@@ -1,6 +1,7 @@
 <script lang="ts">
   import { portal } from '../../lib/actions/portal.js';
   import { clickOutside } from '../../lib/actions/clickOutside.js';
+  import { focusTrap } from '../../lib/actions/focusTrap.js';
   import type { ScopedDestinationStore } from '../../navigation/scope-to-destination.js';
 
   // ============================================================================
@@ -31,6 +32,12 @@
      * @default '60vh'
      */
     height?: string;
+
+    /**
+     * Element to return focus to when sheet is dismissed.
+     * @default null
+     */
+    returnFocusTo?: HTMLElement | null;
   }
 
   let {
@@ -38,6 +45,7 @@
     disableClickOutside = false,
     disableEscapeKey = false,
     height = '60vh',
+    returnFocusTo = null,
     children
   }: SheetPrimitiveProps<unknown, unknown> = $props();
 
@@ -109,7 +117,10 @@
 
 {#if visible}
   <div use:portal>
-    <div use:clickOutside={handleClickOutside}>
+    <div
+      use:clickOutside={handleClickOutside}
+      use:focusTrap={{ returnFocus: returnFocusTo }}
+    >
       {@render children?.({ visible, store, height })}
     </div>
   </div>

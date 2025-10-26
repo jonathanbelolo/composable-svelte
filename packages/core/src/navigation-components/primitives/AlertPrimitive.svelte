@@ -1,6 +1,7 @@
 <script lang="ts">
   import { portal } from '../../lib/actions/portal.js';
   import { clickOutside } from '../../lib/actions/clickOutside.js';
+  import { focusTrap } from '../../lib/actions/focusTrap.js';
   import type { ScopedDestinationStore } from '../../navigation/scope-to-destination.js';
 
   // ============================================================================
@@ -25,12 +26,19 @@
      * @default false
      */
     disableEscapeKey?: boolean;
+
+    /**
+     * Element to return focus to when alert is dismissed.
+     * @default null
+     */
+    returnFocusTo?: HTMLElement | null;
   }
 
   let {
     store,
     disableClickOutside = false,
     disableEscapeKey = false,
+    returnFocusTo = null,
     children
   }: AlertPrimitiveProps<unknown, unknown> = $props();
 
@@ -102,7 +110,10 @@
 
 {#if visible}
   <div use:portal>
-    <div use:clickOutside={handleClickOutside}>
+    <div
+      use:clickOutside={handleClickOutside}
+      use:focusTrap={{ returnFocus: returnFocusTo }}
+    >
       {@render children?.({ visible, store })}
     </div>
   </div>

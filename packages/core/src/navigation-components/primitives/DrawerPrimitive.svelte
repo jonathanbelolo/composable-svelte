@@ -1,6 +1,7 @@
 <script lang="ts">
   import { portal } from '../../lib/actions/portal.js';
   import { clickOutside } from '../../lib/actions/clickOutside.js';
+  import { focusTrap } from '../../lib/actions/focusTrap.js';
   import type { ScopedDestinationStore } from '../../navigation/scope-to-destination.js';
 
   // ============================================================================
@@ -37,6 +38,12 @@
      * @default '320px'
      */
     width?: string;
+
+    /**
+     * Element to return focus to when drawer is dismissed.
+     * @default null
+     */
+    returnFocusTo?: HTMLElement | null;
   }
 
   let {
@@ -45,6 +52,7 @@
     disableEscapeKey = false,
     side = 'left',
     width = '320px',
+    returnFocusTo = null,
     children
   }: DrawerPrimitiveProps<unknown, unknown> = $props();
 
@@ -116,7 +124,10 @@
 
 {#if visible}
   <div use:portal>
-    <div use:clickOutside={handleClickOutside}>
+    <div
+      use:clickOutside={handleClickOutside}
+      use:focusTrap={{ returnFocus: returnFocusTo }}
+    >
       {@render children?.({ visible, store, side, width })}
     </div>
   </div>
