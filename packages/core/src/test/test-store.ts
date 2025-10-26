@@ -96,16 +96,36 @@ export class TestStore<State, Action, Dependencies = any> {
    *
    * @param partialAction - Partial action to match (must have type field)
    * @param assert - Optional state assertion
+   * @param timeout - Timeout in milliseconds (default: 1000)
+   * @throws {Error} If action not received within timeout
    */
   async receive(
     partialAction: PartialAction<Action>,
-    assert?: StateAssertion<State>
+    assert?: StateAssertion<State>,
+    timeout: number = 1000
   ): Promise<void> {
+    const startTime = Date.now();
+
     // Wait for any pending effects (effects may spawn new effects)
     while (this.pendingEffects.length > 0) {
+      const elapsed = Date.now() - startTime;
+      if (elapsed > timeout) {
+        throw new Error(
+          `Timeout waiting for effects after ${timeout}ms\n` +
+          `Expected action: ${JSON.stringify(partialAction)}\n` +
+          `Pending effects: ${this.pendingEffects.length}\n` +
+          `Received actions so far: ${JSON.stringify(this.receivedActions.map((a: any) => a.type))}`
+        );
+      }
+
       const pending = [...this.pendingEffects];
       this.pendingEffects = [];
-      await Promise.all(pending);
+
+      // Add small delay to prevent tight loop
+      await Promise.race([
+        Promise.all(pending),
+        new Promise(resolve => setTimeout(resolve, 10))
+      ]);
     }
 
     // Find matching action
@@ -143,6 +163,23 @@ export class TestStore<State, Action, Dependencies = any> {
         `Full actions: ${JSON.stringify(this.receivedActions, null, 2)}`
       );
     }
+  }
+
+  /**
+   * Convenience method to complete the test.
+   * Waits for any pending effects and asserts no actions remain.
+   * Equivalent to: await advanceTime(0); assertNoPendingActions();
+   *
+   * @example
+   * ```typescript
+   * await store.send({ type: 'loadData' });
+   * await store.receive({ type: 'dataLoaded' });
+   * await store.finish(); // Verify test is complete
+   * ```
+   */
+  async finish(): Promise<void> {
+    await this.advanceTime(0);
+    this.assertNoPendingActions();
   }
 
   /**

@@ -94,3 +94,45 @@ export function scope<ParentState, ParentAction, ChildState, ChildAction, Depend
     return [newParentState, parentEffect];
   };
 }
+
+/**
+ * Helper for common case where child actions are embedded in parent actions.
+ *
+ * @param toChildState - Extract child state from parent state
+ * @param fromChildState - Embed child state back into parent state
+ * @param actionType - The action type string to match
+ * @param childReducer - The child reducer to compose
+ * @returns A parent reducer
+ *
+ * @example
+ * ```typescript
+ * type AppAction = { type: 'counter'; action: CounterAction } | ...;
+ *
+ * const parentReducer = scopeAction(
+ *   (parent: AppState) => parent.counter,
+ *   (parent, child) => ({ ...parent, counter: child }),
+ *   'counter',
+ *   counterReducer
+ * );
+ * ```
+ */
+export function scopeAction<
+  ParentState,
+  ParentAction extends { type: string },
+  ChildState,
+  ChildAction,
+  Dependencies = any
+>(
+  toChildState: StateLens<ParentState, ChildState>,
+  fromChildState: StateUpdater<ParentState, ChildState>,
+  actionType: string,
+  childReducer: Reducer<ChildState, ChildAction, Dependencies>
+): Reducer<ParentState, ParentAction, Dependencies> {
+  return scope(
+    toChildState,
+    fromChildState,
+    (action) => (action.type === actionType && 'action' in action ? (action as any).action : null),
+    (childAction) => ({ type: actionType, action: childAction } as any),
+    childReducer
+  );
+}

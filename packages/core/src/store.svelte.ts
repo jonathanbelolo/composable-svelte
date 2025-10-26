@@ -54,8 +54,15 @@ export function createStore<State, Action, Dependencies = any>(
    * Core dispatch logic (before middleware).
    */
   function dispatchCore(action: Action): void {
-    // Record action
-    actionHistory.push(action);
+    // Record action (with optional size limit)
+    if (config.maxHistorySize === undefined || config.maxHistorySize > 0) {
+      actionHistory.push(action);
+
+      // Trim history if it exceeds max size
+      if (config.maxHistorySize !== undefined && actionHistory.length > config.maxHistorySize) {
+        actionHistory.shift(); // Remove oldest action
+      }
+    }
 
     // Run reducer (pure function)
     const [newState, effect] = config.reducer(
@@ -94,23 +101,8 @@ export function createStore<State, Action, Dependencies = any>(
     }
   }
 
-  // Create dispatch with middleware
-  let dispatch: Dispatch<Action>;
-
-  if (config.middleware && config.middleware.length > 0) {
-    const middlewareAPI: MiddlewareAPI<State, Action> = {
-      getState: () => state,
-      dispatch: (action: Action) => dispatch(action)
-    };
-
-    // Compose middleware chain
-    dispatch = config.middleware.reduceRight(
-      (next, middleware) => middleware(middlewareAPI)(next),
-      dispatchCore
-    );
-  } else {
-    dispatch = dispatchCore;
-  }
+  // TODO: Middleware support deferred to Phase 5
+  const dispatch: Dispatch<Action> = dispatchCore;
 
   /**
    * Execute an effect based on its type.
@@ -176,7 +168,10 @@ export function createStore<State, Action, Dependencies = any>(
         const throttle = throttleState.get(effect.id);
 
         if (!throttle || now - throttle.lastRun >= effect.ms) {
-          // Execute immediately
+          // Execute immediately, clear any pending timeout
+          if (throttle?.timeout) {
+            clearTimeout(throttle.timeout);
+          }
           throttleState.set(effect.id, { lastRun: now });
           Promise.resolve(effect.execute(dispatch)).catch(error => {
             console.error('[Composable Svelte] Effect error:', error);
@@ -185,14 +180,16 @@ export function createStore<State, Action, Dependencies = any>(
           // Schedule for later
           const delay = effect.ms - (now - throttle.lastRun);
           const timeout = setTimeout(() => {
+            // Clear timeout field by replacing entire object
             throttleState.set(effect.id, { lastRun: Date.now() });
             Promise.resolve(effect.execute(dispatch)).catch(error => {
               console.error('[Composable Svelte] Effect error:', error);
             });
           }, delay);
 
-          throttleState.set(effect.id, { ...throttle, timeout });
+          throttleState.set(effect.id, { lastRun: throttle.lastRun, timeout });
         }
+        // else: Already throttled with pending timeout, ignore this call
         break;
       }
 

@@ -3,10 +3,11 @@
  *
  * This module exports utilities for composing reducers:
  * - scope(): Embed child reducers into parent reducers
+ * - scopeAction(): Helper for common scoped composition pattern
  * - combineReducers(): Combine multiple slice reducers
  */
 
-export { scope } from './scope.js';
+export { scope, scopeAction } from './scope.js';
 export type {
   StateLens,
   StateUpdater,

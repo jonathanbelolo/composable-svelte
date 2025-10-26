@@ -113,14 +113,18 @@ export interface StoreConfig<State, Action, Dependencies = any> {
   dependencies?: Dependencies;
 
   /**
-   * Optional middleware to intercept and augment action processing.
+   * Maximum number of actions to keep in history.
+   * When limit is reached, oldest actions are removed.
+   * Default: unlimited (all actions retained).
+   * Set to 0 to disable history tracking.
    */
-  middleware?: Middleware<State, Action>[];
+  maxHistorySize?: number;
 
-  /**
-   * Enable Redux DevTools integration (default: false).
-   */
-  devTools?: boolean;
+  // TODO: Middleware support deferred to Phase 5
+  // middleware?: Middleware<State, Action>[];
+
+  // TODO: Redux DevTools integration deferred to Phase 5
+  // devTools?: boolean;
 }
 
 /**

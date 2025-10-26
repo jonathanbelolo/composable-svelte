@@ -235,8 +235,7 @@ composable-svelte/
 │   │   │   ├── combine-reducers.ts   # Slice-based composition
 │   │   │   └── index.ts
 │   │   ├── test/
-│   │   │   ├── test-store.ts         # TestStore implementation
-│   │   │   └── test-clock.ts         # Time control utilities
+│   │   │   └── test-store.ts         # TestStore implementation
 │   │   └── index.ts                  # Public API exports
 │   ├── tests/
 │   │   ├── effect.test.ts            # 17 effect tests

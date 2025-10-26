@@ -30,7 +30,7 @@ describe('Effect', () => {
 
   describe('batch()', () => {
     it('creates a Batch effect with multiple effects', () => {
-      const effect1 = Effect.none();
+      const effect1 = Effect.run(async () => {});
       const effect2 = Effect.run(async () => {});
       const batchEffect = Effect.batch(effect1, effect2);
 
@@ -40,10 +40,23 @@ describe('Effect', () => {
       expect(batchEffect.effects[1]).toBe(effect2);
     });
 
-    it('creates empty batch with no effects', () => {
+    it('optimizes empty batch to None', () => {
       const batchEffect = Effect.batch();
-      expect(batchEffect._tag).toBe('Batch');
-      expect(batchEffect.effects).toHaveLength(0);
+      expect(batchEffect._tag).toBe('None');
+    });
+
+    it('optimizes single effect batch to the effect itself', () => {
+      const effect = Effect.run(async () => {});
+      const batchEffect = Effect.batch(effect);
+      expect(batchEffect).toBe(effect);
+    });
+
+    it('filters out None effects from batch', () => {
+      const effect1 = Effect.none();
+      const effect2 = Effect.run(async () => {});
+      const batchEffect = Effect.batch(effect1, effect2);
+      // With None filtered out, only one effect remains, so returns that effect directly
+      expect(batchEffect).toBe(effect2);
     });
   });
 
@@ -125,14 +138,14 @@ describe('Effect', () => {
     });
 
     it('maps Batch effect recursively', () => {
-      const effect1 = Effect.none<number>();
-      const effect2 = Effect.run<number>((d) => d(1));
+      const effect1 = Effect.run<number>((d) => d(1));
+      const effect2 = Effect.run<number>((d) => d(2));
       const batch = Effect.batch(effect1, effect2);
       const mapped = Effect.map(batch, (n) => String(n));
 
       expect(mapped._tag).toBe('Batch');
       expect(mapped.effects).toHaveLength(2);
-      expect(mapped.effects[0]._tag).toBe('None');
+      expect(mapped.effects[0]._tag).toBe('Run');
       expect(mapped.effects[1]._tag).toBe('Run');
     });
 

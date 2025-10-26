@@ -72,6 +72,11 @@ export const Effect = {
    * All effects in the batch are started simultaneously.
    * Use this when you have multiple independent effects.
    *
+   * Optimizations:
+   * - Returns Effect.none() for empty batches
+   * - Returns single effect directly if batch has only one effect
+   * - Filters out Effect.none() from batch to reduce overhead
+   *
    * @param effects - Effects to execute in parallel
    *
    * @example
@@ -84,7 +89,20 @@ export const Effect = {
    * ```
    */
   batch<A>(...effects: EffectType<A>[]): EffectType<A> {
-    return { _tag: 'Batch', effects };
+    // Filter out None effects
+    const nonNoneEffects = effects.filter(e => e._tag !== 'None');
+
+    // Optimization: empty batch
+    if (nonNoneEffects.length === 0) {
+      return Effect.none();
+    }
+
+    // Optimization: single effect
+    if (nonNoneEffects.length === 1) {
+      return nonNoneEffects[0]!;
+    }
+
+    return { _tag: 'Batch', effects: nonNoneEffects };
   },
 
   /**
@@ -117,8 +135,9 @@ export const Effect = {
    * where you want to wait until the user stops performing an action.
    *
    * @param id - Unique identifier for debouncing
-   * @param ms - Delay in milliseconds
+   * @param ms - Delay in milliseconds (must be non-negative)
    * @param execute - Function that performs async work
+   * @throws {TypeError} If ms is negative
    *
    * @example
    * ```typescript
@@ -129,6 +148,9 @@ export const Effect = {
    * ```
    */
   debounced<A>(id: string, ms: number, execute: EffectExecutor<A>): EffectType<A> {
+    if (ms < 0) {
+      throw new TypeError(`debounced: ms must be non-negative, got ${ms}`);
+    }
     return { _tag: 'Debounced', id, ms, execute };
   },
 
@@ -139,8 +161,9 @@ export const Effect = {
    * events where you want to limit execution rate.
    *
    * @param id - Unique identifier for throttling
-   * @param ms - Minimum interval between executions in milliseconds
+   * @param ms - Minimum interval between executions in milliseconds (must be non-negative)
    * @param execute - Function that performs async work
+   * @throws {TypeError} If ms is negative
    *
    * @example
    * ```typescript
@@ -150,6 +173,9 @@ export const Effect = {
    * ```
    */
   throttled<A>(id: string, ms: number, execute: EffectExecutor<A>): EffectType<A> {
+    if (ms < 0) {
+      throw new TypeError(`throttled: ms must be non-negative, got ${ms}`);
+    }
     return { _tag: 'Throttled', id, ms, execute };
   },
 
@@ -157,8 +183,9 @@ export const Effect = {
    * Execute effect after a delay.
    * Useful for animations and timed transitions.
    *
-   * @param ms - Delay in milliseconds
-   * @param execute - Function that performs work after delay
+   * @param ms - Delay in milliseconds (must be non-negative)
+   * @param create - Function that creates the dispatch call after delay
+   * @throws {TypeError} If ms is negative
    *
    * @example
    * ```typescript
@@ -167,8 +194,11 @@ export const Effect = {
    * })
    * ```
    */
-  afterDelay<A>(ms: number, execute: EffectExecutor<A>): EffectType<A> {
-    return { _tag: 'AfterDelay', ms, execute };
+  afterDelay<A>(ms: number, create: EffectExecutor<A>): EffectType<A> {
+    if (ms < 0) {
+      throw new TypeError(`afterDelay: ms must be non-negative, got ${ms}`);
+    }
+    return { _tag: 'AfterDelay', ms, execute: create };
   },
 
   /**
@@ -222,8 +252,8 @@ export const Effect = {
         });
 
       case 'AfterDelay':
-        return Effect.afterDelay(effect.ms, async (dispatch) => {
-          await effect.execute((a) => dispatch(f(a)));
+        return Effect.afterDelay(effect.ms, (dispatch) => {
+          effect.execute((a) => dispatch(f(a)));
         });
 
       default:

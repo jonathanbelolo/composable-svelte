@@ -24,14 +24,19 @@ export type {
   Selector,
   EffectExecutor,
   Store,
-  StoreConfig,
-  Middleware,
-  MiddlewareAPI
+  StoreConfig
+  // Middleware and MiddlewareAPI deferred to Phase 5
+  // Middleware,
+  // MiddlewareAPI
 } from './types.js';
 
-// Note: Effect type is not exported here due to name conflict with Effect namespace.
-// Import it directly when needed: import type { Effect } from '@composable-svelte/core/types'
-// In most cases, TypeScript will infer the Effect type from Effect.none(), Effect.run(), etc.
+// Export Effect type with alias to avoid name conflict with Effect namespace
+export type { Effect as EffectType } from './types.js';
+
+// Note: Most users won't need to explicitly import EffectType.
+// TypeScript will infer the Effect type from Effect.none(), Effect.run(), etc.
+// Use EffectType only when you need to annotate effect variables explicitly:
+// const myEffect: EffectType<MyAction> = Effect.run(...);
 
 // ============================================================================
 // Store
@@ -51,6 +56,7 @@ export { Effect } from './effect.js';
 
 export {
   scope,
+  scopeAction,
   combineReducers
 } from './composition/index.js';
 
