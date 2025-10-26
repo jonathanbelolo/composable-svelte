@@ -378,175 +378,364 @@ Implement factory that creates dismiss dependencies bound to parent dispatch.
 
 ## Task 2.5: Navigation Components
 
-### Task 2.5.1: Implement Modal Component
-**Estimated Time**: 2-3 hours
+**Architecture Decision**: Two-layer component system
+1. **Primitives** (headless, logic-only) - for maximum flexibility
+2. **Styled components** (Tailwind-based defaults) - for quick starts
+
+Users can choose their level of customization:
+- Use styled components as-is
+- Customize styled components with Tailwind
+- Use primitives with their own styling
+- Build from scratch using store state directly
+
+**Phase 2 Focus**: Functionality over animations
+- NO animations in Phase 2 (deferred to Phase 4)
+- Simple show/hide logic
+- Portal/teleport to body
+- Keyboard and click-outside handling
+- Basic Tailwind styling (optional via `unstyled` prop)
+
+---
+
+### Task 2.5.1: Implement ModalPrimitive Component
+**Estimated Time**: 2 hours
 **Dependencies**: Task 2.2.4
-**File**: `packages/core/src/navigation-components/Modal.svelte`
+**File**: `packages/core/src/navigation-components/primitives/ModalPrimitive.svelte`
 
 **Description**:
-Create reusable Modal component for presenting child features in modal dialogs.
+Create headless Modal primitive with pure logic, no styling or animations.
 
 **What to do**:
 - Accept scoped child store as prop
-- Render modal overlay and content container
-- Show/hide based on store being null or not
-- Use Svelte transitions for enter/exit animations
-- Support close on overlay click (optional prop)
-- Support close on escape key
+- Show/hide based on store being null or not (no animations)
+- Portal content to document.body
+- Handle Escape key to dismiss (emit event)
+- Handle click-outside to dismiss (emit event)
+- Provide `visible` slot prop for conditional rendering
 - Provide slot for child component
-- Style with basic modal layout
+- NO STYLES, NO ANIMATIONS
 
 **Important**:
-- Component should be headless/unstyled or provide minimal default styles
-- Focus management not required in Phase 2 (defer to Phase 4 or 5)
+- Focus management deferred to Phase 5
+- Animations deferred to Phase 4
+- Component only manages logic and DOM structure
 
 **Spec Reference**: `navigation-spec.md` Section 6.1 - "Modal Component"
 
 **Acceptance Criteria**:
-- [ ] Modal renders when store is non-null
-- [ ] Modal hides when store is null
-- [ ] Transitions work smoothly
-- [ ] Overlay click dismisses (if enabled)
-- [ ] Escape key dismisses
-- [ ] Child component slot provided
-- [ ] Basic styling applied
+- [ ] Shows when store is non-null
+- [ ] Hides when store is null
+- [ ] Portals to body
+- [ ] Escape key emits dismiss event
+- [ ] Click-outside emits dismiss event
+- [ ] No styling applied
+- [ ] Child slot provided
 
 ---
 
-### Task 2.5.2: Implement Sheet Component
-**Estimated Time**: 2-3 hours
-**Dependencies**: Task 2.2.4
-**File**: `packages/core/src/navigation-components/Sheet.svelte`
+### Task 2.5.2: Implement Modal Styled Component
+**Estimated Time**: 1.5 hours
+**Dependencies**: Task 2.5.1
+**File**: `packages/core/src/navigation-components/Modal.svelte`
 
 **Description**:
-Create Sheet component for bottom-drawer presentations.
+Create styled Modal using ModalPrimitive + Tailwind CSS (shadcn-inspired).
 
 **What to do**:
-- Similar to Modal but slides from bottom
-- Support partial height (not full screen)
-- Slide-up/slide-down transitions
-- Overlay dimming
-- Drag-to-dismiss gesture (optional in Phase 2)
-- Provide content slot
+- Wrap ModalPrimitive
+- Add backdrop overlay with Tailwind classes
+- Add content container with centering
+- Support `unstyled` prop to disable all styling
+- Support `class` prop to override content classes
+- Support `backdropClass` prop to override backdrop classes
+- Use CSS variables for theme colors
+- NO ANIMATIONS (just opacity changes)
+
+**Spec Reference**: `navigation-spec.md` Section 6.1 - "Modal Component"
+
+**Acceptance Criteria**:
+- [ ] Uses ModalPrimitive internally
+- [ ] Backdrop overlay styled with Tailwind
+- [ ] Content centered with good defaults
+- [ ] `unstyled` prop works
+- [ ] Class overrides work
+- [ ] No animations (instant show/hide)
+- [ ] Peer dependency on Tailwind documented
+
+---
+
+### Task 2.5.3: Implement SheetPrimitive Component
+**Estimated Time**: 2 hours
+**Dependencies**: Task 2.2.4
+**File**: `packages/core/src/navigation-components/primitives/SheetPrimitive.svelte`
+
+**Description**:
+Create headless Sheet primitive for bottom-drawer presentations.
+
+**What to do**:
+- Similar to ModalPrimitive but positioned at bottom
+- Portal to body
+- Handle Escape key
+- Handle click-outside
+- Support partial height configuration
+- Provide visible slot prop
+- NO STYLES, NO ANIMATIONS
 
 **Spec Reference**: `navigation-spec.md` Section 6.2 - "Sheet Component"
 
 **Acceptance Criteria**:
-- [ ] Sheet slides from bottom
-- [ ] Partial height supported
-- [ ] Transitions smooth
-- [ ] Overlay dims background
-- [ ] Child content slot provided
-- [ ] Basic styling applied
+- [ ] Shows when store is non-null
+- [ ] Hides when store is null
+- [ ] Portals to body
+- [ ] Escape and click-outside handled
+- [ ] Height configurable
+- [ ] No styling applied
 
 ---
 
-### Task 2.5.3: Implement Drawer Component
-**Estimated Time**: 2-3 hours
-**Dependencies**: Task 2.2.4
-**File**: `packages/core/src/navigation-components/Drawer.svelte`
+### Task 2.5.4: Implement Sheet Styled Component
+**Estimated Time**: 1.5 hours
+**Dependencies**: Task 2.5.3
+**File**: `packages/core/src/navigation-components/Sheet.svelte`
 
 **Description**:
-Create Drawer component for side-panel presentations.
+Create styled Sheet using SheetPrimitive + Tailwind.
 
 **What to do**:
-- Slide from left or right (prop-controlled)
-- Support partial width
-- Slide transitions
-- Overlay dimming
-- Close on overlay click
-- Provide content slot
+- Wrap SheetPrimitive
+- Position at bottom of viewport
+- Support partial height
+- Backdrop overlay
+- Support `unstyled`, `class`, `backdropClass` props
+- NO ANIMATIONS (instant show/hide)
+
+**Spec Reference**: `navigation-spec.md` Section 6.2 - "Sheet Component"
+
+**Acceptance Criteria**:
+- [ ] Uses SheetPrimitive internally
+- [ ] Positioned at bottom
+- [ ] Height configurable
+- [ ] Styled with Tailwind
+- [ ] No animations
+
+---
+
+### Task 2.5.5: Implement DrawerPrimitive Component
+**Estimated Time**: 2 hours
+**Dependencies**: Task 2.2.4
+**File**: `packages/core/src/navigation-components/primitives/DrawerPrimitive.svelte`
+
+**Description**:
+Create headless Drawer primitive for side-panel presentations.
+
+**What to do**:
+- Portal to body
+- Support left or right side positioning
+- Handle Escape key
+- Handle click-outside
+- Support partial width configuration
+- Provide visible slot prop
+- NO STYLES, NO ANIMATIONS
 
 **Spec Reference**: `navigation-spec.md` Section 6.3 - "Drawer Component"
 
 **Acceptance Criteria**:
-- [ ] Drawer slides from specified side
+- [ ] Shows when store is non-null
+- [ ] Side configurable (left/right)
 - [ ] Width configurable
-- [ ] Transitions smooth
-- [ ] Overlay support
-- [ ] Child content slot provided
-- [ ] Basic styling applied
+- [ ] Keyboard/click handling
+- [ ] No styling applied
 
 ---
 
-### Task 2.5.4: Implement NavigationStack Component
-**Estimated Time**: 3-4 hours
-**Dependencies**: Tasks 2.3.2, 2.2.4
-**File**: `packages/core/src/navigation-components/NavigationStack.svelte`
+### Task 2.5.6: Implement Drawer Styled Component
+**Estimated Time**: 1.5 hours
+**Dependencies**: Task 2.5.5
+**File**: `packages/core/src/navigation-components/Drawer.svelte`
 
 **Description**:
-Create NavigationStack component for stack-based navigation (like mobile app navigation).
+Create styled Drawer using DrawerPrimitive + Tailwind.
+
+**What to do**:
+- Wrap DrawerPrimitive
+- Position on left or right
+- Support partial width
+- Backdrop overlay
+- Support `unstyled`, `class`, `backdropClass` props
+- NO ANIMATIONS (instant show/hide)
+
+**Spec Reference**: `navigation-spec.md` Section 6.3 - "Drawer Component"
+
+**Acceptance Criteria**:
+- [ ] Uses DrawerPrimitive internally
+- [ ] Side selection works
+- [ ] Width configurable
+- [ ] Styled with Tailwind
+- [ ] No animations
+
+---
+
+### Task 2.5.7: Implement NavigationStackPrimitive Component
+**Estimated Time**: 2.5 hours
+**Dependencies**: Tasks 2.3.2, 2.2.4
+**File**: `packages/core/src/navigation-components/primitives/NavigationStackPrimitive.svelte`
+
+**Description**:
+Create headless NavigationStack primitive for managing stack rendering.
 
 **What to do**:
 - Accept array of screen stores
-- Render screens in stack with transitions
-- Support push/pop transitions (slide left/right)
-- Show back button for non-root screens
-- Handle back navigation
-- Provide screen slot with index context
-
-**Important**:
-- Complex transitions can be simplified in Phase 2
-- Focus on basic push/pop functionality
-- Polish transitions in Phase 4 (animation phase)
+- Provide currentIndex slot prop
+- Emit navigation events (back, forward)
+- Manage which screen is visible
+- Provide context to child screens (index, isTop)
+- NO STYLES, NO ANIMATIONS
 
 **Spec Reference**: `navigation-spec.md` Section 6.4 - "NavigationStack Component"
 
 **Acceptance Criteria**:
-- [ ] Renders all screens in stack
-- [ ] Only top screen visible (or slide transition)
-- [ ] Back button on non-root screens
-- [ ] Push/pop transitions work
-- [ ] Screen slot receives context
-- [ ] Basic navigation works
+- [ ] Renders screens from store array
+- [ ] Provides screen context
+- [ ] Emits navigation events
+- [ ] No styling applied
 
 ---
 
-### Task 2.5.5: Implement Alert Component
-**Estimated Time**: 1-2 hours
-**Dependencies**: Task 2.2.4
-**File**: `packages/core/src/navigation-components/Alert.svelte`
+### Task 2.5.8: Implement NavigationStack Styled Component
+**Estimated Time**: 2 hours
+**Dependencies**: Task 2.5.7
+**File**: `packages/core/src/navigation-components/NavigationStack.svelte`
 
 **Description**:
-Create simple Alert component for confirmation dialogs.
+Create styled NavigationStack using primitive + Tailwind.
 
 **What to do**:
-- Accept title, message, and button configuration
-- Support OK, Cancel, and custom buttons
-- Center modal style
-- Simple fade transition
-- Dispatch button actions to parent
-- Minimal styling
+- Wrap NavigationStackPrimitive
+- Add back button for non-root screens
+- Stack container styling
+- Screen transition container
+- Support `unstyled`, `class` props
+- NO ANIMATIONS (just show top screen)
+
+**Important**:
+- Phase 2 only shows top screen, no transitions
+- Phase 4 will add slide animations
+
+**Spec Reference**: `navigation-spec.md` Section 6.4 - "NavigationStack Component"
+
+**Acceptance Criteria**:
+- [ ] Uses NavigationStackPrimitive internally
+- [ ] Back button on non-root screens
+- [ ] Only top screen visible
+- [ ] Styled with Tailwind
+- [ ] No animations
+
+---
+
+### Task 2.5.9: Implement AlertPrimitive Component
+**Estimated Time**: 1 hour
+**Dependencies**: Task 2.2.4
+**File**: `packages/core/src/navigation-components/primitives/AlertPrimitive.svelte`
+
+**Description**:
+Create headless Alert primitive for confirmation dialogs.
+
+**What to do**:
+- Portal to body
+- Handle Escape key
+- Emit button click events
+- Provide visible slot prop
+- NO STYLES, NO ANIMATIONS
 
 **Spec Reference**: `navigation-spec.md` Section 6.5 - "Alert Component"
 
 **Acceptance Criteria**:
-- [ ] Alert renders with title and message
-- [ ] Buttons configurable
-- [ ] Button clicks dispatch actions
-- [ ] Fade transition
-- [ ] Clean minimal design
+- [ ] Shows when store is non-null
+- [ ] Escape key handled
+- [ ] Button events emitted
+- [ ] No styling applied
 
 ---
 
-### Task 2.5.6: Create Navigation Components Index
-**Estimated Time**: 30 minutes
-**Dependencies**: Tasks 2.5.1-2.5.5
-**File**: `packages/core/src/navigation-components/index.ts`
+### Task 2.5.10: Implement Alert Styled Component
+**Estimated Time**: 1 hour
+**Dependencies**: Task 2.5.9
+**File**: `packages/core/src/navigation-components/Alert.svelte`
 
 **Description**:
-Export all navigation components with organized documentation.
+Create styled Alert using AlertPrimitive + Tailwind.
 
 **What to do**:
-- Export all components from single module
-- Add module docs explaining component usage
-- Organize by presentation type
+- Wrap AlertPrimitive
+- Accept title, message, buttons configuration
+- Center modal style
+- Button styling with variants (primary, secondary)
+- Support `unstyled`, `class` props
+- NO ANIMATIONS
+
+**Spec Reference**: `navigation-spec.md` Section 6.5 - "Alert Component"
+
+**Acceptance Criteria**:
+- [ ] Uses AlertPrimitive internally
+- [ ] Title and message display
+- [ ] Buttons configurable
+- [ ] Styled with Tailwind
+- [ ] No animations
+
+---
+
+### Task 2.5.11: Create Navigation Components Index
+**Estimated Time**: 45 minutes
+**Dependencies**: Tasks 2.5.1-2.5.10
+**Files**:
+- `packages/core/src/navigation-components/index.ts`
+- `packages/core/src/navigation-components/primitives/index.ts`
+
+**Description**:
+Export all navigation components with organized documentation and clear import paths.
+
+**What to do**:
+- Export styled components from main index
+- Export primitives from primitives/index
+- Add module docs explaining:
+  - Two-layer architecture (primitives + styled)
+  - Customization patterns
+  - Tailwind peer dependency
+  - `unstyled` prop usage
+- Organize exports logically
 - Include import examples
 
 **Acceptance Criteria**:
-- [ ] All components exported
-- [ ] Clear module documentation
-- [ ] Easy import paths
+- [ ] Styled components exported from main index
+- [ ] Primitives exported from primitives/index
+- [ ] Clear documentation provided
+- [ ] Import paths work:
+  - `import { Modal } from '@composable-svelte/core/navigation-components'`
+  - `import { ModalPrimitive } from '@composable-svelte/core/navigation-components/primitives'`
+
+---
+
+### Task 2.5.12: Add Tailwind Configuration Guide
+**Estimated Time**: 1 hour
+**Dependencies**: Task 2.5.11
+**File**: `packages/core/src/navigation-components/README.md`
+
+**Description**:
+Create guide for setting up Tailwind with navigation components.
+
+**What to do**:
+- Document Tailwind peer dependency
+- Provide example tailwind.config.js
+- Show how to customize CSS variables
+- Document `unstyled` prop usage
+- Show customization patterns (5 levels)
+- Include shadcn-inspired theming approach
+
+**Acceptance Criteria**:
+- [ ] Tailwind setup documented
+- [ ] Customization levels explained
+- [ ] CSS variables documented
+- [ ] Examples provided
 
 ---
 
