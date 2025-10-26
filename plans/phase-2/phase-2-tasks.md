@@ -324,9 +324,112 @@ Export stack navigation utilities with documentation.
 
 ---
 
-## Task 2.4: Dismiss Dependency
+## Task 2.4: Component Styling Setup
 
-### Task 2.4.1: Define Dismiss Dependency Interface
+**Reference Guide**: See `plans/phase-2/radix-shadcn-reuse-guide.md` for comprehensive adaptation strategy.
+
+**Philosophy**: Leverage battle-tested patterns from Radix UI (accessibility, logic) and shadcn/ui (styling) rather than reinventing the wheel. We adapt their React implementations to our Svelte + store-driven architecture.
+
+---
+
+### Task 2.4.1: Copy shadcn/ui Tailwind Configuration
+**Estimated Time**: 30 minutes
+**Dependencies**: None
+**Files**:
+- `packages/core/tailwind.config.ts`
+- `packages/core/src/styles/globals.css`
+
+**Description**:
+Copy shadcn/ui's Tailwind configuration and CSS variables for consistent theming.
+
+**What to do**:
+- Copy `shadcn/ui/apps/www/tailwind.config.js` → our `tailwind.config.ts`
+- Adapt content paths to our project structure
+- Copy `shadcn/ui/apps/www/app/globals.css` → our `globals.css`
+- Include all CSS variables (light + dark mode)
+- Copy color definitions, border radius variables
+- Install `tailwindcss-animate` plugin
+
+**Source Files**:
+- https://github.com/shadcn-ui/ui/blob/main/apps/www/tailwind.config.js
+- https://github.com/shadcn-ui/ui/blob/main/apps/www/app/globals.css
+
+**Acceptance Criteria**:
+- [ ] Tailwind config copied and adapted
+- [ ] CSS variables defined (light + dark mode)
+- [ ] tailwindcss-animate plugin installed
+- [ ] Test builds successfully
+- [ ] All shadcn color variables available
+
+---
+
+### Task 2.4.2: Create Shared Component Utilities
+**Estimated Time**: 1 hour
+**Dependencies**: None
+**File**: `packages/core/src/lib/actions/`
+
+**Description**:
+Create Svelte-specific utilities adapted from Radix UI patterns.
+
+**What to do**:
+- Create `clickOutside.ts` action (adapt from Radix DismissableLayer)
+- Create portal helper if not using built-in Svelte 5 portals
+- Create keyboard navigation utilities
+- Add TypeScript types for all utilities
+
+**Reference**:
+- Radix DismissableLayer: `radix-ui/primitives/packages/react/dismissable-layer/src/DismissableLayer.tsx`
+
+**Acceptance Criteria**:
+- [ ] clickOutside action implemented
+- [ ] Portal helper created (if needed)
+- [ ] Keyboard utils created
+- [ ] All utilities typed
+- [ ] Unit tests for utilities
+
+---
+
+### Task 2.4.3: Install Component Dependencies
+**Estimated Time**: 15 minutes
+**Dependencies**: None
+**File**: `packages/core/package.json`
+
+**Description**:
+Install required dependencies for component implementation.
+
+**What to do**:
+- Install `@floating-ui/dom` (for Popover positioning, same library Radix uses)
+- Install `svelte-portal` (if not using Svelte 5 built-in portals)
+- Install `tailwindcss-animate` (dev dependency)
+- Update peer dependencies (Tailwind CSS)
+
+**Dependencies**:
+```json
+{
+  "dependencies": {
+    "@floating-ui/dom": "^1.5.0"
+  },
+  "peerDependencies": {
+    "tailwindcss": "^3.4.0"
+  },
+  "devDependencies": {
+    "tailwindcss-animate": "^1.0.7"
+  }
+}
+```
+
+**Acceptance Criteria**:
+- [ ] @floating-ui/dom installed
+- [ ] Portal solution decided and installed
+- [ ] tailwindcss-animate installed
+- [ ] Peer dependencies documented
+- [ ] No version conflicts
+
+---
+
+## Task 2.5: Dismiss Dependency
+
+### Task 2.5.1: Define Dismiss Dependency Interface
 **Estimated Time**: 1 hour
 **Dependencies**: None
 **File**: `packages/core/src/dependencies/dismiss.ts`
@@ -352,9 +455,9 @@ Create dependency injection interface for child features to dismiss themselves.
 
 ---
 
-### Task 2.4.2: Implement createDismissDependency() Factory
+### Task 2.5.2: Implement createDismissDependency() Factory
 **Estimated Time**: 1-2 hours
-**Dependencies**: Task 2.4.1
+**Dependencies**: Task 2.6.1
 **File**: `packages/core/src/dependencies/dismiss.ts`
 
 **Description**:
@@ -379,7 +482,9 @@ Implement factory that creates dismiss dependencies bound to parent dispatch.
 
 ---
 
-## Task 2.5: Navigation Components
+## Task 2.6: Navigation Components
+
+**IMPORTANT**: See `radix-shadcn-reuse-guide.md` in this folder for detailed guidance on adapting Radix UI and shadcn/ui patterns to our architecture.
 
 **Architecture Decision**: Two-layer component system
 1. **Primitives** (headless, logic-only) - for maximum flexibility
@@ -405,13 +510,15 @@ Users can choose their level of customization:
 
 ---
 
-### Task 2.5.1: Implement ModalPrimitive Component
+### Task 2.6.1: Implement ModalPrimitive Component
 **Estimated Time**: 2 hours
-**Dependencies**: Task 2.2.4
+**Dependencies**: Task 2.2.4, Task 2.4.2
 **File**: `packages/core/src/navigation-components/primitives/ModalPrimitive.svelte`
 
+**Reference**: See `radix-shadcn-reuse-guide.md` → "Modal Component" section for Radix UI patterns to adapt.
+
 **Description**:
-Create headless Modal primitive with pure logic, no styling or animations.
+Create headless Modal primitive with pure logic, no styling or animations. Adapt logic from Radix UI Dialog.
 
 **What to do**:
 - Accept scoped child store as prop
@@ -441,13 +548,15 @@ Create headless Modal primitive with pure logic, no styling or animations.
 
 ---
 
-### Task 2.5.2: Implement Modal Styled Component
+### Task 2.6.2: Implement Modal Styled Component
 **Estimated Time**: 1.5 hours
-**Dependencies**: Task 2.5.1
+**Dependencies**: Task 2.6.1, Task 2.4.1
 **File**: `packages/core/src/navigation-components/Modal.svelte`
 
+**Reference**: See `radix-shadcn-reuse-guide.md` → "Modal Component" section for shadcn/ui classes to copy.
+
 **Description**:
-Create styled Modal using ModalPrimitive + Tailwind CSS (shadcn-inspired).
+Create styled Modal using ModalPrimitive + Tailwind CSS. Copy classes directly from shadcn/ui Dialog component.
 
 **What to do**:
 - Wrap ModalPrimitive
@@ -472,7 +581,7 @@ Create styled Modal using ModalPrimitive + Tailwind CSS (shadcn-inspired).
 
 ---
 
-### Task 2.5.3: Implement SheetPrimitive Component
+### Task 2.6.3: Implement SheetPrimitive Component
 **Estimated Time**: 2 hours
 **Dependencies**: Task 2.2.4
 **File**: `packages/core/src/navigation-components/primitives/SheetPrimitive.svelte`
@@ -501,9 +610,9 @@ Create headless Sheet primitive for bottom-drawer presentations.
 
 ---
 
-### Task 2.5.4: Implement Sheet Styled Component
+### Task 2.6.4: Implement Sheet Styled Component
 **Estimated Time**: 1.5 hours
-**Dependencies**: Task 2.5.3
+**Dependencies**: Task 2.6.3
 **File**: `packages/core/src/navigation-components/Sheet.svelte`
 
 **Description**:
@@ -528,7 +637,7 @@ Create styled Sheet using SheetPrimitive + Tailwind.
 
 ---
 
-### Task 2.5.5: Implement DrawerPrimitive Component
+### Task 2.6.5: Implement DrawerPrimitive Component
 **Estimated Time**: 2 hours
 **Dependencies**: Task 2.2.4
 **File**: `packages/core/src/navigation-components/primitives/DrawerPrimitive.svelte`
@@ -556,9 +665,9 @@ Create headless Drawer primitive for side-panel presentations.
 
 ---
 
-### Task 2.5.6: Implement Drawer Styled Component
+### Task 2.6.6: Implement Drawer Styled Component
 **Estimated Time**: 1.5 hours
-**Dependencies**: Task 2.5.5
+**Dependencies**: Task 2.6.5
 **File**: `packages/core/src/navigation-components/Drawer.svelte`
 
 **Description**:
@@ -583,7 +692,7 @@ Create styled Drawer using DrawerPrimitive + Tailwind.
 
 ---
 
-### Task 2.5.7: Implement NavigationStackPrimitive Component
+### Task 2.6.7: Implement NavigationStackPrimitive Component
 **Estimated Time**: 2.5 hours
 **Dependencies**: Tasks 2.3.2, 2.2.4
 **File**: `packages/core/src/navigation-components/primitives/NavigationStackPrimitive.svelte`
@@ -609,9 +718,9 @@ Create headless NavigationStack primitive for managing stack rendering.
 
 ---
 
-### Task 2.5.8: Implement NavigationStack Styled Component
+### Task 2.6.8: Implement NavigationStack Styled Component
 **Estimated Time**: 2 hours
-**Dependencies**: Task 2.5.7
+**Dependencies**: Task 2.6.7
 **File**: `packages/core/src/navigation-components/NavigationStack.svelte`
 
 **Description**:
@@ -640,7 +749,7 @@ Create styled NavigationStack using primitive + Tailwind.
 
 ---
 
-### Task 2.5.9: Implement AlertPrimitive Component
+### Task 2.6.9: Implement AlertPrimitive Component
 **Estimated Time**: 1 hour
 **Dependencies**: Task 2.2.4
 **File**: `packages/core/src/navigation-components/primitives/AlertPrimitive.svelte`
@@ -665,9 +774,9 @@ Create headless Alert primitive for confirmation dialogs.
 
 ---
 
-### Task 2.5.10: Implement Alert Styled Component
+### Task 2.6.10: Implement Alert Styled Component
 **Estimated Time**: 1 hour
-**Dependencies**: Task 2.5.9
+**Dependencies**: Task 2.6.9
 **File**: `packages/core/src/navigation-components/Alert.svelte`
 
 **Description**:
@@ -692,7 +801,7 @@ Create styled Alert using AlertPrimitive + Tailwind.
 
 ---
 
-### Task 2.5.11: Implement SidebarPrimitive Component
+### Task 2.6.11: Implement SidebarPrimitive Component
 **Estimated Time**: 2 hours
 **Dependencies**: Task 2.2.4
 **File**: `packages/core/src/navigation-components/primitives/SidebarPrimitive.svelte`
@@ -725,9 +834,9 @@ Create headless Sidebar primitive for persistent/collapsible navigation panels (
 
 ---
 
-### Task 2.5.12: Implement Sidebar Styled Component
+### Task 2.6.12: Implement Sidebar Styled Component
 **Estimated Time**: 2 hours
-**Dependencies**: Task 2.5.11
+**Dependencies**: Task 2.6.11
 **File**: `packages/core/src/navigation-components/Sidebar.svelte`
 
 **Description**:
@@ -760,7 +869,7 @@ Create styled Sidebar using SidebarPrimitive + Tailwind with responsive behavior
 
 ---
 
-### Task 2.5.13: Implement TabsPrimitive Component
+### Task 2.6.13: Implement TabsPrimitive Component
 **Estimated Time**: 1.5 hours
 **Dependencies**: Task 2.2.4
 **File**: `packages/core/src/navigation-components/primitives/TabsPrimitive.svelte`
@@ -802,9 +911,9 @@ interface Tab {
 
 ---
 
-### Task 2.5.14: Implement Tabs Styled Component
+### Task 2.6.14: Implement Tabs Styled Component
 **Estimated Time**: 1.5 hours
-**Dependencies**: Task 2.5.13
+**Dependencies**: Task 2.6.13
 **File**: `packages/core/src/navigation-components/Tabs.svelte`
 
 **Description**:
@@ -836,7 +945,7 @@ Create styled Tabs using TabsPrimitive + Tailwind.
 
 ---
 
-### Task 2.5.15: Implement PopoverPrimitive Component
+### Task 2.6.15: Implement PopoverPrimitive Component
 **Estimated Time**: 2.5 hours
 **Dependencies**: Task 2.2.4
 **File**: `packages/core/src/navigation-components/primitives/PopoverPrimitive.svelte`
@@ -877,9 +986,9 @@ Create headless Popover primitive for contextual overlays (dropdowns, menus, too
 
 ---
 
-### Task 2.5.16: Implement Popover Styled Component
+### Task 2.6.16: Implement Popover Styled Component
 **Estimated Time**: 2 hours
-**Dependencies**: Task 2.5.15
+**Dependencies**: Task 2.6.15
 **File**: `packages/core/src/navigation-components/Popover.svelte`
 
 **Description**:
@@ -918,9 +1027,9 @@ Create styled Popover using PopoverPrimitive + Tailwind.
 
 ---
 
-### Task 2.5.17: Create Navigation Components Index
+### Task 2.6.17: Create Navigation Components Index
 **Estimated Time**: 45 minutes
-**Dependencies**: Tasks 2.5.1-2.5.16
+**Dependencies**: Tasks 2.6.1-2.5.16
 **Files**:
 - `packages/core/src/navigation-components/index.ts`
 - `packages/core/src/navigation-components/primitives/index.ts`
@@ -955,9 +1064,9 @@ Export all navigation components with organized documentation and clear import p
 
 ---
 
-### Task 2.5.18: Add Tailwind Configuration Guide
+### Task 2.6.18: Add Tailwind Configuration Guide
 **Estimated Time**: 1 hour
-**Dependencies**: Task 2.5.17
+**Dependencies**: Task 2.6.17
 **File**: `packages/core/src/navigation-components/README.md`
 
 **Description**:
@@ -981,9 +1090,9 @@ Create guide for setting up Tailwind with navigation components.
 
 ---
 
-## Task 2.6: Testing
+## Task 2.7: Testing
 
-### Task 2.6.1: Test ifLet() Operator
+### Task 2.7.1: Test ifLet() Operator
 **Estimated Time**: 2 hours
 **Dependencies**: Task 2.2.1
 **File**: `packages/core/tests/navigation/operators.test.ts`
@@ -1007,7 +1116,7 @@ Comprehensive tests for ifLet() operator covering all scenarios.
 
 ---
 
-### Task 2.6.2: Test createDestinationReducer() Helper
+### Task 2.7.2: Test createDestinationReducer() Helper
 **Estimated Time**: 2 hours
 **Dependencies**: Task 2.2.2
 **File**: `packages/core/tests/navigation/operators.test.ts`
@@ -1030,7 +1139,7 @@ Test enum destination routing and reducer selection.
 
 ---
 
-### Task 2.6.3: Test Stack Navigation Helpers
+### Task 2.7.3: Test Stack Navigation Helpers
 **Estimated Time**: 2-3 hours
 **Dependencies**: Tasks 2.3.1, 2.3.2
 **File**: `packages/core/tests/navigation/stack.test.ts`
@@ -1056,9 +1165,9 @@ Test all stack navigation utilities and reducer helper.
 
 ---
 
-### Task 2.6.4: Test Dismiss Dependency
+### Task 2.7.4: Test Dismiss Dependency
 **Estimated Time**: 1 hour
-**Dependencies**: Task 2.4.2
+**Dependencies**: Task 2.5.2
 **File**: `packages/core/tests/dependencies/dismiss.test.ts`
 
 **Description**:
@@ -1078,9 +1187,9 @@ Test dismiss dependency creation and usage.
 
 ---
 
-### Task 2.6.5: Test Navigation Components
+### Task 2.7.5: Test Navigation Components
 **Estimated Time**: 5-6 hours
-**Dependencies**: Tasks 2.5.1-2.5.16
+**Dependencies**: Tasks 2.6.1-2.6.16
 **File**: `packages/core/tests/navigation-components/*.test.ts`
 
 **Description**:
@@ -1114,11 +1223,11 @@ Component tests for all navigation components (mobile + desktop).
 
 ---
 
-## Task 2.7: Example Applications
+## Task 2.8: Example Applications
 
-### Task 2.7.1: Create Inventory Navigation Example
+### Task 2.8.1: Create Inventory Navigation Example
 **Estimated Time**: 3-4 hours
-**Dependencies**: Tasks 2.2.1, 2.5.1
+**Dependencies**: Tasks 2.2.1, 2.6.1
 **File**: `examples/inventory-nav/`
 
 **Description**:
@@ -1145,9 +1254,9 @@ Build example app demonstrating tree-based navigation with modals.
 
 ---
 
-### Task 2.7.2: Create Stack Navigation Example
+### Task 2.8.2: Create Stack Navigation Example
 **Estimated Time**: 3-4 hours
-**Dependencies**: Tasks 2.3.2, 2.5.4
+**Dependencies**: Tasks 2.3.2, 2.6.7
 **File**: `examples/stack-nav/`
 
 **Description**:
@@ -1172,9 +1281,9 @@ Build example app demonstrating stack-based navigation.
 
 ---
 
-### Task 2.7.3: Create Desktop Navigation Example
+### Task 2.8.3: Create Desktop Navigation Example
 **Estimated Time**: 3-4 hours
-**Dependencies**: Tasks 2.5.11-2.5.16
+**Dependencies**: Tasks 2.6.11-2.6.16
 **File**: `examples/desktop-nav/`
 
 **Description**:
@@ -1208,9 +1317,9 @@ Build example app demonstrating desktop-focused navigation patterns (Sidebar, Ta
 
 ---
 
-## Task 2.8: Documentation & Polish
+## Task 2.9: Documentation & Polish
 
-### Task 2.8.1: Add Navigation API Documentation
+### Task 2.9.1: Add Navigation API Documentation
 **Estimated Time**: 2 hours
 **Dependencies**: All implementation tasks
 **File**: `packages/core/README.md`
@@ -1234,7 +1343,7 @@ Update package README with navigation system documentation.
 
 ---
 
-### Task 2.8.2: Run Full Test Suite
+### Task 2.9.2: Run Full Test Suite
 **Estimated Time**: 1 hour
 **Dependencies**: All testing tasks
 **File**: N/A
@@ -1259,9 +1368,9 @@ Verify all tests pass and navigation system works end-to-end.
 
 ---
 
-### Task 2.8.3: Create Phase 2 Completion Summary
+### Task 2.9.3: Create Phase 2 Completion Summary
 **Estimated Time**: 30 minutes
-**Dependencies**: Task 2.8.2
+**Dependencies**: Task 2.9.2
 **File**: `plans/phase-2/PHASE-2-COMPLETE.md`
 
 **Description**:
@@ -1285,32 +1394,35 @@ Document Phase 2 completion with metrics and verification.
 
 ## Summary
 
-**Total Estimated Time**: 65-80 hours (~3 weeks at 20-25 hours/week)
+**Total Estimated Time**: 67-82 hours (~3 weeks at 20-25 hours/week)
 
 **Time Breakdown by Section**:
 - Task 2.1 (Types): 1.5 hours
 - Task 2.2 (Operators): 8-11 hours
 - Task 2.3 (Stack): 4-5 hours
-- Task 2.4 (Dismiss): 2-3 hours
-- Task 2.5 (Components): 28-32 hours (16 component tasks + 2 infrastructure)
-- Task 2.6 (Testing): 12-16 hours
-- Task 2.7 (Examples): 9-12 hours
-- Task 2.8 (Docs): 3.5 hours
+- Task 2.4 (Component Styling Setup): 1.75 hours ← NEW
+- Task 2.5 (Dismiss): 2-3 hours
+- Task 2.6 (Components): 28-32 hours (16 component tasks + 2 infrastructure)
+- Task 2.7 (Testing): 12-16 hours
+- Task 2.8 (Examples): 9-12 hours
+- Task 2.9 (Docs): 3.5 hours
 
 **Critical Path**:
-1. Navigation types (2.1.x) → Operators (2.2.x) → Components (2.5.x)
-2. Stack types (2.1.2) → Stack helpers (2.3.x) → NavigationStack (2.5.7-2.5.8)
-3. Testing (2.6.x) can happen in parallel with component development
-4. Examples (2.7.x) after core implementation
-5. Documentation (2.8.x) at the end
+1. **Setup**: Component styling setup (2.4.x) must be done first
+2. Navigation types (2.1.x) → Operators (2.2.x) → Components (2.6.x)
+3. Stack types (2.1.2) → Stack helpers (2.3.x) → NavigationStack (2.6.7-2.6.8)
+4. Testing (2.7.x) can happen in parallel with component development
+5. Examples (2.8.x) after core implementation
+6. Documentation (2.9.x) at the end
 
 **Component Implementation Order** (recommended):
-1. Start with Modal (2.5.1-2.5.2) to establish pattern
-2. Sheet and Drawer (mobile overlays)
-3. Sidebar (desktop persistent navigation)
-4. Tabs (desktop tabbed content)
-5. Popover (contextual menus)
-6. NavigationStack and Alert last
+1. **First**: Complete setup tasks (2.4.1-2.4.3) - Tailwind config, utilities, dependencies
+2. Start with Modal (2.6.1-2.6.2) to establish pattern - reference shadcn/Radix
+3. Sheet and Drawer (mobile overlays) - copy Modal pattern
+4. Sidebar (desktop persistent navigation) - new pattern
+5. Tabs (desktop tabbed content) - keyboard navigation from Radix
+6. Popover (contextual menus) - Floating UI positioning
+7. NavigationStack and Alert last
 
 **Deferred Items**:
 - SvelteKit integration (optional, can be Phase 6)
