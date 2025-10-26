@@ -1,10 +1,12 @@
 # Phase 2: Navigation System - Detailed Tasks
 
-**Duration**: Week 3-4 (15-20 hours/week)
+**Duration**: Week 3-5 (15-20 hours/week, ~3 weeks)
 **Deliverable**: `@composable-svelte/core@0.2.0` with navigation system
 **Spec Reference**: `navigation-spec.md`
 **Last Updated**: 2025-10-26
 **Status**: ✅ READY TO START
+
+**Timeline Extension**: Extended from 2 weeks to 3 weeks to include desktop-focused navigation components (Sidebar, Tabs, Popover) in addition to mobile-first components.
 
 ---
 
@@ -15,7 +17,8 @@ Phase 2 implements the navigation system that enables tree-based and stack-based
 **Key Deliverables**:
 - Navigation types (PresentationAction, StackAction)
 - Navigation operators (ifLet, createDestinationReducer, matchPresentationAction)
-- Navigation components (Modal, Sheet, Drawer, NavigationStack, Alert)
+- **Mobile-First Components**: Modal, Sheet, Drawer, NavigationStack, Alert
+- **Desktop-First Components**: Sidebar, Tabs, Popover (NEW)
 - Dismiss dependency for child self-dismissal
 - Stack navigation utilities
 - Optional: SvelteKit integration (can be deferred to Phase 6)
@@ -395,6 +398,11 @@ Users can choose their level of customization:
 - Keyboard and click-outside handling
 - Basic Tailwind styling (optional via `unstyled` prop)
 
+**Component Categories**:
+- **Mobile-First** (5 components): Modal, Sheet, Drawer, NavigationStack, Alert
+- **Desktop-First** (3 components): Sidebar, Tabs, Popover
+- **Total**: 8 components × 2 variants each = 16 component tasks
+
 ---
 
 ### Task 2.5.1: Implement ModalPrimitive Component
@@ -684,9 +692,235 @@ Create styled Alert using AlertPrimitive + Tailwind.
 
 ---
 
-### Task 2.5.11: Create Navigation Components Index
+### Task 2.5.11: Implement SidebarPrimitive Component
+**Estimated Time**: 2 hours
+**Dependencies**: Task 2.2.4
+**File**: `packages/core/src/navigation-components/primitives/SidebarPrimitive.svelte`
+
+**Description**:
+Create headless Sidebar primitive for persistent/collapsible navigation panels (desktop-first pattern).
+
+**What to do**:
+- Accept expanded state as prop
+- Support left or right positioning
+- Handle collapse/expand toggle
+- Support keyboard navigation (Arrow keys, Tab)
+- Emit toggle events
+- Provide visible slot prop
+- NO STYLES, NO ANIMATIONS
+- NO mobile responsiveness (primitive is desktop-only)
+
+**Important**:
+- This is a **persistent** navigation pattern (not portal-based like modals)
+- Renders in-place, not portaled to body
+- Desktop-first: mobile adaptation happens in styled variant
+
+**Acceptance Criteria**:
+- [ ] Shows/hides based on expanded prop
+- [ ] Side configurable (left/right)
+- [ ] Toggle event emitted
+- [ ] Keyboard navigation supported
+- [ ] No styling applied
+- [ ] No mobile logic in primitive
+
+---
+
+### Task 2.5.12: Implement Sidebar Styled Component
+**Estimated Time**: 2 hours
+**Dependencies**: Task 2.5.11
+**File**: `packages/core/src/navigation-components/Sidebar.svelte`
+
+**Description**:
+Create styled Sidebar using SidebarPrimitive + Tailwind with responsive behavior.
+
+**What to do**:
+- Wrap SidebarPrimitive
+- Add Tailwind classes for width, transitions
+- Support icons + text labels
+- **Responsive behavior**:
+  - Desktop: Full sidebar with collapse
+  - Tablet/Mobile: Transform to Drawer (overlay)
+- Support `unstyled`, `class` props
+- Width configurable (default 240px expanded, 64px collapsed)
+- NO ANIMATIONS (instant collapse/expand)
+
+**Important**:
+- Uses Tailwind responsive classes to switch between sidebar and drawer
+- Desktop (>= 1024px): Fixed sidebar
+- Mobile (< 1024px): Drawer overlay (uses DrawerPrimitive internally)
+
+**Acceptance Criteria**:
+- [ ] Uses SidebarPrimitive for desktop
+- [ ] Falls back to Drawer on mobile/tablet
+- [ ] Collapse/expand works
+- [ ] Icon + text label support
+- [ ] Styled with Tailwind
+- [ ] Responsive breakpoints work
+- [ ] No animations
+
+---
+
+### Task 2.5.13: Implement TabsPrimitive Component
+**Estimated Time**: 1.5 hours
+**Dependencies**: Task 2.2.4
+**File**: `packages/core/src/navigation-components/primitives/TabsPrimitive.svelte`
+
+**Description**:
+Create headless Tabs primitive for horizontal tabbed navigation.
+
+**What to do**:
+- Accept tabs array and activeTab as props
+- Emit tab change events
+- Support keyboard arrow navigation (Left/Right arrows)
+- Support Home/End keys
+- ARIA roles (role="tablist", role="tab", role="tabpanel")
+- Horizontal only (vertical tabs are rare)
+- NO STYLES, NO ANIMATIONS
+
+**Important**:
+- State-driven: activeTab controlled by parent
+- No tab content rendering (just navigation)
+- Component only handles tab selection UI
+
+**Tab Interface**:
+```typescript
+interface Tab {
+  id: string;
+  label: string;
+  disabled?: boolean;
+}
+```
+
+**Acceptance Criteria**:
+- [ ] Renders tabs from array
+- [ ] Active tab controllable
+- [ ] Arrow key navigation works
+- [ ] Home/End keys work
+- [ ] ARIA roles applied
+- [ ] Disabled tabs skip navigation
+- [ ] No styling applied
+
+---
+
+### Task 2.5.14: Implement Tabs Styled Component
+**Estimated Time**: 1.5 hours
+**Dependencies**: Task 2.5.13
+**File**: `packages/core/src/navigation-components/Tabs.svelte`
+
+**Description**:
+Create styled Tabs using TabsPrimitive + Tailwind.
+
+**What to do**:
+- Wrap TabsPrimitive
+- Add underline or pill style variants
+- Active state styling (highlight)
+- Support icon + label tabs
+- Scrollable on mobile (horizontal scroll)
+- Support `unstyled`, `class` props
+- Support `variant` prop: 'underline' | 'pills' (default: 'underline')
+- NO ANIMATIONS (instant active state change)
+
+**Important**:
+- Mobile: Horizontal scroll container
+- Desktop: Fixed tab bar
+- Active indicator positioning (underline or background)
+
+**Acceptance Criteria**:
+- [ ] Uses TabsPrimitive internally
+- [ ] Underline variant works
+- [ ] Pills variant works
+- [ ] Active state styled
+- [ ] Scrollable on mobile
+- [ ] Styled with Tailwind
+- [ ] No animations
+
+---
+
+### Task 2.5.15: Implement PopoverPrimitive Component
+**Estimated Time**: 2.5 hours
+**Dependencies**: Task 2.2.4
+**File**: `packages/core/src/navigation-components/primitives/PopoverPrimitive.svelte`
+
+**Description**:
+Create headless Popover primitive for contextual overlays (dropdowns, menus, tooltips).
+
+**What to do**:
+- Accept anchor element reference
+- Accept position preference: 'top' | 'bottom' | 'left' | 'right'
+- Auto-positioning (flip if doesn't fit)
+- Portal to document.body
+- Handle click-outside to close
+- Handle Escape key to close
+- Emit open/close events
+- Provide visible slot prop
+- NO STYLES, NO ANIMATIONS
+
+**Important**:
+- Auto-positioning: Calculate available space, flip if needed
+- Anchor tracking: Position relative to anchor element
+- Z-index management
+
+**Positioning Logic**:
+1. Calculate anchor position
+2. Check available space in preferred direction
+3. Flip to opposite side if insufficient space
+4. Align to anchor (start, center, end)
+
+**Acceptance Criteria**:
+- [ ] Positions relative to anchor
+- [ ] Auto-flips when space insufficient
+- [ ] Portals to body
+- [ ] Click-outside closes
+- [ ] Escape key closes
+- [ ] Position updates on scroll/resize
+- [ ] No styling applied
+
+---
+
+### Task 2.5.16: Implement Popover Styled Component
+**Estimated Time**: 2 hours
+**Dependencies**: Task 2.5.15
+**File**: `packages/core/src/navigation-components/Popover.svelte`
+
+**Description**:
+Create styled Popover using PopoverPrimitive + Tailwind.
+
+**What to do**:
+- Wrap PopoverPrimitive
+- Add shadow, border, background
+- Support arrow indicator (optional)
+- Arrow positioning based on side
+- Support `unstyled`, `class` props
+- Support `showArrow` prop (default: true)
+- Responsive positioning (always fits viewport)
+- NO ANIMATIONS (instant show/hide)
+
+**Important**:
+- Arrow SVG or CSS triangle
+- Arrow points to anchor
+- Min/max width constraints
+
+**Use Cases**:
+- Dropdown menus
+- User menus
+- Context menus
+- Notification panels
+- Quick actions
+
+**Acceptance Criteria**:
+- [ ] Uses PopoverPrimitive internally
+- [ ] Shadow and border styled
+- [ ] Arrow indicator works
+- [ ] Arrow positioning correct
+- [ ] Styled with Tailwind
+- [ ] Responsive positioning
+- [ ] No animations
+
+---
+
+### Task 2.5.17: Create Navigation Components Index
 **Estimated Time**: 45 minutes
-**Dependencies**: Tasks 2.5.1-2.5.10
+**Dependencies**: Tasks 2.5.1-2.5.16
 **Files**:
 - `packages/core/src/navigation-components/index.ts`
 - `packages/core/src/navigation-components/primitives/index.ts`
@@ -699,25 +933,31 @@ Export all navigation components with organized documentation and clear import p
 - Export primitives from primitives/index
 - Add module docs explaining:
   - Two-layer architecture (primitives + styled)
+  - Mobile-first vs Desktop-first components
   - Customization patterns
   - Tailwind peer dependency
   - `unstyled` prop usage
 - Organize exports logically
 - Include import examples
 
+**Components to Export**:
+- Mobile-First: Modal, Sheet, Drawer, NavigationStack, Alert
+- Desktop-First: Sidebar, Tabs, Popover
+- Total: 8 styled + 8 primitives = 16 components
+
 **Acceptance Criteria**:
-- [ ] Styled components exported from main index
-- [ ] Primitives exported from primitives/index
+- [ ] All 8 styled components exported from main index
+- [ ] All 8 primitives exported from primitives/index
 - [ ] Clear documentation provided
 - [ ] Import paths work:
-  - `import { Modal } from '@composable-svelte/core/navigation-components'`
-  - `import { ModalPrimitive } from '@composable-svelte/core/navigation-components/primitives'`
+  - `import { Modal, Sidebar, Tabs } from '@composable-svelte/core/navigation-components'`
+  - `import { ModalPrimitive, SidebarPrimitive } from '@composable-svelte/core/navigation-components/primitives'`
 
 ---
 
-### Task 2.5.12: Add Tailwind Configuration Guide
+### Task 2.5.18: Add Tailwind Configuration Guide
 **Estimated Time**: 1 hour
-**Dependencies**: Task 2.5.11
+**Dependencies**: Task 2.5.17
 **File**: `packages/core/src/navigation-components/README.md`
 
 **Description**:
@@ -730,12 +970,14 @@ Create guide for setting up Tailwind with navigation components.
 - Document `unstyled` prop usage
 - Show customization patterns (5 levels)
 - Include shadcn-inspired theming approach
+- Document mobile-first vs desktop-first component behavior
 
 **Acceptance Criteria**:
 - [ ] Tailwind setup documented
 - [ ] Customization levels explained
 - [ ] CSS variables documented
 - [ ] Examples provided
+- [ ] Mobile/desktop component usage documented
 
 ---
 
@@ -837,25 +1079,37 @@ Test dismiss dependency creation and usage.
 ---
 
 ### Task 2.6.5: Test Navigation Components
-**Estimated Time**: 3-4 hours
-**Dependencies**: Tasks 2.5.1-2.5.5
+**Estimated Time**: 5-6 hours
+**Dependencies**: Tasks 2.5.1-2.5.16
 **File**: `packages/core/tests/navigation-components/*.test.ts`
 
 **Description**:
-Component tests for all navigation components.
+Component tests for all navigation components (mobile + desktop).
 
 **What to do**:
-- Test Modal show/hide based on store
-- Test Sheet transitions
-- Test Drawer side selection
-- Test NavigationStack push/pop
-- Test Alert button actions
+- **Mobile-First Components**:
+  - Test Modal show/hide based on store
+  - Test Sheet transitions
+  - Test Drawer side selection
+  - Test NavigationStack push/pop
+  - Test Alert button actions
+- **Desktop-First Components**:
+  - Test Sidebar collapse/expand
+  - Test Sidebar responsive behavior (desktop → drawer)
+  - Test Tabs keyboard navigation
+  - Test Tabs variant styles
+  - Test Popover positioning and auto-flip
+  - Test Popover anchor tracking
 - Use @testing-library/svelte for user interactions
+- Test primitives independently from styled components
 
 **Acceptance Criteria**:
-- [ ] All components render correctly
+- [ ] All 8 styled components tested
+- [ ] All 8 primitives tested
 - [ ] Show/hide logic tested
-- [ ] User interactions tested
+- [ ] User interactions tested (keyboard, click)
+- [ ] Responsive behavior tested (Sidebar)
+- [ ] Auto-positioning tested (Popover)
 - [ ] All tests pass
 
 ---
@@ -915,6 +1169,42 @@ Build example app demonstrating stack-based navigation.
 - [ ] Back button functions
 - [ ] Deep linking demonstrated
 - [ ] README explains usage
+
+---
+
+### Task 2.7.3: Create Desktop Navigation Example
+**Estimated Time**: 3-4 hours
+**Dependencies**: Tasks 2.5.11-2.5.16
+**File**: `examples/desktop-nav/`
+
+**Description**:
+Build example app demonstrating desktop-focused navigation patterns (Sidebar, Tabs, Popover).
+
+**What to do**:
+- Create admin panel layout with Sidebar
+- Implement multi-section content with Tabs
+- Add user menu with Popover
+- Demonstrate responsive behavior (sidebar → drawer on mobile)
+- Show tab navigation for settings pages
+- Include popover for notifications/quick actions
+- Add README explaining desktop patterns
+
+**Spec Reference**: Custom implementation (desktop patterns not in navigation-spec.md)
+
+**Example Features**:
+- Collapsible sidebar navigation
+- Settings page with tabs
+- User menu popover (profile, settings, logout)
+- Notifications popover
+- Responsive layout
+
+**Acceptance Criteria**:
+- [ ] Example app runs
+- [ ] Sidebar collapse/expand works
+- [ ] Tabs switch content correctly
+- [ ] Popover menus work
+- [ ] Responsive behavior demonstrated
+- [ ] README explains desktop patterns
 
 ---
 
@@ -995,14 +1285,32 @@ Document Phase 2 completion with metrics and verification.
 
 ## Summary
 
-**Total Estimated Time**: 50-65 hours (3-4 weeks at 15-20 hours/week)
+**Total Estimated Time**: 65-80 hours (~3 weeks at 20-25 hours/week)
+
+**Time Breakdown by Section**:
+- Task 2.1 (Types): 1.5 hours
+- Task 2.2 (Operators): 8-11 hours
+- Task 2.3 (Stack): 4-5 hours
+- Task 2.4 (Dismiss): 2-3 hours
+- Task 2.5 (Components): 28-32 hours (16 component tasks + 2 infrastructure)
+- Task 2.6 (Testing): 12-16 hours
+- Task 2.7 (Examples): 9-12 hours
+- Task 2.8 (Docs): 3.5 hours
 
 **Critical Path**:
 1. Navigation types (2.1.x) → Operators (2.2.x) → Components (2.5.x)
-2. Stack types (2.1.2) → Stack helpers (2.3.x) → NavigationStack (2.5.4)
+2. Stack types (2.1.2) → Stack helpers (2.3.x) → NavigationStack (2.5.7-2.5.8)
 3. Testing (2.6.x) can happen in parallel with component development
 4. Examples (2.7.x) after core implementation
 5. Documentation (2.8.x) at the end
+
+**Component Implementation Order** (recommended):
+1. Start with Modal (2.5.1-2.5.2) to establish pattern
+2. Sheet and Drawer (mobile overlays)
+3. Sidebar (desktop persistent navigation)
+4. Tabs (desktop tabbed content)
+5. Popover (contextual menus)
+6. NavigationStack and Alert last
 
 **Deferred Items**:
 - SvelteKit integration (optional, can be Phase 6)
@@ -1013,10 +1321,13 @@ Document Phase 2 completion with metrics and verification.
 **Phase 2 Success Criteria**:
 - Users can implement tree-based navigation with modals/sheets
 - Stack-based navigation works for multi-screen flows
+- Desktop navigation patterns supported (sidebar, tabs, popover)
+- Mobile-first components work responsively
 - Children can dismiss themselves via dependency
 - All navigation is state-driven and testable
 - Components provide good defaults with customization
-- Examples demonstrate real-world usage
+- Primitives allow full styling control
+- Examples demonstrate real-world usage (mobile + desktop)
 
 **Key Principles**:
 - State drives navigation (non-null = show, null = hide)
