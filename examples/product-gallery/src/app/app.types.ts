@@ -1,4 +1,4 @@
-import type { StackAction } from '@composable-svelte/core/navigation';
+import type { PresentationAction } from '@composable-svelte/core/navigation';
 import type { Product, ProductCategory } from '../models/product.js';
 import type { CartState } from '../models/cart.js';
 import type {
@@ -18,7 +18,7 @@ export interface AppState {
   filters: FilterState;
   viewMode: ViewMode;
   sidebarExpanded: boolean;
-  detailPath: ProductDetailState[];
+  productDetail: ProductDetailState | null;  // Tree-based navigation
 }
 
 export interface FilterState {
@@ -37,7 +37,7 @@ export type AppAction =
   | { type: 'cartItemAdded'; productId: string; quantity: number }
   | { type: 'productDeleted'; productId: string }
   | { type: 'favoriteToggled'; productId: string }
-  | { type: 'detailPath'; action: StackAction<ProductDetailState, ProductDetailAction> };
+  | { type: 'productDetail'; action: PresentationAction<ProductDetailAction> };
 
 // ============================================================================
 // Factory Functions
@@ -52,6 +52,6 @@ export function createInitialAppState(products: Product[]): AppState {
     },
     viewMode: 'grid',
     sidebarExpanded: true,
-    detailPath: []
+    productDetail: null
   };
 }

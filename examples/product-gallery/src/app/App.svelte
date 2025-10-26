@@ -1,6 +1,8 @@
 <script lang="ts">
   import { createStore } from '@composable-svelte/core';
   import { Sidebar } from '@composable-svelte/core/navigation-components';
+  import { Modal } from '@composable-svelte/core/navigation-components';
+  import { scopeToDestination } from '@composable-svelte/core/navigation';
   import { appReducer } from './app.reducer.js';
   import { createInitialAppState } from './app.types.js';
   import { SAMPLE_PRODUCTS } from '../models/sample-data.js';
@@ -19,11 +21,26 @@
   // ============================================================================
 
   const state = $derived(store.state);
-  const currentProduct = $derived.by(() => {
-    const lastDetail = state.detailPath[state.detailPath.length - 1];
-    if (!lastDetail) return null;
-    return state.products.find((p) => p.id === lastDetail.productId) ?? null;
-  });
+
+  // Scope to product detail destination
+  const productDetailStore = $derived(
+    state.productDetail
+      ? {
+          ...store,
+          state: state.productDetail,
+          send: (action: any) => {
+            store.send({ type: 'productDetail', action: { type: 'presented', action } });
+          },
+          dismiss: () => {
+            store.send({ type: 'productDetail', action: { type: 'dismiss' } });
+          }
+        }
+      : null
+  );
+
+  const currentProduct = $derived(
+    state.productDetail ? state.products.find((p) => p.id === state.productDetail!.productId) : null
+  );
 </script>
 
 <!-- ============================================================================ -->
@@ -55,35 +72,32 @@
       <h1 class="text-xl font-bold">Product Gallery</h1>
     </div>
 
-    <!-- Content -->
-    <div class="flex-1 overflow-hidden relative">
-      <!-- Base Layer: Product List -->
-      {#if state.detailPath.length === 0}
-        <ProductList
-          products={state.products}
-          cart={state.cart}
-          viewMode={state.viewMode}
-          selectedCategories={state.filters.selectedCategories}
-          onViewModeChange={(mode) => store.send({ type: 'viewModeChanged', mode })}
-          onProductClick={(productId) => store.send({ type: 'productClicked', productId })}
-        />
-      {/if}
-
-      <!-- Stack Layer: Product Detail (only show last one) -->
-      {#if state.detailPath.length > 0 && currentProduct}
-        <div class="absolute inset-0 bg-background">
-          <ProductDetail
-            store={store}
-            product={currentProduct}
-            onBack={() => {
-              store.send({
-                type: 'detailPath',
-                action: { type: 'pop' }
-              });
-            }}
-          />
-        </div>
-      {/if}
+    <!-- Product List -->
+    <div class="flex-1 overflow-hidden">
+      <ProductList
+        products={state.products}
+        cart={state.cart}
+        viewMode={state.viewMode}
+        selectedCategories={state.filters.selectedCategories}
+        onViewModeChange={(mode) => store.send({ type: 'viewModeChanged', mode })}
+        onProductClick={(productId) => store.send({ type: 'productClicked', productId })}
+      />
     </div>
   </div>
 </div>
+
+<!-- ============================================================================ -->
+<!-- Product Detail Modal -->
+<!-- ============================================================================ -->
+
+{#if productDetailStore && currentProduct}
+  <Modal store={productDetailStore}>
+    {#snippet children({ store: detailStore })}
+      <ProductDetail
+        store={detailStore}
+        product={currentProduct}
+        onBack={() => detailStore.dismiss()}
+      />
+    {/snippet}
+  </Modal>
+{/if}

@@ -1,6 +1,6 @@
 import type { Reducer } from '@composable-svelte/core';
 import { Effect } from '@composable-svelte/core';
-import { handleStackAction } from '@composable-svelte/core/navigation';
+import { ifLet } from '@composable-svelte/core/navigation';
 import type { AppState, AppAction } from './app.types.js';
 import { addToCart } from '../models/cart.js';
 import { createProductDetailState } from '../features/product-detail/product-detail.types.js';
@@ -21,12 +21,12 @@ export interface AppDependencies {
 export const appReducer: Reducer<AppState, AppAction, AppDependencies> = (state, action, deps) => {
   switch (action.type) {
     case 'productClicked': {
-      // Push product detail onto stack
+      // Show product detail using tree-based navigation
       const detailState = createProductDetailState(action.productId);
       return [
         {
           ...state,
-          detailPath: [...state.detailPath, detailState]
+          productDetail: detailState
         },
         Effect.none()
       ];
@@ -84,8 +84,8 @@ export const appReducer: Reducer<AppState, AppAction, AppDependencies> = (state,
         {
           ...state,
           products: state.products.filter((p) => p.id !== action.productId),
-          // Also pop the detail view from stack since product is deleted
-          detailPath: state.detailPath.slice(0, -1)
+          // Also dismiss the detail view since product is deleted
+          productDetail: null
         },
         Effect.none()
       ];
@@ -103,17 +103,16 @@ export const appReducer: Reducer<AppState, AppAction, AppDependencies> = (state,
       ];
     }
 
-    case 'detailPath': {
-      // Handle stack navigation with handleStackAction
-      return handleStackAction(
-        (s: AppState) => s.detailPath,
-        (s: AppState, path) => ({ ...s, detailPath: path }),
-        (a: AppAction) => (a.type === 'detailPath' ? a.action : null),
-        (sa) => ({ type: 'detailPath' as const, action: sa }),
+    case 'productDetail': {
+      // Handle product detail navigation with ifLet
+      const [newState, effect] = ifLet(
+        (s: AppState) => s.productDetail,
+        (s: AppState, detail) => ({ ...s, productDetail: detail }),
+        (a: AppAction) => (a.type === 'productDetail' ? a.action : null),
+        (ca) => ({ type: 'productDetail' as const, action: ca }),
         productDetailReducer,
         {
           onCartItemAdded: (productId, quantity) => {
-            // This will be dispatched as an effect
             return { type: 'cartItemAdded' as const, productId, quantity };
           },
           onProductDeleted: (productId) => {
@@ -121,6 +120,13 @@ export const appReducer: Reducer<AppState, AppAction, AppDependencies> = (state,
           }
         }
       )(state, action, deps);
+
+      // Observe dismiss action to hide detail
+      if (action.action.type === 'dismiss') {
+        return [{ ...newState, productDetail: null }, effect];
+      }
+
+      return [newState, effect];
     }
 
     default:
