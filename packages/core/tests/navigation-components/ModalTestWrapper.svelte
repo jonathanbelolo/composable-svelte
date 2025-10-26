@@ -9,20 +9,10 @@
 
   let { parentStore }: Props = $props();
 
-  // Track parent store state reactively
-  let parentState = $state(parentStore.state);
-
-  // Subscribe to parent store updates
-  $effect(() => {
-    const unsubscribe = parentStore.subscribe((newState) => {
-      parentState = newState;
-    });
-    return unsubscribe;
-  });
-
-  // Reactively compute the scoped store based on parent state
+  // Derive the scoped store directly from parentStore.state
+  // This ensures reactivity is tied to the store's internal state
   const scopedStore = $derived(
-    parentState.destination
+    parentStore.state.destination
       ? scopeToDestination(
           parentStore,
           ['destination'],
