@@ -124,10 +124,16 @@ export function scopeToDestination<DestState, DestAction, ParentState = any, Par
 
   // Create dispatch function that wraps actions
   const dispatch = (action: DestAction): void => {
-    // Wrap in PresentationAction.presented
-    const presentationAction: PresentationAction<DestAction> = {
-      type: 'presented' as const,
+    // Wrap in case type (e.g., { type: 'deleteAlert', action: childAction })
+    const destinationAction = {
+      type: caseType,
       action
+    } as any;
+
+    // Wrap in PresentationAction.presented
+    const presentationAction: PresentationAction<any> = {
+      type: 'presented' as const,
+      action: destinationAction
     };
 
     // Wrap in parent action field

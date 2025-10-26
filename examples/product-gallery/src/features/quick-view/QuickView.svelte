@@ -25,7 +25,7 @@
   <div class="flex items-center justify-between p-6 border-b">
     <h2 class="text-2xl font-bold">Quick View</h2>
     <button
-      onclick={() => store.send({ type: 'closeButtonTapped' })}
+      onclick={() => store.dispatch({ type: 'closeButtonTapped' })}
       class="w-10 h-10 rounded-full hover:bg-accent flex items-center justify-center text-2xl text-muted-foreground hover:text-foreground"
       aria-label="Close"
     >
@@ -61,7 +61,7 @@
   <!-- Footer -->
   <div class="p-6 border-t bg-accent/50">
     <button
-      onclick={() => store.send({ type: 'closeButtonTapped' })}
+      onclick={() => store.dispatch({ type: 'closeButtonTapped' })}
       class="w-full py-3 px-4 bg-primary text-primary-foreground rounded-lg font-semibold hover:opacity-90"
     >
       Close

@@ -7,7 +7,7 @@ import type { QuickViewState, QuickViewAction } from './quick-view.types.js';
 // ============================================================================
 
 export interface QuickViewDependencies {
-  dismiss: () => void;
+  // No dependencies needed - parent observes actions
 }
 
 // ============================================================================
@@ -21,11 +21,7 @@ export const quickViewReducer: Reducer<QuickViewState, QuickViewAction, QuickVie
 ) => {
   switch (action.type) {
     case 'closeButtonTapped':
-      try {
-        deps.dismiss();
-      } catch (error) {
-        console.error('[QuickView] Failed to dismiss:', error);
-      }
+      // Parent observes this action and dismisses
       return [state, Effect.none()];
 
     default:

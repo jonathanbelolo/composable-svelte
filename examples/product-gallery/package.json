@@ -19,6 +19,7 @@
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^6.2.1",
     "@vitest/browser": "^4.0.3",
+    "@vitest/browser-playwright": "^4.0.3",
     "@vitest/ui": "^4.0.3",
     "playwright": "^1.56.1",
     "tailwindcss": "^3.4.0",

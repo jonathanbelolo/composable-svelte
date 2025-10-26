@@ -14,7 +14,11 @@
   // Store Initialization
   // ============================================================================
 
-  const store = createStore(appReducer, createInitialAppState(SAMPLE_PRODUCTS), {});
+  const store = createStore({
+    initialState: createInitialAppState(SAMPLE_PRODUCTS),
+    reducer: appReducer,
+    dependencies: {}
+  });
 
   // ============================================================================
   // Derived State
@@ -28,11 +32,11 @@
       ? {
           ...store,
           state: state.productDetail,
-          send: (action: any) => {
-            store.send({ type: 'productDetail', action: { type: 'presented', action } });
+          dispatch: (action: any) => {
+            store.dispatch({ type: 'productDetail', action: { type: 'presented', action } });
           },
           dismiss: () => {
-            store.send({ type: 'productDetail', action: { type: 'dismiss' } });
+            store.dispatch({ type: 'productDetail', action: { type: 'dismiss' } });
           }
         }
       : null
@@ -53,7 +57,7 @@
     {#snippet children()}
       <CategoryFilter
         selectedCategories={state.filters.selectedCategories}
-        onCategoryToggle={(category) => store.send({ type: 'categoryToggled', category })}
+        onCategoryToggle={(category) => store.dispatch({ type: 'categoryToggled', category })}
       />
     {/snippet}
   </Sidebar>
@@ -63,7 +67,7 @@
     <!-- Mobile Menu Button -->
     <div class="lg:hidden p-4 border-b flex items-center gap-4">
       <button
-        onclick={() => store.send({ type: 'sidebarToggled' })}
+        onclick={() => store.dispatch({ type: 'sidebarToggled' })}
         class="w-10 h-10 rounded-lg hover:bg-accent flex items-center justify-center"
         aria-label="Toggle sidebar"
       >
@@ -79,8 +83,8 @@
         cart={state.cart}
         viewMode={state.viewMode}
         selectedCategories={state.filters.selectedCategories}
-        onViewModeChange={(mode) => store.send({ type: 'viewModeChanged', mode })}
-        onProductClick={(productId) => store.send({ type: 'productClicked', productId })}
+        onViewModeChange={(mode) => store.dispatch({ type: 'viewModeChanged', mode })}
+        onProductClick={(productId) => store.dispatch({ type: 'productClicked', productId })}
       />
     </div>
   </div>
@@ -91,7 +95,7 @@
 <!-- ============================================================================ -->
 
 {#if productDetailStore && currentProduct}
-  <Modal store={productDetailStore}>
+  <Modal store={productDetailStore} disableClickOutside>
     {#snippet children({ store: detailStore })}
       <ProductDetail
         store={detailStore}

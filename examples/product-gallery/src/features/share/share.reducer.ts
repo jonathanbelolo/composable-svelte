@@ -7,7 +7,7 @@ import type { ShareState, ShareAction } from './share.types.js';
 // ============================================================================
 
 export interface ShareDependencies {
-  dismiss: () => void;
+  // No dependencies needed - parent observes actions
 }
 
 // ============================================================================
@@ -31,23 +31,15 @@ export const shareReducer: Reducer<ShareState, ShareAction, ShareDependencies> =
 
     case 'shareButtonTapped':
       // In a real app, would trigger share action here
-      // For demo, just dismiss
+      // For demo, just log and let parent observe to dismiss
       if (state.selectedMethod) {
         console.log(`[Share] Sharing via ${state.selectedMethod}`);
-        try {
-          deps.dismiss();
-        } catch (error) {
-          console.error('[Share] Failed to dismiss:', error);
-        }
       }
+      // Parent observes this action and dismisses
       return [state, Effect.none()];
 
     case 'cancelButtonTapped':
-      try {
-        deps.dismiss();
-      } catch (error) {
-        console.error('[Share] Failed to dismiss:', error);
-      }
+      // Parent observes this action and dismisses
       return [state, Effect.none()];
 
     default:

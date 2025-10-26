@@ -48,7 +48,7 @@
   // Derived State
   // ============================================================================
 
-  const visible = $derived(store !== null);
+  const visible = $derived(store !== null && store.state !== null);
 
   // ============================================================================
   // Event Handlers

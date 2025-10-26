@@ -7,7 +7,7 @@ import type { AddToCartState, AddToCartAction } from './add-to-cart.types.js';
 // ============================================================================
 
 export interface AddToCartDependencies {
-  dismiss: () => void;
+  // No dependencies needed - parent observes actions
 }
 
 // ============================================================================
@@ -39,19 +39,11 @@ export const addToCartReducer: Reducer<
       ];
 
     case 'addButtonTapped':
-      try {
-        deps.dismiss();
-      } catch (error) {
-        console.error('[AddToCart] Failed to dismiss:', error);
-      }
+      // Parent observes this action and dismisses
       return [state, Effect.none()];
 
     case 'cancelButtonTapped':
-      try {
-        deps.dismiss();
-      } catch (error) {
-        console.error('[AddToCart] Failed to dismiss:', error);
-      }
+      // Parent observes this action and dismisses
       return [state, Effect.none()];
 
     default:

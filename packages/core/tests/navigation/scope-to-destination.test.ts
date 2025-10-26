@@ -37,6 +37,10 @@ type ChildAction =
   | { type: 'save' }
   | { type: 'cancel' };
 
+type DestinationAction =
+  | { type: 'addItem'; action: ChildAction }
+  | { type: 'editItem'; action: ChildAction };
+
 interface ParentState {
   destination: Destination | null;
   items: string[];
@@ -45,7 +49,7 @@ interface ParentState {
 type ParentAction =
   | { type: 'showAddItem' }
   | { type: 'showEditItem'; id: string }
-  | { type: 'destination'; action: PresentationAction<ChildAction> }
+  | { type: 'destination'; action: PresentationAction<DestinationAction> }
   | { type: 'addItem'; item: string };
 
 const parentReducer: Reducer<ParentState, ParentAction, null> = (state, action) => {
@@ -172,7 +176,7 @@ describe('scopeToDestination()', () => {
     expect(scopedStore.state).toEqual({ item: 'apple', quantity: 5 });
   });
 
-  it('dispatch() wraps actions in PresentationAction.presented', () => {
+  it('dispatch() wraps actions with case type and PresentationAction.presented', () => {
     const initialState: ParentState = {
       destination: {
         type: 'addItem',
@@ -209,15 +213,101 @@ describe('scopeToDestination()', () => {
       type: 'destination',
       action: {
         type: 'presented',
-        action: { type: 'updateItem', value: 'banana' }
+        action: {
+          type: 'addItem',  // Case type wrapper
+          action: { type: 'updateItem', value: 'banana' }
+        }
+      }
+    });
+  });
+
+  it('dispatch() wraps actions with case type to distinguish between destination types', () => {
+    // Regression test: Verify that actions are wrapped with case type
+    // This prevents actions from one destination type being handled by another
+    const initialState: ParentState = {
+      destination: {
+        type: 'addItem',
+        state: { item: 'apple', quantity: 5 }
+      },
+      items: []
+    };
+
+    const dispatched: ParentAction[] = [];
+
+    const testReducer: Reducer<ParentState, ParentAction, null> = (state, action) => {
+      dispatched.push(action);
+      return parentReducer(state, action, null);
+    };
+
+    const store = createStore({
+      initialState,
+      reducer: testReducer,
+      dependencies: null
+    });
+
+    // Create scoped stores for BOTH destination types
+    const addItemStore = scopeToDestination<AddItemState, ChildAction>(
+      store,
+      ['destination'],
+      'addItem',
+      'destination'
+    );
+
+    const editItemStore = scopeToDestination<EditItemState, ChildAction>(
+      store,
+      ['destination'],
+      'editItem',
+      'destination'
+    );
+
+    // Dispatch from addItem store
+    addItemStore.dispatch({ type: 'save' });
+
+    // Verify action is wrapped with 'addItem' case type
+    expect(dispatched[0]).toEqual({
+      type: 'destination',
+      action: {
+        type: 'presented',
+        action: {
+          type: 'addItem',  // ← Critical: Case type prevents confusion
+          action: { type: 'save' }
+        }
+      }
+    });
+
+    // Now switch destination to editItem
+    store.dispatch({ type: 'showEditItem', id: '123' });
+
+    // Re-create scoped stores
+    const editItemStore2 = scopeToDestination<EditItemState, ChildAction>(
+      store,
+      ['destination'],
+      'editItem',
+      'destination'
+    );
+
+    // Dispatch from editItem store
+    editItemStore2.dispatch({ type: 'save' });
+
+    // Verify action is wrapped with 'editItem' case type (index 2: first action + showEditItem + second action)
+    expect(dispatched[2]).toEqual({
+      type: 'destination',
+      action: {
+        type: 'presented',
+        action: {
+          type: 'editItem',  // ← Different case type for different destination
+          action: { type: 'save' }
+        }
       }
     });
   });
 
   it('dispatch() wraps actions in correct parent field', () => {
+    type CustomDestinationAction = { type: 'addItem'; action: ChildAction };
+
     type CustomParentAction =
       | { type: 'show' }
-      | { type: 'modal'; action: PresentationAction<ChildAction> };
+      | { type: 'modal'; action: PresentationAction<CustomDestinationAction> };
 
     const initialState: ParentState = {
       destination: {
@@ -261,7 +351,10 @@ describe('scopeToDestination()', () => {
       type: 'modal',
       action: {
         type: 'presented',
-        action: { type: 'save' }
+        action: {
+          type: 'addItem',  // Case type wrapper
+          action: { type: 'save' }
+        }
       }
     });
   });

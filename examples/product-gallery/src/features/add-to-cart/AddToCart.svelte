@@ -30,14 +30,14 @@
   <!-- Header -->
   <div class="flex items-center justify-between p-4 border-b">
     <button
-      onclick={() => store.send({ type: 'cancelButtonTapped' })}
+      onclick={() => store.dispatch({ type: 'cancelButtonTapped' })}
       class="text-sm font-medium text-muted-foreground hover:text-foreground"
     >
       Cancel
     </button>
     <h2 class="text-lg font-semibold">Add to Cart</h2>
     <button
-      onclick={() => store.send({ type: 'addButtonTapped' })}
+      onclick={() => store.dispatch({ type: 'addButtonTapped' })}
       class="text-sm font-medium text-primary hover:opacity-80"
     >
       Add
@@ -60,15 +60,15 @@
       <label class="text-sm font-medium">Quantity</label>
       <div class="flex items-center gap-4">
         <button
-          onclick={() => store.send({ type: 'decrementQuantity' })}
-          disabled={state.quantity <= 1}
+          onclick={() => store.dispatch({ type: 'decrementQuantity' })}
+          disabled={(state?.quantity || 1) <= 1}
           class="w-12 h-12 rounded-lg border-2 border-border bg-background hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-xl"
         >
           −
         </button>
-        <span class="text-3xl font-semibold w-16 text-center">{state.quantity}</span>
+        <span class="text-3xl font-semibold w-16 text-center">{state?.quantity || 1}</span>
         <button
-          onclick={() => store.send({ type: 'incrementQuantity' })}
+          onclick={() => store.dispatch({ type: 'incrementQuantity' })}
           class="w-12 h-12 rounded-lg border-2 border-border bg-background hover:bg-accent font-semibold text-xl"
         >
           +
@@ -80,7 +80,7 @@
     <div class="mt-8 p-4 rounded-lg bg-accent">
       <div class="flex justify-between items-center">
         <span class="text-lg font-medium">Total</span>
-        <span class="text-2xl font-bold">{formatPrice(product.price * state.quantity)}</span>
+        <span class="text-2xl font-bold">{formatPrice(product.price * (state?.quantity || 1))}</span>
       </div>
     </div>
   </div>

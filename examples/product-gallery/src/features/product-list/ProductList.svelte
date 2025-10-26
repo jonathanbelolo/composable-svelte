@@ -31,7 +31,7 @@
   // Filtered Products
   // ============================================================================
 
-  const filteredProducts = $derived(() => {
+  const filteredProducts = $derived.by(() => {
     let filtered = products;
 
     // Filter by category
@@ -106,7 +106,7 @@
 
   <!-- Product Grid/List -->
   <div class="flex-1 overflow-y-auto p-4">
-    {#if filteredProducts().length === 0}
+    {#if filteredProducts.length === 0}
       <!-- Empty State -->
       <div class="flex flex-col items-center justify-center h-full text-center p-8">
         <div class="text-6xl mb-4">📦</div>
@@ -124,7 +124,7 @@
     {:else if viewMode === 'grid'}
       <!-- Grid View -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {#each filteredProducts() as product (product.id)}
+        {#each filteredProducts as product (product.id)}
           <ProductCard
             {product}
             viewMode="grid"
@@ -135,7 +135,7 @@
     {:else}
       <!-- List View (or Favorites in list mode) -->
       <div class="space-y-4">
-        {#each filteredProducts() as product (product.id)}
+        {#each filteredProducts as product (product.id)}
           <ProductCard
             {product}
             viewMode="list"

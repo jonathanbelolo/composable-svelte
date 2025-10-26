@@ -97,6 +97,7 @@
       role="dialog"
       aria-modal="true"
       aria-label="Bottom sheet"
+      data-dialog-type="sheet"
     >
       {@render children?.({ visible, store, height })}
     </div>

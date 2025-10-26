@@ -89,6 +89,7 @@
       role="dialog"
       aria-modal="true"
       aria-label="Modal dialog"
+      data-dialog-type="modal"
     >
       {@render children?.({ visible, store })}
     </div>

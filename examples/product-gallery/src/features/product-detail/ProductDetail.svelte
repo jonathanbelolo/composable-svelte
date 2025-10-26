@@ -11,6 +11,7 @@
   import AddToCart from '../add-to-cart/AddToCart.svelte';
   import Share from '../share/Share.svelte';
   import QuickView from '../quick-view/QuickView.svelte';
+  import DeleteAlert from '../delete-alert/DeleteAlert.svelte';
 
   // ============================================================================
   // Props
@@ -29,24 +30,21 @@
   // ============================================================================
 
   const addToCartStore = $derived(
-    scopeToDestination(store)
-      .into('destination')
-      .case('addToCart')
+    scopeToDestination(store, ['destination'], 'addToCart', 'destination')
   );
 
   const shareStore = $derived(
-    scopeToDestination(store)
-      .into('destination')
-      .case('share')
+    scopeToDestination(store, ['destination'], 'share', 'destination')
   );
 
   const quickViewStore = $derived(
-    scopeToDestination(store)
-      .into('destination')
-      .case('quickView')
+    scopeToDestination(store, ['destination'], 'quickView', 'destination')
   );
 
-  const deleteAlertVisible = $derived(store.state.destination?.type === 'delete');
+  const deleteAlertStore = $derived(
+    scopeToDestination(store, ['destination'], 'deleteAlert', 'destination')
+  );
+
   const infoPopoverVisible = $derived(store.state.destination?.type === 'info');
 
   // ============================================================================
@@ -75,7 +73,7 @@
     <h1 class="text-xl font-bold flex-1">Product Details</h1>
     <button
       bind:this={infoButtonRef}
-      onclick={() => store.send({ type: 'infoButtonTapped' })}
+      onclick={() => store.dispatch({ type: 'infoButtonTapped' })}
       class="w-10 h-10 rounded-full hover:bg-accent flex items-center justify-center"
       aria-label="Info"
     >
@@ -122,14 +120,14 @@
     <!-- Primary Actions -->
     <div class="grid grid-cols-2 gap-3">
       <button
-        onclick={() => store.send({ type: 'addToCartButtonTapped' })}
+        onclick={() => store.dispatch({ type: 'addToCartButtonTapped' })}
         disabled={!isInStock(product)}
         class="py-3 px-4 bg-primary text-primary-foreground rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Add to Cart
       </button>
       <button
-        onclick={() => store.send({ type: 'quickViewButtonTapped' })}
+        onclick={() => store.dispatch({ type: 'quickViewButtonTapped' })}
         class="py-3 px-4 bg-secondary text-secondary-foreground rounded-lg font-semibold hover:opacity-90"
       >
         Quick View
@@ -139,13 +137,13 @@
     <!-- Secondary Actions -->
     <div class="grid grid-cols-2 gap-3">
       <button
-        onclick={() => store.send({ type: 'shareButtonTapped' })}
+        onclick={() => store.dispatch({ type: 'shareButtonTapped' })}
         class="py-2 px-4 border-2 border-border rounded-lg font-medium hover:bg-accent"
       >
         Share
       </button>
       <button
-        onclick={() => store.send({ type: 'deleteButtonTapped' })}
+        onclick={() => store.dispatch({ type: 'deleteButtonTapped' })}
         class="py-2 px-4 border-2 border-destructive text-destructive rounded-lg font-medium hover:bg-destructive/10"
       >
         Delete
@@ -180,36 +178,17 @@
 </Modal>
 
 <!-- Delete Alert -->
-{#if deleteAlertVisible}
-  <Alert
-    title="Delete Product"
-    message="Are you sure you want to delete '{product.name}'? This action cannot be undone."
-    buttons={[
-      {
-        label: 'Cancel',
-        variant: 'secondary',
-        onclick: () => store.send({
-          type: 'destination',
-          action: { type: 'presented', action: { type: 'deleteCancelled' } }
-        })
-      },
-      {
-        label: 'Delete',
-        variant: 'destructive',
-        onclick: () => store.send({
-          type: 'destination',
-          action: { type: 'presented', action: { type: 'deleteConfirmed' } }
-        })
-      }
-    ]}
-  />
-{/if}
+<Alert store={deleteAlertStore}>
+  {#snippet children({ store: childStore })}
+    <DeleteAlert store={childStore} {product} />
+  {/snippet}
+</Alert>
 
 <!-- Info Popover -->
 {#if infoPopoverVisible && infoButtonRef}
   <Popover
     triggerElement={infoButtonRef}
-    onClose={() => store.send({
+    onClose={() => store.dispatch({
       type: 'destination',
       action: { type: 'dismiss' }
     })}

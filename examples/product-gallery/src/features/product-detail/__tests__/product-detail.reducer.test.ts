@@ -123,7 +123,8 @@ describe('ProductDetail Reducer', () => {
       );
 
       expect(newState.destination).toBeNull();
-      expect(effect._tag).toBe('Batch');
+      // Effect.batch() optimizes single effects - returns Run instead of Batch
+      expect(effect._tag).toBe('Run');
     });
   });
 

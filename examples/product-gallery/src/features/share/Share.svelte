@@ -40,15 +40,15 @@
   <!-- Header -->
   <div class="flex items-center justify-between p-4 border-b">
     <button
-      onclick={() => store.send({ type: 'cancelButtonTapped' })}
+      onclick={() => store.dispatch({ type: 'cancelButtonTapped' })}
       class="text-sm font-medium text-muted-foreground hover:text-foreground"
     >
       Cancel
     </button>
     <h2 class="text-lg font-semibold">Share Product</h2>
     <button
-      onclick={() => store.send({ type: 'shareButtonTapped' })}
-      disabled={!state.selectedMethod}
+      onclick={() => store.dispatch({ type: 'shareButtonTapped' })}
+      disabled={!state?.selectedMethod}
       class="text-sm font-medium text-primary hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
     >
       Share
@@ -71,15 +71,15 @@
       <label class="text-sm font-medium block mb-3">Share via</label>
       {#each shareMethods as { method, label, icon }}
         <button
-          onclick={() => store.send({ type: 'methodSelected', method })}
-          class="w-full flex items-center gap-4 p-4 rounded-lg border-2 transition-all {state.selectedMethod ===
+          onclick={() => store.dispatch({ type: 'methodSelected', method })}
+          class="w-full flex items-center gap-4 p-4 rounded-lg border-2 transition-all {state?.selectedMethod ===
           method
             ? 'border-primary bg-primary/10'
             : 'border-border hover:bg-accent'}"
         >
           <span class="text-3xl">{icon}</span>
           <span class="font-medium">{label}</span>
-          {#if state.selectedMethod === method}
+          {#if state?.selectedMethod === method}
             <span class="ml-auto text-primary">✓</span>
           {/if}
         </button>

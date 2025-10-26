@@ -23,6 +23,9 @@
   <!-- Grid View -->
   <button
     {onclick}
+    data-testid="product-card"
+    data-product-id={String(product.id)}
+    data-product-name={String(product.name)}
     class="group relative flex flex-col p-4 rounded-lg border-2 border-border hover:border-primary hover:shadow-lg transition-all text-left bg-card"
   >
     <!-- Favorite Badge -->
@@ -51,6 +54,9 @@
   <!-- List View -->
   <button
     {onclick}
+    data-testid="product-card"
+    data-product-id={String(product.id)}
+    data-product-name={String(product.name)}
     class="group flex items-center gap-4 p-4 rounded-lg border-2 border-border hover:border-primary hover:shadow-lg transition-all text-left bg-card w-full"
   >
     <!-- Product Image -->

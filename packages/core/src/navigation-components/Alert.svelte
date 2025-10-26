@@ -89,6 +89,7 @@
       role="alertdialog"
       aria-modal="true"
       aria-label="Alert dialog"
+      data-dialog-type="alert"
     >
       {@render children?.({ visible, store })}
     </div>
