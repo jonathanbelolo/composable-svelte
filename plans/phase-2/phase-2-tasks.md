@@ -178,23 +178,53 @@ Create a helper function that simplifies enum-based destination routing by autom
 **Description**:
 Create utility functions for deep matching of PresentationAction to simplify parent observation of child events.
 
+**Important**: The spec (Section 7.2) defines TWO helper functions. Implement both:
+1. `matchPresentationAction<T>(action, path)` - Extracts action if path matches
+2. `isActionAtPath<T>(action, path, predicate)` - Boolean check with predicate
+
 **What to do**:
-- Implement matchPresentationAction() that unwraps presented actions
-- Support deep path matching (e.g., 'addItem.saveButtonTapped')
-- Return null if action doesn't match the path
-- Return unwrapped child action if it matches
+- Implement `matchPresentationAction()` that unwraps presented actions
+  - Support deep path matching (e.g., `['destination', 'presented', 'addItem']`)
+  - Return null if action doesn't match the path
+  - Return unwrapped child action if it matches
+- Implement `isActionAtPath()` for predicate-based matching
+  - Combines path matching with type-safe predicate
+  - Returns boolean instead of extracted action
 - Add type guards for safer extraction
 - Include examples of parent observing child actions
 
-**Spec Reference**: `navigation-spec.md` Section 7.2 - "Helper Functions"
+**Spec Reference**: `navigation-spec.md` Section 7.2 - "Helper: Deep Action Matching" (lines 1537-1602)
+
+**Implementation Notes**:
+```typescript
+// Example from spec
+const innerAction = matchPresentationAction(
+  action,
+  ['destination', 'presented', 'addItem']
+);
+if (innerAction?.type === 'saveButtonTapped') {
+  // Handle save
+}
+
+// Predicate variant
+if (isActionAtPath(
+  action,
+  ['destination', 'presented', 'addItem'],
+  (a) => a.type === 'saveButtonTapped'
+)) {
+  // Handle save - more concise
+}
+```
 
 **Acceptance Criteria**:
 - [ ] matchPresentationAction() unwraps presented actions
+- [ ] isActionAtPath() provides predicate-based matching
 - [ ] Supports single-level matching
 - [ ] Supports deep path matching with dot notation
-- [ ] Returns null for non-matching actions
+- [ ] Returns null for non-matching actions (matchPresentationAction)
+- [ ] Returns boolean for predicate checks (isActionAtPath)
 - [ ] Type guards ensure type safety
-- [ ] JSDoc shows parent observation pattern
+- [ ] JSDoc shows parent observation pattern for both functions
 
 ---
 
@@ -206,6 +236,8 @@ Create utility functions for deep matching of PresentationAction to simplify par
 **Description**:
 Create helper for creating scoped stores from destination state for use in navigation components.
 
+**Important**: This is the Phase 2 implementation. In Phase 3, a more ergonomic fluent API `scopeTo()` will be added that wraps this function. This implementation will remain as the underlying engine.
+
 **What to do**:
 - Accept parent store and destination field selector
 - Return scoped store that reads from destination field
@@ -213,8 +245,43 @@ Create helper for creating scoped stores from destination state for use in navig
 - Support optional case type filtering for enum destinations
 - Enable components to receive focused stores
 - Document usage in Modal/Sheet components
+- **Add JSDoc note about Phase 3 upgrade path**
 
 **Spec Reference**: `navigation-spec.md` Section 4.8 - "Scoped Stores for Components"
+
+**Phase 3 Upgrade Path**:
+```typescript
+// Phase 2: scopeToDestination() (functional API)
+const addItemStore = $derived(
+  scopeToDestination(store, ['destination'], 'addItem', 'destination')
+);
+
+// Phase 3: scopeTo() (fluent API) - wraps scopeToDestination()
+const addItemStore = $derived(
+  scopeTo(store)
+    .into('destination')
+    .case('addItem')
+);
+```
+
+**JSDoc Template**:
+```typescript
+/**
+ * Create a scoped store for a specific destination case.
+ *
+ * Note: In Phase 3, the fluent `scopeTo()` API will provide a more
+ * ergonomic way to create scoped stores. This function will remain
+ * as the underlying implementation.
+ *
+ * @example
+ * // Phase 2 usage
+ * const childStore = $derived(
+ *   scopeToDestination(store, ['destination'], 'addItem', 'destination')
+ * );
+ *
+ * @see navigation-dsl-spec.md for the Phase 3 fluent API
+ */
+```
 
 **Acceptance Criteria**:
 - [ ] scopeToDestination() creates scoped stores
@@ -223,6 +290,7 @@ Create helper for creating scoped stores from destination state for use in navig
 - [ ] Scoped store dispatches wrap actions with parent action
 - [ ] Type safety maintained through scoping
 - [ ] JSDoc shows component integration
+- [ ] JSDoc documents Phase 3 upgrade path
 
 ---
 
@@ -366,16 +434,48 @@ Copy shadcn/ui's Tailwind configuration and CSS variables for consistent theming
 ### Task 2.4.2: Create Shared Component Utilities
 **Estimated Time**: 1 hour
 **Dependencies**: None
-**File**: `packages/core/src/lib/actions/`
+**Files**:
+- `packages/core/src/lib/actions/clickOutside.ts`
+- `packages/core/src/lib/actions/portal.ts`
+- `packages/core/src/lib/actions/keyboard.ts`
 
 **Description**:
 Create Svelte-specific utilities adapted from Radix UI patterns.
 
 **What to do**:
 - Create `clickOutside.ts` action (adapt from Radix DismissableLayer)
-- Create portal helper if not using built-in Svelte 5 portals
-- Create keyboard navigation utilities
+- Create `portal.ts` action wrapper for teleporting content to document.body
+  - **Decision**: Use custom Svelte action approach for maximum control
+  - Wraps `document.body.appendChild()` / `removeChild()` in Svelte action
+  - Alternative considered: `svelte-portal` library (adds dependency, but simpler)
+  - If custom implementation proves complex, can switch to `svelte-portal`
+- Create `keyboard.ts` utilities for common keyboard patterns (Tab trap, arrow navigation)
 - Add TypeScript types for all utilities
+
+**Portal Implementation Strategy**:
+```typescript
+// Custom portal action (recommended for zero deps)
+export function portal(node: HTMLElement, target: HTMLElement | string = 'body') {
+  const targetEl = typeof target === 'string' ? document.querySelector(target) : target;
+  if (!targetEl) throw new Error(`Portal target not found: ${target}`);
+
+  targetEl.appendChild(node);
+
+  return {
+    destroy() {
+      if (node.parentNode === targetEl) {
+        targetEl.removeChild(node);
+      }
+    }
+  };
+}
+```
+
+**Fallback Option**:
+If custom portal proves insufficient, install `svelte-portal`:
+```bash
+npm install svelte-portal
+```
 
 **Reference**:
 - Radix DismissableLayer: `radix-ui/primitives/packages/react/dismissable-layer/src/DismissableLayer.tsx`
@@ -407,16 +507,22 @@ Install required dependencies for component implementation.
 ```json
 {
   "dependencies": {
-    "@floating-ui/dom": "^1.5.0"
+    "@floating-ui/dom": "^1.6.0"
   },
   "peerDependencies": {
-    "tailwindcss": "^3.4.0"
+    "tailwindcss": "^3.4.0",
+    "svelte": "^5.0.0"
   },
   "devDependencies": {
     "tailwindcss-animate": "^1.0.7"
   }
 }
 ```
+
+**Notes**:
+- `@floating-ui/dom` version ^1.6.0 is the latest stable (as of October 2025)
+- Matches version used by Radix UI Popover implementation
+- Svelte 5 added to peer dependencies for clarity
 
 **Acceptance Criteria**:
 - [ ] @floating-ui/dom installed
@@ -457,7 +563,7 @@ Create dependency injection interface for child features to dismiss themselves.
 
 ### Task 2.5.2: Implement createDismissDependency() Factory
 **Estimated Time**: 1-2 hours
-**Dependencies**: Task 2.6.1
+**Dependencies**: Task 2.5.1
 **File**: `packages/core/src/dependencies/dismiss.ts`
 
 **Description**:
@@ -836,11 +942,13 @@ Create headless Sidebar primitive for persistent/collapsible navigation panels (
 
 ### Task 2.6.12: Implement Sidebar Styled Component
 **Estimated Time**: 2 hours
-**Dependencies**: Task 2.6.11
+**Dependencies**: Task 2.6.11, Task 2.6.5 (DrawerPrimitive - required for mobile fallback)
 **File**: `packages/core/src/navigation-components/Sidebar.svelte`
 
 **Description**:
 Create styled Sidebar using SidebarPrimitive + Tailwind with responsive behavior.
+
+**Important**: This component uses DrawerPrimitive as a fallback on mobile devices, so DrawerPrimitive (Task 2.6.5) must be completed first.
 
 **What to do**:
 - Wrap SidebarPrimitive
@@ -1029,17 +1137,19 @@ Create styled Popover using PopoverPrimitive + Tailwind.
 
 ### Task 2.6.17: Create Navigation Components Index
 **Estimated Time**: 45 minutes
-**Dependencies**: Tasks 2.6.1-2.5.16
+**Dependencies**: Tasks 2.6.1-2.6.16
 **Files**:
 - `packages/core/src/navigation-components/index.ts`
 - `packages/core/src/navigation-components/primitives/index.ts`
+- `packages/core/package.json` (exports field)
 
 **Description**:
-Export all navigation components with organized documentation and clear import paths.
+Export all navigation components with organized documentation and clear import paths, including proper package.json exports configuration.
 
 **What to do**:
 - Export styled components from main index
 - Export primitives from primitives/index
+- **Configure package.json exports field** for proper module resolution
 - Add module docs explaining:
   - Two-layer architecture (primitives + styled)
   - Mobile-first vs Desktop-first components
@@ -1054,13 +1164,43 @@ Export all navigation components with organized documentation and clear import p
 - Desktop-First: Sidebar, Tabs, Popover
 - Total: 8 styled + 8 primitives = 16 components
 
+**package.json Exports Configuration**:
+```json
+{
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "svelte": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./navigation": {
+      "types": "./dist/navigation/index.d.ts",
+      "svelte": "./dist/navigation/index.js",
+      "default": "./dist/navigation/index.js"
+    },
+    "./navigation-components": {
+      "types": "./dist/navigation-components/index.d.ts",
+      "svelte": "./dist/navigation-components/index.js",
+      "default": "./dist/navigation-components/index.js"
+    },
+    "./navigation-components/primitives": {
+      "types": "./dist/navigation-components/primitives/index.d.ts",
+      "svelte": "./dist/navigation-components/primitives/index.js",
+      "default": "./dist/navigation-components/primitives/index.js"
+    }
+  }
+}
+```
+
 **Acceptance Criteria**:
 - [ ] All 8 styled components exported from main index
 - [ ] All 8 primitives exported from primitives/index
+- [ ] package.json exports field properly configured
 - [ ] Clear documentation provided
 - [ ] Import paths work:
   - `import { Modal, Sidebar, Tabs } from '@composable-svelte/core/navigation-components'`
   - `import { ModalPrimitive, SidebarPrimitive } from '@composable-svelte/core/navigation-components/primitives'`
+- [ ] TypeScript types resolve correctly for all import paths
 
 ---
 
@@ -1070,16 +1210,62 @@ Export all navigation components with organized documentation and clear import p
 **File**: `packages/core/src/navigation-components/README.md`
 
 **Description**:
-Create guide for setting up Tailwind with navigation components.
+Create guide for setting up Tailwind with navigation components, including behavior when Tailwind is missing.
 
 **What to do**:
-- Document Tailwind peer dependency
+- Document Tailwind peer dependency requirements
 - Provide example tailwind.config.js
 - Show how to customize CSS variables
 - Document `unstyled` prop usage
-- Show customization patterns (5 levels)
+- Show customization patterns (4 levels)
 - Include shadcn-inspired theming approach
 - Document mobile-first vs desktop-first component behavior
+- **Document behavior when Tailwind is missing**
+
+**Tailwind Peer Dependency Behavior**:
+
+1. **Using Styled Components (requires Tailwind)**:
+   ```typescript
+   // ❌ Will render but styles won't work without Tailwind
+   import { Modal } from '@composable-svelte/core/navigation-components';
+   ```
+   - If Tailwind CSS is not installed, component will render but appear unstyled
+   - Classes like `bg-background`, `rounded-lg` won't apply
+   - **Recommendation**: Show console warning in development if Tailwind classes don't resolve
+
+2. **Using Primitives (no Tailwind required)**:
+   ```typescript
+   // ✅ Works without Tailwind - bring your own styles
+   import { ModalPrimitive } from '@composable-svelte/core/navigation-components/primitives';
+   ```
+   - Primitives have zero styling dependencies
+   - User provides all styles (CSS modules, vanilla CSS, other frameworks)
+
+3. **Using `unstyled` prop (no Tailwind required)**:
+   ```svelte
+   <!-- ✅ Disables all default styles -->
+   <Modal store={myStore} unstyled>
+     <div class="my-custom-modal">
+       <!-- Your own styling -->
+     </div>
+   </Modal>
+   ```
+
+**Customization Levels**:
+1. **Level 0**: Use primitives with custom CSS (no Tailwind)
+2. **Level 1**: Use styled components as-is (requires Tailwind)
+3. **Level 2**: Customize with Tailwind class overrides
+4. **Level 3**: Use `unstyled` prop + custom styles
+5. **Level 4**: Build from scratch using store state directly
+
+**Installation Instructions**:
+```bash
+# Required for styled components
+npm install -D tailwindcss@^3.4.0 tailwindcss-animate@^1.0.7
+
+# Copy our tailwind.config.js and globals.css
+# (provide templates in docs)
+```
 
 **Acceptance Criteria**:
 - [ ] Tailwind setup documented
@@ -1394,18 +1580,20 @@ Document Phase 2 completion with metrics and verification.
 
 ## Summary
 
-**Total Estimated Time**: 67-82 hours (~3 weeks at 20-25 hours/week)
+**Total Estimated Time**: 69-87 hours (~3 weeks at 23-29 hours/week)
 
 **Time Breakdown by Section**:
 - Task 2.1 (Types): 1.5 hours
 - Task 2.2 (Operators): 8-11 hours
 - Task 2.3 (Stack): 4-5 hours
-- Task 2.4 (Component Styling Setup): 1.75 hours ← NEW
+- Task 2.4 (Component Styling Setup): 1.5-2 hours
 - Task 2.5 (Dismiss): 2-3 hours
 - Task 2.6 (Components): 28-32 hours (16 component tasks + 2 infrastructure)
 - Task 2.7 (Testing): 12-16 hours
 - Task 2.8 (Examples): 9-12 hours
 - Task 2.9 (Docs): 3.5 hours
+
+**Note**: The upper range (87 hours) requires ~29 hours/week, which is above the initial target of 25 hours/week. Desktop components (Sidebar, Tabs, Popover) can be deferred to "Phase 2.5" if needed, saving ~14-18 hours.
 
 **Critical Path**:
 1. **Setup**: Component styling setup (2.4.x) must be done first

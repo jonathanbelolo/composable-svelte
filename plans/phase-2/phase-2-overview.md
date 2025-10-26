@@ -148,12 +148,17 @@ import {
 - `handleStackAction()` reducer helper
 - Effect collection from stack operations
 
-### 2.4: Dismiss Dependency (2-3 hours)
+### 2.4: Component Styling Setup (1.5-2 hours)
+- Copy shadcn/ui Tailwind configuration and CSS variables
+- Create shared component utilities (clickOutside action, portal helpers)
+- Install component dependencies (@floating-ui/dom, tailwindcss-animate)
+
+### 2.5: Dismiss Dependency (2-3 hours)
 - DismissDependency interface
 - `createDismissDependency()` factory
 - Child self-dismissal pattern
 
-### 2.5: Navigation Components (28-32 hours)
+### 2.6: Navigation Components (28-32 hours)
 **16 component tasks + 2 infrastructure tasks**
 
 #### Mobile-First (10 tasks)
@@ -172,19 +177,19 @@ import {
 - 2.5.17: Component exports
 - 2.5.18: Tailwind configuration guide
 
-### 2.6: Testing (12-16 hours)
+### 2.7: Testing (12-16 hours)
 - ifLet() operator tests
 - createDestinationReducer() tests
 - Stack navigation tests
 - Dismiss dependency tests
 - Component tests (all 16 components)
 
-### 2.7: Example Applications (9-12 hours)
+### 2.8: Example Applications (9-12 hours)
 - Inventory navigation example (modals)
 - Stack navigation example (multi-screen)
 - Desktop navigation example (sidebar + tabs + popover)
 
-### 2.8: Documentation & Polish (3.5 hours)
+### 2.9: Documentation & Polish (3.5 hours)
 - Navigation API docs
 - Full test suite verification
 - Phase 2 completion summary
@@ -194,25 +199,26 @@ import {
 ## Timeline & Estimates
 
 **Total Duration**: 3 weeks
-**Total Estimated Time**: 65-80 hours
-**Weekly Commitment**: 20-25 hours/week
+**Total Estimated Time**: 69-87 hours
+**Weekly Commitment**: 23-29 hours/week (requires upper range for completion)
 
 ### Week-by-Week Breakdown
 
-**Week 1** (20-25 hours):
+**Week 1** (21-27 hours):
 - Complete types, operators, stack utilities (2.1-2.3)
-- Implement dismiss dependency (2.4)
+- Component styling setup (2.4)
+- Implement dismiss dependency (2.5)
 - Start component development (Modal + Sheet primitives/styled)
 
-**Week 2** (22-28 hours):
+**Week 2** (24-30 hours):
 - Complete mobile components (Drawer, NavigationStack, Alert)
 - Implement desktop components (Sidebar, Tabs, Popover)
 - Component exports and Tailwind guide
 
-**Week 3** (23-27 hours):
-- Complete all testing (2.6)
-- Build example applications (2.7)
-- Documentation and polish (2.8)
+**Week 3** (24-30 hours):
+- Complete all testing (2.7)
+- Build example applications (2.8)
+- Documentation and polish (2.9)
 - Phase 2 completion verification
 
 ---
@@ -223,7 +229,8 @@ import {
 1. Navigation types (2.1.x)
 2. Navigation operators (2.2.x)
 3. Stack utilities (2.3.x)
-4. Dismiss dependency (2.4.x)
+4. Component styling setup (2.4.x)
+5. Dismiss dependency (2.5.x)
 
 ### Phase 2: Mobile Components (Week 1, Day 4 - Week 2, Day 2)
 5. **Modal first** (establish pattern)
@@ -241,13 +248,13 @@ import {
 13. Component exports and docs
 
 ### Phase 5: Testing & Examples (Week 3, Days 2-4)
-14. Unit tests (all operators and components)
-15. Example applications (mobile + desktop)
+14. Unit tests (all operators and components) (2.7.x)
+15. Example applications (mobile + desktop) (2.8.x)
 
 ### Phase 6: Polish (Week 3, Day 5)
-16. Documentation updates
-17. Full test suite verification
-18. Completion summary
+16. Documentation updates (2.9.x)
+17. Full test suite verification (2.9.x)
+18. Completion summary (2.9.x)
 
 ---
 
