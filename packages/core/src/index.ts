@@ -68,6 +68,52 @@ export type {
 } from './composition/index.js';
 
 // ============================================================================
+// Navigation
+// ============================================================================
+
+export type {
+  PresentationAction,
+  StackAction,
+  Presentation,
+  Stack,
+  DestinationState,
+  DestinationReducerMap,
+  CasePath,
+  StackResult,
+  ScopedDestinationStore,
+  DismissDependency
+} from './navigation/index.js';
+
+export {
+  PresentationActionHelpers,
+  StackActionHelpers,
+  ifLet,
+  ifLetPresentation,
+  createDestinationReducer,
+  createDestination,
+  isDestinationType,
+  extractDestinationState,
+  matchPresentationAction,
+  isActionAtPath,
+  matchPaths,
+  extractDestinationOnAction,
+  push,
+  pop,
+  popToRoot,
+  setPath,
+  handleStackAction,
+  topScreen,
+  rootScreen,
+  canGoBack,
+  stackDepth,
+  scopeToDestination,
+  scopeToOptional,
+  createDismissDependency,
+  createDismissDependencyWithCleanup,
+  dismissDependency
+} from './navigation/index.js';
+
+// ============================================================================
 // Testing
 // ============================================================================
 
