@@ -1,5 +1,5 @@
 <script lang="ts">
-  import ModalPrimitive from './primitives/ModalPrimitive.svelte';
+  import SheetPrimitive from './primitives/SheetPrimitive.svelte';
   import type { ScopedDestinationStore } from '../navigation/scope-to-destination.js';
   import { cn } from '../lib/utils.js';
 
@@ -7,9 +7,9 @@
   // Props
   // ============================================================================
 
-  interface ModalProps<State, Action> {
+  interface SheetProps<State, Action> {
     /**
-     * Scoped store for the modal content.
+     * Scoped store for the sheet content.
      */
     store: ScopedDestinationStore<State, Action> | null;
 
@@ -41,6 +41,12 @@
      * @default false
      */
     disableEscapeKey?: boolean;
+
+    /**
+     * Height of the sheet as CSS value.
+     * @default '60vh'
+     */
+    height?: string;
   }
 
   let {
@@ -50,8 +56,9 @@
     class: className,
     disableClickOutside = false,
     disableEscapeKey = false,
+    height = '60vh',
     children
-  }: ModalProps<unknown, unknown> = $props();
+  }: SheetProps<unknown, unknown> = $props();
 
   // ============================================================================
   // Computed Classes
@@ -61,7 +68,7 @@
     'fixed inset-0 z-50 bg-background/80 backdrop-blur-sm';
 
   const defaultContentClasses =
-    'fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg sm:rounded-lg';
+    'fixed bottom-0 left-0 right-0 z-50 border-t bg-background shadow-lg rounded-t-xl';
 
   const backdropClasses = $derived(
     unstyled ? '' : cn(defaultBackdropClasses, backdropClass)
@@ -75,22 +82,23 @@
 </script>
 
 <!-- ============================================================================ -->
-<!-- Styled Modal -->
+<!-- Styled Sheet -->
 <!-- ============================================================================ -->
 
-<ModalPrimitive {store} {disableClickOutside} {disableEscapeKey}>
-  {#snippet children({ visible, store })}
+<SheetPrimitive {store} {disableClickOutside} {disableEscapeKey} {height}>
+  {#snippet children({ visible, store, height })}
     {#if backdropClasses}
       <div class={backdropClasses} aria-hidden="true"></div>
     {/if}
 
     <div
       class={contentClasses}
+      style="height: {height}"
       role="dialog"
       aria-modal="true"
-      aria-label="Modal dialog"
+      aria-label="Bottom sheet"
     >
-      {@render children?.({ visible, store })}
+      {@render children?.({ visible, store, height })}
     </div>
   {/snippet}
-</ModalPrimitive>
+</SheetPrimitive>

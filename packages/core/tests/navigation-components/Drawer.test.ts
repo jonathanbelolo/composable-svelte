@@ -1,8 +1,7 @@
 import { render } from 'vitest-browser-svelte';
 import { page, userEvent } from 'vitest/browser';
 import { describe, it, expect } from 'vitest';
-import Modal from '../../src/navigation-components/Modal.svelte';
-import ModalTestWrapper from './ModalTestWrapper.svelte';
+import Drawer from '../../src/navigation-components/Drawer.svelte';
 import { createStore } from '../../src/store.svelte.js';
 import { scopeToDestination } from '../../src/navigation/scope-to-destination.js';
 import { Effect } from '../../src/effect.js';
@@ -26,10 +25,10 @@ type ParentAction =
   | { type: 'destination'; action: any };
 
 // ============================================================================
-// Modal Component Tests
+// Drawer Component Tests
 // ============================================================================
 
-describe('Modal Component', () => {
+describe('Drawer Component', () => {
   it('shows when store is non-null', async () => {
     const parentStore = createStore<ParentState, ParentAction>({
       initialState: {
@@ -45,77 +44,25 @@ describe('Modal Component', () => {
       'destination'
     );
 
-    render(Modal, {
+    render(Drawer, {
       props: { store: scopedStore }
     });
 
-    const dialog = page.getByRole('dialog');
-    await expect.element(dialog).toBeInTheDocument();
+    const drawer = page.getByRole('dialog');
+    await expect.element(drawer).toBeInTheDocument();
   });
 
   it('hides when store is null', async () => {
-    const parentStore = createStore<ParentState, ParentAction>({
-      initialState: { destination: null },
-      reducer: (state) => [state, Effect.none()]
-    });
-
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
-
-    // When destination is null, scopedStore is null
-    // So we pass null to Modal
-    render(Modal, {
+    render(Drawer, {
       props: { store: null }
     });
 
     // Check that no dialog exists
-    const dialogs = page.getByRole('dialog').elements();
-    expect(dialogs.length).toBe(0);
+    const drawers = page.getByRole('dialog').elements();
+    expect(drawers.length).toBe(0);
   });
 
-  it('dismisses modal and removes from DOM when Escape pressed', async () => {
-    const parentStore = createStore<ParentState, ParentAction>({
-      initialState: {
-        destination: { type: 'test', state: { value: 'test' } }
-      },
-      reducer: (state, action) => {
-        if (
-          action.type === 'destination' &&
-          action.action.type === 'dismiss'
-        ) {
-          return [{ ...state, destination: null }, Effect.none()];
-        }
-        return [state, Effect.none()];
-      }
-    });
-
-    // Use wrapper component that reactively renders Modal based on store state
-    render(ModalTestWrapper, {
-      props: { parentStore }
-    });
-
-    // Modal should be visible
-    const dialog = page.getByRole('dialog');
-    await expect.element(dialog).toBeInTheDocument();
-
-    // Press Escape using userEvent
-    await userEvent.keyboard('{Escape}');
-
-    // Wait for modal to be removed from DOM
-    // This verifies the complete end-to-end flow:
-    // 1. Escape key pressed
-    // 2. Component calls store.dismiss()
-    // 3. Reducer sets destination to null
-    // 4. Wrapper reactively hides Modal
-    // 5. Modal removed from DOM
-    await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
-  });
-
-  it('dismisses modal when clicking backdrop', async () => {
+  it('dismisses drawer when Escape pressed', async () => {
     let dismissCalled = false;
 
     const parentStore = createStore<ParentState, ParentAction>({
@@ -141,16 +88,59 @@ describe('Modal Component', () => {
       'destination'
     );
 
-    render(Modal, {
+    render(Drawer, {
       props: { store: scopedStore }
     });
 
-    // Modal should be visible
-    const dialog = page.getByRole('dialog');
-    await expect.element(dialog).toBeInTheDocument();
+    // Drawer should be visible
+    const drawer = page.getByRole('dialog');
+    await expect.element(drawer).toBeInTheDocument();
+
+    // Press Escape
+    await userEvent.keyboard('{Escape}');
+
+    // Give time for event to process
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    // Verify dismiss was called
+    expect(dismissCalled).toBe(true);
+  });
+
+  it('dismisses drawer when clicking backdrop', async () => {
+    let dismissCalled = false;
+
+    const parentStore = createStore<ParentState, ParentAction>({
+      initialState: {
+        destination: { type: 'test', state: { value: 'test' } }
+      },
+      reducer: (state, action) => {
+        if (
+          action.type === 'destination' &&
+          action.action.type === 'dismiss'
+        ) {
+          dismissCalled = true;
+          return [{ ...state, destination: null }, Effect.none()];
+        }
+        return [state, Effect.none()];
+      }
+    });
+
+    const scopedStore = scopeToDestination(
+      parentStore,
+      ['destination'],
+      'test',
+      'destination'
+    );
+
+    render(Drawer, {
+      props: { store: scopedStore }
+    });
+
+    // Drawer should be visible
+    const drawer = page.getByRole('dialog');
+    await expect.element(drawer).toBeInTheDocument();
 
     // Trigger pointerdown event on document (simulates clicking outside)
-    // The clickOutside action listens for pointerdown events
     const pointerEvent = new PointerEvent('pointerdown', {
       bubbles: true,
       cancelable: true,
@@ -158,7 +148,7 @@ describe('Modal Component', () => {
     });
     document.dispatchEvent(pointerEvent);
 
-    // Give time for event to process (clickOutside uses setTimeout)
+    // Give time for event to process
     await new Promise(resolve => setTimeout(resolve, 50));
 
     // Verify dismiss was called
@@ -188,16 +178,16 @@ describe('Modal Component', () => {
       'destination'
     );
 
-    render(Modal, {
+    render(Drawer, {
       props: { store: scopedStore, disableEscapeKey: true }
     });
 
     // Press Escape
     await userEvent.keyboard('{Escape}');
 
-    // Modal should still be visible (Escape disabled)
-    const dialog = page.getByRole('dialog');
-    await expect.element(dialog).toBeInTheDocument();
+    // Drawer should still be visible (Escape disabled)
+    const drawer = page.getByRole('dialog');
+    await expect.element(drawer).toBeInTheDocument();
   });
 
   it('respects disableClickOutside prop', async () => {
@@ -226,11 +216,11 @@ describe('Modal Component', () => {
       'destination'
     );
 
-    render(Modal, {
+    render(Drawer, {
       props: { store: scopedStore, disableClickOutside: true }
     });
 
-    // Trigger pointerdown event on document (simulates clicking outside)
+    // Trigger pointerdown event on document
     const pointerEvent = new PointerEvent('pointerdown', {
       bubbles: true,
       cancelable: true,
@@ -241,10 +231,82 @@ describe('Modal Component', () => {
     // Give time for event to process
     await new Promise(resolve => setTimeout(resolve, 50));
 
-    // Modal should still be visible (click-outside disabled)
-    const dialog = page.getByRole('dialog');
-    await expect.element(dialog).toBeInTheDocument();
+    // Drawer should still be visible (click-outside disabled)
+    const drawer = page.getByRole('dialog');
+    await expect.element(drawer).toBeInTheDocument();
     expect(dismissCalled).toBe(false);
+  });
+
+  it('applies custom width', async () => {
+    const parentStore = createStore<ParentState, ParentAction>({
+      initialState: {
+        destination: { type: 'test', state: { value: 'test' } }
+      },
+      reducer: (state) => [state, Effect.none()]
+    });
+
+    const scopedStore = scopeToDestination(
+      parentStore,
+      ['destination'],
+      'test',
+      'destination'
+    );
+
+    render(Drawer, {
+      props: { store: scopedStore, width: '400px' }
+    });
+
+    const drawer = page.getByRole('dialog');
+    const style = drawer.element().getAttribute('style');
+    expect(style).toContain('width: 400px');
+  });
+
+  it('applies left positioning by default', async () => {
+    const parentStore = createStore<ParentState, ParentAction>({
+      initialState: {
+        destination: { type: 'test', state: { value: 'test' } }
+      },
+      reducer: (state) => [state, Effect.none()]
+    });
+
+    const scopedStore = scopeToDestination(
+      parentStore,
+      ['destination'],
+      'test',
+      'destination'
+    );
+
+    render(Drawer, {
+      props: { store: scopedStore }
+    });
+
+    const drawer = page.getByRole('dialog');
+    await expect.element(drawer).toHaveClass(/left-0/);
+    await expect.element(drawer).toHaveClass(/border-r/);
+  });
+
+  it('applies right positioning when side="right"', async () => {
+    const parentStore = createStore<ParentState, ParentAction>({
+      initialState: {
+        destination: { type: 'test', state: { value: 'test' } }
+      },
+      reducer: (state) => [state, Effect.none()]
+    });
+
+    const scopedStore = scopeToDestination(
+      parentStore,
+      ['destination'],
+      'test',
+      'destination'
+    );
+
+    render(Drawer, {
+      props: { store: scopedStore, side: 'right' }
+    });
+
+    const drawer = page.getByRole('dialog');
+    await expect.element(drawer).toHaveClass(/right-0/);
+    await expect.element(drawer).toHaveClass(/border-l/);
   });
 
   it('applies custom classes', async () => {
@@ -262,16 +324,16 @@ describe('Modal Component', () => {
       'destination'
     );
 
-    render(Modal, {
+    render(Drawer, {
       props: {
         store: scopedStore,
-        class: 'custom-modal-content',
+        class: 'custom-drawer-content',
         backdropClass: 'custom-backdrop'
       }
     });
 
-    const dialog = page.getByRole('dialog');
-    await expect.element(dialog).toHaveClass(/custom-modal-content/);
+    const drawer = page.getByRole('dialog');
+    await expect.element(drawer).toHaveClass(/custom-drawer-content/);
   });
 
   it('respects unstyled prop', async () => {
@@ -289,12 +351,12 @@ describe('Modal Component', () => {
       'destination'
     );
 
-    render(Modal, {
+    render(Drawer, {
       props: { store: scopedStore, unstyled: true }
     });
 
-    const dialog = page.getByRole('dialog');
-    const className = dialog.element().className;
+    const drawer = page.getByRole('dialog');
+    const className = drawer.element().className;
     expect(className).toBe('');
   });
 
@@ -313,7 +375,7 @@ describe('Modal Component', () => {
       'destination'
     );
 
-    render(Modal, {
+    render(Drawer, {
       props: { store: scopedStore }
     });
 

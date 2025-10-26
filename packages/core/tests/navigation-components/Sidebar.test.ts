@@ -1,8 +1,7 @@
 import { render } from 'vitest-browser-svelte';
 import { page, userEvent } from 'vitest/browser';
 import { describe, it, expect } from 'vitest';
-import Modal from '../../src/navigation-components/Modal.svelte';
-import ModalTestWrapper from './ModalTestWrapper.svelte';
+import Sidebar from '../../src/navigation-components/Sidebar.svelte';
 import { createStore } from '../../src/store.svelte.js';
 import { scopeToDestination } from '../../src/navigation/scope-to-destination.js';
 import { Effect } from '../../src/effect.js';
@@ -26,10 +25,10 @@ type ParentAction =
   | { type: 'destination'; action: any };
 
 // ============================================================================
-// Modal Component Tests
+// Sidebar Component Tests
 // ============================================================================
 
-describe('Modal Component', () => {
+describe('Sidebar Component', () => {
   it('shows when store is non-null', async () => {
     const parentStore = createStore<ParentState, ParentAction>({
       initialState: {
@@ -45,77 +44,25 @@ describe('Modal Component', () => {
       'destination'
     );
 
-    render(Modal, {
+    render(Sidebar, {
       props: { store: scopedStore }
     });
 
-    const dialog = page.getByRole('dialog');
-    await expect.element(dialog).toBeInTheDocument();
+    const sidebar = page.getByRole('navigation');
+    await expect.element(sidebar).toBeInTheDocument();
   });
 
   it('hides when store is null', async () => {
-    const parentStore = createStore<ParentState, ParentAction>({
-      initialState: { destination: null },
-      reducer: (state) => [state, Effect.none()]
-    });
-
-    const scopedStore = scopeToDestination(
-      parentStore,
-      ['destination'],
-      'test',
-      'destination'
-    );
-
-    // When destination is null, scopedStore is null
-    // So we pass null to Modal
-    render(Modal, {
+    render(Sidebar, {
       props: { store: null }
     });
 
-    // Check that no dialog exists
-    const dialogs = page.getByRole('dialog').elements();
-    expect(dialogs.length).toBe(0);
+    // Check that no complementary element exists
+    const sidebars = page.getByRole('navigation').elements();
+    expect(sidebars.length).toBe(0);
   });
 
-  it('dismisses modal and removes from DOM when Escape pressed', async () => {
-    const parentStore = createStore<ParentState, ParentAction>({
-      initialState: {
-        destination: { type: 'test', state: { value: 'test' } }
-      },
-      reducer: (state, action) => {
-        if (
-          action.type === 'destination' &&
-          action.action.type === 'dismiss'
-        ) {
-          return [{ ...state, destination: null }, Effect.none()];
-        }
-        return [state, Effect.none()];
-      }
-    });
-
-    // Use wrapper component that reactively renders Modal based on store state
-    render(ModalTestWrapper, {
-      props: { parentStore }
-    });
-
-    // Modal should be visible
-    const dialog = page.getByRole('dialog');
-    await expect.element(dialog).toBeInTheDocument();
-
-    // Press Escape using userEvent
-    await userEvent.keyboard('{Escape}');
-
-    // Wait for modal to be removed from DOM
-    // This verifies the complete end-to-end flow:
-    // 1. Escape key pressed
-    // 2. Component calls store.dismiss()
-    // 3. Reducer sets destination to null
-    // 4. Wrapper reactively hides Modal
-    // 5. Modal removed from DOM
-    await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
-  });
-
-  it('dismisses modal when clicking backdrop', async () => {
+  it('dismisses sidebar when Escape pressed', async () => {
     let dismissCalled = false;
 
     const parentStore = createStore<ParentState, ParentAction>({
@@ -141,24 +88,18 @@ describe('Modal Component', () => {
       'destination'
     );
 
-    render(Modal, {
+    render(Sidebar, {
       props: { store: scopedStore }
     });
 
-    // Modal should be visible
-    const dialog = page.getByRole('dialog');
-    await expect.element(dialog).toBeInTheDocument();
+    // Sidebar should be visible
+    const sidebar = page.getByRole('navigation');
+    await expect.element(sidebar).toBeInTheDocument();
 
-    // Trigger pointerdown event on document (simulates clicking outside)
-    // The clickOutside action listens for pointerdown events
-    const pointerEvent = new PointerEvent('pointerdown', {
-      bubbles: true,
-      cancelable: true,
-      button: 0
-    });
-    document.dispatchEvent(pointerEvent);
+    // Press Escape
+    await userEvent.keyboard('{Escape}');
 
-    // Give time for event to process (clickOutside uses setTimeout)
+    // Give time for event to process
     await new Promise(resolve => setTimeout(resolve, 50));
 
     // Verify dismiss was called
@@ -188,35 +129,24 @@ describe('Modal Component', () => {
       'destination'
     );
 
-    render(Modal, {
+    render(Sidebar, {
       props: { store: scopedStore, disableEscapeKey: true }
     });
 
     // Press Escape
     await userEvent.keyboard('{Escape}');
 
-    // Modal should still be visible (Escape disabled)
-    const dialog = page.getByRole('dialog');
-    await expect.element(dialog).toBeInTheDocument();
+    // Sidebar should still be visible (Escape disabled)
+    const sidebar = page.getByRole('navigation');
+    await expect.element(sidebar).toBeInTheDocument();
   });
 
-  it('respects disableClickOutside prop', async () => {
-    let dismissCalled = false;
-
+  it('applies custom width', async () => {
     const parentStore = createStore<ParentState, ParentAction>({
       initialState: {
         destination: { type: 'test', state: { value: 'test' } }
       },
-      reducer: (state, action) => {
-        if (
-          action.type === 'destination' &&
-          action.action.type === 'dismiss'
-        ) {
-          dismissCalled = true;
-          return [{ ...state, destination: null }, Effect.none()];
-        }
-        return [state, Effect.none()];
-      }
+      reducer: (state) => [state, Effect.none()]
     });
 
     const scopedStore = scopeToDestination(
@@ -226,25 +156,59 @@ describe('Modal Component', () => {
       'destination'
     );
 
-    render(Modal, {
-      props: { store: scopedStore, disableClickOutside: true }
+    render(Sidebar, {
+      props: { store: scopedStore, width: '300px' }
     });
 
-    // Trigger pointerdown event on document (simulates clicking outside)
-    const pointerEvent = new PointerEvent('pointerdown', {
-      bubbles: true,
-      cancelable: true,
-      button: 0
+    const sidebar = page.getByRole('navigation');
+    const style = sidebar.element().getAttribute('style');
+    expect(style).toContain('width: 300px');
+  });
+
+  it('applies left border by default', async () => {
+    const parentStore = createStore<ParentState, ParentAction>({
+      initialState: {
+        destination: { type: 'test', state: { value: 'test' } }
+      },
+      reducer: (state) => [state, Effect.none()]
     });
-    document.dispatchEvent(pointerEvent);
 
-    // Give time for event to process
-    await new Promise(resolve => setTimeout(resolve, 50));
+    const scopedStore = scopeToDestination(
+      parentStore,
+      ['destination'],
+      'test',
+      'destination'
+    );
 
-    // Modal should still be visible (click-outside disabled)
-    const dialog = page.getByRole('dialog');
-    await expect.element(dialog).toBeInTheDocument();
-    expect(dismissCalled).toBe(false);
+    render(Sidebar, {
+      props: { store: scopedStore }
+    });
+
+    const sidebar = page.getByRole('navigation');
+    await expect.element(sidebar).toHaveClass(/border-r/);
+  });
+
+  it('applies right border when side="right"', async () => {
+    const parentStore = createStore<ParentState, ParentAction>({
+      initialState: {
+        destination: { type: 'test', state: { value: 'test' } }
+      },
+      reducer: (state) => [state, Effect.none()]
+    });
+
+    const scopedStore = scopeToDestination(
+      parentStore,
+      ['destination'],
+      'test',
+      'destination'
+    );
+
+    render(Sidebar, {
+      props: { store: scopedStore, side: 'right' }
+    });
+
+    const sidebar = page.getByRole('navigation');
+    await expect.element(sidebar).toHaveClass(/border-l/);
   });
 
   it('applies custom classes', async () => {
@@ -262,16 +226,15 @@ describe('Modal Component', () => {
       'destination'
     );
 
-    render(Modal, {
+    render(Sidebar, {
       props: {
         store: scopedStore,
-        class: 'custom-modal-content',
-        backdropClass: 'custom-backdrop'
+        class: 'custom-sidebar-content'
       }
     });
 
-    const dialog = page.getByRole('dialog');
-    await expect.element(dialog).toHaveClass(/custom-modal-content/);
+    const sidebar = page.getByRole('navigation');
+    await expect.element(sidebar).toHaveClass(/custom-sidebar-content/);
   });
 
   it('respects unstyled prop', async () => {
@@ -289,16 +252,19 @@ describe('Modal Component', () => {
       'destination'
     );
 
-    render(Modal, {
+    render(Sidebar, {
       props: { store: scopedStore, unstyled: true }
     });
 
-    const dialog = page.getByRole('dialog');
-    const className = dialog.element().className;
+    const sidebar = page.getByRole('navigation');
+    const className = sidebar.element().className;
     expect(className).toBe('');
   });
 
-  it('prevents body scroll when visible', async () => {
+  it('does not prevent body scroll (persistent sidebar)', async () => {
+    // Store initial body overflow value
+    const initialOverflow = document.body.style.overflow;
+
     const parentStore = createStore<ParentState, ParentAction>({
       initialState: {
         destination: { type: 'test', state: { value: 'test' } }
@@ -313,12 +279,12 @@ describe('Modal Component', () => {
       'destination'
     );
 
-    render(Modal, {
+    render(Sidebar, {
       props: { store: scopedStore }
     });
 
-    // Check body overflow style directly
+    // Check body overflow is NOT set to hidden (sidebars don't lock scroll)
     const bodyStyle = document.body.style.overflow;
-    expect(bodyStyle).toBe('hidden');
+    expect(bodyStyle).toBe(initialOverflow);
   });
 });

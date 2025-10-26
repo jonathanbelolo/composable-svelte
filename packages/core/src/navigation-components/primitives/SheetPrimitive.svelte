@@ -7,10 +7,10 @@
   // Props
   // ============================================================================
 
-  interface ModalPrimitiveProps<State, Action> {
+  interface SheetPrimitiveProps<State, Action> {
     /**
-     * Scoped store for the modal content.
-     * When null, modal is hidden. When non-null, modal is visible.
+     * Scoped store for the sheet content.
+     * When null, sheet is hidden. When non-null, sheet is visible.
      */
     store: ScopedDestinationStore<State, Action> | null;
 
@@ -25,14 +25,21 @@
      * @default false
      */
     disableEscapeKey?: boolean;
+
+    /**
+     * Height of the sheet as CSS value.
+     * @default '60vh'
+     */
+    height?: string;
   }
 
   let {
     store,
     disableClickOutside = false,
     disableEscapeKey = false,
+    height = '60vh',
     children
-  }: ModalPrimitiveProps<unknown, unknown> = $props();
+  }: SheetPrimitiveProps<unknown, unknown> = $props();
 
   // ============================================================================
   // Derived State
@@ -50,7 +57,7 @@
       try {
         store.dismiss();
       } catch (error) {
-        console.error('[ModalPrimitive] Failed to dismiss:', error);
+        console.error('[SheetPrimitive] Failed to dismiss:', error);
       }
     }
   }
@@ -60,7 +67,7 @@
       try {
         store.dismiss();
       } catch (error) {
-        console.error('[ModalPrimitive] Failed to dismiss:', error);
+        console.error('[SheetPrimitive] Failed to dismiss:', error);
       }
     }
   }
@@ -69,13 +76,11 @@
   // Side Effects
   // ============================================================================
 
-  // Prevent body scroll when modal is open
+  // Prevent body scroll when sheet is open
   $effect(() => {
     if (visible) {
       const originalOverflow = document.body.style.overflow;
       const originalPaddingRight = document.body.style.paddingRight;
-
-      // Calculate scrollbar width to prevent layout shift
       const scrollbarWidth =
         window.innerWidth - document.documentElement.clientWidth;
 
@@ -105,7 +110,7 @@
 {#if visible}
   <div use:portal>
     <div use:clickOutside={handleClickOutside}>
-      {@render children?.({ visible, store })}
+      {@render children?.({ visible, store, height })}
     </div>
   </div>
 {/if}

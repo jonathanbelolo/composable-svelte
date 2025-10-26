@@ -1,5 +1,5 @@
 <script lang="ts">
-  import ModalPrimitive from './primitives/ModalPrimitive.svelte';
+  import AlertPrimitive from './primitives/AlertPrimitive.svelte';
   import type { ScopedDestinationStore } from '../navigation/scope-to-destination.js';
   import { cn } from '../lib/utils.js';
 
@@ -7,9 +7,9 @@
   // Props
   // ============================================================================
 
-  interface ModalProps<State, Action> {
+  interface AlertProps<State, Action> {
     /**
-     * Scoped store for the modal content.
+     * Scoped store for the alert content.
      */
     store: ScopedDestinationStore<State, Action> | null;
 
@@ -51,7 +51,7 @@
     disableClickOutside = false,
     disableEscapeKey = false,
     children
-  }: ModalProps<unknown, unknown> = $props();
+  }: AlertProps<unknown, unknown> = $props();
 
   // ============================================================================
   // Computed Classes
@@ -61,7 +61,7 @@
     'fixed inset-0 z-50 bg-background/80 backdrop-blur-sm';
 
   const defaultContentClasses =
-    'fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg sm:rounded-lg';
+    'fixed left-[50%] top-[50%] z-50 grid w-full max-w-md translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg sm:rounded-lg';
 
   const backdropClasses = $derived(
     unstyled ? '' : cn(defaultBackdropClasses, backdropClass)
@@ -75,10 +75,10 @@
 </script>
 
 <!-- ============================================================================ -->
-<!-- Styled Modal -->
+<!-- Styled Alert -->
 <!-- ============================================================================ -->
 
-<ModalPrimitive {store} {disableClickOutside} {disableEscapeKey}>
+<AlertPrimitive {store} {disableClickOutside} {disableEscapeKey}>
   {#snippet children({ visible, store })}
     {#if backdropClasses}
       <div class={backdropClasses} aria-hidden="true"></div>
@@ -86,11 +86,11 @@
 
     <div
       class={contentClasses}
-      role="dialog"
+      role="alertdialog"
       aria-modal="true"
-      aria-label="Modal dialog"
+      aria-label="Alert dialog"
     >
       {@render children?.({ visible, store })}
     </div>
   {/snippet}
-</ModalPrimitive>
+</AlertPrimitive>

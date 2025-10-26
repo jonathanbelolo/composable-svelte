@@ -1,5 +1,5 @@
 <script lang="ts">
-  import ModalPrimitive from './primitives/ModalPrimitive.svelte';
+  import PopoverPrimitive from './primitives/PopoverPrimitive.svelte';
   import type { ScopedDestinationStore } from '../navigation/scope-to-destination.js';
   import { cn } from '../lib/utils.js';
 
@@ -7,9 +7,9 @@
   // Props
   // ============================================================================
 
-  interface ModalProps<State, Action> {
+  interface PopoverProps<State, Action> {
     /**
-     * Scoped store for the modal content.
+     * Scoped store for the popover content.
      */
     store: ScopedDestinationStore<State, Action> | null;
 
@@ -19,11 +19,6 @@
      * @default false
      */
     unstyled?: boolean;
-
-    /**
-     * Override backdrop classes.
-     */
-    backdropClass?: string;
 
     /**
      * Override content container classes.
@@ -41,56 +36,52 @@
      * @default false
      */
     disableEscapeKey?: boolean;
+
+    /**
+     * Custom positioning style.
+     * User must provide absolute positioning via inline styles or classes.
+     */
+    style?: string;
   }
 
   let {
     store,
     unstyled = false,
-    backdropClass,
     class: className,
     disableClickOutside = false,
     disableEscapeKey = false,
+    style = '',
     children
-  }: ModalProps<unknown, unknown> = $props();
+  }: PopoverProps<unknown, unknown> = $props();
 
   // ============================================================================
   // Computed Classes
   // ============================================================================
 
-  const defaultBackdropClasses =
-    'fixed inset-0 z-50 bg-background/80 backdrop-blur-sm';
-
   const defaultContentClasses =
-    'fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg sm:rounded-lg';
-
-  const backdropClasses = $derived(
-    unstyled ? '' : cn(defaultBackdropClasses, backdropClass)
-  );
+    'absolute z-50 w-72 rounded-md border bg-popover p-4 text-popover-foreground shadow-md outline-none';
 
   const contentClasses = $derived(
     unstyled ? '' : cn(defaultContentClasses, className)
   );
 
   // Note: No transitions/animations in Phase 2 - instant show/hide only
+  // Note: Positioning must be provided by consumer via style prop
 </script>
 
 <!-- ============================================================================ -->
-<!-- Styled Modal -->
+<!-- Styled Popover -->
 <!-- ============================================================================ -->
 
-<ModalPrimitive {store} {disableClickOutside} {disableEscapeKey}>
+<PopoverPrimitive {store} {disableClickOutside} {disableEscapeKey}>
   {#snippet children({ visible, store })}
-    {#if backdropClasses}
-      <div class={backdropClasses} aria-hidden="true"></div>
-    {/if}
-
     <div
       class={contentClasses}
+      style={style}
       role="dialog"
-      aria-modal="true"
-      aria-label="Modal dialog"
+      aria-modal="false"
     >
       {@render children?.({ visible, store })}
     </div>
   {/snippet}
-</ModalPrimitive>
+</PopoverPrimitive>

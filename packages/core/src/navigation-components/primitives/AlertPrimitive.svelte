@@ -7,10 +7,10 @@
   // Props
   // ============================================================================
 
-  interface ModalPrimitiveProps<State, Action> {
+  interface AlertPrimitiveProps<State, Action> {
     /**
-     * Scoped store for the modal content.
-     * When null, modal is hidden. When non-null, modal is visible.
+     * Scoped store for the alert content.
+     * When null, alert is hidden. When non-null, alert is visible.
      */
     store: ScopedDestinationStore<State, Action> | null;
 
@@ -32,7 +32,7 @@
     disableClickOutside = false,
     disableEscapeKey = false,
     children
-  }: ModalPrimitiveProps<unknown, unknown> = $props();
+  }: AlertPrimitiveProps<unknown, unknown> = $props();
 
   // ============================================================================
   // Derived State
@@ -50,7 +50,7 @@
       try {
         store.dismiss();
       } catch (error) {
-        console.error('[ModalPrimitive] Failed to dismiss:', error);
+        console.error('[AlertPrimitive] Failed to dismiss:', error);
       }
     }
   }
@@ -60,7 +60,7 @@
       try {
         store.dismiss();
       } catch (error) {
-        console.error('[ModalPrimitive] Failed to dismiss:', error);
+        console.error('[AlertPrimitive] Failed to dismiss:', error);
       }
     }
   }
@@ -69,13 +69,11 @@
   // Side Effects
   // ============================================================================
 
-  // Prevent body scroll when modal is open
+  // Prevent body scroll when alert is open
   $effect(() => {
     if (visible) {
       const originalOverflow = document.body.style.overflow;
       const originalPaddingRight = document.body.style.paddingRight;
-
-      // Calculate scrollbar width to prevent layout shift
       const scrollbarWidth =
         window.innerWidth - document.documentElement.clientWidth;
 

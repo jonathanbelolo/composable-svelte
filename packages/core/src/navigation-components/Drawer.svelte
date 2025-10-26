@@ -1,5 +1,5 @@
 <script lang="ts">
-  import ModalPrimitive from './primitives/ModalPrimitive.svelte';
+  import DrawerPrimitive from './primitives/DrawerPrimitive.svelte';
   import type { ScopedDestinationStore } from '../navigation/scope-to-destination.js';
   import { cn } from '../lib/utils.js';
 
@@ -7,9 +7,9 @@
   // Props
   // ============================================================================
 
-  interface ModalProps<State, Action> {
+  interface DrawerProps<State, Action> {
     /**
-     * Scoped store for the modal content.
+     * Scoped store for the drawer content.
      */
     store: ScopedDestinationStore<State, Action> | null;
 
@@ -41,6 +41,18 @@
      * @default false
      */
     disableEscapeKey?: boolean;
+
+    /**
+     * Side from which the drawer slides in.
+     * @default 'left'
+     */
+    side?: 'left' | 'right';
+
+    /**
+     * Width of the drawer as CSS value.
+     * @default '320px'
+     */
+    width?: string;
   }
 
   let {
@@ -50,8 +62,10 @@
     class: className,
     disableClickOutside = false,
     disableEscapeKey = false,
+    side = 'left',
+    width = '320px',
     children
-  }: ModalProps<unknown, unknown> = $props();
+  }: DrawerProps<unknown, unknown> = $props();
 
   // ============================================================================
   // Computed Classes
@@ -60,8 +74,11 @@
   const defaultBackdropClasses =
     'fixed inset-0 z-50 bg-background/80 backdrop-blur-sm';
 
-  const defaultContentClasses =
-    'fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg sm:rounded-lg';
+  const defaultContentClasses = $derived(
+    side === 'left'
+      ? 'fixed left-0 top-0 bottom-0 z-50 border-r bg-background shadow-lg'
+      : 'fixed right-0 top-0 bottom-0 z-50 border-l bg-background shadow-lg'
+  );
 
   const backdropClasses = $derived(
     unstyled ? '' : cn(defaultBackdropClasses, backdropClass)
@@ -75,22 +92,23 @@
 </script>
 
 <!-- ============================================================================ -->
-<!-- Styled Modal -->
+<!-- Styled Drawer -->
 <!-- ============================================================================ -->
 
-<ModalPrimitive {store} {disableClickOutside} {disableEscapeKey}>
-  {#snippet children({ visible, store })}
+<DrawerPrimitive {store} {disableClickOutside} {disableEscapeKey} {side} {width}>
+  {#snippet children({ visible, store, side, width })}
     {#if backdropClasses}
       <div class={backdropClasses} aria-hidden="true"></div>
     {/if}
 
     <div
       class={contentClasses}
+      style="width: {width}"
       role="dialog"
       aria-modal="true"
-      aria-label="Modal dialog"
+      aria-label="Side drawer"
     >
-      {@render children?.({ visible, store })}
+      {@render children?.({ visible, store, side, width })}
     </div>
   {/snippet}
-</ModalPrimitive>
+</DrawerPrimitive>

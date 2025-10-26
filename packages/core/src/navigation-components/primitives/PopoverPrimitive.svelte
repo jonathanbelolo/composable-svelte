@@ -7,10 +7,10 @@
   // Props
   // ============================================================================
 
-  interface ModalPrimitiveProps<State, Action> {
+  interface PopoverPrimitiveProps<State, Action> {
     /**
-     * Scoped store for the modal content.
-     * When null, modal is hidden. When non-null, modal is visible.
+     * Scoped store for the popover content.
+     * When null, popover is hidden. When non-null, popover is visible.
      */
     store: ScopedDestinationStore<State, Action> | null;
 
@@ -32,7 +32,7 @@
     disableClickOutside = false,
     disableEscapeKey = false,
     children
-  }: ModalPrimitiveProps<unknown, unknown> = $props();
+  }: PopoverPrimitiveProps<unknown, unknown> = $props();
 
   // ============================================================================
   // Derived State
@@ -50,7 +50,7 @@
       try {
         store.dismiss();
       } catch (error) {
-        console.error('[ModalPrimitive] Failed to dismiss:', error);
+        console.error('[PopoverPrimitive] Failed to dismiss:', error);
       }
     }
   }
@@ -60,36 +60,13 @@
       try {
         store.dismiss();
       } catch (error) {
-        console.error('[ModalPrimitive] Failed to dismiss:', error);
+        console.error('[PopoverPrimitive] Failed to dismiss:', error);
       }
     }
   }
 
-  // ============================================================================
-  // Side Effects
-  // ============================================================================
-
-  // Prevent body scroll when modal is open
-  $effect(() => {
-    if (visible) {
-      const originalOverflow = document.body.style.overflow;
-      const originalPaddingRight = document.body.style.paddingRight;
-
-      // Calculate scrollbar width to prevent layout shift
-      const scrollbarWidth =
-        window.innerWidth - document.documentElement.clientWidth;
-
-      document.body.style.overflow = 'hidden';
-      if (scrollbarWidth > 0) {
-        document.body.style.paddingRight = `${scrollbarWidth}px`;
-      }
-
-      return () => {
-        document.body.style.overflow = originalOverflow;
-        document.body.style.paddingRight = originalPaddingRight;
-      };
-    }
-  });
+  // Note: Popovers typically don't prevent body scroll
+  // as they're meant for contextual menus/tooltips
 </script>
 
 <!-- ============================================================================ -->
