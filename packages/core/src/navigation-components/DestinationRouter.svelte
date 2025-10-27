@@ -124,14 +124,47 @@
 	// ============================================================================
 
 	/**
+	 * Get the current destination value for reactive tracking.
+	 * Only recompute when this specific field changes.
+	 */
+	const destinationValue = $derived(store.state[field]);
+
+	/**
 	 * For each route, create a scoped store.
 	 *
 	 * This reactively creates scoped stores for all destination cases.
 	 * Only the active destination will have a non-null scoped store.
+	 *
+	 * Performance: We create scoped stores for all routes, but only one
+	 * will be non-null at a time. This is acceptable for typical use
+	 * (3-7 routes). For very large route tables (>20), consider
+	 * on-demand scoping in the loop below.
 	 */
 	const scopedStores = $derived.by(() => {
 		const result: Record<string, any> = {};
 
+		// Early return if no destination
+		if (!destinationValue) {
+			return result;
+		}
+
+		// Development-mode validation: check if active destination has a route
+		if (
+			import.meta.env.DEV &&
+			typeof destinationValue === 'object' &&
+			'type' in destinationValue
+		) {
+			const activeType = destinationValue.type as string;
+			if (!(activeType in routes)) {
+				console.warn(
+					`[DestinationRouter] No route configured for destination case '${activeType}'. ` +
+						`Available routes: ${Object.keys(routes).join(', ')}. ` +
+						`The destination will not be rendered.`
+				);
+			}
+		}
+
+		// Create scoped stores for all routes
 		for (const key of Object.keys(routes)) {
 			result[key] = scopeTo(store).into(field).case(key);
 		}

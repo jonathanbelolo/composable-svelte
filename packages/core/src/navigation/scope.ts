@@ -217,10 +217,54 @@ class ScopeBuilder<State, Action, Current = State> {
 	case<T extends string>(caseType: T): ScopedStore<any, any> | null {
 		const value = this.getValue();
 
-		// Check if value matches the discriminated union case
-		if (value && typeof value === 'object' && 'type' in value && value.type === caseType) {
-			// Extract nested state from { type, state } structure
+		// Early return if no value
+		if (!value) {
+			return null;
+		}
+
+		// Validate discriminated union structure
+		if (typeof value !== 'object') {
+			if (import.meta.env.DEV) {
+				console.warn(
+					`[scopeTo.case] Value at path [${this.path.join('.')}] is not an object (got ${typeof value}). ` +
+						`Expected a discriminated union like { type: '${caseType}', state: ... }`
+				);
+			}
+			return null;
+		}
+
+		if (!('type' in value)) {
+			if (import.meta.env.DEV) {
+				console.warn(
+					`[scopeTo.case] Value at path [${this.path.join('.')}] is missing 'type' field. ` +
+						`Expected a discriminated union like { type: '${caseType}', state: ... }`
+				);
+			}
+			return null;
+		}
+
+		if (!('state' in value)) {
+			if (import.meta.env.DEV) {
+				console.warn(
+					`[scopeTo.case] Value at path [${this.path.join('.')}] is missing 'state' field. ` +
+						`Discriminated unions should have structure: { type: '${caseType}', state: ... }`
+				);
+			}
+			return null;
+		}
+
+		// Check if type matches
+		if (value.type === caseType) {
 			const state = (value as any).state;
+
+			// Warn if state is undefined (potential reducer bug)
+			if (import.meta.env.DEV && state === undefined) {
+				console.warn(
+					`[scopeTo.case] Destination at path [${this.path.join('.')}] has case '${caseType}' ` +
+						`but state is undefined. This may indicate a bug in your reducer.`
+				);
+			}
+
 			return this.createScopedStore(state, caseType);
 		}
 
@@ -263,6 +307,19 @@ class ScopeBuilder<State, Action, Current = State> {
 
 		if (value == null) {
 			return null;
+		}
+
+		// Development warning: detect if user should use .case() instead
+		if (
+			import.meta.env.DEV &&
+			typeof value === 'object' &&
+			'type' in value &&
+			'state' in value
+		) {
+			console.warn(
+				`[scopeTo.optional] Value at path [${this.path.join('.')}] looks like a discriminated union ` +
+					`(has 'type' and 'state' fields). Did you mean to use .case('${(value as any).type}') instead of .optional()?`
+			);
 		}
 
 		// No case type for optional fields (not a discriminated union)
