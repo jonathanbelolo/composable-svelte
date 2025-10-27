@@ -73,8 +73,9 @@ export function focusTrap(
     // Use setTimeout to ensure the element is fully rendered
     setTimeout(() => {
       const focusableElements = getFocusableElements(node);
-      if (focusableElements.length > 0) {
-        focusableElements[0].focus();
+      const firstElement = focusableElements[0];
+      if (firstElement) {
+        firstElement.focus();
       }
     }, 0);
   }
@@ -88,6 +89,9 @@ export function focusTrap(
 
     const firstElement = focusableElements[0];
     const lastElement = focusableElements[focusableElements.length - 1];
+
+    // TypeScript doesn't know the length check above ensures these exist
+    if (!firstElement || !lastElement) return;
 
     if (event.shiftKey) {
       // Shift+Tab: Move focus backwards
