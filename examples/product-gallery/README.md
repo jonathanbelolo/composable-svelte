@@ -185,6 +185,10 @@ case 'productDetail': {
     (s: AppState) => s.productDetail,
     (s: AppState, detail) => ({ ...s, productDetail: detail }),
     'productDetail',
+    (childAction): AppAction => ({
+      type: 'productDetail',
+      action: { type: 'presented', action: childAction }
+    }),
     productDetailReducer
   )(state, action, {});  // Empty dependencies
 
@@ -199,7 +203,8 @@ case 'productDetail': {
 
 **Key Points**:
 - `ifLetPresentation` automatically wraps/unwraps PresentationActions
-- Takes 4 arguments: lens, updater, action type, child reducer
+- Takes 5 arguments: lens, updater, action type, action mapper, child reducer
+- Action mapper properly types the wrapped action for TypeScript inference
 - Parent observes `dismiss` action to clear state
 - No manual action wrapping needed
 
@@ -254,6 +259,10 @@ case 'destination': {
     (s: ProductDetailState) => s.destination,
     (s: ProductDetailState, d: ProductDetailDestination | null) => ({ ...s, destination: d }),
     'destination',
+    (childAction): ProductDetailAction => ({
+      type: 'destination',
+      action: { type: 'presented', action: childAction }
+    }),
     destinationReducer
   )(state, action, deps);
 

@@ -1,5 +1,4 @@
-// @ts-nocheck - Temporary: ifLetPresentation has type inference issues with Effect mapping
-import type { Reducer, EffectType } from '@composable-svelte/core';
+import type { Reducer } from '@composable-svelte/core';
 import { Effect } from '@composable-svelte/core';
 import { ifLetPresentation } from '@composable-svelte/core/navigation';
 import type { AppState, AppAction } from './app.types.js';
@@ -117,21 +116,19 @@ export const appReducer: Reducer<AppState, AppAction, AppDependencies> = (state,
         }
       };
 
-      // @ts-expect-error - ifLetPresentation effect typing issue
       const [newState, effect] = ifLetPresentation(
         (s: AppState) => s.productDetail,
         (s: AppState, detail) => ({ ...s, productDetail: detail }),
         'productDetail',
+        (childAction): AppAction => ({ type: 'productDetail', action: { type: 'presented', action: childAction } }),
         productDetailReducer
       )(state, action, productDetailDeps);
 
       // Observe dismiss action to hide detail
       if ('action' in action && action.action.type === 'dismiss') {
-        // @ts-expect-error - ifLetPresentation effect typing issue
         return [{ ...newState, productDetail: null }, effect];
       }
 
-      // @ts-expect-error - ifLetPresentation effect typing issue
       return [newState, effect];
     }
 

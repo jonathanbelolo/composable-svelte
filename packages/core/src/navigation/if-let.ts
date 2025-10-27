@@ -110,12 +110,13 @@ export function ifLet<ParentState, ParentAction, ChildState, ChildAction, Depend
  *
  * This is a convenience wrapper that:
  * 1. Unwraps PresentationAction.presented to extract child action
- * 2. Wraps child effects back in PresentationAction.presented
+ * 2. Wraps child effects back in PresentationAction.presented via fromChildAction
  * 3. Handles PresentationAction.dismiss by setting state to null
  *
  * @param toChildState - Extract optional child state from parent state
  * @param fromChildState - Update parent with new child state (or null to dismiss)
  * @param actionType - The parent action type string to match
+ * @param fromChildAction - Wrap child action into parent action
  * @param childReducer - The child reducer to compose
  * @returns A parent reducer
  *
@@ -126,6 +127,7 @@ export function ifLet<ParentState, ParentAction, ChildState, ChildAction, Depend
  *   (s) => s.destination,
  *   (s, d) => ({ ...s, destination: d }),
  *   'destination',
+ *   (ca) => ({ type: 'destination', action: { type: 'presented', action: ca } }),
  *   addItemReducer
  * );
  *
@@ -141,29 +143,33 @@ export function ifLet<ParentState, ParentAction, ChildState, ChildAction, Depend
  */
 export function ifLetPresentation<
   ParentState,
-  ParentAction extends { type: string },
+  ParentAction,
   ChildState,
   ChildAction,
+  ActionType extends string,
   Dependencies = any
 >(
   toChildState: StateLens<ParentState, ChildState | null>,
   fromChildState: StateUpdater<ParentState, ChildState | null>,
-  actionType: string,
+  actionType: ActionType,
+  fromChildAction: (action: ChildAction) => ParentAction,
   childReducer: Reducer<ChildState, ChildAction, Dependencies>
 ): Reducer<ParentState, ParentAction, Dependencies> {
-  return (parentState, parentAction, dependencies) => {
+  return (parentState, parentAction: ParentAction, dependencies) => {
+    const action = parentAction as any;
+
     // Check if action matches our type and has the presentation wrapper
     if (
-      parentAction.type !== actionType ||
-      !('action' in parentAction) ||
-      typeof parentAction.action !== 'object' ||
-      parentAction.action === null ||
-      !('type' in parentAction.action)
+      action.type !== actionType ||
+      !('action' in action) ||
+      typeof action.action !== 'object' ||
+      action.action === null ||
+      !('type' in action.action)
     ) {
       return [parentState, Effect.none()];
     }
 
-    const presentationAction = parentAction.action as { type: string; action?: unknown };
+    const presentationAction = action.action as { type: string; action?: unknown };
 
     // Handle dismiss action
     if (presentationAction.type === 'dismiss') {
@@ -187,12 +193,7 @@ export function ifLetPresentation<
       const newParentState = fromChildState(parentState, newChildState);
 
       // Map child effects to parent actions
-      const parentEffect = Effect.map(childEffect, (ca) =>
-        ({
-          type: actionType,
-          action: { type: 'presented' as const, action: ca }
-        } as unknown as ParentAction)
-      );
+      const parentEffect = Effect.map(childEffect, fromChildAction);
 
       return [newParentState, parentEffect];
     }

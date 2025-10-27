@@ -64,31 +64,19 @@ describe('Share Reducer', () => {
   });
 
   describe('shareButtonTapped', () => {
-    it('calls dismiss when method is selected', () => {
-      let dismissCalled = false;
-      const deps: ShareDependencies = {
-        dismiss: () => {
-          dismissCalled = true;
-        }
-      };
-
+    it('returns state unchanged when method is selected - parent observes', () => {
       const state: ShareState = { productId: 'prod-1', selectedMethod: 'email' };
-      shareReducer(state, { type: 'shareButtonTapped' }, deps);
+      const [newState] = shareReducer(state, { type: 'shareButtonTapped' }, mockDeps);
 
-      expect(dismissCalled).toBe(true);
+      // Child doesn't change state - parent observes and handles dismissal
+      expect(newState).toEqual(state);
     });
 
-    it('does not dismiss when no method selected', () => {
-      let dismissCalled = false;
-      const deps: ShareDependencies = {
-        dismiss: () => {
-          dismissCalled = true;
-        }
-      };
+    it('returns state unchanged when no method selected', () => {
+      const [newState] = shareReducer(initialState, { type: 'shareButtonTapped' }, mockDeps);
 
-      shareReducer(initialState, { type: 'shareButtonTapped' }, deps);
-
-      expect(dismissCalled).toBe(false);
+      // No method selected, state remains unchanged
+      expect(newState).toEqual(initialState);
     });
 
     it('logs share action', () => {
@@ -103,17 +91,11 @@ describe('Share Reducer', () => {
   });
 
   describe('cancelButtonTapped', () => {
-    it('calls dismiss dependency', () => {
-      let dismissCalled = false;
-      const deps: ShareDependencies = {
-        dismiss: () => {
-          dismissCalled = true;
-        }
-      };
+    it('returns state unchanged - parent observes action', () => {
+      const [newState] = shareReducer(initialState, { type: 'cancelButtonTapped' }, mockDeps);
 
-      shareReducer(initialState, { type: 'cancelButtonTapped' }, deps);
-
-      expect(dismissCalled).toBe(true);
+      // Child doesn't change state - parent observes and handles dismissal
+      expect(newState).toEqual(initialState);
     });
   });
 });

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { productDetailReducer, type ProductDetailDependencies } from '../product-detail.reducer.js';
 import type { ProductDetailState } from '../product-detail.types.js';
 import { Effect } from '@composable-svelte/core';
@@ -66,9 +66,9 @@ describe('ProductDetail Reducer', () => {
         mockDeps
       );
 
-      expect(newState.destination?.type).toBe('delete');
-      if (newState.destination?.type === 'delete') {
-        expect(newState.destination.productId).toBe('prod-1');
+      expect(newState.destination?.type).toBe('deleteAlert');
+      if (newState.destination?.type === 'deleteAlert') {
+        expect(newState.destination.state.productId).toBe('prod-1');
       }
     });
   });
@@ -157,22 +157,20 @@ describe('ProductDetail Reducer', () => {
     });
   });
 
-  describe('destination - delete flow', () => {
-    it('observes delete confirmation and calls onProductDeleted', () => {
+  describe('destination - deleteAlert flow', () => {
+    it('observes delete confirmation and dismisses alert', () => {
       const state: ProductDetailState = {
         productId: 'prod-1',
         destination: {
-          type: 'delete',
-          productId: 'prod-1'
+          type: 'deleteAlert',
+          state: {
+            productId: 'prod-1'
+          }
         }
       };
 
-      let productDeleted = false;
       const deps: ProductDetailDependencies = {
-        onProductDeleted: (productId) => {
-          productDeleted = true;
-          expect(productId).toBe('prod-1');
-        }
+        onProductDeleted: vi.fn()
       };
 
       const [newState] = productDetailReducer(
@@ -181,7 +179,10 @@ describe('ProductDetail Reducer', () => {
           type: 'destination',
           action: {
             type: 'presented',
-            action: { type: 'deleteConfirmed' }
+            action: {
+              type: 'deleteAlert',
+              action: { type: 'confirmButtonTapped' }
+            }
           }
         },
         deps
@@ -194,8 +195,10 @@ describe('ProductDetail Reducer', () => {
       const state: ProductDetailState = {
         productId: 'prod-1',
         destination: {
-          type: 'delete',
-          productId: 'prod-1'
+          type: 'deleteAlert',
+          state: {
+            productId: 'prod-1'
+          }
         }
       };
 
@@ -205,7 +208,10 @@ describe('ProductDetail Reducer', () => {
           type: 'destination',
           action: {
             type: 'presented',
-            action: { type: 'deleteCancelled' }
+            action: {
+              type: 'deleteAlert',
+              action: { type: 'cancelButtonTapped' }
+            }
           }
         },
         mockDeps

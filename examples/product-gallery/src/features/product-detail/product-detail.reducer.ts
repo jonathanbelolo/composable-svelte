@@ -1,4 +1,3 @@
-// @ts-nocheck - Temporary: ifLetPresentation has type inference issues with Effect mapping
 import type { Reducer, EffectType } from '@composable-svelte/core';
 import { Effect } from '@composable-svelte/core';
 import { ifLetPresentation } from '@composable-svelte/core/navigation';
@@ -80,7 +79,10 @@ const destinationReducer: Reducer<
 
     case 'deleteAlert': {
       if (action.type === 'deleteAlert') {
-        const [childState, childEffect] = deleteAlertReducer(state.state, action.action, deps);
+        const deleteAlertDeps: DeleteAlertDependencies = {
+          dismiss: () => {} // Handled by parent observation
+        };
+        const [childState, childEffect] = deleteAlertReducer(state.state, action.action, deleteAlertDeps);
         return [
           { type: 'deleteAlert' as const, state: childState },
           Effect.map(childEffect, (childAction) => ({
@@ -180,6 +182,7 @@ export const productDetailReducer: Reducer<
         (s: ProductDetailState) => s.destination,
         (s: ProductDetailState, d: ProductDetailDestination | null) => ({ ...s, destination: d }),
         'destination',
+        (childAction): ProductDetailAction => ({ type: 'destination', action: { type: 'presented', action: childAction } }),
         destinationReducer
       )(state, action, deps);
 

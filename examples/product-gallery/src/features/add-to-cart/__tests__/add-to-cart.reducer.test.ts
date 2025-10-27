@@ -50,44 +50,18 @@ describe('AddToCart Reducer', () => {
   });
 
   describe('addButtonTapped', () => {
-    it('calls dismiss dependency', () => {
-      let dismissCalled = false;
-      const deps: AddToCartDependencies = {
-        dismiss: () => {
-          dismissCalled = true;
-        }
-      };
-
-      addToCartReducer(initialState, { type: 'addButtonTapped' }, deps);
-
-      expect(dismissCalled).toBe(true);
-    });
-
-    it('does not throw if dismiss fails', () => {
-      const deps: AddToCartDependencies = {
-        dismiss: () => {
-          throw new Error('Dismiss failed');
-        }
-      };
-
-      expect(() => {
-        addToCartReducer(initialState, { type: 'addButtonTapped' }, deps);
-      }).not.toThrow();
+    it('returns state unchanged - parent observes action', () => {
+      const [newState] = addToCartReducer(initialState, { type: 'addButtonTapped' }, mockDeps);
+      // Child doesn't change state - parent observes and handles dismissal
+      expect(newState).toEqual(initialState);
     });
   });
 
   describe('cancelButtonTapped', () => {
-    it('calls dismiss dependency', () => {
-      let dismissCalled = false;
-      const deps: AddToCartDependencies = {
-        dismiss: () => {
-          dismissCalled = true;
-        }
-      };
-
-      addToCartReducer(initialState, { type: 'cancelButtonTapped' }, deps);
-
-      expect(dismissCalled).toBe(true);
+    it('returns state unchanged - parent observes action', () => {
+      const [newState] = addToCartReducer(initialState, { type: 'cancelButtonTapped' }, mockDeps);
+      // Child doesn't change state - parent observes and handles dismissal
+      expect(newState).toEqual(initialState);
     });
   });
 });

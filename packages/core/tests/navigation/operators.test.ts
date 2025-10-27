@@ -288,6 +288,7 @@ describe('ifLetPresentation()', () => {
       (s) => s.child,
       (s, c) => ({ ...s, child: c }),
       'child',
+      (ca) => ({ type: 'child', action: { type: 'presented', action: ca } }),
       childReducer
     );
 
@@ -311,6 +312,7 @@ describe('ifLetPresentation()', () => {
       (s) => s.child,
       (s, c) => ({ ...s, child: c }),
       'child',
+      (ca) => ({ type: 'child', action: { type: 'presented', action: ca } }),
       childReducer
     );
 
@@ -331,6 +333,7 @@ describe('ifLetPresentation()', () => {
       (s) => s.child,
       (s, c) => ({ ...s, child: c }),
       'child',
+      (ca) => ({ type: 'child', action: { type: 'presented', action: ca } }),
       childReducer
     );
 
@@ -351,6 +354,7 @@ describe('ifLetPresentation()', () => {
       (s) => s.child,
       (s, c) => ({ ...s, child: c }),
       'child',
+      (ca) => ({ type: 'child', action: { type: 'presented', action: ca } }),
       childReducer
     );
 
@@ -391,6 +395,7 @@ describe('ifLetPresentation()', () => {
       (s) => s.child,
       (s, c) => ({ ...s, child: c }),
       'child',
+      (ca) => ({ type: 'child', action: { type: 'presented', action: ca } }),
       childReducerWithEffect
     );
 
