@@ -2,7 +2,7 @@
   import { createStore } from '@composable-svelte/core';
   import { Sidebar } from '@composable-svelte/core/navigation-components';
   import { Modal } from '@composable-svelte/core/navigation-components';
-  import { scopeToDestination } from '@composable-svelte/core/navigation';
+  import { scopeTo } from '@composable-svelte/core/navigation';
   import { appReducer } from './app.reducer.js';
   import { createInitialAppState } from './app.types.js';
   import { SAMPLE_PRODUCTS } from '../models/sample-data.js';
@@ -26,20 +26,24 @@
 
   const state = $derived(store.state);
 
-  // Scope to product detail destination
+  // Phase 3 DSL: Scope to product detail using scopeTo()
+  // Phase 2 manual pattern (before):
+  // const productDetailStore = $derived(
+  //   state.productDetail
+  //     ? {
+  //         state: state.productDetail,
+  //         dispatch: (action: any) => {
+  //           store.dispatch({ type: 'productDetail', action: { type: 'presented', action } });
+  //         },
+  //         dismiss: () => {
+  //           store.dispatch({ type: 'productDetail', action: { type: 'dismiss' } });
+  //         }
+  //       }
+  //     : null
+  // );
+
   const productDetailStore = $derived(
-    state.productDetail
-      ? {
-          ...store,
-          state: state.productDetail,
-          dispatch: (action: any) => {
-            store.dispatch({ type: 'productDetail', action: { type: 'presented', action } });
-          },
-          dismiss: () => {
-            store.dispatch({ type: 'productDetail', action: { type: 'dismiss' } });
-          }
-        }
-      : null
+    scopeTo(store).into('productDetail').optional()
   );
 
   const currentProduct = $derived(

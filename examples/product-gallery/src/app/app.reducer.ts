@@ -1,6 +1,6 @@
 import type { Reducer } from '@composable-svelte/core';
 import { Effect } from '@composable-svelte/core';
-import { ifLetPresentation } from '@composable-svelte/core/navigation';
+import { integrate } from '@composable-svelte/core/navigation';
 import type { AppState, AppAction } from './app.types.js';
 import { addToCart } from '../models/cart.js';
 import { createProductDetailState } from '../features/product-detail/product-detail.types.js';
@@ -15,10 +15,10 @@ export interface AppDependencies {
 }
 
 // ============================================================================
-// App Reducer
+// Core Reducer (without child integration)
 // ============================================================================
 
-export const appReducer: Reducer<AppState, AppAction, AppDependencies> = (state, action, deps) => {
+const coreReducer: Reducer<AppState, AppAction, AppDependencies> = (state, action, deps) => {
   switch (action.type) {
     case 'productClicked': {
       // Show product detail using tree-based navigation
@@ -103,36 +103,27 @@ export const appReducer: Reducer<AppState, AppAction, AppDependencies> = (state,
       ];
     }
 
-    case 'productDetail': {
-      // Handle product detail navigation with ifLetPresentation
-      // Provide dependencies for child feature
-      const productDetailDeps = {
-        onCartItemAdded: (productId: string, quantity: number) => {
-          // Parent observes and handles - dispatch action to update cart
-          // This will be handled via Effect, so no direct dispatch here
-        },
-        onProductDeleted: (productId: string) => {
-          // Parent observes and handles - will be triggered via Effect
-        }
-      };
-
-      const [newState, effect] = ifLetPresentation(
-        (s: AppState) => s.productDetail,
-        (s: AppState, detail) => ({ ...s, productDetail: detail }),
-        'productDetail',
-        (childAction): AppAction => ({ type: 'productDetail', action: { type: 'presented', action: childAction } }),
-        productDetailReducer
-      )(state, action, productDetailDeps);
-
-      // Observe dismiss action to hide detail
-      if ('action' in action && action.action.type === 'dismiss') {
-        return [{ ...newState, productDetail: null }, effect];
-      }
-
-      return [newState, effect];
-    }
-
     default:
       return [state, Effect.none()];
   }
 };
+
+// ============================================================================
+// App Reducer (Phase 3 DSL - with integrate())
+// ============================================================================
+
+// Phase 2 manual pattern (before):
+// case 'productDetail': {
+//   const [newState, effect] = ifLetPresentation(
+//     (s: AppState) => s.productDetail,
+//     (s: AppState, detail) => ({ ...s, productDetail: detail }),
+//     'productDetail',
+//     (childAction): AppAction => ({ type: 'productDetail', action: { type: 'presented', action: childAction } }),
+//     productDetailReducer
+//   )(state, action, deps);
+//   return [newState, effect];
+// }
+
+export const appReducer = integrate(coreReducer)
+  .with('productDetail', productDetailReducer)
+  .build();

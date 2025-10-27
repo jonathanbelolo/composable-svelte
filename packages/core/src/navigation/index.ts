@@ -77,7 +77,7 @@ export {
 export type { StackResult } from './stack.js';
 
 // ============================================================================
-// Scoped Stores
+// Scoped Stores (Phase 2)
 // ============================================================================
 
 export {
@@ -86,6 +86,17 @@ export {
 } from './scope-to-destination.js';
 
 export type { ScopedDestinationStore } from './scope-to-destination.js';
+
+// ============================================================================
+// Phase 3 DSL
+// ============================================================================
+
+// Fluent Reducer Integration
+export { integrate } from './integrate.js';
+
+// Fluent Store Scoping
+export { scopeTo } from './scope.js';
+export type { ScopedStore } from './scope.js';
 
 // ============================================================================
 // Dismiss Dependency
