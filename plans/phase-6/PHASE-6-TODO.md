@@ -2,7 +2,7 @@
 
 **Strategy**: Foundation-First Hybrid (Vertical Slices)
 **Timeline**: 5 weeks
-**Status**: In Progress - Week 2, Day 4 Complete ✅
+**Status**: In Progress - Week 2 Complete ✅
 
 ---
 
@@ -15,15 +15,19 @@
 - [x] **Week 2, Day 2**: Form Atomic Inputs ✅
 - [x] **Week 2, Day 3**: Integrated Form Example (Browser Tested) ✅
 - [x] **Week 2, Day 4**: Form Examples (Contact, Registration, Multi-Step) ✅
-- [ ] **Week 2, Day 5**: Remaining Atomic Components
-- [ ] **Week 3**: DataTable + Navigation Components
+- [x] **Week 2, Day 5**: Remaining Atomic Components ✅
+- [ ] **Week 3**: DataTable + Additional UI Components
 - [ ] **Week 4**: Remaining Stateful Components
 - [ ] **Week 5**: Advanced Components + Polish
 
-**Components Complete**: 23 / 50+
-- Foundation: Button, Input, Label, Spinner, Card (6), Separator
-- Form: Form, FormField, FormControl, FormItem, FormLabel, FormMessage, FormDescription (7)
-- Inputs: Textarea, Checkbox, Radio, RadioGroup, Switch (5)
+**Components Complete**: 38 / 50+
+- Foundation: Button (3), Input, Label, Spinner, Card (6), Separator
+- Layout: Panel, Box, AspectRatio (3)
+- Typography: Heading, Text, Kbd (3)
+- Visual: Banner (3), Empty (2)
+- Form System: Form, FormField, FormControl, FormItem, FormLabel, FormMessage, FormDescription (7)
+- Form Inputs: Textarea, Checkbox, Radio, RadioGroup, Switch (5)
+- **Navigation Components** (from earlier phases): Modal, Sheet, Alert, AlertDialog, Drawer, Popover, Sidebar, Tabs, NavigationStack, DestinationRouter (10) ✅
 
 **Form System**: Complete with 23/23 unit tests passing ✅
 **Examples**: 3 complete examples with 55 browser tests passing ✅
@@ -488,7 +492,9 @@
 
 ---
 
-## Week 3: DataTable + Navigation Components (5 days)
+## Week 3: DataTable + Additional UI Components (5 days)
+
+**Note**: Navigation components (Modal, Sheet, Alert, AlertDialog, Drawer, Popover, Sidebar, Tabs, NavigationStack, DestinationRouter) already exist from earlier phases (Phases 2-4) in `packages/core/src/navigation-components/`. Week 3 focuses on DataTable and remaining utility components.
 
 ### Day 1-2: DataTable System
 
@@ -545,61 +551,49 @@
 
 ---
 
-### Day 3-4: Navigation Component Extensions
+### Day 3-4: Additional UI Components
 
-**Goal**: Extend Phase 4 navigation with more overlay types
-
-#### Popover Component
-- [ ] Create `navigation-components/Popover.svelte`
-- [ ] Create `PopoverPrimitive.svelte`
-- [ ] Integrate `destination` + `presentation` pattern
-- [ ] Add floating-ui positioning
-- [ ] Add Motion One animations
-- [ ] Test: Popover opens/closes with animations
+**Goal**: Build remaining utility and interactive components
 
 #### Tooltip Component
-- [ ] Create `navigation-components/Tooltip.svelte`
-- [ ] Create `TooltipPrimitive.svelte`
-- [ ] Integrate `destination` + `presentation` pattern
+- [ ] Create `components/ui/tooltip/Tooltip.svelte`
+- [ ] Simple hover-triggered tooltip (NOT navigation-based)
 - [ ] Add hover delay (300ms)
-- [ ] Add positioning logic
-- [ ] Add Motion One animations
+- [ ] Add positioning logic (top, bottom, left, right)
+- [ ] Add Svelte transitions
 - [ ] Test: Tooltip shows on hover with delay
 
 #### Dropdown Menu Component
-- [ ] Create `navigation-components/DropdownMenu.svelte`
-- [ ] Create `DropdownMenuPrimitive.svelte`
-- [ ] Integrate `destination` + `presentation` pattern
-- [ ] Menu items as navigation destinations
+- [ ] Create `components/ui/dropdown-menu/DropdownMenu.svelte`
+- [ ] Menu trigger + menu content
+- [ ] Menu items with icons
 - [ ] Add keyboard navigation (arrows, enter, esc)
-- [ ] Add nested menu support
-- [ ] Add Motion One animations
+- [ ] Add nested menu support (optional)
 - [ ] Test: Menu navigation works
 
-#### Context Menu Component
-- [ ] Create `navigation-components/ContextMenu.svelte`
-- [ ] Create `ContextMenuPrimitive.svelte`
+#### Context Menu Component (optional)
+- [ ] Create `components/ui/context-menu/ContextMenu.svelte`
 - [ ] Right-click trigger
 - [ ] Position at cursor
-- [ ] Integrate `destination` + `presentation` pattern
-- [ ] Add Motion One animations
+- [ ] Menu items with keyboard nav
 - [ ] Test: Context menu on right-click
 
-#### Hover Card Component
-- [ ] Create `navigation-components/HoverCard.svelte`
-- [ ] Create `HoverCardPrimitive.svelte`
-- [ ] Hover trigger with delay
-- [ ] Integrate `destination` + `presentation` pattern
-- [ ] Add Motion One animations
-- [ ] Test: Hover card shows on hover
+#### Select Component
+- [ ] Create `components/ui/select/Select.svelte`
+- [ ] Native-like select with custom styling
+- [ ] Searchable variant
+- [ ] Multi-select variant
+- [ ] Bindable value with $bindable
+- [ ] Test: Select works with form integration
 
-#### Navigation Tests
-- [ ] Browser tests for all components
-- [ ] Animation tests
-- [ ] Keyboard navigation tests
-- [ ] Destination pattern tests
+#### Calendar Component (optional)
+- [ ] Create `components/ui/calendar/Calendar.svelte`
+- [ ] Month view with date selection
+- [ ] Range selection
+- [ ] Min/max date constraints
+- [ ] Test: Calendar selection works
 
-**Checkpoint**: ✅ Navigation components complete
+**Checkpoint**: ✅ Additional UI components complete
 
 ---
 
