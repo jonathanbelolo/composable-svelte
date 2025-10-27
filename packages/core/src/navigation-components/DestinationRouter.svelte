@@ -152,31 +152,22 @@
 	{#if config.presentation === 'modal'}
 		<Modal store={scopedStore} {...(config.presentationProps ?? {})}>
 			{#if scopedStore}
-				<svelte:component
-					this={config.component}
-					store={scopedStore}
-					{...(config.componentProps ?? {})}
-				/>
+				{@const Component = config.component}
+				<Component store={scopedStore} {...(config.componentProps ?? {})} />
 			{/if}
 		</Modal>
 	{:else if config.presentation === 'sheet'}
 		<Sheet store={scopedStore} {...(config.presentationProps ?? {})}>
 			{#if scopedStore}
-				<svelte:component
-					this={config.component}
-					store={scopedStore}
-					{...(config.componentProps ?? {})}
-				/>
+				{@const Component = config.component}
+				<Component store={scopedStore} {...(config.componentProps ?? {})} />
 			{/if}
 		</Sheet>
 	{:else if config.presentation === 'drawer'}
 		<Drawer store={scopedStore} {...(config.presentationProps ?? {})}>
 			{#if scopedStore}
-				<svelte:component
-					this={config.component}
-					store={scopedStore}
-					{...(config.componentProps ?? {})}
-				/>
+				{@const Component = config.component}
+				<Component store={scopedStore} {...(config.componentProps ?? {})} />
 			{/if}
 		</Drawer>
 	{/if}
