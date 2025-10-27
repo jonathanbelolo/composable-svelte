@@ -11,7 +11,9 @@
     "typecheck": "pnpm -r typecheck"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.0",
     "@changesets/cli": "^2.27.1",
+    "@playwright/test": "^1.56.1",
     "@sveltejs/vite-plugin-svelte": "^4.0.0",
     "@testing-library/svelte": "^5.2.1",
     "@vitest/ui": "^2.0.5",
