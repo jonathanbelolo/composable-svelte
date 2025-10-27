@@ -34,5 +34,5 @@ export { Text } from './text/index.js';
 export { Kbd } from './kbd/index.js';
 
 // Visual
-export { Alert, AlertTitle, AlertDescription } from './alert/index.js';
+export { Banner, BannerTitle, BannerDescription } from './banner/index.js';
 export { Empty } from './empty/index.js';
