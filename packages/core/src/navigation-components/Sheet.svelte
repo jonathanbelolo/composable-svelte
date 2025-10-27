@@ -1,6 +1,8 @@
 <script lang="ts">
   import SheetPrimitive from './primitives/SheetPrimitive.svelte';
   import type { ScopedDestinationStore } from '../navigation/scope-to-destination.js';
+  import type { PresentationState } from '../navigation/types.js';
+  import type { SpringConfig } from '../animation/spring-config.js';
   import { cn } from '../lib/utils.js';
 
   // ============================================================================
@@ -12,6 +14,27 @@
      * Scoped store for the sheet content.
      */
     store: ScopedDestinationStore<State, Action> | null;
+
+    /**
+     * Presentation state for animation lifecycle.
+     * Optional - if not provided, no animations (instant show/hide).
+     */
+    presentation?: PresentationState<any>;
+
+    /**
+     * Callback when presentation animation completes.
+     */
+    onPresentationComplete?: () => void;
+
+    /**
+     * Callback when dismissal animation completes.
+     */
+    onDismissalComplete?: () => void;
+
+    /**
+     * Spring configuration override.
+     */
+    springConfig?: Partial<SpringConfig>;
 
     /**
      * Disable all default styling.
@@ -43,7 +66,13 @@
     disableEscapeKey?: boolean;
 
     /**
-     * Height of the sheet as CSS value.
+     * Side from which the sheet slides in.
+     * @default 'bottom'
+     */
+    side?: 'bottom' | 'left' | 'right';
+
+    /**
+     * Height of the sheet as CSS value (for bottom sheets).
      * @default '60vh'
      */
     height?: string;
@@ -51,11 +80,16 @@
 
   let {
     store,
+    presentation,
+    onPresentationComplete,
+    onDismissalComplete,
+    springConfig,
     unstyled = false,
     backdropClass,
     class: className,
     disableClickOutside = false,
     disableEscapeKey = false,
+    side = 'bottom',
     height = '60vh',
     children
   }: SheetProps<unknown, unknown> = $props();
@@ -77,15 +111,23 @@
   const contentClasses = $derived(
     unstyled ? '' : cn(defaultContentClasses, className)
   );
-
-  // Note: No transitions/animations in Phase 2 - instant show/hide only
 </script>
 
 <!-- ============================================================================ -->
 <!-- Styled Sheet -->
 <!-- ============================================================================ -->
 
-<SheetPrimitive {store} {disableClickOutside} {disableEscapeKey} {height}>
+<SheetPrimitive
+  {store}
+  {presentation}
+  {onPresentationComplete}
+  {onDismissalComplete}
+  {springConfig}
+  {disableClickOutside}
+  {disableEscapeKey}
+  {side}
+  {height}
+>
   {#snippet children({ visible, store, height })}
     {#if backdropClasses}
       <div class={backdropClasses} aria-hidden="true"></div>

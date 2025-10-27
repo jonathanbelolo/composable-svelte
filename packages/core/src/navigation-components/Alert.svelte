@@ -1,6 +1,8 @@
 <script lang="ts">
   import AlertPrimitive from './primitives/AlertPrimitive.svelte';
   import type { ScopedDestinationStore } from '../navigation/scope-to-destination.js';
+  import type { PresentationState } from '../navigation/types.js';
+  import type { SpringConfig } from '../animation/spring-config.js';
   import { cn } from '../lib/utils.js';
 
   // ============================================================================
@@ -12,6 +14,27 @@
      * Scoped store for the alert content.
      */
     store: ScopedDestinationStore<State, Action> | null;
+
+    /**
+     * Presentation state for animation lifecycle.
+     * Optional - if not provided, no animations (instant show/hide).
+     */
+    presentation?: PresentationState<any>;
+
+    /**
+     * Callback when presentation animation completes.
+     */
+    onPresentationComplete?: () => void;
+
+    /**
+     * Callback when dismissal animation completes.
+     */
+    onDismissalComplete?: () => void;
+
+    /**
+     * Spring configuration override.
+     */
+    springConfig?: Partial<SpringConfig>;
 
     /**
      * Disable all default styling.
@@ -45,6 +68,10 @@
 
   let {
     store,
+    presentation,
+    onPresentationComplete,
+    onDismissalComplete,
+    springConfig,
     unstyled = false,
     backdropClass,
     class: className,
@@ -70,15 +97,21 @@
   const contentClasses = $derived(
     unstyled ? '' : cn(defaultContentClasses, className)
   );
-
-  // Note: No transitions/animations in Phase 2 - instant show/hide only
 </script>
 
 <!-- ============================================================================ -->
 <!-- Styled Alert -->
 <!-- ============================================================================ -->
 
-<AlertPrimitive {store} {disableClickOutside} {disableEscapeKey}>
+<AlertPrimitive
+  {store}
+  {presentation}
+  {onPresentationComplete}
+  {onDismissalComplete}
+  {springConfig}
+  {disableClickOutside}
+  {disableEscapeKey}
+>
   {#snippet children({ visible, store })}
     {#if backdropClasses}
       <div class={backdropClasses} aria-hidden="true"></div>

@@ -58,6 +58,7 @@
     "vitest-browser-svelte": "^2.0.0"
   },
   "dependencies": {
-    "@floating-ui/dom": "^1.6.0"
+    "@floating-ui/dom": "^1.6.0",
+    "motion": "^12.23.24"
   }
 }

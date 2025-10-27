@@ -425,11 +425,15 @@ export type PresentationState<T> =
  * Events for presentation lifecycle transitions.
  *
  * These events are dispatched by animation components to signal lifecycle changes:
+ * - `presentationStarted`: Animation-in started (optional, for coordination)
  * - `presentationCompleted`: Animation-in finished → transition from 'presenting' to 'presented'
+ * - `dismissalStarted`: Animation-out started (optional, for coordination)
  * - `dismissalCompleted`: Animation-out finished → transition from 'dismissing' to 'idle'
+ * - `presentationTimeout`: Animation-in exceeded timeout → force completion
+ * - `dismissalTimeout`: Animation-out exceeded timeout → force cleanup
  *
- * Components dispatch these events via `onintroend` / `onoutroend` callbacks
- * (Svelte transitions) or animation completion handlers (Motion One).
+ * Components dispatch these events via Motion One animation completion handlers.
+ * Timeout events are dispatched by Effect.animated() fallbacks to prevent stuck states.
  *
  * @example
  * ```typescript
@@ -440,16 +444,34 @@ export type PresentationState<T> =
  *   | { type: 'presentation'; event: PresentationEvent };
  *
  * case 'presentation': {
- *   if (action.event.type === 'presentationCompleted') {
+ *   if (action.event.type === 'presentationCompleted' ||
+ *       action.event.type === 'presentationTimeout') {
  *     // Transition from 'presenting' → 'presented'
+ *     if (state.presentation.status !== 'presenting') {
+ *       return [state, Effect.none()];
+ *     }
+ *
+ *     if (action.event.type === 'presentationTimeout') {
+ *       console.warn('[Animation] Presentation timeout - forcing completion');
+ *     }
+ *
  *     return [
  *       { ...state, presentation: { status: 'presented', content: state.presentation.content } },
  *       Effect.none()
  *     ];
  *   }
  *
- *   if (action.event.type === 'dismissalCompleted') {
+ *   if (action.event.type === 'dismissalCompleted' ||
+ *       action.event.type === 'dismissalTimeout') {
  *     // Transition from 'dismissing' → 'idle' (clear destination too)
+ *     if (state.presentation.status !== 'dismissing') {
+ *       return [state, Effect.none()];
+ *     }
+ *
+ *     if (action.event.type === 'dismissalTimeout') {
+ *       console.warn('[Animation] Dismissal timeout - forcing cleanup');
+ *     }
+ *
  *     return [
  *       { ...state, destination: null, presentation: { status: 'idle' } },
  *       Effect.none()
@@ -462,7 +484,9 @@ export type PresentationEvent =
 	| { readonly type: 'presentationStarted' }
 	| { readonly type: 'presentationCompleted' }
 	| { readonly type: 'dismissalStarted' }
-	| { readonly type: 'dismissalCompleted' };
+	| { readonly type: 'dismissalCompleted' }
+	| { readonly type: 'presentationTimeout' }
+	| { readonly type: 'dismissalTimeout' };
 
 // ============================================================================
 // Type Exports

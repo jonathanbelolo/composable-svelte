@@ -1,6 +1,8 @@
 <script lang="ts">
   import DrawerPrimitive from './primitives/DrawerPrimitive.svelte';
   import type { ScopedDestinationStore } from '../navigation/scope-to-destination.js';
+  import type { PresentationState } from '../navigation/types.js';
+  import type { SpringConfig } from '../animation/spring-config.js';
   import { cn } from '../lib/utils.js';
 
   // ============================================================================
@@ -12,6 +14,27 @@
      * Scoped store for the drawer content.
      */
     store: ScopedDestinationStore<State, Action> | null;
+
+    /**
+     * Presentation state for animation lifecycle.
+     * Optional - if not provided, no animations (instant show/hide).
+     */
+    presentation?: PresentationState<any>;
+
+    /**
+     * Callback when presentation animation completes.
+     */
+    onPresentationComplete?: () => void;
+
+    /**
+     * Callback when dismissal animation completes.
+     */
+    onDismissalComplete?: () => void;
+
+    /**
+     * Spring configuration override.
+     */
+    springConfig?: Partial<SpringConfig>;
 
     /**
      * Disable all default styling.
@@ -57,6 +80,10 @@
 
   let {
     store,
+    presentation,
+    onPresentationComplete,
+    onDismissalComplete,
+    springConfig,
     unstyled = false,
     backdropClass,
     class: className,
@@ -88,14 +115,24 @@
     unstyled ? '' : cn(defaultContentClasses, className)
   );
 
-  // Note: No transitions/animations in Phase 2 - instant show/hide only
+  // Note: Animations integrated in Phase 4 via presentation prop
 </script>
 
 <!-- ============================================================================ -->
 <!-- Styled Drawer -->
 <!-- ============================================================================ -->
 
-<DrawerPrimitive {store} {disableClickOutside} {disableEscapeKey} {side} {width}>
+<DrawerPrimitive
+  {store}
+  {presentation}
+  {onPresentationComplete}
+  {onDismissalComplete}
+  {springConfig}
+  {disableClickOutside}
+  {disableEscapeKey}
+  {side}
+  {width}
+>
   {#snippet children({ visible, store, side, width })}
     {#if backdropClasses}
       <div class={backdropClasses} aria-hidden="true"></div>
