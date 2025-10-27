@@ -4,16 +4,7 @@
 	import type { TableState, TableAction } from './table.types.js';
 	import { Button } from '../ui/button/index.js';
 
-	/**
-	 * DataTablePagination component - Pagination controls for DataTable.
-	 *
-	 * @packageDocumentation
-	 *
-	 * @example
-	 * ```svelte
-	 * <DataTablePagination {store} />
-	 * ```
-	 */
+	// DataTablePagination component - Pagination controls for DataTable.
 
 	interface DataTablePaginationProps<T> {
 		/**

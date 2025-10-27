@@ -5,7 +5,7 @@
  */
 
 import type { Reducer } from '../../types.js';
-import { Effect } from '../../effects/index.js';
+import { Effect } from '../../effect.js';
 import type {
 	TableState,
 	TableAction,
@@ -19,15 +19,19 @@ import type {
  */
 export function createInitialState<T>(config: TableConfig<T>): TableState<T> {
 	const initialData = config.initialData || [];
+	const pageSize = config.pageSize || 10;
+
+	// Apply initial pagination
+	const paginatedData = initialData.slice(0, pageSize);
 
 	return {
-		data: initialData,
+		data: paginatedData,
 		originalData: initialData,
 		sorting: [],
 		filters: [],
 		pagination: {
 			page: 0,
-			pageSize: config.pageSize || 10,
+			pageSize,
 			total: initialData.length
 		},
 		selectedRows: new Set(),

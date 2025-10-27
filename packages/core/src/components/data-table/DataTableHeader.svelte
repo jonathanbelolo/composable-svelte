@@ -4,23 +4,7 @@
 	import type { TableState, TableAction, SortDirection } from './table.types.js';
 	import { Button } from '../ui/button/index.js';
 
-	/**
-	 * DataTableHeader component - Column headers with sorting controls.
-	 *
-	 * @packageDocumentation
-	 *
-	 * @example
-	 * ```svelte
-	 * <DataTableHeader
-	 *   {store}
-	 *   columns={[
-	 *     { key: 'name', label: 'Name', sortable: true },
-	 *     { key: 'price', label: 'Price', sortable: true },
-	 *     { key: 'category', label: 'Category', sortable: false }
-	 *   ]}
-	 * />
-	 * ```
-	 */
+	// DataTableHeader component - Column headers with sorting controls.
 
 	interface ColumnDef<T> {
 		/**

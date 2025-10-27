@@ -6,45 +6,7 @@
 	import { Empty } from '../ui/empty/index.js';
 	import { Spinner } from '../ui/spinner/index.js';
 
-	/**
-	 * DataTable component - Main table container with Composable Architecture integration.
-	 *
-	 * @packageDocumentation
-	 *
-	 * @example
-	 * ```svelte
-	 * <script lang="ts">
-	 *   import { createStore } from '@composable-svelte/core';
-	 *   import { createTableReducer, createInitialState } from '@composable-svelte/core/components/data-table';
-	 *
-	 *   interface Product {
-	 *     id: string;
-	 *     name: string;
-	 *     price: number;
-	 *   }
-	 *
-	 *   const data: Product[] = [
-	 *     { id: '1', name: 'Product A', price: 100 },
-	 *     { id: '2', name: 'Product B', price: 200 }
-	 *   ];
-	 *
-	 *   const reducer = createTableReducer<Product>({ initialData: data });
-	 *   const store = createStore(createInitialState({ initialData: data }), reducer, {});
-	 * </script>
-	 *
-	 * <DataTable {store}>
-	 *   {#snippet header()}
-	 *     <DataTableHeader columns={['Name', 'Price']} />
-	 *   {/snippet}
-	 *   {#snippet row(item: Product)}
-	 *     <tr>
-	 *       <td>{item.name}</td>
-	 *       <td>${item.price}</td>
-	 *     </tr>
-	 *   {/snippet}
-	 * </DataTable>
-	 * ```
-	 */
+	// DataTable component - Main table container with Composable Architecture integration.
 
 	interface DataTableProps<T> {
 		/**
