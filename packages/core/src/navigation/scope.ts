@@ -339,7 +339,16 @@ class ScopeBuilder<State, Action, Current = State> {
 			// Build dismiss action
 			let wrapped: any = { type: 'dismiss' };
 
-			// Wrap in parent actions by following the path backwards
+			// Step 1: If we have a case type, wrap in the destination case structure
+			// This ensures the parent reducer knows which case is being dismissed
+			if (caseType) {
+				wrapped = {
+					type: caseType,
+					action: wrapped
+				};
+			}
+
+			// Step 2: Wrap in parent actions by following the path backwards
 			for (let i = this.path.length - 1; i >= 0; i--) {
 				const key = this.path[i];
 				wrapped = {

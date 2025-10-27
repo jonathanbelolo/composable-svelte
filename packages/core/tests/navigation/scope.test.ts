@@ -208,10 +208,13 @@ describe('scopeTo()', () => {
 			// Call dismiss
 			scopedStore?.dismiss();
 
-			// Verify dismiss action
+			// Verify dismiss action - should wrap with case type
 			expect(store.dispatch).toHaveBeenCalledWith({
 				type: 'destination',
-				action: { type: 'dismiss' }
+				action: {
+					type: 'addItem',
+					action: { type: 'dismiss' }
+				}
 			});
 		});
 	});
@@ -441,6 +444,85 @@ describe('scopeTo()', () => {
 			expect(modalStore).not.toBeNull();
 			expect(sheetStore).not.toBeNull();
 			expect(drawerStore).toBeNull();
+		});
+	});
+
+	describe('dismiss() behavior', () => {
+		it('wraps dismiss with case type for enum destinations', () => {
+			const store = {
+				state: {
+					destination: { type: 'addItem', state: { name: 'Test' } }
+				},
+				dispatch: vi.fn()
+			} as unknown as Store<ParentState, any>;
+
+			const scopedStore = scopeTo(store).into('destination').case('addItem');
+
+			expect(scopedStore).not.toBeNull();
+			scopedStore!.dismiss();
+
+			// Should wrap: { type: 'dismiss' } -> { type: 'addItem', action: dismiss } -> { type: 'destination', action: ... }
+			expect(store.dispatch).toHaveBeenCalledWith({
+				type: 'destination',
+				action: {
+					type: 'addItem',
+					action: { type: 'dismiss' }
+				}
+			});
+		});
+
+		it('does not wrap dismiss with case type for optional fields', () => {
+			const store = {
+				state: {
+					modal: { name: 'Test' }
+				},
+				dispatch: vi.fn()
+			} as unknown as Store<any, any>;
+
+			const scopedStore = scopeTo(store).into('modal').optional();
+
+			expect(scopedStore).not.toBeNull();
+			scopedStore!.dismiss();
+
+			// Should wrap: { type: 'dismiss' } -> { type: 'modal', action: dismiss } (no case type)
+			expect(store.dispatch).toHaveBeenCalledWith({
+				type: 'modal',
+				action: { type: 'dismiss' }
+			});
+		});
+
+		it('wraps dismiss through nested paths with case type', () => {
+			interface NestedState {
+				outer: {
+					inner: { type: 'caseA'; state: { value: string } } | null;
+				} | null;
+			}
+
+			const store = {
+				state: {
+					outer: {
+						inner: { type: 'caseA', state: { value: 'test' } }
+					}
+				},
+				dispatch: vi.fn()
+			} as unknown as Store<NestedState, any>;
+
+			const scopedStore = scopeTo(store).into('outer').into('inner').case('caseA');
+
+			expect(scopedStore).not.toBeNull();
+			scopedStore!.dismiss();
+
+			// Should wrap through all levels
+			expect(store.dispatch).toHaveBeenCalledWith({
+				type: 'outer',
+				action: {
+					type: 'inner',
+					action: {
+						type: 'caseA',
+						action: { type: 'dismiss' }
+					}
+				}
+			});
 		});
 	});
 });

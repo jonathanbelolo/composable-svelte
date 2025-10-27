@@ -385,4 +385,58 @@ describe('integrate()', () => {
 			expect(effect._tag).toBe('None');
 		});
 	});
+
+	describe('error handling', () => {
+		it('throws when registering same field twice', () => {
+			const coreReducer: Reducer<InventoryState, any> = (state) => [state, Effect.none()];
+			const childReducer: Reducer<AddItemState, any> = (state) => [state, Effect.none()];
+
+			expect(() => {
+				integrate(coreReducer)
+					.with('destination', childReducer)
+					.with('destination', childReducer) // ❌ Duplicate!
+					.build();
+			}).toThrow(/Field 'destination' has already been integrated/);
+		});
+
+		it('throws when childReducer is not a function', () => {
+			const coreReducer: Reducer<InventoryState, any> = (state) => [state, Effect.none()];
+
+			expect(() => {
+				integrate(coreReducer)
+					.with('destination', null as any)
+					.build();
+			}).toThrow(/childReducer for field 'destination' must be a function/);
+		});
+
+		it('throws when childReducer is undefined', () => {
+			const coreReducer: Reducer<InventoryState, any> = (state) => [state, Effect.none()];
+
+			expect(() => {
+				integrate(coreReducer)
+					.with('destination', undefined as any)
+					.build();
+			}).toThrow(/childReducer for field 'destination' must be a function/);
+		});
+
+		it('allows multiple different fields', () => {
+			interface MultiState {
+				destination: AddItemState | null;
+				alert: { message: string } | null;
+				sheet: { id: string } | null;
+			}
+
+			const coreReducer: Reducer<MultiState, any> = (state) => [state, Effect.none()];
+			const childReducer: Reducer<any, any> = (state) => [state, Effect.none()];
+
+			// Should not throw - different fields
+			expect(() => {
+				integrate(coreReducer)
+					.with('destination', childReducer)
+					.with('alert', childReducer)
+					.with('sheet', childReducer)
+					.build();
+			}).not.toThrow();
+		});
+	});
 });

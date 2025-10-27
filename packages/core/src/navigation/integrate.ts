@@ -102,6 +102,7 @@ class IntegrationBuilder<State, Action, Dependencies = any> {
 	private integrations: Array<
 		(r: Reducer<State, Action, Dependencies>) => Reducer<State, Action, Dependencies>
 	> = [];
+	private fields = new Set<keyof State>();
 
 	constructor(private coreReducer: Reducer<State, Action, Dependencies>) {}
 
@@ -149,6 +150,25 @@ class IntegrationBuilder<State, Action, Dependencies = any> {
 		field: K,
 		childReducer: Reducer<NonNullable<State[K]>, ChildAction, Dependencies>
 	): this {
+		// Validate that field hasn't already been registered
+		if (this.fields.has(field)) {
+			throw new Error(
+				`[integrate] Field '${String(field)}' has already been integrated. ` +
+					`Each field can only be registered once.`
+			);
+		}
+
+		// Validate that childReducer is a function
+		if (typeof childReducer !== 'function') {
+			throw new TypeError(
+				`[integrate] childReducer for field '${String(field)}' must be a function, ` +
+					`but got ${typeof childReducer}`
+			);
+		}
+
+		// Mark field as registered
+		this.fields.add(field);
+
 		// Add integration function to the chain
 		this.integrations.push((parentReducer) => {
 			return (state, action, deps) => {
