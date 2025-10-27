@@ -2,7 +2,7 @@
 
 **Strategy**: Foundation-First Hybrid (Vertical Slices)
 **Timeline**: 5 weeks
-**Status**: In Progress - Week 2, Day 2 Complete ✅
+**Status**: In Progress - Week 2, Day 3 Complete ✅
 
 ---
 
@@ -13,7 +13,8 @@
 - [x] **Week 1, Day 3-5**: Form System (Reducer, Types, Zod Integration) ✅
 - [x] **Week 2, Day 1**: Form UI Components ✅
 - [x] **Week 2, Day 2**: Form Atomic Inputs ✅
-- [ ] **Week 2, Day 3-5**: Form Examples + Remaining Atomic Components
+- [x] **Week 2, Day 3**: Integrated Form Example (Browser Tested) ✅
+- [ ] **Week 2, Day 4-5**: Form Examples + Remaining Atomic Components
 - [ ] **Week 3**: DataTable + Navigation Components
 - [ ] **Week 4**: Remaining Stateful Components
 - [ ] **Week 5**: Advanced Components + Polish
@@ -23,7 +24,8 @@
 - Form: Form, FormField, FormControl, FormItem, FormLabel, FormMessage, FormDescription (7)
 - Inputs: Textarea, Checkbox, Radio, RadioGroup, Switch (5)
 
-**Form System**: Complete with 23/23 tests passing ✅
+**Form System**: Complete with 23/23 unit tests passing + 13/13 browser tests passing ✅
+**Examples**: Contact form with integrated mode (browser tested) ✅
 
 ---
 
@@ -296,11 +298,67 @@
 
 ---
 
-### Day 3: Form TestStore Tests ✅ COMPLETED IN WEEK 1
+### Day 3: Integrated Form Example + Browser Tests ✅ COMPLETE
 
-**Goal**: Comprehensive test coverage (see FORM-SYSTEM-DESIGN.md)
+**Goal**: Real-world integrated form example with comprehensive browser testing
 
-**Note**: These tests were already completed during Week 1, Day 3-5 as part of the form reducer implementation.
+#### Contact Form Example (Integrated Mode) ✅
+- [x] Create `examples/contact-form` directory
+- [x] Setup Vite browser testing configuration
+- [x] Define ContactFormData Zod schema
+- [x] Create contactFormConfig with async validation
+- [x] Integrate form reducer into parent app reducer using `scope()`
+- [x] Define AppState with contactForm, submissionHistory, successMessage
+- [x] Define AppAction with parent observation of form events
+- [x] Create reactive store wrapper for integrated mode
+  - [x] Use `$state()` for reactive form state
+  - [x] Use `$effect()` to sync with parent store
+  - [x] Fixed: Proper reactivity tracking for Svelte 5
+- [x] Implement App.svelte with full form UI
+  - [x] Name, Email, Message fields with validation
+  - [x] Success message with auto-dismiss
+  - [x] Submission history tracking
+  - [x] All using integrated mode pattern
+
+#### Browser Tests (13/13 passing) ✅
+- [x] Initial render tests (3 tests)
+  - [x] Renders all form fields
+  - [x] No success message initially
+  - [x] No submission history initially
+- [x] Field validation tests (4 tests)
+  - [x] Name too short error
+  - [x] Invalid email error
+  - [x] Message too short error
+  - [x] Errors clear when input becomes valid
+- [x] Form submission tests (4 tests)
+  - [x] Successfully submits valid form
+  - [x] Adds submission to history
+  - [x] Dismisses success message when clicked
+  - [x] Does not submit invalid form
+- [x] Async validation tests (2 tests)
+  - [x] Shows validating state during async validation
+  - [x] Rejects blocked email domains
+
+#### Issues Fixed ✅
+- [x] **Fixed**: Missing `$lib` Vite alias
+- [x] **Fixed**: Wrong import paths (Form vs UI components)
+- [x] **Fixed**: Missing Textarea export
+- [x] **Fixed**: JSDoc parsing error in Form.svelte
+- [x] **Fixed**: FormField snippet signature (added `send` function)
+- [x] **Fixed**: Non-reactive store wrapper (added `$state()` + `$effect()`)
+- [x] **Fixed**: Wrong state access (`submission.status` → `isSubmitting`)
+
+#### Documentation ✅
+- [x] Created comprehensive forms-guide.md
+  - [x] Form state structure reference
+  - [x] Two form modes explained (standalone vs integrated)
+  - [x] Complete integrated mode example
+  - [x] All 6 common pitfalls documented with solutions
+  - [x] Browser testing guide
+  - [x] Component API reference
+  - [x] Summary checklist
+
+**Checkpoint**: ✅ Integrated form example works in browser! All lessons learned documented.
 
 #### Test Suite Structure ✅
 - [x] Create `tests/form.test.ts`

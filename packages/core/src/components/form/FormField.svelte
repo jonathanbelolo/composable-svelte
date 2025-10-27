@@ -19,6 +19,11 @@
 	 * ```
 	 */
 
+	interface FieldRenderProps {
+		field: FieldState;
+		send: (action: FormAction<T>) => void;
+	}
+
 	interface Props {
 		/**
 		 * The name of the field in the form data
@@ -31,7 +36,7 @@
 		/**
 		 * Children components (label, control, message, etc.)
 		 */
-		children?: import('svelte').Snippet<[FieldState]>;
+		children?: import('svelte').Snippet<[FieldRenderProps]>;
 	}
 
 	let { name, class: className, children }: Props = $props();
@@ -53,6 +58,11 @@
 		warnings: store.state.fields[name]?.warnings ?? []
 	});
 
+	// Provide send function for dispatching actions
+	const send = (action: FormAction<T>) => {
+		store.dispatch(action);
+	};
+
 	// Provide field name and state to child components
 	setContext('fieldName', name);
 	setContext('fieldState', fieldState);
@@ -60,6 +70,6 @@
 
 <div class={className} data-field={name}>
 	{#if children}
-		{@render children(fieldState)}
+		{@render children({ field: fieldState, send })}
 	{/if}
 </div>

@@ -6,44 +6,11 @@
 	import { createInitialFormState } from './form.reducer.js';
 	import type { Store } from '../../types.js';
 
-	/**
-	 * Form component - Creates and manages form state using the reducer pattern.
-	 *
-	 * Supports two modes:
-	 * 1. **Standalone mode**: Pass `config` to create internal store
-	 * 2. **Integrated mode**: Pass `store` to use external store from parent reducer
-	 *
-	 * @example Standalone mode (simple forms)
-	 * ```svelte
-	 * <Form config={formConfig}>
-	 *   <FormField name="email">
-	 *     <FormLabel>Email</FormLabel>
-	 *     <FormControl>
-	 *       <Input type="email" />
-	 *     </FormControl>
-	 *     <FormMessage />
-	 *   </FormField>
-	 *   <Button type="submit">Submit</Button>
-	 * </Form>
-	 * ```
-	 *
-	 * @example Integrated mode (parent reducer manages form)
-	 * ```svelte
-	 * <script>
-	 *   // Parent reducer uses scope() to integrate form
-	 *   const parentReducer = integrate(coreReducer)
-	 *     .with('contactForm', createFormReducer(config))
-	 *     .build();
-	 *
-	 *   const store = createStore({ initialState, reducer: parentReducer });
-	 *   const formStore = scopeTo(store).into('contactForm');
-	 * </script>
-	 *
-	 * <Form store={formStore}>
-	 *   <!-- form fields -->
-	 * </Form>
-	 * ```
-	 */
+	// Form component - Creates and manages form state using the reducer pattern.
+	//
+	// Supports two modes:
+	// 1. Standalone mode: Pass `config` to create internal store
+	// 2. Integrated mode: Pass `store` to use external store from parent reducer
 
 	interface Props {
 		/**

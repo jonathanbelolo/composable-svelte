@@ -3,35 +3,50 @@
   import { scopeTo } from '@composable-svelte/core/navigation';
   import {
     Form,
-    FormField,
-    Input,
-    Textarea,
-    Button
+    FormField
   } from '@composable-svelte/core/components/form';
+  import { Button, Input, Textarea } from '@composable-svelte/core/components/ui';
   import { appReducer } from './app.reducer.js';
   import { createInitialAppState } from './app.state.js';
 
   // Create store with integrated form reducer
-  const store = createStore({
+  const parentStore = createStore({
     initialState: createInitialAppState(),
     reducer: appReducer,
     dependencies: {}
   });
 
-  // Create scoped store for the contact form
-  const formStore = scopeTo(store).into('contactForm');
-
-  // Subscribe to state changes to get submission history and success message
-  let submissionHistory = $state(store.state.submissionHistory);
-  let successMessage = $state(store.state.successMessage);
+  // Create a reactive wrapper store that exposes just the form state
+  // Using $state to make the formStore.state reactive
+  let formStoreState = $state(parentStore.state.contactForm);
 
   $effect(() => {
-    submissionHistory = store.state.submissionHistory;
-    successMessage = store.state.successMessage;
+    formStoreState = parentStore.state.contactForm;
+  });
+
+  const formStore = {
+    get state() {
+      return formStoreState;
+    },
+    dispatch(action: any) {
+      parentStore.dispatch({ type: 'contactForm', action });
+    },
+    subscribe(listener: any) {
+      return parentStore.subscribe(listener);
+    }
+  };
+
+  // Subscribe to state changes to get submission history and success message
+  let submissionHistory = $state(parentStore.state.submissionHistory);
+  let successMessage = $state(parentStore.state.successMessage);
+
+  $effect(() => {
+    submissionHistory = parentStore.state.submissionHistory;
+    successMessage = parentStore.state.successMessage;
   });
 
   function dismissSuccessMessage() {
-    store.dispatch({ type: 'successMessageDismissed' });
+    parentStore.dispatch({ type: 'successMessageDismissed' });
   }
 </script>
 
@@ -142,7 +157,7 @@
             class="w-full"
             data-testid="submit-button"
           >
-            {formStore.state.submission.status === 'submitting' ? 'Sending...' : 'Send Message'}
+            {formStore.state.isSubmitting ? 'Sending...' : 'Send Message'}
           </Button>
         </div>
       </Form>

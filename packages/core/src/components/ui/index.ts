@@ -10,6 +10,7 @@ export { Button } from './button/index.js';
 // Form Elements
 export { Input } from './input/index.js';
 export { Label } from './label/index.js';
+export { Textarea } from './textarea/index.js';
 
 // Feedback
 export { Spinner } from './spinner/index.js';
