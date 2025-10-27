@@ -6,12 +6,27 @@ This example demonstrates the **composable architecture** pattern for forms in C
 
 ### 1. Form Integration with Parent Reducer
 
-The contact form is integrated into the app reducer using `integrate()`:
+The contact form is integrated into the app reducer using `scope()`:
 
 ```typescript
-export const appReducer = integrate(coreReducer)
-  .with('contactForm', createFormReducer(contactFormConfig))
-  .build();
+const formReducer = createFormReducer(contactFormConfig);
+
+export const appReducer: Reducer<AppState, AppAction, {}> = (state, action, deps) => {
+  // Run core reducer first
+  const [s1, e1] = coreReducer(state, action, deps);
+
+  // Then run scoped form reducer
+  const scopedFormReducer = scope<AppState, AppAction, any, any, {}>(
+    (s) => s.contactForm,                           // Extract child state
+    (s, child) => ({ ...s, contactForm: child }),   // Update parent with child
+    (a) => (a.type === 'contactForm' ? a.action : null),  // Extract child action
+    (childAction) => ({ type: 'contactForm', action: childAction }),  // Wrap child action
+    formReducer
+  );
+
+  const [s2, e2] = scopedFormReducer(s1, action, deps);
+  return [s2, Effect.batch(e1, e2)];
+};
 ```
 
 This means:
@@ -77,7 +92,7 @@ Then pass it to the Form component in **integrated mode**:
 │ - Observes form.submissionSucceeded      │
 └────────────────┬─────────────────────────┘
                  │
-                 │ integrate().with('contactForm', ...)
+                 │ scope() composition
                  │
                  ↓
 ┌──────────────────────────────────────────┐
@@ -92,7 +107,7 @@ Then pass it to the Form component in **integrated mode**:
 
 ## Key Patterns Demonstrated
 
-1. **Reducer Composition** - `integrate().with()` composes reducers
+1. **Reducer Composition** - `scope()` composes child reducers into parent
 2. **Scoped Stores** - `scopeTo().into()` creates component-level stores
 3. **Parent Observation** - Parent reacts to child form events
 4. **Effect Orchestration** - Auto-dismiss success message with `Effect.afterDelay()`

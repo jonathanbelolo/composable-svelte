@@ -1,4 +1,4 @@
-import type { FormConfig } from '@composable-svelte/core/form';
+import type { FormConfig } from '@composable-svelte/core/components/form';
 import type { ContactFormData } from './contact-form.types.js';
 import { contactSchema } from './contact-form.types.js';
 

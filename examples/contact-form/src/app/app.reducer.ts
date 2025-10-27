@@ -1,7 +1,7 @@
 import type { Reducer } from '@composable-svelte/core';
 import { Effect } from '@composable-svelte/core';
-import { integrate } from '@composable-svelte/core/navigation';
-import { createFormReducer } from '@composable-svelte/core/form';
+import { scope } from '@composable-svelte/core/composition';
+import { createFormReducer } from '@composable-svelte/core/components/form';
 import type { AppState, AppAction } from './app.types.js';
 import { contactFormConfig } from '../features/contact-form/contact-form.config.js';
 
@@ -73,15 +73,30 @@ const coreReducer: Reducer<AppState, AppAction, AppDependencies> = (state, actio
 /**
  * Complete app reducer with integrated form.
  *
- * Uses integrate() to compose form reducer into parent state at 'contactForm' field.
+ * Uses scope() to compose form reducer into parent state at 'contactForm' field.
  *
  * This demonstrates the composable architecture pattern:
  * - Form has its own reducer (createFormReducer)
- * - Parent integrates it using integrate().with()
+ * - Parent integrates it using scope()
  * - Parent can observe child actions (submissionSucceeded)
  * - Child form is fully testable in isolation
  * - Parent can test form integration
  */
-export const appReducer: Reducer<AppState, AppAction, AppDependencies> = integrate(coreReducer)
-	.with('contactForm', createFormReducer(contactFormConfig))
-	.build();
+const formReducer = createFormReducer(contactFormConfig);
+
+export const appReducer: Reducer<AppState, AppAction, AppDependencies> = (state, action, deps) => {
+	// Run core reducer first
+	const [s1, e1] = coreReducer(state, action, deps);
+
+	// Then run scoped form reducer
+	const scopedFormReducer = scope<AppState, AppAction, any, any, AppDependencies>(
+		(s) => s.contactForm,                           // Extract child state
+		(s, child) => ({ ...s, contactForm: child }),   // Update parent with child
+		(a) => (a.type === 'contactForm' ? a.action : null),  // Extract child action
+		(childAction) => ({ type: 'contactForm', action: childAction }),  // Wrap child action
+		formReducer
+	);
+
+	const [s2, e2] = scopedFormReducer(s1, action, deps);
+	return [s2, Effect.batch(e1, e2)];
+};

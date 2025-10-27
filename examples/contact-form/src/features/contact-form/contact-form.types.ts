@@ -1,4 +1,4 @@
-import type { FormState, FormAction } from '@composable-svelte/core/form';
+import type { FormState, FormAction } from '@composable-svelte/core/components/form';
 import { z } from 'zod';
 
 /**
