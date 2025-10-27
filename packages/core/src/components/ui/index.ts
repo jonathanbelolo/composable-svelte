@@ -14,6 +14,10 @@ export { Textarea } from './textarea/index.js';
 
 // Feedback
 export { Spinner } from './spinner/index.js';
+export { Badge } from './badge/index.js';
+export { Avatar } from './avatar/index.js';
+export { Skeleton } from './skeleton/index.js';
+export { Progress } from './progress/index.js';
 
 // Layout
 export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './card/index.js';
