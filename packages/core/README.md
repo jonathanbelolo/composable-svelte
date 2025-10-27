@@ -2,14 +2,23 @@
 
 A Composable Architecture for Svelte 5.
 
-## Features (Phase 1)
+## Features
 
+### Phase 1 (Core Architecture) ✅
 - ✅ **Predictable State Management** - Pure reducers transform state based on actions
 - ✅ **Type-Safe** - Full TypeScript support with discriminated unions
 - ✅ **Effect System** - Declarative side effects (run, batch, cancellable, debounced, throttled, afterDelay, fireAndForget)
 - ✅ **Reducer Composition** - Compose features with `scope()` and `combineReducers()`
 - ✅ **TestStore** - Comprehensive testing support with send/receive pattern
 - ✅ **Svelte 5 Integration** - Built on Svelte 5's $state runes for reactivity
+
+### Phase 2 (Navigation System) ✅
+- ✅ **Tree-Based Navigation** - Modal, Sheet, Alert, Drawer, Popover navigation
+- ✅ **Stack-Based Navigation** - Multi-screen flows with NavigationStack
+- ✅ **8 Navigation Components** - Accessible, tested, customizable
+- ✅ **Type-Safe Action Routing** - `ifLetPresentation()` with full type inference
+- ✅ **Store Scoping** - `scopeToDestination()` for child components
+- ✅ **WCAG 2.1 AA Compliant** - Enterprise-grade accessibility
 
 ## Installation
 
@@ -148,23 +157,100 @@ describe('Counter', () => {
 });
 ```
 
+## Navigation Quick Start
+
+```typescript
+import { ifLetPresentation } from '@composable-svelte/core/navigation';
+import { Modal } from '@composable-svelte/core/navigation-components';
+
+// 1. Define state with optional destination
+interface AppState {
+  productDetail: ProductDetailState | null;
+}
+
+// 2. Define actions with PresentationAction wrapper
+type AppAction =
+  | { type: 'showProduct'; productId: string }
+  | { type: 'productDetail'; action: PresentationAction<ProductDetailAction> };
+
+// 3. Use ifLetPresentation in reducer
+const appReducer: Reducer<AppState, AppAction, AppDeps> = (state, action, deps) => {
+  switch (action.type) {
+    case 'showProduct':
+      return [{
+        ...state,
+        productDetail: { productId: action.productId }
+      }, Effect.none()];
+
+    case 'productDetail': {
+      const [newState, effect] = ifLetPresentation(
+        (s) => s.productDetail,
+        (s, detail) => ({ ...s, productDetail: detail }),
+        'productDetail',
+        (childAction): AppAction => ({
+          type: 'productDetail',
+          action: { type: 'presented', action: childAction }
+        }),
+        productDetailReducer
+      )(state, action, deps);
+
+      // Observe dismiss
+      if ('action' in action && action.action.type === 'dismiss') {
+        return [{ ...newState, productDetail: null }, effect];
+      }
+
+      return [newState, effect];
+    }
+
+    default:
+      return [state, Effect.none()];
+  }
+};
+```
+
+**In your Svelte component:**
+
+```svelte
+<script lang="ts">
+  import { scopeToDestination } from '@composable-svelte/core/navigation';
+  import { Modal } from '@composable-svelte/core/navigation-components';
+
+  let { store } = $props();
+
+  const detailStore = $derived(
+    scopeToDestination(store, 'productDetail')
+  );
+</script>
+
+{#if detailStore}
+  <Modal
+    open={true}
+    title="Product Details"
+    onOpenChange={(open) => !open && detailStore.dismiss()}
+  >
+    <ProductDetails store={detailStore} />
+  </Modal>
+{/if}
+```
+
 ## Examples
 
-See `examples/counter` for a complete working example.
+- **Counter** - `examples/counter` - Basic store usage
+- **Product Gallery** - `examples/product-gallery` - Complete navigation example with all 8 components
 
 ## Documentation
 
-Full documentation will be available in Phase 5.
-
-For now, refer to the TypeScript types and JSDoc comments in the source code.
+- **Navigation Guide** - [`docs/NAVIGATION-GUIDE.md`](../../docs/NAVIGATION-GUIDE.md) - Complete navigation system guide
+- **Best Practices** - [`docs/navigation-best-practices.md`](../../docs/navigation-best-practices.md) - Patterns and pitfalls
+- **Product Gallery README** - [`examples/product-gallery/README.md`](../../examples/product-gallery/README.md) - Architecture walkthrough
 
 ## Roadmap
 
-- ✅ **Phase 1 (Current)**: Core architecture - store, effects, composition, testing
-- 🔄 **Phase 2**: Navigation system
-- 🔄 **Phase 3**: DSL + matchers
-- 🔄 **Phase 4**: Animation integration
-- 🔄 **Phase 5**: Polish, documentation, examples, 1.0.0 release
+- ✅ **Phase 1**: Core architecture - store, effects, composition, testing
+- ✅ **Phase 2**: Navigation system - components, routing, accessibility
+- 🔄 **Phase 3**: DSL + matchers - ergonomic fluent APIs
+- 🔄 **Phase 4**: Animation integration - animated transitions
+- 🔄 **Phase 5**: Polish, documentation, 1.0.0 release
 
 ## License
 
