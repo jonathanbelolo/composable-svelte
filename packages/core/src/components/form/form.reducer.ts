@@ -193,7 +193,8 @@ export function createFormReducer<T extends Record<string, any>>(
 							// 1. Zod schema validation for this field
 							// Validate just this specific field using schema.shape
 							try {
-								const fieldSchema = schema.shape[field];
+								// Access shape safely - it only exists on ZodObject
+								const fieldSchema = (schema as any).shape?.[field];
 								if (fieldSchema) {
 									const result = fieldSchema.safeParse(fieldValue);
 
