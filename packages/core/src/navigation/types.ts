@@ -212,6 +212,175 @@ export const StackAction = {
 } as const;
 
 // ============================================================================
+// Destination Types (Phase 3 DSL)
+// ============================================================================
+
+/**
+ * Extract state union from a map of reducers.
+ *
+ * Given a reducer map like `{ addItem: addItemReducer, editItem: editItemReducer }`,
+ * this type generates a discriminated union:
+ * ```typescript
+ * | { type: 'addItem'; state: AddItemState }
+ * | { type: 'editItem'; state: EditItemState }
+ * ```
+ *
+ * This enables type-safe destination state handling with full inference.
+ *
+ * @template Reducers - A record mapping case types to reducer functions
+ *
+ * @example
+ * ```typescript
+ * const reducers = {
+ *   addItem: addItemReducer,  // Reducer<AddItemState, AddItemAction>
+ *   editItem: editItemReducer  // Reducer<EditItemState, EditItemAction>
+ * };
+ *
+ * type State = DestinationState<typeof reducers>;
+ * // Result: { type: 'addItem'; state: AddItemState } | { type: 'editItem'; state: EditItemState }
+ * ```
+ */
+export type DestinationState<Reducers extends Record<string, (s: any, a: any, d: any) => any>> = {
+  [K in keyof Reducers]: {
+    readonly type: K;
+    readonly state: Reducers[K] extends (s: infer S, a: any, d: any) => any ? S : never;
+  };
+}[keyof Reducers];
+
+/**
+ * Extract action union from a map of reducers.
+ *
+ * Given a reducer map like `{ addItem: addItemReducer, editItem: editItemReducer }`,
+ * this type generates a discriminated union:
+ * ```typescript
+ * | { type: 'addItem'; action: PresentationAction<AddItemAction> }
+ * | { type: 'editItem'; action: PresentationAction<EditItemAction> }
+ * ```
+ *
+ * Actions are wrapped in PresentationAction to enable parent observation.
+ *
+ * @template Reducers - A record mapping case types to reducer functions
+ *
+ * @example
+ * ```typescript
+ * const reducers = {
+ *   addItem: addItemReducer,
+ *   editItem: editItemReducer
+ * };
+ *
+ * type Action = DestinationAction<typeof reducers>;
+ * // Result: { type: 'addItem'; action: PresentationAction<AddItemAction> } | ...
+ * ```
+ */
+export type DestinationAction<Reducers extends Record<string, (s: any, a: any, d: any) => any>> = {
+  [K in keyof Reducers]: {
+    readonly type: K;
+    readonly action: PresentationAction<Reducers[K] extends (s: any, a: infer A, d: any) => any ? A : never>;
+  };
+}[keyof Reducers];
+
+/**
+ * Extract all valid case paths from a destination state union.
+ *
+ * Case paths are template literal strings in the format `"caseType.actionType"`.
+ * These enable type-safe action matching with autocomplete and compile-time validation.
+ *
+ * Given destination state with cases `addItem` and `editItem`, where:
+ * - AddItemAction = `{ type: 'saveButtonTapped' } | { type: 'cancelButtonTapped' }`
+ * - EditItemAction = `{ type: 'saveButtonTapped' } | { type: 'deleteButtonTapped' }`
+ *
+ * This generates the union:
+ * ```typescript
+ * | "addItem.saveButtonTapped"
+ * | "addItem.cancelButtonTapped"
+ * | "editItem.saveButtonTapped"
+ * | "editItem.deleteButtonTapped"
+ * | "addItem"   // Prefix matching (any addItem action)
+ * | "editItem"  // Prefix matching (any editItem action)
+ * ```
+ *
+ * @template State - The destination state union
+ *
+ * @example
+ * ```typescript
+ * type State = { type: 'addItem'; state: AddItemState } | { type: 'editItem'; state: EditItemState };
+ * type Paths = DestinationCasePath<State>;
+ *
+ * // IDE provides autocomplete:
+ * const path: Paths = 'addItem.saveButtonTapped';  // ✓ Valid
+ * const invalid: Paths = 'addItem.saveButonTapped';  // ✗ Type error (typo detected!)
+ * ```
+ */
+export type DestinationCasePath<State extends { type: string }> =
+  | Extract<State, { type: string }>['type']  // Prefix matching: just the case type
+  | (State extends { type: infer CaseType extends string }
+      ? CaseType extends any
+        ? Extract<State, { type: CaseType }> extends { state: infer S }
+          ? S extends { _actions: infer Actions }
+            ? Actions extends { type: infer ActionType extends string }
+              ? `${CaseType}.${ActionType}`
+              : never
+            : never
+          : never
+        : never
+      : never);
+
+/**
+ * Extract the case type from a case path string.
+ *
+ * Given a path like `"addItem.saveButtonTapped"`, extracts `"addItem"`.
+ * Given a prefix path like `"addItem"`, returns `"addItem"`.
+ *
+ * @template Path - The case path string
+ *
+ * @example
+ * ```typescript
+ * type Case1 = ExtractCaseType<"addItem.saveButtonTapped">;  // "addItem"
+ * type Case2 = ExtractCaseType<"editItem">;  // "editItem"
+ * ```
+ */
+export type ExtractCaseType<Path extends string> = Path extends `${infer Case}.${string}`
+  ? Case
+  : Path;
+
+/**
+ * Extract the action type from a case path string.
+ *
+ * Given a path like `"addItem.saveButtonTapped"`, extracts `"saveButtonTapped"`.
+ * Given a prefix path like `"addItem"`, returns `never` (no specific action).
+ *
+ * @template Path - The case path string
+ *
+ * @example
+ * ```typescript
+ * type Action1 = ExtractActionType<"addItem.saveButtonTapped">;  // "saveButtonTapped"
+ * type Action2 = ExtractActionType<"addItem">;  // never (prefix matching)
+ * ```
+ */
+export type ExtractActionType<Path extends string> = Path extends `${string}.${infer Action}`
+  ? Action
+  : never;
+
+/**
+ * Extract the child state type for a specific case from a destination union.
+ *
+ * @template State - The destination state union
+ * @template CaseType - The case type to extract
+ *
+ * @example
+ * ```typescript
+ * type State = { type: 'addItem'; state: AddItemState } | { type: 'editItem'; state: EditItemState };
+ * type AddState = ExtractCaseState<State, 'addItem'>;  // AddItemState
+ * ```
+ */
+export type ExtractCaseState<State extends { type: string; state: any }, CaseType extends string> = Extract<
+  State,
+  { type: CaseType }
+> extends { state: infer S }
+  ? S
+  : never;
+
+// ============================================================================
 // Type Exports
 // ============================================================================
 
