@@ -2,13 +2,18 @@
 	import { setContext } from 'svelte';
 	import { createStore } from '../../store.svelte.js';
 	import { createFormReducer } from './form.reducer.js';
-	import type { FormConfig } from './form.types.js';
+	import type { FormConfig, FormState, FormAction } from './form.types.js';
 	import { createInitialFormState } from './form.reducer.js';
+	import type { Store } from '../../types.js';
 
 	/**
 	 * Form component - Creates and manages form state using the reducer pattern.
 	 *
-	 * @example
+	 * Supports two modes:
+	 * 1. **Standalone mode**: Pass `config` to create internal store
+	 * 2. **Integrated mode**: Pass `store` to use external store from parent reducer
+	 *
+	 * @example Standalone mode (simple forms)
 	 * ```svelte
 	 * <Form config={formConfig}>
 	 *   <FormField name="email">
@@ -21,13 +26,36 @@
 	 *   <Button type="submit">Submit</Button>
 	 * </Form>
 	 * ```
+	 *
+	 * @example Integrated mode (parent reducer manages form)
+	 * ```svelte
+	 * <script>
+	 *   // Parent reducer uses scope() to integrate form
+	 *   const parentReducer = integrate(coreReducer)
+	 *     .with('contactForm', createFormReducer(config))
+	 *     .build();
+	 *
+	 *   const store = createStore({ initialState, reducer: parentReducer });
+	 *   const formStore = scopeTo(store).into('contactForm');
+	 * </script>
+	 *
+	 * <Form store={formStore}>
+	 *   <!-- form fields -->
+	 * </Form>
+	 * ```
 	 */
 
 	interface Props {
 		/**
-		 * Form configuration including schema, validation mode, and handlers
+		 * Form configuration (standalone mode)
+		 * Mutually exclusive with `store`
 		 */
-		config: FormConfig<T>;
+		config?: FormConfig<T>;
+		/**
+		 * External store from parent reducer (integrated mode)
+		 * Mutually exclusive with `config`
+		 */
+		store?: Store<FormState<T>, FormAction<T>>;
 		/**
 		 * Optional class name for the form element
 		 */
@@ -38,16 +66,34 @@
 		children?: import('svelte').Snippet;
 	}
 
-	let { config, class: className, children }: Props = $props();
+	let { config, store: externalStore, class: className, children }: Props = $props();
 
-	// Create store with form reducer
-	const reducer = createFormReducer(config);
-	const initialState = createInitialFormState(config);
-	const store = createStore({
-		initialState,
-		reducer,
-		dependencies: {}
-	});
+	// Validate props
+	if (!config && !externalStore) {
+		throw new Error('Form: Must provide either `config` (standalone) or `store` (integrated)');
+	}
+	if (config && externalStore) {
+		throw new Error('Form: Cannot provide both `config` and `store` - use one or the other');
+	}
+
+	// Determine which store to use
+	let store: Store<FormState<T>, FormAction<T>>;
+
+	if (externalStore) {
+		// Integrated mode - use external store
+		store = externalStore;
+	} else if (config) {
+		// Standalone mode - create internal store
+		const reducer = createFormReducer(config);
+		const initialState = createInitialFormState(config);
+		store = createStore({
+			initialState,
+			reducer,
+			dependencies: {}
+		});
+	} else {
+		throw new Error('Form: Unreachable - props validation failed');
+	}
 
 	// Provide store to child components via context
 	setContext('formStore', store);

@@ -41,6 +41,7 @@ export function createInitialFormState<T extends Record<string, any>>(
 	const fields: any = {};
 	for (const key in formData) {
 		fields[key] = {
+			value: formData[key],
 			touched: false,
 			dirty: false,
 			error: null,

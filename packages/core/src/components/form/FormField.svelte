@@ -49,7 +49,8 @@
 		error: store.state.fields[name]?.error ?? null,
 		touched: store.state.fields[name]?.touched ?? false,
 		dirty: store.state.fields[name]?.dirty ?? false,
-		validating: store.state.fields[name]?.validating ?? false
+		isValidating: store.state.fields[name]?.isValidating ?? false,
+		warnings: store.state.fields[name]?.warnings ?? []
 	});
 
 	// Provide field name and state to child components

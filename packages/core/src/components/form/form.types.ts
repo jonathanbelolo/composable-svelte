@@ -95,6 +95,7 @@ export interface FormState<T extends Record<string, any>> {
  * @example
  * ```typescript
  * const fieldState: FieldState = {
+ *   value: 'John',       // Current field value
  *   touched: true,       // User has interacted with field
  *   dirty: true,         // Value differs from initial
  *   error: 'Too short',  // Validation error message
@@ -104,6 +105,11 @@ export interface FormState<T extends Record<string, any>> {
  * ```
  */
 export interface FieldState {
+	/**
+	 * Current field value.
+	 */
+	value: any;
+
 	/**
 	 * Has user interacted with this field (focused/blurred)?
 	 */
