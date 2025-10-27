@@ -1,0 +1,19 @@
+<script lang="ts">
+	import { cn } from '$lib/utils.js';
+	import type { HTMLAttributes } from 'svelte/elements';
+
+	interface AlertTitleProps extends Omit<HTMLAttributes<HTMLHeadingElement>, 'class'> {
+		class?: string;
+		children?: import('svelte').Snippet;
+	}
+
+	let { class: className, children, ...restProps }: AlertTitleProps = $props();
+
+	const titleClasses = $derived(cn('mb-1 font-medium leading-none tracking-tight', className));
+</script>
+
+<h5 class={titleClasses} {...restProps}>
+	{#if children}
+		{@render children()}
+	{/if}
+</h5>
