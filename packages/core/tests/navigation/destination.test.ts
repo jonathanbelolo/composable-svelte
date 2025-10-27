@@ -352,4 +352,217 @@ describe('createDestination', () => {
 			expect(action.action.type).toBe('presented');
 		});
 	});
+
+	describe('matcher APIs', () => {
+		const Destination = createDestination({
+			addItem: addItemReducer,
+			editItem: editItemReducer
+		});
+
+		describe('is()', () => {
+			it('matches full path', () => {
+				const action = {
+					type: 'addItem',
+					action: { type: 'presented' as const, action: { type: 'saveButtonTapped' as const } }
+				};
+
+				expect(Destination.is(action, 'addItem.saveButtonTapped')).toBe(true);
+				expect(Destination.is(action, 'addItem.cancelButtonTapped')).toBe(false);
+				expect(Destination.is(action, 'editItem.saveButtonTapped')).toBe(false);
+			});
+
+			it('matches prefix (case type only)', () => {
+				const action = {
+					type: 'addItem',
+					action: { type: 'presented' as const, action: { type: 'saveButtonTapped' as const } }
+				};
+
+				expect(Destination.is(action, 'addItem')).toBe(true);
+				expect(Destination.is(action, 'editItem')).toBe(false);
+			});
+
+			it('returns false for dismiss actions', () => {
+				const action = {
+					type: 'addItem',
+					action: { type: 'dismiss' as const }
+				};
+
+				expect(Destination.is(action, 'addItem.saveButtonTapped')).toBe(false);
+				expect(Destination.is(action, 'addItem')).toBe(true); // Prefix still matches
+			});
+
+			it('returns false for malformed actions', () => {
+				expect(Destination.is(null, 'addItem.saveButtonTapped')).toBe(false);
+				expect(Destination.is(undefined, 'addItem.saveButtonTapped')).toBe(false);
+				expect(Destination.is('string', 'addItem.saveButtonTapped')).toBe(false);
+				expect(Destination.is({}, 'addItem.saveButtonTapped')).toBe(false);
+				expect(Destination.is({ type: 'addItem' }, 'addItem.saveButtonTapped')).toBe(false);
+			});
+
+			it('handles different action types', () => {
+				const nameAction = {
+					type: 'addItem',
+					action: { type: 'presented' as const, action: { type: 'nameChanged' as const, value: 'Test' } }
+				};
+
+				const saveAction = {
+					type: 'addItem',
+					action: { type: 'presented' as const, action: { type: 'saveButtonTapped' as const } }
+				};
+
+				expect(Destination.is(nameAction, 'addItem.nameChanged')).toBe(true);
+				expect(Destination.is(nameAction, 'addItem.saveButtonTapped')).toBe(false);
+				expect(Destination.is(saveAction, 'addItem.saveButtonTapped')).toBe(true);
+				expect(Destination.is(saveAction, 'addItem.nameChanged')).toBe(false);
+			});
+		});
+
+		describe('matchCase()', () => {
+			it('returns child state when action matches and state exists', () => {
+				const state = Destination.initial('addItem', { name: 'Test', quantity: 5 });
+				const action = {
+					type: 'addItem',
+					action: { type: 'presented' as const, action: { type: 'saveButtonTapped' as const } }
+				};
+
+				const result = Destination.matchCase(action, state, 'addItem.saveButtonTapped');
+
+				expect(result).toEqual({ name: 'Test', quantity: 5 });
+			});
+
+			it('returns null when action does not match', () => {
+				const state = Destination.initial('addItem', { name: 'Test', quantity: 5 });
+				const action = {
+					type: 'addItem',
+					action: { type: 'presented' as const, action: { type: 'cancelButtonTapped' as const } }
+				};
+
+				const result = Destination.matchCase(action, state, 'addItem.saveButtonTapped');
+
+				expect(result).toBeNull();
+			});
+
+			it('returns null when state is for different case', () => {
+				const state = Destination.initial('addItem', { name: 'Test', quantity: 5 });
+				const action = {
+					type: 'editItem',
+					action: { type: 'presented' as const, action: { type: 'saveButtonTapped' as const } }
+				};
+
+				const result = Destination.matchCase(action, state, 'editItem.saveButtonTapped');
+
+				expect(result).toBeNull();
+			});
+
+			it('returns null when state is null', () => {
+				const action = {
+					type: 'addItem',
+					action: { type: 'presented' as const, action: { type: 'saveButtonTapped' as const } }
+				};
+
+				const result = Destination.matchCase(action, null, 'addItem.saveButtonTapped');
+
+				expect(result).toBeNull();
+			});
+
+			it('works with prefix matching', () => {
+				const state = Destination.initial('addItem', { name: 'Test', quantity: 5 });
+				const action = {
+					type: 'addItem',
+					action: { type: 'presented' as const, action: { type: 'saveButtonTapped' as const } }
+				};
+
+				const result = Destination.matchCase(action, state, 'addItem');
+
+				expect(result).toEqual({ name: 'Test', quantity: 5 });
+			});
+		});
+
+		describe('match()', () => {
+			it('routes to correct handler', () => {
+				const state = Destination.initial('addItem', { name: 'Test', quantity: 5 });
+				const action = {
+					type: 'addItem',
+					action: { type: 'presented' as const, action: { type: 'saveButtonTapped' as const } }
+				};
+
+				const result = Destination.match(action, state, {
+					'addItem.saveButtonTapped': (addState) => ({ type: 'add' as const, item: addState }),
+					'addItem.cancelButtonTapped': (addState) => ({ type: 'cancel' as const }),
+					'editItem.saveButtonTapped': (editState) => ({ type: 'edit' as const, item: editState })
+				});
+
+				expect(result.matched).toBe(true);
+				if (result.matched) {
+					expect(result.value).toEqual({ type: 'add', item: { name: 'Test', quantity: 5 } });
+				}
+			});
+
+			it('returns first matching handler', () => {
+				const state = Destination.initial('addItem', { name: 'Test', quantity: 5 });
+				const action = {
+					type: 'addItem',
+					action: { type: 'presented' as const, action: { type: 'saveButtonTapped' as const } }
+				};
+
+				const result = Destination.match(action, state, {
+					'addItem': () => 'prefix-match',
+					'addItem.saveButtonTapped': () => 'full-match'
+				});
+
+				expect(result.matched).toBe(true);
+				if (result.matched) {
+					expect(result.value).toBe('prefix-match'); // First handler wins
+				}
+			});
+
+			it('returns unmatched when no handlers match', () => {
+				const state = Destination.initial('addItem', { name: 'Test', quantity: 5 });
+				const action = {
+					type: 'addItem',
+					action: { type: 'presented' as const, action: { type: 'saveButtonTapped' as const } }
+				};
+
+				const result = Destination.match(action, state, {
+					'addItem.cancelButtonTapped': () => 'cancel',
+					'editItem.saveButtonTapped': () => 'edit'
+				});
+
+				expect(result.matched).toBe(false);
+			});
+
+			it('works with multiple cases', () => {
+				const addState = Destination.initial('addItem', { name: 'Add', quantity: 1 });
+				const editState = Destination.initial('editItem', { id: '1', name: 'Edit', quantity: 2 });
+
+				const addAction = {
+					type: 'addItem',
+					action: { type: 'presented' as const, action: { type: 'saveButtonTapped' as const } }
+				};
+
+				const editAction = {
+					type: 'editItem',
+					action: { type: 'presented' as const, action: { type: 'deleteButtonTapped' as const } }
+				};
+
+				const handlers = {
+					'addItem.saveButtonTapped': (s: any) => ({ type: 'add' as const, name: s.name }),
+					'editItem.saveButtonTapped': (s: any) => ({ type: 'edit' as const, name: s.name }),
+					'editItem.deleteButtonTapped': (s: any) => ({ type: 'delete' as const, id: s.id })
+				};
+
+				const addResult = Destination.match(addAction, addState, handlers);
+				expect(addResult.matched).toBe(true);
+				if (addResult.matched) {
+					expect(addResult.value).toEqual({ type: 'add', name: 'Add' });
+				}
+
+				const editResult = Destination.match(editAction, editState, handlers);
+				expect(editResult.matched).toBe(true);
+				if (editResult.matched) {
+					expect(editResult.value).toEqual({ type: 'delete', id: '1' });
+				}
+			});
+		});
+	});
 });
