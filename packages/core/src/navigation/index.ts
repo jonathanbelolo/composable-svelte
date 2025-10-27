@@ -22,7 +22,9 @@ export type {
   PresentationAction,
   StackAction,
   Presentation,
-  Stack
+  Stack,
+  PresentationState,
+  PresentationEvent
 } from './types.js';
 
 export { PresentationAction as PresentationActionHelpers, StackAction as StackActionHelpers } from './types.js';

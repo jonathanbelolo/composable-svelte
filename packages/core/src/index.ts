@@ -76,6 +76,8 @@ export type {
   StackAction,
   Presentation,
   Stack,
+  PresentationState,
+  PresentationEvent,
   DestinationState,
   DestinationReducerMap,
   CasePath,

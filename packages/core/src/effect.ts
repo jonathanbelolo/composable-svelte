@@ -202,6 +202,190 @@ export const Effect = {
   },
 
   /**
+   * Create an effect that coordinates with animation lifecycle.
+   * Automatically dispatches completion events after the specified duration.
+   *
+   * This is a convenience wrapper around `Effect.afterDelay()` specifically
+   * for animation use cases. It provides a cleaner API for common patterns
+   * where you need to dispatch an action after an animation completes.
+   *
+   * **Use this when:**
+   * - You have a fixed-duration animation (e.g., CSS transition, Svelte transition)
+   * - You need to transition presentation state after animation completes
+   * - You want a concise, declarative way to express "do X after Y milliseconds"
+   *
+   * **Don't use this when:**
+   * - Animation duration is variable (use callback from animation library)
+   * - You need to cancel the animation mid-flight (use cancellable effects)
+   *
+   * @param config - Animation configuration
+   * @param config.duration - Animation duration in milliseconds (must be non-negative)
+   * @param config.onComplete - Action to dispatch when animation completes
+   * @throws {TypeError} If duration is negative
+   *
+   * @example
+   * ```typescript
+   * // Simple presentation completion
+   * case 'addButtonTapped': {
+   *   return [
+   *     {
+   *       ...state,
+   *       presentation: { status: 'presenting', content: destination }
+   *     },
+   *     Effect.animated({
+   *       duration: 300,
+   *       onComplete: {
+   *         type: 'presentation',
+   *         event: { type: 'presentationCompleted' }
+   *       }
+   *     })
+   *   ];
+   * }
+   * ```
+   *
+   * @example
+   * ```typescript
+   * // With timeout fallback
+   * case 'addButtonTapped': {
+   *   return [
+   *     {
+   *       ...state,
+   *       presentation: { status: 'presenting', content: destination }
+   *     },
+   *     Effect.batch(
+   *       Effect.animated({
+   *         duration: 300,
+   *         onComplete: {
+   *           type: 'presentation',
+   *           event: { type: 'presentationCompleted' }
+   *         }
+   *       }),
+   *       Effect.animated({
+   *         duration: 600,  // 2x expected duration
+   *         onComplete: {
+   *           type: 'presentation',
+   *           event: { type: 'presentationTimeout' }
+   *         }
+   *       })
+   *     )
+   *   ];
+   * }
+   * ```
+   */
+  animated<A>(config: { duration: number; onComplete: A }): EffectType<A> {
+    if (config.duration < 0) {
+      throw new TypeError(`animated: duration must be non-negative, got ${config.duration}`);
+    }
+    return Effect.afterDelay(config.duration, (dispatch) => {
+      dispatch(config.onComplete);
+    });
+  },
+
+  /**
+   * Create a presentation effect with automatic lifecycle management.
+   *
+   * This helper generates both `present` and `dismiss` effects for a complete
+   * animation lifecycle. It's designed for the common pattern where you have:
+   * - A presentation animation (animate IN)
+   * - A dismissal animation (animate OUT)
+   * - Both dispatch events to transition presentation state
+   *
+   * **Benefits:**
+   * - DRY: Define animation durations once, reuse for present/dismiss
+   * - Type-safe: Action creator ensures correct event structure
+   * - Consistent: Both animations use same pattern
+   *
+   * **Use this when:**
+   * - You have symmetric present/dismiss animations (e.g., modal, sheet, drawer)
+   * - Both animations dispatch to the same action type
+   * - You want to avoid repeating duration/event configuration
+   *
+   * **Don't use this when:**
+   * - Animations are asymmetric (different action types, complex coordination)
+   * - You need fine-grained control over timing
+   * - You're not using the presentation lifecycle pattern
+   *
+   * @param config - Transition configuration
+   * @param config.presentDuration - Duration for presentation animation (default: 300ms)
+   * @param config.dismissDuration - Duration for dismissal animation (default: 200ms)
+   * @param config.createPresentationEvent - Function to create action from event
+   * @throws {TypeError} If duration is negative
+   *
+   * @example
+   * ```typescript
+   * // Define transition once
+   * const transition = Effect.transition({
+   *   presentDuration: 300,
+   *   dismissDuration: 200,
+   *   createPresentationEvent: (event) => ({
+   *     type: 'presentation',
+   *     event
+   *   })
+   * });
+   *
+   * // Use in reducer
+   * case 'addButtonTapped':
+   *   return [
+   *     { ...state, presentation: { status: 'presenting', content: destination } },
+   *     transition.present
+   *   ];
+   *
+   * case 'closeButtonTapped':
+   *   return [
+   *     { ...state, presentation: { status: 'dismissing', content: state.presentation.content } },
+   *     transition.dismiss
+   *   ];
+   * ```
+   *
+   * @example
+   * ```typescript
+   * // Nested presentation (child within parent)
+   * const parentTransition = Effect.transition({
+   *   createPresentationEvent: (event) => ({
+   *     type: 'parentPresentation',
+   *     event
+   *   })
+   * });
+   *
+   * const childTransition = Effect.transition({
+   *   createPresentationEvent: (event) => ({
+   *     type: 'childPresentation',
+   *     event
+   *   })
+   * });
+   * ```
+   */
+  transition<A>(config: {
+    presentDuration?: number;
+    dismissDuration?: number;
+    createPresentationEvent: (event: { type: 'presentationCompleted' | 'dismissalCompleted' }) => A;
+  }): {
+    present: EffectType<A>;
+    dismiss: EffectType<A>;
+  } {
+    const presentDuration = config.presentDuration ?? 300;
+    const dismissDuration = config.dismissDuration ?? 200;
+
+    if (presentDuration < 0) {
+      throw new TypeError(`transition: presentDuration must be non-negative, got ${presentDuration}`);
+    }
+    if (dismissDuration < 0) {
+      throw new TypeError(`transition: dismissDuration must be non-negative, got ${dismissDuration}`);
+    }
+
+    return {
+      present: Effect.animated({
+        duration: presentDuration,
+        onComplete: config.createPresentationEvent({ type: 'presentationCompleted' })
+      }),
+      dismiss: Effect.animated({
+        duration: dismissDuration,
+        onComplete: config.createPresentationEvent({ type: 'dismissalCompleted' })
+      })
+    };
+  },
+
+  /**
    * Map effect actions to parent actions (for composition).
    *
    * This is the key function that enables reducer composition.

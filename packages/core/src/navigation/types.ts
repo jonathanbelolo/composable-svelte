@@ -381,6 +381,90 @@ export type ExtractCaseState<State extends { type: string; state: any }, CaseTyp
   : never;
 
 // ============================================================================
+// Animation Types (Phase 4)
+// ============================================================================
+
+/**
+ * Presentation lifecycle state for animated presentations.
+ *
+ * Tracks the animation lifecycle of a destination through four states:
+ * - `idle`: Nothing is being presented
+ * - `presenting`: Animation in progress (animating IN)
+ * - `presented`: Animation complete, content fully visible
+ * - `dismissing`: Animation in progress (animating OUT)
+ *
+ * **Key Design Decision**: Separate `destination` and `presentation` fields.
+ * - `destination`: The WHAT (logical destination data)
+ * - `presentation`: The HOW (animation lifecycle)
+ * - During dismissal, `destination` remains non-null (so UI can animate out)
+ * - Both are cleared atomically when dismissal completes
+ *
+ * @template T - The content type being presented (usually DestinationState)
+ *
+ * @example
+ * ```typescript
+ * interface FeatureState {
+ *   destination: DestinationState | null;  // From navigation-spec.md
+ *   presentation: PresentationState<DestinationState>;  // Animation lifecycle
+ * }
+ *
+ * // Lifecycle:
+ * // 1. User taps button → destination set, presentation: { status: 'presenting', content }
+ * // 2. Animation completes → presentation: { status: 'presented', content }
+ * // 3. User dismisses → destination still set, presentation: { status: 'dismissing', content }
+ * // 4. Dismissal completes → destination: null, presentation: { status: 'idle' }
+ * ```
+ */
+export type PresentationState<T> =
+	| { readonly status: 'idle' }
+	| { readonly status: 'presenting'; readonly content: T; readonly duration?: number }
+	| { readonly status: 'presented'; readonly content: T }
+	| { readonly status: 'dismissing'; readonly content: T; readonly duration?: number };
+
+/**
+ * Events for presentation lifecycle transitions.
+ *
+ * These events are dispatched by animation components to signal lifecycle changes:
+ * - `presentationCompleted`: Animation-in finished → transition from 'presenting' to 'presented'
+ * - `dismissalCompleted`: Animation-out finished → transition from 'dismissing' to 'idle'
+ *
+ * Components dispatch these events via `onintroend` / `onoutroend` callbacks
+ * (Svelte transitions) or animation completion handlers (Motion One).
+ *
+ * @example
+ * ```typescript
+ * // In reducer
+ * type FeatureAction =
+ *   | { type: 'addButtonTapped' }
+ *   | { type: 'closeButtonTapped' }
+ *   | { type: 'presentation'; event: PresentationEvent };
+ *
+ * case 'presentation': {
+ *   if (action.event.type === 'presentationCompleted') {
+ *     // Transition from 'presenting' → 'presented'
+ *     return [
+ *       { ...state, presentation: { status: 'presented', content: state.presentation.content } },
+ *       Effect.none()
+ *     ];
+ *   }
+ *
+ *   if (action.event.type === 'dismissalCompleted') {
+ *     // Transition from 'dismissing' → 'idle' (clear destination too)
+ *     return [
+ *       { ...state, destination: null, presentation: { status: 'idle' } },
+ *       Effect.none()
+ *     ];
+ *   }
+ * }
+ * ```
+ */
+export type PresentationEvent =
+	| { readonly type: 'presentationStarted' }
+	| { readonly type: 'presentationCompleted' }
+	| { readonly type: 'dismissalStarted' }
+	| { readonly type: 'dismissalCompleted' };
+
+// ============================================================================
 // Type Exports
 // ============================================================================
 
