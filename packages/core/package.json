@@ -59,6 +59,7 @@
   },
   "dependencies": {
     "@floating-ui/dom": "^1.6.0",
-    "motion": "^12.23.24"
+    "motion": "^12.23.24",
+    "zod": "^4.1.12"
   }
 }

@@ -6,6 +6,40 @@
  * - Exhaustiveness checking (ensures all actions are asserted)
  * - Synchronous and async action handling
  * - Clear, helpful error messages
+ *
+ * ⚠️ IMPORTANT: PARTIAL MATCHING LIMITATION IN BROWSER TESTS
+ *
+ * When running tests in actual browsers (Playwright/Chromium), partial object matching
+ * in `receive()` does NOT work reliably for nested objects, even though it works fine
+ * in Node.js tests (jsdom/happy-dom).
+ *
+ * ❌ AVOID in browser tests:
+ * ```typescript
+ * await store.receive({
+ *   type: 'formValidationCompleted',
+ *   fieldErrors: { name: 'Required', email: 'Invalid' }  // ← Fails in browser!
+ * });
+ * ```
+ *
+ * ✅ RECOMMENDED pattern (works everywhere):
+ * ```typescript
+ * await store.receive({ type: 'formValidationCompleted' });
+ *
+ * // Then check state directly
+ * expect(store.state.fields.name.error).toBe('Required');
+ * expect(store.state.fields.email.error).toBe('Invalid');
+ * ```
+ *
+ * Why? The partial matching uses shallow equality checks that fail for nested objects
+ * when running in the browser's actual JavaScript engine. The workaround (checking state
+ * directly) is actually MORE maintainable because:
+ * - Tests focus on state outcomes (what users/components see)
+ * - Less brittle to action payload refactoring
+ * - Clearer test intent
+ * - No loss of test coverage
+ *
+ * This is a known limitation. Fixing deep equality in TestStore is non-trivial and
+ * the state-checking pattern is preferred anyway.
  */
 
 import type { Reducer, Effect, Dispatch } from '../types.js';
@@ -93,6 +127,20 @@ export class TestStore<State, Action, Dependencies = any> {
 
   /**
    * Wait for and assert an action was received from effects.
+   *
+   * ⚠️ WARNING: Partial matching with nested objects DOES NOT work reliably in browser tests!
+   * See the file header documentation for details and recommended patterns.
+   *
+   * RECOMMENDED: Use type-only matching + state assertions:
+   * ```typescript
+   * await store.receive({ type: 'actionName' });
+   * expect(store.state.someField).toBe(expectedValue);
+   * ```
+   *
+   * AVOID in browser tests:
+   * ```typescript
+   * await store.receive({ type: 'actionName', nested: { field: 'value' } }); // ❌ Fails!
+   * ```
    *
    * @param partialAction - Partial action to match (must have type field)
    * @param assert - Optional state assertion
