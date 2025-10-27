@@ -2,7 +2,7 @@
 
 **Strategy**: Foundation-First Hybrid (Vertical Slices)
 **Timeline**: 5 weeks
-**Status**: In Progress - Week 1 Complete (Form System) ✅
+**Status**: In Progress - Week 2, Day 2 Complete ✅
 
 ---
 
@@ -11,13 +11,19 @@
 - [x] **Week 1, Day 1**: Infrastructure & Theme System ✅
 - [x] **Week 1, Day 2**: Foundational Atomic Components ✅
 - [x] **Week 1, Day 3-5**: Form System (Reducer, Types, Zod Integration) ✅
-- [ ] **Week 2**: Form Components + Atomic Expansion
+- [x] **Week 2, Day 1**: Form UI Components ✅
+- [x] **Week 2, Day 2**: Form Atomic Inputs ✅
+- [ ] **Week 2, Day 3-5**: Form Examples + Remaining Atomic Components
 - [ ] **Week 3**: DataTable + Navigation Components
 - [ ] **Week 4**: Remaining Stateful Components
 - [ ] **Week 5**: Advanced Components + Polish
 
-**Components Complete**: 11 / 50+ (Button, Input, Label, Spinner, Card family [6 components], Separator)
-**Form System**: Core reducer complete with 23/23 tests passing ✅
+**Components Complete**: 23 / 50+
+- Foundation: Button, Input, Label, Spinner, Card (6), Separator
+- Form: Form, FormField, FormControl, FormItem, FormLabel, FormMessage, FormDescription (7)
+- Inputs: Textarea, Checkbox, Radio, RadioGroup, Switch (5)
+
+**Form System**: Complete with 23/23 tests passing ✅
 
 ---
 
@@ -215,128 +221,131 @@
 
 ## Week 2: Form System Complete + Atomic Expansion (5 days)
 
-### Day 1: Form Components
+### Day 1: Form Components ✅ COMPLETE
 
 **Goal**: Build UI components backed by form reducer
 
-#### Form Component
-- [ ] Create `components/form/Form.svelte`
-- [ ] Create form store from config
-- [ ] Provide store to context
-- [ ] Handle form submission
-- [ ] Test: Form creates store correctly
+#### Form Component ✅
+- [x] Create `components/form/Form.svelte`
+- [x] Create form store from config
+- [x] Provide store to context
+- [x] Handle form submission
+- [x] Test: Form creates store correctly
 
-#### FormField Component
-- [ ] Create `components/form/FormField.svelte`
-- [ ] Get store from context
-- [ ] Derive field state
-- [ ] Render children with field state
-- [ ] Test: Field state reactive
+#### FormField Component ✅
+- [x] Create `components/form/FormField.svelte`
+- [x] Get store from context
+- [x] Derive field state
+- [x] Render children with field state
+- [x] Test: Field state reactive
 
-#### FormControl Component
-- [ ] Create `components/form/FormControl.svelte`
-- [ ] Handle change/blur/focus events
-- [ ] Dispatch field actions
-- [ ] Add data attributes (error, touched, dirty)
-- [ ] Test: Events dispatch correctly
+#### FormControl Component ✅
+- [x] Create `components/form/FormControl.svelte`
+- [x] Handle change/blur/focus events
+- [x] Dispatch field actions
+- [x] Add data attributes (error, touched, dirty)
+- [x] Test: Events dispatch correctly
 
-#### FormItem, FormLabel, FormMessage, FormDescription
-- [ ] Create `FormItem.svelte` (wrapper)
-- [ ] Create `FormLabel.svelte` (label with error styling)
-- [ ] Create `FormMessage.svelte` (error/loading messages)
-- [ ] Create `FormDescription.svelte` (helper text)
-- [ ] Test: All components render correctly
+#### FormItem, FormLabel, FormMessage, FormDescription ✅
+- [x] Create `FormItem.svelte` (wrapper)
+- [x] Create `FormLabel.svelte` (label with error styling)
+- [x] Create `FormMessage.svelte` (error/loading messages with spinner)
+- [x] Create `FormDescription.svelte` (helper text)
+- [x] Test: All components render correctly
 
-**Checkpoint**: ✅ Form components work together
+**Checkpoint**: ✅ Form components work together - Context-based architecture complete!
 
 ---
 
-### Day 2: Form Atomic Inputs
+### Day 2: Form Atomic Inputs ✅ COMPLETE
 
 **Goal**: Build form-specific input components
 
-#### Textarea
-- [ ] Create `components/ui/textarea/Textarea.svelte`
-- [ ] Implement rows prop
-- [ ] Add resize control
-- [ ] Add action dispatch
-- [ ] Add to registry
+#### Textarea ✅
+- [x] Create `components/ui/textarea/Textarea.svelte`
+- [x] Implement rows prop
+- [x] Add resize control (none, vertical, horizontal, both)
+- [x] Bindable value with $bindable
+- [x] Add to registry
 
-#### Checkbox
-- [ ] Create `components/ui/checkbox/Checkbox.svelte`
-- [ ] Implement checked state
-- [ ] Add indeterminate state
-- [ ] Add action dispatch
-- [ ] Add accessibility (role, aria-checked)
-- [ ] Add to registry
+#### Checkbox ✅
+- [x] Create `components/ui/checkbox/Checkbox.svelte`
+- [x] Implement checked state
+- [x] Add indeterminate state (with visual dash)
+- [x] Bindable checked with $bindable
+- [x] Add accessibility (role="checkbox", aria-checked)
+- [x] Add to registry
 
-#### Radio & RadioGroup
-- [ ] Create `components/ui/radio/Radio.svelte`
-- [ ] Create `components/ui/radio/RadioGroup.svelte`
-- [ ] Implement group selection
-- [ ] Add action dispatch
-- [ ] Add accessibility
-- [ ] Add to registry
+#### Radio & RadioGroup ✅
+- [x] Create `components/ui/radio/Radio.svelte`
+- [x] Create `components/ui/radio/RadioGroup.svelte`
+- [x] Implement group selection with context
+- [x] Bindable value on RadioGroup
+- [x] Add accessibility (role="radio", role="radiogroup")
+- [x] Add to registry
 
-#### Switch
-- [ ] Create `components/ui/switch/Switch.svelte`
-- [ ] Implement toggle animation (Motion One)
-- [ ] Add action dispatch
-- [ ] Add accessibility (role="switch")
-- [ ] Add to registry
+#### Switch ✅
+- [x] Create `components/ui/switch/Switch.svelte`
+- [x] Implement toggle animation with Motion One
+- [x] Spring physics using SPRING_PRESETS.button
+- [x] Bindable checked with $bindable
+- [x] Add accessibility (role="switch", aria-checked)
+- [x] Add to registry
 
-**Checkpoint**: ✅ All form inputs complete
+**Checkpoint**: ✅ All form inputs complete with animations!
 
 ---
 
-### Day 3: Form TestStore Tests
+### Day 3: Form TestStore Tests ✅ COMPLETED IN WEEK 1
 
 **Goal**: Comprehensive test coverage (see FORM-SYSTEM-DESIGN.md)
 
-#### Test Suite Structure
-- [ ] Create `components/form/form.test.ts`
-- [ ] Setup test utilities and fixtures
+**Note**: These tests were already completed during Week 1, Day 3-5 as part of the form reducer implementation.
 
-#### Field Validation Tests
-- [ ] Test: Field value updates on change
-- [ ] Test: Debounced validation triggers
-- [ ] Test: Field validation on blur
-- [ ] Test: Field touched state updates
-- [ ] Test: Field dirty state updates
-- [ ] Test: Field error cleared on change
-- [ ] Test: Validation errors displayed
-- [ ] Test: Async validation works
-- [ ] Test: Async validation errors shown
+#### Test Suite Structure ✅
+- [x] Create `tests/form.test.ts`
+- [x] Setup test utilities and fixtures
 
-#### Form Validation Tests
-- [ ] Test: Form validates all fields on submit
-- [ ] Test: Form shows all errors on invalid submit
-- [ ] Test: Form prevents submission with errors
-- [ ] Test: Form submits with valid data
-- [ ] Test: Cross-field validation works (password confirmation)
-- [ ] Test: Submit count increments
+#### Field Validation Tests ✅
+- [x] Test: Field value updates on change
+- [x] Test: Debounced validation triggers
+- [x] Test: Field validation on blur
+- [x] Test: Field touched state updates
+- [x] Test: Field dirty state updates
+- [x] Test: Field error cleared on change
+- [x] Test: Validation errors displayed
+- [x] Test: Async validation works
+- [x] Test: Async validation errors shown
 
-#### Submission Tests
-- [ ] Test: Submission starts after valid form
-- [ ] Test: Submission loading state works
-- [ ] Test: Submission success updates state
-- [ ] Test: Submission failure shows error
-- [ ] Test: Last submitted timestamp updates
+#### Form Validation Tests ✅
+- [x] Test: Form validates all fields on submit
+- [x] Test: Form shows all errors on invalid submit
+- [x] Test: Form prevents submission with errors
+- [x] Test: Form submits with valid data
+- [x] Test: Cross-field validation works (password confirmation)
+- [x] Test: Submit count increments
 
-#### Form Management Tests
-- [ ] Test: Form reset clears all fields
-- [ ] Test: Form reset with new data works
-- [ ] Test: Programmatic field value setting
-- [ ] Test: Programmatic error setting
-- [ ] Test: Programmatic error clearing
+#### Submission Tests ✅
+- [x] Test: Submission starts after valid form
+- [x] Test: Submission loading state works
+- [x] Test: Submission success updates state
+- [x] Test: Submission failure shows error
+- [x] Test: Last submitted timestamp updates
 
-#### Validation Mode Tests
-- [ ] Test: onBlur mode only validates on blur
-- [ ] Test: onChange mode validates on change (debounced)
-- [ ] Test: onSubmit mode only validates on submit
-- [ ] Test: all mode validates on blur and change
+#### Form Management Tests ✅
+- [x] Test: Form reset clears all fields
+- [x] Test: Form reset with new data works
+- [x] Test: Programmatic field value setting
+- [x] Test: Programmatic error setting
+- [x] Test: Programmatic error clearing
 
-**Checkpoint**: ✅ 100% TestStore coverage for form system
+#### Validation Mode Tests ✅
+- [x] Test: onBlur mode only validates on blur
+- [x] Test: onChange mode validates on change (debounced)
+- [x] Test: onSubmit mode only validates on submit
+- [x] Test: all mode validates on blur and change
+
+**Checkpoint**: ✅ 23/23 tests passing - 100% TestStore coverage for form system!
 
 ---
 
