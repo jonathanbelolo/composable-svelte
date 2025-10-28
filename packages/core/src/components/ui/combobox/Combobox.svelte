@@ -3,6 +3,7 @@
 	import { comboboxReducer } from './combobox.reducer.js';
 	import { createInitialComboboxState } from './combobox.types.js';
 	import type { ComboboxOption } from './combobox.types.js';
+	import { animateDropdownIn, animateDropdownOut } from '../../../animation/animate.js';
 	import { Spinner } from '$lib/components/ui/spinner/index.js';
 	import { cn } from '$lib/utils.js';
 
@@ -212,6 +213,29 @@
 			return () => {
 				document.removeEventListener('click', handleClickOutside);
 			};
+		}
+	});
+
+	// Track previous isOpen state for animation
+	let previousIsOpen = $state(false);
+
+	// Animate dropdown open/close using centralized animation system
+	$effect(() => {
+		const isOpen = store.state.isOpen;
+
+		// Skip animation on initial render
+		if (previousIsOpen === isOpen) {
+			return;
+		}
+
+		previousIsOpen = isOpen;
+
+		if (!dropdownElement) return;
+
+		if (isOpen) {
+			animateDropdownIn(dropdownElement);
+		} else {
+			animateDropdownOut(dropdownElement);
 		}
 	});
 </script>

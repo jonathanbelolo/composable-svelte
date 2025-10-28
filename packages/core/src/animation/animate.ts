@@ -441,6 +441,73 @@ export async function animateToastOut(
 }
 
 // ============================================================================
+// Dropdown Animations (Combobox, Select, etc.)
+// ============================================================================
+
+/**
+ * Animate dropdown/popover in with scale + fade + subtle slide.
+ *
+ * @param element - The dropdown element to animate
+ * @returns Promise that resolves when animation completes (or fails gracefully)
+ */
+export async function animateDropdownIn(element: HTMLElement): Promise<void> {
+	try {
+		const config = getSpringConfig(springPresets.tooltip); // Fast like tooltip
+
+		await animate(
+			element,
+			{
+				opacity: [0, 1],
+				scale: [0.95, 1],
+				y: [-4, 0]
+			},
+			{
+				type: 'spring',
+				visualDuration: config.visualDuration,
+				bounce: config.bounce
+			}
+		).finished;
+	} catch (error) {
+		console.error('[animateDropdownIn] Animation failed:', error);
+		// Ensure element is visible even if animation fails
+		if (element) {
+			element.style.opacity = '1';
+			element.style.transform = 'scale(1) translateY(0)';
+		}
+	}
+}
+
+/**
+ * Animate dropdown/popover out with fade (fast exit).
+ *
+ * @param element - The dropdown element to animate
+ * @returns Promise that resolves when animation completes (or fails gracefully)
+ */
+export async function animateDropdownOut(element: HTMLElement): Promise<void> {
+	try {
+		const config = getSpringConfig(springPresets.tooltip);
+
+		await animate(
+			element,
+			{
+				opacity: [1, 0]
+			},
+			{
+				type: 'spring',
+				visualDuration: config.visualDuration * 0.7, // Faster exit
+				bounce: 0
+			}
+		).finished;
+	} catch (error) {
+		console.error('[animateDropdownOut] Animation failed:', error);
+		// Ensure element is hidden even if animation fails
+		if (element) {
+			element.style.opacity = '0';
+		}
+	}
+}
+
+// ============================================================================
 // Accordion/Collapsible Animations
 // ============================================================================
 
