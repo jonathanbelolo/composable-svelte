@@ -23,7 +23,7 @@
 - [ ] **Week 4**: Remaining Stateful Components
 - [ ] **Week 5**: Advanced Components + Polish
 
-**Components Complete**: 47 / 50+
+**Components Complete**: 48 / 50+
 - Foundation: Button (3), Input, Label, Spinner, Card (6), Separator
 - Layout: Panel, Box, AspectRatio (3)
 - Typography: Heading, Text, Kbd (3)
@@ -33,6 +33,7 @@
 - DataTable: DataTable, DataTableHeader, DataTablePagination (3) ✅
 - Tooltip: Tooltip, TooltipPrimitive, tooltip.reducer (3) ✅
 - DropdownMenu: DropdownMenu, dropdown-menu.reducer, dropdown-menu.types (3) ✅
+- Select: Select, select.reducer, select.types (3) ✅
 - **Navigation Components** (from earlier phases): Modal, Sheet, Alert, AlertDialog, Drawer, Popover, Sidebar, Tabs, NavigationStack, DestinationRouter (10) ✅
 
 **Form System**: Complete with 23/23 unit tests passing ✅
@@ -49,6 +50,9 @@
 
 **DropdownMenu System**: Complete with 27/27 unit tests passing ✅
 **DropdownMenu Tests**: Open/close/toggle, keyboard navigation, item highlighting, selection, edge cases
+
+**Select System**: Complete with 30/30 unit tests passing ✅
+**Select Tests**: Single/multi-select, search/filter, keyboard navigation, full user flows, edge cases
 
 ---
 
@@ -667,13 +671,50 @@
 - [ ] Menu items with keyboard nav
 - [ ] Test: Context menu on right-click
 
-#### Select Component
-- [ ] Create `components/ui/select/Select.svelte`
-- [ ] Native-like select with custom styling
-- [ ] Searchable variant
-- [ ] Multi-select variant
-- [ ] Bindable value with $bindable
-- [ ] Test: Select works with form integration
+#### Select Component ✅
+- [x] Create `components/ui/select/select.types.ts`
+  - [x] SelectOption interface (value, label, disabled, description)
+  - [x] SelectState (options, selected, isOpen, highlightedIndex, searchQuery, filteredOptions, isMulti)
+  - [x] SelectAction (15 action types: opened, closed, toggled, optionSelected, optionToggled, searchChanged, etc.)
+  - [x] createInitialSelectState() factory
+- [x] Create `components/ui/select/select.reducer.ts`
+  - [x] Pure reducer with all 15 action handlers
+  - [x] filterOptions() helper for search
+  - [x] findNextEnabledIndex() helper for keyboard navigation
+  - [x] Single-select closes dropdown, multi-select stays open
+  - [x] Search automatically highlights first result
+  - [x] Selection triggers onChange via Effect.run()
+- [x] Create `components/ui/select/Select.svelte`
+  - [x] $bindable for two-way value binding
+  - [x] Full keyboard navigation (arrows, home, end, enter, escape)
+  - [x] Search input with filtering
+  - [x] Multi-select with checkboxes
+  - [x] Single-select with checkmark
+  - [x] Clear button
+  - [x] Click-outside detection
+  - [x] Disabled state support
+- [x] Comprehensive TestStore tests (30/30 passing)
+  - [x] Single Select tests (4 tests)
+  - [x] Multi-Select tests (3 tests)
+  - [x] Search/Filter tests (5 tests)
+  - [x] Keyboard Navigation tests (9 tests)
+  - [x] Manual Highlight tests (2 tests)
+  - [x] Full User Flows tests (3 tests)
+  - [x] Edge Cases tests (4 tests)
+- [x] Create index.ts with exports
+- [x] Add to component registry
+
+**Key Features**:
+- ✅ Single and multi-select modes
+- ✅ Search/filter by label and description
+- ✅ Full keyboard accessibility
+- ✅ $bindable for two-way binding
+- ✅ Clear button
+- ✅ Skip disabled items in navigation
+- ✅ Reducer-based state management
+- ✅ NO CSS animations (state-driven only)
+
+**Checkpoint**: ✅ Select complete with 30 tests passing in 5ms!
 
 #### Calendar Component (optional)
 - [ ] Create `components/ui/calendar/Calendar.svelte`
