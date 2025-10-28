@@ -32,18 +32,33 @@ describe('Combobox', () => {
 			});
 
 			await store.send({ type: 'opened' }, (state) => {
-				expect(state.isOpen).toBe(true);
+				expect(state.dropdown.status).toBe('opening');
+			});
+
+			vi.advanceTimersByTime(150);
+
+			await store.receive({ type: 'openingCompleted' }, (state) => {
+				expect(state.dropdown.status).toBe('open');
 			});
 		});
 
 		it('should close dropdown', async () => {
 			const store = new TestStore({
-				initialState: { ...createInitialComboboxState(testOptions), isOpen: true },
+				initialState: {
+					...createInitialComboboxState(testOptions),
+					dropdown: { status: 'open' }
+				},
 				reducer: comboboxReducer
 			});
 
 			await store.send({ type: 'closed' }, (state) => {
-				expect(state.isOpen).toBe(false);
+				expect(state.dropdown.status).toBe('closing');
+			});
+
+			vi.advanceTimersByTime(100);
+
+			await store.receive({ type: 'closingCompleted' }, (state) => {
+				expect(state.dropdown.status).toBe('idle');
 				expect(state.highlightedIndex).toBe(-1);
 			});
 		});
@@ -55,23 +70,44 @@ describe('Combobox', () => {
 			});
 
 			await store.send({ type: 'toggled' }, (state) => {
-				expect(state.isOpen).toBe(true);
+				expect(state.dropdown.status).toBe('opening');
+			});
+
+			vi.advanceTimersByTime(150);
+
+			await store.receive({ type: 'openingCompleted' }, (state) => {
+				expect(state.dropdown.status).toBe('open');
 			});
 
 			await store.send({ type: 'toggled' }, (state) => {
-				expect(state.isOpen).toBe(false);
+				expect(state.dropdown.status).toBe('closing');
+			});
+
+			vi.advanceTimersByTime(100);
+
+			await store.receive({ type: 'closingCompleted' }, (state) => {
+				expect(state.dropdown.status).toBe('idle');
 				expect(state.highlightedIndex).toBe(-1);
 			});
 		});
 
 		it('should close dropdown on escape key', async () => {
 			const store = new TestStore({
-				initialState: { ...createInitialComboboxState(testOptions), isOpen: true },
+				initialState: {
+					...createInitialComboboxState(testOptions),
+					dropdown: { status: 'open' }
+				},
 				reducer: comboboxReducer
 			});
 
 			await store.send({ type: 'escape' }, (state) => {
-				expect(state.isOpen).toBe(false);
+				expect(state.dropdown.status).toBe('closing');
+			});
+
+			vi.advanceTimersByTime(100);
+
+			await store.receive({ type: 'closingCompleted' }, (state) => {
+				expect(state.dropdown.status).toBe('idle');
 				expect(state.highlightedIndex).toBe(-1);
 			});
 		});
@@ -88,8 +124,17 @@ describe('Combobox', () => {
 				expect(state.searchQuery).toBe('ban');
 				expect(state.filteredOptions).toHaveLength(1);
 				expect(state.filteredOptions[0].label).toBe('Banana');
-				expect(state.isOpen).toBe(true);
 				expect(state.highlightedIndex).toBe(0);
+			});
+
+			await store.receive({ type: 'opened' }, (state) => {
+				expect(state.dropdown.status).toBe('opening');
+			});
+
+			vi.advanceTimersByTime(150);
+
+			await store.receive({ type: 'openingCompleted' }, (state) => {
+				expect(state.dropdown.status).toBe('open');
 			});
 		});
 
@@ -140,8 +185,16 @@ describe('Combobox', () => {
 				reducer: comboboxReducer
 			});
 
-			await store.send({ type: 'searchChanged', query: 'apple' }, (state) => {
-				expect(state.isOpen).toBe(true);
+			await store.send({ type: 'searchChanged', query: 'apple' });
+
+			await store.receive({ type: 'opened' }, (state) => {
+				expect(state.dropdown.status).toBe('opening');
+			});
+
+			vi.advanceTimersByTime(150);
+
+			await store.receive({ type: 'openingCompleted' }, (state) => {
+				expect(state.dropdown.status).toBe('open');
 			});
 		});
 
@@ -172,7 +225,6 @@ describe('Combobox', () => {
 
 			await store.send({ type: 'searchChanged', query: 'test' }, (state) => {
 				expect(state.searchQuery).toBe('test');
-				expect(state.isOpen).toBe(true);
 				expect(state.highlightedIndex).toBe(0);
 			});
 
@@ -303,8 +355,17 @@ describe('Combobox', () => {
 
 			await store.send({ type: 'optionSelected', value: '2' }, (state) => {
 				expect(state.selected).toBe('2');
-				expect(state.isOpen).toBe(false);
 				expect(state.searchQuery).toBe('');
+			});
+
+			await store.receive({ type: 'closed' }, (state) => {
+				expect(state.dropdown.status).toBe('closing');
+			});
+
+			vi.advanceTimersByTime(100);
+
+			await store.receive({ type: 'closingCompleted' }, (state) => {
+				expect(state.dropdown.status).toBe('idle');
 				expect(state.highlightedIndex).toBe(-1);
 			});
 
@@ -313,12 +374,25 @@ describe('Combobox', () => {
 
 		it('should close dropdown on selection', async () => {
 			const store = new TestStore({
-				initialState: { ...createInitialComboboxState(testOptions), isOpen: true },
+				initialState: {
+					...createInitialComboboxState(testOptions),
+					dropdown: { status: 'open' }
+				},
 				reducer: comboboxReducer
 			});
 
 			await store.send({ type: 'optionSelected', value: '3' }, (state) => {
-				expect(state.isOpen).toBe(false);
+				expect(state.selected).toBe('3');
+			});
+
+			await store.receive({ type: 'closed' }, (state) => {
+				expect(state.dropdown.status).toBe('closing');
+			});
+
+			vi.advanceTimersByTime(100);
+
+			await store.receive({ type: 'closingCompleted' }, (state) => {
+				expect(state.dropdown.status).toBe('idle');
 			});
 		});
 
@@ -362,7 +436,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(testOptions),
-					isOpen: true,
+					dropdown: { status: 'open' },
 					highlightedIndex: 0
 				},
 				reducer: comboboxReducer
@@ -377,7 +451,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(testOptions),
-					isOpen: true,
+					dropdown: { status: 'open' },
 					highlightedIndex: 2
 				},
 				reducer: comboboxReducer
@@ -392,7 +466,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(testOptions),
-					isOpen: true,
+					dropdown: { status: 'open' },
 					highlightedIndex: 4
 				},
 				reducer: comboboxReducer
@@ -407,7 +481,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(testOptions),
-					isOpen: true,
+					dropdown: { status: 'open' },
 					highlightedIndex: 0
 				},
 				reducer: comboboxReducer
@@ -422,7 +496,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(testOptions),
-					isOpen: true,
+					dropdown: { status: 'open' },
 					highlightedIndex: 3
 				},
 				reducer: comboboxReducer
@@ -437,7 +511,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(testOptions),
-					isOpen: true,
+					dropdown: { status: 'open' },
 					highlightedIndex: 1
 				},
 				reducer: comboboxReducer
@@ -452,7 +526,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(testOptions),
-					isOpen: true,
+					dropdown: { status: 'open' },
 					highlightedIndex: 2
 				},
 				reducer: comboboxReducer
@@ -460,7 +534,16 @@ describe('Combobox', () => {
 
 			await store.send({ type: 'enter' }, (state) => {
 				expect(state.selected).toBe('3');
-				expect(state.isOpen).toBe(false);
+			});
+
+			await store.receive({ type: 'closed' }, (state) => {
+				expect(state.dropdown.status).toBe('closing');
+			});
+
+			vi.advanceTimersByTime(100);
+
+			await store.receive({ type: 'closingCompleted' }, (state) => {
+				expect(state.dropdown.status).toBe('idle');
 			});
 		});
 
@@ -474,7 +557,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(optionsWithDisabled),
-					isOpen: true,
+					dropdown: { status: 'open' },
 					highlightedIndex: 0
 				},
 				reducer: comboboxReducer
@@ -492,8 +575,17 @@ describe('Combobox', () => {
 			});
 
 			await store.send({ type: 'arrowDown' }, (state) => {
-				expect(state.isOpen).toBe(true);
 				expect(state.highlightedIndex).toBe(0);
+			});
+
+			await store.receive({ type: 'opened' }, (state) => {
+				expect(state.dropdown.status).toBe('opening');
+			});
+
+			vi.advanceTimersByTime(150);
+
+			await store.receive({ type: 'openingCompleted' }, (state) => {
+				expect(state.dropdown.status).toBe('open');
 			});
 		});
 
@@ -504,8 +596,17 @@ describe('Combobox', () => {
 			});
 
 			await store.send({ type: 'arrowUp' }, (state) => {
-				expect(state.isOpen).toBe(true);
 				expect(state.highlightedIndex).toBe(4);
+			});
+
+			await store.receive({ type: 'opened' }, (state) => {
+				expect(state.dropdown.status).toBe('opening');
+			});
+
+			vi.advanceTimersByTime(150);
+
+			await store.receive({ type: 'openingCompleted' }, (state) => {
+				expect(state.dropdown.status).toBe('open');
 			});
 		});
 	});
@@ -518,8 +619,14 @@ describe('Combobox', () => {
 			});
 
 			await store.send({ type: 'opened' }, (state) => {
-				expect(state.isOpen).toBe(true);
+				expect(state.dropdown.status).toBe('opening');
 				expect(state.filteredOptions).toHaveLength(0);
+			});
+
+			vi.advanceTimersByTime(150);
+
+			await store.receive({ type: 'openingCompleted' }, (state) => {
+				expect(state.dropdown.status).toBe('open');
 			});
 
 			await store.send({ type: 'arrowDown' }, (state) => {
@@ -537,7 +644,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(disabledOptions),
-					isOpen: true
+					dropdown: { status: 'open' }
 				},
 				reducer: comboboxReducer
 			});
@@ -557,7 +664,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(singleOption),
-					isOpen: true,
+					dropdown: { status: 'open' },
 					highlightedIndex: 0
 				},
 				reducer: comboboxReducer
@@ -600,7 +707,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(optionsWithDisabled),
-					isOpen: true,
+					dropdown: { status: 'open' },
 					highlightedIndex: 1
 				},
 				reducer: comboboxReducer
@@ -608,7 +715,7 @@ describe('Combobox', () => {
 
 			await store.send({ type: 'enter' }, (state) => {
 				expect(state.selected).toBeNull();
-				expect(state.isOpen).toBe(true);
+				expect(state.dropdown.status).toBe('open');
 			});
 		});
 

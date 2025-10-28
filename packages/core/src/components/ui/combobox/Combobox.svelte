@@ -208,7 +208,8 @@
 	}
 
 	$effect(() => {
-		if (store.state.isOpen) {
+		const isOpen = store.state.dropdown.status !== 'idle';
+		if (isOpen) {
 			document.addEventListener('click', handleClickOutside);
 			return () => {
 				document.removeEventListener('click', handleClickOutside);
@@ -216,25 +217,15 @@
 		}
 	});
 
-	// Track previous isOpen state for animation
-	let previousIsOpen = $state(false);
-
 	// Animate dropdown open/close using centralized animation system
 	$effect(() => {
-		const isOpen = store.state.isOpen;
-
-		// Skip animation on initial render
-		if (previousIsOpen === isOpen) {
-			return;
-		}
-
-		previousIsOpen = isOpen;
+		const status = store.state.dropdown.status;
 
 		if (!dropdownElement) return;
 
-		if (isOpen) {
+		if (status === 'opening') {
 			animateDropdownIn(dropdownElement);
-		} else {
+		} else if (status === 'closing') {
 			animateDropdownOut(dropdownElement);
 		}
 	});
@@ -257,7 +248,7 @@
 			{disabled}
 			value={displayValue()}
 			role="combobox"
-			aria-expanded={store.state.isOpen}
+			aria-expanded={store.state.dropdown.status !== 'idle'}
 			aria-autocomplete="list"
 			aria-controls="combobox-dropdown"
 			onfocus={handleInputFocus}
@@ -305,7 +296,10 @@
 				stroke-width="2"
 				stroke-linecap="round"
 				stroke-linejoin="round"
-				class={cn('text-muted-foreground transition-transform', store.state.isOpen && 'rotate-180')}
+				class={cn(
+					'text-muted-foreground transition-transform',
+					store.state.dropdown.status !== 'idle' && 'rotate-180'
+				)}
 			>
 				<polyline points="6 9 12 15 18 9"></polyline>
 			</svg>
@@ -313,7 +307,7 @@
 	</div>
 
 	<!-- Dropdown -->
-	{#if store.state.isOpen}
+	{#if store.state.dropdown.status === 'opening' || store.state.dropdown.status === 'open' || store.state.dropdown.status === 'closing'}
 		<div
 			bind:this={dropdownElement}
 			id="combobox-dropdown"

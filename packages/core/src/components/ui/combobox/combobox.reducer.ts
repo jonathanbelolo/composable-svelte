@@ -92,7 +92,19 @@ export const comboboxReducer: Reducer<
 			return [
 				{
 					...state,
-					isOpen: true
+					dropdown: { status: 'opening' }
+				},
+				Effect.afterDelay<ComboboxAction>(150, (dispatch) => {
+					dispatch({ type: 'openingCompleted' });
+				})
+			];
+		}
+
+		case 'openingCompleted': {
+			return [
+				{
+					...state,
+					dropdown: { status: 'open' }
 				},
 				Effect.none<ComboboxAction>()
 			];
@@ -102,7 +114,19 @@ export const comboboxReducer: Reducer<
 			return [
 				{
 					...state,
-					isOpen: false,
+					dropdown: { status: 'closing' }
+				},
+				Effect.afterDelay<ComboboxAction>(100, (dispatch) => {
+					dispatch({ type: 'closingCompleted' });
+				})
+			];
+		}
+
+		case 'closingCompleted': {
+			return [
+				{
+					...state,
+					dropdown: { status: 'idle' },
 					highlightedIndex: -1
 				},
 				Effect.none<ComboboxAction>()
@@ -110,34 +134,33 @@ export const comboboxReducer: Reducer<
 		}
 
 		case 'toggled': {
-			const newIsOpen = !state.isOpen;
-			return [
-				{
-					...state,
-					isOpen: newIsOpen,
-					highlightedIndex: newIsOpen ? state.highlightedIndex : -1
-				},
-				Effect.none<ComboboxAction>()
-			];
+			const isCurrentlyOpen = state.dropdown.status === 'open' || state.dropdown.status === 'opening';
+			if (isCurrentlyOpen) {
+				return comboboxReducer(state, { type: 'closed' }, deps);
+			} else {
+				return comboboxReducer(state, { type: 'opened' }, deps);
+			}
 		}
 
 		case 'optionSelected': {
 			const newState: ComboboxState = {
 				...state,
 				selected: action.value,
-				isOpen: false, // Close dropdown on selection
-				highlightedIndex: -1,
 				searchQuery: '' // Clear search after selection
 			};
 
-			// Trigger onChange callback
-			const effect = deps?.onChange
+			// Trigger onChange callback and close dropdown
+			const onChangeEffect = deps?.onChange
 				? Effect.run<ComboboxAction>(async () => {
 						deps.onChange?.(action.value);
 					})
 				: Effect.none<ComboboxAction>();
 
-			return [newState, effect];
+			const closeEffect = Effect.run<ComboboxAction>(async (dispatch) => {
+				dispatch({ type: 'closed' });
+			});
+
+			return [newState, Effect.batch(onChangeEffect, closeEffect)];
 		}
 
 		case 'searchChanged': {
@@ -145,31 +168,46 @@ export const comboboxReducer: Reducer<
 
 			// If async mode and query is not empty, trigger debounced search
 			if (deps?.loadOptions && newQuery.trim()) {
+				const openEffect =
+					state.dropdown.status === 'idle'
+						? Effect.run<ComboboxAction>(async (dispatch) => {
+								dispatch({ type: 'opened' });
+							})
+						: Effect.none<ComboboxAction>();
+
 				return [
 					{
 						...state,
 						searchQuery: newQuery,
-						isOpen: true, // Open dropdown when searching
 						highlightedIndex: 0 // Highlight first result
 					},
-					Effect.afterDelay<ComboboxAction>(state.debounceDelay, (dispatch) => {
-						dispatch({ type: 'searchDebounced', query: newQuery });
-					})
+					Effect.batch(
+						openEffect,
+						Effect.afterDelay<ComboboxAction>(state.debounceDelay, (dispatch) => {
+							dispatch({ type: 'searchDebounced', query: newQuery });
+						})
+					)
 				];
 			}
 
 			// Sync mode: filter immediately
 			const filtered = filterOptions(state.options, newQuery);
 
+			const openEffect =
+				state.dropdown.status === 'idle'
+					? Effect.run<ComboboxAction>(async (dispatch) => {
+							dispatch({ type: 'opened' });
+						})
+					: Effect.none<ComboboxAction>();
+
 			return [
 				{
 					...state,
 					searchQuery: newQuery,
 					filteredOptions: filtered,
-					isOpen: true,
 					highlightedIndex: filtered.length > 0 ? 0 : -1
 				},
-				Effect.none<ComboboxAction>()
+				openEffect
 			];
 		}
 
@@ -259,15 +297,18 @@ export const comboboxReducer: Reducer<
 				return [state, Effect.none<ComboboxAction>()];
 			}
 
+			const isOpen = state.dropdown.status === 'open' || state.dropdown.status === 'opening';
+
 			// If not open, open it
-			if (!state.isOpen) {
+			if (!isOpen) {
 				return [
 					{
 						...state,
-						isOpen: true,
 						highlightedIndex: findNextEnabledIndex(state.filteredOptions, -1, 'down')
 					},
-					Effect.none<ComboboxAction>()
+					Effect.run<ComboboxAction>(async (dispatch) => {
+						dispatch({ type: 'opened' });
+					})
 				];
 			}
 
@@ -291,15 +332,18 @@ export const comboboxReducer: Reducer<
 				return [state, Effect.none<ComboboxAction>()];
 			}
 
+			const isOpen = state.dropdown.status === 'open' || state.dropdown.status === 'opening';
+
 			// If not open, open it
-			if (!state.isOpen) {
+			if (!isOpen) {
 				return [
 					{
 						...state,
-						isOpen: true,
 						highlightedIndex: findNextEnabledIndex(state.filteredOptions, 0, 'up')
 					},
-					Effect.none<ComboboxAction>()
+					Effect.run<ComboboxAction>(async (dispatch) => {
+						dispatch({ type: 'opened' });
+					})
 				];
 			}
 
@@ -319,7 +363,9 @@ export const comboboxReducer: Reducer<
 		}
 
 		case 'home': {
-			if (!state.isOpen || state.filteredOptions.length === 0) {
+			const isOpen = state.dropdown.status === 'open' || state.dropdown.status === 'opening';
+
+			if (!isOpen || state.filteredOptions.length === 0) {
 				return [state, Effect.none<ComboboxAction>()];
 			}
 
@@ -335,7 +381,9 @@ export const comboboxReducer: Reducer<
 		}
 
 		case 'end': {
-			if (!state.isOpen || state.filteredOptions.length === 0) {
+			const isOpen = state.dropdown.status === 'open' || state.dropdown.status === 'opening';
+
+			if (!isOpen || state.filteredOptions.length === 0) {
 				return [state, Effect.none<ComboboxAction>()];
 			}
 
@@ -351,8 +399,10 @@ export const comboboxReducer: Reducer<
 		}
 
 		case 'enter': {
+			const isOpen = state.dropdown.status === 'open' || state.dropdown.status === 'opening';
+
 			// Select highlighted option
-			if (state.isOpen && state.highlightedIndex >= 0) {
+			if (isOpen && state.highlightedIndex >= 0) {
 				const selectedOption = state.filteredOptions[state.highlightedIndex];
 				if (selectedOption && !selectedOption.disabled) {
 					return comboboxReducer(
@@ -367,7 +417,9 @@ export const comboboxReducer: Reducer<
 		}
 
 		case 'escape': {
-			if (state.isOpen) {
+			const isOpen = state.dropdown.status === 'open' || state.dropdown.status === 'opening';
+
+			if (isOpen) {
 				return comboboxReducer(state, { type: 'closed' }, deps);
 			}
 

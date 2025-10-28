@@ -32,6 +32,27 @@ export interface ComboboxOption<T = string> {
 }
 
 /**
+ * Dropdown state machine status.
+ *
+ * State transitions:
+ * - idle → opening (user interaction)
+ * - opening → open (animation complete)
+ * - open → closing (user closes or selects)
+ * - closing → idle (animation complete)
+ */
+export type DropdownStatus = 'idle' | 'opening' | 'open' | 'closing';
+
+/**
+ * Dropdown state for managing animation lifecycle.
+ */
+export interface DropdownState {
+	/**
+	 * Current dropdown status in the state machine.
+	 */
+	status: DropdownStatus;
+}
+
+/**
  * Combobox state.
  */
 export interface ComboboxState<T = string> {
@@ -51,9 +72,9 @@ export interface ComboboxState<T = string> {
 	selected: T | null;
 
 	/**
-	 * Whether the dropdown is open.
+	 * Dropdown state machine for managing animations.
 	 */
-	isOpen: boolean;
+	dropdown: DropdownState;
 
 	/**
 	 * Currently highlighted option index.
@@ -80,15 +101,21 @@ export interface ComboboxState<T = string> {
  * Combobox actions.
  */
 export type ComboboxAction<T = string> =
-	| { type: 'opened' }
-	| { type: 'closed' }
+	// Dropdown lifecycle actions
+	| { type: 'opened' } // User wants to open dropdown
+	| { type: 'openingCompleted' } // Animation finished, now fully open
+	| { type: 'closed' } // User wants to close dropdown
+	| { type: 'closingCompleted' } // Animation finished, now fully closed
 	| { type: 'toggled' }
+	// Selection and search
 	| { type: 'optionSelected'; value: T }
 	| { type: 'searchChanged'; query: string }
 	| { type: 'searchDebounced'; query: string } // Internal: after debounce delay
+	// Async loading
 	| { type: 'loadingStarted' }
 	| { type: 'loadingCompleted'; options: ComboboxOption<T>[] }
 	| { type: 'loadingFailed'; error: string }
+	// Keyboard navigation
 	| { type: 'highlightChanged'; index: number }
 	| { type: 'arrowDown' }
 	| { type: 'arrowUp' }
@@ -126,7 +153,7 @@ export function createInitialComboboxState<T = string>(
 		options,
 		filteredOptions: options,
 		selected: initialValue,
-		isOpen: false,
+		dropdown: { status: 'idle' },
 		highlightedIndex: -1,
 		searchQuery: '',
 		isLoading: false,
