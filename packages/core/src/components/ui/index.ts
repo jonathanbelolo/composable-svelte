@@ -37,9 +37,32 @@ export { Kbd } from './kbd/index.js';
 export { Banner, BannerTitle, BannerDescription } from './banner/index.js';
 export { Empty } from './empty/index.js';
 
+// Content Organization
+export { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from './accordion/index.js';
+export { Collapsible, CollapsibleTrigger, CollapsibleContent } from './collapsible/index.js';
+
 // Interactive
 export { Tooltip } from './tooltip/index.js';
 export { DropdownMenu } from './dropdown-menu/index.js';
 export { Select } from './select/index.js';
+export { Combobox } from './combobox/index.js';
 export { Pagination } from './pagination/index.js';
 export { Calendar } from './calendar/index.js';
+
+// Command Palette
+export {
+	Command,
+	CommandInput,
+	CommandList,
+	CommandGroup,
+	CommandItem
+} from '../command/index.js';
+
+// Toast/Notifications
+export {
+	Toaster,
+	Toast,
+	ToastTitle,
+	ToastDescription,
+	ToastAction
+} from '../toast/index.js';

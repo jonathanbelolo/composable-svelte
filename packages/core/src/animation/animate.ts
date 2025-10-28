@@ -380,3 +380,144 @@ export async function animateTooltipOut(element: HTMLElement): Promise<void> {
 		console.error('[animateTooltipOut] Animation failed:', error);
 	}
 }
+
+// ============================================================================
+// Toast Animations
+// ============================================================================
+
+/**
+ * Animate toast in with scale + fade + slide.
+ */
+export async function animateToastIn(
+	element: HTMLElement,
+	springConfig?: Partial<SpringConfig>
+): Promise<void> {
+	try {
+		const config = getSpringConfig(springPresets.toast, springConfig);
+
+		await animate(
+			element,
+			{
+				opacity: [0, 1],
+				scale: [0.95, 1],
+				y: [8, 0]
+			},
+			{
+				type: 'spring',
+				visualDuration: config.visualDuration,
+				bounce: config.bounce
+			}
+		).finished;
+	} catch (error) {
+		console.error('[animateToastIn] Animation failed:', error);
+	}
+}
+
+/**
+ * Animate toast out with scale + fade.
+ */
+export async function animateToastOut(
+	element: HTMLElement,
+	springConfig?: Partial<SpringConfig>
+): Promise<void> {
+	try {
+		const config = getSpringConfig(springPresets.toast, springConfig);
+
+		await animate(
+			element,
+			{
+				opacity: [1, 0],
+				scale: [1, 0.95]
+			},
+			{
+				type: 'spring',
+				visualDuration: config.visualDuration * 0.7, // Faster exit
+				bounce: 0
+			}
+		).finished;
+	} catch (error) {
+		console.error('[animateToastOut] Animation failed:', error);
+	}
+}
+
+// ============================================================================
+// Accordion/Collapsible Animations
+// ============================================================================
+
+/**
+ * Animate accordion/collapsible content expand with height + fade.
+ *
+ * @param element - The content element to animate
+ * @returns Promise that resolves when animation completes (or fails gracefully)
+ */
+export async function animateAccordionExpand(element: HTMLElement): Promise<void> {
+	try {
+		// Set initial state
+		element.style.height = '0px';
+		element.style.overflow = 'hidden';
+		element.style.opacity = '0';
+
+		// Get the full height
+		const fullHeight = element.scrollHeight;
+
+		// Animate to full height with fade in
+		await animate(
+			element,
+			{
+				height: [`0px`, `${fullHeight}px`] as any,
+				opacity: [0, 1]
+			},
+			{
+				duration: 0.3,
+				easing: [0.4, 0, 0.2, 1] // ease-in-out
+			}
+		).finished;
+
+		// Clean up styles
+		element.style.height = 'auto';
+		element.style.overflow = 'visible';
+	} catch (error) {
+		console.error('[animateAccordionExpand] Animation failed:', error);
+		// Ensure element is visible even if animation fails
+		if (element) {
+			element.style.height = 'auto';
+			element.style.overflow = 'visible';
+			element.style.opacity = '1';
+		}
+	}
+}
+
+/**
+ * Animate accordion/collapsible content collapse with height + fade.
+ *
+ * @param element - The content element to animate
+ * @returns Promise that resolves when animation completes (or fails gracefully)
+ */
+export async function animateAccordionCollapse(element: HTMLElement): Promise<void> {
+	try {
+		// Get current height
+		const startHeight = element.scrollHeight;
+		element.style.height = `${startHeight}px`;
+		element.style.overflow = 'hidden';
+
+		// Animate to zero height with fade out
+		await animate(
+			element,
+			{
+				height: [`${startHeight}px`, `0px`] as any,
+				opacity: [1, 0]
+			},
+			{
+				duration: 0.2,
+				easing: [0.4, 0, 1, 1] // ease-out
+			}
+		).finished;
+	} catch (error) {
+		console.error('[animateAccordionCollapse] Animation failed:', error);
+		// Ensure element is hidden even if animation fails
+		if (element) {
+			element.style.height = '0px';
+			element.style.opacity = '0';
+		}
+	}
+}
