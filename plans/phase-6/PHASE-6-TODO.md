@@ -2,7 +2,7 @@
 
 **Strategy**: Foundation-First Hybrid (Vertical Slices)
 **Timeline**: 5 weeks
-**Status**: In Progress - Week 4, Day 5 In Progress (Carousel Complete) ✅
+**Status**: In Progress - Week 4, Day 5 Complete (Carousel & File Upload Complete) ✅
 
 ---
 
@@ -22,10 +22,10 @@
 - [x] **Week 3, Day 5**: Calendar Component (Reducer, Tests, Component) ✅
 - [x] **Week 4, Day 1**: Command Palette & Toast (Reducer, Tests, Components) ✅
 - [x] **Week 4, Day 4**: TreeView Component (Reducer, Tests, Component, Example) ✅
-- [ ] **Week 4, Day 5**: Carousel Component (Reducer, Tests, Component) ✅ | File Upload (TODO)
+- [x] **Week 4, Day 5**: Carousel Component (Reducer, Tests, Component) ✅ | File Upload (Reducer, Tests, Component) ✅
 - [ ] **Week 5**: Advanced Components + Polish
 
-**Components Complete**: 58 / 50+
+**Components Complete**: 61 / 50+
 - Foundation: Button (3), Input, Label, Spinner, Card (6), Separator
 - Layout: Panel, Box, AspectRatio (3)
 - Typography: Heading, Text, Kbd (3)
@@ -42,6 +42,7 @@
 - Collapsible: Collapsible, CollapsibleTrigger, CollapsibleContent (3) ✅
 - TreeView: TreeView, tree-view.reducer, tree-view.types (3) ✅
 - Carousel: Carousel, carousel.reducer, carousel.types (3) ✅
+- FileUpload: FileUpload, file-upload.reducer, file-upload.types (3) ✅
 - **Navigation Components** (from earlier phases): Modal, Sheet, Alert, AlertDialog, Drawer, Popover, Sidebar, Tabs, NavigationStack, DestinationRouter (10) ✅
 
 **Form System**: Complete with 23/23 unit tests passing ✅
