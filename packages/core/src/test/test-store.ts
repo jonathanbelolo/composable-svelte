@@ -399,8 +399,11 @@ export class TestStore<State, Action, Dependencies = any> {
     // Import vi dynamically to avoid issues in non-test environments
     const { vi } = await import('vitest');
 
-    // Use synchronous timer advancement (this fires all timers up to ms)
-    vi.advanceTimersByTime(ms);
+    // Check if vi is available (jsdom mode has it, browser mode doesn't)
+    if (typeof vi !== 'undefined' && vi.advanceTimersByTime) {
+      // Use synchronous timer advancement (this fires all timers up to ms)
+      vi.advanceTimersByTime(ms);
+    }
 
     // Flush microtask queue to let async callbacks execute
     await Promise.resolve();
