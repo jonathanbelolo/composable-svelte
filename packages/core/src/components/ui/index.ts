@@ -39,3 +39,4 @@ export { Empty } from './empty/index.js';
 
 // Interactive
 export { Tooltip } from './tooltip/index.js';
+export { DropdownMenu } from './dropdown-menu/index.js';

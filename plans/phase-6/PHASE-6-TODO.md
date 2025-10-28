@@ -2,7 +2,7 @@
 
 **Strategy**: Foundation-First Hybrid (Vertical Slices)
 **Timeline**: 5 weeks
-**Status**: In Progress - Week 3, Day 1-2 Complete ✅
+**Status**: In Progress - Week 3, Day 1-4 Complete ✅
 
 ---
 
@@ -17,11 +17,13 @@
 - [x] **Week 2, Day 4**: Form Examples (Contact, Registration, Multi-Step) ✅
 - [x] **Week 2, Day 5**: Remaining Atomic Components ✅
 - [x] **Week 3, Day 1-2**: DataTable System (Reducer, Components, Example) ✅
-- [ ] **Week 3, Day 3-5**: Additional UI Components
+- [x] **Week 3, Day 3**: Tooltip Component (State-Driven with TestStore) ✅
+- [x] **Week 3, Day 4**: Dropdown Menu Component (Reducer, Tests, Component) ✅
+- [ ] **Week 3, Day 5**: Additional UI Components
 - [ ] **Week 4**: Remaining Stateful Components
 - [ ] **Week 5**: Advanced Components + Polish
 
-**Components Complete**: 41 / 50+
+**Components Complete**: 47 / 50+
 - Foundation: Button (3), Input, Label, Spinner, Card (6), Separator
 - Layout: Panel, Box, AspectRatio (3)
 - Typography: Heading, Text, Kbd (3)
@@ -29,6 +31,8 @@
 - Form System: Form, FormField, FormControl, FormItem, FormLabel, FormMessage, FormDescription (7)
 - Form Inputs: Textarea, Checkbox, Radio, RadioGroup, Switch (5)
 - DataTable: DataTable, DataTableHeader, DataTablePagination (3) ✅
+- Tooltip: Tooltip, TooltipPrimitive, tooltip.reducer (3) ✅
+- DropdownMenu: DropdownMenu, dropdown-menu.reducer, dropdown-menu.types (3) ✅
 - **Navigation Components** (from earlier phases): Modal, Sheet, Alert, AlertDialog, Drawer, Popover, Sidebar, Tabs, NavigationStack, DestinationRouter (10) ✅
 
 **Form System**: Complete with 23/23 unit tests passing ✅
@@ -39,6 +43,12 @@
 
 **DataTable System**: Complete with 8/8 browser tests passing ✅
 **DataTable Example**: Product table with filtering, sorting, pagination (8 tests)
+
+**Tooltip System**: Complete with 11/11 unit tests passing ✅
+**Tooltip Tests**: Hover delay, presentation lifecycle, dismissal, state guards, full user flow
+
+**DropdownMenu System**: Complete with 27/27 unit tests passing ✅
+**DropdownMenu Tests**: Open/close/toggle, keyboard navigation, item highlighting, selection, edge cases
 
 ---
 
@@ -459,39 +469,39 @@
 
 ---
 
-### Day 5: Remaining Atomic Components (Batch)
+### Day 5: Remaining Atomic Components (Batch) ✅ COMPLETE
 
 **Goal**: Complete Tier 1 component library
 
-#### Feedback Components
-- [ ] **Badge** - Status indicator with variants
-- [ ] **Avatar** - User image with fallback
-- [ ] **Skeleton** - Loading placeholder
-- [ ] **Progress** - Progress bar
-- [ ] Already have: Spinner ✓
+#### Feedback Components ✅
+- [x] **Badge** - Status indicator with variants
+- [x] **Avatar** - User image with fallback
+- [x] **Skeleton** - Loading placeholder
+- [x] **Progress** - Progress bar
+- [x] Already have: Spinner ✓
 
-#### Layout Components
-- [ ] Already have: Card ✓
-- [ ] **Panel** - Generic content container
-- [ ] **Box** - Primitive with padding/margin
-- [ ] Already have: Separator ✓
-- [ ] **Aspect Ratio** - Maintain aspect ratio wrapper
+#### Layout Components ✅
+- [x] Already have: Card ✓
+- [x] **Panel** - Generic content container
+- [x] **Box** - Primitive with padding/margin
+- [x] Already have: Separator ✓
+- [x] **AspectRatio** - Maintain aspect ratio wrapper
 
-#### Typography Components
-- [ ] **Heading** - H1-H6 with consistent styling
-- [ ] **Text** - Paragraph with variants
-- [ ] Already have: Label ✓
-- [ ] **Kbd** - Keyboard key display
+#### Typography Components ✅
+- [x] **Heading** - H1-H6 with consistent styling
+- [x] **Text** - Paragraph with variants
+- [x] Already have: Label ✓
+- [x] **Kbd** - Keyboard key display
 
-#### Visual Components
-- [ ] **Alert** - Static informational message (not Alert Dialog)
-- [ ] **Empty** - Empty state placeholder
+#### Visual Components ✅
+- [x] **Banner** - Static informational message (replaces Alert)
+- [x] **Empty** - Empty state placeholder
 
-#### Button Variants
-- [ ] Already have: Button ✓
-- [ ] **Button Group** - Multiple buttons together
-- [ ] **Icon Button** - Button with icon only
-- [ ] **Link Button** - Button styled as link
+#### Button Variants ✅
+- [x] Already have: Button ✓
+- [x] **ButtonGroup** - Multiple buttons together
+- [x] **IconButton** - Button with icon only
+- [x] Button (link variant) - Available via `variant="link"` prop
 
 **Checkpoint**: ✅ All Tier 1 (Atomic) components complete
 
@@ -570,25 +580,85 @@
 
 ---
 
-### Day 3-4: Additional UI Components
+### Day 3: Tooltip Component ✅ COMPLETE
 
-**Goal**: Build remaining utility and interactive components
+**Goal**: Build hover-triggered tooltip with state-driven animations
 
-#### Tooltip Component
-- [ ] Create `components/ui/tooltip/Tooltip.svelte`
-- [ ] Simple hover-triggered tooltip (NOT navigation-based)
-- [ ] Add hover delay (300ms)
-- [ ] Add positioning logic (top, bottom, left, right)
-- [ ] Add Svelte transitions
-- [ ] Test: Tooltip shows on hover with delay
+#### Tooltip Component ✅
+- [x] Create `components/ui/tooltip/Tooltip.svelte`
+- [x] Create `components/ui/tooltip/TooltipPrimitive.svelte`
+- [x] Create `components/ui/tooltip/tooltip.reducer.ts`
+- [x] Implement hover delay (300ms configurable)
+- [x] Implement PresentationState lifecycle (idle → presenting → presented → dismissing)
+- [x] Add positioning logic (top, bottom, left, right)
+- [x] Add Motion One animations (animateTooltipIn/Out)
+- [x] Comprehensive TestStore tests (11/11 passing)
+  - [x] Hover delay tests
+  - [x] Presentation lifecycle tests
+  - [x] Dismissal lifecycle tests
+  - [x] State guard tests
+  - [x] Custom hover delay tests
+  - [x] Full user flow tests
+- [x] Test: Tooltip shows on hover with delay
+- [x] Test: Tooltip cancels if hover ends before delay
+- [x] Test: Tooltip animations work correctly
+- [x] Test: Fake timer support working perfectly
 
-#### Dropdown Menu Component
-- [ ] Create `components/ui/dropdown-menu/DropdownMenu.svelte`
-- [ ] Menu trigger + menu content
-- [ ] Menu items with icons
-- [ ] Add keyboard navigation (arrows, enter, esc)
-- [ ] Add nested menu support (optional)
-- [ ] Test: Menu navigation works
+**Issues Fixed**:
+- [x] TestStore `advanceTime()` now properly supports fake timers
+- [x] TestStore `receive()` uses polling pattern with `vi.waitFor()`
+- [x] Added deep equality for nested object matching in actions
+- [x] Comprehensive fake timer documentation added
+
+**Checkpoint**: ✅ Tooltip complete with state-driven architecture, 11 tests passing in 4ms!
+
+---
+
+### Day 4: Dropdown Menu Component ✅ COMPLETE
+
+**Goal**: Build interactive menu with full keyboard navigation
+
+#### Dropdown Menu Component ✅
+- [x] Create `components/ui/dropdown-menu/dropdown-menu.types.ts`
+  - [x] MenuItem interface (id, label, icon, disabled, isSeparator, shortcut)
+  - [x] DropdownMenuState (isOpen, highlightedIndex, items)
+  - [x] DropdownMenuAction (9 action types)
+  - [x] createInitialDropdownMenuState() factory
+- [x] Create `components/ui/dropdown-menu/dropdown-menu.reducer.ts`
+  - [x] Pure reducer with all 9 action handlers
+  - [x] findNextEnabledIndex() helper for smart navigation
+  - [x] Automatically skips disabled and separator items
+  - [x] Wrapping navigation (arrows loop around)
+  - [x] Home/End key support
+  - [x] Selection triggers onSelect via Effect.run()
+- [x] Create `components/ui/dropdown-menu/DropdownMenu.svelte`
+  - [x] Trigger button with ARIA attributes
+  - [x] Comprehensive keyboard navigation (arrows, home, end, enter, escape)
+  - [x] Mouse interaction (hover to highlight, click to select)
+  - [x] Click-outside detection using $effect()
+  - [x] Conditional rendering based on state
+  - [x] Themeable with CSS variables
+- [x] Comprehensive TestStore tests (27/27 passing)
+  - [x] Open/Close/Toggle tests (5 tests)
+  - [x] Keyboard Navigation tests (7 tests)
+  - [x] Item Highlighting tests (3 tests)
+  - [x] Item Selection tests (4 tests)
+  - [x] Full User Flows tests (3 tests)
+  - [x] Edge Cases tests (5 tests)
+- [x] Create index.ts with exports
+- [x] Add to component registry
+
+**Key Features**:
+- ✅ Full keyboard accessibility (arrows, home, end, enter, escape)
+- ✅ Automatic skip of disabled/separator items
+- ✅ Wrapping navigation
+- ✅ Click-outside handling
+- ✅ Hover highlighting
+- ✅ Selection callback via Effect system
+- ✅ Reducer-based state management
+- ✅ NO CSS animations (state-driven only)
+
+**Checkpoint**: ✅ Dropdown Menu complete with 27 tests passing in 5ms!
 
 #### Context Menu Component (optional)
 - [ ] Create `components/ui/context-menu/ContextMenu.svelte`
