@@ -43,6 +43,8 @@ describe('TestStore', () => {
     });
 
     it('executes effects immediately', async () => {
+      vi.useFakeTimers();
+
       const reducer: Reducer<CounterState, CounterAction> = (state, action) => {
         switch (action.type) {
           case 'loadTapped':
@@ -71,6 +73,8 @@ describe('TestStore', () => {
       await store.advanceTime(0); // Wait for effects
       expect(store.getState().isLoading).toBe(false);
       expect(store.getState().count).toBe(42);
+
+      vi.useRealTimers();
     });
   });
 
@@ -198,6 +202,8 @@ describe('TestStore', () => {
     });
 
     it('throws when pending actions in exhaustive mode', async () => {
+      vi.useFakeTimers();
+
       const reducer: Reducer<CounterState, CounterAction> = (state, action) => {
         if (action.type === 'increment') {
           return [
@@ -220,9 +226,13 @@ describe('TestStore', () => {
       expect(() => store.assertNoPendingActions()).toThrow(
         'Expected no pending actions'
       );
+
+      vi.useRealTimers();
     });
 
     it('passes with pending actions in non-exhaustive mode', async () => {
+      vi.useFakeTimers();
+
       const reducer: Reducer<CounterState, CounterAction> = (state, action) => {
         if (action.type === 'increment') {
           return [
@@ -242,6 +252,8 @@ describe('TestStore', () => {
       await store.advanceTime(0);
 
       expect(() => store.assertNoPendingActions()).not.toThrow();
+
+      vi.useRealTimers();
     });
   });
 

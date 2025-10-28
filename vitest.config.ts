@@ -8,6 +8,13 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
     include: ['packages/**/*.test.ts', 'packages/**/*.spec.ts'],
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/*-animation.test.ts', // Exclude browser animation tests
+      '**/navigation-components/**/*.test.ts', // Exclude browser component tests
+      '**/lib/actions/focusTrap.test.ts' // Exclude browser focus management tests
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

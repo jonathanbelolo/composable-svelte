@@ -63,6 +63,7 @@ describe('createInitialFormState', () => {
 
 		expect(state.data).toEqual({ name: '', email: '', message: '' });
 		expect(state.fields.name).toEqual({
+			value: '',
 			touched: false,
 			dirty: false,
 			error: null,
