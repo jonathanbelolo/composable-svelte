@@ -2,7 +2,7 @@
 
 **Strategy**: Foundation-First Hybrid (Vertical Slices)
 **Timeline**: 5 weeks
-**Status**: In Progress - Week 3, Day 1-4 Complete ✅
+**Status**: In Progress - Week 4, Day 4 Complete (TreeView) ✅
 
 ---
 
@@ -21,7 +21,8 @@
 - [x] **Week 3, Day 4**: Dropdown Menu Component (Reducer, Tests, Component) ✅
 - [x] **Week 3, Day 5**: Calendar Component (Reducer, Tests, Component) ✅
 - [x] **Week 4, Day 1**: Command Palette & Toast (Reducer, Tests, Components) ✅
-- [ ] **Week 4, Day 2-5**: Remaining Stateful Components
+- [x] **Week 4, Day 4**: TreeView Component (Reducer, Tests, Component, Example) ✅
+- [ ] **Week 4, Day 5**: Remaining Stateful Components (Carousel, File Upload)
 - [ ] **Week 5**: Advanced Components + Polish
 
 **Components Complete**: 55 / 50+
