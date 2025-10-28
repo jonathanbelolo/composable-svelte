@@ -42,3 +42,4 @@ export { Tooltip } from './tooltip/index.js';
 export { DropdownMenu } from './dropdown-menu/index.js';
 export { Select } from './select/index.js';
 export { Pagination } from './pagination/index.js';
+export { Calendar } from './calendar/index.js';
