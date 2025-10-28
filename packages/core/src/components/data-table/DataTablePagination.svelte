@@ -129,7 +129,7 @@
 			</Button>
 
 			<!-- Page indicator -->
-			<div class="flex w-[100px] items-center justify-center text-sm font-medium">
+			<div class="flex w-[100px] items-center justify-center text-sm font-medium" data-testid="page-indicator">
 				Page {currentPage} of {totalPages}
 			</div>
 

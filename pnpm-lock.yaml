@@ -107,6 +107,49 @@ importers:
         specifier: ^5.4.2
         version: 5.4.21(@types/node@20.19.23)
 
+  examples/data-table:
+    dependencies:
+      '@composable-svelte/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      svelte:
+        specifier: ^5.0.0
+        version: 5.42.2
+    devDependencies:
+      '@sveltejs/vite-plugin-svelte':
+        specifier: ^6.2.1
+        version: 6.2.1(svelte@5.42.2)(vite@6.4.1(@types/node@20.19.23)(jiti@1.21.7))
+      '@vitest/browser':
+        specifier: ^4.0.3
+        version: 4.0.3(vite@6.4.1(@types/node@20.19.23)(jiti@1.21.7))(vitest@4.0.3(@types/node@20.19.23)(@vitest/browser-playwright@4.0.3)(@vitest/ui@4.0.3)(jiti@1.21.7)(jsdom@25.0.1))
+      '@vitest/browser-playwright':
+        specifier: ^4.0.3
+        version: 4.0.3(playwright@1.56.1)(vite@6.4.1(@types/node@20.19.23)(jiti@1.21.7))(vitest@4.0.3)
+      '@vitest/ui':
+        specifier: ^4.0.3
+        version: 4.0.3(vitest@4.0.3)
+      playwright:
+        specifier: ^1.56.1
+        version: 1.56.1
+      tailwindcss:
+        specifier: ^3.4.0
+        version: 3.4.18
+      tailwindcss-animate:
+        specifier: ^1.0.7
+        version: 1.0.7(tailwindcss@3.4.18)
+      typescript:
+        specifier: ^5.5.4
+        version: 5.9.3
+      vite:
+        specifier: ^6.4.1
+        version: 6.4.1(@types/node@20.19.23)(jiti@1.21.7)
+      vitest:
+        specifier: ^4.0.3
+        version: 4.0.3(@types/node@20.19.23)(@vitest/browser-playwright@4.0.3)(@vitest/ui@4.0.3)(jiti@1.21.7)(jsdom@25.0.1)
+      vitest-browser-svelte:
+        specifier: ^2.0.0
+        version: 2.0.0(svelte@5.42.2)(vitest@4.0.3(@types/node@20.19.23)(@vitest/browser-playwright@4.0.3)(@vitest/ui@4.0.3)(jiti@1.21.7)(jsdom@25.0.1))
+
   examples/multi-step-form:
     dependencies:
       '@composable-svelte/core':
