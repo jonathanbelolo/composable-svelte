@@ -23,7 +23,7 @@
 - [ ] **Week 4**: Remaining Stateful Components
 - [ ] **Week 5**: Advanced Components + Polish
 
-**Components Complete**: 48 / 50+
+**Components Complete**: 49 / 50+
 - Foundation: Button (3), Input, Label, Spinner, Card (6), Separator
 - Layout: Panel, Box, AspectRatio (3)
 - Typography: Heading, Text, Kbd (3)
@@ -34,6 +34,7 @@
 - Tooltip: Tooltip, TooltipPrimitive, tooltip.reducer (3) ✅
 - DropdownMenu: DropdownMenu, dropdown-menu.reducer, dropdown-menu.types (3) ✅
 - Select: Select, select.reducer, select.types (3) ✅
+- Pagination: Pagination, pagination.reducer, pagination.types (3) ✅
 - **Navigation Components** (from earlier phases): Modal, Sheet, Alert, AlertDialog, Drawer, Popover, Sidebar, Tabs, NavigationStack, DestinationRouter (10) ✅
 
 **Form System**: Complete with 23/23 unit tests passing ✅
@@ -53,6 +54,9 @@
 
 **Select System**: Complete with 30/30 unit tests passing ✅
 **Select Tests**: Single/multi-select, search/filter, keyboard navigation, full user flows, edge cases
+
+**Pagination System**: Complete with 23/23 unit tests passing ✅
+**Pagination Tests**: Page navigation, boundary conditions, items per page, total items changes, edge cases
 
 ---
 
@@ -731,13 +735,44 @@
 
 **Goal**: Complete utility components
 
-#### Pagination Component
-- [ ] Create `components/pagination/Pagination.svelte`
-- [ ] Page number display
-- [ ] Previous/Next buttons
-- [ ] Jump to page
-- [ ] Items per page selector
-- [ ] Test: Pagination controls work
+#### Pagination Component ✅
+- [x] Create `components/ui/pagination/pagination.types.ts`
+  - [x] PaginationState (currentPage, totalItems, itemsPerPage, totalPages, maxPageButtons)
+  - [x] PaginationAction (7 action types)
+  - [x] createInitialPaginationState() factory
+- [x] Create `components/ui/pagination/pagination.reducer.ts`
+  - [x] Pure reducer with all 7 action handlers
+  - [x] recomputeTotalPages() helper
+  - [x] Automatic page adjustment when bounds change
+  - [x] Callbacks via Effect.run()
+- [x] Create `components/ui/pagination/Pagination.svelte`
+  - [x] Smart page button generation with ellipsis
+  - [x] First, previous, next, last navigation
+  - [x] Direct page selection
+  - [x] Items per page selector (optional)
+  - [x] $bindable for current page
+  - [x] Boundary validation
+- [x] Comprehensive TestStore tests (23/23 passing)
+  - [x] Page Navigation tests (5 tests)
+  - [x] Boundary Conditions tests (4 tests)
+  - [x] Items Per Page tests (4 tests)
+  - [x] Total Items Changes tests (4 tests)
+  - [x] Edge Cases tests (4 tests)
+  - [x] Full User Flow tests (2 tests)
+- [x] Create index.ts with exports
+- [x] Add to component registry
+
+**Key Features**:
+- ✅ Smart page button algorithm with ellipsis
+- ✅ Always shows first and last pages
+- ✅ Centers current page in visible window
+- ✅ Boundary validation (no invalid pages)
+- ✅ Automatic page adjustment
+- ✅ Items per page control
+- ✅ $bindable for two-way binding
+- ✅ Reducer-based state management
+
+**Checkpoint**: ✅ Pagination complete with 23 tests passing in 4ms!
 
 #### Slider Component
 - [ ] Create `components/ui/slider/Slider.svelte`
