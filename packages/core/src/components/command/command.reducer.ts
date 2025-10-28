@@ -38,46 +38,83 @@ export const commandReducer: Reducer<CommandState, CommandAction, CommandDepende
 	action,
 	deps
 ) => {
+	const animationDuration = 0.15; // Modal-like animation duration in seconds
+
 	switch (action.type) {
 		case 'opened': {
+			// Start presentation animation
 			return [
 				{
 					...state,
 					isOpen: true,
 					query: '',
 					filteredCommands: state.commands,
-					selectedIndex: 0
+					selectedIndex: 0,
+					presentation: {
+						status: 'presenting',
+						content: true,
+						duration: animationDuration
+					}
 				},
-				Effect.none()
+				// Dispatch completion after animation
+				Effect.run<CommandAction>(async (dispatch) => {
+					await new Promise((resolve) => setTimeout(resolve, animationDuration * 1000));
+					dispatch({
+						type: 'presentation',
+						event: { type: 'presentationCompleted' }
+					});
+				})
 			];
 		}
 
 		case 'closed': {
+			// Start dismissal animation if already presented
+			if (state.presentation.status === 'presented') {
+				return [
+					{
+						...state,
+						presentation: {
+							status: 'dismissing',
+							content: true,
+							duration: animationDuration
+						}
+					},
+					// Dispatch completion after animation
+					Effect.run<CommandAction>(async (dispatch) => {
+						await new Promise((resolve) => setTimeout(resolve, animationDuration * 1000));
+						dispatch({
+							type: 'presentation',
+							event: { type: 'dismissalCompleted' }
+						});
+					})
+				];
+			}
+
+			// Not yet presented, just close immediately
 			return [
 				{
 					...state,
 					isOpen: false,
 					query: '',
 					filteredCommands: state.commands,
-					selectedIndex: 0
+					selectedIndex: 0,
+					presentation: { status: 'idle' }
 				},
 				Effect.none()
 			];
 		}
 
 		case 'toggled': {
+			// Toggle by dispatching open or close
 			const newIsOpen = !state.isOpen;
 
-			return [
-				{
-					...state,
-					isOpen: newIsOpen,
-					query: newIsOpen ? state.query : '',
-					filteredCommands: newIsOpen ? state.filteredCommands : state.commands,
-					selectedIndex: newIsOpen ? state.selectedIndex : 0
-				},
-				Effect.none()
-			];
+			if (newIsOpen) {
+				// Dispatch 'opened' action to trigger animation
+				return commandReducer(state, { type: 'opened' }, deps);
+			} else {
+				// Dispatch 'closed' action to trigger animation
+				return commandReducer(state, { type: 'closed' }, deps);
+			}
 		}
 
 		case 'queryChanged': {
@@ -227,10 +264,52 @@ export const commandReducer: Reducer<CommandState, CommandAction, CommandDepende
 					query: '',
 					filteredCommands: state.commands,
 					selectedIndex: 0,
-					isOpen: false
+					isOpen: false,
+					presentation: { status: 'idle' }
 				},
 				Effect.none()
 			];
+		}
+
+		case 'presentation': {
+			if (action.event.type === 'presentationCompleted') {
+				// Animation-in completed
+				if (state.presentation.status !== 'presenting') {
+					return [state, Effect.none()];
+				}
+
+				return [
+					{
+						...state,
+						presentation: {
+							status: 'presented',
+							content: true
+						}
+					},
+					Effect.none()
+				];
+			}
+
+			if (action.event.type === 'dismissalCompleted') {
+				// Animation-out completed - now actually close
+				if (state.presentation.status !== 'dismissing') {
+					return [state, Effect.none()];
+				}
+
+				return [
+					{
+						...state,
+						isOpen: false,
+						query: '',
+						filteredCommands: state.commands,
+						selectedIndex: 0,
+						presentation: { status: 'idle' }
+					},
+					Effect.none()
+				];
+			}
+
+			return [state, Effect.none()];
 		}
 
 		default: {

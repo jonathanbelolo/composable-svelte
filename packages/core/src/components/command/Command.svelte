@@ -6,7 +6,7 @@
 	Features:
 	- Search/filter commands
 	- Keyboard navigation (Arrow Up/Down, Enter, Escape)
-	- Modal overlay
+	- Modal overlay with Motion One animations
 	- Custom filtering
 	- Action dispatch on command execution
 
@@ -18,6 +18,7 @@
 	import { commandReducer } from './command.reducer.js';
 	import type { CommandState, CommandItem, CommandDependencies } from './command.types.js';
 	import { createInitialCommandState } from './command.types.js';
+	import { animateModalIn, animateModalOut, animateBackdropIn, animateBackdropOut } from '../../animation/animate.js';
 
 	interface CommandProps {
 		/**
@@ -129,16 +130,63 @@
 			store.dispatch({ type: 'closed' });
 		}
 	}
+
+	// Animation integration
+	let contentElement: HTMLElement | undefined = $state();
+	let backdropElement: HTMLElement | undefined = $state();
+	let lastAnimatedContent: any = $state(null);
+
+	// Watch presentation status and trigger animations
+	$effect(() => {
+		if (!store.state.presentation || !contentElement || !backdropElement) return;
+
+		const presentation = store.state.presentation;
+		const currentContent = presentation.content;
+
+		if (presentation.status === 'presenting' && lastAnimatedContent !== currentContent) {
+			lastAnimatedContent = currentContent;
+			// Animate in: content + backdrop in parallel
+			Promise.all([
+				animateModalIn(contentElement),
+				animateBackdropIn(backdropElement)
+			]).then(() => {
+				store.dispatch({
+					type: 'presentation',
+					event: { type: 'presentationCompleted' }
+				});
+			});
+		}
+
+		if (presentation.status === 'dismissing' && lastAnimatedContent === currentContent) {
+			lastAnimatedContent = null;
+			// Animate out: content + backdrop in parallel
+			Promise.all([
+				animateModalOut(contentElement),
+				animateBackdropOut(backdropElement)
+			]).then(() => {
+				store.dispatch({
+					type: 'presentation',
+					event: { type: 'dismissalCompleted' }
+				});
+			});
+		}
+	});
+
+	// Visible when presentation is not idle
+	const visible = $derived(
+		store.state.presentation.status !== 'idle'
+	);
 </script>
 
-{#if store.state.isOpen}
+{#if visible}
 	<!-- Backdrop -->
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="command-backdrop" onclick={handleBackdropClick}>
+	<div bind:this={backdropElement} class="command-backdrop" onclick={handleBackdropClick}>
 		<!-- Modal Container -->
 		<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 		<div
+			bind:this={contentElement}
 			class="command-dialog {className}"
 			role="dialog"
 			aria-modal="true"
@@ -162,16 +210,6 @@
 		align-items: flex-start;
 		justify-content: center;
 		padding: 4rem 1rem;
-		animation: fadeIn 0.15s ease-out;
-	}
-
-	@keyframes fadeIn {
-		from {
-			opacity: 0;
-		}
-		to {
-			opacity: 1;
-		}
 	}
 
 	.command-dialog {
@@ -186,17 +224,5 @@
 		overflow: hidden;
 		display: flex;
 		flex-direction: column;
-		animation: slideIn 0.15s ease-out;
-	}
-
-	@keyframes slideIn {
-		from {
-			opacity: 0;
-			transform: scale(0.95) translateY(-1rem);
-		}
-		to {
-			opacity: 1;
-			transform: scale(1) translateY(0);
-		}
 	}
 </style>

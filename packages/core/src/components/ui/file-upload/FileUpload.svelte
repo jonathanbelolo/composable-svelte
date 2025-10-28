@@ -172,7 +172,6 @@
   <!-- Dropzone -->
   <div
     class={`file-dropzone relative border-2 border-dashed rounded-lg p-8 text-center
-            transition-colors duration-200
             ${store.state.isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}
             ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
     ondragenter={handleDragEnter}
@@ -224,8 +223,7 @@
     <div class="mt-4 space-y-2">
       {#each store.state.errors as error, index (index)}
         <div
-          class="flex items-center justify-between bg-red-50 border border-red-200 rounded-lg p-3
-                 transition-opacity duration-200"
+          class="flex items-center justify-between bg-red-50 border border-red-200 rounded-lg p-3"
         >
           <div class="flex items-center gap-2">
             <span class="text-red-500">⚠</span>
@@ -233,7 +231,7 @@
           </div>
           <button
             onclick={() => handleDismissError(index)}
-            class="text-red-400 hover:text-red-600 transition-colors"
+            class="text-red-400 hover:text-red-600"
             aria-label="Dismiss error"
           >
             ✕
@@ -252,7 +250,7 @@
         </h3>
         <button
           onclick={handleClearAll}
-          class="text-sm text-red-600 hover:text-red-700 transition-colors"
+          class="text-sm text-red-600 hover:text-red-700"
           disabled={store.state.isUploading}
           aria-label="Clear all files"
         >
@@ -263,8 +261,7 @@
       <div class="space-y-3">
         {#each store.state.files as file (file.id)}
           <div
-            class="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-lg p-3
-                   transition-opacity duration-200"
+            class="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-lg p-3"
           >
             <!-- Preview (for images) -->
             {#if showPreviews && file.previewUrl}
@@ -294,7 +291,7 @@
               {#if file.status === 'uploading'}
                 <div class="mt-2 w-full bg-gray-200 rounded-full h-1.5">
                   <div
-                    class="bg-blue-500 h-1.5 rounded-full transition-all duration-300"
+                    class="bg-blue-500 h-1.5 rounded-full"
                     style:width={`${file.progress}%`}
                   ></div>
                 </div>
@@ -309,7 +306,7 @@
             <!-- Remove Button -->
             <button
               onclick={() => handleRemoveFile(file.id)}
-              class="text-gray-400 hover:text-gray-600 transition-colors
+              class="text-gray-400 hover:text-gray-600
                      disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={file.status === 'uploading'}
               aria-label={`Remove ${file.file.name}`}

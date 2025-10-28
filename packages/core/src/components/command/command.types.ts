@@ -5,6 +5,8 @@
  * with search, keyboard navigation, and action dispatch.
  */
 
+import type { PresentationState, PresentationEvent } from '../../navigation/types.js';
+
 /**
  * Command item representing an executable action.
  */
@@ -115,6 +117,11 @@ export interface CommandState {
 	isOpen: boolean;
 
 	/**
+	 * Presentation state for animation lifecycle.
+	 */
+	presentation: PresentationState<true>;
+
+	/**
 	 * Whether search is case-sensitive.
 	 */
 	caseSensitive: boolean;
@@ -139,7 +146,8 @@ export type CommandAction =
 	| { type: 'selectCommand'; index: number }
 	| { type: 'executeCommand'; index?: number } // Execute selected or specific command
 	| { type: 'clearQuery' }
-	| { type: 'reset' };
+	| { type: 'reset' }
+	| { type: 'presentation'; event: PresentationEvent };
 
 /**
  * Command Palette Dependencies.
@@ -177,6 +185,7 @@ export function createInitialCommandState(config?: {
 		filteredCommands: commands,
 		selectedIndex: 0,
 		isOpen: config?.isOpen ?? false,
+		presentation: { status: 'idle' },
 		caseSensitive: config?.caseSensitive ?? false,
 		maxResults: config?.maxResults
 	};

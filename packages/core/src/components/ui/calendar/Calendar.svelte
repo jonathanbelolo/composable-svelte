@@ -367,7 +367,6 @@
 		border-radius: 0.375rem;
 		cursor: pointer;
 		color: #374151;
-		transition: background-color 0.2s;
 	}
 
 	.calendar-nav-button:hover {
@@ -422,7 +421,6 @@
 		cursor: pointer;
 		font-size: 0.875rem;
 		color: #111827;
-		transition: all 0.2s;
 	}
 
 	.calendar-day:hover:not(:disabled) {
@@ -473,7 +471,6 @@
 		cursor: pointer;
 		font-size: 0.875rem;
 		color: #374151;
-		transition: all 0.2s;
 	}
 
 	.calendar-clear-button:hover {
