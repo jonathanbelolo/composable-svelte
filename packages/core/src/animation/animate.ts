@@ -326,3 +326,57 @@ export async function animateAlertOut(
 		console.error('[animateAlertOut] Animation failed:', error);
 	}
 }
+
+// ============================================================================
+// Tooltip Animations
+// ============================================================================
+
+/**
+ * Animate tooltip in with subtle scale + fade (very fast).
+ */
+export async function animateTooltipIn(
+	element: HTMLElement,
+	springConfig?: Partial<SpringConfig>
+): Promise<void> {
+	try {
+		const config = getSpringConfig(springPresets.tooltip, springConfig);
+
+		await animate(
+			element,
+			{
+				opacity: [0, 1],
+				scale: [0.95, 1]
+			},
+			{
+				type: 'spring',
+				visualDuration: config.visualDuration,
+				bounce: config.bounce
+			}
+		).finished;
+	} catch (error) {
+		console.error('[animateTooltipIn] Animation failed:', error);
+	}
+}
+
+/**
+ * Animate tooltip out with fade (no scale for faster exit).
+ */
+export async function animateTooltipOut(element: HTMLElement): Promise<void> {
+	try {
+		const config = getSpringConfig(springPresets.tooltip);
+
+		await animate(
+			element,
+			{
+				opacity: [1, 0]
+			},
+			{
+				type: 'spring',
+				visualDuration: config.visualDuration * 0.7, // Faster exit
+				bounce: 0
+			}
+		).finished;
+	} catch (error) {
+		console.error('[animateTooltipOut] Animation failed:', error);
+	}
+}

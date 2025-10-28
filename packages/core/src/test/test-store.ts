@@ -5,41 +5,175 @@
  * - send/receive pattern for asserting on effect-dispatched actions
  * - Exhaustiveness checking (ensures all actions are asserted)
  * - Synchronous and async action handling
+ * - Fake timer support for testing time-based effects
  * - Clear, helpful error messages
  *
- * ⚠️ IMPORTANT: PARTIAL MATCHING LIMITATION IN BROWSER TESTS
+ * ## Basic Usage
  *
- * When running tests in actual browsers (Playwright/Chromium), partial object matching
- * in `receive()` does NOT work reliably for nested objects, even though it works fine
- * in Node.js tests (jsdom/happy-dom).
- *
- * ❌ AVOID in browser tests:
  * ```typescript
- * await store.receive({
- *   type: 'formValidationCompleted',
- *   fieldErrors: { name: 'Required', email: 'Invalid' }  // ← Fails in browser!
+ * const store = createTestStore({
+ *   initialState: { count: 0 },
+ *   reducer: counterReducer
+ * });
+ *
+ * // Send user action
+ * await store.send({ type: 'incrementTapped' }, (state) => {
+ *   expect(state.count).toBe(1);
+ * });
+ *
+ * // Receive effect-dispatched action
+ * await store.receive({ type: 'animationCompleted' }, (state) => {
+ *   expect(state.isAnimating).toBe(false);
+ * });
+ *
+ * // Assert all actions handled
+ * store.assertNoPendingActions();
+ * ```
+ *
+ * ## Testing Time-Based Effects (Fake Timers)
+ *
+ * TestStore integrates with Vitest's fake timers to test delays, debounces, and timeouts
+ * without waiting for real time to pass.
+ *
+ * ### Setup Requirements
+ *
+ * 1. **Enable fake timers in your test setup:**
+ * ```typescript
+ * beforeEach(() => {
+ *   vi.useFakeTimers();
+ * });
+ *
+ * afterEach(() => {
+ *   vi.restoreAllMocks();
  * });
  * ```
  *
- * ✅ RECOMMENDED pattern (works everywhere):
+ * 2. **Use `advanceTime()` to progress virtual time:**
  * ```typescript
- * await store.receive({ type: 'formValidationCompleted' });
+ * await store.send({ type: 'hoverStarted' });
  *
- * // Then check state directly
- * expect(store.state.fields.name.error).toBe('Required');
- * expect(store.state.fields.email.error).toBe('Invalid');
+ * // Advance 300ms to trigger afterDelay effect
+ * await store.advanceTime(300);
+ *
+ * await store.receive({ type: 'delayCompleted' });
  * ```
  *
- * Why? The partial matching uses shallow equality checks that fail for nested objects
- * when running in the browser's actual JavaScript engine. The workaround (checking state
- * directly) is actually MORE maintainable because:
- * - Tests focus on state outcomes (what users/components see)
- * - Less brittle to action payload refactoring
- * - Clearer test intent
- * - No loss of test coverage
+ * ### How Fake Timers Work
  *
- * This is a known limitation. Fixing deep equality in TestStore is non-trivial and
- * the state-checking pattern is preferred anyway.
+ * - `advanceTime(ms)` calls `vi.advanceTimersByTime(ms)` to fire setTimeout/setInterval
+ * - After advancing timers, flushes microtask queue for async effects
+ * - `receive()` uses `vi.waitFor()` to poll for actions (effects execute asynchronously)
+ *
+ * ### Complete Example: Testing Tooltip with Hover Delay
+ *
+ * ```typescript
+ * describe('Tooltip with hover delay', () => {
+ *   beforeEach(() => {
+ *     vi.useFakeTimers();
+ *   });
+ *
+ *   afterEach(() => {
+ *     vi.restoreAllMocks();
+ *   });
+ *
+ *   it('shows tooltip after delay', async () => {
+ *     const store = createTestStore({
+ *       initialState: initialTooltipState,
+ *       reducer: tooltipReducer,
+ *       dependencies: { hoverDelay: 300 }
+ *     });
+ *
+ *     // User hovers
+ *     await store.send({ type: 'hoverStarted', content: 'Save' }, (state) => {
+ *       expect(state.isWaitingToShow).toBe(true);
+ *     });
+ *
+ *     // Advance time to trigger delay effect
+ *     await store.advanceTime(300);
+ *
+ *     // Delay effect fires delayCompleted action
+ *     await store.receive({ type: 'delayCompleted' }, (state) => {
+ *       expect(state.isWaitingToShow).toBe(false);
+ *       expect(state.presentation.status).toBe('presenting');
+ *     });
+ *
+ *     // Advance time for animation duration
+ *     await store.advanceTime(150);
+ *
+ *     await store.receive({
+ *       type: 'presentation',
+ *       event: { type: 'presentationCompleted' }
+ *     }, (state) => {
+ *       expect(state.presentation.status).toBe('presented');
+ *     });
+ *
+ *     await store.finish(); // Verify no pending actions
+ *   });
+ * });
+ * ```
+ *
+ * ### Important Notes on Fake Timers
+ *
+ * 1. **Effects still execute asynchronously**: Even with fake timers, effect callbacks
+ *    (e.g., `Effect.cancellable()`) execute asynchronously. `receive()` polls for actions
+ *    using `vi.waitFor()`.
+ *
+ * 2. **Guard patterns for cancelled effects**: If your reducer has guards (e.g., checking
+ *    `isWaitingToShow` before processing `delayCompleted`), the action will still be
+ *    dispatched but the reducer will return the same state unchanged. Your test should
+ *    receive it and verify state didn't change from what it was before:
+ *
+ *    ```typescript
+ *    // User hovers, then cancels before delay completes
+ *    await store.send({ type: 'hoverStarted', content: 'Save' });
+ *    await store.send({ type: 'hoverEnded' }, (state) => {
+ *      expect(state.isWaitingToShow).toBe(false);
+ *      expect(state.content).toBe(null);
+ *    });
+ *
+ *    // Advance past the original delay time
+ *    await store.advanceTime(300); // Timer still fires!
+ *
+ *    // Action is dispatched but reducer guard returns unchanged state
+ *    await store.receive({ type: 'delayCompleted' }, (state) => {
+ *      // State remains unchanged - still cancelled
+ *      expect(state.isWaitingToShow).toBe(false);
+ *      expect(state.content).toBe(null);
+ *    });
+ *    ```
+ *
+ * 3. **`finish()` convenience method**: Equivalent to `await advanceTime(0); assertNoPendingActions()`
+ *
+ * ## Partial Action Matching
+ *
+ * `receive()` supports partial matching with nested objects:
+ *
+ * ```typescript
+ * // Matches actions with matching type and nested event
+ * await store.receive({
+ *   type: 'presentation',
+ *   event: { type: 'presentationCompleted' }
+ * });
+ * ```
+ *
+ * Deep equality is performed using JSON serialization. For complex objects,
+ * consider checking state directly instead.
+ *
+ * ## Exhaustiveness Checking
+ *
+ * By default (`exhaustivity: 'on'`), TestStore ensures all received actions are asserted:
+ *
+ * ```typescript
+ * await store.send({ type: 'loadData' });
+ * await store.receive({ type: 'dataLoaded' });
+ *
+ * // If another action was received but not asserted:
+ * store.assertNoPendingActions(); // ❌ Throws error
+ *
+ * // Disable exhaustiveness for specific tests:
+ * store.exhaustivity = 'off';
+ * store.assertNoPendingActions(); // ✅ Passes even with unasserted actions
+ * ```
  */
 
 import type { Reducer, Effect, Dispatch } from '../types.js';
@@ -88,6 +222,7 @@ export class TestStore<State, Action, Dependencies = any> {
   private actionHistory: Action[] = [];
   private receivedActions: Action[] = [];
   private pendingEffects: Promise<void>[] = [];
+  private pendingTimers: number = 0; // Track number of scheduled timers
 
   /**
    * Control exhaustiveness checking for received actions.
@@ -152,46 +287,34 @@ export class TestStore<State, Action, Dependencies = any> {
     assert?: StateAssertion<State>,
     timeout: number = 1000
   ): Promise<void> {
-    const startTime = Date.now();
+    const { vi } = await import('vitest');
 
-    // Wait for any pending effects (effects may spawn new effects)
-    while (this.pendingEffects.length > 0) {
-      const elapsed = Date.now() - startTime;
-      if (elapsed > timeout) {
+    // Use vi.waitFor to poll for the action (like store.test.ts does)
+    await vi.waitFor(() => {
+      // Process any immediate effects
+      while (this.pendingEffects.length > 0) {
+        const pending = [...this.pendingEffects];
+        this.pendingEffects = [];
+        Promise.all(pending); // Fire and forget
+      }
+
+      // Find matching action
+      const index = this.receivedActions.findIndex(action =>
+        this._matchesPartialAction(action, partialAction)
+      );
+
+      if (index === -1) {
+        const receivedTypes = this.receivedActions.map((a: any) => a.type);
         throw new Error(
-          `Timeout waiting for effects after ${timeout}ms\n` +
-          `Expected action: ${JSON.stringify(partialAction)}\n` +
-          `Pending effects: ${this.pendingEffects.length}\n` +
-          `Received actions so far: ${JSON.stringify(this.receivedActions.map((a: any) => a.type))}`
+          `Expected to receive action matching ${JSON.stringify(partialAction)}\n` +
+          `Received actions: ${JSON.stringify(receivedTypes)}\n` +
+          `Full actions: ${JSON.stringify(this.receivedActions, null, 2)}`
         );
       }
 
-      const pending = [...this.pendingEffects];
-      this.pendingEffects = [];
-
-      // Add small delay to prevent tight loop
-      await Promise.race([
-        Promise.all(pending),
-        new Promise(resolve => setTimeout(resolve, 10))
-      ]);
-    }
-
-    // Find matching action
-    const index = this.receivedActions.findIndex(action =>
-      this._matchesPartialAction(action, partialAction)
-    );
-
-    if (index === -1) {
-      const receivedTypes = this.receivedActions.map((a: any) => a.type);
-      throw new Error(
-        `Expected to receive action matching ${JSON.stringify(partialAction)}\n` +
-        `Received actions: ${JSON.stringify(receivedTypes)}\n` +
-        `Full actions: ${JSON.stringify(this.receivedActions, null, 2)}`
-      );
-    }
-
-    // Remove matched action
-    this.receivedActions.splice(index, 1);
+      // Remove matched action
+      this.receivedActions.splice(index, 1);
+    }, { timeout });
 
     if (assert) {
       await assert(this.state);
@@ -245,17 +368,43 @@ export class TestStore<State, Action, Dependencies = any> {
   }
 
   /**
-   * Advance virtual time (for testing timeouts/intervals).
-   * Note: Only increments virtual time counter. Actual timer control
-   * requires fake timer implementation (e.g., vi.useFakeTimers()).
+   * Advance virtual time for testing timeouts/intervals.
+   *
+   * IMPORTANT: Requires vi.useFakeTimers() to be called in your test setup.
+   *
+   * This method advances Vitest's fake timers and flushes the microtask queue.
+   * Effects scheduled via setTimeout/afterDelay will execute during the advancement.
+   *
+   * @param ms - Number of milliseconds to advance the clock
+   *
+   * @example
+   * ```typescript
+   * beforeEach(() => {
+   *   vi.useFakeTimers();
+   * });
+   *
+   * it('handles delayed effects', async () => {
+   *   const store = createTestStore({ initialState, reducer });
+   *
+   *   await store.send({ type: 'startTimer' });
+   *
+   *   // Advance 300ms to trigger afterDelay effect
+   *   await store.advanceTime(300);
+   *
+   *   await store.receive({ type: 'timerCompleted' });
+   * });
+   * ```
    */
   async advanceTime(ms: number): Promise<void> {
-    // Wait for any scheduled effects to complete
-    while (this.pendingEffects.length > 0) {
-      const pending = [...this.pendingEffects];
-      this.pendingEffects = [];
-      await Promise.all(pending);
-    }
+    // Import vi dynamically to avoid issues in non-test environments
+    const { vi } = await import('vitest');
+
+    // Use synchronous timer advancement (this fires all timers up to ms)
+    vi.advanceTimersByTime(ms);
+
+    // Flush microtask queue to let async callbacks execute
+    await Promise.resolve();
+    await Promise.resolve(); // Double flush to handle nested promises
   }
 
   /**
@@ -278,9 +427,25 @@ export class TestStore<State, Action, Dependencies = any> {
 
       case 'Run':
       case 'Cancellable':
+        await effect.execute(dispatch);
+        break;
+
+      case 'AfterDelay':
+        // Schedule the effect to execute after delay using setTimeout
+        // Don't track the promise - just let setTimeout fire naturally
+        // When vi.advanceTimersByTime() is called, this will execute
+        setTimeout(async () => {
+          try {
+            await effect.execute(dispatch);
+          } catch (error) {
+            console.error('[TestStore] Effect error:', error);
+          }
+        }, effect.ms);
+        break;
+
       case 'Debounced':
       case 'Throttled':
-      case 'AfterDelay':
+        // For now, execute immediately (proper debounce/throttle would need more complex timer management)
         await effect.execute(dispatch);
         break;
 
@@ -301,13 +466,22 @@ export class TestStore<State, Action, Dependencies = any> {
 
   /**
    * Check if action matches partial action.
+   * Supports nested object matching via deep equality.
    */
   private _matchesPartialAction(
     action: Action,
     partial: PartialAction<Action>
   ): boolean {
     return Object.entries(partial).every(([key, value]) => {
-      return (action as any)[key] === value;
+      const actionValue = (action as any)[key];
+
+      // Deep equality for objects
+      if (typeof value === 'object' && value !== null && typeof actionValue === 'object' && actionValue !== null) {
+        return JSON.stringify(actionValue) === JSON.stringify(value);
+      }
+
+      // Shallow equality for primitives
+      return actionValue === value;
     });
   }
 }

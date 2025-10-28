@@ -36,3 +36,6 @@ export { Kbd } from './kbd/index.js';
 // Visual
 export { Banner, BannerTitle, BannerDescription } from './banner/index.js';
 export { Empty } from './empty/index.js';
+
+// Interactive
+export { Tooltip } from './tooltip/index.js';
