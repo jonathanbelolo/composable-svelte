@@ -64,6 +64,7 @@
 
 **Combobox System**: Complete with 36/36 unit tests passing ✅
 **Combobox Tests**: Open/close/toggle, search/filter, async loading with debouncing, keyboard navigation, full user flows, edge cases
+**Combobox Architecture**: Refactored to use dropdown state machine (idle/opening/open/closing) with centralized animations (150ms open, 100ms close) for cross-component coordination ✅
 
 **Accordion System**: Complete with 31/31 unit tests passing ✅
 **Accordion Tests**: Toggle, single/multiple mode, collapsible mode, expand/collapse, callbacks, items changes
