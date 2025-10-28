@@ -24,7 +24,7 @@
 - [ ] **Week 4, Day 2-5**: Remaining Stateful Components
 - [ ] **Week 5**: Advanced Components + Polish
 
-**Components Complete**: 52 / 50+
+**Components Complete**: 55 / 50+
 - Foundation: Button (3), Input, Label, Spinner, Card (6), Separator
 - Layout: Panel, Box, AspectRatio (3)
 - Typography: Heading, Text, Kbd (3)
@@ -39,6 +39,7 @@
 - Combobox: Combobox, combobox.reducer, combobox.types (3) ✅
 - Accordion: Accordion, AccordionItem, AccordionTrigger, AccordionContent (4) ✅
 - Collapsible: Collapsible, CollapsibleTrigger, CollapsibleContent (3) ✅
+- TreeView: TreeView, tree-view.reducer, tree-view.types (3) ✅
 - **Navigation Components** (from earlier phases): Modal, Sheet, Alert, AlertDialog, Drawer, Popover, Sidebar, Tabs, NavigationStack, DestinationRouter (10) ✅
 
 **Form System**: Complete with 23/23 unit tests passing ✅
@@ -71,6 +72,10 @@
 
 **Collapsible System**: Complete with 24/24 unit tests passing ✅
 **Collapsible Tests**: Toggle, disabled state, explicit expand/collapse, callbacks, edge cases
+
+**TreeView System**: Complete with 32/32 unit tests passing ✅
+**TreeView Tests**: Expand/collapse, single/multi-select, keyboard navigation, lazy loading, callbacks, edge cases
+**TreeView Example**: File browser with lazy loading demonstration, activity log, and comprehensive README ✅
 
 ---
 
@@ -914,17 +919,39 @@
 - [x] Test: Collapsible works (24/24 tests passing)
 - [x] Uses centralized animation system
 
-#### TreeView Component
-- [ ] Create `components/tree/tree.reducer.ts`
-- [ ] Define state (nodes, expanded, selected)
-- [ ] Implement expand/collapse
-- [ ] Implement selection
-- [ ] Implement lazy loading
-- [ ] Test: TreeView works
-
-- [ ] Create `TreeView.svelte` components
-- [ ] Add keyboard navigation
-- [ ] Create examples (file browser)
+#### TreeView Component ✅
+- [x] Create `components/ui/tree-view/tree-view.types.ts`
+  - [x] TreeNode interface (id, label, icon, disabled, children, data, lazy)
+  - [x] TreeViewState (nodes, expandedIds, selectedIds, highlightedId, loadingIds, isMultiSelect)
+  - [x] TreeViewAction (17 action types)
+  - [x] createInitialTreeViewState() factory
+- [x] Create `components/ui/tree-view/tree-view.reducer.ts`
+  - [x] Pure reducer with all 17 action handlers
+  - [x] Helper functions (findNodeById, getAllVisibleNodeIds, findParentNodeId)
+  - [x] Expand/collapse with lazy loading support
+  - [x] Single and multi-select modes
+  - [x] Full keyboard navigation (arrows, home, end, enter, space)
+  - [x] Async children loading with Effect.run()
+- [x] Create `components/ui/tree-view/TreeView.svelte`
+  - [x] Recursive rendering using Svelte 5 snippets
+  - [x] Full keyboard navigation handlers
+  - [x] ARIA accessibility attributes
+  - [x] Loading spinner for lazy-loaded nodes
+  - [x] Visual selection and highlight indicators
+- [x] Comprehensive TestStore tests (32/32 passing)
+  - [x] Expand/collapse tests (5 tests)
+  - [x] Selection tests (7 tests)
+  - [x] Keyboard navigation tests (8 tests)
+  - [x] Lazy loading tests (2 tests)
+  - [x] Callback tests (3 tests)
+  - [x] Edge case tests (7 tests)
+- [x] Create examples/file-browser/ (complete working example)
+  - [x] Realistic file system structure
+  - [x] Visual icons for different file types
+  - [x] Lazy loading demonstration
+  - [x] Activity log and details panel
+  - [x] Full keyboard navigation hints
+  - [x] Comprehensive README
 
 **Checkpoint**: ✅ Content organization components complete
 
