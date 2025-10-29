@@ -2,9 +2,10 @@
   import { createStore } from '@composable-svelte/core';
   import { styleguideReducer } from '../lib/stores/styleguide.reducer.js';
   import { createInitialStyleguideState } from '../lib/stores/styleguide.types.js';
-  import { COMPONENT_REGISTRY, COMPONENT_CATEGORIES } from '../lib/data/component-registry.js';
+  import { COMPONENT_REGISTRY, COMPONENT_CATEGORIES, getComponentById } from '../lib/data/component-registry.js';
   import Header from '../lib/components/layout/Header.svelte';
   import ComponentCard from '../lib/components/showcase/ComponentCard.svelte';
+  import ComponentShowcase from '../lib/components/showcase/ComponentShowcase.svelte';
 
   // ============================================================================
   // Store Initialization
@@ -21,6 +22,9 @@
   // ============================================================================
 
   const state = $derived(store.state);
+  const selectedComponentInfo = $derived(
+    state.selectedComponent ? getComponentById(state.selectedComponent) : null
+  );
 </script>
 
 <!-- Apply theme class to root div -->
@@ -71,26 +75,12 @@
             {/if}
           {/each}
         </div>
-      {:else}
-        <!-- Component Detail View (TODO) -->
-        <div class="space-y-8">
-          <div class="flex items-center gap-4">
-            <button
-              onclick={() => store.dispatch({ type: 'homeSelected' })}
-              class="w-10 h-10 rounded-lg hover:bg-accent flex items-center justify-center"
-              aria-label="Back to home"
-            >
-              ←
-            </button>
-            <h2 class="text-3xl font-bold">
-              Component: {state.selectedComponent}
-            </h2>
-          </div>
-
-          <div class="p-12 border-2 rounded-lg bg-muted/20 text-center text-muted-foreground">
-            Component showcase will be implemented in Phase 2
-          </div>
-        </div>
+      {:else if selectedComponentInfo}
+        <!-- Component Showcase View -->
+        <ComponentShowcase
+          component={selectedComponentInfo}
+          onBack={() => store.dispatch({ type: 'homeSelected' })}
+        />
       {/if}
     </main>
   </div>
