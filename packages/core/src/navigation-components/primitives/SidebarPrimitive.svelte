@@ -94,6 +94,18 @@
   // Track last animated content to prevent duplicate animations
   let lastAnimatedContent: any = $state(null);
 
+  // Set initial width when element is bound
+  $effect(() => {
+    if (!contentElement) return;
+
+    // Set initial width based on presentation state
+    if (presentation && presentation.status === 'presented') {
+      contentElement.style.width = width;
+    } else if (!presentation || presentation.status === 'idle') {
+      contentElement.style.width = '0px';
+    }
+  });
+
   // Watch presentation status and trigger animations
   $effect(() => {
     if (!presentation || !contentElement) return;

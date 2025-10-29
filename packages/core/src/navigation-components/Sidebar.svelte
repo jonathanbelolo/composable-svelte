@@ -117,7 +117,6 @@
     <nav
       use:bindContent
       class={contentClasses}
-      style="width: {width}"
       aria-label="Sidebar navigation"
     >
       {@render children?.({ visible, store, side, width })}
