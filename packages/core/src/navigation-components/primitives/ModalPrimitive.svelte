@@ -99,13 +99,13 @@
   // Animation Integration
   // ============================================================================
 
-  let contentElement: HTMLElement | undefined = $state();
-  let backdropElement: HTMLElement | undefined = $state();
+  let modalContentElement: HTMLElement | undefined = $state();
+  let modalBackdropElement: HTMLElement | undefined = $state();
   let lastAnimatedContent: any = $state(null);
 
   // Watch presentation status and trigger animations
   $effect(() => {
-    if (!presentation || !contentElement || !backdropElement) return;
+    if (!presentation || !modalContentElement || !modalBackdropElement) return;
 
     // Only animate if content changed and we're in the right state
     const currentContent = presentation.content;
@@ -115,8 +115,8 @@
       console.log('[ModalPrimitive] Starting presentation animation for', currentContent);
       // Animate in: content + backdrop in parallel
       Promise.all([
-        animateModalIn(contentElement, springConfig),
-        animateBackdropIn(backdropElement)
+        animateModalIn(modalContentElement, springConfig),
+        animateBackdropIn(modalBackdropElement)
       ]).then(() => {
         console.log('[ModalPrimitive] Animation completed, calling onPresentationComplete');
         // Schedule callback outside of effect context
@@ -129,8 +129,8 @@
       console.log('[ModalPrimitive] Starting dismissal animation');
       // Animate out: content + backdrop in parallel
       Promise.all([
-        animateModalOut(contentElement, springConfig),
-        animateBackdropOut(backdropElement)
+        animateModalOut(modalContentElement, springConfig),
+        animateBackdropOut(modalBackdropElement)
       ]).then(() => {
         console.log('[ModalPrimitive] Dismissal animation completed, calling onDismissalComplete');
         // Schedule callback outside of effect context
@@ -203,23 +203,19 @@
 
 {#if visible}
   <div use:portal>
-    <!-- Backdrop (separate element for independent animation) -->
-    <!-- Note: pointer-events: none allows clicks to pass through to clickOutside handler -->
-    <div
-      bind:this={backdropElement}
-      class="modal-backdrop"
-      aria-hidden="true"
-      style:pointer-events="none"
-    ></div>
-
     <!-- Content Container -->
     <div
-      bind:this={contentElement}
       use:clickOutside={handleClickOutside}
       use:focusTrap={{ returnFocus: returnFocusTo }}
       style:pointer-events={interactionsEnabled ? 'auto' : 'none'}
     >
-      {@render children?.({ visible, store })}
+      {@render children?.({
+        visible,
+        store,
+        bindBackdrop: (node: HTMLElement) => { modalBackdropElement = node; },
+        bindContent: (node: HTMLElement) => { modalContentElement = node; },
+        initialOpacity: presentation?.status === 'presenting' ? '0' : undefined
+      })}
     </div>
   </div>
 {/if}

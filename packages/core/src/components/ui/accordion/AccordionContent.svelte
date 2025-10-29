@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { animateAccordionExpand, animateAccordionCollapse } from '../../../animation/animate.js';
 	import { getAccordionItemContext } from './AccordionItem.svelte';
-	import { cn } from '$lib/utils.js';
+	import { cn } from '../../../lib/utils.js';
 
 	/**
 	 * AccordionContent component - Collapsible content section.

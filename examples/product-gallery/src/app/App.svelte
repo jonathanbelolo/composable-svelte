@@ -55,9 +55,9 @@
 <!-- Root App Layout -->
 <!-- ============================================================================ -->
 
-<div class="flex h-screen overflow-hidden">
-  <!-- Sidebar (Desktop) -->
-  <Sidebar expanded={state.sidebarExpanded} side="left" width="280px">
+<div class="flex h-screen overflow-hidden bg-gradient-to-br from-background via-background to-muted/20">
+  <!-- Sidebar (Desktop) - Enhanced with Shadow -->
+  <Sidebar expanded={state.sidebarExpanded} side="left" width="320px">
     {#snippet children()}
       <CategoryFilter
         selectedCategories={state.filters.selectedCategories}
@@ -66,18 +66,18 @@
     {/snippet}
   </Sidebar>
 
-  <!-- Main Content Area -->
-  <div class="flex-1 flex flex-col overflow-hidden">
-    <!-- Mobile Menu Button -->
-    <div class="lg:hidden p-4 border-b flex items-center gap-4">
+  <!-- Main Content Area - Enhanced with Structure -->
+  <div class="flex-1 flex flex-col overflow-hidden shadow-2xl">
+    <!-- Mobile Menu Button - Enhanced -->
+    <div class="lg:hidden px-6 py-5 border-b-2 flex items-center gap-4 bg-gradient-to-r from-background to-muted/20 shadow-md">
       <button
         onclick={() => store.dispatch({ type: 'sidebarToggled' })}
-        class="w-10 h-10 rounded-lg hover:bg-accent flex items-center justify-center"
+        class="w-12 h-12 rounded-xl hover:bg-accent flex items-center justify-center text-2xl transition-all hover:shadow-lg"
         aria-label="Toggle sidebar"
       >
         ☰
       </button>
-      <h1 class="text-xl font-bold">Product Gallery</h1>
+      <h1 class="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">Product Gallery</h1>
     </div>
 
     <!-- Product List -->
@@ -99,7 +99,15 @@
 <!-- ============================================================================ -->
 
 {#if productDetailStore && currentProduct}
-  <Modal store={productDetailStore} disableClickOutside>
+  <Modal
+    store={productDetailStore}
+    presentation={state.presentation}
+    onPresentationComplete={() =>
+      store.dispatch({ type: 'presentation', event: { type: 'presentationCompleted' } })}
+    onDismissalComplete={() =>
+      store.dispatch({ type: 'presentation', event: { type: 'dismissalCompleted' } })}
+    disableClickOutside
+  >
     {#snippet children({ store: detailStore })}
       <ProductDetail
         store={detailStore}

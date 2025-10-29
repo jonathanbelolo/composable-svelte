@@ -2,7 +2,7 @@
 	import { createStore } from '../../../store.svelte.js';
 	import { paginationReducer } from './pagination.reducer.js';
 	import { createInitialPaginationState } from './pagination.types.js';
-	import { cn } from '$lib/utils.js';
+	import { cn } from '../../../lib/utils.js';
 
 	/**
 	 * Pagination component - Page navigation with smart button generation.

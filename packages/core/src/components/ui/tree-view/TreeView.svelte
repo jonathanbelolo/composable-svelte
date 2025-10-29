@@ -4,7 +4,7 @@
 	import { createInitialTreeViewState } from './tree-view.types.js';
 	import type { TreeNode } from './tree-view.types.js';
 	import { Spinner } from '$lib/components/ui/spinner/index.js';
-	import { cn } from '$lib/utils.js';
+	import { cn } from '../../../lib/utils.js';
 
 	/**
 	 * TreeView component - Hierarchical tree with expand/collapse and selection.

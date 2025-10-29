@@ -116,29 +116,43 @@ export const productDetailReducer: Reducer<
   ProductDetailDependencies
 > = (state, action, deps) => {
   switch (action.type) {
-    case 'addToCartButtonTapped':
+    case 'addToCartButtonTapped': {
+      const destinationState = {
+        type: 'addToCart' as const,
+        state: createAddToCartState(state.productId)
+      };
       return [
         {
           ...state,
-          destination: {
-            type: 'addToCart',
-            state: createAddToCartState(state.productId)
+          destination: destinationState,
+          presentation: {
+            status: 'presenting',
+            content: destinationState,
+            duration: 300
           }
         },
         Effect.none()
       ];
+    }
 
-    case 'shareButtonTapped':
+    case 'shareButtonTapped': {
+      const destinationState = {
+        type: 'share' as const,
+        state: createShareState(state.productId)
+      };
       return [
         {
           ...state,
-          destination: {
-            type: 'share',
-            state: createShareState(state.productId)
+          destination: destinationState,
+          presentation: {
+            status: 'presenting',
+            content: destinationState,
+            duration: 300
           }
         },
         Effect.none()
       ];
+    }
 
     case 'quickViewButtonTapped':
       return [
@@ -220,8 +234,21 @@ export const productDetailReducer: Reducer<
         presentedAction.action.type === 'addToCart' &&
         presentedAction.action.action.type === 'cancelButtonTapped'
       ) {
-        // Just dismiss
-        return [{ ...newState, destination: null }, effect];
+        // Start dismissal animation
+        if (state.destination) {
+          return [
+            {
+              ...newState,
+              presentation: {
+                status: 'dismissing',
+                content: state.destination,
+                duration: 300
+              }
+            },
+            effect
+          ];
+        }
+        return [{ ...newState, destination: null, presentation: { status: 'idle' } }, effect];
       }
 
       // Share completed
@@ -230,8 +257,21 @@ export const productDetailReducer: Reducer<
         presentedAction.action.type === 'share' &&
         presentedAction.action.action.type === 'shareButtonTapped'
       ) {
-        // Just dismiss
-        return [{ ...newState, destination: null }, effect];
+        // Start dismissal animation
+        if (state.destination) {
+          return [
+            {
+              ...newState,
+              presentation: {
+                status: 'dismissing',
+                content: state.destination,
+                duration: 300
+              }
+            },
+            effect
+          ];
+        }
+        return [{ ...newState, destination: null, presentation: { status: 'idle' } }, effect];
       }
 
       // Share canceled
@@ -240,8 +280,21 @@ export const productDetailReducer: Reducer<
         presentedAction.action.type === 'share' &&
         presentedAction.action.action.type === 'cancelButtonTapped'
       ) {
-        // Just dismiss
-        return [{ ...newState, destination: null }, effect];
+        // Start dismissal animation
+        if (state.destination) {
+          return [
+            {
+              ...newState,
+              presentation: {
+                status: 'dismissing',
+                content: state.destination,
+                duration: 300
+              }
+            },
+            effect
+          ];
+        }
+        return [{ ...newState, destination: null, presentation: { status: 'idle' } }, effect];
       }
 
       // QuickView closed
@@ -266,6 +319,42 @@ export const productDetailReducer: Reducer<
       }
 
       return [newState, effect];
+    }
+
+    case 'presentation': {
+      switch (action.event.type) {
+        case 'presentationCompleted': {
+          // Animation finished - mark as presented
+          if (state.presentation.status === 'presenting' && state.presentation.content) {
+            return [
+              {
+                ...state,
+                presentation: {
+                  status: 'presented',
+                  content: state.presentation.content
+                }
+              },
+              Effect.none()
+            ];
+          }
+          return [state, Effect.none()];
+        }
+
+        case 'dismissalCompleted': {
+          // Dismissal animation finished - clear everything
+          return [
+            {
+              ...state,
+              destination: null,
+              presentation: { status: 'idle' }
+            },
+            Effect.none()
+          ];
+        }
+
+        default:
+          return [state, Effect.none()];
+      }
     }
 
     default:

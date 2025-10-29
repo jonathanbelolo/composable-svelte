@@ -3,7 +3,7 @@
 	import { dropdownMenuReducer } from './dropdown-menu.reducer.js';
 	import { createInitialDropdownMenuState } from './dropdown-menu.types.js';
 	import type { MenuItem } from './dropdown-menu.types.js';
-	import { cn } from '$lib/utils.js';
+	import { cn } from '../../../lib/utils.js';
 	import type { Snippet } from 'svelte';
 
 	/**

@@ -3,7 +3,7 @@
 	import { selectReducer } from './select.reducer.js';
 	import { createInitialSelectState } from './select.types.js';
 	import type { SelectOption } from './select.types.js';
-	import { cn } from '$lib/utils.js';
+	import { cn } from '../../../lib/utils.js';
 
 	/**
 	 * Select component - Dropdown select with search and multi-select support.

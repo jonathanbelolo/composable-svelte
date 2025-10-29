@@ -1,5 +1,5 @@
 <script lang="ts" generics="Action = unknown">
-	import { cn } from '$lib/utils.js';
+	import { cn } from '../../../lib/utils.js';
 	import type { Dispatch } from '../../../types.js';
 	import type { HTMLInputAttributes } from 'svelte/elements';
 

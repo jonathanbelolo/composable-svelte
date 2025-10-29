@@ -1,4 +1,4 @@
-import type { PresentationAction } from '@composable-svelte/core/navigation';
+import type { PresentationAction, PresentationState } from '@composable-svelte/core/navigation';
 import type { AddToCartState, AddToCartAction } from '../add-to-cart/add-to-cart.types.js';
 import type { ShareState, ShareAction } from '../share/share.types.js';
 import type { QuickViewState, QuickViewAction } from '../quick-view/quick-view.types.js';
@@ -11,6 +11,7 @@ import type { DeleteAlertState, DeleteAlertAction } from '../delete-alert/delete
 export interface ProductDetailState {
   productId: string;
   destination: ProductDetailDestination | null;
+  presentation: PresentationState<ProductDetailDestination>;
 }
 
 export type ProductDetailDestination =
@@ -20,13 +21,18 @@ export type ProductDetailDestination =
   | { type: 'deleteAlert'; state: DeleteAlertState }
   | { type: 'info'; productId: string };
 
+export type PresentationEvent =
+  | { type: 'presentationCompleted' }
+  | { type: 'dismissalCompleted' };
+
 export type ProductDetailAction =
   | { type: 'addToCartButtonTapped' }
   | { type: 'shareButtonTapped' }
   | { type: 'quickViewButtonTapped' }
   | { type: 'deleteButtonTapped' }
   | { type: 'infoButtonTapped' }
-  | { type: 'destination'; action: PresentationAction<ProductDetailDestinationAction> };
+  | { type: 'destination'; action: PresentationAction<ProductDetailDestinationAction> }
+  | { type: 'presentation'; event: PresentationEvent };
 
 export type ProductDetailDestinationAction =
   | { type: 'addToCart'; action: AddToCartAction }
@@ -41,6 +47,7 @@ export type ProductDetailDestinationAction =
 export function createProductDetailState(productId: string): ProductDetailState {
   return {
     productId,
-    destination: null
+    destination: null,
+    presentation: { status: 'idle' }
   };
 }

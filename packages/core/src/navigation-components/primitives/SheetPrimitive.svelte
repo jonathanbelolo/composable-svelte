@@ -111,15 +111,15 @@
   // Animation Integration
   // ============================================================================
 
-  let contentElement: HTMLElement | undefined = $state();
-  let backdropElement: HTMLElement | undefined = $state();
+  let sheetContentElement: HTMLElement | undefined = $state();
+  let sheetBackdropElement: HTMLElement | undefined = $state();
 
   // Track last animated content to prevent duplicate animations
   let lastAnimatedContent: any = $state(null);
 
   // Watch presentation status and trigger animations
   $effect(() => {
-    if (!presentation || !contentElement || !backdropElement) return;
+    if (!presentation || !sheetContentElement || !sheetBackdropElement) return;
 
     const currentContent = presentation.content;
 
@@ -130,8 +130,8 @@
       lastAnimatedContent = currentContent;
       console.log('[SheetPrimitive] Starting presentation animation for', currentContent);
       Promise.all([
-        animateSheetIn(contentElement, side, springConfig),
-        animateBackdropIn(backdropElement)
+        animateSheetIn(sheetContentElement, side, springConfig),
+        animateBackdropIn(sheetBackdropElement)
       ]).then(() => {
         console.log(
           '[SheetPrimitive] Animation completed, calling onPresentationComplete'
@@ -144,8 +144,8 @@
       lastAnimatedContent = null;
       console.log('[SheetPrimitive] Starting dismissal animation');
       Promise.all([
-        animateSheetOut(contentElement, side, springConfig),
-        animateBackdropOut(backdropElement)
+        animateSheetOut(sheetContentElement, side, springConfig),
+        animateBackdropOut(sheetBackdropElement)
       ]).then(() => {
         console.log(
           '[SheetPrimitive] Dismissal animation completed, calling onDismissalComplete'
@@ -217,23 +217,20 @@
 
 {#if visible}
   <div use:portal>
-    <!-- Backdrop (separate element for independent animation) -->
-    <!-- Note: pointer-events: none allows clicks to pass through to clickOutside handler -->
-    <div
-      bind:this={backdropElement}
-      class="sheet-backdrop"
-      aria-hidden="true"
-      style:pointer-events="none"
-    ></div>
-
     <!-- Content Container -->
     <div
-      bind:this={contentElement}
       use:clickOutside={handleClickOutside}
       use:focusTrap={{ returnFocus: returnFocusTo }}
       style:pointer-events={interactionsEnabled ? 'auto' : 'none'}
     >
-      {@render children?.({ visible, store, height })}
+      {@render children?.({
+        visible,
+        store,
+        height,
+        bindBackdrop: (node: HTMLElement) => { sheetBackdropElement = node; },
+        bindContent: (node: HTMLElement) => { sheetContentElement = node; },
+        initialOpacity: presentation?.status === 'presenting' ? '0' : undefined
+      })}
     </div>
   </div>
 {/if}

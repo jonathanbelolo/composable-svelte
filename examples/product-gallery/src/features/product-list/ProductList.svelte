@@ -5,6 +5,10 @@
   import { getTotalItems } from '../../models/cart.js';
   import type { CartState } from '../../models/cart.js';
 
+  // Phase 6 Components
+  import Empty from '@composable-svelte/core/components/ui/empty/Empty.svelte';
+  import Button from '@composable-svelte/core/components/ui/button/Button.svelte';
+
   // ============================================================================
   // Props
   // ============================================================================
@@ -69,61 +73,76 @@
 <!-- ============================================================================ -->
 
 <div class="flex flex-col h-full bg-background">
-  <!-- Header -->
-  <div class="flex items-center justify-between p-4 border-b">
-    <h1 class="text-2xl font-bold">Products</h1>
+  <!-- Header - Enhanced with Better Structure -->
+  <div class="flex items-center justify-between px-8 py-6 border-b-2 bg-gradient-to-r from-background to-muted/20 shadow-sm">
+    <h1 class="text-4xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">Products</h1>
 
-    <!-- Cart Badge -->
+    <!-- Cart Badge - Enhanced -->
     {#if cartTotal > 0}
       <div class="relative">
-        <span class="text-3xl">🛒</span>
-        <span class="absolute -top-1 -right-1 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold">
+        <span class="text-4xl drop-shadow-lg">🛒</span>
+        <span class="absolute -top-2 -right-2 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold shadow-lg ring-2 ring-background">
           {cartTotal}
         </span>
       </div>
     {/if}
   </div>
 
-  <!-- View Mode Tabs -->
-  <div class="border-b border-border">
-    <div class="flex" role="tablist">
+  <!-- View Mode Tabs - Enhanced Visual Hierarchy -->
+  <div class="border-b-2 border-border bg-muted/30">
+    <div class="flex px-8" role="tablist">
       {#each viewModes as mode, index (mode.id)}
         <button
           role="tab"
           aria-selected={viewMode === mode.id}
           onclick={() => onViewModeChange(mode.id)}
-          class="flex items-center gap-2 px-6 py-3 font-medium transition-colors border-b-2 {viewMode ===
+          class="flex items-center gap-3 px-8 py-4 font-semibold transition-all border-b-4 {viewMode ===
           mode.id
-            ? 'border-primary text-primary'
-            : 'border-transparent text-muted-foreground hover:text-foreground'}"
+            ? 'border-primary text-primary bg-background/50'
+            : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-background/30'}"
         >
-          <span class="text-lg">{mode.icon}</span>
-          <span>{mode.label}</span>
+          <span class="text-xl">{mode.icon}</span>
+          <span class="text-base">{mode.label}</span>
         </button>
       {/each}
     </div>
   </div>
 
-  <!-- Product Grid/List -->
-  <div class="flex-1 overflow-y-auto p-4">
+  <!-- Product Grid/List - Dramatically Enhanced Spacing -->
+  <div class="flex-1 overflow-y-auto p-8 bg-gradient-to-b from-background to-muted/10">
     {#if filteredProducts.length === 0}
-      <!-- Empty State -->
-      <div class="flex flex-col items-center justify-center h-full text-center p-8">
-        <div class="text-6xl mb-4">📦</div>
-        <h3 class="text-xl font-semibold mb-2">No products found</h3>
-        <p class="text-muted-foreground">
-          {#if viewMode === 'favorites'}
-            You haven't favorited any products yet.
-          {:else if selectedCategories.length > 0}
-            No products match your selected categories.
-          {:else}
-            No products available.
+      <!-- Empty State with Empty Component -->
+      <div class="flex items-center justify-center h-full">
+        <Empty
+          title="No products found"
+          description={viewMode === 'favorites'
+            ? "You haven't favorited any products yet."
+            : selectedCategories.length > 0
+              ? 'No products match your selected categories.'
+              : 'No products available.'}
+        >
+          {#snippet icon()}
+            <div class="text-8xl mb-6 opacity-50">
+              {#if viewMode === 'favorites'}
+                💔
+              {:else}
+                📦
+              {/if}
+            </div>
+          {/snippet}
+
+          {#if selectedCategories.length > 0}
+            {#snippet actions()}
+              <Button variant="outline" size="default" onclick={() => onViewModeChange('grid')}>
+                Clear Filters
+              </Button>
+            {/snippet}
           {/if}
-        </p>
+        </Empty>
       </div>
     {:else if viewMode === 'grid'}
-      <!-- Grid View -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <!-- Grid View - Enhanced with Generous Spacing -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 auto-rows-fr">
         {#each filteredProducts as product (product.id)}
           <ProductCard
             {product}
@@ -133,8 +152,8 @@
         {/each}
       </div>
     {:else}
-      <!-- List View (or Favorites in list mode) -->
-      <div class="space-y-4">
+      <!-- List View (or Favorites in list mode) - Enhanced Spacing -->
+      <div class="space-y-6">
         {#each filteredProducts as product (product.id)}
           <ProductCard
             {product}

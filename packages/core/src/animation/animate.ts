@@ -29,6 +29,7 @@ function getSpringConfig(
 
 /**
  * Animate modal in with scale + fade.
+ * Preserves CSS translate(-50%, -50%) for centering by composing transforms.
  */
 export async function animateModalIn(
 	element: HTMLElement,
@@ -41,7 +42,12 @@ export async function animateModalIn(
 			element,
 			{
 				opacity: [0, 1],
-				scale: [0.95, 1]
+				scale: [0.95, 1],
+				// Compose with the centering translate
+				transform: [
+					'translate(-50%, -50%) scale(0.95)',
+					'translate(-50%, -50%) scale(1)'
+				]
 			},
 			{
 				type: 'spring',
@@ -59,6 +65,7 @@ export async function animateModalIn(
 
 /**
  * Animate modal out with scale + fade.
+ * Preserves CSS translate(-50%, -50%) for centering by composing transforms.
  */
 export async function animateModalOut(
 	element: HTMLElement,
@@ -71,7 +78,12 @@ export async function animateModalOut(
 			element,
 			{
 				opacity: [1, 0],
-				scale: [1, 0.95]
+				scale: [1, 0.95],
+				// Compose with the centering translate
+				transform: [
+					'translate(-50%, -50%) scale(1)',
+					'translate(-50%, -50%) scale(0.95)'
+				]
 			},
 			{
 				type: 'spring',

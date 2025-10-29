@@ -43,3 +43,6 @@ yarn-error.log*
 *.tmp
 .cache
 .temp
+
+# Playwright MCP
+.playwright-mcp

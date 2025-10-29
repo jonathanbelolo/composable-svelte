@@ -1,4 +1,4 @@
-import type { PresentationAction } from '@composable-svelte/core/navigation';
+import type { PresentationAction, PresentationState } from '@composable-svelte/core/navigation';
 import type { Product, ProductCategory } from '../models/product.js';
 import type { CartState } from '../models/cart.js';
 import type {
@@ -18,7 +18,8 @@ export interface AppState {
   filters: FilterState;
   viewMode: ViewMode;
   sidebarExpanded: boolean;
-  productDetail: ProductDetailState | null;  // Tree-based navigation
+  productDetail: ProductDetailState | null;  // Tree-based navigation (what to show)
+  presentation: PresentationState<ProductDetailState>;  // Animation lifecycle
 }
 
 export interface FilterState {
@@ -29,6 +30,10 @@ export interface FilterState {
 // App Actions
 // ============================================================================
 
+export type PresentationEvent =
+  | { type: 'presentationCompleted' }
+  | { type: 'dismissalCompleted' };
+
 export type AppAction =
   | { type: 'productClicked'; productId: string }
   | { type: 'categoryToggled'; category: ProductCategory }
@@ -37,7 +42,8 @@ export type AppAction =
   | { type: 'cartItemAdded'; productId: string; quantity: number }
   | { type: 'productDeleted'; productId: string }
   | { type: 'favoriteToggled'; productId: string }
-  | { type: 'productDetail'; action: PresentationAction<ProductDetailAction> };
+  | { type: 'productDetail'; action: PresentationAction<ProductDetailAction> }
+  | { type: 'presentation'; event: PresentationEvent };
 
 // ============================================================================
 // Factory Functions
@@ -52,6 +58,7 @@ export function createInitialAppState(products: Product[]): AppState {
     },
     viewMode: 'grid',
     sidebarExpanded: true,
-    productDetail: null
+    productDetail: null,
+    presentation: { status: 'idle' }
   };
 }

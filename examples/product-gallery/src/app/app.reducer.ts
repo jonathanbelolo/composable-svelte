@@ -21,15 +21,56 @@ export interface AppDependencies {
 const coreReducer: Reducer<AppState, AppAction, AppDependencies> = (state, action, deps) => {
   switch (action.type) {
     case 'productClicked': {
-      // Show product detail using tree-based navigation
+      // Show product detail using tree-based navigation WITH animation
       const detailState = createProductDetailState(action.productId);
       return [
         {
           ...state,
-          productDetail: detailState
+          productDetail: detailState,
+          presentation: {
+            status: 'presenting',
+            content: detailState,
+            duration: 300  // 300ms animation
+          }
         },
         Effect.none()
       ];
+    }
+
+    case 'presentation': {
+      switch (action.event.type) {
+        case 'presentationCompleted': {
+          // Animation finished - mark as presented
+          if (state.presentation.status === 'presenting' && state.presentation.content) {
+            return [
+              {
+                ...state,
+                presentation: {
+                  status: 'presented',
+                  content: state.presentation.content
+                }
+              },
+              Effect.none()
+            ];
+          }
+          return [state, Effect.none()];
+        }
+
+        case 'dismissalCompleted': {
+          // Dismissal animation finished - clear everything
+          return [
+            {
+              ...state,
+              productDetail: null,
+              presentation: { status: 'idle' }
+            },
+            Effect.none()
+          ];
+        }
+
+        default:
+          return [state, Effect.none()];
+      }
     }
 
     case 'categoryToggled': {
@@ -124,6 +165,33 @@ const coreReducer: Reducer<AppState, AppAction, AppDependencies> = (state, actio
 //   return [newState, effect];
 // }
 
-export const appReducer = integrate(coreReducer)
+const integratedReducer = integrate(coreReducer)
   .with('productDetail', productDetailReducer)
   .build();
+
+// Wrap integrated reducer to handle dismiss animations
+export const appReducer: Reducer<AppState, AppAction, AppDependencies> = (state, action, deps) => {
+  // Check if this is a dismiss action
+  if (
+    action.type === 'productDetail' &&
+    action.action.type === 'dismiss' &&
+    state.presentation.status === 'presented' &&
+    state.presentation.content
+  ) {
+    // Start dismissing animation instead of immediately clearing productDetail
+    return [
+      {
+        ...state,
+        presentation: {
+          status: 'dismissing',
+          content: state.presentation.content,
+          duration: 200  // 200ms dismiss animation
+        }
+      },
+      Effect.none()
+    ];
+  }
+
+  // Otherwise, let the integrated reducer handle it
+  return integratedReducer(state, action, deps);
+};

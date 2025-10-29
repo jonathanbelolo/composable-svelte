@@ -99,10 +99,10 @@
   // ============================================================================
 
   const defaultBackdropClasses =
-    'fixed inset-0 z-50 bg-background/80 backdrop-blur-sm';
+    'fixed inset-0 z-[60] bg-background/80 backdrop-blur-sm';
 
   const defaultContentClasses =
-    'fixed bottom-0 left-0 right-0 z-50 border-t bg-background shadow-lg rounded-t-xl';
+    'fixed bottom-0 left-0 right-0 z-[61] border-t bg-background shadow-lg rounded-t-xl';
 
   const backdropClasses = $derived(
     unstyled ? '' : cn(defaultBackdropClasses, backdropClass)
@@ -128,14 +128,21 @@
   {side}
   {height}
 >
-  {#snippet children({ visible, store, height })}
+  {#snippet children({ visible, store, height, bindBackdrop, bindContent, initialOpacity })}
     {#if backdropClasses}
-      <div class={backdropClasses} aria-hidden="true"></div>
+      <div
+        use:bindBackdrop
+        class={backdropClasses}
+        aria-hidden="true"
+        style:opacity={initialOpacity}
+      ></div>
     {/if}
 
     <div
+      use:bindContent
       class={contentClasses}
       style="height: {height}"
+      style:opacity={initialOpacity}
       role="dialog"
       aria-modal="true"
       aria-label="Bottom sheet"

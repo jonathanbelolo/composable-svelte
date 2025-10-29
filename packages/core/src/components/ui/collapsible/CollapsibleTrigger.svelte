@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getCollapsibleContext } from './Collapsible.svelte';
-	import { cn } from '$lib/utils.js';
+	import { cn } from '../../../lib/utils.js';
 
 	/**
 	 * CollapsibleTrigger component - Clickable trigger for collapsible.

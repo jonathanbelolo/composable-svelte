@@ -5,7 +5,7 @@
 	import type { ComboboxOption } from './combobox.types.js';
 	import { animateDropdownIn, animateDropdownOut } from '../../../animation/animate.js';
 	import { Spinner } from '$lib/components/ui/spinner/index.js';
-	import { cn } from '$lib/utils.js';
+	import { cn } from '../../../lib/utils.js';
 
 	/**
 	 * Combobox component - Searchable select with async loading support.

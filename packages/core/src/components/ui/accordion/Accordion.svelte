@@ -23,7 +23,7 @@
 	import { accordionReducer } from './accordion.reducer.js';
 	import { createInitialAccordionState } from './accordion.types.js';
 	import type { AccordionItem } from './accordion.types.js';
-	import { cn } from '$lib/utils.js';
+	import { cn } from '../../../lib/utils.js';
 
 	/**
 	 * Accordion component - Collapsible sections.

@@ -48,6 +48,18 @@
   const infoPopoverVisible = $derived(store.state.destination?.type === 'info');
 
   // ============================================================================
+  // Presentation State for Animations
+  // ============================================================================
+
+  const addToCartPresentation = $derived(
+    store.state.destination?.type === 'addToCart' ? store.state.presentation : undefined
+  );
+
+  const sharePresentation = $derived(
+    store.state.destination?.type === 'share' ? store.state.presentation : undefined
+  );
+
+  // ============================================================================
   // Handlers
   // ============================================================================
 
@@ -157,14 +169,32 @@
 <!-- ============================================================================ -->
 
 <!-- AddToCart Sheet -->
-<Sheet store={addToCartStore}>
+<Sheet
+  store={addToCartStore}
+  presentation={addToCartPresentation}
+  onPresentationComplete={() => {
+    store.dispatch({ type: 'presentation', event: { type: 'presentationCompleted' } });
+  }}
+  onDismissalComplete={() => {
+    store.dispatch({ type: 'presentation', event: { type: 'dismissalCompleted' } });
+  }}
+>
   {#snippet children({ store: childStore })}
     <AddToCart store={childStore} {product} />
   {/snippet}
 </Sheet>
 
 <!-- Share Sheet -->
-<Sheet store={shareStore}>
+<Sheet
+  store={shareStore}
+  presentation={sharePresentation}
+  onPresentationComplete={() => {
+    store.dispatch({ type: 'presentation', event: { type: 'presentationCompleted' } });
+  }}
+  onDismissalComplete={() => {
+    store.dispatch({ type: 'presentation', event: { type: 'dismissalCompleted' } });
+  }}
+>
   {#snippet children({ store: childStore })}
     <Share store={childStore} {product} />
   {/snippet}

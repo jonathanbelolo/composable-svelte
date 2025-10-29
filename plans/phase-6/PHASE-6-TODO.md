@@ -26,7 +26,7 @@
 - [x] **Week 4, Day 5**: Carousel Component (Reducer, Tests, Component) ✅ | File Upload (Reducer, Tests, Component) ✅
 - [ ] **Week 5**: Advanced Components + Polish
 
-**Components Complete**: 69 / 50+
+**Components Complete**: 72 / 50+
 - Foundation: Button (3), Input, Label, Spinner, Card (6), Separator
 - Layout: Panel, Box, AspectRatio (3)
 - Typography: Heading, Text, Kbd (3)
@@ -46,6 +46,7 @@
 - FileUpload: FileUpload, file-upload.reducer, file-upload.types (3) ✅
 - Command: Command, CommandInput, CommandList, CommandGroup, CommandItem, command.reducer, command.types (7) ✅
 - Toast: Toast, Toaster, ToastAction, ToastTitle, ToastDescription, toast.reducer, toast.types (7) ✅
+- Calendar: Calendar, calendar.reducer, calendar.types (3) ✅
 - **Navigation Components** (from earlier phases): Modal, Sheet, Alert, AlertDialog, Drawer, Popover, Sidebar, Tabs, NavigationStack, DestinationRouter (10) ✅
 
 **Form System**: Complete with 23/23 unit tests passing ✅
@@ -82,6 +83,9 @@
 **TreeView System**: Complete with 32/32 unit tests passing ✅
 **TreeView Tests**: Expand/collapse, single/multi-select, keyboard navigation, lazy loading, callbacks, edge cases
 **TreeView Example**: File browser with lazy loading demonstration, activity log, and comprehensive README ✅
+
+**Calendar System**: Complete with 25/25 unit tests passing ✅
+**Calendar Tests**: Single/range selection, month navigation, date validation, bounds checking, callbacks, edge cases
 
 ---
 

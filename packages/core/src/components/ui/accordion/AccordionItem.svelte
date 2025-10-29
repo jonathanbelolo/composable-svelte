@@ -24,7 +24,7 @@
 
 <script lang="ts">
 	import { getAccordionContext } from './Accordion.svelte';
-	import { cn } from '$lib/utils.js';
+	import { cn } from '../../../lib/utils.js';
 
 	/**
 	 * AccordionItem component - Individual accordion section.

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getAccordionContext } from './Accordion.svelte';
 	import { getAccordionItemContext } from './AccordionItem.svelte';
-	import { cn } from '$lib/utils.js';
+	import { cn } from '../../../lib/utils.js';
 
 	/**
 	 * AccordionTrigger component - Clickable header for accordion item.
