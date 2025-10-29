@@ -3,6 +3,7 @@
   import type { Component } from 'svelte';
   import ButtonDemo from '../demos/ButtonDemo.svelte';
   import ModalDemo from '../demos/ModalDemo.svelte';
+  import SheetDemo from '../demos/SheetDemo.svelte';
 
   interface ComponentShowcaseProps {
     component: ComponentInfo;
@@ -15,6 +16,7 @@
   const demoComponents: Record<string, Component> = {
     'button': ButtonDemo,
     'modal': ModalDemo,
+    'sheet': SheetDemo,
   };
 
   const DemoComponent = $derived(demoComponents[component.id]);
