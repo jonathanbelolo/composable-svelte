@@ -133,14 +133,21 @@
   {side}
   {width}
 >
-  {#snippet children({ visible, store, side, width })}
+  {#snippet children({ visible, store, side, width, bindBackdrop, bindContent, initialOpacity })}
     {#if backdropClasses}
-      <div class={backdropClasses} aria-hidden="true"></div>
+      <div
+        use:bindBackdrop
+        class={backdropClasses}
+        aria-hidden="true"
+        style:opacity={initialOpacity}
+      ></div>
     {/if}
 
     <div
+      use:bindContent
       class={contentClasses}
-      style="width: {width}"
+      style:width={width}
+      style:opacity={initialOpacity}
       role="dialog"
       aria-modal="true"
       aria-label="Side drawer"

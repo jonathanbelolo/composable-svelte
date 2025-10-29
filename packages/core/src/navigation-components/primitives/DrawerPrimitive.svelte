@@ -217,31 +217,22 @@
 
 {#if visible}
   <div use:portal>
-    <!-- Backdrop (separate element for independent animation) -->
-    <!-- Note: pointer-events: none allows clicks to pass through to clickOutside handler -->
-    <div
-      bind:this={backdropElement}
-      class="drawer-backdrop"
-      aria-hidden="true"
-      style:pointer-events="none"
-    ></div>
-
     <!-- Content Container -->
     <div
-      bind:this={contentElement}
       use:clickOutside={handleClickOutside}
       use:focusTrap={{ returnFocus: returnFocusTo }}
       style:pointer-events={interactionsEnabled ? 'auto' : 'none'}
     >
-      {@render children?.({ visible, store, side, width })}
+      {@render children?.({
+        visible,
+        store,
+        side,
+        width,
+        bindBackdrop: (node: HTMLElement) => { backdropElement = node; },
+        bindContent: (node: HTMLElement) => { contentElement = node; },
+        initialOpacity: presentation?.status === 'presenting' ? '0' : undefined
+      })}
     </div>
   </div>
 {/if}
 
-<style>
-  .drawer-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 50;
-  }
-</style>
