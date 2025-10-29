@@ -1,26 +1,86 @@
 <script lang="ts">
-  import { createStore } from '@composable-svelte/core';
+  import { createStore, Effect } from '@composable-svelte/core';
+  import type { PresentationState } from '@composable-svelte/core/navigation';
   import { Modal } from '@composable-svelte/core/navigation-components';
   import Button from '@composable-svelte/core/components/ui/button/Button.svelte';
 
   interface DemoState {
     showModal: boolean;
+    presentation: PresentationState<boolean>;
   }
+
+  type PresentationEvent =
+    | { type: 'presentationCompleted' }
+    | { type: 'dismissalCompleted' };
 
   type DemoAction =
     | { type: 'openModal' }
-    | { type: 'closeModal' };
+    | { type: 'closeModal' }
+    | { type: 'presentation'; event: PresentationEvent };
 
   const demoStore = createStore<DemoState, DemoAction>({
-    initialState: { showModal: false },
+    initialState: {
+      showModal: false,
+      presentation: { status: 'idle' }
+    },
     reducer: (state, action) => {
       switch (action.type) {
         case 'openModal':
-          return [{ showModal: true }, { _tag: 'None' as const }];
+          return [
+            {
+              showModal: true,
+              presentation: {
+                status: 'presenting' as const,
+                content: true,
+                duration: 300
+              }
+            },
+            Effect.afterDelay(300, (d) => d({ type: 'presentation', event: { type: 'presentationCompleted' } }))
+          ];
+
         case 'closeModal':
-          return [{ showModal: false }, { _tag: 'None' as const }];
+          // Only allow dismissal if we're in presented state
+          if (state.presentation.status !== 'presented') {
+            return [state, Effect.none()];
+          }
+          return [
+            {
+              ...state,
+              presentation: {
+                status: 'dismissing' as const,
+                content: state.presentation.content,
+                duration: 200
+              }
+            },
+            Effect.afterDelay(200, (d) => d({ type: 'presentation', event: { type: 'dismissalCompleted' } }))
+          ];
+
+        case 'presentation':
+          if (action.event.type === 'presentationCompleted') {
+            return [
+              {
+                ...state,
+                presentation: {
+                  status: 'presented' as const,
+                  content: state.presentation.status === 'presenting' ? state.presentation.content : true
+                }
+              },
+              Effect.none()
+            ];
+          }
+          if (action.event.type === 'dismissalCompleted') {
+            return [
+              {
+                showModal: false,
+                presentation: { status: 'idle' as const }
+              },
+              Effect.none()
+            ];
+          }
+          return [state, Effect.none()];
+
         default:
-          return [state, { _tag: 'None' as const }];
+          return [state, Effect.none()];
       }
     },
     dependencies: {}
@@ -121,6 +181,11 @@
 {#if state.showModal}
   <Modal
     store={storeWithDismiss}
+    presentation={state.presentation}
+    onPresentationComplete={() =>
+      demoStore.dispatch({ type: 'presentation', event: { type: 'presentationCompleted' } })}
+    onDismissalComplete={() =>
+      demoStore.dispatch({ type: 'presentation', event: { type: 'dismissalCompleted' } })}
   >
     {#snippet children()}
       <div class="bg-background rounded-lg shadow-xl max-w-md w-full p-6 space-y-6">
