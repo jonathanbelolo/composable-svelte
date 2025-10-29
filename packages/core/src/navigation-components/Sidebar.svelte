@@ -60,15 +60,15 @@
 
   const defaultContentClasses = $derived(
     side === 'left'
-      ? 'h-full border-r bg-background'
-      : 'h-full border-l bg-background'
+      ? 'h-full border-r bg-background transition-all duration-300 ease-in-out'
+      : 'h-full border-l bg-background transition-all duration-300 ease-in-out'
   );
 
   const contentClasses = $derived(
     unstyled ? '' : cn(defaultContentClasses, className)
   );
 
-  // Note: No transitions/animations in Phase 2 - instant show/hide only
+  // Note: CSS transitions added for smooth layout changes (300ms)
   // Note: Sidebar is inline (not fixed/absolute), meant for layout integration
 </script>
 

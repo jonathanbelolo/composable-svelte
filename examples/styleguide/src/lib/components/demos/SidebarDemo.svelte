@@ -63,7 +63,7 @@
 
     <!-- Demo Container with Sidebar Layout -->
     <div class="rounded-lg border-2 bg-card overflow-hidden">
-      <div class="flex h-[500px]">
+      <div class="flex h-[500px] transition-all duration-300 ease-in-out">
         <!-- Sidebar (inline, affects layout) -->
         <Sidebar
           store={storeWithDismiss}
@@ -131,7 +131,7 @@
               <p class="text-sm font-medium mb-2">Key Differences</p>
               <ul class="text-sm text-muted-foreground space-y-1">
                 <li>• Inline component (not an overlay)</li>
-                <li>• No animations (instant show/hide)</li>
+                <li>• Smooth CSS transitions (300ms)</li>
                 <li>• Affects page layout</li>
                 <li>• No backdrop</li>
                 <li>• ESC key closes it</li>
@@ -161,7 +161,7 @@
       </p>
       <ul>
         <li>Inline layout integration (not fixed/absolute)</li>
-        <li>No animations (instant show/hide)</li>
+        <li>Smooth CSS transitions for layout changes</li>
         <li>Positioned left or right</li>
         <li>Customizable width</li>
         <li>ESC key support for closing</li>
@@ -187,9 +187,9 @@
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
         <div class="text-2xl">⚡</div>
-        <h4 class="font-semibold">Instant Toggle</h4>
+        <h4 class="font-semibold">Smooth Transitions</h4>
         <p class="text-sm text-muted-foreground">
-          No animations - immediate show/hide for responsive layouts
+          CSS transitions for polished layout changes (300ms)
         </p>
       </div>
 
@@ -253,7 +253,7 @@
           <h4 class="font-semibold">Sidebar (This Component)</h4>
           <ul class="text-sm text-muted-foreground space-y-2">
             <li>✓ Inline in document flow</li>
-            <li>✓ Instant show/hide</li>
+            <li>✓ Smooth CSS transitions</li>
             <li>✓ No backdrop</li>
             <li>✓ Affects layout</li>
             <li>✓ Persistent navigation</li>
