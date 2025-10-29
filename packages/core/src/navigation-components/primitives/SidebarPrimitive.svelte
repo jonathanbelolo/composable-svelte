@@ -97,15 +97,26 @@
     presentation?.status === 'presented' ? presentation.content : null
   );
 
-  // Set initial width when element is bound
+  // Set initial state when element is bound (fixed width with margin/transform)
   $effect(() => {
     if (!contentElement) return;
 
-    // Set initial width based on presentation state
+    const marginProp = side === 'left' ? 'marginLeft' : 'marginRight';
+    const translateDirection = side === 'left' ? '-100%' : '100%';
+
+    // Set fixed width with overflow hidden
+    contentElement.style.width = width;
+    contentElement.style.overflow = 'hidden';
+
+    // Set initial state based on presentation status
     if (presentation && presentation.status === 'presented') {
-      contentElement.style.width = width;
+      // Visible state: no margin, no transform
+      contentElement.style[marginProp] = '0px';
+      contentElement.style.transform = 'translateX(0)';
     } else if (!presentation || presentation.status === 'idle') {
-      contentElement.style.width = '0px';
+      // Hidden state: negative margin + transform
+      contentElement.style[marginProp] = `-${width}`;
+      contentElement.style.transform = `translateX(${translateDirection})`;
     }
   });
 
@@ -121,7 +132,7 @@
     ) {
       lastAnimatedContent = currentContent;
       console.log('[SidebarPrimitive] Starting presentation animation for', currentContent);
-      animateSidebarExpand(contentElement, width, springConfig).then(() => {
+      animateSidebarExpand(contentElement, width, springConfig, side).then(() => {
         console.log('[SidebarPrimitive] Animation completed, calling onPresentationComplete');
         queueMicrotask(() => onPresentationComplete?.());
       });
@@ -130,7 +141,7 @@
     if (presentation.status === 'dismissing' && lastAnimatedContent !== null) {
       lastAnimatedContent = null;
       console.log('[SidebarPrimitive] Starting dismissal animation');
-      animateSidebarCollapse(contentElement, width, springConfig).then(() => {
+      animateSidebarCollapse(contentElement, width, springConfig, side).then(() => {
         console.log('[SidebarPrimitive] Dismissal animation completed, calling onDismissalComplete');
         queueMicrotask(() => onDismissalComplete?.());
       });

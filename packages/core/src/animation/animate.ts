@@ -524,25 +524,40 @@ export async function animateDropdownOut(element: HTMLElement): Promise<void> {
 // ============================================================================
 
 /**
- * Animate sidebar expand (width animation for inline layout integration).
+ * Animate sidebar expand (GPU-accelerated with transform + margin).
+ *
+ * Uses hybrid approach:
+ * - Fixed width with overflow: hidden
+ * - Margin for layout changes (cheap reflows)
+ * - Transform for GPU-accelerated visual smoothness
  */
 export async function animateSidebarExpand(
 	element: HTMLElement,
 	targetWidth: string,
-	springConfig?: Partial<SpringConfig>
+	springConfig?: Partial<SpringConfig>,
+	side: 'left' | 'right' = 'left'
 ): Promise<void> {
 	try {
 		const config = getSpringConfig(springPresets.drawer, springConfig);
 
-		// Set initial state
-		element.style.width = '0px';
+		// Set fixed width and overflow
+		element.style.width = targetWidth;
 		element.style.overflow = 'hidden';
 
-		// Animate to target width
+		// Determine margin property and transform direction
+		const marginProp = side === 'left' ? 'marginLeft' : 'marginRight';
+		const translateStart = side === 'left' ? '-100%' : '100%';
+
+		// Set initial hidden state
+		element.style[marginProp] = `-${targetWidth}`;
+		element.style.transform = `translateX(${translateStart})`;
+
+		// Animate margin (layout) and transform (visual) together
 		await animate(
 			element,
 			{
-				width: ['0px', targetWidth]
+				[marginProp]: [`-${targetWidth}`, '0px'],
+				x: [translateStart, '0%']
 			},
 			{
 				type: 'spring',
@@ -558,29 +573,39 @@ export async function animateSidebarExpand(
 		// Ensure element is visible even if animation fails
 		if (element) {
 			element.style.width = targetWidth;
+			const marginProp = side === 'left' ? 'marginLeft' : 'marginRight';
+			element.style[marginProp] = '0px';
+			element.style.transform = 'translateX(0)';
 			element.style.overflow = 'visible';
 		}
 	}
 }
 
 /**
- * Animate sidebar collapse (width animation for inline layout integration).
+ * Animate sidebar collapse (GPU-accelerated with transform + margin).
  */
 export async function animateSidebarCollapse(
 	element: HTMLElement,
 	currentWidth: string,
-	springConfig?: Partial<SpringConfig>
+	springConfig?: Partial<SpringConfig>,
+	side: 'left' | 'right' = 'left'
 ): Promise<void> {
 	try {
 		const config = getSpringConfig(springPresets.drawer, springConfig);
 
+		// Ensure overflow is hidden during animation
 		element.style.overflow = 'hidden';
 
-		// Animate to zero width
+		// Determine margin property and transform direction
+		const marginProp = side === 'left' ? 'marginLeft' : 'marginRight';
+		const translateEnd = side === 'left' ? '-100%' : '100%';
+
+		// Animate margin (layout) and transform (visual) together
 		await animate(
 			element,
 			{
-				width: [currentWidth, '0px']
+				[marginProp]: ['0px', `-${currentWidth}`],
+				x: ['0%', translateEnd]
 			},
 			{
 				type: 'spring',
@@ -592,7 +617,9 @@ export async function animateSidebarCollapse(
 		console.error('[animateSidebarCollapse] Animation failed:', error);
 		// Ensure element is hidden even if animation fails
 		if (element) {
-			element.style.width = '0px';
+			const marginProp = side === 'left' ? 'marginLeft' : 'marginRight';
+			element.style[marginProp] = `-${currentWidth}`;
+			element.style.transform = `translateX(${side === 'left' ? '-100%' : '100%'})`;
 		}
 	}
 }
