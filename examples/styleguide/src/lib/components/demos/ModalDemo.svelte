@@ -26,6 +26,14 @@
     dependencies: {}
   });
 
+  // Create a store wrapper with dismiss() method for Modal component
+  const storeWithDismiss = $derived({
+    ...demoStore,
+    state: demoStore.state,
+    dispatch: demoStore.dispatch,
+    dismiss: () => demoStore.dispatch({ type: 'closeModal' })
+  });
+
   const state = $derived(demoStore.state);
 </script>
 
@@ -112,8 +120,7 @@
 <!-- Modal Implementation -->
 {#if state.showModal}
   <Modal
-    store={demoStore}
-    onDismiss={() => demoStore.dispatch({ type: 'closeModal' })}
+    store={storeWithDismiss}
   >
     {#snippet children()}
       <div class="bg-background rounded-lg shadow-xl max-w-md w-full p-6 space-y-6">

@@ -205,14 +205,19 @@
   <div use:portal>
     <!-- Content Container -->
     <div
-      use:clickOutside={handleClickOutside}
       use:focusTrap={{ returnFocus: returnFocusTo }}
       style:pointer-events={interactionsEnabled ? 'auto' : 'none'}
     >
       {@render children?.({
         visible,
         store,
-        bindBackdrop: (node: HTMLElement) => { modalBackdropElement = node; },
+        bindBackdrop: (node: HTMLElement) => {
+          modalBackdropElement = node;
+          // Attach click handler directly to backdrop
+          if (!disableClickOutside) {
+            node.addEventListener('click', handleClickOutside);
+          }
+        },
         bindContent: (node: HTMLElement) => { modalContentElement = node; },
         initialOpacity: presentation?.status === 'presenting' ? '0' : undefined
       })}
