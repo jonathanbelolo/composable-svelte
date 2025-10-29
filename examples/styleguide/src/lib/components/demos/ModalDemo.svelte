@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createStore } from '@composable-svelte/core';
   import { Modal } from '@composable-svelte/core/navigation-components';
-  import { Button } from '@composable-svelte/core/foundational-components';
+  import Button from '@composable-svelte/core/components/ui/button/Button.svelte';
 
   interface DemoState {
     showModal: boolean;

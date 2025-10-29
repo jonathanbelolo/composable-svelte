@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button } from '@composable-svelte/core/foundational-components';
+  import Button from '@composable-svelte/core/components/ui/button/Button.svelte';
 
   let clickCount = $state(0);
 </script>
