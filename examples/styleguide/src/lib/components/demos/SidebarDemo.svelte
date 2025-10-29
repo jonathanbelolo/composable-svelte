@@ -1,33 +1,96 @@
 <script lang="ts">
   import { createStore, Effect } from '@composable-svelte/core';
+  import type { PresentationState } from '@composable-svelte/core/navigation';
   import { Sidebar } from '@composable-svelte/core/navigation-components';
   import Button from '@composable-svelte/core/components/ui/button/Button.svelte';
 
   interface DemoState {
     showSidebar: boolean;
+    presentation: PresentationState<boolean>;
   }
 
+  type PresentationEvent =
+    | { type: 'presentationCompleted' }
+    | { type: 'dismissalCompleted' };
+
   type DemoAction =
+    | { type: 'openSidebar' }
+    | { type: 'closeSidebar' }
     | { type: 'toggleSidebar' }
-    | { type: 'closeSidebar' };
+    | { type: 'presentation'; event: PresentationEvent };
 
   const demoStore = createStore<DemoState, DemoAction>({
     initialState: {
-      showSidebar: true  // Start open to show the layout
+      showSidebar: true,  // Start open to show the layout
+      presentation: {
+        status: 'presented' as const,
+        content: true
+      }
     },
     reducer: (state, action) => {
       switch (action.type) {
-        case 'toggleSidebar':
+        case 'openSidebar':
           return [
-            { showSidebar: !state.showSidebar },
-            Effect.none()
+            {
+              showSidebar: true,
+              presentation: {
+                status: 'presenting' as const,
+                content: true,
+                duration: 300
+              }
+            },
+            Effect.afterDelay(300, (d) => d({ type: 'presentation', event: { type: 'presentationCompleted' } }))
           ];
 
         case 'closeSidebar':
+          // Only allow dismissal if we're in presented state
+          if (state.presentation.status !== 'presented') {
+            return [state, Effect.none()];
+          }
           return [
-            { showSidebar: false },
-            Effect.none()
+            {
+              ...state,
+              presentation: {
+                status: 'dismissing' as const,
+                content: state.presentation.content,
+                duration: 200
+              }
+            },
+            Effect.afterDelay(200, (d) => d({ type: 'presentation', event: { type: 'dismissalCompleted' } }))
           ];
+
+        case 'toggleSidebar':
+          if (state.showSidebar) {
+            // Close if open
+            return demoStore.reducer(state, { type: 'closeSidebar' });
+          } else {
+            // Open if closed
+            return demoStore.reducer(state, { type: 'openSidebar' });
+          }
+
+        case 'presentation':
+          if (action.event.type === 'presentationCompleted') {
+            return [
+              {
+                ...state,
+                presentation: {
+                  status: 'presented' as const,
+                  content: state.presentation.status === 'presenting' ? state.presentation.content : true
+                }
+              },
+              Effect.none()
+            ];
+          }
+          if (action.event.type === 'dismissalCompleted') {
+            return [
+              {
+                showSidebar: false,
+                presentation: { status: 'idle' as const }
+              },
+              Effect.none()
+            ];
+          }
+          return [state, Effect.none()];
 
         default:
           return [state, Effect.none()];
@@ -63,10 +126,15 @@
 
     <!-- Demo Container with Sidebar Layout -->
     <div class="rounded-lg border-2 bg-card overflow-hidden">
-      <div class="flex h-[500px] transition-all duration-300 ease-in-out">
+      <div class="flex h-[500px]">
         <!-- Sidebar (inline, affects layout) -->
         <Sidebar
           store={storeWithDismiss}
+          presentation={state.presentation}
+          onPresentationComplete={() =>
+            demoStore.dispatch({ type: 'presentation', event: { type: 'presentationCompleted' } })}
+          onDismissalComplete={() =>
+            demoStore.dispatch({ type: 'presentation', event: { type: 'dismissalCompleted' } })}
           side="left"
           width="240px"
         >
@@ -131,7 +199,7 @@
               <p class="text-sm font-medium mb-2">Key Differences</p>
               <ul class="text-sm text-muted-foreground space-y-1">
                 <li>• Inline component (not an overlay)</li>
-                <li>• Smooth CSS transitions (300ms)</li>
+                <li>• State-driven width animations (300ms)</li>
                 <li>• Affects page layout</li>
                 <li>• No backdrop</li>
                 <li>• ESC key closes it</li>
@@ -161,7 +229,7 @@
       </p>
       <ul>
         <li>Inline layout integration (not fixed/absolute)</li>
-        <li>Smooth CSS transitions for layout changes</li>
+        <li>State-driven width animations for smooth transitions</li>
         <li>Positioned left or right</li>
         <li>Customizable width</li>
         <li>ESC key support for closing</li>
@@ -187,9 +255,9 @@
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
         <div class="text-2xl">⚡</div>
-        <h4 class="font-semibold">Smooth Transitions</h4>
+        <h4 class="font-semibold">Smooth Animations</h4>
         <p class="text-sm text-muted-foreground">
-          CSS transitions for polished layout changes (300ms)
+          State-driven width animations for polished layout changes (300ms)
         </p>
       </div>
 
@@ -253,7 +321,7 @@
           <h4 class="font-semibold">Sidebar (This Component)</h4>
           <ul class="text-sm text-muted-foreground space-y-2">
             <li>✓ Inline in document flow</li>
-            <li>✓ Smooth CSS transitions</li>
+            <li>✓ State-driven width animations</li>
             <li>✓ No backdrop</li>
             <li>✓ Affects layout</li>
             <li>✓ Persistent navigation</li>

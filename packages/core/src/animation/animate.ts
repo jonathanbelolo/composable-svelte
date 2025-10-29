@@ -520,6 +520,84 @@ export async function animateDropdownOut(element: HTMLElement): Promise<void> {
 }
 
 // ============================================================================
+// Sidebar Animations
+// ============================================================================
+
+/**
+ * Animate sidebar expand (width animation for inline layout integration).
+ */
+export async function animateSidebarExpand(
+	element: HTMLElement,
+	targetWidth: string,
+	springConfig?: Partial<SpringConfig>
+): Promise<void> {
+	try {
+		const config = getSpringConfig(springPresets.drawer, springConfig);
+
+		// Set initial state
+		element.style.width = '0px';
+		element.style.overflow = 'hidden';
+
+		// Animate to target width
+		await animate(
+			element,
+			{
+				width: ['0px', targetWidth]
+			},
+			{
+				type: 'spring',
+				visualDuration: config.visualDuration,
+				bounce: config.bounce
+			}
+		).finished;
+
+		// Clean up overflow
+		element.style.overflow = 'visible';
+	} catch (error) {
+		console.error('[animateSidebarExpand] Animation failed:', error);
+		// Ensure element is visible even if animation fails
+		if (element) {
+			element.style.width = targetWidth;
+			element.style.overflow = 'visible';
+		}
+	}
+}
+
+/**
+ * Animate sidebar collapse (width animation for inline layout integration).
+ */
+export async function animateSidebarCollapse(
+	element: HTMLElement,
+	currentWidth: string,
+	springConfig?: Partial<SpringConfig>
+): Promise<void> {
+	try {
+		const config = getSpringConfig(springPresets.drawer, springConfig);
+
+		element.style.overflow = 'hidden';
+
+		// Animate to zero width
+		await animate(
+			element,
+			{
+				width: [currentWidth, '0px']
+			},
+			{
+				type: 'spring',
+				visualDuration: config.visualDuration,
+				bounce: config.bounce
+			}
+		).finished;
+	} catch (error) {
+		console.error('[animateSidebarCollapse] Animation failed:', error);
+		// Ensure element is hidden even if animation fails
+		if (element) {
+			element.style.width = '0px';
+		}
+	}
+}
+
+// ============================================================================
 // Accordion/Collapsible Animations
 // ============================================================================
 

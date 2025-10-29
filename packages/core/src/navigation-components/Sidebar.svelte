@@ -1,6 +1,8 @@
 <script lang="ts">
   import SidebarPrimitive from './primitives/SidebarPrimitive.svelte';
   import type { ScopedDestinationStore } from '../navigation/scope-to-destination.js';
+  import type { PresentationState } from '../navigation/types.js';
+  import type { SpringConfig } from '../animation/spring-config.js';
   import { cn } from '../lib/utils.js';
 
   // ============================================================================
@@ -12,6 +14,27 @@
      * Scoped store for the sidebar content.
      */
     store: ScopedDestinationStore<State, Action> | null;
+
+    /**
+     * Presentation state for animation lifecycle.
+     * Optional - if not provided, no animations (instant show/hide).
+     */
+    presentation?: PresentationState<any>;
+
+    /**
+     * Callback when presentation animation completes.
+     */
+    onPresentationComplete?: () => void;
+
+    /**
+     * Callback when dismissal animation completes.
+     */
+    onDismissalComplete?: () => void;
+
+    /**
+     * Spring configuration override.
+     */
+    springConfig?: Partial<SpringConfig>;
 
     /**
      * Disable all default styling.
@@ -46,6 +69,10 @@
 
   let {
     store,
+    presentation,
+    onPresentationComplete,
+    onDismissalComplete,
+    springConfig,
     unstyled = false,
     class: className,
     disableEscapeKey = false,
@@ -60,15 +87,15 @@
 
   const defaultContentClasses = $derived(
     side === 'left'
-      ? 'h-full border-r bg-background transition-all duration-300 ease-in-out'
-      : 'h-full border-l bg-background transition-all duration-300 ease-in-out'
+      ? 'h-full border-r bg-background overflow-hidden'
+      : 'h-full border-l bg-background overflow-hidden'
   );
 
   const contentClasses = $derived(
     unstyled ? '' : cn(defaultContentClasses, className)
   );
 
-  // Note: CSS transitions added for smooth layout changes (300ms)
+  // Note: Animations integrated via PresentationState (state-driven, not CSS)
   // Note: Sidebar is inline (not fixed/absolute), meant for layout integration
 </script>
 
