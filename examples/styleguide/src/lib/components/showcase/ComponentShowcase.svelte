@@ -4,6 +4,7 @@
   import ButtonDemo from '../demos/ButtonDemo.svelte';
   import ModalDemo from '../demos/ModalDemo.svelte';
   import SheetDemo from '../demos/SheetDemo.svelte';
+  import DrawerDemo from '../demos/DrawerDemo.svelte';
 
   interface ComponentShowcaseProps {
     component: ComponentInfo;
@@ -17,6 +18,7 @@
     'button': ButtonDemo,
     'modal': ModalDemo,
     'sheet': SheetDemo,
+    'drawer': DrawerDemo,
   };
 
   const DemoComponent = $derived(demoComponents[component.id]);
