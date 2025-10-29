@@ -61,11 +61,34 @@
 
         case 'toggleSidebar':
           if (state.showSidebar) {
-            // Close if open
-            return demoStore.reducer(state, { type: 'closeSidebar' });
+            // Close if open - check presentation status
+            if (state.presentation.status !== 'presented') {
+              return [state, Effect.none()];
+            }
+            return [
+              {
+                ...state,
+                presentation: {
+                  status: 'dismissing' as const,
+                  content: state.presentation.content,
+                  duration: 200
+                }
+              },
+              Effect.afterDelay(200, (d) => d({ type: 'presentation', event: { type: 'dismissalCompleted' } }))
+            ];
           } else {
             // Open if closed
-            return demoStore.reducer(state, { type: 'openSidebar' });
+            return [
+              {
+                showSidebar: true,
+                presentation: {
+                  status: 'presenting' as const,
+                  content: true,
+                  duration: 300
+                }
+              },
+              Effect.afterDelay(300, (d) => d({ type: 'presentation', event: { type: 'presentationCompleted' } }))
+            ];
           }
 
         case 'presentation':

@@ -103,9 +103,19 @@
 <!-- Styled Sidebar -->
 <!-- ============================================================================ -->
 
-<SidebarPrimitive {store} {disableEscapeKey} {side} {width}>
-  {#snippet children({ visible, store, side, width })}
+<SidebarPrimitive
+  {store}
+  {presentation}
+  {onPresentationComplete}
+  {onDismissalComplete}
+  {springConfig}
+  {disableEscapeKey}
+  {side}
+  {width}
+>
+  {#snippet children({ visible, store, side, width, bindContent })}
     <nav
+      use:bindContent
       class={contentClasses}
       style="width: {width}"
       aria-label="Sidebar navigation"
