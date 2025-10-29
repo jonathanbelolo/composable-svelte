@@ -92,7 +92,10 @@
   let contentElement: HTMLElement | undefined = $state();
 
   // Track last animated content to prevent duplicate animations
-  let lastAnimatedContent: any = $state(null);
+  // Initialize based on initial presentation state to handle starting in 'presented'
+  let lastAnimatedContent: any = $state(
+    presentation?.status === 'presented' ? presentation.content : null
+  );
 
   // Set initial width when element is bound
   $effect(() => {
