@@ -2,10 +2,6 @@
   import type { ScopedDestinationStore } from '../../navigation/scope-to-destination.js';
   import type { PresentationState } from '../../navigation/types.js';
   import type { SpringConfig } from '../../animation/spring-config.js';
-  import {
-    animateSidebarExpand,
-    animateSidebarCollapse
-  } from '../../animation/animate.js';
 
   // ============================================================================
   // Props
@@ -86,67 +82,46 @@
   );
 
   // ============================================================================
-  // Animation Integration
+  // CSS Transition Integration
   // ============================================================================
 
   let contentElement: HTMLElement | undefined = $state();
 
-  // Track last animated content to prevent duplicate animations
-  // Initialize based on initial presentation state to handle starting in 'presented'
-  let lastAnimatedContent: any = $state(
-    presentation?.status === 'presented' ? presentation.content : null
-  );
+  // Compute target width based on presentation state
+  const targetWidth = $derived(() => {
+    if (!presentation) return visible ? width : '0px';
 
-  // Set initial state when element is bound (fixed width with margin/transform)
-  $effect(() => {
-    if (!contentElement) return;
-
-    const marginProp = side === 'left' ? 'marginLeft' : 'marginRight';
-    const translateDirection = side === 'left' ? '-100%' : '100%';
-
-    // Set fixed width with overflow hidden
-    contentElement.style.width = width;
-    contentElement.style.overflow = 'hidden';
-
-    // Set initial state based on presentation status
-    if (presentation && presentation.status === 'presented') {
-      // Visible state: no margin, no transform
-      contentElement.style[marginProp] = '0px';
-      contentElement.style.transform = 'translateX(0)';
-    } else if (!presentation || presentation.status === 'idle') {
-      // Hidden state: negative margin + transform
-      contentElement.style[marginProp] = `-${width}`;
-      contentElement.style.transform = `translateX(${translateDirection})`;
+    switch (presentation.status) {
+      case 'presented':
+      case 'presenting':
+        return width;
+      case 'dismissing':
+      case 'idle':
+      default:
+        return '0px';
     }
   });
 
-  // Watch presentation status and trigger animations
-  $effect(() => {
-    if (!presentation || !contentElement) return;
-
-    const currentContent = presentation.content;
-
-    if (
-      presentation.status === 'presenting' &&
-      lastAnimatedContent !== currentContent
-    ) {
-      lastAnimatedContent = currentContent;
-      console.log('[SidebarPrimitive] Starting presentation animation for', currentContent);
-      animateSidebarExpand(contentElement, width, springConfig, side).then(() => {
-        console.log('[SidebarPrimitive] Animation completed, calling onPresentationComplete');
-        queueMicrotask(() => onPresentationComplete?.());
-      });
+  // Handle transitionend event to trigger callbacks
+  function handleTransitionEnd(event: TransitionEvent) {
+    // Only handle width transitions on the content element itself
+    if (event.target !== contentElement || event.propertyName !== 'width') {
+      return;
     }
 
-    if (presentation.status === 'dismissing' && lastAnimatedContent !== null) {
-      lastAnimatedContent = null;
-      console.log('[SidebarPrimitive] Starting dismissal animation');
-      animateSidebarCollapse(contentElement, width, springConfig, side).then(() => {
-        console.log('[SidebarPrimitive] Dismissal animation completed, calling onDismissalComplete');
-        queueMicrotask(() => onDismissalComplete?.());
-      });
+    if (!presentation) return;
+
+    console.log('[SidebarPrimitive] Transition ended, status:', presentation.status);
+
+    // Trigger appropriate callback based on current status
+    if (presentation.status === 'presenting') {
+      console.log('[SidebarPrimitive] Presentation complete');
+      queueMicrotask(() => onPresentationComplete?.());
+    } else if (presentation.status === 'dismissing') {
+      console.log('[SidebarPrimitive] Dismissal complete');
+      queueMicrotask(() => onDismissalComplete?.());
     }
-  });
+  }
 
   // ============================================================================
   // Event Handlers
@@ -186,6 +161,8 @@
     store,
     side,
     width,
-    bindContent: (node: HTMLElement) => { contentElement = node; }
+    targetWidth: targetWidth(),
+    bindContent: (node: HTMLElement) => { contentElement = node; },
+    onTransitionEnd: handleTransitionEnd
   })}
 </div>

@@ -113,13 +113,22 @@
   {side}
   {width}
 >
-  {#snippet children({ visible, store, side, width, bindContent })}
-    <nav
+  {#snippet children({ visible, store, side, width, targetWidth, bindContent, onTransitionEnd })}
+    <!-- Outer wrapper: animates width with overflow hidden -->
+    <div
       use:bindContent
-      class={contentClasses}
-      aria-label="Sidebar navigation"
+      class="h-full transition-[width] duration-300 ease-out overflow-hidden"
+      style="width: {targetWidth}"
+      ontransitionend={onTransitionEnd}
     >
-      {@render children?.({ visible, store, side, width })}
-    </nav>
+      <!-- Inner content: stays at full width, gets clipped -->
+      <nav
+        class={contentClasses}
+        style="width: {width}; height: 100%"
+        aria-label="Sidebar navigation"
+      >
+        {@render children?.({ visible, store, side, width })}
+      </nav>
+    </div>
   {/snippet}
 </SidebarPrimitive>
