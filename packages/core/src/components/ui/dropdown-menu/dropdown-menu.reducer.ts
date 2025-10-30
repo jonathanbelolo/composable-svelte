@@ -23,11 +23,10 @@ function findNextEnabledIndex(
 	direction: 'up' | 'down'
 ): number {
 	const increment = direction === 'down' ? 1 : -1;
-	let currentIndex = startIndex;
 
 	// Loop through all items
 	for (let i = 0; i < items.length; i++) {
-		currentIndex = (currentIndex + increment + items.length) % items.length;
+		const currentIndex = (startIndex + increment * (i + 1) + items.length) % items.length;
 		const item = items[currentIndex];
 
 		// Skip disabled and separator items
@@ -82,33 +81,79 @@ export const dropdownMenuReducer: Reducer<
 				{
 					...state,
 					isOpen: true,
+					presentation: {
+						status: 'presenting' as const,
+						content: true,
+						duration: 150
+					},
 					highlightedIndex: -1 // Reset highlight when opening
 				},
-				Effect.none()
+				Effect.afterDelay(150, (dispatch) =>
+					dispatch({ type: 'presentation', event: { type: 'presentationCompleted' } })
+				)
 			];
 		}
 
 		case 'closed': {
+			// Guard: Only allow dismissal if we're in presented state
+			if (state.presentation.status !== 'presented') {
+				return [state, Effect.none()];
+			}
+
 			return [
 				{
 					...state,
-					isOpen: false,
+					presentation: {
+						status: 'dismissing' as const,
+						content: state.presentation.content,
+						duration: 100
+					},
 					highlightedIndex: -1
 				},
-				Effect.none()
+				Effect.afterDelay(100, (dispatch) =>
+					dispatch({ type: 'presentation', event: { type: 'dismissalCompleted' } })
+				)
 			];
 		}
 
 		case 'toggled': {
-			const newIsOpen = !state.isOpen;
-			return [
-				{
-					...state,
-					isOpen: newIsOpen,
-					highlightedIndex: newIsOpen ? -1 : state.highlightedIndex
-				},
-				Effect.none()
-			];
+			if (state.isOpen) {
+				// Closing - guard and start dismissal
+				if (state.presentation.status !== 'presented') {
+					return [state, Effect.none()];
+				}
+				return [
+					{
+						...state,
+						presentation: {
+							status: 'dismissing' as const,
+							content: state.presentation.content,
+							duration: 100
+						},
+						highlightedIndex: -1
+					},
+					Effect.afterDelay(100, (dispatch) =>
+						dispatch({ type: 'presentation', event: { type: 'dismissalCompleted' } })
+					)
+				];
+			} else {
+				// Opening - start presentation
+				return [
+					{
+						...state,
+						isOpen: true,
+						presentation: {
+							status: 'presenting' as const,
+							content: true,
+							duration: 150
+						},
+						highlightedIndex: -1
+					},
+					Effect.afterDelay(150, (dispatch) =>
+						dispatch({ type: 'presentation', event: { type: 'presentationCompleted' } })
+					)
+				];
+			}
 		}
 
 		case 'itemHighlighted': {
@@ -260,14 +305,54 @@ export const dropdownMenuReducer: Reducer<
 				return [state, Effect.none()];
 			}
 
+			// Guard: Only allow dismissal if we're in presented state
+			if (state.presentation.status !== 'presented') {
+				return [state, Effect.none()];
+			}
+
 			return [
 				{
 					...state,
-					isOpen: false,
+					presentation: {
+						status: 'dismissing' as const,
+						content: state.presentation.content,
+						duration: 100
+					},
 					highlightedIndex: -1
 				},
-				Effect.none()
+				Effect.afterDelay(100, (dispatch) =>
+					dispatch({ type: 'presentation', event: { type: 'dismissalCompleted' } })
+				)
 			];
+		}
+
+		case 'presentation': {
+			if (action.event.type === 'presentationCompleted') {
+				return [
+					{
+						...state,
+						presentation: {
+							status: 'presented' as const,
+							content:
+								state.presentation.status === 'presenting' ? state.presentation.content : true
+						}
+					},
+					Effect.none()
+				];
+			}
+
+			if (action.event.type === 'dismissalCompleted') {
+				return [
+					{
+						...state,
+						isOpen: false,
+						presentation: { status: 'idle' as const }
+					},
+					Effect.none()
+				];
+			}
+
+			return [state, Effect.none()];
 		}
 
 		default:

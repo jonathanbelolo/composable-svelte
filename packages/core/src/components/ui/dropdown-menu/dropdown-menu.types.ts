@@ -6,6 +6,8 @@
  * @packageDocumentation
  */
 
+import type { PresentationState } from '../../../navigation/types.js';
+
 /**
  * Menu item configuration.
  */
@@ -51,6 +53,11 @@ export interface DropdownMenuState {
 	isOpen: boolean;
 
 	/**
+	 * Presentation state for animation lifecycle.
+	 */
+	presentation: PresentationState<boolean>;
+
+	/**
 	 * Currently highlighted item index (-1 if none).
 	 */
 	highlightedIndex: number;
@@ -60,6 +67,13 @@ export interface DropdownMenuState {
 	 */
 	items: MenuItem[];
 }
+
+/**
+ * Presentation lifecycle events.
+ */
+export type PresentationEvent =
+	| { type: 'presentationCompleted' }
+	| { type: 'dismissalCompleted' };
 
 /**
  * Dropdown menu actions.
@@ -74,7 +88,8 @@ export type DropdownMenuAction =
 	| { type: 'arrowUp' }
 	| { type: 'home' }
 	| { type: 'end' }
-	| { type: 'escape' };
+	| { type: 'escape' }
+	| { type: 'presentation'; event: PresentationEvent };
 
 /**
  * Dropdown menu dependencies.
@@ -94,6 +109,7 @@ export function createInitialDropdownMenuState(
 ): DropdownMenuState {
 	return {
 		isOpen: false,
+		presentation: { status: 'idle' },
 		highlightedIndex: -1,
 		items
 	};

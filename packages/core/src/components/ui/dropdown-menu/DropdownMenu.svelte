@@ -5,6 +5,7 @@
 	import type { MenuItem } from './dropdown-menu.types.js';
 	import { cn } from '../../../lib/utils.js';
 	import type { Snippet } from 'svelte';
+	import { animateDropdownIn, animateDropdownOut } from '../../../animation/animate.js';
 
 	/**
 	 * DropdownMenu component - Interactive menu with keyboard navigation.
@@ -74,6 +75,9 @@
 	let triggerElement: HTMLElement | null = $state(null);
 	let menuElement: HTMLElement | null = $state(null);
 
+	// Animation state
+	let lastAnimatedContent: any = $state(null);
+
 	function handleTriggerClick() {
 		store.dispatch({ type: 'toggled' });
 	}
@@ -86,14 +90,14 @@
 			event.preventDefault();
 			if (!store.state.isOpen) {
 				store.dispatch({ type: 'opened' });
+				store.dispatch({ type: 'arrowDown' });
 			}
-			store.dispatch({ type: 'arrowDown' });
 		} else if (event.key === 'ArrowUp') {
 			event.preventDefault();
 			if (!store.state.isOpen) {
 				store.dispatch({ type: 'opened' });
+				store.dispatch({ type: 'arrowUp' });
 			}
-			store.dispatch({ type: 'arrowUp' });
 		}
 	}
 
@@ -158,6 +162,34 @@
 			};
 		}
 	});
+
+	// Animation integration
+	$effect(() => {
+		if (!menuElement) return;
+
+		const currentContent = store.state.presentation.content;
+
+		if (
+			store.state.presentation.status === 'presenting' &&
+			lastAnimatedContent !== currentContent
+		) {
+			lastAnimatedContent = currentContent;
+			animateDropdownIn(menuElement).then(() => {
+				queueMicrotask(() =>
+					store.dispatch({ type: 'presentation', event: { type: 'presentationCompleted' } })
+				);
+			});
+		}
+
+		if (store.state.presentation.status === 'dismissing' && lastAnimatedContent !== null) {
+			lastAnimatedContent = null;
+			animateDropdownOut(menuElement).then(() => {
+				queueMicrotask(() =>
+					store.dispatch({ type: 'presentation', event: { type: 'dismissalCompleted' } })
+				);
+			});
+		}
+	});
 </script>
 
 <svelte:window on:keydown={handleMenuKeyDown} />
@@ -177,7 +209,7 @@
 	</div>
 
 	<!-- Menu -->
-	{#if store.state.isOpen}
+	{#if store.state.isOpen || store.state.presentation.status === 'dismissing'}
 		<div
 			bind:this={menuElement}
 			class={cn(
@@ -185,6 +217,7 @@
 				align === 'start' ? 'left-0' : 'right-0',
 				className
 			)}
+			style:opacity={store.state.presentation.status === 'presenting' ? '0' : undefined}
 			role="menu"
 			aria-orientation="vertical"
 		>
@@ -194,9 +227,9 @@
 				{:else}
 					<button
 						type="button"
+						tabindex="-1"
 						class={cn(
 							'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none',
-							'transition-colors',
 							store.state.highlightedIndex === index
 								? 'bg-accent text-accent-foreground'
 								: 'text-foreground',

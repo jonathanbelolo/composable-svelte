@@ -8,6 +8,7 @@
   import SidebarDemo from '../demos/SidebarDemo.svelte';
   import AlertDemo from '../demos/AlertDemo.svelte';
   import PopoverDemo from '../demos/PopoverDemo.svelte';
+  import DropdownMenuDemo from '../demos/DropdownMenuDemo.svelte';
 
   interface ComponentShowcaseProps {
     component: ComponentInfo;
@@ -25,6 +26,7 @@
     'sidebar': SidebarDemo,
     'alert': AlertDemo,
     'popover': PopoverDemo,
+    'dropdown-menu': DropdownMenuDemo,
   };
 
   const DemoComponent = $derived(demoComponents[component.id]);
