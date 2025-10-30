@@ -63,7 +63,12 @@
 
 				case 'popScreen':
 					if (state.destination?.type === 'stack') {
-						const newStack = state.destination.state.stack.slice(0, -1);
+						const currentStack = state.destination.state.stack;
+						// Don't pop if only one screen remains (stack must have at least 1 screen)
+						if (currentStack.length <= 1) {
+							return [state, Effect.none()];
+						}
+						const newStack = currentStack.slice(0, -1);
 						return [
 							{
 								...state,
