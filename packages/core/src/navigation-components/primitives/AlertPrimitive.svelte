@@ -5,6 +5,12 @@
   import type { ScopedDestinationStore } from '../../navigation/scope-to-destination.js';
   import type { PresentationState } from '../../navigation/types.js';
   import type { SpringConfig } from '../../animation/spring-config.js';
+  import {
+    animateAlertIn,
+    animateAlertOut,
+    animateBackdropIn,
+    animateBackdropOut
+  } from '../../animation/animate.js';
 
   // ============================================================================
   // Props
@@ -88,63 +94,52 @@
   );
 
   // ============================================================================
-  // CSS Transition Integration
+  // Animation Integration
   // ============================================================================
 
   let contentElement: HTMLElement | undefined = $state();
   let backdropElement: HTMLElement | undefined = $state();
 
-  // Track which elements have completed transitions
-  let contentTransitionComplete = $state(false);
-  let backdropTransitionComplete = $state(false);
+  // Track last animated content to prevent duplicate animations
+  let lastAnimatedContent: any = $state(null);
 
-  // Compute animation states based on presentation status
-  const contentAnimating = $derived(() => {
-    if (!presentation) return false;
-    return presentation.status === 'presenting' || presentation.status === 'dismissing';
-  });
+  // Watch presentation status and trigger animations
+  $effect(() => {
+    if (!presentation || !contentElement || !backdropElement) return;
 
-  const contentVisible = $derived(() => {
-    if (!presentation) return visible;
-    return presentation.status === 'presenting' || presentation.status === 'presented';
-  });
+    const currentContent = presentation.content;
 
-  // Handle transitionend events
-  function handleContentTransitionEnd(event: TransitionEvent) {
-    if (event.target !== contentElement) return;
-
-    contentTransitionComplete = true;
-    console.log('[AlertPrimitive] Content transition ended');
-    checkAnimationComplete();
-  }
-
-  function handleBackdropTransitionEnd(event: TransitionEvent) {
-    if (event.target !== backdropElement) return;
-
-    backdropTransitionComplete = true;
-    console.log('[AlertPrimitive] Backdrop transition ended');
-    checkAnimationComplete();
-  }
-
-  // Check if both animations are complete
-  function checkAnimationComplete() {
-    if (!contentTransitionComplete || !backdropTransitionComplete) return;
-    if (!presentation) return;
-
-    console.log('[AlertPrimitive] All transitions complete, status:', presentation.status);
-
-    if (presentation.status === 'presenting') {
-      console.log('[AlertPrimitive] Presentation complete');
-      queueMicrotask(() => onPresentationComplete?.());
-    } else if (presentation.status === 'dismissing') {
-      console.log('[AlertPrimitive] Dismissal complete');
-      queueMicrotask(() => onDismissalComplete?.());
+    if (
+      presentation.status === 'presenting' &&
+      lastAnimatedContent !== currentContent
+    ) {
+      lastAnimatedContent = currentContent;
+      console.log('[AlertPrimitive] Starting presentation animation for', currentContent);
+      Promise.all([
+        animateAlertIn(contentElement, springConfig),
+        animateBackdropIn(backdropElement)
+      ]).then(() => {
+        console.log(
+          '[AlertPrimitive] Animation completed, calling onPresentationComplete'
+        );
+        queueMicrotask(() => onPresentationComplete?.());
+      });
     }
 
-    // Reset for next animation
-    contentTransitionComplete = false;
-    backdropTransitionComplete = false;
-  }
+    if (presentation.status === 'dismissing' && lastAnimatedContent !== null) {
+      lastAnimatedContent = null;
+      console.log('[AlertPrimitive] Starting dismissal animation');
+      Promise.all([
+        animateAlertOut(contentElement, springConfig),
+        animateBackdropOut(backdropElement)
+      ]).then(() => {
+        console.log(
+          '[AlertPrimitive] Dismissal animation completed, calling onDismissalComplete'
+        );
+        queueMicrotask(() => onDismissalComplete?.());
+      });
+    }
+  });
 
   // ============================================================================
   // Event Handlers
@@ -208,18 +203,24 @@
 
 {#if visible}
   <div use:portal>
-    {@render children?.({
-      visible,
-      store,
-      contentVisible: contentVisible(),
-      bindContent: (node: HTMLElement) => { contentElement = node; },
-      bindBackdrop: (node: HTMLElement) => { backdropElement = node; },
-      onContentTransitionEnd: handleContentTransitionEnd,
-      onBackdropTransitionEnd: handleBackdropTransitionEnd,
-      clickOutsideHandler: handleClickOutside,
-      focusTrapConfig: { returnFocus: returnFocusTo },
-      interactionsEnabled
-    })}
+    <!-- Backdrop (separate element for independent animation) -->
+    <!-- Note: pointer-events: none allows clicks to pass through to clickOutside handler -->
+    <div
+      bind:this={backdropElement}
+      class="alert-backdrop"
+      aria-hidden="true"
+      style:pointer-events="none"
+    ></div>
+
+    <!-- Content Container -->
+    <div
+      bind:this={contentElement}
+      use:clickOutside={handleClickOutside}
+      use:focusTrap={{ returnFocus: returnFocusTo }}
+      style:pointer-events={interactionsEnabled ? 'auto' : 'none'}
+    >
+      {@render children?.({ visible, store })}
+    </div>
   </div>
 {/if}
 
