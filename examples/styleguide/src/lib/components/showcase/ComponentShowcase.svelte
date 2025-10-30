@@ -10,6 +10,7 @@
   import PopoverDemo from '../demos/PopoverDemo.svelte';
   import DropdownMenuDemo from '../demos/DropdownMenuDemo.svelte';
   import TabsDemo from '../demos/TabsDemo.svelte';
+  import NavigationStackDemo from '../demos/NavigationStackDemo.svelte';
 
   interface ComponentShowcaseProps {
     component: ComponentInfo;
@@ -29,6 +30,7 @@
     'popover': PopoverDemo,
     'dropdown-menu': DropdownMenuDemo,
     'tabs': TabsDemo,
+    'navigation-stack': NavigationStackDemo,
   };
 
   const DemoComponent = $derived(demoComponents[component.id]);
