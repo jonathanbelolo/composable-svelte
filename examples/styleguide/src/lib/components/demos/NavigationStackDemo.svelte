@@ -197,7 +197,7 @@
 										<div class="space-y-2">
 											<p class="text-sm font-medium">Push another screen:</p>
 											<div class="flex flex-wrap gap-2">
-												{#each demoScreens.slice(stackDepth - 1, stackDepth + 2) as screen}
+												{#each demoScreens.slice(stackDepth - 1, Math.min(stackDepth + 2, demoScreens.length)) as screen}
 													<Button variant="default" size="sm" onclick={() => pushScreen(screen)}>
 														{screen.title} →
 													</Button>
