@@ -4,6 +4,8 @@
   import type { PresentationState } from '../navigation/types.js';
   import type { SpringConfig } from '../animation/spring-config.js';
   import { cn } from '../lib/utils.js';
+  import { clickOutside } from '../lib/actions/clickOutside.js';
+  import { focusTrap } from '../lib/actions/focusTrap.js';
 
   // ============================================================================
   // Props
@@ -112,13 +114,38 @@
   {disableClickOutside}
   {disableEscapeKey}
 >
-  {#snippet children({ visible, store })}
+  {#snippet children({
+    visible,
+    store,
+    contentVisible,
+    bindContent,
+    bindBackdrop,
+    onContentTransitionEnd,
+    onBackdropTransitionEnd,
+    clickOutsideHandler,
+    focusTrapConfig,
+    interactionsEnabled
+  })}
+    <!-- Backdrop with CSS transitions -->
     {#if backdropClasses}
-      <div class={backdropClasses} aria-hidden="true"></div>
+      <div
+        use:bindBackdrop
+        class="{backdropClasses} transition-opacity duration-200"
+        style="opacity: {contentVisible ? 1 : 0}"
+        ontransitionend={onBackdropTransitionEnd}
+        aria-hidden="true"
+      ></div>
     {/if}
 
+    <!-- Content with CSS transitions -->
     <div
-      class={contentClasses}
+      use:bindContent
+      use:clickOutside={clickOutsideHandler}
+      use:focusTrap={focusTrapConfig}
+      class="{contentClasses} transition-all duration-200"
+      style="opacity: {contentVisible ? 1 : 0}; transform: translate(-50%, -50%) scale({contentVisible ? 1 : 0.98})"
+      style:pointer-events={interactionsEnabled ? 'auto' : 'none'}
+      ontransitionend={onContentTransitionEnd}
       role="alertdialog"
       aria-modal="true"
       aria-label="Alert dialog"
