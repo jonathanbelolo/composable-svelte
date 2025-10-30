@@ -641,6 +641,82 @@ export async function animateSidebarCollapse(
 }
 
 // ============================================================================
+// Popover Animations
+// ============================================================================
+
+/**
+ * Animate popover in with subtle scale + fade.
+ * Preserves positioning transforms (translateX/translateY) by composing them.
+ */
+export async function animatePopoverIn(
+	element: HTMLElement,
+	positionTransform: string = '',
+	springConfig?: Partial<SpringConfig>
+): Promise<void> {
+	try {
+		const config = getSpringConfig(springPresets.popover, springConfig);
+
+		// Compose positioning transform with scale
+		const transformFrom = positionTransform ? `${positionTransform} scale(0.96)` : 'scale(0.96)';
+		const transformTo = positionTransform ? `${positionTransform} scale(1)` : 'scale(1)';
+
+		await animate(
+			element,
+			{
+				opacity: [0, 1],
+				transform: [transformFrom, transformTo]
+			},
+			{
+				type: 'spring',
+				visualDuration: config.visualDuration,
+				bounce: config.bounce
+			}
+		).finished;
+
+		// Wait for one more frame to ensure styles are applied
+		await new Promise(resolve => requestAnimationFrame(resolve));
+	} catch (error) {
+		console.error('[animatePopoverIn] Animation failed:', error);
+	}
+}
+
+/**
+ * Animate popover out with subtle scale + fade.
+ * Preserves positioning transforms (translateX/translateY) by composing them.
+ */
+export async function animatePopoverOut(
+	element: HTMLElement,
+	positionTransform: string = '',
+	springConfig?: Partial<SpringConfig>
+): Promise<void> {
+	try {
+		const config = getSpringConfig(springPresets.popover, springConfig);
+
+		// Compose positioning transform with scale
+		const transformFrom = positionTransform ? `${positionTransform} scale(1)` : 'scale(1)';
+		const transformTo = positionTransform ? `${positionTransform} scale(0.96)` : 'scale(0.96)';
+
+		await animate(
+			element,
+			{
+				opacity: [1, 0],
+				transform: [transformFrom, transformTo]
+			},
+			{
+				type: 'spring',
+				visualDuration: config.visualDuration,
+				bounce: config.bounce
+			}
+		).finished;
+
+		// Wait for one more frame to ensure styles are applied
+		await new Promise(resolve => requestAnimationFrame(resolve));
+	} catch (error) {
+		console.error('[animatePopoverOut] Animation failed:', error);
+	}
+}
+
+// ============================================================================
 // Accordion/Collapsible Animations
 // ============================================================================
 

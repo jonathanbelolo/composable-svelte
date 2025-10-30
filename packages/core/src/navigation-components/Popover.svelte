@@ -1,6 +1,8 @@
 <script lang="ts">
   import PopoverPrimitive from './primitives/PopoverPrimitive.svelte';
   import type { ScopedDestinationStore } from '../navigation/scope-to-destination.js';
+  import type { PresentationState } from '../navigation/types.js';
+  import type { SpringConfig } from '../animation/spring-config.js';
   import { cn } from '../lib/utils.js';
 
   // ============================================================================
@@ -12,6 +14,27 @@
      * Scoped store for the popover content.
      */
     store: ScopedDestinationStore<State, Action> | null;
+
+    /**
+     * Presentation state for animation lifecycle.
+     * Optional - if not provided, no animations (instant show/hide).
+     */
+    presentation?: PresentationState<any>;
+
+    /**
+     * Callback when presentation animation completes.
+     */
+    onPresentationComplete?: () => void;
+
+    /**
+     * Callback when dismissal animation completes.
+     */
+    onDismissalComplete?: () => void;
+
+    /**
+     * Spring configuration override.
+     */
+    springConfig?: Partial<SpringConfig>;
 
     /**
      * Disable all default styling.
@@ -46,6 +69,10 @@
 
   let {
     store,
+    presentation,
+    onPresentationComplete,
+    onDismissalComplete,
+    springConfig,
     unstyled = false,
     class: className,
     disableClickOutside = false,
@@ -55,7 +82,7 @@
   }: PopoverProps<unknown, unknown> = $props();
 
   // ============================================================================
-  // Computed Classes
+  // Computed Classes and Styles
   // ============================================================================
 
   const defaultContentClasses =
@@ -65,19 +92,39 @@
     unstyled ? '' : cn(defaultContentClasses, className)
   );
 
-  // Note: No transitions/animations in Phase 2 - instant show/hide only
-  // Note: Positioning must be provided by consumer via style prop
+  // Extract transform from style string and separate it for animation
+  const extractedStyles = $derived(() => {
+    if (!style) return { styleWithoutTransform: '', transform: '' };
+
+    // Match transform property in the style string
+    const transformMatch = style.match(/transform:\s*([^;]+)/);
+    const transform = transformMatch ? transformMatch[1].trim() : '';
+
+    // Remove transform from the style string
+    const styleWithoutTransform = style.replace(/transform:\s*[^;]+;?\s*/, '').trim();
+
+    return { styleWithoutTransform, transform };
+  });
 </script>
 
 <!-- ============================================================================ -->
 <!-- Styled Popover -->
 <!-- ============================================================================ -->
 
-<PopoverPrimitive {store} {disableClickOutside} {disableEscapeKey}>
-  {#snippet children({ visible, store })}
+<PopoverPrimitive
+  {store}
+  {presentation}
+  {onPresentationComplete}
+  {onDismissalComplete}
+  {springConfig}
+  {disableClickOutside}
+  {disableEscapeKey}
+>
+  {#snippet children({ visible, store, bindContent, initialOpacity })}
     <div
+      use:bindContent={[extractedStyles().transform]}
       class={contentClasses}
-      style={style}
+      style="{extractedStyles().styleWithoutTransform}{initialOpacity ? `; opacity: ${initialOpacity}` : ''}"
       role="dialog"
       aria-modal="false"
     >
