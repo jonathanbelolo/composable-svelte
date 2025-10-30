@@ -46,13 +46,18 @@
 			switch (action.type) {
 				case 'pushScreen':
 					if (state.destination?.type === 'stack') {
+						const currentStack = state.destination.state.stack;
+						// Don't push if we're already at maximum stack depth (5 screens)
+						if (currentStack.length >= 5) {
+							return [state, Effect.none()];
+						}
 						return [
 							{
 								...state,
 								destination: {
 									...state.destination,
 									state: {
-										stack: [...state.destination.state.stack, action.screen]
+										stack: [...currentStack, action.screen]
 									}
 								}
 							},
