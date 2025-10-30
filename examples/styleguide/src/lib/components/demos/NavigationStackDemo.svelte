@@ -137,6 +137,8 @@
 	const currentStack = $derived(demoStore.state.destination?.state.stack ?? []);
 	const currentScreen = $derived(currentStack[currentStack.length - 1]);
 	const stackDepth = $derived(currentStack.length);
+	const availableScreens = $derived(demoScreens.slice(stackDepth - 1, Math.min(stackDepth + 2, demoScreens.length)));
+	const canPushMore = $derived(stackDepth < 5 && availableScreens.length > 0);
 </script>
 
 <div class="space-y-12">
@@ -193,11 +195,11 @@
 										</p>
 									</div>
 
-									{#if stackDepth < 5}
+									{#if canPushMore}
 										<div class="space-y-2">
 											<p class="text-sm font-medium">Push another screen:</p>
 											<div class="flex flex-wrap gap-2">
-												{#each demoScreens.slice(stackDepth - 1, Math.min(stackDepth + 2, demoScreens.length)) as screen}
+												{#each availableScreens as screen}
 													<Button variant="default" size="sm" onclick={() => pushScreen(screen)}>
 														{screen.title} →
 													</Button>
