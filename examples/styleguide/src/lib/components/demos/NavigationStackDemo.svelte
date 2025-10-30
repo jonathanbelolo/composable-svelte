@@ -4,6 +4,13 @@
 	import { createStore } from '@composable-svelte/core/store.svelte.js';
 	import { scopeToDestination } from '@composable-svelte/core/navigation/scope-to-destination.js';
 	import { Effect } from '@composable-svelte/core/effect.js';
+	import type { PresentationState } from '@composable-svelte/core/navigation/types.js';
+	import {
+		animateStackPushIn,
+		animateStackPushOut,
+		animateStackPopOut,
+		animateStackPopIn
+	} from '@composable-svelte/core/animation/animate.js';
 
 	// ============================================================================
 	// Demo State & Store Setup
@@ -16,15 +23,21 @@
 		color: string;
 	}
 
+	type StackDestination = { type: 'stack'; state: { stack: ScreenState[] } };
+
 	interface DemoState {
-		destination: { type: 'stack'; state: { stack: ScreenState[] } } | null;
+		destination: StackDestination | null;
+		presentation: PresentationState<StackDestination>;
+		transitionDirection: 'push' | 'pop' | null;
 	}
 
 	type DemoAction =
 		| { type: 'show' }
 		| { type: 'pushScreen'; screen: ScreenState }
 		| { type: 'popScreen' }
-		| { type: 'destination'; action: any };
+		| { type: 'destination'; action: any }
+		| { type: 'presentationCompleted' }
+		| { type: 'dismissalCompleted' };
 
 	const demoStore = createStore<DemoState, DemoAction>({
 		initialState: {
@@ -40,7 +53,9 @@
 						}
 					]
 				}
-			}
+			},
+			presentation: { status: 'idle' as const },
+			transitionDirection: null
 		},
 		reducer: (state, action) => {
 			switch (action.type) {
@@ -51,17 +66,28 @@
 						if (currentStack.length >= 5) {
 							return [state, Effect.none()];
 						}
+						// Guard: Only allow push if not animating
+						if (state.presentation.status === 'presenting' || state.presentation.status === 'dismissing') {
+							return [state, Effect.none()];
+						}
+						const newDestination: StackDestination = {
+							...state.destination,
+							state: {
+								stack: [...currentStack, action.screen]
+							}
+						};
 						return [
 							{
 								...state,
-								destination: {
-									...state.destination,
-									state: {
-										stack: [...currentStack, action.screen]
-									}
-								}
+								destination: newDestination,
+								presentation: {
+									status: 'presenting' as const,
+									content: newDestination,
+									duration: 350
+								},
+								transitionDirection: 'push' as const
 							},
-							Effect.none()
+							Effect.afterDelay(350, (d) => d({ type: 'presentationCompleted' }))
 						];
 					}
 					return [state, Effect.none()];
@@ -73,19 +99,67 @@
 						if (currentStack.length <= 1) {
 							return [state, Effect.none()];
 						}
+						// Guard: Only allow pop if presented (not animating)
+						if (state.presentation.status !== 'presented') {
+							return [state, Effect.none()];
+						}
 						const newStack = currentStack.slice(0, -1);
 						return [
 							{
 								...state,
-								destination: {
-									...state.destination,
-									state: { stack: newStack }
-								}
+								presentation: {
+									status: 'dismissing' as const,
+									content: state.presentation.status === 'presented' ? state.presentation.content : state.destination!,
+									duration: 350
+								},
+								transitionDirection: 'pop' as const
 							},
-							Effect.none()
+							Effect.afterDelay(350, (d) => d({ type: 'dismissalCompleted' }))
 						];
 					}
 					return [state, Effect.none()];
+
+				case 'presentationCompleted':
+					return [
+						{
+							...state,
+							presentation: {
+								status: 'presented' as const,
+								content: state.presentation.status === 'presenting' ? state.presentation.content : state.destination!
+							}
+						},
+						Effect.none()
+					];
+
+				case 'dismissalCompleted':
+					// After pop animation completes, update the stack
+					if (state.destination?.type === 'stack' && state.transitionDirection === 'pop') {
+						const currentStack = state.destination.state.stack;
+						if (currentStack.length > 1) {
+							const newStack = currentStack.slice(0, -1);
+							const newDestination: StackDestination = {
+								...state.destination,
+								state: { stack: newStack }
+							};
+							return [
+								{
+									...state,
+									destination: newDestination,
+									presentation: { status: 'idle' as const },
+									transitionDirection: null
+								},
+								Effect.none()
+							];
+						}
+					}
+					return [
+						{
+							...state,
+							presentation: { status: 'idle' as const },
+							transitionDirection: null
+						},
+						Effect.none()
+					];
 
 				default:
 					return [state, Effect.none()];
@@ -143,6 +217,46 @@
 		demoScreens.filter(screen => !stackScreenIds.has(screen.id)).slice(0, 3)
 	);
 	const canPushMore = $derived(stackDepth < 5 && availableScreens.length > 0);
+
+	// ============================================================================
+	// Animation Integration
+	// ============================================================================
+
+	let currentScreenElement: HTMLElement | null = $state(null);
+	let previousScreenElement: HTMLElement | null = $state(null);
+	let lastAnimatedContent: StackDestination | null = $state(null);
+
+	// Animation effect - handles both push and pop animations
+	$effect(() => {
+		const presentation = demoStore.state.presentation;
+		const direction = demoStore.state.transitionDirection;
+
+		// Handle push animations (new screen slides in, previous screen slides out)
+		if (
+			presentation.status === 'presenting' &&
+			direction === 'push' &&
+			currentScreenElement &&
+			lastAnimatedContent !== presentation.content
+		) {
+			lastAnimatedContent = presentation.content;
+			animateStackPushIn(currentScreenElement).then(() => {
+				queueMicrotask(() => demoStore.dispatch({ type: 'presentationCompleted' }));
+			});
+		}
+
+		// Handle pop animations (current screen slides out, previous screen slides in)
+		if (
+			presentation.status === 'dismissing' &&
+			direction === 'pop' &&
+			currentScreenElement &&
+			lastAnimatedContent !== null
+		) {
+			lastAnimatedContent = null;
+			animateStackPopOut(currentScreenElement).then(() => {
+				queueMicrotask(() => demoStore.dispatch({ type: 'dismissalCompleted' }));
+			});
+		}
+	});
 </script>
 
 <div class="space-y-12">
@@ -181,7 +295,7 @@
 				<NavigationStack store={scopedStore} stack={currentStack} onBack={popScreen}>
 					{#snippet children({ currentScreen })}
 						{#if currentScreen}
-							<div class="h-full {currentScreen.color} p-8 space-y-6">
+							<div bind:this={currentScreenElement} class="h-full {currentScreen.color} p-8 space-y-6">
 								<div class="space-y-2">
 									<h2 class="text-3xl font-bold">{currentScreen.title}</h2>
 									<p class="text-muted-foreground">{currentScreen.content}</p>
@@ -236,7 +350,7 @@
 			</p>
 			<ul>
 				<li>Automatic back button management based on stack depth</li>
-				<li>Instant screen transitions (no lifecycle animations)</li>
+				<li>iOS-style slide animations with spring physics (350ms push/pop)</li>
 				<li>Built-in header with back navigation</li>
 				<li>Flexible content rendering via children snippet</li>
 				<li>Customizable styling and layout options</li>
@@ -262,10 +376,10 @@
 
 			<div class="rounded-lg border bg-card p-6 space-y-3">
 				<div class="text-2xl">⚡</div>
-				<h4 class="font-semibold">Instant Transitions</h4>
+				<h4 class="font-semibold">Smooth Slide Animations</h4>
 				<p class="text-sm text-muted-foreground">
-					Screens switch instantly with no animations - the correct UX for stack navigation,
-					matching native mobile patterns.
+					iOS-style push/pop slide animations with spring physics (350ms) matching native mobile patterns.
+					Powered by Motion One and PresentationState lifecycle.
 				</p>
 			</div>
 
@@ -377,32 +491,32 @@
 
 		<div class="rounded-lg border bg-card p-6 space-y-4">
 			<p class="text-sm text-muted-foreground">
-				Navigation Stack deliberately uses instant transitions without animations:
+				Navigation Stack uses iOS-style slide animations powered by Motion One and PresentationState:
 			</p>
 			<ul class="list-disc list-inside text-sm space-y-2 text-muted-foreground">
 				<li>
-					<strong>Instant Screen Switching:</strong> Screens change immediately when stack updates
+					<strong>Push Animation:</strong> New screen slides in from 100% right to center with spring physics (350ms)
 				</li>
 				<li>
-					<strong>No Lifecycle Animations:</strong> No slide/fade transitions between screens (matches
-					iOS behavior)
+					<strong>Pop Animation:</strong> Current screen slides out to 100% right revealing previous screen (350ms)
 				</li>
 				<li>
-					<strong>Hover Transitions Only:</strong> Back button uses CSS transition-colors for hover
-					states
+					<strong>Spring Physics:</strong> Uses drawer preset (visualDuration: 0.35s, bounce: 0.25) for polished feel
 				</li>
 				<li>
-					<strong>Performance:</strong> Instant switching provides immediate feedback and better UX
+					<strong>Animation Guards:</strong> Prevents pushing/popping during animations to maintain smooth UX
 				</li>
 				<li>
-					<strong>Simplicity:</strong> Reduces complexity - no PresentationState or animation coordination
-					needed
+					<strong>State-Driven:</strong> PresentationState tracks lifecycle (idle → presenting → presented → dismissing → idle)
+				</li>
+				<li>
+					<strong>Effect Coordination:</strong> Effect.afterDelay() dispatches presentationCompleted/dismissalCompleted after animations
 				</li>
 			</ul>
 			<div class="mt-4 p-4 bg-muted/30 rounded text-xs text-muted-foreground">
-				<strong>Note:</strong> This follows platform conventions - native iOS navigation stacks switch
-				screens instantly during push/pop operations. Animations would slow down hierarchical navigation
-				and feel unnatural for this pattern.
+				<strong>Note:</strong> This matches native iOS navigation stack behavior with slide transitions.
+				The animations are state-driven using PresentationState to ensure proper lifecycle management and
+				coordination with the reducer. Try pushing and popping screens to see the smooth transitions!
 			</div>
 		</div>
 	</section>

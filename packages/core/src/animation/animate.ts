@@ -717,6 +717,150 @@ export async function animatePopoverOut(
 }
 
 // ============================================================================
+// NavigationStack Animations (iOS-style slide transitions)
+// ============================================================================
+
+/**
+ * Animate new screen sliding in from right (push animation).
+ *
+ * Used when pushing a new screen onto the navigation stack.
+ * New screen slides in from 100% right to 0%.
+ */
+export async function animateStackPushIn(
+	element: HTMLElement,
+	springConfig?: Partial<SpringConfig>
+): Promise<void> {
+	try {
+		const config = getSpringConfig(springPresets.drawer, springConfig);
+
+		await animate(
+			element,
+			{
+				opacity: [0, 1],
+				x: ['100%', '0%']
+			},
+			{
+				type: 'spring',
+				visualDuration: config.visualDuration,
+				bounce: config.bounce
+			}
+		).finished;
+	} catch (error) {
+		console.error('[animateStackPushIn] Animation failed:', error);
+		// Ensure element is visible even if animation fails
+		if (element) {
+			element.style.opacity = '1';
+			element.style.transform = 'translateX(0)';
+		}
+	}
+}
+
+/**
+ * Animate previous screen sliding out to left (push animation background).
+ *
+ * Used when pushing a new screen - the previous screen slides slightly to the left
+ * to create a depth effect, similar to iOS navigation.
+ */
+export async function animateStackPushOut(
+	element: HTMLElement,
+	springConfig?: Partial<SpringConfig>
+): Promise<void> {
+	try {
+		const config = getSpringConfig(springPresets.drawer, springConfig);
+
+		await animate(
+			element,
+			{
+				opacity: [1, 0.7],
+				x: ['0%', '-30%']
+			},
+			{
+				type: 'spring',
+				visualDuration: config.visualDuration,
+				bounce: config.bounce
+			}
+		).finished;
+	} catch (error) {
+		console.error('[animateStackPushOut] Animation failed:', error);
+		// Ensure element state even if animation fails
+		if (element) {
+			element.style.opacity = '0.7';
+			element.style.transform = 'translateX(-30%)';
+		}
+	}
+}
+
+/**
+ * Animate current screen sliding out to right (pop animation).
+ *
+ * Used when popping the current screen from the navigation stack.
+ * Current screen slides from 0% to 100% right.
+ */
+export async function animateStackPopOut(
+	element: HTMLElement,
+	springConfig?: Partial<SpringConfig>
+): Promise<void> {
+	try {
+		const config = getSpringConfig(springPresets.drawer, springConfig);
+
+		await animate(
+			element,
+			{
+				opacity: [1, 0],
+				x: ['0%', '100%']
+			},
+			{
+				type: 'spring',
+				visualDuration: config.visualDuration,
+				bounce: config.bounce
+			}
+		).finished;
+	} catch (error) {
+		console.error('[animateStackPopOut] Animation failed:', error);
+		// Ensure element is hidden even if animation fails
+		if (element) {
+			element.style.opacity = '0';
+			element.style.transform = 'translateX(100%)';
+		}
+	}
+}
+
+/**
+ * Animate previous screen sliding in from left (pop animation background).
+ *
+ * Used when popping - the previous screen slides in from the left
+ * (reverses the push-out animation).
+ */
+export async function animateStackPopIn(
+	element: HTMLElement,
+	springConfig?: Partial<SpringConfig>
+): Promise<void> {
+	try {
+		const config = getSpringConfig(springPresets.drawer, springConfig);
+
+		await animate(
+			element,
+			{
+				opacity: [0.7, 1],
+				x: ['-30%', '0%']
+			},
+			{
+				type: 'spring',
+				visualDuration: config.visualDuration,
+				bounce: config.bounce
+			}
+		).finished;
+	} catch (error) {
+		console.error('[animateStackPopIn] Animation failed:', error);
+		// Ensure element is visible even if animation fails
+		if (element) {
+			element.style.opacity = '1';
+			element.style.transform = 'translateX(0)';
+		}
+	}
+}
+
+// ============================================================================
 // Accordion/Collapsible Animations
 // ============================================================================
 
