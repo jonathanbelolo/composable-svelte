@@ -137,7 +137,11 @@
 	const currentStack = $derived(demoStore.state.destination?.state.stack ?? []);
 	const currentScreen = $derived(currentStack[currentStack.length - 1]);
 	const stackDepth = $derived(currentStack.length);
-	const availableScreens = $derived(demoScreens.slice(stackDepth - 1, Math.min(stackDepth + 2, demoScreens.length)));
+	// Filter out screens that are already in the stack
+	const stackScreenIds = $derived(new Set(currentStack.map(s => s.id)));
+	const availableScreens = $derived(
+		demoScreens.filter(screen => !stackScreenIds.has(screen.id)).slice(0, 3)
+	);
 	const canPushMore = $derived(stackDepth < 5 && availableScreens.length > 0);
 </script>
 
