@@ -287,6 +287,7 @@ export async function animateDrawerOut(
 
 /**
  * Animate alert in with subtle scale + fade.
+ * Preserves CSS translate(-50%, -50%) for centering by composing transforms.
  */
 export async function animateAlertIn(
 	element: HTMLElement,
@@ -299,7 +300,11 @@ export async function animateAlertIn(
 			element,
 			{
 				opacity: [0, 1],
-				scale: [0.98, 1]
+				// Compose with the centering translate
+				transform: [
+					'translate(-50%, -50%) scale(0.98)',
+					'translate(-50%, -50%) scale(1)'
+				]
 			},
 			{
 				type: 'spring',
@@ -307,6 +312,9 @@ export async function animateAlertIn(
 				bounce: config.bounce
 			}
 		).finished;
+
+		// Wait for one more frame to ensure styles are applied
+		await new Promise(resolve => requestAnimationFrame(resolve));
 	} catch (error) {
 		console.error('[animateAlertIn] Animation failed:', error);
 	}
@@ -314,6 +322,7 @@ export async function animateAlertIn(
 
 /**
  * Animate alert out with subtle scale + fade.
+ * Preserves CSS translate(-50%, -50%) for centering by composing transforms.
  */
 export async function animateAlertOut(
 	element: HTMLElement,
@@ -326,7 +335,11 @@ export async function animateAlertOut(
 			element,
 			{
 				opacity: [1, 0],
-				scale: [1, 0.98]
+				// Compose with the centering translate
+				transform: [
+					'translate(-50%, -50%) scale(1)',
+					'translate(-50%, -50%) scale(0.98)'
+				]
 			},
 			{
 				type: 'spring',
@@ -334,6 +347,9 @@ export async function animateAlertOut(
 				bounce: config.bounce
 			}
 		).finished;
+
+		// Wait for one more frame to ensure styles are applied
+		await new Promise(resolve => requestAnimationFrame(resolve));
 	} catch (error) {
 		console.error('[animateAlertOut] Animation failed:', error);
 	}

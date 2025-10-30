@@ -214,12 +214,22 @@
 
     <!-- Content Container -->
     <div
-      bind:this={contentElement}
-      use:clickOutside={handleClickOutside}
       use:focusTrap={{ returnFocus: returnFocusTo }}
       style:pointer-events={interactionsEnabled ? 'auto' : 'none'}
     >
-      {@render children?.({ visible, store })}
+      {@render children?.({
+        visible,
+        store,
+        bindBackdrop: (node: HTMLElement) => {
+          backdropElement = node;
+          // Attach click handler directly to backdrop
+          if (!disableClickOutside) {
+            node.addEventListener('click', handleClickOutside);
+          }
+        },
+        bindContent: (node: HTMLElement) => { contentElement = node; },
+        initialOpacity: presentation?.status === 'presenting' ? '0' : undefined
+      })}
     </div>
   </div>
 {/if}

@@ -88,7 +88,7 @@
     'fixed inset-0 z-50 bg-background/80 backdrop-blur-sm';
 
   const defaultContentClasses =
-    'fixed left-[50%] top-[50%] z-50 grid w-full max-w-md translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg sm:rounded-lg';
+    'fixed left-[50%] top-[50%] z-[51] grid w-full max-w-md gap-4 border bg-background p-6 shadow-lg sm:rounded-lg';
 
   const backdropClasses = $derived(
     unstyled ? '' : cn(defaultBackdropClasses, backdropClass)
@@ -112,17 +112,25 @@
   {disableClickOutside}
   {disableEscapeKey}
 >
-  {#snippet children({ visible, store })}
+  {#snippet children({ visible, store, bindBackdrop, bindContent, initialOpacity })}
     {#if backdropClasses}
-      <div class={backdropClasses} aria-hidden="true"></div>
+      <div
+        use:bindBackdrop
+        class={backdropClasses}
+        aria-hidden="true"
+        style:opacity={initialOpacity}
+      ></div>
     {/if}
 
     <div
+      use:bindContent
       class={contentClasses}
       role="alertdialog"
       aria-modal="true"
       aria-label="Alert dialog"
       data-dialog-type="alert"
+      style:opacity={initialOpacity}
+      style:transform="translate(-50%, -50%)"
     >
       {@render children?.({ visible, store })}
     </div>

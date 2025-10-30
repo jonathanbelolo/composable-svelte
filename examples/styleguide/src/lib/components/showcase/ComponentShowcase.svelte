@@ -6,6 +6,7 @@
   import SheetDemo from '../demos/SheetDemo.svelte';
   import DrawerDemo from '../demos/DrawerDemo.svelte';
   import SidebarDemo from '../demos/SidebarDemo.svelte';
+  import AlertDemo from '../demos/AlertDemo.svelte';
 
   interface ComponentShowcaseProps {
     component: ComponentInfo;
@@ -21,6 +22,7 @@
     'sheet': SheetDemo,
     'drawer': DrawerDemo,
     'sidebar': SidebarDemo,
+    'alert': AlertDemo,
   };
 
   const DemoComponent = $derived(demoComponents[component.id]);
