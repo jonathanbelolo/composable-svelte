@@ -40,6 +40,7 @@
   import PaginationDemo from '../demos/PaginationDemo.svelte';
   import EmptyDemo from '../demos/EmptyDemo.svelte';
   import CarouselDemo from '../demos/CarouselDemo.svelte';
+  import TreeViewDemo from '../demos/TreeViewDemo.svelte';
   // Typography
   import HeadingDemo from '../demos/HeadingDemo.svelte';
   import TextDemo from '../demos/TextDemo.svelte';
@@ -100,6 +101,7 @@
     'pagination': PaginationDemo,
     'empty': EmptyDemo,
     'carousel': CarouselDemo,
+    'tree-view': TreeViewDemo,
     // Typography
     'heading': HeadingDemo,
     'text': TextDemo,

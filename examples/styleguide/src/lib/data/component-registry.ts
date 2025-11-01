@@ -70,6 +70,7 @@ export const COMPONENT_REGISTRY: ComponentInfo[] = [
   { id: 'pagination', name: 'Pagination', category: 'Data Display', description: 'Page navigation controls' },
   { id: 'empty', name: 'Empty', category: 'Data Display', description: 'Empty state placeholder' },
   { id: 'carousel', name: 'Carousel', category: 'Data Display', description: 'Sliding content carousel with navigation' },
+  { id: 'tree-view', name: 'Tree View', category: 'Data Display', description: 'Hierarchical tree with expand/collapse' },
 
   // Typography
   { id: 'heading', name: 'Heading', category: 'Typography', description: 'Semantic heading component' },
