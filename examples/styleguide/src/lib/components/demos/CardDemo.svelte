@@ -85,7 +85,7 @@
       <!-- Horizontal Card -->
       <Card>
         <div class="flex flex-col md:flex-row">
-          <div class="w-full md:w-48 h-48 bg-gradient-to-br from-purple-500 to-pink-500 rounded-t-lg md:rounded-l-lg md:rounded-tr-none"></div>
+          <div class="w-full md:w-48 h-48 bg-gradient-to-br from-purple-500 to-pink-500 rounded-t-lg md:rounded-l-lg md:rounded-r-none"></div>
           <div class="flex-1">
             <CardHeader>
               <CardTitle>Image Card</CardTitle>
