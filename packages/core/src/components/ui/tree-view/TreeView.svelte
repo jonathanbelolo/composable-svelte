@@ -3,7 +3,7 @@
 	import { treeViewReducer } from './tree-view.reducer.js';
 	import { createInitialTreeViewState } from './tree-view.types.js';
 	import type { TreeNode } from './tree-view.types.js';
-	import { Spinner } from '$lib/components/ui/spinner/index.js';
+	import { Spinner } from '../spinner/index.js';
 	import { cn } from '../../../lib/utils.js';
 
 	/**
