@@ -22,6 +22,8 @@
   import SelectDemo from '../demos/SelectDemo.svelte';
   import SliderDemo from '../demos/SliderDemo.svelte';
   import FormDemo from '../demos/FormDemo.svelte';
+  // Form Components - Advanced
+  import ComboboxDemo from '../demos/ComboboxDemo.svelte';
   // Foundational Components
   import CardDemo from '../demos/CardDemo.svelte';
   import SeparatorDemo from '../demos/SeparatorDemo.svelte';
@@ -83,6 +85,8 @@
     'select': SelectDemo,
     'slider': SliderDemo,
     'form': FormDemo,
+    // Form Components - Advanced
+    'combobox': ComboboxDemo,
     // Foundational Components
     'card': CardDemo,
     'separator': SeparatorDemo,

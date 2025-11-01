@@ -12,7 +12,7 @@ export interface ComponentInfo {
 export const COMPONENT_CATEGORIES = [
   'Navigation Components',
   'Form System',
-  'Form Components Advanced',
+  'Form Components - Advanced',
   'Data Display',
   'Foundational Components',
   'Typography',
@@ -58,6 +58,9 @@ export const COMPONENT_REGISTRY: ComponentInfo[] = [
   { id: 'textarea', name: 'Textarea', category: 'Form System', description: 'Multi-line text input' },
   { id: 'select', name: 'Select', category: 'Form System', description: 'Dropdown selection' },
   { id: 'slider', name: 'Slider', category: 'Form System', description: 'Range input slider' },
+
+  // Form Components - Advanced
+  { id: 'combobox', name: 'Combobox', category: 'Form Components - Advanced', description: 'Searchable select with async loading' },
 
   // Visual Feedback
   { id: 'toast', name: 'Toast', category: 'Visual Feedback', description: 'Temporary notifications' },
