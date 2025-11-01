@@ -145,21 +145,18 @@
 	function handleTriggerKeyDown(event: KeyboardEvent) {
 		if (disabled) return;
 
+		// When dropdown is open, let window handler handle all keys
+		if (store.state.isOpen) return;
+
 		if (event.key === 'Enter' || event.key === ' ') {
 			event.preventDefault();
-			store.dispatch({ type: 'toggled' });
+			store.dispatch({ type: 'opened' });
 		} else if (event.key === 'ArrowDown') {
 			event.preventDefault();
-			if (!store.state.isOpen) {
-				store.dispatch({ type: 'opened' });
-			}
-			store.dispatch({ type: 'arrowDown' });
+			store.dispatch({ type: 'opened' });
 		} else if (event.key === 'ArrowUp') {
 			event.preventDefault();
-			if (!store.state.isOpen) {
-				store.dispatch({ type: 'opened' });
-			}
-			store.dispatch({ type: 'arrowUp' });
+			store.dispatch({ type: 'opened' });
 		}
 	}
 

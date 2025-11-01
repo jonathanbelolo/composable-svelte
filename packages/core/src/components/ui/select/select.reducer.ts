@@ -45,15 +45,16 @@ function findNextEnabledIndex<T>(
 	if (options.length === 0) return -1;
 
 	const increment = direction === 'down' ? 1 : -1;
-	let currentIndex = startIndex;
+	let currentIndex = (startIndex + increment + options.length) % options.length;
 
 	for (let i = 0; i < options.length; i++) {
-		currentIndex = (currentIndex + increment + options.length) % options.length;
 		const option = options[currentIndex];
 
 		if (!option.disabled) {
 			return currentIndex;
 		}
+
+		currentIndex = (currentIndex + increment + options.length) % options.length;
 	}
 
 	return -1;
