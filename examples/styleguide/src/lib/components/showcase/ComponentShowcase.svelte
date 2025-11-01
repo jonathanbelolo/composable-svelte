@@ -12,6 +12,28 @@
   import TabsDemo from '../demos/TabsDemo.svelte';
   import NavigationStackDemo from '../demos/NavigationStackDemo.svelte';
   import BreadcrumbDemo from '../demos/BreadcrumbDemo.svelte';
+  // Form System
+  import InputDemo from '../demos/InputDemo.svelte';
+  import LabelDemo from '../demos/LabelDemo.svelte';
+  import TextareaDemo from '../demos/TextareaDemo.svelte';
+  import CheckboxDemo from '../demos/CheckboxDemo.svelte';
+  import RadioGroupDemo from '../demos/RadioGroupDemo.svelte';
+  import SwitchDemo from '../demos/SwitchDemo.svelte';
+  import SelectDemo from '../demos/SelectDemo.svelte';
+  import SliderDemo from '../demos/SliderDemo.svelte';
+  import FormDemo from '../demos/FormDemo.svelte';
+  // Foundational Components
+  import CardDemo from '../demos/CardDemo.svelte';
+  import SeparatorDemo from '../demos/SeparatorDemo.svelte';
+  import BadgeDemo from '../demos/BadgeDemo.svelte';
+  import AvatarDemo from '../demos/AvatarDemo.svelte';
+  import TooltipDemo from '../demos/TooltipDemo.svelte';
+  import SkeletonDemo from '../demos/SkeletonDemo.svelte';
+  import AspectRatioDemo from '../demos/AspectRatioDemo.svelte';
+  // Visual Feedback
+  import ToastDemo from '../demos/ToastDemo.svelte';
+  import ProgressDemo from '../demos/ProgressDemo.svelte';
+  import SpinnerDemo from '../demos/SpinnerDemo.svelte';
 
   interface ComponentShowcaseProps {
     component: ComponentInfo;
@@ -33,6 +55,28 @@
     'tabs': TabsDemo,
     'navigation-stack': NavigationStackDemo,
     'breadcrumb': BreadcrumbDemo,
+    // Form System
+    'input': InputDemo,
+    'label': LabelDemo,
+    'textarea': TextareaDemo,
+    'checkbox': CheckboxDemo,
+    'radio-group': RadioGroupDemo,
+    'switch': SwitchDemo,
+    'select': SelectDemo,
+    'slider': SliderDemo,
+    'form': FormDemo,
+    // Foundational Components
+    'card': CardDemo,
+    'separator': SeparatorDemo,
+    'badge': BadgeDemo,
+    'avatar': AvatarDemo,
+    'tooltip': TooltipDemo,
+    'skeleton': SkeletonDemo,
+    'aspect-ratio': AspectRatioDemo,
+    // Visual Feedback
+    'toast': ToastDemo,
+    'progress': ProgressDemo,
+    'spinner': SpinnerDemo,
   };
 
   const DemoComponent = $derived(demoComponents[component.id]);
