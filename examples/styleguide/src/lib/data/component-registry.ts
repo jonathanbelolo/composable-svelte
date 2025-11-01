@@ -69,6 +69,7 @@ export const COMPONENT_REGISTRY: ComponentInfo[] = [
   { id: 'collapsible', name: 'Collapsible', category: 'Data Display', description: 'Expandable/collapsible content sections' },
   { id: 'pagination', name: 'Pagination', category: 'Data Display', description: 'Page navigation controls' },
   { id: 'empty', name: 'Empty', category: 'Data Display', description: 'Empty state placeholder' },
+  { id: 'carousel', name: 'Carousel', category: 'Data Display', description: 'Sliding content carousel with navigation' },
 
   // Typography
   { id: 'heading', name: 'Heading', category: 'Typography', description: 'Semantic heading component' },
