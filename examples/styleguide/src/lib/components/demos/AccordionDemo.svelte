@@ -12,7 +12,7 @@
       </p>
     </div>
 
-    <Accordion items={[]} class="max-w-2xl">
+    <Accordion class="max-w-2xl">
       <AccordionItem id="item-1">
         <AccordionTrigger>What is Composable Svelte?</AccordionTrigger>
         <AccordionContent>
@@ -64,7 +64,7 @@
       </p>
     </div>
 
-    <Accordion items={[]} allowMultiple={false} initialExpandedIds={['feature-1']} class="max-w-2xl">
+    <Accordion allowMultiple={false} initialExpandedIds={['feature-1']} class="max-w-2xl">
       <AccordionItem id="feature-1">
         <AccordionTrigger>
           <div class="flex items-center gap-2">
@@ -121,7 +121,7 @@
       </p>
     </div>
 
-    <Accordion items={[]} class="max-w-2xl">
+    <Accordion class="max-w-2xl">
       <AccordionItem id="enabled-1">
         <AccordionTrigger>Active Section</AccordionTrigger>
         <AccordionContent>
@@ -160,7 +160,7 @@
       </p>
     </div>
 
-    <Accordion items={[]} initialExpandedIds={['faq-1']} class="max-w-2xl">
+    <Accordion initialExpandedIds={['faq-1']} class="max-w-2xl">
       <AccordionItem id="faq-1">
         <AccordionTrigger>How do I install Composable Svelte?</AccordionTrigger>
         <AccordionContent>
@@ -233,7 +233,7 @@ pnpm add @composable-svelte/core</code></pre>
       </p>
     </div>
 
-    <Accordion items={[]} class="max-w-2xl border rounded-lg p-4">
+    <Accordion class="max-w-2xl border rounded-lg p-4">
       <AccordionItem id="settings-general">
         <AccordionTrigger>
           <div class="flex items-center gap-2">
