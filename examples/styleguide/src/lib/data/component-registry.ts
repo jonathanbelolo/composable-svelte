@@ -38,6 +38,8 @@ export const COMPONENT_REGISTRY: ComponentInfo[] = [
 
   // Foundational Components
   { id: 'button', name: 'Button', category: 'Foundational Components', description: 'Interactive button element' },
+  { id: 'button-group', name: 'Button Group', category: 'Foundational Components', description: 'Grouped buttons with connected styling' },
+  { id: 'icon-button', name: 'Icon Button', category: 'Foundational Components', description: 'Icon-only button' },
   { id: 'card', name: 'Card', category: 'Foundational Components', description: 'Content container' },
   { id: 'separator', name: 'Separator', category: 'Foundational Components', description: 'Visual divider' },
   { id: 'badge', name: 'Badge', category: 'Foundational Components', description: 'Status indicator' },
@@ -61,6 +63,22 @@ export const COMPONENT_REGISTRY: ComponentInfo[] = [
   { id: 'toast', name: 'Toast', category: 'Visual Feedback', description: 'Temporary notifications' },
   { id: 'progress', name: 'Progress', category: 'Visual Feedback', description: 'Progress indicator' },
   { id: 'spinner', name: 'Spinner', category: 'Visual Feedback', description: 'Loading spinner' },
+
+  // Data Display
+  { id: 'accordion', name: 'Accordion', category: 'Data Display', description: 'Collapsible sections for organizing content' },
+  { id: 'collapsible', name: 'Collapsible', category: 'Data Display', description: 'Expandable/collapsible content sections' },
+  { id: 'pagination', name: 'Pagination', category: 'Data Display', description: 'Page navigation controls' },
+  { id: 'empty', name: 'Empty', category: 'Data Display', description: 'Empty state placeholder' },
+
+  // Typography
+  { id: 'heading', name: 'Heading', category: 'Typography', description: 'Semantic heading component' },
+  { id: 'text', name: 'Text', category: 'Typography', description: 'Text component with variants' },
+  { id: 'kbd', name: 'Kbd', category: 'Typography', description: 'Keyboard shortcut display' },
+
+  // Layout
+  { id: 'box', name: 'Box', category: 'Layout', description: 'Generic container component' },
+  { id: 'panel', name: 'Panel', category: 'Layout', description: 'Content panel container' },
+  { id: 'banner', name: 'Banner', category: 'Layout', description: 'Notification/announcement banner' },
 ];
 
 export function getComponentsByCategory(category: ComponentCategory): ComponentInfo[] {

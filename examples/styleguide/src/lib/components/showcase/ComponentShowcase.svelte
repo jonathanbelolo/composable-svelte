@@ -34,6 +34,22 @@
   import ToastDemo from '../demos/ToastDemo.svelte';
   import ProgressDemo from '../demos/ProgressDemo.svelte';
   import SpinnerDemo from '../demos/SpinnerDemo.svelte';
+  // Data Display
+  import AccordionDemo from '../demos/AccordionDemo.svelte';
+  import CollapsibleDemo from '../demos/CollapsibleDemo.svelte';
+  import PaginationDemo from '../demos/PaginationDemo.svelte';
+  import EmptyDemo from '../demos/EmptyDemo.svelte';
+  // Typography
+  import HeadingDemo from '../demos/HeadingDemo.svelte';
+  import TextDemo from '../demos/TextDemo.svelte';
+  import KbdDemo from '../demos/KbdDemo.svelte';
+  // Layout
+  import BoxDemo from '../demos/BoxDemo.svelte';
+  import PanelDemo from '../demos/PanelDemo.svelte';
+  import BannerDemo from '../demos/BannerDemo.svelte';
+  // Foundational Components (new additions)
+  import ButtonGroupDemo from '../demos/ButtonGroupDemo.svelte';
+  import IconButtonDemo from '../demos/IconButtonDemo.svelte';
 
   interface ComponentShowcaseProps {
     component: ComponentInfo;
@@ -77,6 +93,22 @@
     'toast': ToastDemo,
     'progress': ProgressDemo,
     'spinner': SpinnerDemo,
+    // Data Display
+    'accordion': AccordionDemo,
+    'collapsible': CollapsibleDemo,
+    'pagination': PaginationDemo,
+    'empty': EmptyDemo,
+    // Typography
+    'heading': HeadingDemo,
+    'text': TextDemo,
+    'kbd': KbdDemo,
+    // Layout
+    'box': BoxDemo,
+    'panel': PanelDemo,
+    'banner': BannerDemo,
+    // Foundational (new)
+    'button-group': ButtonGroupDemo,
+    'icon-button': IconButtonDemo,
   };
 
   const DemoComponent = $derived(demoComponents[component.id]);
