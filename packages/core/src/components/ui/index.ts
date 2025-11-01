@@ -28,6 +28,17 @@ export { Panel } from './panel/index.js';
 export { Box } from './box/index.js';
 export { AspectRatio } from './aspect-ratio/index.js';
 
+// Navigation
+export {
+	Breadcrumb,
+	BreadcrumbList,
+	BreadcrumbItem,
+	BreadcrumbLink,
+	BreadcrumbPage,
+	BreadcrumbSeparator,
+	BreadcrumbEllipsis
+} from './breadcrumb/index.js';
+
 // Typography
 export { Heading } from './heading/index.js';
 export { Text } from './text/index.js';

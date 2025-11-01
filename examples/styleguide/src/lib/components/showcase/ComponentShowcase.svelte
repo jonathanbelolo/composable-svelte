@@ -11,6 +11,7 @@
   import DropdownMenuDemo from '../demos/DropdownMenuDemo.svelte';
   import TabsDemo from '../demos/TabsDemo.svelte';
   import NavigationStackDemo from '../demos/NavigationStackDemo.svelte';
+  import BreadcrumbDemo from '../demos/BreadcrumbDemo.svelte';
 
   interface ComponentShowcaseProps {
     component: ComponentInfo;
@@ -31,6 +32,7 @@
     'dropdown-menu': DropdownMenuDemo,
     'tabs': TabsDemo,
     'navigation-stack': NavigationStackDemo,
+    'breadcrumb': BreadcrumbDemo,
   };
 
   const DemoComponent = $derived(demoComponents[component.id]);
