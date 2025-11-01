@@ -66,7 +66,9 @@ export type AccordionAction =
 	| { type: 'itemCollapsed'; id: string }
 	| { type: 'allExpanded' }
 	| { type: 'allCollapsed' }
-	| { type: 'itemsChanged'; items: AccordionItem[] };
+	| { type: 'itemsChanged'; items: AccordionItem[] }
+	| { type: 'itemRegistered'; id: string; disabled?: boolean }
+	| { type: 'itemUnregistered'; id: string };
 
 /**
  * Accordion dependencies.

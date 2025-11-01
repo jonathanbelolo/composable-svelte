@@ -6,7 +6,6 @@
 	interface AccordionItemContext {
 		id: string;
 		disabled: boolean;
-		isExpanded: boolean;
 	}
 
 	export function setAccordionItemContext(context: AccordionItemContext) {
@@ -64,14 +63,13 @@
 
 	const store = getAccordionContext();
 
-	// Check if this item is expanded
+	// Check if this item is expanded (for template data-state attribute)
 	const isExpanded = $derived(store.state.expandedIds.includes(id));
 
-	// Set context for trigger and content
+	// Set context for trigger and content (only static values)
 	setAccordionItemContext({
 		id,
-		disabled,
-		isExpanded
+		disabled
 	});
 </script>
 

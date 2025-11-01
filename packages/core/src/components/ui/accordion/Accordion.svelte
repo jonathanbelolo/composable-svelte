@@ -42,9 +42,9 @@
 
 	interface AccordionProps {
 		/**
-		 * Accordion items.
+		 * Accordion items (optional - use this for declarative mode or omit to use composition with AccordionItem children).
 		 */
-		items: AccordionItem[];
+		items?: AccordionItem[];
 
 		/**
 		 * Initially expanded item IDs.
@@ -90,7 +90,7 @@
 
 	// Create accordion store with reducer
 	const store = createStore({
-		initialState: createInitialAccordionState(items, initialExpandedIds, allowMultiple, collapsible),
+		initialState: createInitialAccordionState(items || [], initialExpandedIds, allowMultiple, collapsible),
 		reducer: accordionReducer,
 		dependencies: {
 			onExpand,
@@ -101,9 +101,10 @@
 	// Set context for child components
 	setAccordionContext(store);
 
-	// Sync items changes
+	// Sync items changes (only when items prop is provided for declarative mode)
+	// Only track items prop, not store.state (to avoid re-running on item registration)
 	$effect(() => {
-		if (store.state.items !== items) {
+		if (items) {
 			store.dispatch({ type: 'itemsChanged', items });
 		}
 	});

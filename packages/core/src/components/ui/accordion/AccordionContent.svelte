@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { animateAccordionExpand, animateAccordionCollapse } from '../../../animation/animate.js';
 	import { getAccordionItemContext } from './AccordionItem.svelte';
+	import { getAccordionContext } from './Accordion.svelte';
 	import { cn } from '../../../lib/utils.js';
 
 	/**
@@ -29,24 +30,37 @@
 	}: AccordionContentProps = $props();
 
 	const itemContext = getAccordionItemContext();
+	const store = getAccordionContext();
 
 	let contentElement: HTMLDivElement | null = $state(null);
-	let previousExpandedState = $state(itemContext.isExpanded);
+
+	// Read isExpanded directly from store
+	// CRITICAL: Only depend on the specific boolean value, not the whole array
+	const isExpanded = $derived(store.state.expandedIds.includes(itemContext.id));
+
+	// Track previous with regular let
+	let previousExpandedState: boolean | undefined = undefined;
 
 	// Animate expand/collapse when isExpanded changes
 	$effect(() => {
-		const isExpanded = itemContext.isExpanded;
+		const currentExpanded = isExpanded;
 
 		// Skip animation on initial render
-		if (previousExpandedState === isExpanded) {
+		if (previousExpandedState === undefined) {
+			previousExpandedState = currentExpanded;
 			return;
 		}
 
-		previousExpandedState = isExpanded;
+		// Skip if no actual change
+		if (previousExpandedState === currentExpanded) {
+			return;
+		}
+
+		previousExpandedState = currentExpanded;
 
 		if (!contentElement) return;
 
-		if (isExpanded) {
+		if (currentExpanded) {
 			animateAccordionExpand(contentElement);
 		} else {
 			animateAccordionCollapse(contentElement);
@@ -61,10 +75,10 @@
 	aria-labelledby={`accordion-trigger-${itemContext.id}`}
 	class={cn(
 		'text-sm',
-		!itemContext.isExpanded && 'h-0 overflow-hidden opacity-0',
+		!isExpanded && 'h-0 overflow-hidden opacity-0',
 		className
 	)}
-	style={itemContext.isExpanded ? 'height: auto;' : 'height: 0; overflow: hidden; opacity: 0;'}
+	style={isExpanded ? 'height: auto;' : 'height: 0; overflow: hidden; opacity: 0;'}
 >
 	<div class="pb-4 pt-0">
 		{@render children?.()}

@@ -4,7 +4,7 @@
 	import { createInitialComboboxState } from './combobox.types.js';
 	import type { ComboboxOption } from './combobox.types.js';
 	import { animateDropdownIn, animateDropdownOut } from '../../../animation/animate.js';
-	import { Spinner } from '$lib/components/ui/spinner/index.js';
+	import { Spinner } from '../spinner/index.js';
 	import { cn } from '../../../lib/utils.js';
 
 	/**

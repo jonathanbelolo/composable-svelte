@@ -43,8 +43,9 @@ export const accordionReducer: Reducer<
 > = (state, action, deps) => {
 	switch (action.type) {
 		case 'itemToggled': {
+			// In composition mode, items array may be empty - check if disabled via items array if present
 			const item = state.items.find((i) => i.id === action.id);
-			if (!item || item.disabled) {
+			if (item && item.disabled) {
 				return [state, Effect.none<AccordionAction>()];
 			}
 
@@ -101,7 +102,7 @@ export const accordionReducer: Reducer<
 
 		case 'itemExpanded': {
 			const item = state.items.find((i) => i.id === action.id);
-			if (!item || item.disabled) {
+			if (item && item.disabled) {
 				return [state, Effect.none<AccordionAction>()];
 			}
 
@@ -135,7 +136,7 @@ export const accordionReducer: Reducer<
 
 		case 'itemCollapsed': {
 			const item = state.items.find((i) => i.id === action.id);
-			if (!item || item.disabled) {
+			if (item && item.disabled) {
 				return [state, Effect.none<AccordionAction>()];
 			}
 
@@ -222,6 +223,11 @@ export const accordionReducer: Reducer<
 		}
 
 		case 'itemsChanged': {
+			// Guard: if items reference hasn't changed, return same state
+			if (state.items === action.items) {
+				return [state, Effect.none<AccordionAction>()];
+			}
+
 			// Update items, preserve expanded state for items that still exist
 			const newItemIds = new Set(action.items.map((i) => i.id));
 			const newExpandedIds = state.expandedIds.filter((id) => newItemIds.has(id));
@@ -230,6 +236,46 @@ export const accordionReducer: Reducer<
 				{
 					...state,
 					items: action.items,
+					expandedIds: newExpandedIds
+				},
+				Effect.none<AccordionAction>()
+			];
+		}
+
+		case 'itemRegistered': {
+			// Register item in composition mode (when items prop not provided)
+			// Check if item already exists
+			const existingItem = state.items.find((i) => i.id === action.id);
+			if (existingItem) {
+				return [state, Effect.none<AccordionAction>()];
+			}
+
+			// Add item to items array
+			const newItem: import('./accordion.types.js').AccordionItem = {
+				id: action.id,
+				title: '', // Not used in composition mode
+				content: '', // Not used in composition mode
+				disabled: action.disabled
+			};
+
+			return [
+				{
+					...state,
+					items: [...state.items, newItem]
+				},
+				Effect.none<AccordionAction>()
+			];
+		}
+
+		case 'itemUnregistered': {
+			// Unregister item when component unmounts
+			const newItems = state.items.filter((i) => i.id !== action.id);
+			const newExpandedIds = state.expandedIds.filter((id) => id !== action.id);
+
+			return [
+				{
+					...state,
+					items: newItems,
 					expandedIds: newExpandedIds
 				},
 				Effect.none<AccordionAction>()
