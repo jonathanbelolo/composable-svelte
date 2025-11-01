@@ -44,7 +44,6 @@ export const COMPONENT_REGISTRY: ComponentInfo[] = [
   { id: 'avatar', name: 'Avatar', category: 'Foundational Components', description: 'User profile image' },
   { id: 'tooltip', name: 'Tooltip', category: 'Foundational Components', description: 'Hover information' },
   { id: 'skeleton', name: 'Skeleton', category: 'Foundational Components', description: 'Loading placeholder' },
-  { id: 'scroll-area', name: 'Scroll Area', category: 'Foundational Components', description: 'Custom scrollable container' },
   { id: 'aspect-ratio', name: 'Aspect Ratio', category: 'Foundational Components', description: 'Responsive container ratio' },
 
   // Form System (Basic)
