@@ -1,7 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { createStore } from '@composable-svelte/core';
-  import { Sidebar } from '@composable-svelte/core/navigation-components';
   import { Modal } from '@composable-svelte/core/navigation-components';
   import { scopeTo } from '@composable-svelte/core/navigation';
   import { syncBrowserHistory } from '@composable-svelte/core/routing';
@@ -25,7 +24,7 @@
     ? {
         ...defaultState,
         productDetail: createProductDetailState(productIdFromURL),
-        presentation: { status: 'presented', content: createProductDetailState(productIdFromURL) }
+        presentation: { status: 'presented' as const, content: createProductDetailState(productIdFromURL) }
       }
     : defaultState;
 
@@ -96,14 +95,16 @@
 
 <div class="flex h-screen overflow-hidden bg-gradient-to-br from-background via-background to-muted/20">
   <!-- Sidebar (Desktop) - Enhanced with Shadow -->
-  <Sidebar expanded={state.sidebarExpanded} side="left" width="320px">
-    {#snippet children()}
-      <CategoryFilter
-        selectedCategories={state.filters.selectedCategories}
-        onCategoryToggle={(category) => store.dispatch({ type: 'categoryToggled', category })}
-      />
-    {/snippet}
-  </Sidebar>
+  <aside
+    class="h-full border-r bg-background overflow-hidden transition-all duration-300 lg:block"
+    class:hidden={!state.sidebarExpanded}
+    style="width: 320px;"
+  >
+    <CategoryFilter
+      selectedCategories={state.filters.selectedCategories}
+      onCategoryToggle={(category) => store.dispatch({ type: 'categoryToggled', category })}
+    />
+  </aside>
 
   <!-- Main Content Area - Enhanced with Structure -->
   <div class="flex-1 flex flex-col overflow-hidden shadow-2xl">
@@ -145,7 +146,6 @@
       store.dispatch({ type: 'presentation', event: { type: 'presentationCompleted' } })}
     onDismissalComplete={() =>
       store.dispatch({ type: 'presentation', event: { type: 'dismissalCompleted' } })}
-    disableClickOutside
   >
     {#snippet children({ store: detailStore })}
       <ProductDetail

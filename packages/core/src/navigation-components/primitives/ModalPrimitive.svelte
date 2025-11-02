@@ -110,6 +110,12 @@
     // Only animate if content changed and we're in the right state
     const currentContent = presentation.content;
 
+    // Handle deep linking case: if we start with 'presented', mark content as animated
+    if (presentation.status === 'presented' && lastAnimatedContent === null && currentContent) {
+      lastAnimatedContent = currentContent;
+      console.log('[ModalPrimitive] Deep link detected - marking content as presented:', currentContent);
+    }
+
     if (presentation.status === 'presenting' && lastAnimatedContent !== currentContent) {
       lastAnimatedContent = currentContent;
       console.log('[ModalPrimitive] Starting presentation animation for', currentContent);
