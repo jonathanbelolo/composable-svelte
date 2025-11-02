@@ -48,28 +48,57 @@
   });
 
   // Sync external slides changes to store
+  // CRITICAL: Track previous slides to only dispatch when slides actually change
+  let previousSlides: CarouselSlide<T>[] | undefined = undefined;
   $effect(() => {
-    if (slides !== store.state.slides) {
-      store.dispatch({ type: 'slidesUpdated', slides });
+    const currentSlides = slides;
+
+    // Skip on initial render
+    if (previousSlides === undefined) {
+      previousSlides = currentSlides;
+      return;
+    }
+
+    // Only dispatch if slides reference actually changed
+    if (previousSlides !== currentSlides) {
+      previousSlides = currentSlides;
+      store.dispatch({ type: 'slidesUpdated', slides: currentSlides });
     }
   });
 
-  // Start auto-play if configured
+  // Start auto-play if configured (only run once on mount)
+  let autoPlayInitialized = false;
   $effect(() => {
-    if (autoPlayInterval > 0 && !store.state.isAutoPlaying) {
+    if (autoPlayInterval > 0 && !autoPlayInitialized) {
+      autoPlayInitialized = true;
       store.dispatch({ type: 'autoPlayStarted' });
     }
   });
 
   // Handle transition completion
+  // Track previous state with regular let (not $state) to prevent tracking
+  let previousTransitioning: boolean | undefined = undefined;
   let transitionTimeout: ReturnType<typeof setTimeout> | null = null;
+
   $effect(() => {
-    if (store.state.isTransitioning) {
+    const currentTransitioning = store.state.isTransitioning;
+
+    // Skip on initial render
+    if (previousTransitioning === undefined) {
+      previousTransitioning = currentTransitioning;
+      return;
+    }
+
+    // Only act when transitioning changes from false to true
+    if (!previousTransitioning && currentTransitioning) {
       if (transitionTimeout) clearTimeout(transitionTimeout);
       transitionTimeout = setTimeout(() => {
         store.dispatch({ type: 'transitionCompleted' });
       }, transitionDuration);
     }
+
+    previousTransitioning = currentTransitioning;
+
     return () => {
       if (transitionTimeout) clearTimeout(transitionTimeout);
     };

@@ -443,6 +443,23 @@ export const comboboxReducer: Reducer<
 			];
 		}
 
+		case 'optionsChanged': {
+			// External options changed (for local/sync mode)
+			// Re-filter based on current search query
+			const newOptions = action.options;
+			const filtered = state.searchQuery ? filterOptions(newOptions, state.searchQuery) : newOptions;
+
+			return [
+				{
+					...state,
+					options: newOptions,
+					filteredOptions: filtered,
+					highlightedIndex: filtered.length > 0 ? Math.min(state.highlightedIndex, filtered.length - 1) : -1
+				},
+				Effect.none<ComboboxAction>()
+			];
+		}
+
 		default: {
 			const _exhaustive: never = action;
 			return [state, Effect.none<ComboboxAction>()];

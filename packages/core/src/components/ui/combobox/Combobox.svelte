@@ -109,10 +109,16 @@
 	});
 
 	// Sync options changes (for local mode)
+	// CRITICAL: Dispatch action instead of directly mutating state
+	// Direct mutation bypasses the reducer's filtering logic
+	let previousOptions: ComboboxOption[] | undefined = undefined;
 	$effect(() => {
 		if (!loadOptions) {
-			store.state.options = options;
-			store.state.filteredOptions = options;
+			// Only dispatch if options reference actually changed
+			if (previousOptions !== options) {
+				previousOptions = options;
+				store.dispatch({ type: 'optionsChanged', options });
+			}
 		}
 	});
 

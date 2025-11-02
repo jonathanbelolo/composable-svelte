@@ -24,6 +24,7 @@
   import FormDemo from '../demos/FormDemo.svelte';
   // Form Components - Advanced
   import ComboboxDemo from '../demos/ComboboxDemo.svelte';
+  import CalendarDemo from '../demos/CalendarDemo.svelte';
   // Foundational Components
   import CardDemo from '../demos/CardDemo.svelte';
   import SeparatorDemo from '../demos/SeparatorDemo.svelte';
@@ -87,6 +88,7 @@
     'form': FormDemo,
     // Form Components - Advanced
     'combobox': ComboboxDemo,
+    'calendar': CalendarDemo,
     // Foundational Components
     'card': CardDemo,
     'separator': SeparatorDemo,

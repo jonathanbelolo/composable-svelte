@@ -111,6 +111,7 @@ export type ComboboxAction<T = string> =
 	| { type: 'optionSelected'; value: T }
 	| { type: 'searchChanged'; query: string }
 	| { type: 'searchDebounced'; query: string } // Internal: after debounce delay
+	| { type: 'optionsChanged'; options: ComboboxOption<T>[] } // External options changed
 	// Async loading
 	| { type: 'loadingStarted' }
 	| { type: 'loadingCompleted'; options: ComboboxOption<T>[] }
