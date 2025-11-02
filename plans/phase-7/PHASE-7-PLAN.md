@@ -200,23 +200,25 @@ const appReducer: Reducer<AppState, AppAction, AppDeps> = (state, action, deps) 
 /inventory/item-123/edit   → Edit modal for item 123
 ```
 
-**Nested destinations → nested paths:**
+**Note on Nested Destinations:**
+Nested destinations (modals within modals) are **deferred to v1.1**. Phase 7 v1 focuses on **single-level destinations only**:
 ```typescript
-// State
+// ✅ v1 Supported
+destination: { type: 'detailItem', state: { itemId: '123' } }
+→ /inventory/item-123
+
+// ❌ v1.1 (Future)
 destination: {
   type: 'detailItem',
   state: {
     itemId: '123',
-    editModal: {
-      type: 'editForm',
-      state: { /* edit state */ }
-    }
+    destination: { type: 'editForm', state: {} }  // Nested
   }
 }
-
-// URL
-/inventory/item-123/edit
+→ /inventory/item-123/edit
 ```
+
+**Rationale:** Keep v1 focused on core functionality. Nested destinations add significant complexity to type system and parsing logic.
 
 ### 4.2 Serialization API
 
@@ -309,44 +311,115 @@ const url = serializeDestination(destination, serializerConfig);
 // → url: '/inventory/item-123'
 ```
 
-### 4.3 Nested Destination Serialization
+### 4.3 Scope Limitations (v1)
 
-**For nested destinations (modals within modals):**
+**Phase 7 v1 supports single-level destinations only:**
 
 ```typescript
-// Recursive serialization
-export function serializeNestedDestination<Dest>(
-  destination: Dest | null,
-  config: SerializerConfig<Dest>
-): string {
-  if (!destination) {
-    return config.basePath ?? '/';
+// ✅ Supported in v1
+serializeDestination({ type: 'detail', state: { id: '123' } }, config)
+→ '/inventory/item-123'
+
+serializeDestination({ type: 'edit', state: { id: '123' } }, config)
+→ '/inventory/item-123/edit'
+
+// ❌ Not supported in v1 (deferred to v1.1)
+// Nested destination with child destination field
+destination: {
+  type: 'detail',
+  state: {
+    id: '123',
+    destination: { type: 'edit', state: {} }  // Nested - v1.1
   }
-
-  const serializer = config.serializers[destination.type];
-  if (!serializer) {
-    return config.basePath ?? '/';
-  }
-
-  // Serialize this level
-  const path = serializer(destination.state);
-
-  // Check if child has nested destination
-  if (destination.state.destination) {
-    const childConfig = config.nested?.[destination.type];
-    if (childConfig) {
-      const childPath = serializeNestedDestination(
-        destination.state.destination,
-        childConfig
-      );
-      // Append child path
-      return childPath === '/' ? path : `${path}${childPath}`;
-    }
-  }
-
-  return path;
 }
 ```
+
+**Workaround for v1:** Model nested UI as separate top-level destination types:
+```typescript
+type AppDestination =
+  | { type: 'itemDetail'; state: { id: string } }
+  | { type: 'itemEdit'; state: { id: string } }  // Separate type, not nested
+  | { type: 'itemAdd'; state: {} };
+
+// Both have URLs
+'/inventory/item-123'       → itemDetail
+'/inventory/item-123/edit'  → itemEdit (not nested, just different type)
+```
+
+### 4.4 Pattern Matching Limitations (v1)
+
+**matchPath() supports simple parameter patterns only in v1:**
+
+```typescript
+// ✅ Supported in v1
+matchPath('/item-:id', '/item-123')
+→ { id: '123' }
+
+matchPath('/item-:id/edit/:field', '/item-123/edit/name')
+→ { id: '123', field: 'name' }
+
+// ❌ Not supported in v1 (deferred to v1.1+)
+// Optional segments: '/item-:id?'
+// Wildcard segments: '/files/*'
+// Regex patterns: '/item-:id(\\d+)'
+// Query params: '/items?filter=:status'
+// Hash fragments: '/items#:section'
+```
+
+**Pattern Syntax (v1):**
+- `:param` - Named parameter (matches any non-slash characters)
+- `/` - Path separator (exact match)
+- All other characters - Exact match
+
+**Limitations:**
+1. **No optional parameters** - All `:param` segments are required
+2. **No wildcards** - Cannot match arbitrary path segments
+3. **No regex constraints** - Cannot validate parameter format
+4. **No query params** - Path only (query string ignored)
+5. **No hash fragments** - Hash ignored in v1
+
+**Workaround Patterns:**
+
+For optional segments, use multiple parsers:
+```typescript
+const config: ParserConfig<Dest> = {
+  basePath: '/inventory',
+  parsers: [
+    // Try more specific pattern first
+    (path) => {
+      const params = matchPath('/item-:id/edit', path);
+      return params ? { type: 'editItem', state: { itemId: params.id } } : null;
+    },
+    // Then try less specific pattern
+    (path) => {
+      const params = matchPath('/item-:id', path);
+      return params ? { type: 'detailItem', state: { itemId: params.id } } : null;
+    }
+  ]
+};
+```
+
+For validation, use post-match checks:
+```typescript
+const parser = (path: string): Dest | null => {
+  const params = matchPath('/item-:id', path);
+  if (!params) return null;
+
+  // Validate id is numeric
+  if (!/^\d+$/.test(params.id)) {
+    return null; // Invalid format, no match
+  }
+
+  return { type: 'detail', state: { itemId: params.id } };
+};
+```
+
+**Future Enhancements (v1.1+):**
+- Optional segments with `?` suffix
+- Wildcard matching with `*`
+- Regex constraints with `:param(regex)`
+- Query parameter parsing
+- Hash fragment handling
 
 ---
 
@@ -511,14 +584,12 @@ export function syncBrowserHistory<State, Action, Dest>(
   store: Store<State, Action>,
   config: BrowserHistoryConfig<State, Action, Dest>
 ): () => void {
-  let isUpdatingFromState = false;
-
   // Listen to browser back/forward
   const handlePopState = (event: PopStateEvent) => {
-    if (isUpdatingFromState) {
-      // Navigation triggered by our state update, ignore
-      isUpdatingFromState = false;
-      return;
+    // Check if this navigation was triggered by our code
+    // We mark our own pushState calls with metadata
+    if (event.state?.composableSvelteSync) {
+      return; // Ignore our own updates - prevents infinite loops
     }
 
     // Navigation triggered by browser (back/forward button)
@@ -534,19 +605,8 @@ export function syncBrowserHistory<State, Action, Dest>(
 
   window.addEventListener('popstate', handlePopState);
 
-  // Track when we update URL from state
-  const unsubscribe = store.subscribe((state) => {
-    const currentPath = window.location.pathname;
-    const expectedPath = config.serialize(state);
-
-    if (currentPath !== expectedPath) {
-      isUpdatingFromState = true;
-    }
-  });
-
   return () => {
     window.removeEventListener('popstate', handlePopState);
-    unsubscribe();
   };
 }
 
@@ -598,10 +658,14 @@ export function createURLSyncEffect<State, Action>(
 
     if (expectedPath !== currentPath) {
       return Effect.fireAndForget(() => {
+        // Mark this navigation as coming from our sync
+        // This prevents popstate handler from dispatching redundant actions
+        const stateMetadata = { composableSvelteSync: true };
+
         if (options.replace) {
-          history.replaceState(null, '', expectedPath);
+          history.replaceState(stateMetadata, '', expectedPath);
         } else {
-          history.pushState(null, '', expectedPath);
+          history.pushState(stateMetadata, '', expectedPath);
         }
       });
     }
@@ -1160,6 +1224,156 @@ describe('createInitialStateFromURL', () => {
 });
 ```
 
+### 9.4 Test Utilities (TestStore Integration)
+
+**Leveraging Existing TestStore:**
+
+Phase 7 routing integrates seamlessly with the existing `TestStore` utility (from Phase 1) for testing reducers with URL synchronization:
+
+```typescript
+// packages/core/tests/routing/teststore-integration.test.ts
+
+import { TestStore } from '@composable-svelte/core/test';
+import { createURLSyncEffect, serializeDestination } from '@composable-svelte/core/routing';
+
+describe('URL sync with TestStore', () => {
+  it('updates URL when destination changes', async () => {
+    const urlSyncEffect = createURLSyncEffect(
+      (state: InventoryState) => serializeDestination(state.destination, config),
+      { replace: false }
+    );
+
+    const store = new TestStore({
+      initialState: { destination: null, items: [] },
+      reducer: (state, action) => {
+        const [newState, effect] = inventoryReducer(state, action, {});
+
+        // Combine business logic effect with URL sync effect
+        const combinedEffect = Effect.batch(effect, urlSyncEffect(newState));
+
+        return [newState, combinedEffect];
+      },
+      dependencies: {}
+    });
+
+    // Send action
+    await store.send({ type: 'itemSelected', itemId: '123' }, (state) => {
+      expect(state.destination).toEqual({
+        type: 'detailItem',
+        state: { itemId: '123' }
+      });
+    });
+
+    // Verify URL was updated
+    expect(window.location.pathname).toBe('/inventory/item-123');
+
+    store.finish();
+  });
+
+  it('receives actions from browser back button', async () => {
+    const store = new TestStore({
+      initialState: { destination: null, items: [] },
+      reducer: inventoryReducer,
+      dependencies: {}
+    });
+
+    // Navigate forward
+    await store.send({ type: 'itemSelected', itemId: '456' });
+
+    // Simulate back button (triggers popstate)
+    history.back();
+
+    // Receive the dismiss action
+    await store.receive({ type: 'destination', action: { type: 'dismiss' } }, (state) => {
+      expect(state.destination).toBe(null);
+    });
+
+    store.finish();
+  });
+
+  it('exhaustively tests navigation flow', async () => {
+    const store = new TestStore({
+      initialState: { destination: null, items: [] },
+      reducer: inventoryReducer,
+      dependencies: {}
+    });
+
+    // Step 1: Select item
+    await store.send({ type: 'itemSelected', itemId: '789' }, (state) => {
+      expect(state.destination?.type).toBe('detailItem');
+    });
+
+    // Step 2: Edit item
+    await store.send(
+      { type: 'destination', action: { type: 'presented', action: { type: 'editTapped' } } },
+      (state) => {
+        // Verify nested navigation if supported
+        expect(state.destination?.state.isEditing).toBe(true);
+      }
+    );
+
+    // Step 3: Dismiss
+    await store.send(
+      { type: 'destination', action: { type: 'dismiss' } },
+      (state) => {
+        expect(state.destination).toBe(null);
+      }
+    );
+
+    // Verify all actions were handled
+    store.finish();
+  });
+});
+```
+
+**TestStore Benefits for Routing:**
+
+1. **Exhaustive Testing**: Ensures all actions are handled (no missed receives)
+2. **State Assertions**: Validate state changes at each step
+3. **Effect Verification**: Confirm URL sync effects execute correctly
+4. **Browser API Mocking**: Test with `jsdom` or `happy-dom` for History API
+
+**Integration with Browser Tests:**
+
+Combine TestStore with `@vitest/browser` for full browser integration:
+
+```typescript
+// Browser-based test with TestStore
+import { test } from 'vitest';
+import { TestStore } from '@composable-svelte/core/test';
+import { syncBrowserHistory } from '@composable-svelte/core/routing';
+
+test('TestStore + real browser history', async () => {
+  const store = new TestStore({
+    initialState: { destination: null },
+    reducer: inventoryReducer,
+    dependencies: {}
+  });
+
+  // Convert TestStore to regular Store for browser sync
+  const regularStore = {
+    state: store.state,
+    dispatch: (action) => store.send(action),
+    subscribe: store.subscribe
+  };
+
+  const cleanup = syncBrowserHistory(regularStore, config);
+
+  // Use TestStore assertions
+  await store.send({ type: 'itemSelected', itemId: '999' });
+  expect(window.location.pathname).toBe('/inventory/item-999');
+
+  cleanup();
+  store.finish();
+});
+```
+
+**Key Testing Patterns:**
+
+- **Unit Tests**: Use TestStore for reducer logic (no browser APIs)
+- **Integration Tests**: Combine TestStore + `syncBrowserHistory()` for full flow
+- **Browser Tests**: Use `@vitest/browser` for real History API testing
+
 ---
 
 ## 10. Examples
@@ -1303,14 +1517,15 @@ if (destination === null) {
 
 **Problem**: Multiple quick state changes could cause URL thrashing
 
-**Solution**: Debounce URL updates in effect
+**Solution**: Debounce URL updates with proper timeout management
 
 ```typescript
-export function createDebouncedURLSyncEffect<State, Action>(
+export function createURLSyncEffect<State, Action>(
   serialize: (state: State) => string,
-  debounceMs: number = 100
+  options: { replace?: boolean; debounceMs?: number } = {}
 ): (state: State) => Effect<Action> {
-  let timeoutId: number | null = null;
+  // Shared timeout across effect executions
+  let pendingTimeout: number | undefined;
 
   return (state: State): Effect<Action> => {
     const expectedPath = serialize(state);
@@ -1318,13 +1533,24 @@ export function createDebouncedURLSyncEffect<State, Action>(
 
     if (expectedPath !== currentPath) {
       return Effect.fireAndForget(() => {
-        if (timeoutId !== null) {
-          clearTimeout(timeoutId);
+        const stateMetadata = { composableSvelteSync: true };
+
+        if (options.debounceMs) {
+          // Clear previous pending timeout
+          if (pendingTimeout !== undefined) {
+            clearTimeout(pendingTimeout);
+          }
+          // Schedule new URL update
+          pendingTimeout = window.setTimeout(() => {
+            const method = options.replace ? 'replaceState' : 'pushState';
+            history[method](stateMetadata, '', expectedPath);
+            pendingTimeout = undefined;
+          }, options.debounceMs);
+        } else {
+          // No debounce - update immediately
+          const method = options.replace ? 'replaceState' : 'pushState';
+          history[method](stateMetadata, '', expectedPath);
         }
-        timeoutId = setTimeout(() => {
-          history.pushState(null, '', expectedPath);
-          timeoutId = null;
-        }, debounceMs);
       });
     }
 
@@ -1333,31 +1559,27 @@ export function createDebouncedURLSyncEffect<State, Action>(
 }
 ```
 
-### 11.4 Nested Modal States
+**Note:** Debouncing is **optional** and usually not needed. Only use for high-frequency state updates (e.g., slider, typing).
 
-**Problem**: Modal within modal → complex URL structure
+### 11.4 Query Parameters and Hash Fragments (Deferred to v1.1)
 
-**Solution**: Recursive serialization/parsing
+**Status**: **Deferred to Phase 7 v1.1**
 
+Phase 7 v1 focuses on **path-based routing only**:
+- ✅ Paths: `/inventory/item-123`
+- ❌ Query params: `/inventory?filter=active` (v1.1)
+- ❌ Hash: `/inventory#section` (v1.1)
+
+**Rationale:**
+- Path routing covers 90% of navigation use cases
+- Query params add complexity (parsing, merging, serialization)
+- Keep v1 scope focused on core functionality
+
+**Workaround for v1:** Store filters/search in app state, not URL:
 ```typescript
-// URL: /inventory/item-123/edit/field-name
-// State: destination → detailItem → editModal → fieldEditor
-```
-
-### 11.5 Query Parameters
-
-**Problem**: Need to store additional state in URL (filters, search)
-
-**Solution**: Extend serializer to include query params
-
-```typescript
-export function serializeWithQuery(
-  destination: Dest | null,
-  query: Record<string, string>
-): string {
-  const path = serializeDestination(destination, config);
-  const queryString = new URLSearchParams(query).toString();
-  return queryString ? `${path}?${queryString}` : path;
+interface AppState {
+  destination: Destination | null;
+  filters: { category?: string; search?: string };  // In state, not URL
 }
 ```
 

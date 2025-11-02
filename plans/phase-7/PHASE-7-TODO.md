@@ -19,8 +19,9 @@
 - [ ] **Week 2, Day 9**: Comprehensive Documentation
 - [ ] **Week 2, Day 10**: Testing & Polish
 
-**Tests Complete**: 0 / 90+
+**Tests Complete**: 0 / 110+
 **API Functions**: 0 / 6 core functions
+**Scope**: v1.0 - Single-level destinations only (nested destinations deferred to v1.1)
 
 ---
 
@@ -40,18 +41,12 @@
   - [ ] Define `SerializerConfig<Dest>` interface
     - [ ] `basePath?: string` - Base path for routes
     - [ ] `serializers: Record<Dest['type'], (state) => string>` - Type-specific serializers
-    - [ ] `nested?: Record<Dest['type'], SerializerConfig>` - Nested destination configs
   - [ ] Implement `serializeDestination<Dest>(destination, config): string`
     - [ ] Handle null destination → return basePath
     - [ ] Look up serializer for destination.type
     - [ ] Call serializer with destination.state
     - [ ] Return serialized path
     - [ ] Warn on unknown destination type
-  - [ ] Implement `serializeNestedDestination<Dest>(destination, config): string`
-    - [ ] Serialize current level
-    - [ ] Check for nested destination in state
-    - [ ] Recursively serialize child
-    - [ ] Concatenate paths
   - [ ] Implement `pathSegment(base, segment): string`
     - [ ] Strip trailing slash from base
     - [ ] Prepend slash to segment
@@ -64,18 +59,14 @@
 - [ ] Test: Simple destination serialization
   - [ ] `{ type: 'detail', state: { id: '123' } }` → `'/inventory/item-123'`
 - [ ] Test: Multiple destination types
-  - [ ] `{ type: 'edit', state: { id: '123' } }` → `'/inventory/item-123/edit'`
+  - [ ] `{ type: 'edit', state: { id: '123' } }` → `'/inventory/edit-123'`
   - [ ] `{ type: 'add', state: {} }` → `'/inventory/add'`
-- [ ] Test: Nested destination serialization
-  - [ ] `{ type: 'detail', state: { id: '123', destination: { type: 'edit' } } }` → `'/inventory/item-123/edit'`
 - [ ] Test: Unknown destination type
   - [ ] Logs warning
   - [ ] Returns basePath
 - [ ] Test: pathSegment helper
   - [ ] `pathSegment('/base', 'segment')` → `'/base/segment'`
   - [ ] `pathSegment('/base/', 'segment')` → `'/base/segment'` (strips trailing slash)
-- [ ] Test: Complex nested paths
-  - [ ] 3+ levels of nesting
 - [ ] Test: Empty base path
   - [ ] `basePath: '/'` → paths start with `/`
 - [ ] Test: Base path without leading slash
@@ -96,7 +87,6 @@
   - [ ] Define `ParserConfig<Dest>` interface
     - [ ] `basePath?: string` - Base path for routes
     - [ ] `parsers: Array<(path: string) => Dest | null>` - Parser functions
-    - [ ] `nested?: Record<string, ParserConfig>` - Nested destination configs
   - [ ] Implement `parseDestination<Dest>(path, config): Dest | null`
     - [ ] Strip basePath from path
     - [ ] Try each parser in order
@@ -107,11 +97,6 @@
     - [ ] Match path against regex
     - [ ] Extract params by name
     - [ ] Return params object or null
-  - [ ] Implement `parseNestedDestination<Dest>(path, config): Dest | null`
-    - [ ] Parse top-level path
-    - [ ] Check for remaining path segments
-    - [ ] Recursively parse nested destination
-    - [ ] Attach nested destination to state
 
 #### Unit Tests (20+ tests)
 - [ ] Create `packages/core/tests/routing/parser.test.ts`
@@ -131,8 +116,6 @@
   - [ ] `matchPath('/item-:id/edit/:field', '/item-123/edit/name')` → `{ id: '123', field: 'name' }`
 - [ ] Test: matchPath non-match
   - [ ] `matchPath('/item-:id', '/other/123')` → `null`
-- [ ] Test: Nested path parsing
-  - [ ] `'/inventory/item-123/edit'` → nested destination structure
 - [ ] Test: Base path stripping
   - [ ] Config with `basePath: '/inventory'`
   - [ ] Path `'/inventory/item-123'` → parses as `'/item-123'`
@@ -258,8 +241,11 @@
       - [ ] Remove `popstate` listener
       - [ ] Unsubscribe from store
 
-#### Browser Tests (10+ tests)
+#### Browser Tests (15+ tests)
 - [ ] Create `packages/core/tests/routing/browser-history.browser.test.ts`
+- [ ] Test: No infinite loops with history.state metadata
+  - [ ] Verify `history.state.composableSvelteSync` prevents loops
+  - [ ] State → URL → popstate handler ignores own navigation
 - [ ] Test: Back button dispatches action
   - [ ] Navigate forward (state → URL)
   - [ ] Click back button
@@ -288,8 +274,12 @@
   - [ ] User navigates to invalid URL
   - [ ] `destinationToAction` returns null
   - [ ] No error thrown
+- [ ] Test: Debounced URL sync
+  - [ ] Multiple rapid state changes
+  - [ ] URL only updates after debounce timeout
+  - [ ] Verify `history.state.composableSvelteSync` on final update
 
-**Checkpoint**: ✅ Browser history integration complete with 10+ tests
+**Checkpoint**: ✅ Browser history integration complete with 15+ tests
 
 ---
 
@@ -307,9 +297,6 @@
     - [ ] If null (root or invalid), return defaultState
     - [ ] If valid destination, call setDestination
     - [ ] Return state with destination set
-  - [ ] Implement `createNestedInitialStateFromURL<State, Dest>(defaultState, parse, setDestination): State`
-    - [ ] Support nested destination reconstruction
-    - [ ] Recursively parse nested paths
 
 #### Unit Tests (10+ tests)
 - [ ] Create `packages/core/tests/routing/deep-link.test.ts`
@@ -322,15 +309,12 @@
 - [ ] Test: Invalid URL returns default state
   - [ ] `window.location.pathname = '/invalid'`
   - [ ] Result equals `defaultState`
-- [ ] Test: Nested URL creates nested destination
-  - [ ] `window.location.pathname = '/inventory/item-123/edit'`
-  - [ ] Result has nested destination structure
-- [ ] Test: Query string ignored
+- [ ] Test: Query string ignored (v1.1 feature)
   - [ ] `window.location.pathname = '/inventory?filter=active'`
-  - [ ] Parses path only
-- [ ] Test: Hash ignored
+  - [ ] Parses path only (query params deferred to v1.1)
+- [ ] Test: Hash ignored (v1.1 feature)
   - [ ] `window.location.pathname = '/inventory#section'`
-  - [ ] Parses path only
+  - [ ] Parses path only (hash support deferred to v1.1)
 - [ ] Test: setDestination called correctly
   - [ ] Mock setDestination function
   - [ ] Verify called with correct args
@@ -370,14 +354,10 @@
   - [ ] Navigate to another destination
   - [ ] Back button restores deep link state
   - [ ] Forward button works
-- [ ] Test: Multiple destinations
-  - [ ] Navigate through 3+ destinations
+- [ ] Test: Multiple destinations (single-level only in v1)
+  - [ ] Navigate through 3+ different destination types
   - [ ] Back button navigates through history
   - [ ] State always matches URL
-- [ ] Test: Nested destinations
-  - [ ] Open modal within modal
-  - [ ] URL reflects nesting
-  - [ ] Back button closes inner modal first
 - [ ] Test: Rapid navigation
   - [ ] Multiple quick actions
   - [ ] All URL updates happen
@@ -412,8 +392,8 @@
 
 #### Inventory App Implementation
 - [ ] Define state types
-  - [ ] `InventoryState` with items + destination
-  - [ ] `InventoryDestination` enum (list, detail, edit, add)
+  - [ ] `InventoryState` with items + destination (single-level only)
+  - [ ] `InventoryDestination` enum (detail, add) - simple v1 scope
   - [ ] `InventoryAction` types
 - [ ] Create routing config
   - [ ] Serializer config for all destinations
@@ -425,7 +405,6 @@
 - [ ] Create views
   - [ ] Inventory list view
   - [ ] Item detail modal (with URL sync)
-  - [ ] Edit item sheet (with URL sync)
   - [ ] Add item modal (with URL sync)
 - [ ] Setup app entry point
   - [ ] Deep link initialization
@@ -433,14 +412,14 @@
   - [ ] Browser history sync
   - [ ] Cleanup on unmount
 
-#### Features
+#### Features (v1 Scope - Single-Level Only)
 - [ ] List view with item cards
 - [ ] Click item → opens detail modal → URL updates
-- [ ] Edit button → opens edit sheet → URL updates
 - [ ] Add button → opens add modal → URL updates
-- [ ] Back button works at all levels
+- [ ] Back button works for all modals
 - [ ] Refresh page preserves state
 - [ ] Shareable URLs for all modals
+- [ ] NOTE: No nested modals (detail → edit) in v1
 
 #### Browser Tests (20+ tests)
 - [ ] Create `examples/url-routing/tests/app.browser.test.ts`
@@ -458,14 +437,6 @@
 - [ ] Test: Direct navigation to detail
   - [ ] Load page with `/inventory/item-123`
   - [ ] Detail modal opens immediately
-- [ ] Test: Edit item
-  - [ ] Open detail → click edit
-  - [ ] URL changes to `/inventory/item-123/edit`
-  - [ ] Edit sheet opens
-- [ ] Test: Back from edit
-  - [ ] From edit sheet
-  - [ ] Back button → URL changes to `/inventory/item-123`
-  - [ ] Detail modal still open
 - [ ] Test: Add item
   - [ ] Click add button
   - [ ] URL changes to `/inventory/add`
@@ -478,10 +449,10 @@
   - [ ] Open detail modal
   - [ ] Refresh page
   - [ ] Modal still open
-- [ ] Test: Multiple back clicks
-  - [ ] Navigate: list → detail → edit
-  - [ ] Back → edit closes, detail remains
-  - [ ] Back → detail closes, list shows
+- [ ] Test: Multiple back clicks (single-level v1)
+  - [ ] Navigate: list → detail → back to list
+  - [ ] Navigate: list → add → back to list
+  - [ ] Verify all transitions work
 
 #### README
 - [ ] Create `examples/url-routing/README.md`
@@ -509,16 +480,16 @@
   - [ ] How serialization works
   - [ ] Creating serializer config
   - [ ] Pattern: Path params (`/item-:id`)
-  - [ ] Pattern: Nested destinations
   - [ ] Pattern: Custom serializers
   - [ ] Best practices
+  - [ ] Note: Nested destinations deferred to v1.1
 - [ ] **Section 3: Parsing**
   - [ ] How parsing works
   - [ ] Creating parser config
   - [ ] Using `matchPath` helper
   - [ ] Pattern: Multiple parsers (order matters)
-  - [ ] Pattern: Nested path parsing
   - [ ] Handling invalid URLs
+  - [ ] Note: Nested path parsing deferred to v1.1
 - [ ] **Section 4: Browser Integration**
   - [ ] Setting up `syncBrowserHistory`
   - [ ] Adding `createURLSyncEffect` to reducer
@@ -531,9 +502,10 @@
   - [ ] SSR considerations (future)
 - [ ] **Section 6: Common Patterns**
   - [ ] Pattern: Optional URL sync (only top-level routes)
-  - [ ] Pattern: Nested modals with URLs
-  - [ ] Pattern: Query parameters (future enhancement)
-  - [ ] Pattern: Hash-based routing (future enhancement)
+  - [ ] Pattern: Single-level destinations (v1 scope)
+  - [ ] Future v1.1: Nested modals with URLs
+  - [ ] Future v1.1: Query parameters
+  - [ ] Future v1.1: Hash-based routing
 - [ ] **Section 7: Testing**
   - [ ] Unit testing serializers/parsers
   - [ ] Integration testing with browser history
