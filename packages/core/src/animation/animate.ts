@@ -7,9 +7,12 @@
  * @packageDocumentation
  */
 
-import { animate } from 'motion';
+import { animate as motionAnimate } from 'motion';
 import type { SpringConfig } from './spring-config';
 import { springPresets, mergeSpringConfig } from './spring-config';
+
+// Re-export animate for use in components
+export { motionAnimate as animate };
 
 /**
  * Get resolved spring config (helper to satisfy TypeScript).
@@ -38,7 +41,7 @@ export async function animateModalIn(
 	try {
 		const config = getSpringConfig(springPresets.modal, springConfig);
 
-		await animate(
+		await motionAnimate(
 			element,
 			{
 				opacity: [0, 1],
@@ -74,7 +77,7 @@ export async function animateModalOut(
 	try {
 		const config = getSpringConfig(springPresets.modal, springConfig);
 
-		await animate(
+		await motionAnimate(
 			element,
 			{
 				opacity: [1, 0],
@@ -106,7 +109,7 @@ export async function animateBackdropIn(element: HTMLElement): Promise<void> {
 	try {
 		const config = getSpringConfig(springPresets.modal);
 
-		await animate(
+		await motionAnimate(
 			element,
 			{ opacity: [0, 1] },
 			{
@@ -130,7 +133,7 @@ export async function animateBackdropOut(element: HTMLElement): Promise<void> {
 	try {
 		const config = getSpringConfig(springPresets.modal);
 
-		await animate(
+		await motionAnimate(
 			element,
 			{ opacity: [1, 0] },
 			{
@@ -169,7 +172,7 @@ export async function animateSheetIn(
 					? { x: ['-100%', '0%'] }
 					: { x: ['100%', '0%'] };
 
-		await animate(
+		await motionAnimate(
 			element,
 			{
 				opacity: [0, 1],
@@ -204,7 +207,7 @@ export async function animateSheetOut(
 					? { x: ['0%', '-100%'] }
 					: { x: ['0%', '100%'] };
 
-		await animate(
+		await motionAnimate(
 			element,
 			{
 				opacity: [1, 0],
@@ -236,7 +239,7 @@ export async function animateDrawerIn(
 	try {
 		const config = getSpringConfig(springPresets.drawer, springConfig);
 
-		await animate(
+		await motionAnimate(
 			element,
 			{
 				opacity: [0, 1],
@@ -264,7 +267,7 @@ export async function animateDrawerOut(
 	try {
 		const config = getSpringConfig(springPresets.drawer, springConfig);
 
-		await animate(
+		await motionAnimate(
 			element,
 			{
 				opacity: [1, 0],
@@ -296,7 +299,7 @@ export async function animateAlertIn(
 	try {
 		const config = getSpringConfig(springPresets.alert, springConfig);
 
-		await animate(
+		await motionAnimate(
 			element,
 			{
 				opacity: [0, 1],
@@ -331,7 +334,7 @@ export async function animateAlertOut(
 	try {
 		const config = getSpringConfig(springPresets.alert, springConfig);
 
-		await animate(
+		await motionAnimate(
 			element,
 			{
 				opacity: [1, 0],
@@ -369,7 +372,7 @@ export async function animateTooltipIn(
 	try {
 		const config = getSpringConfig(springPresets.tooltip, springConfig);
 
-		await animate(
+		await motionAnimate(
 			element,
 			{
 				opacity: [0, 1],
@@ -393,7 +396,7 @@ export async function animateTooltipOut(element: HTMLElement): Promise<void> {
 	try {
 		const config = getSpringConfig(springPresets.tooltip);
 
-		await animate(
+		await motionAnimate(
 			element,
 			{
 				opacity: [1, 0]
@@ -423,7 +426,7 @@ export async function animateToastIn(
 	try {
 		const config = getSpringConfig(springPresets.toast, springConfig);
 
-		await animate(
+		await motionAnimate(
 			element,
 			{
 				opacity: [0, 1],
@@ -451,7 +454,7 @@ export async function animateToastOut(
 	try {
 		const config = getSpringConfig(springPresets.toast, springConfig);
 
-		await animate(
+		await motionAnimate(
 			element,
 			{
 				opacity: [1, 0],
@@ -482,7 +485,7 @@ export async function animateDropdownIn(element: HTMLElement): Promise<void> {
 	try {
 		const config = getSpringConfig(springPresets.tooltip); // Fast like tooltip
 
-		await animate(
+		await motionAnimate(
 			element,
 			{
 				opacity: [0, 1],
@@ -515,7 +518,7 @@ export async function animateDropdownOut(element: HTMLElement): Promise<void> {
 	try {
 		const config = getSpringConfig(springPresets.tooltip);
 
-		await animate(
+		await motionAnimate(
 			element,
 			{
 				opacity: [1, 0]
@@ -569,7 +572,7 @@ export async function animateSidebarExpand(
 		element.style.transform = `translateX(${translateStart})`;
 
 		// Animate margin (layout) and transform (visual) together
-		await animate(
+		await motionAnimate(
 			element,
 			{
 				[marginProp]: [`-${targetWidth}`, '0px'],
@@ -617,7 +620,7 @@ export async function animateSidebarCollapse(
 		const translateEnd = side === 'left' ? '-100%' : '100%';
 
 		// Animate margin (layout) and transform (visual) together
-		await animate(
+		await motionAnimate(
 			element,
 			{
 				[marginProp]: ['0px', `-${currentWidth}`],
@@ -660,7 +663,7 @@ export async function animatePopoverIn(
 		const transformFrom = positionTransform ? `${positionTransform} scale(0.96)` : 'scale(0.96)';
 		const transformTo = positionTransform ? `${positionTransform} scale(1)` : 'scale(1)';
 
-		await animate(
+		await motionAnimate(
 			element,
 			{
 				opacity: [0, 1],
@@ -696,7 +699,7 @@ export async function animatePopoverOut(
 		const transformFrom = positionTransform ? `${positionTransform} scale(1)` : 'scale(1)';
 		const transformTo = positionTransform ? `${positionTransform} scale(0.96)` : 'scale(0.96)';
 
-		await animate(
+		await motionAnimate(
 			element,
 			{
 				opacity: [1, 0],
@@ -733,7 +736,7 @@ export async function animateStackPushIn(
 	try {
 		const config = getSpringConfig(springPresets.drawer, springConfig);
 
-		await animate(
+		await motionAnimate(
 			element,
 			{
 				opacity: [0, 1],
@@ -768,7 +771,7 @@ export async function animateStackPushOut(
 	try {
 		const config = getSpringConfig(springPresets.drawer, springConfig);
 
-		await animate(
+		await motionAnimate(
 			element,
 			{
 				opacity: [1, 0.7],
@@ -803,7 +806,7 @@ export async function animateStackPopOut(
 	try {
 		const config = getSpringConfig(springPresets.drawer, springConfig);
 
-		await animate(
+		await motionAnimate(
 			element,
 			{
 				opacity: [1, 0],
@@ -838,7 +841,7 @@ export async function animateStackPopIn(
 	try {
 		const config = getSpringConfig(springPresets.drawer, springConfig);
 
-		await animate(
+		await motionAnimate(
 			element,
 			{
 				opacity: [0.7, 1],
@@ -881,7 +884,7 @@ export async function animateAccordionExpand(element: HTMLElement): Promise<void
 		const fullHeight = element.scrollHeight;
 
 		// Animate to full height with fade in
-		await animate(
+		await motionAnimate(
 			element,
 			{
 				height: [`0px`, `${fullHeight}px`] as any,
@@ -921,7 +924,7 @@ export async function animateAccordionCollapse(element: HTMLElement): Promise<vo
 		element.style.overflow = 'hidden';
 
 		// Animate to zero height with fade out
-		await animate(
+		await motionAnimate(
 			element,
 			{
 				height: [`${startHeight}px`, `0px`] as any,

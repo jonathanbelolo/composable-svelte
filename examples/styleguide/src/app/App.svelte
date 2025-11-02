@@ -1,27 +1,62 @@
 <script lang="ts">
+  import { onMount, onDestroy } from 'svelte';
   import { createStore } from '@composable-svelte/core';
+  import { syncBrowserHistory } from '@composable-svelte/core/routing';
   import { styleguideReducer } from '../lib/stores/styleguide.reducer.js';
   import { createInitialStyleguideState } from '../lib/stores/styleguide.types.js';
+  import { parseStyleguideURL, serializeStyleguideState, componentIdToAction } from '../lib/stores/styleguide.routing.js';
   import { COMPONENT_REGISTRY, COMPONENT_CATEGORIES, getComponentById } from '../lib/data/component-registry.js';
   import Header from '../lib/components/layout/Header.svelte';
   import ComponentCard from '../lib/components/showcase/ComponentCard.svelte';
   import ComponentShowcase from '../lib/components/showcase/ComponentShowcase.svelte';
 
   // ============================================================================
-  // Store Initialization
+  // Store Initialization with Deep Linking
   // ============================================================================
 
+  // Initialize state from URL (deep linking support)
+  const defaultState = createInitialStyleguideState();
+  const componentIdFromURL = parseStyleguideURL(window.location.pathname);
+  const initialState = componentIdFromURL
+    ? { ...defaultState, selectedComponent: componentIdFromURL }
+    : defaultState;
+
   const store = createStore({
-    initialState: createInitialStyleguideState(),
+    initialState,
     reducer: styleguideReducer,
     dependencies: {}
+  });
+
+  // ============================================================================
+  // Browser History Sync
+  // ============================================================================
+
+  let cleanup: (() => void) | null = null;
+
+  onMount(() => {
+    cleanup = syncBrowserHistory(store, {
+      parse: parseStyleguideURL,
+      serialize: serializeStyleguideState,
+      destinationToAction: componentIdToAction
+    });
+  });
+
+  onDestroy(() => {
+    cleanup?.();
   });
 
   // ============================================================================
   // Derived State
   // ============================================================================
 
-  const state = $derived(store.state);
+  // Use onMount + subscribe instead of $derived to avoid infinite loops
+  let state = $state(initialState);
+
+  onMount(() => {
+    const unsubscribe = store.subscribe(s => state = s);
+    return unsubscribe;
+  });
+
   const selectedComponentInfo = $derived(
     state.selectedComponent ? getComponentById(state.selectedComponent) : null
   );

@@ -108,16 +108,39 @@ export function syncBrowserHistory<State, Action, Dest>(
 	store: Store<State, Action>,
 	config: BrowserHistoryConfig<State, Action, Dest>
 ): () => void {
+	// Track the last pushState timestamp to detect programmatic navigation
+	let lastPushStateTime = 0;
+	const PUSHSTATE_DEBOUNCE_MS = 50; // Time window to ignore popstate after pushState
+
+	// Intercept history.pushState to track when we programmatically navigate
+	const originalPushState = history.pushState.bind(history);
+	const originalReplaceState = history.replaceState.bind(history);
+
+	history.pushState = function (state: any, title: string, url?: string | URL | null) {
+		if (state?.composableSvelteSync) {
+			lastPushStateTime = Date.now();
+		}
+		return originalPushState(state, title, url);
+	};
+
+	history.replaceState = function (state: any, title: string, url?: string | URL | null) {
+		if (state?.composableSvelteSync) {
+			lastPushStateTime = Date.now();
+		}
+		return originalReplaceState(state, title, url);
+	};
+
 	// Listen to browser back/forward
 	const handlePopState = (event: PopStateEvent) => {
-		// Check if this navigation was triggered by our code
-		// We mark our own pushState calls with metadata
-		if (event.state?.composableSvelteSync) {
-			// Navigation came from our URL sync effect - ignore it
+		// Check if this popstate fired immediately after our pushState/replaceState
+		// If so, ignore it to prevent dispatching the same action twice
+		const timeSinceLastPush = Date.now() - lastPushStateTime;
+		if (event.state?.composableSvelteSync && timeSinceLastPush < PUSHSTATE_DEBOUNCE_MS) {
+			// Popstate triggered by our own pushState - ignore it
 			// This prevents infinite loops where:
 			// 1. Action updates state
-			// 2. Effect updates URL
-			// 3. popstate fires
+			// 2. Effect updates URL (pushState)
+			// 3. popstate fires immediately
 			// 4. We dispatch action again (loop!)
 			return;
 		}
@@ -142,5 +165,8 @@ export function syncBrowserHistory<State, Action, Dest>(
 	// Return cleanup function
 	return () => {
 		window.removeEventListener('popstate', handlePopState);
+		// Restore original history methods
+		history.pushState = originalPushState;
+		history.replaceState = originalReplaceState;
 	};
 }

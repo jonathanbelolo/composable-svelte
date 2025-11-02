@@ -128,6 +128,9 @@ export const springPresets = {
 	} as Required<SpringConfig>
 } as const;
 
+// Alias for backward compatibility
+export const SPRING_PRESETS = springPresets;
+
 /**
  * Merge spring configurations.
  * Always returns a complete config with all required properties.

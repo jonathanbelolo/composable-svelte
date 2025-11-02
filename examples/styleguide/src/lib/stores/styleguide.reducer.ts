@@ -1,12 +1,23 @@
 import type { Reducer } from '@composable-svelte/core';
 import { Effect } from '@composable-svelte/core';
+import { createURLSyncEffect } from '@composable-svelte/core/routing';
 import type { StyleguideState, StyleguideAction } from './styleguide.types.js';
+import { serializeStyleguideState } from './styleguide.routing.js';
 
 // ============================================================================
 // Dependencies
 // ============================================================================
 
 export interface StyleguideDependencies {}
+
+// ============================================================================
+// URL Sync Effect
+// ============================================================================
+
+// Create the URL sync effect function (called once)
+const urlSyncEffect = createURLSyncEffect<StyleguideState, StyleguideAction>(
+  serializeStyleguideState
+);
 
 // ============================================================================
 // Styleguide Reducer
@@ -29,22 +40,24 @@ export const styleguideReducer: Reducer<
     }
 
     case 'componentSelected': {
+      const newState = {
+        ...state,
+        selectedComponent: action.componentId
+      };
       return [
-        {
-          ...state,
-          selectedComponent: action.componentId
-        },
-        Effect.none()
+        newState,
+        urlSyncEffect(newState)
       ];
     }
 
     case 'homeSelected': {
+      const newState = {
+        ...state,
+        selectedComponent: null
+      };
       return [
-        {
-          ...state,
-          selectedComponent: null
-        },
-        Effect.none()
+        newState,
+        urlSyncEffect(newState)
       ];
     }
 
