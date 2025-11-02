@@ -62,6 +62,7 @@ export const COMPONENT_REGISTRY: ComponentInfo[] = [
   // Form Components - Advanced
   { id: 'combobox', name: 'Combobox', category: 'Form Components - Advanced', description: 'Searchable select with async loading' },
   { id: 'calendar', name: 'Calendar', category: 'Form Components - Advanced', description: 'Date and range picker calendar' },
+  { id: 'file-upload', name: 'File Upload', category: 'Form Components - Advanced', description: 'Drag & drop file upload with progress tracking' },
 
   // Visual Feedback
   { id: 'toast', name: 'Toast', category: 'Visual Feedback', description: 'Temporary notifications' },
