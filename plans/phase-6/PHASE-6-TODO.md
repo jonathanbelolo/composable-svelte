@@ -2,7 +2,7 @@
 
 **Strategy**: Foundation-First Hybrid (Vertical Slices)
 **Timeline**: 5 weeks
-**Status**: In Progress - Week 4 Complete (Carousel, File Upload, Command, Toast Complete) ✅
+**Status**: In Progress - Week 4 Complete → Starting Week 5 (Advanced Components) 🎯
 
 ---
 
@@ -24,9 +24,14 @@
 - [x] **Week 4, Day 4**: TreeView Component (Reducer, Tests, Component, Example) ✅
 - [x] **Week 4, Day 1-2**: Command Palette & Toast (Reducer, Tests, Components) ✅
 - [x] **Week 4, Day 5**: Carousel Component (Reducer, Tests, Component) ✅ | File Upload (Reducer, Tests, Component) ✅
-- [ ] **Week 5**: Advanced Components + Polish
+- [x] **Week 4, Day 6**: Slider Component (Component, Reducer, Tests) ✅
+- [ ] **Week 5, Day 1-2**: Chart Component (D3 Wrapper) 🎯 CURRENT
+- [ ] **Week 5, Day 2-3**: Rich Text Editor (Tiptap Wrapper)
+- [ ] **Week 5, Day 4**: Infinite Scroll Component
+- [ ] **Week 5, Day 5**: Code Editor (CodeMirror Wrapper)
+- [ ] **Week 5+**: Documentation + Polish
 
-**Components Complete**: 72 / 50+
+**Components Complete**: 73 / 50+ (includes Slider)
 - Foundation: Button (3), Input, Label, Spinner, Card (6), Separator
 - Layout: Panel, Box, AspectRatio (3)
 - Typography: Heading, Text, Kbd (3)
@@ -47,7 +52,8 @@
 - Command: Command, CommandInput, CommandList, CommandGroup, CommandItem, command.reducer, command.types (7) ✅
 - Toast: Toast, Toaster, ToastAction, ToastTitle, ToastDescription, toast.reducer, toast.types (7) ✅
 - Calendar: Calendar, calendar.reducer, calendar.types (3) ✅
-- **Navigation Components** (from earlier phases): Modal, Sheet, Alert, AlertDialog, Drawer, Popover, Sidebar, Tabs, NavigationStack, DestinationRouter (10) ✅
+- **Navigation Components** (from earlier phases): Modal, Sheet, Alert, Drawer, Popover, Sidebar, Tabs, NavigationStack, AnimatedNavigationStack, DestinationRouter (10) ✅
+- **Form Components**: Input, Textarea, Checkbox, Radio, RadioGroup, Switch, Slider (7) ✅
 
 **Form System**: Complete with 23/23 unit tests passing ✅
 **Form Examples**: 3 complete examples with 55 browser tests passing ✅
@@ -803,13 +809,13 @@
 
 **Checkpoint**: ✅ Pagination complete with 23 tests passing in 4ms!
 
-#### Slider Component
-- [ ] Create `components/ui/slider/Slider.svelte`
-- [ ] Single value slider
-- [ ] Range slider (two handles)
-- [ ] Add action dispatch
-- [ ] Add accessibility (role="slider")
-- [ ] Test: Slider works
+#### Slider Component ✅ COMPLETE
+- [x] Create `components/ui/slider/Slider.svelte`
+- [x] Single value slider
+- [x] Range slider (two handles)
+- [x] Add action dispatch
+- [x] Add accessibility (role="slider")
+- [x] Component complete and in styleguide
 
 **Checkpoint**: ✅ Week 3 complete
 
@@ -995,121 +1001,221 @@
 
 ---
 
-## Week 5: Advanced Components + Polish (5 days)
+## Week 5: Advanced Components + Polish (5+ days)
 
-### Day 1-2: Calendar & Date Picker
+**Current Status**: 🎯 Starting advanced component wrappers
 
-**Goal**: Build date selection components
+### Day 1-2: Chart Component (D3 Wrapper) 🎯 CURRENT
 
-#### Calendar Reducer
-- [ ] Create `components/calendar/calendar.reducer.ts`
-- [ ] Define state (selectedDate, selectedRange, viewMonth, viewYear)
-- [ ] Implement date selection
-- [ ] Implement range selection
-- [ ] Implement month/year navigation
-- [ ] Implement date constraints (min/max, disabled dates)
-- [ ] Test: Calendar state management works
-
-#### Calendar Components
-- [ ] Create `Calendar.svelte`
-- [ ] Create `DatePicker.svelte`
-- [ ] Create `RangePicker.svelte`
-- [ ] Add keyboard navigation
-- [ ] Test: Date selection works
-
-#### Examples
-- [ ] Booking form example
-- [ ] Date range filter example
-
-**Checkpoint**: ✅ Calendar system complete
-
----
-
-### Day 3: Advanced Wrapper - Chart Component
-
-**Goal**: Integrate D3 with reducer state
+**Goal**: Integrate D3 with reducer state for interactive data visualization
 
 #### Chart Reducer
-- [ ] Create `components/chart/chart.reducer.ts`
-- [ ] Define state (data, selectedPoints, hoveredPoint, zoom)
-- [ ] Implement point selection
-- [ ] Implement hover tracking
-- [ ] Implement zoom state
-- [ ] Test: Chart state works
+- [ ] Create `packages/core/src/components/chart/chart.reducer.ts`
+- [ ] Define `ChartState` interface
+  - [ ] data: DataPoint[]
+  - [ ] selectedPoints: Set<string>
+  - [ ] hoveredPoint: string | null
+  - [ ] zoom: { scale: number; x: number; y: number }
+  - [ ] isLoading: boolean
+- [ ] Define `ChartAction` discriminated union
+  - [ ] dataLoaded, pointHovered, pointClicked
+  - [ ] zoomed, resetZoom
+- [ ] Implement pure reducer with all action handlers
+- [ ] Test: Chart state management works
 
 #### Chart Component
-- [ ] Create `Chart.svelte` with D3 integration
-- [ ] Implement reactive D3 rendering
-- [ ] Connect user interactions to reducer
+- [ ] Create `packages/core/src/components/chart/Chart.svelte`
+- [ ] Integrate D3 for rendering (scales, axes, points)
+- [ ] Implement reactive D3 updates with $effect
+- [ ] Connect user interactions (click, hover, zoom) to reducer
+- [ ] Add TypeScript types for chart configurations
 - [ ] Test: Chart renders and interactions work
 
+#### TestStore Tests
+- [ ] Create `packages/core/tests/chart.test.ts`
+- [ ] Test: Point selection (single, multiple, toggle)
+- [ ] Test: Hover state tracking
+- [ ] Test: Zoom state updates
+- [ ] Test: Reset zoom functionality
+- [ ] Test: Data loading states
+
 #### Examples
-- [ ] Line chart example
-- [ ] Bar chart example
-- [ ] Interactive scatter plot
+- [ ] Create `examples/chart/` directory
+- [ ] Line chart example with time series data
+- [ ] Bar chart example with categorical data
+- [ ] Interactive scatter plot with selection
+- [ ] Comprehensive README with usage patterns
 
 **Checkpoint**: ✅ Chart component complete
 
 ---
 
-### Day 4: Advanced Wrapper - Rich Text Editor
+### Day 2-3: Rich Text Editor (Tiptap Wrapper)
 
-**Goal**: Integrate Tiptap with reducer state
+**Goal**: Integrate Tiptap with reducer state for document editing
 
 #### Editor Reducer
-- [ ] Create `components/rich-text/editor.reducer.ts`
-- [ ] Define state (content, selection, isSaving, lastSaved)
-- [ ] Implement content change tracking
-- [ ] Implement auto-save with debouncing
+- [ ] Create `packages/core/src/components/rich-text-editor/editor.reducer.ts`
+- [ ] Define `EditorState` interface
+  - [ ] content: JSONContent
+  - [ ] selection: { from: number; to: number }
+  - [ ] isSaving: boolean
+  - [ ] lastSaved: Date | null
+  - [ ] isCollaborating: boolean (optional)
+- [ ] Define `EditorAction` discriminated union
+  - [ ] contentChanged, selectionChanged
+  - [ ] saveTriggered, saveCompleted, saveFailed
+  - [ ] boldButtonTapped, italicButtonTapped, headingButtonTapped
+- [ ] Implement auto-save with debouncing (Effect.afterDelay)
 - [ ] Test: Editor state management works
 
-#### Editor Component
-- [ ] Create `RichTextEditor.svelte` with Tiptap
-- [ ] Create `Toolbar.svelte` for formatting
-- [ ] Connect Tiptap to reducer
-- [ ] Implement auto-save effects
-- [ ] Test: Editor works
+#### Editor Components
+- [ ] Create `packages/core/src/components/rich-text-editor/RichTextEditor.svelte`
+- [ ] Create `packages/core/src/components/rich-text-editor/Toolbar.svelte`
+- [ ] Integrate Tiptap editor instance
+- [ ] Connect Tiptap callbacks to reducer actions
+- [ ] Implement toolbar formatting buttons
+- [ ] Sync external content changes with $effect
+- [ ] Add saving indicator UI
+- [ ] Test: Editor works with Tiptap
+
+#### TestStore Tests
+- [ ] Create `packages/core/tests/rich-text-editor.test.ts`
+- [ ] Test: Content changes trigger auto-save
+- [ ] Test: Debounced save (1 second delay)
+- [ ] Test: Save success updates lastSaved
+- [ ] Test: Save failure shows error
+- [ ] Test: Formatting actions dispatch correctly
 
 #### Examples
-- [ ] Document editor example
-- [ ] Comment editor example
+- [ ] Create `examples/rich-text-editor/` directory
+- [ ] Document editor example with auto-save
+- [ ] Comment editor example (simpler)
+- [ ] Comprehensive README with Tiptap integration patterns
 
 **Checkpoint**: ✅ Rich text editor complete
 
 ---
 
-### Day 5: Final Components + Documentation
+### Day 4: Infinite Scroll Component
 
-**Goal**: Finish remaining components and polish
+**Goal**: Build load-more pagination with reducer state
+
+#### Infinite Scroll Reducer
+- [ ] Create `packages/core/src/components/infinite-scroll/infinite-scroll.reducer.ts`
+- [ ] Define `InfiniteScrollState` interface
+  - [ ] items: T[]
+  - [ ] page: number
+  - [ ] hasMore: boolean
+  - [ ] isLoading: boolean
+  - [ ] error: string | null
+- [ ] Define `InfiniteScrollAction` discriminated union
+  - [ ] loadMoreTriggered, itemsLoaded, loadMoreFailed
+  - [ ] reset, scrolledToBottom
+- [ ] Implement load more effect (Effect.run with async)
+- [ ] Test: Infinite scroll state works
 
 #### Infinite Scroll Component
-- [ ] Create `components/infinite-scroll/scroll.reducer.ts`
-- [ ] Define state (items, page, hasMore, isLoading)
-- [ ] Implement load more effect
-- [ ] Test: Infinite scroll works
+- [ ] Create `packages/core/src/components/infinite-scroll/InfiniteScroll.svelte`
+- [ ] Add Intersection Observer for scroll detection
+- [ ] Render items with snippets for customization
+- [ ] Show loading spinner at bottom
+- [ ] Show "No more items" message when hasMore is false
+- [ ] Test: Component triggers load more correctly
 
-- [ ] Create `InfiniteScroll.svelte`
-- [ ] Add intersection observer
-- [ ] Create examples
+#### TestStore Tests
+- [ ] Create `packages/core/tests/infinite-scroll.test.ts`
+- [ ] Test: Load more triggers on scroll
+- [ ] Test: Items accumulate correctly
+- [ ] Test: hasMore becomes false when no more data
+- [ ] Test: Error state handling
+- [ ] Test: Reset clears items
 
-#### Code Editor (Optional if time)
-- [ ] Wrap CodeMirror with reducer state
-- [ ] Basic example
+#### Examples
+- [ ] Create `examples/infinite-scroll/` directory
+- [ ] Product list example with infinite scroll
+- [ ] Social feed example
+- [ ] README with load more patterns
+
+**Checkpoint**: ✅ Infinite scroll complete
+
+---
+
+### Day 5: Code Editor (CodeMirror Wrapper)
+
+**Goal**: Integrate CodeMirror with reducer state for code editing
+
+#### Code Editor Reducer
+- [ ] Create `packages/core/src/components/code-editor/code-editor.reducer.ts`
+- [ ] Define `CodeEditorState` interface
+  - [ ] content: string
+  - [ ] language: string
+  - [ ] cursorPosition: { line: number; column: number }
+  - [ ] selection: { from: number; to: number } | null
+  - [ ] errors: LintError[]
+  - [ ] isLinting: boolean
+- [ ] Define `CodeEditorAction` discriminated union
+  - [ ] contentChanged, languageChanged
+  - [ ] formatTriggered, lintTriggered
+  - [ ] lintCompleted, lintFailed
+  - [ ] cursorMoved, selectionChanged
+- [ ] Implement lint effect (Effect.run with async)
+- [ ] Test: Code editor state works
+
+#### Code Editor Component
+- [ ] Create `packages/core/src/components/code-editor/CodeEditor.svelte`
+- [ ] Integrate CodeMirror 6
+- [ ] Connect editor callbacks to reducer
+- [ ] Add language mode support (JS, TS, HTML, CSS, etc.)
+- [ ] Add theme support (light/dark)
+- [ ] Sync external content changes with $effect
+- [ ] Test: Editor works with CodeMirror
+
+#### TestStore Tests
+- [ ] Create `packages/core/tests/code-editor.test.ts`
+- [ ] Test: Content changes dispatch actions
+- [ ] Test: Language switching
+- [ ] Test: Lint triggers and completes
+- [ ] Test: Format triggers
+- [ ] Test: Cursor and selection tracking
+
+#### Examples
+- [ ] Create `examples/code-editor/` directory
+- [ ] Multi-language code editor example
+- [ ] Live code preview example (HTML/CSS/JS)
+- [ ] README with CodeMirror integration patterns
+
+**Checkpoint**: ✅ Code editor complete
+
+---
+
+### Days 6+: Documentation + Polish
+
+**Goal**: Final polish and comprehensive documentation
 
 #### Documentation Pass
-- [ ] Review all component APIs
-- [ ] Ensure all examples work
-- [ ] Create migration guide from shadcn-svelte
-- [ ] Create integration guide for parent reducers
-- [ ] Document styling customization
-- [ ] Document animation customization
+- [ ] Review all component APIs for consistency
+- [ ] Ensure all 73+ components have examples
+- [ ] Create **migration guide from shadcn-svelte**
+- [ ] Create **integration guide for parent reducers**
+- [ ] Document **styling customization** (CSS variables, Tailwind)
+- [ ] Document **animation customization** (Motion One, spring configs)
+- [ ] Document **advanced wrapper patterns** (D3, Tiptap, CodeMirror)
+- [ ] Create **complete example app** showcasing all components
 
 #### Final Testing
-- [ ] Run all TestStore tests
-- [ ] Run all browser tests
-- [ ] Run all accessibility tests
+- [ ] Run all TestStore tests (ensure 100% pass)
+- [ ] Run all browser tests (ensure 100% pass)
+- [ ] Run all accessibility tests (0 violations)
 - [ ] Visual regression test pass
-- [ ] Test CLI on fresh project
+- [ ] Test component registry/CLI on fresh project
+
+#### Styleguide Polish
+- [ ] Ensure all 73+ components are in styleguide
+- [ ] Add category filters to styleguide
+- [ ] Add search functionality
+- [ ] Add dark mode toggle
+- [ ] Deploy styleguide to demo site
 
 **Checkpoint**: ✅ Phase 6 Complete!
 
