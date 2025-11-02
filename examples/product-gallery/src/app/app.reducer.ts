@@ -1,10 +1,12 @@
 import type { Reducer } from '@composable-svelte/core';
 import { Effect } from '@composable-svelte/core';
 import { integrate } from '@composable-svelte/core/navigation';
+import { createURLSyncEffect } from '@composable-svelte/core/routing';
 import type { AppState, AppAction } from './app.types.js';
 import { addToCart } from '../models/cart.js';
 import { createProductDetailState } from '../features/product-detail/product-detail.types.js';
 import { productDetailReducer } from '../features/product-detail/product-detail.reducer.js';
+import { serializeAppState } from './app.routing.js';
 
 // ============================================================================
 // Dependencies
@@ -15,6 +17,15 @@ export interface AppDependencies {
 }
 
 // ============================================================================
+// URL Sync Effect
+// ============================================================================
+
+// Create the URL sync effect function (called once at module level)
+const urlSyncEffect = createURLSyncEffect<AppState, AppAction>(
+  serializeAppState
+);
+
+// ============================================================================
 // Core Reducer (without child integration)
 // ============================================================================
 
@@ -23,17 +34,18 @@ const coreReducer: Reducer<AppState, AppAction, AppDependencies> = (state, actio
     case 'productClicked': {
       // Show product detail using tree-based navigation WITH animation
       const detailState = createProductDetailState(action.productId);
+      const newState = {
+        ...state,
+        productDetail: detailState,
+        presentation: {
+          status: 'presenting',
+          content: detailState,
+          duration: 300  // 300ms animation
+        }
+      };
       return [
-        {
-          ...state,
-          productDetail: detailState,
-          presentation: {
-            status: 'presenting',
-            content: detailState,
-            duration: 300  // 300ms animation
-          }
-        },
-        Effect.none()
+        newState,
+        urlSyncEffect(newState)
       ];
     }
 
@@ -58,13 +70,14 @@ const coreReducer: Reducer<AppState, AppAction, AppDependencies> = (state, actio
 
         case 'dismissalCompleted': {
           // Dismissal animation finished - clear everything
+          const newState = {
+            ...state,
+            productDetail: null,
+            presentation: { status: 'idle' }
+          };
           return [
-            {
-              ...state,
-              productDetail: null,
-              presentation: { status: 'idle' }
-            },
-            Effect.none()
+            newState,
+            urlSyncEffect(newState)
           ];
         }
 

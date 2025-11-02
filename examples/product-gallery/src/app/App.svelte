@@ -1,30 +1,69 @@
 <script lang="ts">
+  import { onMount, onDestroy } from 'svelte';
   import { createStore } from '@composable-svelte/core';
   import { Sidebar } from '@composable-svelte/core/navigation-components';
   import { Modal } from '@composable-svelte/core/navigation-components';
   import { scopeTo } from '@composable-svelte/core/navigation';
+  import { syncBrowserHistory } from '@composable-svelte/core/routing';
   import { appReducer } from './app.reducer.js';
   import { createInitialAppState } from './app.types.js';
+  import { parseAppURL, serializeAppState, productIdToAction } from './app.routing.js';
   import { SAMPLE_PRODUCTS } from '../models/sample-data.js';
+  import { createProductDetailState } from '../features/product-detail/product-detail.types.js';
   import ProductList from '../features/product-list/ProductList.svelte';
   import ProductDetail from '../features/product-detail/ProductDetail.svelte';
   import CategoryFilter from '../features/category-filter/CategoryFilter.svelte';
 
   // ============================================================================
-  // Store Initialization
+  // Store Initialization with Deep Linking
   // ============================================================================
 
+  // Initialize state from URL (deep linking support)
+  const defaultState = createInitialAppState(SAMPLE_PRODUCTS);
+  const productIdFromURL = parseAppURL(window.location.pathname);
+  const initialState = productIdFromURL
+    ? {
+        ...defaultState,
+        productDetail: createProductDetailState(productIdFromURL),
+        presentation: { status: 'presented', content: createProductDetailState(productIdFromURL) }
+      }
+    : defaultState;
+
   const store = createStore({
-    initialState: createInitialAppState(SAMPLE_PRODUCTS),
+    initialState,
     reducer: appReducer,
     dependencies: {}
+  });
+
+  // ============================================================================
+  // Browser History Sync
+  // ============================================================================
+
+  let cleanup: (() => void) | null = null;
+
+  onMount(() => {
+    cleanup = syncBrowserHistory(store, {
+      parse: parseAppURL,
+      serialize: serializeAppState,
+      destinationToAction: productIdToAction
+    });
+  });
+
+  onDestroy(() => {
+    cleanup?.();
   });
 
   // ============================================================================
   // Derived State
   // ============================================================================
 
-  const state = $derived(store.state);
+  // Use onMount + subscribe instead of $derived to avoid infinite loops
+  let state = $state(initialState);
+
+  onMount(() => {
+    const unsubscribe = store.subscribe(s => state = s);
+    return unsubscribe;
+  });
 
   // Phase 3 DSL: Scope to product detail using scopeTo()
   // Phase 2 manual pattern (before):
