@@ -32,6 +32,9 @@
 **Goal**: Implement URL serialization (state → URL path)
 
 #### Setup
+- [ ] Install `path-to-regexp` dependency
+  - [ ] Run `pnpm add path-to-regexp` in packages/core
+  - [ ] Verify TypeScript types are included
 - [ ] Create `packages/core/src/routing/` directory
 - [ ] Create `packages/core/tests/routing/` directory
 - [ ] Setup Vitest test files
@@ -84,6 +87,7 @@
 
 #### Implementation
 - [ ] Create `packages/core/src/routing/parser.ts`
+  - [ ] Import `pathToRegexp` from `path-to-regexp`
   - [ ] Define `ParserConfig<Dest>` interface
     - [ ] `basePath?: string` - Base path for routes
     - [ ] `parsers: Array<(path: string) => Dest | null>` - Parser functions
@@ -93,9 +97,10 @@
     - [ ] Return first match
     - [ ] Return null if no match
   - [ ] Implement `matchPath(pattern, path): Record<string, string> | null`
-    - [ ] Convert pattern to regex (`:id` → `([^/]+)`)
-    - [ ] Match path against regex
-    - [ ] Extract params by name
+    - [ ] Use `pathToRegexp` from path-to-regexp library
+    - [ ] Extract keys from pattern
+    - [ ] Match path against compiled regex
+    - [ ] Build params object from matches
     - [ ] Return params object or null
 
 #### Unit Tests (20+ tests)

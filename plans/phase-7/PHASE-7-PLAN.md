@@ -7,6 +7,12 @@
 
 **Philosophy**: Framework-agnostic - NO SvelteKit dependencies. Pure browser History API integration.
 
+**Dependencies**:
+- `path-to-regexp` - Battle-tested route pattern matching (used by Express, React Router)
+  - Version: 8.x (latest)
+  - Size: ~3KB minified
+  - Purpose: URL pattern matching with named parameters
+
 ---
 
 ## Table of Contents
@@ -346,80 +352,81 @@ type AppDestination =
 '/inventory/item-123/edit'  → itemEdit (not nested, just different type)
 ```
 
-### 4.4 Pattern Matching Limitations (v1)
+### 4.4 Pattern Matching with path-to-regexp
 
-**matchPath() supports simple parameter patterns only in v1:**
+**We use the [path-to-regexp](https://github.com/pillarjs/path-to-regexp) library for pattern matching:**
+
+This gives us production-ready, battle-tested route matching used by Express, React Router, and many other frameworks.
+
+**Supported in v1 (via path-to-regexp):**
 
 ```typescript
-// ✅ Supported in v1
+// ✅ Named parameters
 matchPath('/item-:id', '/item-123')
 → { id: '123' }
 
+// ✅ Multiple parameters
 matchPath('/item-:id/edit/:field', '/item-123/edit/name')
 → { id: '123', field: 'name' }
 
-// ❌ Not supported in v1 (deferred to v1.1+)
-// Optional segments: '/item-:id?'
-// Wildcard segments: '/files/*'
-// Regex patterns: '/item-:id(\\d+)'
-// Query params: '/items?filter=:status'
-// Hash fragments: '/items#:section'
+// ✅ Optional parameters (path-to-regexp supports this!)
+matchPath('/item-:id/:action?', '/item-123')
+→ { id: '123', action: undefined }
+
+// ✅ Wildcards (path-to-regexp supports this!)
+matchPath('/files/*', '/files/docs/readme.md')
+→ { '0': 'docs/readme.md' }
+
+// ✅ Custom regex validation (path-to-regexp supports this!)
+matchPath('/item-:id(\\d+)', '/item-123')
+→ { id: '123' }
+
+matchPath('/item-:id(\\d+)', '/item-abc')
+→ null (no match)
 ```
 
-**Pattern Syntax (v1):**
-- `:param` - Named parameter (matches any non-slash characters)
-- `/` - Path separator (exact match)
-- All other characters - Exact match
+**v1 Scope Limitations (by design, not library):**
 
-**Limitations:**
-1. **No optional parameters** - All `:param` segments are required
-2. **No wildcards** - Cannot match arbitrary path segments
-3. **No regex constraints** - Cannot validate parameter format
-4. **No query params** - Path only (query string ignored)
-5. **No hash fragments** - Hash ignored in v1
+While path-to-regexp supports advanced features, we're keeping v1 simple:
 
-**Workaround Patterns:**
+1. **✅ v1: Named parameters** - `/item-:id`
+2. **✅ v1: Multiple parameters** - `/item-:id/edit/:field`
+3. **❌ v1.1: Optional parameters** - `/item-:id/:action?` (library supports, we defer usage)
+4. **❌ v1.1: Wildcards** - `/files/*` (library supports, we defer usage)
+5. **❌ v1.1: Regex validation** - `/item-:id(\\d+)` (library supports, we defer usage)
+6. **❌ v1.1: Query params** - Not in path-to-regexp scope (separate parsing needed)
+7. **❌ v1.1: Hash fragments** - Not in path-to-regexp scope (separate parsing needed)
 
-For optional segments, use multiple parsers:
+**Why path-to-regexp?**
+
+- **Battle-tested**: Used by Express, React Router, etc.
+- **TypeScript support**: Full type definitions included
+- **Future-proof**: When we add optional params in v1.1, no library change needed
+- **Small cost**: ~3KB minified (worth it for reliability)
+
+**Usage Pattern (v1):**
+
+Keep patterns simple in v1, leverage library power in v1.1+:
+
 ```typescript
 const config: ParserConfig<Dest> = {
   basePath: '/inventory',
   parsers: [
-    // Try more specific pattern first
+    // v1: Simple patterns only
     (path) => {
       const params = matchPath('/item-:id/edit', path);
       return params ? { type: 'editItem', state: { itemId: params.id } } : null;
     },
-    // Then try less specific pattern
     (path) => {
       const params = matchPath('/item-:id', path);
       return params ? { type: 'detailItem', state: { itemId: params.id } } : null;
     }
   ]
 };
+
+// v1.1: Can use optional params without changing library
+// matchPath('/item-:id/:action?', path) - will work when we enable it
 ```
-
-For validation, use post-match checks:
-```typescript
-const parser = (path: string): Dest | null => {
-  const params = matchPath('/item-:id', path);
-  if (!params) return null;
-
-  // Validate id is numeric
-  if (!/^\d+$/.test(params.id)) {
-    return null; // Invalid format, no match
-  }
-
-  return { type: 'detail', state: { itemId: params.id } };
-};
-```
-
-**Future Enhancements (v1.1+):**
-- Optional segments with `?` suffix
-- Wildcard matching with `*`
-- Regex constraints with `:param(regex)`
-- Query parameter parsing
-- Hash fragment handling
 
 ---
 
@@ -431,6 +438,8 @@ const parser = (path: string): Dest | null => {
 
 ```typescript
 // routing/parser.ts
+
+import { pathToRegexp } from 'path-to-regexp';
 
 /**
  * Parse URL path to destination state.
@@ -485,27 +494,30 @@ export interface ParserConfig<Dest extends { type: string; state: any }> {
 }
 
 /**
- * Helper to match path patterns.
+ * Helper to match path patterns using path-to-regexp.
+ *
+ * Uses the path-to-regexp library for robust pattern matching.
+ * Supports all path-to-regexp features (optional params, wildcards, etc.)
+ *
+ * @see https://github.com/pillarjs/path-to-regexp
  */
 export function matchPath(
   pattern: string,
   path: string
 ): Record<string, string> | null {
-  // Convert pattern to regex
-  // /item-:id → /item-([^/]+)
-  const regexPattern = pattern.replace(/:(\w+)/g, '([^/]+)');
-  const regex = new RegExp(`^${regexPattern}$`);
+  // Use path-to-regexp for pattern matching
+  const keys: Array<{ name: string }> = [];
+  const regex = pathToRegexp(pattern, keys);
 
-  const match = path.match(regex);
+  const match = regex.exec(path);
   if (!match) {
     return null;
   }
 
-  // Extract params
-  const paramNames = [...pattern.matchAll(/:(\w+)/g)].map(m => m[1]);
+  // Extract params from match
   const params: Record<string, string> = {};
-  paramNames.forEach((name, i) => {
-    params[name] = match[i + 1];
+  keys.forEach((key, i) => {
+    params[key.name] = match[i + 1];
   });
 
   return params;
