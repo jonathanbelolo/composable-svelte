@@ -13,6 +13,10 @@ export { IconButton } from './icon-button/index.js';
 export { Input } from './input/index.js';
 export { Label } from './label/index.js';
 export { Textarea } from './textarea/index.js';
+export { Checkbox } from './checkbox/index.js';
+export { Radio, RadioGroup } from './radio/index.js';
+export { Switch } from './switch/index.js';
+export { Slider } from './slider/index.js';
 
 // Feedback
 export { Spinner } from './spinner/index.js';
@@ -59,6 +63,9 @@ export { Select } from './select/index.js';
 export { Combobox } from './combobox/index.js';
 export { Pagination } from './pagination/index.js';
 export { Calendar } from './calendar/index.js';
+export { Carousel } from './carousel/index.js';
+export { TreeView } from './tree-view/index.js';
+export { FileUpload } from './file-upload/index.js';
 
 // Command Palette
 export {
