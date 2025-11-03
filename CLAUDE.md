@@ -4,23 +4,67 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This repository contains **specifications** for a Composable Architecture library for Svelte 5, inspired by The Composable Architecture (TCA) from Swift/iOS. This is a **specification-first** project - the implementation does not yet exist, only detailed specifications.
+This repository contains **Composable Svelte**, a Composable Architecture library for Svelte 5, inspired by The Composable Architecture (TCA) from Swift/iOS. The project follows a specification-first approach with active implementation underway.
 
-**Current Status**: Pre-implementation (specification phase only)
+**Current Status**: ✅ **Active Implementation** - Multiple phases completed, production-ready features available
+
+### Implementation Status
+
+- ✅ **Phase 1**: Core architecture (Store, Reducer, Effects, Composition, TestStore)
+- ✅ **Phase 2**: Navigation system (ifLet, Destinations, Components, Dismiss dependency)
+- ✅ **Phase 3**: DSL & Matchers (createDestination, integrate, scopeTo, case paths)
+- ✅ **Phase 4**: Animation integration (PresentationState, animated effects, transitions)
+- ✅ **Phase 6**: API Client (HTTP/REST with effects, error handling, interceptors)
+- ✅ **Phase 7**: URL Routing (Browser history, pattern matching, synchronization)
+- ✅ **Phase 8**: Dependencies (Clock, Storage: localStorage/sessionStorage/cookies)
+- 🔄 **Phase 9**: WebSocket (Real-time communication, reconnection, channels) - In Progress
 
 ## Repository Structure
 
 ```
 composable-svelte/
-├── specs/                           # Detailed specifications (implementation guides)
+├── packages/
+│   └── core/                        # @composable-svelte/core package
+│       ├── src/
+│       │   ├── animation/           # Animation integration (Phase 4)
+│       │   ├── api/                 # HTTP/REST client (Phase 6)
+│       │   ├── components/          # UI components (shadcn-svelte integration)
+│       │   ├── composition/         # Reducer composition (scope, combineReducers)
+│       │   ├── dependencies/        # Injectable dependencies (Phase 8)
+│       │   │   ├── clock.ts         # SystemClock + MockClock
+│       │   │   ├── cookie-storage.ts # Cookie storage with registry
+│       │   │   ├── local-storage.ts  # localStorage + sessionStorage
+│       │   │   ├── errors.ts        # Custom error types
+│       │   │   ├── utils.ts         # Environment detection
+│       │   │   ├── README.md        # API documentation
+│       │   │   └── SECURITY.md      # Security guidelines
+│       │   ├── navigation/          # Navigation system (Phase 2)
+│       │   ├── navigation-components/ # Modal, Sheet, Drawer, etc.
+│       │   ├── routing/             # URL routing (Phase 7)
+│       │   ├── websocket/           # WebSocket client (Phase 9)
+│       │   ├── test/                # TestStore for testing
+│       │   ├── effect.ts            # Effect system
+│       │   ├── store.svelte.ts      # Store implementation
+│       │   ├── types.ts             # Core types
+│       │   └── index.ts             # Main exports
+│       └── tests/                   # Comprehensive test suite
+│           ├── dependencies/        # 118 tests (clock, storage)
+│           ├── websocket/           # 140+ tests (in progress)
+│           └── ...
+├── examples/
+│   ├── styleguide/                  # Component showcase
+│   ├── product-gallery/             # Product browsing example
+│   └── url-routing/                 # Routing examples
+├── specs/                           # Original specifications
 │   └── frontend/
-│       ├── composable-svelte-spec.md        # Core architecture (store, reducers, effects)
-│       ├── navigation-spec.md               # Tree-based navigation patterns
-│       ├── navigation-dsl-spec.md           # Ergonomic DSL for navigation
-│       ├── navigation-matcher-spec.md       # Type-safe action matching
-│       └── animation-integration-spec.md    # Animated presentation lifecycle
-├── plans/
-│   └── implementation-plan.md       # 11-week phased implementation roadmap
+│       ├── composable-svelte-spec.md
+│       ├── navigation-spec.md
+│       ├── navigation-dsl-spec.md
+│       ├── navigation-matcher-spec.md
+│       └── animation-integration-spec.md
+├── plans/                           # Phase-by-phase plans & summaries
+│   ├── phase-1/ through phase-9/    # Detailed phase documentation
+│   └── implementation-plan.md       # Original roadmap
 └── .claude/
     └── settings.local.json          # Claude Code configuration
 ```
@@ -109,20 +153,32 @@ interface FeatureState {
 
 ## Implementation Roadmap
 
-See `plans/implementation-plan.md` for the complete 11-week phased plan:
+### Completed Phases
 
-- **Phase 1 (Weeks 1-2)**: Core architecture - store, effects, composition, TestStore
-- **Phase 2 (Weeks 3-4)**: Navigation system - ifLet, enum destinations, components, dismiss
-  - **Note**: SvelteKit integration (section 2.5 in plan) is DEFERRED - skip for initial release
-- **Phase 3 (Weeks 5-7)**: DSL + matchers - createDestination, integrate, scopeTo, matcher APIs
-- **Phase 4 (Weeks 8-9)**: Animation integration - PresentationState, animated effects, timeout fallbacks
-  - **Note**: Animation is REQUIRED - this phase is critical for 1.0.0
-- **Phase 5 (Weeks 10-11)**: Polish, documentation, examples, CI/CD, 1.0.0 release
+- ✅ **Phase 1**: Core architecture - Store, Reducer, Effects, Composition, TestStore
+- ✅ **Phase 2**: Navigation system - ifLet, Destinations, Navigation components, Dismiss dependency
+  - Components: Modal, Sheet, Drawer, Alert, NavigationStack, Sidebar
+  - Integrated with shadcn-svelte for UI components
+- ✅ **Phase 3**: DSL & Matchers - createDestination, integrate, scopeTo, case paths
+- ✅ **Phase 4**: Animation integration - PresentationState, animated effects, Svelte transitions
+- ✅ **Phase 6**: API Client - HTTP/REST with effects, error handling, interceptors, retries
+- ✅ **Phase 7**: URL Routing - Browser history integration, pattern matching (path-to-regexp), synchronization
+- ✅ **Phase 8**: Dependencies - Clock (SystemClock/MockClock), Storage (localStorage/sessionStorage/cookies)
+  - 118 comprehensive tests, full security documentation
 
-**Distribution**: NPM package `@composable-svelte/core`
+### In Progress
 
-**Future Phases** (post-1.0.0):
-- Phase 6: SvelteKit integration utilities (optional, separate package possible)
+- 🔄 **Phase 9**: WebSocket - Real-time communication, reconnection strategies, channel routing
+  - 140+ tests implemented (heartbeat, message queue, reconnection)
+
+### Upcoming
+
+- ⏳ **Phase 5**: Polish, final documentation, production examples, CI/CD setup
+- ⏳ **SvelteKit Integration** (Deferred): Optional utilities for SvelteKit (may be separate package)
+
+**Distribution**: NPM package `@composable-svelte/core` (planned)
+
+**Key Achievement**: Production-ready implementation of core Composable Architecture patterns with comprehensive testing and documentation.
 
 ## Key Concepts
 
@@ -257,19 +313,61 @@ This library is heavily inspired by TCA for Swift but adapted for Svelte/TypeScr
 | SwiftUI views | Svelte components |
 | `Effect.run` | `Effect.run()` |
 
+## Implemented Features
+
+### Core Architecture (Phase 1)
+- ✅ **Store**: Svelte 5 runes-based reactive store with `$state` and `$derived`
+- ✅ **Reducer Pattern**: Pure functions `(state, action, deps) => [newState, effect]`
+- ✅ **Effect System**: Run, FireAndForget, None, Batch, Merge, Cancel effects
+- ✅ **Composition**: `scope()` for embedding child reducers, `combineReducers()` for multiple children
+- ✅ **TestStore**: Exhaustive action testing with `send/receive` pattern
+
+### Navigation (Phase 2-3)
+- ✅ **State-Driven Navigation**: Optional/enum destination fields
+- ✅ **Components**: Modal, Sheet, Drawer, Alert, NavigationStack, Sidebar (shadcn-svelte based)
+- ✅ **ifLet Operator**: Integration of optional child features
+- ✅ **createDestination**: Generate destination reducer from reducer map
+- ✅ **Dismiss Dependency**: Children can dismiss themselves via `deps.dismiss()`
+- ✅ **Case Paths**: Type-safe path strings for action matching
+
+### Animation (Phase 4)
+- ✅ **PresentationState**: Lifecycle tracking (idle → presenting → presented → dismissing)
+- ✅ **Svelte Transitions**: Built-in transition support (scale, fade, slide)
+- ✅ **Effect.afterDelay**: Timing-based effects for animations
+- ✅ **State Guards**: Prevent invalid animation transitions
+
+### Advanced Features
+- ✅ **API Client (Phase 6)**: HTTP/REST with interceptors, retries, error handling
+- ✅ **URL Routing (Phase 7)**: Browser history, pattern matching (path-to-regexp), state sync
+- ✅ **Dependencies (Phase 8)**: Clock (time control), Storage (localStorage/cookies) with security docs
+- 🔄 **WebSocket (Phase 9)**: Real-time communication (in progress)
+
+### Testing Infrastructure
+- ✅ **Vitest + jsdom**: Fast, Vite-native testing
+- ✅ **TestStore API**: Exhaustive action testing
+- ✅ **Mock Implementations**: MockClock, MockCookieStorage for deterministic tests
+- ✅ **258+ Tests**: Comprehensive coverage across all modules
+
+### Examples & Documentation
+- ✅ **Styleguide**: Component showcase with interactive examples
+- ✅ **Product Gallery**: Full-featured app example
+- ✅ **URL Routing**: Router integration examples
+- ✅ **API Documentation**: Per-module README files
+- ✅ **Security Guides**: Storage security best practices
+
 ## Working with This Repository
 
-### Reading Specs
-Specs are **highly detailed** (25k+ tokens each). When reading:
-1. Start with the overview and table of contents
-2. Reference specific sections as needed
-3. Use the implementation plan for cross-spec context
+### For Implementation
+1. **Check Phase Status**: See "Implementation Status" section above for completed phases
+2. **Read Completion Summaries**: Each phase has a `COMPLETION-SUMMARY.md` in `plans/phase-X/`
+3. **Reference Specs**: Original specs in `specs/frontend/` provide detailed design rationale
+4. **Run Tests**: `pnpm test` to verify implementation
 
-### Implementing from Specs
-1. Follow the phase order in `implementation-plan.md`
-2. Each spec has "Implementation" sections with TypeScript code
-3. Test examples provided in each spec
-4. Cross-reference related specs (noted in "Relationship to Other Specs" sections)
+### Reading Specs vs Implementation
+- **Specs**: Original design documents (specification-first approach)
+- **Implementation**: Actual code in `packages/core/src/`
+- **Plans**: Phase-by-phase implementation tracking in `plans/`
+- **Tests**: Validation in `packages/core/tests/`
 
 ### Spec Cross-References
 - `navigation-spec.md` section 7.2 provides `matchPresentationAction()` helpers
