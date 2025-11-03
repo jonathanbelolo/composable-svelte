@@ -81,77 +81,43 @@ export const dropdownMenuReducer: Reducer<
 				{
 					...state,
 					isOpen: true,
-					presentation: {
-						status: 'presenting' as const,
-						content: true,
-						duration: 150
-					},
 					highlightedIndex: -1 // Reset highlight when opening
 				},
-				Effect.afterDelay(150, (dispatch) =>
-					dispatch({ type: 'presentation', event: { type: 'presentationCompleted' } })
-				)
+				Effect.none()
 			];
 		}
 
 		case 'closed': {
-			// Guard: Only allow dismissal if we're in presented state
-			if (state.presentation.status !== 'presented') {
-				return [state, Effect.none()];
-			}
-
 			return [
 				{
 					...state,
-					presentation: {
-						status: 'dismissing' as const,
-						content: state.presentation.content,
-						duration: 100
-					},
+					isOpen: false,
 					highlightedIndex: -1
 				},
-				Effect.afterDelay(100, (dispatch) =>
-					dispatch({ type: 'presentation', event: { type: 'dismissalCompleted' } })
-				)
+				Effect.none()
 			];
 		}
 
 		case 'toggled': {
 			if (state.isOpen) {
-				// Closing - guard and start dismissal
-				if (state.presentation.status !== 'presented') {
-					return [state, Effect.none()];
-				}
+				// Closing
 				return [
 					{
 						...state,
-						presentation: {
-							status: 'dismissing' as const,
-							content: state.presentation.content,
-							duration: 100
-						},
+						isOpen: false,
 						highlightedIndex: -1
 					},
-					Effect.afterDelay(100, (dispatch) =>
-						dispatch({ type: 'presentation', event: { type: 'dismissalCompleted' } })
-					)
+					Effect.none()
 				];
 			} else {
-				// Opening - start presentation
+				// Opening
 				return [
 					{
 						...state,
 						isOpen: true,
-						presentation: {
-							status: 'presenting' as const,
-							content: true,
-							duration: 150
-						},
 						highlightedIndex: -1
 					},
-					Effect.afterDelay(150, (dispatch) =>
-						dispatch({ type: 'presentation', event: { type: 'presentationCompleted' } })
-					)
+					Effect.none()
 				];
 			}
 		}
@@ -305,24 +271,13 @@ export const dropdownMenuReducer: Reducer<
 				return [state, Effect.none()];
 			}
 
-			// Guard: Only allow dismissal if we're in presented state
-			if (state.presentation.status !== 'presented') {
-				return [state, Effect.none()];
-			}
-
 			return [
 				{
 					...state,
-					presentation: {
-						status: 'dismissing' as const,
-						content: state.presentation.content,
-						duration: 100
-					},
+					isOpen: false,
 					highlightedIndex: -1
 				},
-				Effect.afterDelay(100, (dispatch) =>
-					dispatch({ type: 'presentation', event: { type: 'dismissalCompleted' } })
-				)
+				Effect.none()
 			];
 		}
 

@@ -73,7 +73,11 @@ export const accordionReducer: Reducer<
 					effect
 				];
 			} else {
-				// Expanding
+				// Expanding - check if item exists in the items array
+				if (state.items.length > 0 && !state.items.find((i) => i.id === action.id)) {
+					return [state, Effect.none<AccordionAction>()];
+				}
+
 				let newExpandedIds: string[];
 
 				if (state.allowMultiple) {

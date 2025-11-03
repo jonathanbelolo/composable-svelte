@@ -102,6 +102,7 @@
 
   // Track last animated content to prevent duplicate animations
   let lastAnimatedContent: any = $state(null);
+  let clickOutsideCleanup: (() => void) | undefined = undefined;
 
   // Watch presentation status and trigger animations
   $effect(() => {
@@ -156,7 +157,7 @@
     }
   }
 
-  function handleClickOutside() {
+  function handleClickOutside(event: PointerEvent) {
     if (!disableClickOutside && store && interactionsEnabled) {
       try {
         store.dismiss();
@@ -186,6 +187,9 @@
       return () => {
         document.body.style.overflow = originalOverflow;
         document.body.style.paddingRight = originalPaddingRight;
+        // Cleanup clickOutside action when alert unmounts
+        clickOutsideCleanup?.();
+        clickOutsideCleanup = undefined;
       };
     }
   });
@@ -220,14 +224,15 @@
       {@render children?.({
         visible,
         store,
-        bindBackdrop: (node: HTMLElement) => {
-          backdropElement = node;
-          // Attach click handler directly to backdrop
+        bindBackdrop: (node: HTMLElement) => { backdropElement = node; },
+        bindContent: (node: HTMLElement) => {
+          contentElement = node;
+          // Apply clickOutside to the content element
           if (!disableClickOutside) {
-            node.addEventListener('click', handleClickOutside);
+            const action = clickOutside(node, handleClickOutside);
+            clickOutsideCleanup = action.destroy;
           }
         },
-        bindContent: (node: HTMLElement) => { contentElement = node; },
         initialOpacity: presentation?.status === 'presenting' ? '0' : undefined
       })}
     </div>

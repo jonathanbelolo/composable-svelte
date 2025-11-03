@@ -113,14 +113,12 @@
   {disableEscapeKey}
 >
   {#snippet children({ visible, store, bindBackdrop, bindContent, initialOpacity })}
-    {#if backdropClasses}
-      <div
-        use:bindBackdrop
-        class={backdropClasses}
-        aria-hidden="true"
-        style:opacity={initialOpacity}
-      ></div>
-    {/if}
+    <div
+      use:bindBackdrop
+      class={backdropClasses}
+      aria-hidden="true"
+      style:opacity={initialOpacity}
+    ></div>
 
     <div
       use:bindContent
