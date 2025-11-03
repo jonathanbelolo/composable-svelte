@@ -2,9 +2,16 @@ import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { resolve } from 'path';
 import { playwright } from '@vitest/browser-playwright';
+import dts from 'vite-plugin-dts';
 
 export default defineConfig({
-  plugins: [svelte()],
+  plugins: [
+    svelte(),
+    dts({
+      include: ['src/**/*.ts', 'src/**/*.svelte.ts'],
+      exclude: ['src/**/*.test.ts', 'src/**/*.spec.ts']
+    })
+  ],
 
   // ============================================================================
   // Browser Mode Configuration (Vitest 4)
