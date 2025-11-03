@@ -7,7 +7,7 @@
  * @module routing/parser
  */
 
-import { pathToRegexp, type Keys } from 'path-to-regexp';
+import { pathToRegexp } from 'path-to-regexp';
 
 /**
  * Configuration for URL parsing.
@@ -153,7 +153,7 @@ export function matchPath(pattern: string, path: string): Record<string, string>
 
 	// Extract parameters from match
 	const params: Record<string, string> = {};
-	keys.forEach((key, index) => {
+	keys.forEach((key: { name: string | number }, index: number) => {
 		const value = match[index + 1];
 		if (value !== undefined) {
 			params[String(key.name)] = value;
