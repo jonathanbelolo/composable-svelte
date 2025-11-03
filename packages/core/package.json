@@ -1,7 +1,7 @@
 {
   "name": "@composable-svelte/core",
   "version": "0.1.0",
-  "description": "A Composable Architecture for Svelte 5",
+  "description": "A Composable Architecture for Svelte 5 - Type-safe state management with reducers, effects, and navigation",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -14,7 +14,10 @@
   },
   "svelte": "./dist/index.js",
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "vite build && tsc --project tsconfig.json --declaration --emitDeclarationOnly --outDir dist",
@@ -22,7 +25,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "prepublishOnly": "pnpm run build && pnpm run typecheck && pnpm test",
+    "prepack": "pnpm run build"
   },
   "keywords": [
     "svelte",
@@ -31,10 +36,24 @@
     "composable-architecture",
     "tca",
     "reducer",
-    "effects"
+    "effects",
+    "navigation",
+    "typescript",
+    "functional-programming",
+    "predictable-state",
+    "testable"
   ],
-  "author": "",
+  "author": "Jonathan Belolo",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jbelolo/composable-svelte.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/jbelolo/composable-svelte#readme",
+  "bugs": {
+    "url": "https://github.com/jbelolo/composable-svelte/issues"
+  },
   "peerDependencies": {
     "svelte": "^5.0.0"
   },

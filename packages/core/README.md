@@ -1,55 +1,66 @@
 # @composable-svelte/core
 
-A Composable Architecture for Svelte 5.
+> A Composable Architecture for Svelte 5 - Type-safe state management with reducers, effects, and navigation
+
+[![npm version](https://img.shields.io/npm/v/@composable-svelte/core.svg)](https://www.npmjs.com/package/@composable-svelte/core)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue)](https://www.typescriptlang.org/)
+[![Svelte 5](https://img.shields.io/badge/Svelte-5-orange)](https://svelte.dev/)
+
+Inspired by [The Composable Architecture (TCA)](https://github.com/pointfreeco/swift-composable-architecture) from Swift/iOS, adapted for Svelte 5 and TypeScript.
 
 ## Features
 
-### Phase 1 (Core Architecture) ✅
-- ✅ **Predictable State Management** - Pure reducers transform state based on actions
-- ✅ **Type-Safe** - Full TypeScript support with discriminated unions
-- ✅ **Effect System** - Declarative side effects (run, batch, cancellable, debounced, throttled, afterDelay, fireAndForget)
-- ✅ **Reducer Composition** - Compose features with `scope()` and `combineReducers()`
-- ✅ **TestStore** - Comprehensive testing support with send/receive pattern
-- ✅ **Svelte 5 Integration** - Built on Svelte 5's $state runes for reactivity
-
-### Phase 2 (Navigation System) ✅
-- ✅ **Tree-Based Navigation** - Modal, Sheet, Alert, Drawer, Popover navigation
-- ✅ **Stack-Based Navigation** - Multi-screen flows with NavigationStack
-- ✅ **8 Navigation Components** - Accessible, tested, customizable
-- ✅ **Type-Safe Action Routing** - `ifLetPresentation()` with full type inference
-- ✅ **Store Scoping** - `scopeToDestination()` for child components
-- ✅ **WCAG 2.1 AA Compliant** - Enterprise-grade accessibility
+- ✅ **Pure Reducers**: Predictable state management with `(state, action, deps) => [newState, effect]`
+- ✅ **Declarative Effects**: Side effects as data structures (run, fireAndForget, batch, merge, cancel)
+- ✅ **Composability**: Nest and scope reducers like Lego blocks
+- ✅ **Type-Safe Navigation**: State-driven navigation with Modal, Sheet, Drawer, Alert, NavigationStack
+- ✅ **Svelte 5 Runes**: Full integration with Svelte's reactivity system (\`$state\`, \`$derived\`)
+- ✅ **TestStore**: Exhaustive action testing with send/receive pattern
+- ✅ **Complete Backend**: API client, WebSocket, Storage, Clock dependencies
+- ✅ **73+ Components**: shadcn-svelte integration with reducer-driven patterns
+- ✅ **URL Routing**: Browser history sync with pattern matching
+- ✅ **1500+ Tests**: Comprehensive test coverage across all modules
 
 ## Installation
 
-```bash
-pnpm add @composable-svelte/core svelte
-```
+\`\`\`bash
+npm install @composable-svelte/core
+# or
+pnpm add @composable-svelte/core
+# or
+yarn add @composable-svelte/core
+\`\`\`
 
-**Requirements:**
-- Svelte 5+
-- TypeScript 5.5+
+**Peer Dependencies**: Svelte 5.0.0 or higher
 
 ## Quick Start
 
-```typescript
-import { createStore, Effect, type Reducer } from '@composable-svelte/core';
+### 1. Define Your State and Actions
 
-// 1. Define your state
+\`\`\`typescript
+import { createStore, Effect } from '@composable-svelte/core';
+
 interface CounterState {
   count: number;
   isLoading: boolean;
 }
 
-// 2. Define your actions
 type CounterAction =
   | { type: 'increment' }
   | { type: 'decrement' }
-  | { type: 'loadAsync' }
-  | { type: 'loadComplete'; value: number };
+  | { type: 'incrementAsync' }
+  | { type: 'incrementCompleted' };
+\`\`\`
 
-// 3. Create a reducer
-const counterReducer: Reducer<CounterState, CounterAction> = (state, action) => {
+### 2. Create a Reducer
+
+\`\`\`typescript
+const counterReducer = (
+  state: CounterState,
+  action: CounterAction,
+  deps: {}
+): [CounterState, Effect<CounterAction>] => {
   switch (action.type) {
     case 'increment':
       return [{ ...state, count: state.count + 1 }, Effect.none()];
@@ -57,201 +68,96 @@ const counterReducer: Reducer<CounterState, CounterAction> = (state, action) => 
     case 'decrement':
       return [{ ...state, count: state.count - 1 }, Effect.none()];
 
-    case 'loadAsync':
+    case 'incrementAsync':
       return [
         { ...state, isLoading: true },
         Effect.run(async (dispatch) => {
-          const value = await fetchData();
-          dispatch({ type: 'loadComplete', value });
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          dispatch({ type: 'incrementCompleted' });
         })
       ];
 
-    case 'loadComplete':
+    case 'incrementCompleted':
       return [
-        { ...state, count: action.value, isLoading: false },
+        { ...state, count: state.count + 1, isLoading: false },
         Effect.none()
       ];
-
-    default:
-      return [state, Effect.none()];
   }
 };
+\`\`\`
 
-// 4. Create the store
+### 3. Create the Store
+
+\`\`\`typescript
 const store = createStore({
   initialState: { count: 0, isLoading: false },
-  reducer: counterReducer
+  reducer: counterReducer,
+  dependencies: {}
 });
+\`\`\`
 
-// 5. Use in Svelte components
-store.dispatch({ type: 'increment' });
-console.log(store.state.count); // 1
-```
+### 4. Use in Svelte Component
 
-## Using in Svelte 5 Components
-
-```svelte
+\`\`\`svelte
 <script lang="ts">
-  import { createStore } from '@composable-svelte/core';
-  import { counterReducer, initialState } from './counter';
-  import { onDestroy } from 'svelte';
-
-  const store = createStore({
-    initialState,
-    reducer: counterReducer
-  });
-
-  // Derived state (reactive)
-  const canDecrement = $derived(store.state.count > 0);
-
-  onDestroy(() => store.destroy());
+  import { store } from './counter-store';
 </script>
 
 <div>
-  <h2>Count: {store.state.count}</h2>
-
-  <button
-    onclick={() => store.dispatch({ type: 'decrement' })}
-    disabled={!canDecrement}
-  >
-    -
-  </button>
-
+  <h1>Count: {store.state.count}</h1>
   <button onclick={() => store.dispatch({ type: 'increment' })}>
     +
   </button>
-</div>
-```
-
-## Testing
-
-```typescript
-import { TestStore } from '@composable-svelte/core';
-import { counterReducer, initialState } from './counter';
-
-describe('Counter', () => {
-  it('increments count', async () => {
-    const store = new TestStore({ initialState, reducer: counterReducer });
-
-    await store.send({ type: 'increment' }, (state) => {
-      expect(state.count).toBe(1);
-    });
-
-    await store.send({ type: 'increment' }, (state) => {
-      expect(state.count).toBe(2);
-    });
-
-    store.assertNoPendingActions();
-  });
-
-  it('handles async effects', async () => {
-    const store = new TestStore({ initialState, reducer: counterReducer });
-
-    await store.send({ type: 'loadAsync' });
-
-    await store.receive({ type: 'loadComplete' }, (state) => {
-      expect(state.isLoading).toBe(false);
-      expect(state.count).toBe(42);
-    });
-  });
-});
-```
-
-## Navigation Quick Start
-
-```typescript
-import { ifLetPresentation } from '@composable-svelte/core/navigation';
-import { Modal } from '@composable-svelte/core/navigation-components';
-
-// 1. Define state with optional destination
-interface AppState {
-  productDetail: ProductDetailState | null;
-}
-
-// 2. Define actions with PresentationAction wrapper
-type AppAction =
-  | { type: 'showProduct'; productId: string }
-  | { type: 'productDetail'; action: PresentationAction<ProductDetailAction> };
-
-// 3. Use ifLetPresentation in reducer
-const appReducer: Reducer<AppState, AppAction, AppDeps> = (state, action, deps) => {
-  switch (action.type) {
-    case 'showProduct':
-      return [{
-        ...state,
-        productDetail: { productId: action.productId }
-      }, Effect.none()];
-
-    case 'productDetail': {
-      const [newState, effect] = ifLetPresentation(
-        (s) => s.productDetail,
-        (s, detail) => ({ ...s, productDetail: detail }),
-        'productDetail',
-        (childAction): AppAction => ({
-          type: 'productDetail',
-          action: { type: 'presented', action: childAction }
-        }),
-        productDetailReducer
-      )(state, action, deps);
-
-      // Observe dismiss
-      if ('action' in action && action.action.type === 'dismiss') {
-        return [{ ...newState, productDetail: null }, effect];
-      }
-
-      return [newState, effect];
-    }
-
-    default:
-      return [state, Effect.none()];
-  }
-};
-```
-
-**In your Svelte component:**
-
-```svelte
-<script lang="ts">
-  import { scopeToDestination } from '@composable-svelte/core/navigation';
-  import { Modal } from '@composable-svelte/core/navigation-components';
-
-  let { store } = $props();
-
-  const detailStore = $derived(
-    scopeToDestination(store, 'productDetail')
-  );
-</script>
-
-{#if detailStore}
-  <Modal
-    open={true}
-    title="Product Details"
-    onOpenChange={(open) => !open && detailStore.dismiss()}
+  <button onclick={() => store.dispatch({ type: 'decrement' })}>
+    -
+  </button>
+  <button
+    onclick={() => store.dispatch({ type: 'incrementAsync' })}
+    disabled={store.state.isLoading}
   >
-    <ProductDetails store={detailStore} />
-  </Modal>
-{/if}
-```
-
-## Examples
-
-- **Counter** - `examples/counter` - Basic store usage
-- **Product Gallery** - `examples/product-gallery` - Complete navigation example with all 8 components
+    Async +
+  </button>
+</div>
+\`\`\`
 
 ## Documentation
 
-- **Navigation Guide** - [`docs/NAVIGATION-GUIDE.md`](../../docs/NAVIGATION-GUIDE.md) - Complete navigation system guide
-- **Best Practices** - [`docs/navigation-best-practices.md`](../../docs/navigation-best-practices.md) - Patterns and pitfalls
-- **Product Gallery README** - [`examples/product-gallery/README.md`](../../examples/product-gallery/README.md) - Architecture walkthrough
+Comprehensive documentation is available in the \`docs/\` directory:
 
-## Roadmap
+- **[Getting Started](./docs/getting-started.md)** - First app tutorial
+- **[Core Concepts](./docs/core-concepts/)** - Store, reducers, effects, composition, testing
+- **[Navigation](./docs/navigation/)** - Tree-based navigation, components, dismiss patterns
+- **[DSL](./docs/dsl/)** - Destinations, matchers, scope helpers
+- **[Animation](./docs/animation/)** - Motion One integration
+- **[Backend](./docs/backend/)** - API client, WebSocket, dependencies
+- **[Routing](./docs/routing/)** - URL synchronization
+- **[API Reference](./docs/api/)** - Complete API documentation
+- **[Troubleshooting](./docs/troubleshooting.md)** - Common issues and solutions
+- **[Migration](./docs/migration.md)** - From Redux, TCA, MobX, Svelte stores
 
-- ✅ **Phase 1**: Core architecture - store, effects, composition, testing
-- ✅ **Phase 2**: Navigation system - components, routing, accessibility
-- 🔄 **Phase 3**: DSL + matchers - ergonomic fluent APIs
-- 🔄 **Phase 4**: Animation integration - animated transitions
-- 🔄 **Phase 5**: Polish, documentation, 1.0.0 release
+## Examples
+
+See the \`examples/\` directory for working examples:
+
+- **[Styleguide](../../examples/styleguide)** - Component showcase with 73+ components
+- **[Product Gallery](../../examples/product-gallery)** - Full-featured product browsing app
+- **[URL Routing](../../examples/url-routing)** - Browser history integration examples
+
+## Contributing
+
+Contributions are welcome! This project follows a specification-first approach. See [CLAUDE.md](../../CLAUDE.md) for contributor guidelines.
 
 ## License
 
-MIT
+MIT License - see [LICENSE](./LICENSE) for details.
+
+## Acknowledgments
+
+Heavily inspired by [The Composable Architecture](https://github.com/pointfreeco/swift-composable-architecture) by Point-Free. Adapted for Svelte 5 and TypeScript with love.
+
+## Links
+
+- [Documentation](./docs/)
+- [GitHub Repository](https://github.com/jbelolo/composable-svelte)
+- [Issue Tracker](https://github.com/jbelolo/composable-svelte/issues)
+- [Changelog](./CHANGELOG.md)
