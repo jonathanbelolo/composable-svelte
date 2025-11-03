@@ -63,5 +63,15 @@ export { createLiveWebSocket } from './live-client.js';
 export type { MockWebSocketClient, SpyWebSocketClient, RecordedConnection, RecordedDisconnection } from './testing/index.js';
 export { createMockWebSocket, createSpyWebSocket } from './testing/index.js';
 
+// Advanced features
+export type { Heartbeat } from './heartbeat.js';
+export { createHeartbeat } from './heartbeat.js';
+
+export type { MessageQueue } from './message-queue.js';
+export { createMessageQueue, createQueuedWebSocket } from './message-queue.js';
+
+export type { ChannelRouter, ChannelExtractor } from './channel-router.js';
+export { createChannelRouter, createChannelWebSocket } from './channel-router.js';
+
 // Effect integration (imported to register Effect.websocket namespace)
 import './effect-websocket.js';

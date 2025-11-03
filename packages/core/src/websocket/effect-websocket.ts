@@ -15,9 +15,9 @@ import type {
   WebSocketClient,
   WebSocketEvent,
   WebSocketMessage,
-  WebSocketError,
   Unsubscribe
 } from './types.js';
+import { WebSocketError } from './types.js';
 import { WS_ERROR_CODES } from './types.js';
 
 /**

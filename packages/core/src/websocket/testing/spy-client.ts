@@ -86,7 +86,11 @@ export function createSpyWebSocket<T = unknown>(
   const receivedMessages: WebSocketMessage<T>[] = [];
 
   async function connect(url: string, protocols?: string[]): Promise<void> {
-    connections.push({ url, protocols, timestamp: Date.now() });
+    const record: RecordedConnection = { url, timestamp: Date.now() };
+    if (protocols !== undefined) {
+      (record as any).protocols = protocols;
+    }
+    connections.push(record);
     return realClient.connect(url, protocols);
   }
 

@@ -70,7 +70,7 @@ export function createLiveWebSocket<T = unknown>(
     connectedAt: null
   };
 
-  const stats: ConnectionStats = {
+  const stats = {
     messagesSent: 0,
     messagesReceived: 0,
     bytesSent: 0,
@@ -441,12 +441,16 @@ export function createLiveWebSocket<T = unknown>(
 
   function subscribe(listener: MessageListener<T>): Unsubscribe {
     messageListeners.add(listener);
-    return () => messageListeners.delete(listener);
+    return () => {
+      messageListeners.delete(listener);
+    };
   }
 
   function subscribeToEvents(listener: EventListener): Unsubscribe {
     eventListeners.add(listener);
-    return () => eventListeners.delete(listener);
+    return () => {
+      eventListeners.delete(listener);
+    };
   }
 
   // ========================================

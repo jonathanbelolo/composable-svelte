@@ -167,12 +167,16 @@ export function createMockWebSocket<T = unknown>(
 
   function subscribe(listener: MessageListener<T>): Unsubscribe {
     messageListeners.add(listener);
-    return () => messageListeners.delete(listener);
+    return () => {
+      messageListeners.delete(listener);
+    };
   }
 
   function subscribeToEvents(listener: EventListener): Unsubscribe {
     eventListeners.add(listener);
-    return () => eventListeners.delete(listener);
+    return () => {
+      eventListeners.delete(listener);
+    };
   }
 
   function simulateMessage(data: T): void {
