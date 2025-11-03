@@ -121,7 +121,8 @@ export function createQueuedWebSocket<T = unknown>(
   });
 
   return {
-    ...client,
+    connect: client.connect.bind(client),
+    disconnect: client.disconnect.bind(client),
     async send(message: T): Promise<void> {
       if (isConnected) {
         return client.send(message);
@@ -129,6 +130,10 @@ export function createQueuedWebSocket<T = unknown>(
         // Queue message for later
         queue.enqueue(message);
       }
-    }
+    },
+    subscribe: client.subscribe.bind(client),
+    subscribeToEvents: client.subscribeToEvents.bind(client),
+    get state() { return client.state; },
+    get stats() { return client.stats; }
   };
 }

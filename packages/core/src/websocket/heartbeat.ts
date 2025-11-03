@@ -60,6 +60,7 @@ export function createHeartbeat(
 ): Heartbeat {
   let intervalId: ReturnType<typeof setInterval> | null = null;
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  let unsubscribe: (() => void) | null = null;
   let pongReceived = true;
 
   const pingMessage = config.pingMessage ?? 'PING';
@@ -69,6 +70,17 @@ export function createHeartbeat(
     if (intervalId || !config.enabled) return;
 
     pongReceived = true;
+
+    // Subscribe to pong messages
+    unsubscribe = client.subscribe((message) => {
+      if (message.data === pongMessage) {
+        pongReceived = true;
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+      }
+    });
 
     intervalId = setInterval(() => {
       // Check if last ping was acknowledged
@@ -96,17 +108,6 @@ export function createHeartbeat(
       }, config.timeout);
 
     }, config.interval);
-
-    // Listen for pong messages
-    client.subscribe((message) => {
-      if (message.data === pongMessage) {
-        pongReceived = true;
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-          timeoutId = null;
-        }
-      }
-    });
   }
 
   function stop(): void {
@@ -117,6 +118,10 @@ export function createHeartbeat(
     if (timeoutId) {
       clearTimeout(timeoutId);
       timeoutId = null;
+    }
+    if (unsubscribe) {
+      unsubscribe();
+      unsubscribe = null;
     }
     pongReceived = true;
   }

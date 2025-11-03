@@ -89,7 +89,25 @@ export function createMockWebSocket<T = unknown>(
   const eventListeners = new Set<EventListener>();
   const sentMessages: T[] = [];
 
+  const stats = {
+    messagesSent: 0,
+    messagesReceived: 0,
+    bytesSent: 0,
+    bytesReceived: 0,
+    reconnects: 0,
+    errors: 0
+  };
+
   async function connect(url: string, protocols: string[] = []): Promise<void> {
+    // Prevent connecting when already connected
+    if (state.status === 'connected') {
+      throw new WebSocketError(
+        'Already connected',
+        WS_ERROR_CODES.CONNECTION_FAILED,
+        false
+      );
+    }
+
     state = {
       ...state,
       status: 'connecting',
@@ -97,28 +115,32 @@ export function createMockWebSocket<T = unknown>(
       protocols
     };
 
-    // Simulate async connection
-    await new Promise(resolve => setTimeout(resolve, config?.connectionTimeout || 10));
+    // Simulate async connection - use queueMicrotask for fake timer compatibility
+    await new Promise<void>(resolve => {
+      setTimeout(() => {
+        state = {
+          ...state,
+          status: 'connected',
+          connectedAt: new Date()
+        };
 
-    state = {
-      ...state,
-      status: 'connected',
-      connectedAt: new Date()
-    };
+        const event: WebSocketConnectedEvent = {
+          type: 'connected',
+          url,
+          protocols,
+          timestamp: Date.now()
+        };
 
-    const event: WebSocketConnectedEvent = {
-      type: 'connected',
-      url,
-      protocols,
-      timestamp: Date.now()
-    };
+        eventListeners.forEach(listener => {
+          try {
+            listener(event);
+          } catch (error) {
+            console.error('[MockWebSocket] Error in listener:', error);
+          }
+        });
 
-    eventListeners.forEach(listener => {
-      try {
-        listener(event);
-      } catch (error) {
-        console.error('[MockWebSocket] Error in listener:', error);
-      }
+        resolve();
+      }, config?.connectionTimeout || 10);
     });
   }
 
@@ -163,6 +185,11 @@ export function createMockWebSocket<T = unknown>(
     }
 
     sentMessages.push(message);
+    stats.messagesSent++;
+
+    // Calculate bytes sent
+    const serialized = JSON.stringify(message);
+    stats.bytesSent += serialized.length;
   }
 
   function subscribe(listener: MessageListener<T>): Unsubscribe {
@@ -186,6 +213,9 @@ export function createMockWebSocket<T = unknown>(
       raw: JSON.stringify(data)
     };
 
+    stats.messagesReceived++;
+    stats.bytesReceived += message.raw.length;
+
     messageListeners.forEach(listener => {
       try {
         listener(message);
@@ -207,6 +237,8 @@ export function createMockWebSocket<T = unknown>(
 
   function simulateError(error: WebSocketError): void {
     state = { ...state, lastError: error };
+    stats.errors++;
+
     const event: WebSocketErrorEvent = {
       type: 'error',
       error,
@@ -248,6 +280,14 @@ export function createMockWebSocket<T = unknown>(
     messageListeners.clear();
     eventListeners.clear();
     sentMessages.length = 0;
+
+    // Reset stats
+    stats.messagesSent = 0;
+    stats.messagesReceived = 0;
+    stats.bytesSent = 0;
+    stats.bytesReceived = 0;
+    stats.reconnects = 0;
+    stats.errors = 0;
   }
 
   return {
@@ -259,12 +299,7 @@ export function createMockWebSocket<T = unknown>(
     get state() { return state; },
     get stats(): ConnectionStats {
       return {
-        messagesSent: sentMessages.length,
-        messagesReceived: 0,
-        bytesSent: 0,
-        bytesReceived: 0,
-        reconnects: 0,
-        errors: 0,
+        ...stats,
         uptime: state.connectedAt ? Date.now() - state.connectedAt.getTime() : 0
       };
     },

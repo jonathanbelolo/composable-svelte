@@ -198,7 +198,13 @@ export function createChannelWebSocket<T = unknown>(
   const router = createChannelRouter(client, extractChannel);
 
   return {
-    ...client,
+    connect: client.connect.bind(client),
+    disconnect: client.disconnect.bind(client),
+    send: client.send.bind(client),
+    subscribe: client.subscribe.bind(client),
+    subscribeToEvents: client.subscribeToEvents.bind(client),
+    get state() { return client.state; },
+    get stats() { return client.stats; },
     router
   };
 }
