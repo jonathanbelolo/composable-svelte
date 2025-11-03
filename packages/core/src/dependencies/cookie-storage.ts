@@ -215,8 +215,8 @@ export function createCookieStorage<T = unknown>(
 				domain: options.domain ?? domain ?? '',
 				secure: options.secure ?? secure,
 				sameSite: options.sameSite ?? sameSite,
-				maxAge: options.maxAge ?? maxAge,
-				expires: options.expires
+				...(options.maxAge !== undefined || maxAge !== undefined ? { maxAge: options.maxAge ?? maxAge } : {}),
+				...(options.expires !== undefined ? { expires: options.expires } : {})
 			};
 
 			// Build and set cookie
@@ -391,10 +391,10 @@ export function createMockCookieStorage<T = unknown>(
 				options: {
 					path: options.path ?? '/',
 					domain: options.domain ?? '',
-					secure: options.secure,
-					sameSite: options.sameSite,
-					maxAge: options.maxAge,
-					expires: options.expires
+					...(options.secure !== undefined ? { secure: options.secure } : {}),
+					...(options.sameSite !== undefined ? { sameSite: options.sameSite } : {}),
+					...(options.maxAge !== undefined ? { maxAge: options.maxAge } : {}),
+					...(options.expires !== undefined ? { expires: options.expires } : {})
 				}
 			});
 

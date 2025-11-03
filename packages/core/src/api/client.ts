@@ -55,10 +55,12 @@ function buildQueryString(params: Record<string, string | number | boolean | nul
   const keys = Object.keys(params);
   for (let i = 0; i < keys.length; i++) {
     const key = keys[i];
-    const value = params[key];
+    if (key !== undefined) {
+      const value = params[key];
 
-    if (value !== null && value !== undefined) {
-      entries.push(`${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`);
+      if (value !== null && value !== undefined) {
+        entries.push(`${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`);
+      }
     }
   }
 
@@ -128,7 +130,12 @@ function mergeHeaders(...headerSets: (Record<string, string> | undefined)[]): Re
       const keys = Object.keys(headers);
       for (let j = 0; j < keys.length; j++) {
         const key = keys[j];
-        result[key] = headers[key];
+        if (key !== undefined) {
+          const value = headers[key];
+          if (value !== undefined) {
+            result[key] = value;
+          }
+        }
       }
     }
   }
@@ -201,7 +208,7 @@ export function createAPIClient(config: APIClientConfig = {}): APIClient {
       let interceptedConfig: RequestConfig = { ...config, headers };
       for (let i = 0; i < interceptors.length; i++) {
         const interceptor = interceptors[i];
-        if (interceptor.onRequest) {
+        if (interceptor && interceptor.onRequest) {
           interceptedConfig = await interceptor.onRequest(fullURL, interceptedConfig);
           headers = interceptedConfig.headers || headers;
         }
@@ -240,7 +247,7 @@ export function createAPIClient(config: APIClientConfig = {}): APIClient {
           // Run error interceptors
           for (let i = 0; i < interceptors.length; i++) {
             const interceptor = interceptors[i];
-            if (interceptor.onError) {
+            if (interceptor && interceptor.onError) {
               try {
                 return await interceptor.onError(error) as APIResponse<T>;
               } catch (e) {
@@ -265,7 +272,7 @@ export function createAPIClient(config: APIClientConfig = {}): APIClient {
         // Run error interceptors
         for (let i = 0; i < interceptors.length; i++) {
           const interceptor = interceptors[i];
-          if (interceptor.onError) {
+          if (interceptor && interceptor.onError) {
             try {
               return await interceptor.onError(error) as APIResponse<T>;
             } catch (e) {
@@ -287,7 +294,7 @@ export function createAPIClient(config: APIClientConfig = {}): APIClient {
       // Run response interceptors
       for (let i = 0; i < interceptors.length; i++) {
         const interceptor = interceptors[i];
-        if (interceptor.onResponse) {
+        if (interceptor && interceptor.onResponse) {
           apiResponse = await interceptor.onResponse(apiResponse);
         }
       }
@@ -302,7 +309,7 @@ export function createAPIClient(config: APIClientConfig = {}): APIClient {
         // Run error interceptors
         for (let i = 0; i < interceptors.length; i++) {
           const interceptor = interceptors[i];
-          if (interceptor.onError) {
+          if (interceptor && interceptor.onError) {
             try {
               return await interceptor.onError(timeoutError) as APIResponse<T>;
             } catch (e) {
@@ -324,7 +331,7 @@ export function createAPIClient(config: APIClientConfig = {}): APIClient {
         // Run error interceptors
         for (let i = 0; i < interceptors.length; i++) {
           const interceptor = interceptors[i];
-          if (interceptor.onError) {
+          if (interceptor && interceptor.onError) {
             try {
               return await interceptor.onError(networkError) as APIResponse<T>;
             } catch (e) {

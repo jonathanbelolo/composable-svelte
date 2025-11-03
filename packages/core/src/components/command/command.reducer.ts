@@ -218,7 +218,7 @@ export const commandReducer: Reducer<CommandState, CommandAction, CommandDepende
 
 			const command = state.filteredCommands[commandIndex];
 
-			if (command.disabled) {
+			if (!command || command.disabled) {
 				return [state, Effect.none()];
 			}
 

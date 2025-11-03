@@ -30,7 +30,7 @@ function findNextEnabledIndex(
 		const item = items[currentIndex];
 
 		// Skip disabled and separator items
-		if (!item.disabled && !item.isSeparator) {
+		if (item && !item.disabled && !item.isSeparator) {
 			return currentIndex;
 		}
 	}

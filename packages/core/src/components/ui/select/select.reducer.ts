@@ -50,7 +50,7 @@ function findNextEnabledIndex<T>(
 	for (let i = 0; i < options.length; i++) {
 		const option = options[currentIndex];
 
-		if (!option.disabled) {
+		if (option && !option.disabled) {
 			return currentIndex;
 		}
 

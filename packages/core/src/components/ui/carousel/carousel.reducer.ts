@@ -5,6 +5,7 @@
  */
 
 import { Effect } from '../../../effect.js';
+import type { Effect as EffectType } from '../../../types.js';
 import type {
   CarouselState,
   CarouselAction,
@@ -19,7 +20,7 @@ export function carouselReducer<T = unknown>(
   state: CarouselState<T>,
   action: CarouselAction,
   deps?: CarouselDependencies<T>
-): [CarouselState<T>, Effect<CarouselAction>] {
+): [CarouselState<T>, EffectType<CarouselAction>] {
   switch (action.type) {
     case 'nextSlide': {
       if (state.isTransitioning) {
@@ -190,10 +191,10 @@ function handleSlideChange<T>(
   state: CarouselState<T>,
   newIndex: number,
   deps?: CarouselDependencies<T>
-): [CarouselState<T>, Effect<CarouselAction>] {
+): [CarouselState<T>, EffectType<CarouselAction>] {
   const newSlide = state.slides[newIndex];
 
-  const effects: Effect<CarouselAction>[] = [
+  const effects: EffectType<CarouselAction>[] = [
     Effect.run<CarouselAction>(async (dispatch) => {
       dispatch({ type: 'transitionStarted' });
     })

@@ -70,7 +70,11 @@ function matchPattern(
 
   const params: Record<string, string> = {};
   for (let i = 0; i < paramNames.length; i++) {
-    params[paramNames[i]] = match[i + 1];
+    const paramName = paramNames[i];
+    const matchValue = match[i + 1];
+    if (paramName !== undefined && matchValue !== undefined) {
+      params[paramName] = matchValue;
+    }
   }
 
   return { params };

@@ -6,6 +6,7 @@
  */
 
 import { Effect } from '../../../effect.js';
+import type { Effect as EffectType } from '../../../types.js';
 import type {
   FileUploadState,
   FileUploadAction,
@@ -23,7 +24,7 @@ export function fileUploadReducer(
   state: FileUploadState,
   action: FileUploadAction,
   deps?: FileUploadDependencies
-): [FileUploadState, Effect<FileUploadAction>] {
+): [FileUploadState, EffectType<FileUploadAction>] {
   switch (action.type) {
     case 'filesSelected': {
       const { files } = action;
@@ -46,7 +47,7 @@ export function fileUploadReducer(
       const newFiles = [...state.files, ...validFiles];
 
       // Trigger onFilesChange callback
-      const effects: Effect<FileUploadAction>[] = [];
+      const effects: EffectType<FileUploadAction>[] = [];
 
       if (deps?.onFilesChange) {
         effects.push(

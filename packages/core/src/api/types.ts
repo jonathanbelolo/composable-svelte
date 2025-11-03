@@ -357,7 +357,7 @@ export const Request = {
   get: <T = unknown>(url: string, config?: RequestConfig): APIRequest<T> => ({
     method: 'GET',
     url,
-    config
+    ...(config !== undefined && { config })
   }),
 
   /**
@@ -393,7 +393,7 @@ export const Request = {
   delete: <T = unknown>(url: string, config?: RequestConfig): APIRequest<T> => ({
     method: 'DELETE',
     url,
-    config
+    ...(config !== undefined && { config })
   }),
 
   /**
@@ -402,6 +402,6 @@ export const Request = {
   head: (url: string, config?: RequestConfig): APIRequest<void> => ({
     method: 'HEAD',
     url,
-    config
+    ...(config !== undefined && { config })
   })
 };

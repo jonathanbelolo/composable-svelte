@@ -214,7 +214,11 @@ export function createMockWebSocket<T = unknown>(
     };
 
     stats.messagesReceived++;
-    stats.bytesReceived += message.raw.length;
+    stats.bytesReceived += typeof message.raw === 'string'
+      ? message.raw.length
+      : message.raw instanceof ArrayBuffer
+        ? message.raw.byteLength
+        : 0; // Blob size not easily accessible
 
     messageListeners.forEach(listener => {
       try {

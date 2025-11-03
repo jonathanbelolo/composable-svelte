@@ -180,14 +180,14 @@ export function createInitialCommandState(config?: {
 
 	return {
 		commands,
-		groups: config?.groups,
+		...(config?.groups !== undefined && { groups: config.groups }),
 		query: '',
 		filteredCommands: commands,
 		selectedIndex: 0,
 		isOpen: config?.isOpen ?? false,
 		presentation: { status: 'idle' },
 		caseSensitive: config?.caseSensitive ?? false,
-		maxResults: config?.maxResults
+		...(config?.maxResults !== undefined && { maxResults: config.maxResults })
 	};
 }
 
@@ -234,5 +234,5 @@ export function getSelectedCommand(state: CommandState): CommandItem | null {
 		return null;
 	}
 
-	return state.filteredCommands[state.selectedIndex];
+	return state.filteredCommands[state.selectedIndex] ?? null;
 }

@@ -83,7 +83,7 @@ export function createRESTEndpoints<T, CreateDTO = Partial<T>, UpdateDTO = Parti
       return {
         method: 'GET',
         url: basePath,
-        config
+        ...(config !== undefined && { config })
       };
     },
 
@@ -91,7 +91,7 @@ export function createRESTEndpoints<T, CreateDTO = Partial<T>, UpdateDTO = Parti
       return {
         method: 'GET',
         url: `${basePath}/${id}`,
-        config
+        ...(config !== undefined && { config })
       };
     },
 
@@ -123,7 +123,7 @@ export function createRESTEndpoints<T, CreateDTO = Partial<T>, UpdateDTO = Parti
       return {
         method: 'DELETE',
         url: `${basePath}/${id}`,
-        config
+        ...(config !== undefined && { config })
       };
     }
   };

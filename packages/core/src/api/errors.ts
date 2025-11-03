@@ -97,18 +97,23 @@ export class APIError extends Error {
     const headerKeys = Object.keys(this.headers);
     for (let i = 0; i < headerKeys.length; i++) {
       const key = headerKeys[i];
-      const value = this.headers[key];
-      const lowerKey = key.toLowerCase();
+      if (key !== undefined) {
+        const value = this.headers[key];
+        if (value !== undefined) {
+          const lowerKey = key.toLowerCase();
 
-      let isSensitive = false;
-      for (let j = 0; j < SENSITIVE_HEADERS.length; j++) {
-        if (lowerKey === SENSITIVE_HEADERS[j]) {
-          isSensitive = true;
-          break;
+          let isSensitive = false;
+          for (let j = 0; j < SENSITIVE_HEADERS.length; j++) {
+            const sensitiveHeader = SENSITIVE_HEADERS[j];
+            if (sensitiveHeader !== undefined && lowerKey === sensitiveHeader) {
+              isSensitive = true;
+              break;
+            }
+          }
+
+          sanitized[key] = isSensitive ? '***REDACTED***' : value;
         }
       }
-
-      sanitized[key] = isSensitive ? '***REDACTED***' : value;
     }
 
     return sanitized;
@@ -138,7 +143,9 @@ export class NetworkError extends APIError {
       true  // Network errors are retryable
     );
     this.name = 'NetworkError';
-    this.cause = cause;
+    if (cause !== undefined) {
+      this.cause = cause;
+    }
 
     if ('captureStackTrace' in Error) {
       (Error as any).captureStackTrace(this, NetworkError);
@@ -292,17 +299,19 @@ export class ValidationError extends APIError {
       const errorFields = Object.keys(bodyObj.errors);
       for (let i = 0; i < errorFields.length; i++) {
         const field = errorFields[i];
-        const messages = (bodyObj.errors as any)[field];
+        if (field !== undefined) {
+          const messages = (bodyObj.errors as any)[field];
 
-        if (Array.isArray(messages)) {
-          for (let j = 0; j < messages.length; j++) {
-            const message = messages[j];
-            if (typeof message === 'string') {
-              errors.push({ field, message });
+          if (Array.isArray(messages)) {
+            for (let j = 0; j < messages.length; j++) {
+              const message = messages[j];
+              if (typeof message === 'string') {
+                errors.push({ field, message });
+              }
             }
+          } else if (typeof messages === 'string') {
+            errors.push({ field, message: messages });
           }
-        } else if (typeof messages === 'string') {
-          errors.push({ field, message: messages });
         }
       }
     }

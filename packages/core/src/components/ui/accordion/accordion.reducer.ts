@@ -255,7 +255,7 @@ export const accordionReducer: Reducer<
 				id: action.id,
 				title: '', // Not used in composition mode
 				content: '', // Not used in composition mode
-				disabled: action.disabled
+				...(action.disabled !== undefined && { disabled: action.disabled })
 			};
 
 			return [

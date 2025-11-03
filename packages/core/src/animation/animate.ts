@@ -887,13 +887,13 @@ export async function animateAccordionExpand(element: HTMLElement): Promise<void
 		await motionAnimate(
 			element,
 			{
-				height: [`0px`, `${fullHeight}px`] as any,
+				height: [`0px`, `${fullHeight}px`],
 				opacity: [0, 1]
-			},
+			} as any,
 			{
 				duration: 0.3,
 				easing: [0.4, 0, 0.2, 1] // ease-in-out
-			}
+			} as any
 		).finished;
 
 		// Clean up styles
@@ -927,13 +927,13 @@ export async function animateAccordionCollapse(element: HTMLElement): Promise<vo
 		await motionAnimate(
 			element,
 			{
-				height: [`${startHeight}px`, `0px`] as any,
+				height: [`${startHeight}px`, `0px`],
 				opacity: [1, 0]
-			},
+			} as any,
 			{
 				duration: 0.2,
 				easing: [0.4, 0, 1, 1] // ease-out
-			}
+			} as any
 		).finished;
 	} catch (error) {
 		console.error('[animateAccordionCollapse] Animation failed:', error);

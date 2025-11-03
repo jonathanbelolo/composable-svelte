@@ -6,7 +6,7 @@
  * @packageDocumentation
  */
 
-import type { Reducer } from '../../../types.js';
+import type { Reducer, Effect as EffectType } from '../../../types.js';
 import { Effect } from '../../../effect.js';
 import type {
 	PaginationState,
@@ -182,7 +182,7 @@ export const paginationReducer: Reducer<
 				itemsPerPage
 			});
 
-			const effects: Effect<PaginationAction>[] = [];
+			const effects: EffectType<PaginationAction>[] = [];
 
 			// If items per page changes, callback
 			if (deps.onItemsPerPageChange) {

@@ -61,8 +61,10 @@ function stableStringify(obj: unknown): string {
 
   for (let i = 0; i < keys.length; i++) {
     const key = keys[i];
-    const value = (obj as Record<string, unknown>)[key];
-    pairs.push('"' + key + '":' + stableStringify(value));
+    if (key !== undefined) {
+      const value = (obj as Record<string, unknown>)[key];
+      pairs.push('"' + key + '":' + stableStringify(value));
+    }
   }
 
   return '{' + pairs.join(',') + '}';
@@ -227,7 +229,10 @@ export function invalidateCache(pattern: string): void {
   });
 
   for (let i = 0; i < keysToDelete.length; i++) {
-    cache.delete(keysToDelete[i]);
+    const key = keysToDelete[i];
+    if (key !== undefined) {
+      cache.delete(key);
+    }
   }
 }
 
@@ -253,7 +258,10 @@ export function invalidateCacheOnMutation(
   // Invalidate specific patterns if configured
   if (typeof cacheConfig === 'object' && cacheConfig.invalidates) {
     for (let i = 0; i < cacheConfig.invalidates.length; i++) {
-      invalidateCache(cacheConfig.invalidates[i]);
+      const pattern = cacheConfig.invalidates[i];
+      if (pattern !== undefined) {
+        invalidateCache(pattern);
+      }
     }
     return;
   }
@@ -284,7 +292,10 @@ function cleanupExpiredEntries(): void {
   });
 
   for (let i = 0; i < keysToDelete.length; i++) {
-    cache.delete(keysToDelete[i]);
+    const key = keysToDelete[i];
+    if (key !== undefined) {
+      cache.delete(key);
+    }
   }
 }
 

@@ -39,8 +39,10 @@ function stableStringify(obj: unknown): string {
 
   for (let i = 0; i < keys.length; i++) {
     const key = keys[i];
-    const value = (obj as Record<string, unknown>)[key];
-    pairs.push('"' + key + '":' + stableStringify(value));
+    if (key !== undefined) {
+      const value = (obj as Record<string, unknown>)[key];
+      pairs.push('"' + key + '":' + stableStringify(value));
+    }
   }
 
   return '{' + pairs.join(',') + '}';
@@ -105,7 +107,10 @@ function cleanupStaleRequests(): void {
   });
 
   for (let i = 0; i < keysToDelete.length; i++) {
-    inFlightRequests.delete(keysToDelete[i]);
+    const key = keysToDelete[i];
+    if (key !== undefined) {
+      inFlightRequests.delete(key);
+    }
   }
 }
 

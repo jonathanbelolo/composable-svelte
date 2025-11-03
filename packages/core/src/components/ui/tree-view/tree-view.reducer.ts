@@ -6,7 +6,7 @@
  * @packageDocumentation
  */
 
-import type { Reducer } from '../../../types.js';
+import type { Reducer, Effect as EffectType } from '../../../types.js';
 import { Effect } from '../../../effect.js';
 import type {
 	TreeNode,
@@ -135,7 +135,7 @@ export const treeViewReducer: Reducer<
 				const newLoadingIds = new Set(state.loadingIds);
 				newLoadingIds.add(action.nodeId);
 
-				const effects: Effect<TreeViewAction>[] = [];
+				const effects: EffectType<TreeViewAction>[] = [];
 
 				// Trigger loading
 				if (deps?.loadChildren) {
@@ -478,12 +478,14 @@ export const treeViewReducer: Reducer<
 
 		case 'childrenLoaded': {
 			// Update the node's children
+			const nodeId = action.nodeId;
+			const children = action.children;
 			function updateNodeChildren(nodes: TreeNode[]): TreeNode[] {
 				return nodes.map((node) => {
-					if (node.id === action.nodeId) {
+					if (node.id === nodeId) {
 						return {
 							...node,
-							children: action.children
+							children: children
 						};
 					}
 					if (node.children) {

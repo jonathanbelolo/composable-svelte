@@ -109,7 +109,7 @@ export function createSpyAPI(
     calls.push({
       method,
       url,
-      config,
+      ...(config !== undefined && { config }),
       timestamp: Date.now()
     });
   }
