@@ -34,6 +34,19 @@ export type EffectExecutor<Action> = (
 ) => void | Promise<void>;
 
 /**
+ * Function that sets up a long-running subscription and returns cleanup.
+ *
+ * @template Action - The action type that can be dispatched
+ * @returns Cleanup function called when subscription is cancelled
+ */
+export type SubscriptionSetup<Action> = (dispatch: Dispatch<Action>) => SubscriptionCleanup;
+
+/**
+ * Function that cleans up a subscription's resources.
+ */
+export type SubscriptionCleanup = () => void | Promise<void>;
+
+/**
  * A discriminated union representing all possible effect types.
  * Effects are declarative descriptions of side effects - they describe WHAT
  * to do, not HOW or WHEN. The Store executes them.
@@ -48,7 +61,8 @@ export type Effect<Action> =
   | { readonly _tag: 'Cancellable'; readonly id: string; readonly execute: EffectExecutor<Action> }
   | { readonly _tag: 'Debounced'; readonly id: string; readonly ms: number; readonly execute: EffectExecutor<Action> }
   | { readonly _tag: 'Throttled'; readonly id: string; readonly ms: number; readonly execute: EffectExecutor<Action> }
-  | { readonly _tag: 'AfterDelay'; readonly ms: number; readonly execute: EffectExecutor<Action> };
+  | { readonly _tag: 'AfterDelay'; readonly ms: number; readonly execute: EffectExecutor<Action> }
+  | { readonly _tag: 'Subscription'; readonly id: string; readonly setup: SubscriptionSetup<Action> };
 
 /**
  * A pure function that transforms state based on an action.

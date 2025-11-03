@@ -38,6 +38,9 @@ export function createStore<State, Action, Dependencies = any>(
   // In-flight effects for cancellation
   const inFlightEffects = new Map<string, AbortController>();
 
+  // Subscription cleanup functions
+  const subscriptionCleanups = new Map<string, () => void | Promise<void>>();
+
   // Debounce timers
   const debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
@@ -129,6 +132,36 @@ export function createStore<State, Action, Dependencies = any>(
           existing.abort();
         }
 
+        // Cancel existing subscription with same id
+        const existingSubscription = subscriptionCleanups.get(effect.id);
+        if (existingSubscription) {
+          Promise.resolve(existingSubscription()).catch(error => {
+            console.error('[Composable Svelte] Subscription cleanup error:', error);
+          });
+          subscriptionCleanups.delete(effect.id);
+        }
+
+        // Clear debounce timer with same id
+        const existingTimer = debounceTimers.get(effect.id);
+        if (existingTimer) {
+          clearTimeout(existingTimer);
+          debounceTimers.delete(effect.id);
+        }
+
+        // Clear throttle with same id
+        const existingThrottle = throttleState.get(effect.id);
+        if (existingThrottle?.timeout) {
+          clearTimeout(existingThrottle.timeout);
+        }
+        throttleState.delete(effect.id);
+
+        // If execute is a no-op, this is Effect.cancel() - just cancel and return
+        const executeString = effect.execute.toString();
+        if (executeString.includes('{}') || executeString.includes('{ }')) {
+          break;
+        }
+
+        // Otherwise, set up new cancellable effect
         const controller = new AbortController();
         inFlightEffects.set(effect.id, controller);
 
@@ -207,6 +240,25 @@ export function createStore<State, Action, Dependencies = any>(
         });
         break;
 
+      case 'Subscription': {
+        // Cancel existing subscription with same id
+        const existingCleanup = subscriptionCleanups.get(effect.id);
+        if (existingCleanup) {
+          Promise.resolve(existingCleanup()).catch(error => {
+            console.error('[Composable Svelte] Subscription cleanup error:', error);
+          });
+        }
+
+        // Setup new subscription and store cleanup function
+        try {
+          const cleanup = effect.setup(dispatch);
+          subscriptionCleanups.set(effect.id, cleanup);
+        } catch (error) {
+          console.error('[Composable Svelte] Subscription setup error:', error);
+        }
+        break;
+      }
+
       default:
         // Exhaustiveness check
         const _exhaustive: never = effect;
@@ -256,6 +308,14 @@ export function createStore<State, Action, Dependencies = any>(
     // Cancel all in-flight effects
     inFlightEffects.forEach(controller => controller.abort());
     inFlightEffects.clear();
+
+    // Call all subscription cleanups
+    subscriptionCleanups.forEach((cleanup, id) => {
+      Promise.resolve(cleanup()).catch(error => {
+        console.error(`[Composable Svelte] Error cleaning up subscription "${id}":`, error);
+      });
+    });
+    subscriptionCleanups.clear();
 
     // Clear all timers
     debounceTimers.forEach(timer => clearTimeout(timer));

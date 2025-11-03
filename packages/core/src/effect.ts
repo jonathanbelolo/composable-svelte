@@ -202,6 +202,99 @@ export const Effect = {
   },
 
   /**
+   * Create a long-running subscription with automatic cleanup.
+   *
+   * Use this for subscriptions that need to be maintained over time and properly
+   * cleaned up when cancelled or when the store is destroyed. This is essential
+   * for WebSocket connections, event listeners, and other persistent resources.
+   *
+   * The subscription is identified by ID and can be cancelled with Effect.cancel().
+   * When cancelled, the cleanup function returned by setup() is called automatically.
+   *
+   * @param id - Unique identifier for subscription (used for cancellation)
+   * @param setup - Function that sets up the subscription and returns cleanup
+   *
+   * @example
+   * ```typescript
+   * // WebSocket subscription
+   * Effect.subscription('websocket-connection', (dispatch) => {
+   *   const socket = new WebSocket('wss://example.com');
+   *
+   *   socket.onmessage = (event) => {
+   *     dispatch({ type: 'messageReceived', data: event.data });
+   *   };
+   *
+   *   socket.onerror = (error) => {
+   *     dispatch({ type: 'connectionError', error });
+   *   };
+   *
+   *   // Return cleanup function
+   *   return () => {
+   *     socket.close();
+   *   };
+   * })
+   * ```
+   *
+   * @example
+   * ```typescript
+   * // Event listener subscription
+   * Effect.subscription('window-resize', (dispatch) => {
+   *   const handler = () => {
+   *     dispatch({ type: 'windowResized', width: window.innerWidth });
+   *   };
+   *
+   *   window.addEventListener('resize', handler);
+   *
+   *   return () => {
+   *     window.removeEventListener('resize', handler);
+   *   };
+   * })
+   * ```
+   *
+   * @example
+   * ```typescript
+   * // Cancelling a subscription
+   * case 'disconnect':
+   *   return [
+   *     state,
+   *     Effect.cancel('websocket-connection')
+   *   ];
+   * ```
+   */
+  subscription<A>(id: string, setup: (dispatch: Dispatch<A>) => (() => void | Promise<void>)): EffectType<A> {
+    return { _tag: 'Subscription', id, setup };
+  },
+
+  /**
+   * Cancel all in-flight effects with the given ID.
+   *
+   * This cancels effects created with:
+   * - Effect.cancellable()
+   * - Effect.subscription()
+   * - Effect.debounced()
+   * - Effect.throttled()
+   *
+   * For subscriptions, this triggers the cleanup function returned by setup().
+   *
+   * @param id - The ID of the effect(s) to cancel
+   *
+   * @example
+   * ```typescript
+   * case 'disconnect':
+   *   return [
+   *     state,
+   *     Effect.batch(
+   *       Effect.cancel('websocket-connection'),
+   *       Effect.cancel('websocket-messages')
+   *     )
+   *   ];
+   * ```
+   */
+  cancel<A>(id: string): EffectType<A> {
+    return { _tag: 'Cancellable', id, execute: () => {} };
+  },
+
+  /**
    * Create an effect that coordinates with animation lifecycle.
    * Automatically dispatches completion events after the specified duration.
    *
@@ -438,6 +531,12 @@ export const Effect = {
       case 'AfterDelay':
         return Effect.afterDelay(effect.ms, (dispatch) => {
           effect.execute((a) => dispatch(f(a)));
+        });
+
+      case 'Subscription':
+        return Effect.subscription(effect.id, (dispatch) => {
+          const cleanup = effect.setup((a) => dispatch(f(a)));
+          return cleanup;
         });
 
       default:

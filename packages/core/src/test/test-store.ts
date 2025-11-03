@@ -223,6 +223,7 @@ export class TestStore<State, Action, Dependencies = any> {
   private receivedActions: Action[] = [];
   private pendingEffects: Promise<void>[] = [];
   private pendingTimers: number = 0; // Track number of scheduled timers
+  private _subscriptionCleanups = new Map<string, () => void | Promise<void>>();
 
   /**
    * Control exhaustiveness checking for received actions.
@@ -458,6 +459,12 @@ export class TestStore<State, Action, Dependencies = any> {
 
       case 'FireAndForget':
         await effect.execute();
+        break;
+
+      case 'Subscription':
+        // Set up subscription and store cleanup
+        const cleanup = effect.setup(dispatch);
+        this._subscriptionCleanups.set(effect.id, cleanup);
         break;
 
       default:
