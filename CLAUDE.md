@@ -13,7 +13,7 @@ This repository contains **Composable Svelte**, a Composable Architecture librar
 - ✅ **Phase 1**: Core architecture (Store, Reducer, Effects, Composition, TestStore)
 - ✅ **Phase 2**: Navigation system (ifLet, Destinations, Navigation components, Dismiss dependency)
 - ✅ **Phase 3**: DSL & Matchers (createDestination, integrate, scopeTo, case paths)
-- ✅ **Phase 4**: Animation integration (PresentationState, animated effects, Svelte transitions)
+- ✅ **Phase 4**: Animation integration (PresentationState, Motion One for lifecycle animations)
 - ✅ **Phase 6**: Component Library (73+ shadcn-svelte components, Forms with Zod validation)
 - ✅ **Phase 7**: URL Routing (Browser history, pattern matching with path-to-regexp, query params)
 - ✅ **Phase 8**: Complete Backend Integration (3 major systems, 420 tests)
@@ -163,7 +163,7 @@ interface FeatureState {
   - Components: Modal, Sheet, Drawer, Alert, NavigationStack, Sidebar
   - Integrated with shadcn-svelte for UI components
 - ✅ **Phase 3**: DSL & Matchers - createDestination, integrate, scopeTo, case paths
-- ✅ **Phase 4**: Animation integration - PresentationState, animated effects, Svelte transitions
+- ✅ **Phase 4**: Animation integration - PresentationState, Motion One for lifecycle animations
 - ✅ **Phase 6**: Component Library - 73+ shadcn-svelte components, Forms with Zod validation
 - ✅ **Phase 7**: URL Routing - Browser history, pattern matching (path-to-regexp), query params
 - ✅ **Phase 8**: Complete Backend Integration (420 tests total)
@@ -331,9 +331,11 @@ This library is heavily inspired by TCA for Swift but adapted for Svelte/TypeScr
 
 ### Animation (Phase 4)
 - ✅ **PresentationState**: Lifecycle tracking (idle → presenting → presented → dismissing)
-- ✅ **Svelte Transitions**: Built-in transition support (scale, fade, slide)
-- ✅ **Effect.afterDelay**: Timing-based effects for animations
+- ✅ **Motion One**: State-driven animations for component lifecycles (Modal, Sheet, Drawer, Dropdown, etc.)
+- ✅ **Animation Helpers**: `animateModalIn/Out`, `animateSheetIn/Out`, `animateAccordionExpand/Collapse`, etc.
+- ✅ **Effect.afterDelay**: Timing-based effects for animation coordination
 - ✅ **State Guards**: Prevent invalid animation transitions
+- ✅ **CSS Animations**: Only for infinite loops (Spinner, Skeleton) - no CSS transitions for hover/focus
 
 ### Component Library (Phase 6)
 - ✅ **73+ shadcn-svelte Components**: Complete UI component library
@@ -456,72 +458,88 @@ export default {
 
 **Key Dependencies**:
 - `svelte: ^5.0.0` (peer dependency, required)
-- `motion: ^11.0.0` (peer dependency, optional - for advanced animations)
+- `motion: ^11.0.0` (peer dependency, required - for component lifecycle animations)
 - Dev: `vite`, `vitest`, `@testing-library/svelte`, `tsup`, `typescript`
 
 ### Animation System Implementation
 
-**CONFIRMED DECISION**: **Hybrid Approach** (Svelte transitions + optional Motion One)
+**IMPLEMENTATION**: **State-Driven Animations with Motion One**
 
-**Default**: Use **Svelte's built-in transitions**
-- Zero dependencies beyond Svelte
-- Covers 90% of use cases (modals, sheets, drawers)
-- Built-in easing functions and lifecycle events
-- Small bundle size
+**Core Architecture**: All component lifecycle animations use **Motion One** with state-driven patterns:
+- State-driven animation coordination via PresentationState
+- Animation helpers in `packages/core/src/animation/animate.ts`
+- Lifecycle: idle → presenting → presented → dismissing
+- GPU-accelerated via Web Animations API
+- Predictable, testable animation flows
 
-```svelte
-import { scale, fade, slide } from 'svelte/transition';
+**When to Use Motion One (REQUIRED)**:
+1. **Component Lifecycle Animations**: Modal/Dialog fade/scale, Dropdown appear/disappear, Sheet slide in/out
+2. **Expand/Collapse Animations**: Accordion items, Collapsible sections, height transitions
+3. **Toast/Alert Animations**: Slide in from edge, Notification animations
+4. **Navigation Animations**: Page transitions, Stack push/pop, route changes
 
-<div
-  in:scale={{ duration: 300, start: 0.95 }}
-  out:scale={{ duration: 200, start: 0.95 }}
-  onintroend={() => dispatch('presentationCompleted')}
-  onoutroend={() => dispatch('dismissalCompleted')}
-/>
-```
-
-**Advanced (Optional)**: **Motion One** for spring physics and gestures
-- Optional peer dependency (tree-shakeable)
-- Only imported when user opts in via `animationDriver="motion"`
-- Provides spring physics, gesture-driven animations
-- Uses Web Animations API (GPU-accelerated)
-
+**Animation Helpers** (`animate.ts`):
 ```typescript
-import { animate, spring } from 'motion';
+import {
+  animateModalIn,
+  animateModalOut,
+  animateSheetIn,
+  animateSheetOut,
+  animateAccordionExpand,
+  animateAccordionCollapse
+} from '@composable-svelte/core/animation';
 
-animate(node,
-  { opacity: [0, 1], scale: [0.95, 1] },
-  { easing: spring({ stiffness: 300, damping: 30 }) }
-);
+// In component
+$effect(() => {
+  if (store.state.presentation.status === 'presenting') {
+    animateModalIn(element).then(() => {
+      store.dispatch({
+        type: 'presentation',
+        event: { type: 'presentationCompleted' }
+      });
+    });
+  }
+});
 ```
 
-**Component API Design**:
-```svelte
-<!-- Default: Svelte transitions -->
-<Modal presentation={state.presentation}>
-  <Content />
-</Modal>
-
-<!-- Advanced: Motion One -->
-<Modal
-  presentation={state.presentation}
-  animationDriver="motion"
-  spring={{ stiffness: 300, damping: 30 }}
->
-  <Content />
-</Modal>
+**State Pattern**:
+```typescript
+// Reducer manages animation lifecycle
+case 'show': {
+  return [
+    {
+      ...state,
+      content,
+      presentation: {
+        status: 'presenting',
+        content,
+        duration: 0.3
+      }
+    },
+    Effect.run(async (dispatch) => {
+      await new Promise(r => setTimeout(r, 300));
+      dispatch({
+        type: 'presentation',
+        event: { type: 'presentationCompleted' }
+      });
+    })
+  ];
+}
 ```
+
+**CSS Animations (EXCEPTIONS ONLY)**:
+- ✅ **Allowed**: Infinite loops (Spinner, Skeleton shimmer effects, Progress indicators)
+- ❌ **Prohibited**: Hover states, Focus states, Click/Active states
+- ❌ **Prohibited**: Any lifecycle animations (appearing, disappearing, expanding, collapsing)
 
 **Why This Approach**:
-- ✅ Zero deps for most users (just Svelte)
-- ✅ Opt-in complexity for advanced cases
-- ✅ Small bundle size by default
-- ✅ Upgrade path for gesture animations
-- ✅ Framework-appropriate (leverages Svelte strengths)
+- ✅ Predictable: State-driven animations are fully controlled by reducers
+- ✅ Testable: Animation state testable via TestStore
+- ✅ Composable: PresentationState pattern works with all navigation components
+- ✅ Performant: GPU-accelerated, Web Animations API
+- ✅ Consistent: Same pattern for Modal, Sheet, Drawer, Dropdown, Accordion, etc.
 
-**Implementation Priority**:
-1. **Phase 4**: Implement Svelte transitions (required for v1.0.0)
-2. **Phase 5 or post-1.0**: Add Motion One integration (optional enhancement)
+**See Also**: `docs/ANIMATION-GUIDELINES.md` for complete animation architecture
 
 ## Resources
 
