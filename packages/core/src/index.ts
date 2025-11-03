@@ -116,6 +116,45 @@ export {
 } from './navigation/index.js';
 
 // ============================================================================
+// Dependencies
+// ============================================================================
+
+export type {
+  Clock,
+  MockClock,
+  Storage,
+  SyncStorage,
+  CookieStorage,
+  StorageConfig,
+  CookieConfig,
+  CookieOptions,
+  SchemaValidator,
+  StorageEventData,
+  StorageEventListener,
+  Unsubscribe
+} from './dependencies/index.js';
+
+export {
+  createSystemClock,
+  createMockClock,
+  createLocalStorage,
+  createSessionStorage,
+  createNoopStorage,
+  createCookieStorage,
+  createMockCookieStorage,
+  isBrowser,
+  getStorageQuota,
+  getByteSize,
+  isStorageAvailable,
+  DependencyError,
+  StorageQuotaExceededError,
+  InvalidJSONError,
+  SchemaValidationError,
+  CookieSizeExceededError,
+  EnvironmentNotSupportedError
+} from './dependencies/index.js';
+
+// ============================================================================
 // Testing
 // ============================================================================
 
