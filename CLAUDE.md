@@ -539,7 +539,7 @@ case 'show': {
 - ✅ Performant: GPU-accelerated, Web Animations API
 - ✅ Consistent: Same pattern for Modal, Sheet, Drawer, Dropdown, Accordion, etc.
 
-**See Also**: `docs/ANIMATION-GUIDELINES.md` for complete animation architecture
+**See Also**: `guides/ANIMATION-GUIDELINES.md` for complete animation architecture
 
 ## Resources
 
