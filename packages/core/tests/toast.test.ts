@@ -8,8 +8,8 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { createTestStore } from '../src/test/test-store.js';
-import { toastReducer } from '../src/components/toast/toast.reducer.js';
+import { createTestStore } from '../src/lib/test/test-store.js';
+import { toastReducer } from '../src/lib/components/toast/toast.reducer.js';
 import {
 	createInitialToastState,
 	createToast,
@@ -17,7 +17,7 @@ import {
 	type ToastAction,
 	type ToastDependencies,
 	type Toast
-} from '../src/components/toast/toast.types.js';
+} from '../src/lib/components/toast/toast.types.js';
 
 // ================================================================
 // Helper: Advance Time (for auto-dismiss tests)

@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { parseDestination, matchPath, type ParserConfig } from '../../src/routing/parser';
+import { parseDestination, matchPath, type ParserConfig } from '../../src/lib/routing/parser';
 
 // Test Types
 type InventoryDestination =

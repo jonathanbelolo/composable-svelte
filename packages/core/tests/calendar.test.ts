@@ -5,9 +5,9 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createTestStore } from '../src/test/test-store.js';
-import { calendarReducer } from '../src/components/ui/calendar/calendar.reducer.js';
-import { createInitialCalendarState } from '../src/components/ui/calendar/calendar.types.js';
+import { createTestStore } from '../src/lib/test/test-store.js';
+import { calendarReducer } from '../src/lib/components/ui/calendar/calendar.reducer.js';
+import { createInitialCalendarState } from '../src/lib/components/ui/calendar/calendar.types.js';
 
 describe('Calendar', () => {
 	describe('Single Mode - Date Selection', () => {

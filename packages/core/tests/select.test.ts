@@ -5,12 +5,12 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createTestStore } from '../src/test/test-store.js';
-import { selectReducer } from '../src/components/ui/select/select.reducer.js';
+import { createTestStore } from '../src/lib/test/test-store.js';
+import { selectReducer } from '../src/lib/components/ui/select/select.reducer.js';
 import {
 	createInitialSelectState,
 	type SelectOption
-} from '../src/components/ui/select/select.types.js';
+} from '../src/lib/components/ui/select/select.types.js';
 
 describe('Select', () => {
 	const options: SelectOption[] = [

@@ -13,10 +13,10 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { TestStore } from '../src/test/test-store.js';
-import { accordionReducer } from '../src/components/ui/accordion/accordion.reducer.js';
-import { createInitialAccordionState } from '../src/components/ui/accordion/accordion.types.js';
-import type { AccordionItem } from '../src/components/ui/accordion/accordion.types.js';
+import { TestStore } from '../src/lib/test/test-store.js';
+import { accordionReducer } from '../src/lib/components/ui/accordion/accordion.reducer.js';
+import { createInitialAccordionState } from '../src/lib/components/ui/accordion/accordion.types.js';
+import type { AccordionItem } from '../src/lib/components/ui/accordion/accordion.types.js';
 
 describe('Accordion - Toggle Tests', () => {
 	it('should toggle item from collapsed to expanded', async () => {

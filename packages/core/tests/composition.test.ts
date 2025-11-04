@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { scope, combineReducers } from '../src/composition';
-import { Effect } from '../src/effect';
-import type { Reducer } from '../src/types';
+import { scope, combineReducers } from '../src/lib/composition';
+import { Effect } from '../src/lib/effect';
+import type { Reducer } from '../src/lib/types';
 
 describe('scope()', () => {
   interface ParentState {

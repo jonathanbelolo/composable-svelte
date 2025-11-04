@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createStore } from '../src/store.svelte';
-import { Effect } from '../src/effect';
-import type { Reducer } from '../src/types';
+import { createStore } from '../src/lib/store';
+import { Effect } from '../src/lib/effect';
+import type { Reducer } from '../src/lib/types';
 
 interface TestState {
   count: number;

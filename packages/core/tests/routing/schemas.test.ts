@@ -14,7 +14,7 @@ import {
 	enumSchema,
 	object,
 	literal
-} from '../../src/routing/schemas';
+} from '../../src/lib/routing/schemas';
 
 describe('string schema', () => {
 	it('accepts valid strings', () => {

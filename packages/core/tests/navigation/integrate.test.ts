@@ -6,10 +6,10 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { integrate } from '../../src/navigation/integrate.js';
-import type { Reducer } from '../../src/types.js';
-import { Effect } from '../../src/effect.js';
-import type { PresentationAction } from '../../src/navigation/types.js';
+import { integrate } from '../../src/lib/navigation/integrate.js';
+import type { Reducer } from '../../src/lib/types.js';
+import { Effect } from '../../src/lib/effect.js';
+import type { PresentationAction } from '../../src/lib/navigation/types.js';
 
 // ============================================================================
 // Test Fixtures

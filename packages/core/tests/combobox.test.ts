@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { TestStore } from '../src/test/test-store.js';
-import { comboboxReducer } from '../src/components/ui/combobox/combobox.reducer.js';
+import { TestStore } from '../src/lib/test/test-store.js';
+import { comboboxReducer } from '../src/lib/components/ui/combobox/combobox.reducer.js';
 import {
 	createInitialComboboxState,
 	type ComboboxOption
-} from '../src/components/ui/combobox/combobox.types.js';
+} from '../src/lib/components/ui/combobox/combobox.types.js';
 
 describe('Combobox', () => {
 	beforeEach(() => {

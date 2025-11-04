@@ -8,8 +8,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
 	createNoopStorage
-} from '../../src/dependencies/local-storage.js';
-import type { Storage } from '../../src/dependencies/storage.js';
+} from '../../src/lib/dependencies/local-storage.js';
+import type { Storage } from '../../src/lib/dependencies/storage.js';
 
 // Mock storage implementation for testing (since JSDOM storage is limited)
 function createMockStorage<T = unknown>(prefix = ''): Storage<T> {

@@ -8,7 +8,7 @@ import {
   createPaginatedEndpoints,
   createSearchEndpoints,
   createFullEndpoints
-} from '../../src/api/endpoints.js';
+} from '../../src/lib/api/endpoints.js';
 
 describe('createRESTEndpoints', () => {
   interface Product {

@@ -1,0 +1,1 @@
+{"version":3,"file":"live-client.d.ts","sourceRoot":"","sources":["../../src/lib/websocket/live-client.ts"],"names":[],"mappings":"AAAA;;;;;;;;;GASG;AAEH,OAAO,KAAK,EACV,eAAe,EACf,eAAe,EAUhB,MAAM,YAAY,CAAC;AAGpB;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;GA+BG;AACH,wBAAgB,mBAAmB,CAAC,CAAC,GAAG,OAAO,EAC7C,MAAM,CAAC,EAAE,OAAO,CAAC,eAAe,CAAC,GAChC,eAAe,CAAC,CAAC,CAAC,CAgapB"}

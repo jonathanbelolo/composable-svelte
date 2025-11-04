@@ -7,9 +7,9 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createHeartbeat } from '../../src/websocket/heartbeat.js';
-import { createMockWebSocket } from '../../src/websocket/testing/mock-client.js';
-import type { HeartbeatConfig } from '../../src/websocket/types.js';
+import { createHeartbeat } from '../../src/lib/websocket/heartbeat.js';
+import { createMockWebSocket } from '../../src/lib/websocket/testing/mock-client.js';
+import type { HeartbeatConfig } from '../../src/lib/websocket/types.js';
 
 describe('WebSocket Heartbeat - Basic', () => {
   describe('Lifecycle', () => {

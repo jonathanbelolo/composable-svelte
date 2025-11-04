@@ -12,11 +12,11 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createTestStore } from '../../src/test/test-store.js';
-import type { Reducer } from '../../src/types.js';
-import { Effect } from '../../src/effect.js';
-import type { PresentationAction } from '../../src/navigation/types.js';
-import { scopeTo } from '../../src/navigation/scope.js';
+import { createTestStore } from '../../src/lib/test/test-store.js';
+import type { Reducer } from '../../src/lib/types.js';
+import { Effect } from '../../src/lib/effect.js';
+import type { PresentationAction } from '../../src/lib/navigation/types.js';
+import { scopeTo } from '../../src/lib/navigation/scope.js';
 
 // ============================================================================
 // Test Fixtures

@@ -6,8 +6,8 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createURLSyncEffect } from '../../src/routing/sync-effect';
-import { Effect } from '../../src/effect';
+import { createURLSyncEffect } from '../../src/lib/routing/sync-effect';
+import { Effect } from '../../src/lib/effect';
 
 // Test State and Action Types
 interface TestState {

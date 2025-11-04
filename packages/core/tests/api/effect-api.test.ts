@@ -3,10 +3,10 @@
 // ============================================================================
 
 import { describe, it, expect, vi } from 'vitest';
-import { Effect } from '../../src/effect.js';
-import { api, apiFireAndForget, apiAll } from '../../src/api/effect-api.js';
-import { createMockAPI } from '../../src/api/testing/mock-client.js';
-import { APIError } from '../../src/api/errors.js';
+import { Effect } from '../../src/lib/effect.js';
+import { api, apiFireAndForget, apiAll } from '../../src/lib/api/effect-api.js';
+import { createMockAPI } from '../../src/lib/api/testing/mock-client.js';
+import { APIError } from '../../src/lib/api/errors.js';
 
 describe('Effect.api()', () => {
   describe('Successful API Calls', () => {

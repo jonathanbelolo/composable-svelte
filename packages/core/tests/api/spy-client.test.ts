@@ -3,9 +3,9 @@
 // ============================================================================
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createSpyAPI } from '../../src/api/testing/spy-client.js';
-import { createMockAPI } from '../../src/api/testing/mock-client.js';
-import { APIError } from '../../src/api/errors.js';
+import { createSpyAPI } from '../../src/lib/api/testing/spy-client.js';
+import { createMockAPI } from '../../src/lib/api/testing/mock-client.js';
+import { APIError } from '../../src/lib/api/errors.js';
 
 describe('createSpyAPI', () => {
   describe('Call Tracking', () => {

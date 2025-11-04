@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { TestStore } from '../src/test/test-store.js';
-import { fileUploadReducer } from '../src/components/ui/file-upload/file-upload.reducer.js';
+import { TestStore } from '../src/lib/test/test-store.js';
+import { fileUploadReducer } from '../src/lib/components/ui/file-upload/file-upload.reducer.js';
 import {
   createInitialFileUploadState,
   generateFileId,
   formatFileSize,
   type FileUploadAction,
   type UploadedFile
-} from '../src/components/ui/file-upload/file-upload.types.js';
+} from '../src/lib/components/ui/file-upload/file-upload.types.js';
 
 describe('File Upload Component', () => {
   // Helper to create mock File objects with proper size

@@ -5,7 +5,7 @@ import {
   TimeoutError,
   ValidationError,
   type ValidationErrorField
-} from '../../src/api/errors.js';
+} from '../../src/lib/api/errors.js';
 
 // ============================================================================
 // APIError Tests

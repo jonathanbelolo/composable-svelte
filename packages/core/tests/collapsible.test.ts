@@ -10,9 +10,9 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { TestStore } from '../src/test/test-store.js';
-import { collapsibleReducer } from '../src/components/ui/collapsible/collapsible.reducer.js';
-import { createInitialCollapsibleState } from '../src/components/ui/collapsible/collapsible.types.js';
+import { TestStore } from '../src/lib/test/test-store.js';
+import { collapsibleReducer } from '../src/lib/components/ui/collapsible/collapsible.reducer.js';
+import { createInitialCollapsibleState } from '../src/lib/components/ui/collapsible/collapsible.types.js';
 
 describe('Collapsible - Basic Toggle Tests', () => {
 	it('should toggle from collapsed to expanded', async () => {

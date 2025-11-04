@@ -46,3 +46,6 @@ yarn-error.log*
 
 # Playwright MCP
 .playwright-mcp
+
+# client tests
+_client_tests

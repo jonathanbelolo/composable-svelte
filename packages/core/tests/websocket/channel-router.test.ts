@@ -3,9 +3,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createChannelRouter, createChannelWebSocket } from '../../src/websocket/channel-router.js';
-import { createMockWebSocket } from '../../src/websocket/testing/mock-client.js';
-import type { WebSocketMessage } from '../../src/websocket/types.js';
+import { createChannelRouter, createChannelWebSocket } from '../../src/lib/websocket/channel-router.js';
+import { createMockWebSocket } from '../../src/lib/websocket/testing/mock-client.js';
+import type { WebSocketMessage } from '../../src/lib/websocket/types.js';
 
 interface ChannelMessage {
   channel: string;

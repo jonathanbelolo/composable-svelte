@@ -1,10 +1,10 @@
 import { render } from 'vitest-browser-svelte';
 import { page, userEvent } from 'vitest/browser';
 import { describe, it, expect } from 'vitest';
-import Alert from '../../src/navigation-components/Alert.svelte';
-import { createStore } from '../../src/store.svelte.js';
-import { scopeToDestination } from '../../src/navigation/scope-to-destination.js';
-import { Effect } from '../../src/effect.js';
+import Alert from '../../src/lib/navigation-components/Alert.svelte';
+import { createStore } from '../../src/lib/store.js';
+import { scopeToDestination } from '../../src/lib/navigation/scope-to-destination.js';
+import { Effect } from '../../src/lib/effect.js';
 
 // ============================================================================
 // Test Fixtures

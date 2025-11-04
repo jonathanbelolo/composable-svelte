@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { TestStore, createTestStore } from '../src/test/test-store';
-import { Effect } from '../src/effect';
-import type { Reducer } from '../src/types';
+import { TestStore, createTestStore } from '../src/lib/test/test-store';
+import { Effect } from '../src/lib/effect';
+import type { Reducer } from '../src/lib/types';
 
 interface CounterState {
   count: number;

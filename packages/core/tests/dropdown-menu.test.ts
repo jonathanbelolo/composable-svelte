@@ -5,12 +5,12 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createTestStore } from '../src/test/test-store.js';
-import { dropdownMenuReducer } from '../src/components/ui/dropdown-menu/dropdown-menu.reducer.js';
+import { createTestStore } from '../src/lib/test/test-store.js';
+import { dropdownMenuReducer } from '../src/lib/components/ui/dropdown-menu/dropdown-menu.reducer.js';
 import {
 	createInitialDropdownMenuState,
 	type MenuItem
-} from '../src/components/ui/dropdown-menu/dropdown-menu.types.js';
+} from '../src/lib/components/ui/dropdown-menu/dropdown-menu.types.js';
 
 describe('DropdownMenu', () => {
 	const items: MenuItem[] = [

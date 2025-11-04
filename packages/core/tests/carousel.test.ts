@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { TestStore } from '../src/test/test-store.js';
-import { carouselReducer } from '../src/components/ui/carousel/carousel.reducer.js';
+import { TestStore } from '../src/lib/test/test-store.js';
+import { carouselReducer } from '../src/lib/components/ui/carousel/carousel.reducer.js';
 import {
   createInitialCarouselState,
   type CarouselSlide,
   type CarouselAction
-} from '../src/components/ui/carousel/carousel.types.js';
+} from '../src/lib/components/ui/carousel/carousel.types.js';
 
 describe('Carousel Component', () => {
   const testSlides: CarouselSlide[] = [

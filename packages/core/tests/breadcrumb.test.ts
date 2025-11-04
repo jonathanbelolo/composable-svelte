@@ -8,7 +8,7 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 	BreadcrumbEllipsis
-} from '../src/components/ui/breadcrumb/index.js';
+} from '../src/lib/components/ui/breadcrumb/index.js';
 
 describe('Breadcrumb', () => {
 	it('renders nav element with aria-label', () => {

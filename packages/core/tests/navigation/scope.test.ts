@@ -6,9 +6,9 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { scopeTo } from '../../src/navigation/scope.js';
-import type { Store } from '../../src/types.js';
-import type { PresentationAction } from '../../src/navigation/types.js';
+import { scopeTo } from '../../src/lib/navigation/scope.js';
+import type { Store } from '../../src/lib/types.js';
+import type { PresentationAction } from '../../src/lib/navigation/types.js';
 
 // ============================================================================
 // Test Fixtures

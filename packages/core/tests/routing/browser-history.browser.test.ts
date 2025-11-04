@@ -8,10 +8,10 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { syncBrowserHistory } from '../../src/routing/browser-history';
-import { createStore } from '../../src/store.svelte';
-import type { Reducer } from '../../src/types';
-import { Effect } from '../../src/effect';
+import { syncBrowserHistory } from '../../src/lib/routing/browser-history';
+import { createStore } from '../../src/lib/store';
+import type { Reducer } from '../../src/lib/types';
+import { Effect } from '../../src/lib/effect';
 
 // Test State and Types
 interface TestState {

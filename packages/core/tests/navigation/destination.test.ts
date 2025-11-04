@@ -3,9 +3,9 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createDestination } from '../../src/navigation/destination.js';
-import type { Reducer } from '../../src/types.js';
-import { Effect } from '../../src/effect.js';
+import { createDestination } from '../../src/lib/navigation/destination.js';
+import type { Reducer } from '../../src/lib/types.js';
+import { Effect } from '../../src/lib/effect.js';
 
 // ============================================================================
 // Test Fixtures

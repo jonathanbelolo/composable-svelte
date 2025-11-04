@@ -3,14 +3,14 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createStore } from '../../src/store.svelte.js';
-import { Effect } from '../../src/effect.js';
+import { createStore } from '../../src/lib/store.js';
+import { Effect } from '../../src/lib/effect.js';
 import {
   scopeToDestination,
   scopeToOptional,
   type PresentationAction
-} from '../../src/navigation/index.js';
-import type { Reducer } from '../../src/types.js';
+} from '../../src/lib/navigation/index.js';
+import type { Reducer } from '../../src/lib/types.js';
 
 // ============================================================================
 // Test Fixtures

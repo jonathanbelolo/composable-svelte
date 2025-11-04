@@ -5,12 +5,12 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { createTestStore } from '../src/test/test-store.js';
-import { commandReducer } from '../src/components/command/command.reducer.js';
+import { createTestStore } from '../src/lib/test/test-store.js';
+import { commandReducer } from '../src/lib/components/command/command.reducer.js';
 import {
 	createInitialCommandState,
 	type CommandItem
-} from '../src/components/command/command.types.js';
+} from '../src/lib/components/command/command.types.js';
 
 describe('Command Palette', () => {
 	// Sample commands for testing

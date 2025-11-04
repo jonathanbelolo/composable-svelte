@@ -3,9 +3,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createMockWebSocket } from '../../src/websocket/testing/mock-client.js';
-import type { WebSocketMessage, WebSocketEvent } from '../../src/websocket/types.js';
-import { WebSocketError, WS_ERROR_CODES } from '../../src/websocket/types.js';
+import { createMockWebSocket } from '../../src/lib/websocket/testing/mock-client.js';
+import type { WebSocketMessage, WebSocketEvent } from '../../src/lib/websocket/types.js';
+import { WebSocketError, WS_ERROR_CODES } from '../../src/lib/websocket/types.js';
 
 describe('Mock WebSocket Client', () => {
   describe('Connection Management', () => {

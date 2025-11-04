@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { serializeDestination, pathSegment, type SerializerConfig } from '../../src/routing/serializer';
+import { serializeDestination, pathSegment, type SerializerConfig } from '../../src/lib/routing/serializer';
 
 // Test Types
 type InventoryDestination =

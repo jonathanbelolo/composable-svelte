@@ -3,8 +3,8 @@
 // ============================================================================
 
 import { describe, it, expect, vi } from 'vitest';
-import { createMockAPI, type MockRoutes } from '../../src/api/testing/mock-client.js';
-import { APIError } from '../../src/api/errors.js';
+import { createMockAPI, type MockRoutes } from '../../src/lib/api/testing/mock-client.js';
+import { APIError } from '../../src/lib/api/errors.js';
 
 describe('createMockAPI', () => {
   describe('Static Responses', () => {

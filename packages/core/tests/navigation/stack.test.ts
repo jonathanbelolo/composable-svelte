@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { Effect } from '../../src/effect.js';
+import { Effect } from '../../src/lib/effect.js';
 import {
   push,
   pop,
@@ -16,8 +16,8 @@ import {
   stackDepth,
   type StackAction,
   type PresentationAction
-} from '../../src/navigation/index.js';
-import type { Reducer } from '../../src/types.js';
+} from '../../src/lib/navigation/index.js';
+import type { Reducer } from '../../src/lib/types.js';
 
 // ============================================================================
 // Test Fixtures

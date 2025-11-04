@@ -3,9 +3,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createSpyWebSocket } from '../../src/websocket/testing/spy-client.js';
-import { createMockWebSocket } from '../../src/websocket/testing/mock-client.js';
-import type { WebSocketMessage } from '../../src/websocket/types.js';
+import { createSpyWebSocket } from '../../src/lib/websocket/testing/spy-client.js';
+import { createMockWebSocket } from '../../src/lib/websocket/testing/mock-client.js';
+import type { WebSocketMessage } from '../../src/lib/websocket/types.js';
 
 describe('Spy WebSocket Client', () => {
   describe('Connection Recording', () => {

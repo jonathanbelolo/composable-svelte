@@ -9,17 +9,17 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { z } from 'zod';
-import { createTestStore } from '../src/test/test-store.js';
+import { createTestStore } from '../src/lib/test/test-store.js';
 import {
 	createFormReducer,
 	createInitialFormState
-} from '../src/components/form/form.reducer.js';
+} from '../src/lib/components/form/form.reducer.js';
 import type {
 	FormState,
 	FormConfig,
 	FormAction,
 	FormDependencies
-} from '../src/components/form/form.types.js';
+} from '../src/lib/components/form/form.types.js';
 
 // ================================================================
 // Test Schema & Types

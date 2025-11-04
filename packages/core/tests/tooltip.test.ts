@@ -5,10 +5,10 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { createTestStore } from '../src/test/test-store.js';
-import { tooltipReducer } from '../src/components/ui/tooltip/tooltip.reducer.js';
-import { initialTooltipState } from '../src/components/ui/tooltip/tooltip.types.js';
-import type { TooltipState, TooltipAction, TooltipDependencies } from '../src/components/ui/tooltip/tooltip.types.js';
+import { createTestStore } from '../src/lib/test/test-store.js';
+import { tooltipReducer } from '../src/lib/components/ui/tooltip/tooltip.reducer.js';
+import { initialTooltipState } from '../src/lib/components/ui/tooltip/tooltip.types.js';
+import type { TooltipState, TooltipAction, TooltipDependencies } from '../src/lib/components/ui/tooltip/tooltip.types.js';
 
 describe('Tooltip Reducer', () => {
 	beforeEach(() => {

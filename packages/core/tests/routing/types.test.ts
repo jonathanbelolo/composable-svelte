@@ -15,7 +15,7 @@ import type {
 	Serializer,
 	Parser,
 	DestinationToActionMapper
-} from '../../src/routing/types';
+} from '../../src/lib/routing/types';
 
 // Test Destination Types
 type TestDestination =

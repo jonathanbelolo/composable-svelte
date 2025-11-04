@@ -3,8 +3,8 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createMockCookieStorage } from '../../src/dependencies/cookie-storage.js';
-import { CookieSizeExceededError } from '../../src/dependencies/errors.js';
+import { createMockCookieStorage } from '../../src/lib/dependencies/cookie-storage.js';
+import { CookieSizeExceededError } from '../../src/lib/dependencies/errors.js';
 
 describe('CookieStorage', () => {
 	describe('Basic Operations', () => {

@@ -6,8 +6,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { scopeTo } from '../../src/navigation/scope.js';
-import type { Store } from '../../src/types.js';
+import { scopeTo } from '../../src/lib/navigation/scope.js';
+import type { Store } from '../../src/lib/types.js';
 
 describe('scopeTo() reactivity', () => {
 	describe('reference stability', () => {

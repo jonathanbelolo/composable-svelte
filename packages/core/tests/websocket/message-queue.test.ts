@@ -3,8 +3,8 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createMessageQueue, createQueuedWebSocket } from '../../src/websocket/message-queue.js';
-import { createMockWebSocket } from '../../src/websocket/testing/mock-client.js';
+import { createMessageQueue, createQueuedWebSocket } from '../../src/lib/websocket/message-queue.js';
+import { createMockWebSocket } from '../../src/lib/websocket/testing/mock-client.js';
 
 describe('Message Queue', () => {
   describe('Basic Queue Operations', () => {

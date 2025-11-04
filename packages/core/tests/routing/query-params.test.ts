@@ -13,8 +13,8 @@ import {
 	getQueryParam,
 	getQueryParamAll,
 	hasQueryParam
-} from '../../src/routing/query-params';
-import { string, number, optional, object } from '../../src/routing/schemas';
+} from '../../src/lib/routing/query-params';
+import { string, number, optional, object } from '../../src/lib/routing/schemas';
 
 describe('parseQueryParams', () => {
 	// Basic functionality

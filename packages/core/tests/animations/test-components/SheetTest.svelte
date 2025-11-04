@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { createStore } from '../../../src/store.svelte.js';
-	import Sheet from '../../../src/navigation-components/Sheet.svelte';
-	import type { PresentationState } from '../../../src/navigation/types.js';
-	import { Effect } from '../../../src/effect.js';
+	import { createStore } from '../../../src/lib/store.js';
+	import Sheet from '../../../src/lib/navigation-components/Sheet.svelte';
+	import type { PresentationState } from '../../../src/lib/navigation/types.js';
+	import { Effect } from '../../../src/lib/effect.js';
 
 	// ============================================================================
 	// State & Actions

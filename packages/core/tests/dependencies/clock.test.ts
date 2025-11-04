@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createSystemClock, createMockClock } from '../../src/dependencies/clock.js';
+import { createSystemClock, createMockClock } from '../../src/lib/dependencies/clock.js';
 
 describe('Clock', () => {
 	describe('SystemClock', () => {

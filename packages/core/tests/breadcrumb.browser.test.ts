@@ -14,7 +14,7 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 	BreadcrumbEllipsis
-} from '../src/components/ui/breadcrumb/index.js';
+} from '../src/lib/components/ui/breadcrumb/index.js';
 
 // Helper to wait for DOM updates
 const waitForUpdates = () => new Promise(resolve => setTimeout(resolve, 50));

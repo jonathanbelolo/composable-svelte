@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { Effect } from '../src/effect';
-import type { Effect as EffectType } from '../src/types';
+import { Effect } from '../src/lib/effect';
+import type { Effect as EffectType } from '../src/lib/types';
 
 describe('Effect', () => {
   describe('none()', () => {

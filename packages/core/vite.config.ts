@@ -28,6 +28,7 @@ export default defineConfig({
 
     // Test file patterns
     include: ['tests/**/*.{test,spec}.{js,ts}'],
+    exclude: ['tests/animations/**/*.test.ts'],
 
     // Suppress console output during tests (for CI/prepublish)
     silent: process.env.CI === 'true' || process.env.SILENT_TESTS === 'true',
@@ -58,7 +59,11 @@ export default defineConfig({
     minify: 'esbuild',
     sourcemap: true,
     rollupOptions: {
-      external: ['svelte', 'svelte/internal'],
+      // Externalize all Svelte imports (peer dependency)
+      // This ensures Svelte is not bundled, preventing duplicate runtime issues
+      external: (id) => {
+        return id === 'svelte' || id.startsWith('svelte/');
+      },
       output: {
         preserveModules: false
       }

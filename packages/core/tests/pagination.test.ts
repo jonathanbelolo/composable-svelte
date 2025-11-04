@@ -5,9 +5,9 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createTestStore } from '../src/test/test-store.js';
-import { paginationReducer } from '../src/components/ui/pagination/pagination.reducer.js';
-import { createInitialPaginationState } from '../src/components/ui/pagination/pagination.types.js';
+import { createTestStore } from '../src/lib/test/test-store.js';
+import { paginationReducer } from '../src/lib/components/ui/pagination/pagination.reducer.js';
+import { createInitialPaginationState } from '../src/lib/components/ui/pagination/pagination.types.js';
 
 describe('Pagination', () => {
 	describe('Page Navigation', () => {

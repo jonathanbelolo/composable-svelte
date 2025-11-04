@@ -3,15 +3,15 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { Effect } from '../../src/effect.js';
+import { Effect } from '../../src/lib/effect.js';
 import {
   createDismissDependency,
   createDismissDependencyWithCleanup,
   dismissDependency,
   type DismissDependency,
   type PresentationAction
-} from '../../src/navigation/index.js';
-import type { Dispatch } from '../../src/types.js';
+} from '../../src/lib/navigation/index.js';
+import type { Dispatch } from '../../src/lib/types.js';
 
 // ============================================================================
 // Test Fixtures

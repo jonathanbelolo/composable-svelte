@@ -5,12 +5,12 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { TestStore } from '../src/test/test-store.js';
+import { TestStore } from '../src/lib/test/test-store.js';
 import {
 	createTableReducer,
 	createInitialState
-} from '../src/components/data-table/table.reducer.js';
-import type { TableState, TableAction } from '../src/components/data-table/table.types.js';
+} from '../src/lib/components/data-table/table.reducer.js';
+import type { TableState, TableAction } from '../src/lib/components/data-table/table.types.js';
 
 interface Product {
 	id: string;

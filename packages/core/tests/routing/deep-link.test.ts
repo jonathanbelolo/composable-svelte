@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { createInitialStateFromURL } from '../../src/routing/deep-link';
+import { createInitialStateFromURL } from '../../src/lib/routing/deep-link';
 
 // Test State Types
 interface TestState {

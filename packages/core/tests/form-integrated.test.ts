@@ -10,12 +10,12 @@
 
 import { describe, it, expect } from 'vitest';
 import { z } from 'zod';
-import { createTestStore } from '../src/test/test-store.js';
-import { scope } from '../src/composition/scope.js';
-import { createFormReducer, createInitialFormState } from '../src/components/form/form.reducer.js';
-import type { FormConfig } from '../src/components/form/form.types.js';
-import type { Reducer } from '../src/types.js';
-import { Effect } from '../src/effect.js';
+import { createTestStore } from '../src/lib/test/test-store.js';
+import { scope } from '../src/lib/composition/scope.js';
+import { createFormReducer, createInitialFormState } from '../src/lib/components/form/form.reducer.js';
+import type { FormConfig } from '../src/lib/components/form/form.types.js';
+import type { Reducer } from '../src/lib/types.js';
+import { Effect } from '../src/lib/effect.js';
 
 // ============================================================================
 // Test Setup - Contact Form Example

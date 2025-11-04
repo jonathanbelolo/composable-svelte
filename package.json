@@ -27,5 +27,10 @@
   "workspaces": [
     "packages/*",
     "examples/*"
-  ]
+  ],
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
 }

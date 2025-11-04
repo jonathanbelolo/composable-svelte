@@ -9,18 +9,18 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { createStore } from '../../src/store.svelte';
-import { Effect } from '../../src/effect';
-import type { Reducer } from '../../src/types';
+import { createStore } from '../../src/lib/store';
+import { Effect } from '../../src/lib/effect';
+import type { Reducer } from '../../src/lib/types';
 import {
 	serializeDestination,
 	parseDestination,
 	createURLSyncEffect,
 	syncBrowserHistory,
 	createInitialStateFromURL
-} from '../../src/routing';
-import type { SerializerConfig, ParserConfig } from '../../src/routing';
-import { matchPath } from '../../src/routing/parser';
+} from '../../src/lib/routing';
+import type { SerializerConfig, ParserConfig } from '../../src/lib/routing';
+import { matchPath } from '../../src/lib/routing/parser';
 
 // ============================================================================
 // Test Domain: Inventory Management App

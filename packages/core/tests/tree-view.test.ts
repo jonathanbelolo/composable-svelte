@@ -5,14 +5,14 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { TestStore } from '../src/test/test-store.js';
-import { treeViewReducer } from '../src/components/ui/tree-view/tree-view.reducer.js';
+import { TestStore } from '../src/lib/test/test-store.js';
+import { treeViewReducer } from '../src/lib/components/ui/tree-view/tree-view.reducer.js';
 import {
 	createInitialTreeViewState,
 	type TreeNode,
 	type TreeViewState,
 	type TreeViewAction
-} from '../src/components/ui/tree-view/tree-view.types.js';
+} from '../src/lib/components/ui/tree-view/tree-view.types.js';
 
 describe('TreeView', () => {
 	const testNodes: TreeNode[] = [
