@@ -35,6 +35,7 @@ export { createSystemClock, createMockClock, createLocalStorage, createSessionSt
 // Testing
 // ============================================================================
 export { TestStore, createTestStore } from './test/test-store.js';
+export { createTreeHelpers } from './utils/tree.js';
 // Request builder
 export { Request } from './api/index.js';
 // Client factory

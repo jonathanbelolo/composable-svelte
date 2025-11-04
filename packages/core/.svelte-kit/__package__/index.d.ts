@@ -25,6 +25,8 @@ export type { Clock, MockClock, Storage, SyncStorage, CookieStorage, StorageConf
 export { createSystemClock, createMockClock, createLocalStorage, createSessionStorage, createNoopStorage, createCookieStorage, createMockCookieStorage, isBrowser, getStorageQuota, getByteSize, isStorageAvailable, DependencyError, StorageQuotaExceededError, InvalidJSONError, SchemaValidationError, CookieSizeExceededError, EnvironmentNotSupportedError } from './dependencies/index.js';
 export { TestStore, createTestStore } from './test/test-store.js';
 export type { TestStoreConfig, StateAssertion, PartialAction } from './test/test-store.js';
+export type { TreeConfig, TreeHelpers } from './utils/tree.js';
+export { createTreeHelpers } from './utils/tree.js';
 export type { APIClient, APIResponse, RequestConfig, RetryConfig, CacheConfig, APIRequest, HTTPMethod, SafeHTTPMethod, RequestInterceptor, ResponseInterceptor, ErrorInterceptor, Interceptor, APIClientConfig, InferResponse } from './api/index.js';
 export { Request } from './api/index.js';
 export { createAPIClient } from './api/index.js';
