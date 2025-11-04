@@ -9,6 +9,7 @@ Scope helpers enable reactive, type-safe component integration by creating deriv
 - [API Reference](#api-reference)
   - [scopeToDestination()](#scopetodestination)
   - [scopeToOptional()](#scopetooptional)
+  - [scopeToElement()](#scopetoelement)
   - [ScopedDestinationStore](#scopeddestinationstore)
 - [Usage in Svelte Components](#usage-in-svelte-components)
 - [Integration Patterns](#integration-patterns)
@@ -327,6 +328,190 @@ scopeToDestination(store, ['destination'], 'addItem', 'destination');
 
 // scopeToOptional (3 params, no case filtering)
 scopeToOptional(store, ['modal'], 'modal');
+```
+
+### scopeToElement()
+
+Creates a scoped store for a specific element in a collection by ID.
+
+**Signature:**
+```typescript
+function scopeToElement<
+  ParentState,
+  ParentAction extends { type: string },
+  ChildState,
+  ChildAction,
+  ID extends string | number
+>(
+  parentStore: Store<ParentState, ParentAction>,
+  actionType: string,
+  getArray: (state: ParentState) => Array<IdentifiedItem<ID, ChildState>>,
+  id: ID
+): Store<ChildState, ChildAction> | null
+```
+
+**Parameters:**
+- `parentStore` - The parent store containing the collection
+- `actionType` - The parent action field for element actions (e.g., `'counter'`)
+- `getArray` - Function to extract the array from parent state
+- `id` - The ID of the specific element to scope to
+
+**Returns:**
+A full `Store<ChildState, ChildAction>` (not `ScopedDestinationStore`) for the element, or `null` if element not found.
+
+**Example:**
+```typescript
+interface ParentState {
+  counters: Array<{ id: string; state: CounterState }>;
+}
+
+type ParentAction =
+  | { type: 'addCounter' }
+  | { type: 'counter'; id: string; action: CounterAction };
+
+// In Svelte component
+{#each $store.counters as counter (counter.id)}
+  {@const counterStore = scopeToElement(store, 'counter', s => s.counters, counter.id)}
+  {#key counter.id}
+    {#if counterStore}
+      <Counter store={counterStore} />
+    {/if}
+  {/key}
+{/each}
+```
+
+**When to Use:**
+
+Use `scopeToElement()` when:
+- Working with dynamic collections managed by `forEach()` or `forEachElement()`
+- Need to create a scoped store for a specific item in an array
+- Want to pass a store to a child component that represents one element
+
+Use `scopeToDestination()` when:
+- Working with enum-based navigation destinations
+- Need case type filtering
+- Managing modal/sheet/drawer presentations
+
+**Comparison:**
+```typescript
+// scopeToElement (for collections)
+const counterStore = scopeToElement(
+  store,
+  'counter',                    // Action type
+  s => s.counters,              // Get array
+  'counter-1'                   // Item ID
+);
+
+// scopeToDestination (for navigation)
+const addItemStore = scopeToDestination(
+  store,
+  ['destination'],              // Path to destination
+  'addItem',                    // Case type
+  'destination'                 // Action field
+);
+```
+
+**Action Wrapping:**
+
+```typescript
+// Component dispatches
+counterStore.dispatch({ type: 'increment' });
+
+// Automatically transformed to
+parentStore.dispatch({
+  type: 'counter',              // actionType parameter
+  id: 'counter-1',              // id parameter
+  action: { type: 'increment' } // Child action
+});
+```
+
+**Behavior:**
+
+Returns `null` when:
+- The array doesn't contain an item with the specified ID
+- The item was removed from the collection
+
+Returns a `Store` when:
+- The item exists in the collection
+- Updates reactively when parent store updates
+
+**Complete Example:**
+```svelte
+<!-- Parent.svelte -->
+<script lang="ts">
+import { scopeToElement } from '@composable-svelte/core';
+import Counter from './Counter.svelte';
+
+const { store } = $props<{ store: Store<CountersState, CountersAction> }>();
+</script>
+
+<div class="counters-grid">
+  {#each $store.counters as counter (counter.id)}
+    {@const counterStore = scopeToElement(
+      store,
+      'counter',
+      s => s.counters,
+      counter.id
+    )}
+    {#key counter.id}
+      {#if counterStore}
+        <div class="counter-card">
+          <span class="counter-id">{counter.id}</span>
+          <Counter store={counterStore} />
+          <button onclick={() => store.dispatch({
+            type: 'removeCounter',
+            id: counter.id
+          })}>
+            Remove
+          </button>
+        </div>
+      {/if}
+    {/key}
+  {/each}
+</div>
+```
+
+```svelte
+<!-- Counter.svelte -->
+<script lang="ts">
+const { store } = $props<{ store: Store<CounterState, CounterAction> }>();
+</script>
+
+<div class="counter">
+  <button onclick={() => store.dispatch({ type: 'decrement' })}>
+    -
+  </button>
+  <span>{$store.count}</span>
+  <button onclick={() => store.dispatch({ type: 'increment' })}>
+    +
+  </button>
+</div>
+```
+
+**Benefits:**
+1. **Full Store API**: Returns complete `Store` interface, not limited `ScopedDestinationStore`
+2. **Reactive Updates**: Automatically updates when parent store changes
+3. **Type Safety**: Full generic type inference for child state and actions
+4. **Null Safety**: Returns `null` when item doesn't exist
+5. **Boilerplate Reduction**: Eliminates manual store scoping (26 lines → 1 line)
+
+**Integration with forEach():**
+
+`scopeToElement()` is designed to work seamlessly with `forEach()` and `forEachElement()`:
+
+```typescript
+// In reducer - use forEach for logic
+const reducer = integrate<State, Action, Deps>()
+  .forEach('counter', s => s.counters, (s, counters) => ({ ...s, counters }), counterReducer)
+  .build();
+
+// In component - use scopeToElement for views
+{#each $store.counters as counter (counter.id)}
+  {@const counterStore = scopeToElement(store, 'counter', s => s.counters, counter.id)}
+  {#if counterStore}
+    <Counter store={counterStore} />
+  {/if}
+{/each}
 ```
 
 ### ScopedDestinationStore

@@ -57,14 +57,20 @@ export { Effect } from './effect.js';
 export {
   scope,
   scopeAction,
-  combineReducers
+  combineReducers,
+  forEach,
+  forEachElement,
+  elementAction
 } from './composition/index.js';
 
 export type {
   StateLens,
   StateUpdater,
   ActionPrism,
-  ActionEmbedder
+  ActionEmbedder,
+  IdentifiedItem,
+  ElementAction,
+  ForEachConfig
 } from './composition/index.js';
 
 // ============================================================================
@@ -83,6 +89,7 @@ export type {
   CasePath,
   StackResult,
   ScopedDestinationStore,
+  ScopedStore,
   DismissDependency
 } from './navigation/index.js';
 
@@ -110,6 +117,9 @@ export {
   stackDepth,
   scopeToDestination,
   scopeToOptional,
+  scopeToElement,
+  scopeTo,
+  integrate,
   createDismissDependency,
   createDismissDependencyWithCleanup,
   dismissDependency

@@ -24,6 +24,7 @@ export { push, pop, popToRoot, setPath, handleStackAction, topScreen, rootScreen
 export type { StackResult } from './stack.js';
 export { scopeToDestination, scopeToOptional } from './scope-to-destination.js';
 export type { ScopedDestinationStore } from './scope-to-destination.js';
+export { scopeToElement } from './scope-to-element.js';
 export { integrate } from './integrate.js';
 export { scopeTo } from './scope.js';
 export type { ScopedStore } from './scope.js';

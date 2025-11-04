@@ -89,6 +89,8 @@ export {
 
 export type { ScopedDestinationStore } from './scope-to-destination.js';
 
+export { scopeToElement } from './scope-to-element.js';
+
 // ============================================================================
 // Phase 3 DSL
 // ============================================================================

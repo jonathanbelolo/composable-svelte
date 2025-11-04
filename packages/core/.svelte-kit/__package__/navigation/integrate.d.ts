@@ -13,6 +13,7 @@
  * @packageDocumentation
  */
 import type { Reducer } from '../types.js';
+import { type IdentifiedItem } from '../composition/for-each.js';
 /**
  * Create a fluent builder for integrating child reducers.
  *
@@ -72,7 +73,9 @@ import type { Reducer } from '../types.js';
  *   .build();
  * ```
  */
-export declare function integrate<State, Action, Dependencies = any>(coreReducer: Reducer<State, Action, Dependencies>): IntegrationBuilder<State, Action, Dependencies>;
+export declare function integrate<State, Action extends {
+    type: string;
+}, Dependencies = any>(coreReducer?: Reducer<State, Action, Dependencies>): IntegrationBuilder<State, Action, Dependencies>;
 /**
  * Fluent builder for composing child reducers.
  *
@@ -89,11 +92,13 @@ export declare function integrate<State, Action, Dependencies = any>(coreReducer
  * @template Action - Parent action type
  * @template Dependencies - Dependency injection type
  */
-declare class IntegrationBuilder<State, Action, Dependencies = any> {
-    private coreReducer;
+declare class IntegrationBuilder<State, Action extends {
+    type: string;
+}, Dependencies = any> {
     private integrations;
     private fields;
-    constructor(coreReducer: Reducer<State, Action, Dependencies>);
+    private coreReducer;
+    constructor(coreReducer?: Reducer<State, Action, Dependencies>);
     /**
      * Integrate a child reducer at a specific state field.
      *
@@ -136,14 +141,106 @@ declare class IntegrationBuilder<State, Action, Dependencies = any> {
      */
     with<K extends keyof State, ChildAction>(field: K, childReducer: Reducer<NonNullable<State[K]>, ChildAction, Dependencies>): this;
     /**
+     * Set the core reducer logic.
+     *
+     * This method sets the base reducer that will be composed with child integrations.
+     * Useful when you want to define integrations before the core logic.
+     *
+     * @param reducer - The core reducer function
+     * @returns this (for method chaining)
+     *
+     * @example
+     * ```typescript
+     * const reducer = integrate<State, Action>()
+     *   .forEach('counter', s => s.counters, (s, c) => ({ ...s, counters: c }), counterReducer)
+     *   .reduce((state, action) => {
+     *     // Core logic here
+     *     return [state, Effect.none()];
+     *   })
+     *   .build();
+     * ```
+     */
+    reduce(reducer: Reducer<State, Action, Dependencies>): this;
+    /**
+     * Integrate a collection of child reducers.
+     *
+     * This method eliminates boilerplate for managing dynamic arrays of child features.
+     * It automatically handles action routing by ID, array updates, and effect mapping.
+     *
+     * **Assumptions:**
+     * - Parent state has an array field of type `Array<{ id: ID; state: ChildState }>`
+     * - Parent action has case `{ type: actionType; id: ID; action: ChildAction }`
+     * - IDs are unique within the array
+     *
+     * **What it handles:**
+     * - Finding items by ID (O(n) lookup)
+     * - Running child reducer on matching item
+     * - Immutable array updates
+     * - Effect mapping from child to parent
+     * - Silent ignore for missing IDs (handles removed items gracefully)
+     *
+     * @template ChildState - The child state type
+     * @template ChildAction - The child action type
+     * @template ID - The ID type (string | number)
+     * @param actionType - The action type string to match (e.g., 'counter')
+     * @param getArray - Extract the array from parent state
+     * @param setArray - Update parent state with modified array
+     * @param childReducer - The child reducer to run for each item
+     * @returns this (for method chaining)
+     *
+     * @example
+     * ```typescript
+     * interface ParentState {
+     *   counters: Array<{ id: string; state: CounterState }>;
+     *   nextId: number;
+     * }
+     *
+     * type ParentAction =
+     *   | { type: 'addCounter' }
+     *   | { type: 'removeCounter'; id: string }
+     *   | { type: 'counter'; id: string; action: CounterAction };
+     *
+     * const reducer = integrate<ParentState, ParentAction>()
+     *   .forEach(
+     *     'counter',
+     *     s => s.counters,
+     *     (s, counters) => ({ ...s, counters }),
+     *     counterReducer
+     *   )
+     *   .reduce((state, action) => {
+     *     // Handle add/remove
+     *     switch (action.type) {
+     *       case 'addCounter':
+     *         return [
+     *           {
+     *             ...state,
+     *             counters: [...state.counters, { id: `counter-${state.nextId}`, state: initialState }],
+     *             nextId: state.nextId + 1
+     *           },
+     *           Effect.none()
+     *         ];
+     *       case 'removeCounter':
+     *         return [
+     *           { ...state, counters: state.counters.filter(c => c.id !== action.id) },
+     *           Effect.none()
+     *         ];
+     *       default:
+     *         return [state, Effect.none()];
+     *     }
+     *   })
+     *   .build();
+     * ```
+     */
+    forEach<ChildState, ChildAction, ID extends string | number>(actionType: string, getArray: (state: State) => Array<IdentifiedItem<ID, ChildState>>, setArray: (state: State, array: Array<IdentifiedItem<ID, ChildState>>) => State, childReducer: Reducer<ChildState, ChildAction, Dependencies>): this;
+    /**
      * Build the final integrated reducer.
      *
-     * This method composes all child integrations added via `.with()` into
+     * This method composes all child integrations added via `.with()` and `.forEach()` into
      * a single reducer function. The integrations are applied left-to-right
-     * (first `.with()` integrates first).
+     * (first `.with()` or `.forEach()` integrates first).
      *
      * **Execution order:**
-     * 1. Core reducer runs first
+     * 1. Core reducer runs first (if set via constructor or .reduce())
      * 2. Each child integration runs in order
      * 3. Effects from all stages are batched
      *
@@ -153,11 +250,8 @@ declare class IntegrationBuilder<State, Action, Dependencies = any> {
      * ```typescript
      * const reducer = integrate(coreReducer)
      *   .with('destination', destinationReducer)  // Runs second
-     *   .with('alert', alertReducer)              // Runs third
+     *   .forEach('items', s => s.items, (s, i) => ({ ...s, items: i }), itemReducer)  // Runs third
      *   .build();
-     *
-     * // Equivalent to:
-     * // coreReducer → destinationIntegration → alertIntegration
      * ```
      */
     build(): Reducer<State, Action, Dependencies>;

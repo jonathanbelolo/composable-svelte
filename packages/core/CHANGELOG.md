@@ -5,6 +5,31 @@ All notable changes to `@composable-svelte/core` will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.5] - 2025-11-04
+
+### Fixed
+- **Exports**: Added missing `integrate`, `scopeTo`, and `ScopedStore` exports to main package index
+
+## [0.2.4] - 2025-11-04
+
+### Added
+- **Collection Management** - Comprehensive primitives for managing dynamic arrays of child features
+  - `forEach()`: Core combinator for routing actions to collection items by ID
+  - `forEachElement()`: Simplified wrapper for standard pattern with action type
+  - `elementAction()`: Helper for creating type-safe element actions
+  - `integrate().forEach()`: Fluent DSL integration for collection management
+  - `integrate().reduce()`: Method to set core reducer when using forEach first
+  - `scopeToElement()`: View-layer helper for creating scoped stores for collection items
+  - **Boilerplate Reduction**: Reduces collection management code by ~92% (50+ lines → 4 lines)
+  - **Type Safety**: Full generic type inference without manual annotations
+  - **Immutable Updates**: Automatic shallow copy array updates
+  - **Effect Mapping**: Automatic wrapping of child effects with parent actions
+  - **Test Coverage**: 15 comprehensive tests covering all functionality
+
+### Changed
+- `integrate()` now accepts optional core reducer parameter for better composition
+- `IntegrationBuilder.coreReducer` is now optional when using `.reduce()` method
+
 ## [0.2.1] - 2025-11-04
 
 ### Fixed

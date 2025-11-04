@@ -17,10 +17,10 @@ export type { Reducer, Dispatch, Selector, EffectExecutor, Store, StoreConfig } 
 export type { Effect as EffectType } from './types.js';
 export { createStore } from './store.js';
 export { Effect } from './effect.js';
-export { scope, scopeAction, combineReducers } from './composition/index.js';
-export type { StateLens, StateUpdater, ActionPrism, ActionEmbedder } from './composition/index.js';
-export type { PresentationAction, StackAction, Presentation, Stack, PresentationState, PresentationEvent, DestinationState, DestinationReducerMap, CasePath, StackResult, ScopedDestinationStore, DismissDependency } from './navigation/index.js';
-export { PresentationActionHelpers, StackActionHelpers, ifLet, ifLetPresentation, createDestinationReducer, createDestination, isDestinationType, extractDestinationState, matchPresentationAction, isActionAtPath, matchPaths, extractDestinationOnAction, push, pop, popToRoot, setPath, handleStackAction, topScreen, rootScreen, canGoBack, stackDepth, scopeToDestination, scopeToOptional, createDismissDependency, createDismissDependencyWithCleanup, dismissDependency } from './navigation/index.js';
+export { scope, scopeAction, combineReducers, forEach, forEachElement, elementAction } from './composition/index.js';
+export type { StateLens, StateUpdater, ActionPrism, ActionEmbedder, IdentifiedItem, ElementAction, ForEachConfig } from './composition/index.js';
+export type { PresentationAction, StackAction, Presentation, Stack, PresentationState, PresentationEvent, DestinationState, DestinationReducerMap, CasePath, StackResult, ScopedDestinationStore, ScopedStore, DismissDependency } from './navigation/index.js';
+export { PresentationActionHelpers, StackActionHelpers, ifLet, ifLetPresentation, createDestinationReducer, createDestination, isDestinationType, extractDestinationState, matchPresentationAction, isActionAtPath, matchPaths, extractDestinationOnAction, push, pop, popToRoot, setPath, handleStackAction, topScreen, rootScreen, canGoBack, stackDepth, scopeToDestination, scopeToOptional, scopeToElement, scopeTo, integrate, createDismissDependency, createDismissDependencyWithCleanup, dismissDependency } from './navigation/index.js';
 export type { Clock, MockClock, Storage, SyncStorage, CookieStorage, StorageConfig, CookieConfig, CookieOptions, SchemaValidator, StorageEventData, StorageEventListener, Unsubscribe } from './dependencies/index.js';
 export { createSystemClock, createMockClock, createLocalStorage, createSessionStorage, createNoopStorage, createCookieStorage, createMockCookieStorage, isBrowser, getStorageQuota, getByteSize, isStorageAvailable, DependencyError, StorageQuotaExceededError, InvalidJSONError, SchemaValidationError, CookieSizeExceededError, EnvironmentNotSupportedError } from './dependencies/index.js';
 export { TestStore, createTestStore } from './test/test-store.js';

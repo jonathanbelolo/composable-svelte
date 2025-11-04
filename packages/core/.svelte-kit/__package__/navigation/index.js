@@ -31,6 +31,7 @@ export { push, pop, popToRoot, setPath, handleStackAction, topScreen, rootScreen
 // Scoped Stores (Phase 2)
 // ============================================================================
 export { scopeToDestination, scopeToOptional } from './scope-to-destination.js';
+export { scopeToElement } from './scope-to-element.js';
 // ============================================================================
 // Phase 3 DSL
 // ============================================================================

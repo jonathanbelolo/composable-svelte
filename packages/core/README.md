@@ -14,6 +14,7 @@ Inspired by [The Composable Architecture (TCA)](https://github.com/pointfreeco/s
 - ✅ **Pure Reducers**: Predictable state management with `(state, action, deps) => [newState, effect]`
 - ✅ **Declarative Effects**: Side effects as data structures (run, fireAndForget, batch, merge, cancel)
 - ✅ **Composability**: Nest and scope reducers like Lego blocks
+- ✅ **Collection Management**: `forEach` combinator for managing dynamic arrays of child features (92% less boilerplate)
 - ✅ **Type-Safe Navigation**: State-driven navigation with Modal, Sheet, Drawer, Alert, NavigationStack
 - ✅ **Svelte 5 Runes**: Full integration with Svelte's reactivity system (\`$state\`, \`$derived\`)
 - ✅ **TestStore**: Exhaustive action testing with send/receive pattern

@@ -28,8 +28,8 @@ export { Effect } from './effect.js';
 // ============================================================================
 // Composition
 // ============================================================================
-export { scope, scopeAction, combineReducers } from './composition/index.js';
-export { PresentationActionHelpers, StackActionHelpers, ifLet, ifLetPresentation, createDestinationReducer, createDestination, isDestinationType, extractDestinationState, matchPresentationAction, isActionAtPath, matchPaths, extractDestinationOnAction, push, pop, popToRoot, setPath, handleStackAction, topScreen, rootScreen, canGoBack, stackDepth, scopeToDestination, scopeToOptional, createDismissDependency, createDismissDependencyWithCleanup, dismissDependency } from './navigation/index.js';
+export { scope, scopeAction, combineReducers, forEach, forEachElement, elementAction } from './composition/index.js';
+export { PresentationActionHelpers, StackActionHelpers, ifLet, ifLetPresentation, createDestinationReducer, createDestination, isDestinationType, extractDestinationState, matchPresentationAction, isActionAtPath, matchPaths, extractDestinationOnAction, push, pop, popToRoot, setPath, handleStackAction, topScreen, rootScreen, canGoBack, stackDepth, scopeToDestination, scopeToOptional, scopeToElement, scopeTo, integrate, createDismissDependency, createDismissDependencyWithCleanup, dismissDependency } from './navigation/index.js';
 export { createSystemClock, createMockClock, createLocalStorage, createSessionStorage, createNoopStorage, createCookieStorage, createMockCookieStorage, isBrowser, getStorageQuota, getByteSize, isStorageAvailable, DependencyError, StorageQuotaExceededError, InvalidJSONError, SchemaValidationError, CookieSizeExceededError, EnvironmentNotSupportedError } from './dependencies/index.js';
 // ============================================================================
 // Testing

@@ -8,11 +8,13 @@ Learn how to build complex applications from simple, reusable reducers using Com
 2. [The scope() Operator](#the-scope-operator)
 3. [The scopeAction() Helper](#the-scopeaction-helper)
 4. [The combineReducers() Function](#the-combinereducers-function)
-5. [Composition Patterns](#composition-patterns)
-6. [Real-World Examples](#real-world-examples)
-7. [Testing Composed Reducers](#testing-composed-reducers)
-8. [Best Practices](#best-practices)
-9. [Common Pitfalls](#common-pitfalls)
+5. [The forEach() Combinator](#the-foreach-combinator)
+6. [The forEachElement() Helper](#the-foreachelement-helper)
+7. [Composition Patterns](#composition-patterns)
+8. [Real-World Examples](#real-world-examples)
+9. [Testing Composed Reducers](#testing-composed-reducers)
+10. [Best Practices](#best-practices)
+11. [Common Pitfalls](#common-pitfalls)
 
 ## Overview
 
@@ -466,6 +468,364 @@ const [newState] = appReducer(state, { type: 'unknownAction' }, {});
 
 // If no reducer handled the action
 newState === state; // true (same reference)
+```
+
+## The forEach() Combinator
+
+The `forEach()` function is a specialized composition primitive for managing **dynamic collections** of child features. It eliminates boilerplate when working with arrays of identified items (e.g., counters, todo items, user cards).
+
+### The Problem
+
+Managing collections of child features typically requires significant boilerplate:
+
+```typescript
+// ❌ Manual collection management (28+ lines of boilerplate)
+case 'counter': {
+  const index = state.counters.findIndex(c => c.id === action.id);
+  if (index === -1) return [state, Effect.none()];
+
+  const counter = state.counters[index];
+  const [newCounterState, childEffect] = counterReducer(
+    counter.state,
+    action.action,
+    deps
+  );
+
+  const newCounters = [...state.counters];
+  newCounters[index] = { ...counter, state: newCounterState };
+
+  const mappedEffect = Effect.map(
+    childEffect,
+    (childAction: CounterAction) => ({
+      type: 'counter' as const,
+      id: action.id,
+      action: childAction
+    })
+  );
+
+  return [{ ...state, counters: newCounters }, mappedEffect];
+}
+```
+
+### The Solution
+
+`forEach()` automates collection management:
+
+```typescript
+// ✅ Using forEach (3 lines!)
+export const reducer = integrate<State, Action, Deps>()
+  .forEach('counter', s => s.counters, (s, counters) => ({ ...s, counters }), counterReducer)
+  .build();
+```
+
+**Boilerplate Reduction**: ~92% (28 lines → 3 lines)
+
+### Function Signature
+
+```typescript
+function forEach<
+  ParentState,
+  ParentAction,
+  ChildState,
+  ChildAction,
+  ID extends string | number,
+  Dependencies
+>(config: ForEachConfig<...>): Reducer<ParentState, ParentAction, Dependencies>
+```
+
+### Configuration
+
+```typescript
+interface ForEachConfig<ParentState, ParentAction, ChildState, ChildAction, ID, Dependencies> {
+  getArray: (state: ParentState) => Array<IdentifiedItem<ID, ChildState>>;
+  setArray: (state: ParentState, array: Array<IdentifiedItem<ID, ChildState>>) => ParentState;
+  extractChild: (action: ParentAction) => { id: ID; action: ChildAction } | null;
+  wrapChild: (id: ID, action: ChildAction) => ParentAction;
+  childReducer: Reducer<ChildState, ChildAction, Dependencies>;
+}
+```
+
+**Parameters**:
+
+1. **getArray** - Extract array of identified items from parent state
+   - Type: `(state: ParentState) => Array<IdentifiedItem<ID, ChildState>>`
+   - Example: `(s) => s.counters`
+
+2. **setArray** - Update array in parent state
+   - Type: `(state: ParentState, array: Array<...>) => ParentState`
+   - Example: `(s, counters) => ({ ...s, counters })`
+
+3. **extractChild** - Extract child action and ID from parent action
+   - Type: `(action: ParentAction) => { id: ID; action: ChildAction } | null`
+   - Example: `(a) => a.type === 'counter' ? { id: a.id, action: a.action } : null`
+
+4. **wrapChild** - Wrap child action with parent action format
+   - Type: `(id: ID, action: ChildAction) => ParentAction`
+   - Example: `(id, action) => ({ type: 'counter', id, action })`
+
+5. **childReducer** - The reducer for individual items
+   - Type: `Reducer<ChildState, ChildAction, Dependencies>`
+
+### How It Works
+
+```typescript
+// 1. Extract child action + ID from parent action
+const extracted = extractChild(parentAction);
+if (!extracted) return [parentState, Effect.none()];
+
+// 2. Find item by ID
+const array = getArray(parentState);
+const index = array.findIndex(item => item.id === extracted.id);
+if (index === -1) return [parentState, Effect.none()];
+
+// 3. Run child reducer
+const [newChildState, childEffect] = childReducer(
+  array[index].state,
+  extracted.action,
+  deps
+);
+
+// 4. Update array immutably
+const newArray = [...array];
+newArray[index] = { id: array[index].id, state: newChildState };
+
+// 5. Map child effects to parent actions
+const parentEffect = Effect.map(childEffect, (a) => wrapChild(extracted.id, a));
+
+// 6. Return updated state + effect
+return [setArray(parentState, newArray), parentEffect];
+```
+
+### Example
+
+```typescript
+import { forEach, Effect } from '@composable-svelte/core';
+import type { Reducer } from '@composable-svelte/core';
+
+// ============================================================================
+// Child: Counter
+// ============================================================================
+
+interface CounterState {
+  count: number;
+}
+
+type CounterAction =
+  | { type: 'increment' }
+  | { type: 'decrement' };
+
+const counterReducer: Reducer<CounterState, CounterAction> = (state, action) => {
+  switch (action.type) {
+    case 'increment':
+      return [{ count: state.count + 1 }, Effect.none()];
+    case 'decrement':
+      return [{ count: state.count - 1 }, Effect.none()];
+    default:
+      return [state, Effect.none()];
+  }
+};
+
+// ============================================================================
+// Parent: Counters Collection
+// ============================================================================
+
+interface CountersState {
+  counters: Array<{ id: string; state: CounterState }>;
+}
+
+type CountersAction =
+  | { type: 'addCounter' }
+  | { type: 'removeCounter'; id: string }
+  | { type: 'counter'; id: string; action: CounterAction };
+
+const countersReducer = forEach<
+  CountersState,
+  CountersAction,
+  CounterState,
+  CounterAction,
+  string,
+  {}
+>({
+  getArray: (s) => s.counters,
+  setArray: (s, counters) => ({ ...s, counters }),
+  extractChild: (a) =>
+    a.type === 'counter' ? { id: a.id, action: a.action } : null,
+  wrapChild: (id, action) => ({ type: 'counter', id, action }),
+  childReducer: counterReducer
+});
+
+// Usage
+const initialState: CountersState = {
+  counters: [
+    { id: 'counter-1', state: { count: 0 } },
+    { id: 'counter-2', state: { count: 5 } }
+  ]
+};
+
+const [newState] = countersReducer(
+  initialState,
+  { type: 'counter', id: 'counter-1', action: { type: 'increment' } },
+  {}
+);
+
+console.log(newState.counters[0].state.count); // 1
+console.log(newState.counters[1].state.count); // 5 (unchanged)
+```
+
+### Benefits
+
+1. **Immutability**: Automatic shallow copy of arrays
+2. **Effect Mapping**: Child effects automatically wrapped with parent actions
+3. **Type Safety**: Full generic type inference
+4. **Performance**: O(n) lookup using `findIndex`
+5. **Boilerplate Reduction**: ~92% less code
+
+## The forEachElement() Helper
+
+The `forEachElement()` helper is a streamlined version of `forEach()` for the common pattern where actions follow the `{ type: string; id: ID; action: ChildAction }` format.
+
+### Function Signature
+
+```typescript
+function forEachElement<
+  ParentState,
+  ParentAction extends { type: string },
+  ChildState,
+  ChildAction,
+  ID extends string | number,
+  Dependencies
+>(
+  actionType: string,
+  getArray: (state: ParentState) => Array<IdentifiedItem<ID, ChildState>>,
+  setArray: (state: ParentState, array: Array<IdentifiedItem<ID, ChildState>>) => ParentState,
+  childReducer: Reducer<ChildState, ChildAction, Dependencies>
+): Reducer<ParentState, ParentAction, Dependencies>
+```
+
+### Comparison
+
+```typescript
+// Using forEach() - explicit
+const reducer = forEach({
+  getArray: (s) => s.counters,
+  setArray: (s, counters) => ({ ...s, counters }),
+  extractChild: (a) => a.type === 'counter' ? { id: a.id, action: a.action } : null,
+  wrapChild: (id, action) => ({ type: 'counter', id, action }),
+  childReducer: counterReducer
+});
+
+// Using forEachElement() - shorter
+const reducer = forEachElement(
+  'counter',
+  (s) => s.counters,
+  (s, counters) => ({ ...s, counters }),
+  counterReducer
+);
+```
+
+Both produce identical reducers. Use `forEachElement()` when your actions follow the standard pattern.
+
+### Example
+
+```typescript
+import { forEachElement } from '@composable-svelte/core';
+
+interface TodosState {
+  todos: Array<{ id: string; state: TodoState }>;
+}
+
+type TodosAction =
+  | { type: 'addTodo' }
+  | { type: 'todo'; id: string; action: TodoAction };
+
+const todosReducer = forEachElement(
+  'todo',                                    // Action type
+  (s) => s.todos,                            // Get array
+  (s, todos) => ({ ...s, todos }),           // Set array
+  todoReducer                                // Child reducer
+);
+```
+
+### Integration with integrate()
+
+The fluent `integrate()` DSL provides a `.forEach()` method:
+
+```typescript
+import { integrate } from '@composable-svelte/core';
+
+const appReducer = integrate<AppState, AppAction, Deps>()
+  .forEach('counter', s => s.counters, (s, arr) => ({ ...s, counters: arr }), counterReducer)
+  .forEach('todo', s => s.todos, (s, arr) => ({ ...s, todos: arr }), todoReducer)
+  .build();
+```
+
+### elementAction() Helper
+
+Create type-safe element actions with the `elementAction()` helper:
+
+```typescript
+import { elementAction } from '@composable-svelte/core';
+
+// Manual action creation
+store.dispatch({
+  type: 'counter',
+  id: 'counter-1',
+  action: { type: 'increment' }
+});
+
+// Using elementAction()
+store.dispatch(
+  elementAction('counter', 'counter-1', { type: 'increment' })
+);
+```
+
+### Complete Example with integrate()
+
+```typescript
+import { integrate, forEachElement } from '@composable-svelte/core';
+
+interface State {
+  counters: Array<{ id: string; state: CounterState }>;
+  todos: Array<{ id: string; state: TodoState }>;
+}
+
+type Action =
+  | { type: 'addCounter' }
+  | { type: 'counter'; id: string; action: CounterAction }
+  | { type: 'addTodo' }
+  | { type: 'todo'; id: string; action: TodoAction };
+
+const coreReducer: Reducer<State, Action, Deps> = (state, action, deps) => {
+  switch (action.type) {
+    case 'addCounter':
+      return [{
+        ...state,
+        counters: [...state.counters, {
+          id: crypto.randomUUID(),
+          state: { count: 0 }
+        }]
+      }, Effect.none()];
+
+    case 'addTodo':
+      return [{
+        ...state,
+        todos: [...state.todos, {
+          id: crypto.randomUUID(),
+          state: { text: '', completed: false }
+        }]
+      }, Effect.none()];
+
+    default:
+      return [state, Effect.none()];
+  }
+};
+
+// Compose with forEach for collection management
+export const reducer = integrate<State, Action, Deps>()
+  .forEach('counter', s => s.counters, (s, counters) => ({ ...s, counters }), counterReducer)
+  .forEach('todo', s => s.todos, (s, todos) => ({ ...s, todos }), todoReducer)
+  .reduce(coreReducer)
+  .build();
 ```
 
 ## Composition Patterns
