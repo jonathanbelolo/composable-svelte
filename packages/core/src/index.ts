@@ -168,3 +168,145 @@ export type {
   StateAssertion,
   PartialAction
 } from './test/test-store.js';
+
+// ============================================================================
+// API Module
+// ============================================================================
+
+// Core types
+export type {
+  APIClient,
+  APIResponse,
+  RequestConfig,
+  RetryConfig,
+  CacheConfig,
+  APIRequest,
+  HTTPMethod,
+  SafeHTTPMethod,
+  RequestInterceptor,
+  ResponseInterceptor,
+  ErrorInterceptor,
+  Interceptor,
+  APIClientConfig,
+  InferResponse
+} from './api/index.js';
+
+// Request builder
+export { Request } from './api/index.js';
+
+// Client factory
+export { createAPIClient } from './api/index.js';
+
+// Testing utilities
+export {
+  createMockAPI,
+  type MockResponse,
+  type MockRoutes,
+  createSpyAPI,
+  type SpyAPIClient,
+  type RecordedCall
+} from './api/index.js';
+
+// Endpoint helpers
+export {
+  createRESTEndpoints,
+  createPaginatedEndpoints,
+  createSearchEndpoints,
+  createFullEndpoints,
+  type RESTEndpoints,
+  type PaginatedEndpoints,
+  type SearchEndpoints,
+  type FullEndpoints,
+  type PaginationParams,
+  type PaginatedResponse,
+  type SearchParams
+} from './api/index.js';
+
+// Error classes
+export {
+  APIError,
+  NetworkError,
+  TimeoutError,
+  ValidationError,
+  type ValidationErrorField
+} from './api/index.js';
+
+// Effect integration
+export { api, apiFireAndForget, apiAll } from './api/index.js';
+
+// ============================================================================
+// WebSocket Module
+// ============================================================================
+
+// Core types
+export type {
+  WebSocketClient,
+  WebSocketConfig,
+  WebSocketMessage,
+  WebSocketEvent,
+  WebSocketConnectedEvent,
+  WebSocketDisconnectedEvent,
+  WebSocketErrorEvent,
+  WebSocketReconnectingEvent,
+  WebSocketReconnectedEvent,
+  ConnectionState,
+  ConnectionStatus,
+  ConnectionStats,
+  ReconnectConfig,
+  HeartbeatConfig,
+  MessageSerializer,
+  MessageListener,
+  EventListener
+  // Note: Unsubscribe is already exported from ./dependencies/index.js
+} from './websocket/index.js';
+
+export {
+  WebSocketError,
+  WS_ERROR_CODES,
+  JSONSerializer
+} from './websocket/index.js';
+
+// Production client
+export { createLiveWebSocket } from './websocket/index.js';
+
+// Testing utilities
+export type {
+  MockWebSocketClient,
+  SpyWebSocketClient,
+  RecordedConnection,
+  RecordedDisconnection
+} from './websocket/index.js';
+
+export {
+  createMockWebSocket,
+  createSpyWebSocket
+} from './websocket/index.js';
+
+// Advanced features
+export type { Heartbeat } from './websocket/index.js';
+export { createHeartbeat } from './websocket/index.js';
+
+export type { MessageQueue } from './websocket/index.js';
+export {
+  createMessageQueue,
+  createQueuedWebSocket
+} from './websocket/index.js';
+
+export type {
+  ChannelRouter,
+  ChannelExtractor
+} from './websocket/index.js';
+
+export {
+  createChannelRouter,
+  createChannelWebSocket
+} from './websocket/index.js';
+
+// Effect integration (side effect: registers Effect.websocket namespace)
+import './websocket/effect-websocket.js';
+
+// ============================================================================
+// UI Components & Navigation Components
+// ============================================================================
+
+export * from './components-exports.js';

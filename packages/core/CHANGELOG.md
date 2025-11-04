@@ -5,6 +5,67 @@ All notable changes to `@composable-svelte/core` will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2025-11-04
+
+### Added
+
+#### Complete Public API Surface
+- **API Module Exports** (~30 exports): Complete HTTP/REST client API now publicly available
+  - Core types: `APIClient`, `APIResponse`, `RequestConfig`, `RetryConfig`, `CacheConfig`, `APIRequest`, `HTTPMethod`, `SafeHTTPMethod`
+  - Interceptors: `RequestInterceptor`, `ResponseInterceptor`, `ErrorInterceptor`, `Interceptor`, `APIClientConfig`
+  - Type utilities: `InferResponse`
+  - Client factory: `createAPIClient()`
+  - Request builder: `Request` class
+  - Testing utilities: `createMockAPI()`, `createSpyAPI()` with types `MockResponse`, `MockRoutes`, `SpyAPIClient`, `RecordedCall`
+  - Endpoint helpers: `createRESTEndpoints()`, `createPaginatedEndpoints()`, `createSearchEndpoints()`, `createFullEndpoints()` with types
+  - Error classes: `APIError`, `NetworkError`, `TimeoutError`, `ValidationError`, `ValidationErrorField`
+  - Effect integration: `api()`, `apiFireAndForget()`, `apiAll()`
+
+- **WebSocket Module Exports** (~24 exports): Complete real-time communication API now publicly available
+  - Core types: `WebSocketClient`, `WebSocketConfig`, `WebSocketMessage`, `WebSocketEvent`
+  - Event types: `WebSocketConnectedEvent`, `WebSocketDisconnectedEvent`, `WebSocketErrorEvent`, `WebSocketReconnectingEvent`, `WebSocketReconnectedEvent`
+  - State types: `ConnectionState`, `ConnectionStatus`, `ConnectionStats`
+  - Config types: `ReconnectConfig`, `HeartbeatConfig`
+  - Callback types: `MessageSerializer`, `MessageListener`, `EventListener`
+  - Error handling: `WebSocketError`, `WS_ERROR_CODES`, `JSONSerializer`
+  - Production client: `createLiveWebSocket()`
+  - Testing utilities: `createMockWebSocket()`, `createSpyWebSocket()` with types `MockWebSocketClient`, `SpyWebSocketClient`, `RecordedConnection`, `RecordedDisconnection`
+  - Advanced features: `createHeartbeat()`, `createMessageQueue()`, `createQueuedWebSocket()`, `createChannelRouter()`, `createChannelWebSocket()` with types
+
+- **UI Component Exports** (~60 components): Complete component library now publicly available
+  - Layout & Structure: `Box`, `Panel`, `Separator`, `AspectRatio`
+  - Typography: `Text`, `Heading`
+  - Interactive Elements: `Button`, `IconButton`, `ButtonGroup`, `Kbd`
+  - Form Controls: `Input`, `Textarea`, `Checkbox`, `Radio`, `RadioGroup`, `Switch`, `Slider`, `Select`, `Combobox`, `Label`, `FileUpload`
+  - Display Components: `Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter`, `Badge`, `Avatar`, `Tooltip`, `TooltipPrimitive`
+  - Feedback Components: `Progress`, `Spinner`, `Skeleton`, `Empty`
+  - Banner & Alerts: `Banner`, `BannerTitle`, `BannerDescription`
+  - Navigation UI: `Breadcrumb`, `BreadcrumbList`, `BreadcrumbItem`, `BreadcrumbLink`, `BreadcrumbPage`, `BreadcrumbSeparator`, `BreadcrumbEllipsis`, `Pagination`, `DropdownMenu`, `TreeView`
+  - Interactive Containers: `Accordion`, `AccordionItem`, `AccordionTrigger`, `AccordionContent`, `Collapsible`, `CollapsibleTrigger`, `CollapsibleContent`
+  - Advanced Components: `Calendar`, `Carousel`
+
+- **Navigation Component Exports** (~15 components): Complete navigation system now publicly available
+  - High-level components: `Modal`, `Sheet`, `Drawer`, `Sidebar`, `Popover`, `Alert`, `Tabs`, `NavigationStack`, `AnimatedNavigationStack`, `DestinationRouter`
+  - Primitive components: `ModalPrimitive`, `SheetPrimitive`, `DrawerPrimitive`, `SidebarPrimitive`, `PopoverPrimitive`, `AlertPrimitive`, `TabsPrimitive`, `NavigationStackPrimitive`
+
+### Changed
+- **Organized Exports**: Created `components-exports.ts` for better code organization (separating 75+ component exports from main index)
+
+### Fixed
+- **Duplicate Export**: Removed duplicate `Unsubscribe` type export (now only exported from dependencies module, shared by WebSocket module)
+
+### Migration Guide
+All previously internal modules are now part of the public API. If you were importing from internal paths (not recommended), update to the main package export:
+
+```typescript
+// Before (v0.1.0 - internal imports, not officially supported)
+import { createMockAPI } from '@composable-svelte/core/dist/api/mock-client.js';
+import { Skeleton } from '@composable-svelte/core/dist/components/ui/skeleton/Skeleton.svelte';
+
+// After (v0.2.0 - official public API)
+import { createMockAPI, Skeleton } from '@composable-svelte/core';
+```
+
 ## [0.1.0] - 2025-01-11
 
 ### Added
@@ -78,4 +139,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - All 66+ TypeScript build errors (animation types, API cache, exactOptionalPropertyTypes)
 - All 8 failing tests (accordion, sidebar, modal, alert, dropdown-menu)
 
+[0.2.0]: https://github.com/jbelolo/composable-svelte/releases/tag/v0.2.0
 [0.1.0]: https://github.com/jbelolo/composable-svelte/releases/tag/v0.1.0
