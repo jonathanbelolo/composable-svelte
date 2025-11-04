@@ -5,6 +5,8 @@ import {
   elementAction,
   type IdentifiedItem
 } from '../../src/lib/composition/for-each.js';
+import { scopeToElement } from '../../src/lib/navigation/scope-to-element.js';
+import { createStore } from '../../src/lib/store.js';
 import { Effect } from '../../src/lib/effect.js';
 import type { Reducer } from '../../src/lib/types.js';
 
@@ -420,5 +422,99 @@ describe('forEach integration', () => {
     const [newState] = reducer(initialState, { type: 'counter', id: 'a', action: { type: 'increment' } }, { multiplier: 5 });
 
     expect(newState.items[0].state.count).toBe(15); // 10 + 5
+  });
+});
+
+// =======================================================================
+// scopeToElement Tests
+// =======================================================================
+
+describe('scopeToElement', () => {
+  it('should create scoped store with simplified type signature', () => {
+    // Setup: Create parent store with items
+    const parentReducer = forEachElement(
+      'counter',
+      (s: ParentState) => s.items,
+      (s: ParentState, items) => ({ ...s, items }),
+      counterReducer
+    );
+
+    const parentStore = createStore({
+      initialState: {
+        items: [
+          { id: 'a', state: { count: 10 } },
+          { id: 'b', state: { count: 20 } }
+        ]
+      } as ParentState,
+      reducer: parentReducer,
+      dependencies: {}
+    });
+
+    // Test: Use simplified API with just one type parameter
+    const scopedStore = scopeToElement<CounterAction>(
+      parentStore,
+      'counter',
+      (s) => s.items,
+      'a'
+    );
+
+    expect(scopedStore).not.toBeNull();
+    expect(scopedStore!.state.count).toBe(10);
+  });
+
+  it('should dispatch actions with correct typing', () => {
+    const parentReducer = forEachElement(
+      'counter',
+      (s: ParentState) => s.items,
+      (s: ParentState, items) => ({ ...s, items }),
+      counterReducer
+    );
+
+    const parentStore = createStore({
+      initialState: {
+        items: [{ id: 'a', state: { count: 10 } }]
+      } as ParentState,
+      reducer: parentReducer,
+      dependencies: {}
+    });
+
+    const scopedStore = scopeToElement<CounterAction>(
+      parentStore,
+      'counter',
+      (s) => s.items,
+      'a'
+    );
+
+    // Dispatch should accept CounterAction
+    scopedStore!.dispatch({ type: 'increment' });
+
+    // Verify state updated
+    expect(scopedStore!.state.count).toBe(11);
+  });
+
+  it('should return null for non-existent item', () => {
+    const parentReducer = forEachElement(
+      'counter',
+      (s: ParentState) => s.items,
+      (s: ParentState, items) => ({ ...s, items }),
+      counterReducer
+    );
+
+    const parentStore = createStore({
+      initialState: {
+        items: [{ id: 'a', state: { count: 10 } }]
+      } as ParentState,
+      reducer: parentReducer,
+      dependencies: {}
+    });
+
+    const scopedStore = scopeToElement<CounterAction>(
+      parentStore,
+      'counter',
+      (s) => s.items,
+      'nonexistent'
+    );
+
+    expect(scopedStore).toBeNull();
   });
 });

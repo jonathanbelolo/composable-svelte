@@ -15,6 +15,7 @@
 import type { Store } from '../types.js';
 import type { IdentifiedItem } from '../composition/for-each.js';
 
+
 /**
  * Create a scoped store for a specific item in a collection.
  *
@@ -33,11 +34,11 @@ import type { IdentifiedItem } from '../composition/for-each.js';
  * - Subscribe only triggers for changes to this specific item
  * - Dispatch wraps actions with { type, id, action }
  *
- * @template ParentState - Parent store state type
- * @template ParentAction - Parent store action type
- * @template ChildState - Child item state type
- * @template ChildAction - Child item action type
- * @template ID - ID type (string | number)
+ * @template ChildAction - Child item action type (must be specified)
+ * @template ParentState - Parent store state type (inferred)
+ * @template ParentAction - Parent store action type (inferred)
+ * @template ChildState - Child item state type (inferred)
+ * @template ID - ID type (inferred)
  *
  * @param parentStore - The parent store containing the array
  * @param actionType - The action type string for routing (e.g., 'counter')
@@ -94,11 +95,11 @@ import type { IdentifiedItem } from '../composition/for-each.js';
  * ```
  */
 export function scopeToElement<
-  ParentState,
-  ParentAction extends { type: string },
-  ChildState,
   ChildAction,
-  ID extends string | number
+  ParentState = any,
+  ParentAction extends { type: string } = any,
+  ChildState = any,
+  ID extends string | number = any
 >(
   parentStore: Store<ParentState, ParentAction>,
   actionType: string,
