@@ -1,6 +1,6 @@
 {
   "name": "@composable-svelte/core",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A Composable Architecture for Svelte 5 - Type-safe state management with reducers, effects, and navigation",
   "type": "module",
   "main": "./dist/index.js",

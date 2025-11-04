@@ -5,6 +5,11 @@ All notable changes to `@composable-svelte/core` will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2025-11-04
+
+### Fixed
+- **Build**: Rebuilt package with all exports properly included in dist/ folder. Version 0.2.0 was published before the build step, resulting in missing exports in the npm package. This patch ensures all ~130 exports are available.
+
 ## [0.2.0] - 2025-11-04
 
 ### Added
