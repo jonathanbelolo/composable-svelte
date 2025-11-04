@@ -5,6 +5,22 @@ All notable changes to `@composable-svelte/core` will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.6] - 2025-11-04
+
+### Changed
+- **Developer Experience**: Simplified `scopeToElement()` API from 5 type parameters to just 1
+  - Before: `scopeToElement<ParentState, ParentAction, ChildState, ChildAction, ID>(...)`
+  - After: `scopeToElement<ChildAction>(...)`
+  - 80% reduction in boilerplate while maintaining full type safety
+  - All other types (ParentState, ChildState, ID) are automatically inferred from arguments
+  - No breaking changes to runtime behavior or type safety guarantees
+
+### Added
+- **Testing**: 3 comprehensive tests for `scopeToElement` API covering:
+  - Scoped store creation with simplified type signature
+  - Type-safe action dispatching
+  - Null handling for non-existent items
+
 ## [0.2.5] - 2025-11-04
 
 ### Fixed
