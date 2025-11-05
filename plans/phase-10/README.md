@@ -202,33 +202,61 @@ pnpm add codemirror @codemirror/state @codemirror/view \
 
 ---
 
+## Package Architecture
+
+These components will be in a **separate package** `@composable-svelte/code`:
+
+**Why separate?**
+- ✅ Opt-in: Only install if you need code components
+- ✅ Bundle size: Keeps core lean (~175KB of dependencies)
+- ✅ Specialized: Code components are for dev tools, docs sites, playgrounds
+- ✅ Clear boundaries: Different use case than universal UI components
+- ✅ Future extensibility: Diff viewer, multi-file editor, terminal, etc.
+
+**Usage:**
+```bash
+pnpm add @composable-svelte/core  # Base library
+pnpm add @composable-svelte/code  # Code components (optional)
+```
+
+```typescript
+import { createStore } from '@composable-svelte/core';
+import { CodeHighlight, codeHighlightReducer } from '@composable-svelte/code';
+```
+
+---
+
 ## File Structure
 
 ```
-packages/core/src/lib/components/
-├── code-highlight/
-│   ├── CodeHighlight.svelte
-│   ├── code-highlight.reducer.ts
-│   ├── code-highlight.types.ts
-│   ├── prism-wrapper.ts
-│   ├── CodeHighlight.css
-│   ├── README.md
-│   └── index.ts
-│
-└── code-editor/
-    ├── CodeEditor.svelte
-    ├── code-editor.reducer.ts
-    ├── code-editor.types.ts
-    ├── codemirror-wrapper.ts
-    ├── extensions.ts
-    ├── themes.ts
-    ├── CodeEditor.css
-    ├── README.md
-    └── index.ts
-
-packages/core/tests/components/
-├── code-highlight.test.ts
-└── code-editor.test.ts
+packages/code/                       # @composable-svelte/code (NEW PACKAGE)
+├── src/
+│   ├── code-highlight/
+│   │   ├── CodeHighlight.svelte
+│   │   ├── code-highlight.reducer.ts
+│   │   ├── code-highlight.types.ts
+│   │   ├── prism-wrapper.ts
+│   │   ├── CodeHighlight.css
+│   │   ├── README.md
+│   │   └── index.ts
+│   ├── code-editor/
+│   │   ├── CodeEditor.svelte
+│   │   ├── code-editor.reducer.ts
+│   │   ├── code-editor.types.ts
+│   │   ├── codemirror-wrapper.ts
+│   │   ├── extensions.ts
+│   │   ├── themes.ts
+│   │   ├── CodeEditor.css
+│   │   ├── README.md
+│   │   └── index.ts
+│   └── index.ts                    # Main exports
+├── tests/
+│   ├── code-highlight.test.ts
+│   └── code-editor.test.ts
+├── package.json
+├── vite.config.ts
+├── tsconfig.json
+└── README.md
 
 examples/styleguide/src/routes/
 ├── code-highlight/

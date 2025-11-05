@@ -82,7 +82,7 @@ type CodeHighlightAction =
 ```
 
 **Output:**
-- `packages/core/src/lib/components/code-highlight/code-highlight.types.ts`
+- `packages/code/src/code-highlight/code-highlight.types.ts`
 
 ---
 
@@ -184,7 +184,7 @@ const codeHighlightReducer: Reducer<CodeHighlightState, CodeHighlightAction, Dep
 ```
 
 **Output:**
-- `packages/core/src/lib/components/code-highlight/code-highlight.reducer.ts`
+- `packages/code/src/code-highlight/code-highlight.reducer.ts`
 
 ---
 
@@ -222,7 +222,7 @@ export async function loadLanguage(lang: SupportedLanguage): Promise<void> {
 ```
 
 **Output:**
-- `packages/core/src/lib/components/code-highlight/prism-wrapper.ts`
+- `packages/code/src/code-highlight/prism-wrapper.ts`
 
 ---
 
@@ -287,7 +287,7 @@ export async function loadLanguage(lang: SupportedLanguage): Promise<void> {
 ```
 
 **Output:**
-- `packages/core/src/lib/components/code-highlight/CodeHighlight.svelte`
+- `packages/code/src/code-highlight/CodeHighlight.svelte`
 
 ---
 
@@ -360,7 +360,7 @@ describe('CodeHighlight', () => {
 ```
 
 **Output:**
-- `packages/core/tests/components/code-highlight.test.ts`
+- `packages/code/tests/code-highlight.test.ts`
 
 ---
 
@@ -376,7 +376,7 @@ describe('CodeHighlight', () => {
 - [ ] 7.7. Add smooth transitions for theme switching
 
 **Output:**
-- `packages/core/src/lib/components/code-highlight/CodeHighlight.css`
+- `packages/code/src/code-highlight/CodeHighlight.css`
 
 ---
 
@@ -394,7 +394,7 @@ describe('CodeHighlight', () => {
 **Example Usage:**
 ```typescript
 import { createStore } from '@composable-svelte/core';
-import { codeHighlightReducer, highlightCode } from '@composable-svelte/core/components/code-highlight';
+import { codeHighlightReducer, highlightCode } from '@composable-svelte/code';
 
 const store = createStore({
   initialState: {
@@ -417,7 +417,7 @@ const store = createStore({
 ```
 
 **Output:**
-- `packages/core/src/lib/components/code-highlight/README.md`
+- `packages/code/src/code-highlight/README.md`
 - `examples/styleguide/src/routes/code-highlight/+page.svelte`
 
 ---
@@ -426,13 +426,14 @@ const store = createStore({
 
 **Tasks:**
 - [ ] 9.1. Add exports to component index
-- [ ] 9.2. Update main library exports
+- [ ] 9.2. Update main package exports (`packages/code/src/index.ts`)
 - [ ] 9.3. Ensure tree-shaking works (modular Prism imports)
 - [ ] 9.4. Run build and verify no errors
 - [ ] 9.5. Test in styleguide app
 
 **Output:**
-- Updated `packages/core/src/lib/components/index.ts`
+- Updated `packages/code/src/index.ts`
+- Package exports configured in `packages/code/package.json`
 
 ---
 
@@ -466,20 +467,25 @@ const store = createStore({
 ## File Structure
 
 ```
-packages/core/src/lib/components/code-highlight/
-├── CodeHighlight.svelte          # Main component
-├── code-highlight.reducer.ts     # Pure reducer
-├── code-highlight.types.ts       # State & action types
-├── prism-wrapper.ts              # Prism.js integration
-├── CodeHighlight.css             # Styles
-├── README.md                     # Documentation
-└── index.ts                      # Exports
-
-packages/core/tests/components/
-└── code-highlight.test.ts        # TestStore tests
+packages/code/                    # @composable-svelte/code package
+├── src/
+│   ├── code-highlight/
+│   │   ├── CodeHighlight.svelte          # Main component
+│   │   ├── code-highlight.reducer.ts     # Pure reducer
+│   │   ├── code-highlight.types.ts       # State & action types
+│   │   ├── prism-wrapper.ts              # Prism.js integration
+│   │   ├── CodeHighlight.css             # Styles
+│   │   ├── README.md                     # Documentation
+│   │   └── index.ts                      # Exports
+│   └── index.ts                          # Main package exports
+├── tests/
+│   └── code-highlight.test.ts            # TestStore tests
+├── package.json
+├── vite.config.ts
+└── tsconfig.json
 
 examples/styleguide/src/routes/code-highlight/
-└── +page.svelte                  # Demo page
+└── +page.svelte                          # Demo page
 ```
 
 ---

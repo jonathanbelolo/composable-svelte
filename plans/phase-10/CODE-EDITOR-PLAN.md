@@ -182,7 +182,7 @@ type CodeEditorAction =
 ```
 
 **Output:**
-- `packages/core/src/lib/components/code-editor/code-editor.types.ts`
+- `packages/code/src/code-editor/code-editor.types.ts`
 
 ---
 
@@ -326,7 +326,7 @@ const codeEditorReducer: Reducer<CodeEditorState, CodeEditorAction, Dependencies
 ```
 
 **Output:**
-- `packages/core/src/lib/components/code-editor/code-editor.reducer.ts`
+- `packages/code/src/code-editor/code-editor.reducer.ts`
 
 ---
 
@@ -414,7 +414,7 @@ export async function loadLanguage(lang: SupportedLanguage) {
 ```
 
 **Output:**
-- `packages/core/src/lib/components/code-editor/codemirror-wrapper.ts`
+- `packages/code/src/code-editor/codemirror-wrapper.ts`
 
 ---
 
@@ -547,7 +547,7 @@ export async function loadLanguage(lang: SupportedLanguage) {
 ```
 
 **Output:**
-- `packages/core/src/lib/components/code-editor/CodeEditor.svelte`
+- `packages/code/src/code-editor/CodeEditor.svelte`
 
 ---
 
@@ -636,7 +636,7 @@ describe('CodeEditor', () => {
 ```
 
 **Output:**
-- `packages/core/tests/components/code-editor.test.ts`
+- `packages/code/tests/code-editor.test.ts`
 
 ---
 
@@ -670,7 +670,7 @@ describe('CodeEditor', () => {
 - [ ] 8.8. Add smooth theme transitions
 
 **Output:**
-- `packages/core/src/lib/components/code-editor/CodeEditor.css`
+- `packages/code/src/code-editor/CodeEditor.css`
 
 ---
 
@@ -689,7 +689,7 @@ describe('CodeEditor', () => {
 **Example Usage:**
 ```typescript
 import { createStore } from '@composable-svelte/core';
-import { codeEditorReducer } from '@composable-svelte/core/components/code-editor';
+import { codeEditorReducer } from '@composable-svelte/code';
 
 const store = createStore({
   initialState: {
@@ -722,7 +722,7 @@ const store = createStore({
 ```
 
 **Output:**
-- `packages/core/src/lib/components/code-editor/README.md`
+- `packages/code/src/code-editor/README.md`
 - `examples/styleguide/src/routes/code-editor/+page.svelte`
 
 ---
@@ -731,14 +731,15 @@ const store = createStore({
 
 **Tasks:**
 - [ ] 10.1. Add exports to component index
-- [ ] 10.2. Update main library exports
+- [ ] 10.2. Update main package exports (`packages/code/src/index.ts`)
 - [ ] 10.3. Ensure tree-shaking works (modular CodeMirror imports)
 - [ ] 10.4. Run build and verify no errors
 - [ ] 10.5. Test in styleguide app
 - [ ] 10.6. Performance testing (large files)
 
 **Output:**
-- Updated `packages/core/src/lib/components/index.ts`
+- Updated `packages/code/src/index.ts`
+- Package exports configured in `packages/code/package.json`
 
 ---
 
@@ -790,22 +791,27 @@ const store = createStore({
 ## File Structure
 
 ```
-packages/core/src/lib/components/code-editor/
-├── CodeEditor.svelte             # Main component
-├── code-editor.reducer.ts        # Pure reducer
-├── code-editor.types.ts          # State & action types
-├── codemirror-wrapper.ts         # CodeMirror integration
-├── extensions.ts                 # CodeMirror extensions config
-├── themes.ts                     # Theme definitions
-├── CodeEditor.css                # Styles
-├── README.md                     # Documentation
-└── index.ts                      # Exports
-
-packages/core/tests/components/
-└── code-editor.test.ts           # TestStore tests
+packages/code/                    # @composable-svelte/code package
+├── src/
+│   ├── code-editor/
+│   │   ├── CodeEditor.svelte             # Main component
+│   │   ├── code-editor.reducer.ts        # Pure reducer
+│   │   ├── code-editor.types.ts          # State & action types
+│   │   ├── codemirror-wrapper.ts         # CodeMirror integration
+│   │   ├── extensions.ts                 # CodeMirror extensions config
+│   │   ├── themes.ts                     # Theme definitions
+│   │   ├── CodeEditor.css                # Styles
+│   │   ├── README.md                     # Documentation
+│   │   └── index.ts                      # Exports
+│   └── index.ts                          # Main package exports
+├── tests/
+│   └── code-editor.test.ts               # TestStore tests
+├── package.json
+├── vite.config.ts
+└── tsconfig.json
 
 examples/styleguide/src/routes/code-editor/
-└── +page.svelte                  # Demo page with examples
+└── +page.svelte                          # Demo page with examples
 ```
 
 ---
