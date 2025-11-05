@@ -225,6 +225,7 @@ export function createTreeHelpers<Node>(config: TreeConfig<Node>): TreeHelpers<N
 	): Node[] | null {
 		for (let i = 0; i < nodes.length; i++) {
 			const node = nodes[i];
+			if (!node) continue; // Skip sparse array holes
 
 			// Check if this is the target
 			if (config.getId(node) === targetId) {
@@ -257,6 +258,7 @@ export function createTreeHelpers<Node>(config: TreeConfig<Node>): TreeHelpers<N
 	function deleteNode(nodes: Node[], targetId: string): Node[] | null {
 		for (let i = 0; i < nodes.length; i++) {
 			const node = nodes[i];
+			if (!node) continue; // Skip sparse array holes
 
 			// Check if this is the target
 			if (config.getId(node) === targetId) {

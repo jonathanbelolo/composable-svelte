@@ -77,6 +77,8 @@ export function createTreeHelpers(config) {
     function updateNode(nodes, targetId, updater) {
         for (let i = 0; i < nodes.length; i++) {
             const node = nodes[i];
+            if (!node)
+                continue; // Skip sparse array holes
             // Check if this is the target
             if (config.getId(node) === targetId) {
                 // Found target - update it
@@ -105,6 +107,8 @@ export function createTreeHelpers(config) {
     function deleteNode(nodes, targetId) {
         for (let i = 0; i < nodes.length; i++) {
             const node = nodes[i];
+            if (!node)
+                continue; // Skip sparse array holes
             // Check if this is the target
             if (config.getId(node) === targetId) {
                 // Found target - remove it
