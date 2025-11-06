@@ -9,6 +9,7 @@
  */
 import { EditorView, basicSetup } from 'codemirror';
 import { EditorState } from '@codemirror/state';
+import { keymap } from '@codemirror/view';
 import { oneDark } from '@codemirror/theme-one-dark';
 /**
  * Load language extension for CodeMirror
@@ -135,12 +136,32 @@ export async function createEditorView(parent, store, config) {
             }
         }
     });
+    // Custom keybindings for save and format
+    const customKeymap = keymap.of([
+        {
+            key: 'Mod-s',
+            preventDefault: true,
+            run: () => {
+                store.dispatch({ type: 'save' });
+                return true;
+            }
+        },
+        {
+            key: 'Mod-Shift-f',
+            preventDefault: true,
+            run: () => {
+                store.dispatch({ type: 'format' });
+                return true;
+            }
+        }
+    ]);
     // Build extensions array
     const extensions = [
         basicSetup,
         languageExtension,
         ...themeExtensions,
         updateListener,
+        customKeymap,
         EditorView.editable.of(!config.readOnly),
         EditorState.tabSize.of(config.tabSize)
     ];

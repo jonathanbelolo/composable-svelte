@@ -21,7 +21,7 @@
 	// Track CodeMirror's internal value to prevent circular updates
 	let codemirrorValue = $state('');
 
-	// Subscribe to store changes
+	// Subscribe to store changes and initialize CodeMirror
 	onMount(() => {
 		console.log('[CodeEditor Component] Subscribing to store');
 		const unsubscribe = store.subscribe((newState) => {
@@ -29,34 +29,27 @@
 			state = newState;
 		});
 
-		return unsubscribe;
-	});
+		// Initialize CodeMirror
+		console.log('[CodeEditor] Initializing CodeMirror view');
+		createEditorView(editorElement, store, {
+			value: state.value,
+			language: state.language,
+			theme: state.theme,
+			showLineNumbers: state.showLineNumbers,
+			readOnly: state.readOnly,
+			enableAutocomplete: state.enableAutocomplete,
+			tabSize: state.tabSize
+		}).then((editorView) => {
+			view = editorView;
+			codemirrorValue = state.value;
+			console.log('[CodeEditor] CodeMirror view created');
+		});
 
-	// Initialize CodeMirror
-	$effect(() => {
-		if (editorElement && !view) {
-			console.log('[CodeEditor] Initializing CodeMirror view');
-			createEditorView(editorElement, store, {
-				value: state.value,
-				language: state.language,
-				theme: state.theme,
-				showLineNumbers: state.showLineNumbers,
-				readOnly: state.readOnly,
-				enableAutocomplete: state.enableAutocomplete,
-				tabSize: state.tabSize
-			}).then((editorView) => {
-				view = editorView;
-				codemirrorValue = state.value;
-				console.log('[CodeEditor] CodeMirror view created');
-			});
-
-			return () => {
-				console.log('[CodeEditor] Destroying CodeMirror view');
-				view?.destroy();
-				view = null;
-			};
-		}
-		return undefined;
+		return () => {
+			unsubscribe();
+			console.log('[CodeEditor] Destroying CodeMirror view');
+			view?.destroy();
+		};
 	});
 
 	// Sync programmatic value updates (from store → CodeMirror)
@@ -68,19 +61,6 @@
 			codemirrorValue = state.value;
 		}
 	});
-
-	// Keyboard shortcuts
-	function handleKeyDown(e: KeyboardEvent) {
-		if (e.metaKey || e.ctrlKey) {
-			if (e.key === 's') {
-				e.preventDefault();
-				store.dispatch({ type: 'save' });
-			} else if (e.key === 'f' && e.shiftKey) {
-				e.preventDefault();
-				store.dispatch({ type: 'format' });
-			}
-		}
-	}
 
 	// Derived values
 	const saveButtonText = $derived(state.hasUnsavedChanges ? 'Save *' : 'Save');
@@ -170,12 +150,6 @@
 	<div
 		bind:this={editorElement}
 		class="code-editor__container"
-		onkeydown={handleKeyDown}
-		role="textbox"
-		tabindex="0"
-		aria-label="Code editor"
-		aria-multiline="true"
-		aria-readonly={state.readOnly}
 	></div>
 
 	{#if state.cursorPosition}

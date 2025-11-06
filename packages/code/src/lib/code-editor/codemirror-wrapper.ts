@@ -10,6 +10,7 @@
 
 import { EditorView, basicSetup } from 'codemirror';
 import { EditorState, type Extension } from '@codemirror/state';
+import { keymap } from '@codemirror/view';
 import { oneDark } from '@codemirror/theme-one-dark';
 import type { Store } from '@composable-svelte/core';
 import type {
@@ -162,12 +163,33 @@ export async function createEditorView(
 		}
 	});
 
+	// Custom keybindings for save and format
+	const customKeymap = keymap.of([
+		{
+			key: 'Mod-s',
+			preventDefault: true,
+			run: () => {
+				store.dispatch({ type: 'save' });
+				return true;
+			}
+		},
+		{
+			key: 'Mod-Shift-f',
+			preventDefault: true,
+			run: () => {
+				store.dispatch({ type: 'format' });
+				return true;
+			}
+		}
+	]);
+
 	// Build extensions array
 	const extensions: Extension[] = [
 		basicSetup,
 		languageExtension,
 		...themeExtensions,
 		updateListener,
+		customKeymap,
 		EditorView.editable.of(!config.readOnly),
 		EditorState.tabSize.of(config.tabSize)
 	];
