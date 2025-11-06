@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Tabs from '@composable-svelte/core/navigation-components/Tabs.svelte';
-	import { createStore } from '@composable-svelte/core/store.svelte.js';
+	import { createStore } from '@composable-svelte/core';
 	import { scopeToDestination } from '@composable-svelte/core/navigation/scope-to-destination.js';
 	import { Effect } from '@composable-svelte/core/effect.js';
 

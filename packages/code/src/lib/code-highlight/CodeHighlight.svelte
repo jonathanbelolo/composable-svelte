@@ -7,26 +7,38 @@
 	 * Store containing all component state
 	 * NO component $state - all application state lives in the store
 	 */
-	export let store: Store<CodeHighlightState, CodeHighlightAction>;
+	const { store }: { store: Store<CodeHighlightState, CodeHighlightAction> } = $props();
+
+	// Create reactive state that syncs with store
+	let state = $state(store.state);
+
+	// Subscribe to store changes
+	onMount(() => {
+		console.log('[CodeHighlight Component] Subscribing to store');
+		const unsubscribe = store.subscribe((newState) => {
+			console.log('[CodeHighlight Component] State updated from store');
+			state = newState;
+		});
+
+		console.log('[CodeHighlight Component] Dispatching init action');
+		store.dispatch({ type: 'init' });
+
+		return unsubscribe;
+	});
 
 	// Derived values only (NO $state)
-	const showCopyButton = $derived($store.code.length > 0);
+	const showCopyButton = $derived(state.code.length > 0);
 	const copyButtonText = $derived(
-		$store.copyStatus === 'copied'
+		state.copyStatus === 'copied'
 			? 'Copied!'
-			: $store.copyStatus === 'copying'
+			: state.copyStatus === 'copying'
 				? 'Copying...'
 				: 'Copy'
 	);
-	const copyButtonDisabled = $derived($store.copyStatus === 'copying');
-
-	// Trigger initial highlighting on mount
-	onMount(() => {
-		store.dispatch({ type: 'init' });
-	});
+	const copyButtonDisabled = $derived(state.copyStatus === 'copying');
 </script>
 
-<div class="code-highlight" data-theme={$store.theme}>
+<div class="code-highlight" data-theme={state.theme}>
 	{#if showCopyButton}
 		<div class="code-highlight__toolbar">
 			<button
@@ -40,17 +52,17 @@
 		</div>
 	{/if}
 
-	{#if $store.isHighlighting}
+	{#if state.isHighlighting}
 		<div class="code-highlight__loading">Highlighting...</div>
-	{:else if $store.error}
-		<div class="code-highlight__error">{$store.error}</div>
+	{:else if state.error}
+		<div class="code-highlight__error">{state.error}</div>
 	{/if}
 
 	<pre
-		class="code-highlight__pre language-{$store.language}"
-		class:line-numbers={$store.showLineNumbers}
-		style:counter-reset={$store.showLineNumbers ? `line-number ${$store.startLine - 1}` : undefined}
-	><code class="code-highlight__code">{@html $store.highlightedCode || $store.code}</code></pre>
+		class="code-highlight__pre language-{state.language}"
+		class:line-numbers={state.showLineNumbers}
+		style:counter-reset={state.showLineNumbers ? `line-number ${state.startLine - 1}` : undefined}
+	><code class="code-highlight__code">{@html state.highlightedCode || state.code}</code></pre>
 </div>
 
 <style>

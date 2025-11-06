@@ -45,6 +45,8 @@
   import EmptyDemo from '../demos/EmptyDemo.svelte';
   import CarouselDemo from '../demos/CarouselDemo.svelte';
   import TreeViewDemo from '../demos/TreeViewDemo.svelte';
+  // Code Components
+  import CodeHighlightDemo from '../demos/CodeHighlightDemo.svelte';
   // Typography
   import HeadingDemo from '../demos/HeadingDemo.svelte';
   import TextDemo from '../demos/TextDemo.svelte';
@@ -110,6 +112,8 @@
     'empty': EmptyDemo,
     'carousel': CarouselDemo,
     'tree-view': TreeViewDemo,
+    // Code Components
+    'code-highlight': CodeHighlightDemo,
     // Typography
     'heading': HeadingDemo,
     'text': TextDemo,

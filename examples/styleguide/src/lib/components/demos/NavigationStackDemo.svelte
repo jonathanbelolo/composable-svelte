@@ -2,7 +2,7 @@
 	import NavigationStack from '@composable-svelte/core/navigation-components/NavigationStack.svelte';
 	import AnimatedNavigationStack from '@composable-svelte/core/navigation-components/AnimatedNavigationStack.svelte';
 	import Button from '@composable-svelte/core/components/ui/button/Button.svelte';
-	import { createStore } from '@composable-svelte/core/store.svelte.js';
+	import { createStore } from '@composable-svelte/core';
 	import { scopeToDestination } from '@composable-svelte/core/navigation/scope-to-destination.js';
 	import { Effect } from '@composable-svelte/core/effect.js';
 	import type { PresentationState } from '@composable-svelte/core/navigation/types.js';

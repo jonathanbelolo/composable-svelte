@@ -303,6 +303,9 @@ importers:
 
   examples/styleguide:
     dependencies:
+      '@composable-svelte/code':
+        specifier: workspace:*
+        version: link:../../packages/code
       '@composable-svelte/core':
         specifier: workspace:*
         version: link:../../packages/core
