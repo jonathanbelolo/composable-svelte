@@ -61,3 +61,16 @@ export {
 	type ConnectionValidation,
 	type ConnectionValidator
 } from './node-canvas/index';
+
+// StreamingChat - Transport-agnostic streaming chat for LLM interactions
+export {
+	StreamingChat,
+	ChatMessage,
+	streamingChatReducer,
+	createInitialStreamingChatState,
+	createMockStreamingChat,
+	type Message,
+	type StreamingChatState,
+	type StreamingChatAction,
+	type StreamingChatDependencies
+} from './streaming-chat/index';

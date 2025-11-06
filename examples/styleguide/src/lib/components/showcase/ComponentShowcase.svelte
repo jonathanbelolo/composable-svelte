@@ -49,6 +49,7 @@
   import CodeHighlightDemo from '../demos/CodeHighlightDemo.svelte';
   import CodeEditorDemo from '../demos/CodeEditorDemo.svelte';
   import NodeCanvasDemo from '../demos/NodeCanvasDemo.svelte';
+  import StreamingChatDemo from '../demos/StreamingChatDemo.svelte';
   // Typography
   import HeadingDemo from '../demos/HeadingDemo.svelte';
   import TextDemo from '../demos/TextDemo.svelte';
@@ -118,6 +119,7 @@
     'code-highlight': CodeHighlightDemo,
     'code-editor': CodeEditorDemo,
     'node-canvas': NodeCanvasDemo,
+    'streaming-chat': StreamingChatDemo,
     // Typography
     'heading': HeadingDemo,
     'text': TextDemo,

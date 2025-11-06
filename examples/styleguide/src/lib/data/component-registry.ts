@@ -82,6 +82,7 @@ export const COMPONENT_REGISTRY: ComponentInfo[] = [
   { id: 'code-highlight', name: 'Code Highlight', category: 'Code Components', description: 'Syntax highlighting for code snippets with Prism.js' },
   { id: 'code-editor', name: 'Code Editor', category: 'Code Components', description: 'Interactive code editor with CodeMirror 6' },
   { id: 'node-canvas', name: 'Node Canvas', category: 'Code Components', description: 'Node-based canvas editor with SvelteFlow for visual programming' },
+  { id: 'streaming-chat', name: 'Streaming Chat', category: 'Code Components', description: 'Transport-agnostic streaming chat interface for LLM interactions' },
 
   // Typography
   { id: 'heading', name: 'Heading', category: 'Typography', description: 'Semantic heading component' },
