@@ -74,3 +74,17 @@ export {
 	type StreamingChatAction,
 	type StreamingChatDependencies
 } from './streaming-chat/index';
+
+// VideoEmbed - Video embedding for external platforms (YouTube, Vimeo, Twitch, etc.)
+export {
+	VideoEmbed,
+	detectVideo,
+	extractVideosFromMarkdown,
+	getPlatformConfig,
+	getSupportedPlatforms,
+	type VideoEmbedType,
+	type VideoPlatform,
+	type AspectRatio,
+	type PlatformConfig,
+	type EmbedOptions
+} from './video-embed/index';

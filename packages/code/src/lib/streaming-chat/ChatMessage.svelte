@@ -1,7 +1,8 @@
 <script lang="ts">
 	import type { Message } from './types.js';
-	import { renderMarkdown, attachCopyButtons, extractImagesFromMarkdown } from './markdown.js';
+	import { renderMarkdown, attachCopyButtons, extractImagesFromMarkdown, extractVideosFromMarkdown } from './markdown.js';
 	import { ImageGallery } from '@composable-svelte/core/components/image-gallery';
+	import { VideoEmbed } from '../video-embed/index.js';
 
 	/**
 	 * Individual chat message bubble.
@@ -33,6 +34,14 @@
 	const images = $derived(() => {
 		if (message.role === 'assistant' && !isStreaming) {
 			return extractImagesFromMarkdown(message.content);
+		}
+		return [];
+	});
+
+	// Extract videos from markdown (only for completed assistant messages)
+	const videos = $derived(() => {
+		if (message.role === 'assistant' && !isStreaming) {
+			return extractVideosFromMarkdown(message.content);
 		}
 		return [];
 	});
@@ -70,6 +79,15 @@
 						gap={12}
 						aspectRatio="16:9"
 					/>
+				</div>
+			{/if}
+
+			<!-- Video embeds for detected videos -->
+			{#if videos().length > 0}
+				<div class="chat-message__videos">
+					{#each videos() as video (video.url)}
+						<VideoEmbed {video} />
+					{/each}
 				</div>
 			{/if}
 		{:else}
@@ -394,6 +412,14 @@
 	/* Image Gallery */
 	.chat-message__gallery {
 		margin-top: 16px;
+	}
+
+	/* Video Embeds */
+	.chat-message__videos {
+		margin-top: 16px;
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
 	}
 
 	/* Dark mode support */

@@ -106,10 +106,12 @@ export function createMockStreamingChat(): StreamingChatDependencies {
 				// Simulate some delay before starting
 				await new Promise((resolve) => setTimeout(resolve, 300));
 
-				// Check for image gallery trigger keywords
+				// Check for image and video trigger keywords
 				const lowerMessage = message.toLowerCase();
 				const imageKeywords = ['image', 'images', 'photo', 'photos', 'picture', 'pictures', 'gallery'];
+				const videoKeywords = ['video', 'videos', 'watch', 'youtube', 'vimeo', 'twitch'];
 				const shouldShowImages = imageKeywords.some(keyword => lowerMessage.includes(keyword));
+				const shouldShowVideos = videoKeywords.some(keyword => lowerMessage.includes(keyword));
 
 				// Generate a mock response with markdown
 				const responses = [
@@ -121,13 +123,21 @@ export function createMockStreamingChat(): StreamingChatDependencies {
 
 					`Let me explain "${message}" step by step:\n\n### Step 1: Understanding\n\nFirst, you need to understand the basics. The \`concept\` involves several key components.\n\n### Step 2: Implementation\n\nHere's a simple implementation:\n\n\`\`\`typescript\ninterface Config {\n  name: string;\n  value: number;\n}\n\nconst config: Config = {\n  name: "${message}",\n  value: 42\n};\n\`\`\`\n\n### Step 3: Testing\n\nAlways test your code! Use **unit tests** and *integration tests* for best results.`,
 
-					`Here are some example images related to "${message}":\n\n## Image Gallery Demo\n\nClick on any image to view it in the lightbox with full navigation support!\n\n![Mountain Landscape](https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop "Beautiful mountain view with snow-capped peaks")\n\n![Ocean Sunset](https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&h=600&fit=crop "Stunning sunset over the ocean with vibrant colors")\n\n![Forest Path](https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&h=600&fit=crop "Peaceful forest path surrounded by tall trees")\n\n![City Skyline](https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=800&h=600&fit=crop "Modern city skyline at night with illuminated buildings")\n\n---\n\nThe image gallery supports:\n- **Touch gestures** - Swipe left/right to navigate\n- **Keyboard navigation** - Use arrow keys, Home, End, Esc\n- **Accessibility** - Full ARIA labels and focus management\n- **Animations** - Smooth transitions with reduced motion support`
+					`Here are some example images related to "${message}":\n\n## Image Gallery Demo\n\nClick on any image to view it in the lightbox with full navigation support!\n\n![Mountain Landscape](https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop "Beautiful mountain view with snow-capped peaks")\n\n![Ocean Sunset](https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&h=600&fit=crop "Stunning sunset over the ocean with vibrant colors")\n\n![Forest Path](https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&h=600&fit=crop "Peaceful forest path surrounded by tall trees")\n\n![City Skyline](https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=800&h=600&fit=crop "Modern city skyline at night with illuminated buildings")\n\n---\n\nThe image gallery supports:\n- **Touch gestures** - Swipe left/right to navigate\n- **Keyboard navigation** - Use arrow keys, Home, End, Esc\n- **Accessibility** - Full ARIA labels and focus management\n- **Animations** - Smooth transitions with reduced motion support`,
+
+					`Here are some great video tutorials on "${message}":\n\n## Video Resources\n\nCheck out these helpful videos to learn more!\n\n**Watchtower of Turkey - Beautiful Timelapse:**\nhttps://vimeo.com/148751763\n\nAn amazing visual journey showcasing stunning cinematography and beautiful landscapes.\n\n---\n\n**The Mountain - Epic Time-lapse:**\nhttps://vimeo.com/76979871\n\nWatch this breathtaking time-lapse of mountain landscapes with stunning night skies.\n\n---\n\n**Life in a Day:**\nhttps://vimeo.com/336812660\n\nA creative exploration of everyday moments captured beautifully on film.\n\n---\n\n💡 **Tip**: All videos are embedded directly in the chat for easy viewing! Vimeo videos work great on localhost for testing.`
 				];
 
-				// If message contains image-related keywords, always show the image gallery response
-				const response = shouldShowImages
-					? responses[4]  // The image gallery response is at index 4
-					: responses[Math.floor(Math.random() * responses.length)];
+				// If message contains keywords, show relevant response
+				let response: string;
+				if (shouldShowVideos) {
+					response = responses[5];  // The video response is at index 5
+				} else if (shouldShowImages) {
+					response = responses[4];  // The image gallery response is at index 4
+				} else {
+					response = responses[Math.floor(Math.random() * 4)];  // Random from first 4
+				}
+
 				const words = response.split(' ');
 
 				// Stream word by word

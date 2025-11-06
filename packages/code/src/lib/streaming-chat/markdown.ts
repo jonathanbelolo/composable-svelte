@@ -217,6 +217,14 @@ export function extractImagesFromMarkdown(markdown: string): Array<{
 }
 
 /**
+ * Extract video URLs from markdown content
+ *
+ * Re-exported from video-embed module for convenience.
+ * Detects video URLs from platforms like YouTube, Vimeo, Twitch, etc.
+ */
+export { extractVideosFromMarkdown } from '../video-embed/video-detection.js';
+
+/**
  * Attach copy buttons to code blocks in rendered HTML
  *
  * @param container - The container element containing rendered markdown
