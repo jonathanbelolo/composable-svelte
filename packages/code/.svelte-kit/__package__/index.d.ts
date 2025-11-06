@@ -8,4 +8,5 @@
  * @packageDocumentation
  */
 export { CodeHighlight, codeHighlightReducer, highlightCode, loadLanguage, createInitialState, type CodeHighlightState, type CodeHighlightAction, type CodeHighlightDependencies, type SupportedLanguage } from './code-highlight/index';
+export { CodeEditor, codeEditorReducer, createEditorView, loadLanguage as loadEditorLanguage, updateEditorValue, updateEditorLanguage, updateEditorTheme, updateEditorReadOnly, updateTabSize, focusEditor, blurEditor, createInitialState as createEditorInitialState, type CodeEditorState, type CodeEditorAction, type CodeEditorDependencies, type SupportedLanguage as EditorLanguage, type EditorSelection } from './code-editor/index';
 //# sourceMappingURL=index.d.ts.map

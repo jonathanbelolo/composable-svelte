@@ -26,15 +26,20 @@ export const codeHighlightReducer = (state, action, deps) => {
     switch (action.type) {
         case 'init':
             // Trigger initial highlighting on mount
+            console.log('[CodeHighlight] init action received', { code: state.code, highlightedCode: state.highlightedCode, isHighlighting: state.isHighlighting });
             if (state.code && !state.highlightedCode && !state.isHighlighting) {
+                console.log('[CodeHighlight] Starting highlighting...');
                 return [
                     { ...state, isHighlighting: true, error: null },
                     Effect.run(async (dispatch) => {
                         try {
+                            console.log('[CodeHighlight] Calling highlightCode...');
                             const html = await deps.highlightCode(state.code, state.language);
+                            console.log('[CodeHighlight] Highlighting complete, html length:', html.length);
                             dispatch({ type: 'highlighted', html });
                         }
                         catch (e) {
+                            console.error('[CodeHighlight] Highlighting error:', e);
                             const error = e instanceof Error ? e.message : 'Highlighting failed';
                             dispatch({ type: 'highlightFailed', error });
                         }
@@ -84,6 +89,7 @@ export const codeHighlightReducer = (state, action, deps) => {
                 })
             ];
         case 'highlighted':
+            console.log('[CodeHighlight] Highlighted action received, html length:', action.html.length);
             return [{ ...state, highlightedCode: action.html, isHighlighting: false }, Effect.none()];
         case 'highlightFailed':
             return [{ ...state, error: action.error, isHighlighting: false }, Effect.none()];

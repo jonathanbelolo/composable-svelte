@@ -80,6 +80,7 @@ export const COMPONENT_REGISTRY: ComponentInfo[] = [
 
   // Code Components
   { id: 'code-highlight', name: 'Code Highlight', category: 'Code Components', description: 'Syntax highlighting for code snippets with Prism.js' },
+  { id: 'code-editor', name: 'Code Editor', category: 'Code Components', description: 'Interactive code editor with CodeMirror 6' },
 
   // Typography
   { id: 'heading', name: 'Heading', category: 'Typography', description: 'Semantic heading component' },

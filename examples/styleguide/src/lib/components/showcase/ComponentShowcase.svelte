@@ -47,6 +47,7 @@
   import TreeViewDemo from '../demos/TreeViewDemo.svelte';
   // Code Components
   import CodeHighlightDemo from '../demos/CodeHighlightDemo.svelte';
+  import CodeEditorDemo from '../demos/CodeEditorDemo.svelte';
   // Typography
   import HeadingDemo from '../demos/HeadingDemo.svelte';
   import TextDemo from '../demos/TextDemo.svelte';
@@ -114,6 +115,7 @@
     'tree-view': TreeViewDemo,
     // Code Components
     'code-highlight': CodeHighlightDemo,
+    'code-editor': CodeEditorDemo,
     // Typography
     'heading': HeadingDemo,
     'text': TextDemo,
