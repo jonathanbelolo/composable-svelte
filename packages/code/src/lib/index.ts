@@ -41,3 +41,23 @@ export {
 	type SupportedLanguage as EditorLanguage,
 	type EditorSelection
 } from './code-editor/index';
+
+// NodeCanvas - Node-based canvas editor with SvelteFlow
+export {
+	NodeCanvas,
+	nodeCanvasReducer,
+	createConnectionValidator,
+	permissiveValidator,
+	strictValidator,
+	composeValidators,
+	createInitialNodeCanvasState,
+	nodesToArray,
+	edgesToArray,
+	type NodeCanvasState,
+	type NodeCanvasAction,
+	type NodeCanvasDependencies,
+	type NodeTypeDefinition,
+	type PortDefinition,
+	type ConnectionValidation,
+	type ConnectionValidator
+} from './node-canvas/index';

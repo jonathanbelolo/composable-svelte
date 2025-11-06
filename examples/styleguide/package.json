@@ -15,6 +15,7 @@
   "dependencies": {
     "@composable-svelte/code": "workspace:*",
     "@composable-svelte/core": "workspace:*",
+    "@xyflow/svelte": "^1.4.1",
     "clsx": "^2.1.1",
     "svelte": "^5.0.0",
     "tailwind-merge": "^3.3.1"

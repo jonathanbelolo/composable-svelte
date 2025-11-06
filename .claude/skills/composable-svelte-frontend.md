@@ -125,6 +125,73 @@ $effect(() => {
 
 ## II. CORE ARCHITECTURE
 
+### Store Auto-Subscription Pattern
+
+**IMPORTANT**: Stores implement Svelte's store contract via the `subscribe()` method. This means you can use Svelte's `$store` syntax for automatic subscription - **ZERO boilerplate!**
+
+#### ✅ CORRECT - Auto-Subscription (Recommended)
+
+```svelte
+<script lang="ts">
+  import { createStore } from '@composable-svelte/core';
+
+  const store = createStore({
+    initialState: { count: 0, isLoading: false },
+    reducer: counterReducer,
+    dependencies: { api }
+  });
+
+  // Use $store directly - automatic subscription!
+  const displayText = $derived(`Count: ${$store.count}`);
+</script>
+
+{#if $store.isLoading}
+  <p>Loading...</p>
+{:else}
+  <p>{displayText}</p>
+  <button onclick={() => store.dispatch({ type: 'increment' })}>
+    Increment
+  </button>
+{/if}
+```
+
+#### ❌ WRONG - Manual Subscription (Unnecessary)
+
+```svelte
+<script lang="ts">
+  import { onMount, onDestroy } from 'svelte';
+
+  const store = createStore({...});
+
+  // ❌ Unnecessary manual subscription
+  let state = $state(store.state);
+  let unsubscribe: (() => void) | null = null;
+
+  onMount(() => {
+    unsubscribe = store.subscribe((newState) => {
+      state = newState;
+    });
+  });
+
+  onDestroy(() => {
+    unsubscribe?.();
+  });
+
+  // Using local state variable
+  const displayText = $derived(`Count: ${state.count}`);
+</script>
+
+{#if state.isLoading}
+  <p>Loading...</p>
+{/if}
+```
+
+**Why `$store` Works**: The store implements Svelte's store contract with a `subscribe()` method that takes a callback and returns an unsubscribe function. Svelte's compiler automatically handles subscription/unsubscription when you use the `$` prefix.
+
+**When to Use Manual Subscription**: Only when you need to transform or wrap the store for specific integration patterns (e.g., form reactive wrappers). For normal component usage, always use `$store`.
+
+---
+
 ### Pattern 1: Store-Reducer-Effect Trinity
 
 The fundamental pattern for every feature.

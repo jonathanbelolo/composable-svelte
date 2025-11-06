@@ -48,6 +48,7 @@
   // Code Components
   import CodeHighlightDemo from '../demos/CodeHighlightDemo.svelte';
   import CodeEditorDemo from '../demos/CodeEditorDemo.svelte';
+  import NodeCanvasDemo from '../demos/NodeCanvasDemo.svelte';
   // Typography
   import HeadingDemo from '../demos/HeadingDemo.svelte';
   import TextDemo from '../demos/TextDemo.svelte';
@@ -116,6 +117,7 @@
     // Code Components
     'code-highlight': CodeHighlightDemo,
     'code-editor': CodeEditorDemo,
+    'node-canvas': NodeCanvasDemo,
     // Typography
     'heading': HeadingDemo,
     'text': TextDemo,

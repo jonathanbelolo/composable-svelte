@@ -11,9 +11,6 @@
 	 */
 	const { store, showToolbar = true }: { store: Store<CodeEditorState, CodeEditorAction>; showToolbar?: boolean } = $props();
 
-	// Create reactive state that syncs with store
-	let state = $state(store.state);
-
 	// Editor DOM reference
 	let editorElement: HTMLElement;
 	let view: EditorView | null = null;
@@ -21,32 +18,24 @@
 	// Track CodeMirror's internal value to prevent circular updates
 	let codemirrorValue = $state('');
 
-	// Subscribe to store changes and initialize CodeMirror
+	// Initialize CodeMirror on mount
 	onMount(() => {
-		console.log('[CodeEditor Component] Subscribing to store');
-		const unsubscribe = store.subscribe((newState) => {
-			console.log('[CodeEditor Component] State updated from store');
-			state = newState;
-		});
-
-		// Initialize CodeMirror
 		console.log('[CodeEditor] Initializing CodeMirror view');
 		createEditorView(editorElement, store, {
-			value: state.value,
-			language: state.language,
-			theme: state.theme,
-			showLineNumbers: state.showLineNumbers,
-			readOnly: state.readOnly,
-			enableAutocomplete: state.enableAutocomplete,
-			tabSize: state.tabSize
+			value: $store.value,
+			language: $store.language,
+			theme: $store.theme,
+			showLineNumbers: $store.showLineNumbers,
+			readOnly: $store.readOnly,
+			enableAutocomplete: $store.enableAutocomplete,
+			tabSize: $store.tabSize
 		}).then((editorView) => {
 			view = editorView;
-			codemirrorValue = state.value;
+			codemirrorValue = $store.value;
 			console.log('[CodeEditor] CodeMirror view created');
 		});
 
 		return () => {
-			unsubscribe();
 			console.log('[CodeEditor] Destroying CodeMirror view');
 			view?.destroy();
 		};
@@ -55,25 +44,25 @@
 	// Sync programmatic value updates (from store → CodeMirror)
 	// This handles external changes like loading a file or formatting
 	$effect(() => {
-		if (view && state.value !== codemirrorValue) {
+		if (view && $store.value !== codemirrorValue) {
 			console.log('[CodeEditor] Syncing external value change to CodeMirror');
-			updateEditorValue(view, state.value);
-			codemirrorValue = state.value;
+			updateEditorValue(view, $store.value);
+			codemirrorValue = $store.value;
 		}
 	});
 
-	// Derived values
-	const saveButtonText = $derived(state.hasUnsavedChanges ? 'Save *' : 'Save');
-	const saveButtonDisabled = $derived(!state.hasUnsavedChanges);
+	// Use Svelte's auto-subscription pattern - ZERO boilerplate!
+	const saveButtonText = $derived($store.hasUnsavedChanges ? 'Save *' : 'Save');
+	const saveButtonDisabled = $derived(!$store.hasUnsavedChanges);
 </script>
 
-<div class="code-editor" data-theme={state.theme}>
+<div class="code-editor" data-theme={$store.theme}>
 	{#if showToolbar}
 		<div class="code-editor__toolbar">
 			<div class="code-editor__toolbar-left">
 				<select
 					class="code-editor__select"
-					value={state.language}
+					value={$store.language}
 					onchange={(e) => store.dispatch({ type: 'languageChanged', language: e.currentTarget.value as any })}
 					aria-label="Select programming language"
 				>
@@ -95,15 +84,15 @@
 					onclick={() => store.dispatch({ type: 'toggleLineNumbers' })}
 					aria-label="Toggle line numbers"
 				>
-					Line Numbers: {state.showLineNumbers ? 'On' : 'Off'}
+					Line Numbers: {$store.showLineNumbers ? 'On' : 'Off'}
 				</button>
 
 				<button
 					class="code-editor__button"
-					onclick={() => store.dispatch({ type: 'themeChanged', theme: state.theme === 'dark' ? 'light' : 'dark' })}
+					onclick={() => store.dispatch({ type: 'themeChanged', theme: $store.theme === 'dark' ? 'light' : 'dark' })}
 					aria-label="Toggle theme"
 				>
-					Theme: {state.theme === 'dark' ? 'Dark' : 'Light'}
+					Theme: {$store.theme === 'dark' ? 'Dark' : 'Light'}
 				</button>
 			</div>
 
@@ -111,7 +100,7 @@
 				<button
 					class="code-editor__button"
 					onclick={() => store.dispatch({ type: 'format' })}
-					disabled={state.readOnly || state.formatError !== null}
+					disabled={$store.readOnly || $store.formatError !== null}
 					aria-label="Format code"
 				>
 					Format
@@ -129,21 +118,21 @@
 		</div>
 	{/if}
 
-	{#if state.saveError}
+	{#if $store.saveError}
 		<div class="code-editor__error">
-			Save Error: {state.saveError}
+			Save Error: {$store.saveError}
 		</div>
 	{/if}
 
-	{#if state.formatError}
+	{#if $store.formatError}
 		<div class="code-editor__error">
-			Format Error: {state.formatError}
+			Format Error: {$store.formatError}
 		</div>
 	{/if}
 
-	{#if state.error}
+	{#if $store.error}
 		<div class="code-editor__error">
-			{state.error}
+			{$store.error}
 		</div>
 	{/if}
 
@@ -152,18 +141,18 @@
 		class="code-editor__container"
 	></div>
 
-	{#if state.cursorPosition}
+	{#if $store.cursorPosition}
 		<div class="code-editor__status-bar">
 			<span class="code-editor__status-item">
-				Ln {state.cursorPosition.line}, Col {state.cursorPosition.column}
+				Ln {$store.cursorPosition.line}, Col {$store.cursorPosition.column}
 			</span>
-			{#if state.selection}
+			{#if $store.selection}
 				<span class="code-editor__status-item">
-					{state.selection.text.length} chars selected
+					{$store.selection.text.length} chars selected
 				</span>
 			{/if}
 			<span class="code-editor__status-item">
-				{state.language}
+				{$store.language}
 			</span>
 		</div>
 	{/if}
