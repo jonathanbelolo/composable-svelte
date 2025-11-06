@@ -87,6 +87,27 @@ export { default as CollapsibleContent } from './components/ui/collapsible/Colla
 export { default as Calendar } from './components/ui/calendar/Calendar.svelte';
 export { default as Carousel } from './components/ui/carousel/Carousel.svelte';
 
+// Media Components
+export { default as ImageGallery } from './components/image-gallery/ImageGallery.svelte';
+export { default as ImageLightbox } from './components/image-gallery/ImageLightbox.svelte';
+
+// Re-export image gallery types and utilities
+export type {
+	GalleryImage,
+	ImageGalleryState,
+	ImageGalleryAction,
+	ImageGalleryDependencies,
+	ImageGalleryConfig,
+	LightboxState,
+	TouchState,
+	PresentationEvent as ImageGalleryPresentationEvent
+} from './components/image-gallery/image-gallery.types.js';
+
+export {
+	imageGalleryReducer,
+	createInitialImageGalleryState
+} from './components/image-gallery/image-gallery.reducer.js';
+
 // ============================================================================
 // Navigation Components
 // ============================================================================

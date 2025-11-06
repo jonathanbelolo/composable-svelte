@@ -38,6 +38,8 @@
 			<ul class="text-sm text-purple-800 dark:text-purple-200 space-y-1">
 				<li>✓ Transport-agnostic (SSE, WebSocket, or custom)</li>
 				<li>✓ Real-time streaming text display</li>
+				<li>✓ Markdown rendering with syntax highlighting</li>
+				<li>✓ Interactive code blocks with copy buttons</li>
 				<li>✓ Auto-scroll with smart pause detection</li>
 				<li>✓ Pure reducer pattern (fully testable)</li>
 				<li>✓ Built with Composable Architecture</li>
@@ -234,6 +236,46 @@ const store = createStore({
 		</div>
 	</section>
 
+	<!-- Implemented Features -->
+	<section class="space-y-6">
+		<div>
+			<h3 class="text-xl font-semibold mb-2">Implemented Features</h3>
+			<p class="text-muted-foreground text-sm">Rich content rendering capabilities</p>
+		</div>
+
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+			<Card>
+				<CardHeader>
+					<CardTitle class="text-sm">Markdown Rendering</CardTitle>
+				</CardHeader>
+				<CardContent class="text-sm text-muted-foreground space-y-2">
+					<p>Full markdown support with Prism.js syntax highlighting for code blocks</p>
+					<ul class="list-disc list-inside space-y-1 text-xs">
+						<li>Headers, lists, tables, blockquotes</li>
+						<li>Bold, italic, inline code</li>
+						<li>Syntax highlighting for 20+ languages</li>
+						<li>Handles streaming/partial markdown</li>
+					</ul>
+				</CardContent>
+			</Card>
+
+			<Card>
+				<CardHeader>
+					<CardTitle class="text-sm">Code Block Actions</CardTitle>
+				</CardHeader>
+				<CardContent class="text-sm text-muted-foreground space-y-2">
+					<p>Interactive code blocks with copy functionality</p>
+					<ul class="list-disc list-inside space-y-1 text-xs">
+						<li>Copy button (appears on hover)</li>
+						<li>Language indicators/badges</li>
+						<li>Visual feedback on copy success</li>
+						<li>Clipboard API integration</li>
+					</ul>
+				</CardContent>
+			</Card>
+		</div>
+	</section>
+
 	<!-- Future Enhancements -->
 	<section class="space-y-6">
 		<div>
@@ -242,24 +284,6 @@ const store = createStore({
 		</div>
 
 		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-			<Card>
-				<CardHeader>
-					<CardTitle class="text-sm">Markdown Rendering</CardTitle>
-				</CardHeader>
-				<CardContent class="text-sm text-muted-foreground">
-					Parse and render markdown with syntax-highlighted code blocks
-				</CardContent>
-			</Card>
-
-			<Card>
-				<CardHeader>
-					<CardTitle class="text-sm">Code Block Actions</CardTitle>
-				</CardHeader>
-				<CardContent class="text-sm text-muted-foreground">
-					Copy buttons, language indicators, and run/execute capabilities
-				</CardContent>
-			</Card>
-
 			<Card>
 				<CardHeader>
 					<CardTitle class="text-sm">Multi-modal Support</CardTitle>
@@ -293,6 +317,15 @@ const store = createStore({
 				</CardHeader>
 				<CardContent class="text-sm text-muted-foreground">
 					Claude-style expandable reasoning and thought process display
+				</CardContent>
+			</Card>
+
+			<Card>
+				<CardHeader>
+					<CardTitle class="text-sm">Code Execution</CardTitle>
+				</CardHeader>
+				<CardContent class="text-sm text-muted-foreground">
+					Run code blocks directly in sandboxed environment with output display
 				</CardContent>
 			</Card>
 		</div>
