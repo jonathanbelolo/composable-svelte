@@ -85,7 +85,49 @@ export {
 	type StreamingChatAction,
 	type StreamingChatDependencies,
 	// Constants
-	DEFAULT_REACTIONS
+	DEFAULT_REACTIONS,
+	// Collaborative features
+	collaborativeReducer,
+	createInitialCollaborativeState,
+	generateRandomUserColor,
+	type CollaborativeUser,
+	type UserPresence,
+	type TypingInfo,
+	type CursorPosition,
+	type UserPermissions,
+	type CollaborativeStreamingChatState,
+	type CollaborativeAction,
+	type CollaborativeDependencies,
+	type WebSocketConnectionState,
+	type PendingAction,
+	type SyncState,
+	DEFAULT_USER_PERMISSIONS,
+	// Collaborative primitives
+	PresenceBadge,
+	PresenceAvatarStack,
+	PresenceList,
+	TypingIndicator,
+	TypingUsersList,
+	CursorMarker,
+	CursorOverlay,
+	// Collaborative hooks
+	usePresenceTracking,
+	useTypingEmitter,
+	useCursorTracking,
+	useHeartbeat,
+	getTypingUsers,
+	getActiveUsers,
+	getCursorPositions,
+	formatTypingIndicator,
+	// WebSocket manager
+	WebSocketManager,
+	createWebSocketManager,
+	type WebSocketConfig,
+	type WebSocketMessage,
+	// Cleanup utilities
+	CleanupTracker,
+	createCleanupTracker,
+	type CleanupFunction
 } from './streaming-chat/index';
 
 // VideoEmbed - Video embedding for external platforms (YouTube, Vimeo, Twitch, etc.)
