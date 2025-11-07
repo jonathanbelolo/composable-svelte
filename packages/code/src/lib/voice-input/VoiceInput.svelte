@@ -54,12 +54,20 @@
 		class: className = ''
 	}: Props = $props();
 
+	// Track transcript history for conversation mode
+	let transcriptHistory = $state<string[]>([]);
+
 	// Subscribe to store actions to detect transcription completion
 	$effect(() => {
 		const unsubscribe = store.subscribeToActions?.((action) => {
 			// When transcription completes, call the onTranscript callback
 			if (action.type === 'transcriptionCompleted') {
 				onTranscript(action.transcript);
+
+				// Add to history if in conversation mode
+				if ($store.mode === 'conversation') {
+					transcriptHistory = [...transcriptHistory, action.transcript];
+				}
 			}
 		});
 
@@ -84,6 +92,14 @@
 			store.dispatch({ type: 'activateConversationMode' });
 		}
 	});
+
+	// Reset transcript history when mode changes
+	$effect(() => {
+		const mode = $store.mode;
+		return () => {
+			transcriptHistory = [];
+		};
+	});
 </script>
 
 <div class="voice-input {className}">
@@ -92,7 +108,7 @@
 
 	<!-- Voice Input Panel (appears when recording/active) -->
 	{#if $store.status === 'recording' || $store.mode === 'conversation'}
-		<VoiceInputPanel {store} />
+		<VoiceInputPanel {store} transcripts={transcriptHistory} />
 	{/if}
 </div>
 

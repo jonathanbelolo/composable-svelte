@@ -261,58 +261,195 @@ export const voiceInputReducer: Reducer<
 			];
 		}
 
-		// === Conversation Mode (Placeholder for Phase 2) === //
+	// === Conversation Mode === //
 
-		case 'activateConversationMode': {
-			// TODO: Implement in Phase 2
+	case 'activateConversationMode': {
+		// Check if permission is granted
+		if (state.permission !== 'granted') {
 			return [
 				{
 					...state,
-					mode: 'conversation',
-					status: 'ready',
-					vadState: {
-						isSpeaking: false,
-						silenceDuration: 0,
-						autoSendThreshold: 1500
-					}
+					mode: 'conversation'
+				},
+				Effect.run(async (dispatch) => {
+					dispatch({ type: 'requestMicrophonePermission' });
+				})
+			];
+		}
+
+		const audioManager = deps.getAudioManager(state._audioManagerId!);
+		if (!audioManager) {
+			return [
+				{
+					...state,
+					status: 'error',
+					errorMessage: 'Audio manager not initialized'
 				},
 				Effect.none()
 			];
 		}
 
-		case 'conversationModeToggled': {
-			// TODO: Implement in Phase 2
-			return [state, Effect.none()];
-		}
+		// Start continuous recording with VAD monitoring
+		return [
+			{
+				...state,
+				mode: 'conversation',
+				status: 'recording',
+				recordingStartTime: Date.now(),
+				vadState: {
+					isSpeaking: false,
+					silenceDuration: 0,
+					autoSendThreshold: 1500
+				}
+			},
+			Effect.batch(
+				// Start recording
+				Effect.run(async (dispatch) => {
+					try {
+						audioManager.startRecording();
+					} catch (error) {
+						dispatch({
+							type: 'audioProcessingFailed',
+							error: error instanceof Error ? error.message : 'Recording failed'
+						});
+					}
+				}),
+				// Start audio level monitoring
+				Effect.run(async (dispatch) => {
+					audioManager.startAudioLevelMonitoring((level) => {
+						dispatch({ type: 'audioLevelUpdated', level });
+					}, 50);
+				}),
+				// Start VAD monitoring loop
+				Effect.run(async (dispatch) => {
+					const vadCheck = setInterval(() => {
+						const hasVoice = audioManager.detectVoiceActivity(15);
+						if (hasVoice) {
+							dispatch({ type: 'speechDetected' });
+						}
+					}, 100); // Check every 100ms
+				})
+			)
+		];
+	}
 
-		case 'speechDetected': {
-			// TODO: Implement in Phase 2
-			return [state, Effect.none()];
+	case 'conversationModeToggled': {
+		if (action.enabled) {
+			// Turn on conversation mode
+			return [state, Effect.run(async (dispatch) => {
+				dispatch({ type: 'activateConversationMode' });
+			})];
+		} else {
+			// Turn off conversation mode
+			return [state, Effect.run(async (dispatch) => {
+				dispatch({ type: 'deactivateVoiceInput' });
+			})];
 		}
+	}
 
-		case 'silenceDetected': {
-			// TODO: Implement in Phase 2
-			return [state, Effect.none()];
-		}
+	case 'speechDetected': {
+		if (!state.vadState) return [state, Effect.none()];
 
-		case 'autoSendTriggered': {
-			// TODO: Implement in Phase 2
-			return [state, Effect.none()];
-		}
+		// User started speaking - reset silence duration
+		return [
+			{
+				...state,
+				vadState: {
+					...state.vadState,
+					isSpeaking: true,
+					silenceDuration: 0
+				}
+			},
+			Effect.none()
+		];
+	}
 
-		case 'manualSendRequested': {
-			// TODO: Implement in Phase 2
-			return [state, Effect.none()];
-		}
+	case 'silenceDetected': {
+		if (!state.vadState) return [state, Effect.none()];
 
-		case 'liveTranscriptUpdated': {
-			// TODO: Implement in Phase 2
+		const newSilenceDuration = state.vadState.silenceDuration + 100;
+
+		// Check if we've hit the threshold
+		if (newSilenceDuration >= state.vadState.autoSendThreshold) {
+			// Trigger auto-send
 			return [
 				{
 					...state,
-					liveTranscript: action.text
+					vadState: {
+						...state.vadState,
+						isSpeaking: false,
+						silenceDuration: 0
+					}
 				},
-				Effect.none()
+				Effect.run(async (dispatch) => {
+					dispatch({ type: 'autoSendTriggered' });
+				})
+			];
+		}
+
+		// Update silence duration
+		return [
+			{
+				...state,
+				vadState: {
+					...state.vadState,
+					isSpeaking: false,
+					silenceDuration: newSilenceDuration
+				}
+			},
+			Effect.none()
+		];
+	}
+
+	case 'autoSendTriggered':
+	case 'manualSendRequested': {
+		const audioManager = deps.getAudioManager(state._audioManagerId!);
+		if (!audioManager) {
+			return [state, Effect.none()];
+		}
+
+		// Stop current recording, send audio, restart recording
+		return [
+			{
+				...state,
+				status: 'processing'
+			},
+			Effect.run(async (dispatch) => {
+				try {
+					// Stop recording and get audio blob
+					const audioBlob = await audioManager.stopRecording();
+
+					// Send for transcription
+					const transcript = await deps.transcribeAudio(audioBlob);
+
+					// Restart recording immediately
+					audioManager.startRecording();
+
+					// Dispatch completion
+					dispatch({
+						type: 'audioProcessingComplete',
+						audioBlob,
+						transcript
+					});
+				} catch (error) {
+					dispatch({
+						type: 'audioProcessingFailed',
+						error: error instanceof Error ? error.message : 'Processing failed'
+					});
+				}
+			})
+		];
+	}
+
+	case 'liveTranscriptUpdated': {
+		return [
+			{
+				...state,
+				liveTranscript: action.text
+			},
+			Effect.none()
+		];
+	}
 			];
 		}
 
