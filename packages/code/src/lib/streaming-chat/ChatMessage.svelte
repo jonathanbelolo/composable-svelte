@@ -4,6 +4,7 @@
 	import { renderMarkdown, attachCopyButtons, extractImagesFromMarkdown, extractVideosFromMarkdown } from './markdown.js';
 	import { ImageGallery } from '@composable-svelte/core/components/image-gallery';
 	import { VideoEmbed } from '../video-embed/index.js';
+	import AttachmentGallery from './attachment-components/AttachmentGallery.svelte';
 
 	/**
 	 * Individual chat message bubble.
@@ -114,6 +115,13 @@
 				<span class="chat-message__cursor">▊</span>
 			{/if}
 
+			<!-- Attachments -->
+			{#if message.attachments && message.attachments.length > 0}
+				<div class="chat-message__attachments">
+					<AttachmentGallery attachments={message.attachments} layout="list" />
+				</div>
+			{/if}
+
 			<!-- Image gallery for detected images -->
 			{#if images().length > 0}
 				<div class="chat-message__gallery">
@@ -136,6 +144,13 @@
 			{/if}
 		{:else}
 			{message.content}
+
+			<!-- Attachments for user messages -->
+			{#if message.attachments && message.attachments.length > 0}
+				<div class="chat-message__attachments">
+					<AttachmentGallery attachments={message.attachments} layout="list" />
+				</div>
+			{/if}
 		{/if}
 	</div>
 </div>
@@ -499,6 +514,11 @@
 		50% {
 			opacity: 0;
 		}
+	}
+
+	/* Attachments */
+	.chat-message__attachments {
+		margin-top: 12px;
 	}
 
 	/* Image Gallery */

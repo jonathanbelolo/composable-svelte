@@ -35,8 +35,8 @@ export function streamingChatReducer(
 				role: 'user',
 				content: action.message,
 				timestamp: getTimestamp(),
-				// Include pending attachments if any
-				attachments: state.pendingAttachments.length > 0 ? state.pendingAttachments : undefined
+				// Include attachments from action if provided
+				attachments: action.attachments
 			};
 
 			return [

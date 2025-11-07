@@ -14,9 +14,19 @@
 	 * - Full-featured AI assistants
 	 */
 
+	import { onDestroy } from 'svelte';
 	import type { Store } from '@composable-svelte/core';
-	import type { StreamingChatState, StreamingChatAction } from '../types.js';
+	import type { StreamingChatState, StreamingChatAction, MessageAttachment } from '../types.js';
 	import ChatMessageWithActions from '../primitives/ChatMessageWithActions.svelte';
+	import PendingAttachmentPreview from '../attachment-components/PendingAttachmentPreview.svelte';
+	import AttachmentPreviewModal from '../attachment-components/AttachmentPreviewModal.svelte';
+	import {
+		createAttachmentFromFile,
+		revokeFileBlobURL,
+		validateFileSize,
+		validateFileType,
+		formatFileSize
+	} from '../utils.js';
 
 	interface Props {
 		/**
@@ -38,22 +48,41 @@
 		 * Custom CSS class.
 		 */
 		class?: string;
+
+		/**
+		 * Maximum file size in MB (default: 10MB).
+		 */
+		maxFileSizeMB?: number;
+
+		/**
+		 * Accepted file types (e.g., ["image/*", ".pdf"]).
+		 * Empty array allows all types (default).
+		 */
+		acceptedFileTypes?: string[];
 	}
 
 	const {
 		store,
 		placeholder = 'Type your message...',
 		showClearButton = true,
-		class: className = ''
+		class: className = '',
+		maxFileSizeMB = 10,
+		acceptedFileTypes = []
 	}: Props = $props();
 
 	// Input state
 	let inputValue = $state('');
 	let messagesContainer: HTMLDivElement;
 	let shouldAutoScroll = $state(true);
+	let fileInputRef: HTMLInputElement;
+	let pendingAttachments = $state<MessageAttachment[]>([]);
+	let previewingAttachment = $state<MessageAttachment | null>(null);
 
 	// Use $store auto-subscription
-	const canSendMessage = $derived(!$store.isWaitingForResponse && inputValue.trim().length > 0);
+	const canSendMessage = $derived(
+		!$store.isWaitingForResponse &&
+			(inputValue.trim().length > 0 || pendingAttachments.length > 0)
+	);
 
 	// Auto-scroll to bottom when new messages arrive
 	$effect(() => {
@@ -81,9 +110,16 @@
 		if (!canSendMessage) return;
 
 		const message = inputValue.trim();
-		inputValue = '';
+		const attachments = pendingAttachments.length > 0 ? [...pendingAttachments] : undefined;
 
-		store.dispatch({ type: 'sendMessage', message });
+		inputValue = '';
+		pendingAttachments = [];
+
+		store.dispatch({
+			type: 'sendMessage',
+			message: message || '(Attachments)',
+			attachments
+		});
 	}
 
 	function handleKeyDown(e: KeyboardEvent) {
@@ -98,6 +134,80 @@
 			store.dispatch({ type: 'clearMessages' });
 		}
 	}
+
+	function handleAttachFiles() {
+		fileInputRef?.click();
+	}
+
+	async function handleFileSelect(e: Event) {
+		const input = e.target as HTMLInputElement;
+		const files = input.files;
+
+		if (!files || files.length === 0) return;
+
+		// Validate and process files
+		const validFiles: File[] = [];
+		const errors: string[] = [];
+
+		for (const file of Array.from(files)) {
+			// Validate file size
+			if (!validateFileSize(file, maxFileSizeMB)) {
+				errors.push(
+					`"${file.name}" is too large (${formatFileSize(file.size)}). Maximum size is ${maxFileSizeMB}MB.`
+				);
+				continue;
+			}
+
+			// Validate file type
+			if (acceptedFileTypes.length > 0 && !validateFileType(file, acceptedFileTypes)) {
+				errors.push(`"${file.name}" is not an accepted file type.`);
+				continue;
+			}
+
+			validFiles.push(file);
+		}
+
+		// Show errors if any
+		if (errors.length > 0) {
+			store.dispatch({
+				type: 'streamError',
+				error: errors.join(' ')
+			});
+		}
+
+		// Convert valid files to attachments
+		try {
+			const newAttachments = await Promise.all(
+				validFiles.map((file) => createAttachmentFromFile(file))
+			);
+
+			pendingAttachments = [...pendingAttachments, ...newAttachments];
+		} catch (error) {
+			store.dispatch({
+				type: 'streamError',
+				error: `Failed to process files: ${error instanceof Error ? error.message : 'Unknown error'}`
+			});
+		}
+
+		// Reset input so same file can be selected again
+		input.value = '';
+	}
+
+	function removeAttachment(index: number) {
+		// Revoke blob URL to prevent memory leak
+		const attachment = pendingAttachments[index];
+		if (attachment) {
+			revokeFileBlobURL(attachment.url);
+		}
+		pendingAttachments = pendingAttachments.filter((_, i) => i !== index);
+	}
+
+	// Cleanup blob URLs on unmount to prevent memory leaks
+	onDestroy(() => {
+		pendingAttachments.forEach((attachment) => {
+			revokeFileBlobURL(attachment.url);
+		});
+	});
 </script>
 
 <div class="full-streaming-chat {className}">
@@ -143,7 +253,44 @@
 
 	<!-- Input Form -->
 	<form class="full-streaming-chat__form" onsubmit={handleSubmit}>
+		<!-- Pending Attachments Preview -->
+		{#if pendingAttachments.length > 0}
+			<div class="full-streaming-chat__attachments-preview">
+				{#each pendingAttachments as attachment, index (attachment.id || `${attachment.filename}-${index}`)}
+					<PendingAttachmentPreview
+						{attachment}
+						onclick={() => (previewingAttachment = attachment)}
+						onremove={() => removeAttachment(index)}
+					/>
+				{/each}
+			</div>
+		{/if}
+
 		<div class="full-streaming-chat__input-wrapper">
+			<!-- Hidden file input -->
+			<input
+				type="file"
+				bind:this={fileInputRef}
+				onchange={handleFileSelect}
+				multiple
+				accept={acceptedFileTypes.length > 0
+					? acceptedFileTypes.join(',')
+					: 'image/*,video/*,audio/*,application/pdf,.pdf,.doc,.docx,.txt,.zip,.tar,.gz'}
+				style="display: none;"
+			/>
+
+			<!-- Attach button -->
+			<button
+				type="button"
+				class="full-streaming-chat__attach-btn"
+				onclick={handleAttachFiles}
+				disabled={$store.isWaitingForResponse}
+				aria-label="Attach files"
+				title="Attach files"
+			>
+				📎
+			</button>
+
 			<textarea
 				class="full-streaming-chat__input"
 				bind:value={inputValue}
@@ -187,6 +334,21 @@
 		</div>
 	</form>
 </div>
+
+<!-- Attachment Preview Modal -->
+<AttachmentPreviewModal
+	attachment={previewingAttachment}
+	open={previewingAttachment !== null}
+	onclose={() => (previewingAttachment = null)}
+	onremove={() => {
+		if (previewingAttachment) {
+			const index = pendingAttachments.findIndex((a) => a === previewingAttachment);
+			if (index !== -1) {
+				removeAttachment(index);
+			}
+		}
+	}}
+/>
 
 <style>
 	.full-streaming-chat {
@@ -251,10 +413,43 @@
 		background: #fafafa;
 	}
 
+	.full-streaming-chat__attachments-preview {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		margin-bottom: 12px;
+	}
+
 	.full-streaming-chat__input-wrapper {
 		display: flex;
 		gap: 8px;
 		align-items: flex-end;
+	}
+
+	.full-streaming-chat__attach-btn {
+		padding: 10px;
+		background: white;
+		border: 1px solid #d0d0d0;
+		border-radius: 6px;
+		font-size: 20px;
+		cursor: pointer;
+		transition: background 0.2s, border-color 0.2s;
+		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 44px;
+		height: 44px;
+	}
+
+	.full-streaming-chat__attach-btn:hover:not(:disabled) {
+		background: #f5f5f5;
+		border-color: #007aff;
+	}
+
+	.full-streaming-chat__attach-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
 	}
 
 	.full-streaming-chat__input {
@@ -348,5 +543,16 @@
 
 	:global(.dark) .full-streaming-chat__empty {
 		color: #666;
+	}
+
+	:global(.dark) .full-streaming-chat__attach-btn {
+		background: #2a2a2a;
+		border-color: #444;
+		color: #e0e0e0;
+	}
+
+	:global(.dark) .full-streaming-chat__attach-btn:hover:not(:disabled) {
+		background: #333;
+		border-color: #0066cc;
 	}
 </style>

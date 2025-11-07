@@ -329,3 +329,34 @@ export function getFileTypeIcon(type: MessageAttachment['type']): string {
 			return '📎';
 	}
 }
+
+/**
+ * Create a MessageAttachment from a File object.
+ * Generates a blob URL and extracts metadata.
+ *
+ * @param file - File object to convert
+ * @returns Promise resolving to MessageAttachment
+ */
+export async function createAttachmentFromFile(file: File): Promise<MessageAttachment> {
+	// Create blob URL for the file
+	const url = createFileBlobURL(file);
+
+	// Extract metadata
+	const metadata = await extractFileMetadata(file);
+
+	// Detect file type category from MIME type
+	const type = detectFileType(file.type);
+
+	// Create attachment object
+	const attachment: MessageAttachment = {
+		id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+		type,
+		mimeType: file.type,
+		url,
+		filename: file.name,
+		size: file.size,
+		metadata
+	};
+
+	return attachment;
+}

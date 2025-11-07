@@ -64,12 +64,22 @@ export {
 
 // StreamingChat - Transport-agnostic streaming chat for LLM interactions
 export {
+	// Variants (recommended)
+	MinimalStreamingChat,
+	StandardStreamingChat,
+	FullStreamingChat,
+	// Legacy
 	StreamingChat,
+	// Primitives
 	ChatMessage,
+	// Core
 	streamingChatReducer,
 	createInitialStreamingChatState,
 	createMockStreamingChat,
+	// Types
 	type Message,
+	type MessageAttachment,
+	type AttachmentMetadata,
 	type StreamingChatState,
 	type StreamingChatAction,
 	type StreamingChatDependencies

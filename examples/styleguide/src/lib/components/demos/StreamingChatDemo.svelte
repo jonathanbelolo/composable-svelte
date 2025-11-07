@@ -53,6 +53,7 @@
 				<li>✓ Three specialized variants (Minimal, Standard, Full)</li>
 				<li>✓ Transport-agnostic (SSE, WebSocket, or custom)</li>
 				<li>✓ Real-time streaming text display</li>
+				<li>✓ Multi-modal attachments (images, PDFs, audio, video, files)</li>
 				<li>✓ Stop generation mid-stream with AbortController</li>
 				<li>✓ Message actions (Copy, Edit, Regenerate)</li>
 				<li>✓ Markdown rendering with syntax highlighting</li>
@@ -83,7 +84,7 @@
 				</CardDescription>
 			</CardHeader>
 			<CardContent>
-				<div class="border rounded-lg overflow-hidden" style="height: 400px;">
+				<div class="border rounded-lg overflow-hidden" style="height: 600px;">
 					<MinimalStreamingChat store={minimalStore} placeholder="Type a message..." />
 				</div>
 				<div class="mt-3 text-sm text-muted-foreground space-y-1">
@@ -107,7 +108,7 @@
 				</CardDescription>
 			</CardHeader>
 			<CardContent>
-				<div class="border rounded-lg overflow-hidden" style="height: 400px;">
+				<div class="border rounded-lg overflow-hidden" style="height: 600px;">
 					<StandardStreamingChat store={standardStore} placeholder="Ask me anything..." />
 				</div>
 				<div class="mt-3 text-sm text-muted-foreground space-y-1">
@@ -132,7 +133,7 @@
 				</CardDescription>
 			</CardHeader>
 			<CardContent>
-				<div class="border rounded-lg overflow-hidden" style="height: 400px;">
+				<div class="border rounded-lg overflow-hidden" style="height: 600px;">
 					<FullStreamingChat store={fullStore} placeholder="Ask me anything..." />
 				</div>
 				<div class="mt-3 text-sm text-muted-foreground space-y-1">
@@ -313,7 +314,7 @@ const store = createStore({
 			<p class="text-muted-foreground text-sm">Rich content rendering capabilities</p>
 		</div>
 
-		<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 			<Card>
 				<CardHeader>
 					<CardTitle class="text-sm">Markdown Rendering</CardTitle>
@@ -340,6 +341,23 @@ const store = createStore({
 						<li>Language indicators/badges</li>
 						<li>Visual feedback on copy success</li>
 						<li>Clipboard API integration</li>
+					</ul>
+				</CardContent>
+			</Card>
+
+			<Card>
+				<CardHeader>
+					<CardTitle class="text-sm">Multi-modal Attachments</CardTitle>
+				</CardHeader>
+				<CardContent class="text-sm text-muted-foreground space-y-2">
+					<p>Rich attachment preview components for various file types</p>
+					<ul class="list-disc list-inside space-y-1 text-xs">
+						<li>Images (JPEG, PNG, GIF, WebP, SVG)</li>
+						<li>PDFs with page navigation and zoom</li>
+						<li>Audio with custom playback controls</li>
+						<li>Video with fullscreen and PIP</li>
+						<li>Generic files with download</li>
+						<li>Gallery view for multiple attachments</li>
 					</ul>
 				</CardContent>
 			</Card>
@@ -408,16 +426,7 @@ const store = createStore({
 			<p class="text-muted-foreground text-sm">Planned features for upcoming releases</p>
 		</div>
 
-		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-			<Card>
-				<CardHeader>
-					<CardTitle class="text-sm">Multi-modal Support</CardTitle>
-				</CardHeader>
-				<CardContent class="text-sm text-muted-foreground">
-					Support for images, files, and other media types in conversations
-				</CardContent>
-			</Card>
-
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 			<Card>
 				<CardHeader>
 					<CardTitle class="text-sm">Token Usage</CardTitle>

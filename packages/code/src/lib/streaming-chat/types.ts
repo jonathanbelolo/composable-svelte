@@ -96,7 +96,7 @@ export interface StreamingChatState {
  */
 export type StreamingChatAction =
 	// Message sending and streaming
-	| { type: 'sendMessage'; message: string }
+	| { type: 'sendMessage'; message: string; attachments?: MessageAttachment[] }
 	| { type: 'chunkReceived'; chunk: string }
 	| { type: 'streamComplete' }
 	| { type: 'streamError'; error: string }
