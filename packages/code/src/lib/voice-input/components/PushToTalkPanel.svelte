@@ -7,8 +7,8 @@
 	/**
 	 * Push-to-Talk Panel Component
 	 *
-	 * Modal overlay that appears during push-to-talk recording.
-	 * Shows audio visualization, timer, and cancel button.
+	 * Small popover that appears near the button during recording.
+	 * Shows audio visualization and timer without blocking interaction.
 	 */
 	interface Props {
 		store: Store<VoiceInputState, VoiceInputAction>;
@@ -30,12 +30,8 @@
 
 <svelte:window onkeydown={handleKeyDown} />
 
-<div class="push-to-talk-panel">
-	<div class="panel-backdrop" onclick={handleCancel} role="presentation"></div>
-
-	<div class="panel-content">
-		<h3 class="panel-title">Push to Talk</h3>
-
+<div class="push-to-talk-popover">
+	<div class="popover-content">
 		<!-- Audio Visualizer -->
 		<AudioVisualizer audioLevel={$store.audioLevel} variant="bars" />
 
@@ -49,149 +45,67 @@
 		{/if}
 
 		<!-- Hint Text -->
-		<p class="hint-text">Release to send · ESC to cancel</p>
-
-		<!-- Cancel Button -->
-		<button class="cancel-button" onclick={handleCancel}>Cancel</button>
+		<p class="hint-text">Release to send</p>
 	</div>
 </div>
 
 <style>
-	.push-to-talk-panel {
-		position: fixed;
-		inset: 0;
-		z-index: 1000;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 16px;
-	}
-
-	.panel-backdrop {
+	.push-to-talk-popover {
 		position: absolute;
-		inset: 0;
-		background: rgba(0, 0, 0, 0.4);
-		backdrop-filter: blur(4px);
-		cursor: pointer;
+		bottom: calc(100% + 12px); /* Position above the button */
+		left: 50%;
+		transform: translateX(-50%);
+		z-index: 1000;
+		pointer-events: none; /* Don't intercept pointer events */
+		animation: fadeIn 0.2s ease-out;
 	}
 
-	.panel-content {
-		position: relative;
-		background: white;
-		border-radius: 16px;
-		padding: 32px;
-		width: 100%;
-		max-width: 400px;
-		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 24px;
-		animation: slideUp 0.3s ease-out;
-	}
-
-	@keyframes slideUp {
+	@keyframes fadeIn {
 		from {
 			opacity: 0;
-			transform: translateY(20px);
+			transform: translateX(-50%) translateY(4px);
 		}
 		to {
 			opacity: 1;
-			transform: translateY(0);
+			transform: translateX(-50%) translateY(0);
 		}
 	}
 
-	.panel-title {
-		margin: 0;
-		font-size: 20px;
-		font-weight: 600;
-		color: #1a1a1a;
+	.popover-content {
+		background: white;
+		border-radius: 12px;
+		padding: 16px;
+		min-width: 200px;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 12px;
+		border: 1px solid rgba(0, 0, 0, 0.1);
 	}
 
 	.hint-text {
 		margin: 0;
-		font-size: 14px;
+		font-size: 12px;
 		color: #666;
 		text-align: center;
-	}
-
-	.cancel-button {
-		padding: 10px 24px;
-		border: 1px solid #e0e0e0;
-		background: white;
-		border-radius: 8px;
-		font-size: 14px;
-		font-weight: 600;
-		color: #666;
-		cursor: pointer;
-		transition:
-			background 0.2s ease,
-			border-color 0.2s ease,
-			color 0.2s ease;
-	}
-
-	.cancel-button:hover {
-		background: #f5f5f5;
-		border-color: #ccc;
-		color: #333;
-	}
-
-	.cancel-button:active {
-		transform: scale(0.98);
+		white-space: nowrap;
 	}
 
 	/* Dark mode */
 	@media (prefers-color-scheme: dark) {
-		.panel-content {
+		.popover-content {
 			background: #2a2a2a;
-		}
-
-		.panel-title {
-			color: #e0e0e0;
+			border-color: rgba(255, 255, 255, 0.1);
 		}
 
 		.hint-text {
 			color: #999;
 		}
-
-		.cancel-button {
-			background: #333;
-			border-color: #444;
-			color: #ccc;
-		}
-
-		.cancel-button:hover {
-			background: #3a3a3a;
-			border-color: #555;
-			color: #fff;
-		}
-	}
-
-	/* Mobile */
-	@media (max-width: 640px) {
-		.push-to-talk-panel {
-			align-items: flex-end;
-			padding: 0;
-		}
-
-		.panel-content {
-			border-radius: 16px 16px 0 0;
-			max-width: none;
-			animation: slideUpMobile 0.3s ease-out;
-		}
-
-		@keyframes slideUpMobile {
-			from {
-				transform: translateY(100%);
-			}
-			to {
-				transform: translateY(0);
-			}
-		}
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.panel-content {
+		.push-to-talk-popover {
 			animation: none;
 		}
 	}

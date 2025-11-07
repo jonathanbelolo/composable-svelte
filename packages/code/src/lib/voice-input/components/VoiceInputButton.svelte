@@ -23,6 +23,11 @@
 		if (disabled || $store.status === 'processing') return;
 
 		e.preventDefault();
+
+		// Capture pointer to ensure we receive up/cancel events even if pointer moves
+		const target = e.currentTarget as HTMLElement;
+		target.setPointerCapture(e.pointerId);
+
 		store.dispatch({ type: 'startPushToTalkRecording' });
 	}
 
@@ -31,6 +36,13 @@
 		if (disabled || $store.status !== 'recording') return;
 
 		e.preventDefault();
+
+		// Release pointer capture
+		const target = e.currentTarget as HTMLElement;
+		if (target.hasPointerCapture(e.pointerId)) {
+			target.releasePointerCapture(e.pointerId);
+		}
+
 		store.dispatch({ type: 'stopPushToTalkRecording' });
 	}
 
@@ -39,6 +51,13 @@
 		if (disabled || $store.status !== 'recording') return;
 
 		e.preventDefault();
+
+		// Release pointer capture
+		const target = e.currentTarget as HTMLElement;
+		if (target.hasPointerCapture(e.pointerId)) {
+			target.releasePointerCapture(e.pointerId);
+		}
+
 		store.dispatch({ type: 'cancelPushToTalkRecording' });
 	}
 
