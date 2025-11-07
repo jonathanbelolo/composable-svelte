@@ -44,17 +44,35 @@ export const voiceInputReducer: Reducer<
 			];
 		}
 
-		case 'microphonePermissionGranted': {
+
+	case 'microphonePermissionGranted': {
+		// If we're in push-to-talk mode, automatically start recording
+		// (user was holding button waiting for permission)
+		if (state.mode === 'push-to-talk') {
 			return [
 				{
 					...state,
-					status: 'ready',
 					permission: 'granted',
 					_audioManagerId: action.managerId
 				},
-				Effect.none()
+				Effect.run(async (dispatch) => {
+					// Automatically start recording now that we have permission
+					dispatch({ type: 'startPushToTalkRecording' });
+				})
 			];
 		}
+
+		return [
+			{
+				...state,
+				status: 'ready',
+				permission: 'granted',
+				_audioManagerId: action.managerId
+			},
+			Effect.none()
+		];
+	}
+
 
 		case 'microphonePermissionDenied': {
 			return [
