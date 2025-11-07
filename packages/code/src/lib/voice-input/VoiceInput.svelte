@@ -78,14 +78,10 @@
 		};
 	});
 
-	// Set default mode on mount
+	// Only set default mode for conversation mode (push-to-talk doesn't need pre-activation)
 	$effect(() => {
-		if ($store.mode === null && defaultMode) {
-			if (defaultMode === 'push-to-talk') {
-				store.dispatch({ type: 'activatePushToTalk' });
-			} else {
-				store.dispatch({ type: 'activateConversationMode' });
-			}
+		if ($store.mode === null && defaultMode === 'conversation') {
+			store.dispatch({ type: 'activateConversationMode' });
 		}
 	});
 </script>

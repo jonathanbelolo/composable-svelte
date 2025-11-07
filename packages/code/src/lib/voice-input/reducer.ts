@@ -106,6 +106,7 @@ export const voiceInputReducer: Reducer<
 			return [
 				{
 					...state,
+				mode: 'push-to-talk', // Set mode when starting recording
 					status: 'recording',
 					recordingStartTime: Date.now(),
 					audioLevel: 0
