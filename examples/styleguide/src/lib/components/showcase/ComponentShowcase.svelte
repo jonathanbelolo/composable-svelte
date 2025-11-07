@@ -50,6 +50,7 @@
   import CodeEditorDemo from '../demos/CodeEditorDemo.svelte';
   import NodeCanvasDemo from '../demos/NodeCanvasDemo.svelte';
   import StreamingChatDemo from '../demos/StreamingChatDemo.svelte';
+  import VoiceInputDemo from '../demos/VoiceInputDemo.svelte';
   // Typography
   import HeadingDemo from '../demos/HeadingDemo.svelte';
   import TextDemo from '../demos/TextDemo.svelte';
@@ -120,6 +121,7 @@
     'code-editor': CodeEditorDemo,
     'node-canvas': NodeCanvasDemo,
     'streaming-chat': StreamingChatDemo,
+    'voice-input': VoiceInputDemo,
     // Typography
     'heading': HeadingDemo,
     'text': TextDemo,

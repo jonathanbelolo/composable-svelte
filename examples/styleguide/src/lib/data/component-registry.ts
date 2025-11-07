@@ -83,6 +83,7 @@ export const COMPONENT_REGISTRY: ComponentInfo[] = [
   { id: 'code-editor', name: 'Code Editor', category: 'Code Components', description: 'Interactive code editor with CodeMirror 6' },
   { id: 'node-canvas', name: 'Node Canvas', category: 'Code Components', description: 'Node-based canvas editor with SvelteFlow for visual programming' },
   { id: 'streaming-chat', name: 'Streaming Chat', category: 'Code Components', description: 'Transport-agnostic streaming chat interface for LLM interactions' },
+  { id: 'voice-input', name: 'Voice Input', category: 'Code Components', description: 'Standalone voice input with push-to-talk and conversation modes' },
 
   // Typography
   { id: 'heading', name: 'Heading', category: 'Typography', description: 'Semantic heading component' },
