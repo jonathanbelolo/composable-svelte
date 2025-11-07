@@ -326,6 +326,8 @@ export const voiceInputReducer: Reducer<
 						const hasVoice = audioManager.detectVoiceActivity(15);
 						if (hasVoice) {
 							dispatch({ type: 'speechDetected' });
+						} else {
+							dispatch({ type: 'silenceDetected' });
 						}
 					}, 100); // Check every 100ms
 				})
