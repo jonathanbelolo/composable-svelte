@@ -102,7 +102,7 @@ export const voiceInputReducer: Reducer<
 			// Check if permission is granted
 			if (state.permission !== 'granted') {
 				return [
-					state,
+					{ ...state, mode: 'push-to-talk' },
 					Effect.run(async (dispatch) => {
 						dispatch({ type: 'requestMicrophonePermission' });
 					})
