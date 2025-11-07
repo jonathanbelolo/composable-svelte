@@ -5,7 +5,7 @@
 	/**
 	 * Voice Input Button Component
 	 *
-	 * Trigger button for voice input. Handles press & hold for push-to-talk.
+	 * Trigger button for voice input. Supports push-to-talk and conversation modes.
 	 */
 	interface Props {
 		store: Store<VoiceInputState, VoiceInputAction>;
@@ -13,14 +13,31 @@
 		label?: string;
 		disabled?: boolean;
 		isRecording?: boolean;
+		mode?: 'push-to-talk' | 'conversation'; // Interaction mode
 		class?: string;
 	}
 
-	const { store, variant = 'icon', label = 'Voice Input', disabled = false, isRecording: isRecordingProp = false, class: className = '' }: Props = $props();
+	const { store, variant = 'icon', label = 'Voice Input', disabled = false, isRecording: isRecordingProp = false, mode = 'push-to-talk', class: className = '' }: Props = $props();
 
-	// Handle pointer down (start recording)
+	// Determine interaction mode from store or prop
+	const interactionMode = $derived(mode || ($store.mode === 'conversation' ? 'conversation' : 'push-to-talk'));
+
+	// Handle click for conversation mode (toggle)
+	function handleClick(e: MouseEvent) {
+		if (disabled || $store.status === 'processing') return;
+		if (interactionMode !== 'conversation') return;
+
+		e.preventDefault();
+
+		// Toggle conversation mode on/off
+		const isActive = $store.mode === 'conversation';
+		store.dispatch({ type: 'conversationModeToggled', enabled: !isActive });
+	}
+
+	// Handle pointer down (start recording for push-to-talk)
 	function handlePointerDown(e: PointerEvent) {
 		if (disabled || $store.status === 'processing') return;
+		if (interactionMode !== 'push-to-talk') return;
 
 		e.preventDefault();
 
@@ -31,9 +48,10 @@
 		store.dispatch({ type: 'startPushToTalkRecording' });
 	}
 
-	// Handle pointer up (stop recording)
+	// Handle pointer up (stop recording for push-to-talk)
 	function handlePointerUp(e: PointerEvent) {
 		if (disabled || $store.status !== 'recording') return;
+		if (interactionMode !== 'push-to-talk') return;
 
 		e.preventDefault();
 
@@ -46,9 +64,10 @@
 		store.dispatch({ type: 'stopPushToTalkRecording' });
 	}
 
-	// Handle pointer cancel (cancel recording)
+	// Handle pointer cancel (cancel recording for push-to-talk)
 	function handlePointerCancel(e: PointerEvent) {
 		if (disabled || $store.status !== 'recording') return;
+		if (interactionMode !== 'push-to-talk') return;
 
 		e.preventDefault();
 
@@ -65,6 +84,7 @@
 	const isRecording = $derived($store.status === 'recording');
 	const isProcessing = $derived($store.status === 'processing');
 	const hasError = $derived($store.status === 'error');
+	const isConversationActive = $derived($store.mode === 'conversation');
 </script>
 
 <button
@@ -72,13 +92,15 @@
 	class:voice-input-button--recording={isRecording}
 	class:voice-input-button--processing={isProcessing}
 	class:voice-input-button--error={hasError}
+	class:voice-input-button--conversation-active={isConversationActive}
+	onclick={handleClick}
 	onpointerdown={handlePointerDown}
 	onpointerup={handlePointerUp}
 	onpointercancel={handlePointerCancel}
 	{disabled}
-	aria-label={isRecording ? 'Recording, release to send' : label}
-	aria-pressed={isRecording}
-	title={isRecording ? 'Release to send' : 'Press and hold to record'}
+	aria-label={isConversationActive ? 'Conversation active, click to stop' : isRecording ? 'Recording, release to send' : label}
+	aria-pressed={isRecording || isConversationActive}
+	title={isConversationActive ? 'Click to stop conversation' : isRecording ? 'Release to send' : interactionMode === 'conversation' ? 'Click to start conversation' : 'Press and hold to record'}
 >
 	{#if isProcessing}
 		<!-- Processing spinner -->
@@ -194,6 +216,24 @@
 		}
 	}
 
+	/* Conversation mode active state */
+	.voice-input-button--conversation-active {
+		background: #22c55e !important;
+		color: white !important;
+		animation: pulse-conversation 2s ease-in-out infinite;
+		z-index: 1001;
+	}
+
+	@keyframes pulse-conversation {
+		0%,
+		100% {
+			box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+		}
+		50% {
+			box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);
+		}
+	}
+
 	/* Processing state */
 	.voice-input-button--processing {
 		background: rgba(0, 122, 255, 0.1);
@@ -238,7 +278,8 @@
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.voice-input-button--recording {
+		.voice-input-button--recording,
+		.voice-input-button--conversation-active {
 			animation: none;
 		}
 

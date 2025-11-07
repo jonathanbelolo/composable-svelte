@@ -94,6 +94,75 @@
 		</section>
 
 		<section class="demo-section">
+			<h2>Conversation Mode Demo</h2>
+			<p>Click to toggle conversation mode on/off. Speak naturally, and audio segments are sent after 1.5 seconds of silence.</p>
+
+			<div class="demo-variants">
+				<div class="variant">
+					<h3>Icon Variant</h3>
+					<VoiceInput
+						store={voiceStore}
+						onTranscript={handleTranscript}
+						variant="icon"
+					/>
+					<button
+						class="mode-toggle"
+						onclick={() => {
+							const isActive = $voiceStore.mode === 'conversation';
+							voiceStore.dispatch({ type: 'conversationModeToggled', enabled: !isActive });
+						}}
+					>
+						{$voiceStore.mode === 'conversation' ? 'Stop Conversation' : 'Start Conversation'}
+					</button>
+				</div>
+
+				<div class="variant">
+					<h3>Button Variant</h3>
+					<VoiceInput
+						store={voiceStore}
+						onTranscript={handleTranscript}
+						variant="button"
+						label="Voice Input"
+					/>
+					<button
+						class="mode-toggle"
+						onclick={() => {
+							const isActive = $voiceStore.mode === 'conversation';
+							voiceStore.dispatch({ type: 'conversationModeToggled', enabled: !isActive });
+						}}
+					>
+						{$voiceStore.mode === 'conversation' ? 'Stop Conversation' : 'Start Conversation'}
+					</button>
+				</div>
+
+				<div class="variant">
+					<h3>FAB Variant</h3>
+					<VoiceInput
+						store={voiceStore}
+						onTranscript={handleTranscript}
+						variant="fab"
+					/>
+					<button
+						class="mode-toggle"
+						onclick={() => {
+							const isActive = $voiceStore.mode === 'conversation';
+							voiceStore.dispatch({ type: 'conversationModeToggled', enabled: !isActive });
+						}}
+					>
+						{$voiceStore.mode === 'conversation' ? 'Stop' : 'Start'}
+					</button>
+				</div>
+			</div>
+
+			<div class="status-info">
+				<p><strong>Status:</strong> {$voiceStore.status}</p>
+				<p><strong>Mode:</strong> {$voiceStore.mode || 'none'}</p>
+				<p><strong>VAD Status:</strong> {$voiceStore.vadState?.isSpeaking ? 'Speaking' : 'Listening'}</p>
+				<p><strong>Silence:</strong> {$voiceStore.vadState?.silenceDuration || 0}ms</p>
+			</div>
+		</section>
+
+		<section class="demo-section">
 			<h2>Transcripts</h2>
 			{#if transcripts.length === 0}
 				<p class="empty-state">No transcripts yet. Record a message to see transcription results.</p>
