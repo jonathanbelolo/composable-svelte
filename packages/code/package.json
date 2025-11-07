@@ -66,6 +66,7 @@
   "devDependencies": {
     "@sveltejs/package": "^2.5.4",
     "@sveltejs/vite-plugin-svelte": "^6.2.1",
+    "@types/marked": "^6.0.0",
     "@types/node": "^20.0.0",
     "@types/prismjs": "^1.26.0",
     "@vitest/coverage-v8": "^4.0.3",
@@ -92,6 +93,7 @@
     "@codemirror/view": "^6.38.6",
     "@xyflow/svelte": "^1.4.1",
     "codemirror": "^6.0.2",
+    "marked": "^16.4.1",
     "prism-themes": "^1.9.0",
     "prismjs": "^1.29.0"
   }

@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { createStore } from '@composable-svelte/core';
 	import {
-		StreamingChat,
+		MinimalStreamingChat,
+		StandardStreamingChat,
+		FullStreamingChat,
 		streamingChatReducer,
 		createInitialStreamingChatState,
 		createMockStreamingChat
@@ -14,8 +16,20 @@
 		CardContent
 	} from '@composable-svelte/core/components/ui/card/index.js';
 
-	// Create store with mock streaming implementation
-	const chatStore = createStore({
+	// Create separate stores for each variant demo
+	const minimalStore = createStore({
+		initialState: createInitialStreamingChatState(),
+		reducer: streamingChatReducer,
+		dependencies: createMockStreamingChat()
+	});
+
+	const standardStore = createStore({
+		initialState: createInitialStreamingChatState(),
+		reducer: streamingChatReducer,
+		dependencies: createMockStreamingChat()
+	});
+
+	const fullStore = createStore({
 		initialState: createInitialStreamingChatState(),
 		reducer: streamingChatReducer,
 		dependencies: createMockStreamingChat()
@@ -36,8 +50,11 @@
 		>
 			<h4 class="font-semibold text-purple-900 dark:text-purple-100 mb-2">Key Features</h4>
 			<ul class="text-sm text-purple-800 dark:text-purple-200 space-y-1">
+				<li>✓ Three specialized variants (Minimal, Standard, Full)</li>
 				<li>✓ Transport-agnostic (SSE, WebSocket, or custom)</li>
 				<li>✓ Real-time streaming text display</li>
+				<li>✓ Stop generation mid-stream with AbortController</li>
+				<li>✓ Message actions (Copy, Edit, Regenerate)</li>
 				<li>✓ Markdown rendering with syntax highlighting</li>
 				<li>✓ Interactive code blocks with copy buttons</li>
 				<li>✓ Auto-scroll with smart pause detection</li>
@@ -48,33 +65,86 @@
 		</div>
 	</section>
 
-	<!-- Interactive Demo -->
+	<!-- Chat Variants -->
 	<section class="space-y-6">
 		<div>
-			<h3 class="text-xl font-semibold mb-2">Interactive Demo</h3>
+			<h3 class="text-xl font-semibold mb-2">Chat Variants</h3>
 			<p class="text-muted-foreground text-sm">
-				Try the chat interface with a mock streaming backend
+				Three specialized variants for different use cases
 			</p>
 		</div>
 
+		<!-- MinimalStreamingChat -->
 		<Card>
 			<CardHeader>
-				<div class="flex items-center justify-between">
-					<div>
-						<CardTitle>AI Assistant Chat</CardTitle>
-						<CardDescription>
-							Ask questions and see streaming responses in real-time
-						</CardDescription>
-					</div>
-				</div>
+				<CardTitle>MinimalStreamingChat</CardTitle>
+				<CardDescription>
+					Simplest variant - just messages and input. Perfect for embedded chats or simple UIs.
+				</CardDescription>
 			</CardHeader>
 			<CardContent>
-				<div class="border rounded-lg overflow-hidden" style="height: 500px;">
-					<StreamingChat store={chatStore} placeholder="Ask me anything..." />
+				<div class="border rounded-lg overflow-hidden" style="height: 400px;">
+					<MinimalStreamingChat store={minimalStore} placeholder="Type a message..." />
 				</div>
-				<p class="text-xs text-muted-foreground mt-2">
-					Using mock streaming backend that simulates word-by-word responses
-				</p>
+				<div class="mt-3 text-sm text-muted-foreground space-y-1">
+					<p><strong>Features:</strong></p>
+					<ul class="list-disc list-inside space-y-1 text-xs">
+						<li>Messages and input only</li>
+						<li>No action buttons, no clear button, no stop button</li>
+						<li>Minimal UI footprint</li>
+						<li>Best for: Read-only experiences, simple Q&A</li>
+					</ul>
+				</div>
+			</CardContent>
+		</Card>
+
+		<!-- StandardStreamingChat -->
+		<Card>
+			<CardHeader>
+				<CardTitle>StandardStreamingChat</CardTitle>
+				<CardDescription>
+					Standard variant with Stop and Clear buttons. Most common use case for chat applications.
+				</CardDescription>
+			</CardHeader>
+			<CardContent>
+				<div class="border rounded-lg overflow-hidden" style="height: 400px;">
+					<StandardStreamingChat store={standardStore} placeholder="Ask me anything..." />
+				</div>
+				<div class="mt-3 text-sm text-muted-foreground space-y-1">
+					<p><strong>Features:</strong></p>
+					<ul class="list-disc list-inside space-y-1 text-xs">
+						<li>Messages and input</li>
+						<li>Stop button (appears during streaming)</li>
+						<li>Clear button (removes all messages)</li>
+						<li>No per-message action buttons</li>
+						<li>Best for: Most chat applications, customer support</li>
+					</ul>
+				</div>
+			</CardContent>
+		</Card>
+
+		<!-- FullStreamingChat -->
+		<Card>
+			<CardHeader>
+				<CardTitle>FullStreamingChat</CardTitle>
+				<CardDescription>
+					Complete variant with all features - action buttons, stop, and clear. Power user interface.
+				</CardDescription>
+			</CardHeader>
+			<CardContent>
+				<div class="border rounded-lg overflow-hidden" style="height: 400px;">
+					<FullStreamingChat store={fullStore} placeholder="Ask me anything..." />
+				</div>
+				<div class="mt-3 text-sm text-muted-foreground space-y-1">
+					<p><strong>Features:</strong></p>
+					<ul class="list-disc list-inside space-y-1 text-xs">
+						<li>Per-message action buttons (Copy, Edit, Regenerate)</li>
+						<li>Stop button (cancel streaming mid-flight)</li>
+						<li>Clear button (remove all messages)</li>
+						<li>Full message interaction capabilities</li>
+						<li>Best for: Advanced chat UIs, AI assistants, power users</li>
+					</ul>
+				</div>
 			</CardContent>
 		</Card>
 	</section>
@@ -276,6 +346,61 @@ const store = createStore({
 		</div>
 	</section>
 
+	<!-- Implemented Features -->
+	<section class="space-y-6">
+		<div>
+			<h3 class="text-xl font-semibold mb-2">Implemented Message Interactions</h3>
+			<p class="text-muted-foreground text-sm">Interactive features in FullStreamingChat variant</p>
+		</div>
+
+		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+			<Card>
+				<CardHeader>
+					<CardTitle class="text-sm">Stop Generation</CardTitle>
+				</CardHeader>
+				<CardContent class="text-sm text-muted-foreground">
+					Cancel streaming mid-flight using AbortController. Saves partial content as message.
+				</CardContent>
+			</Card>
+
+			<Card>
+				<CardHeader>
+					<CardTitle class="text-sm">Copy Message</CardTitle>
+				</CardHeader>
+				<CardContent class="text-sm text-muted-foreground">
+					Copy any message content to clipboard with visual feedback
+				</CardContent>
+			</Card>
+
+			<Card>
+				<CardHeader>
+					<CardTitle class="text-sm">Edit Message</CardTitle>
+				</CardHeader>
+				<CardContent class="text-sm text-muted-foreground">
+					Edit user messages and re-send. Automatically removes following messages for clean branching.
+				</CardContent>
+			</Card>
+
+			<Card>
+				<CardHeader>
+					<CardTitle class="text-sm">Regenerate Response</CardTitle>
+				</CardHeader>
+				<CardContent class="text-sm text-muted-foreground">
+					Re-generate assistant responses. Finds preceding user message and re-sends it.
+				</CardContent>
+			</Card>
+
+			<Card>
+				<CardHeader>
+					<CardTitle class="text-sm">Clear Messages</CardTitle>
+				</CardHeader>
+				<CardContent class="text-sm text-muted-foreground">
+					Remove all messages with confirmation dialog
+				</CardContent>
+			</Card>
+		</div>
+	</section>
+
 	<!-- Future Enhancements -->
 	<section class="space-y-6">
 		<div>
@@ -290,15 +415,6 @@ const store = createStore({
 				</CardHeader>
 				<CardContent class="text-sm text-muted-foreground">
 					Support for images, files, and other media types in conversations
-				</CardContent>
-			</Card>
-
-			<Card>
-				<CardHeader>
-					<CardTitle class="text-sm">Message Actions</CardTitle>
-				</CardHeader>
-				<CardContent class="text-sm text-muted-foreground">
-					Regenerate, edit, copy, and delete individual messages
 				</CardContent>
 			</Card>
 
@@ -326,6 +442,15 @@ const store = createStore({
 				</CardHeader>
 				<CardContent class="text-sm text-muted-foreground">
 					Run code blocks directly in sandboxed environment with output display
+				</CardContent>
+			</Card>
+
+			<Card>
+				<CardHeader>
+					<CardTitle class="text-sm">Message Branching UI</CardTitle>
+				</CardHeader>
+				<CardContent class="text-sm text-muted-foreground">
+					Visual indicator for conversation branches when messages are edited or regenerated
 				</CardContent>
 			</Card>
 		</div>

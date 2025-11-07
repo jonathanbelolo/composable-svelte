@@ -1,15 +1,22 @@
 <script lang="ts">
 	/**
-	 * StreamingChat Component
+	 * FullStreamingChat Component
 	 *
-	 * Transport-agnostic streaming chat interface.
-	 * Users provide their own streaming implementation via dependencies.
+	 * Complete streaming chat variant with all features enabled:
+	 * - Per-message action buttons (Copy, Edit, Regenerate)
+	 * - Stop button for cancelling streams
+	 * - Clear button for removing all messages
+	 * - Full message interaction capabilities
+	 *
+	 * Perfect for:
+	 * - Advanced chat applications
+	 * - Power user interfaces
+	 * - Full-featured AI assistants
 	 */
 
-	import { onMount } from 'svelte';
 	import type { Store } from '@composable-svelte/core';
-	import type { StreamingChatState, StreamingChatAction } from './types.js';
-	import ChatMessage from './ChatMessage.svelte';
+	import type { StreamingChatState, StreamingChatAction } from '../types.js';
+	import ChatMessageWithActions from '../primitives/ChatMessageWithActions.svelte';
 
 	interface Props {
 		/**
@@ -93,20 +100,20 @@
 	}
 </script>
 
-<div class="streaming-chat {className}">
+<div class="full-streaming-chat {className}">
 	<!-- Messages Container -->
-	<div class="streaming-chat__messages" bind:this={messagesContainer} onscroll={handleScroll}>
+	<div class="full-streaming-chat__messages" bind:this={messagesContainer} onscroll={handleScroll}>
 		{#if $store.messages.length === 0 && !$store.currentStreaming}
-			<div class="streaming-chat__empty">
+			<div class="full-streaming-chat__empty">
 				<p>No messages yet. Start a conversation!</p>
 			</div>
 		{:else}
 			{#each $store.messages as message (message.id)}
-				<ChatMessage {message} {store} />
+				<ChatMessageWithActions {message} {store} />
 			{/each}
 
 			{#if $store.currentStreaming}
-				<ChatMessage
+				<ChatMessageWithActions
 					message={{
 						id: 'streaming',
 						role: 'assistant',
@@ -122,10 +129,10 @@
 
 	<!-- Error Display -->
 	{#if $store.error}
-		<div class="streaming-chat__error">
-			<span class="streaming-chat__error-text">{$store.error}</span>
+		<div class="full-streaming-chat__error">
+			<span class="full-streaming-chat__error-text">{$store.error}</span>
 			<button
-				class="streaming-chat__error-close"
+				class="full-streaming-chat__error-close"
 				onclick={() => store.dispatch({ type: 'clearError' })}
 				aria-label="Dismiss error"
 			>
@@ -135,10 +142,10 @@
 	{/if}
 
 	<!-- Input Form -->
-	<form class="streaming-chat__form" onsubmit={handleSubmit}>
-		<div class="streaming-chat__input-wrapper">
+	<form class="full-streaming-chat__form" onsubmit={handleSubmit}>
+		<div class="full-streaming-chat__input-wrapper">
 			<textarea
-				class="streaming-chat__input"
+				class="full-streaming-chat__input"
 				bind:value={inputValue}
 				onkeydown={handleKeyDown}
 				{placeholder}
@@ -146,11 +153,11 @@
 				rows="1"
 				aria-label="Chat message input"
 			/>
-			<div class="streaming-chat__actions">
+			<div class="full-streaming-chat__actions">
 				{#if showClearButton && $store.messages.length > 0}
 					<button
 						type="button"
-						class="streaming-chat__button streaming-chat__button--secondary"
+						class="full-streaming-chat__button full-streaming-chat__button--secondary"
 						onclick={handleClear}
 						aria-label="Clear messages"
 					>
@@ -160,7 +167,7 @@
 				{#if $store.currentStreaming}
 					<button
 						type="button"
-						class="streaming-chat__button streaming-chat__button--stop"
+						class="full-streaming-chat__button full-streaming-chat__button--stop"
 						onclick={() => store.dispatch({ type: 'stopGeneration' })}
 						aria-label="Stop generation"
 					>
@@ -169,7 +176,7 @@
 				{:else}
 					<button
 						type="submit"
-						class="streaming-chat__button streaming-chat__button--primary"
+						class="full-streaming-chat__button full-streaming-chat__button--primary"
 						disabled={!canSendMessage}
 						aria-label="Send message"
 					>
@@ -182,7 +189,7 @@
 </div>
 
 <style>
-	.streaming-chat {
+	.full-streaming-chat {
 		display: flex;
 		flex-direction: column;
 		height: 100%;
@@ -192,7 +199,7 @@
 		overflow: hidden;
 	}
 
-	.streaming-chat__messages {
+	.full-streaming-chat__messages {
 		flex: 1;
 		overflow-y: auto;
 		padding: 16px;
@@ -201,7 +208,7 @@
 		scroll-behavior: smooth;
 	}
 
-	.streaming-chat__empty {
+	.full-streaming-chat__empty {
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -210,7 +217,7 @@
 		font-size: 14px;
 	}
 
-	.streaming-chat__error {
+	.full-streaming-chat__error {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
@@ -221,11 +228,11 @@
 		font-size: 14px;
 	}
 
-	.streaming-chat__error-text {
+	.full-streaming-chat__error-text {
 		flex: 1;
 	}
 
-	.streaming-chat__error-close {
+	.full-streaming-chat__error-close {
 		background: none;
 		border: none;
 		color: #c00;
@@ -234,23 +241,23 @@
 		padding: 0 8px;
 	}
 
-	.streaming-chat__error-close:hover {
+	.full-streaming-chat__error-close:hover {
 		opacity: 0.7;
 	}
 
-	.streaming-chat__form {
+	.full-streaming-chat__form {
 		border-top: 1px solid #e0e0e0;
 		padding: 16px;
 		background: #fafafa;
 	}
 
-	.streaming-chat__input-wrapper {
+	.full-streaming-chat__input-wrapper {
 		display: flex;
 		gap: 8px;
 		align-items: flex-end;
 	}
 
-	.streaming-chat__input {
+	.full-streaming-chat__input {
 		flex: 1;
 		padding: 12px;
 		border: 1px solid #d0d0d0;
@@ -263,22 +270,22 @@
 		background: white;
 	}
 
-	.streaming-chat__input:focus {
+	.full-streaming-chat__input:focus {
 		outline: none;
 		border-color: #007aff;
 	}
 
-	.streaming-chat__input:disabled {
+	.full-streaming-chat__input:disabled {
 		background: #f5f5f5;
 		cursor: not-allowed;
 	}
 
-	.streaming-chat__actions {
+	.full-streaming-chat__actions {
 		display: flex;
 		gap: 8px;
 	}
 
-	.streaming-chat__button {
+	.full-streaming-chat__button {
 		padding: 10px 16px;
 		border: none;
 		border-radius: 6px;
@@ -289,57 +296,57 @@
 		white-space: nowrap;
 	}
 
-	.streaming-chat__button:hover:not(:disabled) {
+	.full-streaming-chat__button:hover:not(:disabled) {
 		opacity: 0.8;
 	}
 
-	.streaming-chat__button:disabled {
+	.full-streaming-chat__button:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
 	}
 
-	.streaming-chat__button--primary {
+	.full-streaming-chat__button--primary {
 		background: #007aff;
 		color: white;
 	}
 
-	.streaming-chat__button--secondary {
+	.full-streaming-chat__button--secondary {
 		background: #e0e0e0;
 		color: #333;
 	}
 
-	.streaming-chat__button--stop {
+	.full-streaming-chat__button--stop {
 		background: #dc2626;
 		color: white;
 	}
 
 	/* Dark mode support */
-	:global(.dark) .streaming-chat {
+	:global(.dark) .full-streaming-chat {
 		background: #1a1a1a;
 		border-color: #333;
 	}
 
-	:global(.dark) .streaming-chat__form {
+	:global(.dark) .full-streaming-chat__form {
 		background: #222;
 		border-top-color: #333;
 	}
 
-	:global(.dark) .streaming-chat__input {
+	:global(.dark) .full-streaming-chat__input {
 		background: #2a2a2a;
 		border-color: #444;
 		color: #e0e0e0;
 	}
 
-	:global(.dark) .streaming-chat__input:disabled {
+	:global(.dark) .full-streaming-chat__input:disabled {
 		background: #1a1a1a;
 	}
 
-	:global(.dark) .streaming-chat__button--secondary {
+	:global(.dark) .full-streaming-chat__button--secondary {
 		background: #333;
 		color: #e0e0e0;
 	}
 
-	:global(.dark) .streaming-chat__empty {
+	:global(.dark) .full-streaming-chat__empty {
 		color: #666;
 	}
 </style>

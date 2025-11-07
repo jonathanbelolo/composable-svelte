@@ -8,7 +8,9 @@
  * ```typescript
  * import { createStore } from '@composable-svelte/core';
  * import {
- *   StreamingChat,
+ *   MinimalStreamingChat,
+ *   StandardStreamingChat,
+ *   FullStreamingChat,
  *   streamingChatReducer,
  *   createInitialStreamingChatState,
  *   createMockStreamingChat
@@ -22,8 +24,24 @@
  * ```
  */
 
+// Variants (recommended)
+export {
+	MinimalStreamingChat,
+	StandardStreamingChat,
+	FullStreamingChat
+} from './variants/index.js';
+
+// Primitives (for custom compositions)
+export {
+	ChatMessage,
+	ActionButtons,
+	ChatMessageWithActions
+} from './primitives/index.js';
+
+// Legacy export (use FullStreamingChat instead)
 export { default as StreamingChat } from './StreamingChat.svelte';
-export { default as ChatMessage } from './ChatMessage.svelte';
+
+// Core functionality
 export { streamingChatReducer } from './reducer.js';
 export {
 	createInitialStreamingChatState,
