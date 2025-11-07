@@ -51,6 +51,7 @@
   import NodeCanvasDemo from '../demos/NodeCanvasDemo.svelte';
   import StreamingChatDemo from '../demos/StreamingChatDemo.svelte';
   import VoiceInputDemo from '../demos/VoiceInputDemo.svelte';
+  import CollaborativeChatDemo from '../demos/CollaborativeChatDemo.svelte';
   // Typography
   import HeadingDemo from '../demos/HeadingDemo.svelte';
   import TextDemo from '../demos/TextDemo.svelte';
@@ -122,6 +123,7 @@
     'node-canvas': NodeCanvasDemo,
     'streaming-chat': StreamingChatDemo,
     'voice-input': VoiceInputDemo,
+    'collaborative-chat': CollaborativeChatDemo,
     // Typography
     'heading': HeadingDemo,
     'text': TextDemo,

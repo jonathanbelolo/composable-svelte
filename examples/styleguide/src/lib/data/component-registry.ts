@@ -84,6 +84,7 @@ export const COMPONENT_REGISTRY: ComponentInfo[] = [
   { id: 'node-canvas', name: 'Node Canvas', category: 'Code Components', description: 'Node-based canvas editor with SvelteFlow for visual programming' },
   { id: 'streaming-chat', name: 'Streaming Chat', category: 'Code Components', description: 'Transport-agnostic streaming chat interface for LLM interactions' },
   { id: 'voice-input', name: 'Voice Input', category: 'Code Components', description: 'Standalone voice input with push-to-talk and conversation modes' },
+  { id: 'collaborative-chat', name: 'Collaborative Chat', category: 'Code Components', description: 'Real-time presence tracking, typing indicators, and live cursors for multi-user chat' },
 
   // Typography
   { id: 'heading', name: 'Heading', category: 'Typography', description: 'Semantic heading component' },
