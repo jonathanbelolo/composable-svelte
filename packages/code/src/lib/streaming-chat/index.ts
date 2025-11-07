@@ -69,3 +69,56 @@ export {
 	getFileExtension,
 	getFileTypeIcon
 } from './utils.js';
+
+// Collaborative features
+export { collaborativeReducer } from './collaborative-reducer.js';
+export {
+	createInitialCollaborativeState,
+	generateRandomUserColor,
+	type CollaborativeUser,
+	type UserPresence,
+	type TypingInfo,
+	type CursorPosition,
+	type UserPermissions,
+	type CollaborativeStreamingChatState,
+	type CollaborativeAction,
+	type CollaborativeDependencies,
+	type WebSocketConnectionState,
+	type PendingAction,
+	type SyncState,
+	DEFAULT_USER_PERMISSIONS
+} from './collaborative-types.js';
+
+// Collaborative primitives
+export {
+	PresenceBadge,
+	PresenceAvatarStack,
+	PresenceList,
+	TypingIndicator,
+	TypingUsersList,
+	CursorMarker,
+	CursorOverlay
+} from './collaborative-primitives/index.js';
+
+// Collaborative hooks
+export {
+	usePresenceTracking,
+	useTypingEmitter,
+	useCursorTracking,
+	useHeartbeat,
+	getTypingUsers,
+	getActiveUsers,
+	getCursorPositions,
+	formatTypingIndicator
+} from './collaborative-hooks.js';
+
+// WebSocket manager
+export {
+	WebSocketManager,
+	createWebSocketManager,
+	type WebSocketConfig,
+	type WebSocketMessage
+} from './websocket-manager.js';
+
+// Cleanup utilities
+export { CleanupTracker, createCleanupTracker, type CleanupFunction } from './cleanup-tracker.js';
