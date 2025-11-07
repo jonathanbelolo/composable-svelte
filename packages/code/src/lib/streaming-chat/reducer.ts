@@ -11,7 +11,8 @@ import type {
 	StreamingChatState,
 	StreamingChatAction,
 	StreamingChatDependencies,
-	Message
+	Message,
+	MessageReaction
 } from './types.js';
 
 /**
@@ -413,6 +414,84 @@ export function streamingChatReducer(
 				{
 					...state,
 					pendingAttachments: []
+				},
+				Effect.none()
+			];
+		}
+
+		case 'addReaction': {
+			const messageIndex = state.messages.findIndex((m) => m.id === action.messageId);
+			if (messageIndex === -1) {
+				return [state, Effect.none()];
+			}
+
+			const message = state.messages[messageIndex];
+			const reactions = message.reactions || [];
+			const existingReactionIndex = reactions.findIndex((r) => r.emoji === action.emoji);
+
+			let updatedReactions: MessageReaction[];
+			if (existingReactionIndex !== -1) {
+				// Increment count for existing reaction
+				updatedReactions = reactions.map((r, i) =>
+					i === existingReactionIndex ? { ...r, count: r.count + 1 } : r
+				);
+			} else {
+				// Add new reaction
+				updatedReactions = [...reactions, { emoji: action.emoji, count: 1 }];
+			}
+
+			const newMessages = [...state.messages];
+			newMessages[messageIndex] = {
+				...message,
+				reactions: updatedReactions
+			};
+
+			return [
+				{
+					...state,
+					messages: newMessages
+				},
+				Effect.none()
+			];
+		}
+
+		case 'removeReaction': {
+			const messageIndex = state.messages.findIndex((m) => m.id === action.messageId);
+			if (messageIndex === -1) {
+				return [state, Effect.none()];
+			}
+
+			const message = state.messages[messageIndex];
+			const reactions = message.reactions || [];
+			const existingReactionIndex = reactions.findIndex((r) => r.emoji === action.emoji);
+
+			if (existingReactionIndex === -1) {
+				return [state, Effect.none()];
+			}
+
+			const existingReaction = reactions[existingReactionIndex];
+			let updatedReactions: MessageReaction[];
+
+			if (existingReaction.count > 1) {
+				// Decrement count
+				updatedReactions = reactions.map((r, i) =>
+					i === existingReactionIndex ? { ...r, count: r.count - 1 } : r
+				);
+			} else {
+				// Remove reaction entirely
+				updatedReactions = reactions.filter((_, i) => i !== existingReactionIndex);
+			}
+
+			const newMessages = [...state.messages];
+			newMessages[messageIndex] = {
+				...message,
+				reactions: updatedReactions.length > 0 ? updatedReactions : undefined
+			};
+
+			return [
+				{
+					...state,
+					messages: newMessages
 				},
 				Effect.none()
 			];

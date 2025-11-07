@@ -42,6 +42,21 @@ export interface MessageAttachment {
 }
 
 /**
+ * Emoji reaction to a message.
+ */
+export interface MessageReaction {
+	/** Emoji character (e.g., "👍", "❤️") */
+	emoji: string;
+	/** Number of times this emoji was reacted */
+	count: number;
+}
+
+/**
+ * Default set of quick reaction emojis.
+ */
+export const DEFAULT_REACTIONS = ['👍', '❤️', '😂', '🎉', '🤔', '👎', '✅', '❌'] as const;
+
+/**
  * Individual chat message.
  */
 export interface Message {
@@ -51,6 +66,8 @@ export interface Message {
 	timestamp: number;
 	/** Optional file attachments */
 	attachments?: MessageAttachment[];
+	/** Optional emoji reactions */
+	reactions?: MessageReaction[];
 }
 
 /**
@@ -119,6 +136,9 @@ export type StreamingChatAction =
 	| { type: 'addAttachment'; attachment: MessageAttachment }
 	| { type: 'removeAttachment'; attachmentId: string }
 	| { type: 'clearAttachments' }
+	// Message reactions
+	| { type: 'addReaction'; messageId: string; emoji: string }
+	| { type: 'removeReaction'; messageId: string; emoji: string }
 	// Utility
 	| { type: 'clearError' }
 	| { type: 'clearMessages' }

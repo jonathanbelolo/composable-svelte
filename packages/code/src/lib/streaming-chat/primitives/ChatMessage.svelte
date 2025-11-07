@@ -5,6 +5,7 @@
 	import { ImageGallery } from '@composable-svelte/core/components/image-gallery';
 	import { VideoEmbed } from '../../video-embed/index.js';
 	import AttachmentGallery from '../attachment-components/AttachmentGallery.svelte';
+	import MessageReactions from './MessageReactions.svelte';
 
 	/**
 	 * Minimal chat message bubble primitive (no action buttons).
@@ -15,9 +16,13 @@
 		message: Message;
 		isStreaming?: boolean;
 		headerActions?: Snippet;
+		/** Optional reaction click handler */
+		onReactionClick?: (emoji: string) => void;
+		/** Optional add reaction handler */
+		onAddReaction?: () => void;
 	}
 
-	const { message, isStreaming = false, headerActions }: Props = $props();
+	const { message, isStreaming = false, headerActions, onReactionClick, onAddReaction }: Props = $props();
 
 	let contentElement: HTMLDivElement | undefined = $state();
 
@@ -118,6 +123,19 @@
 			{/if}
 		{/if}
 	</div>
+
+	<!-- Message reactions -->
+	{#if message.reactions && message.reactions.length > 0 && !isStreaming}
+		<MessageReactions reactions={message.reactions} onclick={onReactionClick} />
+	{/if}
+
+	<!-- Add reaction footer button -->
+	{#if onAddReaction && !isStreaming}
+		<button type="button" class="chat-message__add-reaction" onclick={onAddReaction}>
+			<span class="chat-message__add-reaction-icon">😊</span>
+			<span>Add Reaction</span>
+		</button>
+	{/if}
 </div>
 
 <style>
@@ -179,6 +197,10 @@
 		font-size: 14px;
 		line-height: 1.6;
 		word-wrap: break-word;
+		/* Ensure emoji render properly alongside text */
+		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue',
+			Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+			'Noto Color Emoji';
 	}
 
 	/* Markdown Typography */
@@ -451,6 +473,41 @@
 		gap: 16px;
 	}
 
+	/* Add Reaction Footer Button */
+	.chat-message__add-reaction {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		margin-top: 8px;
+		padding: 6px 12px;
+		background: rgba(0, 0, 0, 0.05);
+		border: 1px solid rgba(0, 0, 0, 0.1);
+		border-radius: 16px;
+		font-size: 13px;
+		font-weight: 500;
+		color: rgba(0, 0, 0, 0.7);
+		cursor: pointer;
+		transition: background 0.2s, border-color 0.2s, transform 0.1s;
+	}
+
+	.chat-message__add-reaction:hover {
+		background: rgba(0, 122, 255, 0.1);
+		border-color: rgba(0, 122, 255, 0.3);
+		color: rgba(0, 122, 255, 0.9);
+		transform: scale(1.02);
+	}
+
+	.chat-message__add-reaction:active {
+		transform: scale(0.98);
+	}
+
+	.chat-message__add-reaction-icon {
+		font-size: 16px;
+		line-height: 1;
+		font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji',
+			sans-serif;
+	}
+
 	/* Dark mode support */
 	:global(.dark) .chat-message[data-role='assistant'] {
 		background: #2a2a2a;
@@ -485,5 +542,17 @@
 
 	:global(.dark) .chat-message__content :global(hr) {
 		border-top-color: rgba(255, 255, 255, 0.2);
+	}
+
+	:global(.dark) .chat-message__add-reaction {
+		background: rgba(255, 255, 255, 0.05);
+		border-color: rgba(255, 255, 255, 0.1);
+		color: rgba(255, 255, 255, 0.7);
+	}
+
+	:global(.dark) .chat-message__add-reaction:hover {
+		background: rgba(0, 102, 204, 0.2);
+		border-color: rgba(0, 102, 204, 0.4);
+		color: rgba(0, 122, 255, 1);
 	}
 </style>

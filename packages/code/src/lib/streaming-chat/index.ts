@@ -49,9 +49,11 @@ export {
 	type Message,
 	type MessageAttachment,
 	type AttachmentMetadata,
+	type MessageReaction,
 	type StreamingChatState,
 	type StreamingChatAction,
-	type StreamingChatDependencies
+	type StreamingChatDependencies,
+	DEFAULT_REACTIONS
 } from './types.js';
 
 // Utilities

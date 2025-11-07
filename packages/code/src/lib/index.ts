@@ -80,9 +80,12 @@ export {
 	type Message,
 	type MessageAttachment,
 	type AttachmentMetadata,
+	type MessageReaction,
 	type StreamingChatState,
 	type StreamingChatAction,
-	type StreamingChatDependencies
+	type StreamingChatDependencies,
+	// Constants
+	DEFAULT_REACTIONS
 } from './streaming-chat/index';
 
 // VideoEmbed - Video embedding for external platforms (YouTube, Vimeo, Twitch, etc.)

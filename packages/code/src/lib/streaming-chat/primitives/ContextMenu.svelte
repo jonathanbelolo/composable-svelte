@@ -10,9 +10,10 @@
 	interface Props {
 		message: Message;
 		store: Store<StreamingChatState, StreamingChatAction>;
+		onAddReaction?: () => void;
 	}
 
-	const { message, store }: Props = $props();
+	const { message, store, onAddReaction }: Props = $props();
 
 	let isOpen = $state(false);
 	let menuElement: HTMLDivElement | undefined = $state();
@@ -27,6 +28,11 @@
 	// Handle actions
 	function handleCopy() {
 		store.dispatch({ type: 'copyMessage', messageId: message.id });
+		isOpen = false;
+	}
+
+	function handleAddReaction() {
+		onAddReaction?.();
 		isOpen = false;
 	}
 
@@ -87,6 +93,13 @@
 				</svg>
 				<span>Copy</span>
 			</button>
+
+			{#if onAddReaction}
+				<button class="context-menu__item" onclick={handleAddReaction}>
+					<span class="context-menu__emoji">😊</span>
+					<span>Add Reaction</span>
+				</button>
+			{/if}
 
 			{#if message.role === 'user'}
 				<button class="context-menu__item" onclick={handleEdit}>
@@ -195,6 +208,16 @@
 
 	.context-menu__item--danger:hover:not(:disabled) {
 		background: #fee;
+	}
+
+	.context-menu__emoji {
+		font-size: 16px;
+		line-height: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji',
+			sans-serif;
 	}
 
 	.context-menu__divider {

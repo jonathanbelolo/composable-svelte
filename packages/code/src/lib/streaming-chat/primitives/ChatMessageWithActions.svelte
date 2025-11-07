@@ -3,13 +3,14 @@
 	import type { Message, StreamingChatState, StreamingChatAction } from '../types.js';
 	import ChatMessage from './ChatMessage.svelte';
 	import ContextMenu from './ContextMenu.svelte';
+	import ReactionPicker from './ReactionPicker.svelte';
 
 	/**
 	 * Chat message with context menu and edit mode.
 	 *
 	 * Composes ChatMessage + ContextMenu primitives.
 	 * Handles inline editing for user messages.
-	 * Includes all message actions: Copy, Edit, Regenerate, Delete.
+	 * Includes all message actions: Copy, Edit, Regenerate, Delete, Reactions.
 	 */
 	interface Props {
 		message: Message;
@@ -22,6 +23,19 @@
 	// Check if this message is being edited
 	const isEditing = $derived($store.editingMessage?.id === message.id);
 	const editContent = $derived($store.editingMessage?.content ?? '');
+
+	// Reaction picker state
+	let showReactionPicker = $state(false);
+
+	// Handle reaction click (toggle or add/remove)
+	function handleReactionClick(emoji: string) {
+		store.dispatch({ type: 'addReaction', messageId: message.id, emoji });
+	}
+
+	// Handle adding reaction from picker
+	function handleAddReaction(emoji: string) {
+		store.dispatch({ type: 'addReaction', messageId: message.id, emoji });
+	}
 </script>
 
 {#if isEditing && message.role === 'user'}
@@ -62,16 +76,34 @@
 	</div>
 {:else}
 	<!-- Normal display mode -->
-	<ChatMessage {message} {isStreaming}>
-		{#snippet headerActions()}
-			{#if !isStreaming}
-				<ContextMenu {message} {store} />
-			{/if}
-		{/snippet}
-	</ChatMessage>
+	<div class="chat-message-with-actions">
+		<ChatMessage
+			{message}
+			{isStreaming}
+			onReactionClick={handleReactionClick}
+			onAddReaction={() => (showReactionPicker = true)}
+		>
+			{#snippet headerActions()}
+				{#if !isStreaming}
+					<ContextMenu {message} {store} onAddReaction={() => (showReactionPicker = true)} />
+				{/if}
+			{/snippet}
+		</ChatMessage>
+
+		<!-- Reaction Picker -->
+		<ReactionPicker
+			open={showReactionPicker}
+			onselect={handleAddReaction}
+			onclose={() => (showReactionPicker = false)}
+		/>
+	</div>
 {/if}
 
 <style>
+	.chat-message-with-actions {
+		position: relative;
+	}
+
 	.chat-message--editing {
 		padding: 12px 16px;
 		margin: 8px 0;
