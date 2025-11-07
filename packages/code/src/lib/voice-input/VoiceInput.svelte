@@ -87,8 +87,8 @@
 </script>
 
 <div class="voice-input {className}">
-	<!-- Voice Input Button -->
-	<VoiceInputButton {store} {variant} {label} {disabled} />
+	<!-- Voice Input Button (stays on top during recording) -->
+	<VoiceInputButton {store} {variant} {label} {disabled} isRecording={$store.status === 'recording'} />
 
 	<!-- Voice Input Panel (appears when recording/active) -->
 	{#if $store.status === 'recording' || $store.mode === 'conversation'}
@@ -99,5 +99,6 @@
 <style>
 	.voice-input {
 		display: inline-block;
+		position: relative;
 	}
 </style>

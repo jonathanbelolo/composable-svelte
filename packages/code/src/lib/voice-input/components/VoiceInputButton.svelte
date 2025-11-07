@@ -12,10 +12,11 @@
 		variant?: 'icon' | 'button' | 'fab';
 		label?: string;
 		disabled?: boolean;
+		isRecording?: boolean;
 		class?: string;
 	}
 
-	const { store, variant = 'icon', label = 'Voice Input', disabled = false, class: className = '' }: Props = $props();
+	const { store, variant = 'icon', label = 'Voice Input', disabled = false, isRecording: isRecordingProp = false, class: className = '' }: Props = $props();
 
 	// Handle pointer down (start recording)
 	function handlePointerDown(e: PointerEvent) {
@@ -100,6 +101,7 @@
 			color 0.2s ease;
 		border: none;
 		outline: none;
+		position: relative;
 	}
 
 	.voice-input-button:disabled {
@@ -160,6 +162,7 @@
 		background: #dc2626 !important;
 		color: white !important;
 		animation: pulse-recording 1.5s ease-in-out infinite;
+		z-index: 1001; /* Stay above modal (z-index: 1000) */
 	}
 
 	@keyframes pulse-recording {
