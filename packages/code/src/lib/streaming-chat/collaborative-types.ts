@@ -5,7 +5,7 @@
  * Avoids data duplication across multiple state fields.
  */
 
-import type * as Y from 'yjs';
+import * as Y from 'yjs';
 import type { Message } from './types.js';
 
 /**
