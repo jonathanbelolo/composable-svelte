@@ -452,12 +452,10 @@ export const voiceInputReducer: Reducer<
 			Effect.none()
 		];
 	}
-			];
-		}
 
-		// === Cleanup === //
+	// === Cleanup === //
 
-		case 'deactivateVoiceInput': {
+	case 'deactivateVoiceInput': {
 			const audioManager = deps.getAudioManager(state._audioManagerId!);
 			if (audioManager) {
 				audioManager.cleanup();
