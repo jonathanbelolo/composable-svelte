@@ -101,3 +101,17 @@ export {
 	type PlatformConfig,
 	type EmbedOptions
 } from './video-embed/index';
+
+// VoiceInput - Standalone voice input component with push-to-talk and conversation modes
+export {
+	VoiceInput,
+	voiceInputReducer,
+	createInitialVoiceInputState,
+	AudioManager,
+	createAudioManager,
+	getAudioManager,
+	deleteAudioManager,
+	type VoiceInputState,
+	type VoiceInputAction,
+	type VoiceInputDependencies
+} from './voice-input/index';

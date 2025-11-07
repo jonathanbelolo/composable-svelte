@@ -96,6 +96,7 @@
     "@xyflow/svelte": "^1.4.1",
     "codemirror": "^6.0.2",
     "marked": "^16.4.1",
+    "pdfjs-dist": "^5.4.394",
     "prism-themes": "^1.9.0",
     "prismjs": "^1.29.0"
   }
