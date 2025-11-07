@@ -47,7 +47,23 @@ export {
 	createInitialStreamingChatState,
 	createMockStreamingChat,
 	type Message,
+	type MessageAttachment,
+	type AttachmentMetadata,
 	type StreamingChatState,
 	type StreamingChatAction,
 	type StreamingChatDependencies
 } from './types.js';
+
+// Utilities
+export {
+	detectFileType,
+	extractFileMetadata,
+	formatFileSize,
+	validateFileSize,
+	validateFileType,
+	createFileDataURL,
+	createFileBlobURL,
+	revokeFileBlobURL,
+	getFileExtension,
+	getFileTypeIcon
+} from './utils.js';

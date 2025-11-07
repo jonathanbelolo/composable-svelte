@@ -34,7 +34,9 @@ export function streamingChatReducer(
 				id: generateId(),
 				role: 'user',
 				content: action.message,
-				timestamp: getTimestamp()
+				timestamp: getTimestamp(),
+				// Include pending attachments if any
+				attachments: state.pendingAttachments.length > 0 ? state.pendingAttachments : undefined
 			};
 
 			return [
@@ -43,7 +45,8 @@ export function streamingChatReducer(
 					messages: [...state.messages, userMessage],
 					currentStreaming: { content: '', isComplete: false },
 					isWaitingForResponse: true,
-					error: null
+					error: null,
+					pendingAttachments: [] // Clear attachments after sending
 				},
 				Effect.run(async (dispatch) => {
 					// Call user's streaming implementation

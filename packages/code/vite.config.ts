@@ -6,29 +6,6 @@ export default defineConfig({
   plugins: [svelte()],
 
   // ============================================================================
-  // Test Configuration
-  // ============================================================================
-  test: {
-    // Test file patterns
-    include: ['tests/**/*.{test,spec}.{js,ts}'],
-
-    // Suppress console output during tests (for CI/prepublish)
-    silent: process.env.CI === 'true' || process.env.SILENT_TESTS === 'true',
-
-    // Coverage configuration
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'html', 'lcov'],
-      exclude: [
-        'node_modules/',
-        'tests/',
-        '**/*.spec.ts',
-        '**/*.test.ts',
-      ]
-    }
-  },
-
-  // ============================================================================
   // Build Configuration
   // ============================================================================
   build: {

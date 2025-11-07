@@ -456,12 +456,18 @@ importers:
       '@types/prismjs':
         specifier: ^1.26.0
         version: 1.26.5
-      '@vitest/coverage-v8':
+      '@vitest/browser-playwright':
         specifier: ^4.0.3
+        version: 4.0.7(playwright@1.56.1)(vite@6.4.1(@types/node@20.19.24)(jiti@1.21.7))(vitest@4.0.7)
+      '@vitest/coverage-v8':
+        specifier: ^4.0.7
         version: 4.0.7(@vitest/browser@4.0.7(vite@6.4.1(@types/node@20.19.24)(jiti@1.21.7))(vitest@4.0.7(@types/node@20.19.24)(@vitest/browser-playwright@4.0.7)(@vitest/ui@4.0.7)(jiti@1.21.7)(jsdom@25.0.1)))(vitest@4.0.7(@types/node@20.19.24)(@vitest/browser-playwright@4.0.7)(@vitest/ui@4.0.7)(jiti@1.21.7)(jsdom@25.0.1))
       '@vitest/ui':
-        specifier: ^4.0.3
+        specifier: ^4.0.7
         version: 4.0.7(vitest@4.0.7)
+      playwright:
+        specifier: ^1.56.1
+        version: 1.56.1
       svelte:
         specifier: ^5.0.0
         version: 5.43.3
@@ -472,7 +478,7 @@ importers:
         specifier: ^6.4.1
         version: 6.4.1(@types/node@20.19.24)(jiti@1.21.7)
       vitest:
-        specifier: ^4.0.3
+        specifier: ^4.0.7
         version: 4.0.7(@types/node@20.19.24)(@vitest/browser-playwright@4.0.7)(@vitest/ui@4.0.7)(jiti@1.21.7)(jsdom@25.0.1)
 
   packages/core:
