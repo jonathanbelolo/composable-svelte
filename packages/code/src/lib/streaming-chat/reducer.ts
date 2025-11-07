@@ -383,6 +383,38 @@ export function streamingChatReducer(
 			];
 		}
 
+		case 'addAttachment': {
+			return [
+				{
+					...state,
+					pendingAttachments: [...state.pendingAttachments, action.attachment]
+				},
+				Effect.none()
+			];
+		}
+
+		case 'removeAttachment': {
+			return [
+				{
+					...state,
+					pendingAttachments: state.pendingAttachments.filter(
+						(attachment) => attachment.id !== action.attachmentId
+					)
+				},
+				Effect.none()
+			];
+		}
+
+		case 'clearAttachments': {
+			return [
+				{
+					...state,
+					pendingAttachments: []
+				},
+				Effect.none()
+			];
+		}
+
 		case 'clearError': {
 			return [
 				{

@@ -6,6 +6,42 @@
  */
 
 /**
+ * Attachment metadata for images and videos
+ */
+export interface AttachmentMetadata {
+	/** Width in pixels (for images/videos) */
+	width?: number;
+	/** Height in pixels (for images/videos) */
+	height?: number;
+	/** Duration in seconds (for videos/audio) */
+	duration?: number;
+	/** Number of pages (for PDFs/documents) */
+	pageCount?: number;
+	/** Thumbnail URL (optional preview) */
+	thumbnail?: string;
+}
+
+/**
+ * File attachment for a message.
+ */
+export interface MessageAttachment {
+	/** Unique identifier for the attachment */
+	id: string;
+	/** Type of attachment */
+	type: 'image' | 'video' | 'pdf' | 'document' | 'audio' | 'file';
+	/** Original filename */
+	filename: string;
+	/** URL to the file (uploaded URL, data URL, or blob URL) */
+	url: string;
+	/** File size in bytes */
+	size: number;
+	/** MIME type */
+	mimeType: string;
+	/** Optional metadata */
+	metadata?: AttachmentMetadata;
+}
+
+/**
  * Individual chat message.
  */
 export interface Message {
@@ -13,6 +49,8 @@ export interface Message {
 	role: 'user' | 'assistant' | 'system';
 	content: string;
 	timestamp: number;
+	/** Optional file attachments */
+	attachments?: MessageAttachment[];
 }
 
 /**
@@ -48,6 +86,9 @@ export interface StreamingChatState {
 		messageId: string | null;
 		position: { x: number; y: number };
 	} | null;
+
+	/** Pending file attachments (before sending message) */
+	pendingAttachments: MessageAttachment[];
 }
 
 /**
@@ -74,6 +115,10 @@ export type StreamingChatAction =
 	// Context menu
 	| { type: 'openContextMenu'; messageId: string; position: { x: number; y: number } }
 	| { type: 'closeContextMenu' }
+	// File attachments
+	| { type: 'addAttachment'; attachment: MessageAttachment }
+	| { type: 'removeAttachment'; attachmentId: string }
+	| { type: 'clearAttachments' }
 	// Utility
 	| { type: 'clearError' }
 	| { type: 'clearMessages' }
@@ -114,6 +159,19 @@ export interface StreamingChatDependencies {
 	 * @default Date.now()
 	 */
 	getTimestamp?: () => number;
+
+	/**
+	 * Upload a file and return its URL.
+	 * Optional - if not provided, files will use blob URLs.
+	 *
+	 * @param file - File to upload
+	 * @param onProgress - Progress callback (loaded, total)
+	 * @returns Promise resolving to file URL
+	 */
+	uploadFile?: (
+		file: File,
+		onProgress?: (loaded: number, total: number) => void
+	) => Promise<string>;
 }
 
 /**
@@ -126,7 +184,8 @@ export function createInitialStreamingChatState(): StreamingChatState {
 		isWaitingForResponse: false,
 		error: null,
 		editingMessage: null,
-		contextMenu: null
+		contextMenu: null,
+		pendingAttachments: []
 	};
 }
 
