@@ -297,12 +297,12 @@ export function buildHistogram<T>(
           { y: 'count' },
           {
             x,
-            fill: color,
+            ...(color ? { fill: color as any } : {}),
             fillOpacity: 0.8,
             tip: true,
             ...(bins ? { thresholds: bins } : {}),
             ...(thresholds ? { thresholds } : {})
-          }
+          } as any
         )
       ),
 

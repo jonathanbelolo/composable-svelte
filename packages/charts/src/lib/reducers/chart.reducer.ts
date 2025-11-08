@@ -65,9 +65,7 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
           selection: {
             type: 'point',
             selectedData: [action.data],
-            selectedIndices: [action.index],
-            brushExtent: undefined,
-            range: undefined
+            selectedIndices: [action.index]
           }
         },
         Effect.none()
@@ -93,8 +91,7 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
             type: 'range',
             selectedData,
             selectedIndices,
-            range: action.range,
-            brushExtent: undefined
+            range: action.range
           }
         },
         Effect.none()
@@ -141,9 +138,7 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
           selection: {
             type: 'none',
             selectedData: [],
-            selectedIndices: [],
-            brushExtent: undefined,
-            range: undefined
+            selectedIndices: []
           }
         },
         Effect.none()
@@ -190,11 +185,12 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
 
     case 'zoomComplete': {
       // Animation finished
+      // Remove targetTransform by destructuring it out
+      const { targetTransform, ...restState } = state;
       return [
         {
-          ...state,
-          isAnimating: false,
-          targetTransform: undefined
+          ...restState,
+          isAnimating: false
         },
         Effect.none()
       ];

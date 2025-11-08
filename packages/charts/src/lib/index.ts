@@ -15,7 +15,6 @@ export type {
   ChartConfig,
   SelectionState,
   ZoomTransform,
-  TooltipState,
   PlotSpec,
   DataTransform,
   DataTransforms

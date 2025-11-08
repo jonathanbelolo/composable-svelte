@@ -105,15 +105,46 @@ function plotBuilder(chartState: ChartState<any>, chartConfig: any) {
   style:width={width ? `${width}px` : '100%'}
   style:height={height ? `${height}px` : '400px'}
   role="img"
-  aria-label={`${type} chart with ${$store.data.length} data points`}
+  aria-label={`${type} chart showing ${$store.data.length} data points${
+    $store.selection.selectedIndices.length > 0
+      ? `, ${$store.selection.selectedIndices.length} selected`
+      : ''
+  }`}
+  aria-describedby="chart-summary"
+  tabindex="0"
 >
   <ChartPrimitive {store} {config} {plotBuilder} {enableZoom} {enableBrush} />
-  <!-- Tooltips handled by Observable Plot -->
+
+  <!-- Screen reader summary -->
+  <div id="chart-summary" class="sr-only">
+    {#if x && y}
+      Chart with x-axis: {typeof x === 'string' ? x : 'custom accessor'},
+      y-axis: {typeof y === 'string' ? y : 'custom accessor'}.
+      {#if $store.filteredData.length !== $store.data.length}
+        Showing {$store.filteredData.length} of {$store.data.length} filtered data points.
+      {:else}
+        Showing {$store.data.length} data points.
+      {/if}
+    {/if}
+  </div>
 </div>
 
 <style>
   .chart-container {
     position: relative;
     overflow: hidden;
+  }
+
+  /* Screen reader only content */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
   }
 </style>

@@ -771,30 +771,30 @@ $effect(() => {
 ## Implementation Phases
 
 ### Phase 11A: Core Foundation (Week 1-2)
-- [ ] Chart component infrastructure
-- [ ] ChartPrimitive with Observable Plot integration
-- [ ] Basic chartReducer with data/spec management
-- [ ] Scatter plot example
-- [ ] Line chart example
+- [x] Chart component infrastructure
+- [x] ChartPrimitive with Observable Plot integration
+- [x] Basic chartReducer with data/spec management
+- [x] Scatter plot example
+- [x] Line chart example
 - [ ] Bar chart example
 - [ ] Unit tests for reducer
 
 ### Phase 11B: Interactivity (Week 3-4)
-- [ ] Tooltip system
-- [ ] Zoom/pan behavior
-- [ ] Brush selection
+- [x] Tooltip system (Observable Plot native tooltips)
+- [x] Zoom/pan behavior (with smooth spring animations)
+- [x] Brush selection
 - [ ] Keyboard navigation
-- [ ] Selection state management
-- [ ] Event delegation system
+- [x] Selection state management
+- [x] Event delegation system
 - [ ] Integration tests
 
 ### Phase 11C: Advanced Features (Week 5-6)
-- [ ] Data transforms (filter, group, aggregate)
-- [ ] Animation system
-- [ ] Responsive sizing
-- [ ] Accessibility (ARIA, keyboard)
-- [ ] Advanced chart types (heatmap, network, hierarchy)
-- [ ] Visual regression tests
+- [x] Data transforms (filter, group, aggregate, bin, rollup, topN, unique, sample)
+- [x] Animation system (smooth zoom transitions with requestAnimationFrame)
+- [x] Responsive sizing (ResizeObserver integration)
+- [x] Accessibility (Enhanced ARIA labels, screen reader summaries, tab-focusable)
+- [ ] Advanced chart types (heatmap, network, hierarchy) - DEFERRED to future
+- [x] Visual regression tests (Playwright setup with comprehensive test suite)
 
 ### Phase 11D: Polish & Documentation (Week 7-8)
 - [ ] Styleguide integration

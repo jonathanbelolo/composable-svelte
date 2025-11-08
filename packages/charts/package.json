@@ -30,6 +30,9 @@
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
+    "test:visual": "playwright test",
+    "test:visual:update": "playwright test --update-snapshots",
+    "test:visual:ui": "playwright test --ui",
     "prepublishOnly": "pnpm run build && pnpm run typecheck && SILENT_TESTS=true pnpm test",
     "prepack": "pnpm run build"
   },
