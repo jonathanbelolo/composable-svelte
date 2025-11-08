@@ -10,7 +10,10 @@ import type {
   LngLat,
   BBox,
   FlyToOptions,
-  Marker
+  Marker,
+  Layer,
+  LayerStyle,
+  Popup
 } from '../types/map.types';
 
 /**
@@ -20,6 +23,8 @@ import type {
 export class MaplibreAdapter implements MapAdapter {
   private map: maplibregl.Map | null = null;
   private markers: Map<string, maplibregl.Marker> = new Map();
+  private layers: Map<string, Layer> = new Map();
+  private popups: Map<string, maplibregl.Popup> = new Map();
 
   initialize(container: HTMLElement, options: MapInitOptions): void {
     this.map = new maplibregl.Map({
@@ -136,6 +141,71 @@ export class MaplibreAdapter implements MapAdapter {
     }
   }
 
+  addLayer(layer: Layer): void {
+    if (!this.map) return;
+
+    // Store layer reference
+    this.layers.set(layer.id, layer);
+
+    // TODO: Implement full layer rendering
+    // For now, this is a placeholder for Phase 12B
+    console.log(`Layer ${layer.id} added (implementation pending)`);
+  }
+
+  removeLayer(id: string): void {
+    if (!this.map) return;
+
+    if (this.map.getLayer(id)) {
+      this.map.removeLayer(id);
+    }
+    if (this.map.getSource(id)) {
+      this.map.removeSource(id);
+    }
+    this.layers.delete(id);
+  }
+
+  toggleLayerVisibility(id: string): void {
+    if (!this.map) return;
+
+    const layer = this.layers.get(id);
+    if (!layer) return;
+
+    const visibility = layer.visible ? 'visible' : 'none';
+    if (this.map.getLayer(id)) {
+      this.map.setLayoutProperty(id, 'visibility', visibility);
+    }
+  }
+
+  updateLayerStyle(id: string, style: Partial<LayerStyle>): void {
+    if (!this.map) return;
+
+    // TODO: Implement style updates
+    // This requires mapping LayerStyle to Maplibre paint properties
+    console.log(`Layer ${id} style updated (implementation pending)`, style);
+  }
+
+  openPopup(popup: Popup): void {
+    if (!this.map) return;
+
+    const maplibrePopup = new maplibregl.Popup({
+      closeButton: popup.closeButton ?? true,
+      closeOnClick: popup.closeOnClick ?? false
+    })
+      .setLngLat(popup.position)
+      .setHTML(popup.content)
+      .addTo(this.map);
+
+    this.popups.set(popup.id, maplibrePopup);
+  }
+
+  closePopup(id: string): void {
+    const popup = this.popups.get(id);
+    if (popup) {
+      popup.remove();
+      this.popups.delete(id);
+    }
+  }
+
   on(event: string, handler: Function): void {
     if (!this.map) return;
 
@@ -153,6 +223,21 @@ export class MaplibreAdapter implements MapAdapter {
     // Clean up markers
     this.markers.forEach((marker) => marker.remove());
     this.markers.clear();
+
+    // Clean up popups
+    this.popups.forEach((popup) => popup.remove());
+    this.popups.clear();
+
+    // Clean up layers
+    this.layers.forEach((layer) => {
+      if (this.map?.getLayer(layer.id)) {
+        this.map.removeLayer(layer.id);
+      }
+      if (this.map?.getSource(layer.id)) {
+        this.map.removeSource(layer.id);
+      }
+    });
+    this.layers.clear();
 
     // Destroy map
     this.map?.remove();

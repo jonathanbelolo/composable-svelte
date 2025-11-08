@@ -284,6 +284,135 @@ export const mapReducer: Reducer<MapState, MapAction, {}> = (
       ];
     }
 
+    // Layer actions
+    case 'addLayer': {
+      return [
+        {
+          ...state,
+          layers: [...state.layers, action.layer]
+        },
+        Effect.none()
+      ];
+    }
+
+    case 'removeLayer': {
+      return [
+        {
+          ...state,
+          layers: state.layers.filter((layer) => layer.id !== action.id)
+        },
+        Effect.none()
+      ];
+    }
+
+    case 'toggleLayerVisibility': {
+      return [
+        {
+          ...state,
+          layers: state.layers.map((layer) =>
+            layer.id === action.id ? { ...layer, visible: !layer.visible } : layer
+          )
+        },
+        Effect.none()
+      ];
+    }
+
+    case 'updateLayerStyle': {
+      return [
+        {
+          ...state,
+          layers: state.layers.map((layer) =>
+            layer.id === action.id
+              ? { ...layer, style: { ...layer.style, ...action.style } }
+              : layer
+          )
+        },
+        Effect.none()
+      ];
+    }
+
+    case 'clearLayers': {
+      return [
+        {
+          ...state,
+          layers: []
+        },
+        Effect.none()
+      ];
+    }
+
+    // Popup actions
+    case 'openPopup': {
+      return [
+        {
+          ...state,
+          popups: [...state.popups, { ...action.popup, isOpen: true }]
+        },
+        Effect.none()
+      ];
+    }
+
+    case 'closePopup': {
+      return [
+        {
+          ...state,
+          popups: state.popups.filter((popup) => popup.id !== action.id)
+        },
+        Effect.none()
+      ];
+    }
+
+    case 'closeAllPopups': {
+      return [
+        {
+          ...state,
+          popups: []
+        },
+        Effect.none()
+      ];
+    }
+
+    // Feature interaction actions
+    case 'featureHovered': {
+      return [
+        {
+          ...state,
+          hoveredFeature: action.feature
+        },
+        Effect.none()
+      ];
+    }
+
+    case 'featureUnhovered': {
+      return [
+        {
+          ...state,
+          hoveredFeature: null
+        },
+        Effect.none()
+      ];
+    }
+
+    case 'featureClicked': {
+      return [
+        {
+          ...state,
+          selectedFeatures: [...state.selectedFeatures, action.feature]
+        },
+        Effect.none()
+      ];
+    }
+
+    case 'clearSelection': {
+      return [
+        {
+          ...state,
+          selectedFeatures: []
+        },
+        Effect.none()
+      ];
+    }
+
     default: {
       const _exhaustive: never = action;
       return [state, Effect.none()];
@@ -319,6 +448,10 @@ export function createInitialMapState(config: {
     isDragging: false,
     isZooming: false,
     markers: config.markers ?? [],
+    layers: [],
+    popups: [],
+    hoveredFeature: null,
+    selectedFeatures: [],
     style:
       config.style ??
       (provider === 'maplibre'

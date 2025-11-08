@@ -45,6 +45,58 @@ export interface Marker {
 }
 
 /**
+ * GeoJSON types
+ */
+export type GeoJSON = any; // Full GeoJSON type would be complex, using any for now
+
+/**
+ * Layer style properties
+ */
+export interface LayerStyle {
+  fillColor?: string;
+  fillOpacity?: number;
+  strokeColor?: string;
+  strokeWidth?: number;
+  strokeOpacity?: number;
+  radius?: number;          // For points
+  intensity?: number;       // For heatmaps
+  colorGradient?: [number, string][]; // For heatmaps: [[0, 'blue'], [1, 'red']]
+}
+
+/**
+ * Map layer definition
+ */
+export interface Layer {
+  id: string;
+  type: 'geojson' | 'heatmap';
+  data: GeoJSON | string;  // GeoJSON object or URL
+  style: LayerStyle;
+  visible: boolean;
+  interactive: boolean;
+}
+
+/**
+ * Popup definition
+ */
+export interface Popup {
+  id: string;
+  position: LngLat;
+  content: string;
+  isOpen: boolean;
+  closeButton?: boolean;
+  closeOnClick?: boolean;
+}
+
+/**
+ * Feature reference (for hover/click interactions)
+ */
+export interface FeatureReference {
+  layer: string;
+  featureId: string | number;
+  data?: any;
+}
+
+/**
  * Map state structure
  */
 export interface MapState {
@@ -62,6 +114,16 @@ export interface MapState {
 
   // Markers
   markers: Marker[];
+
+  // Layers
+  layers: Layer[];
+
+  // Popups
+  popups: Popup[];
+
+  // Feature interactions
+  hoveredFeature: FeatureReference | null;
+  selectedFeatures: FeatureReference[];
 
   // Map settings
   style: string;  // Map style URL
@@ -98,6 +160,24 @@ export type MapAction =
   | { type: 'updateMarker'; id: string; updates: Partial<Marker> }
   | { type: 'moveMarker'; id: string; position: LngLat }
   | { type: 'clearMarkers' }
+
+  // Layer actions
+  | { type: 'addLayer'; layer: Layer }
+  | { type: 'removeLayer'; id: string }
+  | { type: 'toggleLayerVisibility'; id: string }
+  | { type: 'updateLayerStyle'; id: string; style: Partial<LayerStyle> }
+  | { type: 'clearLayers' }
+
+  // Popup actions
+  | { type: 'openPopup'; popup: Popup }
+  | { type: 'closePopup'; id: string }
+  | { type: 'closeAllPopups' }
+
+  // Feature interaction actions
+  | { type: 'featureHovered'; feature: FeatureReference }
+  | { type: 'featureUnhovered' }
+  | { type: 'featureClicked'; feature: FeatureReference }
+  | { type: 'clearSelection' }
 
   // Viewport change (dispatched by map component)
   | { type: 'viewportChanged'; viewport: MapViewport }
@@ -138,6 +218,12 @@ export interface MapAdapter {
   addMarker(marker: Marker): void;
   removeMarker(id: string): void;
   updateMarker(id: string, updates: Partial<Marker>): void;
+  addLayer(layer: Layer): void;
+  removeLayer(id: string): void;
+  toggleLayerVisibility(id: string): void;
+  updateLayerStyle(id: string, style: Partial<LayerStyle>): void;
+  openPopup(popup: Popup): void;
+  closePopup(id: string): void;
   on(event: string, handler: Function): void;
   off(event: string, handler: Function): void;
   destroy(): void;
