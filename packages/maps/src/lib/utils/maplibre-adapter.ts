@@ -147,20 +147,94 @@ export class MaplibreAdapter implements MapAdapter {
     // Store layer reference
     this.layers.set(layer.id, layer);
 
-    // TODO: Implement full layer rendering
-    // For now, this is a placeholder for Phase 12B
-    console.log(`Layer ${layer.id} added (implementation pending)`);
+    // Add GeoJSON source
+    const sourceData = typeof layer.data === 'string' ? layer.data : layer.data;
+
+    this.map.addSource(layer.id, {
+      type: 'geojson',
+      data: sourceData as any
+    });
+
+    // Add layer based on type
+    if (layer.type === 'geojson') {
+      // Determine geometry type for appropriate layer type
+      this.map.addLayer({
+        id: layer.id,
+        type: 'fill', // Default to fill, can be point/line based on geometry
+        source: layer.id,
+        paint: {
+          'fill-color': layer.style.fillColor ?? '#0080ff',
+          'fill-opacity': layer.style.fillOpacity ?? 0.5
+        },
+        layout: {
+          visibility: layer.visible ? 'visible' : 'none'
+        }
+      });
+
+      // Add stroke layer if stroke is defined
+      if (layer.style.strokeColor) {
+        this.map.addLayer({
+          id: `${layer.id}-stroke`,
+          type: 'line',
+          source: layer.id,
+          paint: {
+            'line-color': layer.style.strokeColor,
+            'line-width': layer.style.strokeWidth ?? 1,
+            'line-opacity': layer.style.strokeOpacity ?? 1
+          },
+          layout: {
+            visibility: layer.visible ? 'visible' : 'none'
+          }
+        });
+      }
+    } else if (layer.type === 'heatmap') {
+      // Build color gradient for heatmap
+      const colorGradient = layer.style.colorGradient ?? [
+        [0, 'rgba(0, 0, 255, 0)'],
+        [0.5, 'rgba(0, 255, 0, 1)'],
+        [1, 'rgba(255, 0, 0, 1)']
+      ];
+
+      // Flatten gradient to Maplibre format: [stop1, color1, stop2, color2, ...]
+      const heatmapColor: any[] = ['interpolate', ['linear'], ['heatmap-density']];
+      colorGradient.forEach(([stop, color]) => {
+        heatmapColor.push(stop, color);
+      });
+
+      this.map.addLayer({
+        id: layer.id,
+        type: 'heatmap',
+        source: layer.id,
+        paint: {
+          'heatmap-intensity': layer.style.intensity ?? 1,
+          'heatmap-radius': layer.style.radius ?? 20,
+          'heatmap-color': heatmapColor as any // Maplibre expression type is complex
+        },
+        layout: {
+          visibility: layer.visible ? 'visible' : 'none'
+        }
+      });
+    }
   }
 
   removeLayer(id: string): void {
     if (!this.map) return;
 
+    // Remove main layer
     if (this.map.getLayer(id)) {
       this.map.removeLayer(id);
     }
+
+    // Remove stroke layer if it exists
+    if (this.map.getLayer(`${id}-stroke`)) {
+      this.map.removeLayer(`${id}-stroke`);
+    }
+
+    // Remove source
     if (this.map.getSource(id)) {
       this.map.removeSource(id);
     }
+
     this.layers.delete(id);
   }
 
@@ -171,17 +245,70 @@ export class MaplibreAdapter implements MapAdapter {
     if (!layer) return;
 
     const visibility = layer.visible ? 'visible' : 'none';
+
+    // Toggle main layer
     if (this.map.getLayer(id)) {
       this.map.setLayoutProperty(id, 'visibility', visibility);
+    }
+
+    // Toggle stroke layer if it exists
+    if (this.map.getLayer(`${id}-stroke`)) {
+      this.map.setLayoutProperty(`${id}-stroke`, 'visibility', visibility);
     }
   }
 
   updateLayerStyle(id: string, style: Partial<LayerStyle>): void {
     if (!this.map) return;
 
-    // TODO: Implement style updates
-    // This requires mapping LayerStyle to Maplibre paint properties
-    console.log(`Layer ${id} style updated (implementation pending)`, style);
+    const layer = this.layers.get(id);
+    if (!layer) return;
+
+    // Update layer style reference
+    this.layers.set(id, {
+      ...layer,
+      style: { ...layer.style, ...style }
+    });
+
+    // Update Maplibre paint properties based on layer type
+    if (layer.type === 'geojson') {
+      // Update fill properties
+      if (style.fillColor !== undefined && this.map.getLayer(id)) {
+        this.map.setPaintProperty(id, 'fill-color', style.fillColor);
+      }
+      if (style.fillOpacity !== undefined && this.map.getLayer(id)) {
+        this.map.setPaintProperty(id, 'fill-opacity', style.fillOpacity);
+      }
+
+      // Update stroke properties if stroke layer exists
+      const strokeLayerId = `${id}-stroke`;
+      if (this.map.getLayer(strokeLayerId)) {
+        if (style.strokeColor !== undefined) {
+          this.map.setPaintProperty(strokeLayerId, 'line-color', style.strokeColor);
+        }
+        if (style.strokeWidth !== undefined) {
+          this.map.setPaintProperty(strokeLayerId, 'line-width', style.strokeWidth);
+        }
+        if (style.strokeOpacity !== undefined) {
+          this.map.setPaintProperty(strokeLayerId, 'line-opacity', style.strokeOpacity);
+        }
+      }
+    } else if (layer.type === 'heatmap') {
+      // Update heatmap properties
+      if (style.intensity !== undefined && this.map.getLayer(id)) {
+        this.map.setPaintProperty(id, 'heatmap-intensity', style.intensity);
+      }
+      if (style.radius !== undefined && this.map.getLayer(id)) {
+        this.map.setPaintProperty(id, 'heatmap-radius', style.radius);
+      }
+      if (style.colorGradient !== undefined && this.map.getLayer(id)) {
+        // Build color gradient expression
+        const heatmapColor: any[] = ['interpolate', ['linear'], ['heatmap-density']];
+        style.colorGradient.forEach(([stop, color]) => {
+          heatmapColor.push(stop, color);
+        });
+        this.map.setPaintProperty(id, 'heatmap-color', heatmapColor as any);
+      }
+    }
   }
 
   openPopup(popup: Popup): void {

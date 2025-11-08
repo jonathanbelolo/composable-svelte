@@ -67,6 +67,34 @@ $effect(() => {
   });
 });
 
+// Sync layers when state changes
+$effect(() => {
+  if (!mapAdapter) return;
+
+  const currentLayers = $store.layers;
+
+  // Simple sync: remove all, add all
+  // TODO: Optimize with diff algorithm
+  currentLayers.forEach((layer) => {
+    mapAdapter!.addLayer(layer);
+  });
+});
+
+// Sync popups when state changes
+$effect(() => {
+  if (!mapAdapter) return;
+
+  const currentPopups = $store.popups;
+
+  // Simple sync: remove all, add all
+  // TODO: Optimize with diff algorithm
+  currentPopups.forEach((popup) => {
+    if (popup.isOpen) {
+      mapAdapter!.openPopup(popup);
+    }
+  });
+});
+
 // Sync viewport when state changes (but not during interaction)
 $effect(() => {
   if (!mapAdapter || $store.isDragging || $store.isZooming) return;

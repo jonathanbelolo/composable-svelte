@@ -37,6 +37,9 @@ export { mapReducer, createInitialMapState } from './reducers/map.reducer';
 // ============================================================================
 export { default as Map } from './components/Map.svelte';
 export { default as MapPrimitive } from './components/MapPrimitive.svelte';
+export { default as GeoJSONLayer } from './components/GeoJSONLayer.svelte';
+export { default as HeatmapLayer } from './components/HeatmapLayer.svelte';
+export { default as MapPopup } from './components/Popup.svelte';
 
 // ============================================================================
 // Utils
