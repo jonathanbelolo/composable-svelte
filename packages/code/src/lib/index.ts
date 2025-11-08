@@ -157,3 +157,25 @@ export {
 	type VoiceInputAction,
 	type VoiceInputDependencies
 } from './voice-input/index';
+
+// AudioPlayer - Embeddable audio player with playlist support
+export {
+	MinimalAudioPlayer,
+	FullAudioPlayer,
+	PlaylistView,
+	audioPlayerReducer,
+	createInitialAudioPlayerState,
+	createShuffleOrder,
+	getNextTrackIndex,
+	getPreviousTrackIndex,
+	AudioManager as AudioPlayerManager,
+	createAudioManager as createAudioPlayerManager,
+	getAudioManager as getAudioPlayerManager,
+	deleteAudioManager as deleteAudioPlayerManager,
+	type AudioTrack,
+	type LoopMode,
+	type AudioPlayerState,
+	type AudioPlayerAction,
+	type AudioPlayerDependencies,
+	type AudioManagerConfig as AudioPlayerManagerConfig
+} from './audio-player/index';

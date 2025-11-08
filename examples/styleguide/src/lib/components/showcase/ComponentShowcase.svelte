@@ -52,6 +52,7 @@
   import StreamingChatDemo from '../demos/StreamingChatDemo.svelte';
   import VoiceInputDemo from '../demos/VoiceInputDemo.svelte';
   import CollaborativeChatDemo from '../demos/CollaborativeChatDemo.svelte';
+  import AudioPlayerDemo from '../demos/AudioPlayerDemo.svelte';
   // Typography
   import HeadingDemo from '../demos/HeadingDemo.svelte';
   import TextDemo from '../demos/TextDemo.svelte';
@@ -124,6 +125,7 @@
     'streaming-chat': StreamingChatDemo,
     'voice-input': VoiceInputDemo,
     'collaborative-chat': CollaborativeChatDemo,
+    'audio-player': AudioPlayerDemo,
     // Typography
     'heading': HeadingDemo,
     'text': TextDemo,

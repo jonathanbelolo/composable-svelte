@@ -85,6 +85,7 @@ export const COMPONENT_REGISTRY: ComponentInfo[] = [
   { id: 'streaming-chat', name: 'Streaming Chat', category: 'Code Components', description: 'Transport-agnostic streaming chat interface for LLM interactions' },
   { id: 'voice-input', name: 'Voice Input', category: 'Code Components', description: 'Standalone voice input with push-to-talk and conversation modes' },
   { id: 'collaborative-chat', name: 'Collaborative Chat', category: 'Code Components', description: 'Real-time presence tracking, typing indicators, and live cursors for multi-user chat' },
+  { id: 'audio-player', name: 'Audio Player', category: 'Code Components', description: 'Embeddable audio player with playlist support, advanced controls, and modal expansion' },
 
   // Typography
   { id: 'heading', name: 'Heading', category: 'Typography', description: 'Semantic heading component' },

@@ -21,6 +21,48 @@ This repository contains **Composable Svelte**, a Composable Architecture librar
   - **WebSocket**: Real-time communication, reconnection, channels, heartbeat (140 tests)
   - **Dependencies**: Clock (MockClock), Storage (localStorage/cookies) (118 tests)
 
+## ⚠️ CRITICAL: Composable Svelte Skill
+
+**IMPORTANT**: When implementing or modifying **ANY** components in this repository, you **MUST** proactively load and follow the guidance in `.claude/skills/composable-svelte-frontend.md`.
+
+This skill contains **critical patterns** that prevent common bugs:
+
+### Most Important Patterns
+
+1. **Store Subscription Pattern** ⭐ **CRITICAL**
+   - ✅ **ALWAYS USE**: `$store.property` for automatic subscription
+   - ❌ **NEVER USE**: `store.state.property` - this does NOT subscribe and causes reactivity bugs
+   - Example:
+     ```svelte
+     // ✅ CORRECT
+     const state = $derived($store);
+     {#if $store.isLoading}
+
+     // ❌ WRONG - Will not react to changes!
+     const state = $derived(store.state);
+     {#if store.state.isLoading}
+     ```
+
+2. **State Management Rules**
+   - What belongs in store state vs local component state
+   - When to use `$state` vs `$derived`
+
+3. **Animation Patterns**
+   - State-driven animations with Motion One
+   - PresentationState lifecycle management
+
+4. **Testing Patterns**
+   - TestStore usage and best practices
+
+### When to Load the Skill
+
+- **Before** writing any new component
+- **Before** modifying existing components
+- **When** debugging reactivity issues
+- **Any time** you're unsure about a pattern
+
+**The skill exists to prevent bugs - use it proactively, not reactively!**
+
 ## Repository Structure
 
 ```
@@ -69,6 +111,8 @@ composable-svelte/
 │   ├── phase-1/ through phase-9/    # Detailed phase documentation
 │   └── implementation-plan.md       # Original roadmap
 └── .claude/
+    ├── skills/
+    │   └── composable-svelte-frontend.md  # ⭐ CRITICAL patterns (ALWAYS use!)
     └── settings.local.json          # Claude Code configuration
 ```
 
