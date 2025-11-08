@@ -1,21 +1,67 @@
 /**
  * @file data-transforms.ts
- * Data transformation utilities for chart data processing
- * Supports filtering, grouping, aggregation, sorting, binning, and rolling windows
+ * @description
+ * Composable data transformation utilities for chart data processing.
+ * All transforms follow the functional pattern: (data: T[]) => T[] or Record<K, V>
+ *
+ * Transforms can be composed using the `compose()` function for declarative
+ * data pipelines.
+ *
+ * @example
+ * ```typescript
+ * import { DataTransforms } from '@composable-svelte/charts';
+ *
+ * // Compose multiple transforms
+ * const transform = DataTransforms.compose(
+ *   DataTransforms.filter(d => d.value > 100),
+ *   DataTransforms.sortBy('date', 'desc'),
+ *   DataTransforms.topN(10, 'value')
+ * );
+ *
+ * const result = transform(data);
+ * ```
  */
 
 import type { DataTransform } from '../types/chart.types';
 import { bin as d3Bin, extent, mean as d3Mean, median as d3Median, sum as d3Sum } from 'd3-array';
 
 /**
- * Filter data by a predicate
+ * @function filter
+ * @description
+ * Creates a transform that filters data by a predicate function.
+ *
+ * @example
+ * ```typescript
+ * const filterHighValues = filter(d => d.value > 100);
+ * const result = filterHighValues(data);
+ * ```
+ *
+ * @template T - Type of data items
+ * @param {(d: T) => boolean} predicate - Filter predicate
+ * @returns {DataTransform<T>} Transform function
  */
 export function filter<T>(predicate: (d: T) => boolean): DataTransform<T> {
   return (data: T[]) => data.filter(predicate);
 }
 
 /**
- * Sort data by a field
+ * @function sortBy
+ * @description
+ * Creates a transform that sorts data by a field or accessor function.
+ *
+ * @example
+ * ```typescript
+ * // Sort by field
+ * const sortByValue = sortBy('value', 'desc');
+ *
+ * // Sort by accessor
+ * const sortByComputed = sortBy(d => d.x * d.y, 'asc');
+ * ```
+ *
+ * @template T - Type of data items
+ * @param {keyof T | ((d: T) => any)} field - Field name or accessor
+ * @param {'asc' | 'desc'} [order='asc'] - Sort order
+ * @returns {DataTransform<T>} Transform function
  */
 export function sortBy<T>(
   field: keyof T | ((d: T) => any),
@@ -105,7 +151,37 @@ export function aggregate<T>(
 }
 
 /**
- * Compose multiple transforms
+ * @function compose
+ * @description
+ * Composes multiple transforms into a single transform function.
+ * Transforms are applied left-to-right (first transform receives original data).
+ *
+ * This enables declarative data pipelines:
+ * ```typescript
+ * const pipeline = compose(
+ *   filter(d => d.active),
+ *   sortBy('date', 'desc'),
+ *   topN(10, 'score')
+ * );
+ * const result = pipeline(data);
+ * ```
+ *
+ * @example
+ * ```typescript
+ * // Filter, sort, then take top 5
+ * const transform = compose(
+ *   filter(d => d.category === 'A'),
+ *   sortBy('value', 'desc'),
+ *   topN(5, 'value')
+ * );
+ *
+ * const result = transform(data);
+ * // Result: Top 5 category A items by value
+ * ```
+ *
+ * @template T - Type of data items
+ * @param {...DataTransform<T>} transforms - Transform functions to compose
+ * @returns {DataTransform<T>} Composed transform function
  */
 export function compose<T>(...transforms: DataTransform<T>[]): DataTransform<T> {
   return (data: T[]) => {
@@ -114,8 +190,33 @@ export function compose<T>(...transforms: DataTransform<T>[]): DataTransform<T> 
 }
 
 /**
- * Bin data into discrete intervals (for histograms)
- * Returns binned data with added bin metadata
+ * @function binData
+ * @description
+ * Creates a transform that bins continuous data into discrete intervals.
+ * Useful for creating histograms or grouping continuous values.
+ *
+ * Each data point is augmented with:
+ * - `binIndex`: Index of the bin (0-based)
+ * - `binStart`: Lower bound of the bin
+ * - `binEnd`: Upper bound of the bin
+ *
+ * Uses D3's bin() under the hood for optimal bin calculation.
+ *
+ * @example
+ * ```typescript
+ * // Bin values into 10 equal intervals
+ * const bin10 = binData('value', 10);
+ * const binned = bin10(data);
+ * // Each item now has binIndex, binStart, binEnd
+ *
+ * // Custom thresholds
+ * const binCustom = binData('value', [0, 50, 100, 150]);
+ * ```
+ *
+ * @template T - Type of data items
+ * @param {keyof T | ((d: T) => number)} field - Field to bin or accessor
+ * @param {number | number[]} thresholds - Number of bins or explicit thresholds
+ * @returns Transform function that adds bin metadata
  */
 export function binData<T>(
   field: keyof T | ((d: T) => number),

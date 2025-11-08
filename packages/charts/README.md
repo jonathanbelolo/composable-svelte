@@ -2,7 +2,7 @@
 
 > Interactive data visualization components for Composable Svelte
 
-**Status**: 🚧 **Early Development** (Phase 11)
+**Status**: ✅ **Feature Complete** (Phase 11C)
 
 ## Overview
 
@@ -12,11 +12,12 @@
 
 - 🎯 **State-Driven**: All chart state managed via reducers (data, selections, zoom, tooltips)
 - 🎨 **Observable Plot**: Declarative chart specifications with concise, powerful API
-- 🖱️ **Interactive**: Zoom, pan, brush selection, tooltips, and filtering
-- ⚡ **Performant**: GPU-accelerated animations via Motion One
+- 🖱️ **Interactive**: Zoom, pan, brush selection, and smooth animations
+- 🔄 **Data Transforms**: Composable transforms (filter, sort, group, bin, rollup, topN)
+- ⚡ **Performant**: GPU-accelerated animations with `requestAnimationFrame`
 - ♿ **Accessible**: ARIA labels, keyboard navigation, screen reader support
-- 📱 **Responsive**: Automatic container-based sizing
-- 🧪 **Testable**: TestStore integration for exhaustive interaction testing
+- 📱 **Responsive**: Automatic container-based sizing with ResizeObserver
+- 🧪 **Testable**: Comprehensive integration and visual regression tests (34 tests)
 
 ## Installation
 
@@ -68,19 +69,47 @@ const store = createStore({
 
 ## Chart Types
 
-### Phase 11A: Core Charts (In Development)
-- ⏳ **Scatter Plot** - Points with interactive selection
-- ⏳ **Line Chart** - Time series with zoom/pan
-- ⏳ **Bar Chart** - Categorical data with tooltips
-- ⏳ **Area Chart** - Filled time series
-- ⏳ **Histogram** - Distribution visualization with brushing
+### Available Charts
+- ✅ **Scatter Plot** - Points with interactive selection
+- ✅ **Line Chart** - Time series with zoom/pan
+- ✅ **Bar Chart** - Categorical data with tooltips
+- ✅ **Area Chart** - Filled time series
+- ✅ **Histogram** - Distribution visualization with brushing
 
-### Phase 11B: Advanced Charts (Planned)
+### Future Charts (Deferred)
 - 📋 **Heatmap** - 2D density with color scales
-- 📋 **Box Plot** - Statistical summaries
-- 📋 **Violin Plot** - Distribution shapes
 - 📋 **Network Graph** - Force-directed layouts
 - 📋 **Tree/Hierarchy** - Tree layouts, sunburst, treemap
+
+## Data Transforms
+
+Transform your data declaratively before visualization:
+
+```typescript
+import { DataTransforms } from '@composable-svelte/charts';
+
+// Compose multiple transforms
+const pipeline = DataTransforms.compose(
+  DataTransforms.filter(d => d.active),
+  DataTransforms.sortBy('value', 'desc'),
+  DataTransforms.topN(10, 'value')
+);
+
+const transformed = pipeline(data);
+```
+
+### Available Transforms
+
+- **`filter(predicate)`** - Filter data by predicate function
+- **`sortBy(field, order)`** - Sort by field ('asc' or 'desc')
+- **`groupBy(key)`** - Group data into Record<string, T[]>
+- **`aggregate(operation, field)`** - Aggregate (sum, mean, median, count, min, max)
+- **`binData(field, thresholds)`** - Bin continuous data for histograms
+- **`rollup(window, field, operation)`** - Rolling window aggregation
+- **`topN(n, field)`** - Top N items by field value
+- **`unique(field)`** - Remove duplicates by field
+- **`sample(n)`** - Random sample of n items
+- **`compose(...transforms)`** - Compose multiple transforms into pipeline
 
 ## API
 
@@ -226,14 +255,20 @@ await store.send(
 
 ## Development Status
 
-This package is under active development as part of Phase 11. See the [Phase 11 Plan](../../plans/phase-11/PHASE-11-PLAN.md) for detailed roadmap.
+**Phase 11C Complete!** See the [Phase 11 Plan](../../plans/phase-11/PHASE-11-PLAN.md) for detailed roadmap.
 
-### Current Progress
-- ✅ Core types defined
-- ✅ Chart reducer implemented
-- ⏳ Components in progress
-- ⏳ Interactive behaviors in progress
-- ⏳ Animation system in progress
+### Completed Features
+- ✅ Core types and interfaces
+- ✅ Chart reducer with full state management
+- ✅ Chart and ChartPrimitive components
+- ✅ Interactive behaviors (zoom, pan, brush selection)
+- ✅ Smooth animation system with requestAnimationFrame
+- ✅ Data transformation utilities (10 transforms)
+- ✅ Responsive sizing with ResizeObserver
+- ✅ Accessibility features (ARIA, keyboard, screen reader)
+- ✅ Comprehensive integration tests (34 tests)
+- ✅ Visual regression test framework
+- ✅ Complete JSDoc documentation
 
 ## Dependencies
 

@@ -143,7 +143,7 @@ describe('chartReducer', () => {
   });
 
   describe('resetZoom', () => {
-    it('resets zoom to identity transform', () => {
+    it('initiates animated reset to identity transform', () => {
       const initialState = createInitialChartState({});
 
       // First zoom
@@ -153,63 +153,21 @@ describe('chartReducer', () => {
         {}
       );
 
-      // Then reset
+      // Then reset - should initiate animation
       const [resetState] = chartReducer(
         zoomedState,
         { type: 'resetZoom' },
         {}
       );
 
-      expect(resetState.transform).toEqual({ x: 0, y: 0, k: 1 });
+      expect(resetState.isAnimating).toBe(true);
+      expect(resetState.targetTransform).toEqual({ x: 0, y: 0, k: 1 });
+      // Transform doesn't change immediately - component will animate
+      expect(resetState.transform).toEqual({ x: 10, y: 20, k: 2 });
     });
   });
 
-  describe('tooltip', () => {
-    it('shows tooltip with data and position', () => {
-      const data = [{ x: 1, y: 10 }];
-      const initialState = createInitialChartState({ data });
-
-      const [newState] = chartReducer(
-        initialState,
-        {
-          type: 'showTooltip',
-          data: data[0],
-          position: { x: 100, y: 200 }
-        },
-        {}
-      );
-
-      expect(newState.tooltip.visible).toBe(true);
-      expect(newState.tooltip.data).toEqual(data[0]);
-      expect(newState.tooltip.position).toEqual({ x: 100, y: 200 });
-    });
-
-    it('hides tooltip', () => {
-      const data = [{ x: 1, y: 10 }];
-      const initialState = createInitialChartState({ data });
-
-      // First show
-      const [shownState] = chartReducer(
-        initialState,
-        {
-          type: 'showTooltip',
-          data: data[0],
-          position: { x: 100, y: 200 }
-        },
-        {}
-      );
-
-      // Then hide
-      const [hiddenState] = chartReducer(
-        shownState,
-        { type: 'hideTooltip' },
-        {}
-      );
-
-      expect(hiddenState.tooltip.visible).toBe(false);
-      expect(hiddenState.tooltip.data).toBe(null);
-    });
-  });
+  // Tooltip tests removed - tooltips are now handled natively by Observable Plot
 
   describe('resize', () => {
     it('updates dimensions', () => {
@@ -259,7 +217,7 @@ describe('createInitialChartState', () => {
     expect(state.dimensions).toEqual({ width: 600, height: 400 });
     expect(state.selection.type).toBe('none');
     expect(state.transform).toEqual({ x: 0, y: 0, k: 1 });
-    expect(state.tooltip.visible).toBe(false);
+    // Tooltip removed - handled by Observable Plot
     expect(state.isAnimating).toBe(false);
   });
 

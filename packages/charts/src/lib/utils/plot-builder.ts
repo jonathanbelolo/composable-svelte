@@ -23,19 +23,29 @@ export function buildScatterPlot<T>(
   if (config.xDomain && config.xDomain !== 'auto') {
     xDomain = config.xDomain as [number, number];
   } else {
-    xDomain = calculateDomain(filteredData, x);
+    const calculatedXDomain = calculateDomain(filteredData, x);
+    if (calculatedXDomain && typeof calculatedXDomain[0] === 'number') {
+      xDomain = calculatedXDomain as [number, number];
+    }
   }
 
   if (config.yDomain && config.yDomain !== 'auto') {
     yDomain = config.yDomain as [number, number];
   } else {
-    yDomain = calculateDomain(filteredData, y);
+    const calculatedYDomain = calculateDomain(filteredData, y);
+    if (calculatedYDomain && typeof calculatedYDomain[0] === 'number') {
+      yDomain = calculatedYDomain as [number, number];
+    }
   }
 
-  // Apply zoom transform
+  // Apply zoom transform (only to numeric domains)
   if (transform.k !== 1 || transform.x !== 0 || transform.y !== 0) {
-    xDomain = applyZoomToDomain(xDomain, transform, 'x');
-    yDomain = applyZoomToDomain(yDomain, transform, 'y');
+    if (xDomain) {
+      xDomain = applyZoomToDomain(xDomain, transform, 'x');
+    }
+    if (yDomain) {
+      yDomain = applyZoomToDomain(yDomain, transform, 'y');
+    }
   }
 
   // Check if we have selections
@@ -76,8 +86,8 @@ export function buildScatterPlot<T>(
       Plot.axisY({ label: null })
     ],
 
-    x: { domain: xDomain },
-    y: { domain: yDomain }
+    ...(xDomain ? { x: { domain: xDomain } } : {}),
+    ...(yDomain ? { y: { domain: yDomain } } : {})
   });
 }
 
@@ -98,19 +108,30 @@ export function buildLineChart<T>(
   if (config.xDomain && config.xDomain !== 'auto') {
     xDomain = config.xDomain as [number, number];
   } else {
-    xDomain = calculateDomain(filteredData, x);
+    const calculatedXDomain = calculateDomain(filteredData, x);
+    // Only set domain if it's numeric (not temporal)
+    if (calculatedXDomain && typeof calculatedXDomain[0] === 'number') {
+      xDomain = calculatedXDomain as [number, number];
+    }
   }
 
   if (config.yDomain && config.yDomain !== 'auto') {
     yDomain = config.yDomain as [number, number];
   } else {
-    yDomain = calculateDomain(filteredData, y);
+    const calculatedYDomain = calculateDomain(filteredData, y);
+    if (calculatedYDomain && typeof calculatedYDomain[0] === 'number') {
+      yDomain = calculatedYDomain as [number, number];
+    }
   }
 
-  // Apply zoom transform
+  // Apply zoom transform (only to numeric domains)
   if (transform.k !== 1 || transform.x !== 0 || transform.y !== 0) {
-    xDomain = applyZoomToDomain(xDomain, transform, 'x');
-    yDomain = applyZoomToDomain(yDomain, transform, 'y');
+    if (xDomain) {
+      xDomain = applyZoomToDomain(xDomain, transform, 'x');
+    }
+    if (yDomain) {
+      yDomain = applyZoomToDomain(yDomain, transform, 'y');
+    }
   }
 
   return Plot.plot({
@@ -149,8 +170,8 @@ export function buildLineChart<T>(
       Plot.axisY({ label: null })
     ],
 
-    x: { domain: xDomain },
-    y: { domain: yDomain }
+    ...(xDomain ? { x: { domain: xDomain } } : {}),
+    ...(yDomain ? { y: { domain: yDomain } } : {})
   });
 }
 
@@ -213,19 +234,30 @@ export function buildAreaChart<T>(
   if (config.xDomain && config.xDomain !== 'auto') {
     xDomain = config.xDomain as [number, number];
   } else {
-    xDomain = calculateDomain(filteredData, x);
+    const calculatedXDomain = calculateDomain(filteredData, x);
+    // Only set domain if it's numeric (not temporal)
+    if (calculatedXDomain && typeof calculatedXDomain[0] === 'number') {
+      xDomain = calculatedXDomain as [number, number];
+    }
   }
 
   if (config.yDomain && config.yDomain !== 'auto') {
     yDomain = config.yDomain as [number, number];
   } else {
-    yDomain = calculateDomain(filteredData, y);
+    const calculatedYDomain = calculateDomain(filteredData, y);
+    if (calculatedYDomain && typeof calculatedYDomain[0] === 'number') {
+      yDomain = calculatedYDomain as [number, number];
+    }
   }
 
-  // Apply zoom transform
+  // Apply zoom transform (only to numeric domains)
   if (transform.k !== 1 || transform.x !== 0 || transform.y !== 0) {
-    xDomain = applyZoomToDomain(xDomain, transform, 'x');
-    yDomain = applyZoomToDomain(yDomain, transform, 'y');
+    if (xDomain) {
+      xDomain = applyZoomToDomain(xDomain, transform, 'x');
+    }
+    if (yDomain) {
+      yDomain = applyZoomToDomain(yDomain, transform, 'y');
+    }
   }
 
   return Plot.plot({
@@ -263,8 +295,8 @@ export function buildAreaChart<T>(
       Plot.axisY({ label: null })
     ],
 
-    x: { domain: xDomain },
-    y: { domain: yDomain }
+    ...(xDomain ? { x: { domain: xDomain } } : {}),
+    ...(yDomain ? { y: { domain: yDomain } } : {})
   });
 }
 
@@ -368,24 +400,34 @@ export function applyZoomToDomain(
 
 /**
  * Calculate domain from data
- * Returns [min, max] for numeric data
+ * Returns [min, max] for numeric data or temporal data
  */
 export function calculateDomain<T>(
   data: T[],
-  accessor: string | ((d: T) => number)
-): [number, number] {
+  accessor: string | ((d: T) => number | Date)
+): [number, number] | [Date, Date] | undefined {
   if (data.length === 0) return [0, 1];
 
   const getValue = typeof accessor === 'string'
     ? (d: T) => (d as any)[accessor]
     : accessor;
 
-  const values = data.map(getValue).filter((v): v is number => typeof v === 'number' && !isNaN(v));
+  const values = data.map(getValue);
 
-  if (values.length === 0) return [0, 1];
+  // Check if values are Date objects
+  const firstValue = values.find(v => v != null);
+  if (firstValue instanceof Date) {
+    // For dates, return undefined to let Observable Plot infer the domain
+    return undefined;
+  }
 
-  const min = Math.min(...values);
-  const max = Math.max(...values);
+  // Filter to only numeric values
+  const numericValues = values.filter((v): v is number => typeof v === 'number' && !isNaN(v));
+
+  if (numericValues.length === 0) return [0, 1];
+
+  const min = Math.min(...numericValues);
+  const max = Math.max(...numericValues);
 
   // Add 5% padding
   const padding = (max - min) * 0.05;
