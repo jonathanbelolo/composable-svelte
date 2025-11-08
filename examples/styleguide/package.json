@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@composable-svelte/charts": "workspace:*",
     "@composable-svelte/code": "workspace:*",
     "@composable-svelte/core": "workspace:*",
     "@xyflow/svelte": "^1.4.1",

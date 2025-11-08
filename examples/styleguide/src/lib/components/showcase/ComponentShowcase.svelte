@@ -45,6 +45,10 @@
   import EmptyDemo from '../demos/EmptyDemo.svelte';
   import CarouselDemo from '../demos/CarouselDemo.svelte';
   import TreeViewDemo from '../demos/TreeViewDemo.svelte';
+  // Data Visualization
+  import ScatterChartDemo from '../demos/ScatterChartDemo.svelte';
+  import LineChartDemo from '../demos/LineChartDemo.svelte';
+  import BarChartDemo from '../demos/BarChartDemo.svelte';
   // Code Components
   import CodeHighlightDemo from '../demos/CodeHighlightDemo.svelte';
   import CodeEditorDemo from '../demos/CodeEditorDemo.svelte';
@@ -118,6 +122,10 @@
     'empty': EmptyDemo,
     'carousel': CarouselDemo,
     'tree-view': TreeViewDemo,
+    // Data Visualization
+    'scatter-chart': ScatterChartDemo,
+    'line-chart': LineChartDemo,
+    'bar-chart': BarChartDemo,
     // Code Components
     'code-highlight': CodeHighlightDemo,
     'code-editor': CodeEditorDemo,

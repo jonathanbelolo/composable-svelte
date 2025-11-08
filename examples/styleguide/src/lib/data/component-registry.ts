@@ -14,6 +14,7 @@ export const COMPONENT_CATEGORIES = [
   'Form System',
   'Form Components - Advanced',
   'Data Display',
+  'Data Visualization',
   'Code Components',
   'Foundational Components',
   'Typography',
@@ -77,6 +78,11 @@ export const COMPONENT_REGISTRY: ComponentInfo[] = [
   { id: 'empty', name: 'Empty', category: 'Data Display', description: 'Empty state placeholder' },
   { id: 'carousel', name: 'Carousel', category: 'Data Display', description: 'Sliding content carousel with navigation' },
   { id: 'tree-view', name: 'Tree View', category: 'Data Display', description: 'Hierarchical tree with expand/collapse' },
+
+  // Data Visualization
+  { id: 'scatter-chart', name: 'Scatter Chart', category: 'Data Visualization', description: 'Interactive scatter plot with tooltips and selection - powered by Observable Plot' },
+  { id: 'line-chart', name: 'Line Chart', category: 'Data Visualization', description: 'Time series line chart with hover interactions - state-driven visualization' },
+  { id: 'bar-chart', name: 'Bar Chart', category: 'Data Visualization', description: 'Categorical bar chart with selection support - built with Composable Architecture' },
 
   // Code Components
   { id: 'code-highlight', name: 'Code Highlight', category: 'Code Components', description: 'Syntax highlighting for code snippets with Prism.js' },

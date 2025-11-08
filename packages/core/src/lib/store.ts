@@ -59,9 +59,6 @@ export function createStore<State, Action, Dependencies = any>(
    * Core dispatch logic (before middleware).
    */
   function dispatchCore(action: Action): void {
-    console.log('[Store] Dispatching action:', action);
-    console.log('[Store] Current subscribers count:', subscribers.size);
-
     // Record action (with optional size limit)
     if (config.maxHistorySize === undefined || config.maxHistorySize > 0) {
       actionHistory.push(action);
@@ -79,21 +76,15 @@ export function createStore<State, Action, Dependencies = any>(
       config.dependencies as Dependencies
     );
 
-    console.log('[Store] Old state:', state);
-    console.log('[Store] New state:', newState);
-    console.log('[Store] State changed:', !Object.is(state, newState));
-
     // Update state (Svelte reactivity kicks in)
     const stateChanged = !Object.is(state, newState);
     if (stateChanged) {
       state = newState;
 
-      console.log('[Store] Notifying', subscribers.size, 'subscribers');
       // Notify subscribers
       subscribers.forEach(listener => {
         try {
           listener(state);
-          console.log('[Store] Subscriber notified successfully');
         } catch (error) {
           console.error('[Composable Svelte] Subscriber error:', error);
         }
@@ -288,21 +279,16 @@ export function createStore<State, Action, Dependencies = any>(
    * Subscribe to state changes.
    */
   function subscribe(listener: (state: State) => void): () => void {
-    console.log('[Store] subscribe() called, adding listener');
     subscribers.add(listener);
-    console.log('[Store] Total subscribers:', subscribers.size);
 
     // Immediately call with current state
-    console.log('[Store] Calling listener immediately with current state:', state);
     try {
       listener(state);
-      console.log('[Store] Initial listener call succeeded');
     } catch (error) {
       console.error('[Composable Svelte] Subscriber error:', error);
     }
 
     return () => {
-      console.log('[Store] Unsubscribe called');
       subscribers.delete(listener);
     };
   }
