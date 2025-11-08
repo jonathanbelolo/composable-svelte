@@ -18,6 +18,11 @@
 		presentation: PresentationState<string>;
 
 		/**
+		 * Reference to the trigger element for positioning
+		 */
+		triggerElement: HTMLElement | null;
+
+		/**
 		 * Callback when presentation animation completes
 		 */
 		onPresentationComplete?: () => void;
@@ -41,6 +46,7 @@
 
 	let {
 		presentation,
+		triggerElement,
 		onPresentationComplete,
 		onDismissalComplete,
 		position = 'top',
@@ -48,12 +54,57 @@
 	}: TooltipPrimitiveProps = $props();
 
 	let tooltipElement: HTMLElement | null = $state(null);
+	let tooltipStyle = $state<string>('');
+
+	// Calculate dynamic position based on trigger element's bounding rect
+	function updateTooltipPosition() {
+		if (!tooltipElement || !triggerElement) return;
+
+		const triggerRect = triggerElement.getBoundingClientRect();
+		const tooltipRect = tooltipElement.getBoundingClientRect();
+		const gap = 8; // Gap between trigger and tooltip (0.5rem)
+
+		let top = 0;
+		let left = 0;
+
+		switch (position) {
+			case 'top':
+				top = triggerRect.top - tooltipRect.height - gap;
+				left = triggerRect.left + triggerRect.width / 2 - tooltipRect.width / 2;
+				break;
+
+			case 'bottom':
+				top = triggerRect.bottom + gap;
+				left = triggerRect.left + triggerRect.width / 2 - tooltipRect.width / 2;
+				break;
+
+			case 'left':
+				top = triggerRect.top + triggerRect.height / 2 - tooltipRect.height / 2;
+				left = triggerRect.left - tooltipRect.width - gap;
+				break;
+
+			case 'right':
+				top = triggerRect.top + triggerRect.height / 2 - tooltipRect.height / 2;
+				left = triggerRect.right + gap;
+				break;
+		}
+
+		// Ensure tooltip stays within viewport bounds
+		const padding = 8;
+		top = Math.max(padding, Math.min(top, window.innerHeight - tooltipRect.height - padding));
+		left = Math.max(padding, Math.min(left, window.innerWidth - tooltipRect.width - padding));
+
+		tooltipStyle = `top: ${top}px; left: ${left}px;`;
+	}
 
 	// Watch presentation state and trigger animations
 	$effect(() => {
 		if (!tooltipElement) return;
 
 		if (presentation.status === 'presenting') {
+			// Calculate position before animating in
+			updateTooltipPosition();
+
 			// Animate in
 			animateTooltipIn(tooltipElement).then(() => {
 				onPresentationComplete?.();
@@ -66,13 +117,22 @@
 		}
 	});
 
-	// Position classes based on position prop
-	const positionClasses = $derived({
-		top: 'bottom-full left-1/2 -translate-x-1/2 mb-2',
-		bottom: 'top-full left-1/2 -translate-x-1/2 mt-2',
-		left: 'right-full top-1/2 -translate-y-1/2 mr-2',
-		right: 'left-full top-1/2 -translate-y-1/2 ml-2'
-	}[position]);
+	// Update position when trigger element changes or window resizes
+	$effect(() => {
+		if (!shouldShow || !triggerElement || !tooltipElement) return;
+
+		updateTooltipPosition();
+
+		// Update position on scroll or resize
+		const handlePositionUpdate = () => updateTooltipPosition();
+		window.addEventListener('scroll', handlePositionUpdate, true);
+		window.addEventListener('resize', handlePositionUpdate);
+
+		return () => {
+			window.removeEventListener('scroll', handlePositionUpdate, true);
+			window.removeEventListener('resize', handlePositionUpdate);
+		};
+	});
 
 	// Arrow position classes
 	const arrowClasses = $derived({
@@ -94,15 +154,14 @@
 	<div
 		bind:this={tooltipElement}
 		class={cn(
-			'absolute z-50 px-3 py-1.5 text-sm rounded-md',
+			'fixed z-50 px-3 py-1.5 text-sm rounded-md',
 			'bg-popover text-popover-foreground',
 			'border border-border shadow-md',
 			'pointer-events-none whitespace-nowrap',
-			positionClasses,
 			className
 		)}
 		role="tooltip"
-		style="opacity: 0;"
+		style="{tooltipStyle} opacity: 0;"
 	>
 		{presentation.content}
 

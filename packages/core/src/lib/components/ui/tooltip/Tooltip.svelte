@@ -70,6 +70,17 @@
 		dependencies: { hoverDelay: delay }
 	});
 
+	// Subscribe to store for reactivity
+	const state = $derived($store);
+
+	// Reference to the wrapper element (which contains the trigger)
+	let wrapperElement: HTMLElement | null = $state(null);
+
+	// Get the actual trigger element (first child of wrapper)
+	const triggerElement = $derived(
+		wrapperElement?.children[0] as HTMLElement | null ?? null
+	);
+
 	function handleMouseEnter() {
 		if (disabled) return;
 		store.dispatch({ type: 'hoverStarted', content });
@@ -95,23 +106,24 @@
 	}
 </script>
 
-<div class="relative inline-block">
+<div
+	bind:this={wrapperElement}
+	class="relative inline-flex"
+	onmouseenter={handleMouseEnter}
+	onmouseleave={handleMouseLeave}
+	onfocus={handleMouseEnter}
+	onblur={handleMouseLeave}
+>
 	<!-- Trigger element -->
-	<div
-		onmouseenter={handleMouseEnter}
-		onmouseleave={handleMouseLeave}
-		onfocus={handleMouseEnter}
-		onblur={handleMouseLeave}
-	>
-		{@render children()}
-	</div>
-
-	<!-- Tooltip -->
-	<TooltipPrimitive
-		presentation={store.state.presentation}
-		{position}
-		class={className}
-		onPresentationComplete={handlePresentationComplete}
-		onDismissalComplete={handleDismissalComplete}
-	/>
+	{@render children()}
 </div>
+
+<!-- Tooltip (rendered outside wrapper with fixed positioning) -->
+<TooltipPrimitive
+	presentation={state.presentation}
+	{triggerElement}
+	{position}
+	class={className}
+	onPresentationComplete={handlePresentationComplete}
+	onDismissalComplete={handleDismissalComplete}
+/>
