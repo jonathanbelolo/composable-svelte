@@ -107,7 +107,7 @@ function plotBuilder(chartState: ChartState<any>, chartConfig: any) {
   role="img"
   aria-label={`${type} chart with ${$store.data.length} data points`}
 >
-  <ChartPrimitive {store} {config} {plotBuilder} />
+  <ChartPrimitive {store} {config} {plotBuilder} {enableZoom} {enableBrush} />
   <!-- Tooltips handled by Observable Plot -->
 </div>
 

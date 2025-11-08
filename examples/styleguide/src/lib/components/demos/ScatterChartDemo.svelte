@@ -1,6 +1,8 @@
 <script lang="ts">
   import { createStore } from '@composable-svelte/core';
   import { Chart, chartReducer, createInitialChartState } from '@composable-svelte/charts';
+  import { Button } from '$lib/components/ui/button';
+  import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-svelte';
 
   // Sample data - Iris dataset
   const data = [
@@ -53,17 +55,99 @@
   function handleSelectionChange(selected: any[]) {
     selectedPoints = selected;
   }
+
+  // Interaction mode
+  let interactionMode: 'zoom' | 'brush' = $state('zoom');
+
+  // Zoom controls with animation
+  function handleZoomIn() {
+    const currentTransform = $store.transform;
+    store.dispatch({
+      type: 'zoomAnimated',
+      targetTransform: {
+        ...currentTransform,
+        k: currentTransform.k * 1.2
+      }
+    });
+  }
+
+  function handleZoomOut() {
+    const currentTransform = $store.transform;
+    store.dispatch({
+      type: 'zoomAnimated',
+      targetTransform: {
+        ...currentTransform,
+        k: currentTransform.k / 1.2
+      }
+    });
+  }
+
+  function handleResetZoom() {
+    store.dispatch({ type: 'resetZoom' });
+  }
+
+  // Selection controls
+  function handleClearSelection() {
+    store.dispatch({ type: 'clearSelection' });
+  }
+
+  function toggleMode() {
+    interactionMode = interactionMode === 'zoom' ? 'brush' : 'zoom';
+    // Clear selection when switching to zoom mode
+    if (interactionMode === 'zoom') {
+      handleClearSelection();
+    }
+  }
 </script>
 
 <div class="space-y-6">
   <div class="space-y-2">
-    <h3 class="text-lg font-semibold">Scatter Chart</h3>
+    <h3 class="text-lg font-semibold">Scatter Chart - Interactive</h3>
     <p class="text-sm text-muted-foreground">
-      Interactive scatter plot with hover tooltips. Uses the Iris dataset to visualize sepal dimensions.
+      Interactive scatter plot with zoom/pan and brush selection. Toggle between modes to explore the Iris dataset.
     </p>
   </div>
 
-  <div class="border rounded-lg p-6 bg-card">
+  <div class="border rounded-lg p-6 bg-card space-y-4">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <Button
+          variant={interactionMode === 'zoom' ? 'default' : 'outline'}
+          size="sm"
+          onclick={toggleMode}
+        >
+          {interactionMode === 'zoom' ? 'Zoom Mode' : 'Brush Mode'}
+        </Button>
+
+        {#if interactionMode === 'zoom'}
+          <div class="flex items-center gap-1 ml-2">
+            <Button variant="outline" size="sm" onclick={handleZoomIn}>
+              <ZoomIn class="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="sm" onclick={handleZoomOut}>
+              <ZoomOut class="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="sm" onclick={handleResetZoom}>
+              <RotateCcw class="h-4 w-4 mr-1" />
+              Reset
+            </Button>
+          </div>
+        {:else}
+          <Button variant="outline" size="sm" onclick={handleClearSelection} class="ml-2">
+            Clear Selection
+          </Button>
+        {/if}
+      </div>
+
+      <div class="text-sm text-muted-foreground">
+        {#if interactionMode === 'zoom'}
+          Zoom: {($store.transform.k * 100).toFixed(0)}%
+        {:else}
+          Selected: {$store.selection.selectedIndices.length} points
+        {/if}
+      </div>
+    </div>
+
     <Chart
       {store}
       width={700}
@@ -74,6 +158,8 @@
       color="species"
       size={6}
       enableTooltip={true}
+      enableZoom={interactionMode === 'zoom'}
+      enableBrush={interactionMode === 'brush'}
     />
   </div>
 
@@ -81,9 +167,12 @@
     <h4 class="text-sm font-semibold">Features:</h4>
     <ul class="text-sm text-muted-foreground space-y-1 list-disc list-inside">
       <li>Interactive tooltips on hover</li>
-      <li>Color-coded by species</li>
-      <li>Built with Observable Plot</li>
-      <li>Fully type-safe with TypeScript</li>
+      <li><strong>Zoom Mode:</strong> Mouse wheel to zoom, drag to pan, +/- buttons</li>
+      <li><strong>Brush Mode:</strong> Click and drag to select multiple points</li>
+      <li>Selected points are highlighted with black stroke</li>
+      <li>Unselected points are dimmed for contrast</li>
+      <li>Color-coded by species (setosa, versicolor, virginica)</li>
+      <li>Built with Observable Plot & D3</li>
       <li>Composable Architecture state management</li>
     </ul>
   </div>

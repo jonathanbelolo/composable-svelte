@@ -1,6 +1,8 @@
 <script lang="ts">
   import { createStore } from '@composable-svelte/core';
   import { Chart, chartReducer, createInitialChartState } from '@composable-svelte/charts';
+  import { Button } from '$lib/components/ui/button';
+  import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-svelte';
 
   // Sample data - Stock prices over time
   const data = [
@@ -34,17 +36,62 @@
     reducer: chartReducer,
     dependencies: {}
   });
+
+  // Zoom controls with animation
+  function handleZoomIn() {
+    const currentTransform = $store.transform;
+    store.dispatch({
+      type: 'zoomAnimated',
+      targetTransform: {
+        ...currentTransform,
+        k: currentTransform.k * 1.2
+      }
+    });
+  }
+
+  function handleZoomOut() {
+    const currentTransform = $store.transform;
+    store.dispatch({
+      type: 'zoomAnimated',
+      targetTransform: {
+        ...currentTransform,
+        k: currentTransform.k / 1.2
+      }
+    });
+  }
+
+  function handleResetZoom() {
+    store.dispatch({ type: 'resetZoom' });
+  }
 </script>
 
 <div class="space-y-6">
   <div class="space-y-2">
-    <h3 class="text-lg font-semibold">Line Chart</h3>
+    <h3 class="text-lg font-semibold">Line Chart with Zoom</h3>
     <p class="text-sm text-muted-foreground">
-      Time series visualization with continuous line. Perfect for tracking trends and changes over time.
+      Time series visualization with zoom/pan and tooltips. Perfect for exploring stock prices and trends.
     </p>
   </div>
 
-  <div class="border rounded-lg p-6 bg-card">
+  <div class="border rounded-lg p-6 bg-card space-y-4">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <Button variant="outline" size="sm" onclick={handleZoomIn}>
+          <ZoomIn class="h-4 w-4" />
+        </Button>
+        <Button variant="outline" size="sm" onclick={handleZoomOut}>
+          <ZoomOut class="h-4 w-4" />
+        </Button>
+        <Button variant="outline" size="sm" onclick={handleResetZoom}>
+          <RotateCcw class="h-4 w-4 mr-1" />
+          Reset
+        </Button>
+      </div>
+      <div class="text-sm text-muted-foreground">
+        Zoom: {($store.transform.k * 100).toFixed(0)}%
+      </div>
+    </div>
+
     <Chart
       {store}
       width={700}
@@ -54,6 +101,7 @@
       y="price"
       color="#3b82f6"
       enableTooltip={true}
+      enableZoom={true}
     />
   </div>
 
@@ -63,6 +111,8 @@
       <li>Smooth line rendering</li>
       <li>Automatic date formatting</li>
       <li>Interactive tooltips with date and value</li>
+      <li>Zoom with mouse wheel or drag to pan</li>
+      <li>Zoom controls (+/- buttons and reset)</li>
       <li>Responsive to container size</li>
       <li>State-driven updates</li>
     </ul>

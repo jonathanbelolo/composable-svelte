@@ -18,6 +18,7 @@
     "@composable-svelte/core": "workspace:*",
     "@xyflow/svelte": "^1.4.1",
     "clsx": "^2.1.1",
+    "lucide-svelte": "^0.553.0",
     "svelte": "^5.0.0",
     "tailwind-merge": "^3.3.1"
   },

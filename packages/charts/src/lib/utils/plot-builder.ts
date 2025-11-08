@@ -13,8 +13,34 @@ export function buildScatterPlot<T>(
   state: ChartState<T>,
   config: ChartConfig
 ): any {
-  const { filteredData, selection, dimensions } = state;
+  const { filteredData, dimensions, transform, selection } = state;
   const { x = 'x', y = 'y', color, size = 5 } = config;
+
+  // Calculate domains
+  let xDomain: [number, number] | undefined;
+  let yDomain: [number, number] | undefined;
+
+  if (config.xDomain && config.xDomain !== 'auto') {
+    xDomain = config.xDomain as [number, number];
+  } else {
+    xDomain = calculateDomain(filteredData, x);
+  }
+
+  if (config.yDomain && config.yDomain !== 'auto') {
+    yDomain = config.yDomain as [number, number];
+  } else {
+    yDomain = calculateDomain(filteredData, y);
+  }
+
+  // Apply zoom transform
+  if (transform.k !== 1 || transform.x !== 0 || transform.y !== 0) {
+    xDomain = applyZoomToDomain(xDomain, transform, 'x');
+    yDomain = applyZoomToDomain(yDomain, transform, 'y');
+  }
+
+  // Check if we have selections
+  const hasSelection = selection.selectedIndices.length > 0;
+  const selectedSet = new Set(selection.selectedIndices);
 
   return Plot.plot({
     width: dimensions.width,
@@ -29,13 +55,19 @@ export function buildScatterPlot<T>(
       Plot.gridY({ stroke: '#e5e7eb', strokeOpacity: 0.5 }),
       Plot.gridX({ stroke: '#e5e7eb', strokeOpacity: 0.5 }),
 
-      // Data points
+      // Data points - with selection highlighting
       Plot.dot(filteredData, {
         x,
         y,
         fill: color || '#3b82f6',
         r: size,
-        fillOpacity: 0.7,
+        fillOpacity: hasSelection
+          ? (d, i) => (selectedSet.has(i) ? 1.0 : 0.2)  // Dim unselected
+          : 0.7,
+        stroke: hasSelection
+          ? (d, i) => (selectedSet.has(i) ? '#000' : null)  // Stroke selected
+          : null,
+        strokeWidth: 2,
         tip: true  // Use Observable Plot's built-in tooltips
       }),
 
@@ -44,8 +76,8 @@ export function buildScatterPlot<T>(
       Plot.axisY({ label: null })
     ],
 
-    ...(config.xDomain && config.xDomain !== 'auto' ? { x: { domain: config.xDomain } } : {}),
-    ...(config.yDomain && config.yDomain !== 'auto' ? { y: { domain: config.yDomain } } : {})
+    x: { domain: xDomain },
+    y: { domain: yDomain }
   });
 }
 
@@ -56,8 +88,30 @@ export function buildLineChart<T>(
   state: ChartState<T>,
   config: ChartConfig
 ): any {
-  const { filteredData, dimensions } = state;
+  const { filteredData, dimensions, transform } = state;
   const { x = 'x', y = 'y', color = '#3b82f6' } = config;
+
+  // Calculate domains
+  let xDomain: [number, number] | undefined;
+  let yDomain: [number, number] | undefined;
+
+  if (config.xDomain && config.xDomain !== 'auto') {
+    xDomain = config.xDomain as [number, number];
+  } else {
+    xDomain = calculateDomain(filteredData, x);
+  }
+
+  if (config.yDomain && config.yDomain !== 'auto') {
+    yDomain = config.yDomain as [number, number];
+  } else {
+    yDomain = calculateDomain(filteredData, y);
+  }
+
+  // Apply zoom transform
+  if (transform.k !== 1 || transform.x !== 0 || transform.y !== 0) {
+    xDomain = applyZoomToDomain(xDomain, transform, 'x');
+    yDomain = applyZoomToDomain(yDomain, transform, 'y');
+  }
 
   return Plot.plot({
     width: dimensions.width,
@@ -95,8 +149,8 @@ export function buildLineChart<T>(
       Plot.axisY({ label: null })
     ],
 
-    ...(config.xDomain && config.xDomain !== 'auto' ? { x: { domain: config.xDomain } } : {}),
-    ...(config.yDomain && config.yDomain !== 'auto' ? { y: { domain: config.yDomain } } : {})
+    x: { domain: xDomain },
+    y: { domain: yDomain }
   });
 }
 
@@ -149,8 +203,30 @@ export function buildAreaChart<T>(
   state: ChartState<T>,
   config: ChartConfig
 ): any {
-  const { filteredData, dimensions } = state;
+  const { filteredData, dimensions, transform } = state;
   const { x = 'x', y = 'y', color = '#3b82f6' } = config;
+
+  // Calculate domains
+  let xDomain: [number, number] | undefined;
+  let yDomain: [number, number] | undefined;
+
+  if (config.xDomain && config.xDomain !== 'auto') {
+    xDomain = config.xDomain as [number, number];
+  } else {
+    xDomain = calculateDomain(filteredData, x);
+  }
+
+  if (config.yDomain && config.yDomain !== 'auto') {
+    yDomain = config.yDomain as [number, number];
+  } else {
+    yDomain = calculateDomain(filteredData, y);
+  }
+
+  // Apply zoom transform
+  if (transform.k !== 1 || transform.x !== 0 || transform.y !== 0) {
+    xDomain = applyZoomToDomain(xDomain, transform, 'x');
+    yDomain = applyZoomToDomain(yDomain, transform, 'y');
+  }
 
   return Plot.plot({
     width: dimensions.width,
@@ -187,8 +263,8 @@ export function buildAreaChart<T>(
       Plot.axisY({ label: null })
     ],
 
-    ...(config.xDomain && config.xDomain !== 'auto' ? { x: { domain: config.xDomain } } : {}),
-    ...(config.yDomain && config.yDomain !== 'auto' ? { y: { domain: config.yDomain } } : {})
+    x: { domain: xDomain },
+    y: { domain: yDomain }
   });
 }
 
@@ -263,11 +339,56 @@ export function buildPlot<T>(
 }
 
 /**
- * Apply zoom transform to plot specification
- * This will be used for zoom/pan functionality
+ * Apply zoom transform to domain
+ * Converts screen-space transform to data-space domain
  */
-export function applyZoomTransform(spec: any, transform: { x: number; y: number; k: number }): any {
-  // For now, return spec as-is
-  // Will implement actual zoom transform logic when D3 zoom is integrated
-  return spec;
+export function applyZoomToDomain(
+  domain: [number, number],
+  transform: { x: number; y: number; k: number },
+  axis: 'x' | 'y'
+): [number, number] {
+  if (transform.k === 1 && transform.x === 0 && transform.y === 0) {
+    return domain;
+  }
+
+  const [min, max] = domain;
+  const range = max - min;
+  const center = (min + max) / 2;
+  const scale = transform.k;
+
+  // Zooming: scale > 1 means zoom in (smaller range), scale < 1 means zoom out (larger range)
+  const newRange = range / scale;
+
+  // Center the zoom around the middle of the domain
+  const newMin = center - newRange / 2;
+  const newMax = center + newRange / 2;
+
+  return [newMin, newMax];
+}
+
+/**
+ * Calculate domain from data
+ * Returns [min, max] for numeric data
+ */
+export function calculateDomain<T>(
+  data: T[],
+  accessor: string | ((d: T) => number)
+): [number, number] {
+  if (data.length === 0) return [0, 1];
+
+  const getValue = typeof accessor === 'string'
+    ? (d: T) => (d as any)[accessor]
+    : accessor;
+
+  const values = data.map(getValue).filter((v): v is number => typeof v === 'number' && !isNaN(v));
+
+  if (values.length === 0) return [0, 1];
+
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+
+  // Add 5% padding
+  const padding = (max - min) * 0.05;
+
+  return [min - padding, max + padding];
 }

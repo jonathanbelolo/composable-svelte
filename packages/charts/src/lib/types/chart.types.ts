@@ -23,6 +23,7 @@ export interface ChartState<T = unknown> {
 
   // Zoom/pan state
   transform: ZoomTransform;
+  targetTransform?: ZoomTransform; // Target for animated zoom
 
   // Tooltips handled by Observable Plot (no state needed)
 
@@ -90,6 +91,9 @@ export type ChartAction<T = unknown> =
 
   // Zoom/pan actions
   | { type: 'zoom'; transform: ZoomTransform }
+  | { type: 'zoomAnimated'; targetTransform: ZoomTransform }
+  | { type: 'zoomProgress'; transform: ZoomTransform }
+  | { type: 'zoomComplete' }
   | { type: 'resetZoom' }
 
   // Tooltip actions - Handled by Observable Plot (no actions needed)

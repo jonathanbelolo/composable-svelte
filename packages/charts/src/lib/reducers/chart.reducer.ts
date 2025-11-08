@@ -164,11 +164,48 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
       ];
     }
 
+    case 'zoomAnimated': {
+      // Start animation - component will handle the actual animation
+      return [
+        {
+          ...state,
+          isAnimating: true,
+          // Store target transform for component to animate towards
+          targetTransform: action.targetTransform
+        },
+        Effect.none()
+      ];
+    }
+
+    case 'zoomProgress': {
+      // Update transform during animation
+      return [
+        {
+          ...state,
+          transform: action.transform
+        },
+        Effect.none()
+      ];
+    }
+
+    case 'zoomComplete': {
+      // Animation finished
+      return [
+        {
+          ...state,
+          isAnimating: false,
+          targetTransform: undefined
+        },
+        Effect.none()
+      ];
+    }
+
     case 'resetZoom': {
       return [
         {
           ...state,
-          transform: {
+          isAnimating: true,
+          targetTransform: {
             x: 0,
             y: 0,
             k: 1
