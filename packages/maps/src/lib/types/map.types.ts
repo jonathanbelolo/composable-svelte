@@ -3,10 +3,15 @@
  * @description Type definitions for interactive map components
  */
 
+import type { TileProvider } from '../utils/tile-providers';
+
 /**
  * Map provider type
  */
 export type MapProvider = 'maplibre' | 'mapbox';
+
+// Re-export TileProvider for convenience
+export type { TileProvider };
 
 /**
  * Longitude, Latitude coordinate pair
@@ -104,6 +109,11 @@ export interface MapState {
   provider: MapProvider;
   accessToken?: string;
 
+  // Tile provider
+  tileProvider: TileProvider;
+  customTileURL?: string;
+  customAttribution?: string;
+
   // Viewport
   viewport: MapViewport;
 
@@ -185,7 +195,10 @@ export type MapAction =
   // Map lifecycle actions
   | { type: 'mapLoaded' }
   | { type: 'mapError'; error: string }
-  | { type: 'changeStyle'; style: string };
+  | { type: 'changeStyle'; style: string }
+
+  // Tile provider actions
+  | { type: 'changeTileProvider'; provider: TileProvider; customURL?: string; customAttribution?: string };
 
 /**
  * Fly-to animation options
@@ -224,6 +237,7 @@ export interface MapAdapter {
   updateLayerStyle(id: string, style: Partial<LayerStyle>): void;
   openPopup(popup: Popup): void;
   closePopup(id: string): void;
+  changeStyle(styleURL: string): void;
   on(event: string, handler: Function): void;
   off(event: string, handler: Function): void;
   destroy(): void;

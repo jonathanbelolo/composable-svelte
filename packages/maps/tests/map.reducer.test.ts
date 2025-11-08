@@ -288,15 +288,17 @@ describe('createInitialMapState', () => {
     expect(state.viewport.pitch).toBe(30);
   });
 
-  it('uses maplibre style by default', () => {
+  it('uses openstreetmap style by default', () => {
     const state = createInitialMapState({ provider: 'maplibre' });
 
     expect(state.style).toBe('https://demotiles.maplibre.org/style.json');
+    expect(state.tileProvider).toBe('openstreetmap');
   });
 
-  it('uses mapbox style for mapbox provider', () => {
-    const state = createInitialMapState({ provider: 'mapbox' });
+  it('uses specified tile provider', () => {
+    const state = createInitialMapState({ provider: 'mapbox', tileProvider: 'carto-dark' });
 
-    expect(state.style).toBe('mapbox://styles/mapbox/streets-v12');
+    expect(state.tileProvider).toBe('carto-dark');
+    expect(state.style).toBe('https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json');
   });
 });

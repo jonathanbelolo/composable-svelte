@@ -11,6 +11,7 @@
 // ============================================================================
 export type {
   MapProvider,
+  TileProvider,
   LngLat,
   BBox,
   MapViewport,
@@ -27,6 +28,8 @@ export type {
   MapInitOptions
 } from './types/map.types';
 
+export type { TileProviderConfig } from './utils/tile-providers';
+
 // ============================================================================
 // Reducers
 // ============================================================================
@@ -40,9 +43,17 @@ export { default as MapPrimitive } from './components/MapPrimitive.svelte';
 export { default as GeoJSONLayer } from './components/GeoJSONLayer.svelte';
 export { default as HeatmapLayer } from './components/HeatmapLayer.svelte';
 export { default as MapPopup } from './components/Popup.svelte';
+export { default as TileProviderControl } from './components/TileProviderControl.svelte';
 
 // ============================================================================
 // Utils
 // ============================================================================
 export { createMapAdapter } from './utils/map-adapter';
 export { MaplibreAdapter } from './utils/maplibre-adapter';
+export {
+  TILE_PROVIDERS,
+  getTileProviderConfig,
+  getStyleURL,
+  getAvailableTileProviders,
+  requiresAPIKey
+} from './utils/tile-providers';

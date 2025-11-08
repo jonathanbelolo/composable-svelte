@@ -83,6 +83,7 @@ export const COMPONENT_REGISTRY: ComponentInfo[] = [
   { id: 'scatter-chart', name: 'Scatter Chart', category: 'Data Visualization', description: 'Interactive scatter plot with tooltips and selection - powered by Observable Plot' },
   { id: 'line-chart', name: 'Line Chart', category: 'Data Visualization', description: 'Time series line chart with hover interactions - state-driven visualization' },
   { id: 'bar-chart', name: 'Bar Chart', category: 'Data Visualization', description: 'Categorical bar chart with selection support - built with Composable Architecture' },
+  { id: 'map', name: 'Map', category: 'Data Visualization', description: 'Interactive maps with markers, layers, and popups - powered by Maplibre GL with state-driven architecture' },
 
   // Code Components
   { id: 'code-highlight', name: 'Code Highlight', category: 'Code Components', description: 'Syntax highlighting for code snippets with Prism.js' },

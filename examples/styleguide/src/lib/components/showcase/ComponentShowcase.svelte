@@ -49,6 +49,7 @@
   import ScatterChartDemo from '../demos/ScatterChartDemo.svelte';
   import LineChartDemo from '../demos/LineChartDemo.svelte';
   import BarChartDemo from '../demos/BarChartDemo.svelte';
+  import MapDemo from '../demos/MapDemo.svelte';
   // Code Components
   import CodeHighlightDemo from '../demos/CodeHighlightDemo.svelte';
   import CodeEditorDemo from '../demos/CodeEditorDemo.svelte';
@@ -126,6 +127,7 @@
     'scatter-chart': ScatterChartDemo,
     'line-chart': LineChartDemo,
     'bar-chart': BarChartDemo,
+    'map': MapDemo,
     // Code Components
     'code-highlight': CodeHighlightDemo,
     'code-editor': CodeEditorDemo,

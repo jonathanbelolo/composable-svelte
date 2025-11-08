@@ -316,6 +316,9 @@ importers:
       '@composable-svelte/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@composable-svelte/maps':
+        specifier: workspace:*
+        version: link:../../packages/maps
       '@xyflow/svelte':
         specifier: ^1.4.1
         version: 1.4.1(svelte@5.43.3)
@@ -325,6 +328,9 @@ importers:
       lucide-svelte:
         specifier: ^0.553.0
         version: 0.553.0(svelte@5.43.3)
+      maplibre-gl:
+        specifier: ^4.0.0
+        version: 4.7.1
       svelte:
         specifier: ^5.0.0
         version: 5.43.3

@@ -333,6 +333,13 @@ export class MaplibreAdapter implements MapAdapter {
     }
   }
 
+  changeStyle(styleURL: string): void {
+    if (!this.map) return;
+
+    // Change the map style
+    this.map.setStyle(styleURL);
+  }
+
   on(event: string, handler: Function): void {
     if (!this.map) return;
 

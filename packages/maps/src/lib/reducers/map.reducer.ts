@@ -5,7 +5,8 @@
 
 import type { Reducer } from '@composable-svelte/core';
 import { Effect } from '@composable-svelte/core';
-import type { MapState, MapAction, LngLat } from '../types/map.types';
+import type { MapState, MapAction, LngLat, TileProvider } from '../types/map.types';
+import { getStyleURL } from '../utils/tile-providers';
 
 /**
  * Map reducer
@@ -413,6 +414,23 @@ export const mapReducer: Reducer<MapState, MapAction, {}> = (
       ];
     }
 
+    // ========================================================================
+    // Tile Provider Actions
+    // ========================================================================
+
+    case 'changeTileProvider': {
+      const { provider, customURL, customAttribution } = action;
+      return [
+        {
+          ...state,
+          tileProvider: provider,
+          ...(customURL ? { customTileURL: customURL } : {}),
+          ...(customAttribution ? { customAttribution } : {})
+        },
+        Effect.none()
+      ];
+    }
+
     default: {
       const _exhaustive: never = action;
       return [state, Effect.none()];
@@ -426,6 +444,7 @@ export const mapReducer: Reducer<MapState, MapAction, {}> = (
 export function createInitialMapState(config: {
   provider?: 'maplibre' | 'mapbox';
   accessToken?: string;
+  tileProvider?: TileProvider;
   center?: LngLat;
   zoom?: number;
   bearing?: number;
@@ -434,10 +453,12 @@ export function createInitialMapState(config: {
   markers?: any[];
 }): MapState {
   const provider = config.provider ?? 'maplibre';
+  const tileProvider = config.tileProvider ?? 'openstreetmap';
 
   return {
     provider,
     ...(config.accessToken ? { accessToken: config.accessToken } : {}),
+    tileProvider,
     viewport: {
       center: config.center ?? [0, 0],
       zoom: config.zoom ?? 2,
@@ -454,9 +475,7 @@ export function createInitialMapState(config: {
     selectedFeatures: [],
     style:
       config.style ??
-      (provider === 'maplibre'
-        ? 'https://demotiles.maplibre.org/style.json'
-        : 'mapbox://styles/mapbox/streets-v12'),
+      getStyleURL(tileProvider, config.accessToken),
     isLoaded: false,
     isLoading: false,
     error: null

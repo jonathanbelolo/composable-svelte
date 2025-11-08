@@ -8,6 +8,7 @@ import { onMount } from 'svelte';
 import type { Store } from '@composable-svelte/core';
 import type { MapState, MapAction, MapAdapter } from '../types/map.types';
 import { createMapAdapter } from '../utils/map-adapter';
+import { getStyleURL } from '../utils/tile-providers';
 
 // Props
 let {
@@ -105,6 +106,16 @@ $effect(() => {
   mapAdapter.setZoom(viewport.zoom);
   mapAdapter.setBearing(viewport.bearing);
   mapAdapter.setPitch(viewport.pitch);
+});
+
+// Sync tile provider when it changes
+$effect(() => {
+  if (!mapAdapter) return;
+
+  const { tileProvider, customTileURL, accessToken } = $store;
+  const newStyleURL = getStyleURL(tileProvider, accessToken, customTileURL);
+
+  mapAdapter.changeStyle(newStyleURL);
 });
 
 // Event handlers
