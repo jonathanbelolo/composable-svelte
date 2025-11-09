@@ -97,8 +97,6 @@ function setupMapContentSync() {
   const unsubscribe = store.subscribe((state) => {
     if (!mapAdapter) return;
 
-    console.log('[MapPrimitive] State update, flyToTarget:', state.flyToTarget);
-
     // Sync markers
     const currentMarkers = state.markers;
     if (JSON.stringify(previousMarkers) !== JSON.stringify(currentMarkers)) {
@@ -207,8 +205,6 @@ function setupMapContentSync() {
 
     if (flyToTargetChanged && state.flyToTarget) {
       // Use flyTo for smooth animation
-      console.log('[MapPrimitive] flyTo called with:', state.flyToTarget);
-
       // Set animation flag to prevent moveend from interfering
       isAnimating = true;
 
@@ -217,9 +213,7 @@ function setupMapContentSync() {
 
       // Clear the flyTo target and animation flag after animation completes
       const duration = state.flyToTarget.duration || 0;
-      console.log('[MapPrimitive] Will dispatch flyToCompleted in', duration + 50, 'ms');
       setTimeout(() => {
-        console.log('[MapPrimitive] Dispatching flyToCompleted');
         isAnimating = false;
         store.dispatch({ type: 'flyToCompleted' });
       }, duration + 50); // Add 50ms buffer to ensure animation completes
@@ -236,7 +230,6 @@ function setupMapContentSync() {
 
     if (!state.isDragging && !state.isZooming && viewportChanged && !isProcessingMapEvent && !state.flyToTarget) {
       // Only update map if not processing a map event (prevents feedback loop)
-      console.log('[MapPrimitive] Syncing viewport (instant):', state.viewport);
       mapAdapter.setCenter(state.viewport.center);
       mapAdapter.setZoom(state.viewport.zoom);
       mapAdapter.setBearing(state.viewport.bearing);
@@ -244,7 +237,6 @@ function setupMapContentSync() {
       previousViewport = { ...state.viewport };
     } else if (viewportChanged) {
       // Just track the change without updating the map
-      console.log('[MapPrimitive] Viewport changed but skipping sync (flyToTarget:', !!state.flyToTarget, ')');
       previousViewport = { ...state.viewport };
     }
 
@@ -297,7 +289,6 @@ function handleMoveEnd() {
 
   // Ignore moveend events during flyTo/easeTo animations
   if (isAnimating) {
-    console.log('[MapPrimitive] Ignoring moveend during animation');
     return;
   }
 

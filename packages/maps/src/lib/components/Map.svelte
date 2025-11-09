@@ -7,18 +7,21 @@
 import MapPrimitive from './MapPrimitive.svelte';
 import type { Store } from '@composable-svelte/core';
 import type { MapState, MapAction } from '../types/map.types';
+import type { Snippet } from 'svelte';
 
 // Props
 let {
   store,
   width = '100%',
   height = '600px',
-  onMapClick
+  onMapClick,
+  children
 }: {
   store: Store<MapState, MapAction>;
   width?: string | number;
   height?: string | number;
   onMapClick?: (lngLat: [number, number]) => void;
+  children?: Snippet;
 } = $props();
 
 // Computed styles
@@ -33,6 +36,7 @@ const heightStyle = typeof height === 'number' ? `${height}px` : height;
   aria-label="Interactive map with {$store.markers.length} markers"
 >
   <MapPrimitive {store} />
+  {@render children?.()}
 </div>
 
 <style>

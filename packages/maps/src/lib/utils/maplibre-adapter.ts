@@ -66,7 +66,6 @@ export class MaplibreAdapter implements MapAdapter {
       ...(options.duration !== undefined ? { duration: options.duration } : {}),
       ...(options.essential !== undefined ? { essential: options.essential } : {})
     };
-    console.log('[MaplibreAdapter] flyTo called with:', flyToParams);
     this.map.flyTo(flyToParams);
   }
 
@@ -146,19 +145,35 @@ export class MaplibreAdapter implements MapAdapter {
     }
   }
 
-  addLayer(layer: Layer): void {
-    if (!this.map) return;
+  addLayer(layer: Layer, skipStyleCheck = false): void {
+    if (!this.map) {
+      return;
+    }
 
-    // Store layer reference
-    this.layers.set(layer.id, layer);
+    // Wait for style to load before adding layers (skip check when retrying from styledata)
+    if (!skipStyleCheck && !this.map.isStyleLoaded()) {
+      this.map.once('styledata', () => {
+        this.addLayer(layer, true); // Skip style check on retry
+      });
+      return;
+    }
 
-    // Add GeoJSON source
-    const sourceData = typeof layer.data === 'string' ? layer.data : layer.data;
+    // Check if source already exists (can happen on style changes)
+    if (this.map.getSource(layer.id)) {
+      return;
+    }
 
-    this.map.addSource(layer.id, {
-      type: 'geojson',
-      data: sourceData as any
-    });
+    try {
+      // Store layer reference
+      this.layers.set(layer.id, layer);
+
+      // Add GeoJSON source
+      const sourceData = typeof layer.data === 'string' ? layer.data : layer.data;
+
+      this.map.addSource(layer.id, {
+        type: 'geojson',
+        data: sourceData as any
+      });
 
     // Add layer based on type
     if (layer.type === 'geojson') {
@@ -219,6 +234,12 @@ export class MaplibreAdapter implements MapAdapter {
           visibility: layer.visible ? 'visible' : 'none'
         }
       });
+    }
+    } catch (error) {
+      console.error('[MaplibreAdapter] Error adding layer:', layer.id, error);
+      // Remove from layers map if addition failed
+      this.layers.delete(layer.id);
+      throw error;
     }
   }
 

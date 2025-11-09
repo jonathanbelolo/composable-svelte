@@ -60,8 +60,16 @@ onMount(() => {
   });
 });
 
+// Track if layer has been mounted
+let mounted = $state(false);
+
 // Update layer when props change
 $effect(() => {
+  if (!mounted) {
+    mounted = true;
+    return;
+  }
+
   store.dispatch({
     type: 'updateLayerStyle',
     id,
