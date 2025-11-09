@@ -62,12 +62,13 @@ function rotateCube() {
     <!-- 3D Scene -->
     <div class="rounded-lg border overflow-hidden">
       <Scene {store} height="400px">
-        <Camera position={[0, 3, 8]} lookAt={[0, 0, 0]} fov={45} />
+        <Camera {store} position={[0, 3, 8]} lookAt={[0, 0, 0]} fov={45} />
 
-        <Light type="ambient" intensity={0.4} color="#ffffff" />
-        <Light type="directional" position={[5, 10, 7.5]} intensity={1.2} color="#ffffff" />
+        <Light {store} type="ambient" intensity={0.4} color="#ffffff" />
+        <Light {store} type="directional" position={[5, 10, 7.5]} intensity={1.2} color="#ffffff" />
 
         <Mesh
+          {store}
           id="cube-1"
           geometry={{ type: 'box', size: 2 }}
           material={{ color: '#ff6b6b', metallic: 0.7, roughness: 0.3 }}
