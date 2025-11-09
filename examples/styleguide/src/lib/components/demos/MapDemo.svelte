@@ -106,27 +106,36 @@
   const heatmapStore = createStore({
     initialState: createInitialMapState({
       provider: 'maplibre',
-      center: [-73.985, 40.758], // NYC
-      zoom: 11
+      center: [-118.2437, 34.0522], // Los Angeles
+      zoom: 10
     }),
     reducer: mapReducer,
     dependencies: {}
   });
 
-  // Sample heatmap data (earthquake points)
-  const earthquakeData = {
+  // Sample heatmap data (200 crime incident points concentrated in downtown LA)
+  const crimeHeatmapData = {
     type: 'FeatureCollection',
-    features: Array.from({ length: 50 }, (_, i) => ({
-      type: 'Feature',
-      properties: { magnitude: Math.random() * 5 },
-      geometry: {
-        type: 'Point',
-        coordinates: [
-          -73.985 + (Math.random() - 0.5) * 0.5,
-          40.758 + (Math.random() - 0.5) * 0.5
-        ]
-      }
-    }))
+    features: Array.from({ length: 200 }, (_, i) => {
+      // Create clusters of points for more realistic heatmap effect
+      const clusterCenterLng = -118.2437 + (Math.random() - 0.5) * 0.4;
+      const clusterCenterLat = 34.0522 + (Math.random() - 0.5) * 0.3;
+
+      return {
+        type: 'Feature',
+        properties: {
+          severity: Math.random() * 10,
+          timestamp: Date.now() - Math.random() * 86400000 // Last 24 hours
+        },
+        geometry: {
+          type: 'Point',
+          coordinates: [
+            clusterCenterLng + (Math.random() - 0.5) * 0.05, // Cluster points together
+            clusterCenterLat + (Math.random() - 0.5) * 0.05
+          ]
+        }
+      };
+    })
   };
 
   // Store for interactive controls
@@ -140,15 +149,35 @@
     dependencies: {}
   });
 
+  // Store for tile provider demo
+  const tileProviderStore = createStore({
+    initialState: createInitialMapState({
+      provider: 'maplibre',
+      center: [-0.1278, 51.5074], // London
+      zoom: 12
+    }),
+    reducer: mapReducer,
+    dependencies: {}
+  });
+
+  // Store for standalone popup demo
+  const popupStore = createStore({
+    initialState: createInitialMapState({
+      provider: 'maplibre',
+      center: [-122.431, 37.773], // San Francisco
+      zoom: 12
+    }),
+    reducer: mapReducer,
+    dependencies: {}
+  });
+
   // Control functions
   function zoomIn() {
-    const currentZoom = $interactiveStore.viewport.zoom;
-    interactiveStore.dispatch({ type: 'setZoom', zoom: currentZoom + 1 });
+    interactiveStore.dispatch({ type: 'zoomIn' });
   }
 
   function zoomOut() {
-    const currentZoom = $interactiveStore.viewport.zoom;
-    interactiveStore.dispatch({ type: 'setZoom', zoom: currentZoom - 1 });
+    interactiveStore.dispatch({ type: 'zoomOut' });
   }
 
   function flyToNewYork() {
@@ -250,7 +279,7 @@
     <div>
       <h3 class="text-xl font-semibold mb-2">Heatmap Layer</h3>
       <p class="text-muted-foreground text-sm">
-        Visualize point density with color gradients
+        Visualize point density with color gradients - Crime incidents heatmap showing hotspots
       </p>
     </div>
 
@@ -260,24 +289,27 @@
           <Map store={heatmapStore}>
             <HeatmapLayer
               store={heatmapStore}
-              id="earthquake-heatmap"
-              data={earthquakeData}
-              intensity={0.9}
-              radius={30}
+              id="crime-heatmap"
+              data={crimeHeatmapData}
+              intensity={1.2}
+              radius={40}
               colorGradient={[
-                [0, 'rgba(0, 0, 255, 0)'],
-                [0.3, 'rgba(0, 255, 0, 0.5)'],
-                [0.6, 'rgba(255, 255, 0, 0.8)'],
-                [1, 'rgba(255, 0, 0, 1)']
+                [0, 'rgba(33, 102, 172, 0)'],
+                [0.2, 'rgba(103, 169, 207, 0.4)'],
+                [0.4, 'rgba(209, 229, 240, 0.6)'],
+                [0.6, 'rgba(253, 219, 199, 0.8)'],
+                [0.8, 'rgba(239, 138, 98, 0.9)'],
+                [1, 'rgba(178, 24, 43, 1)']
               ]}
               visible={true}
             />
           </Map>
         </div>
         <div class="mt-4 text-sm text-muted-foreground">
-          <p><strong>Layer Type:</strong> Heatmap</p>
-          <p><strong>Data Points:</strong> {earthquakeData.features.length}</p>
-          <p><strong>Gradient:</strong> Blue → Green → Yellow → Red</p>
+          <p><strong>Layer Type:</strong> Heatmap (density visualization)</p>
+          <p><strong>Data Points:</strong> {crimeHeatmapData.features.length} incident locations</p>
+          <p><strong>Location:</strong> Los Angeles, CA</p>
+          <p><strong>Gradient:</strong> Blue (low density) → White → Red (high density)</p>
         </div>
       </CardContent>
     </Card>
@@ -339,13 +371,13 @@
     <Card>
       <CardContent class="pt-6">
         <div class="h-[400px] w-full rounded-lg overflow-hidden border relative">
-          <Map store={interactiveStore}>
-            <TileProviderControl store={interactiveStore} position="top-right" />
+          <Map store={tileProviderStore}>
+            <TileProviderControl store={tileProviderStore} position="top-right" />
           </Map>
         </div>
         <div class="mt-4 text-sm text-muted-foreground">
           <p><strong>Feature:</strong> Dynamic tile provider switching</p>
-          <p><strong>Current Provider:</strong> {$interactiveStore.tileProvider}</p>
+          <p><strong>Current Provider:</strong> {$tileProviderStore.tileProvider}</p>
           <p><strong>Available:</strong> OpenStreetMap, Stadia Maps, CARTO Light/Dark, and more</p>
         </div>
       </CardContent>
@@ -364,9 +396,9 @@
     <Card>
       <CardContent class="pt-6">
         <div class="h-[400px] w-full rounded-lg overflow-hidden border">
-          <Map store={interactiveStore}>
+          <Map store={popupStore}>
             <MapPopup
-              store={interactiveStore}
+              store={popupStore}
               id="info-popup"
               position={[-122.431, 37.773]}
               isOpen={true}

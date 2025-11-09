@@ -55,14 +55,19 @@ export class MaplibreAdapter implements MapAdapter {
   }
 
   flyTo(options: FlyToOptions): void {
-    this.map?.flyTo({
+    if (!this.map) return;
+
+    // Use flyTo for all animations - it works perfectly
+    const flyToParams = {
       center: options.center,
       ...(options.zoom !== undefined ? { zoom: options.zoom } : {}),
       ...(options.bearing !== undefined ? { bearing: options.bearing } : {}),
       ...(options.pitch !== undefined ? { pitch: options.pitch } : {}),
       ...(options.duration !== undefined ? { duration: options.duration } : {}),
       ...(options.essential !== undefined ? { essential: options.essential } : {})
-    });
+    };
+    console.log('[MaplibreAdapter] flyTo called with:', flyToParams);
+    this.map.flyTo(flyToParams);
   }
 
   fitBounds(bounds: BBox, padding?: number): void {

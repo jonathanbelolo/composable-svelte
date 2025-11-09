@@ -43,27 +43,50 @@ let {
 // Container for popup content
 let contentElement: HTMLDivElement | null = $state(null);
 
-// Open popup on mount
-onMount(() => {
-  if (!contentElement) return;
+// Track previous values to detect changes
+let previousIsOpen = isOpen;
+let previousPosition = position;
+let hasInitialized = false;
 
-  store.dispatch({
-    type: 'openPopup',
-    popup: {
-      id,
-      position,
-      content: contentElement.innerHTML,
-      isOpen,
-      closeButton,
-      closeOnClick
-    }
-  });
+// Open popup on mount and update when props change
+onMount(() => {
+  // Wait for content to render
+  setTimeout(() => {
+    if (!contentElement) return;
+
+    // Initial popup creation
+    store.dispatch({
+      type: 'openPopup',
+      popup: {
+        id,
+        position,
+        content: contentElement.innerHTML,
+        isOpen,
+        closeButton,
+        closeOnClick
+      }
+    });
+    hasInitialized = true;
+  }, 0);
+
+  return () => {
+    // Close popup on unmount
+    store.dispatch({
+      type: 'closePopup',
+      id
+    });
+  };
 });
 
-// Update popup when position or open state changes
+// Manual prop change detection (avoid $effect infinite loops)
 $effect(() => {
-  if (isOpen) {
-    if (contentElement) {
+  if (!hasInitialized || !contentElement) return;
+
+  const isOpenChanged = previousIsOpen !== isOpen;
+  const positionChanged = previousPosition[0] !== position[0] || previousPosition[1] !== position[1];
+
+  if (isOpenChanged || positionChanged) {
+    if (isOpen) {
       store.dispatch({
         type: 'openPopup',
         popup: {
@@ -75,21 +98,16 @@ $effect(() => {
           closeOnClick
         }
       });
+    } else {
+      store.dispatch({
+        type: 'closePopup',
+        id
+      });
     }
-  } else {
-    store.dispatch({
-      type: 'closePopup',
-      id
-    });
-  }
-});
 
-// Close popup on unmount
-onDestroy(() => {
-  store.dispatch({
-    type: 'closePopup',
-    id
-  });
+    previousIsOpen = isOpen;
+    previousPosition = position;
+  }
 });
 </script>
 

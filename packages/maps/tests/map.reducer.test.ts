@@ -61,17 +61,36 @@ describe('mapReducer', () => {
       expect(newState.viewport.pitch).toBe(30);
     });
 
-    it('flyTo updates center and zoom', () => {
+    it('flyTo sets flyToTarget for smooth animation', () => {
       const action: MapAction = {
         type: 'flyTo',
         center: [-118.2437, 34.0522],
-        zoom: 12
+        zoom: 12,
+        duration: 2000
       };
 
       const [newState] = mapReducer(initialState, action, {});
 
-      expect(newState.viewport.center).toEqual([-118.2437, 34.0522]);
-      expect(newState.viewport.zoom).toBe(12);
+      expect(newState.flyToTarget).toEqual({
+        center: [-118.2437, 34.0522],
+        zoom: 12,
+        duration: 2000
+      });
+    });
+
+    it('flyToCompleted clears flyToTarget', () => {
+      const stateWithFlyTo: MapState = {
+        ...initialState,
+        flyToTarget: {
+          center: [-118.2437, 34.0522],
+          zoom: 12
+        }
+      };
+
+      const action: MapAction = { type: 'flyToCompleted' };
+      const [newState] = mapReducer(stateWithFlyTo, action, {});
+
+      expect(newState.flyToTarget).toBeUndefined();
     });
 
     it('resetNorth resets bearing and pitch', () => {
@@ -116,18 +135,26 @@ describe('mapReducer', () => {
       expect(newState.isDragging).toBe(false);
     });
 
-    it('zoomIn increases zoom by 1', () => {
+    it('zoomIn sets flyToTarget with increased zoom', () => {
       const action: MapAction = { type: 'zoomIn' };
       const [newState] = mapReducer(initialState, action, {});
 
-      expect(newState.viewport.zoom).toBe(3); // was 2
+      expect(newState.flyToTarget).toEqual({
+        center: [0, 0],
+        zoom: 3, // was 2, now 3
+        duration: 300
+      });
     });
 
-    it('zoomOut decreases zoom by 1', () => {
+    it('zoomOut sets flyToTarget with decreased zoom', () => {
       const action: MapAction = { type: 'zoomOut' };
       const [newState] = mapReducer(initialState, action, {});
 
-      expect(newState.viewport.zoom).toBe(1); // was 2
+      expect(newState.flyToTarget).toEqual({
+        center: [0, 0],
+        zoom: 1, // was 2, now 1
+        duration: 300
+      });
     });
   });
 
@@ -300,5 +327,182 @@ describe('createInitialMapState', () => {
 
     expect(state.tileProvider).toBe('carto-dark');
     expect(state.style).toBe('https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json');
+  });
+});
+
+describe('layer actions', () => {
+  const initialState: MapState = createInitialMapState({
+    provider: 'maplibre',
+    center: [0, 0],
+    zoom: 2
+  });
+
+  const sampleLayer = {
+    id: 'test-layer',
+    type: 'geojson' as const,
+    data: {
+      type: 'FeatureCollection' as const,
+      features: []
+    },
+    style: {
+      fillColor: '#0080ff',
+      fillOpacity: 0.5
+    },
+    visible: true,
+    interactive: true
+  };
+
+  it('addLayer adds a layer', () => {
+    const action: MapAction = {
+      type: 'addLayer',
+      layer: sampleLayer
+    };
+
+    const [newState] = mapReducer(initialState, action, {});
+
+    expect(newState.layers).toHaveLength(1);
+    expect(newState.layers[0]).toEqual(sampleLayer);
+  });
+
+  it('removeLayer removes a layer by id', () => {
+    const stateWithLayer: MapState = {
+      ...initialState,
+      layers: [sampleLayer]
+    };
+
+    const action: MapAction = {
+      type: 'removeLayer',
+      id: 'test-layer'
+    };
+
+    const [newState] = mapReducer(stateWithLayer, action, {});
+
+    expect(newState.layers).toHaveLength(0);
+  });
+
+  it('toggleLayerVisibility toggles visibility', () => {
+    const stateWithLayer: MapState = {
+      ...initialState,
+      layers: [{ ...sampleLayer, visible: true }]
+    };
+
+    const action: MapAction = {
+      type: 'toggleLayerVisibility',
+      id: 'test-layer'
+    };
+
+    const [newState] = mapReducer(stateWithLayer, action, {});
+
+    expect(newState.layers[0].visible).toBe(false);
+  });
+
+  it('updateLayerStyle updates layer style', () => {
+    const stateWithLayer: MapState = {
+      ...initialState,
+      layers: [sampleLayer]
+    };
+
+    const action: MapAction = {
+      type: 'updateLayerStyle',
+      id: 'test-layer',
+      style: { fillColor: '#ff0000', fillOpacity: 0.8 }
+    };
+
+    const [newState] = mapReducer(stateWithLayer, action, {});
+
+    expect(newState.layers[0].style.fillColor).toBe('#ff0000');
+    expect(newState.layers[0].style.fillOpacity).toBe(0.8);
+  });
+
+  it('clearLayers removes all layers', () => {
+    const stateWithLayers: MapState = {
+      ...initialState,
+      layers: [
+        sampleLayer,
+        { ...sampleLayer, id: 'layer-2' }
+      ]
+    };
+
+    const action: MapAction = { type: 'clearLayers' };
+    const [newState] = mapReducer(stateWithLayers, action, {});
+
+    expect(newState.layers).toHaveLength(0);
+  });
+});
+
+describe('popup actions', () => {
+  const initialState: MapState = createInitialMapState({
+    provider: 'maplibre',
+    center: [0, 0],
+    zoom: 2
+  });
+
+  const samplePopup = {
+    id: 'test-popup',
+    position: [-74.006, 40.7128] as [number, number],
+    content: '<h3>Test Popup</h3>',
+    isOpen: true,
+    closeButton: true,
+    closeOnClick: false
+  };
+
+  it('openPopup adds a popup', () => {
+    const action: MapAction = {
+      type: 'openPopup',
+      popup: samplePopup
+    };
+
+    const [newState] = mapReducer(initialState, action, {});
+
+    expect(newState.popups).toHaveLength(1);
+    expect(newState.popups[0]).toEqual(samplePopup);
+  });
+
+  it('openPopup updates existing popup', () => {
+    const stateWithPopup: MapState = {
+      ...initialState,
+      popups: [{ ...samplePopup, isOpen: false }]
+    };
+
+    const action: MapAction = {
+      type: 'openPopup',
+      popup: { ...samplePopup, content: '<h3>Updated</h3>' }
+    };
+
+    const [newState] = mapReducer(stateWithPopup, action, {});
+
+    expect(newState.popups).toHaveLength(1);
+    expect(newState.popups[0].content).toBe('<h3>Updated</h3>');
+  });
+
+  it('closePopup closes a popup by id', () => {
+    const stateWithPopup: MapState = {
+      ...initialState,
+      popups: [samplePopup]
+    };
+
+    const action: MapAction = {
+      type: 'closePopup',
+      id: 'test-popup'
+    };
+
+    const [newState] = mapReducer(stateWithPopup, action, {});
+
+    expect(newState.popups[0].isOpen).toBe(false);
+  });
+
+  it('closeAllPopups closes all popups', () => {
+    const stateWithPopups: MapState = {
+      ...initialState,
+      popups: [
+        samplePopup,
+        { ...samplePopup, id: 'popup-2' }
+      ]
+    };
+
+    const action: MapAction = { type: 'closeAllPopups' };
+    const [newState] = mapReducer(stateWithPopups, action, {});
+
+    expect(newState.popups.every(p => !p.isOpen)).toBe(true);
   });
 });

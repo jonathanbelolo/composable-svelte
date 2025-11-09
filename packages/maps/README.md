@@ -2,7 +2,7 @@
 
 > Interactive map components for Composable Svelte
 
-**Status**: 🚧 **In Development** (Phase 12A)
+**Status**: 🚧 **In Development** (Phase 12B Complete, Phase 12C In Progress)
 
 ## Overview
 
@@ -13,7 +13,9 @@
 - 🗺️ **State-Driven**: All map state managed via reducers (viewport, markers, layers)
 - 🌍 **Open Source**: Built on Maplibre GL (no API key required)
 - 📦 **Mapbox Compatible**: Optional Mapbox GL support for users with API keys
+- 🎨 **Multiple Tile Providers**: Switch between OpenStreetMap, Stadia Maps, CARTO, Maptiler, and more
 - 🖱️ **Interactive**: Pan, zoom, markers, popups
+- 📊 **GeoJSON & Heatmap Layers**: Render polygons, points, and density visualizations
 - ⚡ **Performant**: GPU-accelerated rendering via WebGL
 - ♿ **Accessible**: ARIA labels, keyboard navigation
 - 📱 **Responsive**: Touch gestures, adaptive UI
@@ -97,6 +99,50 @@ const store = createStore({
 });
 ```
 
+## Tile Providers
+
+Switch between different map styles on the fly.
+
+### Using Built-in Providers
+
+```typescript
+const store = createStore({
+  initialState: createInitialMapState({
+    provider: 'maplibre',
+    tileProvider: 'carto-dark',  // 'openstreetmap', 'stadia', 'carto-light', 'carto-dark', 'maptiler', 'mapbox'
+    center: [-74.006, 40.7128],
+    zoom: 12
+  }),
+  reducer: mapReducer
+});
+```
+
+### Dynamic Provider Switching
+
+```svelte
+<script>
+  import { Map, TileProviderControl } from '@composable-svelte/maps';
+</script>
+
+<Map store={mapStore}>
+  <TileProviderControl store={mapStore} position="top-right" />
+</Map>
+```
+
+### Custom Tile Provider
+
+```typescript
+const store = createStore({
+  initialState: createInitialMapState({
+    provider: 'maplibre',
+    tileProvider: 'custom',
+    customTileURL: 'https://your-tiles.com/style.json',
+    customAttribution: '© Your Maps'
+  }),
+  reducer: mapReducer
+});
+```
+
 ## API
 
 ### Types
@@ -140,30 +186,34 @@ const mapReducer: Reducer<MapState, MapAction, {}>
 
 ## Roadmap
 
-### Phase 12A: Core Foundation ✅ **IN PROGRESS**
+### Phase 12A: Core Foundation ✅ **COMPLETE**
 - [x] Map component infrastructure
 - [x] MapPrimitive with Maplibre GL integration
 - [x] Mapbox adapter support
 - [x] Basic mapReducer with viewport management
 - [x] Marker support
 - [x] Pan/zoom interactions
-- [ ] Unit tests for reducer
+- [x] Unit tests for reducer
 
-### Phase 12B: Layers & Interactivity (Planned)
-- [ ] GeoJSON layer component
-- [ ] Heatmap layer component
-- [ ] Popup system
-- [ ] Feature hover/click handling
+### Phase 12B: Layers & Interactivity ✅ **COMPLETE**
+- [x] GeoJSON layer component
+- [x] Heatmap layer component
+- [x] Popup system
+- [x] Feature hover/click handling
+- [x] Multiple tile providers
+- [x] TileProviderControl component
 
-### Phase 12C: Advanced Features (Planned)
-- [ ] Marker clustering
+### Phase 12C: Advanced Features 🚧 **IN PROGRESS**
+- [x] Multiple tile provider support
+- [ ] 3D buildings layer
+- [ ] Marker clustering with supercluster
 - [ ] Geocoding/search component
-- [ ] Drawing tools
-- [ ] Routing/directions
+- [ ] Drawing tools (polygon, line, circle)
+- [ ] Routing/directions support
 
 ## Development Status
 
-**Phase 12A in progress!** See the [Phase 12 Plan](../../plans/phase-12/PHASE-12-PLAN.md) for detailed roadmap.
+**Phase 12B Complete, Phase 12C in progress!** See the [Phase 12 Plan](../../plans/phase-12/PHASE-12-PLAN.md) for detailed roadmap.
 
 ## Dependencies
 

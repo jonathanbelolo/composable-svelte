@@ -4,6 +4,7 @@
  */
 
 import type { TileProvider } from '../utils/tile-providers';
+import type { GeoJSON as GeoJSONType } from 'geojson';
 
 /**
  * Map provider type
@@ -37,12 +38,12 @@ export interface MapViewport {
 /**
  * Marker definition
  */
-export interface Marker {
+export interface Marker<TData = unknown> {
   id: string;
   position: LngLat;
   icon?: string;  // URL or data URI
   draggable?: boolean;
-  data?: any;     // Custom data attached to marker
+  data?: TData;   // Custom data attached to marker
   popup?: {
     content: string;
     isOpen: boolean;
@@ -50,9 +51,9 @@ export interface Marker {
 }
 
 /**
- * GeoJSON types
+ * GeoJSON types - supports FeatureCollection, Feature, or Geometry
  */
-export type GeoJSON = any; // Full GeoJSON type would be complex, using any for now
+export type GeoJSON = GeoJSONType.FeatureCollection | GeoJSONType.Feature | GeoJSONType.Geometry;
 
 /**
  * Layer style properties
@@ -95,10 +96,10 @@ export interface Popup {
 /**
  * Feature reference (for hover/click interactions)
  */
-export interface FeatureReference {
+export interface FeatureReference<TData = unknown> {
   layer: string;
   featureId: string | number;
-  data?: any;
+  data?: TData;
 }
 
 /**
@@ -121,6 +122,9 @@ export interface MapState {
   isInteractive: boolean;
   isDragging: boolean;
   isZooming: boolean;
+
+  // Smooth animation target (for flyTo)
+  flyToTarget?: FlyToOptions;
 
   // Markers
   markers: Marker[];
@@ -155,6 +159,7 @@ export type MapAction =
   | { type: 'setPitch'; pitch: number }
   | { type: 'fitBounds'; bounds: BBox; padding?: number }
   | { type: 'flyTo'; center: LngLat; zoom?: number; duration?: number }
+  | { type: 'flyToCompleted' }
   | { type: 'resetNorth' }
 
   // Interaction actions

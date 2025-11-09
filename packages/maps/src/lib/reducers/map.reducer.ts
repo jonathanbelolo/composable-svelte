@@ -90,17 +90,28 @@ export const mapReducer: Reducer<MapState, MapAction, {}> = (
     }
 
     case 'flyTo': {
-      // FlyTo is handled by the map adapter
-      // Reducer just updates the target state
-      const { center, zoom } = action;
+      // Set flyTo target to trigger smooth animation in MapPrimitive
+      // Don't update viewport directly - let the map animation update it
+      const { center, zoom, duration } = action;
       return [
         {
           ...state,
-          viewport: {
-            ...state.viewport,
+          flyToTarget: {
             center,
-            ...(zoom !== undefined ? { zoom } : {})
+            zoom,
+            duration
           }
+        },
+        Effect.none()
+      ];
+    }
+
+    case 'flyToCompleted': {
+      // Clear flyTo target after animation starts
+      return [
+        {
+          ...state,
+          flyToTarget: undefined
         },
         Effect.none()
       ];
@@ -150,12 +161,19 @@ export const mapReducer: Reducer<MapState, MapAction, {}> = (
     }
 
     case 'zoomIn': {
+      // Use flyTo for smooth zoom animation
+      const targetZoom = Math.min(state.viewport.zoom + 1, 22); // Max zoom 22
       return [
         {
           ...state,
           viewport: {
             ...state.viewport,
-            zoom: state.viewport.zoom + 1
+            zoom: targetZoom
+          },
+          flyToTarget: {
+            center: state.viewport.center,
+            zoom: targetZoom,
+            duration: 300 // Shorter duration for zoom
           }
         },
         Effect.none()
@@ -163,12 +181,19 @@ export const mapReducer: Reducer<MapState, MapAction, {}> = (
     }
 
     case 'zoomOut': {
+      // Use flyTo for smooth zoom animation
+      const targetZoom = Math.max(state.viewport.zoom - 1, 0); // Min zoom 0
       return [
         {
           ...state,
           viewport: {
             ...state.viewport,
-            zoom: state.viewport.zoom - 1
+            zoom: targetZoom
+          },
+          flyToTarget: {
+            center: state.viewport.center,
+            zoom: targetZoom,
+            duration: 300 // Shorter duration for zoom
           }
         },
         Effect.none()
@@ -344,10 +369,18 @@ export const mapReducer: Reducer<MapState, MapAction, {}> = (
 
     // Popup actions
     case 'openPopup': {
+      // Update existing popup or add new one
+      const existingIndex = state.popups.findIndex((p) => p.id === action.popup.id);
+
       return [
         {
           ...state,
-          popups: [...state.popups, { ...action.popup, isOpen: true }]
+          popups:
+            existingIndex >= 0
+              ? state.popups.map((p) =>
+                  p.id === action.popup.id ? { ...action.popup, isOpen: true } : p
+                )
+              : [...state.popups, { ...action.popup, isOpen: true }]
         },
         Effect.none()
       ];
@@ -357,7 +390,9 @@ export const mapReducer: Reducer<MapState, MapAction, {}> = (
       return [
         {
           ...state,
-          popups: state.popups.filter((popup) => popup.id !== action.id)
+          popups: state.popups.map((popup) =>
+            popup.id === action.id ? { ...popup, isOpen: false } : popup
+          )
         },
         Effect.none()
       ];
@@ -367,7 +402,7 @@ export const mapReducer: Reducer<MapState, MapAction, {}> = (
       return [
         {
           ...state,
-          popups: []
+          popups: state.popups.map((popup) => ({ ...popup, isOpen: false }))
         },
         Effect.none()
       ];
