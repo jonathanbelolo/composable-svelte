@@ -50,6 +50,7 @@
   import LineChartDemo from '../demos/LineChartDemo.svelte';
   import BarChartDemo from '../demos/BarChartDemo.svelte';
   import MapDemo from '../demos/MapDemo.svelte';
+  import SceneDemo from '../demos/SceneDemo.svelte';
   // Code Components
   import CodeHighlightDemo from '../demos/CodeHighlightDemo.svelte';
   import CodeEditorDemo from '../demos/CodeEditorDemo.svelte';
@@ -128,6 +129,7 @@
     'line-chart': LineChartDemo,
     'bar-chart': BarChartDemo,
     'map': MapDemo,
+    'scene': SceneDemo,
     // Code Components
     'code-highlight': CodeHighlightDemo,
     'code-editor': CodeEditorDemo,

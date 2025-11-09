@@ -84,6 +84,7 @@ export const COMPONENT_REGISTRY: ComponentInfo[] = [
   { id: 'line-chart', name: 'Line Chart', category: 'Data Visualization', description: 'Time series line chart with hover interactions - state-driven visualization' },
   { id: 'bar-chart', name: 'Bar Chart', category: 'Data Visualization', description: 'Categorical bar chart with selection support - built with Composable Architecture' },
   { id: 'map', name: 'Map', category: 'Data Visualization', description: 'Interactive maps with markers, layers, and popups - powered by Maplibre GL with state-driven architecture' },
+  { id: 'scene', name: '3D Scene', category: 'Data Visualization', description: 'State-driven 3D scene with WebGPU/WebGL rendering - powered by Babylon.js with declarative Svelte components' },
 
   // Code Components
   { id: 'code-highlight', name: 'Code Highlight', category: 'Code Components', description: 'Syntax highlighting for code snippets with Prism.js' },
