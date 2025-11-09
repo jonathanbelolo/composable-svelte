@@ -1,0 +1,43 @@
+{
+  "name": "@composable-svelte/graphics",
+  "version": "0.1.0",
+  "description": "State-driven WebGL/WebGPU graphics package for Composable Svelte",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && tsc --emitDeclarationOnly",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "check": "svelte-check --tsconfig ./tsconfig.json"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "svelte": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "svelte": "./dist/index.js",
+  "files": [
+    "dist"
+  ],
+  "peerDependencies": {
+    "@composable-svelte/core": "workspace:*",
+    "svelte": "^5.0.0"
+  },
+  "dependencies": {
+    "@babylonjs/core": "^8.0.0",
+    "@babylonjs/loaders": "^8.0.0"
+  },
+  "devDependencies": {
+    "@babylonjs/inspector": "^8.0.0",
+    "@sveltejs/vite-plugin-svelte": "^5.0.0",
+    "@types/node": "^22.0.0",
+    "svelte": "^5.0.0",
+    "svelte-check": "^4.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.6.0",
+    "vite": "^6.0.0",
+    "vitest": "^2.0.0"
+  }
+}
