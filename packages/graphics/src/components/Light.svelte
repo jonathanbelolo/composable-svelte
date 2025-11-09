@@ -77,4 +77,5 @@ onDestroy(() => {
 });
 </script>
 
-<!-- Light component renders nothing - updates state only -->
+<!-- Empty element for Svelte 5 snippet compatibility -->
+<!-- Light component updates state only, no visual output -->

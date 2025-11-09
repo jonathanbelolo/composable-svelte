@@ -80,4 +80,5 @@ onDestroy(() => {
 });
 </script>
 
-<!-- Mesh component renders nothing - updates state only -->
+<!-- Empty element for Svelte 5 snippet compatibility -->
+<!-- Mesh component updates state only, no visual output -->

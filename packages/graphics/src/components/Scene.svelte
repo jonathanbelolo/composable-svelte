@@ -152,10 +152,8 @@ const heightStyle = typeof height === 'number' ? `${height}px` : height;
 <div class="scene-container" style="width: {widthStyle}; height: {heightStyle};">
   <canvas bind:this={canvas} class="scene-canvas"></canvas>
 
-  <!-- Render children (Camera, Mesh, Light components) after adapter is ready -->
-  {#if adapter && children}
-    {@render children()}
-  {/if}
+  <!-- Render children (Camera, Mesh, Light components) -->
+  {@render children?.()}
 </div>
 
 <style>

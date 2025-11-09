@@ -3,8 +3,8 @@ import { createStore } from '@composable-svelte/core';
 import {
   Scene,
   Camera,
-  Mesh,
   Light,
+  Mesh,
   graphicsReducer,
   createInitialGraphicsState
 } from '@composable-svelte/graphics';
@@ -18,14 +18,12 @@ const store = createStore({
   dependencies: {}
 });
 
+// Track rotation for animation
+let rotation = $state(0);
+
 // Simple rotation animation
 function rotateCube() {
-  const currentRotation = $store.meshes.find((m) => m.id === 'cube-1')?.rotation || [0, 0, 0];
-  store.dispatch({
-    type: 'setMeshRotation',
-    id: 'cube-1',
-    rotation: [currentRotation[0], currentRotation[1] + Math.PI / 4, currentRotation[2]]
-  });
+  rotation += Math.PI / 4;
 }
 </script>
 
@@ -63,17 +61,16 @@ function rotateCube() {
     <div class="rounded-lg border overflow-hidden">
       <Scene {store} height="400px">
         <Camera {store} position={[0, 3, 8]} lookAt={[0, 0, 0]} fov={45} />
-
         <Light {store} type="ambient" intensity={0.4} color="#ffffff" />
         <Light {store} type="directional" position={[5, 10, 7.5]} intensity={1.2} color="#ffffff" />
-
         <Mesh
           {store}
           id="cube-1"
           geometry={{ type: 'box', size: 2 }}
           material={{ color: '#ff6b6b', metallic: 0.7, roughness: 0.3 }}
           position={[0, 0, 0]}
-          rotation={$store.meshes.find((m) => m.id === 'cube-1')?.rotation}
+          rotation={[0, rotation, 0]}
+          scale={[1, 1, 1]}
         />
       </Scene>
     </div>
@@ -100,9 +97,8 @@ function rotateCube() {
       <pre class="text-sm"><code>{`<script>
   import { createStore } from '@composable-svelte/core';
   import {
-    Scene, Camera, Mesh, Light,
-    graphicsReducer,
-    createInitialGraphicsState
+    Scene, Camera, Light, Mesh,
+    graphicsReducer, createInitialGraphicsState
   } from '@composable-svelte/graphics';
 
   const store = createStore({
@@ -113,14 +109,13 @@ function rotateCube() {
 </script>
 
 <Scene {store}>
-  <Camera position={[0, 3, 8]} lookAt={[0, 0, 0]} />
-  <Light type="ambient" intensity={0.4} />
-  <Light type="directional" position={[5, 10, 7.5]} intensity={1.2} />
-
+  <Camera {store} position={[0, 3, 8]} lookAt={[0, 0, 0]} />
+  <Light {store} type="ambient" intensity={0.4} />
   <Mesh
+    {store}
     id="cube"
     geometry={{ type: 'box', size: 2 }}
-    material={{ color: '#ff6b6b', metallic: 0.7, roughness: 0.3 }}
+    material={{ color: '#ff6b6b' }}
     position={[0, 0, 0]}
   />
 </Scene>`}</code></pre>

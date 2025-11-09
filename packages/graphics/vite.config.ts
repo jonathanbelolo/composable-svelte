@@ -14,13 +14,18 @@ export default defineConfig({
     minify: 'esbuild',
     sourcemap: true,
     rollupOptions: {
-      external: [
-        'svelte',
-        'svelte/store',
-        '@composable-svelte/core',
-        '@babylonjs/core',
-        '@babylonjs/loaders'
-      ],
+      external: (id) => {
+        return (
+          id === 'svelte' ||
+          id.startsWith('svelte/') ||
+          id === '@composable-svelte/core' ||
+          id.startsWith('@composable-svelte/core/') ||
+          id === '@babylonjs/core' ||
+          id.startsWith('@babylonjs/core/') ||
+          id === '@babylonjs/loaders' ||
+          id.startsWith('@babylonjs/loaders/')
+        );
+      },
       output: {
         preserveModules: false
       }
