@@ -50,11 +50,21 @@ app.get('/', async (request, reply) => {
 
     // 2. Create store with pre-populated data
     // Note: dependencies is empty because effects won't run on server
+    const firstPost = posts[0];
     const store = createStore({
       initialState: {
         ...initialState,
         posts,
-        selectedPostId: posts[0]?.id || null // Select first post by default
+        selectedPostId: firstPost?.id || null,
+        // Set initial meta for the first post (computed in state, not in template!)
+        meta: firstPost
+          ? {
+              title: `${firstPost.title} - Composable Svelte Blog`,
+              description: firstPost.content.slice(0, 160),
+              ogImage: `/og/post-${firstPost.id}.jpg`,
+              canonical: `https://example.com/posts/${firstPost.id}`
+            }
+          : initialState.meta
       },
       reducer: appReducer,
       dependencies: {} as AppDependencies
@@ -62,10 +72,10 @@ app.get('/', async (request, reply) => {
     });
 
     // 3. Render component to HTML
+    // Note: Title and meta tags are now handled by <svelte:head> in App.svelte!
+    // This demonstrates state-driven meta tags computed by the reducer.
     const html = renderToHTML(App, { store }, {
-      title: 'Composable Svelte SSR Example',
       head: `
-        <meta name="description" content="Server-Side Rendered blog with Composable Svelte and Fastify">
         <link rel="stylesheet" href="/assets/index.css">
         <style>
           * {

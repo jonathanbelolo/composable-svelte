@@ -12,11 +12,23 @@ export interface Post {
   tags: string[];
 }
 
+/**
+ * Page metadata for SEO and social sharing.
+ * Computed by the reducer based on application state.
+ */
+export interface PageMeta {
+  title: string;
+  description: string;
+  ogImage?: string;
+  canonical?: string;
+}
+
 export interface AppState {
   posts: Post[];
   selectedPostId: number | null;
   isLoading: boolean;
   error: string | null;
+  meta: PageMeta;
 }
 
 export type AppAction =
@@ -29,5 +41,9 @@ export const initialState: AppState = {
   posts: [],
   selectedPostId: null,
   isLoading: false,
-  error: null
+  error: null,
+  meta: {
+    title: 'Composable Svelte SSR Example',
+    description: 'Server-Side Rendered blog with Composable Svelte and Fastify'
+  }
 };

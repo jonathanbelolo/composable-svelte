@@ -17,6 +17,20 @@
   );
 </script>
 
+<!-- State-driven meta tags (computed by reducer, rendered by component) -->
+<svelte:head>
+  <title>{state.meta.title}</title>
+  <meta name="description" content={state.meta.description} />
+  {#if state.meta.ogImage}
+    <meta property="og:title" content={state.meta.title} />
+    <meta property="og:description" content={state.meta.description} />
+    <meta property="og:image" content={state.meta.ogImage} />
+  {/if}
+  {#if state.meta.canonical}
+    <link rel="canonical" href={state.meta.canonical} />
+  {/if}
+</svelte:head>
+
 <div class="app">
   <header>
     <h1>Composable Svelte SSR Example</h1>

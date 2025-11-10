@@ -15,8 +15,8 @@ test.describe('SSR Server Example', () => {
     // Navigate to the application
     await page.goto('/');
 
-    // Verify the page title
-    await expect(page).toHaveTitle('Composable Svelte SSR Example');
+    // Verify the page title (state-driven from first post)
+    await expect(page).toHaveTitle('Getting Started with Composable Svelte - Composable Svelte Blog');
 
     // Verify main heading is present
     await expect(page.locator('.app > header h1').first()).toContainText('Composable Svelte SSR Example');
@@ -193,12 +193,42 @@ test.describe('SSR Server Example', () => {
     const response = await page.goto('/');
     const html = await response?.text();
 
-    // Verify title
-    expect(html).toContain('<title>Composable Svelte SSR Example</title>');
+    // Verify state-driven title (from first post)
+    expect(html).toContain('<title>Getting Started with Composable Svelte - Composable Svelte Blog</title>');
 
-    // Verify description meta tag
+    // Verify state-driven description meta tag (from first post)
     expect(html).toContain('<meta name="description"');
-    expect(html).toContain('Server-Side Rendered blog');
+    expect(html).toContain('Composable Svelte');
+    expect(html).toContain('brings the power of the Composable Architecture');
+
+    // Verify Open Graph tags
+    expect(html).toContain('<meta property="og:title"');
+    expect(html).toContain('<meta property="og:image" content="/og/post-1.jpg"');
+    expect(html).toContain('<link rel="canonical" href="https://example.com/posts/1"');
+  });
+
+  test('should update meta tags when post changes', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForTimeout(2000); // Wait for hydration
+
+    // Verify initial title (first post)
+    await expect(page).toHaveTitle('Getting Started with Composable Svelte - Composable Svelte Blog');
+
+    // Click on the second post
+    const secondPost = page.locator('aside.sidebar ul li').nth(1);
+    await secondPost.locator('button').click();
+    await page.waitForTimeout(1000);
+
+    // Verify title updated to second post
+    await expect(page).toHaveTitle('Understanding Server-Side Rendering - Composable Svelte Blog');
+
+    // Click on the third post
+    const thirdPost = page.locator('aside.sidebar ul li').nth(2);
+    await thirdPost.locator('button').click();
+    await page.waitForTimeout(1000);
+
+    // Verify title updated to third post
+    await expect(page).toHaveTitle('Building Production-Ready Apps - Composable Svelte Blog');
   });
 
   test('should load CSS correctly', async ({ page }) => {

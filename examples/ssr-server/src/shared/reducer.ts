@@ -28,14 +28,27 @@ export const appReducer: Reducer<AppState, AppAction, AppDependencies> = (
         Effect.none()
       ];
 
-    case 'selectPost':
+    case 'selectPost': {
+      // Find the selected post
+      const post = state.posts.find((p) => p.id === action.postId);
+
       return [
         {
           ...state,
-          selectedPostId: action.postId
+          selectedPostId: action.postId,
+          // Update meta based on selected post (logic in reducer!)
+          meta: post
+            ? {
+                title: `${post.title} - Composable Svelte Blog`,
+                description: post.content.slice(0, 160),
+                ogImage: `/og/post-${post.id}.jpg`,
+                canonical: `https://example.com/posts/${post.id}`
+              }
+            : state.meta
         },
         Effect.none()
       ];
+    }
 
     case 'loadPostsFailed':
       return [
