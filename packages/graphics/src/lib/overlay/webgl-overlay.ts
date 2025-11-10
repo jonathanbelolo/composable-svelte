@@ -1,7 +1,7 @@
 /**
  * WebGL Overlay
  *
- * Phase 1.4: WebGLOverlay component
+ * Phase 1.4 + 2: WebGLOverlay component with shader system
  *
  * Main orchestrator that brings together:
  * - WebGLContextManager (context loss/recovery)
@@ -10,6 +10,8 @@
  * - RenderLoop (animation frame management)
  * - DeviceCapabilities (platform detection)
  * - BrowserCompatibility (browser quirks)
+ * - ShaderProgramManager (shader compilation/caching)
+ * - RenderPipeline (WebGL rendering)
  */
 
 import { WebGLContextManager } from '../utils/webgl-context-manager.js';
@@ -20,6 +22,9 @@ import { DeviceCapabilities } from '../utils/device-capabilities.js';
 import { BrowserCompatibility } from '../utils/browser-compatibility.js';
 import { OverlayError, OverlayErrorCode } from '../utils/overlay-error.js';
 import { checkWebGLSupport } from '../utils/webgl-support.js';
+import { ShaderProgramManager } from '../shaders/shader-program-manager.js';
+import { RenderPipeline } from '../shaders/render-pipeline.js';
+import { DEFAULT_VERTEX_SHADER, DEFAULT_FRAGMENT_SHADER } from '../shaders/default-shaders.js';
 import type {
 	OverlayOptions,
 	OverlayContextAPI,
@@ -28,6 +33,7 @@ import type {
 	ShaderEffect,
 	UpdateStrategy
 } from './overlay-types.js';
+import type { CompiledProgram } from '../shaders/shader-compiler.js';
 
 /**
  * Create WebGL overlay
@@ -68,7 +74,10 @@ class WebGLOverlay implements OverlayContextAPI {
 	private renderLoop: RenderLoop;
 	private deviceCapabilities: DeviceCapabilities | null = null;
 	private browserCompatibility: BrowserCompatibility;
+	private programManager: ShaderProgramManager | null = null;
+	private renderPipeline: RenderPipeline | null = null;
 	private elements = new Map<string, ElementRegistration>();
+	private elementPrograms = new Map<string, CompiledProgram>();
 	private options: Required<OverlayOptions>;
 	private destroyed = false;
 
@@ -130,6 +139,12 @@ class WebGLOverlay implements OverlayContextAPI {
 			this.browserCompatibility.needsCORSWorkaround()
 		);
 
+		// Initialize shader program manager
+		this.programManager = new ShaderProgramManager(this.gl);
+
+		// Initialize render pipeline
+		this.renderPipeline = new RenderPipeline(this.gl, this.programManager);
+
 		// Initialize update scheduler
 		this.updateScheduler = new UpdateScheduler();
 		this.updateScheduler.setUpdateCallback((elementId) => {
@@ -186,6 +201,9 @@ class WebGLOverlay implements OverlayContextAPI {
 
 		// Create initial texture
 		this.createElementTexture(registration);
+
+		// Compile shader program
+		this.compileElementShader(registration);
 
 		// Add to elements map
 		this.elements.set(id, registration);
@@ -378,6 +396,18 @@ class WebGLOverlay implements OverlayContextAPI {
 		// Destroy update scheduler
 		this.updateScheduler.destroy();
 
+		// Clean up shader system
+		if (this.programManager) {
+			this.programManager.destroy();
+		}
+
+		if (this.renderPipeline) {
+			this.renderPipeline.destroy();
+		}
+
+		// Clear program cache
+		this.elementPrograms.clear();
+
 		// Clean up WebGL resources
 		if (this.gl) {
 			// Delete all textures (already done in unregisterElement)
@@ -504,18 +534,82 @@ class WebGLOverlay implements OverlayContextAPI {
 	 * Render a single element
 	 */
 	private renderElement(registration: ElementRegistration, deltaTime: number): void {
-		if (!this.gl) return;
+		if (!this.renderPipeline || !this.programManager) return;
 
-		// Placeholder rendering (Phase 2 will implement proper shader system)
-		// For now, just bind the texture to show it's working
+		// Get compiled program for this element
+		const program = this.elementPrograms.get(registration.id);
+		if (!program) return;
 
-		const gl = this.gl;
-		gl.bindTexture(gl.TEXTURE_2D, registration.texture!);
+		// Get texture
+		if (!registration.texture) return;
 
-		// TODO: Phase 2 - Implement shader program rendering
-		// - Compile shaders
-		// - Set uniforms
-		// - Draw quad with texture
+		// Prepare render options
+		const uniforms: Record<string, number | number[]> = {};
+
+		// Add time uniform if shader uses it
+		if (program.uniforms.has('uTime')) {
+			uniforms.uTime = performance.now() / 1000.0; // Convert to seconds
+		}
+
+		// Add deltaTime if shader uses it
+		if (program.uniforms.has('uDeltaTime')) {
+			uniforms.uDeltaTime = deltaTime / 1000.0; // Convert to seconds
+		}
+
+		// Add custom uniforms from shader effect
+		if (typeof registration.shader === 'object' && registration.shader.uniforms) {
+			Object.assign(uniforms, registration.shader.uniforms);
+		}
+
+		// Render the element
+		this.renderPipeline.render(program, registration.texture, {
+			uniforms,
+			clear: false // Don't clear between elements
+		});
+
+		// Mark as rendered
+		registration.needsUpdate = false;
+	}
+
+	/**
+	 * Compile shader program for an element
+	 */
+	private compileElementShader(registration: ElementRegistration): void {
+		if (!this.programManager) return;
+
+		// Determine vertex and fragment shader source
+		let vertexSource = DEFAULT_VERTEX_SHADER;
+		let fragmentSource = DEFAULT_FRAGMENT_SHADER;
+
+		// Handle custom shader effect
+		if (typeof registration.shader === 'object') {
+			if (registration.shader.vertex) {
+				vertexSource = registration.shader.vertex;
+			}
+			fragmentSource = registration.shader.fragment;
+		} else if (typeof registration.shader === 'string') {
+			// Built-in preset (Phase 3 will add preset library)
+			// For now, use default shader
+		}
+
+		// Compile program
+		const result = this.programManager.getProgram(
+			vertexSource,
+			fragmentSource,
+			['aPosition', 'aTexCoord'],
+			['uTexture', 'uTime', 'uDeltaTime'] // Standard uniforms
+		);
+
+		if (result instanceof OverlayError) {
+			registration.error = result;
+			if (this.options.onError) {
+				this.options.onError(result);
+			}
+			console.error(`[WebGLOverlay] Failed to compile shader for '${registration.id}':`, result);
+		} else {
+			// Cache compiled program
+			this.elementPrograms.set(registration.id, result);
+		}
 	}
 
 	/**
@@ -537,9 +631,19 @@ class WebGLOverlay implements OverlayContextAPI {
 			this.browserCompatibility.needsCORSWorkaround()
 		);
 
-		// Recreate all textures
+		// Reinitialize shader program manager
+		this.programManager = new ShaderProgramManager(this.gl);
+
+		// Reinitialize render pipeline
+		this.renderPipeline = new RenderPipeline(this.gl, this.programManager);
+
+		// Clear program cache
+		this.elementPrograms.clear();
+
+		// Recreate all textures and shaders
 		for (const registration of this.elements.values()) {
 			this.createElementTexture(registration);
+			this.compileElementShader(registration);
 		}
 
 		console.info('[WebGLOverlay] Resources recreated');
