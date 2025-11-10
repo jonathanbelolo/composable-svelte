@@ -1,0 +1,32 @@
+{
+  "name": "ssr-server-example",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Server-side rendering example with Fastify and Composable Svelte",
+  "scripts": {
+    "dev": "tsx watch src/server/index.ts",
+    "build": "vite build && vite build --ssr",
+    "build:client": "vite build",
+    "build:server": "vite build --ssr",
+    "start": "NODE_ENV=production node dist/server/index.js",
+    "preview": "npm run build && npm run start",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed"
+  },
+  "dependencies": {
+    "@composable-svelte/core": "workspace:*",
+    "fastify": "^4.28.1",
+    "@fastify/static": "^7.0.4",
+    "svelte": "^5.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "@sveltejs/vite-plugin-svelte": "^4.0.0",
+    "@types/node": "^20.14.0",
+    "tsx": "^4.16.0",
+    "typescript": "^5.5.0",
+    "vite": "^5.4.0"
+  }
+}

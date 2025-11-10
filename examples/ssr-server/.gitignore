@@ -1,0 +1,12 @@
+# Build outputs
+dist/
+node_modules/
+
+# Test outputs
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Environment
+.env
+.env.local
