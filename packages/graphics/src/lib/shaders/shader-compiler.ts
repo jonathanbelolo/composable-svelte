@@ -254,9 +254,8 @@ export class ShaderCompiler {
 			const location = gl.getAttribLocation(program, name);
 			if (location >= 0) {
 				attributes.set(name, location);
-			} else {
-				console.warn(`[ShaderCompiler] Attribute '${name}' not found in program`);
 			}
+			// Note: Attributes not found are silently ignored (shader may not use them)
 		}
 
 		// Cache uniform locations
@@ -265,9 +264,8 @@ export class ShaderCompiler {
 			const location = gl.getUniformLocation(program, name);
 			if (location) {
 				uniforms.set(name, location);
-			} else {
-				console.warn(`[ShaderCompiler] Uniform '${name}' not found in program`);
 			}
+			// Note: Uniforms not found are silently ignored (shader may not use them)
 		}
 
 		return {
