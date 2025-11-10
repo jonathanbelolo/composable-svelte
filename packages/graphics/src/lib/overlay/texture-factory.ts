@@ -29,7 +29,7 @@ export class TextureFactory {
 		private memoryBudget: number,
 		private needsCORSWorkaround: boolean
 	) {
-		this.textureValidator = new TextureValidator(gl, memoryBudget);
+		this.textureValidator = new TextureValidator(gl);
 		this.htmlSanitizer = new HTMLSanitizer();
 	}
 
@@ -58,7 +58,7 @@ export class TextureFactory {
 				default:
 					const _exhaustive: never = type;
 					return {
-						error: OverlayError.invalidElement(
+						error: OverlayError.invalidElementType(
 							element.id || 'unknown',
 							`Unsupported element type: ${_exhaustive}`
 						)
@@ -92,7 +92,7 @@ export class TextureFactory {
 		// Check if image is loaded
 		if (!img.complete || img.naturalWidth === 0) {
 			return {
-				error: OverlayError.invalidElement(img.id || 'image', 'Image not loaded')
+				error: OverlayError.invalidElementType(img.id || 'image', 'Image not loaded')
 			};
 		}
 
@@ -214,7 +214,7 @@ export class TextureFactory {
 		// Check if video has valid dimensions
 		if (video.videoWidth === 0 || video.videoHeight === 0) {
 			return {
-				error: OverlayError.invalidElement(
+				error: OverlayError.invalidElementType(
 					video.id || 'video',
 					'Video has no dimensions (not loaded or invalid)'
 				)
@@ -349,7 +349,7 @@ export class TextureFactory {
 		if (!safetyCheck.safe) {
 			console.warn('[TextureFactory] HTML element has security risks:', safetyCheck);
 			return {
-				error: OverlayError.invalidElement(
+				error: OverlayError.invalidElementType(
 					element.id || 'html',
 					`HTML element has security risks: ${safetyCheck.reason}`
 				)
@@ -445,7 +445,7 @@ export class TextureFactory {
 					// HTML elements require full recreation via html2canvas
 					return {
 						success: false,
-						error: OverlayError.invalidElement(
+						error: OverlayError.invalidElementType(
 							element.id || 'html',
 							'HTML/text elements require full texture recreation (not update)'
 						)
@@ -455,7 +455,7 @@ export class TextureFactory {
 					const _exhaustive: never = type;
 					return {
 						success: false,
-						error: OverlayError.invalidElement(
+						error: OverlayError.invalidElementType(
 							element.id || 'unknown',
 							`Unsupported element type: ${_exhaustive}`
 						)

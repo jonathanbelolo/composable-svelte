@@ -1,26 +1,34 @@
 <script lang="ts">
 /**
  * ShaderImage - Image component that registers with shader gallery
- * Follows same pattern as Mesh.svelte from graphics package
+ * Simplified using WebGLOverlay API
  */
 
 import { onMount, getContext } from 'svelte';
+import type { CustomShaderEffect } from '@composable-svelte/graphics';
 
 let {
   id,
   src,
-  alt
+  alt,
+  shader
 }: {
   id: string;
   src: string;
   alt: string;
+  shader: string | CustomShaderEffect;
 } = $props();
 
 // Get gallery context
 const gallery = getContext<{
-  registerImageElement: (id: string, element: HTMLImageElement, src: string, onTextureLoaded?: () => void) => void;
+  registerImageElement: (
+    id: string,
+    element: HTMLImageElement,
+    src: string,
+    shader: string | CustomShaderEffect,
+    onTextureLoaded?: () => void
+  ) => void;
   unregisterImageElement: (id: string) => void;
-  updateImageElementBounds: (id: string, bounds: DOMRect) => void;
 }>('shader-gallery');
 
 let imgRef: HTMLImageElement | null = $state(null);
@@ -33,7 +41,7 @@ onMount(() => {
   const handleLoad = () => {
     if (!imgRef) return;
     // Pass callback to fade out DOM image only after WebGL texture is loaded
-    gallery.registerImageElement(id, imgRef, src, () => {
+    gallery.registerImageElement(id, imgRef, src, shader, () => {
       webglLoaded = true;
     });
   };
@@ -44,20 +52,7 @@ onMount(() => {
     imgRef.addEventListener('load', handleLoad);
   }
 
-  // Update bounds every frame for smooth scrolling
-  let frameId: number;
-  const updateBounds = () => {
-    if (!imgRef) return;
-
-    const bounds = imgRef.getBoundingClientRect();
-    gallery.updateImageElementBounds(id, bounds);
-
-    frameId = requestAnimationFrame(updateBounds);
-  };
-  updateBounds();
-
   return () => {
-    cancelAnimationFrame(frameId);
     gallery.unregisterImageElement(id);
     if (imgRef) {
       imgRef.removeEventListener('load', handleLoad);

@@ -122,14 +122,14 @@ class WebGLOverlay implements OverlayContextAPI {
 		// Merge options with defaults
 		this.options = {
 			canvas: this.canvas,
-			targetFPS: options.targetFPS ?? this.deviceCapabilities.getRecommendedFPS(),
-			maxTextureSize: options.maxTextureSize ?? this.deviceCapabilities.getMaxTextureSize(),
+			targetFPS: options.targetFPS ?? this.deviceCapabilities.recommendedFPS,
+			maxTextureSize: options.maxTextureSize ?? this.deviceCapabilities.maxTextureSize,
 			memoryBudget: options.memoryBudget ?? 200 * 1024 * 1024, // 200MB default
 			debug: options.debug ?? false,
 			handleContextLoss: options.handleContextLoss ?? true,
-			onContextLost: options.onContextLost,
-			onContextRestored: options.onContextRestored,
-			onError: options.onError
+			onContextLost: options.onContextLost ?? (() => {}),
+			onContextRestored: options.onContextRestored ?? (() => {}),
+			onError: options.onError ?? (() => {})
 		};
 
 		// Initialize texture factory
@@ -180,11 +180,11 @@ class WebGLOverlay implements OverlayContextAPI {
 		}
 	): ElementRegistration | OverlayError {
 		if (this.destroyed) {
-			return OverlayError.invalidElement(id, 'Overlay has been destroyed');
+			return OverlayError.invalidElementType(id, 'Overlay has been destroyed');
 		}
 
 		if (this.elements.has(id)) {
-			return OverlayError.invalidElement(id, `Element with ID '${id}' already registered`);
+			return OverlayError.invalidElementType(id, `Element with ID '${id}' already registered`);
 		}
 
 		// Determine update strategy

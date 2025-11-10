@@ -36,11 +36,11 @@ export class OverlayError extends Error {
 	/**
 	 * WebGL is not supported in this browser
 	 */
-	static webGLNotSupported(): OverlayError {
+	static webGLNotSupported(reason?: string): OverlayError {
 		return new OverlayError(
 			OverlayErrorCode.WEBGL_NOT_SUPPORTED,
-			'WebGL is not supported in this browser',
-			{},
+			reason || 'WebGL is not supported in this browser',
+			reason ? { reason } : {},
 			'Use a modern browser that supports WebGL (Chrome, Firefox, Safari, Edge). Check https://get.webgl.org/ to verify WebGL support.'
 		);
 	}
@@ -60,11 +60,17 @@ export class OverlayError extends Error {
 	/**
 	 * Texture dimensions exceed device maximum
 	 */
-	static textureTooLarge(width: number, height: number, maxSize: number): OverlayError {
+	static textureTooLarge(
+		elementId: string,
+		width: number,
+		height: number,
+		maxSize: number,
+		reason?: string
+	): OverlayError {
 		return new OverlayError(
 			OverlayErrorCode.TEXTURE_TOO_LARGE,
-			`Texture size ${width}x${height} exceeds device maximum ${maxSize}x${maxSize}`,
-			{ width, height, maxSize },
+			`Texture size ${width}x${height} exceeds device maximum ${maxSize}x${maxSize} (element: ${elementId})${reason ? ': ' + reason : ''}`,
+			{ elementId, width, height, maxSize, reason },
 			'Reduce image size or enable auto-scaling. Consider using lower resolution images on mobile devices.'
 		);
 	}
@@ -84,11 +90,11 @@ export class OverlayError extends Error {
 	/**
 	 * Cannot create texture from cross-origin image
 	 */
-	static corsTaintedCanvas(elementId: string, imageUrl?: string): OverlayError {
+	static corsTaintedCanvas(elementId: string, imageUrl?: string, errorMessage?: string): OverlayError {
 		return new OverlayError(
 			OverlayErrorCode.CORS_TAINTED_CANVAS,
-			`Cannot create texture from cross-origin image (element: ${elementId})`,
-			{ elementId, imageUrl },
+			`Cannot create texture from cross-origin image (element: ${elementId})${errorMessage ? ': ' + errorMessage : ''}`,
+			{ elementId, imageUrl, errorMessage },
 			'Add crossOrigin="anonymous" attribute to image element, or serve images from the same origin. Ensure the image server has proper CORS headers (Access-Control-Allow-Origin).'
 		);
 	}
@@ -110,14 +116,14 @@ export class OverlayError extends Error {
 	}
 
 	/**
-	 * Invalid element type specified
+	 * Invalid element type or element issue
 	 */
-	static invalidElementType(type: string, validTypes: string[]): OverlayError {
+	static invalidElementType(elementId: string, reason: string): OverlayError {
 		return new OverlayError(
 			OverlayErrorCode.INVALID_ELEMENT_TYPE,
-			`Invalid element type: ${type}. Valid types: ${validTypes.join(', ')}`,
-			{ type, validTypes },
-			`Use one of the valid element types: ${validTypes.join(', ')}`
+			`Invalid element '${elementId}': ${reason}`,
+			{ elementId, reason },
+			'Check element content, attributes, and ensure it is properly loaded and accessible.'
 		);
 	}
 

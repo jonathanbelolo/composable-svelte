@@ -3,6 +3,7 @@ import { createStore } from '@composable-svelte/core';
 import ShaderGallery from './lib/ShaderGallery.svelte';
 import ShaderImage2 from './lib/ShaderImage2.svelte';
 import { createInitialShaderGalleryState, shaderGalleryReducer } from './lib/shader-reducer';
+import { CHROMATIC_MEDIUM } from './lib/custom-shaders';
 
 // Create store with proper Composable Architecture
 const store = createStore({
@@ -46,6 +47,21 @@ const sidebarImages = [
     alt: 'Ocean waves'
   }
 ];
+
+// Map shader effect to actual shader preset or custom effect
+$: currentShader = (() => {
+  switch ($store.shaderEffect) {
+    case 'wave':
+      return 'wave-gentle-horizontal'; // Built-in preset
+    case 'pixelate':
+      return 'pixelate-medium'; // Built-in preset
+    case 'chromatic':
+      return CHROMATIC_MEDIUM; // Custom shader
+    case 'none':
+    default:
+      return undefined; // No shader
+  }
+})();
 </script>
 
 <style>
@@ -200,13 +216,13 @@ const sidebarImages = [
   }
 </style>
 
-<!-- Composable Architecture: Store-driven shader gallery with Babylon.js -->
+<!-- Composable Architecture: Store-driven shader gallery with WebGLOverlay -->
 <ShaderGallery {store}>
   <div class="container">
     <div class="header">
       <h1>DOM/WebGL Hybrid Image Gallery</h1>
       <p class="description">
-        Composable Architecture + Babylon.js: State-driven shader effects with pure reducers
+        Composable Architecture + WebGLOverlay: State-driven shader effects with pure reducers
       </p>
     </div>
 
@@ -243,6 +259,7 @@ const sidebarImages = [
           id={image.id}
           src={image.src}
           alt={image.alt}
+          shader={currentShader}
         />
       {/each}
     </div>
@@ -251,10 +268,11 @@ const sidebarImages = [
       <h2>How It Works</h2>
       <ul>
         <li><strong>Composable Architecture:</strong> Pure reducer pattern, store-driven state, effect system</li>
-        <li><strong>Babylon.js:</strong> OrthographicCamera + textured planes with custom ShaderMaterial</li>
+        <li><strong>WebGLOverlay:</strong> Native WebGL with custom shaders (no Babylon.js dependency)</li>
+        <li><strong>Shader Presets:</strong> Built-in effects (wave, pixelate) + custom GLSL (chromatic aberration)</li>
         <li><strong>DOM Images:</strong> Regular <code>&lt;img&gt;</code> tags handle layout, SEO, accessibility</li>
-        <li><strong>Position Sync:</strong> Frame-based bounds updates for pixel-perfect WebGL overlay</li>
-        <li><strong>Zero Opacity:</strong> DOM images fade when Babylon textures load (no reflow)</li>
+        <li><strong>Automatic Sync:</strong> IntersectionObserver tracks positions for pixel-perfect WebGL overlay</li>
+        <li><strong>Zero Opacity:</strong> DOM images fade when WebGL textures load (no reflow)</li>
         <li><strong>Testable:</strong> TestStore can verify shader changes, image registration</li>
       </ul>
     </div>
@@ -270,8 +288,8 @@ const sidebarImages = [
         </p>
         <p>
           This hybrid approach combines the best of both worlds: DOM for layout and accessibility,
-          WebGL for visual effects. The frame-based position tracking ensures pixel-perfect alignment
-          even as content scrolls or reflows.
+          WebGL for visual effects. The IntersectionObserver-based position tracking ensures pixel-perfect
+          alignment even as content scrolls or reflows.
         </p>
         <p>
           The Composable Architecture pattern ensures all state changes are predictable and testable.
@@ -290,6 +308,7 @@ const sidebarImages = [
             id={image.id}
             src={image.src}
             alt={image.alt}
+            shader={currentShader}
           />
         {/each}
       </div>
@@ -297,7 +316,7 @@ const sidebarImages = [
 
     <footer>
       <p><strong>DOM/WebGL Hybrid Image Gallery</strong></p>
-      <p>Built with Composable Svelte + Babylon.js</p>
+      <p>Built with Composable Svelte + WebGLOverlay</p>
       <p>Demonstrating state-driven shader effects with pure reducer patterns</p>
     </footer>
   </div>

@@ -40,12 +40,12 @@ export function checkWebGLSupport(): WebGLSupportInfo {
 
 	try {
 		// Try WebGL2 first
-		gl = canvas.getContext('webgl2');
+		gl = canvas.getContext('webgl2') as WebGL2RenderingContext | null;
 		if (gl) {
 			version = 2;
 		} else {
 			// Fallback to WebGL1
-			gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+			gl = (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')) as WebGLRenderingContext | null;
 			if (gl) {
 				version = 1;
 			}

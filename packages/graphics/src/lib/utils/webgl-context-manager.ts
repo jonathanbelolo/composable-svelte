@@ -13,7 +13,7 @@
  */
 
 export class WebGLContextManager {
-	private canvas: HTMLCanvasElement;
+	private canvas: HTMLCanvasElement | null = null;
 	private gl: WebGLRenderingContext | null = null;
 	private contextLost = false;
 	private onContextLostCallbacks: (() => void)[] = [];
@@ -54,6 +54,11 @@ export class WebGLContextManager {
 	 * @returns WebGL context or null if not supported
 	 */
 	private createContext(): WebGLRenderingContext | null {
+		if (!this.canvas) {
+			console.error('[WebGLOverlay] Canvas not initialized');
+			return null;
+		}
+
 		const gl = this.canvas.getContext('webgl', {
 			alpha: true, // Allow transparency
 			antialias: true, // Smooth edges

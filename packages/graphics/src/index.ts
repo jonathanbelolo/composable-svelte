@@ -14,5 +14,12 @@ export { default as Camera } from './components/Camera.svelte';
 export { default as Mesh } from './components/Mesh.svelte';
 export { default as Light } from './components/Light.svelte';
 
+// WebGL Overlay
+export { default as WebGLOverlay } from './lib/overlay/WebGLOverlay.svelte';
+export type * from './lib/overlay/overlay-types';
+
+// Shader presets
+export * from './lib/shaders/index';
+
 // Adapters (for advanced usage)
 export { BabylonAdapter } from './adapters/babylon-adapter';
