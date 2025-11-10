@@ -40,27 +40,37 @@ onMount(() => {
 /**
  * Public API - Register an element
  */
-export function registerElement(registration: Omit<ElementRegistration, 'bounds' | 'needsUpdate' | 'error'>): void {
+export function registerElement(registration: {
+  id: string;
+  domElement: HTMLElement;
+  shader: any;
+  onTextureLoaded?: () => void;
+}): void {
   if (!overlay) {
     console.warn('[WebGLOverlay] Overlay not initialized yet');
     return;
   }
 
-  // Get element bounds
-  const bounds = registration.domElement.getBoundingClientRect();
+  // Infer element type from HTML element
+  const elementType =
+    registration.domElement instanceof HTMLImageElement ? 'image' :
+    registration.domElement instanceof HTMLVideoElement ? 'video' :
+    registration.domElement instanceof HTMLCanvasElement ? 'canvas' : 'image';
 
-  // Register with overlay
-  overlay.registerElement({
-    ...registration,
-    bounds: {
-      x: bounds.left,
-      y: bounds.top,
-      width: bounds.width,
-      height: bounds.height
-    },
-    needsUpdate: false,
-    error: null
-  });
+  // Register with overlay - call with correct three-parameter signature
+  overlay.registerElement(
+    registration.id,
+    registration.domElement,
+    {
+      type: elementType,
+      shader: registration.shader
+    }
+  );
+
+  // Call texture loaded callback if provided
+  if (registration.onTextureLoaded) {
+    registration.onTextureLoaded();
+  }
 }
 
 /**
