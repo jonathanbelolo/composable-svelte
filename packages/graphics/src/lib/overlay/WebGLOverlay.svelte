@@ -30,8 +30,12 @@ onMount(() => {
   // Create overlay instance
   overlay = createOverlay(canvas, options);
 
+  // Start the render loop
+  overlay.start();
+
   // Cleanup on unmount
   return () => {
+    overlay?.stop();
     overlay?.destroy();
     overlay = null;
   };
