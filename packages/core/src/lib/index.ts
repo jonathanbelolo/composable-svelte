@@ -327,6 +327,28 @@ export {
 import './websocket/effect-websocket.js';
 
 // ============================================================================
+// Server-Side Rendering (SSR) & Static Site Generation (SSG)
+// ============================================================================
+
+// Serialization
+export { serializeStore, serializeState } from './ssr/index.js';
+
+// Hydration
+export { hydrateStore, parseState } from './ssr/index.js';
+
+// Rendering
+export {
+  renderToHTML,
+  renderComponent,
+  buildHydrationScript,
+  type RenderOptions
+} from './ssr/index.js';
+
+// Utilities
+export { isServer } from './ssr/index.js';
+// Note: isBrowser is already exported from ./dependencies/index.js
+
+// ============================================================================
 // UI Components & Navigation Components
 // ============================================================================
 

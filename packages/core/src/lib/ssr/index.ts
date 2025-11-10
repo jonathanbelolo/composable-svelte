@@ -1,0 +1,75 @@
+/**
+ * Server-Side Rendering (SSR) and Static Site Generation (SSG) utilities.
+ *
+ * This module provides:
+ * - State serialization (server → JSON)
+ * - State hydration (JSON → client store)
+ * - Rendering helpers (component → HTML)
+ * - Environment detection (server vs browser)
+ *
+ * @example Server-Side Rendering
+ * ```typescript
+ * // server.ts
+ * import { renderToHTML } from '@composable-svelte/core/ssr';
+ * import { createStore } from '@composable-svelte/core';
+ * import App from './App.svelte';
+ *
+ * app.get('/', async (req, res) => {
+ *   // Load data for this request
+ *   const data = await loadData(req.user);
+ *
+ *   // Create store with pre-populated data
+ *   const store = createStore({
+ *     initialState: data,
+ *     reducer: appReducer,
+ *     dependencies: {}  // Empty on server
+ *   });
+ *
+ *   // Render to HTML
+ *   const html = renderToHTML(App, { store });
+ *   res.send(html);
+ * });
+ * ```
+ *
+ * @example Client Hydration
+ * ```typescript
+ * // client.ts
+ * import { hydrateStore } from '@composable-svelte/core/ssr';
+ * import { mount } from 'svelte';
+ * import App from './App.svelte';
+ *
+ * // Read state from script tag
+ * const stateJSON = document.getElementById('__COMPOSABLE_SVELTE_STATE__')?.textContent;
+ *
+ * // Hydrate with client dependencies
+ * const store = hydrateStore(stateJSON, {
+ *   reducer: appReducer,
+ *   dependencies: {
+ *     api: createAPIClient(),
+ *     storage: createLocalStorage()
+ *   }
+ * });
+ *
+ * // Mount app
+ * mount(App, { target: document.body, props: { store } });
+ * ```
+ *
+ * @module ssr
+ */
+
+// Serialization
+export { serializeStore, serializeState } from './serialize.js';
+
+// Hydration
+export { hydrateStore, parseState } from './hydrate.js';
+
+// Rendering
+export {
+  renderToHTML,
+  renderComponent,
+  buildHydrationScript,
+  type RenderOptions
+} from './render.js';
+
+// Utilities
+export { isServer, isBrowser } from './utils.js';

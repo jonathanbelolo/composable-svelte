@@ -13,6 +13,7 @@ import type {
   MiddlewareAPI,
   Effect
 } from './types.js';
+import { isServer } from './ssr/utils.js';
 
 /**
  * Create a Store for a feature.
@@ -113,6 +114,13 @@ export function createStore<State, Action, Dependencies = any>(
    * Execute an effect based on its type.
    */
   function executeEffect(effect: Effect<Action>): void {
+    // Check if we should defer effects (SSR)
+    const deferEffects = config.ssr?.deferEffects ?? true; // Default to true
+    if (isServer() && deferEffects) {
+      // Skip effect execution on server
+      return;
+    }
+
     switch (effect._tag) {
       case 'None':
         break;

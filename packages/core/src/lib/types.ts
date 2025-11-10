@@ -134,6 +134,21 @@ export interface StoreConfig<State, Action, Dependencies = any> {
    */
   maxHistorySize?: number;
 
+  /**
+   * Server-side rendering configuration.
+   * Controls how the store behaves in server environments.
+   */
+  ssr?: {
+    /**
+     * Whether to defer effect execution on the server.
+     * When true (default), effects are skipped during server-side rendering.
+     * Set to false to allow specific effects to run on the server.
+     *
+     * Default: true
+     */
+    deferEffects?: boolean;
+  };
+
   // TODO: Middleware support deferred to Phase 5
   // middleware?: Middleware<State, Action>[];
 
