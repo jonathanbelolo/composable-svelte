@@ -80,7 +80,7 @@
 	});
 
 	// Use external toasts if provided, otherwise use store state
-	const activeToasts = $derived(externalToasts ?? store.state.toasts);
+	const activeToasts = $derived(externalToasts ?? $store.toasts);
 
 	function handleDismiss(id: string) {
 		store.dispatch({ type: 'toastDismissed', id });

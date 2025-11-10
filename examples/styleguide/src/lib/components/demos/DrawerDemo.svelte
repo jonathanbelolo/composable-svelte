@@ -89,12 +89,12 @@
   // Create a store wrapper with dismiss() method for Drawer component
   const storeWithDismiss = $derived({
     ...demoStore,
-    state: demoStore.state,
+    state: $demoStore,
     dispatch: demoStore.dispatch,
     dismiss: () => demoStore.dispatch({ type: 'closeDrawer' })
   });
 
-  const state = $derived(demoStore.state);
+  const state = $derived($demoStore);
 </script>
 
 <div class="space-y-12">

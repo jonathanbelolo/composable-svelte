@@ -291,7 +291,7 @@
 	];
 
 	// Simple stack helpers
-	const simpleStack = $derived(demoStore.state.simpleDestination?.state.stack ?? []);
+	const simpleStack = $derived($demoStore.simpleDestination?.state.stack ?? []);
 	const simpleStackIds = $derived(new Set(simpleStack.map(s => s.id)));
 	const availableSimpleScreens = $derived(
 		simpleScreens.filter(screen => !simpleStackIds.has(screen.id)).slice(0, 3)
@@ -299,7 +299,7 @@
 	const canPushSimple = $derived(simpleStack.length < 5 && availableSimpleScreens.length > 0);
 
 	// Animated stack helpers
-	const animatedStack = $derived(demoStore.state.animatedDestination?.state.stack ?? []);
+	const animatedStack = $derived($demoStore.animatedDestination?.state.stack ?? []);
 	const animatedStackIds = $derived(new Set(animatedStack.map(s => s.id)));
 	const availableAnimatedScreens = $derived(
 		animatedScreens.filter(screen => !animatedStackIds.has(screen.id)).slice(0, 3)
@@ -440,7 +440,7 @@
 						<AnimatedNavigationStack
 							store={animatedStore}
 							stack={animatedStack}
-							presentation={demoStore.state.presentation}
+							presentation={$demoStore.presentation}
 							onBack={popAnimatedScreen}
 							onPresentationComplete={() => demoStore.dispatch({ type: 'presentationCompleted' })}
 							onDismissalComplete={() => demoStore.dispatch({ type: 'dismissalCompleted' })}
@@ -457,7 +457,7 @@
 											<div class="p-3 bg-background/50 rounded border text-xs">
 												<p><strong>Screen ID:</strong> {currentScreen.id}</p>
 												<p><strong>Stack Depth:</strong> {animatedStack.length}</p>
-												<p><strong>Animation:</strong> {demoStore.state.presentation.status}</p>
+												<p><strong>Animation:</strong> {$demoStore.presentation.status}</p>
 											</div>
 
 											{#if canPushAnimated}
@@ -468,7 +468,7 @@
 															<Button
 																variant="default"
 																size="sm"
-																disabled={demoStore.state.presentation.status === 'presenting' || demoStore.state.presentation.status === 'dismissing'}
+																disabled={$demoStore.presentation.status === 'presenting' || $demoStore.presentation.status === 'dismissing'}
 																onclick={() => pushAnimatedScreen(screen)}
 															>
 																{screen.title} →

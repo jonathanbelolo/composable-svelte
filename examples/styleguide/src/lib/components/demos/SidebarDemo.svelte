@@ -124,17 +124,17 @@
 
   // Create a store wrapper with dismiss() method for Sidebar component
   const storeWithDismiss = $derived(
-    demoStore.state.showSidebar
+    $demoStore.showSidebar
       ? {
           ...demoStore,
-          state: demoStore.state,
+          state: $demoStore,
           dispatch: demoStore.dispatch,
           dismiss: () => demoStore.dispatch({ type: 'closeSidebar' })
         }
       : null
   );
 
-  const state = $derived(demoStore.state);
+  const state = $derived($demoStore);
 </script>
 
 <div class="space-y-12">

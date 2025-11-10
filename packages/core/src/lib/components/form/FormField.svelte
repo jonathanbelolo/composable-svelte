@@ -50,12 +50,12 @@
 
 	// Derive field state from store
 	const fieldState = $derived<FieldState>({
-		value: store.state.data[name],
-		error: store.state.fields[name]?.error ?? null,
-		touched: store.state.fields[name]?.touched ?? false,
-		dirty: store.state.fields[name]?.dirty ?? false,
-		isValidating: store.state.fields[name]?.isValidating ?? false,
-		warnings: store.state.fields[name]?.warnings ?? []
+		value: $store.data[name],
+		error: $store.fields[name]?.error ?? null,
+		touched: $store.fields[name]?.touched ?? false,
+		dirty: $store.fields[name]?.dirty ?? false,
+		isValidating: $store.fields[name]?.isValidating ?? false,
+		warnings: $store.fields[name]?.warnings ?? []
 	});
 
 	// Provide send function for dispatching actions

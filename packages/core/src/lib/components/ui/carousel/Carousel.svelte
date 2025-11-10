@@ -106,7 +106,7 @@
 
   function handlePrevious() {
     // Stop auto-play when user manually navigates
-    if (store.state.isAutoPlaying) {
+    if ($store.isAutoPlaying) {
       store.dispatch({ type: 'autoPlayStopped' });
     }
     store.dispatch({ type: 'previousSlide' });
@@ -114,7 +114,7 @@
 
   function handleNext() {
     // Stop auto-play when user manually navigates
-    if (store.state.isAutoPlaying) {
+    if ($store.isAutoPlaying) {
       store.dispatch({ type: 'autoPlayStopped' });
     }
     store.dispatch({ type: 'nextSlide' });
@@ -122,7 +122,7 @@
 
   function handleDotClick(index: number) {
     // Stop auto-play when user manually navigates
-    if (store.state.isAutoPlaying) {
+    if ($store.isAutoPlaying) {
       store.dispatch({ type: 'autoPlayStopped' });
     }
     store.dispatch({ type: 'goToSlide', index });
@@ -143,14 +143,14 @@
 
   // Compute whether prev/next buttons should be disabled
   const canGoPrevious = $derived(
-    loop || store.state.currentIndex > 0
+    loop || $store.currentIndex > 0
   );
 
   const canGoNext = $derived(
-    loop || store.state.currentIndex < store.state.slides.length - 1
+    loop || $store.currentIndex < $store.slides.length - 1
   );
 
-  const currentSlide = $derived(store.state.slides[store.state.currentIndex]);
+  const currentSlide = $derived($store.slides[$store.currentIndex]);
 </script>
 
 <div
@@ -168,16 +168,16 @@
   >
     <div
       class="carousel-slides flex transition-transform"
-      style:transform={`translateX(-${store.state.currentIndex * 100}%)`}
+      style:transform={`translateX(-${$store.currentIndex * 100}%)`}
       style:transition-duration={`${transitionDuration}ms`}
     >
-      {#each store.state.slides as slide, index (slide.id)}
+      {#each $store.slides as slide, index (slide.id)}
         <div
           class={`carousel-slide flex-shrink-0 w-full ${slideClass}`}
           role="group"
           aria-roledescription="slide"
-          aria-label={`Slide ${index + 1} of ${store.state.slides.length}`}
-          aria-hidden={index !== store.state.currentIndex}
+          aria-label={`Slide ${index + 1} of ${$store.slides.length}`}
+          aria-hidden={index !== $store.currentIndex}
         >
           {#if children}
             {@render children({ slide, index })}
@@ -199,7 +199,7 @@
              disabled:opacity-50 disabled:cursor-not-allowed
              transition-all duration-200"
       onclick={handlePrevious}
-      disabled={!canGoPrevious || store.state.isTransitioning}
+      disabled={!canGoPrevious || $store.isTransitioning}
       aria-label="Previous slide"
     >
       <svg
@@ -224,7 +224,7 @@
              disabled:opacity-50 disabled:cursor-not-allowed
              transition-all duration-200"
       onclick={handleNext}
-      disabled={!canGoNext || store.state.isTransitioning}
+      disabled={!canGoNext || $store.isTransitioning}
       aria-label="Next slide"
     >
       <svg
@@ -251,15 +251,15 @@
       role="tablist"
       aria-label="Slide navigation"
     >
-      {#each store.state.slides as slide, index (slide.id)}
+      {#each $store.slides as slide, index (slide.id)}
         <button
           class="carousel-dot w-2 h-2 rounded-full transition-all duration-200
-                 {index === store.state.currentIndex ? 'bg-gray-800 w-6' : 'bg-gray-400 hover:bg-gray-600'}"
+                 {index === $store.currentIndex ? 'bg-gray-800 w-6' : 'bg-gray-400 hover:bg-gray-600'}"
           onclick={() => handleDotClick(index)}
-          disabled={store.state.isTransitioning}
+          disabled={$store.isTransitioning}
           role="tab"
           aria-label={`Go to slide ${index + 1}`}
-          aria-selected={index === store.state.currentIndex}
+          aria-selected={index === $store.currentIndex}
         />
       {/each}
     </div>
@@ -267,7 +267,7 @@
 
   <!-- Current Slide Indicator (for screen readers) -->
   <div class="sr-only" aria-live="polite" aria-atomic="true">
-    Slide {store.state.currentIndex + 1} of {store.state.slides.length}
+    Slide {$store.currentIndex + 1} of {$store.slides.length}
   </div>
 </div>
 

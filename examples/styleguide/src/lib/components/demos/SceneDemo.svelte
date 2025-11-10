@@ -22,7 +22,7 @@ const store = createStore({
 let rotation = $state(0);
 
 // Simple rotation animation
-function rotateCube() {
+function rotateShapes() {
   rotation += Math.PI / 4;
 }
 </script>
@@ -33,7 +33,7 @@ function rotateCube() {
     <div>
       <h2 class="text-2xl font-bold mb-2">Live Demo</h2>
       <p class="text-muted-foreground">
-        State-driven 3D scene with WebGPU/WebGL rendering
+        All primitive geometries: Box, Sphere, Cylinder, Torus, and Plane with state-driven WebGPU/WebGL rendering
       </p>
     </div>
 
@@ -59,18 +59,56 @@ function rotateCube() {
 
     <!-- 3D Scene -->
     <div class="rounded-lg border overflow-hidden">
-      <Scene {store} height="400px">
-        <Camera {store} position={[0, 3, 8]} lookAt={[0, 0, 0]} fov={45} />
+      <Scene {store} height="500px">
+        <Camera {store} position={[0, 4, 12]} lookAt={[0, 0, 0]} fov={45} />
         <Light {store} type="ambient" intensity={0.4} color="#ffffff" />
         <Light {store} type="directional" position={[5, 10, 7.5]} intensity={1.2} color="#ffffff" />
+
+        <!-- Row 1: Box, Sphere, Cylinder -->
         <Mesh
           {store}
-          id="cube-1"
-          geometry={{ type: 'box', size: 2 }}
+          id="box"
+          geometry={{ type: 'box', size: 1.5 }}
           material={{ color: '#ff6b6b', metallic: 0.7, roughness: 0.3 }}
-          position={[0, 0, 0]}
+          position={[-4, 1.5, 0]}
           rotation={[0, rotation, 0]}
-          scale={[1, 1, 1]}
+        />
+
+        <Mesh
+          {store}
+          id="sphere"
+          geometry={{ type: 'sphere', radius: 0.8, segments: 32 }}
+          material={{ color: '#4ecdc4', metallic: 0.8, roughness: 0.2 }}
+          position={[-1.5, 1.5, 0]}
+          rotation={[0, rotation, 0]}
+        />
+
+        <Mesh
+          {store}
+          id="cylinder"
+          geometry={{ type: 'cylinder', height: 2, diameter: 1 }}
+          material={{ color: '#95e1d3', metallic: 0.6, roughness: 0.4 }}
+          position={[1, 1.5, 0]}
+          rotation={[0, rotation, 0]}
+        />
+
+        <!-- Row 2: Torus, Plane -->
+        <Mesh
+          {store}
+          id="torus"
+          geometry={{ type: 'torus', diameter: 1.5, thickness: 0.3, segments: 32 }}
+          material={{ color: '#f38181', metallic: 0.9, roughness: 0.1 }}
+          position={[3.5, 1.5, 0]}
+          rotation={[0, rotation, 0]}
+        />
+
+        <Mesh
+          {store}
+          id="plane"
+          geometry={{ type: 'plane', width: 12, height: 12 }}
+          material={{ color: '#aa96da', metallic: 0.3, roughness: 0.7 }}
+          position={[0, -0.5, 0]}
+          rotation={[Math.PI / 2, 0, 0]}
         />
       </Scene>
     </div>
@@ -78,10 +116,10 @@ function rotateCube() {
     <!-- Controls -->
     <div class="flex gap-2">
       <button
-        onclick={rotateCube}
+        onclick={rotateShapes}
         class="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
       >
-        Rotate 45°
+        Rotate All Shapes 45°
       </button>
     </div>
   </section>
@@ -90,7 +128,7 @@ function rotateCube() {
   <section class="space-y-4">
     <div>
       <h2 class="text-2xl font-bold mb-2">Usage</h2>
-      <p class="text-muted-foreground">Basic example of 3D scene rendering</p>
+      <p class="text-muted-foreground">All supported geometry types</p>
     </div>
 
     <div class="rounded-lg bg-muted p-4 overflow-x-auto">
@@ -109,15 +147,39 @@ function rotateCube() {
 </script>
 
 <Scene {store}>
-  <Camera {store} position={[0, 3, 8]} lookAt={[0, 0, 0]} />
+  <Camera {store} position={[0, 4, 12]} lookAt={[0, 0, 0]} />
   <Light {store} type="ambient" intensity={0.4} />
-  <Mesh
-    {store}
-    id="cube"
-    geometry={{ type: 'box', size: 2 }}
+
+  <!-- Box -->
+  <Mesh {store} id="box"
+    geometry={{ type: 'box', size: 1.5 }}
     material={{ color: '#ff6b6b' }}
-    position={[0, 0, 0]}
-  />
+    position={[-4, 1.5, 0]} />
+
+  <!-- Sphere -->
+  <Mesh {store} id="sphere"
+    geometry={{ type: 'sphere', radius: 0.8, segments: 32 }}
+    material={{ color: '#4ecdc4' }}
+    position={[-1.5, 1.5, 0]} />
+
+  <!-- Cylinder -->
+  <Mesh {store} id="cylinder"
+    geometry={{ type: 'cylinder', height: 2, diameter: 1 }}
+    material={{ color: '#95e1d3' }}
+    position={[1, 1.5, 0]} />
+
+  <!-- Torus -->
+  <Mesh {store} id="torus"
+    geometry={{ type: 'torus', diameter: 1.5, thickness: 0.3 }}
+    material={{ color: '#f38181' }}
+    position={[3.5, 1.5, 0]} />
+
+  <!-- Plane (Ground) -->
+  <Mesh {store} id="plane"
+    geometry={{ type: 'plane', width: 12, height: 12 }}
+    material={{ color: '#aa96da' }}
+    position={[0, -0.5, 0]}
+    rotation={[Math.PI / 2, 0, 0]} />
 </Scene>`}</code></pre>
     </div>
   </section>

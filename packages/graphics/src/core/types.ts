@@ -64,13 +64,14 @@ export interface CameraConfig {
 // Geometry Types
 // ============================================================================
 
-export type GeometryType = 'box' | 'sphere' | 'cylinder' | 'plane' | 'custom';
+export type GeometryType = 'box' | 'sphere' | 'cylinder' | 'plane' | 'torus' | 'custom';
 
 export type GeometryConfig =
   | { type: 'box'; size: number }
   | { type: 'sphere'; radius: number; segments?: number }
   | { type: 'cylinder'; height: number; diameter: number }
   | { type: 'plane'; width: number; height: number }
+  | { type: 'torus'; diameter: number; thickness: number; segments?: number }
   | { type: 'custom'; vertices: number[]; indices: number[]; normals?: number[]; uvs?: number[] };
 
 // ============================================================================

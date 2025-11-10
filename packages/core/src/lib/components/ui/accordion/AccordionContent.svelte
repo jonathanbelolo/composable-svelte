@@ -36,7 +36,7 @@
 
 	// Read isExpanded directly from store
 	// CRITICAL: Only depend on the specific boolean value, not the whole array
-	const isExpanded = $derived(store.state.expandedIds.includes(itemContext.id));
+	const isExpanded = $derived($store.expandedIds.includes(itemContext.id));
 
 	// Track previous with regular let
 	let previousExpandedState: boolean | undefined = undefined;

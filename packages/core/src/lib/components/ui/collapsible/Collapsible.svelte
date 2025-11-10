@@ -81,7 +81,7 @@
 <div
 	role="region"
 	class={cn('space-y-2', className)}
-	data-state={store.state.isExpanded ? 'open' : 'closed'}
+	data-state={$store.isExpanded ? 'open' : 'closed'}
 >
 	{@render children?.()}
 </div>

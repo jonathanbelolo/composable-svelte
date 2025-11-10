@@ -112,7 +112,7 @@
 				event.preventDefault();
 				store.dispatch({
 					type: 'goToImage',
-					index: store.state.images.length - 1
+					index: storeState.images.length - 1
 				});
 				break;
 		}

@@ -30,7 +30,7 @@
 	const itemContext = getAccordionItemContext();
 
 	// Read isExpanded directly from store, not from context (context is not reactive!)
-	const isExpanded = $derived(store.state.expandedIds.includes(itemContext.id));
+	const isExpanded = $derived($store.expandedIds.includes(itemContext.id));
 
 	function handleClick() {
 		if (itemContext.disabled) return;

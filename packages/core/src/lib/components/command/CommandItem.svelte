@@ -34,7 +34,7 @@
 
 	let { store, command, index, class: className = '' }: CommandItemProps = $props();
 
-	const isSelected = $derived(store.state.selectedIndex === index);
+	const isSelected = $derived($store.selectedIndex === index);
 	const isDisabled = $derived(command.disabled ?? false);
 
 	function handleClick() {

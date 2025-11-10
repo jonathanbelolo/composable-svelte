@@ -89,12 +89,12 @@
   // Create a store wrapper with dismiss() method for Modal component
   const storeWithDismiss = $derived({
     ...demoStore,
-    state: demoStore.state,
+    state: $demoStore,
     dispatch: demoStore.dispatch,
     dismiss: () => demoStore.dispatch({ type: 'closeModal' })
   });
 
-  const state = $derived(demoStore.state);
+  const state = $derived($demoStore);
 </script>
 
 <div class="space-y-12">
@@ -108,7 +108,22 @@
     </div>
 
     <div class="flex flex-col items-center justify-center gap-6 p-12 rounded-lg border-2 bg-card">
-      <Button onclick={() => demoStore.dispatch({ type: 'openModal' })}>
+      <!-- Test with plain button first -->
+      <button
+        type="button"
+        onclick={() => {
+          console.log('Plain button clicked!');
+          demoStore.dispatch({ type: 'openModal' });
+        }}
+        class="px-4 py-2 bg-blue-500 text-white rounded"
+      >
+        Test Plain Button
+      </button>
+
+      <Button onclick={() => {
+        console.log('Button component clicked!');
+        demoStore.dispatch({ type: 'openModal' });
+      }}>
         Open Modal
       </Button>
       <p class="text-sm text-muted-foreground">

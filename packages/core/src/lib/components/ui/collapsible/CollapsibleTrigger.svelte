@@ -37,12 +37,12 @@
 	const { store, contentId, triggerId } = context;
 
 	function handleClick() {
-		if (store.state.disabled) return;
+		if ($store.disabled) return;
 		store.dispatch({ type: 'toggled' });
 	}
 
 	function handleKeyDown(event: KeyboardEvent) {
-		if (store.state.disabled) return;
+		if ($store.disabled) return;
 
 		if (event.key === 'Enter' || event.key === ' ') {
 			event.preventDefault();
@@ -57,12 +57,12 @@
 	class={cn(
 		'flex w-full items-center justify-between py-4 text-sm font-medium',
 		'transition-all hover:underline',
-		store.state.disabled ? 'cursor-not-allowed' : 'cursor-pointer',
+		$store.disabled ? 'cursor-not-allowed' : 'cursor-pointer',
 		className
 	)}
-	aria-expanded={store.state.isExpanded}
+	aria-expanded={$store.isExpanded}
 	aria-controls={contentId}
-	disabled={store.state.disabled}
+	disabled={$store.disabled}
 	onclick={handleClick}
 	onkeydown={handleKeyDown}
 >
@@ -81,7 +81,7 @@
 		stroke-linejoin="round"
 		class={cn(
 			'shrink-0 transition-transform duration-200',
-			store.state.isExpanded && 'rotate-180'
+			$store.isExpanded && 'rotate-180'
 		)}
 	>
 		<polyline points="6 9 12 15 18 9"></polyline>

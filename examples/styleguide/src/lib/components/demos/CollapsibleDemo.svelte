@@ -46,6 +46,25 @@
     reducer: collapsibleReducer,
     dependencies: {}
   });
+
+  // Stores for multiple collapsibles section
+  const multiStore1 = createStore({
+    initialState: createInitialCollapsibleState(false, false),
+    reducer: collapsibleReducer,
+    dependencies: {}
+  });
+
+  const multiStore2 = createStore({
+    initialState: createInitialCollapsibleState(false, false),
+    reducer: collapsibleReducer,
+    dependencies: {}
+  });
+
+  const multiStore3 = createStore({
+    initialState: createInitialCollapsibleState(false, false),
+    reducer: collapsibleReducer,
+    dependencies: {}
+  });
 </script>
 
 <div class="space-y-12">
@@ -278,9 +297,9 @@ const store = createStore({
 
     <div class="max-w-2xl">
       {#each [
-        { id: 1, title: 'Understanding Reducers', preview: 'Reducers are pure functions that take state and actions...', store: createStore({ initialState: createInitialCollapsibleState(false), reducer: collapsibleReducer, dependencies: {} }) },
-        { id: 2, title: 'Effect System', preview: 'Effects represent side effects in a declarative way...', store: createStore({ initialState: createInitialCollapsibleState(false), reducer: collapsibleReducer, dependencies: {} }) },
-        { id: 3, title: 'Testing Best Practices', preview: 'Use TestStore for exhaustive action testing...', store: createStore({ initialState: createInitialCollapsibleState(false), reducer: collapsibleReducer, dependencies: {} }) }
+        { id: 1, title: 'Understanding Reducers', preview: 'Reducers are pure functions that take state and actions...', store: multiStore1 },
+        { id: 2, title: 'Effect System', preview: 'Effects represent side effects in a declarative way...', store: multiStore2 },
+        { id: 3, title: 'Testing Best Practices', preview: 'Use TestStore for exhaustive action testing...', store: multiStore3 }
       ] as item}
         <div class="border-b last:border-b-0 py-4">
           <h4 class="font-semibold mb-2">{item.title}</h4>
@@ -297,7 +316,7 @@ const store = createStore({
               </p>
             </CollapsibleContent>
             <CollapsibleTrigger class="text-primary text-sm">
-              {item.store.state.isExpanded ? 'Show less' : 'Show more'}
+              Toggle
             </CollapsibleTrigger>
           </Collapsible>
         </div>

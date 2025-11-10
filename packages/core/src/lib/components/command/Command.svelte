@@ -87,14 +87,14 @@
 
 	// Sync open prop to store
 	$effect(() => {
-		if (store.state.isOpen !== open) {
+		if ($store.isOpen !== open) {
 			store.dispatch({ type: open ? 'opened' : 'closed' });
 		}
 	});
 
 	// Sync store to open prop
 	$effect(() => {
-		open = store.state.isOpen;
+		open = $store.isOpen;
 	});
 
 	// Sync commands prop to store
@@ -138,9 +138,9 @@
 
 	// Watch presentation status and trigger animations
 	$effect(() => {
-		if (!store.state.presentation || !contentElement || !backdropElement) return;
+		if (!$store.presentation || !contentElement || !backdropElement) return;
 
-		const presentation = store.state.presentation;
+		const presentation = $store.presentation;
 		const currentContent = presentation.content;
 
 		if (presentation.status === 'presenting' && lastAnimatedContent !== currentContent) {
@@ -174,7 +174,7 @@
 
 	// Visible when presentation is not idle
 	const visible = $derived(
-		store.state.presentation.status !== 'idle'
+		$store.presentation.status !== 'idle'
 	);
 </script>
 

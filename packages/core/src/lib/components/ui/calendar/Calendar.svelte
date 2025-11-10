@@ -162,8 +162,8 @@
 	});
 
 	// Derived values
-	const calendarDays = $derived(getCalendarDays(store.state.currentMonth));
-	const currentMonthDate = $derived(store.state.currentMonth);
+	const calendarDays = $derived(getCalendarDays($store.currentMonth));
+	const currentMonthDate = $derived($store.currentMonth);
 
 	const monthNames = [
 		'January',
@@ -199,7 +199,7 @@
 			store.dispatch({ type: 'dateSelected', date });
 		} else {
 			// Range mode
-			if (!store.state.selectedRange.from || store.state.selectedRange.to) {
+			if (!$store.selectedRange.from || $store.selectedRange.to) {
 				// Start new range
 				store.dispatch({ type: 'rangeStarted', date });
 			} else {
@@ -220,10 +220,10 @@
 
 	const isSelected = (date: Date): boolean => {
 		if (mode === 'single') {
-			return store.state.selectedDate !== null && isSameDay(date, store.state.selectedDate);
+			return $store.selectedDate !== null && isSameDay(date, $store.selectedDate);
 		} else {
 			// Range mode: Check if date is start or end
-			const { from, to } = store.state.selectedRange;
+			const { from, to } = $store.selectedRange;
 			if (from && isSameDay(date, from)) return true;
 			if (to && isSameDay(date, to)) return true;
 			return false;
@@ -232,11 +232,11 @@
 
 	const isInRange = (date: Date): boolean => {
 		if (mode !== 'range') return false;
-		return isDateInRange(date, store.state.selectedRange);
+		return isDateInRange(date, $store.selectedRange);
 	};
 
 	const isDisabled = (date: Date): boolean => {
-		return !isDateInBounds(date, store.state.minDate, store.state.maxDate);
+		return !isDateInBounds(date, $store.minDate, $store.maxDate);
 	};
 </script>
 
@@ -329,7 +329,7 @@
 	</div>
 
 	<!-- Footer (clear button) -->
-	{#if (mode === 'single' && store.state.selectedDate) || (mode === 'range' && (store.state.selectedRange.from || store.state.selectedRange.to))}
+	{#if (mode === 'single' && $store.selectedDate) || (mode === 'range' && ($store.selectedRange.from || $store.selectedRange.to))}
 		<div class="calendar-footer">
 			<button type="button" class="calendar-clear-button" onclick={clear}> Clear </button>
 		</div>

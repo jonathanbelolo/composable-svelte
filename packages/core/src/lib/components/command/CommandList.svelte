@@ -40,7 +40,7 @@
 		class: className = ''
 	}: CommandListProps = $props();
 
-	const hasCommands = $derived(store.state.filteredCommands.length > 0);
+	const hasCommands = $derived($store.filteredCommands.length > 0);
 </script>
 
 <div class="command-list {className}" role="listbox">

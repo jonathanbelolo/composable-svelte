@@ -89,12 +89,12 @@
   // Create a store wrapper with dismiss() method for Sheet component
   const storeWithDismiss = $derived({
     ...demoStore,
-    state: demoStore.state,
+    state: $demoStore,
     dispatch: demoStore.dispatch,
     dismiss: () => demoStore.dispatch({ type: 'closeSheet' })
   });
 
-  const state = $derived(demoStore.state);
+  const state = $derived($demoStore);
 </script>
 
 <div class="space-y-12">

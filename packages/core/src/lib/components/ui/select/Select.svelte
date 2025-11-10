@@ -93,15 +93,14 @@
 
 	// Sync external value changes to store
 	$effect(() => {
-		if (store.state.selected !== value) {
-			store.state.selected = value;
+		if ($store.selected !== value) {
+			store.dispatch({ type: 'valueChanged', value });
 		}
 	});
 
 	// Sync options changes
 	$effect(() => {
-		store.state.options = options;
-		store.state.filteredOptions = options;
+		store.dispatch({ type: 'optionsChanged', options });
 	});
 
 	let triggerElement: HTMLElement | null = $state(null);
@@ -110,26 +109,26 @@
 
 	// Get display text for selected value(s)
 	const displayText = $derived(() => {
-		if (!store.state.selected) return placeholder;
+		if (!$store.selected) return placeholder;
 
-		if (multiple && Array.isArray(store.state.selected)) {
-			if (store.state.selected.length === 0) return placeholder;
-			const labels = store.state.selected
+		if (multiple && Array.isArray($store.selected)) {
+			if ($store.selected.length === 0) return placeholder;
+			const labels = $store.selected
 				.map((val) => options.find((o) => o.value === val)?.label)
 				.filter(Boolean);
 			return labels.join(', ');
 		}
 
-		const option = options.find((o) => o.value === store.state.selected);
+		const option = options.find((o) => o.value === $store.selected);
 		return option?.label || placeholder;
 	});
 
 	// Check if an option is selected
 	function isSelected(optionValue: any): boolean {
-		if (multiple && Array.isArray(store.state.selected)) {
-			return store.state.selected.includes(optionValue);
+		if (multiple && Array.isArray($store.selected)) {
+			return $store.selected.includes(optionValue);
 		}
-		return store.state.selected === optionValue;
+		return $store.selected === optionValue;
 	}
 
 	function handleTriggerClick() {
@@ -137,7 +136,7 @@
 		store.dispatch({ type: 'toggled' });
 
 		// Focus search input when opening
-		if (!store.state.isOpen && searchable) {
+		if (!$store.isOpen && searchable) {
 			setTimeout(() => searchInputElement?.focus(), 10);
 		}
 	}
@@ -146,7 +145,7 @@
 		if (disabled) return;
 
 		// When dropdown is open, let window handler handle all keys
-		if (store.state.isOpen) return;
+		if ($store.isOpen) return;
 
 		if (event.key === 'Enter' || event.key === ' ') {
 			event.preventDefault();
@@ -161,7 +160,7 @@
 	}
 
 	function handleDropdownKeyDown(event: KeyboardEvent) {
-		if (!store.state.isOpen) return;
+		if (!$store.isOpen) return;
 
 		switch (event.key) {
 			case 'ArrowDown':
@@ -229,7 +228,7 @@
 	}
 
 	$effect(() => {
-		if (store.state.isOpen) {
+		if ($store.isOpen) {
 			document.addEventListener('click', handleClickOutside);
 			return () => {
 				document.removeEventListener('click', handleClickOutside);
@@ -253,16 +252,16 @@
 			className
 		)}
 		aria-haspopup="listbox"
-		aria-expanded={store.state.isOpen}
+		aria-expanded={$store.isOpen}
 		{disabled}
 		onclick={handleTriggerClick}
 		onkeydown={handleTriggerKeyDown}
 	>
-		<span class={cn('truncate', !store.state.selected && 'text-muted-foreground')}>
+		<span class={cn('truncate', !$store.selected && 'text-muted-foreground')}>
 			{displayText()}
 		</span>
 		<div class="flex items-center gap-2">
-			{#if store.state.selected && !disabled}
+			{#if $store.selected && !disabled}
 				<button
 					type="button"
 					class="text-muted-foreground hover:text-foreground"
@@ -296,7 +295,7 @@
 				stroke-linejoin="round"
 				class={cn(
 					'transition-transform',
-					store.state.isOpen && 'rotate-180'
+					$store.isOpen && 'rotate-180'
 				)}
 			>
 				<polyline points="6 9 12 15 18 9"></polyline>
@@ -305,7 +304,7 @@
 	</button>
 
 	<!-- Dropdown -->
-	{#if store.state.isOpen}
+	{#if $store.isOpen}
 		<div
 			bind:this={dropdownElement}
 			class="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border border-border bg-popover shadow-md"
@@ -319,25 +318,25 @@
 						type="text"
 						class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring"
 						placeholder="Search..."
-						value={store.state.searchQuery}
+						value={$store.searchQuery}
 						oninput={handleSearchInput}
 					/>
 				</div>
 			{/if}
 
 			<div class="p-1">
-				{#if store.state.filteredOptions.length === 0}
+				{#if $store.filteredOptions.length === 0}
 					<div class="px-2 py-6 text-center text-sm text-muted-foreground">
 						No options found
 					</div>
 				{:else}
-					{#each store.state.filteredOptions as option, index}
+					{#each $store.filteredOptions as option, index}
 						<button
 							type="button"
 							class={cn(
 								'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-left outline-none',
 								'transition-colors',
-								store.state.highlightedIndex === index
+								$store.highlightedIndex === index
 									? 'bg-accent text-accent-foreground'
 									: 'text-foreground',
 								option.disabled

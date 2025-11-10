@@ -64,7 +64,7 @@
 	const store = getAccordionContext();
 
 	// Check if this item is expanded (for template data-state attribute)
-	const isExpanded = $derived(store.state.expandedIds.includes(id));
+	const isExpanded = $derived($store.expandedIds.includes(id));
 
 	// Set context for trigger and content (only static values)
 	setAccordionItemContext({

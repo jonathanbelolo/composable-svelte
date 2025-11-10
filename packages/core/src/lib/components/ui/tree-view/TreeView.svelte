@@ -103,7 +103,7 @@
 
 	// Sync external nodes changes to store
 	$effect(() => {
-		store.state.nodes = nodes;
+		store.dispatch({ type: 'nodesUpdated', nodes });
 	});
 
 	function handleKeyDown(event: KeyboardEvent) {
@@ -168,10 +168,10 @@
 {#snippet TreeNodeItem(props)}
 	{@const node = props.node}
 	{@const level = props.level}
-	{@const isExpanded = store.state.expandedIds.has(node.id)}
-	{@const isSelected = store.state.selectedIds.has(node.id)}
-	{@const isHighlighted = store.state.highlightedId === node.id}
-	{@const isLoading = store.state.loadingIds.has(node.id)}
+	{@const isExpanded = $store.expandedIds.has(node.id)}
+	{@const isSelected = $store.selectedIds.has(node.id)}
+	{@const isHighlighted = $store.highlightedId === node.id}
+	{@const isLoading = $store.loadingIds.has(node.id)}
 	{@const hasChildren = node.children && node.children.length > 0}
 	{@const canExpand = hasChildren || node.lazy}
 
@@ -274,10 +274,10 @@
 	onkeydown={handleKeyDown}
 	tabindex="0"
 >
-	{#if store.state.nodes.length === 0}
+	{#if $store.nodes.length === 0}
 		<div class="px-2 py-6 text-center text-sm text-muted-foreground">No items</div>
 	{:else}
-		{#each store.state.nodes as node}
+		{#each $store.nodes as node}
 			{@render TreeNodeItem({ node, level: 1 })}
 		{/each}
 	{/if}

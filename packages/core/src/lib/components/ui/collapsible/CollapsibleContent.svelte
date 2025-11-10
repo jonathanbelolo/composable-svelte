@@ -38,11 +38,11 @@
 	const { store, contentId, triggerId } = context;
 
 	let contentElement: HTMLDivElement | null = $state(null);
-	let previousExpandedState = $state(store.state.isExpanded);
+	let previousExpandedState = $state($store.isExpanded);
 
 	// Animate expand/collapse when isExpanded changes
 	$effect(() => {
-		const isExpanded = store.state.isExpanded;
+		const isExpanded = $store.isExpanded;
 
 		// Skip animation on initial render
 		if (previousExpandedState === isExpanded) {
@@ -68,12 +68,12 @@
 	aria-labelledby={triggerId}
 	class={cn(
 		'text-sm',
-		!store.state.isExpanded && 'h-0 overflow-hidden opacity-0',
+		!$store.isExpanded && 'h-0 overflow-hidden opacity-0',
 		className
 	)}
-	style={store.state.isExpanded ? 'height: auto;' : 'height: 0; overflow: hidden; opacity: 0;'}
+	style={$store.isExpanded ? 'height: auto;' : 'height: 0; overflow: hidden; opacity: 0;'}
 >
-	{#if store.state.isExpanded}
+	{#if $store.isExpanded}
 		<div class="pb-4 pt-0">
 			{@render children?.()}
 		</div>

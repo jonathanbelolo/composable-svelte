@@ -172,7 +172,7 @@
   <!-- Dropzone -->
   <div
     class={`file-dropzone relative border-2 border-dashed rounded-lg p-8 text-center
-            ${store.state.isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}
+            ${$store.isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}
             ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
     ondragenter={handleDragEnter}
     ondragover={handleDragOver}
@@ -219,9 +219,9 @@
   </div>
 
   <!-- Validation Errors -->
-  {#if store.state.errors.length > 0}
+  {#if $store.errors.length > 0}
     <div class="mt-4 space-y-2">
-      {#each store.state.errors as error, index (index)}
+      {#each $store.errors as error, index (index)}
         <div
           class="flex items-center justify-between bg-red-50 border border-red-200 rounded-lg p-3"
         >
@@ -242,16 +242,16 @@
   {/if}
 
   <!-- File List -->
-  {#if store.state.files.length > 0}
+  {#if $store.files.length > 0}
     <div class="mt-4">
       <div class="flex items-center justify-between mb-3">
         <h3 class="text-sm font-medium text-gray-700">
-          Files ({store.state.files.length})
+          Files ({$store.files.length})
         </h3>
         <button
           onclick={handleClearAll}
           class="text-sm text-red-600 hover:text-red-700"
-          disabled={store.state.isUploading}
+          disabled={$store.isUploading}
           aria-label="Clear all files"
         >
           Clear All
@@ -259,7 +259,7 @@
       </div>
 
       <div class="space-y-3">
-        {#each store.state.files as file (file.id)}
+        {#each $store.files as file (file.id)}
           <div
             class="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-lg p-3"
           >

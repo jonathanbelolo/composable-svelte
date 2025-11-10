@@ -141,7 +141,7 @@
 	});
 
 	// Derived state for modal
-	const isExpanded = $derived(fullStore.state.isExpanded);
+	const isExpanded = $derived($fullStore.isExpanded);
 
 	// Demo controls
 	let activeTab = $state<'minimal' | 'full' | 'playlist'>('minimal');
@@ -150,7 +150,7 @@
 		const randomTrack: AudioTrack = {
 			id: `track-${Date.now()}`,
 			url: `https://www.soundhelix.com/examples/mp3/SoundHelix-Song-${Math.floor(Math.random() * 16) + 1}.mp3`,
-			title: `Random Track ${fullStore.state.playlist.length + 1}`,
+			title: `Random Track ${$fullStore.playlist.length + 1}`,
 			artist: 'Random Artist',
 			album: 'Random Album',
 			coverArt: `https://picsum.photos/seed/random${Date.now()}/300/300`,
@@ -371,17 +371,17 @@ const store = createStore({
 		<summary>🔍 Inspect Player State</summary>
 		<pre>{JSON.stringify(
 				{
-					currentTrack: fullStore.state.currentTrack?.title,
-					isPlaying: fullStore.state.isPlaying,
-					currentTime: Math.floor(fullStore.state.currentTime),
-					duration: Math.floor(fullStore.state.duration),
-					volume: fullStore.state.volume.toFixed(2),
-					playbackSpeed: fullStore.state.playbackSpeed,
-					loopMode: fullStore.state.loopMode,
-					isShuffled: fullStore.state.isShuffled,
-					playlistLength: fullStore.state.playlist.length,
-					currentTrackIndex: fullStore.state.currentTrackIndex,
-					isExpanded: fullStore.state.isExpanded
+					currentTrack: $fullStore.currentTrack?.title,
+					isPlaying: $fullStore.isPlaying,
+					currentTime: Math.floor($fullStore.currentTime),
+					duration: Math.floor($fullStore.duration),
+					volume: $fullStore.volume.toFixed(2),
+					playbackSpeed: $fullStore.playbackSpeed,
+					loopMode: $fullStore.loopMode,
+					isShuffled: $fullStore.isShuffled,
+					playlistLength: $fullStore.playlist.length,
+					currentTrackIndex: $fullStore.currentTrackIndex,
+					isExpanded: $fullStore.isExpanded
 				},
 				null,
 				2

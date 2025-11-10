@@ -126,7 +126,7 @@
 	 * Always shows first, last, current, and nearby pages.
 	 */
 	const pageButtons = $derived(() => {
-		const { currentPage, totalPages, maxPageButtons } = store.state;
+		const { currentPage, totalPages, maxPageButtons } = $store;
 
 		if (totalPages <= maxPageButtons) {
 			// Show all pages
@@ -207,7 +207,7 @@
 			<span class="text-muted-foreground">Items per page:</span>
 			<select
 				class="rounded-md border border-input bg-background px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring"
-				value={store.state.itemsPerPage}
+				value={$store.itemsPerPage}
 				onchange={handleItemsPerPageChange}
 			>
 				{#each itemsPerPageOptions as option}
@@ -227,7 +227,7 @@
 				'hover:bg-accent hover:text-accent-foreground',
 				'disabled:pointer-events-none disabled:opacity-50'
 			)}
-			disabled={store.state.currentPage === 1}
+			disabled={$store.currentPage === 1}
 			onclick={handleFirst}
 			aria-label="Go to first page"
 		>
@@ -255,7 +255,7 @@
 				'hover:bg-accent hover:text-accent-foreground',
 				'disabled:pointer-events-none disabled:opacity-50'
 			)}
-			disabled={store.state.currentPage === 1}
+			disabled={$store.currentPage === 1}
 			onclick={handlePrevious}
 			aria-label="Go to previous page"
 		>
@@ -285,13 +285,13 @@
 					type="button"
 					class={cn(
 						'flex h-9 w-9 items-center justify-center rounded-md text-sm transition-colors',
-						store.state.currentPage === button
+						$store.currentPage === button
 							? 'bg-primary text-primary-foreground'
 							: 'hover:bg-accent hover:text-accent-foreground'
 					)}
 					onclick={() => handlePageClick(button)}
 					aria-label="Go to page {button}"
-					aria-current={store.state.currentPage === button ? 'page' : undefined}
+					aria-current={$store.currentPage === button ? 'page' : undefined}
 				>
 					{button}
 				</button>
@@ -306,7 +306,7 @@
 				'hover:bg-accent hover:text-accent-foreground',
 				'disabled:pointer-events-none disabled:opacity-50'
 			)}
-			disabled={store.state.currentPage === store.state.totalPages}
+			disabled={$store.currentPage === $store.totalPages}
 			onclick={handleNext}
 			aria-label="Go to next page"
 		>
@@ -333,7 +333,7 @@
 				'hover:bg-accent hover:text-accent-foreground',
 				'disabled:pointer-events-none disabled:opacity-50'
 			)}
-			disabled={store.state.currentPage === store.state.totalPages}
+			disabled={$store.currentPage === $store.totalPages}
 			onclick={handleLast}
 			aria-label="Go to last page"
 		>
@@ -356,6 +356,6 @@
 
 	<!-- Page info -->
 	<div class="text-sm text-muted-foreground">
-		Page {store.state.currentPage} of {store.state.totalPages}
+		Page {$store.currentPage} of {$store.totalPages}
 	</div>
 </div>

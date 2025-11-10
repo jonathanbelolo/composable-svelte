@@ -128,12 +128,12 @@
 
 	// Get display value for input
 	const displayValue = $derived(() => {
-		if (store.state.searchQuery) {
-			return store.state.searchQuery;
+		if ($store.searchQuery) {
+			return $store.searchQuery;
 		}
 
-		if (store.state.selected) {
-			const selectedOption = store.state.options.find((o) => o.value === store.state.selected);
+		if ($store.selected) {
+			const selectedOption = $store.options.find((o) => o.value === $store.selected);
 			return selectedOption?.label || '';
 		}
 
@@ -142,7 +142,7 @@
 
 	// Get selected option for display when not focused
 	const selectedOption = $derived(
-		store.state.options.find((o) => o.value === store.state.selected)
+		$store.options.find((o) => o.value === $store.selected)
 	);
 
 	function handleInputFocus() {
@@ -214,7 +214,7 @@
 	}
 
 	$effect(() => {
-		const isOpen = store.state.dropdown.status !== 'idle';
+		const isOpen = $store.dropdown.status !== 'idle';
 		if (isOpen) {
 			document.addEventListener('click', handleClickOutside);
 			return () => {
@@ -225,7 +225,7 @@
 
 	// Animate dropdown open/close using centralized animation system
 	$effect(() => {
-		const status = store.state.dropdown.status;
+		const status = $store.dropdown.status;
 
 		if (!dropdownElement) return;
 
@@ -254,7 +254,7 @@
 			{disabled}
 			value={displayValue()}
 			role="combobox"
-			aria-expanded={store.state.dropdown.status !== 'idle'}
+			aria-expanded={$store.dropdown.status !== 'idle'}
 			aria-autocomplete="list"
 			aria-controls="combobox-dropdown"
 			onfocus={handleInputFocus}
@@ -265,11 +265,11 @@
 
 		<!-- Icons -->
 		<div class="absolute inset-y-0 right-0 flex items-center gap-1 pr-2">
-			{#if store.state.isLoading}
+			{#if $store.isLoading}
 				<div class="text-muted-foreground">
 					<Spinner size="sm" />
 				</div>
-			{:else if store.state.selected && !disabled}
+			{:else if $store.selected && !disabled}
 				<button
 					type="button"
 					class="text-muted-foreground hover:text-foreground"
@@ -304,7 +304,7 @@
 				stroke-linejoin="round"
 				class={cn(
 					'text-muted-foreground transition-transform',
-					store.state.dropdown.status !== 'idle' && 'rotate-180'
+					$store.dropdown.status !== 'idle' && 'rotate-180'
 				)}
 			>
 				<polyline points="6 9 12 15 18 9"></polyline>
@@ -313,7 +313,7 @@
 	</div>
 
 	<!-- Dropdown -->
-	{#if store.state.dropdown.status === 'opening' || store.state.dropdown.status === 'open' || store.state.dropdown.status === 'closing'}
+	{#if $store.dropdown.status === 'opening' || $store.dropdown.status === 'open' || $store.dropdown.status === 'closing'}
 		<div
 			bind:this={dropdownElement}
 			id="combobox-dropdown"
@@ -321,30 +321,30 @@
 			role="listbox"
 		>
 			<div class="p-1">
-				{#if store.state.isLoading}
+				{#if $store.isLoading}
 					<div class="flex items-center justify-center px-2 py-6 text-sm text-muted-foreground">
 						<Spinner size="sm" class="mr-2" />
 						Loading...
 					</div>
-				{:else if store.state.filteredOptions.length === 0}
+				{:else if $store.filteredOptions.length === 0}
 					<div class="px-2 py-6 text-center text-sm text-muted-foreground">No results found</div>
 				{:else}
-					{#each store.state.filteredOptions as option, index}
+					{#each $store.filteredOptions as option, index}
 						<button
 							type="button"
 							class={cn(
 								'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-left outline-none',
 								'transition-colors',
-								store.state.highlightedIndex === index
+								$store.highlightedIndex === index
 									? 'bg-accent text-accent-foreground'
 									: 'text-foreground',
 								option.disabled
 									? 'pointer-events-none opacity-50'
 									: 'hover:bg-accent hover:text-accent-foreground',
-								store.state.selected === option.value && 'font-medium'
+								$store.selected === option.value && 'font-medium'
 							)}
 							role="option"
-							aria-selected={store.state.selected === option.value}
+							aria-selected={$store.selected === option.value}
 							disabled={option.disabled}
 							onclick={() => handleOptionClick(option.value)}
 							onmouseenter={() => handleOptionMouseEnter(index)}
@@ -357,7 +357,7 @@
 									</div>
 								{/if}
 							</div>
-							{#if store.state.selected === option.value}
+							{#if $store.selected === option.value}
 								<svg
 									xmlns="http://www.w3.org/2000/svg"
 									width="16"

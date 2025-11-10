@@ -112,12 +112,12 @@
   // Create a store wrapper with dismiss() method for Alert component
   const storeWithDismiss = $derived({
     ...demoStore,
-    state: demoStore.state,
+    state: $demoStore,
     dispatch: demoStore.dispatch,
     dismiss: () => demoStore.dispatch({ type: 'closeAlert' })
   });
 
-  const state = $derived(demoStore.state);
+  const state = $derived($demoStore);
 
   // Alert content based on type
   const alertContent = $derived(() => {

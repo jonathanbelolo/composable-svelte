@@ -393,6 +393,14 @@ export class BabylonAdapter {
         );
       }
 
+      case 'torus': {
+        return MeshBuilder.CreateTorus(
+          id,
+          { diameter: config.diameter, thickness: config.thickness, tessellation: config.segments || 32 },
+          this.scene
+        );
+      }
+
       case 'custom': {
         // TODO: Implement custom geometry from vertices/indices
         console.warn('[BabylonAdapter] Custom geometry not yet implemented');

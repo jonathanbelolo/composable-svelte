@@ -88,13 +88,13 @@
 			store.dispatch({ type: 'toggled' });
 		} else if (event.key === 'ArrowDown') {
 			event.preventDefault();
-			if (!store.state.isOpen) {
+			if (!$store.isOpen) {
 				store.dispatch({ type: 'opened' });
 				store.dispatch({ type: 'arrowDown' });
 			}
 		} else if (event.key === 'ArrowUp') {
 			event.preventDefault();
-			if (!store.state.isOpen) {
+			if (!$store.isOpen) {
 				store.dispatch({ type: 'opened' });
 				store.dispatch({ type: 'arrowUp' });
 			}
@@ -102,7 +102,7 @@
 	}
 
 	function handleMenuKeyDown(event: KeyboardEvent) {
-		if (!store.state.isOpen) return;
+		if (!$store.isOpen) return;
 
 		switch (event.key) {
 			case 'ArrowDown':
@@ -124,8 +124,8 @@
 			case 'Enter':
 			case ' ':
 				event.preventDefault();
-				if (store.state.highlightedIndex !== -1) {
-					store.dispatch({ type: 'itemSelected', index: store.state.highlightedIndex });
+				if ($store.highlightedIndex !== -1) {
+					store.dispatch({ type: 'itemSelected', index: $store.highlightedIndex });
 				}
 				break;
 			case 'Escape':
@@ -155,7 +155,7 @@
 
 	// Register click outside handler
 	$effect(() => {
-		if (store.state.isOpen) {
+		if ($store.isOpen) {
 			document.addEventListener('click', handleClickOutside);
 			return () => {
 				document.removeEventListener('click', handleClickOutside);
@@ -167,10 +167,10 @@
 	$effect(() => {
 		if (!menuElement) return;
 
-		const currentContent = store.state.presentation.content;
+		const currentContent = $store.presentation.content;
 
 		if (
-			store.state.presentation.status === 'presenting' &&
+			$store.presentation.status === 'presenting' &&
 			lastAnimatedContent !== currentContent
 		) {
 			lastAnimatedContent = currentContent;
@@ -181,7 +181,7 @@
 			});
 		}
 
-		if (store.state.presentation.status === 'dismissing' && lastAnimatedContent !== null) {
+		if ($store.presentation.status === 'dismissing' && lastAnimatedContent !== null) {
 			lastAnimatedContent = null;
 			animateDropdownOut(menuElement).then(() => {
 				queueMicrotask(() =>
@@ -201,7 +201,7 @@
 		role="button"
 		tabindex="0"
 		aria-haspopup="true"
-		aria-expanded={store.state.isOpen}
+		aria-expanded={$store.isOpen}
 		onclick={handleTriggerClick}
 		onkeydown={handleTriggerKeyDown}
 	>
@@ -209,7 +209,7 @@
 	</div>
 
 	<!-- Menu -->
-	{#if store.state.isOpen || store.state.presentation.status === 'dismissing'}
+	{#if $store.isOpen || $store.presentation.status === 'dismissing'}
 		<div
 			bind:this={menuElement}
 			class={cn(
@@ -217,11 +217,11 @@
 				align === 'start' ? 'left-0' : 'right-0',
 				className
 			)}
-			style:opacity={store.state.presentation.status === 'presenting' ? '0' : undefined}
+			style:opacity={$store.presentation.status === 'presenting' ? '0' : undefined}
 			role="menu"
 			aria-orientation="vertical"
 		>
-			{#each store.state.items as item, index}
+			{#each $store.items as item, index}
 				{#if item.isSeparator}
 					<div class="my-1 h-px bg-border" role="separator"></div>
 				{:else}
@@ -230,7 +230,7 @@
 						tabindex="-1"
 						class={cn(
 							'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none',
-							store.state.highlightedIndex === index
+							$store.highlightedIndex === index
 								? 'bg-accent text-accent-foreground'
 								: 'text-foreground',
 							item.disabled

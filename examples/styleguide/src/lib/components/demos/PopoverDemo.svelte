@@ -96,14 +96,14 @@
   });
 
   // Create a store wrapper with dismiss() method for Popover component
-  const storeWithDismiss = $derived(demoStore.state.showPopover ? {
+  const storeWithDismiss = $derived($demoStore.showPopover ? {
     ...demoStore,
-    state: demoStore.state,
+    state: $demoStore,
     dispatch: demoStore.dispatch,
     dismiss: () => demoStore.dispatch({ type: 'closePopover' })
   } : null);
 
-  const state = $derived(demoStore.state);
+  const state = $derived($demoStore);
 
   // Calculate popover position based on trigger button and direction
   const popoverStyle = $derived(() => {

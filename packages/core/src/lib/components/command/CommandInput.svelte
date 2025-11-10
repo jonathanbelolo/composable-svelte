@@ -85,14 +85,14 @@
 		type="text"
 		class="command-input"
 		{placeholder}
-		value={store.state.query}
+		value={$store.query}
 		oninput={handleInput}
 		autocomplete="off"
 		spellcheck="false"
 	/>
 
 	<!-- Clear Button (when query exists) -->
-	{#if store.state.query}
+	{#if $store.query}
 		<button
 			type="button"
 			class="command-input-clear"
