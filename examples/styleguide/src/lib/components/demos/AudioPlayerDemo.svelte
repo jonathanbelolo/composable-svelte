@@ -17,7 +17,7 @@
 		audioPlayerReducer,
 		createInitialAudioPlayerState,
 		type AudioTrack
-	} from '@composable-svelte/code';
+	} from '@composable-svelte/media';
 	import { Modal } from '@composable-svelte/core/navigation-components';
 
 	// Sample audio tracks (using free Creative Commons music)

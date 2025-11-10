@@ -1,3 +1,8 @@
+---
+name: composable-svelte-frontend
+description: Comprehensive guidance for writing production-quality Composable Svelte applications. Use when implementing or modifying Composable Svelte components, stores, reducers, effects, or navigation. Critical for preventing reactivity bugs ($store vs store.state), proper state management, and testing patterns.
+---
+
 # Composable Svelte Front-End Coding Skill
 
 This skill provides comprehensive guidance for writing production-quality Composable Svelte applications, covering core patterns, components, testing, and common pitfalls.

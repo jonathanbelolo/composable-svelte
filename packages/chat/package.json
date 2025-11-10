@@ -1,7 +1,7 @@
 {
-  "name": "@composable-svelte/code",
+  "name": "@composable-svelte/chat",
   "version": "0.1.0",
-  "description": "Code editor, syntax highlighting, and node-based canvas components for Composable Svelte - Built with Prism.js, CodeMirror, and SvelteFlow",
+  "description": "Streaming chat component with collaborative features for Composable Svelte - Built for LLM interactions with transport-agnostic design",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -36,15 +36,13 @@
   "keywords": [
     "svelte",
     "svelte5",
-    "code-editor",
-    "syntax-highlighting",
-    "node-editor",
-    "node-canvas",
-    "flow-editor",
-    "visual-programming",
-    "prismjs",
-    "codemirror",
-    "svelteflow",
+    "streaming-chat",
+    "llm",
+    "ai-chat",
+    "collaborative",
+    "websocket",
+    "real-time",
+    "markdown",
     "composable-architecture",
     "typescript"
   ],
@@ -53,7 +51,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/jbelolo/composable-svelte.git",
-    "directory": "packages/code"
+    "directory": "packages/chat"
   },
   "homepage": "https://github.com/jbelolo/composable-svelte#readme",
   "bugs": {
@@ -66,8 +64,8 @@
   "devDependencies": {
     "@sveltejs/package": "^2.5.4",
     "@sveltejs/vite-plugin-svelte": "^6.2.1",
+    "@types/marked": "^6.0.0",
     "@types/node": "^20.0.0",
-    "@types/prismjs": "^1.26.0",
     "@vitest/browser-playwright": "^4.0.3",
     "@vitest/coverage-v8": "^4.0.7",
     "@vitest/ui": "^4.0.7",
@@ -78,24 +76,10 @@
     "vitest": "^4.0.7"
   },
   "dependencies": {
-    "@codemirror/autocomplete": "^6.19.1",
-    "@codemirror/lang-css": "^6.3.1",
-    "@codemirror/lang-html": "^6.4.11",
-    "@codemirror/lang-javascript": "^6.2.4",
-    "@codemirror/lang-json": "^6.0.2",
-    "@codemirror/lang-markdown": "^6.5.0",
-    "@codemirror/lang-python": "^6.2.1",
-    "@codemirror/lang-rust": "^6.0.2",
-    "@codemirror/lang-sql": "^6.10.0",
-    "@codemirror/lint": "^6.9.2",
-    "@codemirror/search": "^6.5.11",
-    "@codemirror/state": "^6.5.2",
-    "@codemirror/theme-one-dark": "^6.1.3",
-    "@codemirror/view": "^6.38.6",
+    "@composable-svelte/code": "workspace:*",
     "@composable-svelte/core": "workspace:*",
-    "@xyflow/svelte": "^1.4.1",
-    "codemirror": "^6.0.2",
-    "prism-themes": "^1.9.0",
-    "prismjs": "^1.29.0"
+    "@composable-svelte/media": "workspace:*",
+    "marked": "^16.4.1",
+    "pdfjs-dist": "^5.4.394"
   }
 }

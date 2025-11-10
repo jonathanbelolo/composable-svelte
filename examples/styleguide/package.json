@@ -14,10 +14,12 @@
   },
   "dependencies": {
     "@composable-svelte/charts": "workspace:*",
+    "@composable-svelte/chat": "workspace:*",
     "@composable-svelte/code": "workspace:*",
     "@composable-svelte/core": "workspace:*",
     "@composable-svelte/graphics": "workspace:*",
     "@composable-svelte/maps": "workspace:*",
+    "@composable-svelte/media": "workspace:*",
     "@xyflow/svelte": "^1.4.1",
     "clsx": "^2.1.1",
     "lucide-svelte": "^0.553.0",

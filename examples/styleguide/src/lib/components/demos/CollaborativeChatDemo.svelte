@@ -16,7 +16,7 @@
 		type CollaborativeAction,
 		type CollaborativeDependencies,
 		type CollaborativeStreamingChatState
-	} from '@composable-svelte/code';
+	} from '@composable-svelte/chat';
 
 	// Mock current user
 	const currentUserId = 'user-1';

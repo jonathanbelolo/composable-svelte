@@ -6,7 +6,7 @@
 		createInitialVoiceInputState,
 		getAudioManager,
 		type VoiceInputState
-	} from '@composable-svelte/code';
+	} from '@composable-svelte/media';
 
 	// Mock transcription function (shared by both stores)
 	const mockTranscribe = async (audioBlob: Blob) => {

@@ -16,6 +16,7 @@ import { appReducer } from '../shared/reducer';
 import type { AppDependencies } from '../shared/reducer';
 import { initialState } from '../shared/types';
 import { loadPosts } from './data';
+import { parsePostFromURL } from '../shared/routing';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -36,33 +37,38 @@ app.register(fastifyStatic, {
 
 /**
  * Main SSR route handler.
- * This demonstrates the complete SSR flow:
- * 1. Load data on the server
- * 2. Create store with pre-populated state
- * 3. Render component to HTML
- * 4. Send response with embedded state
+ * This demonstrates the complete SSR flow with routing:
+ * 1. Parse URL to determine which post to show
+ * 2. Load data on the server
+ * 3. Create store with URL-driven state
+ * 4. Render component to HTML
+ * 5. Send response with embedded state
  */
-app.get('/', async (request, reply) => {
+async function renderApp(request: any, reply: any) {
   try {
-    // 1. Load data for this request (server-side only)
-    // In a real app, this might include user-specific data, etc.
+    // 1. Parse URL using router (same logic as client!)
     const posts = await loadPosts();
+    // Use request.routeOptions.url or request.url to get the path
+    const path = request.routeOptions?.url || request.url;
+    const requestedPostId = parsePostFromURL(path, posts[0]?.id || 1);
 
-    // 2. Create store with pre-populated data
+    // Find the requested post
+    const selectedPost = posts.find((p) => p.id === requestedPostId) || posts[0];
+
+    // 2. Create store with URL-driven state
     // Note: dependencies is empty because effects won't run on server
-    const firstPost = posts[0];
     const store = createStore({
       initialState: {
         ...initialState,
         posts,
-        selectedPostId: firstPost?.id || null,
-        // Set initial meta for the first post (computed in state, not in template!)
-        meta: firstPost
+        selectedPostId: selectedPost?.id || null,
+        // Set initial meta based on URL-selected post
+        meta: selectedPost
           ? {
-              title: `${firstPost.title} - Composable Svelte Blog`,
-              description: firstPost.content.slice(0, 160),
-              ogImage: `/og/post-${firstPost.id}.jpg`,
-              canonical: `https://example.com/posts/${firstPost.id}`
+              title: `${selectedPost.title} - Composable Svelte Blog`,
+              description: selectedPost.content.slice(0, 160),
+              ogImage: `/og/post-${selectedPost.id}.jpg`,
+              canonical: `https://example.com/posts/${selectedPost.id}`
             }
           : initialState.meta
       },
@@ -101,7 +107,11 @@ app.get('/', async (request, reply) => {
       message: error instanceof Error ? error.message : 'Unknown error'
     });
   }
-});
+}
+
+// Register routes - handle both / and /posts/:id with the same handler
+app.get('/', renderApp);
+app.get('/posts/:id', renderApp);
 
 /**
  * Health check endpoint

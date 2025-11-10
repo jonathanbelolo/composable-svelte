@@ -3,7 +3,7 @@
 	import type { Snippet } from 'svelte';
 	import { renderMarkdown, attachCopyButtons, extractImagesFromMarkdown, extractVideosFromMarkdown } from '../markdown.js';
 	import { ImageGallery } from '@composable-svelte/core/components/image-gallery';
-	import { VideoEmbed } from '../../video-embed/index.js';
+	import { VideoEmbed } from '@composable-svelte/media';
 	import AttachmentGallery from '../attachment-components/AttachmentGallery.svelte';
 	import MessageReactions from './MessageReactions.svelte';
 

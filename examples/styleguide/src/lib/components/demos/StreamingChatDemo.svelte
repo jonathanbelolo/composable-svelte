@@ -7,7 +7,7 @@
 		streamingChatReducer,
 		createInitialStreamingChatState,
 		createMockStreamingChat
-	} from '@composable-svelte/code';
+	} from '@composable-svelte/chat';
 	import {
 		Card,
 		CardHeader,

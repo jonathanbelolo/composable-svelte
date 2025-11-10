@@ -369,6 +369,9 @@ importers:
       '@composable-svelte/charts':
         specifier: workspace:*
         version: link:../../packages/charts
+      '@composable-svelte/chat':
+        specifier: workspace:*
+        version: link:../../packages/chat
       '@composable-svelte/code':
         specifier: workspace:*
         version: link:../../packages/code
@@ -381,6 +384,9 @@ importers:
       '@composable-svelte/maps':
         specifier: workspace:*
         version: link:../../packages/maps
+      '@composable-svelte/media':
+        specifier: workspace:*
+        version: link:../../packages/media
       '@xyflow/svelte':
         specifier: ^1.4.1
         version: 1.4.1(svelte@5.43.3)
@@ -538,6 +544,61 @@ importers:
         specifier: ^4.0.7
         version: 4.0.7(@types/node@20.19.24)(@vitest/browser-playwright@4.0.7)(@vitest/ui@4.0.7)(jiti@1.21.7)(jsdom@25.0.1)(tsx@4.20.6)
 
+  packages/chat:
+    dependencies:
+      '@composable-svelte/code':
+        specifier: workspace:*
+        version: link:../code
+      '@composable-svelte/core':
+        specifier: workspace:*
+        version: link:../core
+      '@composable-svelte/media':
+        specifier: workspace:*
+        version: link:../media
+      marked:
+        specifier: ^16.4.1
+        version: 16.4.1
+      pdfjs-dist:
+        specifier: ^5.4.394
+        version: 5.4.394
+    devDependencies:
+      '@sveltejs/package':
+        specifier: ^2.5.4
+        version: 2.5.4(svelte@5.43.3)(typescript@5.9.3)
+      '@sveltejs/vite-plugin-svelte':
+        specifier: ^6.2.1
+        version: 6.2.1(svelte@5.43.3)(vite@6.4.1(@types/node@20.19.24)(jiti@1.21.7)(tsx@4.20.6))
+      '@types/marked':
+        specifier: ^6.0.0
+        version: 6.0.0
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.24
+      '@vitest/browser-playwright':
+        specifier: ^4.0.3
+        version: 4.0.7(playwright@1.56.1)(vite@6.4.1(@types/node@20.19.24)(jiti@1.21.7)(tsx@4.20.6))(vitest@4.0.7)
+      '@vitest/coverage-v8':
+        specifier: ^4.0.7
+        version: 4.0.7(@vitest/browser@4.0.7(vite@6.4.1(@types/node@20.19.24)(jiti@1.21.7)(tsx@4.20.6))(vitest@4.0.7(@types/node@20.19.24)(@vitest/browser-playwright@4.0.7)(@vitest/ui@4.0.7)(jiti@1.21.7)(jsdom@25.0.1)(tsx@4.20.6)))(vitest@4.0.7(@types/node@20.19.24)(@vitest/browser-playwright@4.0.7)(@vitest/ui@4.0.7)(jiti@1.21.7)(jsdom@25.0.1)(tsx@4.20.6))
+      '@vitest/ui':
+        specifier: ^4.0.7
+        version: 4.0.7(vitest@4.0.7)
+      playwright:
+        specifier: ^1.56.1
+        version: 1.56.1
+      svelte:
+        specifier: ^5.0.0
+        version: 5.43.3
+      typescript:
+        specifier: ^5.5.4
+        version: 5.9.3
+      vite:
+        specifier: ^6.4.1
+        version: 6.4.1(@types/node@20.19.24)(jiti@1.21.7)(tsx@4.20.6)
+      vitest:
+        specifier: ^4.0.7
+        version: 4.0.7(@types/node@20.19.24)(@vitest/browser-playwright@4.0.7)(@vitest/ui@4.0.7)(jiti@1.21.7)(jsdom@25.0.1)(tsx@4.20.6)
+
   packages/code:
     dependencies:
       '@codemirror/autocomplete':
@@ -591,12 +652,6 @@ importers:
       codemirror:
         specifier: ^6.0.2
         version: 6.0.2
-      marked:
-        specifier: ^16.4.1
-        version: 16.4.1
-      pdfjs-dist:
-        specifier: ^5.4.394
-        version: 5.4.394
       prism-themes:
         specifier: ^1.9.0
         version: 1.9.0
@@ -610,9 +665,6 @@ importers:
       '@sveltejs/vite-plugin-svelte':
         specifier: ^6.2.1
         version: 6.2.1(svelte@5.43.3)(vite@6.4.1(@types/node@20.19.24)(jiti@1.21.7)(tsx@4.20.6))
-      '@types/marked':
-        specifier: ^6.0.0
-        version: 6.0.0
       '@types/node':
         specifier: ^20.0.0
         version: 20.19.24
@@ -791,6 +843,46 @@ importers:
       '@vitest/ui':
         specifier: ^4.0.7
         version: 4.0.7(vitest@4.0.7)
+      svelte:
+        specifier: ^5.0.0
+        version: 5.43.3
+      typescript:
+        specifier: ^5.5.4
+        version: 5.9.3
+      vite:
+        specifier: ^6.4.1
+        version: 6.4.1(@types/node@20.19.24)(jiti@1.21.7)(tsx@4.20.6)
+      vitest:
+        specifier: ^4.0.7
+        version: 4.0.7(@types/node@20.19.24)(@vitest/browser-playwright@4.0.7)(@vitest/ui@4.0.7)(jiti@1.21.7)(jsdom@25.0.1)(tsx@4.20.6)
+
+  packages/media:
+    dependencies:
+      '@composable-svelte/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      '@sveltejs/package':
+        specifier: ^2.5.4
+        version: 2.5.4(svelte@5.43.3)(typescript@5.9.3)
+      '@sveltejs/vite-plugin-svelte':
+        specifier: ^6.2.1
+        version: 6.2.1(svelte@5.43.3)(vite@6.4.1(@types/node@20.19.24)(jiti@1.21.7)(tsx@4.20.6))
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.24
+      '@vitest/browser-playwright':
+        specifier: ^4.0.3
+        version: 4.0.7(playwright@1.56.1)(vite@6.4.1(@types/node@20.19.24)(jiti@1.21.7)(tsx@4.20.6))(vitest@4.0.7)
+      '@vitest/coverage-v8':
+        specifier: ^4.0.7
+        version: 4.0.7(@vitest/browser@4.0.7(vite@6.4.1(@types/node@20.19.24)(jiti@1.21.7)(tsx@4.20.6))(vitest@4.0.7(@types/node@20.19.24)(@vitest/browser-playwright@4.0.7)(@vitest/ui@4.0.7)(jiti@1.21.7)(jsdom@25.0.1)(tsx@4.20.6)))(vitest@4.0.7(@types/node@20.19.24)(@vitest/browser-playwright@4.0.7)(@vitest/ui@4.0.7)(jiti@1.21.7)(jsdom@25.0.1)(tsx@4.20.6))
+      '@vitest/ui':
+        specifier: ^4.0.7
+        version: 4.0.7(vitest@4.0.7)
+      playwright:
+        specifier: ^1.56.1
+        version: 1.56.1
       svelte:
         specifier: ^5.0.0
         version: 5.43.3

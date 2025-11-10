@@ -7,7 +7,7 @@
 
 import { marked } from 'marked';
 import Prism from 'prismjs';
-import { loadLanguage } from '../code-highlight/prism-wrapper';
+import { loadLanguage } from '@composable-svelte/code';
 
 // Language map for Prism
 const LANGUAGE_MAP: Record<string, string> = {
@@ -222,7 +222,7 @@ export function extractImagesFromMarkdown(markdown: string): Array<{
  * Re-exported from video-embed module for convenience.
  * Detects video URLs from platforms like YouTube, Vimeo, Twitch, etc.
  */
-export { extractVideosFromMarkdown } from '../video-embed/video-detection.js';
+export { extractVideosFromMarkdown } from '@composable-svelte/media';
 
 /**
  * Attach copy buttons to code blocks in rendered HTML

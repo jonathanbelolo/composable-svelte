@@ -6,10 +6,12 @@
 
 import { hydrate as hydrateComponent } from 'svelte';
 import { hydrateStore } from '@composable-svelte/core/ssr';
+import { syncBrowserHistory } from '@composable-svelte/core/routing';
 import App from '../shared/App.svelte';
 import { appReducer } from '../shared/reducer';
 import type { AppDependencies } from '../shared/reducer';
 import type { AppState, AppAction } from '../shared/types';
+import { parserConfig, serializerConfig } from '../shared/routing';
 
 /**
  * Client-side dependencies.
@@ -45,14 +47,36 @@ function hydrate() {
       }
     );
 
-    // 3. Hydrate the app (reuse existing DOM from SSR)
+    // 3. Sync browser history with state (URL routing!)
+    // When selectedPostId changes → update URL
+    // When user clicks back/forward → dispatch selectPost action
+    syncBrowserHistory(store, {
+      serializers: serializerConfig.serializers,
+      parsers: parserConfig.parsers,
+      // Map state → destination for URL serialization
+      getDestination: (state) => {
+        if (state.selectedPostId !== null) {
+          return { type: 'post' as const, state: { postId: state.selectedPostId } };
+        }
+        return null;
+      },
+      // Map destination → action for back/forward navigation
+      destinationToAction: (dest) => {
+        if (dest?.type === 'post') {
+          return { type: 'selectPost', postId: dest.state.postId };
+        }
+        return null;
+      }
+    });
+
+    // 4. Hydrate the app (reuse existing DOM from SSR)
     const app = hydrateComponent(App, {
       target: document.body,
       props: { store }
     });
 
     // Log successful hydration
-    console.log('✅ Composable Svelte hydrated successfully');
+    console.log('✅ Composable Svelte hydrated successfully with URL routing');
 
     // Cleanup on unmount (for HMR during development)
     if (import.meta.hot) {
