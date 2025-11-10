@@ -25,6 +25,7 @@ import { checkWebGLSupport } from '../utils/webgl-support.js';
 import { ShaderProgramManager } from '../shaders/shader-program-manager.js';
 import { RenderPipeline } from '../shaders/render-pipeline.js';
 import { DEFAULT_VERTEX_SHADER, DEFAULT_FRAGMENT_SHADER } from '../shaders/default-shaders.js';
+import { getPreset, hasPreset, type PresetName } from '../shaders/presets/index.js';
 import type {
 	OverlayOptions,
 	OverlayContextAPI,
@@ -580,6 +581,7 @@ class WebGLOverlay implements OverlayContextAPI {
 		// Determine vertex and fragment shader source
 		let vertexSource = DEFAULT_VERTEX_SHADER;
 		let fragmentSource = DEFAULT_FRAGMENT_SHADER;
+		let customShader: typeof registration.shader | null = null;
 
 		// Handle custom shader effect
 		if (typeof registration.shader === 'object') {
@@ -587,9 +589,34 @@ class WebGLOverlay implements OverlayContextAPI {
 				vertexSource = registration.shader.vertex;
 			}
 			fragmentSource = registration.shader.fragment;
+			customShader = registration.shader;
 		} else if (typeof registration.shader === 'string') {
-			// Built-in preset (Phase 3 will add preset library)
-			// For now, use default shader
+			// Try to load built-in preset
+			if (hasPreset(registration.shader)) {
+				const preset = getPreset(registration.shader as PresetName);
+				if (preset) {
+					if (preset.vertex) {
+						vertexSource = preset.vertex;
+					}
+					fragmentSource = preset.fragment;
+					customShader = preset;
+					// Update registration with resolved preset
+					registration.shader = preset;
+				}
+			} else {
+				// Unknown preset name, log warning and use default
+				console.warn(
+					`[WebGLOverlay] Unknown shader preset '${registration.shader}' for element '${registration.id}', using default shader`
+				);
+			}
+		}
+
+		// Compile program with all possible uniforms
+		const uniformNames = ['uTexture', 'uTime', 'uDeltaTime'];
+
+		// Add custom uniforms if present
+		if (customShader && typeof customShader === 'object' && customShader.uniforms) {
+			uniformNames.push(...Object.keys(customShader.uniforms));
 		}
 
 		// Compile program
@@ -597,7 +624,7 @@ class WebGLOverlay implements OverlayContextAPI {
 			vertexSource,
 			fragmentSource,
 			['aPosition', 'aTexCoord'],
-			['uTexture', 'uTime', 'uDeltaTime'] // Standard uniforms
+			uniformNames
 		);
 
 		if (result instanceof OverlayError) {
