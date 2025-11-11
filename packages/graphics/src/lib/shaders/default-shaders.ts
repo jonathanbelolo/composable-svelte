@@ -37,8 +37,8 @@ void main() {
   // Pass texture coordinate to fragment shader
   vTexCoord = aTexCoord;
 
-  // Convert position from [0,1] to clip space [-1,1]
-  gl_Position = vec4(aPosition * 2.0 - 1.0, 0.0, 1.0);
+  // aPosition is already in NDC space [-1,1], use directly
+  gl_Position = vec4(aPosition, 0.0, 1.0);
 }
 `.trim();
 

@@ -61,6 +61,16 @@ export interface CustomShaderEffect {
 }
 
 /**
+ * Element bounds in viewport coordinates
+ */
+export interface ElementBounds {
+	x: number; // Left position in pixels
+	y: number; // Top position in pixels
+	width: number; // Width in pixels
+	height: number; // Height in pixels
+}
+
+/**
  * Element registration configuration
  *
  * Represents a single HTML element tracked by the overlay.
@@ -90,6 +100,11 @@ export interface ElementRegistration {
 	 * Shader effect to apply
 	 */
 	shader: ShaderEffect;
+
+	/**
+	 * Element bounds in viewport (for positioning)
+	 */
+	bounds: ElementBounds;
 
 	/**
 	 * WebGL texture reference (internal)

@@ -26,13 +26,15 @@ import { ShaderProgramManager } from '../shaders/shader-program-manager.js';
 import { RenderPipeline } from '../shaders/render-pipeline.js';
 import { DEFAULT_VERTEX_SHADER, DEFAULT_FRAGMENT_SHADER } from '../shaders/default-shaders.js';
 import { getPreset, hasPreset, type PresetName } from '../shaders/presets/index.js';
+import { PositionTracker } from './position-tracker.js';
 import type {
 	OverlayOptions,
 	OverlayContextAPI,
 	ElementRegistration,
 	ElementType,
 	ShaderEffect,
-	UpdateStrategy
+	UpdateStrategy,
+	ElementBounds
 } from './overlay-types.js';
 import type { CompiledProgram } from '../shaders/shader-compiler.js';
 
@@ -77,6 +79,7 @@ class WebGLOverlay implements OverlayContextAPI {
 	private browserCompatibility: BrowserCompatibility;
 	private programManager: ShaderProgramManager | null = null;
 	private renderPipeline: RenderPipeline | null = null;
+	private positionTracker: PositionTracker;
 	private elements = new Map<string, ElementRegistration>();
 	private elementPrograms = new Map<string, CompiledProgram>();
 	private options: Required<OverlayOptions>;
@@ -155,6 +158,12 @@ class WebGLOverlay implements OverlayContextAPI {
 		// Initialize render loop
 		this.renderLoop = new RenderLoop(this.options.targetFPS);
 
+		// Initialize position tracker
+		this.positionTracker = new PositionTracker(null); // null = track relative to viewport
+		this.positionTracker.onPositionUpdate((elementId, bounds) => {
+			this.handlePositionUpdate(elementId, bounds);
+		});
+
 		// Log initialization
 		if (this.options.debug) {
 			console.info('[WebGLOverlay] Initialized', {
@@ -190,6 +199,15 @@ class WebGLOverlay implements OverlayContextAPI {
 		// Determine update strategy
 		const updateStrategy = options.updateStrategy ?? this.inferUpdateStrategy(options.type);
 
+		// Get initial element bounds
+		const rect = element.getBoundingClientRect();
+		const initialBounds: ElementBounds = {
+			x: rect.left,
+			y: rect.top,
+			width: rect.width,
+			height: rect.height
+		};
+
 		// Create element registration
 		const registration: ElementRegistration = {
 			id,
@@ -197,6 +215,7 @@ class WebGLOverlay implements OverlayContextAPI {
 			type: options.type,
 			updateStrategy,
 			shader: options.shader,
+			bounds: initialBounds,
 			needsUpdate: true
 		};
 
@@ -211,6 +230,9 @@ class WebGLOverlay implements OverlayContextAPI {
 
 		// Register with update scheduler
 		this.updateScheduler.registerElement(registration);
+
+		// Start tracking element position
+		this.positionTracker.track(id, element);
 
 		// Log registration
 		if (this.options.debug) {
@@ -229,6 +251,9 @@ class WebGLOverlay implements OverlayContextAPI {
 			console.warn(`[WebGLOverlay] Element '${id}' not found`);
 			return;
 		}
+
+		// Stop tracking element position
+		this.positionTracker.untrack(id);
 
 		// Unregister from update scheduler
 		this.updateScheduler.unregisterElement(id);
@@ -302,6 +327,21 @@ class WebGLOverlay implements OverlayContextAPI {
 
 		registration.shader = shader;
 		registration.needsUpdate = true;
+
+		// Recompile shader program with new shader
+		this.compileElementShader(registration);
+	}
+
+	/**
+	 * Update element position
+	 *
+	 * Manually trigger a position update for an element.
+	 * Useful when CSS transforms change the element's visual position.
+	 *
+	 * @param id - Element ID
+	 */
+	updateElementPosition(id: string): void {
+		this.positionTracker.updateElementPosition(id);
 	}
 
 	/**
@@ -393,6 +433,9 @@ class WebGLOverlay implements OverlayContextAPI {
 		for (const id of Array.from(this.elements.keys())) {
 			this.unregisterElement(id);
 		}
+
+		// Destroy position tracker
+		this.positionTracker.destroy();
 
 		// Destroy update scheduler
 		this.updateScheduler.destroy();
@@ -512,6 +555,20 @@ class WebGLOverlay implements OverlayContextAPI {
 	}
 
 	/**
+	 * Handle element position update from tracker
+	 */
+	private handlePositionUpdate(elementId: string, bounds: ElementBounds): void {
+		const registration = this.elements.get(elementId);
+		if (!registration) return;
+
+		// Update bounds
+		registration.bounds = bounds;
+
+		// Element needs re-render with new position
+		registration.needsUpdate = true;
+	}
+
+	/**
 	 * Render frame
 	 */
 	private render(deltaTime: number): void {
@@ -562,8 +619,22 @@ class WebGLOverlay implements OverlayContextAPI {
 			Object.assign(uniforms, registration.shader.uniforms);
 		}
 
-		// Render the element
+		// Render the element with bounds
+		// WebGL viewport is set to canvas.width x canvas.height (physical pixels)
+		// DOM bounds are in CSS pixels from getBoundingClientRect()
+		// We must convert CSS pixels to physical pixels for correct NDC conversion
+		const dpr = window.devicePixelRatio || 1;
+		const physicalBounds = {
+			x: registration.bounds.x * dpr,
+			y: registration.bounds.y * dpr,
+			width: registration.bounds.width * dpr,
+			height: registration.bounds.height * dpr
+		};
+
 		this.renderPipeline.render(program, registration.texture, {
+			bounds: physicalBounds, // Use physical pixel bounds
+			canvasWidth: this.canvas.width, // Use physical pixel canvas dimensions
+			canvasHeight: this.canvas.height,
 			uniforms,
 			clear: false // Don't clear between elements
 		});

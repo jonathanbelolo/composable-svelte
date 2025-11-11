@@ -13,22 +13,28 @@
 
 import type { CompiledProgram } from './shader-compiler.js';
 import type { ShaderProgramManager } from './shader-program-manager.js';
+import type { ElementBounds } from '../overlay/overlay-types.js';
+import { domToNDC, createQuadVertices } from '../utils/coordinate-converter.js';
 
 /**
  * Render options
  */
 export interface RenderOptions {
 	/**
-	 * Position (x, y) in normalized coordinates [0, 1]
-	 * Default: [0, 0] (top-left)
+	 * Element bounds in DOM pixel coordinates
+	 * If not provided, renders fullscreen quad
 	 */
-	position?: [number, number];
+	bounds?: ElementBounds;
 
 	/**
-	 * Size (width, height) in normalized coordinates [0, 1]
-	 * Default: [1, 1] (full canvas)
+	 * Canvas width in pixels (required if bounds is provided)
 	 */
-	size?: [number, number];
+	canvasWidth?: number;
+
+	/**
+	 * Canvas height in pixels (required if bounds is provided)
+	 */
+	canvasHeight?: number;
 
 	/**
 	 * Opacity (alpha blending)
@@ -74,29 +80,30 @@ export class RenderPipeline {
 	/**
 	 * Initialize quad geometry buffers
 	 *
-	 * Creates buffers for a full-screen quad (2 triangles).
+	 * Creates buffers for quad rendering (2 triangles).
+	 * Position buffer uses DYNAMIC_DRAW for per-element positioning.
 	 */
 	private initializeBuffers(): void {
 		const gl = this.gl;
 
-		// Quad vertices (2 triangles forming a rectangle)
-		// Format: [x, y] in normalized coordinates [0, 1]
+		// Default fullscreen quad vertices in NDC space
+		// Format: [x, y] in NDC coordinates [-1, 1]
 		const vertices = new Float32Array([
 			// Triangle 1
-			0.0,
-			0.0, // top-left
+			-1.0,
+			1.0, // top-left
 			1.0,
-			0.0, // top-right
-			0.0,
-			1.0, // bottom-left
+			1.0, // top-right
+			-1.0,
+			-1.0, // bottom-left
 
 			// Triangle 2
-			0.0,
-			1.0, // bottom-left
 			1.0,
-			0.0, // top-right
+			1.0, // top-right
 			1.0,
-			1.0 // bottom-right
+			-1.0, // bottom-right
+			-1.0,
+			-1.0 // bottom-left
 		]);
 
 		// Texture coordinates (matches vertex order)
@@ -111,22 +118,22 @@ export class RenderPipeline {
 			1.0, // bottom-left
 
 			// Triangle 2
-			0.0,
-			1.0, // bottom-left
 			1.0,
 			0.0, // top-right
 			1.0,
-			1.0 // bottom-right
+			1.0, // bottom-right
+			0.0,
+			1.0 // bottom-left
 		]);
 
-		// Create position buffer
+		// Create position buffer with DYNAMIC_DRAW (updated per element)
 		this.quadBuffer = gl.createBuffer();
 		if (this.quadBuffer) {
 			gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer);
-			gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+			gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.DYNAMIC_DRAW);
 		}
 
-		// Create texture coordinate buffer
+		// Create texture coordinate buffer with STATIC_DRAW (never changes)
 		this.texCoordBuffer = gl.createBuffer();
 		if (this.texCoordBuffer) {
 			gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoordBuffer);
@@ -164,6 +171,11 @@ export class RenderPipeline {
 			gl.clear(gl.COLOR_BUFFER_BIT);
 		}
 
+		// Update quad position if bounds provided
+		if (options.bounds && options.canvasWidth && options.canvasHeight) {
+			this.updateQuadPosition(options.bounds, options.canvasWidth, options.canvasHeight);
+		}
+
 		// Use shader program
 		this.programManager.useProgram(program);
 
@@ -181,6 +193,31 @@ export class RenderPipeline {
 
 		// Clean up
 		this.cleanupAttributes(program);
+	}
+
+	/**
+	 * Update quad position based on element bounds
+	 *
+	 * Converts DOM pixel coordinates to NDC and updates vertex buffer.
+	 *
+	 * @param bounds - Element bounds in DOM pixels
+	 * @param canvasWidth - Canvas width in pixels
+	 * @param canvasHeight - Canvas height in pixels
+	 */
+	private updateQuadPosition(bounds: ElementBounds, canvasWidth: number, canvasHeight: number): void {
+		const gl = this.gl;
+
+		// Convert DOM bounds to NDC
+		const ndc = domToNDC(bounds, canvasWidth, canvasHeight);
+
+		// Create positioned quad vertices
+		const vertices = createQuadVertices(ndc);
+
+		// Update quad buffer
+		if (this.quadBuffer) {
+			gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer);
+			gl.bufferSubData(gl.ARRAY_BUFFER, 0, vertices);
+		}
 	}
 
 	/**
@@ -215,15 +252,6 @@ export class RenderPipeline {
 	 * @param options - Render options
 	 */
 	private setUniforms(program: CompiledProgram, options: RenderOptions): void {
-		// Set position/size uniforms if program supports them
-		if (options.position && program.uniforms.has('uPosition')) {
-			this.programManager.setUniform(program, 'uPosition', options.position);
-		}
-
-		if (options.size && program.uniforms.has('uSize')) {
-			this.programManager.setUniform(program, 'uSize', options.size);
-		}
-
 		// Set opacity if program supports it
 		if (options.opacity !== undefined && program.uniforms.has('uOpacity')) {
 			this.programManager.setUniform(program, 'uOpacity', options.opacity);
