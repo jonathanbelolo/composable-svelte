@@ -3,7 +3,8 @@
  * In a real application, this would fetch from a database or API.
  */
 
-import type { Post } from '../shared/types';
+import type { Post, Comment } from '../shared/types';
+import { sanitizeHTML } from '@composable-svelte/core/ssr';
 
 const mockPosts: Post[] = [
   {
@@ -110,7 +111,11 @@ export async function loadPosts(): Promise<Post[]> {
   // Simulate network delay
   await new Promise((resolve) => setTimeout(resolve, 10));
 
-  return mockPosts;
+  // Sanitize all post content to prevent XSS attacks
+  return mockPosts.map(post => ({
+    ...post,
+    content: sanitizeHTML(post.content)
+  }));
 }
 
 /**
@@ -119,4 +124,124 @@ export async function loadPosts(): Promise<Post[]> {
 export async function loadPostById(id: number): Promise<Post | null> {
   const posts = await loadPosts();
   return posts.find((p) => p.id === id) || null;
+}
+
+/**
+ * Mock comments for blog posts.
+ */
+const mockComments: Comment[] = [
+  // Post 1 comments
+  {
+    id: 1,
+    postId: 1,
+    author: 'Alice Reader',
+    date: '2025-01-06',
+    content: 'Great introduction! I love how the architecture makes state management so predictable.'
+  },
+  {
+    id: 2,
+    postId: 1,
+    author: 'Bob Developer',
+    date: '2025-01-06',
+    content: 'The pure reducer pattern is a game changer. Testing has never been easier!'
+  },
+  {
+    id: 3,
+    postId: 1,
+    author: 'Carol Engineer',
+    date: '2025-01-07',
+    content: 'Coming from React, this feels like a breath of fresh air. Svelte + Composable Architecture = perfection.'
+  },
+  // Post 2 comments
+  {
+    id: 4,
+    postId: 2,
+    author: 'David SEO',
+    date: '2025-01-09',
+    content: 'The SEO benefits of SSR are massive. Our search rankings improved significantly after switching.'
+  },
+  {
+    id: 5,
+    postId: 2,
+    author: 'Emma Performance',
+    date: '2025-01-09',
+    content: 'First contentful paint is under 500ms now. Users love the instant page loads!'
+  },
+  // Post 3 comments
+  {
+    id: 6,
+    postId: 3,
+    author: 'Frank DevOps',
+    date: '2025-01-11',
+    content: 'The production deployment was smooth. State serialization just works.'
+  },
+  {
+    id: 7,
+    postId: 3,
+    author: 'Grace Backend',
+    date: '2025-01-11',
+    content: 'Hydration is seamless. No flicker, no layout shift - perfect user experience.'
+  },
+  {
+    id: 8,
+    postId: 3,
+    author: 'Henry Frontend',
+    date: '2025-01-12',
+    content: 'The architecture scales beautifully. We went from prototype to production in weeks.'
+  },
+  // Post 4 comments
+  {
+    id: 9,
+    postId: 4,
+    author: 'Iris QA',
+    date: '2025-01-13',
+    content: 'Testing reducers is so straightforward. Pure functions make QA much easier.'
+  },
+  {
+    id: 10,
+    postId: 4,
+    author: 'Jack Tester',
+    date: '2025-01-13',
+    content: 'E2E tests catch hydration issues early. The test infrastructure is solid.'
+  },
+  // Post 5 comments
+  {
+    id: 11,
+    postId: 5,
+    author: 'Karen Speed',
+    date: '2025-01-16',
+    content: 'Fastify is lightning fast! Response times are consistently under 50ms.'
+  },
+  {
+    id: 12,
+    postId: 5,
+    author: 'Leo Backend',
+    date: '2025-01-16',
+    content: 'The plugin system makes it easy to add authentication, logging, and other middleware.'
+  },
+  {
+    id: 13,
+    postId: 5,
+    author: 'Maya Developer',
+    date: '2025-01-17',
+    content: 'Combined with Composable Svelte, this is my go-to stack for new projects.'
+  }
+];
+
+/**
+ * Load all comments for a specific post.
+ */
+export async function loadCommentsByPostId(postId: number): Promise<Comment[]> {
+  // Simulate network delay
+  await new Promise((resolve) => setTimeout(resolve, 10));
+
+  return mockComments.filter((c) => c.postId === postId);
+}
+
+/**
+ * Load all comments (for preloading on server).
+ */
+export async function loadAllComments(): Promise<Comment[]> {
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  return mockComments;
 }

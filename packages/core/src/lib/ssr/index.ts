@@ -73,3 +73,24 @@ export {
 
 // Utilities
 export { isServer, isBrowser } from './utils.js';
+
+// Security
+export {
+  createSecurityHeaders,
+  fastifySecurityHeaders,
+  defaultSecurityHeaders,
+  type SecurityHeadersConfig
+} from './middleware/security-headers.js';
+
+export {
+  sanitizeHTML,
+  createSanitizer,
+  defaultSanitizeOptions,
+  type SanitizeOptions
+} from './middleware/html-sanitization.js';
+
+export {
+  RateLimiter,
+  fastifyRateLimit,
+  type RateLimitConfig
+} from './middleware/rate-limiting.js';

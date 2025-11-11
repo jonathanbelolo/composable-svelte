@@ -13,6 +13,17 @@ export interface Post {
 }
 
 /**
+ * Comment on a blog post (for nested routing example).
+ */
+export interface Comment {
+  id: number;
+  postId: number;
+  author: string;
+  content: string;
+  date: string;
+}
+
+/**
  * Page metadata for SEO and social sharing.
  * Computed by the reducer based on application state.
  */
@@ -23,9 +34,22 @@ export interface PageMeta {
   canonical?: string;
 }
 
+/**
+ * Destination types for routing (demonstration of navigation spec patterns).
+ *
+ * - list: Show all posts (/)
+ * - post: Show single post detail (/posts/:id)
+ * - comments: Show post comments - nested route (/posts/:id/comments)
+ */
+export type AppDestination =
+  | { type: 'list' }
+  | { type: 'post'; state: { postId: number } }
+  | { type: 'comments'; state: { postId: number } };
+
 export interface AppState {
   posts: Post[];
-  selectedPostId: number | null;
+  comments: Comment[];
+  destination: AppDestination;
   isLoading: boolean;
   error: string | null;
   meta: PageMeta;
@@ -33,13 +57,15 @@ export interface AppState {
 
 export type AppAction =
   | { type: 'postsLoaded'; posts: Post[] }
-  | { type: 'selectPost'; postId: number }
+  | { type: 'commentsLoaded'; comments: Comment[] }
+  | { type: 'navigate'; destination: AppDestination }
   | { type: 'loadPostsFailed'; error: string }
   | { type: 'refreshPosts' };
 
 export const initialState: AppState = {
   posts: [],
-  selectedPostId: null,
+  comments: [],
+  destination: { type: 'list' },
   isLoading: false,
   error: null,
   meta: {

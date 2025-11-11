@@ -11,7 +11,7 @@ import App from '../shared/App.svelte';
 import { appReducer } from '../shared/reducer';
 import type { AppDependencies } from '../shared/reducer';
 import type { AppState, AppAction } from '../shared/types';
-import { parserConfig, serializerConfig } from '../shared/routing';
+import { parseDestinationFromURL, destinationURL } from '../shared/routing';
 
 /**
  * Client-side dependencies.
@@ -22,6 +22,11 @@ const clientDependencies: AppDependencies = {
     // In a real app, this would fetch from an API
     // For this example, we'll just return empty array
     // (the data is already loaded via SSR)
+    return [];
+  },
+  fetchComments: async (postId: number) => {
+    // In a real app, this would fetch from an API
+    // For this example, return empty (comments loaded via SSR)
     return [];
   }
 };
@@ -48,24 +53,20 @@ function hydrate() {
     );
 
     // 3. Sync browser history with state (URL routing!)
-    // When selectedPostId changes → update URL
-    // When user clicks back/forward → dispatch selectPost action
+    // When destination changes → update URL
+    // When user clicks back/forward → dispatch navigate action
     syncBrowserHistory(store, {
-      serializers: serializerConfig.serializers,
-      parsers: parserConfig.parsers,
-      // Map state → destination for URL serialization
-      getDestination: (state) => {
-        if (state.selectedPostId !== null) {
-          return { type: 'post' as const, state: { postId: state.selectedPostId } };
-        }
-        return null;
-      },
+      // Parse URL path to destination
+      parse: parseDestinationFromURL,
+      // Serialize state to URL
+      serialize: (state) => destinationURL(state.destination),
       // Map destination → action for back/forward navigation
       destinationToAction: (dest) => {
-        if (dest?.type === 'post') {
-          return { type: 'selectPost', postId: dest.state.postId };
+        if (dest) {
+          return { type: 'navigate', destination: dest };
         }
-        return null;
+        // If no destination, navigate to list
+        return { type: 'navigate', destination: { type: 'list' } };
       }
     });
 
