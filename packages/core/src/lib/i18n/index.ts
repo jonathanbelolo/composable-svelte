@@ -134,3 +134,14 @@ export {
   DateFormats,
   NumberFormats
 } from './formatters.js';
+
+// SSR utilities
+export type { SSRConfig, I18nSSRData } from './ssr.js';
+export {
+  initI18nOnServer,
+  hydrateI18nOnClient,
+  createI18nHandle,
+  generateAlternateLinks,
+  extractLocaleFromPath,
+  rerouteWithLocale
+} from './ssr.js';
