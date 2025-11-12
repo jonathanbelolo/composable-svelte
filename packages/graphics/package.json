@@ -23,7 +23,7 @@
     "dist"
   ],
   "peerDependencies": {
-    "@composable-svelte/core": "workspace:*",
+    "@composable-svelte/core": "^0.4.0",
     "svelte": "^5.0.0"
   },
   "dependencies": {

@@ -58,7 +58,7 @@
     "url": "https://github.com/jbelolo/composable-svelte/issues"
   },
   "peerDependencies": {
-    "@composable-svelte/core": "^0.3.0",
+    "@composable-svelte/core": "^0.4.0",
     "svelte": "^5.0.0"
   },
   "devDependencies": {
