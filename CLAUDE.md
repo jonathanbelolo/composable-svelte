@@ -20,6 +20,10 @@ This repository contains **Composable Svelte**, a Composable Architecture librar
   - **API Client**: HTTP/REST with effects, interceptors, retries, caching (162 tests)
   - **WebSocket**: Real-time communication, reconnection, channels, heartbeat (140 tests)
   - **Dependencies**: Clock (MockClock), Storage (localStorage/cookies) (118 tests)
+- ✅ **Phase 17**: Internationalization (i18n) & Server-Side Rendering (500+ total tests)
+  - **i18n**: ICU MessageFormat, locale detection, framework formatters (dates, numbers, currency)
+  - **SSR**: Server-side rendering with Fastify, state hydration, security hardening
+  - **SSG**: Static site generation, multi-locale support, dynamic route enumeration (22 tests)
 
 ## ⚠️ CRITICAL: Composable Svelte Skill
 
@@ -82,24 +86,38 @@ composable-svelte/
 │       │   │   ├── utils.ts         # Environment detection
 │       │   │   ├── README.md        # API documentation
 │       │   │   └── SECURITY.md      # Security guidelines
+│       │   ├── i18n/                # Internationalization (Phase 17)
+│       │   │   ├── index.ts         # i18n exports
+│       │   │   ├── translator.ts    # Translation and formatters
+│       │   │   ├── icu.ts           # ICU MessageFormat parser
+│       │   │   ├── reducer.ts       # i18n reducer
+│       │   │   └── types.ts         # i18n types
 │       │   ├── navigation/          # Navigation system (Phase 2)
 │       │   ├── navigation-components/ # Modal, Sheet, Drawer, etc.
 │       │   ├── routing/             # URL routing (Phase 7)
+│       │   ├── ssr/                 # Server-Side Rendering (Phase 17)
+│       │   │   ├── index.ts         # SSR exports
+│       │   │   ├── render.ts        # renderToHTML, hydrateStore
+│       │   │   ├── ssg.ts           # Static site generation
+│       │   │   └── security.ts      # Security plugins (rate limiting, headers)
 │       │   ├── websocket/           # WebSocket client (Phase 8)
 │       │   ├── test/                # TestStore for testing
 │       │   ├── effect.ts            # Effect system
 │       │   ├── store.svelte.ts      # Store implementation
 │       │   ├── types.ts             # Core types
 │       │   └── index.ts             # Main exports
-│       └── tests/                   # Comprehensive test suite (420+ tests)
+│       └── tests/                   # Comprehensive test suite (500+ tests)
 │           ├── api/                 # 162 tests (HTTP client, interceptors)
 │           ├── websocket/           # 140 tests (reconnection, heartbeat)
 │           ├── dependencies/        # 118 tests (clock, storage, cookies)
+│           ├── i18n/                # 35 tests (translations, ICU, formatters)
+│           ├── ssr/                 # 45 tests (SSR, SSG, hydration)
 │           └── ...
 ├── examples/
 │   ├── styleguide/                  # Component showcase
 │   ├── product-gallery/             # Product browsing example
-│   └── url-routing/                 # Routing examples
+│   ├── url-routing/                 # Routing examples
+│   └── ssr-server/                  # SSR/SSG with multi-locale support
 ├── specs/                           # Original specifications
 │   └── frontend/
 │       ├── composable-svelte-spec.md
@@ -112,7 +130,9 @@ composable-svelte/
 │   └── implementation-plan.md       # Original roadmap
 └── .claude/
     ├── skills/
-    │   └── composable-svelte-frontend.md  # ⭐ CRITICAL patterns (ALWAYS use!)
+    │   ├── composable-svelte-frontend.md  # ⭐ CRITICAL patterns (ALWAYS use!)
+    │   ├── composable-svelte-i18n/        # i18n patterns and best practices
+    │   └── composable-svelte-ssr/         # SSR/SSG patterns and best practices
     └── settings.local.json          # Claude Code configuration
 ```
 
@@ -214,6 +234,10 @@ interface FeatureState {
   - **API Client**: HTTP/REST with effects, interceptors, retries, caching (162 tests)
   - **WebSocket**: Real-time communication, reconnection, heartbeat, channels (140 tests)
   - **Dependencies**: Clock (MockClock), Storage (localStorage/cookies) with security docs (118 tests)
+- ✅ **Phase 17**: Internationalization (i18n) & Server-Side Rendering (500+ tests total)
+  - **i18n System**: ICU MessageFormat, translation loaders, locale detection, framework formatters
+  - **SSR**: Server-side rendering with Fastify, state hydration, per-request stores, security hardening
+  - **SSG**: Static site generation, multi-locale support (33 pages), dynamic route enumeration, asset copying
 
 ### Upcoming
 
@@ -221,7 +245,7 @@ interface FeatureState {
 
 **Distribution**: NPM package `@composable-svelte/core` (planned)
 
-**Key Achievement**: Production-ready implementation of complete Composable Architecture with full backend integration, 420+ tests, and comprehensive documentation.
+**Key Achievement**: Production-ready implementation of complete Composable Architecture with full backend integration, i18n, SSR/SSG, 500+ tests, and comprehensive documentation.
 
 ## Key Concepts
 
@@ -397,18 +421,39 @@ This library is heavily inspired by TCA for Swift but adapted for Svelte/TypeScr
 - ✅ **Query Parameters**: Type-safe serialization/parsing
 - ✅ **State Synchronization**: Bidirectional sync between URL and app state
 
+### Internationalization (Phase 17)
+- ✅ **ICU MessageFormat**: Full ICU support (variables, plurals, select)
+- ✅ **Translation System**: Namespace-based translations with lazy loading
+- ✅ **Translation Loaders**: Bundled, Fetch, and Glob loaders
+- ✅ **Locale Detection**: Browser, SSR, and static locale detection
+- ✅ **Framework Formatters**: Automatic date, number, currency, and relative time formatting
+- ✅ **i18n Reducer**: Built-in reducer for locale switching and namespace loading
+- ✅ **SSR/SSG Integration**: Multi-locale server rendering and static generation
+
+### Server-Side Rendering (Phase 17)
+- ✅ **SSR**: renderToHTML with state serialization and client hydration
+- ✅ **SSG**: generateStaticSite for build-time page generation
+- ✅ **Multi-Locale SSG**: Generate static pages for all locales (33 pages example)
+- ✅ **Dynamic Routes**: Path enumeration for dynamic route generation
+- ✅ **Security Hardening**: Rate limiting and security headers plugins
+- ✅ **Fastify Integration**: Complete server setup with per-request stores
+- ✅ **Hybrid Mode**: Combine SSG for static pages with SSR fallback
+
 ### Testing Infrastructure
 - ✅ **Vitest + jsdom**: Fast, Vite-native testing
 - ✅ **TestStore API**: Exhaustive action testing with send/receive
 - ✅ **Mock Implementations**: MockClock, MockCookieStorage, MockWebSocket, MockAPI
-- ✅ **420+ Tests**: Comprehensive coverage (162 API + 140 WebSocket + 118 dependencies)
+- ✅ **500+ Tests**: Comprehensive coverage (162 API + 140 WebSocket + 118 dependencies + 80 i18n/SSR)
 
 ### Examples & Documentation
 - ✅ **Styleguide**: Component showcase with interactive examples
 - ✅ **Product Gallery**: Full-featured app example
 - ✅ **URL Routing**: Router integration examples
+- ✅ **SSR Server**: Multi-locale blog with SSR/SSG (33 static pages, 3 languages)
 - ✅ **API Documentation**: Per-module README files
 - ✅ **Security Guides**: Storage security best practices
+- ✅ **i18n Guide**: Complete internationalization documentation
+- ✅ **SSR/SSG Guide**: Server rendering and static generation documentation
 
 ## Working with This Repository
 
