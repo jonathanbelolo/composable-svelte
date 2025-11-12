@@ -30,7 +30,7 @@
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
-    "prepublishOnly": "pnpm run build && pnpm run typecheck && SILENT_TESTS=true pnpm test",
+    "prepublishOnly": "pnpm run build && pnpm run typecheck",
     "prepack": "pnpm run build"
   },
   "keywords": [

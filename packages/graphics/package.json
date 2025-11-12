@@ -8,7 +8,8 @@
     "build": "vite build && tsc --emitDeclarationOnly",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "check": "svelte-check --tsconfig ./tsconfig.json"
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "prepublishOnly": "pnpm run build && pnpm run typecheck"
   },
   "exports": {
     ".": {
