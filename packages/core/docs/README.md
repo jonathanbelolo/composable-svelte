@@ -34,6 +34,12 @@ Welcome to the complete documentation for **@composable-svelte/core** - a Compos
 ### URL Routing
 - **[Browser History](./routing/url-sync.md)** - URL synchronization and pattern matching
 
+### Internationalization
+- **[i18n Guide](./i18n/internationalization.md)** - Multi-language support with ICU MessageFormat, locale detection, and framework formatters
+
+### Server-Side Rendering
+- **[SSR & SSG](./ssr/server-rendering.md)** - Server-side rendering and static site generation with full state hydration
+
 ### Reference
 - **[API Reference](./api/reference.md)** - Complete API documentation
 - **[Troubleshooting](./troubleshooting.md)** - Common issues and solutions
@@ -54,6 +60,12 @@ Welcome to the complete documentation for **@composable-svelte/core** - a Compos
 
 **Want Type-Safe Routing?**
 → Read [Matcher API](./dsl/matchers.md) and [Destination DSL](./dsl/destinations.md)
+
+**Building Multi-Language Apps?**
+→ Check [i18n Guide](./i18n/internationalization.md)
+
+**Need Server Rendering?**
+→ See [SSR & SSG Guide](./ssr/server-rendering.md)
 
 **Testing Your App?**
 → Follow [Testing Guide](./core-concepts/testing.md)
@@ -77,6 +89,8 @@ Welcome to the complete documentation for **@composable-svelte/core** - a Compos
 10. [Matcher API](./dsl/matchers.md)
 11. [Animation System](./animation/animated-navigation.md)
 12. [URL Routing](./routing/url-sync.md)
+13. [Internationalization](./i18n/internationalization.md)
+14. [SSR & SSG](./ssr/server-rendering.md)
 
 ## 📖 Documentation Structure
 
@@ -112,6 +126,12 @@ packages/core/docs/
 ├── routing/
 │   └── url-sync.md
 │
+├── i18n/
+│   └── internationalization.md
+│
+├── ssr/
+│   └── server-rendering.md
+│
 ├── api/
 │   └── reference.md
 │
@@ -136,10 +156,12 @@ packages/core/docs/
 - Day 3-4: [WebSocket](./backend/websocket.md) (if needed)
 - Day 5-7: [DSL](./dsl/destinations.md) + Type-safe routing
 
-### Week 4: Polish
+### Week 4: Polish & Production
 - Day 1-2: [Animation](./animation/animated-navigation.md) + Add transitions
 - Day 3-4: [URL Routing](./routing/url-sync.md) + Browser history
-- Day 5-7: Polish UI, write more tests, deploy
+- Day 5: [i18n](./i18n/internationalization.md) (if multi-language needed)
+- Day 6: [SSR/SSG](./ssr/server-rendering.md) (if server rendering needed)
+- Day 7: Polish UI, write more tests, deploy
 
 ## 💡 Examples
 
@@ -166,6 +188,15 @@ Browser history integration with:
 - Query parameters
 - Deep linking
 - Back/forward navigation
+
+### [SSR Server](../../../examples/ssr-server/)
+Server-side rendering and static generation with:
+- Multi-locale support (en/fr/es)
+- SSR with Fastify
+- SSG build script
+- Client-side hydration
+- Translation loading
+- Framework formatters
 
 ## 🔧 API Overview
 
@@ -242,6 +273,42 @@ ws.on('message', handler);
 const clock = createSystemClock();
 const storage = createLocalStorage<T>();
 const cookies = createCookieStorage<T>();
+```
+
+### Internationalization
+
+```typescript
+// i18n
+createInitialI18nState('en', ['en', 'fr', 'es'], 'en')
+createTranslator($store.i18n, 'common')
+createFormatters($store.i18n)
+
+// Formatters
+formatters.date(date)
+formatters.number(1234.56)
+formatters.currency(29.99, 'USD')
+formatters.relativeTime(date)
+
+// Translation loaders
+new BundledTranslationLoader({ bundles })
+new FetchTranslationLoader({ baseURL })
+new GlobTranslationLoader({ files })
+```
+
+### SSR & SSG
+
+```typescript
+// SSR
+renderToHTML(App, { store })
+hydrateStore(serializedState, { reducer, dependencies })
+
+// SSG
+generateStaticSite(App, { routes, outDir }, { reducer, dependencies })
+generateStaticPage(App, path, outDir, storeConfig)
+
+// Security
+fastify.register(fastifyRateLimit, { max: 100, timeWindow: '1 minute' })
+fastify.register(fastifySecurityHeaders, { contentSecurityPolicy })
 ```
 
 ## 🐛 Troubleshooting

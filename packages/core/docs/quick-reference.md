@@ -389,6 +389,188 @@ if (match) {
 }
 ```
 
+## Internationalization
+
+### Basic Setup
+
+```typescript
+import {
+  createInitialI18nState,
+  createTranslator,
+  createFormatters,
+  BundledTranslationLoader,
+  createBrowserLocaleDetector,
+  browserDOM
+} from '@composable-svelte/core/i18n';
+
+// Initialize i18n
+const i18nState = createInitialI18nState('en', ['en', 'fr', 'es'], 'en');
+
+// Translation loader
+const translationLoader = new BundledTranslationLoader({
+  bundles: {
+    en: { common: enTranslations },
+    fr: { common: frTranslations }
+  }
+});
+
+// Create store with i18n
+const store = createStore({
+  initialState: { /* ... */, i18n: i18nState },
+  reducer: appReducer,
+  dependencies: {
+    translationLoader,
+    localeDetector: createBrowserLocaleDetector(['en', 'fr']),
+    storage: localStorage,
+    dom: browserDOM
+  }
+});
+```
+
+### Translations in Components
+
+```svelte
+<script lang="ts">
+  import { createTranslator, createFormatters } from '@composable-svelte/core/i18n';
+
+  const t = $derived(createTranslator($store.i18n, 'common'));
+  const formatters = $derived(createFormatters($store.i18n));
+</script>
+
+<!-- Simple translation -->
+<h1>{t('welcome')}</h1>
+
+<!-- With variables -->
+<p>{t('greeting', { name: 'Alice' })}</p>
+
+<!-- Plurals (ICU MessageFormat) -->
+<span>{t('items', { count: 5 })}</span>
+
+<!-- Date formatting -->
+<time>{formatters.date(new Date())}</time>
+
+<!-- Number formatting -->
+<span>{formatters.number(1234.56)}</span>
+
+<!-- Currency -->
+<span>{formatters.currency(29.99, 'USD')}</span>
+```
+
+### Translation Files
+
+**`locales/en/common.json`**:
+```json
+{
+  "welcome": "Welcome",
+  "greeting": "Hello, {name}!",
+  "items": "{count, plural, =0 {No items} one {# item} other {# items}}"
+}
+```
+
+## Server-Side Rendering (SSR)
+
+### SSR Server
+
+```typescript
+import Fastify from 'fastify';
+import { createStore } from '@composable-svelte/core';
+import { renderToHTML } from '@composable-svelte/core/ssr';
+import App from './App.svelte';
+
+const fastify = Fastify();
+
+fastify.get('*', async (request, reply) => {
+  // Create new store for each request
+  const store = createStore({
+    initialState,
+    reducer: appReducer,
+    dependencies: {} // Server dependencies (no-op)
+  });
+
+  // Render to HTML
+  const html = renderToHTML(App, { store });
+  reply.type('text/html').send(html);
+});
+
+fastify.listen({ port: 3000 });
+```
+
+### Client Hydration
+
+```typescript
+import { hydrateStore } from '@composable-svelte/core/ssr';
+import { hydrate as hydrateComponent } from 'svelte';
+
+function hydrate() {
+  const stateElement = document.getElementById('__COMPOSABLE_SVELTE_STATE__');
+
+  // Hydrate store with real client dependencies
+  const store = hydrateStore(stateElement.textContent, {
+    reducer: appReducer,
+    dependencies: {
+      // Real client implementations
+      fetchData: async () => fetch('/api/data').then(r => r.json())
+    }
+  });
+
+  // Hydrate component
+  hydrateComponent(App, {
+    target: document.body,
+    props: { store }
+  });
+}
+```
+
+## Static Site Generation (SSG)
+
+### Build Script
+
+```typescript
+import { generateStaticSite } from '@composable-svelte/core/ssr';
+
+await generateStaticSite(App, {
+  routes: [
+    { path: '/' },
+    { path: '/about' },
+    {
+      path: '/posts/:id',
+      paths: ['/posts/1', '/posts/2', '/posts/3'],
+      getServerProps: async (path) => {
+        const id = parseInt(path.split('/').pop()!);
+        const post = await loadPost(id);
+        return { post };
+      }
+    }
+  ],
+  outDir: './static',
+  baseURL: 'https://example.com'
+}, {
+  reducer: appReducer,
+  dependencies: {}
+});
+```
+
+### Multi-Locale SSG
+
+```typescript
+const locales = ['en', 'fr', 'es'];
+const routes = [];
+
+for (const locale of locales) {
+  const prefix = locale === 'en' ? '' : `/${locale}`;
+
+  routes.push({
+    path: `${prefix}/`,
+    getServerProps: async () => {
+      const i18nState = await initI18n(locale);
+      return { ...initialState, i18n: i18nState };
+    }
+  });
+}
+
+await generateStaticSite(App, { routes, outDir: './static' }, { reducer: appReducer });
+```
+
 ## Testing
 
 ### TestStore
