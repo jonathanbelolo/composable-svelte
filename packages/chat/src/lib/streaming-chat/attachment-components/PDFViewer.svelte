@@ -7,7 +7,10 @@
 	 */
 	import { onMount } from 'svelte';
 	import type { MessageAttachment } from '../types.js';
-	import * as pdfjsLib from 'pdfjs-dist';
+
+	// Lazy-load pdfjs-dist to avoid Node.js dependency issues in tests
+	type PDFDocumentProxy = any;
+	type PDFLib = any;
 
 	interface Props {
 		/** PDF attachment to display */
@@ -22,7 +25,8 @@
 
 	// State
 	let canvasRef: HTMLCanvasElement | undefined = $state();
-	let pdf: pdfjsLib.PDFDocumentProxy | null = $state(null);
+	let pdf: PDFDocumentProxy | null = $state(null);
+	let pdfjsLib: PDFLib | null = $state(null);
 	let currentPage = $state(1);
 	let totalPages = $state(0);
 	let scale = $state(1.5);
@@ -30,13 +34,23 @@
 	let error = $state<string | null>(null);
 
 	// Configure PDF.js worker
-	onMount(() => {
-		// Set worker source from CDN
-		pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
-		loadPDF();
+	onMount(async () => {
+		try {
+			// Lazy-load pdfjs-dist
+			pdfjsLib = await import('pdfjs-dist');
+
+			// Set worker source from CDN
+			pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+			await loadPDF();
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to load PDF library';
+			isLoading = false;
+		}
 	});
 
 	async function loadPDF() {
+		if (!pdfjsLib) return;
+
 		try {
 			isLoading = true;
 			error = null;

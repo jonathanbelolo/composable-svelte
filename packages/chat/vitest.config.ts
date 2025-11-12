@@ -7,6 +7,9 @@ export default defineConfig({
 	plugins: [svelte()],
 
 	test: {
+		// Setup file for mocks
+		setupFiles: ['./tests/setup.ts'],
+
 		// Browser mode configuration (like core package)
 		browser: {
 			enabled: true,
@@ -26,12 +29,24 @@ export default defineConfig({
 			provider: 'v8',
 			reporter: ['text', 'html', 'lcov'],
 			exclude: ['node_modules/', 'tests/', '**/*.spec.ts', '**/*.test.ts']
+		},
+
+		// Server configuration for dependencies
+		server: {
+			deps: {
+				// Don't process pdfjs-dist - use mock instead
+				external: ['pdfjs-dist']
+			}
 		}
 	},
 
 	resolve: {
 		alias: {
-			'$lib': resolve(__dirname, 'src/lib')
-		}
+			'$lib': resolve(__dirname, 'src/lib'),
+			// Mock pdfjs-dist to avoid Node.js dependencies in tests
+			'pdfjs-dist': resolve(__dirname, 'tests/__mocks__/pdfjs-dist.ts')
+		},
+		// Prefer browser builds over Node.js builds
+		conditions: ['browser', 'module', 'import', 'default']
 	}
 });

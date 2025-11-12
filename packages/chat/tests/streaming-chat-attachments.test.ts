@@ -6,6 +6,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { createStore } from '@composable-svelte/core';
+// Import directly from source files to avoid pulling in component dependencies
 import { streamingChatReducer } from '../src/lib/streaming-chat/reducer';
 import {
 	createInitialStreamingChatState,
