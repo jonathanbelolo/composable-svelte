@@ -1,0 +1,73 @@
+# Fly.io Configuration for Composable Svelte SSR
+# Documentation: https://fly.io/docs/reference/configuration/
+
+app = "my-composable-app"
+primary_region = "sjc"  # San Jose, California (change to your preferred region)
+
+# Use Dockerfile in same directory
+[build]
+  dockerfile = "Dockerfile"
+
+# Environment variables (non-sensitive)
+[env]
+  NODE_ENV = "production"
+  PORT = "3000"
+
+  # Internal Fly.io network for backend communication
+  # Use .internal for private 6PN network (faster, no internet egress)
+  COMPOSABLE_RUST_BACKEND_URL = "http://my-rust-backend.internal:8080"
+
+  # Public URL for client-side API calls (if needed)
+  PUBLIC_API_URL = "https://my-rust-backend.fly.dev"
+
+# HTTP service configuration
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0  # Scale to zero when idle (change to 1+ for production)
+
+  [http_service.concurrency]
+    type = "connections"
+    hard_limit = 250
+    soft_limit = 200
+
+# VM resources
+[[vm]]
+  memory = '512mb'  # Minimum for Node.js SSR (increase if needed)
+  cpu_kind = 'shared'
+  cpus = 1
+
+# Persistent storage (optional, for logs/cache)
+# [[mounts]]
+#   source = "data"
+#   destination = "/app/data"
+
+# Health checks (Apps V2 syntax)
+[[http_service.checks]]
+  interval = "30s"
+  timeout = "5s"
+  grace_period = "10s"
+  method = "GET"
+  path = "/health"
+
+# Secrets (set via: fly secrets set KEY=value)
+# - SESSION_SECRET (for session cookies)
+# - JWT_SECRET (if using JWT auth)
+# - BACKEND_API_KEY (if Rust backend requires auth)
+
+# Scaling configuration
+# Adjust based on traffic patterns
+# fly scale count 2  # Run 2 instances
+# fly scale count 2 --region sjc  # 2 in San Jose
+# fly scale count 1 --region lhr  # 1 in London
+
+# Autoscaling (paid feature)
+# [auto_scaling]
+#   min_instances = 1
+#   max_instances = 10
+#
+#   [[auto_scaling.metrics]]
+#     type = "requests"
+#     target = 500  # Scale when avg requests > 500/sec

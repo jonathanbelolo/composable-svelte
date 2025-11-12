@@ -1,0 +1,86 @@
+# Docker ignore file for Composable Svelte SSR builds
+# Excludes files that shouldn't be copied to Docker build context
+
+# Node modules (installed via pnpm in Dockerfile)
+node_modules
+**/node_modules
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build output (rebuilt in Docker)
+dist
+**/dist
+build
+**/build
+.svelte-kit
+**/.svelte-kit
+
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage
+.nyc_output
+test-results
+playwright-report
+**/*.test.ts
+**/*.spec.ts
+**/tests
+
+# Environment files (use Fly secrets instead)
+.env
+.env.*
+!.env.example
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.travis.yml
+
+# Documentation
+*.md
+!README.md
+docs
+
+# Examples (if building from monorepo root)
+examples
+!examples/ssr-server
+
+# Plans and specs (not needed in production)
+plans
+specs
+
+# Temporary files
+tmp
+temp
+*.tmp
+
+# OS
+Thumbs.db
+.DS_Store
+
+# pnpm
+.pnpm-store
+
+# Vite
+.vite
+vite.config.ts.timestamp-*
+
+# TypeScript
+*.tsbuildinfo
