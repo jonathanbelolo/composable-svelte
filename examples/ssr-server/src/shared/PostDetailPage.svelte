@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Store } from '@composable-svelte/core';
+  import { createTranslator, createFormatters } from '@composable-svelte/core/i18n';
   import type { AppState, AppAction, Post } from './types';
   import { listURL, commentsURL } from './routing';
 
@@ -11,6 +12,8 @@
   let { store, post }: Props = $props();
 
   const state = $derived($store);
+  const t = $derived(createTranslator($store.i18n, 'common'));
+  const formatters = $derived(createFormatters($store.i18n));
   const commentCount = $derived(
     state.comments.filter((c) => c.postId === post.id).length
   );
@@ -33,7 +36,7 @@
 <div class="detail-page">
   <nav class="breadcrumb">
     <a href={listURL()} onclick={(e) => { e.preventDefault(); navigateToList(); }}>
-      ← Back to all posts
+      {t('posts.backToList')}
     </a>
   </nav>
 
@@ -41,8 +44,8 @@
     <header>
       <h1>{post.title}</h1>
       <div class="meta">
-        <span class="author">By {post.author}</span>
-        <span class="date">{new Date(post.date).toLocaleDateString()}</span>
+        <span class="author">{t('posts.author', { author: post.author })}</span>
+        <span class="date">{formatters.date(post.date)}</span>
       </div>
       <div class="tags">
         {#each post.tags as tag (tag)}
@@ -61,7 +64,7 @@
         class="comments-link"
         onclick={(e) => { e.preventDefault(); navigateToComments(); }}
       >
-        View Comments ({commentCount})
+        {t('posts.viewComments', { count: commentCount })}
       </a>
     </footer>
   </article>

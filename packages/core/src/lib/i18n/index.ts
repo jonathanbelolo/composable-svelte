@@ -92,6 +92,30 @@
  *   return { locale, deps };
  * }
  * ```
+ *
+ * @example ICU MessageFormat Usage
+ * ```typescript
+ * import { ICUPatterns } from '@composable-svelte/core/i18n';
+ *
+ * // In your translation JSON files, use ICU syntax:
+ * // {
+ * //   "items": "{count, plural, one {You have # item} other {You have # items}}",
+ * //   "greeting": "{gender, select, male {Hello Mr. {name}} female {Hello Ms. {name}} other {Hello {name}}}",
+ * //   "price": "Price: {value, number, ::currency/USD}"
+ * // }
+ *
+ * // The translator automatically detects and compiles ICU messages
+ * const t = createTranslator(state.i18n, 'common');
+ * t('items', { count: 1 });    // "You have 1 item"
+ * t('items', { count: 5 });    // "You have 5 items"
+ * t('greeting', { gender: 'male', name: 'John' });  // "Hello Mr. John"
+ * t('price', { value: 1234.56 }); // "Price: $1,234.56"
+ *
+ * // Manual ICU compilation (advanced usage)
+ * import { compileICU } from '@composable-svelte/core/i18n';
+ * const format = compileICU('{count, plural, one {# item} other {# items}}', 'en');
+ * format({ count: 1 }); // "1 item"
+ * ```
  */
 
 // Core types
@@ -115,7 +139,8 @@ export { browserDOM, serverDOM } from './types.js';
 export { i18nReducer, createInitialI18nState, buildFallbackChain, getDirection } from './reducer.js';
 
 // Translator
-export { createTranslator, isNamespaceLoaded, isNamespaceLoading, getLoadedNamespaces } from './translator.js';
+export type { BoundFormatters } from './translator.js';
+export { createTranslator, isNamespaceLoaded, isNamespaceLoading, getLoadedNamespaces, createFormatters } from './translator.js';
 
 // Loaders
 export { FetchTranslationLoader, BundledTranslationLoader, createGlobLoader } from './loader.js';
@@ -134,6 +159,17 @@ export {
   DateFormats,
   NumberFormats
 } from './formatters.js';
+
+// ICU MessageFormat
+export type { ICUMessageFunction } from './icu.js';
+export {
+  isICUMessage,
+  compileICU,
+  clearICUCache,
+  getICUCacheStats,
+  ICUPatterns,
+  PluralRules
+} from './icu.js';
 
 // SSR utilities
 export type { SSRConfig, I18nSSRData } from './ssr.js';

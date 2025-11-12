@@ -13,7 +13,10 @@ export default defineConfig(({ command, mode, isSsrBuild }) => {
         ssr: true,
         outDir: 'dist/server',
         rollupOptions: {
-          input: 'src/server/index.ts',
+          input: {
+            index: 'src/server/index.ts',
+            ssg: 'src/build/ssg.ts'
+          },
           output: {
             format: 'esm',
             entryFileNames: '[name].js'
@@ -45,7 +48,9 @@ export default defineConfig(({ command, mode, isSsrBuild }) => {
           format: 'esm',
           entryFileNames: '[name].js',
           assetFileNames: '[name].[ext]'
-        }
+        },
+        // External Node.js modules that shouldn't be bundled for browser
+        external: ['fs/promises', 'path', 'url', 'fs', 'node:fs/promises', 'node:path', 'node:url']
       },
       target: 'es2022',
       minify: true

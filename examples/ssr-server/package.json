@@ -9,6 +9,7 @@
     "build": "vite build && vite build --ssr",
     "build:client": "vite build",
     "build:server": "vite build --ssr",
+    "build:ssg": "vite build && vite build --ssr && node dist/server/ssg.js",
     "start": "NODE_ENV=production node dist/server/index.js",
     "preview": "npm run build && npm run start",
     "test:e2e": "playwright test",

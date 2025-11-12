@@ -1,9 +1,11 @@
 <script lang="ts">
   import type { Store } from '@composable-svelte/core';
+  import { createTranslator } from '@composable-svelte/core/i18n';
   import type { AppState, AppAction } from './types';
   import PostListPage from './PostListPage.svelte';
   import PostDetailPage from './PostDetailPage.svelte';
   import PostCommentsPage from './PostCommentsPage.svelte';
+  import LanguageSwitcher from './LanguageSwitcher.svelte';
 
   interface Props {
     store: Store<AppState, AppAction>;
@@ -13,6 +15,9 @@
 
   // Reactive state derived from store
   const state = $derived($store);
+
+  // Create translation function
+  const t = $derived(createTranslator($store.i18n, 'common'));
 
   // Derive current post (for detail and comments pages)
   const currentPost = $derived(
@@ -38,18 +43,23 @@
 
 <div class="app">
   <header>
-    <h1>Composable Svelte SSR Example</h1>
-    <p>Server-Side Rendered Blog with Fastify - Routing Demo</p>
+    <div class="header-content">
+      <div class="header-text">
+        <h1>{t('app.title')}</h1>
+        <p>{t('app.description')}</p>
+      </div>
+      <LanguageSwitcher {store} />
+    </div>
   </header>
 
   <main>
     {#if state.error}
       <div class="error">
-        <p>Error: {state.error}</p>
+        <p>{t('posts.error')}: {state.error}</p>
       </div>
     {:else if state.isLoading}
       <div class="loading">
-        <p>Loading posts...</p>
+        <p>{t('posts.loading')}</p>
       </div>
     {:else}
       <!-- Route based on destination -->
@@ -61,8 +71,8 @@
         <PostCommentsPage {store} post={currentPost} />
       {:else}
         <div class="not-found">
-          <h2>Post Not Found</h2>
-          <p>The requested post could not be found.</p>
+          <h2>{t('posts.notFound')}</h2>
+          <p>{t('posts.error')}</p>
         </div>
       {/if}
     {/if}
@@ -70,9 +80,7 @@
 
   <footer>
     <p>
-      Rendered with Composable Svelte SSR
-      <span class="separator">•</span>
-      Demonstrates routing with URL parameters and nested routes
+      Composable Svelte SSR - {t('app.description')}
     </p>
   </footer>
 </div>
@@ -89,7 +97,22 @@
     background: #2c3e50;
     color: white;
     padding: 2rem;
+  }
+
+  .header-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .header-text {
     text-align: center;
+    flex: 1;
+    min-width: 300px;
   }
 
   header h1 {
@@ -145,10 +168,5 @@
     text-align: center;
     color: rgba(255, 255, 255, 0.7);
     font-size: 0.875rem;
-  }
-
-  .separator {
-    margin: 0 0.5rem;
-    opacity: 0.5;
   }
 </style>

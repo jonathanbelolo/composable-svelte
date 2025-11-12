@@ -3,6 +3,9 @@
  * Used by both server and client.
  */
 
+import type { I18nState, I18nAction } from '@composable-svelte/core/i18n';
+import { createInitialI18nState } from '@composable-svelte/core/i18n';
+
 export interface Post {
   id: number;
   title: string;
@@ -53,6 +56,7 @@ export interface AppState {
   isLoading: boolean;
   error: string | null;
   meta: PageMeta;
+  i18n: I18nState;
 }
 
 export type AppAction =
@@ -60,7 +64,8 @@ export type AppAction =
   | { type: 'commentsLoaded'; comments: Comment[] }
   | { type: 'navigate'; destination: AppDestination }
   | { type: 'loadPostsFailed'; error: string }
-  | { type: 'refreshPosts' };
+  | { type: 'refreshPosts' }
+  | I18nAction;
 
 export const initialState: AppState = {
   posts: [],
@@ -71,5 +76,6 @@ export const initialState: AppState = {
   meta: {
     title: 'Composable Svelte SSR Example',
     description: 'Server-Side Rendered blog with Composable Svelte and Fastify'
-  }
+  },
+  i18n: createInitialI18nState('en', ['en', 'fr', 'es'])
 };

@@ -84,7 +84,9 @@
   },
   "dependencies": {
     "@floating-ui/dom": "^1.6.0",
+    "@formatjs/intl": "^3.1.8",
     "clsx": "^2.1.1",
+    "intl-messageformat": "^10.7.18",
     "isomorphic-dompurify": "^2.16.0",
     "motion": "^12.23.24",
     "path-to-regexp": "^8.3.0",

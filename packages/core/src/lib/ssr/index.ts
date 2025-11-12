@@ -5,6 +5,7 @@
  * - State serialization (server → JSON)
  * - State hydration (JSON → client store)
  * - Rendering helpers (component → HTML)
+ * - Static site generation (build-time HTML generation)
  * - Environment detection (server vs browser)
  *
  * @example Server-Side Rendering
@@ -29,6 +30,38 @@
  *   const html = renderToHTML(App, { store });
  *   res.send(html);
  * });
+ * ```
+ *
+ * @example Static Site Generation
+ * ```typescript
+ * // build.ts
+ * import { generateStaticSite } from '@composable-svelte/core/ssr';
+ * import App from './App.svelte';
+ * import { appReducer } from './reducer';
+ *
+ * const posts = await loadPosts();
+ *
+ * const result = await generateStaticSite(App, {
+ *   routes: [
+ *     { path: '/' },
+ *     { path: '/about' },
+ *     {
+ *       path: '/posts/:id',
+ *       paths: posts.map(p => `/posts/${p.id}`),
+ *       getServerProps: async (path) => ({
+ *         post: await loadPost(path)
+ *       })
+ *     }
+ *   ],
+ *   outDir: './dist',
+ *   baseURL: 'https://example.com'
+ * }, {
+ *   reducer: appReducer,
+ *   dependencies: {},
+ *   getInitialState: () => ({ posts: [], selectedPost: null })
+ * });
+ *
+ * console.log(`Generated ${result.pagesGenerated} pages in ${result.duration}ms`);
  * ```
  *
  * @example Client Hydration
@@ -73,6 +106,16 @@ export {
 
 // Utilities
 export { isServer, isBrowser } from './utils.js';
+
+// Static Site Generation
+export {
+  generateStaticSite,
+  generateStaticPage,
+  type SSGConfig,
+  type SSGRoute,
+  type SSGResult,
+  type SSGGenerateOptions
+} from './ssg.js';
 
 // Security
 export {

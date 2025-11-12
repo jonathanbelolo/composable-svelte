@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Store } from '@composable-svelte/core';
+  import { createTranslator, createFormatters } from '@composable-svelte/core/i18n';
   import type { AppState, AppAction, Post, Comment } from './types';
   import { listURL, postURL } from './routing';
 
@@ -11,6 +12,8 @@
   let { store, post }: Props = $props();
 
   const state = $derived($store);
+  const t = $derived(createTranslator($store.i18n, 'common'));
+  const formatters = $derived(createFormatters($store.i18n));
   const comments = $derived(
     state.comments.filter((c) => c.postId === post.id)
   );
@@ -33,25 +36,25 @@
 <div class="comments-page">
   <nav class="breadcrumb">
     <a href={listURL()} onclick={(e) => { e.preventDefault(); navigateToList(); }}>
-      All Posts
+      {t('nav.allPosts')}
     </a>
     <span class="separator">›</span>
     <a href={postURL(post.id)} onclick={(e) => { e.preventDefault(); navigateToPost(); }}>
       {post.title}
     </a>
     <span class="separator">›</span>
-    <span class="current">Comments</span>
+    <span class="current">{t('posts.comments')}</span>
   </nav>
 
   <div class="comments-container">
     <header>
-      <h1>Comments on "{post.title}"</h1>
-      <p class="count">{comments.length} {comments.length === 1 ? 'comment' : 'comments'}</p>
+      <h1>{t('comments.title', { title: post.title })}</h1>
+      <p class="count">{t('comments.count', { count: comments.length })}</p>
     </header>
 
     {#if comments.length === 0}
       <div class="no-comments">
-        <p>No comments yet. Be the first to comment!</p>
+        <p>{t('posts.noComments')}</p>
       </div>
     {:else}
       <div class="comments-list">
@@ -59,7 +62,7 @@
           <article class="comment">
             <div class="comment-header">
               <span class="author">{comment.author}</span>
-              <span class="date">{new Date(comment.date).toLocaleDateString()}</span>
+              <span class="date">{formatters.date(comment.date)}</span>
             </div>
             <div class="comment-content">
               <p>{comment.content}</p>
@@ -75,7 +78,7 @@
         class="back-link"
         onclick={(e) => { e.preventDefault(); navigateToPost(); }}
       >
-        ← Back to post
+        {t('comments.backToPost')}
       </a>
     </footer>
   </div>

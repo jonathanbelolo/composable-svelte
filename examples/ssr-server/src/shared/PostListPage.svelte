@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Store } from '@composable-svelte/core';
+  import { createTranslator, createFormatters } from '@composable-svelte/core/i18n';
   import type { AppState, AppAction, Post } from './types';
   import { postURL } from './routing';
 
@@ -10,6 +11,8 @@
   let { store }: Props = $props();
 
   const state = $derived($store);
+  const t = $derived(createTranslator($store.i18n, 'common'));
+  const formatters = $derived(createFormatters($store.i18n));
 
   function navigateToPost(postId: number) {
     store.dispatch({
@@ -25,8 +28,8 @@
 </script>
 
 <div class="list-page">
-  <h1>Blog Posts</h1>
-  <p class="subtitle">Explore our collection of articles</p>
+  <h1>{t('posts.title')}</h1>
+  <p class="subtitle">{t('nav.allPosts')}</p>
 
   <div class="posts-grid">
     {#each state.posts as post (post.id)}
@@ -35,8 +38,8 @@
           <h2>{post.title}</h2>
           <p class="excerpt">{stripHtml(post.content).slice(0, 150)}...</p>
           <div class="meta">
-            <span class="author">By {post.author}</span>
-            <span class="date">{new Date(post.date).toLocaleDateString()}</span>
+            <span class="author">{t('posts.author', { author: post.author })}</span>
+            <span class="date">{formatters.date(post.date)}</span>
           </div>
           <div class="tags">
             {#each post.tags as tag (tag)}

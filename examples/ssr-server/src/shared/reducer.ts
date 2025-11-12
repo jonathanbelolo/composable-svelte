@@ -3,13 +3,14 @@
  * Shared between server and client.
  */
 
-import { Effect } from '@composable-svelte/core';
+import { Effect, scope } from '@composable-svelte/core';
 import { createURLSyncEffect } from '@composable-svelte/core/routing';
 import type { Reducer } from '@composable-svelte/core';
+import { i18nReducer, type I18nDependencies } from '@composable-svelte/core/i18n';
 import type { AppState, AppAction } from './types';
 import { destinationURL } from './routing';
 
-export interface AppDependencies {
+export interface AppDependencies extends I18nDependencies {
   fetchPosts: () => Promise<any[]>;
   fetchComments?: (postId: number) => Promise<any[]>;
 }
@@ -156,8 +157,19 @@ const coreReducer: Reducer<AppState, AppAction, AppDependencies> = (
         })
       ];
 
-    default:
+    default: {
+      // Handle i18n actions by checking if type starts with 'i18n/'
+      if (typeof action.type === 'string' && action.type.startsWith('i18n/')) {
+        // Pass the action directly to i18n reducer
+        const [newI18nState, i18nEffect] = i18nReducer(state.i18n, action as any, deps);
+        return [
+          { ...state, i18n: newI18nState },
+          i18nEffect as Effect<AppAction>
+        ];
+      }
+
       return [state, Effect.none()];
+    }
   }
 };
 

@@ -522,6 +522,220 @@ app.get('/', async (req, res) => {
 
 ---
 
+## I18N SSR PATTERNS
+
+### Manual i18n Initialization (Fastify/Custom Servers)
+
+**Key Pattern**: For non-SvelteKit servers (Fastify, Express, etc.), manually initialize i18n state and dependencies.
+
+```typescript
+import { createInitialI18nState, BundledTranslationLoader, createStaticLocaleDetector, serverDOM, browserDOM } from '@composable-svelte/core/i18n';
+
+// Server: Detect locale from request
+function detectLocale(request: any): string {
+  // 1. Check query param (?lang=fr)
+  const queryLang = request.query?.lang;
+  if (queryLang && ['en', 'fr', 'es'].includes(queryLang)) {
+    return queryLang;
+  }
+
+  // 2. Check Accept-Language header
+  const acceptLanguage = request.headers?.['accept-language'];
+  if (acceptLanguage && typeof acceptLanguage === 'string') {
+    const languages = acceptLanguage.split(',')
+      .map(lang => lang.trim().split(';')[0].split('-')[0]);
+
+    for (const lang of languages) {
+      if (['en', 'fr', 'es'].includes(lang)) {
+        return lang;
+      }
+    }
+  }
+
+  // 3. Default to English
+  return 'en';
+}
+
+// Server: Initialize i18n for SSR
+async function renderApp(request, reply) {
+  const locale = detectLocale(request);
+  const i18nState = createInitialI18nState(locale, ['en', 'fr', 'es'], 'en');
+
+  // Create translation loader
+  const translationLoader = new BundledTranslationLoader({
+    bundles: {
+      en: { common: enTranslations },
+      fr: { common: frTranslations },
+      es: { common: esTranslations }
+    }
+  });
+
+  // Preload translations for current locale
+  const translations = await translationLoader.load('common', locale);
+  const updatedI18nState = {
+    ...i18nState,
+    translations: { [`${locale}:common`]: translations }
+  };
+
+  // Create mock storage for server (no-op)
+  const mockStorage = {
+    getItem: (key: string) => null,
+    setItem: (key: string, value: unknown) => {},
+    removeItem: (key: string) => {},
+    keys: () => [],
+    has: (key: string) => false,
+    clear: () => {}
+  };
+
+  // Create i18n dependencies for server
+  const i18nDependencies = {
+    translationLoader,
+    localeDetector: createStaticLocaleDetector(locale, ['en', 'fr', 'es']),
+    storage: mockStorage,
+    dom: serverDOM
+  };
+
+  const store = createStore({
+    initialState: {
+      ...initialState,
+      i18n: updatedI18nState
+    },
+    reducer: appReducer,
+    dependencies: {
+      ...otherDependencies,
+      ...i18nDependencies
+    }
+  });
+
+  const html = renderToHTML(App, { store });
+  reply.type('text/html').send(html);
+}
+```
+
+### Client i18n Hydration
+
+```typescript
+import { BundledTranslationLoader, createStaticLocaleDetector, browserDOM } from '@composable-svelte/core/i18n';
+
+// Client: Hydrate with localStorage-backed storage
+const clientStorage = {
+  getItem: (key: string) => {
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  },
+  setItem: (key: string, value: unknown) => {
+    try {
+      localStorage.setItem(key, String(value));
+    } catch {}
+  },
+  removeItem: (key: string) => {
+    try {
+      localStorage.removeItem(key);
+    } catch {}
+  },
+  keys: () => {
+    try {
+      return Object.keys(localStorage);
+    } catch {
+      return [];
+    }
+  },
+  has: (key: string) => {
+    try {
+      return localStorage.getItem(key) !== null;
+    } catch {
+      return false;
+    }
+  },
+  clear: () => {
+    try {
+      localStorage.clear();
+    } catch {}
+  }
+};
+
+// Hydrate i18n on client
+async function hydrate() {
+  const stateElement = document.getElementById('__COMPOSABLE_SVELTE_STATE__');
+  const parsedState = JSON.parse(stateElement.textContent);
+  const locale = parsedState.i18n.currentLocale;
+
+  const translationLoader = new BundledTranslationLoader({
+    bundles: {
+      en: { common: enTranslations },
+      fr: { common: frTranslations },
+      es: { common: esTranslations }
+    }
+  });
+
+  const i18nDependencies = {
+    translationLoader,
+    localeDetector: createStaticLocaleDetector(locale, ['en', 'fr', 'es']),
+    storage: clientStorage,  // Real localStorage
+    dom: browserDOM
+  };
+
+  const store = hydrateStore(stateElement.textContent, {
+    reducer: appReducer,
+    dependencies: {
+      ...otherDependencies,
+      ...i18nDependencies
+    }
+  });
+
+  hydrateComponent(App, { target: document.body, props: { store } });
+}
+```
+
+### Storage Interface Requirements
+
+**Critical**: The i18n system expects a `Storage` interface, not a `Map`.
+
+```typescript
+// ❌ WRONG - Map doesn't have setItem/getItem
+const i18nDependencies = {
+  storage: new Map()  // TypeError: storage.setItem is not a function
+};
+
+// ✅ CORRECT - Implement Storage interface
+const mockStorage: Storage = {
+  getItem: (key: string) => null,
+  setItem: (key: string, value: unknown) => {},
+  removeItem: (key: string) => {},
+  keys: () => [],
+  has: (key: string) => false,
+  clear: () => {}
+};
+```
+
+### i18n + URL Routing Pattern
+
+Combine i18n with URL routing to support language selection via URL:
+
+```typescript
+// Server: Support ?lang=fr query parameter
+app.get('/', async (req, res) => {
+  const locale = detectLocale(req);  // Checks ?lang= first, then Accept-Language
+  const destination = parseDestinationFromURL(req.url);
+
+  const store = createStore({
+    initialState: {
+      destination,
+      i18n: createInitialI18nState(locale, ['en', 'fr', 'es'])
+      // ...
+    }
+  });
+  // ...
+});
+```
+
+**URL Pattern**: `http://localhost:3000/?lang=fr` or `http://localhost:3000/posts/1?lang=es`
+
+---
+
 ## SSR PERFORMANCE CONSIDERATIONS
 
 ### 1. Defer Effects on Server
@@ -655,20 +869,254 @@ interface AppState {
 
 ---
 
+## STATIC SITE GENERATION (SSG)
+
+### generateStaticSite - Build-Time Generation
+
+```typescript
+import { generateStaticSite } from '@composable-svelte/core/ssr';
+import App from './App.svelte';
+import { appReducer } from './reducer';
+
+const posts = await loadPosts();
+
+const result = await generateStaticSite(App, {
+  routes: [
+    { path: '/' },
+    { path: '/about' },
+    {
+      path: '/posts/:id',
+      paths: posts.map(p => `/posts/${p.id}`),
+      getServerProps: async (path) => ({
+        post: await loadPost(path)
+      })
+    }
+  ],
+  outDir: './dist',
+  baseURL: 'https://example.com',
+  onPageGenerated: (path, outPath) => {
+    console.log(`Generated ${path} → ${outPath}`);
+  }
+}, {
+  reducer: appReducer,
+  dependencies: {},
+  getInitialState: (path) => ({ /* compute state for path */ })
+});
+
+console.log(`Generated ${result.pagesGenerated} pages in ${result.duration}ms`);
+```
+
+### SSG Configuration
+
+**Full-Site Generation**:
+```typescript
+// Generate all routes at build time
+await generateStaticSite(App, {
+  routes: [
+    { path: '/' },                        // Static route
+    { path: '/about' },                   // Static route
+    {
+      path: '/posts/:id',                 // Dynamic route
+      paths: ['/posts/1', '/posts/2']     // Pre-rendered paths
+    }
+  ],
+  outDir: './static'
+}, { reducer, dependencies: {} });
+```
+
+**Selective Generation**:
+```typescript
+// Generate only specific pages
+await generateStaticSite(App, {
+  routes: [
+    { path: '/' },                    // Only homepage
+    { path: '/posts/1' }              // Only one post
+  ],
+  outDir: './static'
+}, { reducer, dependencies: {} });
+```
+
+**Dynamic Path Generation**:
+```typescript
+// Fetch paths dynamically at build time
+await generateStaticSite(App, {
+  routes: [
+    {
+      path: '/posts/:id',
+      paths: async () => {
+        const posts = await loadAllPosts();
+        return posts.map(p => `/posts/${p.id}`);
+      }
+    }
+  ],
+  outDir: './static'
+}, { reducer, dependencies: {} });
+```
+
+### SSG + i18n Pattern
+
+**Multi-Locale Static Generation**:
+```typescript
+const supportedLocales = ['en', 'fr', 'es'];
+const posts = await loadPosts();
+
+// Generate routes for each locale
+const routes = [];
+for (const locale of supportedLocales) {
+  const localePrefix = locale === 'en' ? '' : `/${locale}`;
+
+  // Home page
+  routes.push({
+    path: `${localePrefix}/`,
+    getServerProps: async (path) => {
+      const i18nState = await initI18n(locale);
+      return { ...initialState, i18n: i18nState };
+    }
+  });
+
+  // Post pages
+  for (const post of posts) {
+    routes.push({
+      path: `${localePrefix}/posts/${post.id}`,
+      getServerProps: async (path) => {
+        const i18nState = await initI18n(locale);
+        const post = await loadPost(post.id);
+        return { ...initialState, post, i18n: i18nState };
+      }
+    });
+  }
+}
+
+await generateStaticSite(App, { routes, outDir: './static' }, { reducer });
+```
+
+### SSG Build Script
+
+**Create build script** (`src/build/ssg.ts`):
+```typescript
+import { generateStaticSite } from '@composable-svelte/core/ssr';
+import App from '../shared/App.svelte';
+import { appReducer } from '../shared/reducer';
+import { loadPosts } from '../server/data';
+
+async function build() {
+  console.log('Starting SSG build...');
+
+  const posts = await loadPosts();
+
+  const result = await generateStaticSite(App, {
+    routes: [
+      { path: '/' },
+      {
+        path: '/posts/:id',
+        paths: posts.map(p => `/posts/${p.id}`),
+        getServerProps: async (path) => {
+          const id = parseInt(path.split('/').pop()!);
+          const post = await loadPost(id);
+          return { posts: [post] };
+        }
+      }
+    ],
+    outDir: './static',
+    baseURL: 'https://example.com'
+  }, {
+    reducer: appReducer,
+    dependencies: {}
+  });
+
+  console.log(`✅ Generated ${result.pagesGenerated} pages in ${result.duration}ms`);
+}
+
+build().catch(console.error);
+```
+
+**Add script to package.json**:
+```json
+{
+  "scripts": {
+    "build:ssg": "vite build && tsx src/build/ssg.ts"
+  }
+}
+```
+
+**Run build**:
+```bash
+pnpm build:ssg
+```
+
+### SSG vs SSR Decision Matrix
+
+| Use Case | Recommendation | Reason |
+|----------|----------------|--------|
+| Blog posts | SSG | Content rarely changes, many reads |
+| User dashboards | SSR | Personalized, private data |
+| Product catalog | SSG | Public, static content |
+| Search results | SSR | Dynamic, user-specific |
+| Marketing pages | SSG | Static, performance-critical |
+| Admin panels | SSR | Dynamic, authenticated |
+
+### Hybrid SSG + SSR Pattern
+
+**Use SSG for static pages, SSR for dynamic**:
+
+1. **Build-time** (SSG): Generate static pages
+   ```bash
+   pnpm build:ssg  # Generates /static/index.html, /static/posts/*/index.html
+   ```
+
+2. **Runtime** (SSR): Serve dynamic pages
+   ```typescript
+   // Server fallback for non-static routes
+   app.get('*', async (req, res) => {
+     // Try to serve static file first
+     const staticPath = join(__dirname, '../static', req.url, 'index.html');
+     if (existsSync(staticPath)) {
+       return res.sendFile(staticPath);
+     }
+
+     // Fall back to SSR for dynamic routes
+     const store = createStore({ /* ... */ });
+     const html = renderToHTML(App, { store });
+     res.send(html);
+   });
+   ```
+
+---
+
 ## SUMMARY
 
-This skill covers SSR patterns for Composable Svelte:
+This skill covers SSR and SSG patterns for Composable Svelte:
 
 1. **SSR APIs**: renderToHTML, hydrateStore
-2. **Isomorphic Patterns**: Server vs client dependencies, router pure functions
-3. **State Initialization**: Parse URL on server, initialize state
-4. **State Serialization**: Automatic serialization/deserialization
-5. **Meta Tags**: State-driven meta tags computed by reducer
-6. **Complete Example**: Fastify server + client hydration with routing
-7. **Avoiding Pitfalls**: Per-request stores, environment detection, error handling
+2. **SSG APIs**: generateStaticSite, generateStaticPage
+3. **Isomorphic Patterns**: Server vs client dependencies, router pure functions
+4. **State Initialization**: Parse URL on server, initialize state
+5. **State Serialization**: Automatic serialization/deserialization
+6. **Meta Tags**: State-driven meta tags computed by reducer
+7. **i18n SSR/SSG**: Manual i18n initialization, locale detection, multi-locale generation
+8. **Complete Examples**: Fastify server + SSG build script + client hydration
+9. **Avoiding Pitfalls**: Per-request stores, environment detection, error handling
 
-**Remember**: Create new store for each request, use empty dependencies on server, hydrate with real dependencies on client.
+**SSR Key Points**:
+- Create new store for each request
+- Use empty dependencies on server
+- Hydrate with real dependencies on client
+- State is serialized automatically
+
+**SSG Key Points**:
+- Generate static HTML at build time
+- Support dynamic routes with path enumeration
+- Use getServerProps to load data for each path
+- Combine with i18n for multi-locale sites
+- Ideal for content-heavy, rarely-changing sites
+
+**i18n Key Points**:
+- Use `BundledTranslationLoader` with `bundles` wrapper
+- Server: Mock storage (no-op), `createStaticLocaleDetector`, `serverDOM`
+- Client: localStorage-backed storage, `createStaticLocaleDetector`, `browserDOM`
+- Detect locale from query param → Accept-Language → default
+- Storage interface requires `getItem/setItem`, not Map's `get/set`
 
 For core architecture, see **composable-svelte-core** skill.
 For URL routing, see **composable-svelte-navigation** skill.
-For testing SSR, see **composable-svelte-testing** skill.
+For testing SSR/SSG, see **composable-svelte-testing** skill.
