@@ -16,12 +16,15 @@ Inspired by [The Composable Architecture (TCA)](https://github.com/pointfreeco/s
 - ✅ **Composability**: Nest and scope reducers like Lego blocks
 - ✅ **Collection Management**: `forEach` combinator for managing dynamic arrays of child features (92% less boilerplate)
 - ✅ **Type-Safe Navigation**: State-driven navigation with Modal, Sheet, Drawer, Alert, NavigationStack
+- ✅ **Internationalization**: Complete i18n with ICU MessageFormat, locale detection, framework formatters
+- ✅ **Server-Side Rendering**: Production-ready SSR with Fastify, state hydration, security hardening
+- ✅ **Static Site Generation**: Multi-locale SSG with dynamic routes and build-time optimization
 - ✅ **Svelte 5 Runes**: Full integration with Svelte's reactivity system (\`$state\`, \`$derived\`)
 - ✅ **TestStore**: Exhaustive action testing with send/receive pattern
 - ✅ **Complete Backend**: API client, WebSocket, Storage, Clock dependencies
 - ✅ **73+ Components**: shadcn-svelte integration with reducer-driven patterns
 - ✅ **URL Routing**: Browser history sync with pattern matching
-- ✅ **1500+ Tests**: Comprehensive test coverage across all modules
+- ✅ **500+ Tests**: Comprehensive test coverage across all modules
 
 ## Installation
 

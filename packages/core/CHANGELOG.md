@@ -5,6 +5,225 @@ All notable changes to `@composable-svelte/core` will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2025-01-12
+
+### Added
+
+#### 🌍 Internationalization (i18n)
+- **Complete i18n System**: Full-featured internationalization with ICU MessageFormat
+  - `createInitialI18nState()`: Initialize i18n state with locale configuration
+  - `createTranslator()`: Create translation function bound to locale and namespace
+  - `createFormatters()`: Framework formatters for dates, numbers, currency, relative time
+  - `i18nReducer()`: Built-in reducer for locale switching and namespace loading
+  - **ICU MessageFormat Parser**: Full ICU support (variables, plurals, select)
+  - **Translation Loaders**: Three built-in loaders for different use cases
+    - `BundledTranslationLoader`: Import translations directly (fastest, best for SSG)
+    - `FetchTranslationLoader`: Load translations over network (dynamic, best for large apps)
+    - `GlobTranslationLoader`: Vite glob imports (best for code splitting)
+  - **Locale Detection**: Three detection strategies
+    - `createBrowserLocaleDetector()`: Detect from browser `navigator.language`
+    - `createStaticLocaleDetector()`: Fixed locale (SSR/SSG)
+    - Custom detector support for cookies, URL params, user preferences
+  - **Framework Formatters**: Automatic locale-aware formatting
+    - `formatters.date()`: Respects cultural date formatting (MM/DD vs DD/MM)
+    - `formatters.number()`: Locale-specific number formatting (1,234.56 vs 1 234,56)
+    - `formatters.currency()`: Currency formatting with proper symbols
+    - `formatters.relativeTime()`: Relative time formatting ("2 hours ago")
+  - **Namespace Loading**: Progressive loading for performance
+    - Load namespaces on-demand
+    - `isNamespaceLoaded()`, `isNamespaceLoading()` helpers
+    - `loadNamespace` action for dynamic loading
+  - **35 Tests**: Comprehensive test coverage for all i18n features
+
+#### 🖥️ Server-Side Rendering (SSR)
+- **Complete SSR System**: Production-ready server-side rendering
+  - `renderToHTML()`: Render Svelte components to HTML string with state serialization
+  - `hydrateStore()`: Client-side store hydration from serialized state
+  - **Fastify Integration**: Production server setup with security hardening
+    - `fastifyRateLimit`: Rate limiting plugin (100 requests/minute default)
+    - `fastifySecurityHeaders`: Security headers plugin (CSP, X-Frame-Options, etc.)
+  - **Per-Request Stores**: Isolated state for each SSR request (no memory leaks)
+  - **State Serialization**: Automatic JSON serialization/deserialization
+  - **Client Hydration**: Seamless client-side hydration without flicker
+  - **Multi-Locale SSR**: Detect locale from query params, Accept-Language header, or cookies
+  - **Data Loading**: `getServerProps` for pre-loading data on server
+  - **URL Routing Integration**: Parse URL and initialize destination state on server
+  - **Security Best Practices**: CSRF protection, rate limiting, security headers
+
+#### 📦 Static Site Generation (SSG)
+- **Complete SSG System**: Build-time static page generation
+  - `generateStaticSite()`: Generate entire site with multiple routes
+  - `generateStaticPage()`: Generate single static page
+  - **Dynamic Routes**: Path enumeration for dynamic route generation
+    - Support for patterns like `/posts/:id`
+    - Enumerate all paths at build time
+    - `getServerProps` for loading data per path
+  - **Multi-Locale SSG**: Generate static pages for all locales
+    - Example: 33 pages generated (11 routes × 3 languages)
+    - URL structure: `/`, `/fr/`, `/es/` for different locales
+  - **Asset Copying**: Copy CSS and JS to static output directory
+  - **Build Callbacks**: `onPageGenerated` callback for progress tracking
+  - **Hybrid SSG + SSR**: Combine static pages with server-side fallback
+  - **22 Tests**: Comprehensive SSG test coverage
+
+#### 📚 Documentation
+- **i18n Guide** (`docs/i18n/internationalization.md`): 400+ lines
+  - Quick start and setup instructions
+  - Translation file structure with ICU MessageFormat
+  - Using translations and formatters in components
+  - Locale switching and namespace loading
+  - SSR/SSG integration patterns
+  - Best practices and troubleshooting
+  - Complete API reference
+- **SSR/SSG Guide** (`docs/ssr/server-rendering.md`): 600+ lines
+  - When to use SSR vs SSG (decision matrix)
+  - Complete SSR setup with Fastify
+  - Complete SSG setup with build scripts
+  - Multi-locale static generation
+  - Security hardening guide
+  - Performance optimization strategies
+  - Troubleshooting common issues
+- **Updated Docs**: README.md and quick-reference.md updated with i18n and SSR/SSG sections
+
+#### 🎯 Examples
+- **SSR Server Example** (`examples/ssr-server/`): Complete multi-locale blog
+  - Fastify server with SSR
+  - SSG build script (generates 33 static pages)
+  - Multi-locale support (English, French, Spanish)
+  - Language switcher with progressive enhancement
+  - Client-side hydration
+  - Translation files for all locales
+  - Framework formatters in use
+
+#### 🧪 Testing
+- **80+ New Tests**: Bringing total to 500+ tests
+  - 35 i18n tests: Translation, ICU parsing, formatters, locale detection
+  - 22 SSG tests: Static generation, multi-locale, dynamic routes
+  - 23 SSR tests: Rendering, hydration, security
+
+### Changed
+- **Package Keywords**: Added `i18n`, `internationalization`, `ssr`, `server-rendering`, `ssg`, `static-generation` keywords for better npm discoverability
+
+### Migration Guide
+
+#### i18n Integration
+Add i18n to your store state and dependencies:
+
+```typescript
+import {
+  createInitialI18nState,
+  BundledTranslationLoader,
+  createBrowserLocaleDetector,
+  browserDOM
+} from '@composable-svelte/core/i18n';
+
+// Initialize i18n state
+const i18nState = createInitialI18nState('en', ['en', 'fr'], 'en');
+
+// Create translation loader
+const translationLoader = new BundledTranslationLoader({
+  bundles: {
+    en: { common: enTranslations },
+    fr: { common: frTranslations }
+  }
+});
+
+// Add to store
+const store = createStore({
+  initialState: {
+    // ... your state
+    i18n: i18nState
+  },
+  reducer: appReducer,
+  dependencies: {
+    // ... your dependencies
+    translationLoader,
+    localeDetector: createBrowserLocaleDetector(['en', 'fr']),
+    storage: localStorage,
+    dom: browserDOM
+  }
+});
+```
+
+Use translations in components:
+
+```svelte
+<script lang="ts">
+  import { createTranslator, createFormatters } from '@composable-svelte/core/i18n';
+
+  const t = $derived(createTranslator($store.i18n, 'common'));
+  const formatters = $derived(createFormatters($store.i18n));
+</script>
+
+<h1>{t('welcome')}</h1>
+<p>{t('greeting', { name: 'Alice' })}</p>
+<time>{formatters.date(new Date())}</time>
+```
+
+#### SSR Setup
+For server-side rendering, use Fastify with `renderToHTML`:
+
+```typescript
+import { createStore } from '@composable-svelte/core';
+import { renderToHTML } from '@composable-svelte/core/ssr';
+
+fastify.get('*', async (request, reply) => {
+  const store = createStore({
+    initialState,
+    reducer: appReducer,
+    dependencies: {} // Server dependencies
+  });
+
+  const html = renderToHTML(App, { store });
+  reply.type('text/html').send(html);
+});
+```
+
+Client hydration:
+
+```typescript
+import { hydrateStore } from '@composable-svelte/core/ssr';
+
+const stateElement = document.getElementById('__COMPOSABLE_SVELTE_STATE__');
+const store = hydrateStore(stateElement.textContent, {
+  reducer: appReducer,
+  dependencies: clientDependencies
+});
+```
+
+#### SSG Setup
+For static site generation, create a build script:
+
+```typescript
+import { generateStaticSite } from '@composable-svelte/core/ssr';
+
+await generateStaticSite(App, {
+  routes: [
+    { path: '/' },
+    { path: '/about' },
+    {
+      path: '/posts/:id',
+      paths: ['/posts/1', '/posts/2'],
+      getServerProps: async (path) => {
+        const id = parseInt(path.split('/').pop()!);
+        return { post: await loadPost(id) };
+      }
+    }
+  ],
+  outDir: './static',
+  baseURL: 'https://example.com'
+}, {
+  reducer: appReducer,
+  dependencies: {}
+});
+```
+
+## [0.3.0] - 2025-11-05
+
+### Added
+- **Phase 16**: WebGL Overlay System for shader-based image effects
+- **Graphics Package Integration**: Full WebGL/WebGPU rendering capabilities
+
 ## [0.2.6] - 2025-11-04
 
 ### Changed

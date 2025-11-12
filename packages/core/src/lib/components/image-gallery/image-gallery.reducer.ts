@@ -5,8 +5,8 @@
  * Handles grid interactions, lightbox navigation, touch gestures, and animations.
  */
 
-import type { Reducer } from '../../types.js';
-import { Effect } from '../../effect.js';
+import type { Reducer, Effect } from '../../types.js';
+import { Effect as EffectBuilder } from '../../effect.js';
 import type {
 	ImageGalleryState,
 	ImageGalleryAction,
@@ -72,12 +72,14 @@ export const imageGalleryReducer: Reducer<
 		case 'imageClicked': {
 			// Validate index
 			if (action.index < 0 || action.index >= state.images.length) {
-				return [state, Effect.none()];
+				return [state, EffectBuilder.none()];
 			}
+
+			const clickedImage = state.images[action.index]!; // Safe: validated above
 
 			// Call callback if provided
 			if (deps.onImageClick) {
-				deps.onImageClick(state.images[action.index], action.index);
+				deps.onImageClick(clickedImage, action.index);
 			}
 
 			// Open lightbox at clicked image index
@@ -100,8 +102,8 @@ export const imageGalleryReducer: Reducer<
 					}
 				},
 				state.prefersReducedMotion
-					? Effect.none()
-					: Effect.afterDelay(300, (dispatch) =>
+					? EffectBuilder.none()
+					: EffectBuilder.afterDelay(300, (dispatch) =>
 							dispatch({
 								type: 'presentation',
 								event: { type: 'presentationCompleted' }
@@ -120,7 +122,7 @@ export const imageGalleryReducer: Reducer<
 					...state,
 					loadedImages: new Set([...state.loadedImages, action.imageId])
 				},
-				Effect.none()
+				EffectBuilder.none()
 			];
 		}
 
@@ -137,7 +139,7 @@ export const imageGalleryReducer: Reducer<
 						[action.imageId]: action.error
 					}
 				},
-				Effect.none()
+				EffectBuilder.none()
 			];
 		}
 
@@ -145,7 +147,7 @@ export const imageGalleryReducer: Reducer<
 		case 'openLightbox': {
 			// Validate index
 			if (action.index < 0 || action.index >= state.images.length) {
-				return [state, Effect.none()];
+				return [state, EffectBuilder.none()];
 			}
 
 			return [
@@ -167,8 +169,8 @@ export const imageGalleryReducer: Reducer<
 					}
 				},
 				state.prefersReducedMotion
-					? Effect.none()
-					: Effect.afterDelay(300, (dispatch) =>
+					? EffectBuilder.none()
+					: EffectBuilder.afterDelay(300, (dispatch) =>
 							dispatch({
 								type: 'presentation',
 								event: { type: 'presentationCompleted' }
@@ -180,7 +182,7 @@ export const imageGalleryReducer: Reducer<
 		case 'closeLightbox': {
 			// Guard: can only close if presented
 			if (state.lightbox.presentation.status !== 'presented') {
-				return [state, Effect.none()];
+				return [state, EffectBuilder.none()];
 			}
 
 			return [
@@ -198,13 +200,13 @@ export const imageGalleryReducer: Reducer<
 					}
 				},
 				state.prefersReducedMotion
-					? Effect.run((dispatch) =>
+					? EffectBuilder.run((dispatch) =>
 							dispatch({
 								type: 'presentation',
 								event: { type: 'dismissalCompleted' }
 							})
 						)
-					: Effect.afterDelay(300, (dispatch) =>
+					: EffectBuilder.afterDelay(300, (dispatch) =>
 							dispatch({
 								type: 'presentation',
 								event: { type: 'dismissalCompleted' }
@@ -216,13 +218,13 @@ export const imageGalleryReducer: Reducer<
 		case 'nextImage': {
 			// Guard: already navigating
 			if (state.isNavigating) {
-				return [state, Effect.none()];
+				return [state, EffectBuilder.none()];
 			}
 
 			const nextIndex = state.lightbox.currentIndex + 1;
 			if (nextIndex >= state.images.length) {
 				// Don't go past last image
-				return [state, Effect.none()];
+				return [state, EffectBuilder.none()];
 			}
 
 			return [
@@ -236,20 +238,20 @@ export const imageGalleryReducer: Reducer<
 					},
 					isNavigating: true // Lock navigation
 				},
-				Effect.afterDelay(300, (dispatch) => dispatch({ type: 'navigationCompleted' }))
+				EffectBuilder.afterDelay(300, (dispatch) => dispatch({ type: 'navigationCompleted' }))
 			];
 		}
 
 		case 'previousImage': {
 			// Guard: already navigating
 			if (state.isNavigating) {
-				return [state, Effect.none()];
+				return [state, EffectBuilder.none()];
 			}
 
 			const prevIndex = state.lightbox.currentIndex - 1;
 			if (prevIndex < 0) {
 				// Don't go before first image
-				return [state, Effect.none()];
+				return [state, EffectBuilder.none()];
 			}
 
 			return [
@@ -263,24 +265,24 @@ export const imageGalleryReducer: Reducer<
 					},
 					isNavigating: true // Lock navigation
 				},
-				Effect.afterDelay(300, (dispatch) => dispatch({ type: 'navigationCompleted' }))
+				EffectBuilder.afterDelay(300, (dispatch) => dispatch({ type: 'navigationCompleted' }))
 			];
 		}
 
 		case 'goToImage': {
 			// Guard: already navigating
 			if (state.isNavigating) {
-				return [state, Effect.none()];
+				return [state, EffectBuilder.none()];
 			}
 
 			// Validate index
 			if (action.index < 0 || action.index >= state.images.length) {
-				return [state, Effect.none()];
+				return [state, EffectBuilder.none()];
 			}
 
 			// Don't navigate if already at target
 			if (action.index === state.lightbox.currentIndex) {
-				return [state, Effect.none()];
+				return [state, EffectBuilder.none()];
 			}
 
 			return [
@@ -294,12 +296,12 @@ export const imageGalleryReducer: Reducer<
 					},
 					isNavigating: true
 				},
-				Effect.afterDelay(300, (dispatch) => dispatch({ type: 'navigationCompleted' }))
+				EffectBuilder.afterDelay(300, (dispatch) => dispatch({ type: 'navigationCompleted' }))
 			];
 		}
 
 		case 'navigationCompleted':
-			return [{ ...state, isNavigating: false }, Effect.none()];
+			return [{ ...state, isNavigating: false }, EffectBuilder.none()];
 
 		// Lightbox image loading
 		case 'lightboxImageLoading':
@@ -312,7 +314,7 @@ export const imageGalleryReducer: Reducer<
 						imageLoadError: null
 					}
 				},
-				Effect.none()
+				EffectBuilder.none()
 			];
 
 		case 'lightboxImageLoaded':
@@ -325,7 +327,7 @@ export const imageGalleryReducer: Reducer<
 						imageLoadError: null
 					}
 				},
-				Effect.none()
+				EffectBuilder.none()
 			];
 
 		case 'lightboxImageError':
@@ -338,7 +340,7 @@ export const imageGalleryReducer: Reducer<
 						imageLoadError: action.error
 					}
 				},
-				Effect.none()
+				EffectBuilder.none()
 			];
 
 		case 'retryLoadImage':
@@ -351,7 +353,7 @@ export const imageGalleryReducer: Reducer<
 						imageLoadError: null
 					}
 				},
-				Effect.none()
+				EffectBuilder.none()
 			];
 
 		// Touch gesture handling
@@ -368,11 +370,11 @@ export const imageGalleryReducer: Reducer<
 						isDragging: true
 					}
 				},
-				Effect.none()
+				EffectBuilder.none()
 			];
 
 		case 'touchMove':
-			if (!state.touch.isDragging) return [state, Effect.none()];
+			if (!state.touch.isDragging) return [state, EffectBuilder.none()];
 
 			return [
 				{
@@ -383,11 +385,11 @@ export const imageGalleryReducer: Reducer<
 						currentY: action.y
 					}
 				},
-				Effect.none()
+				EffectBuilder.none()
 			];
 
 		case 'touchEnd': {
-			if (!state.touch.isDragging) return [state, Effect.none()];
+			if (!state.touch.isDragging) return [state, EffectBuilder.none()];
 
 			const deltaX = state.touch.currentX - state.touch.startX;
 			const absDelta = Math.abs(deltaX);
@@ -416,7 +418,7 @@ export const imageGalleryReducer: Reducer<
 				}
 			}
 
-			return [newState, Effect.none()];
+			return [newState, EffectBuilder.none()];
 		}
 
 		// Animation lifecycle (PresentationState)
@@ -428,9 +430,9 @@ export const imageGalleryReducer: Reducer<
 
 					// Preload next image
 					if (state.lightbox.currentIndex < state.images.length - 1) {
-						const nextImage = state.images[state.lightbox.currentIndex + 1];
+						const nextImage = state.images[state.lightbox.currentIndex + 1]!; // Safe: validated bounds above
 						effects.push(
-							Effect.run(async (dispatch) => {
+							EffectBuilder.run(async (dispatch) => {
 								try {
 									await (deps.preloadImage || defaultPreloadImage)(nextImage.url);
 								} catch (e) {
@@ -442,9 +444,9 @@ export const imageGalleryReducer: Reducer<
 
 					// Preload previous image
 					if (state.lightbox.currentIndex > 0) {
-						const prevImage = state.images[state.lightbox.currentIndex - 1];
+						const prevImage = state.images[state.lightbox.currentIndex - 1]!; // Safe: validated bounds above
 						effects.push(
-							Effect.run(async (dispatch) => {
+							EffectBuilder.run(async (dispatch) => {
 								try {
 									await (deps.preloadImage || defaultPreloadImage)(prevImage.url);
 								} catch (e) {
@@ -465,7 +467,7 @@ export const imageGalleryReducer: Reducer<
 								}
 							}
 						},
-						effects.length > 0 ? Effect.batch(...effects) : Effect.none()
+						effects.length > 0 ? EffectBuilder.batch(...effects) : EffectBuilder.none()
 					];
 				}
 
@@ -481,17 +483,17 @@ export const imageGalleryReducer: Reducer<
 								imageLoadError: null
 							}
 						},
-						Effect.none()
+						EffectBuilder.none()
 					];
 
 				default:
-					return [state, Effect.none()];
+					return [state, EffectBuilder.none()];
 			}
 
 		// Configuration
 		case 'columnsChanged': {
 			const columns = Math.max(1, Math.min(4, action.columns));
-			return [{ ...state, columns }, Effect.none()];
+			return [{ ...state, columns }, EffectBuilder.none()];
 		}
 
 		case 'imagesUpdated':
@@ -508,13 +510,13 @@ export const imageGalleryReducer: Reducer<
 								}
 							: state.lightbox
 				},
-				Effect.none()
+				EffectBuilder.none()
 			];
 
 		case 'motionPreferenceChanged':
-			return [{ ...state, prefersReducedMotion: action.prefersReduced }, Effect.none()];
+			return [{ ...state, prefersReducedMotion: action.prefersReduced }, EffectBuilder.none()];
 
 		default:
-			return [state, Effect.none()];
+			return [state, EffectBuilder.none()];
 	}
 };

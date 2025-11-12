@@ -73,7 +73,7 @@ export function sanitizeHTML(
     config.ALLOW_DATA_ATTR = false;
   }
 
-  return DOMPurify.sanitize(html, config);
+  return DOMPurify.sanitize(html, config) as unknown as string;
 }
 
 /**

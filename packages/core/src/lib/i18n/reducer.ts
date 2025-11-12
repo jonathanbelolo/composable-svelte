@@ -4,8 +4,8 @@
  * @module i18n/reducer
  */
 
-import type { Reducer } from '../types.js';
-import { Effect } from '../effect.js';
+import type { Reducer, Effect } from '../types.js';
+import { Effect as EffectBuilder } from '../effect.js';
 import type { I18nState, I18nAction, I18nDependencies } from './types.js';
 
 /**
@@ -18,7 +18,9 @@ export function buildFallbackChain(locale: string, defaultLocale: string): strin
   // Add base language if locale has region (pt-BR → pt)
   if (locale.includes('-')) {
     const baseLanguage = locale.split('-')[0];
-    chain.push(baseLanguage);
+    if (baseLanguage) {
+      chain.push(baseLanguage);
+    }
   }
 
   // Add default locale if not already in chain
@@ -34,7 +36,7 @@ export function buildFallbackChain(locale: string, defaultLocale: string): strin
  */
 export function getDirection(locale: string): 'ltr' | 'rtl' {
   const rtlLanguages = ['ar', 'he', 'fa', 'ur'];
-  const language = locale.split('-')[0];
+  const language = locale.split('-')[0] || locale;
   return rtlLanguages.includes(language) ? 'rtl' : 'ltr';
 }
 
@@ -53,7 +55,7 @@ export const i18nReducer: Reducer<I18nState, I18nAction, I18nDependencies> = (
       // Validate locale is supported
       if (!deps.localeDetector.getSupportedLocales().includes(locale)) {
         console.warn(`Unsupported locale: ${locale}, falling back to ${state.defaultLocale}`);
-        return [state, Effect.none()];
+        return [state, EffectBuilder.none()];
       }
 
       // Update state with new locale and fallback chain
@@ -67,12 +69,12 @@ export const i18nReducer: Reducer<I18nState, I18nAction, I18nDependencies> = (
       // Effects: persist locale + update DOM + preload namespaces
       const effects: Effect<I18nAction>[] = [
         // Persist to localStorage/cookie
-        Effect.fireAndForget(async () => {
+        EffectBuilder.fireAndForget(async () => {
           await deps.storage.setItem('locale', locale);
         }),
 
         // ✅ FIXED: Use DOM dependency instead of direct document access
-        Effect.fireAndForget(async () => {
+        EffectBuilder.fireAndForget(async () => {
           deps.dom.setLanguage(locale);
           deps.dom.setDirection(newState.direction);
         })
@@ -81,7 +83,7 @@ export const i18nReducer: Reducer<I18nState, I18nAction, I18nDependencies> = (
       // Preload namespaces for new locale
       if (preloadNamespaces.length > 0) {
         effects.push(
-          Effect.run<I18nAction>(async (dispatch) => {
+          EffectBuilder.run<I18nAction>(async (dispatch) => {
             await Promise.all(
               preloadNamespaces.map(ns =>
                 dispatch({ type: 'i18n/loadNamespace', namespace: ns, locale })
@@ -91,7 +93,7 @@ export const i18nReducer: Reducer<I18nState, I18nAction, I18nDependencies> = (
         );
       }
 
-      return [newState, Effect.batch(...effects)];
+      return [newState, EffectBuilder.batch(...effects)];
     }
 
     case 'i18n/loadNamespace': {
@@ -101,7 +103,7 @@ export const i18nReducer: Reducer<I18nState, I18nAction, I18nDependencies> = (
       // Skip if already loaded or loading
       // ✅ FIXED: Use array.includes() instead of Set.has()
       if (state.translations[cacheKey] || state.loadingNamespaces.includes(cacheKey)) {
-        return [state, Effect.none()];
+        return [state, EffectBuilder.none()];
       }
 
       // Mark as loading
@@ -112,7 +114,7 @@ export const i18nReducer: Reducer<I18nState, I18nAction, I18nDependencies> = (
       };
 
       // Effect: load translations
-      const effect = Effect.run<I18nAction>(async (dispatch) => {
+      const effect = EffectBuilder.run<I18nAction>(async (dispatch) => {
         try {
           const translations = await deps.translationLoader.load(namespace, locale);
 
@@ -155,7 +157,7 @@ export const i18nReducer: Reducer<I18nState, I18nAction, I18nDependencies> = (
           },
           loadingNamespaces
         },
-        Effect.none()
+        EffectBuilder.none()
       ];
     }
 
@@ -168,20 +170,20 @@ export const i18nReducer: Reducer<I18nState, I18nAction, I18nDependencies> = (
       // ✅ FIXED: Remove from array using filter
       const loadingNamespaces = state.loadingNamespaces.filter(key => key !== cacheKey);
 
-      return [{ ...state, loadingNamespaces }, Effect.none()];
+      return [{ ...state, loadingNamespaces }, EffectBuilder.none()];
     }
 
     case 'i18n/setDirection': {
       return [
         { ...state, direction: action.direction },
-        Effect.fireAndForget(async () => {
+        EffectBuilder.fireAndForget(async () => {
           deps.dom.setDirection(action.direction);
         })
       ];
     }
 
     default:
-      return [state, Effect.none()];
+      return [state, EffectBuilder.none()];
   }
 };
 

@@ -26,7 +26,7 @@ export interface RateLimitConfig {
  */
 export class RateLimiter {
   private requests = new Map<string, { count: number; resetTime: number }>();
-  private cleanupInterval?: NodeJS.Timeout;
+  private cleanupInterval: NodeJS.Timeout | undefined;
 
   constructor(private config: RateLimitConfig) {
     // Clean up expired entries every minute

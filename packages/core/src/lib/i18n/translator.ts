@@ -59,8 +59,13 @@ export function createTranslator(
           return compiled(params ?? {});
         }
 
-        // Otherwise use simple interpolation
-        return interpolate(value, params ?? {});
+        // Otherwise use simple interpolation for string values
+        if (typeof value === 'string') {
+          return interpolate(value, params ?? {});
+        }
+
+        // If value is neither function nor string, return it as-is
+        return String(value);
       }
     }
 

@@ -51,6 +51,9 @@
 import { renderToHTML, type RenderOptions } from './render.js';
 import type { Store, Reducer } from '../types.js';
 import { createStore } from '../store.js';
+
+// Node.js modules - only used in Node environment (build-time SSG)
+// These are only called during build, never in browser
 import { mkdir, writeFile } from 'fs/promises';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -262,9 +265,9 @@ export async function generateStaticSite<State, Action, Dependencies>(
         }
 
         // Load additional data if route has getServerProps
-        let serverProps: unknown = {};
+        let serverProps: Record<string, unknown> = {};
         if (route.getServerProps) {
-          serverProps = await route.getServerProps(path);
+          serverProps = (await route.getServerProps(path)) as Record<string, unknown>;
         }
 
         // Merge server props into initial state
@@ -277,7 +280,7 @@ export async function generateStaticSite<State, Action, Dependencies>(
         const outPath = await generateStaticPage(Component, path, {
           initialState: mergedState,
           reducer: options.reducer,
-          dependencies: options.dependencies,
+          ...(options.dependencies !== undefined && { dependencies: options.dependencies }),
           renderOptions: {
             ...options.renderOptions,
             // Override canonical URL if baseURL is provided
@@ -311,8 +314,8 @@ export async function generateStaticSite<State, Action, Dependencies>(
       const outPath = await generateStaticPage(Component, '/404', {
         initialState: notFoundState as State,
         reducer: options.reducer,
-        dependencies: options.dependencies,
-        renderOptions: options.renderOptions,
+        ...(options.dependencies !== undefined && { dependencies: options.dependencies }),
+        ...(options.renderOptions !== undefined && { renderOptions: options.renderOptions }),
         outDir
       });
       generatedFiles.push(outPath);

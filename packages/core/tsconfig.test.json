@@ -1,7 +1,7 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "types": ["vitest/globals", "svelte"]
+    "types": ["vitest/globals", "svelte", "node"]
   },
   "include": ["src/**/*", "tests/**/*"]
 }

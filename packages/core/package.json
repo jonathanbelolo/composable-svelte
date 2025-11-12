@@ -1,6 +1,6 @@
 {
   "name": "@composable-svelte/core",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "A Composable Architecture for Svelte 5 - Type-safe state management with reducers, effects, and navigation",
   "type": "module",
   "main": "./dist/index.js",
@@ -46,7 +46,15 @@
     "typescript",
     "functional-programming",
     "predictable-state",
-    "testable"
+    "testable",
+    "i18n",
+    "internationalization",
+    "ssr",
+    "server-rendering",
+    "ssg",
+    "static-generation",
+    "multi-language",
+    "localization"
   ],
   "author": "Jonathan Belolo",
   "license": "MIT",

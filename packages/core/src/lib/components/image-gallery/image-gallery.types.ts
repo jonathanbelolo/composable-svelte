@@ -5,7 +5,7 @@
  * Supports grid display, lightbox modal, touch gestures, and animations.
  */
 
-import type { PresentationState } from '../../animation/index.js';
+import type { PresentationState } from '../../navigation/types.js';
 
 /**
  * Individual image in the gallery

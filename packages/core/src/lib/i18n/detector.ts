@@ -25,10 +25,13 @@ function parseAcceptLanguage(header: string): string[] {
   return header
     .split(',')
     .map((lang) => {
-      const [locale, q] = lang.trim().split(';');
+      const parts = lang.trim().split(';');
+      const locale = parts[0];
+      const q = parts[1];
       const quality = q ? parseFloat(q.replace('q=', '')) : 1.0;
-      return { locale: locale.trim(), quality };
+      return { locale: locale?.trim() || '', quality };
     })
+    .filter((item) => item.locale !== '') // Remove empty locales
     .sort((a, b) => b.quality - a.quality)
     .map((item) => item.locale);
 }
@@ -44,11 +47,13 @@ function normalizeLocale(locale: string): string {
   const parts = locale.split('-');
   if (parts.length === 1) {
     // Just language code (e.g., "en")
-    return parts[0].toLowerCase();
+    return parts[0]?.toLowerCase() || locale;
   }
 
   // Language + region (e.g., "en-US")
-  return `${parts[0].toLowerCase()}-${parts[1].toUpperCase()}`;
+  const lang = parts[0]?.toLowerCase() || '';
+  const region = parts[1]?.toUpperCase() || '';
+  return `${lang}-${region}`;
 }
 
 /**
@@ -142,11 +147,16 @@ export function createBrowserLocaleDetector(config: {
       if (typeof document !== 'undefined') {
         const cookies = document.cookie.split(';');
         for (const cookie of cookies) {
-          const [name, value] = cookie.trim().split('=');
-          if (name === cookieName && value) {
-            const decoded = decodeURIComponent(value);
-            if (supportedLocales.includes(decoded)) {
-              return decoded;
+          const trimmed = cookie.trim();
+          const equalsIndex = trimmed.indexOf('=');
+          if (equalsIndex > 0) {
+            const name = trimmed.substring(0, equalsIndex);
+            const value = trimmed.substring(equalsIndex + 1);
+            if (name === cookieName && value) {
+              const decoded = decodeURIComponent(value);
+              if (supportedLocales.includes(decoded)) {
+                return decoded;
+              }
             }
           }
         }
@@ -242,11 +252,16 @@ export function createSSRLocaleDetector(config: {
       if (cookies) {
         const cookieList = cookies.split(';');
         for (const cookie of cookieList) {
-          const [name, value] = cookie.trim().split('=');
-          if (name === cookieName && value) {
-            const decoded = decodeURIComponent(value);
-            if (supportedLocales.includes(decoded)) {
-              return decoded;
+          const trimmed = cookie.trim();
+          const equalsIndex = trimmed.indexOf('=');
+          if (equalsIndex > 0) {
+            const name = trimmed.substring(0, equalsIndex);
+            const value = trimmed.substring(equalsIndex + 1);
+            if (name === cookieName && value) {
+              const decoded = decodeURIComponent(value);
+              if (supportedLocales.includes(decoded)) {
+                return decoded;
+              }
             }
           }
         }

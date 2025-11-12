@@ -351,8 +351,8 @@ export function createI18nHandle(config: {
       url: event.url.toString(),
       cookies: event.request.headers.get('cookie') ?? '',
       acceptLanguage: event.request.headers.get('accept-language') ?? '',
-      cookieName: config.cookieName,
-      urlParam: config.urlParam
+      ...(config.cookieName !== undefined && { cookieName: config.cookieName }),
+      ...(config.urlParam !== undefined && { urlParam: config.urlParam })
     });
 
     const locale = detector.detect();
@@ -413,6 +413,7 @@ export function extractLocaleFromPath(
   if (segments.length === 0) return null;
 
   const firstSegment = segments[0];
+  if (!firstSegment) return null;
   return supportedLocales.includes(firstSegment) ? firstSegment : null;
 }
 
