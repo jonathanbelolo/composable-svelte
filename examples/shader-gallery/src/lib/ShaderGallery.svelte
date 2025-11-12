@@ -69,10 +69,35 @@ function unregisterImageElement(id: string): void {
   store.dispatch({ type: 'unregisterImage', id });
 }
 
+/**
+ * Update shader for an image element
+ */
+function updateImageShader(id: string, shader: any): void {
+  if (!overlayComponent) {
+    console.warn('[ShaderGallery] Overlay not initialized yet');
+    return;
+  }
+  overlayComponent.updateElementShader(id, shader);
+}
+
+/**
+ * Update position for an image element
+ * Useful when CSS transforms move the element
+ */
+function updateImagePosition(id: string): void {
+  if (!overlayComponent) {
+    console.warn('[ShaderGallery] Overlay not initialized yet');
+    return;
+  }
+  overlayComponent.updateElementPosition(id);
+}
+
 // Provide gallery methods to child components
 setContext('shader-gallery', {
   registerImageElement,
-  unregisterImageElement
+  unregisterImageElement,
+  updateImageShader,
+  updateImagePosition
 });
 
 // Format width/height

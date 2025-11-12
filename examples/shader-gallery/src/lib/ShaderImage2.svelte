@@ -29,10 +29,21 @@ const gallery = getContext<{
     onTextureLoaded?: () => void
   ) => void;
   unregisterImageElement: (id: string) => void;
+  updateImageShader: (id: string, shader: string | CustomShaderEffect) => void;
+  updateImagePosition: (id: string) => void;
 }>('shader-gallery');
 
 let imgRef: HTMLImageElement | null = $state(null);
+let wrapperRef: HTMLDivElement | null = $state(null);
 let webglLoaded = $state(false);
+let isRegistered = $state(false);
+
+// Watch for shader changes and update WebGL overlay
+$effect(() => {
+  if (isRegistered && gallery) {
+    gallery.updateImageShader(id, shader);
+  }
+});
 
 onMount(() => {
   if (!imgRef || !gallery) return;
@@ -44,6 +55,7 @@ onMount(() => {
     gallery.registerImageElement(id, imgRef, src, shader, () => {
       webglLoaded = true;
     });
+    isRegistered = true;
   };
 
   if (imgRef.complete) {
@@ -52,10 +64,85 @@ onMount(() => {
     imgRef.addEventListener('load', handleLoad);
   }
 
+  // Track active animations
+  let activeAnimation: number | null = null;
+
+  // Add hover listeners to update position during CSS transform
+  const handleMouseEnter = () => {
+    if (gallery && isRegistered) {
+      // Cancel any existing animation
+      if (activeAnimation !== null) {
+        cancelAnimationFrame(activeAnimation);
+      }
+
+      // Update position every frame during the transition
+      const startTime = performance.now();
+      const duration = 300; // Match CSS transition duration
+
+      const updateFrame = (currentTime: number) => {
+        const elapsed = currentTime - startTime;
+
+        if (elapsed < duration) {
+          gallery.updateImagePosition(id); // Update position every frame
+          activeAnimation = requestAnimationFrame(updateFrame);
+        } else {
+          // Final update at the end
+          gallery.updateImagePosition(id);
+          activeAnimation = null;
+        }
+      };
+
+      activeAnimation = requestAnimationFrame(updateFrame);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (gallery && isRegistered) {
+      // Cancel any existing animation
+      if (activeAnimation !== null) {
+        cancelAnimationFrame(activeAnimation);
+      }
+
+      // Update position every frame during the transition
+      const startTime = performance.now();
+      const duration = 300; // Match CSS transition duration
+
+      const updateFrame = (currentTime: number) => {
+        const elapsed = currentTime - startTime;
+
+        if (elapsed < duration) {
+          gallery.updateImagePosition(id); // Update position every frame
+          activeAnimation = requestAnimationFrame(updateFrame);
+        } else {
+          // Final update at the end
+          gallery.updateImagePosition(id);
+          activeAnimation = null;
+        }
+      };
+
+      activeAnimation = requestAnimationFrame(updateFrame);
+    }
+  };
+
+  if (wrapperRef) {
+    wrapperRef.addEventListener('mouseenter', handleMouseEnter);
+    wrapperRef.addEventListener('mouseleave', handleMouseLeave);
+  }
+
   return () => {
+    // Cancel any active animation
+    if (activeAnimation !== null) {
+      cancelAnimationFrame(activeAnimation);
+      activeAnimation = null;
+    }
+
     gallery.unregisterImageElement(id);
     if (imgRef) {
       imgRef.removeEventListener('load', handleLoad);
+    }
+    if (wrapperRef) {
+      wrapperRef.removeEventListener('mouseenter', handleMouseEnter);
+      wrapperRef.removeEventListener('mouseleave', handleMouseLeave);
     }
   };
 });
@@ -87,7 +174,7 @@ onMount(() => {
   }
 </style>
 
-<div class="shader-image-wrapper">
+<div class="shader-image-wrapper" bind:this={wrapperRef}>
   <img
     bind:this={imgRef}
     {src}
