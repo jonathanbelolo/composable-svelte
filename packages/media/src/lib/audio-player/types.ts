@@ -272,11 +272,11 @@ export function createShuffleOrder(length: number, currentIndex: number): number
 	// Shuffle remaining tracks
 	for (let i = indices.length - 1; i > 0; i--) {
 		const j = Math.floor(Math.random() * (i + 1));
-		[indices[i], indices[j]] = [indices[j], indices[i]];
+		[indices[i]!, indices[j]!] = [indices[j]!, indices[i]!];
 	}
 
 	// Put current track at the beginning
-	indices.unshift(currentTrack);
+	indices.unshift(currentTrack!);
 
 	return indices;
 }
@@ -301,9 +301,9 @@ export function getNextTrackIndex(
 		const nextShuffleIndex = currentShuffleIndex + 1;
 
 		if (nextShuffleIndex < shuffleOrder.length) {
-			return shuffleOrder[nextShuffleIndex];
+			return shuffleOrder[nextShuffleIndex] ?? null;
 		} else if (loopMode === 'all') {
-			return shuffleOrder[0];
+			return shuffleOrder[0] ?? null;
 		} else {
 			return null;
 		}
@@ -339,9 +339,9 @@ export function getPreviousTrackIndex(
 		const prevShuffleIndex = currentShuffleIndex - 1;
 
 		if (prevShuffleIndex >= 0) {
-			return shuffleOrder[prevShuffleIndex];
+			return shuffleOrder[prevShuffleIndex] ?? null;
 		} else {
-			return shuffleOrder[shuffleOrder.length - 1];
+			return shuffleOrder[shuffleOrder.length - 1] ?? null;
 		}
 	} else {
 		const prevIndex = currentIndex - 1;

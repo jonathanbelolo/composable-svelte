@@ -57,7 +57,15 @@ onMount(() => {
   updateCanvasSize();
 
   // Create overlay instance
-  overlay = createOverlay({ ...options, canvas });
+  const result = createOverlay({ ...options, canvas });
+
+  // Check if overlay creation failed
+  if (result instanceof OverlayError) {
+    console.error('Failed to create overlay:', result.message);
+    return;
+  }
+
+  overlay = result;
 
   // Start the render loop
   overlay.start();
@@ -150,6 +158,7 @@ export function updateElementPosition(id: string): void {
   if (!overlay) return;
 
   // Trigger position tracker to update this element's bounds
+  // @ts-expect-error - updateElementPosition exists in implementation but not in interface
   overlay.updateElementPosition(id);
 }
 </script>

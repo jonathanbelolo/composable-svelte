@@ -327,7 +327,7 @@ export const voiceInputReducer: Reducer<
 						if (hasVoice) {
 							dispatch({ type: 'speechDetected' });
 						} else {
-							dispatch({ type: 'silenceDetected' });
+							dispatch({ type: 'silenceDetected', duration: 0 });
 						}
 					}, 100); // Check every 100ms
 				})

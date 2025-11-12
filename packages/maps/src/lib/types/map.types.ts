@@ -53,7 +53,7 @@ export interface Marker<TData = unknown> {
 /**
  * GeoJSON types - supports FeatureCollection, Feature, or Geometry
  */
-export type GeoJSON = GeoJSONType.FeatureCollection | GeoJSONType.Feature | GeoJSONType.Geometry;
+export type GeoJSON = GeoJSONType;
 
 /**
  * Layer style properties

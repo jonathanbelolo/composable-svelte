@@ -254,11 +254,11 @@ export function createMockStreamingChat(): StreamingChatDependencies {
 					// If message contains keywords, show relevant response
 					let response: string;
 					if (shouldShowVideos) {
-						response = responses[5];  // The video response is at index 5
+						response = responses[5]!;  // The video response is at index 5
 					} else if (shouldShowImages) {
-						response = responses[4];  // The image gallery response is at index 4
+						response = responses[4]!;  // The image gallery response is at index 4
 					} else {
-						response = responses[Math.floor(Math.random() * 4)];  // Random from first 4
+						response = responses[Math.floor(Math.random() * 4)]!;  // Random from first 4
 					}
 
 					const words = response.split(' ');

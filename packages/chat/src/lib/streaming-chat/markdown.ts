@@ -45,8 +45,7 @@ loadCommonLanguages();
 export function configureMarked() {
 	marked.setOptions({
 		gfm: true, // GitHub Flavored Markdown
-		breaks: true, // Convert line breaks to <br>
-		headerIds: false, // Don't generate header IDs
+		breaks: true // Convert line breaks to <br>
 	});
 
 	// Custom renderer for code blocks
@@ -54,7 +53,7 @@ export function configureMarked() {
 
 	// Override code block rendering to use Prism
 	renderer.code = ({ text, lang }) => {
-		const language = lang ? LANGUAGE_MAP[lang] || lang : 'plaintext';
+		const language = lang ? (LANGUAGE_MAP[lang] || lang) : 'plaintext';
 
 		try {
 			// Check if language is supported
@@ -90,7 +89,7 @@ function escapeHtml(text: string): string {
 		'"': '&quot;',
 		"'": '&#039;',
 	};
-	return text.replace(/[&<>"']/g, (char) => map[char]);
+	return text.replace(/[&<>"']/g, (char) => map[char]!);
 }
 
 /**
@@ -197,7 +196,7 @@ export function extractImagesFromMarkdown(markdown: string): Array<{
 
 	while ((match = imageRegex.exec(markdown)) !== null) {
 		const alt = match[1] || 'Image';
-		const url = match[2];
+		const url = match[2]!;
 		const caption = match[3];
 
 		// Generate unique ID
@@ -207,7 +206,7 @@ export function extractImagesFromMarkdown(markdown: string): Array<{
 			id,
 			url,
 			alt,
-			caption
+			...(caption !== undefined && { caption })
 		});
 
 		index++;
@@ -267,7 +266,7 @@ export function attachCopyButtons(container: HTMLElement): () => void {
 
 		// Extract language from class
 		const languageMatch = code.className.match(/language-(\w+)/);
-		const language = languageMatch ? languageMatch[1] : 'code';
+		const language = languageMatch ? languageMatch[1]! : 'code';
 
 		// Create language badge
 		if (language !== 'plaintext') {
@@ -281,7 +280,7 @@ export function attachCopyButtons(container: HTMLElement): () => void {
 		let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
 		const handleClick = async () => {
-			const textContent = code.textContent || '';
+			const textContent = code.textContent ?? '';
 
 			try {
 				await navigator.clipboard.writeText(textContent);

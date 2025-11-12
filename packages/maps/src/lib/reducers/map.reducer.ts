@@ -98,8 +98,8 @@ export const mapReducer: Reducer<MapState, MapAction, {}> = (
           ...state,
           flyToTarget: {
             center,
-            zoom,
-            duration
+            ...(zoom !== undefined && { zoom }),
+            ...(duration !== undefined && { duration })
           }
         },
         Effect.none()
@@ -108,11 +108,9 @@ export const mapReducer: Reducer<MapState, MapAction, {}> = (
 
     case 'flyToCompleted': {
       // Clear flyTo target after animation starts
+      const { flyToTarget, ...rest } = state;
       return [
-        {
-          ...state,
-          flyToTarget: undefined
-        },
+        rest,
         Effect.none()
       ];
     }

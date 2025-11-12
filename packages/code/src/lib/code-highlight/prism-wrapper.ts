@@ -27,6 +27,7 @@ export async function loadLanguage(lang: SupportedLanguage): Promise<void> {
 		switch (lang) {
 			case 'typescript':
 				// TypeScript requires JavaScript first
+				// @ts-expect-error - prismjs components don't have TypeScript declarations
 				await import('prismjs/components/prism-typescript');
 				break;
 
@@ -36,7 +37,9 @@ export async function loadLanguage(lang: SupportedLanguage): Promise<void> {
 
 			case 'svelte':
 				// Svelte syntax highlighting
+				// @ts-expect-error - prismjs components don't have TypeScript declarations
 				await import('prismjs/components/prism-javascript');
+				// @ts-expect-error - prismjs components don't have TypeScript declarations
 				await import('prismjs/components/prism-typescript');
 				// Note: Svelte doesn't have official Prism support, treat as TypeScript for now
 				break;
@@ -50,26 +53,32 @@ export async function loadLanguage(lang: SupportedLanguage): Promise<void> {
 				break;
 
 			case 'json':
+				// @ts-expect-error - prismjs components don't have TypeScript declarations
 				await import('prismjs/components/prism-json');
 				break;
 
 			case 'markdown':
+				// @ts-expect-error - prismjs components don't have TypeScript declarations
 				await import('prismjs/components/prism-markdown');
 				break;
 
 			case 'bash':
+				// @ts-expect-error - prismjs components don't have TypeScript declarations
 				await import('prismjs/components/prism-bash');
 				break;
 
 			case 'sql':
+				// @ts-expect-error - prismjs components don't have TypeScript declarations
 				await import('prismjs/components/prism-sql');
 				break;
 
 			case 'python':
+				// @ts-expect-error - prismjs components don't have TypeScript declarations
 				await import('prismjs/components/prism-python');
 				break;
 
 			case 'rust':
+				// @ts-expect-error - prismjs components don't have TypeScript declarations
 				await import('prismjs/components/prism-rust');
 				break;
 

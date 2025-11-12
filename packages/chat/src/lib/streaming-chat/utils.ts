@@ -67,7 +67,9 @@ export async function extractFileMetadata(file: File): Promise<AttachmentMetadat
 			metadata.width = videoMeta.width;
 			metadata.height = videoMeta.height;
 			metadata.duration = videoMeta.duration;
-			metadata.thumbnail = videoMeta.thumbnail;
+			if (videoMeta.thumbnail !== undefined) {
+				metadata.thumbnail = videoMeta.thumbnail;
+			}
 		}
 
 		// Extract audio metadata

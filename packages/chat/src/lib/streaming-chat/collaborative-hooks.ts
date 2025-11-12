@@ -109,7 +109,11 @@ export function useTypingEmitter(
 		if (!isTyping && now - lastTypingUpdate > THROTTLE_DELAY) {
 			isTyping = true;
 			lastTypingUpdate = now;
-			store.dispatch({ type: 'startTyping', target, messageId });
+			store.dispatch({
+				type: 'startTyping',
+				target,
+				...(messageId !== undefined && { messageId })
+			});
 		}
 
 		// Reset auto-stop timer
@@ -176,7 +180,7 @@ export function useCursorTracking(
 	const cleanup = new CleanupTracker();
 
 	let lastUpdate = 0;
-	let pendingUpdate: (() => void) | null = null;
+	let pendingUpdate: number | null = null;
 
 	const emitCursor = () => {
 		const position = element.selectionStart ?? 0;
@@ -384,11 +388,11 @@ export function formatTypingIndicator(
 	}
 
 	if (typingUsers.length === 1) {
-		return `${typingUsers[0].name} is typing...`;
+		return `${typingUsers[0]!.name} is typing...`;
 	}
 
 	if (typingUsers.length === 2) {
-		return `${typingUsers[0].name} and ${typingUsers[1].name} are typing...`;
+		return `${typingUsers[0]!.name} and ${typingUsers[1]!.name} are typing...`;
 	}
 
 	return `${typingUsers.length} people are typing...`;

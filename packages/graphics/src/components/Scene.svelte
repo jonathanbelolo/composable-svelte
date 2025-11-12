@@ -128,7 +128,7 @@ function setupSceneSync() {
         adapter.removeLight(i);
       }
       currentLights.forEach((light) => {
-        adapter.addLight(light);
+        adapter!.addLight(light);
       });
 
       previousLights = currentLights;

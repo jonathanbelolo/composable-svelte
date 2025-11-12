@@ -37,7 +37,7 @@ export function streamingChatReducer(
 				content: action.message,
 				timestamp: getTimestamp(),
 				// Include attachments from action if provided
-				attachments: action.attachments
+				...(action.attachments !== undefined && { attachments: action.attachments })
 			};
 
 			return [
@@ -161,13 +161,13 @@ export function streamingChatReducer(
 
 		case 'regenerateMessage': {
 			const messageIndex = state.messages.findIndex((m) => m.id === action.messageId);
-			if (messageIndex === -1 || state.messages[messageIndex].role !== 'assistant') {
+			if (messageIndex === -1 || state.messages[messageIndex]!.role !== 'assistant') {
 				return [state, Effect.none()];
 			}
 
 			// Find preceding user message
 			let userMessageIndex = messageIndex - 1;
-			while (userMessageIndex >= 0 && state.messages[userMessageIndex].role !== 'user') {
+			while (userMessageIndex >= 0 && state.messages[userMessageIndex]!.role !== 'user') {
 				userMessageIndex--;
 			}
 
@@ -175,7 +175,7 @@ export function streamingChatReducer(
 				return [state, Effect.none()]; // No user message found
 			}
 
-			const userMessage = state.messages[userMessageIndex];
+			const userMessage = state.messages[userMessageIndex]!;
 
 			// Remove all messages after (and including) the assistant message being regenerated
 			const newMessages = state.messages.slice(0, messageIndex);
@@ -239,7 +239,7 @@ export function streamingChatReducer(
 				return [state, Effect.none()];
 			}
 
-			const message = state.messages[messageIndex];
+			const message = state.messages[messageIndex]!;
 
 			let newMessages: Message[];
 			if (message.role === 'user') {
@@ -311,7 +311,7 @@ export function streamingChatReducer(
 
 			// Update the message content
 			const updatedMessage = {
-				...state.messages[messageIndex],
+				...state.messages[messageIndex]!,
 				content: state.editingMessage.content
 			};
 
@@ -425,7 +425,7 @@ export function streamingChatReducer(
 				return [state, Effect.none()];
 			}
 
-			const message = state.messages[messageIndex];
+			const message = state.messages[messageIndex]!;
 			const reactions = message.reactions || [];
 			const existingReactionIndex = reactions.findIndex((r) => r.emoji === action.emoji);
 
@@ -441,7 +441,7 @@ export function streamingChatReducer(
 			}
 
 			const newMessages = [...state.messages];
-			newMessages[messageIndex] = {
+			newMessages[messageIndex]! = {
 				...message,
 				reactions: updatedReactions
 			};
@@ -461,7 +461,7 @@ export function streamingChatReducer(
 				return [state, Effect.none()];
 			}
 
-			const message = state.messages[messageIndex];
+			const message = state.messages[messageIndex]!;
 			const reactions = message.reactions || [];
 			const existingReactionIndex = reactions.findIndex((r) => r.emoji === action.emoji);
 
@@ -469,7 +469,7 @@ export function streamingChatReducer(
 				return [state, Effect.none()];
 			}
 
-			const existingReaction = reactions[existingReactionIndex];
+			const existingReaction = reactions[existingReactionIndex]!;
 			let updatedReactions: MessageReaction[];
 
 			if (existingReaction.count > 1) {
@@ -483,10 +483,16 @@ export function streamingChatReducer(
 			}
 
 			const newMessages = [...state.messages];
-			newMessages[messageIndex] = {
-				...message,
-				reactions: updatedReactions.length > 0 ? updatedReactions : undefined
-			};
+			if (updatedReactions.length > 0) {
+				newMessages[messageIndex]! = {
+					...message,
+					reactions: updatedReactions
+				};
+			} else {
+				// Remove reactions property entirely
+				const { reactions: _, ...messageWithoutReactions } = message;
+				newMessages[messageIndex]! = messageWithoutReactions;
+			}
 
 			return [
 				{

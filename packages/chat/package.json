@@ -66,6 +66,7 @@
     "@sveltejs/vite-plugin-svelte": "^6.2.1",
     "@types/marked": "^6.0.0",
     "@types/node": "^20.0.0",
+    "@types/prismjs": "^1.26.0",
     "@vitest/browser-playwright": "^4.0.3",
     "@vitest/coverage-v8": "^4.0.7",
     "@vitest/ui": "^4.0.7",
@@ -80,6 +81,7 @@
     "@composable-svelte/core": "workspace:*",
     "@composable-svelte/media": "workspace:*",
     "marked": "^16.4.1",
-    "pdfjs-dist": "^5.4.394"
+    "pdfjs-dist": "^5.4.394",
+    "prismjs": "^1.29.0"
   }
 }

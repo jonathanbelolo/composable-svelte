@@ -489,6 +489,9 @@ export function audioPlayerReducer(
 		case 'playlistReordered': {
 			const newPlaylist = [...state.playlist];
 			const [movedTrack] = newPlaylist.splice(action.from, 1);
+			if (!movedTrack) {
+				return [state, Effect.none()];
+			}
 			newPlaylist.splice(action.to, 0, movedTrack);
 
 			// Update current track index

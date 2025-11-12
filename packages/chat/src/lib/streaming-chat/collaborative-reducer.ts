@@ -269,7 +269,7 @@ export function collaborativeReducer(
 
 			const typingInfo = {
 				target: action.target,
-				messageId: action.messageId,
+				...(action.messageId !== undefined && { messageId: action.messageId }),
 				startedAt: getTimestamp(),
 				lastUpdate: getTimestamp()
 			};
