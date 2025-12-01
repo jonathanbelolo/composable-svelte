@@ -30,14 +30,17 @@ export function streamingChatReducer(
 
 	switch (action.type) {
 		case 'sendMessage': {
+			// Use attachments from action if provided, otherwise use pending attachments from state
+			const attachments = action.attachments ?? (state.pendingAttachments.length > 0 ? state.pendingAttachments : undefined);
+
 			// Add user message to conversation
 			const userMessage: Message = {
 				id: generateId(),
 				role: 'user',
 				content: action.message,
 				timestamp: getTimestamp(),
-				// Include attachments from action if provided
-				...(action.attachments !== undefined && { attachments: action.attachments })
+				// Include attachments if any
+				...(attachments !== undefined && { attachments })
 			};
 
 			return [

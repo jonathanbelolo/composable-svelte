@@ -17,6 +17,7 @@ export {
 	// Legacy
 	StreamingChat,
 	// Primitives
+	SimpleChatMessage,
 	ChatMessage,
 	// Core
 	streamingChatReducer,

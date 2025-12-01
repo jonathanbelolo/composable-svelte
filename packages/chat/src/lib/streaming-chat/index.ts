@@ -33,6 +33,7 @@ export {
 
 // Primitives (for custom compositions)
 export {
+	SimpleChatMessage,
 	ChatMessage,
 	ActionButtons,
 	ChatMessageWithActions

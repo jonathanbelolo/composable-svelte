@@ -13,7 +13,7 @@
 
 	import type { Store } from '@composable-svelte/core';
 	import type { StreamingChatState, StreamingChatAction } from '../types.js';
-	import ChatMessage from '../primitives/ChatMessage.svelte';
+	import SimpleChatMessage from '../primitives/SimpleChatMessage.svelte';
 
 	interface Props {
 		/**
@@ -94,11 +94,11 @@
 			</div>
 		{:else}
 			{#each $store.messages as message (message.id)}
-				<ChatMessage {message} />
+				<SimpleChatMessage {message} />
 			{/each}
 
 			{#if $store.currentStreaming}
-				<ChatMessage
+				<SimpleChatMessage
 					message={{
 						id: 'streaming',
 						role: 'assistant',

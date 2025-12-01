@@ -546,25 +546,19 @@ importers:
 
   packages/chat:
     dependencies:
-      '@composable-svelte/code':
-        specifier: workspace:*
-        version: link:../code
       '@composable-svelte/core':
-        specifier: workspace:*
-        version: link:../core
-      '@composable-svelte/media':
-        specifier: workspace:*
-        version: link:../media
+        specifier: ^0.4.0
+        version: 0.4.0(svelte@5.43.3)(typescript@5.9.3)
       marked:
         specifier: ^16.4.1
         version: 16.4.1
-      pdfjs-dist:
-        specifier: ^5.4.394
-        version: 5.4.394
-      prismjs:
-        specifier: ^1.29.0
-        version: 1.30.0
     devDependencies:
+      '@composable-svelte/code':
+        specifier: workspace:*
+        version: link:../code
+      '@composable-svelte/media':
+        specifier: workspace:*
+        version: link:../media
       '@sveltejs/package':
         specifier: ^2.5.4
         version: 2.5.4(svelte@5.43.3)(typescript@5.9.3)
@@ -589,9 +583,15 @@ importers:
       '@vitest/ui':
         specifier: ^4.0.7
         version: 4.0.7(vitest@4.0.7)
+      pdfjs-dist:
+        specifier: ^5.4.394
+        version: 5.4.394
       playwright:
         specifier: ^1.56.1
         version: 1.56.1
+      prismjs:
+        specifier: ^1.29.0
+        version: 1.30.0
       svelte:
         specifier: ^5.0.0
         version: 5.43.3

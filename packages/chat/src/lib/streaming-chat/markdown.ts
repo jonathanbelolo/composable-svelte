@@ -3,11 +3,12 @@
  *
  * Renders markdown to HTML with syntax highlighting support.
  * Designed to work with streaming content and partial markdown.
+ *
+ * NOTE: @composable-svelte/code, @composable-svelte/media, and prismjs are optional dependencies.
+ * If not installed, syntax highlighting and video extraction will be disabled gracefully.
  */
 
 import { marked } from 'marked';
-import Prism from 'prismjs';
-import { loadLanguage } from '@composable-svelte/code';
 
 // Language map for Prism
 const LANGUAGE_MAP: Record<string, string> = {
@@ -18,31 +19,71 @@ const LANGUAGE_MAP: Record<string, string> = {
 	py: 'python',
 	rb: 'ruby',
 	sh: 'bash',
-	yml: 'yaml',
+	yml: 'yaml'
 };
 
-// Pre-load common languages on module initialization
-const loadCommonLanguages = async () => {
-	try {
-		await Promise.all([
-			loadLanguage('javascript'),
-			loadLanguage('typescript'),
-			loadLanguage('python'),
-			loadLanguage('bash'),
-			loadLanguage('json')
-		]);
-	} catch (error) {
-		console.error('Failed to load common Prism languages:', error);
-	}
-};
+// Lazy-loaded optional dependencies
+let Prism: typeof import('prismjs') | null = null;
+let loadLanguage: ((lang: string) => Promise<void>) | null = null;
+let extractVideosFromMarkdownFn:
+	| ((markdown: string) => Array<{ url: string; platform: string }>)
+	| null = null;
 
-// Start loading languages immediately
-loadCommonLanguages();
+// Track if we've attempted to load optional deps
+let optionalDepsLoaded = false;
 
 /**
- * Configure marked with Prism syntax highlighting
+ * Attempt to load optional dependencies (prismjs, @composable-svelte/code, @composable-svelte/media)
+ * Falls back gracefully if not installed.
  */
-export function configureMarked() {
+async function loadOptionalDependencies(): Promise<void> {
+	if (optionalDepsLoaded) return;
+	optionalDepsLoaded = true;
+
+	// Try to load Prism
+	try {
+		Prism = await import('prismjs');
+	} catch {
+		// prismjs not installed - syntax highlighting disabled
+	}
+
+	// Try to load @composable-svelte/code for language loading
+	try {
+		const codeModule = await import('@composable-svelte/code');
+		loadLanguage = codeModule.loadLanguage;
+
+		// Pre-load common languages if available
+		if (loadLanguage && Prism) {
+			await Promise.all([
+				loadLanguage('javascript'),
+				loadLanguage('typescript'),
+				loadLanguage('python'),
+				loadLanguage('bash'),
+				loadLanguage('json')
+			]).catch(() => {
+				// Ignore language loading errors
+			});
+		}
+	} catch {
+		// @composable-svelte/code not installed
+	}
+
+	// Try to load @composable-svelte/media for video extraction
+	try {
+		const mediaModule = await import('@composable-svelte/media');
+		extractVideosFromMarkdownFn = mediaModule.extractVideosFromMarkdown;
+	} catch {
+		// @composable-svelte/media not installed
+	}
+}
+
+// Start loading optional dependencies (non-blocking)
+loadOptionalDependencies();
+
+/**
+ * Configure marked with Prism syntax highlighting (if available)
+ */
+function configureMarkedRenderer() {
 	marked.setOptions({
 		gfm: true, // GitHub Flavored Markdown
 		breaks: true // Convert line breaks to <br>
@@ -51,13 +92,13 @@ export function configureMarked() {
 	// Custom renderer for code blocks
 	const renderer = new marked.Renderer();
 
-	// Override code block rendering to use Prism
+	// Override code block rendering to use Prism (if available)
 	renderer.code = ({ text, lang }) => {
 		const language = lang ? (LANGUAGE_MAP[lang] || lang) : 'plaintext';
 
 		try {
-			// Check if language is supported
-			if (language !== 'plaintext' && Prism.languages[language]) {
+			// Check if Prism is loaded and language is supported
+			if (Prism && language !== 'plaintext' && Prism.languages[language]) {
 				const highlighted = Prism.highlight(text, Prism.languages[language], language);
 				return `<pre class="language-${language}"><code class="language-${language}">${highlighted}</code></pre>`;
 			}
@@ -66,8 +107,8 @@ export function configureMarked() {
 			console.warn(`Failed to highlight code block with language: ${language}`, e);
 		}
 
-		// Fallback for unsupported languages
-		return `<pre class="language-plaintext"><code class="language-plaintext">${escapeHtml(text)}</code></pre>`;
+		// Fallback for unsupported languages or when Prism is not available
+		return `<pre class="language-${language}"><code class="language-${language}">${escapeHtml(text)}</code></pre>`;
 	};
 
 	// Override inline code rendering
@@ -87,7 +128,7 @@ function escapeHtml(text: string): string {
 		'<': '&lt;',
 		'>': '&gt;',
 		'"': '&quot;',
-		"'": '&#039;',
+		"'": '&#039;'
 	};
 	return text.replace(/[&<>"']/g, (char) => map[char]!);
 }
@@ -156,7 +197,7 @@ export function hasMarkdownSyntax(text: string): boolean {
 		/^\s*[-*+]\s/, // Unordered lists
 		/^\s*\d+\.\s/, // Ordered lists
 		/\[.*\]\(.*\)/, // Links
-		/^\s*>/, // Blockquotes
+		/^\s*>/ // Blockquotes
 	];
 
 	return patterns.some((pattern) => pattern.test(text));
@@ -184,11 +225,6 @@ export function extractImagesFromMarkdown(markdown: string): Array<{
 	}> = [];
 
 	// Match markdown image syntax: ![alt](url "optional caption")
-	// Regex explanation:
-	// !\[([^\]]*)\]  - Match ![...] and capture alt text
-	// \(([^\s)]+)    - Match (url and capture URL (no spaces or closing paren)
-	// (?:\s+"([^"]*)")? - Optionally match space + "caption" and capture caption
-	// \)             - Match closing paren
 	const imageRegex = /!\[([^\]]*)\]\(([^\s)]+)(?:\s+"([^"]*)")?\)/g;
 
 	let match: RegExpExecArray | null;
@@ -218,10 +254,17 @@ export function extractImagesFromMarkdown(markdown: string): Array<{
 /**
  * Extract video URLs from markdown content
  *
- * Re-exported from video-embed module for convenience.
- * Detects video URLs from platforms like YouTube, Vimeo, Twitch, etc.
+ * Requires @composable-svelte/media to be installed.
+ * Returns empty array if the dependency is not available.
  */
-export { extractVideosFromMarkdown } from '@composable-svelte/media';
+export function extractVideosFromMarkdown(
+	markdown: string
+): Array<{ url: string; platform: string }> {
+	if (!extractVideosFromMarkdownFn) {
+		return [];
+	}
+	return extractVideosFromMarkdownFn(markdown);
+}
 
 /**
  * Attach copy buttons to code blocks in rendered HTML
@@ -314,4 +357,4 @@ export function attachCopyButtons(container: HTMLElement): () => void {
 }
 
 // Configure marked on module load
-configureMarked();
+configureMarkedRenderer();
