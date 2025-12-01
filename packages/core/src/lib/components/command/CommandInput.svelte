@@ -7,7 +7,7 @@
 	@component
 -->
 <script lang="ts">
-	import type { Store } from '../../store.svelte.js';
+	import type { Store } from '../../store.js';
 	import type { CommandState, CommandAction } from './command.types.js';
 
 	interface CommandInputProps {

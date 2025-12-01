@@ -14,7 +14,7 @@
 -->
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { createStore } from '../../store.svelte.js';
+	import { createStore } from '../../store.js';
 	import { commandReducer } from './command.reducer.js';
 	import type { CommandState, CommandItem, CommandDependencies } from './command.types.js';
 	import { createInitialCommandState } from './command.types.js';

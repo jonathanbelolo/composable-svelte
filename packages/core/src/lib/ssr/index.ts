@@ -108,13 +108,18 @@ export {
 export { isServer, isBrowser } from './utils.js';
 
 // Static Site Generation
-export {
-  generateStaticSite,
-  generateStaticPage,
-  type SSGConfig,
-  type SSGRoute,
-  type SSGResult,
-  type SSGGenerateOptions
+// NOTE: SSG functions are only available via '@composable-svelte/core/ssr/ssg'
+// to avoid Node.js module imports breaking browser builds.
+//
+// Example:
+// import { generateStaticSite } from '@composable-svelte/core/ssr/ssg';
+//
+// Re-export types only (types don't cause runtime imports)
+export type {
+  SSGConfig,
+  SSGRoute,
+  SSGResult,
+  SSGGenerateOptions
 } from './ssg.js';
 
 // Security

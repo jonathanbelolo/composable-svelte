@@ -1,6 +1,6 @@
 <script lang="ts" generics="T">
 	import { cn } from '../../utils.js';
-	import type { Store } from '../../store.svelte.js';
+	import type { Store } from '../../store.js';
 	import type { TableState, TableAction, SortDirection } from './table.types.js';
 	import { Button } from '../ui/button/index.js';
 

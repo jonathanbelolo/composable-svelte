@@ -8,7 +8,7 @@
 -->
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import type { Store } from '../../store.svelte.js';
+	import type { Store } from '../../store.js';
 	import type { CommandState, CommandAction, CommandItem } from './command.types.js';
 
 	interface CommandListProps {

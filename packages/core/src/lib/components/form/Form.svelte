@@ -1,6 +1,6 @@
 <script lang="ts" generics="T extends Record<string, any>">
 	import { setContext } from 'svelte';
-	import { createStore } from '../../store.svelte.js';
+	import { createStore } from '../../store.js';
 	import { createFormReducer } from './form.reducer.js';
 	import type { FormConfig, FormState, FormAction } from './form.types.js';
 	import { createInitialFormState } from './form.reducer.js';
