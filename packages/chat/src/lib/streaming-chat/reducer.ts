@@ -531,6 +531,23 @@ export function streamingChatReducer(
 			];
 		}
 
+		case 'restoreMessages': {
+			// Restore messages from persistence (e.g., session recovery)
+			// Resets streaming state to clean slate
+			return [
+				{
+					...state,
+					messages: action.messages,
+					currentStreaming: null,
+					isWaitingForResponse: false,
+					error: null,
+					editingMessage: null,
+					contextMenu: null
+				},
+				Effect.none()
+			];
+		}
+
 		default: {
 			const _never: never = action;
 			return [state, Effect.none()];

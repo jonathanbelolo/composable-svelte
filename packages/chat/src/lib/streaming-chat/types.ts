@@ -142,6 +142,8 @@ export type StreamingChatAction =
 	// Utility
 	| { type: 'clearError' }
 	| { type: 'clearMessages' }
+	// Session restore (for persistence/recovery)
+	| { type: 'restoreMessages'; messages: Message[] }
 	// Internal actions
 	| { type: '_internal_setAbortController'; abortController: AbortController };
 

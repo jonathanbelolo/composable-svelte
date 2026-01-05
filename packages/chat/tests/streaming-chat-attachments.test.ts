@@ -302,4 +302,72 @@ describe('StreamingChat Attachments', () => {
 			});
 		});
 	});
+
+	describe('Session Restore', () => {
+		it('handles restoreMessages action', () => {
+			const store = createStore({
+				initialState: createInitialStreamingChatState(),
+				reducer: streamingChatReducer,
+				dependencies
+			});
+
+			const messages = [
+				{ id: 'msg-1', role: 'user' as const, content: 'Hello', timestamp: 1000 },
+				{ id: 'msg-2', role: 'assistant' as const, content: 'Hi there!', timestamp: 2000 }
+			];
+
+			store.dispatch({ type: 'restoreMessages', messages });
+
+			expect(store.state.messages).toHaveLength(2);
+			expect(store.state.messages[0]).toEqual(messages[0]);
+			expect(store.state.messages[1]).toEqual(messages[1]);
+		});
+
+		it('restoreMessages clears streaming state', () => {
+			const store = createStore({
+				initialState: {
+					...createInitialStreamingChatState(),
+					currentStreaming: { content: 'partial...', isComplete: false },
+					isWaitingForResponse: true,
+					error: 'some error'
+				},
+				reducer: streamingChatReducer,
+				dependencies
+			});
+
+			store.dispatch({
+				type: 'restoreMessages',
+				messages: [{ id: 'msg-1', role: 'user' as const, content: 'Hello', timestamp: 1000 }]
+			});
+
+			expect(store.state.currentStreaming).toBeNull();
+			expect(store.state.isWaitingForResponse).toBe(false);
+			expect(store.state.error).toBeNull();
+			expect(store.state.editingMessage).toBeNull();
+			expect(store.state.contextMenu).toBeNull();
+		});
+
+		it('restoreMessages replaces existing messages', () => {
+			const store = createStore({
+				initialState: {
+					...createInitialStreamingChatState(),
+					messages: [
+						{ id: 'old-1', role: 'user' as const, content: 'Old message', timestamp: 100 }
+					]
+				},
+				reducer: streamingChatReducer,
+				dependencies
+			});
+
+			const newMessages = [
+				{ id: 'new-1', role: 'user' as const, content: 'New message', timestamp: 500 }
+			];
+
+			store.dispatch({ type: 'restoreMessages', messages: newMessages });
+
+			expect(store.state.messages).toHaveLength(1);
+			expect(store.state.messages[0]!.id).toBe('new-1');
+			expect(store.state.messages[0]!.content).toBe('New message');
+		});
+	});
 });

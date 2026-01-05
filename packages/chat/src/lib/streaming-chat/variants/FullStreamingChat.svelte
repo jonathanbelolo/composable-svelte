@@ -59,6 +59,18 @@
 		 * Empty array allows all types (default).
 		 */
 		acceptedFileTypes?: string[];
+
+		/**
+		 * Value to prefill the input with.
+		 * When changed, sets the input value. Parent should manage when to clear.
+		 */
+		prefillValue?: string;
+
+		/**
+		 * Callback when prefill has been applied and input is ready for user.
+		 * Call this to acknowledge the prefill was consumed.
+		 */
+		onPrefillApplied?: () => void;
 	}
 
 	const {
@@ -67,7 +79,9 @@
 		showClearButton = true,
 		class: className = '',
 		maxFileSizeMB = 10,
-		acceptedFileTypes = []
+		acceptedFileTypes = [],
+		prefillValue = '',
+		onPrefillApplied
 	}: Props = $props();
 
 	// Input state
@@ -77,6 +91,22 @@
 	let fileInputRef: HTMLInputElement;
 	let pendingAttachments = $state<MessageAttachment[]>([]);
 	let previewingAttachment = $state<MessageAttachment | null>(null);
+	let inputRef: HTMLTextAreaElement;
+
+	// Handle prefill value changes
+	$effect(() => {
+		if (prefillValue) {
+			inputValue = prefillValue;
+			// Focus the input after prefill
+			if (inputRef) {
+				inputRef.focus();
+				// Move cursor to end
+				inputRef.setSelectionRange(prefillValue.length, prefillValue.length);
+			}
+			// Notify parent that prefill was applied
+			onPrefillApplied?.();
+		}
+	});
 
 	// Use $store auto-subscription
 	const canSendMessage = $derived(
@@ -293,6 +323,7 @@
 
 			<textarea
 				class="full-streaming-chat__input"
+				bind:this={inputRef}
 				bind:value={inputValue}
 				onkeydown={handleKeyDown}
 				{placeholder}
