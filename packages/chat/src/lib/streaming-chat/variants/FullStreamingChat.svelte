@@ -71,6 +71,16 @@
 		 * Call this to acknowledge the prefill was consumed.
 		 */
 		onPrefillApplied?: () => void;
+
+		/**
+		 * Custom label for user messages (default: "You").
+		 */
+		userLabel?: string;
+
+		/**
+		 * Custom label for assistant messages (default: "Assistant").
+		 */
+		assistantLabel?: string;
 	}
 
 	const {
@@ -81,7 +91,9 @@
 		maxFileSizeMB = 10,
 		acceptedFileTypes = [],
 		prefillValue = '',
-		onPrefillApplied
+		onPrefillApplied,
+		userLabel = 'You',
+		assistantLabel = 'Assistant'
 	}: Props = $props();
 
 	// Input state
@@ -249,7 +261,7 @@
 			</div>
 		{:else}
 			{#each $store.messages as message (message.id)}
-				<ChatMessageWithActions {message} {store} />
+				<ChatMessageWithActions {message} {store} {userLabel} {assistantLabel} />
 			{/each}
 
 			{#if $store.currentStreaming}
@@ -261,6 +273,8 @@
 						timestamp: Date.now()
 					}}
 					{store}
+					{userLabel}
+					{assistantLabel}
 					isStreaming={true}
 				/>
 			{/if}

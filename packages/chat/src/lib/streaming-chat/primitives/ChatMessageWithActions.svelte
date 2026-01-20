@@ -16,9 +16,13 @@
 		message: Message;
 		store: Store<StreamingChatState, StreamingChatAction>;
 		isStreaming?: boolean;
+		/** Custom label for user messages (default: "You") */
+		userLabel?: string;
+		/** Custom label for assistant messages (default: "Assistant") */
+		assistantLabel?: string;
 	}
 
-	const { message, store, isStreaming = false }: Props = $props();
+	const { message, store, isStreaming = false, userLabel = 'You', assistantLabel = 'Assistant' }: Props = $props();
 
 	// Check if this message is being edited
 	const isEditing = $derived($store.editingMessage?.id === message.id);
@@ -42,7 +46,7 @@
 	<!-- Edit mode for user messages -->
 	<div class="chat-message chat-message--editing" data-role="user">
 		<div class="chat-message__header">
-			<span class="chat-message__role">You (editing)</span>
+			<span class="chat-message__role">{userLabel} (editing)</span>
 		</div>
 		<div class="chat-message__edit-form">
 			<textarea
@@ -80,6 +84,8 @@
 		<ChatMessage
 			{message}
 			{isStreaming}
+			{userLabel}
+			{assistantLabel}
 			onReactionClick={handleReactionClick}
 			onAddReaction={() => (showReactionPicker = true)}
 		>

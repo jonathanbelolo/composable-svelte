@@ -20,9 +20,13 @@
 		onReactionClick?: (emoji: string) => void;
 		/** Optional add reaction handler */
 		onAddReaction?: () => void;
+		/** Custom label for user messages (default: "You") */
+		userLabel?: string;
+		/** Custom label for assistant messages (default: "Assistant") */
+		assistantLabel?: string;
 	}
 
-	const { message, isStreaming = false, headerActions, onReactionClick, onAddReaction }: Props = $props();
+	const { message, isStreaming = false, headerActions, onReactionClick, onAddReaction, userLabel = 'You', assistantLabel = 'Assistant' }: Props = $props();
 
 	let contentElement: HTMLDivElement | undefined = $state();
 
@@ -68,7 +72,7 @@
 <div class="chat-message" data-role={message.role} data-streaming={isStreaming}>
 	<div class="chat-message__header">
 		<span class="chat-message__role">
-			{message.role === 'user' ? 'You' : 'Assistant'}
+			{message.role === 'user' ? userLabel : assistantLabel}
 		</span>
 		<span class="chat-message__time">{timeString()}</span>
 
