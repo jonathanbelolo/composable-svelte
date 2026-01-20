@@ -81,6 +81,16 @@
 		 * Custom label for assistant messages (default: "Assistant").
 		 */
 		assistantLabel?: string;
+
+		/**
+		 * Avatar URL for user messages.
+		 */
+		userAvatarUrl?: string;
+
+		/**
+		 * Avatar URL for assistant messages.
+		 */
+		assistantAvatarUrl?: string;
 	}
 
 	const {
@@ -93,7 +103,9 @@
 		prefillValue = '',
 		onPrefillApplied,
 		userLabel = 'You',
-		assistantLabel = 'Assistant'
+		assistantLabel = 'Assistant',
+		userAvatarUrl,
+		assistantAvatarUrl
 	}: Props = $props();
 
 	// Input state
@@ -261,7 +273,7 @@
 			</div>
 		{:else}
 			{#each $store.messages as message (message.id)}
-				<ChatMessageWithActions {message} {store} {userLabel} {assistantLabel} />
+				<ChatMessageWithActions {message} {store} {userLabel} {assistantLabel} {userAvatarUrl} {assistantAvatarUrl} />
 			{/each}
 
 			{#if $store.currentStreaming}
@@ -275,6 +287,8 @@
 					{store}
 					{userLabel}
 					{assistantLabel}
+					{userAvatarUrl}
+					{assistantAvatarUrl}
 					isStreaming={true}
 				/>
 			{/if}

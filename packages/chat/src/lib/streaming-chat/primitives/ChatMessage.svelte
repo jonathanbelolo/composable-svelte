@@ -24,9 +24,17 @@
 		userLabel?: string;
 		/** Custom label for assistant messages (default: "Assistant") */
 		assistantLabel?: string;
+		/** Avatar URL for user messages */
+		userAvatarUrl?: string;
+		/** Avatar URL for assistant messages */
+		assistantAvatarUrl?: string;
 	}
 
-	const { message, isStreaming = false, headerActions, onReactionClick, onAddReaction, userLabel = 'You', assistantLabel = 'Assistant' }: Props = $props();
+	const { message, isStreaming = false, headerActions, onReactionClick, onAddReaction, userLabel = 'You', assistantLabel = 'Assistant', userAvatarUrl, assistantAvatarUrl }: Props = $props();
+
+	// Get the appropriate avatar URL based on message role
+	const avatarUrl = $derived(message.role === 'user' ? userAvatarUrl : assistantAvatarUrl);
+	const avatarLabel = $derived(message.role === 'user' ? userLabel : assistantLabel);
 
 	let contentElement: HTMLDivElement | undefined = $state();
 
@@ -71,14 +79,25 @@
 
 <div class="chat-message" data-role={message.role} data-streaming={isStreaming}>
 	<div class="chat-message__header">
-		<span class="chat-message__role">
-			{message.role === 'user' ? userLabel : assistantLabel}
-		</span>
-		<span class="chat-message__time">{timeString()}</span>
+		<div class="chat-message__header-left">
+			{#if avatarUrl}
+				<img src={avatarUrl} alt={avatarLabel} class="chat-message__avatar" />
+			{:else}
+				<div class="chat-message__avatar-placeholder" data-role={message.role}>
+					{avatarLabel.charAt(0).toUpperCase()}
+				</div>
+			{/if}
+			<span class="chat-message__role">
+				{message.role === 'user' ? userLabel : assistantLabel}
+			</span>
+			<span class="chat-message__time">{timeString()}</span>
+		</div>
 
 		<!-- Optional header actions (e.g., action buttons) -->
 		{#if headerActions}
-			{@render headerActions()}
+			<div class="chat-message__header-right">
+				{@render headerActions()}
+			</div>
 		{/if}
 	</div>
 	<div class="chat-message__content" bind:this={contentElement}>
@@ -186,7 +205,48 @@
 		align-items: center;
 		margin-bottom: 6px;
 		font-size: 12px;
-		opacity: 0.7;
+		opacity: 0.85;
+	}
+
+	.chat-message__header-left {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.chat-message__header-right {
+		display: flex;
+		align-items: center;
+	}
+
+	.chat-message__avatar {
+		width: 24px;
+		height: 24px;
+		border-radius: 50%;
+		object-fit: cover;
+		flex-shrink: 0;
+	}
+
+	.chat-message__avatar-placeholder {
+		width: 24px;
+		height: 24px;
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 12px;
+		font-weight: 600;
+		flex-shrink: 0;
+	}
+
+	.chat-message__avatar-placeholder[data-role='user'] {
+		background: rgba(255, 255, 255, 0.25);
+		color: white;
+	}
+
+	.chat-message__avatar-placeholder[data-role='assistant'] {
+		background: rgba(0, 0, 0, 0.1);
+		color: rgba(0, 0, 0, 0.6);
 	}
 
 	.chat-message__role {
@@ -195,6 +255,7 @@
 
 	.chat-message__time {
 		font-size: 11px;
+		opacity: 0.7;
 	}
 
 	.chat-message__content {
@@ -513,6 +574,11 @@
 	}
 
 	/* Dark mode support */
+	:global(.dark) .chat-message__avatar-placeholder[data-role='assistant'] {
+		background: rgba(255, 255, 255, 0.1);
+		color: rgba(255, 255, 255, 0.6);
+	}
+
 	:global(.dark) .chat-message[data-role='assistant'] {
 		background: #2a2a2a;
 		color: #e0e0e0;

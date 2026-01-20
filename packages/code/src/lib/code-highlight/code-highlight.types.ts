@@ -18,7 +18,8 @@ export type SupportedLanguage =
 	| 'bash'
 	| 'sql'
 	| 'python'
-	| 'rust';
+	| 'rust'
+	| 'yaml';
 
 /**
  * State for the CodeHighlight component

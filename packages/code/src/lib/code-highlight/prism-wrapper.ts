@@ -82,6 +82,11 @@ export async function loadLanguage(lang: SupportedLanguage): Promise<void> {
 				await import('prismjs/components/prism-rust');
 				break;
 
+			case 'yaml':
+				// @ts-expect-error - prismjs components don't have TypeScript declarations
+				await import('prismjs/components/prism-yaml');
+				break;
+
 			default:
 				// Exhaustiveness check
 				const _never: never = lang;

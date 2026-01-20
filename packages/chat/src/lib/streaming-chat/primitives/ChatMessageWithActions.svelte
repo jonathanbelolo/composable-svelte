@@ -20,9 +20,13 @@
 		userLabel?: string;
 		/** Custom label for assistant messages (default: "Assistant") */
 		assistantLabel?: string;
+		/** Avatar URL for user messages */
+		userAvatarUrl?: string;
+		/** Avatar URL for assistant messages */
+		assistantAvatarUrl?: string;
 	}
 
-	const { message, store, isStreaming = false, userLabel = 'You', assistantLabel = 'Assistant' }: Props = $props();
+	const { message, store, isStreaming = false, userLabel = 'You', assistantLabel = 'Assistant', userAvatarUrl, assistantAvatarUrl }: Props = $props();
 
 	// Check if this message is being edited
 	const isEditing = $derived($store.editingMessage?.id === message.id);
@@ -86,6 +90,8 @@
 			{isStreaming}
 			{userLabel}
 			{assistantLabel}
+			{userAvatarUrl}
+			{assistantAvatarUrl}
 			onReactionClick={handleReactionClick}
 			onAddReaction={() => (showReactionPicker = true)}
 		>
