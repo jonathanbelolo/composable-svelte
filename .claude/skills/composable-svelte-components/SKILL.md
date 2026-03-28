@@ -17,8 +17,16 @@ Composable Svelte includes 77 components (68 high-level + 9 primitives) for buil
 
 **Integration Pattern**:
 - Props for configuration (labels, variants, styles)
-- State from `$store` for reactive data
+- State from `$store` (subscription) or `$derived(store.state)` (rune-based) for reactive data
 - Dispatch actions for user interactions
+
+**Icons**: Components use inline SVGs for structural icons (chevrons, arrows, checkmarks) — these are not currently configurable via props. For application-level icons, use `lucide-svelte` (the recommended icon library). Verify icon names against https://lucide.dev/icons/ — do NOT guess icon names.
+
+```svelte
+import { ChevronDown, Plus, Search } from 'lucide-svelte';
+```
+
+Note: The 22 components with hardcoded inline SVGs (accordion chevron, breadcrumb separator, pagination arrows, etc.) cannot currently be swapped for custom icons. This is a known limitation.
 
 **Package Organization**:
 - `@composable-svelte/core` - UI components (this skill)
