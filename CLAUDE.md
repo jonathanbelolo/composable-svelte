@@ -25,47 +25,33 @@ This repository contains **Composable Svelte**, a Composable Architecture librar
   - **SSR**: Server-side rendering with Fastify, state hydration, security hardening
   - **SSG**: Static site generation, multi-locale support, dynamic route enumeration (22 tests)
 
-## ⚠️ CRITICAL: Composable Svelte Skill
+## ⚠️ CRITICAL: Skills and Store Patterns
 
-**IMPORTANT**: When implementing or modifying **ANY** components in this repository, you **MUST** proactively load and follow the guidance in `.claude/skills/composable-svelte-frontend.md`.
+**IMPORTANT**: When implementing or modifying components in this repository, load the relevant skill from `.claude/skills/` for the module you're working with (e.g., `composable-svelte-core`, `composable-svelte-navigation`, `composable-svelte-forms`, etc.).
 
-This skill contains **critical patterns** that prevent common bugs:
+### Store Reactivity — Both Patterns Work
 
-### Most Important Patterns
+The store uses `$state.raw()` internally (in `store.svelte.ts`), making `store.state` reactive. Both access patterns are valid:
 
-1. **Store Subscription Pattern** ⭐ **CRITICAL**
-   - ✅ **ALWAYS USE**: `$store.property` for automatic subscription
-   - ❌ **NEVER USE**: `store.state.property` - this does NOT subscribe and causes reactivity bugs
-   - Example:
-     ```svelte
-     // ✅ CORRECT
-     const state = $derived($store);
-     {#if $store.isLoading}
+```svelte
+<!-- Pattern A: Rune-based (recommended for Svelte 5) -->
+<script>
+  const count = $derived(store.state.count);
+  const isLoading = $derived(store.state.isLoading);
+</script>
+<p>{count}</p>
 
-     // ❌ WRONG - Will not react to changes!
-     const state = $derived(store.state);
-     {#if store.state.isLoading}
-     ```
+<!-- Pattern B: Subscription-based (also works) -->
+<p>{$store.count}</p>
+<p>{$store.isLoading}</p>
+```
 
-2. **State Management Rules**
-   - What belongs in store state vs local component state
-   - When to use `$state` vs `$derived`
+### Key Patterns to Follow
 
-3. **Animation Patterns**
-   - State-driven animations with Motion One
-   - PresentationState lifecycle management
-
-4. **Testing Patterns**
-   - TestStore usage and best practices
-
-### When to Load the Skill
-
-- **Before** writing any new component
-- **Before** modifying existing components
-- **When** debugging reactivity issues
-- **Any time** you're unsure about a pattern
-
-**The skill exists to prevent bugs - use it proactively, not reactively!**
+1. **State Management**: All persistent state belongs in the store. Use `$state` only for local component state (UI-only, ephemeral).
+2. **Animation**: State-driven animations with Motion One + PresentationState. CSS only for infinite loops (spinners, skeletons).
+3. **Testing**: Use TestStore with send/receive for exhaustive reducer testing.
+4. **Navigation**: Prefer parent observation for dismissal when the parent needs to react. The dismiss dependency is fine for simple close actions.
 
 ## Repository Structure
 

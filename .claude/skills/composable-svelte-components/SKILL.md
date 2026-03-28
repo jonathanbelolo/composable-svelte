@@ -107,7 +107,7 @@ Contextual menu positioned near trigger element.
 
 **Purpose**: User input elements that integrate with Composable Architecture.
 
-**Integration Pattern**: Value from $store.state, dispatch on change, validation state from store.
+**Integration Pattern**: Value from `$store` (subscription) or `$derived(store.state)` (rune-based), dispatch on change, validation state from store.
 
 See **composable-svelte-forms** skill for full patterns.
 
@@ -606,7 +606,7 @@ What kind of feedback?
 
 1. **No `$state` for Application State**: All state that affects behavior or can be tested must be in the store
 2. **Dispatch Actions**: User interactions dispatch actions to the store
-3. **Read from Store**: Render based on `$store.state`
+3. **Read from Store**: Render based on `$store` (subscription) or `$derived(store.state)` (rune-based)
 4. **Use `$derived`**: For computed values derived from store state
 5. **Props for Configuration**: Static configuration (labels, styles) can be props
 
