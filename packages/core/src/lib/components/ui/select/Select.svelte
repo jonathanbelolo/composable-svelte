@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createStore } from '../../../store.js';
+	import { createStore } from '../../../store.svelte.js';
 	import { selectReducer } from './select.reducer.js';
 	import { createInitialSelectState } from './select.types.js';
 	import type { SelectOption } from './select.types.js';

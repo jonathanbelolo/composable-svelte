@@ -34,7 +34,8 @@
 
 	// Get the appropriate avatar URL based on message role
 	const avatarUrl = $derived(message.role === 'user' ? userAvatarUrl : assistantAvatarUrl);
-	const avatarLabel = $derived(message.role === 'user' ? userLabel : assistantLabel);
+	const defaultLabel = $derived(message.role === 'user' ? userLabel : assistantLabel);
+	const avatarLabel = $derived(message.senderName ?? defaultLabel);
 
 	let contentElement: HTMLDivElement | undefined = $state();
 
@@ -88,7 +89,7 @@
 				</div>
 			{/if}
 			<span class="chat-message__role">
-				{message.role === 'user' ? userLabel : assistantLabel}
+				{avatarLabel}
 			</span>
 			<span class="chat-message__time">{timeString()}</span>
 		</div>

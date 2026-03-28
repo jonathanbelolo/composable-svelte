@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createStore } from '../../src/lib/store';
+import { createStore } from '../../src/lib/store.svelte';
 import { serializeStore, serializeState } from '../../src/lib/ssr/serialize';
 import { Effect } from '../../src/lib/effect';
 import type { Reducer } from '../../src/lib/types';

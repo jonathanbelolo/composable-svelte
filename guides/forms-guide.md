@@ -194,7 +194,7 @@ export const contactFormConfig: FormConfig<ContactFormData> = {
 ```typescript
 // app/app.reducer.ts
 import { createFormReducer } from '@composable-svelte/core/components/form';
-import { scope } from '@composable-svelte/core/navigation';
+import { scope } from '@composable-svelte/core';
 import { Effect } from '@composable-svelte/core';
 import { contactFormConfig } from '../features/contact-form/contact-form.config.js';
 
@@ -504,7 +504,7 @@ const formStore = {
 };
 ```
 
-**Why**: Svelte 5's `$derived` in FormField requires the store's `state` property to be reactive. A plain getter doesn't trigger reactivity tracking.
+**Why**: When creating a scoped sub-store from a parent store, the wrapper's `state` getter needs to return a reactive value. Using `$state()` + `$effect()` ensures the scoped wrapper tracks parent state changes. (Note: the main store's `state` property is already reactive via `$state.raw`, so this wrapper pattern is only needed when creating scoped sub-stores for child components like forms.)
 
 ---
 
@@ -543,8 +543,8 @@ Failed to resolve import "$lib/utils.js" from "Spinner.svelte"
 export default defineConfig({
   resolve: {
     alias: {
-      '@composable-svelte/core': resolve(__dirname, '../../packages/core/src'),
-      '$lib': resolve(__dirname, '../../packages/core/src/lib')  // Add this
+      '@composable-svelte/core': resolve(__dirname, '../../packages/core/src/lib'),
+      '$lib': resolve(__dirname, '../../packages/core/src/lib')
     }
   }
 });
@@ -603,8 +603,8 @@ export default defineConfig({
   plugins: [svelte()],
   resolve: {
     alias: {
-      '@composable-svelte/core': resolve(__dirname, '../../packages/core/src'),
-      '$lib': resolve(__dirname, '../../packages/core/src/lib')  // REQUIRED
+      '@composable-svelte/core': resolve(__dirname, '../../packages/core/src/lib'),
+      '$lib': resolve(__dirname, '../../packages/core/src/lib')
     }
   },
   test: {

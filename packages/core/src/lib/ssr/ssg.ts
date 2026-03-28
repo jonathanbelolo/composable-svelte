@@ -50,7 +50,7 @@
 
 import { renderToHTML, type RenderOptions } from './render.js';
 import type { Store, Reducer } from '../types.js';
-import { createStore } from '../store.js';
+import { createStore } from '../store.svelte.js';
 
 // Node.js modules - only used in Node environment (build-time SSG)
 // These are only called during build, never in browser

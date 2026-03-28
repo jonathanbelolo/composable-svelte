@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createStore } from '../../../store.js';
+	import { createStore } from '../../../store.svelte.js';
 	import { tooltipReducer } from './tooltip.reducer.js';
 	import { initialTooltipState } from './tooltip.types.js';
 	import TooltipPrimitive from './TooltipPrimitive.svelte';

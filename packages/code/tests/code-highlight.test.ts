@@ -57,8 +57,8 @@ describe('CodeHighlight Reducer', () => {
 		// Wait for async highlighting to complete
 		await new Promise((resolve) => setTimeout(resolve, 10));
 
-		expect($store.isHighlighting).toBe(false);
-		expect($store.highlightedCode).toBe('<span>const x = 5;</span>');
+		expect(store.state.isHighlighting).toBe(false);
+		expect(store.state.highlightedCode).toBe('<span>const x = 5;</span>');
 		expect(mockHighlightCode).toHaveBeenCalledWith('const x = 5;', 'typescript');
 	});
 
@@ -71,14 +71,14 @@ describe('CodeHighlight Reducer', () => {
 
 		store.dispatch({ type: 'codeChanged', code: 'let y = 10;' });
 
-		expect($store.code).toBe('let y = 10;');
-		expect($store.isHighlighting).toBe(true);
+		expect(store.state.code).toBe('let y = 10;');
+		expect(store.state.isHighlighting).toBe(true);
 
 		// Wait for highlighting
 		await new Promise((resolve) => setTimeout(resolve, 10));
 
-		expect($store.isHighlighting).toBe(false);
-		expect($store.highlightedCode).toContain('<span>');
+		expect(store.state.isHighlighting).toBe(false);
+		expect(store.state.highlightedCode).toContain('<span>');
 	});
 
 	it('handles languageChanged action', async () => {
@@ -90,12 +90,12 @@ describe('CodeHighlight Reducer', () => {
 
 		store.dispatch({ type: 'languageChanged', language: 'python' });
 
-		expect($store.language).toBe('python');
-		expect($store.isHighlighting).toBe(true);
+		expect(store.state.language).toBe('python');
+		expect(store.state.isHighlighting).toBe(true);
 
 		await new Promise((resolve) => setTimeout(resolve, 10));
 
-		expect($store.isHighlighting).toBe(false);
+		expect(store.state.isHighlighting).toBe(false);
 		expect(mockHighlightCode).toHaveBeenCalledWith('print("hello")', 'python');
 	});
 
@@ -108,7 +108,7 @@ describe('CodeHighlight Reducer', () => {
 
 		store.dispatch({ type: 'themeChanged', theme: 'light' });
 
-		expect($store.theme).toBe('light');
+		expect(store.state.theme).toBe('light');
 	});
 
 	it('handles toggleLineNumbers action', () => {
@@ -119,10 +119,10 @@ describe('CodeHighlight Reducer', () => {
 		});
 
 		store.dispatch({ type: 'toggleLineNumbers' });
-		expect($store.showLineNumbers).toBe(false);
+		expect(store.state.showLineNumbers).toBe(false);
 
 		store.dispatch({ type: 'toggleLineNumbers' });
-		expect($store.showLineNumbers).toBe(true);
+		expect(store.state.showLineNumbers).toBe(true);
 	});
 
 	it('handles highlightLinesChanged action', () => {
@@ -134,7 +134,7 @@ describe('CodeHighlight Reducer', () => {
 
 		store.dispatch({ type: 'highlightLinesChanged', lines: [1, 3, 5] });
 
-		expect($store.highlightLines).toEqual([1, 3, 5]);
+		expect(store.state.highlightLines).toEqual([1, 3, 5]);
 	});
 
 	it('handles highlighting errors gracefully', async () => {
@@ -154,7 +154,7 @@ describe('CodeHighlight Reducer', () => {
 
 		await new Promise((resolve) => setTimeout(resolve, 10));
 
-		expect($store.error).toBe('Highlighting failed');
-		expect($store.isHighlighting).toBe(false);
+		expect(store.state.error).toBe('Highlighting failed');
+		expect(store.state.isHighlighting).toBe(false);
 	});
 });

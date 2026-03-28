@@ -14,7 +14,7 @@
 -->
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { createStore } from '../../../store.js';
+	import { createStore } from '../../../store.svelte.js';
 	import { calendarReducer } from './calendar.reducer.js';
 	import type {
 		CalendarMode,

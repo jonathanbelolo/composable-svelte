@@ -42,7 +42,7 @@ export type { Effect as EffectType } from './types.js';
 // Store
 // ============================================================================
 
-export { createStore } from './store.js';
+export { createStore } from './store.svelte.js';
 
 // ============================================================================
 // Effects

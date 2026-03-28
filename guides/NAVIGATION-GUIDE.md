@@ -121,14 +121,16 @@ case 'destination': {
 }
 ```
 
-**❌ WRONG**: Child calling `deps.dismiss()` directly
+**Avoid for observed actions**: Don't use `deps.dismiss()` when the parent needs to react to the action.
 
 ```typescript
-// DON'T DO THIS - violates separation of concerns
+// ❌ WRONG for save — parent needs to handle the save data
 case 'saveButtonTapped':
-  deps.dismiss();  // ❌ Child shouldn't control parent state
+  deps.dismiss();  // Parent never sees this action!
   return [state, Effect.none()];
 ```
+
+The `dismiss` dependency (via `createDismissDependency()`) is fine for simple close/cancel buttons where the parent doesn't need to react.
 
 ---
 
@@ -541,12 +543,17 @@ case 'addToCart': {
 }
 ```
 
-**❌ DON'T**: Child calls dismiss directly
+**Avoid for observed actions**: Don't use `deps.dismiss()` for actions the parent needs to react to (like saves). The `dismiss` dependency is fine for simple close/cancel buttons.
 
 ```typescript
-// Child reducer
+// ❌ WRONG for save actions — parent never sees this
 case 'addButtonTapped':
-  deps.dismiss(); // ❌ Breaks separation of concerns
+  deps.dismiss(); // Parent can't observe the save!
+  return [state, Effect.none()];
+
+// ✅ OK for simple close
+case 'cancelButtonTapped':
+  deps.dismiss(); // Fine — parent doesn't need to react
   return [state, Effect.none()];
 ```
 

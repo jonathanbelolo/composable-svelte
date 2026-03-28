@@ -20,9 +20,9 @@ This guide documents best practices, common pitfalls, and patterns for implement
 
 ## Core Principles
 
-### ✅ DO: Use Parent Observation for Dismissal
+### ✅ DO: Prefer Parent Observation for Dismissal
 
-Child features should **not** have direct access to a `dismiss()` dependency. Instead, parents should **observe** child actions and handle dismissal.
+The library supports two approaches to dismissal. **Parent observation** is the recommended default because it keeps child reducers pure and gives the parent full control. The **dismiss dependency** (`createDismissDependency()`) is also fully supported and appropriate for simple cases where the child just needs to close itself. See "When to use which" below.
 
 ```typescript
 // ✅ CORRECT: Parent observes child action
@@ -47,22 +47,26 @@ case 'destination': {
 }
 ```
 
-```typescript
-// ❌ WRONG: Child calls dismiss dependency
-export interface ChildDependencies {
-  dismiss: () => void;  // ❌ Don't do this
-}
+**Dismiss Dependency (fine for simple cases)**:
 
+```typescript
+import { createDismissDependency } from '@composable-svelte/core/navigation';
+
+// Simple child that just needs to close itself
 const childReducer = (state, action, deps) => {
-  case 'saveButtonTapped':
-    deps.dismiss();  // ❌ Don't do this
+  case 'closeButtonTapped':
+    deps.dismiss();  // OK when parent doesn't need to observe this
     return [state, Effect.none()];
 }
 ```
 
+**When to use which**:
+- **Parent observation**: When the parent needs to react to the child's action (save data, update lists, show confirmation)
+- **Dismiss dependency**: When the child simply needs to close and the parent doesn't care why
+
 ### ✅ DO: Keep Child Reducers Pure
 
-Child reducers should be **pure functions** that only return state and effects. They should not directly trigger side effects like dismissal.
+Child reducers should be **pure functions** that only return state and effects. They should not directly trigger side effects like dismissal (unless using the dismiss dependency for simple close actions).
 
 ```typescript
 // ✅ CORRECT: Pure child reducer
@@ -223,21 +227,17 @@ export interface ProductDetailDependencies {
 ### When NOT to Use Dependencies
 
 Do **not** use dependencies for:
-- ❌ **Dismissal**: Use parent observation instead
 - ❌ **Navigation**: Use state changes instead
 - ❌ **Dispatch Functions**: Pass via store, not dependencies
 
 ```typescript
-// ❌ WRONG: Using dependencies for dismissal
-export interface ChildDependencies {
-  dismiss: () => void;  // ❌ Don't do this
-}
-
 // ❌ WRONG: Using dependencies for dispatch
 export interface ChildDependencies {
   dispatch: (action: ParentAction) => void;  // ❌ Don't do this
 }
 ```
+
+Note: The `dismiss` dependency is a valid use case — see `createDismissDependency()` from `@composable-svelte/core/navigation`. Use it for simple close actions; use parent observation when the parent needs to react.
 
 ### Providing Dependencies
 
@@ -280,25 +280,27 @@ const [newState, effect] = ifLetPresentation(
 
 ## Common Mistakes
 
-### Mistake 1: Calling `deps.dismiss()` in Child Reducer
+### Mistake 1: Using `deps.dismiss()` When Parent Needs to Observe
 
-**Problem**: Child reducer tries to dismiss itself by calling a `dismiss` dependency.
+**Problem**: Child reducer calls `deps.dismiss()` for an action the parent needs to react to (e.g., saving data).
 
 ```typescript
-// ❌ WRONG
+// ❌ WRONG when parent needs to handle the save
 case 'saveButtonTapped':
-  deps.dismiss();  // ❌ Don't do this
+  deps.dismiss();  // Parent never sees this action!
   return [state, Effect.none()];
 ```
 
-**Solution**: Remove `dismiss` dependency and let parent observe the action.
+**Solution**: Let parent observe the action so it can handle both the save and the dismissal.
 
 ```typescript
-// ✅ CORRECT
+// ✅ CORRECT for actions the parent needs to observe
 case 'saveButtonTapped':
-  // Parent will observe this action and handle dismissal
+  // Parent will observe this action, handle the save, and dismiss
   return [state, Effect.none()];
 ```
+
+Note: `deps.dismiss()` is fine for simple close/cancel actions where the parent doesn't need to react.
 
 ### Mistake 2: Not Providing Required Dependencies
 
@@ -639,13 +641,11 @@ test('Add to Cart flow - Add button dismisses sheet', async () => {
 
 ### Console Error: "deps.dismiss is not a function"
 
-**Problem**: Child reducer is trying to call `deps.dismiss()` but the dependency isn't provided.
+**Problem**: Child reducer is trying to call `deps.dismiss()` but the dependency wasn't provided.
 
-**Solution**:
-1. Remove `dismiss` from child dependencies interface
-2. Remove `deps.dismiss()` calls from child reducer
-3. Add parent observation for the child action
-4. Parent sets `destination: null` to dismiss
+**Solution** (choose one):
+1. **Provide the dependency**: Use `createDismissDependency()` from `@composable-svelte/core/navigation` when setting up the child
+2. **Switch to parent observation**: Remove `deps.dismiss()` from the child, let the parent observe the action and set `destination: null`
 
 ### Child Action Not Observed by Parent
 
@@ -738,7 +738,8 @@ return [
 
 ### ✅ DO
 
-- ✅ Use parent observation for dismissal
+- ✅ Prefer parent observation for dismissal when the parent needs to react
+- ✅ Use `dismiss` dependency for simple close/cancel actions
 - ✅ Keep child reducers pure
 - ✅ Provide required dependencies
 - ✅ Observe both success AND cancel actions
@@ -749,8 +750,7 @@ return [
 
 ### ❌ DON'T
 
-- ❌ Add `dismiss()` to child dependencies
-- ❌ Call `deps.dismiss()` in child reducers
+- ❌ Use `deps.dismiss()` for actions the parent needs to observe (saves, confirmations)
 - ❌ Pass empty dependencies when callbacks are expected
 - ❌ Forget to observe cancel actions
 - ❌ Enable click-outside on parents with nested UI
@@ -768,6 +768,6 @@ return [
 
 ---
 
-**Version**: 1.0.0
-**Last Updated**: 2025-01-26
+**Version**: 1.1.0
+**Last Updated**: 2026-03-28
 **Maintainer**: Composable Svelte Team

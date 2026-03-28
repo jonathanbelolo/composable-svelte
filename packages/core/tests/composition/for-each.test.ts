@@ -6,7 +6,7 @@ import {
   type IdentifiedItem
 } from '../../src/lib/composition/for-each.js';
 import { scopeToElement } from '../../src/lib/navigation/scope-to-element.js';
-import { createStore } from '../../src/lib/store.js';
+import { createStore } from '../../src/lib/store.svelte.js';
 import { Effect } from '../../src/lib/effect.js';
 import type { Reducer } from '../../src/lib/types.js';
 

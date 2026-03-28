@@ -2,7 +2,8 @@
  * Store implementation for Composable Svelte.
  *
  * The Store is the runtime that manages state, processes actions, and executes effects.
- * It uses Svelte 5's $state rune for reactivity.
+ * Uses $state.raw() for reactive state tracking across compiled library boundaries.
+ * Consumers can use either $derived(store.state) or $store (subscribe-based) patterns.
  */
 
 import type {
@@ -30,10 +31,8 @@ import { isServer } from './ssr/utils.js';
 export function createStore<State, Action, Dependencies = any>(
   config: StoreConfig<State, Action, Dependencies>
 ): Store<State, Action> {
-  // Use plain JavaScript object - no $state runes
-  // Runes don't work across compiled library boundaries
-  // Components must use the subscription pattern to get updates
-  let state = config.initialState;
+  // $state.raw tracks reassignment only (no deep proxy) — ideal for immutable reducer state
+  let state = $state.raw(config.initialState);
 
   // Action history for debugging/time-travel
   const actionHistory: Action[] = [];

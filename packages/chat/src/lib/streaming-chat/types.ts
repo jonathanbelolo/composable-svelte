@@ -68,6 +68,8 @@ export interface Message {
 	attachments?: MessageAttachment[];
 	/** Optional emoji reactions */
 	reactions?: MessageReaction[];
+	/** Optional custom sender name (overrides userLabel/assistantLabel in display) */
+	senderName?: string;
 }
 
 /**

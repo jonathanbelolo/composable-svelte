@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { createStore } from '$lib/store.js';
+	import { createStore } from '$lib/store.svelte.js';
 	import type { Store } from '$lib/types.js';
 	import {
 		imageGalleryReducer,

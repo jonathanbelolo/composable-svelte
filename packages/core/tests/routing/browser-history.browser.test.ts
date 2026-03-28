@@ -9,7 +9,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { syncBrowserHistory } from '../../src/lib/routing/browser-history';
-import { createStore } from '../../src/lib/store';
+import { createStore } from '../../src/lib/store.svelte';
 import type { Reducer } from '../../src/lib/types';
 import { Effect } from '../../src/lib/effect';
 

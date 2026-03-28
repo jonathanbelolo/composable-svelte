@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createStore } from '../../../store.js';
+	import { createStore } from '../../../store.svelte.js';
 	import { treeViewReducer } from './tree-view.reducer.js';
 	import { createInitialTreeViewState } from './tree-view.types.js';
 	import type { TreeNode } from './tree-view.types.js';

@@ -4,7 +4,7 @@
  * Restores server-rendered state in the browser and reactivates effects.
  */
 
-import { createStore } from '../store.js';
+import { createStore } from '../store.svelte.js';
 import type { Store, StoreConfig } from '../types.js';
 
 /**

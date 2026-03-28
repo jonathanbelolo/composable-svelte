@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createStore } from '../../../store.js';
+	import { createStore } from '../../../store.svelte.js';
 	import { comboboxReducer } from './combobox.reducer.js';
 	import { createInitialComboboxState } from './combobox.types.js';
 	import type { ComboboxOption } from './combobox.types.js';

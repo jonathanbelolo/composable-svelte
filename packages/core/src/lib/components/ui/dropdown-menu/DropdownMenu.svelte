@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createStore } from '../../../store.js';
+	import { createStore } from '../../../store.svelte.js';
 	import { dropdownMenuReducer } from './dropdown-menu.reducer.js';
 	import { createInitialDropdownMenuState } from './dropdown-menu.types.js';
 	import type { MenuItem } from './dropdown-menu.types.js';

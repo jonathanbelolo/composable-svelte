@@ -1,6 +1,6 @@
 {
   "name": "@composable-svelte/code",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Code editor, syntax highlighting, and node-based canvas components for Composable Svelte - Built with Prism.js, CodeMirror, and SvelteFlow",
   "type": "module",
   "main": "./dist/index.js",

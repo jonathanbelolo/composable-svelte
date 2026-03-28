@@ -1,5 +1,5 @@
 <script lang="ts" generics="T = unknown">
-  import { createStore } from '../../../store.js';
+  import { createStore } from '../../../store.svelte.js';
   import { carouselReducer } from './carousel.reducer.js';
   import { createInitialCarouselState } from './carousel.types.js';
   import type { CarouselSlide } from './carousel.types.js';

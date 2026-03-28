@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { cn } from '../../utils.js';
-	import { createStore } from '../../store.js';
+	import { createStore } from '../../store.svelte.js';
 	import { toastReducer } from './toast.reducer.js';
 	import { createInitialToastState, type Toast, type ToastDependencies } from './toast.types.js';
 	import ToastComponent from './Toast.svelte';

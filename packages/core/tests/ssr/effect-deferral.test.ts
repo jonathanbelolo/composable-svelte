@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createStore } from '../../src/lib/store';
+import { createStore } from '../../src/lib/store.svelte';
 import { Effect } from '../../src/lib/effect';
 import type { Reducer } from '../../src/lib/types';
 

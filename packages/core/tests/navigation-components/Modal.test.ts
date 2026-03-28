@@ -3,7 +3,7 @@ import { page, userEvent } from 'vitest/browser';
 import { describe, it, expect } from 'vitest';
 import Modal from '../../src/lib/navigation-components/Modal.svelte';
 import ModalTestWrapper from './ModalTestWrapper.svelte';
-import { createStore } from '../../src/lib/store.js';
+import { createStore } from '../../src/lib/store.svelte.js';
 import { scopeToDestination } from '../../src/lib/navigation/scope-to-destination.js';
 import { Effect } from '../../src/lib/effect.js';
 

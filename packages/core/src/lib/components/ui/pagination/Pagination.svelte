@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createStore } from '../../../store.js';
+	import { createStore } from '../../../store.svelte.js';
 	import { paginationReducer } from './pagination.reducer.js';
 	import { createInitialPaginationState } from './pagination.types.js';
 	import { cn } from '../../../utils.js';

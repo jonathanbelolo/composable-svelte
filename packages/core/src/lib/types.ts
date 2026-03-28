@@ -173,11 +173,15 @@ export interface StoreConfig<State, Action, Dependencies = any> {
 export interface Store<State, Action> {
   /**
    * Current state (read-only).
-   * In Svelte 5, this uses $state for reactivity.
+   * Reactive via $state.raw — works with both rune and subscription patterns.
    *
-   * Access in components:
+   * Access in components (either pattern works):
    * ```typescript
+   * // Rune-based (recommended for Svelte 5)
    * const count = $derived(store.state.count);
+   *
+   * // Subscription-based (also works)
+   * // {$store.count}
    * ```
    */
   readonly state: State;

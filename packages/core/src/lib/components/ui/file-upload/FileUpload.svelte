@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createStore } from '../../../store.js';
+  import { createStore } from '../../../store.svelte.js';
   import { fileUploadReducer } from './file-upload.reducer.js';
   import { createInitialFileUploadState, formatFileSize } from './file-upload.types.js';
   import type { FileValidationConfig } from './file-upload.types.js';

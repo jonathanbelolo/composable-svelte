@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createStore } from '../../../src/lib/store.js';
+	import { createStore } from '../../../src/lib/store.svelte.js';
 	import Drawer from '../../../src/lib/navigation-components/Drawer.svelte';
 	import type { PresentationState } from '../../../src/lib/navigation/types.js';
 	import { Effect } from '../../../src/lib/effect.js';

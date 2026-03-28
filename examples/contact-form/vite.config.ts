@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [svelte()],
   resolve: {
     alias: {
-      '@composable-svelte/core': resolve(__dirname, '../../packages/core/src'),
+      '@composable-svelte/core': resolve(__dirname, '../../packages/core/src/lib'),
       '$lib': resolve(__dirname, '../../packages/core/src/lib')
     }
   },
