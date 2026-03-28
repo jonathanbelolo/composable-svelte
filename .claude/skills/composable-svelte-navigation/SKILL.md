@@ -500,28 +500,45 @@ $effect(() => {
 3. **Toast/Alert Animations**: Slide in from edge, Notification animations
 4. **Navigation Animations**: Page transitions, Stack push/pop, route changes
 
-### Animation Helpers Reference
+### All Animation Helpers (26 functions)
 
 ```typescript
-// Modal animations (fade + scale)
-animateModalIn(element: HTMLElement): Promise<void>
-animateModalOut(element: HTMLElement): Promise<void>
+import { animateModalIn, animateSheetIn, /* etc */ } from '@composable-svelte/core/animation';
 
-// Sheet animations (slide from bottom)
-animateSheetIn(element: HTMLElement): Promise<void>
-animateSheetOut(element: HTMLElement): Promise<void>
+// Modal (fade + scale)
+animateModalIn(element), animateModalOut(element)
+animateBackdropIn(element), animateBackdropOut(element)
 
-// Drawer animations (slide from side)
-animateDrawerIn(element: HTMLElement, side: 'left' | 'right'): Promise<void>
-animateDrawerOut(element: HTMLElement, side: 'left' | 'right'): Promise<void>
+// Sheet (slide from bottom)
+animateSheetIn(element), animateSheetOut(element)
 
-// Accordion animations (height)
-animateAccordionExpand(element: HTMLElement): Promise<void>
-animateAccordionCollapse(element: HTMLElement): Promise<void>
+// Drawer (slide from side)
+animateDrawerIn(element, side), animateDrawerOut(element, side)
 
-// Dropdown animations (fade + slide)
-animateDropdownIn(element: HTMLElement): Promise<void>
-animateDropdownOut(element: HTMLElement): Promise<void>
+// Alert (fade + scale, smaller)
+animateAlertIn(element), animateAlertOut(element)
+
+// Tooltip (fade + slight scale)
+animateTooltipIn(element), animateTooltipOut(element)
+
+// Toast (slide from edge)
+animateToastIn(element), animateToastOut(element)
+
+// Dropdown (fade + slide)
+animateDropdownIn(element), animateDropdownOut(element)
+
+// Sidebar (width expand/collapse)
+animateSidebarExpand(element), animateSidebarCollapse(element)
+
+// Popover (fade + scale)
+animatePopoverIn(element), animatePopoverOut(element)
+
+// NavigationStack (slide left/right)
+animateStackPushIn(element), animateStackPushOut(element)
+animateStackPopIn(element), animateStackPopOut(element)
+
+// Accordion (height expand/collapse)
+animateAccordionExpand(element), animateAccordionCollapse(element)
 ```
 
 ### CSS @keyframes (EXCEPTIONS ONLY)
@@ -1187,18 +1204,226 @@ case 'destination': {
 
 ---
 
+## STACK NAVIGATION
+
+For multi-screen linear flows (wizards, drill-down navigation).
+
+```typescript
+import { push, pop, popToRoot, setPath, handleStackAction, topScreen, rootScreen, canGoBack, stackDepth } from '@composable-svelte/core/navigation';
+
+// State: array of screens
+interface AppState {
+  stack: Screen[];
+}
+
+// Push a new screen
+const [newStack, effect] = push(state.stack, newScreen);
+
+// Pop current screen
+const [newStack, effect] = pop(state.stack);
+
+// Pop to root
+const [newStack, effect] = popToRoot(state.stack);
+
+// Replace entire path
+const [newStack, effect] = setPath(state.stack, [screen1, screen2]);
+
+// Handle actions dispatched from screens
+const [newState, effect] = handleStackAction(state, action, screenReducer, deps);
+
+// Query helpers
+const current = topScreen(state.stack);     // Last screen
+const first = rootScreen(state.stack);      // First screen
+const canPop = canGoBack(state.stack);      // stack.length > 1
+const depth = stackDepth(state.stack);      // stack.length
+```
+
+### NavigationStack Component
+
+```svelte
+<script lang="ts">
+  import { NavigationStack, AnimatedNavigationStack } from '@composable-svelte/core/navigation-components';
+</script>
+
+<!-- Basic (no animations) -->
+<NavigationStack {store}>
+  {#snippet renderScreen(screen, index)}
+    {#if screen.type === 'step1'}
+      <Step1 {store} />
+    {:else if screen.type === 'step2'}
+      <Step2 {store} />
+    {/if}
+  {/snippet}
+</NavigationStack>
+
+<!-- With push/pop animations -->
+<AnimatedNavigationStack {store}>
+  {#snippet renderScreen(screen, index)}
+    <!-- same -->
+  {/snippet}
+</AnimatedNavigationStack>
+```
+
+---
+
+## DESTINATION REDUCERS
+
+Route actions to the correct child reducer based on destination type.
+
+```typescript
+import { createDestinationReducer, createDestination, isDestinationType, extractDestinationState } from '@composable-svelte/core/navigation';
+
+// Create a reducer that routes to the correct child
+const destinationReducer = createDestinationReducer({
+  addItem: addItemReducer,
+  editItem: editItemReducer,
+  confirmDelete: confirmDeleteReducer
+});
+
+// Shorthand for creating destination + reducer + types together
+const { reducer, types } = createDestination({
+  addItem: addItemReducer,
+  editItem: editItemReducer
+});
+
+// Type guards
+if (isDestinationType(state.destination, 'addItem')) {
+  // state.destination is narrowed to { type: 'addItem'; state: AddItemState }
+}
+
+const addState = extractDestinationState(state.destination, 'addItem');
+// addState: AddItemState | null
+```
+
+---
+
+## MATCHERS
+
+Pattern matching for nested presentation actions.
+
+```typescript
+import { matchPresentationAction, isActionAtPath, matchPaths, extractDestinationOnAction } from '@composable-svelte/core/navigation';
+
+// Check if action matches a case path
+if (isActionAtPath(action, 'addItem.saveButtonTapped')) {
+  // Action is addItem's saveButtonTapped
+}
+
+// Match and extract
+const result = matchPresentationAction(action, state, 'editItem.saveButtonTapped');
+if (result) {
+  // result is the EditItemState
+}
+
+// Multi-case matching
+const matched = matchPaths(action, state, {
+  'addItem.saveButtonTapped': (addState) => ({ type: 'add', item: addState }),
+  'editItem.saveButtonTapped': (editState) => ({ type: 'edit', item: editState })
+});
+
+// Extract destination state when a specific action fires
+const destState = extractDestinationOnAction(action, state, 'confirmDelete.confirmButtonTapped');
+```
+
+---
+
+## DISMISS DEPENDENCY
+
+Children can dismiss themselves via an injectable dependency. Use for simple close/cancel; prefer parent observation when the parent needs to react.
+
+```typescript
+import { createDismissDependency, createDismissDependencyWithCleanup, dismissDependency } from '@composable-svelte/core/navigation';
+
+// Create dismiss function for a child
+const dismiss = createDismissDependency(parentStore, 'destination');
+
+// With cleanup callback
+const dismiss = createDismissDependencyWithCleanup(parentStore, 'destination', () => {
+  console.log('child dismissed');
+});
+
+// Shorthand helper
+const deps = { dismiss: dismissDependency(parentStore, 'destination') };
+
+// Child reducer uses it
+case 'closeButtonTapped':
+  deps.dismiss();  // OK for simple close
+  return [state, Effect.none()];
+```
+
+---
+
+## ELEMENT SCOPING
+
+Scope a store to a specific element in a list (for forEach/forEachElement patterns).
+
+```typescript
+import { scopeToElement } from '@composable-svelte/core/navigation';
+
+// Create a scoped store for a specific list item
+const itemStore = scopeToElement(parentStore, {
+  getArray: (s) => s.items,
+  id: item.id,
+  actionWrapper: (id, action) => ({ type: 'item', id, action })
+});
+```
+
+---
+
+## PHASE 3 DSL
+
+Fluent APIs for reducer composition and store scoping.
+
+```typescript
+import { integrate, scopeTo } from '@composable-svelte/core/navigation';
+
+// Fluent reducer integration
+const appReducer = integrate(baseReducer)
+  .with('counter', counterReducer)
+  .with('todos', todoReducer)
+  .build();
+
+// Fluent store scoping for components
+const childStore = scopeTo(store).into('destination').case('addItem');
+```
+
+---
+
+## ALL NAVIGATION COMPONENTS
+
+| Component | Purpose | Import from |
+|-----------|---------|-------------|
+| Modal | Full-screen overlay dialog | `core/navigation-components` |
+| Sheet | Bottom drawer (mobile-first) | `core/navigation-components` |
+| Drawer | Side panel (left/right) | `core/navigation-components` |
+| Alert | Confirmation dialog | `core/navigation-components` |
+| Popover | Contextual popup | `core/navigation-components` |
+| Sidebar | Persistent side navigation | `core/navigation-components` |
+| Tabs | Horizontal tabbed navigation | `core/navigation-components` |
+| NavigationStack | Multi-screen stack | `core/navigation-components` |
+| AnimatedNavigationStack | Stack with push/pop animations | `core/navigation-components` |
+| DestinationRouter | Declarative destination routing | `core/navigation-components` |
+
+Each component also has a `*Primitive` variant for advanced customization (e.g., `ModalPrimitive`, `SheetPrimitive`).
+
+---
+
 ## SUMMARY
 
 This skill covers navigation and animation patterns for Composable Svelte:
 
 1. **Critical Rule**: State-driven animations only (Motion One + PresentationState)
 2. **Tree-Based Navigation**: Non-null = presented, null = dismissed
-3. **ifLet Composition**: For optional children (modals, sheets, drawers)
-4. **Parent Observation**: React to child completion/cancellation
-5. **PresentationState Lifecycle**: idle → presenting → presented → dismissing → idle
-6. **Motion One Integration**: Animation helpers for all lifecycle animations
-7. **URL Routing**: Sync browser history with state
-8. **Navigation Components**: Modal, Sheet, Drawer, Alert, Popover
+3. **Stack Navigation**: push, pop, popToRoot, handleStackAction for linear flows
+4. **ifLet Composition**: For optional children (modals, sheets, drawers)
+5. **Destination Reducers**: createDestinationReducer, createDestination for enum routing
+6. **Matchers**: matchPresentationAction, isActionAtPath for pattern matching
+7. **Parent Observation**: React to child completion/cancellation
+8. **Dismiss Dependency**: createDismissDependency for simple child self-dismissal
+9. **PresentationState Lifecycle**: idle → presenting → presented → dismissing → idle
+10. **Motion One Integration**: 26 animation helpers for all lifecycle animations
+11. **URL Routing**: Sync browser history with state
+12. **10 Navigation Components**: Modal, Sheet, Drawer, Alert, Popover, Sidebar, Tabs, NavigationStack, AnimatedNavigationStack, DestinationRouter (+ Primitive variants)
 
 **Remember**: All component lifecycle animations MUST use Motion One + PresentationState. NO CSS transitions for UI interactions.
 

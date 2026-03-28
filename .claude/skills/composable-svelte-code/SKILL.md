@@ -672,3 +672,30 @@ await store.send({
 - Check language name matches Prism.js language keys
 - Ensure Prism.js language pack is loaded
 - Verify syntax highlighting CSS is included
+
+---
+
+## ALL EXPORTS
+
+### CodeHighlight
+- `CodeHighlight` — Component
+- `codeHighlightReducer`, `createInitialState()` — State management
+- `highlightCode(code, lang)` — Highlight code string with Prism.js
+- `loadLanguage(lang)` — Dynamically load a Prism.js language grammar
+- Types: `CodeHighlightState`, `CodeHighlightAction`, `CodeHighlightDependencies`, `SupportedLanguage`
+
+### CodeEditor
+- `CodeEditor` — Component
+- `codeEditorReducer`, `createEditorInitialState()` — State management
+- `createEditorView(config)` — Create a CodeMirror EditorView
+- `loadEditorLanguage(lang)` — Load a CodeMirror language extension
+- `updateEditorValue(view, value)`, `updateEditorLanguage(view, lang)`, `updateEditorTheme(view, theme)`, `updateEditorReadOnly(view, readOnly)`, `updateTabSize(view, size)` — Programmatic editor updates
+- `focusEditor(view)`, `blurEditor(view)` — Focus management
+- Types: `CodeEditorState`, `CodeEditorAction`, `CodeEditorDependencies`, `EditorLanguage`, `EditorSelection`
+
+### NodeCanvas
+- `NodeCanvas` — Component
+- `nodeCanvasReducer`, `createInitialNodeCanvasState(config)` — State management
+- `createConnectionValidator(config)`, `permissiveValidator`, `strictValidator`, `composeValidators(...validators)` — Connection validation
+- `nodesToArray(nodes)`, `edgesToArray(edges)` — Conversion utilities
+- Types: `NodeCanvasState`, `NodeCanvasAction`, `NodeCanvasDependencies`, `NodeTypeDefinition`, `PortDefinition`, `ConnectionValidation`, `ConnectionValidator`

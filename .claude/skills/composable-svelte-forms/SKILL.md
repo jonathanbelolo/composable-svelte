@@ -276,15 +276,28 @@ if (action.action.type === 'validationFailed') {
 ### FormState Type
 
 ```typescript
-interface FormState<T> {
-  data: T;                          // Current form data
-  errors: Record<string, string>;   // Field-level errors
-  isSubmitting: boolean;            // ✅ USE THIS for loading state
-  touched: Record<string, boolean>; // Which fields have been touched
-  isDirty: boolean;                 // Has form been modified?
-  isValid: boolean;                 // Are all fields valid?
+interface FormState<T extends Record<string, any>> {
+  data: T;                                    // Current form data
+  fields: { [K in keyof T]: FieldState };     // Per-field state
+  schema: ZodSchema<T>;                       // Zod schema for validation
+  formErrors: string[];                       // Cross-field validation errors
+  isValidating: boolean;                      // Form-level validation in progress
+  isSubmitting: boolean;                      // ✅ USE THIS for loading state
+  submitCount: number;                        // Submission attempts
+  submitError: string | null;                 // Last submission error
+  lastSubmitted: Date | null;                 // Last successful submit
+}
+
+interface FieldState {
+  touched: boolean;      // Has user interacted?
+  dirty: boolean;        // Has value changed from initial?
+  error: string | null;  // Validation error
+  isValidating: boolean; // Async validation in progress
+  warnings: string[];    // Non-blocking warnings
 }
 ```
+
+Access field state via `formStore.state.fields.email.error`, not a top-level `errors` record.
 
 ### CRITICAL: Use isSubmitting
 
@@ -312,14 +325,40 @@ interface FormState<T> {
 
 ```typescript
 type FormAction<T> =
+  // Field interactions
   | { type: 'fieldChanged'; field: keyof T; value: any }
   | { type: 'fieldBlurred'; field: keyof T }
-  | { type: 'submit' }
-  | { type: 'reset' }
-  | { type: 'submissionSucceeded' }
+  | { type: 'fieldFocused'; field: keyof T }
+  // Validation lifecycle
+  | { type: 'fieldValidationStarted'; field: keyof T }
+  | { type: 'fieldValidationCompleted'; field: keyof T; error: string | null }
+  | { type: 'formValidationStarted' }
+  | { type: 'formValidationCompleted'; errors: string[] }
+  // Submission lifecycle
+  | { type: 'submitTriggered' }
+  | { type: 'submissionStarted' }
+  | { type: 'submissionSucceeded'; response?: unknown }
   | { type: 'submissionFailed'; error: string }
-  | { type: 'validationFailed'; errors: Record<string, string> };
+  // Form management
+  | { type: 'formReset'; data?: T }
+  | { type: 'setFieldValue'; field: keyof T; value: any }
+  | { type: 'setFieldError'; field: keyof T; error: string }
+  | { type: 'clearFieldError'; field: keyof T };
 ```
+
+### Form Components
+
+All exported from `@composable-svelte/core/components/form`:
+
+| Component | Purpose |
+|-----------|---------|
+| `Form` | Form wrapper (standalone or integrated mode) |
+| `FormField` | Field wrapper providing `{ field, send }` snippet context |
+| `FormControl` | Wraps the actual input control |
+| `FormItem` | Layout wrapper for a field + label + message group |
+| `FormLabel` | Accessible label linked to form control |
+| `FormMessage` | Displays field validation error or description |
+| `FormDescription` | Helper text below a field |
 
 ### Field-Level Errors
 

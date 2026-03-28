@@ -1094,6 +1094,34 @@ await store.send({
 
 ---
 
+## ALL EXPORTS
+
+### Components
+- `Map` — Main map component
+- `MapPrimitive` — Low-level map for advanced customization
+- `GeoJSONLayer` — Render GeoJSON data on map (child of Map)
+- `HeatmapLayer` — Point density heatmap visualization (child of Map)
+- `MapPopup` — Popup anchored to a map position (child of Map)
+- `TileProviderControl` — UI control to switch tile providers (child of Map)
+
+### State Management
+- `mapReducer` — Map state reducer
+- `createInitialMapState(config)` — Initial state factory
+
+### Adapters & Utilities
+- `createMapAdapter(config)` — Create a map adapter instance
+- `MaplibreAdapter` — Maplibre GL adapter (default)
+- `TILE_PROVIDERS` — Constant with all built-in tile provider configs
+- `getTileProviderConfig(provider)` — Get config for a specific tile provider
+- `getStyleURL(provider)` — Get the style/tile URL for a provider
+- `getAvailableTileProviders()` — List all available tile providers
+- `requiresAPIKey(provider)` — Check if provider needs an API key
+
+### Types
+`MapProvider`, `TileProvider`, `LngLat`, `BBox`, `MapViewport`, `Marker`, `GeoJSON`, `LayerStyle`, `Layer`, `Popup`, `FeatureReference`, `MapState`, `MapAction`, `FlyToOptions`, `MapAdapter`, `MapInitOptions`, `TileProviderConfig`
+
+---
+
 ## CROSS-REFERENCES
 
 **Related Skills**:

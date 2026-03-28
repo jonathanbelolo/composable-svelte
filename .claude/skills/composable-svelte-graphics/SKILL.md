@@ -964,3 +964,35 @@ These features are planned but not yet implemented:
 - Ensure `@composable-svelte/graphics` is installed
 - Check geometry config matches type (e.g., `box` requires `size`, not `radius`)
 - Verify Vector3 arrays are exactly 3 numbers `[x, y, z]`
+
+---
+
+## ADDITIONAL EXPORTS
+
+### WebGLOverlay
+
+Embeds a WebGL/WebGPU canvas as an overlay within a web layout:
+
+```svelte
+import { WebGLOverlay } from '@composable-svelte/graphics';
+
+<WebGLOverlay {store} width={800} height={600} />
+```
+
+### Shader Presets
+
+Pre-built shader configurations available via:
+
+```typescript
+import { /* shader presets */ } from '@composable-svelte/graphics';
+```
+
+### BabylonAdapter
+
+Direct access to the Babylon.js engine for advanced use cases beyond the declarative API:
+
+```typescript
+import { BabylonAdapter } from '@composable-svelte/graphics';
+
+const adapter = new BabylonAdapter(canvas, { webgpu: true });
+```

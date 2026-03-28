@@ -584,19 +584,39 @@ const todoReducer: Reducer<TodoState, TodoAction> = (state, action) => {
   }
 };
 
-// Collection reducer with forEach()
-import { integrate } from '@composable-svelte/core';
+// Collection reducer with forEachElement() - simplified API for standard pattern
+import { forEachElement, elementAction } from '@composable-svelte/core';
 
-const todosReducer = integrate<TodosState, any, Deps>()
-  .forEach('todo', s => s.todos, (s, todos) => ({ ...s, todos }), todoReducer)
-  .build();
+// forEachElement(actionType, getArray, setArray, childReducer)
+// Assumes parent action shape: { type: actionType, id: ID, action: ChildAction }
+const todosForEach = forEachElement(
+  'todo',                                       // action type to match
+  (s: TodosState) => s.todos,                   // get array from parent state
+  (s, todos) => ({ ...s, todos }),               // set array in parent state
+  todoReducer                                    // child reducer
+);
+
+// For full control, use forEach(config) with explicit extractChild/wrapChild:
+import { forEach } from '@composable-svelte/core';
+
+const todosForEachFull = forEach({
+  getArray: (s: TodosState) => s.todos,
+  setArray: (s, todos) => ({ ...s, todos }),
+  extractChild: (a) => a.type === 'todo' ? { id: a.id, action: a.action } : null,
+  wrapChild: (id, action) => ({ type: 'todo', id, action }),
+  childReducer: todoReducer
+});
+
+// Helper to create properly-typed element actions:
+// elementAction(type, id, action) => { type, id, action }
+const action = elementAction('todo', 'todo-1', { type: 'toggle' });
 
 // Component
-import { scopeToElement } from '@composable-svelte/core';
-
 {#each $store.todos as todo (todo.id)}
-  {@const todoStore = scopeToElement(store, 'todo', todo.id)}
-  <Todo store={todoStore} />
+  <Todo
+    {todo}
+    onToggle={() => store.dispatch(elementAction('todo', todo.id, { type: 'toggle' }))}
+  />
 {/each}
 ```
 

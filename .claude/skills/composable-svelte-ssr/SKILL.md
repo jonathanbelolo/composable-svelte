@@ -1083,6 +1083,92 @@ pnpm build:ssg
 
 ---
 
+## SECURITY MIDDLEWARE
+
+The SSR module includes security middleware for production Fastify servers.
+
+### Security Headers
+
+```typescript
+import { createSecurityHeaders, fastifySecurityHeaders, defaultSecurityHeaders } from '@composable-svelte/core/ssr';
+
+// Use with Fastify
+app.register(fastifySecurityHeaders);
+
+// Or create custom config
+const headers = createSecurityHeaders({
+  contentSecurityPolicy: "default-src 'self'",
+  strictTransportSecurity: 'max-age=31536000; includeSubDomains',
+  xFrameOptions: 'DENY'
+});
+
+// Default headers available as constant
+console.log(defaultSecurityHeaders);
+```
+
+### HTML Sanitization
+
+```typescript
+import { sanitizeHTML, createSanitizer, defaultSanitizeOptions } from '@composable-svelte/core/ssr';
+
+// Quick sanitize
+const clean = sanitizeHTML('<script>alert("xss")</script><p>Safe</p>');
+// '<p>Safe</p>'
+
+// Custom sanitizer
+const sanitizer = createSanitizer({
+  allowedTags: ['p', 'b', 'i', 'a'],
+  allowedAttributes: { a: ['href'] }
+});
+const clean = sanitizer('<a href="/" onclick="evil()">Link</a>');
+```
+
+### Rate Limiting
+
+```typescript
+import { RateLimiter, fastifyRateLimit } from '@composable-svelte/core/ssr';
+
+// Use with Fastify
+app.register(fastifyRateLimit, { max: 100, timeWindow: '1 minute' });
+
+// Standalone rate limiter
+const limiter = new RateLimiter({ max: 100, windowMs: 60000 });
+if (limiter.isRateLimited(clientIP)) {
+  return res.status(429).send('Too many requests');
+}
+```
+
+---
+
+## ADDITIONAL SSR EXPORTS
+
+```typescript
+import {
+  serializeStore,     // Serialize entire store (shorthand for serializeState(store.state))
+  renderComponent,    // Render a single component to HTML (without full page wrapper)
+  buildHydrationScript, // Generate the <script> tag for client hydration
+  isServer,           // true on server, false in browser
+  isBrowser           // true in browser, false on server (also exported from core/dependencies)
+} from '@composable-svelte/core/ssr';
+
+// renderComponent - render without full HTML page
+const componentHTML = renderComponent(MyComponent, { props });
+
+// buildHydrationScript - generate hydration <script> tag
+const script = buildHydrationScript(store, { id: '__APP_STATE__' });
+```
+
+### SSG Import Path
+
+`generateStaticSite` is available only via the separate subpath to avoid Node.js modules in browser builds:
+
+```typescript
+import { generateStaticSite } from '@composable-svelte/core/ssr/ssg';
+// NOT from '@composable-svelte/core/ssr'
+```
+
+---
+
 ## SUMMARY
 
 This skill covers SSR and SSG patterns for Composable Svelte:

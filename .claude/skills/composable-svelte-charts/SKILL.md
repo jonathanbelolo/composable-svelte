@@ -988,3 +988,62 @@ await store.send({ type: 'clearSelection' }, (state) => {
 - **graphics**: 3D scenes, WebGPU/WebGL (see composable-svelte-graphics)
 - **maps**: Geospatial data (see composable-svelte-maps)
 - **code**: Code editors, media players (see composable-svelte-code)
+
+---
+
+## COMPLETE API REFERENCE
+
+All exports from `@composable-svelte/charts`:
+
+### Types
+
+- `ChartState` - Chart state interface
+- `ChartAction` - Chart action discriminated union
+- `ChartConfig` - Chart configuration options
+- `SelectionState` - Selection state (point, range, brush)
+- `ZoomTransform` - Zoom/pan transform `{ x, y, k }`
+- `PlotSpec` - Observable Plot specification
+- `DataTransform` - Data transform function type `(data: T[]) => T[]`
+- `DataTransforms` - Namespace object with all transform functions
+
+### Reducers
+
+- `chartReducer` - Pure reducer for chart state management
+- `createInitialChartState(config)` - Factory for initial chart state
+
+### Components
+
+- `Chart` - High-level chart component (scatter, line, bar, area, histogram)
+- `ChartPrimitive` - Low-level chart primitive for custom chart implementations
+- `ChartTooltip` - Standalone tooltip component for chart data points
+
+### Utility Exports: Plot Builder (`plot-builder`)
+
+- `buildScatterPlot(state, config)` - Build Observable Plot scatter specification
+- `buildLineChart(state, config)` - Build Observable Plot line specification
+- `buildBarChart(state, config)` - Build Observable Plot bar specification
+- `buildAreaChart(state, config)` - Build Observable Plot area specification
+- `buildHistogram(state, config)` - Build Observable Plot histogram specification
+- `buildPlot(state, config)` - Build plot specification by chart type
+- `applyZoomToDomain(domain, transform)` - Apply zoom transform to axis domain
+- `calculateDomain(data, accessor)` - Calculate min/max domain from data
+
+### Utility Exports: Data Transforms (`data-transforms`)
+
+- `filter(predicate)` - Filter data by predicate
+- `sortBy(field, direction)` - Sort data by field
+- `groupBy(field)` - Group data by field
+- `aggregate(field, fn)` - Aggregate grouped data
+- `compose(...transforms)` - Compose multiple transforms into a pipeline
+- `binData(field, bins)` - Bin numerical data into histogram buckets
+- `rollup(field, fn)` - Roll up grouped data with aggregation
+- `topN(n, field)` - Take top N items by field value
+- `unique(field)` - Deduplicate data by field
+- `sample(n)` - Randomly sample N items from data
+- `DataTransforms` - Namespace object containing all transform functions
+
+### Utility Exports: Responsive (`responsive`)
+
+- `createResizeObserver(element, dispatch)` - Create ResizeObserver for auto-sizing
+- `calculateDimensions(container)` - Calculate dimensions from container element
+- `debounce(fn, delay)` - Debounce function for resize throttling

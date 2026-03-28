@@ -881,3 +881,96 @@ await store.send({
 - Check message format matches expected schema
 - Ensure user IDs are unique and consistent
 - Check heartbeat/presence update intervals
+
+---
+
+## COMPLETE API REFERENCE
+
+All exports from `@composable-svelte/chat`:
+
+### Component Variants
+
+- `MinimalStreamingChat` - Compact chat (message list + input only)
+- `StandardStreamingChat` - Recommended variant (toolbar, status indicator)
+- `FullStreamingChat` - Feature-rich (reactions, attachments, voice)
+- `StreamingChat` - Legacy component
+
+### Primitive Components
+
+- `SimpleChatMessage` - Basic message bubble component
+- `ChatMessage` - Full-featured message component with reactions, editing, etc.
+
+### Collaborative Presence Components
+
+- `PresenceBadge` - User presence status indicator
+- `PresenceAvatarStack` - Stacked avatar display for active users
+- `PresenceList` - Full user presence list with grouping
+- `TypingIndicator` - Animated typing indicator
+- `TypingUsersList` - List of users currently typing
+- `CursorMarker` - Single user cursor position marker
+- `CursorOverlay` - Overlay showing all user cursors
+
+### Reducers & State Factories
+
+- `streamingChatReducer` - Reducer for streaming chat state
+- `createInitialStreamingChatState()` - Factory for initial chat state
+- `collaborativeReducer` - Reducer for collaborative chat state
+- `createInitialCollaborativeState()` - Factory for initial collaborative state
+
+### Collaborative Hooks
+
+- `usePresenceTracking(store)` - Hook for tracking user presence
+- `useTypingEmitter(store)` - Hook for emitting typing events
+- `useCursorTracking(store)` - Hook for tracking cursor positions
+- `useHeartbeat(store)` - Hook for heartbeat/keep-alive
+
+### Helper Functions
+
+- `getTypingUsers(users, currentUserId, target)` - Get users currently typing
+- `getActiveUsers(users, currentUserId)` - Get active (non-offline) users
+- `getCursorPositions(users, currentUserId)` - Get cursor positions of other users
+- `formatTypingIndicator(users)` - Format typing indicator text (e.g., "Alice is typing...")
+- `generateRandomUserColor()` - Generate a random color for user avatars
+
+### Testing Utilities
+
+- `createMockStreamingChat(config?)` - Create mock dependencies for testing
+
+### WebSocket Manager
+
+- `WebSocketManager` - WebSocket connection manager class
+- `createWebSocketManager(config)` - Factory for WebSocket manager
+
+### Cleanup Utilities
+
+- `CleanupTracker` - Class for tracking and running cleanup functions
+- `createCleanupTracker()` - Factory for cleanup tracker
+
+### Types
+
+- `Message` - Chat message interface
+- `MessageAttachment` - File/image attachment
+- `AttachmentMetadata` - Attachment metadata
+- `MessageReaction` - Message reaction (emoji)
+- `StreamingChatState` - Streaming chat state interface
+- `StreamingChatAction` - Streaming chat action union
+- `StreamingChatDependencies` - Streaming chat dependencies
+- `CollaborativeUser` - Collaborative user info
+- `UserPresence` - User presence status
+- `TypingInfo` - Typing indicator info
+- `CursorPosition` - Cursor position data
+- `UserPermissions` - User permission flags
+- `CollaborativeStreamingChatState` - Collaborative state (extends StreamingChatState)
+- `CollaborativeAction` - Collaborative action union
+- `CollaborativeDependencies` - Collaborative dependencies
+- `WebSocketConnectionState` - WebSocket connection state
+- `PendingAction` - Pending sync action
+- `SyncState` - Sync state info
+- `WebSocketConfig` - WebSocket configuration
+- `WebSocketMessage` - WebSocket message format
+- `CleanupFunction` - Cleanup function type
+
+### Constants
+
+- `DEFAULT_REACTIONS` - Default set of reaction emojis
+- `DEFAULT_USER_PERMISSIONS` - Default user permission flags

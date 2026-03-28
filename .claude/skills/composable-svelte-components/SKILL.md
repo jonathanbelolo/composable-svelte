@@ -13,7 +13,7 @@ This skill covers the UI component library for Composable Svelte applications, f
 
 ## COMPONENT LIBRARY OVERVIEW
 
-Composable Svelte includes 73+ shadcn-svelte components for building modern UIs. All components integrate with the Composable Architecture via props and state management.
+Composable Svelte includes 77 components (68 high-level + 9 primitives) for building modern UIs. All components integrate with the Composable Architecture via props and state management.
 
 **Integration Pattern**:
 - Props for configuration (labels, variants, styles)

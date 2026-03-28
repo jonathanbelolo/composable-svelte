@@ -58,14 +58,23 @@ interface TestStore<State, Action> {
   // Receive an action from effects and assert state
   receive(action: Action, assert: (state: State) => void): Promise<void>;
 
-  // Assert no more pending actions
+  // Assert no more pending actions (shorthand for advanceTime(0) + assertNoPendingActions)
   finish(): Promise<void>;
 
-  // Advance time for debounced/delayed effects
+  // Assert no received actions are unhandled (throws if exhaustivity is 'on')
+  assertNoPendingActions(): void;
+
+  // Advance time for debounced/delayed effects (requires vi.useFakeTimers())
   advanceTime(ms: number): Promise<void>;
 
-  // Get current state
-  get state(): State;
+  // Get current state snapshot
+  getState(): State;
+
+  // Get action history
+  getHistory(): ReadonlyArray<Action>;
+
+  // Control exhaustiveness checking ('on' = strict, 'off' = lenient)
+  exhaustivity: 'on' | 'off';
 }
 ```
 
@@ -273,10 +282,10 @@ it('animates modal presentation', async () => {
 ### MockClock
 
 ```typescript
-import { MockClock } from '@composable-svelte/core/test';
+import { createMockClock } from '@composable-svelte/core';
 
 it('uses mock clock for time-based effects', async () => {
-  const mockClock = new MockClock();
+  const mockClock = createMockClock();
 
   const store = createTestStore({
     initialState: { toast: null },
@@ -302,12 +311,13 @@ it('uses mock clock for time-based effects', async () => {
 ### MockAPIClient
 
 ```typescript
-import { MockAPIClient } from '@composable-svelte/core/test';
+import { createMockAPI } from '@composable-svelte/core';
 
 it('uses mock API client', async () => {
-  const mockAPI = new MockAPIClient();
-  mockAPI.mock('GET', '/users', { ok: true, data: [user1, user2] });
-  mockAPI.mock('POST', '/users', { ok: true, data: newUser });
+  const mockAPI = createMockAPI({
+    'GET /users': { ok: true, data: [user1, user2] },
+    'POST /users': { ok: true, data: newUser }
+  });
 
   const store = createTestStore({
     initialState: { users: [] },
@@ -330,10 +340,10 @@ it('uses mock API client', async () => {
 ### MockWebSocket
 
 ```typescript
-import { MockWebSocket } from '@composable-svelte/core/test';
+import { createMockWebSocket } from '@composable-svelte/core';
 
 it('uses mock WebSocket', async () => {
-  const mockWS = new MockWebSocket();
+  const mockWS = createMockWebSocket();
 
   const store = createTestStore({
     initialState: { messages: [], connectionStatus: 'disconnected' },
