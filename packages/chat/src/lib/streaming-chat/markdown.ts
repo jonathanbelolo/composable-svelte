@@ -50,7 +50,7 @@ async function loadOptionalDependencies(): Promise<void> {
 	// Try to load @composable-svelte/code for language loading
 	try {
 		const codeModule = await import('@composable-svelte/code');
-		loadLanguage = codeModule.loadLanguage;
+		loadLanguage = codeModule.loadLanguage as (lang: string) => Promise<void>;
 
 		// Pre-load common languages if available
 		if (loadLanguage && Prism) {
