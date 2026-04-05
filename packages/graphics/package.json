@@ -24,7 +24,7 @@
     "dist"
   ],
   "peerDependencies": {
-    "@composable-svelte/core": "^0.4.0",
+    "@composable-svelte/core": "^0.4.0 || ^0.5.0",
     "svelte": "^5.0.0"
   },
   "dependencies": {
