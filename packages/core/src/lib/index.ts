@@ -165,19 +165,10 @@ export {
 } from './dependencies/index.js';
 
 // ============================================================================
-// Testing
+// Testing — import from '@composable-svelte/core/test' instead
+// TestStore is NOT re-exported here because it dynamically imports vitest,
+// which causes Vite to fail at build time when resolving the main entry.
 // ============================================================================
-
-export {
-  TestStore,
-  createTestStore
-} from './test/test-store.js';
-
-export type {
-  TestStoreConfig,
-  StateAssertion,
-  PartialAction
-} from './test/test-store.js';
 
 // ============================================================================
 // Utilities
