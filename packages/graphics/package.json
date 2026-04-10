@@ -1,6 +1,6 @@
 {
   "name": "@composable-svelte/graphics",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "State-driven WebGL/WebGPU graphics package for Composable Svelte",
   "type": "module",
   "scripts": {

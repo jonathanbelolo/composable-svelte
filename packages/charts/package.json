@@ -1,6 +1,6 @@
 {
   "name": "@composable-svelte/charts",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Interactive data visualization components for Composable Svelte - Built with Observable Plot and D3",
   "type": "module",
   "main": "./dist/index.js",

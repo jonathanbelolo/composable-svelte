@@ -1,6 +1,6 @@
 {
   "name": "@composable-svelte/maps",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Interactive map components for Composable Svelte - Built with Maplibre GL and Mapbox GL",
   "type": "module",
   "main": "./dist/index.js",
