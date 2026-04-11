@@ -127,7 +127,7 @@
 	let dropdownElement: HTMLElement | null = $state(null);
 
 	// Get display value for input
-	const displayValue = $derived(() => {
+	const displayValue = $derived.by(() => {
 		if ($store.searchQuery) {
 			return $store.searchQuery;
 		}
@@ -252,7 +252,7 @@
 			)}
 			{placeholder}
 			{disabled}
-			value={displayValue()}
+			value={displayValue}
 			role="combobox"
 			aria-expanded={$store.dropdown.status !== 'idle'}
 			aria-autocomplete="list"

@@ -26,11 +26,12 @@
 
 	let { class: className, children }: Props = $props();
 
-	// Get field info from context
+	// Get field info from context. fieldState is a holder with a getter so
+	// reads of .current re-evaluate the parent's $derived reactively.
 	const fieldName = getContext<string>('fieldName');
-	const fieldState = getContext<FieldState>('fieldState');
+	const fieldStateCtx = getContext<{ current: FieldState }>('fieldState');
 
-	const hasError = $derived(!!fieldState?.error);
+	const hasError = $derived(!!fieldStateCtx?.current?.error);
 </script>
 
 <Label for={fieldName} error={hasError} class={className}>

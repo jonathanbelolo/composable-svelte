@@ -63,9 +63,16 @@
 		store.dispatch(action);
 	};
 
-	// Provide field name and state to child components
+	// Provide field name and state to child components.
+	// fieldState is wrapped in a holder with a getter so consumers reading
+	// `ctx.current` re-evaluate the $derived on every access instead of
+	// capturing a one-time snapshot (Svelte 5 context gotcha).
 	setContext('fieldName', name);
-	setContext('fieldState', fieldState);
+	setContext('fieldState', {
+		get current() {
+			return fieldState;
+		}
+	});
 </script>
 
 <div class={className} data-field={name}>

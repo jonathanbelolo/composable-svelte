@@ -32,13 +32,14 @@
 
 	let { class: className, children }: Props = $props();
 
-	// Get field info from context
+	// Get field info from context. fieldState is a holder with a getter so
+	// reads of .current re-evaluate the parent's $derived reactively.
 	const fieldName = getContext<string>('fieldName');
-	const fieldState = getContext<FieldState>('fieldState');
+	const fieldStateCtx = getContext<{ current: FieldState }>('fieldState');
 
 	const errorId = $derived(fieldName ? `${fieldName}-error` : undefined);
-	const hasError = $derived(!!fieldState?.error);
-	const isValidating = $derived(!!fieldState?.validating);
+	const hasError = $derived(!!fieldStateCtx?.current?.error);
+	const isValidating = $derived(!!fieldStateCtx?.current?.isValidating);
 </script>
 
 {#if children || hasError || isValidating}
@@ -61,7 +62,7 @@
 		{:else if children}
 			{@render children()}
 		{:else if hasError}
-			{fieldState.error}
+			{fieldStateCtx.current.error}
 		{/if}
 	</p>
 {/if}

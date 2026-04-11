@@ -551,6 +551,38 @@ export const treeViewReducer: Reducer<
 			];
 		}
 
+		case 'nodesUpdated': {
+			// Guard: if nodes reference hasn't changed, return same state
+			if (state.nodes === action.nodes) {
+				return [state, Effect.none<TreeViewAction>()];
+			}
+
+			// Replace nodes and prune transient state entries whose nodes no longer exist
+			const validIds = new Set(getAllNodeIds(action.nodes));
+			const pruneSet = (set: Set<string>): Set<string> => {
+				const next = new Set<string>();
+				for (const id of set) {
+					if (validIds.has(id)) next.add(id);
+				}
+				return next;
+			};
+
+			return [
+				{
+					...state,
+					nodes: action.nodes,
+					expandedIds: pruneSet(state.expandedIds),
+					selectedIds: pruneSet(state.selectedIds),
+					loadingIds: pruneSet(state.loadingIds),
+					highlightedId:
+						state.highlightedId && validIds.has(state.highlightedId)
+							? state.highlightedId
+							: null
+				},
+				Effect.none<TreeViewAction>()
+			];
+		}
+
 		default: {
 			const _exhaustive: never = action;
 			return [state, Effect.none<TreeViewAction>()];

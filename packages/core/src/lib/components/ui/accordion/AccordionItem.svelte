@@ -3,9 +3,14 @@
 
 	const ACCORDION_ITEM_CONTEXT_KEY = Symbol('accordion-item');
 
-	interface AccordionItemContext {
-		id: string;
-		disabled: boolean;
+	/**
+	 * Live view of the accordion item context. `id` is static but `disabled` is
+	 * exposed through a getter so children see prop updates instead of a
+	 * frozen snapshot captured at mount.
+	 */
+	export interface AccordionItemContext {
+		readonly id: string;
+		readonly disabled: boolean;
 	}
 
 	export function setAccordionItemContext(context: AccordionItemContext) {
@@ -66,10 +71,15 @@
 	// Check if this item is expanded (for template data-state attribute)
 	const isExpanded = $derived($store.expandedIds.includes(id));
 
-	// Set context for trigger and content (only static values)
+	// Set context for trigger and content. `disabled` is exposed via a getter
+	// so children stay reactive when the parent mutates the prop after mount.
 	setAccordionItemContext({
-		id,
-		disabled
+		get id() {
+			return id;
+		},
+		get disabled() {
+			return disabled;
+		}
 	});
 </script>
 

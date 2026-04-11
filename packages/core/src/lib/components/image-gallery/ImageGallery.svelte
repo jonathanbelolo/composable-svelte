@@ -117,19 +117,11 @@
 	let gridElement: HTMLElement | undefined = $state();
 	let observer: IntersectionObserver | undefined = undefined;
 
-	// Create reactive state from store
-	let storeState = $state(store.state);
-
-	// Subscribe to store updates
-	$effect(() => {
-		const unsubscribe = store.subscribe((newState) => {
-			storeState = newState;
-		});
-		return unsubscribe;
-	});
+	// Reactive view of store state (store.state is backed by $state.raw)
+	const storeState = $derived(store.state);
 
 	// Get aspect ratio class
-	const aspectRatioClass = $derived(() => {
+	const aspectRatioClass = $derived.by(() => {
 		switch (storeState.aspectRatio) {
 			case 'square':
 				return 'aspect-square';
@@ -236,7 +228,7 @@
 		>
 			<button
 				type="button"
-				class="image-gallery__button {aspectRatioClass()}"
+				class="image-gallery__button {aspectRatioClass}"
 				onclick={() => {
 					if (enableLightbox) {
 						store.dispatch({ type: 'imageClicked', index });

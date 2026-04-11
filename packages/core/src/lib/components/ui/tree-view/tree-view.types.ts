@@ -114,7 +114,9 @@ export type TreeViewAction<T = string> =
 	| { type: 'childrenLoadingFailed'; nodeId: string; error: string }
 	// Bulk Operations
 	| { type: 'expandAll' }
-	| { type: 'collapseAll' };
+	| { type: 'collapseAll' }
+	// External sync
+	| { type: 'nodesUpdated'; nodes: TreeNode<T>[] };
 
 /**
  * TreeView dependencies.

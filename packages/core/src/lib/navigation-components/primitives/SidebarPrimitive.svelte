@@ -88,7 +88,7 @@
   let contentElement: HTMLElement | undefined = $state();
 
   // Compute target width based on presentation state
-  const targetWidth = $derived(() => {
+  const targetWidth = $derived.by(() => {
     if (!presentation) return visible ? width : '0px';
 
     switch (presentation.status) {
@@ -161,7 +161,7 @@
     store,
     side,
     width,
-    targetWidth: targetWidth(),
+    targetWidth,
     bindContent: (node: HTMLElement) => { contentElement = node; },
     onTransitionEnd: handleTransitionEnd
   })}

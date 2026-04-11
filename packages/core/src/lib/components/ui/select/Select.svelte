@@ -108,7 +108,7 @@
 	let searchInputElement: HTMLInputElement | null = $state(null);
 
 	// Get display text for selected value(s)
-	const displayText = $derived(() => {
+	const displayText = $derived.by(() => {
 		if (!$store.selected) return placeholder;
 
 		if (multiple && Array.isArray($store.selected)) {
@@ -258,7 +258,7 @@
 		onkeydown={handleTriggerKeyDown}
 	>
 		<span class={cn('truncate', !$store.selected && 'text-muted-foreground')}>
-			{displayText()}
+			{displayText}
 		</span>
 		<div class="flex items-center gap-2">
 			{#if $store.selected && !disabled}

@@ -44,33 +44,22 @@
 	let imageElement: HTMLImageElement | undefined = $state();
 	let previouslyFocusedElement: HTMLElement | null = null;
 
-	// Create reactive state from store
-	let storeState = $state(store.state);
-	let previousIndex = $state(storeState.lightbox.currentIndex);
-
-	// Subscribe to store updates
-	$effect(() => {
-		const unsubscribe = store.subscribe((newState) => {
-			storeState = newState;
-		});
-		return unsubscribe;
-	});
+	// Reactive view of store state (store.state is backed by $state.raw)
+	const storeState = $derived(store.state);
+	let previousIndex = $state(store.state.lightbox.currentIndex);
 
 	// Current image
-	const currentImage = $derived(() => {
-		const index = storeState.lightbox.currentIndex;
-		return storeState.images[index];
-	});
+	const currentImage = $derived(storeState.images[storeState.lightbox.currentIndex]);
 
 	// Navigation state
-	const canGoPrevious = $derived(() => storeState.lightbox.currentIndex > 0);
+	const canGoPrevious = $derived(storeState.lightbox.currentIndex > 0);
 	const canGoNext = $derived(
-		() => storeState.lightbox.currentIndex < storeState.images.length - 1
+		storeState.lightbox.currentIndex < storeState.images.length - 1
 	);
 
 	// Counter text
 	const counterText = $derived(
-		() => `${storeState.lightbox.currentIndex + 1} / ${storeState.images.length}`
+		`${storeState.lightbox.currentIndex + 1} / ${storeState.images.length}`
 	);
 
 	// Get all focusable elements in lightbox
@@ -346,7 +335,7 @@
 			<!-- Counter -->
 			{#if showCounter && storeState.images.length > 1}
 				<div class="image-lightbox__counter" aria-live="polite">
-					{counterText()}
+					{counterText}
 				</div>
 			{/if}
 
@@ -383,10 +372,10 @@
 						bind:this={imageElement}
 						class="image-lightbox__image"
 						
-						src={currentImage().url}
-						srcset={currentImage().srcset}
-						sizes={currentImage().sizes}
-						alt={currentImage().alt}
+						src={currentImage.url}
+						srcset={currentImage.srcset}
+						sizes={currentImage.sizes}
+						alt={currentImage.alt}
 						onerror={() =>
 							store.dispatch({
 								type: 'lightboxImageError',
@@ -398,9 +387,9 @@
 			</div>
 
 			<!-- Caption -->
-			{#if showCaptions && currentImage().caption}
+			{#if showCaptions && currentImage.caption}
 				<div class="image-lightbox__caption">
-					{currentImage().caption}
+					{currentImage.caption}
 				</div>
 			{/if}
 
@@ -410,7 +399,7 @@
 					type="button"
 					class="image-lightbox__nav image-lightbox__nav--prev"
 					onclick={() => store.dispatch({ type: 'previousImage' })}
-					disabled={!canGoPrevious() || storeState.isNavigating}
+					disabled={!canGoPrevious || storeState.isNavigating}
 					aria-label="Previous image"
 				>
 					<svg
@@ -432,7 +421,7 @@
 					type="button"
 					class="image-lightbox__nav image-lightbox__nav--next"
 					onclick={() => store.dispatch({ type: 'nextImage' })}
-					disabled={!canGoNext() || storeState.isNavigating}
+					disabled={!canGoNext || storeState.isNavigating}
 					aria-label="Next image"
 				>
 					<svg

@@ -93,7 +93,7 @@
   );
 
   // Extract transform from style string and separate it for animation
-  const extractedStyles = $derived(() => {
+  const extractedStyles = $derived.by(() => {
     if (!style) return { styleWithoutTransform: '', transform: '' };
 
     // Match transform property in the style string
@@ -122,9 +122,9 @@
 >
   {#snippet children({ visible, store, bindContent, initialOpacity })}
     <div
-      use:bindContent={[extractedStyles().transform]}
+      use:bindContent={[extractedStyles.transform]}
       class={contentClasses}
-      style="{extractedStyles().styleWithoutTransform}{initialOpacity ? `; opacity: ${initialOpacity}` : ''}"
+      style="{extractedStyles.styleWithoutTransform}{initialOpacity ? `; opacity: ${initialOpacity}` : ''}"
       role="dialog"
       aria-modal="false"
     >

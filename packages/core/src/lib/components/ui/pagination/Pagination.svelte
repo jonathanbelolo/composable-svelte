@@ -125,7 +125,7 @@
 	 * Generate smart page buttons with ellipsis.
 	 * Always shows first, last, current, and nearby pages.
 	 */
-	const pageButtons = $derived(() => {
+	const pageButtons = $derived.by(() => {
 		const { currentPage, totalPages, maxPageButtons } = $store;
 
 		if (totalPages <= maxPageButtons) {
@@ -275,7 +275,7 @@
 		</button>
 
 		<!-- Page buttons -->
-		{#each pageButtons() as button}
+		{#each pageButtons as button}
 			{#if button === 'ellipsis'}
 				<span class="flex h-9 w-9 items-center justify-center text-sm text-muted-foreground">
 					...

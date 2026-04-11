@@ -37,10 +37,11 @@
 
 	let { class: className, children }: Props = $props();
 
-	// Get store and field info from context
+	// Get store and field info from context. fieldState is a holder with a
+	// getter so reads of .current re-evaluate the parent's $derived reactively.
 	const store = getContext<Store<FormState<T>, FormAction<T>>>('formStore');
 	const fieldName = getContext<keyof T & string>('fieldName');
-	const fieldState = getContext<FieldState>('fieldState');
+	const fieldStateCtx = getContext<{ current: FieldState }>('fieldState');
 
 	if (!store || !fieldName) {
 		throw new Error('FormControl must be used within a FormField component');
@@ -73,24 +74,25 @@
 		});
 	}
 
-	// Props to spread on child input elements
-	const controlProps = {
+	// Props to spread on child input elements. Must be $derived so that
+	// value/error/touched/etc. recompute whenever the field state updates.
+	const controlProps = $derived({
 		id: fieldName,
 		name: fieldName,
-		value: fieldState.value,
-		'aria-invalid': fieldState.error ? 'true' : undefined,
-		'aria-describedby': fieldState.error ? `${fieldName}-error` : undefined,
-		'data-touched': fieldState.touched || undefined,
-		'data-dirty': fieldState.dirty || undefined,
-		'data-validating': fieldState.validating || undefined,
+		value: fieldStateCtx.current.value,
+		'aria-invalid': fieldStateCtx.current.error ? 'true' : undefined,
+		'aria-describedby': fieldStateCtx.current.error ? `${fieldName}-error` : undefined,
+		'data-touched': fieldStateCtx.current.touched || undefined,
+		'data-dirty': fieldStateCtx.current.dirty || undefined,
+		'data-validating': fieldStateCtx.current.isValidating || undefined,
 		onchange: handleChange,
 		onblur: handleBlur,
 		onfocus: handleFocus
-	};
+	});
 </script>
 
 <div class={className}>
 	{#if children}
-		{@render children({ props: controlProps, field: fieldState })}
+		{@render children({ props: controlProps, field: fieldStateCtx.current })}
 	{/if}
 </div>
