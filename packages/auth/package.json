@@ -5,17 +5,29 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "svelte": "./dist/index.js",
       "default": "./dist/index.js"
     },
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "svelte": "./dist/*.js",
-      "default": "./dist/*.js"
-    }
+    "./subject": {
+      "types": "./dist/subject/index.d.ts",
+      "svelte": "./dist/subject/index.js",
+      "default": "./dist/subject/index.js"
+    },
+    "./session": {
+      "types": "./dist/session/index.d.ts",
+      "svelte": "./dist/session/index.js",
+      "default": "./dist/session/index.js"
+    },
+    "./components": {
+      "types": "./dist/components/index.d.ts",
+      "svelte": "./dist/components/index.js",
+      "default": "./dist/components/index.js"
+    },
+    "./package.json": "./package.json"
   },
   "svelte": "./dist/index.js",
   "files": [

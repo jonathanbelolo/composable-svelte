@@ -15,6 +15,9 @@ thin guard components.
   `Subject::Authenticated { id, attributes }` / `Subject::Anonymous` maps to
   the `Subject` TS union, with roles at `attributes["roles"]` — the same
   convention the generated authorization gates read.
+- **`AuthGuard`/`RoleGate` are UX gating ONLY.** Hiding children client-side
+  is a courtesy, not a security boundary — enforcement is the backend's
+  authorization gates, which re-check every request against the session.
 
 ## Usage
 
@@ -59,7 +62,23 @@ session.dispatch({ type: 'logout' });
 `unresolved → resolving → authenticated | anonymous`, plus
 `loggingIn → authenticated | loginFailed` and `logout → anonymous`.
 Failure paths are fail-closed: a failing session endpoint or logout call
-lands the client in `anonymous`.
+lands the client in `anonymous`. Two deliberate exceptions to "everything
+falls to anonymous":
+
+- **A failed re-login restores the prior session.** When a login fails while
+  a previously-authenticated session existed, the store returns to
+  `authenticated` with that subject and surfaces the error — the server only
+  replaces the session cookie on a successful login, so the old session is
+  still valid. `loginFailed` is reached only when there was no prior session.
+- **`AuthGuard` is stale-while-revalidate.** While a background resolve (or a
+  logout) is in flight with a retained authenticated subject, children stay
+  rendered (the snippet receives `isRevalidating: true`); the pending snippet
+  shows only when there is no authenticated subject to keep showing.
+
+Feedback attribution is epoch-pinned: every initiator bumps a monotonic
+`epoch` and feedback applies only when both status and epoch match, so a
+superseded request's late response can never clobber newer state (e.g.
+resolve → logout → resolve, or slow login A → logout → login B).
 
 ## Backend endpoints
 
@@ -71,3 +90,21 @@ lands the client in `anonymous`.
 
 Session JSON (`SessionSnapshot`, verbatim wire shape):
 `{ "subject_id": "<uuid>", "display_name": "...", "roles": ["..."] }`.
+A 2xx body is runtime-validated (`subject_id` string; `roles` an array when
+present) — a malformed payload throws `MalformedSessionError` and is treated
+as a failure, never fail-open authenticated.
+
+### Deployment notes
+
+- **Same-site only.** The backend issues the session cookie with
+  `SameSite=Lax`, so a `createHttpSessionDeps(baseUrl)` pointing at a
+  different site will never carry the cookie — use the same origin (default)
+  or a same-site host (e.g. an API subdomain of the app's registrable
+  domain).
+- **`POST /auth/login` is dev/preview only.** The seeded-login endpoint is
+  compiled out of production backend builds; production sign-in goes through
+  the backend's real identity flows.
+- **Sessions expire server-side with no client signal.** Sessions carry a
+  server-side TTL; the client receives no expiry event, so an
+  `authenticated` store can be stale. The consumer's hook is a 401 from any
+  domain API call — dispatch `resolveSession` to re-sync.

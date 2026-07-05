@@ -3,6 +3,10 @@
 	least one of the required roles (read from the subject's
 	`attributes["roles"]`, the backend convention). Thin store consumer;
 	zero async. An empty `roles` array means "no restriction".
+
+	⚠️ UX gating ONLY: hiding children client-side is a courtesy, not a
+	security boundary. Enforcement lives in the backend's authorization
+	gates — every request is re-checked server-side against the session.
 -->
 <script lang="ts">
 	import type { Store } from '@composable-svelte/core';

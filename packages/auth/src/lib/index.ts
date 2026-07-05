@@ -31,6 +31,7 @@ export {
 	createInitialSessionState,
 	createSessionStore,
 	createHttpSessionDeps,
+	MalformedSessionError,
 	type SessionState,
 	type SessionStatus,
 	type SessionAction,

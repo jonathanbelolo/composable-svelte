@@ -3,7 +3,19 @@
  *
  * All async runs in `Effect.run` over the injected {@link SessionDependencies}
  * — the reducer itself is pure. Failure paths are fail-closed: any resolve or
- * logout failure lands the client in `anonymous`.
+ * logout failure lands the client in `anonymous` (a failed RE-login restores
+ * the prior authenticated session instead — see `loginFailed`).
+ *
+ * ## Feedback attribution (epoch + status)
+ *
+ * Every initiator (`resolveSession` / `login` / `logout`) increments
+ * `state.epoch`; its effect closure captures that epoch and stamps it into
+ * the feedback action. Feedback applies only when the status matches AND
+ * `action.epoch === state.epoch`. The status guard alone cannot distinguish
+ * WHICH in-flight request feedback belongs to — e.g. resolve → logout →
+ * resolve leaves the store `resolving` again when the first (dead-session)
+ * resolve lands, and slow login A → logout → login B leaves it `loggingIn`
+ * when A's success lands. The epoch pins feedback to its own request.
  */
 
 import type { Reducer } from '@composable-svelte/core';
@@ -11,12 +23,13 @@ import { Effect } from '@composable-svelte/core';
 import { anonymousSubject, subjectFromSession } from '../subject/helpers.js';
 import type { SessionAction, SessionDependencies, SessionState } from './types.js';
 
-/** Initial state: nothing known, anonymous subject. */
+/** Initial state: nothing known, anonymous subject, epoch 0. */
 export function createInitialSessionState(): SessionState {
 	return {
 		status: 'unresolved',
 		subject: anonymousSubject,
-		error: null
+		error: null,
+		epoch: 0
 	};
 }
 
@@ -39,16 +52,18 @@ export const sessionReducer: Reducer<SessionState, SessionAction, SessionDepende
 			) {
 				return [state, Effect.none()];
 			}
+			const epoch = state.epoch + 1;
 			return [
-				{ ...state, status: 'resolving', error: null },
+				{ ...state, status: 'resolving', error: null, epoch },
 				Effect.run(async (dispatch) => {
 					try {
 						const session = await deps.fetchSession();
-						dispatch({ type: 'sessionResolved', session });
+						dispatch({ type: 'sessionResolved', session, epoch });
 					} catch (error) {
 						dispatch({
 							type: 'sessionResolveFailed',
-							error: errorMessage(error, 'Session resolution failed')
+							error: errorMessage(error, 'Session resolution failed'),
+							epoch
 						});
 					}
 				})
@@ -56,15 +71,17 @@ export const sessionReducer: Reducer<SessionState, SessionAction, SessionDepende
 		}
 
 		case 'sessionResolved': {
-			// Stale-feedback guard: only apply while the matching resolve is in
-			// flight. A login or logout dispatched mid-resolve supersedes the
-			// resolve — its late result must not clobber the newer state.
-			if (state.status !== 'resolving') {
+			// Stale-feedback guard: only apply while the MATCHING resolve is in
+			// flight — status must be `resolving` AND the feedback's epoch must
+			// be the current one. A login/logout dispatched mid-resolve bumps
+			// the epoch, so the superseded resolve's late result is discarded
+			// even when a NEWER resolve has put the store back in `resolving`.
+			if (state.status !== 'resolving' || action.epoch !== state.epoch) {
 				return [state, Effect.none()];
 			}
 			if (action.session === null) {
 				return [
-					{ status: 'anonymous', subject: anonymousSubject, error: null },
+					{ status: 'anonymous', subject: anonymousSubject, error: null, epoch: state.epoch },
 					Effect.none()
 				];
 			}
@@ -72,7 +89,8 @@ export const sessionReducer: Reducer<SessionState, SessionAction, SessionDepende
 				{
 					status: 'authenticated',
 					subject: subjectFromSession(action.session),
-					error: null
+					error: null,
+					epoch: state.epoch
 				},
 				Effect.none()
 			];
@@ -80,12 +98,12 @@ export const sessionReducer: Reducer<SessionState, SessionAction, SessionDepende
 
 		case 'sessionResolveFailed': {
 			// Stale-feedback guard: same as `sessionResolved`.
-			if (state.status !== 'resolving') {
+			if (state.status !== 'resolving' || action.epoch !== state.epoch) {
 				return [state, Effect.none()];
 			}
 			// Fail-closed: an unreachable/failing session endpoint means anonymous.
 			return [
-				{ status: 'anonymous', subject: anonymousSubject, error: action.error },
+				{ status: 'anonymous', subject: anonymousSubject, error: action.error, epoch: state.epoch },
 				Effect.none()
 			];
 		}
@@ -94,21 +112,23 @@ export const sessionReducer: Reducer<SessionState, SessionAction, SessionDepende
 			// Guard: one login at a time, and never while a logout is in
 			// flight. Login DURING `resolving` is allowed — explicit user
 			// intent supersedes the background resolve, whose stale feedback
-			// is then discarded by the `sessionResolved` guard.
+			// is then discarded by the epoch + status guards.
 			if (state.status === 'loggingIn' || state.status === 'loggingOut') {
 				return [state, Effect.none()];
 			}
 			const seededUserId = action.seededUserId;
+			const epoch = state.epoch + 1;
 			return [
-				{ ...state, status: 'loggingIn', error: null },
+				{ ...state, status: 'loggingIn', error: null, epoch },
 				Effect.run(async (dispatch) => {
 					try {
 						const session = await deps.fetchLogin(seededUserId);
-						dispatch({ type: 'loginSucceeded', session });
+						dispatch({ type: 'loginSucceeded', session, epoch });
 					} catch (error) {
 						dispatch({
 							type: 'loginFailed',
-							error: errorMessage(error, 'Login failed')
+							error: errorMessage(error, 'Login failed'),
+							epoch
 						});
 					}
 				})
@@ -116,16 +136,19 @@ export const sessionReducer: Reducer<SessionState, SessionAction, SessionDepende
 		}
 
 		case 'loginSucceeded': {
-			// Stale-feedback guard: only apply while the matching login is in
-			// flight (a logout dispatched mid-login must not be overridden).
-			if (state.status !== 'loggingIn') {
+			// Stale-feedback guard: only apply while the MATCHING login is in
+			// flight (status + epoch). A logout dispatched mid-login bumps the
+			// epoch, so a superseded login's late success cannot re-authenticate
+			// — even when a newer login has put the store back in `loggingIn`.
+			if (state.status !== 'loggingIn' || action.epoch !== state.epoch) {
 				return [state, Effect.none()];
 			}
 			return [
 				{
 					status: 'authenticated',
 					subject: subjectFromSession(action.session),
-					error: null
+					error: null,
+					epoch: state.epoch
 				},
 				Effect.none()
 			];
@@ -133,11 +156,27 @@ export const sessionReducer: Reducer<SessionState, SessionAction, SessionDepende
 
 		case 'loginFailed': {
 			// Stale-feedback guard: same as `loginSucceeded`.
-			if (state.status !== 'loggingIn') {
+			if (state.status !== 'loggingIn' || action.epoch !== state.epoch) {
 				return [state, Effect.none()];
 			}
+			// A failed RE-login must not destroy a still-valid session: the
+			// server only replaces the session cookie on a SUCCESSFUL login, so
+			// when the subject entering `loggingIn` was authenticated, restore
+			// it and surface the error. Fall to `loginFailed`/anonymous only
+			// when there was no prior session to restore.
+			if (state.subject.kind === 'authenticated') {
+				return [
+					{
+						status: 'authenticated',
+						subject: state.subject,
+						error: action.error,
+						epoch: state.epoch
+					},
+					Effect.none()
+				];
+			}
 			return [
-				{ status: 'loginFailed', subject: anonymousSubject, error: action.error },
+				{ status: 'loginFailed', subject: anonymousSubject, error: action.error, epoch: state.epoch },
 				Effect.none()
 			];
 		}
@@ -147,23 +186,25 @@ export const sessionReducer: Reducer<SessionState, SessionAction, SessionDepende
 			// request. Logout from any other status (including mid-resolve or
 			// mid-login) is always honored: it is the user's exit hatch, and
 			// the stale feedback of the superseded operation is discarded by
-			// the feedback guards above.
+			// the epoch + status guards above.
 			if (state.status === 'loggingOut') {
 				return [state, Effect.none()];
 			}
+			const epoch = state.epoch + 1;
 			return [
-				{ ...state, status: 'loggingOut', error: null },
+				{ ...state, status: 'loggingOut', error: null, epoch },
 				Effect.run(async (dispatch) => {
 					try {
 						await deps.fetchLogout();
-						dispatch({ type: 'loggedOut' });
+						dispatch({ type: 'loggedOut', epoch });
 					} catch (error) {
 						// Fail-closed: the client still goes anonymous. The cookie is
 						// HttpOnly and server-owned; the failure is recorded so the app
 						// can surface "sign-out may not have reached the server".
 						dispatch({
 							type: 'loggedOut',
-							error: errorMessage(error, 'Logout request failed')
+							error: errorMessage(error, 'Logout request failed'),
+							epoch
 						});
 					}
 				})
@@ -171,16 +212,17 @@ export const sessionReducer: Reducer<SessionState, SessionAction, SessionDepende
 		}
 
 		case 'loggedOut': {
-			// Stale-feedback guard: only apply while the matching logout is in
-			// flight.
-			if (state.status !== 'loggingOut') {
+			// Stale-feedback guard: only apply while the MATCHING logout is in
+			// flight (status + epoch).
+			if (state.status !== 'loggingOut' || action.epoch !== state.epoch) {
 				return [state, Effect.none()];
 			}
 			return [
 				{
 					status: 'anonymous',
 					subject: anonymousSubject,
-					error: action.error ?? null
+					error: action.error ?? null,
+					epoch: state.epoch
 				},
 				Effect.none()
 			];

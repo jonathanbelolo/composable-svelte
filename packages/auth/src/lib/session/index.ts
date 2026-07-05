@@ -1,6 +1,6 @@
 export { sessionReducer, createInitialSessionState } from './reducer.js';
 export { createSessionStore } from './store.js';
-export { createHttpSessionDeps } from './http.js';
+export { createHttpSessionDeps, MalformedSessionError } from './http.js';
 
 export type {
 	SessionState,

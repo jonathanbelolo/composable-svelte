@@ -14,7 +14,8 @@ import {
 	createInitialSessionState,
 	sessionReducer
 } from '../src/lib/session/reducer';
-import type { SessionDependencies } from '../src/lib/session/types';
+import type { SessionDependencies, SessionState } from '../src/lib/session/types';
+import { subjectFromSession } from '../src/lib/subject/helpers';
 import type { SessionSnapshot } from '../src/lib/subject/types';
 
 const session: SessionSnapshot = {
@@ -24,17 +25,18 @@ const session: SessionSnapshot = {
 };
 
 // The smoke tests drive the reducer synchronously: each initiator action is
-// followed by a manual feedback dispatch in the same tick. The inert deps'
-// own (microtask-later) feedback is discarded by the stale-feedback guards.
+// followed by a manual feedback dispatch (stamped with the initiator's
+// epoch) in the same tick. The inert deps' own (microtask-later) feedback is
+// discarded by the stale-feedback guards.
 const inertDeps: SessionDependencies = {
 	fetchLogin: async () => session,
 	fetchLogout: async () => undefined,
 	fetchSession: async () => null
 };
 
-function makeStore() {
+function makeStore(initialState?: SessionState) {
 	return createStore({
-		initialState: createInitialSessionState(),
+		initialState: initialState ?? createInitialSessionState(),
 		reducer: sessionReducer,
 		dependencies: inertDeps
 	});
@@ -73,20 +75,93 @@ describe('AuthGuard', () => {
 			expect(target.querySelector('[data-testid="secret"]')).toBeNull();
 
 			// authenticated → children
-			store.dispatch({ type: 'resolveSession' });
-			store.dispatch({ type: 'sessionResolved', session });
+			store.dispatch({ type: 'resolveSession' }); // epoch 1
+			store.dispatch({ type: 'sessionResolved', session, epoch: 1 });
 			flushSync();
 			expect(target.querySelector('[data-testid="secret"]')).not.toBeNull();
 			expect(target.querySelector('[data-testid="signin"]')).toBeNull();
 			expect(onAnonymous).not.toHaveBeenCalled();
 
+			// background re-resolve → children KEPT (stale-while-revalidate,
+			// not pending) — an authenticated UI must not blank on refocus.
+			store.dispatch({ type: 'resolveSession' }); // epoch 2
+			flushSync();
+			expect(target.querySelector('[data-testid="secret"]')).not.toBeNull();
+			expect(target.querySelector('[data-testid="pending"]')).toBeNull();
+
+			// logout in flight → children still kept (subject retained)
+			store.dispatch({ type: 'logout' }); // epoch 3
+			flushSync();
+			expect(target.querySelector('[data-testid="secret"]')).not.toBeNull();
+			expect(target.querySelector('[data-testid="pending"]')).toBeNull();
+
 			// logged out → fallback + onAnonymous fires
-			store.dispatch({ type: 'logout' });
-			store.dispatch({ type: 'loggedOut' });
+			store.dispatch({ type: 'loggedOut', epoch: 3 });
 			flushSync();
 			expect(target.querySelector('[data-testid="signin"]')).not.toBeNull();
 			expect(target.querySelector('[data-testid="secret"]')).toBeNull();
 			expect(onAnonymous).toHaveBeenCalled();
+		} finally {
+			unmount(component);
+			target.remove();
+		}
+	});
+
+	it('exposes isRevalidating to children during a background resolve', () => {
+		// Mounted mid-revalidate: an authenticated subject retained while a
+		// resolve is in flight → children render with isRevalidating: true.
+		const store = makeStore({
+			status: 'resolving',
+			subject: subjectFromSession(session),
+			error: null,
+			epoch: 1
+		});
+		const target = mountTarget();
+
+		const component = mount(AuthGuard, {
+			target,
+			props: {
+				store,
+				children: createRawSnippet<[{ isRevalidating: boolean }]>((arg) => ({
+					render: () =>
+						`<span data-testid="secret" data-revalidating="${arg().isRevalidating}">secret</span>`
+				})),
+				pending: snippet('<span data-testid="pending">…</span>')
+			}
+		});
+
+		try {
+			const secret = target.querySelector('[data-testid="secret"]');
+			expect(secret).not.toBeNull();
+			expect(secret?.getAttribute('data-revalidating')).toBe('true');
+			expect(target.querySelector('[data-testid="pending"]')).toBeNull();
+		} finally {
+			unmount(component);
+			target.remove();
+		}
+	});
+
+	it('shows pending while resolving with NO authenticated subject to retain', () => {
+		const store = makeStore({
+			status: 'resolving',
+			subject: { kind: 'anonymous' },
+			error: null,
+			epoch: 1
+		});
+		const target = mountTarget();
+
+		const component = mount(AuthGuard, {
+			target,
+			props: {
+				store,
+				children: snippet('<span data-testid="secret">secret</span>'),
+				pending: snippet('<span data-testid="pending">…</span>')
+			}
+		});
+
+		try {
+			expect(target.querySelector('[data-testid="pending"]')).not.toBeNull();
+			expect(target.querySelector('[data-testid="secret"]')).toBeNull();
 		} finally {
 			unmount(component);
 			target.remove();
@@ -114,17 +189,18 @@ describe('RoleGate', () => {
 			expect(target.querySelector('[data-testid="denied"]')).not.toBeNull();
 
 			// Authenticated as 'agent' — still not 'admin' → fallback.
-			store.dispatch({ type: 'resolveSession' });
-			store.dispatch({ type: 'sessionResolved', session });
+			store.dispatch({ type: 'resolveSession' }); // epoch 1
+			store.dispatch({ type: 'sessionResolved', session, epoch: 1 });
 			flushSync();
 			expect(target.querySelector('[data-testid="admin-only"]')).toBeNull();
 
 			// Authenticated with the required role → children (re-resolve:
 			// feedback only applies while its resolve is in flight).
-			store.dispatch({ type: 'resolveSession' });
+			store.dispatch({ type: 'resolveSession' }); // epoch 2
 			store.dispatch({
 				type: 'sessionResolved',
-				session: { ...session, roles: ['admin'] }
+				session: { ...session, roles: ['admin'] },
+				epoch: 2
 			});
 			flushSync();
 			expect(target.querySelector('[data-testid="admin-only"]')).not.toBeNull();

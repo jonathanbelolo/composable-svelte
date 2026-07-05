@@ -18,6 +18,16 @@ const session: SessionSnapshot = {
 	roles: ['agent', 'customer']
 };
 
+describe('anonymousSubject', () => {
+	it('is frozen — the value is shared by every anonymous state, so mutation must throw', () => {
+		expect(Object.isFrozen(anonymousSubject)).toBe(true);
+		expect(() => {
+			(anonymousSubject as { kind: string }).kind = 'authenticated';
+		}).toThrow(TypeError);
+		expect(anonymousSubject.kind).toBe('anonymous');
+	});
+});
+
 describe('subjectFromSession', () => {
 	it('maps subject_id → id, roles → attributes.roles, display_name → attributes.display_name', () => {
 		const subject = subjectFromSession(session);

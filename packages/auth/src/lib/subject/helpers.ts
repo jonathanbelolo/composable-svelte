@@ -12,8 +12,13 @@ import type {
 	Subject
 } from './types.js';
 
-/** The canonical anonymous subject value. */
-export const anonymousSubject: AnonymousSubject = { kind: 'anonymous' };
+/**
+ * The canonical anonymous subject value. Frozen: it is SHARED by every
+ * store/state that goes anonymous, so accidental mutation anywhere would
+ * corrupt all of them — `Object.freeze` turns that bug into a loud throw
+ * (strict mode) instead of silent cross-store corruption.
+ */
+export const anonymousSubject: AnonymousSubject = Object.freeze({ kind: 'anonymous' } as const);
 
 /**
  * Build an {@link AuthenticatedSubject} from the wire-shape session JSON.

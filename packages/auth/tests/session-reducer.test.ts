@@ -50,7 +50,8 @@ function deferred<T>() {
 const authenticatedState: SessionState = {
 	status: 'authenticated',
 	subject: subjectFromSession(session),
-	error: null
+	error: null,
+	epoch: 0
 };
 
 describe('resolveSession', () => {
@@ -151,7 +152,7 @@ describe('login', () => {
 		store.assertNoPendingActions();
 	});
 
-	it('records a failed login as loginFailed with an anonymous subject', async () => {
+	it('records a failed login as loginFailed when there was no prior session', async () => {
 		const store = makeStore(
 			mockDeps({
 				fetchLogin: vi.fn(async () => {
@@ -164,6 +165,38 @@ describe('login', () => {
 		await store.receive({ type: 'loginFailed' }, (state) => {
 			expect(state.status).toBe('loginFailed');
 			expect(state.subject.kind).toBe('anonymous');
+			expect(state.error).toBe('Unknown account');
+		});
+
+		store.assertNoPendingActions();
+	});
+
+	it('restores the prior authenticated session when a re-login fails', async () => {
+		// The server only replaces the session cookie on a SUCCESSFUL login —
+		// a failed switch-user attempt leaves the old session valid, so the
+		// store must restore it rather than kick the user to loginFailed.
+		const store = makeStore(
+			mockDeps({
+				fetchLogin: vi.fn(async () => {
+					throw new Error('Unknown account');
+				})
+			}),
+			authenticatedState
+		);
+
+		await store.send({ type: 'login', seededUserId: 'nobody' }, (state) => {
+			expect(state.status).toBe('loggingIn');
+			// Prior subject retained through the attempt.
+			expect(state.subject.kind).toBe('authenticated');
+		});
+
+		await store.receive({ type: 'loginFailed' }, (state) => {
+			expect(state.status).toBe('authenticated');
+			expect(state.subject.kind).toBe('authenticated');
+			if (state.subject.kind === 'authenticated') {
+				expect(state.subject.id).toBe(session.subject_id);
+			}
+			// The failure is still surfaced for the login UI.
 			expect(state.error).toBe('Unknown account');
 		});
 
@@ -306,6 +339,100 @@ describe('stale-feedback races', () => {
 			expect(state.subject.kind).toBe('anonymous');
 		});
 
+		store.assertNoPendingActions();
+	});
+});
+
+describe('request-epoch feedback attribution', () => {
+	// These races cannot be caught by status-equality guards alone: by the
+	// time the stale feedback lands, a NEWER request of the same kind has put
+	// the store back into the very status the guard checks for. Only the
+	// epoch stamped into the feedback tells the two requests apart.
+
+	it('resolve → logout → resolve: the first resolve cannot resurrect the dead session', async () => {
+		const first = deferred<SessionSnapshot | null>();
+		const second = deferred<SessionSnapshot | null>();
+		const fetchSession = vi
+			.fn<() => Promise<SessionSnapshot | null>>()
+			.mockImplementationOnce(() => first.promise)
+			.mockImplementationOnce(() => second.promise);
+		const store = makeStore(mockDeps({ fetchSession }));
+
+		await store.send({ type: 'resolveSession' }); // epoch 1 — held open
+		await store.send({ type: 'logout' }); // epoch 2 — supersedes the resolve
+		await store.receive({ type: 'loggedOut' }, (state) => {
+			expect(state.status).toBe('anonymous');
+		});
+		await store.send({ type: 'resolveSession' }, (state) => {
+			// epoch 3 — status is `resolving` AGAIN
+			expect(state.status).toBe('resolving');
+		});
+
+		// The FIRST (pre-logout) resolve lands with a live session. Status
+		// matches (`resolving`), so only the epoch guard can reject it — the
+		// session the user signed out of must NOT be resurrected.
+		first.resolve(session);
+		await store.receive({ type: 'sessionResolved' }, (state) => {
+			expect(state.status).toBe('resolving');
+			expect(state.subject.kind).toBe('anonymous');
+		});
+
+		// The second resolve settles the truth: anonymous.
+		second.resolve(null);
+		await store.receive({ type: 'sessionResolved' }, (state) => {
+			expect(state.status).toBe('anonymous');
+			expect(state.subject.kind).toBe('anonymous');
+		});
+
+		expect(fetchSession).toHaveBeenCalledTimes(2);
+		store.assertNoPendingActions();
+	});
+
+	it('slow login A + logout + login B: A\'s late success is not misattributed to B', async () => {
+		const sessionB: SessionSnapshot = {
+			subject_id: '3f2a58f0-0000-0000-0000-000000000002',
+			display_name: 'Product Owner',
+			roles: ['owner']
+		};
+		const loginA = deferred<SessionSnapshot>();
+		const loginB = deferred<SessionSnapshot>();
+		const fetchLogin = vi
+			.fn<(seededUserId: string) => Promise<SessionSnapshot>>()
+			.mockImplementationOnce(() => loginA.promise)
+			.mockImplementationOnce(() => loginB.promise);
+		const store = makeStore(mockDeps({ fetchLogin }));
+
+		await store.send({ type: 'login', seededUserId: 'user-a' }); // epoch 1 — held open
+		await store.send({ type: 'logout' }); // epoch 2 — user exits mid-login
+		await store.receive({ type: 'loggedOut' }, (state) => {
+			expect(state.status).toBe('anonymous');
+		});
+		await store.send({ type: 'login', seededUserId: 'user-b' }, (state) => {
+			// epoch 3 — status is `loggingIn` AGAIN
+			expect(state.status).toBe('loggingIn');
+		});
+
+		// Login A finally succeeds. Status matches (`loggingIn`), so only the
+		// epoch guard can reject it — the store must NOT authenticate as A
+		// while the user is waiting on B.
+		loginA.resolve(session);
+		await store.receive({ type: 'loginSucceeded' }, (state) => {
+			expect(state.status).toBe('loggingIn');
+			expect(state.subject.kind).toBe('anonymous');
+		});
+
+		// Login B lands and is the one that authenticates.
+		loginB.resolve(sessionB);
+		await store.receive({ type: 'loginSucceeded' }, (state) => {
+			expect(state.status).toBe('authenticated');
+			if (state.subject.kind === 'authenticated') {
+				expect(state.subject.id).toBe(sessionB.subject_id);
+			} else {
+				expect.unreachable('subject must be authenticated');
+			}
+		});
+
+		expect(fetchLogin).toHaveBeenCalledTimes(2);
 		store.assertNoPendingActions();
 	});
 });
