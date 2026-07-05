@@ -462,11 +462,51 @@ importers:
         specifier: ^6.0.7
         version: 6.4.1(@types/node@20.19.24)(jiti@1.21.7)(tsx@4.20.6)
 
+  packages/auth:
+    dependencies:
+      '@composable-svelte/core':
+        specifier: ^0.5.0
+        version: 0.5.2(svelte@5.43.3)(typescript@5.9.3)
+    devDependencies:
+      '@sveltejs/package':
+        specifier: ^2.5.4
+        version: 2.5.4(svelte@5.43.3)(typescript@5.9.3)
+      '@sveltejs/vite-plugin-svelte':
+        specifier: ^6.2.1
+        version: 6.2.1(svelte@5.43.3)(vite@6.4.1(@types/node@20.19.24)(jiti@1.21.7)(tsx@4.20.6))
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.24
+      '@vitest/browser-playwright':
+        specifier: ^4.0.3
+        version: 4.0.7(playwright@1.56.1)(vite@6.4.1(@types/node@20.19.24)(jiti@1.21.7)(tsx@4.20.6))(vitest@4.0.7)
+      '@vitest/coverage-v8':
+        specifier: ^4.0.7
+        version: 4.0.7(@vitest/browser@4.0.7(vite@6.4.1(@types/node@20.19.24)(jiti@1.21.7)(tsx@4.20.6))(vitest@4.0.7(@types/node@20.19.24)(@vitest/browser-playwright@4.0.7)(@vitest/ui@4.0.7)(jiti@1.21.7)(jsdom@25.0.1)(tsx@4.20.6)))(vitest@4.0.7(@types/node@20.19.24)(@vitest/browser-playwright@4.0.7)(@vitest/ui@4.0.7)(jiti@1.21.7)(jsdom@25.0.1)(tsx@4.20.6))
+      '@vitest/ui':
+        specifier: ^4.0.7
+        version: 4.0.7(vitest@4.0.7)
+      playwright:
+        specifier: ^1.56.1
+        version: 1.56.1
+      svelte:
+        specifier: ^5.0.0
+        version: 5.43.3
+      typescript:
+        specifier: ^5.5.4
+        version: 5.9.3
+      vite:
+        specifier: ^6.4.1
+        version: 6.4.1(@types/node@20.19.24)(jiti@1.21.7)(tsx@4.20.6)
+      vitest:
+        specifier: ^4.0.7
+        version: 4.0.7(@types/node@20.19.24)(@vitest/browser-playwright@4.0.7)(@vitest/ui@4.0.7)(jiti@1.21.7)(jsdom@25.0.1)(tsx@4.20.6)
+
   packages/charts:
     dependencies:
       '@composable-svelte/core':
-        specifier: workspace:*
-        version: link:../core
+        specifier: ^0.4.0 || ^0.5.0
+        version: 0.4.0(svelte@5.43.3)(typescript@5.9.3)
       '@observablehq/plot':
         specifier: ^0.6.0
         version: 0.6.17
@@ -547,8 +587,8 @@ importers:
   packages/chat:
     dependencies:
       '@composable-svelte/core':
-        specifier: ^0.4.0
-        version: 0.4.0(svelte@5.43.3)(typescript@5.9.3)
+        specifier: ^0.4.1 || ^0.5.0
+        version: 0.5.2(svelte@5.43.3)(typescript@5.9.3)
       marked:
         specifier: ^16.4.1
         version: 16.4.1
@@ -650,8 +690,8 @@ importers:
         specifier: ^6.38.6
         version: 6.38.6
       '@composable-svelte/core':
-        specifier: workspace:*
-        version: link:../core
+        specifier: ^0.4.0 || ^0.5.0
+        version: 0.4.0(svelte@5.43.3)(typescript@5.9.3)
       '@xyflow/svelte':
         specifier: ^1.4.1
         version: 1.4.1(svelte@5.43.3)
@@ -796,7 +836,7 @@ importers:
         specifier: ^8.0.0
         version: 8.36.1(@babylonjs/core@8.36.1)(babylonjs-gltf2interface@8.36.1)
       '@composable-svelte/core':
-        specifier: ^0.4.0
+        specifier: ^0.4.0 || ^0.5.0
         version: 0.4.0(svelte@5.43.3)(typescript@5.9.3)
     devDependencies:
       '@babylonjs/inspector':
@@ -830,8 +870,8 @@ importers:
   packages/maps:
     dependencies:
       '@composable-svelte/core':
-        specifier: workspace:*
-        version: link:../core
+        specifier: ^0.4.0 || ^0.5.0
+        version: 0.4.0(svelte@5.43.3)(typescript@5.9.3)
       maplibre-gl:
         specifier: ^4.7.1
         version: 4.7.1
@@ -874,8 +914,8 @@ importers:
   packages/media:
     dependencies:
       '@composable-svelte/core':
-        specifier: workspace:*
-        version: link:../core
+        specifier: ^0.4.0 || ^0.5.0
+        version: 0.4.0(svelte@5.43.3)(typescript@5.9.3)
     devDependencies:
       '@sveltejs/package':
         specifier: ^2.5.4
@@ -1122,6 +1162,11 @@ packages:
 
   '@composable-svelte/core@0.4.0':
     resolution: {integrity: sha512-rKixp2x1RQCsVY2FJ7brNYYeI5j2Gz7mwKXNqBTBQigav7faTpYGRyDU1glIcOfVGGqvetqB6mMieQYufnxCCQ==}
+    peerDependencies:
+      svelte: ^5.0.0
+
+  '@composable-svelte/core@0.5.2':
+    resolution: {integrity: sha512-8LghGYD1IDbw/Yxrb0GrIK1p0RgUqPYnKvnUmaVHcZ/d5RFJZ7HlFyN2Le3KYGJW46yS9Yf7eS2PdACQpj67vw==}
     peerDependencies:
       svelte: ^5.0.0
 
@@ -4677,6 +4722,28 @@ snapshots:
       w3c-keyname: 2.2.8
 
   '@composable-svelte/core@0.4.0(svelte@5.43.3)(typescript@5.9.3)':
+    dependencies:
+      '@floating-ui/dom': 1.7.4
+      '@formatjs/intl': 3.1.8(typescript@5.9.3)
+      clsx: 2.1.1
+      intl-messageformat: 10.7.18
+      isomorphic-dompurify: 2.31.0
+      motion: 12.23.24
+      path-to-regexp: 8.3.0
+      svelte: 5.43.3
+      tailwind-merge: 3.3.1
+      zod: 4.1.12
+    transitivePeerDependencies:
+      - '@emotion/is-prop-valid'
+      - bufferutil
+      - canvas
+      - react
+      - react-dom
+      - supports-color
+      - typescript
+      - utf-8-validate
+
+  '@composable-svelte/core@0.5.2(svelte@5.43.3)(typescript@5.9.3)':
     dependencies:
       '@floating-ui/dom': 1.7.4
       '@formatjs/intl': 3.1.8(typescript@5.9.3)
