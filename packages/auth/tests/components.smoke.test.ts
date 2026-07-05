@@ -23,7 +23,9 @@ const session: SessionSnapshot = {
 	roles: ['agent']
 };
 
-// The smoke tests dispatch feedback actions directly — deps are never hit.
+// The smoke tests drive the reducer synchronously: each initiator action is
+// followed by a manual feedback dispatch in the same tick. The inert deps'
+// own (microtask-later) feedback is discarded by the stale-feedback guards.
 const inertDeps: SessionDependencies = {
 	fetchLogin: async () => session,
 	fetchLogout: async () => undefined,
@@ -71,6 +73,7 @@ describe('AuthGuard', () => {
 			expect(target.querySelector('[data-testid="secret"]')).toBeNull();
 
 			// authenticated → children
+			store.dispatch({ type: 'resolveSession' });
 			store.dispatch({ type: 'sessionResolved', session });
 			flushSync();
 			expect(target.querySelector('[data-testid="secret"]')).not.toBeNull();
@@ -78,6 +81,7 @@ describe('AuthGuard', () => {
 			expect(onAnonymous).not.toHaveBeenCalled();
 
 			// logged out → fallback + onAnonymous fires
+			store.dispatch({ type: 'logout' });
 			store.dispatch({ type: 'loggedOut' });
 			flushSync();
 			expect(target.querySelector('[data-testid="signin"]')).not.toBeNull();
@@ -110,11 +114,14 @@ describe('RoleGate', () => {
 			expect(target.querySelector('[data-testid="denied"]')).not.toBeNull();
 
 			// Authenticated as 'agent' — still not 'admin' → fallback.
+			store.dispatch({ type: 'resolveSession' });
 			store.dispatch({ type: 'sessionResolved', session });
 			flushSync();
 			expect(target.querySelector('[data-testid="admin-only"]')).toBeNull();
 
-			// Authenticated with the required role → children.
+			// Authenticated with the required role → children (re-resolve:
+			// feedback only applies while its resolve is in flight).
+			store.dispatch({ type: 'resolveSession' });
 			store.dispatch({
 				type: 'sessionResolved',
 				session: { ...session, roles: ['admin'] }

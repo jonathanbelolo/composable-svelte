@@ -195,8 +195,9 @@ describe('logout', () => {
 		const store = makeStore(deps, authenticatedState);
 
 		await store.send({ type: 'logout' }, (state) => {
-			// No optimistic state change — the transition happens on loggedOut.
-			expect(state.status).toBe('authenticated');
+			// In-flight marker only — the anonymous transition happens on loggedOut.
+			expect(state.status).toBe('loggingOut');
+			expect(state.subject.kind).toBe('authenticated');
 		});
 
 		await store.receive({ type: 'loggedOut' }, (state) => {
@@ -224,6 +225,85 @@ describe('logout', () => {
 			expect(state.status).toBe('anonymous');
 			expect(state.subject.kind).toBe('anonymous');
 			expect(state.error).toBe('server unreachable');
+		});
+
+		store.assertNoPendingActions();
+	});
+
+	it('ignores a duplicate logout while one is in flight (single request)', async () => {
+		// Hold the first logout open so the second send provably races it.
+		const gate = deferred<void>();
+		const deps = mockDeps({ fetchLogout: vi.fn(() => gate.promise) });
+		const store = makeStore(deps, authenticatedState);
+
+		await store.send({ type: 'logout' }, (state) => {
+			expect(state.status).toBe('loggingOut');
+		});
+		// Second logout while the first is still in flight: guarded no-op.
+		await store.send({ type: 'logout' }, (state) => {
+			expect(state.status).toBe('loggingOut');
+		});
+		expect(deps.fetchLogout).toHaveBeenCalledTimes(1);
+
+		gate.resolve(undefined);
+		await store.receive({ type: 'loggedOut' }, (state) => {
+			expect(state.status).toBe('anonymous');
+		});
+		expect(deps.fetchLogout).toHaveBeenCalledTimes(1);
+		store.assertNoPendingActions();
+	});
+});
+
+describe('stale-feedback races', () => {
+	it('slow resolve superseded by login: stale sessionResolved(null) does not clobber authenticated', async () => {
+		// Hold the resolve open; log in while it is still in flight.
+		const gate = deferred<SessionSnapshot | null>();
+		const deps = mockDeps({ fetchSession: vi.fn(() => gate.promise) });
+		const store = makeStore(deps);
+
+		await store.send({ type: 'resolveSession' }, (state) => {
+			expect(state.status).toBe('resolving');
+		});
+		// Explicit user intent supersedes the background resolve.
+		await store.send({ type: 'login', seededUserId: 'seeded-agent' }, (state) => {
+			expect(state.status).toBe('loggingIn');
+		});
+		await store.receive({ type: 'loginSucceeded' }, (state) => {
+			expect(state.status).toBe('authenticated');
+		});
+
+		// The slow resolve finally lands anonymous — it must be discarded.
+		gate.resolve(null);
+		await store.receive({ type: 'sessionResolved' }, (state) => {
+			expect(state.status).toBe('authenticated');
+			expect(state.subject.kind).toBe('authenticated');
+		});
+
+		store.assertNoPendingActions();
+	});
+
+	it('logout during resolving: stale sessionResolved(session) does not resurrect the session', async () => {
+		// Hold the resolve open; log out while it is still in flight.
+		const gate = deferred<SessionSnapshot | null>();
+		const deps = mockDeps({ fetchSession: vi.fn(() => gate.promise) });
+		const store = makeStore(deps);
+
+		await store.send({ type: 'resolveSession' }, (state) => {
+			expect(state.status).toBe('resolving');
+		});
+		await store.send({ type: 'logout' }, (state) => {
+			expect(state.status).toBe('loggingOut');
+		});
+		await store.receive({ type: 'loggedOut' }, (state) => {
+			expect(state.status).toBe('anonymous');
+		});
+
+		// The slow resolve finally lands with a live session — it must NOT
+		// resurrect `authenticated` after the user signed out.
+		gate.resolve(session);
+		await store.receive({ type: 'sessionResolved' }, (state) => {
+			expect(state.status).toBe('anonymous');
+			expect(state.subject.kind).toBe('anonymous');
 		});
 
 		store.assertNoPendingActions();

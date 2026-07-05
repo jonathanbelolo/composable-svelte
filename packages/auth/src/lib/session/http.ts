@@ -19,7 +19,10 @@ import type { SessionDependencies } from './types.js';
  * Build HTTP session dependencies against `baseUrl` (default: same origin).
  */
 export function createHttpSessionDeps(baseUrl: string = ''): SessionDependencies {
-	const url = (path: string): string => `${baseUrl}${path}`;
+	// Normalize once at construction: strip trailing slash(es) so
+	// `https://api.example.com/` + `/auth/login` never yields `//auth/login`.
+	const base = baseUrl.replace(/\/+$/, '');
+	const url = (path: string): string => `${base}${path}`;
 
 	return {
 		async fetchLogin(seededUserId: string): Promise<SessionSnapshot> {

@@ -21,6 +21,7 @@ import type { SessionSnapshot, Subject } from '../subject/types.js';
  *                     fail-closed, or post-logout)
  * - `loggingIn`     — login request in flight
  * - `loginFailed`   — the last login attempt failed; `error` says why
+ * - `loggingOut`    — logout request in flight
  */
 export type SessionStatus =
 	| 'unresolved'
@@ -28,7 +29,8 @@ export type SessionStatus =
 	| 'authenticated'
 	| 'anonymous'
 	| 'loggingIn'
-	| 'loginFailed';
+	| 'loginFailed'
+	| 'loggingOut';
 
 /** State of the session store. */
 export interface SessionState {

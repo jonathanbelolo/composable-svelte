@@ -8,7 +8,7 @@
 	Rendering:
 	- `authenticated`                → children
 	- `anonymous` / `loginFailed`    → fallback (if provided)
-	- `unresolved` / `resolving` / `loggingIn` → pending (if provided)
+	- `unresolved` / `resolving` / `loggingIn` / `loggingOut` → pending (if provided)
 -->
 <script lang="ts">
 	import type { Store } from '@composable-svelte/core';
@@ -34,7 +34,7 @@
 		children?: Snippet;
 		/** Rendered when anonymous or after a failed login. */
 		fallback?: Snippet;
-		/** Rendered while unresolved / resolving / logging in. */
+		/** Rendered while unresolved / resolving / logging in or out. */
 		pending?: Snippet;
 	} = $props();
 

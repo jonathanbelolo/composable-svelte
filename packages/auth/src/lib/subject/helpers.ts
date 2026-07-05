@@ -22,7 +22,9 @@ export const anonymousSubject: AnonymousSubject = { kind: 'anonymous' };
  * `attributes["roles"]`, `display_name` → `attributes["display_name"]`.
  */
 export function subjectFromSession(session: SessionSnapshot): AuthenticatedSubject {
-	const attributes: Record<string, unknown> = { roles: [...session.roles] };
+	// Fail-safe on the wire shape: a payload missing `roles` yields an empty
+	// role-set (matches `subjectRoles`' fail-closed posture).
+	const attributes: Record<string, unknown> = { roles: [...(session.roles ?? [])] };
 	if (session.display_name !== undefined) {
 		attributes['display_name'] = session.display_name;
 	}
