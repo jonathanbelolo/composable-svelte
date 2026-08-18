@@ -105,7 +105,7 @@
 		lg: 'h-12 w-12'
 	};
 
-	function handleClick(e: MouseEvent) {
+	function handleClick(e: MouseEvent & { currentTarget: EventTarget & HTMLButtonElement }) {
 		if (loading || disabled) {
 			e.preventDefault();
 			return;

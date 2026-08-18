@@ -26,42 +26,42 @@
      * Presentation state for animation lifecycle.
      * Optional - if not provided, no animations (instant show/hide).
      */
-    presentation?: PresentationState<any>;
+    presentation?: PresentationState<any> | undefined;
 
     /**
      * Callback when presentation animation completes.
      * Dispatch this to store: { type: 'presentation', event: { type: 'presentationCompleted' } }
      */
-    onPresentationComplete?: () => void;
+    onPresentationComplete?: (() => void) | undefined;
 
     /**
      * Callback when dismissal animation completes.
      * Dispatch this to store: { type: 'presentation', event: { type: 'dismissalCompleted' } }
      */
-    onDismissalComplete?: () => void;
+    onDismissalComplete?: (() => void) | undefined;
 
     /**
      * Spring configuration override.
      */
-    springConfig?: Partial<SpringConfig>;
+    springConfig?: Partial<SpringConfig> | undefined;
 
     /**
      * Disable click-outside to dismiss.
      * @default false
      */
-    disableClickOutside?: boolean;
+    disableClickOutside?: boolean | undefined;
 
     /**
      * Disable Escape key to dismiss.
      * @default false
      */
-    disableEscapeKey?: boolean;
+    disableEscapeKey?: boolean | undefined;
 
     /**
      * Element to return focus to when popover is dismissed.
      * @default null
      */
-    returnFocusTo?: HTMLElement | null;
+    returnFocusTo?: HTMLElement | null | undefined;
 
     /**
      * Content snippet. Receives the primitive's render state.
@@ -122,7 +122,8 @@
   $effect(() => {
     if (!presentation || !contentElement) return;
 
-    const currentContent = presentation.content;
+    // `content` exists on every status except `idle`.
+    const currentContent = presentation.status === 'idle' ? null : presentation.content;
 
     if (
       presentation.status === 'presenting' &&

@@ -20,52 +20,52 @@
      * Presentation state for animation lifecycle.
      * Optional - if not provided, no animations (instant show/hide).
      */
-    presentation?: PresentationState<any>;
+    presentation?: PresentationState<any> | undefined;
 
     /**
      * Callback when presentation animation completes.
      */
-    onPresentationComplete?: () => void;
+    onPresentationComplete?: (() => void) | undefined;
 
     /**
      * Callback when dismissal animation completes.
      */
-    onDismissalComplete?: () => void;
+    onDismissalComplete?: (() => void) | undefined;
 
     /**
      * Spring configuration override.
      */
-    springConfig?: Partial<SpringConfig>;
+    springConfig?: Partial<SpringConfig> | undefined;
 
     /**
      * Disable all default styling.
      * When true, component behaves like the primitive.
      * @default false
      */
-    unstyled?: boolean;
+    unstyled?: boolean | undefined;
 
     /**
      * Override content container classes.
      */
-    class?: string;
+    class?: string | undefined;
 
     /**
      * Disable Escape key to dismiss.
      * @default false
      */
-    disableEscapeKey?: boolean;
+    disableEscapeKey?: boolean | undefined;
 
     /**
      * Side where the sidebar is positioned.
      * @default 'left'
      */
-    side?: 'left' | 'right';
+    side?: 'left' | 'right' | undefined;
 
     /**
      * Width of the sidebar as CSS value.
      * @default '240px'
      */
-    width?: string;
+    width?: string | undefined;
 
     /**
      * Content snippet. Receives the render state of the presented layer.
@@ -93,7 +93,7 @@
     disableEscapeKey = false,
     side = 'left',
     width = '240px',
-    children
+    children: renderContent
   }: SidebarProps<unknown, unknown> = $props();
 
   // ============================================================================
@@ -143,7 +143,7 @@
           style="width: {width}; height: 100%"
           aria-label="Sidebar navigation"
         >
-          {@render children?.({ visible, store, side, width })}
+          {@render renderContent?.({ visible, store, side, width })}
         </nav>
       </div>
     {/if}

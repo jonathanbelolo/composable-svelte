@@ -27,6 +27,7 @@
 </script>
 
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import { getAccordionContext } from './Accordion.svelte';
 	import { cn } from '../../../utils.js';
 

@@ -381,6 +381,24 @@ export const selectReducer: Reducer<
 			return [newState, Effect.none()];
 		}
 
+		case 'valueChanged': {
+			if (state.selected === action.value) {
+				return [state, Effect.none()];
+			}
+			return [{ ...state, selected: action.value }, Effect.none()];
+		}
+
+		case 'optionsChanged': {
+			return [
+				{
+					...state,
+					options: action.options,
+					filteredOptions: filterOptions(action.options, state.searchQuery)
+				},
+				Effect.none()
+			];
+		}
+
 		default:
 			return [state, Effect.none()];
 	}

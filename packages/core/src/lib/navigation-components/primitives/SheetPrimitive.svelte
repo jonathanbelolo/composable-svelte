@@ -28,54 +28,54 @@
      * Presentation state for animation lifecycle.
      * Optional - if not provided, no animations (instant show/hide).
      */
-    presentation?: PresentationState<any>;
+    presentation?: PresentationState<any> | undefined;
 
     /**
      * Callback when presentation animation completes.
      * Dispatch this to store: { type: 'presentation', event: { type: 'presentationCompleted' } }
      */
-    onPresentationComplete?: () => void;
+    onPresentationComplete?: (() => void) | undefined;
 
     /**
      * Callback when dismissal animation completes.
      * Dispatch this to store: { type: 'presentation', event: { type: 'dismissalCompleted' } }
      */
-    onDismissalComplete?: () => void;
+    onDismissalComplete?: (() => void) | undefined;
 
     /**
      * Spring configuration override.
      */
-    springConfig?: Partial<SpringConfig>;
+    springConfig?: Partial<SpringConfig> | undefined;
 
     /**
      * Disable click-outside to dismiss.
      * @default false
      */
-    disableClickOutside?: boolean;
+    disableClickOutside?: boolean | undefined;
 
     /**
      * Disable Escape key to dismiss.
      * @default false
      */
-    disableEscapeKey?: boolean;
+    disableEscapeKey?: boolean | undefined;
 
     /**
      * Side from which the sheet slides in.
      * @default 'bottom'
      */
-    side?: 'bottom' | 'left' | 'right';
+    side?: 'bottom' | 'left' | 'right' | undefined;
 
     /**
      * Height of the sheet as CSS value (for bottom sheets).
      * @default '60vh'
      */
-    height?: string;
+    height?: string | undefined;
 
     /**
      * Element to return focus to when sheet is dismissed.
      * @default null
      */
-    returnFocusTo?: HTMLElement | null;
+    returnFocusTo?: HTMLElement | null | undefined;
 
     /**
      * Content snippet. Receives the primitive's render state.
@@ -140,7 +140,8 @@
   $effect(() => {
     if (!presentation || !sheetContentElement || !sheetBackdropElement) return;
 
-    const currentContent = presentation.content;
+    // `content` exists on every status except `idle`.
+    const currentContent = presentation.status === 'idle' ? null : presentation.content;
 
     if (
       presentation.status === 'presenting' &&
@@ -197,22 +198,22 @@
 
   // Prevent body scroll when sheet is open
   $effect(() => {
-    if (visible) {
-      const originalOverflow = document.body.style.overflow;
-      const originalPaddingRight = document.body.style.paddingRight;
-      const scrollbarWidth =
-        window.innerWidth - document.documentElement.clientWidth;
+    if (!visible) return;
 
-      document.body.style.overflow = 'hidden';
-      if (scrollbarWidth > 0) {
-        document.body.style.paddingRight = `${scrollbarWidth}px`;
-      }
+    const originalOverflow = document.body.style.overflow;
+    const originalPaddingRight = document.body.style.paddingRight;
+    const scrollbarWidth =
+      window.innerWidth - document.documentElement.clientWidth;
 
-      return () => {
-        document.body.style.overflow = originalOverflow;
-        document.body.style.paddingRight = originalPaddingRight;
-      };
+    document.body.style.overflow = 'hidden';
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
     }
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.body.style.paddingRight = originalPaddingRight;
+    };
   });
 </script>
 

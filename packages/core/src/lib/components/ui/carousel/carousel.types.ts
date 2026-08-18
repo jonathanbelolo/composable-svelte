@@ -57,11 +57,11 @@ export type CarouselAction =
  */
 export interface CarouselDependencies<T = unknown> {
   /** Callback when slide changes */
-  onSlideChange?: (index: number, slide: CarouselSlide<T>) => void;
+  onSlideChange?: ((index: number, slide: CarouselSlide<T>) => void) | undefined;
   /** Callback when auto-play starts */
-  onAutoPlayStart?: () => void;
+  onAutoPlayStart?: (() => void) | undefined;
   /** Callback when auto-play stops */
-  onAutoPlayStop?: () => void;
+  onAutoPlayStop?: (() => void) | undefined;
 }
 
 /**
@@ -92,6 +92,8 @@ export interface CarouselProps<T = unknown> {
   slideClass?: string;
   /** Transition duration in milliseconds (default: 300) */
   transitionDuration?: number;
+  /** Slide content snippet */
+  children?: import('svelte').Snippet<[{ slide: CarouselSlide<T>; index: number }]> | undefined;
 }
 
 /**

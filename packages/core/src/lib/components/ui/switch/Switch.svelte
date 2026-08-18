@@ -51,12 +51,15 @@
 	// Animate the thumb when checked state changes
 	$effect(() => {
 		if (thumbRef) {
-			animate(thumbRef, {
-				x: checked ? '100%' : '0%'
-			}, {
-				spring: SPRING_PRESETS.button,
-				duration: 0.2
-			});
+			animate(
+				thumbRef,
+				{ x: checked ? '100%' : '0%' },
+				{
+					type: 'spring',
+					visualDuration: SPRING_PRESETS.button.visualDuration,
+					bounce: SPRING_PRESETS.button.bounce
+				}
+			);
 		}
 	});
 </script>

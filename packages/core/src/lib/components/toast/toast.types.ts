@@ -108,18 +108,18 @@ export interface ToastDependencies {
 	/**
 	 * Optional callback when a toast is added.
 	 */
-	onToastAdded?: (toast: Toast) => void;
+	onToastAdded?: ((toast: Toast) => void) | undefined;
 
 	/**
 	 * Optional callback when a toast is dismissed.
 	 */
-	onToastDismissed?: (toast: Toast) => void;
+	onToastDismissed?: ((toast: Toast) => void) | undefined;
 
 	/**
 	 * Function to generate unique IDs.
 	 * Default: uses Date.now() + random
 	 */
-	generateId?: () => string;
+	generateId?: (() => string) | undefined;
 }
 
 /**

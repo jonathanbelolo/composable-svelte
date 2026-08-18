@@ -124,7 +124,7 @@ export interface StoreConfig<State, Action, Dependencies = any> {
    * Optional dependencies to inject into the reducer.
    * Use this for API clients, storage, UUID generators, etc.
    */
-  dependencies?: Dependencies;
+  dependencies?: Dependencies | undefined;
 
   /**
    * Maximum number of actions to keep in history.

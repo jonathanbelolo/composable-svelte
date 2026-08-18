@@ -133,13 +133,13 @@ export interface ComboboxDependencies<T = string> {
 	/**
 	 * Callback when selection changes.
 	 */
-	onChange?: (value: T | null) => void;
+	onChange?: ((value: T | null) => void) | undefined;
 
 	/**
 	 * Async function to load options based on query.
 	 * If provided, enables async mode.
 	 */
-	loadOptions?: (query: string) => Promise<ComboboxOption<T>[]>;
+	loadOptions?: ((query: string) => Promise<ComboboxOption<T>[]>) | undefined;
 }
 
 /**

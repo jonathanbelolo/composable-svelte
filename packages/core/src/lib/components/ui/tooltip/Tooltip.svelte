@@ -71,14 +71,17 @@
 	});
 
 	// Subscribe to store for reactivity
-	const state = $derived($store);
+	const tooltipState = $derived($store);
 
 	// Reference to the wrapper element (which contains the trigger)
 	let wrapperElement: HTMLElement | null = $state(null);
 
 	// Get the actual trigger element (first child of wrapper)
-	const triggerElement = $derived(
-		wrapperElement?.children[0] as HTMLElement | null ?? null
+	// `$derived.by` rather than `$derived`: the latter is an inline expression, so
+	// `wrapperElement` is still control-flow-narrowed to its `null` initialiser
+	// there — only `bind:this` ever assigns it.
+	const triggerElement = $derived.by(
+		() => (wrapperElement?.firstElementChild as HTMLElement | null) ?? null
 	);
 
 	function handleMouseEnter() {
@@ -120,7 +123,7 @@
 
 <!-- Tooltip (rendered outside wrapper with fixed positioning) -->
 <TooltipPrimitive
-	presentation={state.presentation}
+	presentation={tooltipState.presentation}
 	{triggerElement}
 	{position}
 	class={className}

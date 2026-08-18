@@ -48,6 +48,17 @@
 		 * Additional CSS classes for the table element.
 		 */
 		tableClass?: string;
+
+		/**
+		 * Row identity for the keyed `{#each}`.
+		 *
+		 * Pass the same function given to `createTableReducer({ getRowId })` —
+		 * the reducer closes over its copy, so the component cannot read it back
+		 * off the store.
+		 *
+		 * @default (row) => String(row.id)
+		 */
+		getRowId?: (row: T) => string;
 	}
 
 	let {
@@ -58,7 +69,8 @@
 		emptyMessage = 'No data available',
 		loadingMessage = 'Loading...',
 		class: className,
-		tableClass
+		tableClass,
+		getRowId = (row: T) => String((row as { id?: unknown }).id)
 	}: DataTableProps<T> = $props();
 
 	const state = $derived(store.state);
@@ -91,7 +103,7 @@
 				{/if}
 
 				<tbody class="[&_tr:last-child]:border-0">
-					{#each state.data as item (store.getRowId?.(item) ?? (item as any).id)}
+					{#each state.data as item (getRowId(item))}
 						{@render row(item)}
 					{/each}
 				</tbody>

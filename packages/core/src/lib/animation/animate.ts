@@ -892,8 +892,8 @@ export async function animateAccordionExpand(element: HTMLElement): Promise<void
 			} as any,
 			{
 				duration: 0.3,
-				easing: [0.4, 0, 0.2, 1] // ease-in-out
-			} as any
+				ease: [0.4, 0, 0.2, 1] // ease-in-out
+			}
 		).finished;
 
 		// Clean up styles
@@ -932,8 +932,8 @@ export async function animateAccordionCollapse(element: HTMLElement): Promise<vo
 			} as any,
 			{
 				duration: 0.2,
-				easing: [0.4, 0, 1, 1] // ease-out
-			} as any
+				ease: [0.4, 0, 1, 1] // ease-out
+			}
 		).finished;
 	} catch (error) {
 		console.error('[animateAccordionCollapse] Animation failed:', error);

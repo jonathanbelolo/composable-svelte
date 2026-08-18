@@ -4,7 +4,7 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "composite": true,
-    "types": ["svelte"]
+    "types": ["svelte", "node"]
   },
   "include": ["src/**/*"],
   "exclude": ["dist", "node_modules", "**/*.test.ts"]

@@ -28,36 +28,36 @@
      * Presentation state for animation lifecycle.
      * Optional - if not provided, no animations (instant show/hide).
      */
-    presentation?: PresentationState<any>;
+    presentation?: PresentationState<any> | undefined;
 
     /**
      * Callback when presentation animation completes.
      * Dispatch this to store: { type: 'presentation', event: { type: 'presentationCompleted' } }
      */
-    onPresentationComplete?: () => void;
+    onPresentationComplete?: (() => void) | undefined;
 
     /**
      * Callback when dismissal animation completes.
      * Dispatch this to store: { type: 'presentation', event: { type: 'dismissalCompleted' } }
      */
-    onDismissalComplete?: () => void;
+    onDismissalComplete?: (() => void) | undefined;
 
     /**
      * Spring configuration override.
      */
-    springConfig?: Partial<SpringConfig>;
+    springConfig?: Partial<SpringConfig> | undefined;
 
     /**
      * Disable click-outside to dismiss.
      * @default false
      */
-    disableClickOutside?: boolean;
+    disableClickOutside?: boolean | undefined;
 
     /**
      * Disable Escape key to dismiss.
      * @default false
      */
-    disableEscapeKey?: boolean;
+    disableEscapeKey?: boolean | undefined;
 
     /**
      * Element to return focus to when modal is dismissed.
@@ -65,7 +65,7 @@
      * If not provided, focus returns to the element that was focused before modal opened.
      * @default null
      */
-    returnFocusTo?: HTMLElement | null;
+    returnFocusTo?: HTMLElement | null | undefined;
 
     /**
      * Content snippet. Receives the primitive's render state.
@@ -127,7 +127,8 @@
     if (!presentation || !modalContentElement || !modalBackdropElement) return;
 
     // Only animate if content changed and we're in the right state
-    const currentContent = presentation.content;
+    // `content` exists on every status except `idle`.
+    const currentContent = presentation.status === 'idle' ? null : presentation.content;
 
     // Handle deep linking case: if we start with 'presented', mark content as animated
     if (presentation.status === 'presented' && lastAnimatedContent === null && currentContent) {
@@ -190,27 +191,27 @@
 
   // Prevent body scroll when modal is open
   $effect(() => {
-    if (visible) {
-      const originalOverflow = document.body.style.overflow;
-      const originalPaddingRight = document.body.style.paddingRight;
+    if (!visible) return;
 
-      // Calculate scrollbar width to prevent layout shift
-      const scrollbarWidth =
-        window.innerWidth - document.documentElement.clientWidth;
+    const originalOverflow = document.body.style.overflow;
+    const originalPaddingRight = document.body.style.paddingRight;
 
-      document.body.style.overflow = 'hidden';
-      if (scrollbarWidth > 0) {
-        document.body.style.paddingRight = `${scrollbarWidth}px`;
-      }
+    // Calculate scrollbar width to prevent layout shift
+    const scrollbarWidth =
+      window.innerWidth - document.documentElement.clientWidth;
 
-      return () => {
-        document.body.style.overflow = originalOverflow;
-        document.body.style.paddingRight = originalPaddingRight;
-        // Cleanup clickOutside action when modal unmounts
-        clickOutsideCleanup?.();
-        clickOutsideCleanup = undefined;
-      };
+    document.body.style.overflow = 'hidden';
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
     }
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.body.style.paddingRight = originalPaddingRight;
+      // Cleanup clickOutside action when modal unmounts
+      clickOutsideCleanup?.();
+      clickOutsideCleanup = undefined;
+    };
   });
 </script>
 

@@ -228,12 +228,12 @@
 	}
 
 	$effect(() => {
-		if ($store.isOpen) {
-			document.addEventListener('click', handleClickOutside);
-			return () => {
-				document.removeEventListener('click', handleClickOutside);
-			};
-		}
+		if (!$store.isOpen) return;
+
+		document.addEventListener('click', handleClickOutside);
+		return () => {
+			document.removeEventListener('click', handleClickOutside);
+		};
 	});
 </script>
 

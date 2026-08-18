@@ -63,7 +63,14 @@ export type CalendarAction =
 	| { type: 'monthSet'; date: Date }
 	| { type: 'rangeStarted'; date: Date }
 	| { type: 'rangeCompleted'; date: Date }
-	| { type: 'cleared' };
+	| { type: 'cleared' }
+	// Sync action: the component dispatches this when its props change externally.
+	| {
+			type: 'propsChanged';
+			props: Partial<
+				Pick<CalendarState, 'mode' | 'selectedDate' | 'selectedRange' | 'minDate' | 'maxDate'>
+			>;
+	  };
 
 /**
  * Calendar dependencies.

@@ -2,23 +2,8 @@
   import { createStore } from '../../../store.svelte.js';
   import { carouselReducer } from './carousel.reducer.js';
   import { createInitialCarouselState } from './carousel.types.js';
-  import type { CarouselSlide } from './carousel.types.js';
+  import type { CarouselSlide, CarouselProps } from './carousel.types.js';
 
-  interface Props {
-    slides: CarouselSlide<T>[];
-    initialIndex?: number;
-    loop?: boolean;
-    autoPlayInterval?: number;
-    showArrows?: boolean;
-    showDots?: boolean;
-    onSlideChange?: (index: number, slide: CarouselSlide<T>) => void;
-    onAutoPlayStart?: () => void;
-    onAutoPlayStop?: () => void;
-    class?: string;
-    slideClass?: string;
-    transitionDuration?: number;
-    children?: import('svelte').Snippet<[{ slide: CarouselSlide<T>; index: number }]>;
-  }
 
   let {
     slides,
@@ -34,7 +19,7 @@
     slideClass = '',
     transitionDuration = 300,
     children
-  }: Props = $props();
+  }: CarouselProps<T> = $props();
 
   // Create carousel store with reducer
   const store = createStore({

@@ -115,6 +115,7 @@
 
 			const firstElement = focusableElements[0];
 			const lastElement = focusableElements[focusableElements.length - 1];
+			if (!firstElement || !lastElement) return;
 
 			if (event.shiftKey) {
 				// Shift+Tab: moving backwards
@@ -136,6 +137,7 @@
 	function handleTouchStart(e: TouchEvent) {
 		if (!enableSwipe) return;
 		const touch = e.touches[0];
+		if (!touch) return;
 		store.dispatch({
 			type: 'touchStart',
 			x: touch.clientX,
@@ -147,6 +149,7 @@
 		if (!enableSwipe || !storeState.touch.isDragging) return;
 
 		const touch = e.touches[0];
+		if (!touch) return;
 		store.dispatch({
 			type: 'touchMove',
 			x: touch.clientX,
@@ -183,7 +186,7 @@
 					},
 					{
 						duration: 0.3,
-						easing: 'ease-out'
+						ease: 'easeOut'
 					}
 				).finished.then(() => {
 					store.dispatch({
@@ -211,7 +214,7 @@
 					},
 					{
 						duration: 0.3,
-						easing: 'ease-in'
+						ease: 'easeIn'
 					}
 				).finished.then(() => {
 					store.dispatch({
@@ -237,48 +240,52 @@
 
 	// Focus management
 	$effect(() => {
-		if (storeState.lightbox.isOpen && storeState.lightbox.presentation.status === 'presented') {
-			// Save currently focused element
-			previouslyFocusedElement = document.activeElement as HTMLElement;
-
-			// Focus the first focusable element or the lightbox itself
-			const focusableElements = getFocusableElements();
-			if (focusableElements.length > 0) {
-				focusableElements[0].focus();
-			} else if (lightboxElement) {
-				lightboxElement.focus();
-			}
-
-			// Add keyboard listener
-			window.addEventListener('keydown', handleKeydown);
-
-			return () => {
-				window.removeEventListener('keydown', handleKeydown);
-
-				// Restore focus when closing
-				if (previouslyFocusedElement) {
-					previouslyFocusedElement.focus();
-					previouslyFocusedElement = null;
-				}
-			};
+		if (!storeState.lightbox.isOpen || storeState.lightbox.presentation.status !== 'presented') {
+			return;
 		}
+
+		// Save currently focused element
+		previouslyFocusedElement = document.activeElement as HTMLElement;
+
+		// Focus the first focusable element or the lightbox itself
+		const focusableElements = getFocusableElements();
+		if (focusableElements[0]) {
+			focusableElements[0].focus();
+		} else if (lightboxElement) {
+			lightboxElement.focus();
+		}
+
+		// Add keyboard listener
+		window.addEventListener('keydown', handleKeydown);
+
+		return () => {
+			window.removeEventListener('keydown', handleKeydown);
+
+			// Restore focus when closing
+			if (previouslyFocusedElement) {
+				previouslyFocusedElement.focus();
+				previouslyFocusedElement = null;
+			}
+		};
 	});
 
 	// Body scroll prevention
 	$effect(() => {
-		if (storeState.lightbox.isOpen && storeState.lightbox.presentation.status === 'presented') {
-			// Disable body scroll
-			const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-			document.body.style.overflow = 'hidden';
-			// Prevent layout shift from scrollbar disappearing
-			document.body.style.paddingRight = `${scrollbarWidth}px`;
-
-			return () => {
-				// Re-enable body scroll
-				document.body.style.overflow = '';
-				document.body.style.paddingRight = '';
-			};
+		if (!storeState.lightbox.isOpen || storeState.lightbox.presentation.status !== 'presented') {
+			return;
 		}
+
+		// Disable body scroll
+		const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+		document.body.style.overflow = 'hidden';
+		// Prevent layout shift from scrollbar disappearing
+		document.body.style.paddingRight = `${scrollbarWidth}px`;
+
+		return () => {
+			// Re-enable body scroll
+			document.body.style.overflow = '';
+			document.body.style.paddingRight = '';
+		};
 	});
 
 	// Close handler
@@ -368,7 +375,7 @@
 							Retry
 						</button>
 					</div>
-				{:else}
+				{:else if currentImage}
 					{#key storeState.lightbox.currentIndex}
 					<img
 						bind:this={imageElement}
@@ -389,7 +396,7 @@
 			</div>
 
 			<!-- Caption -->
-			{#if showCaptions && currentImage.caption}
+			{#if showCaptions && currentImage?.caption}
 				<div class="image-lightbox__caption">
 					{currentImage.caption}
 				</div>

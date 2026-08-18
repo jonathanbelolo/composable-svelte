@@ -125,23 +125,23 @@ export interface TreeViewDependencies<T = string> {
 	/**
 	 * Callback when a node is selected.
 	 */
-	onSelect?: (nodeId: string, node: TreeNode<T>) => void;
+	onSelect?: ((nodeId: string, node: TreeNode<T>) => void) | undefined;
 
 	/**
 	 * Callback when a node is expanded.
 	 */
-	onExpand?: (nodeId: string, node: TreeNode<T>) => void;
+	onExpand?: ((nodeId: string, node: TreeNode<T>) => void) | undefined;
 
 	/**
 	 * Callback when a node is collapsed.
 	 */
-	onCollapse?: (nodeId: string, node: TreeNode<T>) => void;
+	onCollapse?: ((nodeId: string, node: TreeNode<T>) => void) | undefined;
 
 	/**
 	 * Async function to load children for a lazy-loaded node.
 	 * Called when a lazy node is expanded for the first time.
 	 */
-	loadChildren?: (nodeId: string, node: TreeNode<T>) => Promise<TreeNode<T>[]>;
+	loadChildren?: ((nodeId: string, node: TreeNode<T>) => Promise<TreeNode<T>[]>) | undefined;
 }
 
 /**

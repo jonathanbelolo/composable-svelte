@@ -15,6 +15,10 @@ export { default as Tabs } from './Tabs.svelte';
 export { default as NavigationStack } from './NavigationStack.svelte';
 export { default as AnimatedNavigationStack } from './AnimatedNavigationStack.svelte';
 export { default as DestinationRouter } from './DestinationRouter.svelte';
+export type {
+	RouteConfig,
+	DestinationRouterProps
+} from './destination-router.types.js';
 
 // Headless primitives. Also available from the package root; re-exported here so
 // this subpath is a complete view of the navigation surface.

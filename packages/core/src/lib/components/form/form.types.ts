@@ -7,6 +7,7 @@
  */
 
 import type { ZodSchema } from 'zod';
+import type { Store } from '../../types.js';
 
 /**
  * Complete form state for a given data shape.
@@ -340,4 +341,58 @@ export type FormAction<T extends Record<string, any>> =
  */
 export interface FormDependencies {
 	// Currently empty - can add deps like API clients, etc.
+}
+
+/**
+ * The value a `FormField` hands to its children snippet.
+ */
+export interface FieldRenderProps<T extends Record<string, any>> {
+	field: FieldState;
+	send: (action: FormAction<T>) => void;
+}
+
+/**
+ * Props for the `Form` component.
+ *
+ * Declared here rather than inside the component: a generic `<script generics=...>`
+ * component cannot reference a locally-declared interface from its emitted
+ * declaration file.
+ */
+export interface FormProps<T extends Record<string, any>> {
+	/**
+	 * Form configuration (standalone mode).
+	 * Mutually exclusive with `store`.
+	 */
+	config?: FormConfig<T> | undefined;
+	/**
+	 * External store from parent reducer (integrated mode).
+	 * Mutually exclusive with `config`.
+	 */
+	store?: Store<FormState<T>, FormAction<T>> | undefined;
+	/**
+	 * Optional class name for the form element.
+	 */
+	class?: string | undefined;
+	/**
+	 * Optional children (form fields and controls).
+	 */
+	children?: import('svelte').Snippet | undefined;
+}
+
+/**
+ * Props for the `FormField` component.
+ */
+export interface FormFieldProps<T extends Record<string, any>> {
+	/**
+	 * The name of the field in the form data.
+	 */
+	name: keyof T & string;
+	/**
+	 * Optional class name for the field wrapper.
+	 */
+	class?: string | undefined;
+	/**
+	 * Children components (label, control, message, etc.).
+	 */
+	children?: import('svelte').Snippet<[FieldRenderProps<T>]> | undefined;
 }

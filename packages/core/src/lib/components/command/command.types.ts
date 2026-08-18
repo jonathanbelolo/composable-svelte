@@ -157,24 +157,24 @@ export interface CommandDependencies {
 	 * Callback when a command is executed.
 	 * Receives the command item and can dispatch actions.
 	 */
-	onCommandExecute?: (command: CommandItem, dispatch: (action: any) => void) => void;
+	onCommandExecute?: ((command: CommandItem, dispatch: (action: any) => void) => void) | undefined;
 
 	/**
 	 * Optional custom filter function.
 	 * If not provided, uses default fuzzy search.
 	 */
-	filterFunction?: (commands: CommandItem[], query: string) => CommandItem[];
+	filterFunction?: ((commands: CommandItem[], query: string) => CommandItem[]) | undefined;
 }
 
 /**
  * Create initial command palette state.
  */
 export function createInitialCommandState(config?: {
-	commands?: CommandItem[];
-	groups?: CommandGroup[];
-	isOpen?: boolean;
-	caseSensitive?: boolean;
-	maxResults?: number;
+	commands?: CommandItem[] | undefined;
+	groups?: CommandGroup[] | undefined;
+	isOpen?: boolean | undefined;
+	caseSensitive?: boolean | undefined;
+	maxResults?: number | undefined;
 }): CommandState {
 	const commands = config?.commands ?? [];
 

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { cn } from '../../../utils.js';
-	import type { HTMLAttributes } from 'svelte/elements';
+	import type { SVGAttributes } from 'svelte/elements';
 
 	/**
 	 * Spinner loading indicator.
@@ -9,17 +9,18 @@
 	 *
 	 * @example
 	 * ```svelte
+	 * <Spinner size="xs" />
 	 * <Spinner size="sm" />
 	 * <Spinner size="md" />
 	 * <Spinner size="lg" />
 	 * ```
 	 */
 
-	interface SpinnerProps extends Omit<HTMLAttributes<HTMLDivElement>, 'class'> {
+	interface SpinnerProps extends Omit<SVGAttributes<SVGSVGElement>, 'class'> {
 		/**
 		 * Size of the spinner.
 		 */
-		size?: 'sm' | 'md' | 'lg';
+		size?: 'xs' | 'sm' | 'md' | 'lg';
 
 		/**
 		 * Additional CSS classes.
@@ -30,6 +31,7 @@
 	let { size = 'md', class: className, ...restProps }: SpinnerProps = $props();
 
 	const sizeClasses = {
+		xs: 'h-3 w-3',
 		sm: 'h-4 w-4',
 		md: 'h-6 w-6',
 		lg: 'h-8 w-8'

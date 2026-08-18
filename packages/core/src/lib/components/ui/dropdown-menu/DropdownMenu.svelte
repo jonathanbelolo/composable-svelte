@@ -157,19 +157,21 @@
 
 	// Register click outside handler
 	$effect(() => {
-		if ($store.isOpen) {
-			document.addEventListener('click', handleClickOutside);
-			return () => {
-				document.removeEventListener('click', handleClickOutside);
-			};
-		}
+		if (!$store.isOpen) return;
+
+		document.addEventListener('click', handleClickOutside);
+		return () => {
+			document.removeEventListener('click', handleClickOutside);
+		};
 	});
 
 	// Animation integration
 	$effect(() => {
 		if (!menuElement) return;
 
-		const currentContent = $store.presentation.content;
+		// `content` exists on every status except `idle`.
+		const currentContent =
+			$store.presentation.status === 'idle' ? null : $store.presentation.content;
 
 		if (
 			$store.presentation.status === 'presenting' &&

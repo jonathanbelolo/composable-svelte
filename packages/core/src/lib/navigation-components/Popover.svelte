@@ -20,52 +20,52 @@
      * Presentation state for animation lifecycle.
      * Optional - if not provided, no animations (instant show/hide).
      */
-    presentation?: PresentationState<any>;
+    presentation?: PresentationState<any> | undefined;
 
     /**
      * Callback when presentation animation completes.
      */
-    onPresentationComplete?: () => void;
+    onPresentationComplete?: (() => void) | undefined;
 
     /**
      * Callback when dismissal animation completes.
      */
-    onDismissalComplete?: () => void;
+    onDismissalComplete?: (() => void) | undefined;
 
     /**
      * Spring configuration override.
      */
-    springConfig?: Partial<SpringConfig>;
+    springConfig?: Partial<SpringConfig> | undefined;
 
     /**
      * Disable all default styling.
      * When true, component behaves like the primitive.
      * @default false
      */
-    unstyled?: boolean;
+    unstyled?: boolean | undefined;
 
     /**
      * Override content container classes.
      */
-    class?: string;
+    class?: string | undefined;
 
     /**
      * Disable click-outside to dismiss.
      * @default false
      */
-    disableClickOutside?: boolean;
+    disableClickOutside?: boolean | undefined;
 
     /**
      * Disable Escape key to dismiss.
      * @default false
      */
-    disableEscapeKey?: boolean;
+    disableEscapeKey?: boolean | undefined;
 
     /**
      * Custom positioning style.
      * User must provide absolute positioning via inline styles or classes.
      */
-    style?: string;
+    style?: string | undefined;
 
     /**
      * Content snippet. Receives the render state of the presented layer.
@@ -91,7 +91,7 @@
     disableClickOutside = false,
     disableEscapeKey = false,
     style = '',
-    children
+    children: renderContent
   }: PopoverProps<unknown, unknown> = $props();
 
   // ============================================================================
@@ -111,7 +111,7 @@
 
     // Match transform property in the style string
     const transformMatch = style.match(/transform:\s*([^;]+)/);
-    const transform = transformMatch ? transformMatch[1].trim() : '';
+    const transform = transformMatch?.[1]?.trim() ?? '';
 
     // Remove transform from the style string
     const styleWithoutTransform = style.replace(/transform:\s*[^;]+;?\s*/, '').trim();
@@ -135,13 +135,13 @@
 >
   {#snippet children({ visible, store, bindContent, initialOpacity })}
     <div
-      use:bindContent={[extractedStyles.transform]}
+      use:bindContent={extractedStyles.transform}
       class={contentClasses}
       style="{extractedStyles.styleWithoutTransform}{initialOpacity ? `; opacity: ${initialOpacity}` : ''}"
       role="dialog"
       aria-modal="false"
     >
-      {@render children?.({ visible, store })}
+      {@render renderContent?.({ visible, store })}
     </div>
   {/snippet}
 </PopoverPrimitive>

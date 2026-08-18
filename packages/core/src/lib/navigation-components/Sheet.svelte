@@ -20,63 +20,63 @@
      * Presentation state for animation lifecycle.
      * Optional - if not provided, no animations (instant show/hide).
      */
-    presentation?: PresentationState<any>;
+    presentation?: PresentationState<any> | undefined;
 
     /**
      * Callback when presentation animation completes.
      */
-    onPresentationComplete?: () => void;
+    onPresentationComplete?: (() => void) | undefined;
 
     /**
      * Callback when dismissal animation completes.
      */
-    onDismissalComplete?: () => void;
+    onDismissalComplete?: (() => void) | undefined;
 
     /**
      * Spring configuration override.
      */
-    springConfig?: Partial<SpringConfig>;
+    springConfig?: Partial<SpringConfig> | undefined;
 
     /**
      * Disable all default styling.
      * When true, component behaves like the primitive.
      * @default false
      */
-    unstyled?: boolean;
+    unstyled?: boolean | undefined;
 
     /**
      * Override backdrop classes.
      */
-    backdropClass?: string;
+    backdropClass?: string | undefined;
 
     /**
      * Override content container classes.
      */
-    class?: string;
+    class?: string | undefined;
 
     /**
      * Disable click-outside to dismiss.
      * @default false
      */
-    disableClickOutside?: boolean;
+    disableClickOutside?: boolean | undefined;
 
     /**
      * Disable Escape key to dismiss.
      * @default false
      */
-    disableEscapeKey?: boolean;
+    disableEscapeKey?: boolean | undefined;
 
     /**
      * Side from which the sheet slides in.
      * @default 'bottom'
      */
-    side?: 'bottom' | 'left' | 'right';
+    side?: 'bottom' | 'left' | 'right' | undefined;
 
     /**
      * Height of the sheet as CSS value (for bottom sheets).
      * @default '60vh'
      */
-    height?: string;
+    height?: string | undefined;
 
     /**
      * Content snippet. Receives the render state of the presented layer.
@@ -105,7 +105,7 @@
     disableEscapeKey = false,
     side = 'bottom',
     height = '60vh',
-    children
+    children: renderContent
   }: SheetProps<unknown, unknown> = $props();
 
   // ============================================================================
@@ -162,7 +162,7 @@
       aria-label="Bottom sheet"
       data-dialog-type="sheet"
     >
-      {@render children?.({ visible, store, height })}
+      {@render renderContent?.({ visible, store, height })}
     </div>
   {/snippet}
 </SheetPrimitive>

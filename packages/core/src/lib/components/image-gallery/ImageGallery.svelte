@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { createStore } from '$lib/store.svelte.js';
-	import type { Store } from '$lib/types.js';
+	import { createStore } from '../../store.svelte.js';
+	import type { Store } from '../../types.js';
 	import {
 		imageGalleryReducer,
 		createInitialImageGalleryState
@@ -72,7 +72,7 @@
 
 	type Props = SimpleProps | AdvancedProps;
 
-	const props = $props<Props>();
+	const props: Props = $props();
 
 	// Determine mode and setup store
 	const isAdvancedMode = 'store' in props && props.store !== undefined;
@@ -141,36 +141,36 @@
 
 	// Lazy loading with proper cleanup
 	$effect(() => {
-		if (enableLazyLoad && gridElement && storeState.images.length > 0) {
-			// Disconnect old observer
-			observer?.disconnect();
+		if (!(enableLazyLoad && gridElement && storeState.images.length > 0)) return;
 
-			// Create new observer
-			observer = new IntersectionObserver((entries) => {
-				entries.forEach((entry) => {
-					if (entry.isIntersecting) {
-						const img = entry.target as HTMLImageElement;
-						const src = img.dataset.src;
-						const imageId = img.dataset.id;
-						if (src && imageId) {
-							img.src = src;
-							store.dispatch({ type: 'imageLoaded', imageId });
-							observer!.unobserve(img);
-						}
+		// Disconnect old observer
+		observer?.disconnect();
+
+		// Create new observer
+		observer = new IntersectionObserver((entries) => {
+			entries.forEach((entry) => {
+				if (entry.isIntersecting) {
+					const img = entry.target as HTMLImageElement;
+					const src = img.dataset.src;
+					const imageId = img.dataset.id;
+					if (src && imageId) {
+						img.src = src;
+						store.dispatch({ type: 'imageLoaded', imageId });
+						observer!.unobserve(img);
 					}
-				});
+				}
 			});
+		});
 
-			// Observe all unloaded thumbnails
-			const thumbnails = gridElement.querySelectorAll('img[data-src]');
-			thumbnails.forEach((img) => observer!.observe(img));
+		// Observe all unloaded thumbnails
+		const thumbnails = gridElement.querySelectorAll('img[data-src]');
+		thumbnails.forEach((img) => observer!.observe(img));
 
-			// Cleanup
-			return () => {
-				observer?.disconnect();
-				observer = undefined;
-			};
-		}
+		// Cleanup
+		return () => {
+			observer?.disconnect();
+			observer = undefined;
+		};
 	});
 
 	// Update images when prop changes (simple mode only)

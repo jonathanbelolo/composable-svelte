@@ -34,22 +34,22 @@
      * When true, component behaves like the primitive.
      * @default false
      */
-    unstyled?: boolean;
+    unstyled?: boolean | undefined;
 
     /**
      * Override tab list container classes.
      */
-    tabListClass?: string;
+    tabListClass?: string | undefined;
 
     /**
      * Override individual tab button classes.
      */
-    tabClass?: string;
+    tabClass?: string | undefined;
 
     /**
      * Override content container classes.
      */
-    class?: string;
+    class?: string | undefined;
 
     /**
      * Content snippet. Receives the render state of the presented layer.
@@ -76,7 +76,7 @@
     tabListClass,
     tabClass,
     class: className,
-    children
+    children: renderContent
   }: TabsProps<unknown, unknown> = $props();
 
   // ============================================================================
@@ -173,7 +173,7 @@
       tabindex="0"
       class={contentClasses}
     >
-      {@render children?.({ visible, store, tabs, activeTab, onTabChange })}
+      {@render renderContent?.({ visible, store, tabs, activeTab, onTabChange })}
     </div>
   {/snippet}
 </TabsPrimitive>

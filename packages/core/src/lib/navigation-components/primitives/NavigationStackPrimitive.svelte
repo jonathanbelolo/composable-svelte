@@ -21,7 +21,7 @@
     /**
      * Callback to handle going back in the stack.
      */
-    onBack?: () => void;
+    onBack?: (() => void) | undefined;
 
     /**
      * Content snippet. Receives the primitive's render state.
@@ -33,6 +33,7 @@
           store: ScopedDestinationStore<State, Action> | null;
           stack: readonly State[];
           currentScreen: State | undefined;
+          previousScreen: State | undefined;
           canGoBack: boolean;
           onBack: (() => void) | undefined;
         }
@@ -53,6 +54,8 @@
 
   const visible = $derived(store !== null && stack.length > 0);
   const currentScreen = $derived(stack[stack.length - 1]);
+  // The screen a pop returns to — the animated stack renders it as the outgoing layer.
+  const previousScreen = $derived(stack[stack.length - 2]);
   const canGoBack = $derived(stack.length > 1);
 
   // ============================================================================
@@ -88,5 +91,5 @@
 <!-- ============================================================================ -->
 
 {#if visible}
-  {@render children?.({ visible, store, stack, currentScreen, canGoBack, onBack })}
+  {@render children?.({ visible, store, stack, currentScreen, previousScreen, canGoBack, onBack })}
 {/if}

@@ -77,12 +77,12 @@ export interface AccordionDependencies {
 	/**
 	 * Callback when an item is expanded.
 	 */
-	onExpand?: (id: string) => void;
+	onExpand?: ((id: string) => void) | undefined;
 
 	/**
 	 * Callback when an item is collapsed.
 	 */
-	onCollapse?: (id: string) => void;
+	onCollapse?: ((id: string) => void) | undefined;
 }
 
 /**

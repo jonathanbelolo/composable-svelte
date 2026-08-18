@@ -36,51 +36,51 @@
 		/**
 		 * Callback to handle going back in the stack.
 		 */
-		onBack?: () => void;
+		onBack?: (() => void) | undefined;
 
 		/**
 		 * Callback when presentation animation completes.
 		 */
-		onPresentationComplete?: () => void;
+		onPresentationComplete?: (() => void) | undefined;
 
 		/**
 		 * Callback when dismissal animation completes.
 		 */
-		onDismissalComplete?: () => void;
+		onDismissalComplete?: (() => void) | undefined;
 
 		/**
 		 * Custom spring configuration for animations.
 		 * @default Uses drawer preset (0.35s duration, 0.25 bounce)
 		 */
-		springConfig?: Partial<SpringConfig>;
+		springConfig?: Partial<SpringConfig> | undefined;
 
 		/**
 		 * Disable all default styling.
 		 * When true, component behaves more like the primitive.
 		 * @default false
 		 */
-		unstyled?: boolean;
+		unstyled?: boolean | undefined;
 
 		/**
 		 * Override container classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Override header classes.
 		 */
-		headerClass?: string;
+		headerClass?: string | undefined;
 
 		/**
 		 * Override content classes.
 		 */
-		contentClass?: string;
+		contentClass?: string | undefined;
 
 		/**
 		 * Show back button in header.
 		 * @default true
 		 */
-		showBackButton?: boolean;
+		showBackButton?: boolean | undefined;
 
 		/**
 		 * Content snippet. Receives the render state of the presented layer.
@@ -111,7 +111,7 @@
 		headerClass,
 		contentClass,
 		showBackButton = true,
-		children
+		children: renderContent
 	}: AnimatedNavigationStackProps<unknown, unknown> = $props();
 
 	// ============================================================================
@@ -145,7 +145,8 @@
 	// Helper to create unique key for each presentation change
 	// Include stack length to ensure each push/pop has a unique key
 	function getPresentationKey(p: PresentationState<any>, stackLen: number): string {
-		const contentId = p.content?.id || 'null';
+		// `content` exists on every status except `idle`.
+		const contentId = (p.status === 'idle' ? null : p.content?.id) || 'null';
 		return `${p.status}:${contentId}:${stackLen}`;
 	}
 
@@ -285,7 +286,7 @@
 					style:visibility={isAnimating && previousScreen ? 'visible' : 'hidden'}
 				>
 					{#if previousScreen}
-						{@render children?.({ visible, store, currentScreen: previousScreen, canGoBack, onBack })}
+						{@render renderContent?.({ visible, store, currentScreen: previousScreen, canGoBack, onBack })}
 					{/if}
 				</div>
 
@@ -297,7 +298,7 @@
 					class="absolute inset-0 z-20"
 				>
 					{#if frozenCurrentScreen || currentScreen}
-						{@render children?.({ visible, store, currentScreen: frozenCurrentScreen || currentScreen, canGoBack, onBack })}
+						{@render renderContent?.({ visible, store, currentScreen: frozenCurrentScreen || currentScreen, canGoBack, onBack })}
 					{/if}
 				</div>
 			</div>

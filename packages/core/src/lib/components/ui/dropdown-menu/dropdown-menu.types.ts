@@ -102,7 +102,7 @@ export interface DropdownMenuDependencies {
 	/**
 	 * Callback when an item is selected.
 	 */
-	onSelect?: (item: MenuItem) => void;
+	onSelect?: ((item: MenuItem) => void) | undefined;
 }
 
 /**

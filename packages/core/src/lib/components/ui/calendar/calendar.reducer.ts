@@ -180,6 +180,10 @@ export const calendarReducer: Reducer<CalendarState, CalendarAction, CalendarDep
 			return [newState, Effect.none()];
 		}
 
+		case 'propsChanged': {
+			return [{ ...state, ...action.props }, Effect.none()];
+		}
+
 		default: {
 			const _exhaustive: never = action;
 			return [state, Effect.none()];

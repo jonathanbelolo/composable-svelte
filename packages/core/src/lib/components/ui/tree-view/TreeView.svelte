@@ -165,7 +165,7 @@
 </script>
 
 <!-- Recursive TreeNode component -->
-{#snippet TreeNodeItem(props)}
+{#snippet TreeNodeItem(props: { node: TreeNode<string>; level: number })}
 	{@const node = props.node}
 	{@const level = props.level}
 	{@const isExpanded = $store.expandedIds.has(node.id)}

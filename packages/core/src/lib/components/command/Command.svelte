@@ -143,7 +143,8 @@
 		if (!$store.presentation || !contentElement || !backdropElement) return;
 
 		const presentation = $store.presentation;
-		const currentContent = presentation.content;
+		// `content` exists on every status except `idle`.
+		const currentContent = presentation.status === 'idle' ? null : presentation.content;
 
 		if (presentation.status === 'presenting' && lastAnimatedContent !== currentContent) {
 			lastAnimatedContent = currentContent;

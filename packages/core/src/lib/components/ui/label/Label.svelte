@@ -44,7 +44,7 @@
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Label content.

@@ -155,23 +155,23 @@ export interface ImageGalleryDependencies {
 	 * Preload an image (for adjacent images)
 	 * @default Built-in Image() preloader
 	 */
-	preloadImage?: (url: string) => Promise<void>;
+	preloadImage?: ((url: string) => Promise<void>) | undefined;
 
 	/**
 	 * Callbacks for grid events
 	 */
-	onImageClick?: (image: GalleryImage, index: number) => void;
-	onImageLoad?: (imageId: string) => void;
-	onImageError?: (imageId: string, error: string) => void;
+	onImageClick?: ((image: GalleryImage, index: number) => void) | undefined;
+	onImageLoad?: ((imageId: string) => void) | undefined;
+	onImageError?: ((imageId: string, error: string) => void) | undefined;
 }
 
 /**
  * Initial state configuration options
  */
 export interface ImageGalleryConfig {
-	images?: GalleryImage[];
-	columns?: number;
-	gap?: number;
-	aspectRatio?: 'auto' | 'square' | '16:9' | '4:3';
-	swipeThreshold?: number;
+	images?: GalleryImage[] | undefined;
+	columns?: number | undefined;
+	gap?: number | undefined;
+	aspectRatio?: 'auto' | 'square' | '16:9' | '4:3' | undefined;
+	swipeThreshold?: number | undefined;
 }

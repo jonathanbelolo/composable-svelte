@@ -22,35 +22,35 @@
     /**
      * Callback to handle going back in the stack.
      */
-    onBack?: () => void;
+    onBack?: (() => void) | undefined;
 
     /**
      * Disable all default styling.
      * When true, component behaves like the primitive.
      * @default false
      */
-    unstyled?: boolean;
+    unstyled?: boolean | undefined;
 
     /**
      * Override container classes.
      */
-    class?: string;
+    class?: string | undefined;
 
     /**
      * Override header classes.
      */
-    headerClass?: string;
+    headerClass?: string | undefined;
 
     /**
      * Override content classes.
      */
-    contentClass?: string;
+    contentClass?: string | undefined;
 
     /**
      * Show back button in header.
      * @default true
      */
-    showBackButton?: boolean;
+    showBackButton?: boolean | undefined;
 
     /**
      * Content snippet. Receives the render state of the presented layer.
@@ -77,7 +77,7 @@
     headerClass,
     contentClass,
     showBackButton = true,
-    children
+    children: renderContent
   }: NavigationStackProps<unknown, unknown> = $props();
 
   // ============================================================================
@@ -124,7 +124,7 @@
       {/if}
 
       <div class={contentClassNames}>
-        {@render children?.({ visible, store, currentScreen, canGoBack, onBack })}
+        {@render renderContent?.({ visible, store, currentScreen, canGoBack, onBack })}
       </div>
     </div>
   {/snippet}

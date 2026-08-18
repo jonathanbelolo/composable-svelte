@@ -578,4 +578,54 @@ describe('Select', () => {
 			store.assertNoPendingActions();
 		});
 	});
+
+	describe('External prop sync', () => {
+		// `Select.svelte` has always dispatched these two actions to mirror its
+		// `value` and `options` props into the store, but neither existed on
+		// SelectAction, so both fell through the reducer's default case and the
+		// sync silently did nothing.
+		it('applies an externally changed value', async () => {
+			const store = createTestStore({
+				initialState: createInitialSelectState(options, 'apple'),
+				reducer: selectReducer
+			});
+
+			await store.send({ type: 'valueChanged', value: 'banana' }, (state) => {
+				expect(state.selected).toBe('banana');
+			});
+
+			store.assertNoPendingActions();
+		});
+
+		it('is a no-op when the value already matches', async () => {
+			const store = createTestStore({
+				initialState: createInitialSelectState(options, 'apple'),
+				reducer: selectReducer
+			});
+
+			await store.send({ type: 'valueChanged', value: 'apple' });
+
+			store.assertNoPendingActions();
+		});
+
+		it('applies externally changed options and re-filters them', async () => {
+			const nextOptions: SelectOption[] = [
+				{ value: 'kiwi', label: 'Kiwi' },
+				{ value: 'melon', label: 'Melon' }
+			];
+
+			const store = createTestStore({
+				initialState: { ...createInitialSelectState(options), searchQuery: 'ki' },
+				reducer: selectReducer
+			});
+
+			await store.send({ type: 'optionsChanged', options: nextOptions }, (state) => {
+				expect(state.options).toEqual(nextOptions);
+				// The active search query is re-applied to the new option list.
+				expect(state.filteredOptions).toEqual([{ value: 'kiwi', label: 'Kiwi' }]);
+			});
+
+			store.assertNoPendingActions();
+		});
+	});
 });

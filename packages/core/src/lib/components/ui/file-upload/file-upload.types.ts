@@ -77,11 +77,11 @@ export type FileUploadAction =
  */
 export interface FileValidationConfig {
   /** Maximum file size in bytes (default: 5MB) */
-  maxSize?: number;
+  maxSize?: number | undefined;
   /** Allowed file types (MIME types or extensions like '.jpg') */
-  acceptedTypes?: string[];
+  acceptedTypes?: string[] | undefined;
   /** Maximum number of files (default: unlimited) */
-  maxFiles?: number;
+  maxFiles?: number | undefined;
 }
 
 /**
@@ -89,11 +89,11 @@ export interface FileValidationConfig {
  */
 export interface FileUploadDependencies {
   /** Callback when files change */
-  onFilesChange?: (files: UploadedFile[]) => void;
+  onFilesChange?: ((files: UploadedFile[]) => void) | undefined;
   /** Callback to handle file upload (returns promise) */
-  onUpload?: (file: File) => Promise<void>;
+  onUpload?: ((file: File) => Promise<void>) | undefined;
   /** File validation configuration */
-  validation?: FileValidationConfig;
+  validation?: FileValidationConfig | undefined;
 }
 
 /**

@@ -127,16 +127,19 @@
 		dependencies
 	});
 
-	// Sync external props to store
+	// Sync external props to store.
+	// `store.state` is a getter with no setter, so the assignments these effects
+	// used to perform threw a TypeError in strict mode the moment a consumer
+	// changed one of these props after mount.
 	$effect(() => {
 		if (store.state.mode !== mode) {
-			store.state = { ...store.state, mode };
+			store.dispatch({ type: 'propsChanged', props: { mode } });
 		}
 	});
 
 	$effect(() => {
 		if (store.state.selectedDate !== selectedDate) {
-			store.state = { ...store.state, selectedDate };
+			store.dispatch({ type: 'propsChanged', props: { selectedDate } });
 		}
 	});
 
@@ -145,19 +148,19 @@
 			store.state.selectedRange.from !== selectedRange.from ||
 			store.state.selectedRange.to !== selectedRange.to
 		) {
-			store.state = { ...store.state, selectedRange };
+			store.dispatch({ type: 'propsChanged', props: { selectedRange } });
 		}
 	});
 
 	$effect(() => {
 		if (store.state.minDate !== minDate) {
-			store.state = { ...store.state, minDate };
+			store.dispatch({ type: 'propsChanged', props: { minDate } });
 		}
 	});
 
 	$effect(() => {
 		if (store.state.maxDate !== maxDate) {
-			store.state = { ...store.state, maxDate };
+			store.dispatch({ type: 'propsChanged', props: { maxDate } });
 		}
 	});
 

@@ -19,40 +19,40 @@
      * Presentation state for animation lifecycle.
      * Optional - if not provided, no animations (instant show/hide).
      */
-    presentation?: PresentationState<any>;
+    presentation?: PresentationState<any> | undefined;
 
     /**
      * Callback when presentation animation completes.
      */
-    onPresentationComplete?: () => void;
+    onPresentationComplete?: (() => void) | undefined;
 
     /**
      * Callback when dismissal animation completes.
      */
-    onDismissalComplete?: () => void;
+    onDismissalComplete?: (() => void) | undefined;
 
     /**
      * Spring configuration override.
      */
-    springConfig?: Partial<SpringConfig>;
+    springConfig?: Partial<SpringConfig> | undefined;
 
     /**
      * Disable Escape key to dismiss.
      * @default false
      */
-    disableEscapeKey?: boolean;
+    disableEscapeKey?: boolean | undefined;
 
     /**
      * Side where the sidebar is positioned.
      * @default 'left'
      */
-    side?: 'left' | 'right';
+    side?: 'left' | 'right' | undefined;
 
     /**
      * Width of the sidebar as CSS value.
      * @default '240px'
      */
-    width?: string;
+    width?: string | undefined;
 
     /**
      * Content snippet. Receives the primitive's render state.

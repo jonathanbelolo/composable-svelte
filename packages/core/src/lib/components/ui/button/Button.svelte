@@ -102,7 +102,7 @@
 		icon: 'h-10 w-10'
 	};
 
-	function handleClick(e: MouseEvent) {
+	function handleClick(e: MouseEvent & { currentTarget: EventTarget & HTMLButtonElement }) {
 		if (loading || disabled) {
 			e.preventDefault();
 			return;

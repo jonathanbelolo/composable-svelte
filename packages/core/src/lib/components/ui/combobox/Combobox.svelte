@@ -215,12 +215,12 @@
 
 	$effect(() => {
 		const isOpen = $store.dropdown.status !== 'idle';
-		if (isOpen) {
-			document.addEventListener('click', handleClickOutside);
-			return () => {
-				document.removeEventListener('click', handleClickOutside);
-			};
-		}
+		if (!isOpen) return;
+
+		document.addEventListener('click', handleClickOutside);
+		return () => {
+			document.removeEventListener('click', handleClickOutside);
+		};
 	});
 
 	// Animate dropdown open/close using centralized animation system

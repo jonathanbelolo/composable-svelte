@@ -19,6 +19,7 @@
 </script>
 
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import { createStore } from '../../../store.svelte.js';
 	import { accordionReducer } from './accordion.reducer.js';
 	import { createInitialAccordionState } from './accordion.types.js';

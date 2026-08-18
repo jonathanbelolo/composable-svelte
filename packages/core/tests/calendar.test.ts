@@ -562,4 +562,47 @@ describe('Calendar', () => {
 			]);
 		});
 	});
+
+	describe('External prop sync', () => {
+		// Calendar.svelte used to write these straight onto `store.state`, which is
+		// a getter with no setter — a TypeError in strict mode the moment a
+		// consumer changed one of these props after mount.
+		it('applies externally changed props', async () => {
+			const min = new Date(2024, 0, 1);
+			const max = new Date(2024, 11, 31);
+
+			const store = createTestStore({
+				initialState: createInitialCalendarState(),
+				reducer: calendarReducer
+			});
+
+			await store.send(
+				{ type: 'propsChanged', props: { mode: 'range', minDate: min, maxDate: max } },
+				(state) => {
+					expect(state.mode).toBe('range');
+					expect(state.minDate).toBe(min);
+					expect(state.maxDate).toBe(max);
+				}
+			);
+
+			store.assertNoPendingActions();
+		});
+
+		it('leaves untouched fields alone', async () => {
+			const currentMonth = new Date(2024, 5, 1);
+			const selected = new Date(2024, 5, 15);
+
+			const store = createTestStore({
+				initialState: { ...createInitialCalendarState(), currentMonth },
+				reducer: calendarReducer
+			});
+
+			await store.send({ type: 'propsChanged', props: { selectedDate: selected } }, (state) => {
+				expect(state.selectedDate).toBe(selected);
+			});
+
+			expect(store.state.currentMonth).toBe(currentMonth);
+			store.assertNoPendingActions();
+		});
+	});
 });

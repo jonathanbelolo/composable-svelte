@@ -88,7 +88,11 @@ export type SelectAction<T = string> =
 	| { type: 'end' }
 	| { type: 'enter' }
 	| { type: 'escape' }
-	| { type: 'cleared' };
+	| { type: 'cleared' }
+	// Sync actions: the component dispatches these when its `value` / `options`
+	// props change externally.
+	| { type: 'valueChanged'; value: T | T[] | null }
+	| { type: 'optionsChanged'; options: SelectOption<T>[] };
 
 /**
  * Select dependencies.

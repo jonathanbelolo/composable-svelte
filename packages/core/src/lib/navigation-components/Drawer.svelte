@@ -20,63 +20,63 @@
      * Presentation state for animation lifecycle.
      * Optional - if not provided, no animations (instant show/hide).
      */
-    presentation?: PresentationState<any>;
+    presentation?: PresentationState<any> | undefined;
 
     /**
      * Callback when presentation animation completes.
      */
-    onPresentationComplete?: () => void;
+    onPresentationComplete?: (() => void) | undefined;
 
     /**
      * Callback when dismissal animation completes.
      */
-    onDismissalComplete?: () => void;
+    onDismissalComplete?: (() => void) | undefined;
 
     /**
      * Spring configuration override.
      */
-    springConfig?: Partial<SpringConfig>;
+    springConfig?: Partial<SpringConfig> | undefined;
 
     /**
      * Disable all default styling.
      * When true, component behaves like the primitive.
      * @default false
      */
-    unstyled?: boolean;
+    unstyled?: boolean | undefined;
 
     /**
      * Override backdrop classes.
      */
-    backdropClass?: string;
+    backdropClass?: string | undefined;
 
     /**
      * Override content container classes.
      */
-    class?: string;
+    class?: string | undefined;
 
     /**
      * Disable click-outside to dismiss.
      * @default false
      */
-    disableClickOutside?: boolean;
+    disableClickOutside?: boolean | undefined;
 
     /**
      * Disable Escape key to dismiss.
      * @default false
      */
-    disableEscapeKey?: boolean;
+    disableEscapeKey?: boolean | undefined;
 
     /**
      * Side from which the drawer slides in.
      * @default 'left'
      */
-    side?: 'left' | 'right';
+    side?: 'left' | 'right' | undefined;
 
     /**
      * Width of the drawer as CSS value.
      * @default '320px'
      */
-    width?: string;
+    width?: string | undefined;
 
     /**
      * Content snippet. Receives the render state of the presented layer.
@@ -106,7 +106,7 @@
     disableEscapeKey = false,
     side = 'left',
     width = '320px',
-    children
+    children: renderContent
   }: DrawerProps<unknown, unknown> = $props();
 
   // ============================================================================
@@ -167,7 +167,7 @@
       aria-modal="true"
       aria-label="Side drawer"
     >
-      {@render children?.({ visible, store, side, width })}
+      {@render renderContent?.({ visible, store, side, width })}
     </div>
   {/snippet}
 </DrawerPrimitive>

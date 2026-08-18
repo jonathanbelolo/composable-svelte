@@ -2,7 +2,7 @@
 	import { setContext } from 'svelte';
 	import { createStore } from '../../store.svelte.js';
 	import { createFormReducer } from './form.reducer.js';
-	import type { FormConfig, FormState, FormAction } from './form.types.js';
+	import type { FormConfig, FormState, FormAction, FormProps } from './form.types.js';
 	import { createInitialFormState } from './form.reducer.js';
 	import type { Store } from '../../types.js';
 
@@ -12,28 +12,8 @@
 	// 1. Standalone mode: Pass `config` to create internal store
 	// 2. Integrated mode: Pass `store` to use external store from parent reducer
 
-	interface Props {
-		/**
-		 * Form configuration (standalone mode)
-		 * Mutually exclusive with `store`
-		 */
-		config?: FormConfig<T>;
-		/**
-		 * External store from parent reducer (integrated mode)
-		 * Mutually exclusive with `config`
-		 */
-		store?: Store<FormState<T>, FormAction<T>>;
-		/**
-		 * Optional class name for the form element
-		 */
-		class?: string;
-		/**
-		 * Optional children (form fields and controls)
-		 */
-		children?: import('svelte').Snippet;
-	}
 
-	let { config, store: externalStore, class: className, children }: Props = $props();
+	let { config, store: externalStore, class: className, children }: FormProps<T> = $props();
 
 	// Validate props
 	if (!config && !externalStore) {

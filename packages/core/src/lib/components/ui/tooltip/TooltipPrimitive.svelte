@@ -41,7 +41,7 @@
 		/**
 		 * Additional CSS classes
 		 */
-		class?: string;
+		class?: string | undefined;
 	}
 
 	let {
@@ -148,6 +148,9 @@
 		presentation.status === 'presented' ||
 		presentation.status === 'dismissing'
 	);
+
+	// Narrowing does not survive the boolean above, so derive the content too.
+	const content = $derived(presentation.status === 'idle' ? null : presentation.content);
 </script>
 
 {#if shouldShow}
@@ -163,7 +166,7 @@
 		role="tooltip"
 		style="{tooltipStyle} opacity: 0;"
 	>
-		{presentation.content}
+		{content}
 
 		<!-- Arrow -->
 		<div
