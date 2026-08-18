@@ -20,10 +20,11 @@ jobs:
         with:
           node-version: '20'
 
+      # No `version:` input — action-setup reads `packageManager` from
+      # package.json, and supplying both errors out when the strings differ
+      # ("9" vs "9.0.0").
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
-        with:
-          version: 9
 
       - name: Get pnpm store directory
         shell: bash
@@ -45,6 +46,13 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm --filter @composable-svelte/core exec playwright install --with-deps chromium
 
+      # Build first: `dist/` is gitignored, and every satellite and example
+      # resolves @composable-svelte/core through the package `exports` map,
+      # which points at dist. Typechecking or testing before the build fails
+      # with TS2307 on a clean checkout.
+      - name: Build
+        run: pnpm -r build
+
       # Every workspace, not just core: the other seven packages and the
       # examples were never covered here, which is how a package could sit
       # broken (wrong vitest major, a watch-mode `test` script, a bad import)
@@ -54,9 +62,6 @@ jobs:
 
       - name: Run tests
         run: pnpm -r test
-
-      - name: Build
-        run: pnpm -r build
 
   lint:
     name: Lint
@@ -71,10 +76,11 @@ jobs:
         with:
           node-version: '20'
 
+      # No `version:` input — action-setup reads `packageManager` from
+      # package.json, and supplying both errors out when the strings differ
+      # ("9" vs "9.0.0").
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
-        with:
-          version: 9
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
