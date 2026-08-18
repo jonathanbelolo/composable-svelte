@@ -30,7 +30,7 @@ export default defineConfig({
     include: ['tests/**/*.{test,spec}.{js,ts}'],
     exclude: [
       // Node-environment tests: they read files from disk, which browser mode
-      // cannot do. Run by the root jsdom config instead.
+      // cannot do. Run by vitest.node.config.ts instead.
       'tests/ssr/ssg.test.ts',
       'tests/styles/**',
       // Needs the Cookie request header, which the browser Request API refuses

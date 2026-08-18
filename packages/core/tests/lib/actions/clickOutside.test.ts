@@ -21,7 +21,7 @@ const flush = () => new Promise((resolve) => setTimeout(resolve, 1));
 describe('clickOutside', () => {
 	let created: Array<{ node: HTMLElement; destroy: () => void }> = [];
 
-	function mountLayer(): {
+	function mountLayer(enabled?: () => boolean): {
 		node: HTMLElement;
 		handler: ReturnType<typeof vi.fn>;
 		destroy: () => void;
@@ -29,7 +29,9 @@ describe('clickOutside', () => {
 		const node = document.createElement('div');
 		document.body.appendChild(node);
 		const handler = vi.fn();
-		const action = clickOutside(node, handler);
+		const action = enabled
+			? clickOutside(node, { handler, enabled })
+			: clickOutside(node, handler);
 		const entry = { node, destroy: action.destroy };
 		created.push(entry);
 		return { node, handler, destroy: action.destroy };
@@ -138,6 +140,23 @@ describe('clickOutside', () => {
 		await flush();
 
 		expect(handler).not.toHaveBeenCalled();
+	});
+
+	it('an opted-out layer neither dismisses nor blocks the layers below it', async () => {
+		// Sheet/Drawer/Popover apply the action unconditionally, so an overlay
+		// configured with `disableClickOutside` would otherwise sit on top of the
+		// stack forever and silence everything beneath it.
+		const modal = mountLayer();
+		const optedOut = mountLayer(() => false);
+
+		const outside = document.createElement('button');
+		document.body.appendChild(outside);
+
+		pointerDownOn(outside);
+		await flush();
+
+		expect(optedOut.handler).not.toHaveBeenCalled();
+		expect(modal.handler).toHaveBeenCalledTimes(1);
 	});
 
 	it('does not leak layers across mount/unmount cycles', async () => {

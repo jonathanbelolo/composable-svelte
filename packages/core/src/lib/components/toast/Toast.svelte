@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { cn } from '../../utils.js';
-	import type { Toast } from './toast.types.js';
+	import type { Toast as ToastData } from './toast.types.js';
 	import { animateToastIn, animateToastOut } from '../../animation/animate.js';
 	import ToastTitle from './ToastTitle.svelte';
 	import ToastDescription from './ToastDescription.svelte';
@@ -24,7 +24,7 @@
 		/**
 		 * Toast data.
 		 */
-		toast: Toast;
+		toast: ToastData;
 
 		/**
 		 * Callback when toast is dismissed.

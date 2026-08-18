@@ -169,7 +169,7 @@
 {#if visible}
   <div use:portal>
     <div
-      use:clickOutside={handleClickOutside}
+      use:clickOutside={{ handler: handleClickOutside, enabled: () => !disableClickOutside }}
       use:focusTrap={{ returnFocus: returnFocusTo }}
       style:pointer-events={interactionsEnabled ? 'auto' : 'none'}
     >

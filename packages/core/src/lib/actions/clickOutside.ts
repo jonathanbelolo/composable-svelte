@@ -13,36 +13,77 @@
  *   Content here
  * </div>
  * ```
+ *
+ * @example
+ * ```svelte
+ * <!-- Opt this layer out of dismissal without removing it from the DOM -->
+ * <div use:clickOutside={{ handler, enabled: () => !disableClickOutside }}>
+ *   Content here
+ * </div>
+ * ```
  */
+
+export type ClickOutsideHandler = (event: PointerEvent) => void;
+
+export interface ClickOutsideOptions {
+	handler: ClickOutsideHandler;
+	/**
+	 * Whether this layer participates in outside-click dismissal at all.
+	 *
+	 * Consulted at event time. A layer that returns `false` is skipped entirely,
+	 * so it neither dismisses itself nor shadows the layers beneath it — which
+	 * is what an overlay configured with `disableClickOutside` needs.
+	 */
+	enabled?: () => boolean;
+}
+
+interface Layer {
+	node: HTMLElement;
+	isEnabled: () => boolean;
+}
 
 /**
- * Every mounted dismissable layer, in mount order — the last entry is topmost.
+ * Every participating dismissable layer, in mount order — the last is topmost.
  *
- * Overlays render through a portal, so a nested one (an alert opened from a
- * modal) is not a DOM descendant of its parent. Without this stack the parent's
- * `node.contains(target)` check reports "outside" for a click inside its own
- * child, and dismissing the child also dismisses the parent.
+ * Overlays render through a portal, so a nested overlay is not a DOM descendant
+ * of its parent. Without this stack the parent's `node.contains(target)` check
+ * reports "outside" for a click inside its own child, and dismissing the child
+ * also dismisses the parent.
  */
-const layers: HTMLElement[] = [];
+const layers: Layer[] = [];
 
-export function clickOutside(node: HTMLElement, handler: (event: PointerEvent) => void) {
-	layers.push(node);
+export function clickOutside(
+	node: HTMLElement,
+	param: ClickOutsideHandler | ClickOutsideOptions
+) {
+	const handler = typeof param === 'function' ? param : param.handler;
+	const isEnabled = typeof param === 'function' ? () => true : (param.enabled ?? (() => true));
+
+	const layer: Layer = { node, isEnabled };
+	layers.push(layer);
 
 	const pointerDownListener = (event: PointerEvent) => {
 		// Ignore right-clicks and middle-clicks
 		if (event.button !== 0) return;
 
-		// Only the topmost layer reacts, so a click never dismisses a parent
-		// overlay out from under its own child.
-		if (layers[layers.length - 1] !== node) return;
+		if (!isEnabled()) return;
+
+		// Only the topmost *participating* layer reacts, so a click never
+		// dismisses a parent overlay out from under its own child. A layer that
+		// has opted out is skipped rather than blocking the ones below it.
+		for (let i = layers.length - 1; i >= 0; i--) {
+			const candidate = layers[i];
+			if (!candidate || !candidate.isEnabled()) continue;
+			if (candidate !== layer) return;
+			break;
+		}
 
 		const target = event.target as Node;
 		if (node.contains(target)) return;
 
-		// Deliberately no "is the target inside some other layer?" test. Only the
-		// topmost layer gets here, so nothing is stacked above it, and a click on
-		// a layer *below* — the modal behind an open dropdown — is a genuine
-		// outside click that should dismiss us.
+		// Deliberately no "is the target inside another layer?" test. Only the
+		// topmost participating layer gets here, so a click on a layer *below* —
+		// the modal behind an open dropdown — is a genuine outside click.
 		//
 		// The containment test must run synchronously: the click that closes a
 		// nested overlay unmounts it, and by the next tick the target is detached
@@ -58,7 +99,7 @@ export function clickOutside(node: HTMLElement, handler: (event: PointerEvent) =
 
 	return {
 		destroy() {
-			const index = layers.indexOf(node);
+			const index = layers.indexOf(layer);
 			if (index !== -1) layers.splice(index, 1);
 			document.removeEventListener('pointerdown', pointerDownListener, true);
 		}

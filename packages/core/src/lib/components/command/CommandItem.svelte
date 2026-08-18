@@ -7,8 +7,8 @@
 	@component
 -->
 <script lang="ts">
-	import type { Store } from '../../store.svelte.js';
-	import type { CommandState, CommandAction, CommandItem } from './command.types.js';
+	import type { Store } from '../../types.js';
+	import type { CommandState, CommandAction, CommandItem as CommandItemData } from './command.types.js';
 
 	interface CommandItemProps {
 		/**
@@ -19,7 +19,7 @@
 		/**
 		 * Command data.
 		 */
-		command: CommandItem;
+		command: CommandItemData;
 
 		/**
 		 * Index in the filtered list.

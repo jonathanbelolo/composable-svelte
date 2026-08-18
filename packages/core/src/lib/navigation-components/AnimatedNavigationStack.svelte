@@ -3,7 +3,7 @@
 	import NavigationStackPrimitive from './primitives/NavigationStackPrimitive.svelte';
 	import type { ScopedDestinationStore } from '../navigation/scope-to-destination.js';
 	import type { PresentationState } from '../navigation/types.js';
-	import type { SpringConfig } from '../animation/spring.js';
+	import type { SpringConfig } from '../animation/spring-config.js';
 	import { cn } from '../utils.js';
 	import {
 		animateStackPushIn,
@@ -244,7 +244,6 @@
 			if (previousScreenElement) {
 				animateStackPopIn(previousScreenElement, springConfig);
 			}
-		} else if (presentation.status === 'dismissing') {
 		}
 	});
 </script>
