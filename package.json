@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "build": "pnpm -r build",
-    "test": "vitest",
-    "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage",
+    "test": "pnpm -r test",
+    "test:ui": "pnpm --filter @composable-svelte/core test:ui",
+    "test:coverage": "pnpm -r test:coverage",
     "typecheck": "pnpm -r typecheck"
   },
   "devDependencies": {
