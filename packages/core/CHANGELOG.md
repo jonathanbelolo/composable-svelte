@@ -29,13 +29,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   inside a nested overlay looked "outside" to its parent — dismissing a
   confirmation alert also dismissed the modal beneath it. Dismissal now follows
   a layer stack: only the topmost overlay reacts.
-- **Effects that re-triggered themselves.** Eleven components held an animation
-  guard in `$state` while reading and writing it inside the `$effect` it
-  guards, which is Svelte's `effect_update_depth_exceeded` condition. It fired
-  when a sheet was opened by a fast click.
-- **Debug logging removed.** 21 `console.log` calls shipped to consumers,
+- **Effects that re-triggered themselves.** The overlay primitives wrote an
+  animation guard held in `$state` on every qualifying run of the `$effect`
+  that reads it — Svelte's `effect_update_depth_exceeded` condition. It threw
+  when a sheet was opened by a fast click. Six other components shared the
+  anti-pattern with a gated write, so they converged after an extra pass rather
+  than hanging; all eleven guards are now plain locals, and the one that must
+  stay reactive reads through `untrack`.
+- **Debug logging removed.** 32 `console.log` calls shipped to consumers,
   including one in `AnimatedNavigationStack`'s template that ran on every
-  render.
+  render. The `console.log`s that remain in the library are all inside JSDoc
+  examples.
 - **Dark mode silently inert** for consumers whose config lacked
   `safelist: ['dark']` — Tailwind v3 tree-shakes `@layer base` selectors absent
   from `content`, purging the entire dark token block. The preset supplies it.
