@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import type { ScopedDestinationStore } from '../../navigation/scope-to-destination.js';
 
   // ============================================================================
@@ -21,6 +22,22 @@
      * Callback to handle going back in the stack.
      */
     onBack?: () => void;
+
+    /**
+     * Content snippet. Receives the primitive's render state.
+     */
+    children?: Snippet<
+      [
+        {
+          visible: boolean;
+          store: ScopedDestinationStore<State, Action> | null;
+          stack: readonly State[];
+          currentScreen: State | undefined;
+          canGoBack: boolean;
+          onBack: (() => void) | undefined;
+        }
+      ]
+    >;
   }
 
   let {

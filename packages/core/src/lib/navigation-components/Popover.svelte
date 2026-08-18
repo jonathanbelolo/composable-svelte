@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import PopoverPrimitive from './primitives/PopoverPrimitive.svelte';
   import type { ScopedDestinationStore } from '../navigation/scope-to-destination.js';
   import type { PresentationState } from '../navigation/types.js';
@@ -65,6 +66,18 @@
      * User must provide absolute positioning via inline styles or classes.
      */
     style?: string;
+
+    /**
+     * Content snippet. Receives the render state of the presented layer.
+     */
+    children?: Snippet<
+      [
+        {
+          visible: boolean;
+          store: ScopedDestinationStore<State, Action> | null;
+        }
+      ]
+    >;
   }
 
   let {

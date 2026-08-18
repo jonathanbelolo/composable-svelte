@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import TabsPrimitive from './primitives/TabsPrimitive.svelte';
   import type { ScopedDestinationStore } from '../navigation/scope-to-destination.js';
   import { cn } from '../utils.js';
@@ -49,6 +50,21 @@
      * Override content container classes.
      */
     class?: string;
+
+    /**
+     * Content snippet. Receives the render state of the presented layer.
+     */
+    children?: Snippet<
+      [
+        {
+          visible: boolean;
+          store: ScopedDestinationStore<State, Action> | null;
+          tabs: string[];
+          activeTab: number;
+          onTabChange: (index: number) => void;
+        }
+      ]
+    >;
   }
 
   let {

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import { animateAccordionExpand, animateAccordionCollapse } from '../../../animation/animate.js';
 	import { getAccordionItemContext } from './AccordionItem.svelte';
 	import { getAccordionContext } from './Accordion.svelte';
@@ -22,6 +23,11 @@
 		 * Additional CSS classes.
 		 */
 		class?: string;
+
+		/**
+		 * Content snippet.
+		 */
+		children?: Snippet;
 	}
 
 	let {

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import { untrack } from 'svelte';
 	import NavigationStackPrimitive from './primitives/NavigationStackPrimitive.svelte';
 	import type { ScopedDestinationStore } from '../navigation/scope-to-destination.js';
@@ -80,6 +81,21 @@
 		 * @default true
 		 */
 		showBackButton?: boolean;
+
+		/**
+		 * Content snippet. Receives the render state of the presented layer.
+		 */
+		children?: Snippet<
+			[
+				{
+					visible: boolean;
+					store: ScopedDestinationStore<State, Action> | null;
+					currentScreen: State | undefined;
+					canGoBack: boolean;
+					onBack: (() => void) | undefined;
+				}
+			]
+		>;
 	}
 
 	let {

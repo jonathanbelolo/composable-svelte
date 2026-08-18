@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import { portal } from '../../actions/portal.js';
   import { clickOutside } from '../../actions/clickOutside.js';
   import { focusTrap } from '../../actions/focusTrap.js';
@@ -61,6 +62,20 @@
      * @default null
      */
     returnFocusTo?: HTMLElement | null;
+
+    /**
+     * Content snippet. Receives the primitive's render state.
+     */
+    children?: Snippet<
+      [
+        {
+          visible: boolean;
+          store: ScopedDestinationStore<State, Action> | null;
+          bindContent: (node: HTMLElement, transform?: string) => void;
+          initialOpacity: string | undefined;
+        }
+      ]
+    >;
   }
 
   let {

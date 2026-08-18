@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import DrawerPrimitive from './primitives/DrawerPrimitive.svelte';
   import type { ScopedDestinationStore } from '../navigation/scope-to-destination.js';
   import type { PresentationState } from '../navigation/types.js';
@@ -76,6 +77,20 @@
      * @default '320px'
      */
     width?: string;
+
+    /**
+     * Content snippet. Receives the render state of the presented layer.
+     */
+    children?: Snippet<
+      [
+        {
+          visible: boolean;
+          store: ScopedDestinationStore<State, Action> | null;
+          side: 'left' | 'right';
+          width: string;
+        }
+      ]
+    >;
   }
 
   let {

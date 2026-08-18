@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import type { ScopedDestinationStore } from '../../navigation/scope-to-destination.js';
 
   // ============================================================================
@@ -26,6 +27,21 @@
      * Callback when tab is clicked.
      */
     onTabChange: (index: number) => void;
+
+    /**
+     * Content snippet. Receives the primitive's render state.
+     */
+    children?: Snippet<
+      [
+        {
+          visible: boolean;
+          store: ScopedDestinationStore<State, Action> | null;
+          tabs: string[];
+          activeTab: number;
+          onTabChange: (index: number) => void;
+        }
+      ]
+    >;
   }
 
   let {

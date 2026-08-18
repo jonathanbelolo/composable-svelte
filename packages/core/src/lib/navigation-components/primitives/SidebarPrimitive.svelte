@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import type { ScopedDestinationStore } from '../../navigation/scope-to-destination.js';
   import type { PresentationState } from '../../navigation/types.js';
   import type { SpringConfig } from '../../animation/spring-config.js';
@@ -52,6 +53,23 @@
      * @default '240px'
      */
     width?: string;
+
+    /**
+     * Content snippet. Receives the primitive's render state.
+     */
+    children?: Snippet<
+      [
+        {
+          visible: boolean;
+          store: ScopedDestinationStore<State, Action> | null;
+          side: 'left' | 'right';
+          width: string;
+          targetWidth: string;
+          bindContent: (node: HTMLElement) => void;
+          onTransitionEnd: (event: TransitionEvent) => void;
+        }
+      ]
+    >;
   }
 
   let {

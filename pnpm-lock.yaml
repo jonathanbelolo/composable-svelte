@@ -836,6 +836,9 @@ importers:
       svelte:
         specifier: ^5.0.0
         version: 5.43.3
+      svelte-check:
+        specifier: ^4.3.3
+        version: 4.3.3(picomatch@4.0.3)(svelte@5.43.3)(typescript@5.9.3)
       tailwindcss:
         specifier: ^3.4.0
         version: 3.4.18(tsx@4.20.6)

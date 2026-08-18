@@ -75,6 +75,11 @@
 		 * Additional CSS classes.
 		 */
 		class?: string;
+
+		/**
+		 * Content snippet.
+		 */
+		children?: Snippet;
 	}
 
 	let {

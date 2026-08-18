@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import ModalPrimitive from './primitives/ModalPrimitive.svelte';
   import type { ScopedDestinationStore } from '../navigation/scope-to-destination.js';
   import type { PresentationState } from '../navigation/types.js';
@@ -64,6 +65,18 @@
      * @default false
      */
     disableEscapeKey?: boolean;
+
+    /**
+     * Content snippet. Receives the render state of the presented layer.
+     */
+    children?: Snippet<
+      [
+        {
+          visible: boolean;
+          store: ScopedDestinationStore<State, Action> | null;
+        }
+      ]
+    >;
   }
 
   let {
