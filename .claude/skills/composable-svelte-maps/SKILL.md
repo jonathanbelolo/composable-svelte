@@ -1004,7 +1004,7 @@ async function loadLargeGeoJSON(url: string) {
 ### Basic Map Testing
 
 ```typescript
-import { TestStore } from '@composable-svelte/core';
+import { TestStore } from '@composable-svelte/core/test';
 import { mapReducer, createInitialMapState } from '@composable-svelte/maps';
 
 const store = new TestStore({

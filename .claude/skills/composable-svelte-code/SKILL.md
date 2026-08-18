@@ -587,7 +587,7 @@ function handleEdgeClick(edge: Edge) {
 ### CodeEditor Testing
 
 ```typescript
-import { TestStore } from '@composable-svelte/core';
+import { TestStore } from '@composable-svelte/core/test';
 import { codeEditorReducer, createInitialState } from '@composable-svelte/code';
 
 const store = new TestStore({
@@ -619,7 +619,7 @@ await store.receive({ type: 'saved', value: 'console.log("test");' }, (state) =>
 ### NodeCanvas Testing
 
 ```typescript
-import { TestStore } from '@composable-svelte/core';
+import { TestStore } from '@composable-svelte/core/test';
 import { nodeCanvasReducer, createInitialNodeCanvasState } from '@composable-svelte/code';
 
 const store = new TestStore({

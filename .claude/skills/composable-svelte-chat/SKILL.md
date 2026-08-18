@@ -772,7 +772,7 @@ const chatStore = createStore({
 ### StreamingChat Testing
 
 ```typescript
-import { TestStore } from '@composable-svelte/core';
+import { TestStore } from '@composable-svelte/core/test';
 import {
   streamingChatReducer,
   createInitialStreamingChatState,
@@ -809,7 +809,7 @@ await store.receive({ type: 'streamingCompleted' }, (state) => {
 ### Collaborative Testing
 
 ```typescript
-import { TestStore } from '@composable-svelte/core';
+import { TestStore } from '@composable-svelte/core/test';
 import {
   collaborativeReducer,
   createInitialCollaborativeState

@@ -633,7 +633,7 @@ type FolderNode = { type: 'folder'; id: string; name: string; children: Node[]; 
 type Node = FileNode | FolderNode;
 
 // 2. Create tree helpers
-import { createTreeHelpers } from '@composable-svelte/core/utils/tree';
+import { createTreeHelpers } from '@composable-svelte/core';
 
 const treeHelpers = createTreeHelpers<Node>({
   getId: (node) => node.id,
@@ -683,10 +683,15 @@ const fileSystemReducer: Reducer<FileSystemState, FileSystemAction> = (state, ac
 // 4. Component passes ID, not scoped store
 // Folder.svelte
 <script lang="ts">
-  export let store: Store<FileSystemState, FileSystemAction>;
-  export let folderId: string;  // Component knows its ID
+  // Runes mode: $props(), not `export let` — mixing the two is a compile error.
+  let { store, folderId }: {
+    store: Store<FileSystemState, FileSystemAction>;
+    folderId: string;
+  } = $props();
 
-  const folder = $derived(treeHelpers.findNode($store.root, folderId) as FolderNode);
+  const folder = $derived(
+    treeHelpers.findNode(store.state.root, folderId) as FolderNode
+  );
 </script>
 
 <div>

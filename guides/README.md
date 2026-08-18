@@ -46,7 +46,7 @@ The foundation library. Everything else builds on this.
 | Root (`core`) | `createStore`, `Effect`, `Reducer`, `TestStore`, `scope`, `combineReducers`, `forEach` |
 | `core/navigation` | `ifLetPresentation`, `scopeToDestination`, `createDestinationReducer`, `push`, `pop`, dismiss dependency |
 | `core/navigation-components` | Modal, Sheet, Drawer, Alert, Popover, Sidebar, Tabs, NavigationStack |
-| `core/components/ui` | 70+ shadcn-svelte components (Button, Input, Card, Select, Accordion, etc.) |
+| `core/components/ui` | 77 shadcn-svelte components (Button, Input, Card, Select, Accordion, etc.) |
 | `core/components/form` | Form system with Zod validation, `createFormReducer`, `FormField` |
 | `core/routing` | URL routing with `path-to-regexp`, browser history sync, query params |
 | `core/api` | HTTP client with interceptors, retries, caching, deduplication |
@@ -384,7 +384,7 @@ Components react to this state:
 
 ```svelte
 {#if $derived(store.state.destination?.type === 'addItem')}
-  <Modal open={true} onOpenChange={(open) => !open && dismiss()}>
+  <Modal store={scopedStore}>
     <AddItemForm />
   </Modal>
 {/if}
@@ -433,7 +433,7 @@ packages/core/src/lib/
 ├── ssr/                  # Server-side rendering, static site generation
 ├── dependencies/         # Clock, Storage, Cookies (injectable)
 ├── animation/            # Motion One helpers for lifecycle animations
-├── components/ui/        # 70+ shadcn-svelte components
+├── components/ui/        # 77 shadcn-svelte components
 ├── components/form/      # Form system with Zod validation
 ├── test/                 # TestStore for exhaustive testing
 └── styles/               # Tailwind base styles

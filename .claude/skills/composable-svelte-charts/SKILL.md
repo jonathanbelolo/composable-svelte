@@ -899,7 +899,7 @@ Disable animations for large datasets or frequent updates:
 ### Basic Chart Testing
 
 ```typescript
-import { TestStore } from '@composable-svelte/core';
+import { TestStore } from '@composable-svelte/core/test';
 import { chartReducer, createInitialChartState } from '@composable-svelte/charts';
 
 const store = new TestStore({

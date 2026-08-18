@@ -692,7 +692,7 @@ Graphics reducer is pure and testable:
 
 ```typescript
 import { graphicsReducer } from '@composable-svelte/graphics';
-import { TestStore } from '@composable-svelte/core';
+import { TestStore } from '@composable-svelte/core/test';
 
 const store = new TestStore({
   initialState: createInitialGraphicsState(),

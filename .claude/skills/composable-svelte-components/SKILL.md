@@ -297,9 +297,8 @@ Get the store from `scopeToDestination(...)`; dismiss with `scoped.dismiss()` �
 />
 ```
 
-> ⚠️ The `composable-svelte-navigation` skill's "NAVIGATION COMPONENTS HOW-TO"
-> section is stale — it still shows `open`/`onOpenChange` and subcomponents such
-> as `AlertTitle` / `PopoverTrigger` that do not exist. Trust this section.
+See **composable-svelte-navigation** for the full navigation patterns —
+scoping, presentation lifecycle and the destination reducers.
 
 ---
 

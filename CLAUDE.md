@@ -14,16 +14,30 @@ This repository contains **Composable Svelte**, a Composable Architecture librar
 - ✅ **Phase 2**: Navigation system (ifLet, Destinations, Navigation components, Dismiss dependency)
 - ✅ **Phase 3**: DSL & Matchers (createDestination, integrate, scopeTo, case paths)
 - ✅ **Phase 4**: Animation integration (PresentationState, Motion One for lifecycle animations)
-- ✅ **Phase 6**: Component Library (73+ shadcn-svelte components, Forms with Zod validation)
+- ✅ **Phase 6**: Component Library (77 shadcn-svelte components, Forms with Zod validation)
 - ✅ **Phase 7**: URL Routing (Browser history, pattern matching with path-to-regexp, query params)
 - ✅ **Phase 8**: Complete Backend Integration (3 major systems, 420 tests)
   - **API Client**: HTTP/REST with effects, interceptors, retries, caching (162 tests)
   - **WebSocket**: Real-time communication, reconnection, channels, heartbeat (140 tests)
   - **Dependencies**: Clock (MockClock), Storage (localStorage/cookies) (118 tests)
-- ✅ **Phase 17**: Internationalization (i18n) & Server-Side Rendering (500+ total tests)
+- ✅ **Phase 17**: Internationalization (i18n) & Server-Side Rendering (1900+ total tests)
   - **i18n**: ICU MessageFormat, locale detection, framework formatters (dates, numbers, currency)
   - **SSR**: Server-side rendering with Fastify, state hydration, security hardening
   - **SSG**: Static site generation, multi-locale support, dynamic route enumeration (22 tests)
+
+## ⚠️ CRITICAL: Tailwind Setup Is Required
+
+The component library ships **no scoped CSS** — every style is a Tailwind utility
+class. A consuming app that does not wire Tailwind to this package renders
+components unstyled or, worse, **transparent** (a popover with a visible border
+and shadow but a see-through body). This was a real, shipped defect.
+
+- **Tailwind v4**: `@import '@composable-svelte/core/styles/tailwind.css';`
+- **Tailwind v3**: the `@composable-svelte/core/tailwind-preset` preset, plus its
+  exported `contentGlob` in your own `content` array.
+
+Full setup, theme overriding and troubleshooting: the "Styling & Theming" section
+of `packages/core/README.md`.
 
 ## ⚠️ CRITICAL: Skills and Store Patterns
 
@@ -92,7 +106,7 @@ composable-svelte/
 │       │   ├── store.svelte.ts      # Store implementation
 │       │   ├── types.ts             # Core types
 │       │   └── index.ts             # Main exports
-│       └── tests/                   # Comprehensive test suite (500+ tests)
+│       └── tests/                   # Comprehensive test suite (1900+ tests)
 │           ├── api/                 # 162 tests (HTTP client, interceptors)
 │           ├── websocket/           # 140 tests (reconnection, heartbeat)
 │           ├── dependencies/        # 118 tests (clock, storage, cookies)
@@ -214,7 +228,7 @@ interface FeatureState {
   - Integrated with shadcn-svelte for UI components
 - ✅ **Phase 3**: DSL & Matchers - createDestination, integrate, scopeTo, case paths
 - ✅ **Phase 4**: Animation integration - PresentationState, Motion One for lifecycle animations
-- ✅ **Phase 6**: Component Library - 73+ shadcn-svelte components, Forms with Zod validation
+- ✅ **Phase 6**: Component Library - 77 shadcn-svelte components, Forms with Zod validation
 - ✅ **Phase 7**: URL Routing - Browser history, pattern matching (path-to-regexp), query params
 - ✅ **Phase 8**: Complete Backend Integration (420 tests total)
   - **API Client**: HTTP/REST with effects, interceptors, retries, caching (162 tests)
@@ -231,7 +245,7 @@ interface FeatureState {
 
 **Distribution**: NPM package `@composable-svelte/core` (planned)
 
-**Key Achievement**: Production-ready implementation of complete Composable Architecture with full backend integration, i18n, SSR/SSG, 500+ tests, and comprehensive documentation.
+**Key Achievement**: Production-ready implementation of complete Composable Architecture with full backend integration, i18n, SSR/SSG, 1900+ tests, and comprehensive documentation.
 
 ## Key Concepts
 
@@ -392,7 +406,7 @@ This library is heavily inspired by TCA for Swift but adapted for Svelte/TypeScr
 - ✅ **CSS Animations**: Only for infinite loops (Spinner, Skeleton) - no CSS transitions for hover/focus
 
 ### Component Library (Phase 6)
-- ✅ **73+ shadcn-svelte Components**: Complete UI component library
+- ✅ **77 shadcn-svelte Components**: Complete UI component library
 - ✅ **Form System**: Zod validation, field-level errors, async validation
 - ✅ **Reducer-Driven**: All components integrate with Composable Architecture patterns
 
@@ -429,7 +443,7 @@ This library is heavily inspired by TCA for Swift but adapted for Svelte/TypeScr
 - ✅ **Vitest + jsdom**: Fast, Vite-native testing
 - ✅ **TestStore API**: Exhaustive action testing with send/receive
 - ✅ **Mock Implementations**: MockClock, MockCookieStorage, MockWebSocket, MockAPI
-- ✅ **500+ Tests**: Comprehensive coverage (162 API + 140 WebSocket + 118 dependencies + 80 i18n/SSR)
+- ✅ **1900+ Tests**: Across every package, run by `pnpm -r test`
 
 ### Examples & Documentation
 - ✅ **Styleguide**: Component showcase with interactive examples

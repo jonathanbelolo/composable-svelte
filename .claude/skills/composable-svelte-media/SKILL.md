@@ -682,7 +682,7 @@ deleteAudioManager('my-player');
 ### AudioPlayer Testing
 
 ```typescript
-import { TestStore } from '@composable-svelte/core';
+import { TestStore } from '@composable-svelte/core/test';
 import { audioPlayerReducer, createInitialAudioPlayerState } from '@composable-svelte/media';
 
 const store = new TestStore({
@@ -709,7 +709,7 @@ await store.send({ type: 'nextTrack' }, (state) => {
 ### VoiceInput Testing
 
 ```typescript
-import { TestStore } from '@composable-svelte/core';
+import { TestStore } from '@composable-svelte/core/test';
 import { voiceInputReducer, createInitialVoiceInputState } from '@composable-svelte/media';
 
 const store = new TestStore({

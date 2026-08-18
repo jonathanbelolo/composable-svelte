@@ -41,7 +41,8 @@ const count = $derived(store.state.count);
 | Need | Package | Skill to load |
 |------|---------|---------------|
 | Store, reducers, effects, composition | `@composable-svelte/core` | `composable-svelte-core` |
-| UI components (Button, Card, Input, 70+) | `@composable-svelte/core/components/ui` | `composable-svelte-components` |
+| UI components (Button, Card, Input, 77 total) | `@composable-svelte/core/components/ui` | `composable-svelte-components` |
+| **Tailwind setup / theming** (required for any UI) | `@composable-svelte/core/styles/tailwind.css` (v4) or `/tailwind-preset` (v3) | `composable-svelte-components` → STYLING SETUP |
 | Forms with Zod validation | `@composable-svelte/core/components/form` | `composable-svelte-forms` |
 | Modal, Sheet, Drawer, Alert, navigation | `@composable-svelte/core/navigation-components` | `composable-svelte-navigation` |
 | URL routing, browser history | `@composable-svelte/core/routing` | `composable-svelte-core` |
@@ -57,6 +58,7 @@ const count = $derived(store.state.count);
 | 3D graphics, WebGL/WebGPU | `@composable-svelte/graphics` | `composable-svelte-graphics` |
 | Interactive maps, GeoJSON | `@composable-svelte/maps` | `composable-svelte-maps` |
 | Audio, video, voice input | `@composable-svelte/media` | `composable-svelte-media` |
+| Sessions, auth guards, role gating | `@composable-svelte/auth` | — (see its README) |
 | Docker, Fly.io deployment | — | `composable-svelte-deployment` |
 
 ## Quick Patterns
@@ -113,7 +115,7 @@ await store.receive({ type: 'loaded' }, s => expect(s.items).toHaveLength(3));
 
 ```
 packages/core/src/lib/     — Core library source (store, effects, composition, navigation, components, routing, api, websocket, i18n, ssr)
-packages/{chat,charts,code,graphics,maps,media}/  — Satellite packages
+packages/{auth,chat,charts,code,graphics,maps,media}/  — Satellite packages
 examples/                  — 11 example applications
 guides/                    — Architecture guides and tutorials
 .claude/skills/            — This skill system (14 domain skills + this umbrella)

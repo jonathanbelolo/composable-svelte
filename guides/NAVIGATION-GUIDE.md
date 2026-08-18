@@ -261,8 +261,7 @@ const addToCartStore = $derived(
 
 {#if addToCartStore}
   <Sheet
-    open={true}
-    onOpenChange={(open) => !open && addToCartStore.dismiss()}
+    store={addToCartStore}
   >
     <AddToCartContent store={addToCartStore} />
   </Sheet>
@@ -356,9 +355,7 @@ Full-screen overlay dialog:
 
 ```svelte
 <Modal
-  open={true}
-  title="Product Details"
-  onOpenChange={(open) => !open && store.dismiss()}
+  store={scopedStore}
 >
   <ProductDetails store={store} />
 </Modal>
@@ -376,9 +373,7 @@ Bottom drawer (mobile-first):
 
 ```svelte
 <Sheet
-  open={true}
-  title="Add to Cart"
-  onOpenChange={(open) => !open && store.dismiss()}
+  store={scopedStore}
 >
   <AddToCartForm store={store} />
 </Sheet>
@@ -396,10 +391,9 @@ Confirmation dialog:
 
 ```svelte
 <Alert
-  open={true}
+  store={scopedStore}
   title="Delete Product?"
   description="This action cannot be undone."
-  onOpenChange={(open) => !open && store.dismiss()}
   actions={[
     { label: 'Cancel', variant: 'outline', onClick: () => store.dispatch({ type: 'cancelButtonTapped' }) },
     { label: 'Delete', variant: 'destructive', onClick: () => store.dispatch({ type: 'confirmButtonTapped' }) }
@@ -419,10 +413,8 @@ Side panel (left/right):
 
 ```svelte
 <Drawer
-  open={true}
+  store={scopedStore}
   side="right"
-  title="Filters"
-  onOpenChange={(open) => !open && store.dismiss()}
 >
   <FilterOptions store={store} />
 </Drawer>
@@ -440,10 +432,9 @@ Contextual menu/tooltip:
 
 ```svelte
 <Popover
-  open={true}
+  store={scopedStore}
   triggerElement={buttonRef}
   placement="bottom"
-  onOpenChange={(open) => !open && store.dismiss()}
 >
   <ProductInfo product={product} />
 </Popover>
@@ -597,7 +588,7 @@ Always check for null before rendering:
 </script>
 
 {#if scopedStore}
-  <Sheet open={true} onOpenChange={(open) => !open && scopedStore.dismiss()}>
+  <Sheet store={scopedStore}>
     <AddToCartContent store={scopedStore} />
   </Sheet>
 {/if}
@@ -609,11 +600,7 @@ Always dismiss when modal is closed:
 
 ```svelte
 <Modal
-  open={true}
-  onOpenChange={(open) => {
-    if (!open) {
-      store.dismiss(); // Or dispatch dismiss action
-    }
+  store={scopedStore}
   }}
 >
   <Content />

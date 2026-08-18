@@ -874,7 +874,7 @@ interface AppState {
 ### generateStaticSite - Build-Time Generation
 
 ```typescript
-import { generateStaticSite } from '@composable-svelte/core/ssr';
+import { generateStaticSite } from '@composable-svelte/core/ssr/ssg';
 import App from './App.svelte';
 import { appReducer } from './reducer';
 
@@ -994,7 +994,7 @@ await generateStaticSite(App, { routes, outDir: './static' }, { reducer });
 
 **Create build script** (`src/build/ssg.ts`):
 ```typescript
-import { generateStaticSite } from '@composable-svelte/core/ssr';
+import { generateStaticSite } from '@composable-svelte/core/ssr/ssg';
 import App from '../shared/App.svelte';
 import { appReducer } from '../shared/reducer';
 import { loadPosts } from '../server/data';

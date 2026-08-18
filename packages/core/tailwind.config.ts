@@ -10,10 +10,7 @@ import preset from './src/lib/tailwind-preset.js';
  */
 export default {
   presets: [preset as unknown as Config],
-  content: [
-    './src/**/*.{html,js,svelte,ts}',
-    './examples/**/*.{html,js,svelte,ts}'
-  ],
+  content: ['./src/**/*.{html,js,svelte,ts}'],
   safelist: ['dark'], // Prevent purging dark mode class
   theme: {
     container: {

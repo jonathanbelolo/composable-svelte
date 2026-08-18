@@ -278,7 +278,7 @@ const addItemStore = $derived(
 );
 
 {#if addItemStore}
-  <Modal open={true} onOpenChange={(open) => !open && addItemStore.dismiss()}>
+  <Modal store={addItemStore}>
     <AddItemForm store={addItemStore} />
   </Modal>
 {/if}
@@ -630,30 +630,41 @@ async function renderApp(request: any, reply: any) {
 
 ### Router Configuration
 
+> There is no `createRouter` builder. Routing is a pair of config objects —
+> `parseDestination` for URL → state and `serializeDestination` for state → URL.
+
 ```typescript
-import { createRouter } from '@composable-svelte/core/routing';
+import {
+  parseDestination,
+  serializeDestination,
+  matchPath,
+  type ParserConfig,
+  type SerializerConfig
+} from '@composable-svelte/core/routing';
 
-// Define destination types
-type Destination =
-  | { type: 'post'; state: { postId: number } };
+type Destination = { type: 'post'; state: { postId: number } };
 
-// Create router with patterns
-const router = createRouter<Destination>()
-  .route('/', null)
-  .route('/posts/:postId', (params) => ({
-    type: 'post',
-    state: { postId: parseInt(params.postId, 10) }
-  }))
-  .build();
+const parserConfig: ParserConfig<Destination> = {
+  routes: [
+    {
+      pattern: '/posts/:postId',
+      parse: (params) => ({ type: 'post', state: { postId: Number(params.postId) } })
+    }
+  ]
+};
 
-// Use for parsing
-const destination = router.parse('/posts/42');
-// { type: 'post', state: { postId: 42 } }
+const serializerConfig: SerializerConfig<Destination> = {
+  post: (state) => `/posts/${state.postId}`
+};
 
-// Use for serialization
-const path = router.serialize({ type: 'post', state: { postId: 42 } });
-// '/posts/42'
+const destination = parseDestination('/posts/42', parserConfig);
+const path = serializeDestination({ type: 'post', state: { postId: 42 } }, serializerConfig);
 ```
+
+`matchPath('/posts/:postId', path)` returns the params (or `null`) if you only
+need to test one pattern. Check the exported types in
+`@composable-svelte/core/routing` for the exact config shapes before writing
+these by hand.
 
 ---
 
@@ -667,7 +678,7 @@ These components are from the shadcn-svelte component library. See **composable-
 
 ```svelte
 <script lang="ts">
-  import { Modal } from '@composable-svelte/core/components';
+  import { Modal } from '@composable-svelte/core/navigation-components';
   import { scopeToDestination } from '@composable-svelte/core';
 
   const modalStore = $derived(scopeToDestination(store, 'destination', 'addItem'));
@@ -675,8 +686,7 @@ These components are from the shadcn-svelte component library. See **composable-
 
 {#if modalStore}
   <Modal
-    open={true}
-    onOpenChange={(open) => !open && modalStore.dismiss()}
+    store={modalStore}
   >
     <ModalContent store={modalStore} />
   </Modal>
@@ -689,15 +699,14 @@ These components are from the shadcn-svelte component library. See **composable-
 
 ```svelte
 <script lang="ts">
-  import { Sheet } from '@composable-svelte/core/components';
+  import { Sheet } from '@composable-svelte/core/navigation-components';
 
   const sheetStore = $derived(scopeToDestination(store, 'destination', 'filters'));
 </script>
 
 {#if sheetStore}
   <Sheet
-    open={true}
-    onOpenChange={(open) => !open && sheetStore.dismiss()}
+    store={sheetStore}
   >
     <SheetContent store={sheetStore} />
   </Sheet>
@@ -710,7 +719,7 @@ These components are from the shadcn-svelte component library. See **composable-
 
 ```svelte
 <script lang="ts">
-  import { Drawer } from '@composable-svelte/core/components';
+  import { Drawer } from '@composable-svelte/core/navigation-components';
 
   const drawerStore = $derived(scopeToDestination(store, 'destination', 'menu'));
 </script>
@@ -718,8 +727,7 @@ These components are from the shadcn-svelte component library. See **composable-
 {#if drawerStore}
   <Drawer
     side="left"
-    open={true}
-    onOpenChange={(open) => !open && drawerStore.dismiss()}
+    store={drawerStore}
   >
     <DrawerContent store={drawerStore} />
   </Drawer>
@@ -730,26 +738,29 @@ These components are from the shadcn-svelte component library. See **composable-
 
 **When to use**: Destructive actions, confirmations
 
+> There are no `AlertTitle` / `AlertDescription` / `AlertActions` components.
+> `Alert` renders a children snippet; compose the contents yourself.
+
 ```svelte
 <script lang="ts">
-  import { Alert, AlertTitle, AlertDescription, AlertActions, Button } from '@composable-svelte/core/components';
+  import { Alert } from '@composable-svelte/core/navigation-components';
+  import { Button } from '@composable-svelte/core/components/ui';
 
   const confirmStore = $derived(scopeToDestination(store, 'destination', 'confirmDelete'));
 </script>
 
 {#if confirmStore}
-  <Alert
-    open={true}
-    onOpenChange={(open) => !open && confirmStore.dismiss()}
-  >
-    <AlertTitle>Delete Item?</AlertTitle>
-    <AlertDescription>This action cannot be undone.</AlertDescription>
-    <AlertActions>
-      <Button onclick={() => confirmStore.dismiss()}>Cancel</Button>
-      <Button variant="destructive" onclick={() => confirmStore.dispatch({ type: 'confirm' })}>
-        Delete
-      </Button>
-    </AlertActions>
+  <Alert store={confirmStore}>
+    {#snippet children({ store: alertStore })}
+      <h2 class="text-lg font-semibold">Delete Item?</h2>
+      <p class="text-sm text-muted-foreground">This action cannot be undone.</p>
+      <div class="flex justify-end gap-2">
+        <Button onclick={() => alertStore.dismiss()}>Cancel</Button>
+        <Button variant="destructive" onclick={() => alertStore.dispatch({ type: 'confirm' })}>
+          Delete
+        </Button>
+      </div>
+    {/snippet}
   </Alert>
 {/if}
 ```
@@ -758,20 +769,29 @@ These components are from the shadcn-svelte component library. See **composable-
 
 **When to use**: Dropdown menus, tooltips, context menus
 
+> There are no `PopoverTrigger` / `PopoverContent` components. The trigger is
+> your own markup; `Popover` takes a `style` prop for absolute positioning.
+
 ```svelte
 <script lang="ts">
-  import { Popover, PopoverTrigger, PopoverContent } from '@composable-svelte/core/components';
+  import { Popover } from '@composable-svelte/core/navigation-components';
+  import { Button } from '@composable-svelte/core/components/ui';
+
+  const menuStore = $derived(scopeToDestination(store, 'destination', 'menu'));
 </script>
 
-<Popover open={$store.showMenu} onOpenChange={(open) => store.dispatch({ type: 'toggleMenu', open })}>
-  <PopoverTrigger>
-    <Button>Options</Button>
-  </PopoverTrigger>
-  <PopoverContent>
-    <button onclick={() => store.dispatch({ type: 'edit' })}>Edit</button>
-    <button onclick={() => store.dispatch({ type: 'delete' })}>Delete</button>
-  </PopoverContent>
-</Popover>
+<div class="relative">
+  <Button onclick={() => store.dispatch({ type: 'menuOpened' })}>Options</Button>
+
+  {#if menuStore}
+    <Popover store={menuStore} style="top: 100%; left: 0;">
+      {#snippet children()}
+        <button onclick={() => store.dispatch({ type: 'edit' })}>Edit</button>
+        <button onclick={() => store.dispatch({ type: 'delete' })}>Delete</button>
+      {/snippet}
+    </Popover>
+  {/if}
+</div>
 ```
 
 ---
@@ -869,7 +889,7 @@ case 'destination': {
 
 // Component
 <script lang="ts">
-  import { Modal, Button } from '@composable-svelte/core/components';
+  import { Modal, Button } from '@composable-svelte/core/navigation-components';
   import { scopeToDestination } from '@composable-svelte/core';
 
   const editProfileStore = $derived(
@@ -883,8 +903,7 @@ case 'destination': {
 
 {#if editProfileStore}
   <Modal
-    open={true}
-    onOpenChange={(open) => !open && editProfileStore.dismiss()}
+    store={editProfileStore}
   >
     <EditProfileForm store={editProfileStore} />
   </Modal>
@@ -951,7 +970,7 @@ case 'presentation':
 
 // Component with animation
 <script lang="ts">
-  import { Sheet } from '@composable-svelte/core/components';
+  import { Sheet } from '@composable-svelte/core/navigation-components';
   import { animateSheetIn, animateSheetOut } from '@composable-svelte/core/animation';
 
   let sheetElement: HTMLElement;
@@ -981,8 +1000,7 @@ case 'presentation':
 
 {#if filterStore}
   <Sheet
-    open={true}
-    onOpenChange={(open) => !open && filterStore.dismiss()}
+    store={filterStore}
   >
     <div bind:this={sheetElement}>
       <FilterForm store={filterStore} />
@@ -1185,7 +1203,7 @@ case 'destination': {
 
 // App.svelte
 <script lang="ts">
-  import { Modal } from '@composable-svelte/core/components';
+  import { Modal } from '@composable-svelte/core/navigation-components';
   import { scopeToDestination } from '@composable-svelte/core';
 
   const addItemStore = $derived(scopeToDestination(store, 'destination'));
@@ -1196,7 +1214,7 @@ case 'destination': {
 </Button>
 
 {#if addItemStore}
-  <Modal open={true} onOpenChange={(open) => !open && addItemStore.dismiss()}>
+  <Modal store={addItemStore}>
     <AddItemForm store={addItemStore} />
   </Modal>
 {/if}
@@ -1240,29 +1258,40 @@ const depth = stackDepth(state.stack);      // stack.length
 
 ### NavigationStack Component
 
+> These take a `stack` array, not just a store, and the snippet is `children` —
+> there is no `renderScreen`. A `renderScreen` snippet is silently never
+> rendered, so the stack appears empty.
+
 ```svelte
 <script lang="ts">
   import { NavigationStack, AnimatedNavigationStack } from '@composable-svelte/core/navigation-components';
 </script>
 
 <!-- Basic (no animations) -->
-<NavigationStack {store}>
-  {#snippet renderScreen(screen, index)}
-    {#if screen.type === 'step1'}
+<NavigationStack {store} stack={store.state.stack} onBack={() => store.dispatch({ type: 'popped' })}>
+  {#snippet children({ currentScreen, canGoBack, onBack })}
+    {#if currentScreen.type === 'step1'}
       <Step1 {store} />
-    {:else if screen.type === 'step2'}
+    {:else if currentScreen.type === 'step2'}
       <Step2 {store} />
     {/if}
   {/snippet}
 </NavigationStack>
 
-<!-- With push/pop animations -->
-<AnimatedNavigationStack {store}>
-  {#snippet renderScreen(screen, index)}
+<!-- With push/pop animations: also requires `presentation` -->
+<AnimatedNavigationStack
+  {store}
+  stack={store.state.stack}
+  presentation={store.state.presentation}
+  onBack={() => store.dispatch({ type: 'popped' })}
+>
+  {#snippet children({ currentScreen })}
     <!-- same -->
   {/snippet}
 </AnimatedNavigationStack>
 ```
+
+The children snippet receives `{ visible, store, currentScreen, canGoBack, onBack }`.
 
 ---
 
