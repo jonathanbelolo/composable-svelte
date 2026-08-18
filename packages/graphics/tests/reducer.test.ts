@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { TestStore } from '@composable-svelte/core';
+import { TestStore } from '@composable-svelte/core/test';
 import { graphicsReducer } from '../src/core/reducer';
 import { createInitialGraphicsState } from '../src/core/initial-state';
 import type { GraphicsState, GraphicsAction } from '../src/core/types';

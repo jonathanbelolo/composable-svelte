@@ -29,9 +29,10 @@ export default defineConfig({
     // Test file patterns
     include: ['tests/**/*.{test,spec}.{js,ts}'],
     exclude: [
-      'tests/animations/**/*.test.ts',
-      'tests/ssr/ssg.test.ts', // Needs Node.js environment (fs/promises)
-      'tests/styles/**' // Needs Node.js environment (reads stylesheets from disk)
+      // Node-environment tests: they read files from disk, which browser mode
+      // cannot do. Run by the root jsdom config instead.
+      'tests/ssr/ssg.test.ts',
+      'tests/styles/**'
     ],
 
     // Suppress console output during tests (for CI/prepublish)
