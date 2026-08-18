@@ -11,13 +11,30 @@ This skill covers form patterns, Zod validation integration, and state managemen
 
 ## FORMS SYSTEM
 
-### Integrated Mode (Recommended)
+### Two Modes
 
-**When**: Complex apps where parent needs to observe form submission, validation, and integrate with other state.
+1. **Standalone Mode**: Pass `config` to `<Form>` — it creates its own internal store
+2. **Integrated Mode** (Recommended): Pass `store` to `<Form>` — uses external store from parent reducer via `scope()`
+
+Passing both, or neither, throws at runtime (`Form.svelte:39-44`).
+
+```svelte
+<!-- Standalone: Form owns the store. Good for prototypes and self-contained forms. -->
+<Form config={contactFormConfig}>
+  <FormField name="name">
+    {#snippet children({ field, send })}
+      <Input value={field.value} oninput={(e) => send({ type: 'fieldChanged', field: 'name', value: e.currentTarget.value })} />
+    {/snippet}
+  </FormField>
+</Form>
+```
+
+**Choose integrated mode whenever the parent must react to submission** — standalone
+state is invisible to the parent reducer. Everything below uses integrated mode.
 
 ---
 
-## COMPLETE EXAMPLE
+## COMPLETE EXAMPLE (Integrated Mode)
 
 ### 1. Define Zod Schema
 
@@ -41,99 +58,107 @@ import type { FormConfig } from '@composable-svelte/core/components/form';
 export const contactFormConfig: FormConfig<ContactData> = {
   schema: contactSchema,
   initialData: { name: '', email: '', message: '' },
-  mode: 'all', // Validate on blur, change, and submit
+  mode: 'onBlur',
   debounceMs: 500,
-  onSubmit: async (data) => {
-    const result = await api.submitContact(data);
-    return result;
+  async onSubmit(_data) {
+    // Command dispatch handled by parent reducer on submissionSucceeded
   }
 };
 ```
 
-### 3. Parent State
+### 3. Parent State & Actions
 
 ```typescript
+import type { FormState, FormAction } from '@composable-svelte/core/components/form';
+
 interface AppState {
   contactForm: FormState<ContactData>;
   submissions: Submission[];
   successMessage: string | null;
 }
-```
 
-### 4. Parent Actions
-
-```typescript
 type AppAction =
   | { type: 'contactForm'; action: FormAction<ContactData> }
-  | { type: 'clearSuccessMessage' };
+  | { type: 'successMessageDismissed' };
 ```
 
-### 5. Parent Reducer
+Every action in the union must be reachable and handled — an action the reducer
+never produces or consumes is dead weight that hides real gaps.
+
+### 4. Parent Reducer with scope()
+
+Two pieces: your own logic, then the scoped form reducer. Keeping them separate is
+what lets the parent observe form events without reaching into form internals.
 
 ```typescript
-import { createFormReducer, scope } from '@composable-svelte/core';
+import { Effect, scope, type Reducer } from '@composable-svelte/core';
+import { createFormReducer } from '@composable-svelte/core/components/form';
 
 const formReducer = createFormReducer(contactFormConfig);
 
-const appReducer: Reducer<AppState, AppAction> = (state, action, deps) => {
+// 1. Parent-level logic — observes the child's actions
+const coreReducer: Reducer<AppState, AppAction> = (state, action) => {
   switch (action.type) {
-    case 'contactForm': {
-      const [formState, formEffect] = formReducer(
-        state.contactForm,
-        action.action,
-        deps
-      );
-
-      const newState = { ...state, contactForm: formState };
-      const effect = Effect.map(formEffect, (fa): AppAction => ({
-        type: 'contactForm',
-        action: fa
-      }));
-
-      // Observe submission success
+    case 'contactForm':
       if (action.action.type === 'submissionSucceeded') {
+        const { name, email } = state.contactForm.data;
         return [
           {
-            ...newState,
-            submissions: [...state.submissions, {
-              id: crypto.randomUUID(),
-              data: formState.data,
-              timestamp: Date.now()
-            }],
-            successMessage: 'Thanks for contacting us!'
+            ...state,
+            submissions: [...state.submissions, { name, email, at: new Date() }],
+            successMessage: `Thank you, ${name}!`
           },
-          Effect.batch(
-            effect,
-            Effect.afterDelay(3000, (d) => d({ type: 'clearSuccessMessage' }))
-          )
+          Effect.afterDelay(5000, (d) => d({ type: 'successMessageDismissed' }))
         ];
       }
+      return [state, Effect.none()]; // the form reducer handles the rest
 
-      return [newState, effect];
-    }
-
-    case 'clearSuccessMessage':
+    case 'successMessageDismissed':
       return [{ ...state, successMessage: null }, Effect.none()];
-
-    default:
-      return [state, Effect.none()];
   }
+};
+
+// 2. Compose: parent logic first, then the scoped form
+export const appReducer: Reducer<AppState, AppAction> = (state, action, deps) => {
+  const [s1, e1] = coreReducer(state, action, deps);
+
+  const scopedForm = scope<AppState, AppAction, FormState<ContactData>, FormAction<ContactData>>(
+    (s) => s.contactForm,
+    (s, child) => ({ ...s, contactForm: child }),
+    (a) => (a.type === 'contactForm' ? a.action : null),
+    (childAction) => ({ type: 'contactForm', action: childAction }),
+    formReducer
+  );
+
+  const [s2, e2] = scopedForm(s1, action, deps);
+  return [s2, Effect.batch(e1, e2)];
 };
 ```
 
-### 6. Component - Reactive Wrapper
+Observe by returning updated parent state directly. **Never** `dispatch(... as any)`
+to escape your own action union — if you need a domain command, add it to
+`AppAction`.
 
-**CRITICAL**: Use reactive wrapper pattern for forms to integrate form state with parent state.
+Working reference: `examples/contact-form/src/app/app.reducer.ts` (reducer only —
+that example has no Tailwind pipeline, so it renders unstyled).
+
+### 5. Component with Reactive Wrapper
 
 ```svelte
 <script lang="ts">
-  import { FormField, Button } from '@composable-svelte/core/components';
+  import { Form, FormField, FormItem, FormLabel, FormMessage } from '@composable-svelte/core/components/form';
+  import { Input, Textarea, Button } from '@composable-svelte/core/components/ui';
+  import type { Store } from '@composable-svelte/core';
+  import type { FormAction } from '@composable-svelte/core/components/form';
+  import type { ContactData } from './schemas';
 
-  export let store: Store<AppState, AppAction>;
+  let { store, onSuccess }: {
+    store: Store<AppState, AppAction>;
+    onSuccess?: () => void;
+  } = $props();
 
-  // Reactive wrapper for form store
+  // Reactive wrapper — exposes the form slice as a store-shaped object
   let formStoreState = $state(store.state.contactForm);
-
   $effect(() => {
     formStoreState = store.state.contactForm;
   });
@@ -142,132 +167,259 @@ const appReducer: Reducer<AppState, AppAction> = (state, action, deps) => {
     get state() { return formStoreState; },
     dispatch(action: FormAction<ContactData>) {
       store.dispatch({ type: 'contactForm', action });
+    },
+    // MUST emit the form slice, not parent state — FormField reads $store.data[name]
+    subscribe(listener: (s: typeof formStoreState) => void) {
+      return store.subscribe((s) => listener(s.contactForm));
     }
   };
+
+  let prevSubmitted = $state<Date | null>(null);
+  $effect(() => {
+    const current = formStoreState?.lastSubmitted;
+    if (current && current !== prevSubmitted) {
+      prevSubmitted = current;
+      onSuccess?.();
+    }
+  });
 </script>
 
-{#if $store.successMessage}
-  <div class="success">{$store.successMessage}</div>
-{/if}
+<Form store={formStore}>
+  <div class="space-y-6">
 
-<form onsubmit={(e) => { e.preventDefault(); formStore.dispatch({ type: 'submit' }); }}>
-  <FormField
-    field="name"
-    send={(action) => formStore.dispatch(action)}
-    state={formStore.state}
-  >
-    <label>Name</label>
-    <input type="text" />
-  </FormField>
+    <!-- Text Input -->
+    <FormField name="name">
+      {#snippet children({ field, send })}
+        <FormItem>
+          <FormLabel>Name *</FormLabel>
+          <Input
+            value={field.value}
+            oninput={(e) => send({ type: 'fieldChanged', field: 'name', value: e.currentTarget.value })}
+            onblur={() => send({ type: 'fieldBlurred', field: 'name' })}
+            placeholder="John Doe"
+          />
+          <FormMessage />
+        </FormItem>
+      {/snippet}
+    </FormField>
 
-  <FormField
-    field="email"
-    send={(action) => formStore.dispatch(action)}
-    state={formStore.state}
-  >
-    <label>Email</label>
-    <input type="email" />
-  </FormField>
+    <!-- Email Input -->
+    <FormField name="email">
+      {#snippet children({ field, send })}
+        <FormItem>
+          <FormLabel>Email *</FormLabel>
+          <Input
+            type="email"
+            value={field.value}
+            oninput={(e) => send({ type: 'fieldChanged', field: 'email', value: e.currentTarget.value })}
+            onblur={() => send({ type: 'fieldBlurred', field: 'email' })}
+            placeholder="john@example.com"
+          />
+          <FormMessage />
+        </FormItem>
+      {/snippet}
+    </FormField>
 
-  <FormField
-    field="message"
-    send={(action) => formStore.dispatch(action)}
-    state={formStore.state}
-  >
-    <label>Message</label>
-    <textarea rows={4} />
-  </FormField>
+    <!-- Textarea -->
+    <FormField name="message">
+      {#snippet children({ field, send })}
+        <FormItem>
+          <FormLabel>Message *</FormLabel>
+          <Textarea
+            value={field.value}
+            oninput={(e) => send({ type: 'fieldChanged', field: 'message', value: e.currentTarget.value })}
+            onblur={() => send({ type: 'fieldBlurred', field: 'message' })}
+            rows={4}
+            placeholder="Your message here..."
+          />
+          <FormMessage />
+        </FormItem>
+      {/snippet}
+    </FormField>
 
-  <Button
-    type="submit"
-    disabled={formStore.state.isSubmitting || Object.keys(formStore.state.errors).length > 0}
-  >
-    {formStore.state.isSubmitting ? 'Submitting...' : 'Submit'}
-  </Button>
-</form>
+    <!-- Submit -->
+    {#if formStoreState?.submitError}
+      <div class="p-3 rounded-md bg-destructive/10 text-destructive text-sm">{formStoreState.submitError}</div>
+    {/if}
+    <div class="flex gap-3">
+      <Button type="submit" disabled={formStoreState?.isSubmitting}>
+        {formStoreState?.isSubmitting ? 'Sending...' : 'Send Message'}
+      </Button>
+      <Button variant="outline" onclick={() => onSuccess?.()}>Cancel</Button>
+    </div>
+
+  </div>
+</Form>
 ```
 
 ---
 
-## KEY CONCEPTS
+## FORMFIELD COMPONENT — THE CORE PATTERN
 
-### Reactive Wrapper Pattern
+**FormField** uses Svelte 5 snippets to provide `field` state and `send` dispatcher to children:
 
-**Why needed**: Forms need to integrate with parent state while maintaining reactive updates.
-
-```typescript
-// Reactive wrapper for form store
-let formStoreState = $state(store.state.contactForm);
-
-$effect(() => {
-  formStoreState = store.state.contactForm;
-});
-
-const formStore = {
-  get state() { return formStoreState; },
-  dispatch(action: FormAction<ContactData>) {
-    store.dispatch({ type: 'contactForm', action });
-  }
-};
+```svelte
+<FormField name="fieldName">
+  {#snippet children({ field, send })}
+    <FormItem>
+      <FormLabel>Label</FormLabel>
+      <!-- input component here -->
+      <FormMessage />
+    </FormItem>
+  {/snippet}
+</FormField>
 ```
 
-**What it does**:
-- Creates reactive local state that tracks form state from parent
-- Provides dispatch method that wraps actions for parent
-- Enables FormField components to work with scoped state
+**Props:**
+- `name: string` — must match a key in the form data shape
+- `children: Snippet<[{ field: FieldState, send: (action) => void }]>` — snippet providing field state and action dispatcher
+
+**FieldState** (provided as `field`):
+```typescript
+{
+  value: any;           // Current field value
+  touched: boolean;     // Has user interacted?
+  dirty: boolean;       // Has value changed from initial?
+  error: string | null; // Validation error message
+  isValidating: boolean; // Async validation in progress
+  warnings: string[];   // Non-blocking warnings
+}
+```
+
+**`send`** dispatches FormActions to the form store. Common actions:
+- `send({ type: 'fieldChanged', field: 'name', value: newValue })`
+- `send({ type: 'fieldBlurred', field: 'name' })`
 
 ---
 
-### Parent Observation
+## INPUT COMPONENT WIRING REFERENCE
 
-**Critical Pattern**: Parent can observe form events to react to submission, validation failures, etc.
+### Text Input
 
-```typescript
-// Observe submission success
-if (action.action.type === 'submissionSucceeded') {
-  return [
-    {
-      ...newState,
-      submissions: [...state.submissions, {
-        id: crypto.randomUUID(),
-        data: formState.data,
-        timestamp: Date.now()
-      }],
-      successMessage: 'Thanks for contacting us!'
-    },
-    Effect.batch(
-      effect,
-      Effect.afterDelay(3000, (d) => d({ type: 'clearSuccessMessage' }))
-    )
-  ];
-}
-
-// Observe submission failure
-if (action.action.type === 'submissionFailed') {
-  return [
-    newState,
-    Effect.batch(
-      effect,
-      Effect.fireAndForget(async () => {
-        toast.error('Submission failed. Please try again.');
-      })
-    )
-  ];
-}
-
-// Observe validation failure
-if (action.action.type === 'validationFailed') {
-  return [
-    newState,
-    Effect.batch(
-      effect,
-      Effect.fireAndForget(async () => {
-        toast.error('Please fix validation errors.');
-      })
-    )
-  ];
-}
+```svelte
+<Input
+  value={field.value}
+  oninput={(e) => send({ type: 'fieldChanged', field: 'name', value: e.currentTarget.value })}
+  onblur={() => send({ type: 'fieldBlurred', field: 'name' })}
+/>
 ```
+
+### Number Input
+
+```svelte
+<Input
+  type="number"
+  value={field.value}
+  oninput={(e) => send({ type: 'fieldChanged', field: 'quantity', value: Number(e.currentTarget.value) })}
+  onblur={() => send({ type: 'fieldBlurred', field: 'quantity' })}
+/>
+```
+
+### Textarea
+
+```svelte
+<Textarea
+  value={field.value}
+  oninput={(e) => send({ type: 'fieldChanged', field: 'message', value: e.currentTarget.value })}
+  onblur={() => send({ type: 'fieldBlurred', field: 'message' })}
+  rows={4}
+/>
+```
+
+### Select (Dropdown)
+
+**CRITICAL**: Select uses `onchange` callback (NOT `onValueChange`) and `options` prop (NOT `SelectTrigger`/`SelectContent`/`SelectItem` children).
+
+```svelte
+<Select
+  value={field.value}
+  options={[
+    { value: 'apple', label: 'Apple' },
+    { value: 'banana', label: 'Banana' },
+  ]}
+  onchange={(v) => send({ type: 'fieldChanged', field: 'fruit', value: v })}
+  placeholder="Select..."
+/>
+```
+
+**Select Props:**
+- `options: { value: T; label: string; disabled?: boolean }[]`
+- `value?: T | T[] | null` — current value
+- `onchange?: (value: T | T[] | null) => void` — change callback
+- `placeholder?: string`
+- `searchable?: boolean`
+- `multiple?: boolean`
+
+### Switch (Toggle)
+
+**CRITICAL**: Switch has no `onCheckedChange`. `checked` **is** `$bindable`
+(`Switch.svelte:43`), so `bind:checked` works in general — but you cannot bind to
+`field.value`, which is a read-only snippet parameter. Use one-way
+`checked={field.value}` + `onclick`. A caller-supplied `onclick` replaces the
+component's internal toggle (restProps are spread after it), which is what keeps
+the store the single source of truth.
+
+```svelte
+<Switch
+  checked={field.value}
+  onclick={() => send({ type: 'fieldChanged', field: 'isActive', value: !field.value })}
+/>
+```
+
+### Date Input
+
+> ⚠️ `Input`'s `type` union is `'text' | 'email' | 'password' | 'number' | 'tel' |
+> 'url' | 'search'` (`Input.svelte:46`) — it narrows the inherited HTML attribute
+> type, so `type="date"` renders correctly at runtime but **fails `svelte-check`**.
+> Use a plain `<input>` (below), the `Calendar` component, or widen the union.
+
+```svelte
+<input
+  type="date"
+  class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+  value={field.value}
+  oninput={(e) => send({ type: 'fieldChanged', field: 'date', value: e.currentTarget.value })}
+  onblur={() => send({ type: 'fieldBlurred', field: 'date' })}
+/>
+```
+
+---
+
+## COMMON CALLBACK MISTAKES
+
+| Component | WRONG | CORRECT |
+|-----------|-------|---------|
+| Select | `onValueChange` | `onchange` |
+| Select | `<SelectTrigger>/<SelectItem>` children | `options` prop |
+| Switch | `onCheckedChange` | `onclick` with manual toggle |
+| Switch | `bind:checked={field.value}` (field.value is read-only) | `checked={field.value}` (one-way) + `onclick` |
+| Input | `onchange` | `oninput` |
+
+---
+
+## FORM COMPONENTS
+
+All exported from `@composable-svelte/core/components/form`:
+
+| Component | Purpose |
+|-----------|---------|
+| `Form` | `<form>` wrapper — handles submit, provides store context. Pass `store` (integrated) or `config` (standalone) |
+| `FormField` | Field wrapper — provides `{ field, send }` via snippet to children |
+| `FormItem` | Layout wrapper — consistent spacing (`space-y-2`) for label + input + message |
+| `FormLabel` | Label with error styling. Emits `for={fieldName}`, but only links if `FormControl` wraps the input — that is the only thing that sets a matching `id` |
+| `FormMessage` | Error display — auto-shows field error from context |
+| `FormDescription` | Helper text below a field |
+| `FormControl` | Optional input wrapper (spread-props pattern) |
+
+UI inputs from `@composable-svelte/core/components/ui`:
+
+| Component | Props for forms |
+|-----------|----------------|
+| `Input` | `value`, `oninput`, `onblur`, `type`, `placeholder`, `class` |
+| `Textarea` | `value`, `oninput`, `onblur`, `rows`, `placeholder`, `class` |
+| `Select` | `value`, `options`, `onchange`, `placeholder`, `searchable`, `class` |
+| `Switch` | `checked`, `onclick`, `disabled`, `class` |
+| `Button` | `type="submit"`, `disabled`, `variant`, `class` |
 
 ---
 
@@ -279,577 +431,298 @@ if (action.action.type === 'validationFailed') {
 interface FormState<T extends Record<string, any>> {
   data: T;                                    // Current form data
   fields: { [K in keyof T]: FieldState };     // Per-field state
-  schema: ZodSchema<T>;                       // Zod schema for validation
+  schema: ZodSchema<T>;                       // Zod schema
   formErrors: string[];                       // Cross-field validation errors
   isValidating: boolean;                      // Form-level validation in progress
-  isSubmitting: boolean;                      // ✅ USE THIS for loading state
+  isSubmitting: boolean;                      // Currently submitting
   submitCount: number;                        // Submission attempts
   submitError: string | null;                 // Last submission error
-  lastSubmitted: Date | null;                 // Last successful submit
+  lastSubmitted: Date | null;                 // Last successful submit timestamp
 }
 
 interface FieldState {
-  touched: boolean;      // Has user interacted?
-  dirty: boolean;        // Has value changed from initial?
-  error: string | null;  // Validation error
+  value: any;           // Current field value
+  touched: boolean;     // Has user interacted?
+  dirty: boolean;       // Has value changed from initial?
+  error: string | null; // Validation error
   isValidating: boolean; // Async validation in progress
-  warnings: string[];    // Non-blocking warnings
+  warnings: string[];   // Non-blocking warnings
 }
 ```
 
-Access field state via `formStore.state.fields.email.error`, not a top-level `errors` record.
+### Accessing Field Errors
 
-### CRITICAL: Use isSubmitting
-
-**❌ WRONG**:
 ```typescript
-{#if formStore.state.submission.status === 'submitting'}
-  Loading...
+// Via FormMessage component (automatic — reads from context)
+<FormMessage />
+
+// Manual access
+{#if field.error && field.touched}
+  <p class="text-sm text-destructive">{field.error}</p>
 {/if}
 ```
-
-**✅ CORRECT**:
-```typescript
-{#if formStore.state.isSubmitting}
-  Loading...
-{/if}
-```
-
-**WHY**: Use `isSubmitting` boolean, not `submission.status`. Simpler API, less nesting.
 
 ---
 
 ## FORM ACTIONS
 
-### FormAction Types
-
 ```typescript
 type FormAction<T> =
   // Field interactions
-  | { type: 'fieldChanged'; field: keyof T; value: any }
+  | { type: 'fieldChanged'; field: keyof T; value: unknown }
   | { type: 'fieldBlurred'; field: keyof T }
   | { type: 'fieldFocused'; field: keyof T }
   // Validation lifecycle
   | { type: 'fieldValidationStarted'; field: keyof T }
-  | { type: 'fieldValidationCompleted'; field: keyof T; error: string | null }
+  | { type: 'fieldValidationCompleted'; field: keyof T; error: string | null; warnings?: string[] }
   | { type: 'formValidationStarted' }
-  | { type: 'formValidationCompleted'; errors: string[] }
+  | { type: 'formValidationCompleted'; fieldErrors: Partial<Record<keyof T, string>>; formErrors: string[] }
   // Submission lifecycle
   | { type: 'submitTriggered' }
   | { type: 'submissionStarted' }
-  | { type: 'submissionSucceeded'; response?: unknown }
+  | { type: 'submissionSucceeded'; response?: unknown }  // reducer never populates response
   | { type: 'submissionFailed'; error: string }
   // Form management
   | { type: 'formReset'; data?: T }
-  | { type: 'setFieldValue'; field: keyof T; value: any }
+  | { type: 'setFieldValue'; field: keyof T; value: unknown }
   | { type: 'setFieldError'; field: keyof T; error: string }
   | { type: 'clearFieldError'; field: keyof T };
 ```
 
-### Form Components
-
-All exported from `@composable-svelte/core/components/form`:
-
-| Component | Purpose |
-|-----------|---------|
-| `Form` | Form wrapper (standalone or integrated mode) |
-| `FormField` | Field wrapper providing `{ field, send }` snippet context |
-| `FormControl` | Wraps the actual input control |
-| `FormItem` | Layout wrapper for a field + label + message group |
-| `FormLabel` | Accessible label linked to form control |
-| `FormMessage` | Displays field validation error or description |
-| `FormDescription` | Helper text below a field |
-
-### Field-Level Errors
-
-```typescript
-// Errors are automatically populated from Zod validation
-{#if formStore.state.errors.email}
-  <span class="error">{formStore.state.errors.email}</span>
-{/if}
-```
-
 ---
 
-## ASYNC VALIDATION
+## REACTIVE WRAPPER PATTERN
 
-### Define Async Validators in Schema
+**Why needed**: The `<Form>` component expects a store-like object with `state`, `dispatch`, and `subscribe`. In integrated mode, we create a wrapper that delegates to the parent store.
 
 ```typescript
-const schema = z.object({
-  username: z.string().refine(
-    async (username) => {
-      const available = await api.checkUsername(username);
-      return available;
-    },
-    { message: 'Username is already taken' }
-  ),
-  email: z.string().email().refine(
-    async (email) => {
-      const exists = await api.checkEmail(email);
-      return !exists;
-    },
-    { message: 'Email already registered' }
-  )
+// Reactive wrapper for form store
+let formStoreState = $state(parentStore.state.contactForm);
+
+$effect(() => {
+  formStoreState = parentStore.state.contactForm;
 });
+
+const formStore = {
+  get state() { return formStoreState; },
+  dispatch(action: FormAction<ContactData>) {
+    parentStore.dispatch({ type: 'contactForm', action });
+  },
+  subscribe(listener: any) {
+    return parentStore.subscribe((s: any) => listener(s.contactForm));
+  }
+};
 ```
-
-### Async Validation Flow
-
-1. User types in field
-2. On blur or after debounce, async validator runs
-3. Loading state shown during validation
-4. Error displayed if validation fails
 
 ---
 
-## FORM CONFIGURATION OPTIONS
+## PARENT OBSERVATION
 
-### FormConfig Reference
+The parent reducer observes form lifecycle events by matching on the wrapped child
+action and returning updated parent state — see `coreReducer` in step 4 above for
+the full pattern.
+
+```typescript
+case 'contactForm':
+  if (action.action.type === 'submissionSucceeded') {
+    // Update parent state directly. No Effect.run, no dispatch, no `as any`.
+    return [{ ...state, successMessage: 'Saved' }, Effect.none()];
+  }
+  return [state, Effect.none()];
+```
+
+Events worth observing: `submissionSucceeded`, `submissionFailed`,
+`fieldChanged`, `formValidationCompleted`.
+
+---
+
+## FORM CONFIGURATION
 
 ```typescript
 interface FormConfig<T> {
-  schema: z.ZodSchema<T>;           // Zod schema for validation
-  initialData: T;                   // Initial form values
-  mode: 'all' | 'blur' | 'submit';  // When to validate
-  debounceMs?: number;              // Debounce validation (default: 300ms)
-  onSubmit: (data: T) => Promise<Result>; // Submit handler
+  schema: z.ZodSchema<T>;                // Zod validation schema
+  initialData: T;                        // Initial form values
+  mode?: 'onBlur' | 'onChange' | 'onSubmit' | 'all';  // When to validate
+  debounceMs?: number;                   // Debounce for onChange (default: 300ms)
+  onSubmit: (data: T) => Promise<void>;  // Submission handler
+  onSubmitSuccess?: (data: T) => void;   // Success callback
+  onSubmitError?: (error: Error) => void; // Error callback
+  asyncValidators?: {                    // Per-field async validators
+    [K in keyof T]?: (value: T[K]) => Promise<void>
+  };
 }
 ```
+
+### Async Validation
+
+`asyncValidators` are **per-field functions on `FormConfig`** — not `z.refine(async …)`,
+which the reducer never invokes. They run only after that field's Zod validation
+passes. Throw to fail; the thrown message becomes the field error
+(`form.reducer.ts:215-223`).
+
+```typescript
+const config: FormConfig<ContactData> = {
+  schema: contactSchema,
+  initialData: { name: '', email: '' },
+  asyncValidators: {
+    email: async (email) => {
+      const available = await api.checkEmail(email);
+      if (!available) throw new Error('Email already registered');
+    }
+  },
+  onSubmit: async (data) => { await api.createContact(data); }
+};
+```
+
+Lifecycle: `fieldValidationStarted` → Zod → async validator →
+`fieldValidationCompleted`. Show progress with `field.isValidating`. Network errors
+are caught and surfaced as the field error rather than crashing.
+
+Working reference: `examples/contact-form/src/features/contact-form/contact-form.config.ts`.
 
 ### Validation Modes
 
-- `'all'` - Validate on blur, change, and submit (recommended for most forms)
-- `'blur'` - Validate only on blur and submit (better UX for long forms)
-- `'submit'` - Validate only on submit (fastest, but less feedback)
+- `'onBlur'` — Validate on blur + submit (recommended for most forms)
+- `'onChange'` — Validate on change (debounced) + submit
+- `'onSubmit'` — Validate only on submit
+- `'all'` — Validate on blur, change, and submit (most feedback)
 
 ---
 
-## COMPLETE FORM EXAMPLES
+## SUBMISSION FLOW
 
-### Example 1: Registration Form
-
-```typescript
-// Schema
-const registrationSchema = z.object({
-  username: z.string().min(3, 'Username must be at least 3 characters'),
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-  confirmPassword: z.string()
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ['confirmPassword']
-});
-
-// Config
-const registrationFormConfig: FormConfig<RegistrationData> = {
-  schema: registrationSchema,
-  initialData: { username: '', email: '', password: '', confirmPassword: '' },
-  mode: 'blur',
-  debounceMs: 500,
-  onSubmit: async (data) => {
-    const result = await api.register(data);
-    return result;
-  }
-};
-
-// Component
-<script lang="ts">
-  import { FormField, Button } from '@composable-svelte/core/components';
-
-  let formStoreState = $state(store.state.registrationForm);
-
-  $effect(() => {
-    formStoreState = store.state.registrationForm;
-  });
-
-  const formStore = {
-    get state() { return formStoreState; },
-    dispatch(action) {
-      store.dispatch({ type: 'registrationForm', action });
-    }
-  };
-</script>
-
-<form onsubmit={(e) => { e.preventDefault(); formStore.dispatch({ type: 'submit' }); }}>
-  <FormField field="username" send={(a) => formStore.dispatch(a)} state={formStore.state}>
-    <label>Username</label>
-    <input type="text" />
-  </FormField>
-
-  <FormField field="email" send={(a) => formStore.dispatch(a)} state={formStore.state}>
-    <label>Email</label>
-    <input type="email" />
-  </FormField>
-
-  <FormField field="password" send={(a) => formStore.dispatch(a)} state={formStore.state}>
-    <label>Password</label>
-    <input type="password" />
-  </FormField>
-
-  <FormField field="confirmPassword" send={(a) => formStore.dispatch(a)} state={formStore.state}>
-    <label>Confirm Password</label>
-    <input type="password" />
-  </FormField>
-
-  <Button type="submit" disabled={formStore.state.isSubmitting || !formStore.state.isValid}>
-    {formStore.state.isSubmitting ? 'Creating Account...' : 'Create Account'}
-  </Button>
-</form>
 ```
-
-### Example 2: Multi-Step Form
-
-```typescript
-// State
-interface MultiStepFormState {
-  step: 1 | 2 | 3;
-  step1: FormState<Step1Data>;
-  step2: FormState<Step2Data>;
-  step3: FormState<Step3Data>;
-}
-
-// Actions
-type MultiStepFormAction =
-  | { type: 'step1'; action: FormAction<Step1Data> }
-  | { type: 'step2'; action: FormAction<Step2Data> }
-  | { type: 'step3'; action: FormAction<Step3Data> }
-  | { type: 'nextStep' }
-  | { type: 'prevStep' };
-
-// Reducer
-case 'nextStep': {
-  // Validate current step before proceeding
-  const currentStep = state.step;
-  if (currentStep === 1 && !state.step1.isValid) {
-    return [state, Effect.none()];
-  }
-  if (currentStep === 2 && !state.step2.isValid) {
-    return [state, Effect.none()];
-  }
-
-  return [
-    { ...state, step: (state.step + 1) as 1 | 2 | 3 },
-    Effect.none()
-  ];
-}
-
-case 'step3': {
-  const [formState, formEffect] = step3Reducer(state.step3, action.action, deps);
-
-  // Observe final submission
-  if (action.action.type === 'submissionSucceeded') {
-    const allData = {
-      ...state.step1.data,
-      ...state.step2.data,
-      ...formState.data
-    };
-
-    return [
-      { ...state, step3: formState },
-      Effect.batch(
-        Effect.map(formEffect, (fa): MultiStepFormAction => ({ type: 'step3', action: fa })),
-        Effect.run(async (d) => {
-          await api.submitCompleteForm(allData);
-          d({ type: 'formCompleted' });
-        })
-      )
-    ];
-  }
-
-  return [
-    { ...state, step3: formState },
-    Effect.map(formEffect, (fa): MultiStepFormAction => ({ type: 'step3', action: fa }))
-  ];
-}
-
-// Component
-{#if state.step === 1}
-  <Step1Form store={step1Store} />
-  <Button onclick={() => store.dispatch({ type: 'nextStep' })}>Next</Button>
-{:else if state.step === 2}
-  <Step2Form store={step2Store} />
-  <Button onclick={() => store.dispatch({ type: 'prevStep' })}>Back</Button>
-  <Button onclick={() => store.dispatch({ type: 'nextStep' })}>Next</Button>
-{:else}
-  <Step3Form store={step3Store} />
-  <Button onclick={() => store.dispatch({ type: 'prevStep' })}>Back</Button>
-  <Button onclick={() => formStore.dispatch({ type: 'submit' })}>Submit</Button>
-{/if}
+User clicks submit button (type="submit")
+  → <Form> intercepts with onsubmit, calls event.preventDefault()
+  → Dispatches { type: 'submitTriggered' }
+  → Form reducer validates entire form with Zod schema
+  → If validation fails: sets field errors, increments submitCount, stops
+  → If validation passes: dispatches { type: 'submissionStarted' }
+  → Calls config.onSubmit(data)
+  → On success: dispatches { type: 'submissionSucceeded' }, sets lastSubmitted
+  → On failure: dispatches { type: 'submissionFailed', error: message }
+  → Parent observes submissionSucceeded to dispatch domain command
 ```
 
 ---
 
-## COMMON ANTI-PATTERNS
+## ANTI-PATTERNS
 
-### 1. Wrong Form State Access
+### 1. Wrong FormField API
 
-#### ❌ WRONG
-```typescript
-{#if formStore.state.submission.status === 'submitting'}
-  Loading...
-{/if}
-```
-
-#### ✅ CORRECT
-```typescript
-{#if formStore.state.isSubmitting}
-  Loading...
-{/if}
-```
-
-**WHY**: Use `isSubmitting` boolean, not `submission.status`. Simpler API, less nesting.
-
----
-
-### 2. Not Using Reactive Wrapper
-
-#### ❌ WRONG
 ```svelte
-<script lang="ts">
-  // Directly using parent store in form fields
-</script>
-
-<FormField
-  field="name"
-  send={(action) => store.dispatch({ type: 'contactForm', action })}
-  state={store.state.contactForm}
->
+<!-- WRONG — old prop-based API that doesn't exist -->
+<FormField field="name" send={...} state={...}>
   <input type="text" />
+</FormField>
+
+<!-- CORRECT — snippet-based API -->
+<FormField name="name">
+  {#snippet children({ field, send })}
+    <FormItem>
+      <FormLabel>Name</FormLabel>
+      <Input value={field.value} oninput={...} onblur={...} />
+      <FormMessage />
+    </FormItem>
+  {/snippet}
 </FormField>
 ```
 
-#### ✅ CORRECT
+### 2. Wrong Select API
+
 ```svelte
-<script lang="ts">
-  // Create reactive wrapper
-  let formStoreState = $state(store.state.contactForm);
+<!-- WRONG — onValueChange doesn't exist, child components not supported -->
+<Select value={field.value} onValueChange={(v) => send(...)}>
+  <SelectTrigger><SelectValue /></SelectTrigger>
+  <SelectContent>
+    <SelectItem value="a">A</SelectItem>
+  </SelectContent>
+</Select>
 
-  $effect(() => {
-    formStoreState = store.state.contactForm;
-  });
-
-  const formStore = {
-    get state() { return formStoreState; },
-    dispatch(action) {
-      store.dispatch({ type: 'contactForm', action });
-    }
-  };
-</script>
-
-<FormField
-  field="name"
-  send={(action) => formStore.dispatch(action)}
-  state={formStore.state}
->
-  <input type="text" />
-</FormField>
+<!-- CORRECT — onchange + options prop -->
+<Select
+  value={field.value}
+  options={[{ value: 'a', label: 'A' }]}
+  onchange={(v) => send({ type: 'fieldChanged', field: 'name', value: v })}
+/>
 ```
 
-**WHY**: Reactive wrapper ensures proper reactivity and cleaner component code.
+### 3. Wrong Switch API
 
----
+```svelte
+<!-- WRONG -->
+<Switch checked={field.value} onCheckedChange={(v) => send(...)} />
+<Switch bind:checked={field.value} />
 
-### 3. Not Observing Submission Events
-
-#### ❌ WRONG
-```typescript
-case 'contactForm': {
-  const [formState, formEffect] = formReducer(state.contactForm, action.action, deps);
-
-  // Just return new state, don't observe events
-  return [
-    { ...state, contactForm: formState },
-    Effect.map(formEffect, (fa): AppAction => ({ type: 'contactForm', action: fa }))
-  ];
-}
+<!-- CORRECT -->
+<Switch checked={field.value} onclick={() => send({ type: 'fieldChanged', field: 'active', value: !field.value })} />
 ```
 
-#### ✅ CORRECT
-```typescript
-case 'contactForm': {
-  const [formState, formEffect] = formReducer(state.contactForm, action.action, deps);
+### 4. Raw form instead of Form component
 
-  const newState = { ...state, contactForm: formState };
-  const effect = Effect.map(formEffect, (fa): AppAction => ({ type: 'contactForm', action: fa }));
-
-  // Observe submission success
-  if (action.action.type === 'submissionSucceeded') {
-    return [
-      {
-        ...newState,
-        submissions: [...state.submissions, { data: formState.data, timestamp: Date.now() }],
-        successMessage: 'Form submitted successfully!'
-      },
-      Effect.batch(
-        effect,
-        Effect.afterDelay(3000, (d) => d({ type: 'clearSuccessMessage' }))
-      )
-    ];
-  }
-
-  return [newState, effect];
-}
-```
-
-**WHY**: Parent needs to react to form submission to show success messages, navigate, etc.
-
----
-
-## DECISION TOOLS
-
-### Form Integration Decision
-
-```
-Do you need parent to observe form events?
-│
-├─ YES (most cases)
-│  └─ Integrated Mode
-│     - Parent state includes FormState<T>
-│     - Parent observes submissionSucceeded/submissionFailed
-│     - Use reactive wrapper in component
-│
-└─ NO (standalone forms, prototypes)
-   └─ Standalone Mode
-      - Create store directly in component
-      - Handle submission locally
-      - Simpler but less composable
-```
-
-### Validation Mode Selection
-
-```
-What's the form complexity?
-│
-├─ Short form (1-3 fields)
-│  └─ mode: 'all' (instant feedback)
-│
-├─ Medium form (4-8 fields)
-│  └─ mode: 'blur' (validate on blur + submit)
-│
-└─ Long form (8+ fields)
-   └─ mode: 'submit' (validate only on submit)
-```
-
----
-
-## CHECKLISTS
-
-### Form Feature Checklist
-
-- [ ] 1. Define Zod schema
-- [ ] 2. Create FormConfig with schema and onSubmit
-- [ ] 3. Add FormState to parent state
-- [ ] 4. Use createFormReducer + scope in parent reducer
-- [ ] 5. Parent observes submissionSucceeded/submissionFailed
-- [ ] 6. Create reactive wrapper in component ($state + $effect)
-- [ ] 7. Use formStore.state.isSubmitting (NOT submission.status)
-- [ ] 8. Test with TestStore (see composable-svelte-testing skill)
-
----
-
-## TEMPLATES
-
-### Form Integration Template
-
-```typescript
-// config.ts
-import { z } from 'zod';
-import type { FormConfig } from '@composable-svelte/core/components/form';
-
-const schema = z.object({
-  name: z.string().min(1, 'Required'),
-  email: z.string().email('Invalid email')
-});
-
-type FormData = z.infer<typeof schema>;
-
-export const formConfig: FormConfig<FormData> = {
-  schema,
-  initialData: { name: '', email: '' },
-  mode: 'all',
-  debounceMs: 500,
-  onSubmit: async (data) => {
-    const result = await api.submit(data);
-    return result;
-  }
-};
-
-// Parent state and reducer
-interface AppState {
-  contactForm: FormState<ContactData>;
-  submissions: Submission[];
-}
-
-const formReducer = createFormReducer(formConfig);
-
-case 'contactForm': {
-  const [formState, formEffect] = formReducer(state.contactForm, action.action, deps);
-  const newState = { ...state, contactForm: formState };
-
-  if (action.action.type === 'submissionSucceeded') {
-    return [
-      {
-        ...newState,
-        submissions: [...state.submissions, { data: formState.data, timestamp: Date.now() }]
-      },
-      Effect.map(formEffect, (fa): AppAction => ({ type: 'contactForm', action: fa }))
-    ];
-  }
-
-  return [newState, Effect.map(formEffect, (fa): AppAction => ({ type: 'contactForm', action: fa }))];
-}
-
-// Component.svelte
-<script lang="ts">
-  import { FormField, Button } from '@composable-svelte/core/components';
-
-  let formStoreState = $state(store.state.contactForm);
-
-  $effect(() => {
-    formStoreState = store.state.contactForm;
-  });
-
-  const formStore = {
-    get state() { return formStoreState; },
-    dispatch(action) {
-      store.dispatch({ type: 'contactForm', action });
-    }
-  };
-</script>
-
+```svelte
+<!-- WRONG — manual form, bypasses Form component's submit handling -->
 <form onsubmit={(e) => { e.preventDefault(); formStore.dispatch({ type: 'submit' }); }}>
-  <FormField field="name" send={(a) => formStore.dispatch(a)} state={formStore.state}>
-    <label>Name</label>
-    <input type="text" />
-  </FormField>
 
-  <FormField field="email" send={(a) => formStore.dispatch(a)} state={formStore.state}>
-    <label>Email</label>
-    <input type="email" />
-  </FormField>
-
-  <Button type="submit" disabled={formStore.state.isSubmitting}>
-    Submit
-  </Button>
-</form>
+<!-- CORRECT — Form component handles submit internally -->
+<Form store={formStore}>
 ```
+
+### 5. Wrong state access
+
+```typescript
+// WRONG — errors record doesn't exist
+formStore.state.errors.email
+
+// CORRECT — per-field state
+formStore.state.fields.email.error
+
+// WRONG — submission.status doesn't exist
+formStore.state.submission.status === 'submitting'
+
+// CORRECT
+formStore.state.isSubmitting
+```
+
+---
+
+## CHECKLIST
+
+- [ ] Define Zod schema
+- [ ] Create FormConfig with schema, initialData, mode, onSubmit
+- [ ] Add `FormState<T>` to parent state
+- [ ] Create form reducer with `createFormReducer(config)`
+- [ ] Wire into parent reducer with `scope()`
+- [ ] Parent observes `submissionSucceeded` to dispatch domain command
+- [ ] Create reactive wrapper in component (`$state` + `$effect`)
+- [ ] Use `<Form store={formStore}>` (NOT raw `<form>`)
+- [ ] Use `<FormField name="...">` with `{#snippet children({ field, send })}` pattern
+- [ ] Use correct callbacks: `oninput`/`onblur` for Input/Textarea, `onchange` for Select, `onclick` for Switch
+- [ ] Use `formStoreState?.isSubmitting` for loading state
+- [ ] Watch `formStoreState?.lastSubmitted` to navigate back on success
+- [ ] Test the reducer with `createTestStore` from `@composable-svelte/core/test` — see **composable-svelte-testing**
+
+### Working examples in this repo
+
+Reference these for **reducer composition and form config**, not for styling —
+none of the three has a Tailwind pipeline (no `postcss.config`, no
+`tailwind.config`), so the core components in them render unstyled.
+
+- `examples/contact-form/` — integrated mode, parent observation, `asyncValidators`
+- `examples/registration-form/` — cross-field refinement
+- `examples/multi-step-form/` — two scoped forms plus step progression
 
 ---
 
 ## SUMMARY
 
-This skill covers form patterns for Composable Svelte:
-
-1. **Integrated Mode**: Forms integrated with parent state
-2. **Reactive Wrapper Pattern**: $state + $effect for form integration
-3. **Parent Observation**: React to submission success/failure
-4. **Zod Integration**: Schema-based validation
-5. **Field-Level Errors**: Automatic error handling
-6. **Async Validation**: Server-side validation support
-7. **CRITICAL**: Use `isSubmitting`, not `submission.status`
-
-**Remember**: Use reactive wrapper pattern for forms, observe submission events in parent, test with TestStore (see **composable-svelte-testing** skill).
+1. **Form component** wraps everything, handles submit via `{ type: 'submitTriggered' }`
+2. **FormField snippet** provides `{ field, send }` — field state + action dispatcher
+3. **Input/Textarea**: `value` + `oninput` + `onblur`
+4. **Select**: `value` + `options` + `onchange` (NOT onValueChange, NOT child components)
+5. **Switch**: `checked` + `onclick` (no onCheckedChange; can't bind to the read-only `field.value`)
+6. **Reactive wrapper**: `$state` + `$effect` + getter/dispatch/subscribe object
+7. **Parent observation**: watch for `submissionSucceeded` to dispatch domain commands
 
 For core architecture, see **composable-svelte-core** skill.
 For navigation with forms, see **composable-svelte-navigation** skill.
