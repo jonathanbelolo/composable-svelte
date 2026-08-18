@@ -10,10 +10,10 @@
     CardDescription,
     CardContent,
     CardFooter
-  } from '@composable-svelte/core/components/ui/card';
-  import Badge from '@composable-svelte/core/components/ui/badge/Badge.svelte';
-  import Button from '@composable-svelte/core/components/ui/button/Button.svelte';
-  import Tooltip from '@composable-svelte/core/components/ui/tooltip/Tooltip.svelte';
+  } from '@composable-svelte/core/components/ui';
+  import { Badge } from '@composable-svelte/core/components/ui';
+  import { Button } from '@composable-svelte/core/components/ui';
+  import { Tooltip } from '@composable-svelte/core/components/ui';
 
   // ============================================================================
   // Props

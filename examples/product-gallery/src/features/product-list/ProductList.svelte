@@ -6,8 +6,8 @@
   import type { CartState } from '../../models/cart.js';
 
   // Phase 6 Components
-  import Empty from '@composable-svelte/core/components/ui/empty/Empty.svelte';
-  import Button from '@composable-svelte/core/components/ui/button/Button.svelte';
+  import { Empty } from '@composable-svelte/core/components/ui';
+  import { Button } from '@composable-svelte/core/components/ui';
 
   // ============================================================================
   // Props
@@ -81,7 +81,10 @@
     {#if cartTotal > 0}
       <div class="relative">
         <span class="text-4xl drop-shadow-lg">🛒</span>
-        <span class="absolute -top-2 -right-2 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold shadow-lg ring-2 ring-background">
+        <span
+          data-testid="cart-total"
+          class="absolute -top-2 -right-2 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold shadow-lg ring-2 ring-background"
+        >
           {cartTotal}
         </span>
       </div>

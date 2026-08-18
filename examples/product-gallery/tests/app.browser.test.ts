@@ -164,15 +164,14 @@ describe('Product Gallery - User Flows', () => {
       await page.getByTestId('detail-add-to-cart').click();
       await waitForUpdates();
 
-      // Click increment button
-      const incrementButton = container.querySelector('button[aria-label="Increment quantity"]');
-      if (incrementButton) {
-        await userEvent.click(incrementButton);
-        await waitForUpdates();
+      // The sheet is portaled, so it is not inside `container`.
+      const quantity = page.getByTestId('add-to-cart-quantity');
+      await expect.element(quantity).toHaveTextContent('1');
 
-        // Verify quantity increased (would show "2")
-        expect(container.textContent).toContain('2');
-      }
+      await page.getByRole('button', { name: 'Increment quantity' }).click();
+      await waitForUpdates();
+
+      await expect.element(quantity).toHaveTextContent('2');
     });
   });
 
@@ -270,20 +269,18 @@ describe('Product Gallery - User Flows', () => {
       productCard!.click();
       await waitForUpdates();
 
-      // Click info button
-      const infoButton = container.querySelector('button[aria-label="Info"]');
-      if (infoButton) {
-        await userEvent.click(infoButton);
-        await waitForUpdates();
+      // The detail modal is portaled, so the Info button is not in `container`.
+      await page.getByTestId('detail-info').click();
+      await waitForUpdates();
 
-        // Popover should show product info
-        expect(container.textContent).toContain('Product Information');
-      }
+      await expect
+        .element(page.getByRole('heading', { name: 'Product Information' }))
+        .toBeInTheDocument();
     });
   });
 
   describe('Complex User Journey', () => {
-    test('full user journey: filter → view product → add to cart → share', async () => {
+    test('user journey: filter → view product → add to cart', async () => {
       const { container } = render(App);
       await waitForUpdates();
 
@@ -299,55 +296,33 @@ describe('Product Gallery - User Flows', () => {
       productCard!.click();
       await waitForUpdates();
 
+      // Everything from here renders through a portal, so `container` queries
+      // never match it — the original versions of these steps were wrapped in
+      // `if (el)` and silently did nothing.
+
       // Step 3: Add to cart
-      let modal = document.querySelector('[data-dialog-type="modal"]');
-      let buttons = Array.from(modal?.querySelectorAll('button') || []);
-      const addToCartButton = buttons.find(btn => btn.textContent?.includes('Add to Cart'));
-      await userEvent.click(addToCartButton!);
+      await page.getByTestId('detail-add-to-cart').click();
       await waitForUpdates();
 
       // Step 4: Increment quantity
-      const incrementButton = container.querySelector('button[aria-label="Increment quantity"]');
-      if (incrementButton) {
-        await userEvent.click(incrementButton);
-        await waitForUpdates();
-      }
+      await page.getByRole('button', { name: 'Increment quantity' }).click();
+      await waitForUpdates();
+      await expect.element(page.getByTestId('add-to-cart-quantity')).toHaveTextContent('2');
 
       // Step 5: Confirm add to cart
-      buttons = Array.from(container.querySelectorAll('button'));
-      const addButton = buttons.filter(btn => btn.textContent?.trim() === 'Add').pop(); // Last "Add" button
-      if (addButton) {
-        await userEvent.click(addButton);
-        await waitForUpdates();
-      }
+      await page.getByTestId('add-to-cart-confirm').click();
+      await waitForUpdates();
 
-      // Step 6: Share the product
-      modal = document.querySelector('[data-dialog-type="modal"]');
-      buttons = Array.from(modal?.querySelectorAll('button') || []);
-      const shareButton = buttons.find(btn => btn.textContent?.trim() === 'Share');
-      if (shareButton) {
-        await userEvent.click(shareButton);
-        await waitForUpdates();
+      // Sharing is covered end-to-end by the Share Flow suite above; repeating
+      // it here only duplicates that coverage.
 
-        // Step 7: Select Twitter
-        buttons = Array.from(container.querySelectorAll('button'));
-        const twitterButton = buttons.find(btn => btn.textContent?.includes('Twitter'));
-        if (twitterButton) {
-          await userEvent.click(twitterButton);
-          await waitForUpdates();
-
-          // Step 8: Complete share
-          buttons = Array.from(container.querySelectorAll('button'));
-          const finalShareButton = buttons.filter(btn => btn.textContent?.trim() === 'Share').pop();
-          if (finalShareButton) {
-            await userEvent.click(finalShareButton);
-            await waitForUpdates();
-          }
-        }
-      }
-
-      // Should end up back at product detail
-      expect(document.body.textContent).toContain('Product Details');
+      // Back at the product detail, with the item in the cart.
+      await expect
+        .element(page.getByRole('heading', { name: 'Product Details' }))
+        .toBeInTheDocument();
+      // The sheet closed and the two units landed in the cart.
+      expect(document.querySelector('[data-testid="add-to-cart-confirm"]')).toBeNull();
+      await expect.element(page.getByTestId('cart-total')).toHaveTextContent('2');
     });
   });
 });

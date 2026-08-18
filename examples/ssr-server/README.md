@@ -336,3 +336,12 @@ The E2E test suite (`tests/e2e/ssr.spec.ts`) verifies:
 ## 📝 License
 
 MIT
+
+## Known issue: TypeScript errors
+
+This example has 27 pre-existing `tsc --noEmit` errors — i18n state typing,
+dependency-shape mismatches between the client/server/SSG entry points, routing
+action types, and `import.meta.hot` needing `vite/client` types. It therefore
+has no `typecheck` script and is excluded from `pnpm -r typecheck`.
+
+It builds and runs; the errors are type-level. Fixing them is tracked work.

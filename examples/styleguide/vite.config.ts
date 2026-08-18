@@ -11,8 +11,7 @@ export default defineConfig({
       // link and the package's own `exports` map, so anything missing from the
       // public surface fails the build here instead of hiding behind a path
       // that reaches straight into dist.
-      '@composable-svelte/code': resolve(__dirname, '../../packages/code/dist'),
-      $lib: resolve(__dirname, '../../packages/core/dist')
+      '@composable-svelte/code': resolve(__dirname, '../../packages/code/dist')
     }
   },
   test: {

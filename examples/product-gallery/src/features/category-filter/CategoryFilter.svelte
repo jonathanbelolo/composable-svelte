@@ -2,10 +2,10 @@
   import type { ProductCategory } from '../../models/product.js';
 
   // Phase 6 Components
-  import Heading from '@composable-svelte/core/components/ui/heading/Heading.svelte';
-  import Separator from '@composable-svelte/core/components/ui/separator/Separator.svelte';
-  import Badge from '@composable-svelte/core/components/ui/badge/Badge.svelte';
-  import Button from '@composable-svelte/core/components/ui/button/Button.svelte';
+  import { Heading } from '@composable-svelte/core/components/ui';
+  import { Separator } from '@composable-svelte/core/components/ui';
+  import { Badge } from '@composable-svelte/core/components/ui';
+  import { Button } from '@composable-svelte/core/components/ui';
 
   // ============================================================================
   // Props

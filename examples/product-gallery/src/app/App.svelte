@@ -31,7 +31,14 @@
   const store = createStore({
     initialState,
     reducer: appReducer,
-    dependencies: {}
+    dependencies: {
+      // Without this the Add to Cart confirmation dispatched nothing and the
+      // cart never updated — the app reducer's `cartItemAdded` case was
+      // unreachable. Declared lazily because it needs the store it belongs to.
+      onCartItemAdded: (productId: string, quantity: number) => {
+        store.dispatch({ type: 'cartItemAdded', productId, quantity });
+      }
+    }
   });
 
   // ============================================================================

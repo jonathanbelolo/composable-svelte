@@ -19,7 +19,7 @@ export type ProductDetailDestination =
   | { type: 'share'; state: ShareState }
   | { type: 'quickView'; state: QuickViewState }
   | { type: 'deleteAlert'; state: DeleteAlertState }
-  | { type: 'info'; productId: string };
+  | { type: 'info'; state: { productId: string } };
 
 export type PresentationEvent =
   | { type: 'presentationCompleted' }

@@ -37,6 +37,7 @@
     </button>
     <h2 class="text-lg font-semibold">Add to Cart</h2>
     <button
+      data-testid="add-to-cart-confirm"
       onclick={() => store.dispatch({ type: 'addButtonTapped' })}
       class="text-sm font-medium text-primary hover:opacity-80"
     >
@@ -67,7 +68,9 @@
         >
           −
         </button>
-        <span class="text-3xl font-semibold w-16 text-center">{state?.quantity || 1}</span>
+        <span data-testid="add-to-cart-quantity" class="text-3xl font-semibold w-16 text-center"
+          >{state?.quantity || 1}</span
+        >
         <button
           aria-label="Increment quantity"
           onclick={() => store.dispatch({ type: 'incrementQuantity' })}

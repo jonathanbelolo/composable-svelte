@@ -47,6 +47,7 @@
     </button>
     <h2 class="text-lg font-semibold">Share Product</h2>
     <button
+      data-testid="share-confirm"
       onclick={() => store.dispatch({ type: 'shareButtonTapped' })}
       disabled={!state?.selectedMethod}
       class="text-sm font-medium text-primary hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -71,6 +72,7 @@
       <label class="text-sm font-medium block mb-3">Share via</label>
       {#each shareMethods as { method, label, icon }}
         <button
+          data-testid="share-method-{method.method}"
           onclick={() => store.dispatch({ type: 'methodSelected', method })}
           class="w-full flex items-center gap-4 p-4 rounded-lg border-2 transition-all {state?.selectedMethod ===
           method

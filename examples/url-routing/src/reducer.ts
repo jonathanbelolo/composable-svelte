@@ -7,7 +7,7 @@
 
 import { Effect, type Reducer } from '@composable-svelte/core';
 import { createURLSyncEffect } from '@composable-svelte/core/routing';
-import type { InventoryState, InventoryAction, InventoryItem } from './types';
+import type { InventoryState, InventoryAction } from './types';
 import { serializeInventoryState } from './routing';
 
 // ============================================================================

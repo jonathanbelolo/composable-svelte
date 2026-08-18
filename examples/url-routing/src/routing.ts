@@ -54,7 +54,7 @@ export const parserConfig: ParserConfig<InventoryDestination> = {
 			if (params) {
 				return {
 					type: 'detail',
-					state: { itemId: params.itemId }
+					state: { itemId: params.itemId ?? '' }
 				};
 			}
 			return null;

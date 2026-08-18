@@ -45,7 +45,9 @@
     scopeToDestination(store, ['destination'], 'deleteAlert', 'destination')
   );
 
-  const infoPopoverVisible = $derived(store.state.destination?.type === 'info');
+  const infoStore = $derived(
+    scopeToDestination(store, ['destination'], 'info', 'destination')
+  );
 
   // ============================================================================
   // Presentation State for Animations
@@ -63,7 +65,6 @@
   // Handlers
   // ============================================================================
 
-  let infoButtonRef: HTMLButtonElement | undefined = $state();
 </script>
 
 <!-- ============================================================================ -->
@@ -83,15 +84,24 @@
       </button>
     {/if}
     <h1 class="text-xl font-bold flex-1">Product Details</h1>
-    <button
-      bind:this={infoButtonRef}
-      data-testid="detail-info"
+    <div class="relative">
+      <button
+        data-testid="detail-info"
         onclick={() => store.dispatch({ type: 'infoButtonTapped' })}
-      class="w-10 h-10 rounded-full hover:bg-accent flex items-center justify-center"
-      aria-label="Info"
-    >
-      ℹ️
-    </button>
+        class="w-10 h-10 rounded-full hover:bg-accent flex items-center justify-center"
+        aria-label="Info"
+      >
+        ℹ️
+      </button>
+
+      {#if infoStore}
+        <Popover store={infoStore} style="top: 100%; right: 0;">
+          {#snippet children()}
+            {@render infoContent()}
+          {/snippet}
+        </Popover>
+      {/if}
+    </div>
   </div>
 
   <!-- Content -->
@@ -219,16 +229,7 @@
   {/snippet}
 </Alert>
 
-<!-- Info Popover -->
-{#if infoPopoverVisible && infoButtonRef}
-  <Popover
-    triggerElement={infoButtonRef}
-    onClose={() => store.dispatch({
-      type: 'destination',
-      action: { type: 'dismiss' }
-    })}
-  >
-    {#snippet children()}
+{#snippet infoContent()}
       <div class="p-4 w-64">
         <h4 class="font-semibold mb-2">Product Information</h4>
         <dl class="space-y-2 text-sm">
@@ -250,6 +251,5 @@
           </div>
         </dl>
       </div>
-    {/snippet}
-  </Popover>
-{/if}
+    
+{/snippet}

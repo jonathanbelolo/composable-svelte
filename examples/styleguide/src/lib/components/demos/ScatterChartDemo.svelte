@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createStore } from '@composable-svelte/core';
   import { Chart, chartReducer, createInitialChartState } from '@composable-svelte/charts';
-  import { Button } from '$lib/components/ui/button';
+  import { Button } from '@composable-svelte/core/components/ui';
   import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-svelte';
 
   // Sample data - Iris dataset

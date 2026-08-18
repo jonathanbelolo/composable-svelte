@@ -84,7 +84,7 @@ describe('ProductDetail Reducer', () => {
 
       expect(newState.destination?.type).toBe('info');
       if (newState.destination?.type === 'info') {
-        expect(newState.destination.productId).toBe('prod-1');
+        expect(newState.destination.state.productId).toBe('prod-1');
       }
     });
   });
@@ -235,7 +235,7 @@ describe('ProductDetail Reducer', () => {
         productId: 'prod-1',
         destination: {
           type: 'info',
-          productId: 'prod-1'
+          state: { productId: 'prod-1' }
         },
         presentation: { status: 'idle' }
       };

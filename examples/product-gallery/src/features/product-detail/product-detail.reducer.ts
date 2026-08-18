@@ -184,7 +184,7 @@ export const productDetailReducer: Reducer<
           ...state,
           destination: {
             type: 'info',
-            productId: state.productId
+            state: { productId: state.productId }
           }
         },
         Effect.none()
@@ -213,18 +213,23 @@ export const productDetailReducer: Reducer<
         if (addToCartState?.type === 'addToCart') {
           const { productId, quantity } = addToCartState.state;
 
-          // Notify parent and dismiss
-          if (deps.onCartItemAdded) {
-            return [
-              { ...newState, destination: null },
-              Effect.batch(
-                effect,
-                Effect.run((dispatch) => {
-                  deps.onCartItemAdded!(productId, quantity);
-                })
-              )
-            ];
-          }
+          // Dismiss regardless of whether the host wired the callback — it is
+          // optional, and skipping the dismissal left the sheet stuck open.
+          //
+          // `presentation` must be reset too: the primitives stay mounted while
+          // it is non-idle so an exit animation can finish, so clearing only
+          // `destination` leaves the sheet on screen forever.
+          return [
+            { ...newState, destination: null, presentation: { status: 'idle' } },
+            deps.onCartItemAdded
+              ? Effect.batch(
+                  effect,
+                  Effect.run(() => {
+                    deps.onCartItemAdded!(productId, quantity);
+                  })
+                )
+              : effect
+          ];
         }
       }
 
@@ -303,8 +308,8 @@ export const productDetailReducer: Reducer<
         presentedAction.action.type === 'quickView' &&
         presentedAction.action.action.type === 'closeButtonTapped'
       ) {
-        // Just dismiss
-        return [{ ...newState, destination: null }, effect];
+        // Just dismiss — reset presentation too, or the overlay stays mounted.
+        return [{ ...newState, destination: null, presentation: { status: 'idle' } }, effect];
       }
 
       // Delete alert - intercept dismiss actions
@@ -314,8 +319,8 @@ export const productDetailReducer: Reducer<
         (presentedAction.action.action?.type === 'cancelButtonTapped' ||
          presentedAction.action.action?.type === 'confirmButtonTapped')
       ) {
-        // Dismiss the alert, keep ProductDetail open
-        return [{ ...newState, destination: null }, effect];
+        // Dismiss the alert, keep ProductDetail open.
+        return [{ ...newState, destination: null, presentation: { status: 'idle' } }, effect];
       }
 
       return [newState, effect];
