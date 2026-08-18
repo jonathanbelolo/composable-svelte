@@ -1,8 +1,8 @@
 <script lang="ts">
-	import Tabs from '@composable-svelte/core/navigation-components/Tabs.svelte';
+	import { Tabs } from '@composable-svelte/core/navigation-components';
 	import { createStore } from '@composable-svelte/core';
-	import { scopeToDestination } from '@composable-svelte/core/navigation/scope-to-destination.js';
-	import { Effect } from '@composable-svelte/core/effect.js';
+	import { scopeToDestination } from '@composable-svelte/core/navigation';
+	import { Effect } from '@composable-svelte/core';
 
 	// Create a simple store for demo purposes (Tabs requires a non-null store to render)
 	interface DemoState {

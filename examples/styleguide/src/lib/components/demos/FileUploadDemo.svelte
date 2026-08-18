@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { FileUpload } from '@composable-svelte/core/components/ui/file-upload/index.js';
-  import { Badge } from '@composable-svelte/core/components/ui/badge/index.js';
-  import type { UploadedFile } from '@composable-svelte/core/components/ui/file-upload/index.js';
+  import { FileUpload } from '@composable-svelte/core/components/ui';
+  import { Badge } from '@composable-svelte/core/components/ui';
+  import type { UploadedFile } from '@composable-svelte/core/components/ui';
 
   // State for different upload demos
   let basicFiles = $state<UploadedFile[]>([]);

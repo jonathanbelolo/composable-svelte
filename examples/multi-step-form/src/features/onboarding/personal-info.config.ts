@@ -40,7 +40,7 @@ export const personalInfoFormConfig: FormConfig<PersonalInfoData> = {
     // No actual submission - parent will handle progression
   },
 
-  onSubmitSuccess: (data) => {
+  onSubmitSuccess: () => {
     console.log('Personal info validated successfully');
   },
 

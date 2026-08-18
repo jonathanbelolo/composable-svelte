@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { Checkbox } from '@composable-svelte/core/components/ui/checkbox/index.js';
-  import { Label } from '@composable-svelte/core/components/ui/label/index.js';
+  import { Checkbox } from '@composable-svelte/core/components/ui';
+  import { Label } from '@composable-svelte/core/components/ui';
 
   let agreedToTerms = $state(false);
   let newsletter = $state(false);

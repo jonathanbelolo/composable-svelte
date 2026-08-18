@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { Input } from '@composable-svelte/core/components/ui/input/index.js';
-  import { Label } from '@composable-svelte/core/components/ui/label/index.js';
+  import { Input } from '@composable-svelte/core/components/ui';
+  import { Label } from '@composable-svelte/core/components/ui';
 
   let textValue = $state('');
   let emailValue = $state('');

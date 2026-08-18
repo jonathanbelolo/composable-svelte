@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { ButtonGroup } from '@composable-svelte/core/components/ui/button-group/index.js';
-  import Button from '@composable-svelte/core/components/ui/button/Button.svelte';
-  import { Badge } from '@composable-svelte/core/components/ui/badge/index.js';
+  import { ButtonGroup } from '@composable-svelte/core/components/ui';
+  import { Button } from '@composable-svelte/core/components/ui';
+  import { Badge } from '@composable-svelte/core/components/ui';
 
   let selectedView = $state('grid');
   let selectedAlign = $state('left');

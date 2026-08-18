@@ -2,7 +2,7 @@
  * Shader Gallery Reducer - Pure state management
  */
 
-import { Effect } from '@composable-svelte/core';
+import { Effect, type EffectType } from '@composable-svelte/core';
 import type {
   ShaderGalleryState,
   ShaderGalleryAction,
@@ -24,7 +24,7 @@ export function shaderGalleryReducer(
   state: ShaderGalleryState,
   action: ShaderGalleryAction,
   _deps: ShaderGalleryDeps
-): [ShaderGalleryState, Effect<ShaderGalleryAction>] {
+): [ShaderGalleryState, EffectType<ShaderGalleryAction>] {
   switch (action.type) {
     case 'initialized': {
       return [

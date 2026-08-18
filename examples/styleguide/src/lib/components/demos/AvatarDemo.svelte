@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { Avatar } from '@composable-svelte/core/components/ui/avatar/index.js';
-  import { Badge } from '@composable-svelte/core/components/ui/badge/index.js';
-  import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@composable-svelte/core/components/ui/card/index.js';
+  import { Avatar } from '@composable-svelte/core/components/ui';
+  import { Badge } from '@composable-svelte/core/components/ui';
+  import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@composable-svelte/core/components/ui';
 </script>
 
 <div class="space-y-12">

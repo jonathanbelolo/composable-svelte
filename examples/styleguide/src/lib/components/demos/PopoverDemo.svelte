@@ -2,7 +2,7 @@
   import { createStore, Effect } from '@composable-svelte/core';
   import type { PresentationState } from '@composable-svelte/core/navigation';
   import { Popover } from '@composable-svelte/core/navigation-components';
-  import Button from '@composable-svelte/core/components/ui/button/Button.svelte';
+  import { Button } from '@composable-svelte/core/components/ui';
 
   interface DemoState {
     showPopover: boolean;

@@ -14,7 +14,7 @@
 		CardTitle,
 		CardDescription,
 		CardContent
-	} from '@composable-svelte/core/components/ui/card/index.js';
+	} from '@composable-svelte/core/components/ui';
 
 	// Create separate stores for each variant demo
 	const minimalStore = createStore({

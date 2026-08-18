@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { AspectRatio } from '@composable-svelte/core/components/ui/aspect-ratio/index.js';
-  import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@composable-svelte/core/components/ui/card/index.js';
+  import { AspectRatio } from '@composable-svelte/core/components/ui';
+  import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@composable-svelte/core/components/ui';
 </script>
 
 <div class="space-y-12">

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { Separator } from '@composable-svelte/core/components/ui/separator/index.js';
-  import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@composable-svelte/core/components/ui/card/index.js';
+  import { Separator } from '@composable-svelte/core/components/ui';
+  import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@composable-svelte/core/components/ui';
 </script>
 
 <div class="space-y-12">

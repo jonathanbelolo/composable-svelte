@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Box } from '@composable-svelte/core/components/ui/box/index.js';
+  import { Box } from '@composable-svelte/core/components/ui';
 </script>
 
 <div class="space-y-12">

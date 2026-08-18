@@ -1,7 +1,8 @@
+import { mount } from 'svelte';
 import App from './app/App.svelte';
-import '@composable-svelte/core/styles/theme.css';
+import './app.css';
 
-const app = new App({
+const app = mount(App, {
   target: document.getElementById('app')!
 });
 

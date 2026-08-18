@@ -15,8 +15,8 @@
     CardTitle,
     CardDescription,
     CardContent
-  } from '@composable-svelte/core/components/ui/card/index.js';
-  import { Button } from '@composable-svelte/core/components/ui/button/index.js';
+  } from '@composable-svelte/core/components/ui';
+  import { Button } from '@composable-svelte/core/components/ui';
   import 'maplibre-gl/dist/maplibre-gl.css';
 
   // Which demo section is currently active (only one map rendered at a time)

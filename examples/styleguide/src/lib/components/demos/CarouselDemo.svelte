@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { Carousel } from '@composable-svelte/core/components/ui/carousel/index.js';
-  import type { CarouselSlide } from '@composable-svelte/core/components/ui/carousel/carousel.types.js';
-  import { Card, CardContent } from '@composable-svelte/core/components/ui/card/index.js';
-  import { Badge } from '@composable-svelte/core/components/ui/badge/index.js';
+  import { Carousel } from '@composable-svelte/core/components/ui';
+  import type { CarouselSlide } from '@composable-svelte/core/components/ui';
+  import { Card, CardContent } from '@composable-svelte/core/components/ui';
+  import { Badge } from '@composable-svelte/core/components/ui';
 
   interface Product {
     name: string;

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { Select } from '@composable-svelte/core/components/ui/select/index.js';
-  import { Label } from '@composable-svelte/core/components/ui/label/index.js';
+  import { Select } from '@composable-svelte/core/components/ui';
+  import { Label } from '@composable-svelte/core/components/ui';
 
   const fruits = [
     { value: 'apple', label: 'Apple' },

@@ -40,7 +40,7 @@ export const addressFormConfig: FormConfig<AddressData> = {
     // No actual submission - parent will handle progression
   },
 
-  onSubmitSuccess: (data) => {
+  onSubmitSuccess: () => {
     console.log('Address validated successfully');
   },
 

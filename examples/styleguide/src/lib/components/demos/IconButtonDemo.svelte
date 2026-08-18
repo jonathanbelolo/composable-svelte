@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { IconButton } from '@composable-svelte/core/components/ui/icon-button/index.js';
-  import { Badge } from '@composable-svelte/core/components/ui/badge/index.js';
+  import { IconButton } from '@composable-svelte/core/components/ui';
+  import { Badge } from '@composable-svelte/core/components/ui';
 
   let loading1 = $state(false);
   let loading2 = $state(false);

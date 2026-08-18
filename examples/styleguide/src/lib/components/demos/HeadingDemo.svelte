@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Heading } from '@composable-svelte/core/components/ui/heading/index.js';
+  import { Heading } from '@composable-svelte/core/components/ui';
 </script>
 
 <div class="space-y-12">

@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { Calendar } from '@composable-svelte/core/components/ui/calendar/index.js';
-  import { Badge } from '@composable-svelte/core/components/ui/badge/index.js';
-  import type { DateRange } from '@composable-svelte/core/components/ui/calendar/calendar.types.js';
+  import { Calendar } from '@composable-svelte/core/components/ui';
+  import { Badge } from '@composable-svelte/core/components/ui';
+  import type { DateRange } from '@composable-svelte/core/components/ui';
 
   // State for different calendar demos
   let singleDate = $state<Date | null>(null);

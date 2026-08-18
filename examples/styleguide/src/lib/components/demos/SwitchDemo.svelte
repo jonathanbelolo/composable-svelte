@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { Switch } from '@composable-svelte/core/components/ui/switch/index.js';
-  import { Label } from '@composable-svelte/core/components/ui/label/index.js';
+  import { Switch } from '@composable-svelte/core/components/ui';
+  import { Label } from '@composable-svelte/core/components/ui';
 
   let notifications = $state(true);
   let marketing = $state(false);

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { Banner, BannerTitle, BannerDescription } from '@composable-svelte/core/components/ui/banner/index.js';
-  import Button from '@composable-svelte/core/components/ui/button/Button.svelte';
+  import { Banner, BannerTitle, BannerDescription } from '@composable-svelte/core/components/ui';
+  import { Button } from '@composable-svelte/core/components/ui';
 </script>
 
 <div class="space-y-12">

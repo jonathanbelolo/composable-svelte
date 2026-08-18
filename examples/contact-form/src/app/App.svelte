@@ -32,7 +32,9 @@
       parentStore.dispatch({ type: 'contactForm', action });
     },
     subscribe(listener: any) {
-      return parentStore.subscribe(listener);
+      // Must emit the form slice, not parent state: FormField reads
+      // `$store.data[name]`, and parent state has no `data`.
+      return parentStore.subscribe((s: any) => listener(s.contactForm));
     }
   };
 

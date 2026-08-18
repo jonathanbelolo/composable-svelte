@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { Collapsible, CollapsibleTrigger, CollapsibleContent, createInitialCollapsibleState, collapsibleReducer } from '@composable-svelte/core/components/ui/collapsible/index.js';
+  import { Collapsible, CollapsibleTrigger, CollapsibleContent, createInitialCollapsibleState, collapsibleReducer } from '@composable-svelte/core/components/ui';
   import { createStore } from '@composable-svelte/core';
-  import { Badge } from '@composable-svelte/core/components/ui/badge/index.js';
-  import Button from '@composable-svelte/core/components/ui/button/Button.svelte';
+  import { Badge } from '@composable-svelte/core/components/ui';
+  import { Button } from '@composable-svelte/core/components/ui';
 
   // Create stores for different collapsible examples
   const basicStore = createStore({

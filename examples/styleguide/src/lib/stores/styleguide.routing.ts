@@ -38,7 +38,7 @@ export function parseStyleguideURL(path: string): string | null {
 	// Component showcase page
 	const params = matchPath('/component/:componentId', path);
 	if (params) {
-		return params.componentId;
+		return params.componentId ?? null;
 	}
 
 	return null;

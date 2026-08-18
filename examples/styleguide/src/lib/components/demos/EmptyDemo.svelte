@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { Empty } from '@composable-svelte/core/components/ui/empty/index.js';
-  import Button from '@composable-svelte/core/components/ui/button/Button.svelte';
-  import { Card, CardContent } from '@composable-svelte/core/components/ui/card/index.js';
+  import { Empty } from '@composable-svelte/core/components/ui';
+  import { Button } from '@composable-svelte/core/components/ui';
+  import { Card, CardContent } from '@composable-svelte/core/components/ui';
 </script>
 
 <div class="space-y-12">

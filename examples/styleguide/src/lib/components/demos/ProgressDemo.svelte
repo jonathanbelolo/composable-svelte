@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { Progress } from '@composable-svelte/core/components/ui/progress/index.js';
-  import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@composable-svelte/core/components/ui/card/index.js';
-  import Button from '@composable-svelte/core/components/ui/button/Button.svelte';
-  import { Badge } from '@composable-svelte/core/components/ui/badge/index.js';
+  import { Progress } from '@composable-svelte/core/components/ui';
+  import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@composable-svelte/core/components/ui';
+  import { Button } from '@composable-svelte/core/components/ui';
+  import { Badge } from '@composable-svelte/core/components/ui';
 
   let progress = $state(0);
   let uploadProgress = $state(45);

@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { Label } from '@composable-svelte/core/components/ui/label/index.js';
-  import { Input } from '@composable-svelte/core/components/ui/input/index.js';
-  import { Checkbox } from '@composable-svelte/core/components/ui/checkbox/index.js';
+  import { Label } from '@composable-svelte/core/components/ui';
+  import { Input } from '@composable-svelte/core/components/ui';
+  import { Checkbox } from '@composable-svelte/core/components/ui';
 </script>
 
 <div class="space-y-12">

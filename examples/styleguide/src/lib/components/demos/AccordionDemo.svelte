@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@composable-svelte/core/components/ui/accordion/index.js';
-  import { Badge } from '@composable-svelte/core/components/ui/badge/index.js';
+  import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@composable-svelte/core/components/ui';
+  import { Badge } from '@composable-svelte/core/components/ui';
 </script>
 
 <div class="space-y-12">

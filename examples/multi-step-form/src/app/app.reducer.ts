@@ -16,7 +16,6 @@ import { createFormReducer } from '@composable-svelte/core/components/form';
 import { personalInfoFormConfig } from '../features/onboarding/personal-info.config.js';
 import { addressFormConfig } from '../features/onboarding/address.config.js';
 import type { AppState, AppAction } from './app.types.js';
-import type { OnboardingStep } from '../features/onboarding/onboarding.types.js';
 
 // Create form reducers
 const personalInfoFormReducer = createFormReducer(personalInfoFormConfig);
@@ -25,7 +24,7 @@ const addressFormReducer = createFormReducer(addressFormConfig);
 /**
  * Core app reducer - handles step navigation and data accumulation
  */
-const coreReducer: Reducer<AppState, AppAction, {}> = (state, action, deps) => {
+const coreReducer: Reducer<AppState, AppAction, {}> = (state, action) => {
   switch (action.type) {
     case 'personalInfoForm': {
       // Parent observes form submission success to capture data and progress

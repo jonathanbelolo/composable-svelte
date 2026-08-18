@@ -60,6 +60,7 @@
       <label class="text-sm font-medium">Quantity</label>
       <div class="flex items-center gap-4">
         <button
+          aria-label="Decrement quantity"
           onclick={() => store.dispatch({ type: 'decrementQuantity' })}
           disabled={(state?.quantity || 1) <= 1}
           class="w-12 h-12 rounded-lg border-2 border-border bg-background hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-xl"
@@ -68,6 +69,7 @@
         </button>
         <span class="text-3xl font-semibold w-16 text-center">{state?.quantity || 1}</span>
         <button
+          aria-label="Increment quantity"
           onclick={() => store.dispatch({ type: 'incrementQuantity' })}
           class="w-12 h-12 rounded-lg border-2 border-border bg-background hover:bg-accent font-semibold text-xl"
         >

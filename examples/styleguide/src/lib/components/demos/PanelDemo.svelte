@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Panel } from '@composable-svelte/core/components/ui/panel/index.js';
+  import { Panel } from '@composable-svelte/core/components/ui';
 </script>
 
 <div class="space-y-12">

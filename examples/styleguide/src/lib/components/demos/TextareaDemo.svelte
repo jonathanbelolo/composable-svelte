@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { Textarea } from '@composable-svelte/core/components/ui/textarea/index.js';
-  import { Label } from '@composable-svelte/core/components/ui/label/index.js';
+  import { Textarea } from '@composable-svelte/core/components/ui';
+  import { Label } from '@composable-svelte/core/components/ui';
 
   let message = $state('');
   let bio = $state('');

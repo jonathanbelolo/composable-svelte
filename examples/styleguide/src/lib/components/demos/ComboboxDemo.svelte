@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { Combobox } from '@composable-svelte/core/components/ui/combobox/index.js';
-  import type { ComboboxOption } from '@composable-svelte/core/components/ui/combobox/combobox.types.js';
-  import { Card, CardContent, CardHeader, CardTitle } from '@composable-svelte/core/components/ui/card/index.js';
-  import { Badge } from '@composable-svelte/core/components/ui/badge/index.js';
+  import { Combobox } from '@composable-svelte/core/components/ui';
+  import type { ComboboxOption } from '@composable-svelte/core/components/ui';
+  import { Card, CardContent, CardHeader, CardTitle } from '@composable-svelte/core/components/ui';
+  import { Badge } from '@composable-svelte/core/components/ui';
 
   // Fruit options
   const fruitOptions: ComboboxOption[] = [

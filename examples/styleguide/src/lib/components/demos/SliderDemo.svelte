@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { Slider } from '@composable-svelte/core/components/ui/slider/index.js';
-  import { Label } from '@composable-svelte/core/components/ui/label/index.js';
+  import { Slider } from '@composable-svelte/core/components/ui';
+  import { Label } from '@composable-svelte/core/components/ui';
 
   let volume = $state(50);
   let brightness = $state(75);

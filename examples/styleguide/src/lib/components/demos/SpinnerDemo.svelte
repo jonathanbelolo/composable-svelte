@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { Spinner } from '@composable-svelte/core/components/ui/spinner/index.js';
-  import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@composable-svelte/core/components/ui/card/index.js';
-  import Button from '@composable-svelte/core/components/ui/button/Button.svelte';
+  import { Spinner } from '@composable-svelte/core/components/ui';
+  import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@composable-svelte/core/components/ui';
+  import { Button } from '@composable-svelte/core/components/ui';
 </script>
 
 <div class="space-y-12">

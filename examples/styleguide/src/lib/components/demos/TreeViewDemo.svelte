@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { TreeView } from '@composable-svelte/core/components/ui/tree-view/index.js';
-  import type { TreeNode } from '@composable-svelte/core/components/ui/tree-view/tree-view.types.js';
-  import { Card, CardContent, CardHeader, CardTitle } from '@composable-svelte/core/components/ui/card/index.js';
-  import { Badge } from '@composable-svelte/core/components/ui/badge/index.js';
+  import { TreeView } from '@composable-svelte/core/components/ui';
+  import type { TreeNode } from '@composable-svelte/core/components/ui';
+  import { Card, CardContent, CardHeader, CardTitle } from '@composable-svelte/core/components/ui';
+  import { Badge } from '@composable-svelte/core/components/ui';
 
   // File system example
   const fileSystemNodes: TreeNode[] = [

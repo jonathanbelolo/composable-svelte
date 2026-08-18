@@ -21,7 +21,13 @@ export default defineConfig({
         }
       }),
       instances: [
-        { browser: 'chromium' }
+        {
+          browser: 'chromium',
+          // This is a desktop layout — modals and sheets overflow the default
+          // mobile-sized viewport, and Playwright refuses to click an element
+          // it cannot bring into view, so every flow test timed out.
+          viewport: { width: 1280, height: 900 }
+        }
       ],
       headless: true
     },

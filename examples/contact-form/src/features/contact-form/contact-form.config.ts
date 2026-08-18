@@ -9,7 +9,7 @@ async function validateEmailAsync(email: string): Promise<void> {
 	await new Promise((resolve) => setTimeout(resolve, 500));
 
 	const blockedDomains = ['spam.com', 'test.invalid'];
-	const domain = email.split('@')[1];
+	const domain = email.split('@')[1] ?? '';
 
 	if (blockedDomains.includes(domain)) {
 		throw new Error('This email domain is not allowed');

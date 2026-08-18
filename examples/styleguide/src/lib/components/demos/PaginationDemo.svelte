@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { Pagination } from '@composable-svelte/core/components/ui/pagination/index.js';
-  import { Card, CardHeader, CardTitle, CardContent } from '@composable-svelte/core/components/ui/card/index.js';
-  import { Badge } from '@composable-svelte/core/components/ui/badge/index.js';
+  import { Pagination } from '@composable-svelte/core/components/ui';
+  import { Card, CardHeader, CardTitle, CardContent } from '@composable-svelte/core/components/ui';
+  import { Badge } from '@composable-svelte/core/components/ui';
 
   // Sample data for demonstrations
   let currentPage1 = $state(1);

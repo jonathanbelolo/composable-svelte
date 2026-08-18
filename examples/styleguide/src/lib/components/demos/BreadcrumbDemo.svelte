@@ -7,7 +7,7 @@
     BreadcrumbPage,
     BreadcrumbSeparator,
     BreadcrumbEllipsis
-  } from '@composable-svelte/core/components/ui/breadcrumb/index.js';
+  } from '@composable-svelte/core/components/ui';
 
   let currentPath = $state(['home', 'products', 'electronics', 'computers', 'laptops']);
 

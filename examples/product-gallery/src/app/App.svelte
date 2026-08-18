@@ -96,6 +96,7 @@
 <div class="flex h-screen overflow-hidden bg-gradient-to-br from-background via-background to-muted/20">
   <!-- Sidebar (Desktop) - Enhanced with Shadow -->
   <aside
+    aria-label="Sidebar navigation"
     class="h-full border-r bg-background overflow-hidden transition-all duration-300 lg:block"
     class:hidden={!state.sidebarExpanded}
     style="width: 320px;"
@@ -142,6 +143,7 @@
   <Modal
     store={productDetailStore}
     presentation={state.presentation}
+    class="max-h-[90vh] overflow-y-auto"
     onPresentationComplete={() =>
       store.dispatch({ type: 'presentation', event: { type: 'presentationCompleted' } })}
     onDismissalComplete={() =>

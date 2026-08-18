@@ -1,13 +1,13 @@
 <script lang="ts">
-  import { Input } from '@composable-svelte/core/components/ui/input/index.js';
-  import { Label } from '@composable-svelte/core/components/ui/label/index.js';
-  import { Textarea } from '@composable-svelte/core/components/ui/textarea/index.js';
-  import { Checkbox } from '@composable-svelte/core/components/ui/checkbox/index.js';
-  import { RadioGroup, Radio } from '@composable-svelte/core/components/ui/radio/index.js';
-  import { Switch } from '@composable-svelte/core/components/ui/switch/index.js';
-  import { Select } from '@composable-svelte/core/components/ui/select/index.js';
-  import { Slider } from '@composable-svelte/core/components/ui/slider/index.js';
-  import Button from '@composable-svelte/core/components/ui/button/Button.svelte';
+  import { Input } from '@composable-svelte/core/components/ui';
+  import { Label } from '@composable-svelte/core/components/ui';
+  import { Textarea } from '@composable-svelte/core/components/ui';
+  import { Checkbox } from '@composable-svelte/core/components/ui';
+  import { RadioGroup, Radio } from '@composable-svelte/core/components/ui';
+  import { Switch } from '@composable-svelte/core/components/ui';
+  import { Select } from '@composable-svelte/core/components/ui';
+  import { Slider } from '@composable-svelte/core/components/ui';
+  import { Button } from '@composable-svelte/core/components/ui';
 
   // Form state
   let name = $state('');

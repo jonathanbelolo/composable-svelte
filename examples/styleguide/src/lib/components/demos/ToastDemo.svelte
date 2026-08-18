@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@composable-svelte/core/components/ui/card/index.js';
-  import Button from '@composable-svelte/core/components/ui/button/Button.svelte';
-  import { Badge } from '@composable-svelte/core/components/ui/badge/index.js';
+  import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@composable-svelte/core/components/ui';
+  import { Button } from '@composable-svelte/core/components/ui';
+  import { Badge } from '@composable-svelte/core/components/ui';
 
   // Note: This is a simplified demo showing toast notification patterns
   // The actual toast component integration will be added once the toast system is fully implemented

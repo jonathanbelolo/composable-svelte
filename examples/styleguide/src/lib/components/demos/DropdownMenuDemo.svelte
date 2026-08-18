@@ -1,7 +1,7 @@
 <script lang="ts">
-	import DropdownMenu from '@composable-svelte/core/components/ui/dropdown-menu/DropdownMenu.svelte';
-	import type { MenuItem } from '@composable-svelte/core/components/ui/dropdown-menu/dropdown-menu.types.js';
-	import Button from '@composable-svelte/core/components/ui/button/Button.svelte';
+	import { DropdownMenu } from '@composable-svelte/core/components/ui';
+	import type { MenuItem } from '@composable-svelte/core/components/ui';
+	import { Button } from '@composable-svelte/core/components/ui';
 
 	const menuItems: MenuItem[] = [
 		{ id: '1', label: 'Profile', icon: '👤' },

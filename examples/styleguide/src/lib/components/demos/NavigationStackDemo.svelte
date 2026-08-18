@@ -1,11 +1,11 @@
 <script lang="ts">
-	import NavigationStack from '@composable-svelte/core/navigation-components/NavigationStack.svelte';
-	import AnimatedNavigationStack from '@composable-svelte/core/navigation-components/AnimatedNavigationStack.svelte';
-	import Button from '@composable-svelte/core/components/ui/button/Button.svelte';
+	import { NavigationStack } from '@composable-svelte/core/navigation-components';
+	import { AnimatedNavigationStack } from '@composable-svelte/core/navigation-components';
+	import { Button } from '@composable-svelte/core/components/ui';
 	import { createStore } from '@composable-svelte/core';
-	import { scopeToDestination } from '@composable-svelte/core/navigation/scope-to-destination.js';
-	import { Effect } from '@composable-svelte/core/effect.js';
-	import type { PresentationState } from '@composable-svelte/core/navigation/types.js';
+	import { scopeToDestination } from '@composable-svelte/core/navigation';
+	import { Effect } from '@composable-svelte/core';
+	import type { PresentationState } from '@composable-svelte/core/navigation';
 
 	// ============================================================================
 	// Demo State & Store Setup

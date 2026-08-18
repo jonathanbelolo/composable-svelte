@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { Skeleton } from '@composable-svelte/core/components/ui/skeleton/index.js';
-  import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@composable-svelte/core/components/ui/card/index.js';
-  import Button from '@composable-svelte/core/components/ui/button/Button.svelte';
-  import { Avatar } from '@composable-svelte/core/components/ui/avatar/index.js';
+  import { Skeleton } from '@composable-svelte/core/components/ui';
+  import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@composable-svelte/core/components/ui';
+  import { Button } from '@composable-svelte/core/components/ui';
+  import { Avatar } from '@composable-svelte/core/components/ui';
 
   let showContent = $state(false);
 </script>

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { RadioGroup, Radio } from '@composable-svelte/core/components/ui/radio/index.js';
-  import { Label } from '@composable-svelte/core/components/ui/label/index.js';
+  import { RadioGroup, Radio } from '@composable-svelte/core/components/ui';
+  import { Label } from '@composable-svelte/core/components/ui';
 
   let selectedPlan = $state('free');
   let notificationPreference = $state('all');

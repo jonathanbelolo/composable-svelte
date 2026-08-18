@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { Kbd } from '@composable-svelte/core/components/ui/kbd/index.js';
-  import { Card, CardContent } from '@composable-svelte/core/components/ui/card/index.js';
+  import { Kbd } from '@composable-svelte/core/components/ui';
+  import { Card, CardContent } from '@composable-svelte/core/components/ui';
 </script>
 
 <div class="space-y-12">

@@ -39,7 +39,7 @@ export function parseAppURL(path: string): string | null {
 	// Product detail page
 	const params = matchPath('/product/:productId', path);
 	if (params) {
-		return params.productId;
+		return params.productId ?? null;
 	}
 
 	return null;

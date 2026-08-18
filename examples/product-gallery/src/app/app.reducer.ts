@@ -34,7 +34,7 @@ const coreReducer: Reducer<AppState, AppAction, AppDependencies> = (state, actio
     case 'productClicked': {
       // Show product detail using tree-based navigation WITH animation
       const detailState = createProductDetailState(action.productId);
-      const newState = {
+      const newState: AppState = {
         ...state,
         productDetail: detailState,
         presentation: {
@@ -70,7 +70,7 @@ const coreReducer: Reducer<AppState, AppAction, AppDependencies> = (state, actio
 
         case 'dismissalCompleted': {
           // Dismissal animation finished - clear everything
-          const newState = {
+          const newState: AppState = {
             ...state,
             productDetail: null,
             presentation: { status: 'idle' }

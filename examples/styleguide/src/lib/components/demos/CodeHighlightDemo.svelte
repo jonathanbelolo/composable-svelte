@@ -12,8 +12,8 @@
 		CardTitle,
 		CardDescription,
 		CardContent
-	} from '@composable-svelte/core/components/ui/card/index.js';
-	import { Button } from '@composable-svelte/core/components/ui/button/index.js';
+	} from '@composable-svelte/core/components/ui';
+	import { Button } from '@composable-svelte/core/components/ui';
 
 	// Example code snippets
 	const typescriptExample = `interface User {

@@ -6,7 +6,8 @@ import { Effect } from '@composable-svelte/core';
 describe('ProductDetail Reducer', () => {
   const initialState: ProductDetailState = {
     productId: 'prod-1',
-    destination: null
+    destination: null,
+    presentation: { status: 'idle' }
   };
 
   const mockDeps: ProductDetailDependencies = {};
@@ -95,7 +96,8 @@ describe('ProductDetail Reducer', () => {
         destination: {
           type: 'addToCart',
           state: { productId: 'prod-1', quantity: 3 }
-        }
+        },
+        presentation: { status: 'idle' }
       };
 
       let cartAdded = false;
@@ -135,7 +137,8 @@ describe('ProductDetail Reducer', () => {
         destination: {
           type: 'share',
           state: { productId: 'prod-1', selectedMethod: 'twitter' }
-        }
+        },
+        presentation: { status: 'idle' }
       };
 
       const [newState] = productDetailReducer(
@@ -153,7 +156,10 @@ describe('ProductDetail Reducer', () => {
         mockDeps
       );
 
-      expect(newState.destination).toBeNull();
+      // The reducer starts a dismissal animation rather than clearing the
+      // destination outright; `destination` is nulled on `dismissalCompleted`.
+      expect(newState.presentation.status).toBe('dismissing');
+      expect(newState.destination).not.toBeNull();
     });
   });
 
@@ -166,7 +172,8 @@ describe('ProductDetail Reducer', () => {
           state: {
             productId: 'prod-1'
           }
-        }
+        },
+        presentation: { status: 'idle' }
       };
 
       const deps: ProductDetailDependencies = {
@@ -199,7 +206,8 @@ describe('ProductDetail Reducer', () => {
           state: {
             productId: 'prod-1'
           }
-        }
+        },
+        presentation: { status: 'idle' }
       };
 
       const [newState] = productDetailReducer(
@@ -228,7 +236,8 @@ describe('ProductDetail Reducer', () => {
         destination: {
           type: 'info',
           productId: 'prod-1'
-        }
+        },
+        presentation: { status: 'idle' }
       };
 
       const [newState] = productDetailReducer(

@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { Tooltip } from '@composable-svelte/core/components/ui/tooltip/index.js';
-  import Button from '@composable-svelte/core/components/ui/button/Button.svelte';
-  import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@composable-svelte/core/components/ui/card/index.js';
-  import { Badge } from '@composable-svelte/core/components/ui/badge/index.js';
-  import { IconButton } from '@composable-svelte/core/components/ui/icon-button/index.js';
+  import { Tooltip } from '@composable-svelte/core/components/ui';
+  import { Button } from '@composable-svelte/core/components/ui';
+  import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@composable-svelte/core/components/ui';
+  import { Badge } from '@composable-svelte/core/components/ui';
+  import { IconButton } from '@composable-svelte/core/components/ui';
 </script>
 
 <div class="space-y-12">
