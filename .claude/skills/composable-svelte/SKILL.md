@@ -41,7 +41,8 @@ const count = $derived(store.state.count);
 | Need | Package | Skill to load |
 |------|---------|---------------|
 | Store, reducers, effects, composition | `@composable-svelte/core` | `composable-svelte-core` |
-| UI components (Button, Card, Input, 77 total) | `@composable-svelte/core/components/ui` | `composable-svelte-components` |
+| UI components (Button, Card, Input, …) | `@composable-svelte/core/components/ui` | `composable-svelte-components` |
+| All 77 components incl. navigation | `@composable-svelte/core` (root barrel) | `composable-svelte-components` |
 | **Tailwind setup / theming** (required for any UI) | `@composable-svelte/core/styles/tailwind.css` (v4) or `/tailwind-preset` (v3) | `composable-svelte-components` → STYLING SETUP |
 | Forms with Zod validation | `@composable-svelte/core/components/form` | `composable-svelte-forms` |
 | Modal, Sheet, Drawer, Alert, navigation | `@composable-svelte/core/navigation-components` | `composable-svelte-navigation` |

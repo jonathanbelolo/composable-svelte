@@ -67,6 +67,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   it cannot shadow a consumer's own `--color-*` overrides; every `--color-*` name
   it shipped through v0.5.x still works via the preset's resolution chain.
 
+### Added — public API surface
+
+- `components/ui` now re-exports each component's **reducer, state factory and
+  prop types**, not just the component: `collapsibleReducer`,
+  `createInitialCollapsibleState`, `selectReducer`, `comboboxReducer`,
+  `accordionReducer`, `treeViewReducer`, `carouselReducer`, `fileUploadReducer`,
+  `paginationReducer`, `calendarReducer`, `tooltipReducer`,
+  `dropdownMenuReducer`, and the prop types `SelectOption`, `ComboboxOption`,
+  `TreeNode`, `MenuItem`, `CarouselSlide`, `DateRange`, `UploadedFile`. None of
+  these was reachable from any entry point before, which made `Collapsible`
+  impossible to use and the others impossible to type.
+- `navigation-components` now also exports `DestinationRouter` and the headless
+  primitives, matching what the root barrel already offered.
+
+### Changed — renames
+
+- The `AccordionItem` **type** is exported as `AccordionItemData`; the name
+  `AccordionItem` belongs to the component.
+- dropdown-menu's local `PresentationEvent` is now
+  `DropdownMenuPresentationEvent`. It shadowed the canonical navigation type of
+  the same name; both were previously unreachable, so nothing can break.
+
 ### Publish order
 
 `@composable-svelte/core` must be published **first**. The satellite packages
@@ -97,6 +119,13 @@ range actually reaches consumers).
 - `styles/tailwind.css` assumes tokens are HSL triplets. An app that already has a
   shadcn-svelte **v4** palette (complete `oklch()` colours) should skip that file
   and map the tokens in its own `@theme` block.
+
+## [0.5.0] – [0.5.2]
+
+No changelog entries were written for these releases. From the git history they
+covered the satellite packages' peer-dependency widening and a Svelte 5
+reactivity sweep across Form, TreeView and several UI components
+(`e47f98a`, `eee141e`, `2625e4d`).
 
 ## [0.4.0] - 2025-01-12
 

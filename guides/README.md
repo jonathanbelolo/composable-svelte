@@ -43,7 +43,7 @@ The foundation library. Everything else builds on this.
 
 | Module | What it provides |
 |--------|-----------------|
-| Root (`core`) | `createStore`, `Effect`, `Reducer`, `TestStore`, `scope`, `combineReducers`, `forEach` |
+| Root (`core`) | `createStore`, `Effect`, `Reducer`, `scope`, `combineReducers`, `forEach` (**not** `TestStore` — see `core/test`) |
 | `core/navigation` | `ifLetPresentation`, `scopeToDestination`, `createDestinationReducer`, `push`, `pop`, dismiss dependency |
 | `core/navigation-components` | Modal, Sheet, Drawer, Alert, Popover, Sidebar, Tabs, NavigationStack |
 | `core/components/ui` | 77 shadcn-svelte components (Button, Input, Card, Select, Accordion, etc.) |
@@ -268,7 +268,7 @@ Access state reactively via `$derived(store.state)` or `$store` (subscription-ba
 ```typescript
 // counter.test.ts
 import { describe, it, expect } from 'vitest';
-import { createTestStore } from '@composable-svelte/core';
+import { createTestStore } from '@composable-svelte/core/test';
 import { counterReducer } from './counter.reducer';
 
 describe('Counter', () => {

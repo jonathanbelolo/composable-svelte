@@ -13,7 +13,7 @@ A **Composable Architecture** library for Svelte 5, inspired by [The Composable 
 - ✅ **Svelte 5 Runes**: Full integration with Svelte's reactivity system (`$state`, `$derived`)
 - ✅ **TestStore**: Exhaustive action testing with send/receive pattern
 - ✅ **Complete Backend**: API client, WebSocket, Storage, Clock dependencies
-- ✅ **73+ Components**: shadcn-svelte integration with reducer-driven patterns
+- ✅ **77 Components**: shadcn-svelte integration with reducer-driven patterns
 - ✅ **URL Routing**: Browser history sync with pattern matching
 
 ## Quick Start
@@ -339,7 +339,7 @@ const timestamp = deps.clock.now();
 
 Explore working examples in the `examples/` directory:
 
-- **[Styleguide](./examples/styleguide)**: Component showcase with 73+ components
+- **[Styleguide](./examples/styleguide)**: Component showcase with 77 components
 - **[Product Gallery](./examples/product-gallery)**: Full-featured product browsing app
 - **[URL Routing](./examples/url-routing)**: Browser history integration examples
 
@@ -393,7 +393,7 @@ pnpm dev
 - ✅ Phase 2: Navigation (Modal, Sheet, Drawer)
 - ✅ Phase 3: DSL & Matchers
 - ✅ Phase 4: Animation
-- ✅ Phase 6: Component Library (73+ components)
+- ✅ Phase 6: Component Library (77 components)
 - ✅ Phase 7: URL Routing
 - ✅ Phase 8: Backend Integration (API, WebSocket, Dependencies)
 

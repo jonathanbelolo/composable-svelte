@@ -644,27 +644,32 @@ import {
 
 type Destination = { type: 'post'; state: { postId: number } };
 
+// `parsers` is an ordered list of functions, each returning a destination or
+// null. Put more specific patterns first.
 const parserConfig: ParserConfig<Destination> = {
-  routes: [
-    {
-      pattern: '/posts/:postId',
-      parse: (params) => ({ type: 'post', state: { postId: Number(params.postId) } })
+  basePath: '/',
+  parsers: [
+    (path) => {
+      const params = matchPath('/posts/:postId', path);
+      return params ? { type: 'post', state: { postId: Number(params.postId) } } : null;
     }
   ]
 };
 
+// `serializers` maps destination.type -> a function over that destination's state.
 const serializerConfig: SerializerConfig<Destination> = {
-  post: (state) => `/posts/${state.postId}`
+  basePath: '/',
+  serializers: {
+    post: (state) => `/posts/${state.postId}`
+  }
 };
 
 const destination = parseDestination('/posts/42', parserConfig);
 const path = serializeDestination({ type: 'post', state: { postId: 42 } }, serializerConfig);
 ```
 
-`matchPath('/posts/:postId', path)` returns the params (or `null`) if you only
-need to test one pattern. Check the exported types in
-`@composable-svelte/core/routing` for the exact config shapes before writing
-these by hand.
+`matchPath('/posts/:postId', path)` returns the params (or `null`) for a single
+pattern. Working reference: `examples/url-routing/src/routing.ts`.
 
 ---
 

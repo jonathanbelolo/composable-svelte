@@ -332,8 +332,8 @@ const wizardReducer: Reducer<WizardState, WizardAction, WizardDeps> = (state, ac
   let { store } = $props();
 </script>
 
-<NavigationStack store={store}>
-  {#snippet renderScreen(screen, index)}
+<NavigationStack {store} stack={store.state.stack} onBack={() => store.dispatch({ type: 'popped' })}>
+  {#snippet children({ currentScreen: screen })}
     {#if screen.type === 'step1'}
       <Step1Screen state={screen.data} store={store} />
     {:else if screen.type === 'step2'}
@@ -390,15 +390,18 @@ Bottom drawer (mobile-first):
 Confirmation dialog:
 
 ```svelte
-<Alert
-  store={scopedStore}
-  title="Delete Product?"
-  description="This action cannot be undone."
-  actions={[
-    { label: 'Cancel', variant: 'outline', onClick: () => store.dispatch({ type: 'cancelButtonTapped' }) },
-    { label: 'Delete', variant: 'destructive', onClick: () => store.dispatch({ type: 'confirmButtonTapped' }) }
-  ]}
-/>
+<Alert store={scopedStore}>
+  {#snippet children({ store })}
+    <h2 class="text-lg font-semibold">Delete Product?</h2>
+    <p class="text-sm text-muted-foreground">This action cannot be undone.</p>
+    <div class="flex justify-end gap-2">
+      <Button onclick={() => store.dispatch({ type: 'cancelButtonTapped' })}>Cancel</Button>
+      <Button variant="destructive" onclick={() => store.dispatch({ type: 'confirmButtonTapped' })}>
+        Delete
+      </Button>
+    </div>
+  {/snippet}
+</Alert>
 ```
 
 **Styling**:
@@ -431,13 +434,16 @@ Side panel (left/right):
 Contextual menu/tooltip:
 
 ```svelte
-<Popover
-  store={scopedStore}
-  triggerElement={buttonRef}
-  placement="bottom"
->
-  <ProductInfo product={product} />
-</Popover>
+<!-- You own the trigger; Popover positions itself with `style`. -->
+<div class="relative">
+  <Button onclick={() => store.dispatch({ type: 'infoButtonTapped' })}>Info</Button>
+
+  <Popover store={scopedStore} style="top: 100%; left: 0;">
+    {#snippet children()}
+      <ProductInfo product={product} />
+    {/snippet}
+  </Popover>
+</div>
 ```
 
 **Styling**:
@@ -594,16 +600,17 @@ Always check for null before rendering:
 {/if}
 ```
 
-### 4. Dismiss on Modal Close
+### 4. Dismissal Is Driven by State
 
-Always dismiss when modal is closed:
+There is no `onOpenChange`. A presented overlay is one whose scoped store is
+non-null, so dismissing means clearing the destination — either from the child
+via `store.dismiss()`, or from the parent reducer.
 
 ```svelte
-<Modal
-  store={scopedStore}
-  }}
->
-  <Content />
+<Modal store={scopedStore}>
+  {#snippet children({ store })}
+    <Content {store} onClose={() => store.dismiss()} />
+  {/snippet}
 </Modal>
 ```
 
