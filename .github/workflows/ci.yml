@@ -23,7 +23,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
         with:
-          version: 8
+          version: 9
 
       - name: Get pnpm store directory
         shell: bash
@@ -41,18 +41,22 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Several packages and examples run their suites in a real browser.
       - name: Install Playwright browsers
-        run: pnpm --filter @composable-svelte/core exec playwright install chromium
-        working-directory: packages/core
+        run: pnpm --filter @composable-svelte/core exec playwright install --with-deps chromium
 
+      # Every workspace, not just core: the other seven packages and the
+      # examples were never covered here, which is how a package could sit
+      # broken (wrong vitest major, a watch-mode `test` script, a bad import)
+      # without CI noticing.
       - name: Type check
-        run: pnpm --filter @composable-svelte/core typecheck
+        run: pnpm -r typecheck
 
       - name: Run tests
-        run: pnpm --filter @composable-svelte/core test
+        run: pnpm -r test
 
-      - name: Build package
-        run: pnpm --filter @composable-svelte/core build
+      - name: Build
+        run: pnpm -r build
 
   lint:
     name: Lint
@@ -70,7 +74,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
         with:
-          version: 8
+          version: 9
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

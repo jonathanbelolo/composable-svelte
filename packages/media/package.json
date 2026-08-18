@@ -1,6 +1,6 @@
 {
   "name": "@composable-svelte/media",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Audio player, video embed, and voice input components for Composable Svelte - Built with Web Audio API and MediaRecorder",
   "type": "module",
   "main": "./dist/index.js",
@@ -26,8 +26,8 @@
   "scripts": {
     "build": "svelte-package -o dist",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest --passWithNoTests",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
     "prepublishOnly": "pnpm run build && pnpm run typecheck",
@@ -74,5 +74,8 @@
     "typescript": "^5.5.4",
     "vite": "^6.4.1",
     "vitest": "^4.0.7"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

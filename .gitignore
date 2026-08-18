@@ -50,3 +50,7 @@ yarn-error.log*
 
 # client tests
 _client_tests
+
+# Vitest browser-mode failure screenshots — regenerated on every failing run,
+# not baselines (nothing compares against them).
+**/__screenshots__/
