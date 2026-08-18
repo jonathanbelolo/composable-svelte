@@ -1,6 +1,18 @@
 /**
- * Composable Svelte Theme System
- * CSS Variables for theming and dark mode support
+ * Composable Svelte Theme System — LEGACY (Tailwind v3 only).
+ *
+ * Declares the `--color-`-prefixed token vocabulary this package shipped
+ * through v0.5.x. It is kept, unchanged, so existing consumers — including
+ * anyone who brand-overrides `--color-primary` and friends — keep working.
+ *
+ * Prefer `styles/globals.css` (Tailwind v3) or `styles/tailwind.css`
+ * (Tailwind v4) for new projects. Both read `--popover`-style names first and
+ * fall back to the `--color-*` names declared here, so the two vocabularies
+ * coexist; importing BOTH entry points is unnecessary and not supported.
+ *
+ * This file intentionally does not import `tokens.css`: doing so would define
+ * `--popover` at our defaults and shadow a consumer's own `--color-popover`
+ * override, since the resolution chain tries the unprefixed name first.
  */
 
 @tailwind base;

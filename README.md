@@ -28,6 +28,22 @@ pnpm add @composable-svelte/core
 
 > **Note**: Package is not yet published to npm. Clone the repo to use it.
 
+### Styling (component library)
+
+The components need Tailwind CSS. On **Tailwind v4** one import does everything:
+
+```css
+@import 'tailwindcss';
+@import '@composable-svelte/core/styles/tailwind.css';
+```
+
+On **Tailwind v3**, extend the published preset in `tailwind.config.js`
+(`presets: [composableSvelte]`) and import `@composable-svelte/core/styles/globals.css`.
+
+Skipping this is what makes popovers and dropdowns render see-through — Tailwind
+resolves the theme tokens to nothing. Full setup, theming and troubleshooting:
+[packages/core README](packages/core/README.md#styling--theming).
+
 ### Basic Example
 
 ```typescript

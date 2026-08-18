@@ -5,6 +5,76 @@ All notable changes to `@composable-svelte/core` will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-08-18
+
+### Fixed
+
+- **Transparent component surfaces.** Popovers, dropdowns, selects, comboboxes,
+  tooltips and modal backdrops rendered see-through in consumer apps. The package
+  shipped two mutually incompatible CSS-variable vocabularies — `--popover` in
+  `styles/globals.css` and `--color-popover` in `styles/theme.css` — with no
+  preset and no setup documentation, so a consumer's Tailwind config routinely
+  referenced tokens that no stylesheet declared. `hsl(var(--undefined))` is
+  invalid at computed-value time, which paints nothing while the border and
+  shadow still draw. Both vocabularies now resolve, and every colour ends in a
+  literal fallback, so an undefined token degrades to the default light theme
+  instead of to nothing. (That fallback cannot help if Tailwind never generates
+  the class at all — for that, see the `content` / `@source` setup below.)
+- **Tailwind v4 incompatibility.** Both shipped stylesheets used v3-only
+  `@tailwind` directives, and v4 consumes `--color-*` as a complete colour rather
+  than an HSL triplet, so v4 apps got invalid colours even when tokens were
+  present. `styles/tailwind.css` is a native v4 entry point.
+- **Dark mode silently inert** for consumers whose config lacked
+  `safelist: ['dark']` — Tailwind v3 tree-shakes `@layer base` selectors absent
+  from `content`, purging the entire dark token block. The preset supplies it.
+
+### Added
+
+- `styles/tokens.css` — canonical, directive-free design tokens, importable from
+  Tailwind v3, Tailwind v4, or plain CSS.
+- `styles/tailwind.css` — Tailwind v4 entry point: registers the library as a
+  content source, defines the `.dark` variant, and maps tokens via `@theme inline`.
+- `tailwind-preset` — published Tailwind v3 preset with the full colour map,
+  `darkMode: 'class'`, the `.dark` safelist, and a `contentGlob` export so
+  consumers need not hardcode an install path.
+- "Styling & Theming" documentation in the README, including troubleshooting for
+  transparent components.
+- `tailwindcss` declared as an optional peer dependency.
+
+### Changed
+
+- `styles/globals.css` is unchanged in behaviour and remains self-contained. Its
+  token block is duplicated from `tokens.css` rather than `@import`ed, because an
+  `@import` is only inlined by pipelines running `postcss-import` — where it is
+  not, no tokens would be declared at all. A test pins the two copies together.
+- `styles/theme.css` is marked legacy. It is deliberately left vocabulary-pure so
+  it cannot shadow a consumer's own `--color-*` overrides; every `--color-*` name
+  it shipped through v0.5.x still works via the preset's resolution chain.
+
+### Notes
+
+- **Applying the preset changes `dark:` from a media query to a class.** The
+  preset sets `darkMode: 'class'` (v4: `@custom-variant dark`), because that is
+  what `themeManager` drives. Any `dark:` utility in your own app that previously
+  followed the OS setting will now require `.dark` on `<html>`.
+- Otherwise the preset does not restyle your app. It sets colours, `borderRadius`,
+  `darkMode` and the `.dark` safelist — nothing else. It deliberately does **not**
+  touch `boxShadow`, `borderColor` or the transition defaults, all of which would
+  apply app-wide for no benefit (`theme.css`'s shadow values were already
+  identical to Tailwind's, and routing them through `var()` silently dropped the
+  second layer of multi-layer coloured shadows).
+- **Do not import both `styles/globals.css` and `styles/theme.css`.** Together,
+  `globals.css` declares `--popover` at our defaults, which shadows a `theme.css`
+  consumer's own `--color-popover` branding — the resolution chain tries the
+  unprefixed name first. Upgrading consumers should keep `theme.css` alone, or
+  migrate their overrides to the unprefixed names.
+- Tailwind v3 does **not** merge a preset's `content` into the resolved config
+  (verified against 3.4.18). Add the exported `contentGlob` to your own `content`
+  array or the component classes will be purged.
+- `styles/tailwind.css` assumes tokens are HSL triplets. An app that already has a
+  shadcn-svelte **v4** palette (complete `oklch()` colours) should skip that file
+  and map the tokens in its own `@theme` block.
+
 ## [0.4.0] - 2025-01-12
 
 ### Added

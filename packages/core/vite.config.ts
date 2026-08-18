@@ -30,7 +30,8 @@ export default defineConfig({
     include: ['tests/**/*.{test,spec}.{js,ts}'],
     exclude: [
       'tests/animations/**/*.test.ts',
-      'tests/ssr/ssg.test.ts' // Needs Node.js environment (fs/promises)
+      'tests/ssr/ssg.test.ts', // Needs Node.js environment (fs/promises)
+      'tests/styles/**' // Needs Node.js environment (reads stylesheets from disk)
     ],
 
     // Suppress console output during tests (for CI/prepublish)

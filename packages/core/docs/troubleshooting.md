@@ -11,7 +11,7 @@ This guide covers common issues you may encounter when working with Composable S
 5. [Performance Issues](#performance-issues)
 6. [SSR Issues](#ssr-issues)
 7. [Build and Bundle Issues](#build-and-bundle-issues)
-8. [Component Rendering Issues](#component-rendering-issues)
+8. [Component Rendering Issues](#component-rendering-issues) — including transparent popovers/modals
 9. [Dependency Injection Issues](#dependency-injection-issues)
 10. [Animation Issues](#animation-issues)
 
@@ -902,6 +902,59 @@ const reducer = (state: State, action: Action): [State, Effect<Action>] => {
 ---
 
 ## Component Rendering Issues
+
+### Popovers, Dropdowns or Modals Render Transparent
+
+**Symptoms:**
+- A popover, dropdown, select menu or tooltip shows its border and shadow but is
+  see-through
+- A modal's backdrop is invisible
+- Components look completely unstyled
+
+**Cause: Tailwind cannot resolve the theme tokens, or is not scanning the library.**
+
+`bg-popover` compiles to `hsl(var(--popover))`. If that variable is undefined the
+declaration is invalid at computed-value time and `background-color` falls back to
+`transparent` — the border and shadow still paint, which is why it looks
+half-styled rather than broken.
+
+**Fix (Tailwind v4)** — one import in your app CSS:
+
+```css
+@import 'tailwindcss';
+@import '@composable-svelte/core/styles/tailwind.css';
+```
+
+**Fix (Tailwind v3)** — the preset plus the exported content glob:
+
+```js
+import composableSvelte, { contentGlob } from '@composable-svelte/core/tailwind-preset';
+export default {
+  presets: [composableSvelte],
+  content: ['./src/**/*.{html,js,svelte,ts}', contentGlob]
+};
+```
+```css
+@import '@composable-svelte/core/styles/globals.css';
+```
+
+`contentGlob` must be listed explicitly — Tailwind v3 does not merge a preset's
+own `content`. If everything is unstyled rather than just transparent, that glob
+is the thing to check first.
+
+On v4 the equivalent knob is `@source`, which resolves **relative to the CSS file,
+not the project root** — from `src/app.css` that is
+`@source "../node_modules/@composable-svelte/core/dist";`. A `./node_modules/...`
+path there points at `src/node_modules/...` and silently matches nothing.
+
+**Related: dark mode does nothing.** On v3 this is the same root cause — Tailwind
+tree-shakes `@layer base` selectors absent from `content`, so the `.dark` token
+block is purged unless the config carries `safelist: ['dark']`. The preset
+supplies it, along with `darkMode: 'class'`.
+
+See the "Styling & Theming" section of the package README for the full setup.
+
+---
 
 ### Component Not Reactive
 

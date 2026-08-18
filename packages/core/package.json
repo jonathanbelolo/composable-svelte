@@ -1,6 +1,6 @@
 {
   "name": "@composable-svelte/core",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "description": "A Composable Architecture for Svelte 5 - Type-safe state management with reducers, effects, and navigation",
   "type": "module",
   "main": "./dist/index.js",
@@ -108,6 +108,12 @@
     },
     "./styles/globals.css": "./dist/styles/globals.css",
     "./styles/theme.css": "./dist/styles/theme.css",
+    "./styles/tailwind.css": "./dist/styles/tailwind.css",
+    "./styles/tokens.css": "./dist/styles/tokens.css",
+    "./tailwind-preset": {
+      "types": "./dist/tailwind-preset.d.ts",
+      "default": "./dist/tailwind-preset.js"
+    },
     "./test": {
       "types": "./dist/test/index.d.ts",
       "svelte": "./dist/test/index.js",
@@ -170,7 +176,13 @@
     "url": "https://github.com/jbelolo/composable-svelte/issues"
   },
   "peerDependencies": {
-    "svelte": "^5.0.0"
+    "svelte": "^5.0.0",
+    "tailwindcss": "^3.4.0 || ^4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "tailwindcss": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",

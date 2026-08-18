@@ -1,54 +1,14 @@
 import type { Config } from 'tailwindcss';
+import composableSvelte, { contentGlob } from '@composable-svelte/core/tailwind-preset';
 
+/**
+ * The colour map, dark-mode strategy, `.dark` safelist and the glob covering
+ * the library's own components all come from the preset — the same one
+ * consumers get. Hand-copying it here is what let this app's tokens drift out
+ * of sync with the library and render component surfaces transparent.
+ */
 export default {
-  content: [
-    './index.html',
-    './src/**/*.{js,ts,svelte}',
-    '../../packages/core/src/**/*.{js,ts,svelte}'
-  ],
-  theme: {
-    extend: {
-      colors: {
-        border: 'hsl(var(--border))',
-        input: 'hsl(var(--input))',
-        ring: 'hsl(var(--ring))',
-        background: 'hsl(var(--background))',
-        foreground: 'hsl(var(--foreground))',
-        primary: {
-          DEFAULT: 'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))'
-        },
-        secondary: {
-          DEFAULT: 'hsl(var(--secondary))',
-          foreground: 'hsl(var(--secondary-foreground))'
-        },
-        destructive: {
-          DEFAULT: 'hsl(var(--destructive))',
-          foreground: 'hsl(var(--destructive-foreground))'
-        },
-        muted: {
-          DEFAULT: 'hsl(var(--muted))',
-          foreground: 'hsl(var(--muted-foreground))'
-        },
-        accent: {
-          DEFAULT: 'hsl(var(--accent))',
-          foreground: 'hsl(var(--accent-foreground))'
-        },
-        popover: {
-          DEFAULT: 'hsl(var(--popover))',
-          foreground: 'hsl(var(--popover-foreground))'
-        },
-        card: {
-          DEFAULT: 'hsl(var(--card))',
-          foreground: 'hsl(var(--card-foreground))'
-        }
-      },
-      borderRadius: {
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)'
-      }
-    }
-  },
+  presets: [composableSvelte as unknown as Config],
+  content: ['./index.html', './src/**/*.{js,ts,svelte}', contentGlob],
   plugins: [require('tailwindcss-animate')]
 } satisfies Config;

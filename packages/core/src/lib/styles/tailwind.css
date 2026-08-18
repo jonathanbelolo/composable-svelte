@@ -1,0 +1,105 @@
+/**
+ * Composable Svelte — Tailwind v4 entry point.
+ *
+ * Import it from your app's stylesheet, immediately after Tailwind itself:
+ *
+ *   @import 'tailwindcss';
+ *   @import '@composable-svelte/core/styles/tailwind.css';
+ *
+ * It registers this package's components as a content source, wires class-based
+ * dark mode, and maps the design tokens onto Tailwind v4's `--color-*` theme
+ * variables.
+ *
+ * It deliberately does not `@import 'tailwindcss'` itself. Tailwind v4 does not
+ * de-duplicate that import — bringing it in here as well as in your app CSS
+ * emits preflight twice (verified: 264 → 425 lines against v4.3.3). The app
+ * owning the Tailwind import is also the documented v4 convention.
+ *
+ * Why the mapping is needed: `tokens.css` stores colors as bare HSL triplets
+ * (`0 0% 100%`) so Tailwind v3 can inject an alpha channel into them. Tailwind
+ * v4 consumes `--color-*` directly as a complete color, so the triplets are
+ * wrapped in `hsl()` here. Feeding v4 a raw triplet produces an invalid
+ * `background-color` and the element renders transparent — that was the cause
+ * of the see-through popovers reported against v0.5.x.
+ *
+ * `@theme inline` (rather than plain `@theme`) is what keeps dark mode working:
+ * it substitutes the expression into the generated utilities instead of
+ * freezing a value into `:root`, so `.dark`'s token overrides still apply.
+ *
+ * KNOWN LIMITATION — shadcn-svelte v4 palettes. This mapping assumes `--popover`
+ * and friends hold HSL *triplets* (`0 0% 100%`). A shadcn-svelte v4 `init` writes
+ * complete colors instead (`oklch(1 0 0)`), and wrapping one of those in `hsl()`
+ * produces an invalid color, i.e. a transparent surface. The two conventions
+ * cannot coexist under the same variable names. If your app already has a
+ * shadcn-v4 palette, skip this file and instead map the tokens yourself in your
+ * own `@theme` block, keeping `@source` and `@custom-variant` from below.
+ *
+ * Tailwind v3 users want `styles/globals.css` plus `tailwind-preset` instead.
+ */
+
+@import './tokens.css';
+
+/**
+ * Scan this package's shipped components so their utility classes survive
+ * Tailwind's content detection. The path is relative to this file, which lives
+ * at `dist/styles/` inside the installed package, so `../` is the package's
+ * `dist` directory.
+ *
+ * v4 skips `node_modules` during automatic detection; an explicit `@source`
+ * opts this package back in. If your build still drops the classes, add the
+ * directive to your own CSS — noting that `@source` resolves relative to the
+ * file it appears in, NOT to the project root. From a conventional
+ * `src/app.css` that means one level up:
+ *   @source "../node_modules/@composable-svelte/core/dist";
+ */
+@source "../**/*.{js,svelte}";
+
+/* Dark mode is driven by a `.dark` class — see `themeManager` in styles/theme.ts. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+	--color-background: hsl(var(--background, 0 0% 100%));
+	--color-foreground: hsl(var(--foreground, 222.2 84% 4.9%));
+
+	--color-card: hsl(var(--card, 0 0% 100%));
+	--color-card-foreground: hsl(var(--card-foreground, 222.2 84% 4.9%));
+
+	--color-popover: hsl(var(--popover, 0 0% 100%));
+	--color-popover-foreground: hsl(var(--popover-foreground, 222.2 84% 4.9%));
+
+	--color-primary: hsl(var(--primary, 222.2 47.4% 11.2%));
+	--color-primary-foreground: hsl(var(--primary-foreground, 210 40% 98%));
+
+	--color-secondary: hsl(var(--secondary, 210 40% 96.1%));
+	--color-secondary-foreground: hsl(var(--secondary-foreground, 222.2 47.4% 11.2%));
+
+	--color-muted: hsl(var(--muted, 210 40% 96.1%));
+	--color-muted-foreground: hsl(var(--muted-foreground, 215.4 16.3% 46.9%));
+
+	--color-accent: hsl(var(--accent, 210 40% 96.1%));
+	--color-accent-foreground: hsl(var(--accent-foreground, 222.2 47.4% 11.2%));
+
+	--color-destructive: hsl(var(--destructive, 0 84.2% 60.2%));
+	--color-destructive-foreground: hsl(var(--destructive-foreground, 210 40% 98%));
+
+	--color-border: hsl(var(--border, 214.3 31.8% 91.4%));
+	--color-input: hsl(var(--input, 214.3 31.8% 91.4%));
+	--color-ring: hsl(var(--ring, 222.2 84% 4.9%));
+
+	--color-chart-1: hsl(var(--chart-1, 12 76% 61%));
+	--color-chart-2: hsl(var(--chart-2, 173 58% 39%));
+	--color-chart-3: hsl(var(--chart-3, 197 37% 24%));
+	--color-chart-4: hsl(var(--chart-4, 43 74% 66%));
+	--color-chart-5: hsl(var(--chart-5, 27 87% 67%));
+}
+
+@layer base {
+	* {
+		border-color: hsl(var(--border, 214.3 31.8% 91.4%));
+	}
+
+	body {
+		background-color: hsl(var(--background, 0 0% 100%));
+		color: hsl(var(--foreground, 222.2 84% 4.9%));
+	}
+}
