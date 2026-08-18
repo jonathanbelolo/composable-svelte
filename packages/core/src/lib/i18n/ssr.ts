@@ -67,6 +67,7 @@ import {
   serverDOM
 } from './types.js';
 import { Effect } from '../effect.js';
+import { createNoopStorage } from '../dependencies/local-storage.js';
 
 /**
  * Configuration for server-side i18n initialization.
@@ -194,7 +195,7 @@ export async function initI18nOnServer(config: SSRConfig): Promise<I18nSSRData> 
   const deps: I18nDependencies = {
     translationLoader,
     localeDetector: detector,
-    storage: createServerStorage(), // SSR-safe storage mock
+    storage: createNoopStorage<string>(), // SSR-safe storage mock
     dom: serverDOM
   };
 
@@ -277,42 +278,6 @@ export function hydrateI18nOnClient<S extends { i18n: I18nState }, A>(
   // For now, this is a conceptual implementation
 }
 
-/**
- * Create SSR-safe storage mock.
- *
- * On the server, localStorage/sessionStorage don't exist.
- * This creates a no-op implementation that won't crash.
- */
-function createServerStorage(): Storage {
-  const storage = new Map<string, string>();
-
-  return {
-    getItem(key: string): string | null {
-      return storage.get(key) ?? null;
-    },
-
-    setItem(key: string, value: string): void {
-      storage.set(key, value);
-    },
-
-    removeItem(key: string): void {
-      storage.delete(key);
-    },
-
-    clear(): void {
-      storage.clear();
-    },
-
-    get length(): number {
-      return storage.size;
-    },
-
-    key(index: number): string | null {
-      const keys = Array.from(storage.keys());
-      return keys[index] ?? null;
-    }
-  };
-}
 
 /**
  * SvelteKit handle hook for automatic locale detection.

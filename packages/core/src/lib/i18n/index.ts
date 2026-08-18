@@ -37,7 +37,7 @@
  *     supportedLocales: ['en', 'pt-BR', 'es'],
  *     defaultLocale: 'en'
  *   }),
- *   storage: localStorage,
+ *   storage: createLocalStorage<string>(),
  *   dom: browserDOM
  * };
  *
@@ -85,7 +85,7 @@
  *       }
  *     }),
  *     localeDetector: detector,
- *     storage: new Map(), // SSR-safe storage mock
+ *     storage: createNoopStorage<string>(), // SSR-safe storage mock
  *     dom: serverDOM
  *   };
  *

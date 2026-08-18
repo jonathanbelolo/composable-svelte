@@ -7,6 +7,8 @@
  * @module i18n/types
  */
 
+import type { Storage } from '../dependencies/storage.js';
+
 /**
  * Translation namespace containing key-value pairs or functions.
  *
@@ -105,8 +107,8 @@ export interface I18nDependencies {
   /** Detect user's preferred locale */
   localeDetector: LocaleDetector;
 
-  /** Persist locale preference */
-  storage: Storage;
+  /** Persist locale preference (the library's `Storage`, not the DOM one) */
+  storage: Storage<string>;
 
   /**
    * DOM manipulation interface.

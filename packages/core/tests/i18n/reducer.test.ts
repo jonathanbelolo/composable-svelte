@@ -106,12 +106,12 @@ describe('i18nReducer', () => {
         getSupportedLocales: vi.fn(() => ['en', 'pt-BR', 'es'])
       },
       storage: {
-        getItem: vi.fn(),
+        getItem: vi.fn(() => null),
         setItem: vi.fn(),
         removeItem: vi.fn(),
-        clear: vi.fn(),
-        length: 0,
-        key: vi.fn(() => null)
+        keys: vi.fn(() => []),
+        has: vi.fn(() => false),
+        clear: vi.fn()
       },
       dom: {
         setLanguage: vi.fn(),
