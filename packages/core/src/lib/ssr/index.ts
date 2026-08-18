@@ -35,7 +35,7 @@
  * @example Static Site Generation
  * ```typescript
  * // build.ts
- * import { generateStaticSite } from '@composable-svelte/core/ssr';
+ * import { generateStaticSite } from '@composable-svelte/core/ssr/ssg';
  * import App from './App.svelte';
  * import { appReducer } from './reducer';
  *

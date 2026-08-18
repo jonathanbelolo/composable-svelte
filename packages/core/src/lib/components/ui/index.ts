@@ -53,19 +53,31 @@ export { Banner, BannerTitle, BannerDescription } from './banner/index.js';
 export { Empty } from './empty/index.js';
 
 // Content Organization
-export { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from './accordion/index.js';
-export { Collapsible, CollapsibleTrigger, CollapsibleContent } from './collapsible/index.js';
+//
+// These use `export *` rather than naming the components, so that each
+// component's reducer, state factory and — most importantly — its prop types
+// travel with it. Naming only the components left `SelectOption`, `TreeNode`,
+// `ComboboxOption` and friends unreachable from every public entry point, which
+// made those props impossible to type and `Collapsible` impossible to use at
+// all (it hard-requires a store whose reducer could not be imported).
+export * from './accordion/index.js';
+export * from './collapsible/index.js';
 
 // Interactive
-export { Tooltip } from './tooltip/index.js';
-export { DropdownMenu } from './dropdown-menu/index.js';
-export { Select } from './select/index.js';
-export { Combobox } from './combobox/index.js';
-export { Pagination } from './pagination/index.js';
-export { Calendar } from './calendar/index.js';
-export { Carousel } from './carousel/index.js';
-export { TreeView } from './tree-view/index.js';
-export { FileUpload } from './file-upload/index.js';
+export * from './tooltip/index.js';
+export * from './dropdown-menu/index.js';
+export * from './select/index.js';
+export * from './combobox/index.js';
+export * from './pagination/index.js';
+export * from './calendar/index.js';
+export * from './carousel/index.js';
+export * from './tree-view/index.js';
+export * from './file-upload/index.js';
+
+// `AccordionItem` is both a component (accordion/AccordionItem.svelte) and the
+// item type in accordion.types.ts. The component wins the `export *` above, so
+// the type is re-exported under a distinct name to keep it usable.
+export type { AccordionItem as AccordionItemData } from './accordion/accordion.types.js';
 
 // Command Palette
 export {

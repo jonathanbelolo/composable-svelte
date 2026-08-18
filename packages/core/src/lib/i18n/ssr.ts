@@ -10,7 +10,7 @@
  *
  * @example SvelteKit +page.server.ts
  * ```typescript
- * import { initI18nOnServer } from '@composable-svelte/core/i18n/ssr';
+ * import { initI18nOnServer } from '@composable-svelte/core/i18n';
  * import enCommon from '$lib/locales/en/common.json';
  * import ptBRCommon from '$lib/locales/pt-BR/common.json';
  *
@@ -34,7 +34,7 @@
  * @example SvelteKit +page.svelte
  * ```svelte
  * <script lang="ts">
- *   import { hydrateI18nOnClient } from '@composable-svelte/core/i18n/ssr';
+ *   import { hydrateI18nOnClient } from '@composable-svelte/core/i18n';
  *   import { onMount } from 'svelte';
  *
  *   let { data } = $props();
@@ -234,7 +234,7 @@ export async function initI18nOnServer(config: SSRConfig): Promise<I18nSSRData> 
  * @example
  * ```svelte
  * <script lang="ts">
- *   import { hydrateI18nOnClient } from '@composable-svelte/core/i18n/ssr';
+ *   import { hydrateI18nOnClient } from '@composable-svelte/core/i18n';
  *   import { onMount } from 'svelte';
  *
  *   let { data } = $props();
@@ -322,7 +322,7 @@ function createServerStorage(): Storage {
  *
  * @example hooks.server.ts
  * ```typescript
- * import { createI18nHandle } from '@composable-svelte/core/i18n/ssr';
+ * import { createI18nHandle } from '@composable-svelte/core/i18n';
  *
  * export const handle = createI18nHandle({
  *   supportedLocales: ['en', 'pt-BR', 'es'],

@@ -69,9 +69,13 @@ export interface DropdownMenuState {
 }
 
 /**
- * Presentation lifecycle events.
+ * Presentation lifecycle events for the dropdown menu.
+ *
+ * Deliberately named apart from the canonical `PresentationEvent` in
+ * `navigation/types.ts`: this is a two-member subset, and sharing the name made
+ * the two ambiguous once the ui barrel started re-exporting its types.
  */
-export type PresentationEvent =
+export type DropdownMenuPresentationEvent =
 	| { type: 'presentationCompleted' }
 	| { type: 'dismissalCompleted' };
 
@@ -89,7 +93,7 @@ export type DropdownMenuAction =
 	| { type: 'home' }
 	| { type: 'end' }
 	| { type: 'escape' }
-	| { type: 'presentation'; event: PresentationEvent };
+	| { type: 'presentation'; event: DropdownMenuPresentationEvent };
 
 /**
  * Dropdown menu dependencies.
