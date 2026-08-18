@@ -76,7 +76,9 @@
 	let menuElement: HTMLElement | null = $state(null);
 
 	// Animation state
-	let lastAnimatedContent: any = $state(null);
+	// Not $state: the effect below reads and writes this. A reactive guard
+	// re-triggers the effect it lives in (effect_update_depth_exceeded).
+	let lastAnimatedContent: any = null;
 
 	function handleTriggerClick() {
 		store.dispatch({ type: 'toggled' });

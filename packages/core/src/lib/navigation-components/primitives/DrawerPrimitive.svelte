@@ -115,7 +115,9 @@
   let backdropElement: HTMLElement | undefined = $state();
 
   // Track last animated content to prevent duplicate animations
-  let lastAnimatedContent: any = $state(null);
+  // Not $state: the effect below reads and writes this, and a reactive
+  // guard would re-trigger the effect it lives in (effect_update_depth_exceeded).
+  let lastAnimatedContent: any = null;
 
   // Watch presentation status and trigger animations
   $effect(() => {
@@ -128,28 +130,20 @@
       lastAnimatedContent !== currentContent
     ) {
       lastAnimatedContent = currentContent;
-      console.log('[DrawerPrimitive] Starting presentation animation for', currentContent);
       Promise.all([
         animateDrawerIn(contentElement, side, springConfig),
         animateBackdropIn(backdropElement)
       ]).then(() => {
-        console.log(
-          '[DrawerPrimitive] Animation completed, calling onPresentationComplete'
-        );
         queueMicrotask(() => onPresentationComplete?.());
       });
     }
 
     if (presentation.status === 'dismissing' && lastAnimatedContent !== null) {
       lastAnimatedContent = null;
-      console.log('[DrawerPrimitive] Starting dismissal animation');
       Promise.all([
         animateDrawerOut(contentElement, side, springConfig),
         animateBackdropOut(backdropElement)
       ]).then(() => {
-        console.log(
-          '[DrawerPrimitive] Dismissal animation completed, calling onDismissalComplete'
-        );
         queueMicrotask(() => onDismissalComplete?.());
       });
     }

@@ -32,7 +32,10 @@ export default defineConfig({
       // Node-environment tests: they read files from disk, which browser mode
       // cannot do. Run by the root jsdom config instead.
       'tests/ssr/ssg.test.ts',
-      'tests/styles/**'
+      'tests/styles/**',
+      // Needs the Cookie request header, which the browser Request API refuses
+      // to expose; runs under vitest.node.config.ts instead.
+      'tests/i18n/ssr.test.ts'
     ],
 
     // Suppress console output during tests (for CI/prepublish)

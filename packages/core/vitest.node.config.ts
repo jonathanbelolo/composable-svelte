@@ -37,7 +37,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['tests/ssr/ssg.test.ts', 'tests/styles/**/*.test.ts'],
+    include: ['tests/ssr/ssg.test.ts', 'tests/styles/**/*.test.ts', 'tests/i18n/ssr.test.ts'],
     silent: process.env.CI === 'true' || process.env.SILENT_TESTS === 'true'
   }
 });

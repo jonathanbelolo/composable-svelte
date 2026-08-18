@@ -24,6 +24,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `@tailwind` directives, and v4 consumes `--color-*` as a complete colour rather
   than an HSL triplet, so v4 apps got invalid colours even when tokens were
   present. `styles/tailwind.css` is a native v4 entry point.
+- **Nested overlays dismissed their parents.** `clickOutside` tested only
+  `node.contains(target)`, but overlays render through a portal, so a click
+  inside a nested overlay looked "outside" to its parent — dismissing a
+  confirmation alert also dismissed the modal beneath it. Dismissal now follows
+  a layer stack: only the topmost overlay reacts.
+- **Effects that re-triggered themselves.** Eleven components held an animation
+  guard in `$state` while reading and writing it inside the `$effect` it
+  guards, which is Svelte's `effect_update_depth_exceeded` condition. It fired
+  when a sheet was opened by a fast click.
+- **Debug logging removed.** 21 `console.log` calls shipped to consumers,
+  including one in `AnimatedNavigationStack`'s template that ran on every
+  render.
 - **Dark mode silently inert** for consumers whose config lacked
   `safelist: ['dark']` — Tailwind v3 tree-shakes `@layer base` selectors absent
   from `content`, purging the entire dark token block. The preset supplies it.

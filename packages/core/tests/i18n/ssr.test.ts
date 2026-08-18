@@ -48,10 +48,7 @@ describe('initI18nOnServer', () => {
     expect(result.state.fallbackChain).toEqual(['pt-BR', 'pt', 'en']);
   });
 
-  // Skipped: Browser Request API doesn't expose Cookie header for security reasons
-  // This test works in actual Node.js SSR environments (Fastify, SvelteKit, etc.)
-  // but cannot be tested in browser/Playwright environment
-  it.skip('should detect locale from cookie', async () => {
+  it('should detect locale from cookie', async () => {
     const request = new Request('http://localhost:3000/', {
       headers: {
         'cookie': 'locale=pt-BR'

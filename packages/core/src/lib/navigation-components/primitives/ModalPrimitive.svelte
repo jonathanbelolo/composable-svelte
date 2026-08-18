@@ -101,7 +101,9 @@
 
   let modalContentElement: HTMLElement | undefined = $state();
   let modalBackdropElement: HTMLElement | undefined = $state();
-  let lastAnimatedContent: any = $state(null);
+  // Not $state: the effect below reads and writes this, and a reactive
+  // guard would re-trigger the effect it lives in (effect_update_depth_exceeded).
+  let lastAnimatedContent: any = null;
   let clickOutsideCleanup: (() => void) | undefined = undefined;
 
   // Watch presentation status and trigger animations
@@ -114,18 +116,15 @@
     // Handle deep linking case: if we start with 'presented', mark content as animated
     if (presentation.status === 'presented' && lastAnimatedContent === null && currentContent) {
       lastAnimatedContent = currentContent;
-      console.log('[ModalPrimitive] Deep link detected - marking content as presented:', currentContent);
     }
 
     if (presentation.status === 'presenting' && lastAnimatedContent !== currentContent) {
       lastAnimatedContent = currentContent;
-      console.log('[ModalPrimitive] Starting presentation animation for', currentContent);
       // Animate in: content + backdrop in parallel
       Promise.all([
         animateModalIn(modalContentElement, springConfig),
         animateBackdropIn(modalBackdropElement)
       ]).then(() => {
-        console.log('[ModalPrimitive] Animation completed, calling onPresentationComplete');
         // Schedule callback outside of effect context
         queueMicrotask(() => onPresentationComplete?.());
       });
@@ -133,13 +132,11 @@
 
     if (presentation.status === 'dismissing' && lastAnimatedContent !== null) {
       lastAnimatedContent = null;
-      console.log('[ModalPrimitive] Starting dismissal animation');
       // Animate out: content + backdrop in parallel
       Promise.all([
         animateModalOut(modalContentElement, springConfig),
         animateBackdropOut(modalBackdropElement)
       ]).then(() => {
-        console.log('[ModalPrimitive] Dismissal animation completed, calling onDismissalComplete');
         // Schedule callback outside of effect context
         queueMicrotask(() => onDismissalComplete?.());
       });

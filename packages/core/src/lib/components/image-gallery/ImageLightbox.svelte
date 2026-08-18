@@ -46,7 +46,9 @@
 
 	// Reactive view of store state (store.state is backed by $state.raw)
 	const storeState = $derived(store.state);
-	let previousIndex = $state(store.state.lightbox.currentIndex);
+	// Not $state: the effect below reads and writes this. A reactive guard
+	// re-triggers the effect it lives in (effect_update_depth_exceeded).
+	let previousIndex = store.state.lightbox.currentIndex;
 
 	// Current image
 	const currentImage = $derived(storeState.images[storeState.lightbox.currentIndex]);

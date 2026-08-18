@@ -85,7 +85,8 @@
     <h1 class="text-xl font-bold flex-1">Product Details</h1>
     <button
       bind:this={infoButtonRef}
-      onclick={() => store.dispatch({ type: 'infoButtonTapped' })}
+      data-testid="detail-info"
+        onclick={() => store.dispatch({ type: 'infoButtonTapped' })}
       class="w-10 h-10 rounded-full hover:bg-accent flex items-center justify-center"
       aria-label="Info"
     >
@@ -132,6 +133,7 @@
     <!-- Primary Actions -->
     <div class="grid grid-cols-2 gap-3">
       <button
+        data-testid="detail-add-to-cart"
         onclick={() => store.dispatch({ type: 'addToCartButtonTapped' })}
         disabled={!isInStock(product)}
         class="py-3 px-4 bg-primary text-primary-foreground rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -139,6 +141,7 @@
         Add to Cart
       </button>
       <button
+        data-testid="detail-quick-view"
         onclick={() => store.dispatch({ type: 'quickViewButtonTapped' })}
         class="py-3 px-4 bg-secondary text-secondary-foreground rounded-lg font-semibold hover:opacity-90"
       >
@@ -149,12 +152,14 @@
     <!-- Secondary Actions -->
     <div class="grid grid-cols-2 gap-3">
       <button
+        data-testid="detail-share"
         onclick={() => store.dispatch({ type: 'shareButtonTapped' })}
         class="py-2 px-4 border-2 border-border rounded-lg font-medium hover:bg-accent"
       >
         Share
       </button>
       <button
+        data-testid="detail-delete"
         onclick={() => store.dispatch({ type: 'deleteButtonTapped' })}
         class="py-2 px-4 border-2 border-destructive text-destructive rounded-lg font-medium hover:bg-destructive/10"
       >

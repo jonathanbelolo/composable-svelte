@@ -77,7 +77,7 @@ describe('Modal Component', () => {
     expect(dialogs.length).toBe(0);
   });
 
-  it.skip('dismisses modal and removes from DOM when Escape pressed', async () => {
+  it('dismisses modal and removes from DOM when Escape pressed', async () => {
     const parentStore = createStore<ParentState, ParentAction>({
       initialState: {
         destination: { type: 'test', state: { value: 'test' } }

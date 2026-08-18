@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import NavigationStackPrimitive from './primitives/NavigationStackPrimitive.svelte';
 	import type { ScopedDestinationStore } from '../navigation/scope-to-destination.js';
 	import type { PresentationState } from '../navigation/types.js';
@@ -121,7 +122,9 @@
 	let previousScreenElement: HTMLElement | null = $state(null);
 
 	// Track the last animated presentation to prevent duplicate animations
-	let lastAnimatedPresentationKey: string | null = $state(null);
+	// Not $state: the effect below reads and writes this. A reactive guard
+	// re-triggers the effect it lives in (effect_update_depth_exceeded).
+	let lastAnimatedPresentationKey: string | null = null;
 
 	// Helper to create unique key for each presentation change
 	// Include stack length to ensure each push/pop has a unique key
@@ -135,7 +138,9 @@
 	let frozenCurrentScreen: any = $state(null);
 
 	// Track when animation promise completes
-	let animationPromiseCompleted = $state(false);
+	// Not $state: the effect below reads and writes this. A reactive guard
+	// re-triggers the effect it lives in (effect_update_depth_exceeded).
+	let animationPromiseCompleted = false;
 
 	// Track transition direction based on presentation state
 	const isAnimating = $derived(
@@ -149,24 +154,12 @@
 	// ============================================================================
 
 	$effect(() => {
-		console.log('[AnimatedNavigationStack] Effect triggered:', {
-			status: presentation.status,
-			stackLength: stack.length,
-			isAnimating,
-			animationPromiseCompleted,
-			frozenCurrent: frozenCurrentScreen,
-			currentScreen: stack[stack.length - 1],
-			previousScreen: stack.length > 1 ? stack[stack.length - 2] : null,
-			hasCurrentElement: !!currentScreenElement,
-			hasPreviousElement: !!previousScreenElement
-		});
 
 		// Unfreeze current screen when BOTH conditions are met:
 		// 1. Animation promise has completed
 		// 2. Status has returned to 'presented' or 'idle'
 		if (animationPromiseCompleted && (presentation.status === 'presented' || presentation.status === 'idle')) {
-			if (frozenCurrentScreen !== null) {
-				console.log('[AnimatedNavigationStack] Unfreezing current screen: promise done + status is', presentation.status);
+			if (untrack(() => frozenCurrentScreen) !== null) {
 				frozenCurrentScreen = null;
 				animationPromiseCompleted = false; // Reset for next animation
 			}
@@ -186,11 +179,9 @@
 			// Previous screen uses live state (no need to freeze)
 			frozenCurrentScreen = stack[stack.length - 1];
 
-			console.log('[AnimatedNavigationStack] Starting PUSH animation', { presentationKey: currentPresentationKey });
 
 			// Animate current screen sliding in from right
 			animateStackPushIn(currentScreenElement, springConfig).then(() => {
-				console.log('[AnimatedNavigationStack] PUSH animation promise completed');
 
 				// Clear transforms AND opacity to prevent white screen issues
 				if (currentScreenElement) {
@@ -221,11 +212,6 @@
 			currentScreenElement &&
 			lastAnimatedPresentationKey !== currentPresentationKey
 		) {
-			console.log('[AnimatedNavigationStack] Starting POP animation', {
-				presentationKey: currentPresentationKey,
-				previousKey: lastAnimatedPresentationKey,
-				stackLength: stack.length
-			});
 
 			lastAnimatedPresentationKey = currentPresentationKey;
 			animationPromiseCompleted = false;
@@ -236,7 +222,6 @@
 
 			// Animate current screen sliding out to right
 			animateStackPopOut(currentScreenElement, springConfig).then(() => {
-				console.log('[AnimatedNavigationStack] POP animation promise completed');
 
 				// Clear transforms AND opacity to prevent white screen issues
 				if (currentScreenElement) {
@@ -260,28 +245,12 @@
 				animateStackPopIn(previousScreenElement, springConfig);
 			}
 		} else if (presentation.status === 'dismissing') {
-			console.log('[AnimatedNavigationStack] POP animation BLOCKED:', {
-				hasCurrentElement: !!currentScreenElement,
-				currentKey: currentPresentationKey,
-				lastKey: lastAnimatedPresentationKey,
-				status: presentation.status
-			});
 		}
 	});
 </script>
 
 <NavigationStackPrimitive {store} {stack} {onBack}>
 	{#snippet children({ visible, store, currentScreen, previousScreen, canGoBack, onBack })}
-		{#if typeof window !== 'undefined'}
-			{@const screenToRender = frozenCurrentScreen || currentScreen}
-			{@const _ = console.log('[AnimatedNavigationStack] RENDER:', {
-				isAnimating,
-				frozenCurrent: frozenCurrentScreen,
-				currentScreen,
-				previousScreen,
-				screenToRender
-			})}
-		{/if}
 		<div class={containerClasses} role="navigation" aria-label="Navigation stack">
 			{#if showBackButton && canGoBack}
 				<header class={headerClassNames}>

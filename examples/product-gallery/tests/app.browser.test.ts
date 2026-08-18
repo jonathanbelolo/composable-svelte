@@ -6,8 +6,14 @@
 
 import { expect, test, describe } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import { userEvent } from 'vitest/browser';
+import { page, userEvent } from 'vitest/browser';
 import App from '../src/app/App.svelte';
+// `render(App)` mounts the component only — main.ts, which imports the app
+// stylesheet, never runs. Without it Tailwind emits nothing, the modal is
+// unstyled and `position: fixed` never applies, so its inline
+// `translate(-50%, -50%)` puts the content at x=-640 and Playwright refuses to
+// click a target it cannot scroll into view.
+import '../src/lib/styles.css';
 
 // Helper to wait for DOM updates
 // Presentation animations run 300ms (`duration: 300` in app.reducer), so a
@@ -58,7 +64,7 @@ describe('Product Gallery - User Flows', () => {
       const electronicsButton = buttons.find(btn => btn.textContent?.includes('Electronics'));
 
       expect(electronicsButton).toBeTruthy();
-      await userEvent.click(electronicsButton!);
+      electronicsButton!.click();
       await waitForUpdates();
 
       // Products should be filtered (electronics only)
@@ -76,14 +82,14 @@ describe('Product Gallery - User Flows', () => {
       const clothingButton = buttons.find(btn => btn.textContent?.includes('Clothing'));
 
       // Click to select
-      await userEvent.click(clothingButton!);
+      clothingButton!.click();
       await waitForUpdates();
 
       let productCards = container.querySelectorAll('[data-testid="product-card"]');
       const filteredCount = productCards.length;
 
       // Click again to deselect
-      await userEvent.click(clothingButton!);
+      clothingButton!.click();
       await waitForUpdates();
 
       // All products should be visible again
@@ -99,9 +105,9 @@ describe('Product Gallery - User Flows', () => {
       await waitForUpdates();
 
       // Click on a product card
-      const productCard = container.querySelector('[data-product-name="Wireless Headphones"]');
+      const productCard = container.querySelector<HTMLElement>('[data-product-name="Wireless Headphones"]');
       expect(productCard).toBeTruthy();
-      await userEvent.click(productCard!);
+      productCard!.click();
       await waitForUpdates();
 
       // Modal should be visible with product content
@@ -116,8 +122,8 @@ describe('Product Gallery - User Flows', () => {
       await waitForUpdates();
 
       // Open modal
-      const productCard = container.querySelector('[data-product-name="Wireless Headphones"]');
-      await userEvent.click(productCard!);
+      const productCard = container.querySelector<HTMLElement>('[data-product-name="Wireless Headphones"]');
+      productCard!.click();
       await waitForUpdates();
 
       const modal = document.querySelector('[data-dialog-type="modal"]');
@@ -128,29 +134,18 @@ describe('Product Gallery - User Flows', () => {
     });
   });
 
-  // TODO(product-gallery): these interact with a presented Modal/Sheet and fail
-  // under Playwright's actionability check — the click target resolves to an
-  // ambiguous role+name locator (every product card also renders an "Add to
-  // Cart" button), so it waits on an off-screen match until it times out.
-  // Pre-existing; unrelated to the component library, whose own modal suites
-  // pass. Re-enable once the queries are scoped to the dialog.
-  describe.skip('Add to Cart Flow', () => {
+  describe('Add to Cart Flow', () => {
     test('opens Add to Cart sheet when button is clicked', async () => {
       const { container } = render(App);
       await waitForUpdates();
 
       // Open product detail
-      const productCard = container.querySelector('[data-product-name="Smart Watch"]');
-      await userEvent.click(productCard!);
+      const productCard = container.querySelector<HTMLElement>('[data-product-name="Smart Watch"]');
+      productCard!.click();
       await waitForUpdates();
 
-      // Click Add to Cart button
-      const modal = document.querySelector('[data-dialog-type="modal"]');
-      const buttons = Array.from(modal?.querySelectorAll('button') || []);
-      const addToCartButton = buttons.find(btn => btn.textContent?.includes('Add to Cart'));
-
-      expect(addToCartButton).toBeTruthy();
-      await userEvent.click(addToCartButton!);
+      // Click Add to Cart in the detail modal
+      await page.getByTestId('detail-add-to-cart').click();
       await waitForUpdates();
 
       // Sheet should be visible
@@ -162,14 +157,11 @@ describe('Product Gallery - User Flows', () => {
       await waitForUpdates();
 
       // Navigate to Add to Cart sheet
-      const productCard = container.querySelector('[data-product-name="Bluetooth Speaker"]');
-      await userEvent.click(productCard!);
+      const productCard = container.querySelector<HTMLElement>('[data-product-name="Bluetooth Speaker"]');
+      productCard!.click();
       await waitForUpdates();
 
-      const modal = document.querySelector('[data-dialog-type="modal"]');
-      const buttons = Array.from(modal?.querySelectorAll('button') || []);
-      const addToCartButton = buttons.find(btn => btn.textContent?.includes('Add to Cart'));
-      await userEvent.click(addToCartButton!);
+      await page.getByTestId('detail-add-to-cart').click();
       await waitForUpdates();
 
       // Click increment button
@@ -184,29 +176,18 @@ describe('Product Gallery - User Flows', () => {
     });
   });
 
-  // TODO(product-gallery): these interact with a presented Modal/Sheet and fail
-  // under Playwright's actionability check — the click target resolves to an
-  // ambiguous role+name locator (every product card also renders an "Add to
-  // Cart" button), so it waits on an off-screen match until it times out.
-  // Pre-existing; unrelated to the component library, whose own modal suites
-  // pass. Re-enable once the queries are scoped to the dialog.
-  describe.skip('Share Flow', () => {
+  describe('Share Flow', () => {
     test('opens Share sheet when button is clicked', async () => {
       const { container } = render(App);
       await waitForUpdates();
 
       // Open product detail
-      const productCard = container.querySelector('[data-product-name="Cotton T-Shirt"]');
-      await userEvent.click(productCard!);
+      const productCard = container.querySelector<HTMLElement>('[data-product-name="Cotton T-Shirt"]');
+      productCard!.click();
       await waitForUpdates();
 
-      // Click Share button
-      const modal = document.querySelector('[data-dialog-type="modal"]');
-      const buttons = Array.from(modal?.querySelectorAll('button') || []);
-      const shareButton = buttons.find(btn => btn.textContent?.trim() === 'Share');
-
-      expect(shareButton).toBeTruthy();
-      await userEvent.click(shareButton!);
+      // Click Share in the detail modal
+      await page.getByTestId('detail-share').click();
       await waitForUpdates();
 
       // Sheet should show share methods
@@ -216,29 +197,18 @@ describe('Product Gallery - User Flows', () => {
     });
   });
 
-  // TODO(product-gallery): these interact with a presented Modal/Sheet and fail
-  // under Playwright's actionability check — the click target resolves to an
-  // ambiguous role+name locator (every product card also renders an "Add to
-  // Cart" button), so it waits on an off-screen match until it times out.
-  // Pre-existing; unrelated to the component library, whose own modal suites
-  // pass. Re-enable once the queries are scoped to the dialog.
-  describe.skip('Quick View Flow', () => {
+  describe('Quick View Flow', () => {
     test('opens Quick View modal when button is clicked', async () => {
       const { container } = render(App);
       await waitForUpdates();
 
       // Open product detail
-      const productCard = container.querySelector('[data-product-name="Yoga Mat"]');
-      await userEvent.click(productCard!);
+      const productCard = container.querySelector<HTMLElement>('[data-product-name="Yoga Mat"]');
+      productCard!.click();
       await waitForUpdates();
 
-      // Click Quick View
-      const modal = document.querySelector('[data-dialog-type="modal"]');
-      const buttons = Array.from(modal?.querySelectorAll('button') || []);
-      const quickViewButton = buttons.find(btn => btn.textContent?.includes('Quick View'));
-
-      expect(quickViewButton).toBeTruthy();
-      await userEvent.click(quickViewButton!);
+      // Click Quick View in the detail modal
+      await page.getByTestId('detail-quick-view').click();
       await waitForUpdates();
 
       // Nested modal should show (Quick View modal)
@@ -247,29 +217,18 @@ describe('Product Gallery - User Flows', () => {
     });
   });
 
-  // TODO(product-gallery): these interact with a presented Modal/Sheet and fail
-  // under Playwright's actionability check — the click target resolves to an
-  // ambiguous role+name locator (every product card also renders an "Add to
-  // Cart" button), so it waits on an off-screen match until it times out.
-  // Pre-existing; unrelated to the component library, whose own modal suites
-  // pass. Re-enable once the queries are scoped to the dialog.
-  describe.skip('Delete Flow', () => {
+  describe('Delete Flow', () => {
     test('shows delete confirmation alert when delete is clicked', async () => {
       const { container } = render(App);
       await waitForUpdates();
 
       // Open product detail
-      const productCard = container.querySelector('[data-product-name="Smart Watch"]');
-      await userEvent.click(productCard!);
+      const productCard = container.querySelector<HTMLElement>('[data-product-name="Smart Watch"]');
+      productCard!.click();
       await waitForUpdates();
 
-      // Click Delete
-      const modal = document.querySelector('[data-dialog-type="modal"]');
-      const buttons = Array.from(modal?.querySelectorAll('button') || []);
-      const deleteButton = buttons.find(btn => btn.textContent?.trim() === 'Delete');
-
-      expect(deleteButton).toBeTruthy();
-      await userEvent.click(deleteButton!);
+      // Click Delete in the detail modal
+      await page.getByTestId('detail-delete').click();
       await waitForUpdates();
 
       // Alert should be visible
@@ -282,23 +241,15 @@ describe('Product Gallery - User Flows', () => {
       await waitForUpdates();
 
       // Navigate to delete alert
-      const productCard = container.querySelector('[data-product-name="Bluetooth Speaker"]');
-      await userEvent.click(productCard!);
+      const productCard = container.querySelector<HTMLElement>('[data-product-name="Bluetooth Speaker"]');
+      productCard!.click();
       await waitForUpdates();
 
-      const modal = document.querySelector('[data-dialog-type="modal"]');
-      let buttons = Array.from(modal?.querySelectorAll('button') || []);
-      const deleteButton = buttons.find(btn => btn.textContent?.trim() === 'Delete');
-      await userEvent.click(deleteButton!);
+      await page.getByTestId('detail-delete').click();
       await waitForUpdates();
 
       // Click Cancel in the alert dialog
-      const alert = document.querySelector('[data-dialog-type="alert"]');
-      buttons = Array.from(alert?.querySelectorAll('button') || []);
-      const cancelButton = buttons.find(btn => btn.textContent?.trim() === 'Cancel');
-
-      expect(cancelButton).toBeTruthy();
-      await userEvent.click(cancelButton!);
+      await page.getByTestId('delete-cancel').click();
       await waitForUpdates();
       await waitForUpdates(); // Extra wait for state updates
 
@@ -315,8 +266,8 @@ describe('Product Gallery - User Flows', () => {
       await waitForUpdates();
 
       // Open product detail
-      const productCard = container.querySelector('[data-product-name="Wireless Headphones"]');
-      await userEvent.click(productCard!);
+      const productCard = container.querySelector<HTMLElement>('[data-product-name="Wireless Headphones"]');
+      productCard!.click();
       await waitForUpdates();
 
       // Click info button
@@ -331,13 +282,7 @@ describe('Product Gallery - User Flows', () => {
     });
   });
 
-  // TODO(product-gallery): these interact with a presented Modal/Sheet and fail
-  // under Playwright's actionability check — the click target resolves to an
-  // ambiguous role+name locator (every product card also renders an "Add to
-  // Cart" button), so it waits on an off-screen match until it times out.
-  // Pre-existing; unrelated to the component library, whose own modal suites
-  // pass. Re-enable once the queries are scoped to the dialog.
-  describe.skip('Complex User Journey', () => {
+  describe('Complex User Journey', () => {
     test('full user journey: filter → view product → add to cart → share', async () => {
       const { container } = render(App);
       await waitForUpdates();
@@ -346,12 +291,12 @@ describe('Product Gallery - User Flows', () => {
       const sidebar = container.querySelector('[aria-label="Sidebar navigation"]');
       const sidebarButtons = Array.from(sidebar?.querySelectorAll('button') || []);
       const electronicsButton = sidebarButtons.find(btn => btn.textContent?.includes('Electronics'));
-      await userEvent.click(electronicsButton!);
+      electronicsButton!.click();
       await waitForUpdates();
 
       // Step 2: Click on a product
-      const productCard = container.querySelector('[data-product-name="Wireless Headphones"]');
-      await userEvent.click(productCard!);
+      const productCard = container.querySelector<HTMLElement>('[data-product-name="Wireless Headphones"]');
+      productCard!.click();
       await waitForUpdates();
 
       // Step 3: Add to cart

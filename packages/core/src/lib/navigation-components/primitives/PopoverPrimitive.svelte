@@ -99,7 +99,9 @@
   let positionTransform: string = $state('');
 
   // Track last animated content to prevent duplicate animations
-  let lastAnimatedContent: any = $state(null);
+  // Not $state: the effect below reads and writes this, and a reactive
+  // guard would re-trigger the effect it lives in (effect_update_depth_exceeded).
+  let lastAnimatedContent: any = null;
 
   // Watch presentation status and trigger animations
   $effect(() => {
@@ -112,22 +114,14 @@
       lastAnimatedContent !== currentContent
     ) {
       lastAnimatedContent = currentContent;
-      console.log('[PopoverPrimitive] Starting presentation animation for', currentContent);
       animatePopoverIn(contentElement, positionTransform, springConfig).then(() => {
-        console.log(
-          '[PopoverPrimitive] Animation completed, calling onPresentationComplete'
-        );
         queueMicrotask(() => onPresentationComplete?.());
       });
     }
 
     if (presentation.status === 'dismissing' && lastAnimatedContent !== null) {
       lastAnimatedContent = null;
-      console.log('[PopoverPrimitive] Starting dismissal animation');
       animatePopoverOut(contentElement, positionTransform, springConfig).then(() => {
-        console.log(
-          '[PopoverPrimitive] Dismissal animation completed, calling onDismissalComplete'
-        );
         queueMicrotask(() => onDismissalComplete?.());
       });
     }

@@ -32,12 +32,14 @@
   <!-- Buttons -->
   <div class="flex gap-3 justify-end">
     <button
+      data-testid="delete-cancel"
       onclick={() => store.dispatch({ type: 'cancelButtonTapped' })}
       class="px-4 py-2 border-2 border-border rounded-md hover:bg-accent"
     >
       Cancel
     </button>
     <button
+      data-testid="delete-confirm"
       onclick={() => store.dispatch({ type: 'confirmButtonTapped' })}
       class="px-4 py-2 bg-destructive text-destructive-foreground rounded-md hover:opacity-90"
     >

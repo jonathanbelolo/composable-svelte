@@ -38,7 +38,9 @@
 	const { store, contentId, triggerId } = context;
 
 	let contentElement: HTMLDivElement | null = $state(null);
-	let previousExpandedState = $state($store.isExpanded);
+	// Not $state: the effect below reads and writes this. A reactive guard
+	// re-triggers the effect it lives in (effect_update_depth_exceeded).
+	let previousExpandedState = $store.isExpanded;
 
 	// Animate expand/collapse when isExpanded changes
 	$effect(() => {

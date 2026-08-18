@@ -111,14 +111,11 @@
 
     if (!presentation) return;
 
-    console.log('[SidebarPrimitive] Transition ended, status:', presentation.status);
 
     // Trigger appropriate callback based on current status
     if (presentation.status === 'presenting') {
-      console.log('[SidebarPrimitive] Presentation complete');
       queueMicrotask(() => onPresentationComplete?.());
     } else if (presentation.status === 'dismissing') {
-      console.log('[SidebarPrimitive] Dismissal complete');
       queueMicrotask(() => onDismissalComplete?.());
     }
   }

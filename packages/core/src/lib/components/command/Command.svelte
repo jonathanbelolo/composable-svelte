@@ -134,7 +134,9 @@
 	// Animation integration
 	let contentElement: HTMLElement | undefined = $state();
 	let backdropElement: HTMLElement | undefined = $state();
-	let lastAnimatedContent: any = $state(null);
+	// Not $state: the effect below reads and writes this. A reactive guard
+	// re-triggers the effect it lives in (effect_update_depth_exceeded).
+	let lastAnimatedContent: any = null;
 
 	// Watch presentation status and trigger animations
 	$effect(() => {
