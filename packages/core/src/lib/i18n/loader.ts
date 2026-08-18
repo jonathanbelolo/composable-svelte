@@ -5,6 +5,7 @@
  */
 
 import type { TranslationLoader, TranslationNamespace } from './types.js';
+import { isDev } from '../dependencies/utils.js';
 
 /**
  * Cache entry with timestamp for TTL management.
@@ -20,7 +21,7 @@ interface CacheEntry {
  * - Production: 1 hour
  */
 function getCacheLifetime(): number {
-  return import.meta.env.DEV ? 0 : 60 * 60 * 1000; // 0ms dev, 1hr prod
+  return isDev() ? 0 : 60 * 60 * 1000; // 0ms dev, 1hr prod
 }
 
 /**

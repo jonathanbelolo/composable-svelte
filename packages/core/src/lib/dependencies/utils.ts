@@ -22,6 +22,36 @@ export function isBrowser(): boolean {
 }
 
 /**
+ * Check whether the library is running in a development build.
+ *
+ * Reads Vite's `import.meta.env.DEV` when a bundler injected it, and otherwise
+ * falls back to `process.env.NODE_ENV`. Consuming `import.meta.env` directly
+ * throws in a plain Node SSR process, where `import.meta` has no `env`.
+ *
+ * This is the one place in the package that touches `import.meta`, so
+ * `svelte-package` warns about a single module rather than eight.
+ *
+ * @returns True when running a development build
+ *
+ * @example
+ * ```typescript
+ * if (isDev()) {
+ *   console.warn('[Composable Svelte] destination is missing a `type` field');
+ * }
+ * ```
+ */
+export function isDev(): boolean {
+	try {
+		const env = typeof import.meta !== 'undefined' ? import.meta.env : undefined;
+		if (env) return Boolean(env.DEV);
+	} catch {
+		// `import.meta` is unavailable in a CommonJS interop context.
+	}
+
+	return typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production';
+}
+
+/**
  * Get available storage space using Storage API.
  *
  * @returns Object with usage and quota in bytes, or null if not supported

@@ -13,6 +13,7 @@
 import type { I18nState, Translator, TranslationFunction } from './types.js';
 import { isICUMessage, compileICU } from './icu.js';
 import { createIntlFormatters, DateFormats, NumberFormats } from './formatters.js';
+import { isDev } from '../dependencies/utils.js';
 
 /**
  * Simple interpolation: "Hello {name}" + { name: "Alice" } → "Hello Alice"
@@ -70,7 +71,7 @@ export function createTranslator(
     }
 
     // Fallback: return key if translation not found
-    if (import.meta.env.DEV) {
+    if (isDev()) {
       console.warn(`[i18n] Translation missing: ${namespace}.${key}`);
     }
     return key;

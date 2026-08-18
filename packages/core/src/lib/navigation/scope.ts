@@ -20,6 +20,7 @@
 
 import type { Store } from '../types.js';
 import type { PresentationAction } from './types.js';
+import { isDev } from '../dependencies/utils.js';
 
 /**
  * Scoped store interface.
@@ -224,7 +225,7 @@ class ScopeBuilder<State, Action, Current = State> {
 
 		// Validate discriminated union structure
 		if (typeof value !== 'object') {
-			if (import.meta.env.DEV) {
+			if (isDev()) {
 				console.warn(
 					`[scopeTo.case] Value at path [${this.path.join('.')}] is not an object (got ${typeof value}). ` +
 						`Expected a discriminated union like { type: '${caseType}', state: ... }`
@@ -234,7 +235,7 @@ class ScopeBuilder<State, Action, Current = State> {
 		}
 
 		if (!('type' in value)) {
-			if (import.meta.env.DEV) {
+			if (isDev()) {
 				console.warn(
 					`[scopeTo.case] Value at path [${this.path.join('.')}] is missing 'type' field. ` +
 						`Expected a discriminated union like { type: '${caseType}', state: ... }`
@@ -244,7 +245,7 @@ class ScopeBuilder<State, Action, Current = State> {
 		}
 
 		if (!('state' in value)) {
-			if (import.meta.env.DEV) {
+			if (isDev()) {
 				console.warn(
 					`[scopeTo.case] Value at path [${this.path.join('.')}] is missing 'state' field. ` +
 						`Discriminated unions should have structure: { type: '${caseType}', state: ... }`
@@ -258,7 +259,7 @@ class ScopeBuilder<State, Action, Current = State> {
 			const state = (value as any).state;
 
 			// Warn if state is undefined (potential reducer bug)
-			if (import.meta.env.DEV && state === undefined) {
+			if (isDev() && state === undefined) {
 				console.warn(
 					`[scopeTo.case] Destination at path [${this.path.join('.')}] has case '${caseType}' ` +
 						`but state is undefined. This may indicate a bug in your reducer.`
@@ -311,7 +312,7 @@ class ScopeBuilder<State, Action, Current = State> {
 
 		// Development warning: detect if user should use .case() instead
 		if (
-			import.meta.env.DEV &&
+			isDev() &&
 			typeof value === 'object' &&
 			'type' in value &&
 			'state' in value

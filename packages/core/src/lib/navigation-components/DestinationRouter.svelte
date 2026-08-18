@@ -27,6 +27,7 @@
 	 * ```
 	 */
 
+	import { isDev } from '../dependencies/utils.js';
 	import { scopeTo } from '../navigation/scope.js';
 	import Modal from './Modal.svelte';
 	import Sheet from './Sheet.svelte';
@@ -76,7 +77,7 @@
 
 		// Development-mode validation: check if active destination has a route
 		if (
-			import.meta.env.DEV &&
+			isDev() &&
 			typeof destinationValue === 'object' &&
 			'type' in destinationValue
 		) {

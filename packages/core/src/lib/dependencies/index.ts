@@ -23,6 +23,7 @@ export {
 // Utilities
 export {
 	isBrowser,
+	isDev,
 	getStorageQuota,
 	getByteSize,
 	isStorageAvailable
