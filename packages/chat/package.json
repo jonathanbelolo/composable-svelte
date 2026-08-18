@@ -100,7 +100,8 @@
     "vitest": "^4.0.7"
   },
   "dependencies": {
-    "marked": "^16.4.1"
+    "marked": "^16.4.1",
+    "yjs": "^13.6.27"
   },
   "publishConfig": {
     "access": "public"

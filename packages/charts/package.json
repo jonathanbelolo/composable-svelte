@@ -67,6 +67,7 @@
   },
   "devDependencies": {
     "@composable-svelte/core": "workspace:*",
+    "@playwright/test": "^1.56.1",
     "@sveltejs/package": "^2.5.4",
     "@sveltejs/vite-plugin-svelte": "^6.2.1",
     "@types/d3-array": "^3.2.0",

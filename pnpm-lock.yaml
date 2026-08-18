@@ -7,10 +7,6 @@ settings:
 importers:
 
   .:
-    dependencies:
-      yjs:
-        specifier: ^13.6.27
-        version: 13.6.27
     devDependencies:
       '@axe-core/playwright':
         specifier: ^4.11.0
@@ -555,6 +551,9 @@ importers:
       '@composable-svelte/core':
         specifier: workspace:*
         version: link:../core
+      '@playwright/test':
+        specifier: ^1.56.1
+        version: 1.56.1
       '@sveltejs/package':
         specifier: ^2.5.4
         version: 2.5.4(svelte@5.43.3)(typescript@5.9.3)
@@ -615,6 +614,9 @@ importers:
       marked:
         specifier: ^16.4.1
         version: 16.4.1
+      yjs:
+        specifier: ^13.6.27
+        version: 13.6.27
     devDependencies:
       '@composable-svelte/code':
         specifier: workspace:*

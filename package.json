@@ -28,8 +28,5 @@
     "onlyBuiltDependencies": [
       "esbuild"
     ]
-  },
-  "dependencies": {
-    "yjs": "^13.6.27"
   }
 }
