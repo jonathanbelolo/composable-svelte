@@ -51,6 +51,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   it cannot shadow a consumer's own `--color-*` overrides; every `--color-*` name
   it shipped through v0.5.x still works via the preset's resolution chain.
 
+### Publish order
+
+`@composable-svelte/core` must be published **first**. The satellite packages
+declare `^0.6.0` in their core peer range, which is unsatisfiable until 0.6.0 is
+on npm. Then publish the seven satellites (each patch-bumped so the widened
+range actually reaches consumers).
+
 ### Notes
 
 - **Applying the preset changes `dark:` from a media query to a class.** The

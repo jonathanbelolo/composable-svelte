@@ -1,6 +1,6 @@
 {
   "name": "@composable-svelte/auth",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Session store, subject helpers, and auth guard components for Composable Svelte - Client half of the DDD identity substrate",
   "type": "module",
   "main": "./dist/index.js",
@@ -85,5 +85,8 @@
     "typescript": "^5.5.4",
     "vite": "^6.4.1",
     "vitest": "^4.0.7"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
