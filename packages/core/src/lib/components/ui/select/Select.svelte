@@ -32,6 +32,15 @@
 		options: SelectOption<T>[];
 
 		/**
+		 * `id` for the trigger, so a `<label for=…>` can address it.
+		 *
+		 * The component does not spread rest props, so without this an `id`
+		 * passed by a consumer was silently dropped and their label association
+		 * did nothing.
+		 */
+		id?: string | undefined;
+
+		/**
 		 * Selected value (single or multi-select array).
 		 * Use bind:value for two-way binding.
 		 */
@@ -70,6 +79,7 @@
 
 	let {
 		options,
+		id,
 		value = $bindable(null),
 		placeholder = 'Select an option...',
 		searchable = false,
@@ -103,6 +113,7 @@
 		store.dispatch({ type: 'optionsChanged', options });
 	});
 
+	let containerElement: HTMLElement | null = $state(null);
 	let triggerElement: HTMLElement | null = $state(null);
 	let dropdownElement: HTMLElement | null = $state(null);
 	let searchInputElement: HTMLInputElement | null = $state(null);
@@ -219,10 +230,10 @@
 
 	// Close on click outside
 	function handleClickOutside(event: MouseEvent) {
-		if (
-			!dropdownElement?.contains(event.target as Node) &&
-			!triggerElement?.contains(event.target as Node)
-		) {
+		// The whole container, not trigger + dropdown: the clear button is a
+		// sibling of the trigger, so a narrower test would treat clearing as an
+		// outside click and close the dropdown.
+		if (containerElement && !containerElement.contains(event.target as Node)) {
 			store.dispatch({ type: 'closed' });
 		}
 	}
@@ -239,35 +250,48 @@
 
 <svelte:window onkeydown={handleDropdownKeyDown} />
 
-<div class="relative inline-block w-full">
+<div bind:this={containerElement} class="relative inline-block w-full">
 	<!-- Trigger -->
-	<button
-		bind:this={triggerElement}
-		type="button"
-		class={cn(
-			'flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm',
-			'ring-offset-background placeholder:text-muted-foreground',
-			'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
-			disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
-			className
-		)}
-		aria-haspopup="listbox"
-		aria-expanded={$store.isOpen}
-		{disabled}
-		onclick={handleTriggerClick}
-		onkeydown={handleTriggerKeyDown}
-	>
-		<span class={cn('truncate', !$store.selected && 'text-muted-foreground')}>
-			{displayText}
-		</span>
-		<div class="flex items-center gap-2">
+	<div class="relative">
+		<button
+			bind:this={triggerElement}
+			{id}
+			type="button"
+			class={cn(
+				'flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm',
+				'ring-offset-background placeholder:text-muted-foreground',
+				'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+				disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
+				// Reserve room for the overlaid controls. Keyed on the same
+				// condition as the clear button so the text area reflows exactly
+				// as it did when they shared a flex row.
+				$store.selected && !disabled ? 'pr-[3.25rem]' : 'pr-7',
+				className
+			)}
+			aria-haspopup="listbox"
+			aria-expanded={$store.isOpen}
+			{disabled}
+			onclick={handleTriggerClick}
+			onkeydown={handleTriggerKeyDown}
+		>
+			<span class={cn('truncate', !$store.selected && 'text-muted-foreground')}>
+				{displayText}
+			</span>
+		</button>
+
+		<!-- Controls: siblings of the trigger, not children. A <button> inside a
+		     <button> is invalid HTML — the parser closes the outer one, so a
+		     server-rendered Select hydrated against a different tree. -->
+		<div class="absolute inset-y-0 right-0 flex items-center gap-2 pr-3">
 			{#if $store.selected && !disabled}
 				<button
 					type="button"
 					class="text-muted-foreground hover:text-foreground"
+					aria-label="Clear selection"
 					onclick={handleClear}
 				>
 					<svg
+						aria-hidden="true"
 						xmlns="http://www.w3.org/2000/svg"
 						width="16"
 						height="16"
@@ -301,7 +325,7 @@
 				<polyline points="6 9 12 15 18 9"></polyline>
 			</svg>
 		</div>
-	</button>
+	</div>
 
 	<!-- Dropdown -->
 	{#if $store.isOpen}
