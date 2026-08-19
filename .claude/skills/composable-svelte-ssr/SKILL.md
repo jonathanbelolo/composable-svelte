@@ -1090,7 +1090,7 @@ The SSR module includes security middleware for production Fastify servers.
 ### Security Headers
 
 ```typescript
-import { createSecurityHeaders, fastifySecurityHeaders, defaultSecurityHeaders } from '@composable-svelte/core/ssr';
+import { createSecurityHeaders, fastifySecurityHeaders, defaultSecurityHeaders } from '@composable-svelte/core/ssr/middleware';
 
 // Use with Fastify
 app.register(fastifySecurityHeaders);
@@ -1109,7 +1109,7 @@ console.log(defaultSecurityHeaders);
 ### HTML Sanitization
 
 ```typescript
-import { sanitizeHTML, createSanitizer, defaultSanitizeOptions } from '@composable-svelte/core/ssr';
+import { sanitizeHTML, createSanitizer, defaultSanitizeOptions } from '@composable-svelte/core/ssr/middleware';
 
 // Quick sanitize
 const clean = sanitizeHTML('<script>alert("xss")</script><p>Safe</p>');
@@ -1126,10 +1126,10 @@ const clean = sanitizer('<a href="/" onclick="evil()">Link</a>');
 ### Rate Limiting
 
 ```typescript
-import { RateLimiter, fastifyRateLimit } from '@composable-svelte/core/ssr';
+import { RateLimiter, fastifyRateLimit } from '@composable-svelte/core/ssr/middleware';
 
 // Use with Fastify
-app.register(fastifyRateLimit, { max: 100, timeWindow: '1 minute' });
+app.register(fastifyRateLimit, { max: 100, windowMs: 60_000 });
 
 // Standalone rate limiter
 const limiter = new RateLimiter({ max: 100, windowMs: 60000 });

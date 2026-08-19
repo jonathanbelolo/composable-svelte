@@ -271,7 +271,7 @@ if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32) {
 
 **Use built-in middleware**:
 ```typescript
-import { fastifySecurityHeaders } from '@composable-svelte/core/ssr';
+import { fastifySecurityHeaders } from '@composable-svelte/core/ssr/middleware';
 
 fastifySecurityHeaders(app, {
   contentSecurityPolicy: [
@@ -308,7 +308,7 @@ curl -I https://your-app.fly.dev
 
 **Per-IP rate limiting**:
 ```typescript
-import { fastifyRateLimit } from '@composable-svelte/core/ssr';
+import { fastifyRateLimit } from '@composable-svelte/core/ssr/middleware';
 
 fastifyRateLimit(app, {
   max: 100,        // 100 requests
@@ -317,18 +317,27 @@ fastifyRateLimit(app, {
 });
 ```
 
-**Per-route rate limiting**:
+**Per-route rate limiting**: `fastifyRateLimit` installs a single `onRequest`
+hook with one limiter, so it has no per-route config. For a stricter limit on
+one route, construct a `RateLimiter` directly and check it in that handler:
+
 ```typescript
-app.get('/api/expensive', {
-  config: {
-    rateLimit: {
-      max: 10,       // 10 requests
-      timeWindow: 60000  // per minute
-    }
+import { RateLimiter } from '@composable-svelte/core/ssr/middleware';
+
+const expensiveLimit = new RateLimiter({ max: 10, windowMs: 60_000 });
+
+app.get('/api/expensive', async (request, reply) => {
+  const { allowed, retryAfter } = expensiveLimit.check(request.ip);
+  if (!allowed) {
+    return reply.header('Retry-After', retryAfter!).status(429).send({
+      error: 'Too Many Requests'
+    });
   }
-}, async (request, reply) => {
   // Expensive operation
 });
+
+// Call expensiveLimit.destroy() on shutdown — the constructor starts a
+// cleanup interval.
 ```
 
 ---

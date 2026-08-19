@@ -52,7 +52,8 @@ The foundation library. Everything else builds on this.
 | `core/api` | HTTP client with interceptors, retries, caching, deduplication |
 | `core/websocket` | WebSocket client with reconnection, heartbeat, channel routing |
 | `core/i18n` | ICU MessageFormat, locale detection, translation loaders, date/number formatters |
-| `core/ssr` | Server-side rendering (`renderToHTML`), hydration, security middleware |
+| `core/ssr` | Server-side rendering (`renderToHTML`), hydration — browser-safe |
+| `core/ssr/middleware` | Security headers, rate limiting, HTML sanitization (Node.js only — separated to keep DOMPurify out of browser builds) |
 | `core/ssr/ssg` | Static site generation (Node.js only — separated to avoid `fs` in browser builds) |
 | `core/dependencies` | Injectable Clock (with MockClock for tests), Storage (localStorage/cookies) |
 | `core/animation` | Motion One helpers for lifecycle animations (modal/sheet/accordion/toast transitions) |

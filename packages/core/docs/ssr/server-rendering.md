@@ -273,7 +273,7 @@ fastify.get('*', async (request, reply) => {
 **1. Create Build Script** (`src/build/ssg.ts`):
 
 ```typescript
-import { generateStaticSite } from '@composable-svelte/core/ssr';
+import { generateStaticSite } from '@composable-svelte/core/ssr/ssg';
 import App from '../shared/App.svelte';
 import { appReducer } from '../shared/reducer';
 import { loadPosts } from '../server/data';
@@ -500,32 +500,28 @@ fastify.get('*', async (request, reply) => {
 ### Rate Limiting
 
 ```typescript
-import { fastifyRateLimit } from '@composable-svelte/core/ssr';
+import { fastifyRateLimit } from '@composable-svelte/core/ssr/middleware';
 
 fastify.register(fastifyRateLimit, {
-  max: 100,             // 100 requests
-  timeWindow: '1 minute',
-  errorResponseBuilder: () => ({
-    statusCode: 429,
-    error: 'Too Many Requests',
-    message: 'Rate limit exceeded'
-  })
+  max: 100,              // requests per window
+  windowMs: 60_000,      // the window, in milliseconds
+  message: 'Rate limit exceeded. Please try again later.',
+  statusCode: 429,
+  keyGenerator: (req) => req.ip   // the default
 });
 ```
 
 ### Security Headers
 
 ```typescript
-import { fastifySecurityHeaders } from '@composable-svelte/core/ssr';
+import { fastifySecurityHeaders } from '@composable-svelte/core/ssr/middleware';
 
 fastify.register(fastifySecurityHeaders, {
-  contentSecurityPolicy: {
-    defaultSrc: ["'self'"],
-    scriptSrc: ["'self'", "'unsafe-inline'"],
-    styleSrc: ["'self'", "'unsafe-inline'"]
-  },
-  xFrameOptions: 'DENY',
-  xContentTypeOptions: 'nosniff'
+  contentSecurityPolicy:
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'",
+  frameOptions: 'DENY',
+  referrerPolicy: 'strict-origin-when-cross-origin',
+  hsts: { maxAge: 31536000, includeSubDomains: true }
 });
 ```
 

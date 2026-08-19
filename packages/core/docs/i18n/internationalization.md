@@ -398,7 +398,7 @@ async function hydrate() {
 Generate static pages for each locale:
 
 ```typescript
-import { generateStaticSite } from '@composable-svelte/core/ssr';
+import { generateStaticSite } from '@composable-svelte/core/ssr/ssg';
 
 const supportedLocales = ['en', 'fr', 'es'];
 const routes = [];

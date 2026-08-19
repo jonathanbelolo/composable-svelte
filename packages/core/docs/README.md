@@ -306,9 +306,9 @@ hydrateStore(serializedState, { reducer, dependencies })
 generateStaticSite(App, { routes, outDir }, { reducer, dependencies })
 generateStaticPage(App, path, outDir, storeConfig)
 
-// Security
-fastify.register(fastifyRateLimit, { max: 100, timeWindow: '1 minute' })
-fastify.register(fastifySecurityHeaders, { contentSecurityPolicy })
+// Security — from '@composable-svelte/core/ssr/middleware'
+fastify.register(fastifyRateLimit, { max: 100, windowMs: 60_000 })
+fastify.register(fastifySecurityHeaders, { contentSecurityPolicy, frameOptions: 'DENY' })
 ```
 
 ## 🐛 Troubleshooting

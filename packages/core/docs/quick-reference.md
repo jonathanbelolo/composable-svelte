@@ -526,7 +526,7 @@ function hydrate() {
 ### Build Script
 
 ```typescript
-import { generateStaticSite } from '@composable-svelte/core/ssr';
+import { generateStaticSite } from '@composable-svelte/core/ssr/ssg';
 
 await generateStaticSite(App, {
   routes: [

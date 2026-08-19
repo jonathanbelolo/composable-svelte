@@ -81,6 +81,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `navigation-components` now also exports `DestinationRouter` and the headless
   primitives, matching what the root barrel already offered.
 
+### Changed — SSR entry points
+
+- **Server-only middleware moved to `@composable-svelte/core/ssr/middleware`.**
+  `sanitizeHTML`, `createSanitizer`, `defaultSanitizeOptions`,
+  `createSecurityHeaders`, `fastifySecurityHeaders`, `defaultSecurityHeaders`,
+  `RateLimiter`, `fastifyRateLimit` and their config types are no longer
+  exported from `/ssr`. The names are unchanged.
+
+  They had to move because `html-sanitization` imports `isomorphic-dompurify`,
+  which depends on `jsdom`, and the root entry re-exports through the `/ssr`
+  barrel — so *any* consumer of `@composable-svelte/core`, browser apps
+  included, pulled DOMPurify into their module graph. A bundle of an app that
+  imported only `Effect` from the root entry went from 70,458 bytes containing
+  DOMPurify's browser build (and throwing `ReferenceError: window is not
+  defined` under Node) to 22,355 bytes without it.
+
+  `/ssr` keeps `hydrateStore`, `parseState`, `serializeStore`, `serializeState`,
+  `renderToHTML`, `renderComponent`, `buildHydrationScript` and `isServer`, and
+  is now browser-safe. A new test walks the built module graph of every entry in
+  the `exports` map and fails any client-reachable one that can reach jsdom,
+  DOMPurify, fastify or a Node builtin.
+
+- For the record: importing `generateStaticSite` from `/ssr` has never worked —
+  the barrel only ever re-exported SSG *types*, deliberately, to keep `fs` out
+  of browser builds. It has always been `@composable-svelte/core/ssr/ssg`.
+  Several docs said otherwise and are corrected.
+
 ### Changed — renames
 
 - The `AccordionItem` **type** is exported as `AccordionItemData`; the name

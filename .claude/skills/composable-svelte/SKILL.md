@@ -51,6 +51,7 @@ const count = $derived(store.state.count);
 | WebSocket, reconnection, channels | `@composable-svelte/core/websocket` | `composable-svelte-core` |
 | Internationalization (i18n) | `@composable-svelte/core/i18n` | `composable-svelte-i18n` |
 | Server-side rendering, hydration | `@composable-svelte/core/ssr` | `composable-svelte-ssr` |
+| Security headers, rate limiting, HTML sanitization | `@composable-svelte/core/ssr/middleware` | `composable-svelte-ssr` |
 | Static site generation | `@composable-svelte/core/ssr/ssg` | `composable-svelte-ssr` |
 | TestStore, send/receive testing | `@composable-svelte/core/test` | `composable-svelte-testing` |
 | Charts and data visualization | `@composable-svelte/charts` | `composable-svelte-charts` |
