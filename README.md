@@ -375,11 +375,19 @@ Inspired by [The Composable Architecture (TCA)](https://github.com/pointfreeco/s
 # Install dependencies
 pnpm install
 
+# Build first. `dist/` is gitignored, and every satellite package and example
+# resolves @composable-svelte/core through its exports map, which points at
+# dist — so typecheck, test and check all fail with TS2307 without this.
+pnpm build
+
 # Run tests
 pnpm test
 
-# Type check
+# Type check (`tsc` never reads .svelte)
 pnpm typecheck
+
+# Check components — types, props and a11y inside .svelte files
+pnpm check
 
 # Run examples
 cd examples/styleguide

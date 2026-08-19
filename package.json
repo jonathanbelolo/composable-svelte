@@ -8,6 +8,7 @@
     "test": "pnpm -r test",
     "test:ui": "pnpm --filter @composable-svelte/core test:ui",
     "test:coverage": "pnpm -r test:coverage",
+    "check": "pnpm -r check",
     "typecheck": "pnpm -r typecheck"
   },
   "devDependencies": {

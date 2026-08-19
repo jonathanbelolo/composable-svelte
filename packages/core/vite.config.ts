@@ -37,6 +37,8 @@ export default defineConfig({
       'tests/ssr/middleware.test.ts',
       // Walks built dist from disk; browser mode cannot read files.
       'tests/ssr/entry-graph.test.ts',
+      // Reads every workspace's package.json from disk; same reason.
+      'tests/repo/check-coverage.test.ts',
       // Needs the Cookie request header, which the browser Request API refuses
       // to expose; runs under vitest.node.config.ts instead.
       'tests/i18n/ssr.test.ts'
