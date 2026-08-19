@@ -63,32 +63,8 @@ jobs:
       - name: Run tests
         run: pnpm -r test
 
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      # No `version:` input — action-setup reads `packageManager` from
-      # package.json, and supplying both errors out when the strings differ
-      # ("9" vs "9.0.0").
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v3
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Check formatting (if applicable)
-        run: |
-          if [ -f "packages/core/package.json" ] && grep -q "\"format:check\"" packages/core/package.json; then
-            pnpm --filter @composable-svelte/core format:check
-          else
-            echo "No format:check script found, skipping..."
-          fi
+      # `tsc` never reads .svelte, which is how a broken `spring.js` import and
+      # 21 components with an undeclared `children` prop stayed invisible.
+      # Errors gate; the a11y and unused-CSS warnings do not.
+      - name: Svelte check
+        run: pnpm --filter @composable-svelte/core check --threshold error
