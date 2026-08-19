@@ -26,11 +26,12 @@
   "scripts": {
     "build": "svelte-package -o dist",
     "typecheck": "tsc --noEmit",
+    "check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
-    "prepublishOnly": "pnpm run build && pnpm run typecheck",
+    "prepublishOnly": "pnpm run build && pnpm run typecheck && pnpm run check",
     "prepack": "pnpm run build"
   },
   "keywords": [
@@ -70,6 +71,7 @@
     "@vitest/ui": "^4.0.7",
     "jsdom": "^25.0.1",
     "svelte": "^5.0.0",
+    "svelte-check": "^4.3.3",
     "typescript": "^5.5.4",
     "vite": "^6.4.1",
     "vitest": "^4.0.7"

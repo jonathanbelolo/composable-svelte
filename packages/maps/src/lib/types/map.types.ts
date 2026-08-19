@@ -59,14 +59,14 @@ export type GeoJSON = GeoJSONType;
  * Layer style properties
  */
 export interface LayerStyle {
-  fillColor?: string;
-  fillOpacity?: number;
-  strokeColor?: string;
-  strokeWidth?: number;
-  strokeOpacity?: number;
-  radius?: number;          // For points
-  intensity?: number;       // For heatmaps
-  colorGradient?: [number, string][]; // For heatmaps: [[0, 'blue'], [1, 'red']]
+  fillColor?: string | undefined;
+  fillOpacity?: number | undefined;
+  strokeColor?: string | undefined;
+  strokeWidth?: number | undefined;
+  strokeOpacity?: number | undefined;
+  radius?: number | undefined;          // For points
+  intensity?: number | undefined;       // For heatmaps
+  colorGradient?: [number, string][] | undefined; // For heatmaps: [[0, 'blue'], [1, 'red']]
 }
 
 /**
@@ -254,9 +254,9 @@ export interface MapAdapter {
 export interface MapInitOptions {
   center: LngLat;
   zoom: number;
-  bearing?: number;
-  pitch?: number;
+  bearing?: number | undefined;
+  pitch?: number | undefined;
   style: string;
-  accessToken?: string;
-  interactive?: boolean;
+  accessToken?: string | undefined;
+  interactive?: boolean | undefined;
 }
