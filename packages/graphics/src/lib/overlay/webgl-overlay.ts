@@ -22,6 +22,7 @@ import { DeviceCapabilities } from '../utils/device-capabilities.js';
 import { BrowserCompatibility } from '../utils/browser-compatibility.js';
 import { OverlayError, OverlayErrorCode } from '../utils/overlay-error.js';
 import { checkWebGLSupport } from '../utils/webgl-support.js';
+import { debugLog, setDebugLogging } from '../utils/debug.js';
 import { ShaderProgramManager } from '../shaders/shader-program-manager.js';
 import { RenderPipeline } from '../shaders/render-pipeline.js';
 import { DEFAULT_VERTEX_SHADER, DEFAULT_FRAGMENT_SHADER } from '../shaders/default-shaders.js';
@@ -105,7 +106,7 @@ class WebGLOverlay implements OverlayContextAPI {
 			});
 
 			this.contextManager.onContextRestored(() => {
-				console.info('[WebGLOverlay] WebGL context restored');
+				debugLog('[WebGLOverlay] WebGL context restored');
 				this.recreateResources();
 				if (this.options.onContextRestored) {
 					this.options.onContextRestored();
@@ -134,6 +135,10 @@ class WebGLOverlay implements OverlayContextAPI {
 			onContextRestored: options.onContextRestored ?? (() => {}),
 			onError: options.onError ?? (() => {})
 		};
+
+		// The utility classes take no options of their own, so the flag is set
+		// once here and read by `debugLog`.
+		setDebugLogging(this.options.debug);
 
 		// Initialize texture factory
 		this.textureFactory = new TextureFactory(
@@ -716,7 +721,7 @@ class WebGLOverlay implements OverlayContextAPI {
 	private recreateResources(): void {
 		if (!this.gl) return;
 
-		console.info('[WebGLOverlay] Recreating resources after context restore');
+		debugLog('[WebGLOverlay] Recreating resources after context restore');
 
 		// Reinitialize device capabilities
 		this.deviceCapabilities = new DeviceCapabilities(this.gl);
@@ -744,6 +749,6 @@ class WebGLOverlay implements OverlayContextAPI {
 			this.compileElementShader(registration);
 		}
 
-		console.info('[WebGLOverlay] Resources recreated');
+		debugLog('[WebGLOverlay] Resources recreated');
 	}
 }

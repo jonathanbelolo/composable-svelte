@@ -53,3 +53,6 @@ export {
 	isWebGLLikelyDisabled,
 	type WebGLSupportInfo
 } from './webgl-support.js';
+
+// Debug logging
+export { setDebugLogging, isDebugLogging, debugLog } from './debug.js';

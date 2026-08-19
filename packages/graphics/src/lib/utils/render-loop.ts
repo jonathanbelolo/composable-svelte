@@ -9,6 +9,8 @@
  * - Provide delta time for smooth animations
  */
 
+import { debugLog } from './debug.js';
+
 export type RenderCallback = (deltaTime: number) => void;
 
 export class RenderLoop {
@@ -40,12 +42,12 @@ export class RenderLoop {
 			this.tabVisible = !document.hidden;
 
 			if (this.tabVisible && this.running) {
-				console.info('[WebGLOverlay] Tab visible - resuming rendering');
+				debugLog('[WebGLOverlay] Tab visible - resuming rendering');
 				this.lastFrameTime = performance.now();
 				this.fpsStartTime = performance.now();
 				this.frameCount = 0;
 			} else if (!this.tabVisible) {
-				console.info('[WebGLOverlay] Tab hidden - pausing rendering');
+				debugLog('[WebGLOverlay] Tab hidden - pausing rendering');
 			}
 		});
 	}
@@ -129,7 +131,7 @@ export class RenderLoop {
 	setTargetFPS(fps: number): void {
 		this.targetFPS = fps;
 		this.frameInterval = 1000 / fps;
-		console.info(`[WebGLOverlay] Target FPS set to ${fps}`);
+		debugLog(`[WebGLOverlay] Target FPS set to ${fps}`);
 	}
 
 	/**

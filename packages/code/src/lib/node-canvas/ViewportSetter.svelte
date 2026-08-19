@@ -35,7 +35,6 @@
     }
 
     lastAppliedJson = json;
-    console.log('[ViewportSetter] Applying viewport via setViewport():', vp);
 
     // Use SvelteFlow's official API to set viewport
     // This properly updates SvelteFlow's internal state
@@ -47,7 +46,6 @@
     // Verify it was applied
     requestAnimationFrame(() => {
       const current = getViewport();
-      console.log('[ViewportSetter] Viewport after setViewport():', current);
     });
   }
 

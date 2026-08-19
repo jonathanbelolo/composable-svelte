@@ -20,7 +20,6 @@
 
 	// Initialize CodeMirror on mount
 	onMount(() => {
-		console.log('[CodeEditor] Initializing CodeMirror view');
 		createEditorView(editorElement, store, {
 			value: $store.value,
 			language: $store.language,
@@ -32,11 +31,9 @@
 		}).then((editorView) => {
 			view = editorView;
 			codemirrorValue = $store.value;
-			console.log('[CodeEditor] CodeMirror view created');
 		});
 
 		return () => {
-			console.log('[CodeEditor] Destroying CodeMirror view');
 			view?.destroy();
 		};
 	});
@@ -45,7 +42,6 @@
 	// This handles external changes like loading a file or formatting
 	$effect(() => {
 		if (view && $store.value !== codemirrorValue) {
-			console.log('[CodeEditor] Syncing external value change to CodeMirror');
 			updateEditorValue(view, $store.value);
 			codemirrorValue = $store.value;
 		}

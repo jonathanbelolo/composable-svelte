@@ -12,6 +12,8 @@
  * Without proper handling, the overlay becomes permanently broken after context loss.
  */
 
+import { debugLog } from './debug.js';
+
 export class WebGLContextManager {
 	private canvas: HTMLCanvasElement | null = null;
 	private gl: WebGLRenderingContext | null = null;
@@ -38,7 +40,7 @@ export class WebGLContextManager {
 
 		// Setup context restore handler
 		canvas.addEventListener('webglcontextrestored', () => {
-			console.info('[WebGLOverlay] Context restored - recreating resources');
+			debugLog('[WebGLOverlay] Context restored - recreating resources');
 			this.contextLost = false;
 			this.gl = this.createContext();
 			this.notifyContextRestored();

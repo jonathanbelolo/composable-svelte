@@ -11,7 +11,6 @@
 
 	// Dispatch init action on mount
 	onMount(() => {
-		console.log('[CodeHighlight Component] Dispatching init action');
 		store.dispatch({ type: 'init' });
 	});
 

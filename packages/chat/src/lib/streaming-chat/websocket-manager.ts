@@ -91,7 +91,6 @@ export class WebSocketManager {
 			this.ws = new WebSocket(this.config.url);
 
 			this.ws.onopen = () => {
-				console.log('[WebSocketManager] Connected');
 				this.reconnectAttempts = 0;
 				this.updateState({ status: 'connected', connectedAt: Date.now() });
 				this.startHeartbeat();
@@ -107,7 +106,6 @@ export class WebSocketManager {
 			};
 
 			this.ws.onclose = (event) => {
-				console.log('[WebSocketManager] Closed', event.code, event.reason);
 				this.stopHeartbeat();
 
 				if (!this.isIntentionallyClosed) {
@@ -258,9 +256,6 @@ export class WebSocketManager {
 
 		const nextRetryAt = Date.now() + delay;
 
-		console.log(
-			`[WebSocketManager] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.config.maxRetries})`
-		);
 
 		this.updateState({
 			status: 'reconnecting',
@@ -325,7 +320,6 @@ export class WebSocketManager {
 			return;
 		}
 
-		console.log(`[WebSocketManager] Flushing ${this.messageQueue.length} queued messages`);
 
 		const queue = [...this.messageQueue];
 		this.messageQueue = [];

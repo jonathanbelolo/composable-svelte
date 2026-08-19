@@ -10,6 +10,8 @@
  * Exceeding limits causes silent failures - textures won't render.
  */
 
+import { debugLog } from './debug.js';
+
 export interface TextureValidationResult {
 	valid: boolean;
 	reason?: string;
@@ -29,7 +31,7 @@ export class TextureValidator {
 
 	constructor(gl: WebGLRenderingContext) {
 		this.maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
-		console.info(`[WebGLOverlay] Max texture size: ${this.maxTextureSize}x${this.maxTextureSize}`);
+		debugLog(`[WebGLOverlay] Max texture size: ${this.maxTextureSize}x${this.maxTextureSize}`);
 	}
 
 	/**
@@ -145,7 +147,7 @@ export class TextureValidator {
 	 */
 	setMemoryBudget(bytes: number): void {
 		this.maxMemoryBudget = bytes;
-		console.info(`[WebGLOverlay] Memory budget set to ${this.formatBytes(bytes)}`);
+		debugLog(`[WebGLOverlay] Memory budget set to ${this.formatBytes(bytes)}`);
 	}
 
 	/**

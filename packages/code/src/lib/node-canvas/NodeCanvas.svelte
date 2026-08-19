@@ -125,7 +125,6 @@
   } = props;
 
   // Debug: Log when component renders with props
-  console.log('[NodeCanvas] Render with externalViewport:', props.externalViewport);
 
   // ==========================================================================
   // Reactive State from Store
@@ -160,7 +159,6 @@
     // Clear flag after SvelteFlow has fully processed the change
     setTimeout(() => {
       isRestoring = false;
-      console.log('[NodeCanvas] Restoration complete, callbacks re-enabled');
     }, 100);
   }
 
@@ -168,7 +166,6 @@
   $effect(() => {
     const extVp = props.externalViewport;
     if (extVp) {
-      console.log('[NodeCanvas] External viewport received, setting restoration flag');
       isRestoring = true;
     }
   });
@@ -254,7 +251,6 @@
   function handleMoveEnd(event: any, newViewport: { x: number; y: number; zoom: number }) {
     // Don't call callback during restoration (prevents sending stale viewport to server)
     if (isRestoring) {
-      console.log('[NodeCanvas] Skipping onViewportChange during restoration');
       return;
     }
     // Call direct callback for persistence
