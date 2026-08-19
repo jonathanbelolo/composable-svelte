@@ -1322,7 +1322,7 @@ case 'addButtonTapped': {
 // Svelte component
 <script>
   import { Modal } from '@composable-svelte/core';
-  import { scopeTo } from '@composable-svelte/core/dsl';
+  import { scopeTo } from '@composable-svelte/core/navigation';
 
   // Scope to addItem destination
   const addItemStore = scopeTo(store)

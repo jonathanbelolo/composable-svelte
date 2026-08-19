@@ -850,7 +850,7 @@ Navigation components expect:
 ### Modal Example
 
 ```typescript
-import Modal from '@composable-svelte/core/navigation-components/Modal.svelte';
+import { Modal } from '@composable-svelte/core/navigation-components';
 
 <Modal
   store={modalStore}

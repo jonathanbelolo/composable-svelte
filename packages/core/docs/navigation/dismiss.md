@@ -677,7 +677,7 @@ describe('AddItem reducer dismiss logic', () => {
 ### Integration Testing with TestStore
 
 ```typescript
-import { createTestStore } from '@composable-svelte/core/testing';
+import { createTestStore } from '@composable-svelte/core/test';
 import { dismissDependency } from '@composable-svelte/core/navigation';
 
 describe('AddItem dismiss integration', () => {

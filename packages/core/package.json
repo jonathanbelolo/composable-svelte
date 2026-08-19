@@ -184,10 +184,14 @@
   },
   "peerDependencies": {
     "svelte": "^5.0.0",
-    "tailwindcss": "^3.4.0 || ^4.0.0"
+    "tailwindcss": "^3.4.0 || ^4.0.0",
+    "vitest": "^3.0.0 || ^4.0.0"
   },
   "peerDependenciesMeta": {
     "tailwindcss": {
+      "optional": true
+    },
+    "vitest": {
       "optional": true
     }
   },

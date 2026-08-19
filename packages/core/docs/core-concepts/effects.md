@@ -1319,7 +1319,7 @@ describe('User reducer', () => {
 Use `TestStore` to test complete effect execution:
 
 ```typescript
-import { createTestStore } from '@composable-svelte/core/testing';
+import { createTestStore } from '@composable-svelte/core/test';
 
 describe('User loading', () => {
   it('loads user successfully', async () => {
