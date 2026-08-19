@@ -33,6 +33,8 @@ export default defineConfig({
       // cannot do. Run by vitest.node.config.ts instead.
       'tests/ssr/ssg.test.ts',
       'tests/styles/**',
+      // Reaches isomorphic-dompurify, which needs its Node (jsdom) build.
+      'tests/ssr/middleware.test.ts',
       // Needs the Cookie request header, which the browser Request API refuses
       // to expose; runs under vitest.node.config.ts instead.
       'tests/i18n/ssr.test.ts'

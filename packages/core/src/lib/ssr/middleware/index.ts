@@ -19,7 +19,7 @@
  * } from '@composable-svelte/core/ssr/middleware';
  *
  * app.register(fastifySecurityHeaders);
- * app.register(fastifyRateLimit, { maxRequests: 100, windowMs: 60_000 });
+ * app.register(fastifyRateLimit, { max: 100, windowMs: 60_000 });
  * ```
  *
  * @packageDocumentation
