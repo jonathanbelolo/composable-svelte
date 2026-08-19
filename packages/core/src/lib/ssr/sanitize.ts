@@ -5,9 +5,9 @@
  *
  * Its own entry point — `@composable-svelte/core/ssr/sanitize` — rather than
  * part of `./ssr/middleware`, because it is the only server-side helper with a
- * dependency: `isomorphic-dompurify`, which pulls in jsdom (72 packages, ~22MB).
- * That dependency is an *optional peer*, so only consumers who sanitise pay for
- * it. Security headers and rate limiting have no dependencies at all and stay
+ * dependency: `isomorphic-dompurify`, which pulls in jsdom — measured at +69
+ * packages and +32.8MB on a fresh install. That dependency is an *optional
+ * peer*, so only consumers who sanitise pay for it. Security headers and rate limiting have no dependencies at all and stay
  * on `./ssr/middleware`, which therefore always resolves.
  *
  * @packageDocumentation

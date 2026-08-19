@@ -90,7 +90,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and `defaultSanitizeOptions` are at `@composable-svelte/core/ssr/sanitize`.
   None of them is exported from `/ssr` any more. The names are unchanged.
 
-  They had to move because `html-sanitization` imports `isomorphic-dompurify`,
+  They had to move because the sanitiser imports `isomorphic-dompurify`,
   which depends on `jsdom`, and the root entry re-exports through the `/ssr`
   barrel — so *any* consumer of `@composable-svelte/core`, browser apps
   included, pulled DOMPurify into their module graph. A bundle of an app that
@@ -105,10 +105,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   DOMPurify, fastify or a Node builtin.
 
 - **`isomorphic-dompurify` is now an optional peer dependency, not a runtime
-  dependency.** It was installing for every consumer — 72 transitive packages,
-  roughly 22 MB — including browser-only apps that never sanitise anything.
-  Measured against a packed tarball: a fresh install is 14 packages without it
-  and 80 with it.
+  dependency.** It was installing for every consumer, including browser-only
+  apps that never sanitise anything. Measured by installing a packed tarball
+  into an empty project and counting every package manifest: core alone is
+  **41 packages / 26.0 MB**; adding the sanitiser's dependency takes that to
+  **110 packages / 58.8 MB** — it costs **+69 packages and +32.8 MB**, mostly
+  jsdom.
 
   It is the only server-side helper in core with a dependency, which is why
   sanitisation gets its own entry rather than sharing `/ssr/middleware`. Security
