@@ -9,15 +9,90 @@ file and line, says whether it was **verified** (something was run) or
 
 | | count |
 |---|---|
-| Fixed and committed | 47 commits |
+| Fixed and committed | 55 commits |
 | **Open — components that crash** | **0** (was 6 — all fixed, see R1) |
-| Open — breaks a consumer at install/build | 8 |
-| Open — silently-wrong behaviour | 11 (was 12 — `connectionStart` fixed) |
+| Open — breaks a consumer at install/build | 6 (S2.6 closed here; S2.7 and S2.8 were already closed and the count was stale) |
+| Open — silently-wrong behaviour | 10 (S4.3 was already closed by R4; the count was stale) |
 | Open — security | 0 (was 1; **the R2 fix was incomplete — see R3**) |
-| Open — `svelte-check` errors, previously invisible | **142** |
-| Open — `svelte-check` warnings | 19 |
+| Open — `svelte-check` errors | **61** (was 142; see R6 for the recount) |
+| Open — `svelte-check` warnings | **29** (was 19 — the examples had never been counted) |
+| Workspaces covered by `pnpm -r check` | **9 of 19** (was 4) |
 
 ## Remediation log
+
+### R6. `pnpm -r check` is a real gate for 9 of 19 workspaces
+
+`C1` was worse than recorded. `pnpm -r` runs a script only where it exists and
+skips the rest silently with exit 0, and the register's error table stopped at
+`styleguide` — the ten other examples had **never been measured**. The true gap
+was 69 errors and 30 warnings across 15 workspaces, not 142 and 19.
+
+Corrections to the counts as they stood:
+
+- The **142** figure was already stale: R4 had cleared `code` (18) and
+  `styleguide` (73).
+- **graphics is 18, not 14.** `tsc` finds 14 because it never reads `.svelte`;
+  svelte-check against the root ruleset finds two more in `Camera.svelte` and two
+  more again once `@types/node` leaves. `Light.svelte`'s `default`-less switch
+  contributes **0** — both `noImplicitReturns` and `noFallthroughCasesInSwitch`
+  are clean there, contrary to the earlier guess.
+- The examples hold **32 errors and 11 warnings**, led by `product-gallery` at
+  11+6, `file-browser` and `ssr-server` at 5 each.
+
+Now gated: core, code, graphics, styleguide (already), plus **auth, counter,
+data-table, maps and charts**. The remaining ten are listed in `NOT_YET_GATED` in
+`packages/core/tests/repo/check-coverage.test.ts` with their measured counts —
+the gap is now a test that fails when forgotten, not a line in this document.
+That test asserts every workspace is either gated with the byte-identical script
+and a declared `svelte-check`, or explicitly allowlisted, and that no allowlist
+entry is stale.
+
+Defects closed on the way, none of them cosmetic:
+
+- **`graphics/Camera.svelte` silently wiped `fov`, `near` and `far`.** Mounting
+  `<Camera {store} {position} {lookAt} />` — the documented shape — sent
+  `fov: undefined`, and `reducer.ts:97`'s `{...state.camera, ...action.camera}`
+  merge let that overwrite `initial-state.ts`'s `fov: 45`.
+  `babylon-adapter.ts:136` then guards `!== undefined`, so the adapter quietly
+  never applied a field of view. Same family as R1's four.
+- **`charts` `brushStart` required a `position` nothing reads** — not the
+  reducer, not the only dispatch, not any of the three tests. It was wrong from
+  the design onward: the phase-11 plan intended `event.selection`, which for a 2D
+  brush is `[[x0,y0],[x1,y1]]`, never a `[number, number]`. **Closes S2.7's
+  sibling.**
+- **`ChartTooltip` deleted, closing S2.6.** Its state, actions and `ChartState`
+  field were all removed in the Observable Plot migration; nothing could produce
+  the prop it took.
+- **`ChartConfig.size` was typed as the one thing it is never** —
+  `string | ((d)=>any)`, while `plot-builder.ts:17,73` destructures `size = 5`
+  and passes it as Plot's `r`. Masked because TS reports only an object
+  literal's first bad property.
+- **`render-pipeline.ts:342` re-read `items[0].options` without the `?.`** its
+  own guard on the line above used — a latent throw.
+
+Two corrections to my own work here, both found by mutation:
+
+- The coverage test's `prepublishOnly` assertion used `toContain('check')`, which
+  matches `typecheck`. It passed on every package that runs typecheck and could
+  never fail. It now splits on `&&` and matches the whole step.
+- The `Camera` test first asserted immediately after `mount()`. `onMount`'s
+  dispatch lands after `mount()` returns, so it read the initial state and passed
+  for the wrong reason. With `flushSync()` it failed, as it should have. The bug
+  is also broader than first written: after a flush `near` and `far` are gone
+  entirely, not just `fov` — the earlier trace hid that because `JSON.stringify`
+  drops undefined values.
+
+Also worth recording: **d3-brush has never been exercisable in `charts`' test
+environment.** jsdom does not implement `SVGAnimatedLength`, so `defaultExtent`
+throws `Cannot read properties of undefined (reading 'baseVal')` — on the `<svg>`
+root exactly as much as on the `<g>` it now installs into. The new test shims it
+and pins the *installation* only; whether dragging behaves identically in a real
+browser is **unverified** and needs browser mode `charts` does not have.
+
+Baseline on the current tree: `pnpm -r build`, `typecheck` and `check` clean,
+`pnpm -r test` **2211 passing** (was 2166), `pnpm install --frozen-lockfile`
+clean.
+
 
 ### R1. All six crashes — FIXED, mutation-verified
 
@@ -297,20 +372,34 @@ only `media` was missed.
 Zero references to any `.css` in `packages/maps/dist/**` or its README. Consumers
 get broken popups and controls out of the box.
 
-### S2.6 `charts/ChartTooltip` imports a type that was deleted — VERIFIED
+### S2.6 `charts/ChartTooltip` imports a type that was deleted — **CLOSED (R6)**
+
+Resolved by deleting the component, not by restoring the type: its state, its
+actions and the `ChartState.tooltip` field were all removed in the Observable
+Plot migration, so nothing could produce the prop it took. Verified as a
+consumer against a packed tarball with `skipLibCheck: false`.
+
+Original finding:
 
 `packages/charts/src/lib/components/ChartTooltip.svelte:6` imports `TooltipState`
 from `../types/chart.types`, where `chart.types.ts:55` reads
 `// Note: TooltipState removed`. The component is still publicly exported, so
 consumers with `skipLibCheck: false` get TS2305 from the package root.
 
-### S2.7 `charts` `DataTransforms` cannot be used as a value — VERIFIED
+### S2.7 `charts` `DataTransforms` cannot be used as a value — **ALREADY CLOSED**
+
+Fixed before this round; `src/lib/index.ts:21` now carries a note explaining why
+it is not re-exported as a type. The status table had not been updated.
+
+Original finding:
 
 `dist/index.d.ts:8` re-exports it with `export type`, which shadows the star
 export of the const object. `TS2693: 'DataTransforms' only refers to a type`. The
 README documents exactly this usage at `:89`; it compiles nowhere.
 
-### S2.8 `code` `NodeCanvas.svelte.d.ts` does not typecheck — VERIFIED
+### S2.8 `code` `NodeCanvas.svelte.d.ts` does not typecheck — **ALREADY CLOSED (R4)**
+
+Original finding:
 
 `TS2344: Type 'NodeData' does not satisfy the constraint 'Record<string, unknown>'`
 at `dist/node-canvas/NodeCanvas.svelte.d.ts:9,14`. The generic needs an `extends
@@ -402,7 +491,9 @@ feeds `<VoiceInputPanel transcripts={transcriptHistory} />`, so the panel is
 effectively always empty. Measured: `["hello world"]` → `[]` after one unrelated
 dispatch.
 
-### S4.3 `NodeCanvas` — three more wrong handler contracts — VERIFIED
+### S4.3 `NodeCanvas` — three more wrong handler contracts — **ALREADY CLOSED (R4)**
+
+Original finding:
 
 - `:210` `handleConnectStart({ nodeId })` — upstream passes
   `(event, params)`, so `nodeId` is destructured off a MouseEvent and is
@@ -494,13 +585,26 @@ Documented use is dispatching a redirect, usually idempotent — low severity, a
 
 ## S5. The `svelte-check` backlog
 
-### C1. `pnpm -r check` is a near no-op
+### C1. `pnpm -r check` was a near no-op — **PARTLY CLOSED (R6)**
 
-CI runs `pnpm -r check`, but `pnpm -r` only runs the script where it exists, and
-only `core` and `graphics` declare one. Six packages are ungated. The commit that
-introduced this said "check every package that can be" — literally true, but the
-effect was nearly nil, and it is why the 55 satellite errors below stayed
-invisible after it landed.
+CI runs `pnpm -r check`, but `pnpm -r` only runs the script where it exists. The
+commit that introduced this said "check every package that can be" — literally
+true, but the effect was nearly nil, and it is why the satellite errors below
+stayed invisible after it landed.
+
+**R6 took coverage from 4 workspaces to 9** and encoded the invariant in
+`packages/core/tests/repo/check-coverage.test.ts`, so the remaining ten cannot be
+forgotten. This entry also understated the gap twice over: it said "six packages
+are ungated" and counted only packages — **ten of the eleven examples were
+ungated too**, holding 32 errors and 11 warnings nobody had ever measured.
+
+### C2. `graphics`'s 0/0 was an artifact — **CLOSED (R6)**
+
+Its tsconfig now extends the root, and all 18 hidden errors are fixed. The count
+in the original finding below was 14, measured with `tsc`, which never reads
+`.svelte`; svelte-check finds four more.
+
+Original finding:
 
 ### C2. `graphics`'s 0/0 is an artifact
 
