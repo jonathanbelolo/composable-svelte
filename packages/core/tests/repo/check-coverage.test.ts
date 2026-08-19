@@ -47,7 +47,6 @@ const CHECK_SCRIPT = 'svelte-check --tsconfig ./tsconfig.json --fail-on-warnings
  * Shrink this map. When it is empty, delete it and the branch that reads it.
  */
 const NOT_YET_GATED: Record<string, { errors: number; warnings: number }> = {
-	'packages/charts': { errors: 5, warnings: 1 },
 	'packages/chat': { errors: 15, warnings: 13 },
 	'packages/media': { errors: 14, warnings: 5 },
 	'examples/contact-form': { errors: 2, warnings: 0 },

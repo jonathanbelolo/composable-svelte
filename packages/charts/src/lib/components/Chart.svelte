@@ -111,7 +111,6 @@ function plotBuilder(chartState: ChartState<any>, chartConfig: any) {
       : ''
   }`}
   aria-describedby="chart-summary"
-  tabindex="0"
 >
   <ChartPrimitive {store} {config} {plotBuilder} {enableZoom} {enableBrush} />
 

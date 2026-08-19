@@ -130,8 +130,10 @@ function renderPlot() {
   // Get current state (not reactive, just a snapshot)
   const plotState = store.state;
 
-  // Build plot
-  const plot = plotBuilder(plotState, config);
+  // Build plot. `plotBuilder` is typed `=> any`, so bind it to a real element
+  // type here rather than letting `plotElement`'s `| null` reach appendChild.
+  const plot: HTMLElement | null = plotBuilder(plotState, config);
+  if (!plot) return;
 
   // Clear previous plot
   if (plotElement) {
@@ -140,7 +142,7 @@ function renderPlot() {
 
   // Render new plot
   plotElement = plot;
-  containerElement.appendChild(plotElement);
+  containerElement.appendChild(plot);
 
   // Wait for SVG to be available before attaching behaviors
   // Observable Plot returns the SVG element directly, so we need to query from the container
@@ -278,12 +280,17 @@ function attachBrushBehavior(svg: SVGSVGElement): () => void {
       store.dispatch({ type: 'brushEnd' });
     });
 
-  // Attach brush to SVG
-  select(svg).call(brushBehavior);
+  // d3-brush installs into a <g>, not the <svg> root: @types/d3-brush types
+  // BrushBehavior as callable only on Selection<SVGGElement, ...>. The behaviour
+  // is unchanged — with no explicit .extent(), d3 falls back to defaultExtent,
+  // which reads `this.ownerSVGElement || this`, and for this <g> that is the
+  // same <svg> it used before. Appended last, so it keeps its old z-order.
+  const brushGroup = select(svg).append('g').attr('class', 'cs-brush');
+  brushGroup.call(brushBehavior);
 
   // Return cleanup function
   return () => {
-    select(svg).on('.brush', null);
+    brushGroup.remove();
   };
 }
 </script>

@@ -109,25 +109,25 @@ export type ChartAction<T = unknown> =
  */
 export interface ChartConfig {
   // Data accessors
-  x?: string | ((d: any) => any);
-  y?: string | ((d: any) => any);
-  color?: string | ((d: any) => any);
+  x?: string | ((d: any) => any) | undefined;
+  y?: string | ((d: any) => any) | undefined;
+  color?: string | ((d: any) => any) | undefined;
   // Dot radius in px. Not an accessor like x/y/color: plot-builder destructures
   // it with `size = 5` and passes it straight to Plot's `r`.
   size?: number | undefined;
 
   // Domain overrides
-  xDomain?: [number, number] | 'auto';
-  yDomain?: [number, number] | 'auto';
+  xDomain?: [number, number] | 'auto' | undefined;
+  yDomain?: [number, number] | 'auto' | undefined;
 
   // Interaction flags
-  enableZoom?: boolean;
-  enableBrush?: boolean;
-  enableTooltip?: boolean;
+  enableZoom?: boolean | undefined;
+  enableBrush?: boolean | undefined;
+  enableTooltip?: boolean | undefined;
 
   // Animation
-  enableAnimations?: boolean;
-  transitionDuration?: number;
+  enableAnimations?: boolean | undefined;
+  transitionDuration?: number | undefined;
 }
 
 /**
