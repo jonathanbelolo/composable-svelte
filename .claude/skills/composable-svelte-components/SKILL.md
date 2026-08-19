@@ -767,7 +767,7 @@ For specialized components beyond standard UI, see dedicated skills:
 ### Charts & Data Visualization
 **Skill**: `composable-svelte-charts`
 **Package**: `@composable-svelte/charts`
-**Components**: Chart, ChartPrimitive, ChartTooltip
+**Components**: Chart, ChartPrimitive
 **Use cases**: Data visualization, interactive charts, statistical plots
 
 ### Maps & Geospatial

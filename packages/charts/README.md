@@ -123,7 +123,6 @@ interface ChartState<T> {
   dimensions: { width: number; height: number };
   selection: SelectionState<T>;
   transform: ZoomTransform;
-  tooltip: TooltipState<T>;
   isAnimating: boolean;
   transitionDuration: number;
 }

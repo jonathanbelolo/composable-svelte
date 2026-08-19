@@ -84,7 +84,7 @@ export type ChartAction<T = unknown> =
   // Selection actions
   | { type: 'selectPoint'; data: T; index: number }
   | { type: 'selectRange'; range: [number, number] }
-  | { type: 'brushStart'; position: [number, number] }
+  | { type: 'brushStart' }
   | { type: 'brushMove'; extent: [[number, number], [number, number]] }
   | { type: 'brushEnd' }
   | { type: 'clearSelection' }
@@ -112,7 +112,9 @@ export interface ChartConfig {
   x?: string | ((d: any) => any);
   y?: string | ((d: any) => any);
   color?: string | ((d: any) => any);
-  size?: string | ((d: any) => any);
+  // Dot radius in px. Not an accessor like x/y/color: plot-builder destructures
+  // it with `size = 5` and passes it straight to Plot's `r`.
+  size?: number | undefined;
 
   // Domain overrides
   xDomain?: [number, number] | 'auto';

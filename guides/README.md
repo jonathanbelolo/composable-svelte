@@ -86,7 +86,7 @@ import { FullStreamingChat, streamingChatReducer } from '@composable-svelte/chat
 
 Interactive data visualization built on Observable Plot and D3.
 
-- **Components**: `Chart`, `ChartPrimitive`, `ChartTooltip`
+- **Components**: `Chart`, `ChartPrimitive` (tooltips are native to Observable Plot)
 - **State**: `chartReducer` with zoom, brush, selection, and responsive support
 - **Utilities**: `plotBuilder` for declarative chart config, `data-transforms` for preprocessing
 - **Built on**: @observablehq/plot, D3 (d3-array, d3-brush, d3-scale, d3-selection, d3-zoom)

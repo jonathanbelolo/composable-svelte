@@ -34,7 +34,6 @@ export { chartReducer, createInitialChartState } from './reducers/chart.reducer'
 // ============================================================================
 export { default as Chart } from './components/Chart.svelte';
 export { default as ChartPrimitive } from './components/ChartPrimitive.svelte';
-export { default as ChartTooltip } from './components/ChartTooltip.svelte';
 
 // ============================================================================
 // Utils

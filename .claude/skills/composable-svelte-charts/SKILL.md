@@ -283,7 +283,7 @@ type ChartAction<T = unknown> =
   // Selection
   | { type: 'selectPoint'; data: T; index: number }
   | { type: 'selectRange'; range: [number, number] }
-  | { type: 'brushStart'; position: [number, number] }
+  | { type: 'brushStart' }
   | { type: 'brushMove'; extent: [[number, number], [number, number]] }
   | { type: 'brushEnd' }
   | { type: 'clearSelection' }
@@ -1015,7 +1015,6 @@ All exports from `@composable-svelte/charts`:
 
 - `Chart` - High-level chart component (scatter, line, bar, area, histogram)
 - `ChartPrimitive` - Low-level chart primitive for custom chart implementations
-- `ChartTooltip` - Standalone tooltip component for chart data points
 
 ### Utility Exports: Plot Builder (`plot-builder`)
 

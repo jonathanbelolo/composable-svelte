@@ -13,8 +13,7 @@ packages/charts/
 ├── src/lib/
 │   ├── components/
 │   │   ├── Chart.svelte              # High-level wrapper
-│   │   ├── ChartPrimitive.svelte     # Low-level Plot renderer
-│   │   └── ChartTooltip.svelte       # Interactive tooltips
+│   │   └── ChartPrimitive.svelte     # Low-level Plot renderer
 │   ├── reducers/
 │   │   └── chart.reducer.ts          # State management (14 tests ✓)
 │   ├── types/
@@ -163,7 +162,6 @@ interface ChartState<T> {
   dimensions: { width; height };
   selection: SelectionState<T>;
   transform: ZoomTransform;
-  tooltip: TooltipState<T>;
   isAnimating: boolean;
   transitionDuration: number;
 }
