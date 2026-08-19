@@ -23,7 +23,17 @@ export default defineConfig(({ command, mode, isSsrBuild }) => {
         minify: false
       },
       ssr: {
-        noExternal: ['@composable-svelte/core']
+        // Core has to be inlined: this server imports `createStore` from its
+        // root entry, which reaches the component barrel, and Node cannot load
+        // the `.svelte` files that come with it.
+        noExternal: ['@composable-svelte/core'],
+        // Its Node-only dependency stays external, though. Bundling
+        // isomorphic-dompurify pulls in jsdom, which is pointless on a Node
+        // server (it is installed and runs natively) and whose cssstyle build
+        // rollup's commonjs plugin cannot parse. Inlining a package makes its
+        // un-inlined runtime dependencies yours, which is why this example
+        // declares isomorphic-dompurify directly.
+        external: ['isomorphic-dompurify']
       }
     };
   }

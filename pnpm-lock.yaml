@@ -8,9 +8,6 @@ importers:
 
   .:
     devDependencies:
-      jsdom:
-        specifier: ^25.0.0
-        version: 25.0.1
       svelte:
         specifier: ^5.0.0
         version: 5.43.3
@@ -337,6 +334,9 @@ importers:
       fastify:
         specifier: ^4.28.1
         version: 4.29.1
+      isomorphic-dompurify:
+        specifier: ^2.16.0
+        version: 2.31.0
       svelte:
         specifier: ^5.0.0
         version: 5.43.3
