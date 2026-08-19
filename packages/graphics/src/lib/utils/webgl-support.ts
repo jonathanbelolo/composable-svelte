@@ -66,10 +66,11 @@ export function checkWebGLSupport(): WebGLSupportInfo {
 		};
 	}
 
+	// `reason` is omitted rather than set to undefined: it is optional, and the
+	// two failure paths above are the only ones that carry a reason.
 	return {
 		supported: true,
-		version,
-		reason: undefined
+		version
 	};
 }
 

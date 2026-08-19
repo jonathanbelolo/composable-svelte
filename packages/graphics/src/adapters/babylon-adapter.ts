@@ -454,14 +454,11 @@ export class BabylonAdapter {
    */
   private hexToColor3(hex: string): Color3 {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    if (!result) {
+    const [, r, g, b] = result ?? [];
+    if (!r || !g || !b) {
       return new Color3(1, 1, 1); // Default to white
     }
 
-    return new Color3(
-      parseInt(result[1], 16) / 255,
-      parseInt(result[2], 16) / 255,
-      parseInt(result[3], 16) / 255
-    );
+    return new Color3(parseInt(r, 16) / 255, parseInt(g, 16) / 255, parseInt(b, 16) / 255);
   }
 }

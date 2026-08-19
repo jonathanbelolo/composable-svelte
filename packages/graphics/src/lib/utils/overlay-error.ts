@@ -27,10 +27,16 @@ export class OverlayError extends Error {
 		super(message);
 		this.name = 'OverlayError';
 
-		// Maintains proper stack trace for where error was thrown (V8 only)
-		if (Error.captureStackTrace) {
-			Error.captureStackTrace(this, OverlayError);
-		}
+		// Maintains proper stack trace for where error was thrown (V8 only).
+		// Typed locally rather than by pulling @types/node into a browser
+		// package's type environment: this is the only symbol graphics wanted
+		// from it, and the cost of the rest is that `setTimeout` starts
+		// returning NodeJS.Timeout and `Buffer`/`process` begin to typecheck in
+		// code that would crash in a browser.
+		const V8Error = Error as ErrorConstructor & {
+			captureStackTrace?(target: object, constructorOpt?: Function): void;
+		};
+		V8Error.captureStackTrace?.(this, OverlayError);
 	}
 
 	/**

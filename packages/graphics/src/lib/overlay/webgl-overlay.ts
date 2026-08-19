@@ -524,8 +524,13 @@ class WebGLOverlay implements OverlayContextAPI {
 			}
 			console.error(`[WebGLOverlay] Failed to create texture for '${registration.id}':`, result.error);
 		} else {
-			registration.texture = result.texture;
-			registration.error = undefined;
+			// `result.texture` is optional on the success branch too, so only assign
+			// when there is one. The caller already treats a vacant texture as a
+			// supported state — see the `if (!registration.texture) return` guard.
+			if (result.texture) {
+				registration.texture = result.texture;
+			}
+			delete registration.error;
 			registration.needsUpdate = false;
 
 			// Store dimensions for memory tracking
@@ -554,7 +559,7 @@ class WebGLOverlay implements OverlayContextAPI {
 				this.options.onError(result.error);
 			}
 		} else {
-			registration.error = undefined;
+			delete registration.error;
 			registration.needsUpdate = true; // Mark for re-render
 		}
 	}

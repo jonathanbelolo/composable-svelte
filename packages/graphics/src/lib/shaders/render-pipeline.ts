@@ -337,10 +337,12 @@ export class RenderPipeline {
 			return;
 		}
 
-		// Clear once at the beginning
-		if (items.length > 0 && items[0].options?.clear) {
-			const color = items[0].options.clearColor || [0, 0, 0, 0];
-			this.clear(color);
+		// Clear once at the beginning. Bound to a local: the second read was
+		// `items[0].options.clearColor` without the `?.` the line above used, so
+		// an item with no `options` would have thrown here.
+		const first = items[0];
+		if (first?.options?.clear) {
+			this.clear(first.options.clearColor || [0, 0, 0, 0]);
 		}
 
 		// Render each item

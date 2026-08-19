@@ -282,7 +282,7 @@ export class UpdateScheduler {
 		const handlePause = () => {
 			if (registration.animationFrameId) {
 				(video as any).cancelVideoFrameCallback(registration.animationFrameId);
-				registration.animationFrameId = undefined;
+				delete registration.animationFrameId;
 			}
 		};
 
@@ -336,7 +336,7 @@ export class UpdateScheduler {
 				const video = registration.element as HTMLVideoElement;
 				if ('cancelVideoFrameCallback' in video) {
 					(video as any).cancelVideoFrameCallback(registration.animationFrameId);
-					registration.animationFrameId = undefined;
+					delete registration.animationFrameId;
 				}
 			}
 		}

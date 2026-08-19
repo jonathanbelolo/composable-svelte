@@ -106,19 +106,22 @@ export function getShaderInfo(shaderSource: string): {
 	const attrRegex = /attribute\s+\w+\s+(\w+);/g;
 	let match: RegExpExecArray | null;
 	while ((match = attrRegex.exec(shaderSource)) !== null) {
-		attributes.push(match[1]);
+		const name = match[1];
+		if (name) attributes.push(name);
 	}
 
 	// Parse uniforms
 	const uniformRegex = /uniform\s+\w+\s+(\w+);/g;
 	while ((match = uniformRegex.exec(shaderSource)) !== null) {
-		uniforms.push(match[1]);
+		const name = match[1];
+		if (name) uniforms.push(name);
 	}
 
 	// Parse varyings
 	const varyingRegex = /varying\s+\w+\s+(\w+);/g;
 	while ((match = varyingRegex.exec(shaderSource)) !== null) {
-		varyings.push(match[1]);
+		const name = match[1];
+		if (name) varyings.push(name);
 	}
 
 	return { lines, attributes, uniforms, varyings };
