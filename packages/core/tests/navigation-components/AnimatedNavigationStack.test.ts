@@ -1,17 +1,28 @@
 /**
- * `AnimatedNavigationStack` had no coverage at all, which is how three of its
- * animation guards (`lastAnimatedPresentationKey`, `animationPromiseCompleted`,
- * `frozenCurrentScreen`) sat in `$state` while being read and written inside
- * the `$effect` they guard — Svelte's `effect_update_depth_exceeded` condition.
+ * `AnimatedNavigationStack` had no coverage at all.
  *
- * These tests drive the presentation lifecycle so that a self-triggering effect
- * shows up as a thrown error or a screen that never settles.
+ * These tests drive the presentation lifecycle and assert what the component is
+ * supposed to render at each stage. The one that matters is the outgoing-layer
+ * test: `previousScreen` was destructured from `NavigationStackPrimitive`, which
+ * never supplied it, so the previous-screen layer rendered nothing and stayed
+ * `visibility: hidden` through every push and pop. svelte-check caught the type
+ * error; nothing caught the behaviour.
+ *
+ * They also fail on `effect_update_depth_exceeded`, which is the hazard behind
+ * holding the animation guards (`lastAnimatedPresentationKey`,
+ * `animationPromiseCompleted`) in plain `let` rather than `$state`. Note that
+ * reverting those guards to `$state` does *not* currently fail these tests —
+ * every write in that effect happens to be idempotent, so the effect converges.
+ * Keeping them non-reactive is still right (they are not state, and making them
+ * reactive costs an extra effect pass), but the assertion is a guard against a
+ * future non-converging write, not a reproduction of a present bug.
  */
 
 import { render } from 'vitest-browser-svelte';
 import { page } from 'vitest/browser';
 import { describe, it, expect } from 'vitest';
 import AnimatedNavigationStack from '../../src/lib/navigation-components/AnimatedNavigationStack.svelte';
+import AnimatedStackTest from './test-components/AnimatedStackTest.svelte';
 import { createStore } from '../../src/lib/store.svelte.js';
 import { scopeToDestination } from '../../src/lib/navigation/scope-to-destination.js';
 import { Effect } from '../../src/lib/effect.js';
@@ -126,5 +137,33 @@ describe('AnimatedNavigationStack', () => {
 		});
 
 		await expect.element(page.getByRole('button', { name: 'Go back' })).toBeInTheDocument();
+	});
+
+	it('renders the outgoing screen in the previous layer while dismissing', async () => {
+		// `previousScreen` came from a primitive that never supplied it, so this
+		// layer rendered nothing and stayed hidden through every push and pop.
+		const stack = [
+			{ id: '1', title: 'Screen One' },
+			{ id: '2', title: 'Screen Two' }
+		];
+		const store = makeScopedStore(stack);
+
+		render(AnimatedStackTest, {
+			props: {
+				store,
+				stack,
+				presentation: { status: 'dismissing' as const, content: stack[1], duration: 300 }
+			}
+		});
+
+		// Both layers are mounted: the outgoing one shows the screen being popped
+		// back to, the current one shows the screen being dismissed.
+		const ids = page
+			.getByTestId('screen')
+			.elements()
+			.map((el) => el.getAttribute('data-screen-id'));
+
+		expect(ids).toContain('1');
+		expect(ids.length).toBe(2);
 	});
 });
