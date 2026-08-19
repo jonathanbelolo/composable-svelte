@@ -5,8 +5,31 @@
 
 import type { Reducer } from '@composable-svelte/core';
 import { Effect } from '@composable-svelte/core';
-import type { MapState, MapAction, LngLat, TileProvider } from '../types/map.types';
+import type { MapState, MapAction, LngLat, TileProvider, LayerStyle } from '../types/map.types';
 import { getStyleURL } from '../utils/tile-providers';
+
+/**
+ * Structural equality for a single style value.
+ *
+ * Style values are plain data: primitives, plus `colorGradient`, which is an
+ * array of `[stop, color]` tuples. Recursing over arrays covers both.
+ */
+function sameStyleValue(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((item, i) => sameStyleValue(item, b[i]));
+  }
+  return false;
+}
+
+/** True when two layer styles are equal by value across every key present in either. */
+function sameStyle(a: LayerStyle, b: LayerStyle): boolean {
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]) as Set<keyof LayerStyle>;
+  for (const key of keys) {
+    if (!sameStyleValue(a[key], b[key])) return false;
+  }
+  return true;
+}
 
 /**
  * Map reducer
@@ -342,13 +365,26 @@ export const mapReducer: Reducer<MapState, MapAction, {}> = (
     }
 
     case 'updateLayerStyle': {
+      const existing = state.layers.find((layer) => layer.id === action.id);
+      if (!existing) {
+        return [state, Effect.none()];
+      }
+
+      const merged = { ...existing.style, ...action.style };
+
+      // Idempotent by value, not by reference. GeoJSONLayer and HeatmapLayer
+      // build `style` with `$derived({...})`, so it is a fresh object on every
+      // render; dispatching it from an `$effect` that also reads store state
+      // would otherwise re-trigger that effect forever.
+      if (sameStyle(existing.style, merged)) {
+        return [state, Effect.none()];
+      }
+
       return [
         {
           ...state,
           layers: state.layers.map((layer) =>
-            layer.id === action.id
-              ? { ...layer, style: { ...layer.style, ...action.style } }
-              : layer
+            layer.id === action.id ? { ...layer, style: merged } : layer
           )
         },
         Effect.none()

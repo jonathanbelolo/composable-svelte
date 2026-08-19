@@ -15,6 +15,37 @@ import type {
   Vector3
 } from './types';
 
+/** True for a plain data object (not an array, not null). */
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Structural equality for plain scene-config data.
+ *
+ * Configs are plain data: primitives, `Vector3` tuples, and nested geometry and
+ * material objects. Recursing over arrays and plain objects covers all three.
+ * Anything else (a function, a class instance) compares unequal, which is the
+ * safe direction — it dispatches rather than wrongly skipping a real update.
+ */
+function sameConfig(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((item, i) => sameConfig(item, b[i]));
+  }
+
+  if (isPlainObject(a) && isPlainObject(b)) {
+    const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+    for (const key of keys) {
+      if (!sameConfig(a[key], b[key])) return false;
+    }
+    return true;
+  }
+
+  return false;
+}
+
 /**
  * Graphics reducer - manages all scene state
  */
@@ -64,16 +95,17 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
     // ========================================================================
 
     case 'updateCamera': {
-      return [
-        {
-          ...state,
-          camera: {
-            ...state.camera,
-            ...action.camera
-          }
-        },
-        Effect.none()
-      ];
+      const merged = { ...state.camera, ...action.camera };
+
+      // Idempotent by value. Camera.svelte builds its config with
+      // `$derived({...})` and dispatches it from an `$effect`; that effect also
+      // reads store state via `dispatch`, so returning a fresh object here
+      // would re-trigger it forever.
+      if (sameConfig(state.camera, merged)) {
+        return [state, Effect.none()];
+      }
+
+      return [{ ...state, camera: merged }, Effect.none()];
     }
 
     case 'setCameraPosition': {
@@ -127,12 +159,23 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
     }
 
     case 'updateMesh': {
+      const existing = state.meshes.find((mesh) => mesh.id === action.id);
+      if (!existing) {
+        return [state, Effect.none()];
+      }
+
+      const merged = { ...existing, ...action.updates };
+
+      // Same value-idempotency requirement as `updateCamera` — Mesh.svelte
+      // dispatches a `$derived` config object from an `$effect`.
+      if (sameConfig(existing, merged)) {
+        return [state, Effect.none()];
+      }
+
       return [
         {
           ...state,
-          meshes: state.meshes.map((mesh) =>
-            mesh.id === action.id ? { ...mesh, ...action.updates } : mesh
-          )
+          meshes: state.meshes.map((mesh) => (mesh.id === action.id ? merged : mesh))
         },
         Effect.none()
       ];

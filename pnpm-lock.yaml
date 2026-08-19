@@ -587,6 +587,9 @@ importers:
 
   packages/chat:
     dependencies:
+      isomorphic-dompurify:
+        specifier: ^2.16.0
+        version: 2.31.0
       marked:
         specifier: ^16.4.1
         version: 16.4.1

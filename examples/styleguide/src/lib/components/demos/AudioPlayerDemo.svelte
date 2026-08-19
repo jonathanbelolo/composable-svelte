@@ -143,6 +143,19 @@
 	// Derived state for modal
 	const isExpanded = $derived($fullStore.isExpanded);
 
+	// Modal takes a scoped destination store (null = hidden), not isOpen/onClose.
+	// Same wrapper shape as ModalDemo.
+	const expandedStore = $derived(
+		isExpanded
+			? {
+					...fullStore,
+					state: $fullStore,
+					dispatch: fullStore.dispatch,
+					dismiss: () => fullStore.dispatch({ type: 'setExpanded', expanded: false })
+				}
+			: null
+	);
+
 	// Demo controls
 	let activeTab = $state<'minimal' | 'full' | 'playlist'>('minimal');
 
@@ -390,18 +403,15 @@ const store = createStore({
 </div>
 
 <!-- Modal for expanded view -->
-{#if isExpanded}
-	<Modal
-		isOpen={true}
-		onClose={() => fullStore.dispatch({ type: 'setExpanded', expanded: false })}
-		title="Audio Player"
-	>
+<Modal store={expandedStore}>
+	{#snippet children()}
+		<h2 class="text-xl font-semibold mb-4">Audio Player</h2>
 		<FullAudioPlayer store={fullStore} id="full-modal" showExpandButton={false} />
 		<div style="margin-top: 1rem;">
 			<PlaylistView store={fullStore} />
 		</div>
-	</Modal>
-{/if}
+	{/snippet}
+</Modal>
 
 <style>
 	.demo-container {

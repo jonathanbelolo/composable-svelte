@@ -31,6 +31,10 @@ export default defineConfig({
       }
     }
   },
+  // Svelte 5 resolves to its server build under Vitest unless the browser
+  // condition is forced, and `mount()` throws there. Scoped to test runs so the
+  // library build below keeps its normal resolution.
+  resolve: process.env.VITEST ? { conditions: ['browser'] } : {},
   test: {
     globals: true,
     environment: 'jsdom',

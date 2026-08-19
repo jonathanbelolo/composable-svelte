@@ -10,12 +10,62 @@ file and line, says whether it was **verified** (something was run) or
 | | count |
 |---|---|
 | Fixed and committed | 47 commits |
-| **Open — components that crash** | **6** |
+| **Open — components that crash** | **0** (was 6 — all fixed, see R1) |
 | Open — breaks a consumer at install/build | 8 |
-| Open — silently-wrong behaviour | 12 |
-| Open — security | 1 |
+| Open — silently-wrong behaviour | 11 (was 12 — `connectionStart` fixed) |
+| Open — security | 0 (was 1 — fixed, see R2) |
 | Open — `svelte-check` errors, previously invisible | **142** |
 | Open — `svelte-check` warnings | 19 |
+
+## Remediation log
+
+### R1. All six crashes — FIXED, mutation-verified
+
+The four `effect_update_depth_exceeded` components were fixed at the reducer, by
+value, mirroring core's `select.reducer.ts`. A reference guard cannot work here:
+both components build their config with `$derived({...})`, a fresh identity every
+render.
+
+- `maps` `updateLayerStyle` — `sameStyle` recurses into `colorGradient` tuples.
+- `graphics` `updateCamera` / `updateMesh` — `sameConfig` recurses into `Vector3`
+  arrays and nested geometry/material objects.
+- `code` `NodeCanvas.handleConnect` — took `{ connection }`; `OnConnect` passes
+  the `Connection` directly.
+- `styleguide` `AudioPlayerDemo` — passed `isOpen`/`onClose`/`title` to `Modal`,
+  which declares none of them and requires `store`. Rewired to the scoped-store
+  pattern `ModalDemo` already used.
+
+**Correction to the original finding:** the loop does *not* surface as a thrown
+Svelte error. It re-schedules, pinning the CPU — the maps mount test hung the
+vitest worker indefinitely rather than failing, and vitest could not enforce its
+own timeout. Worse for a user than reported: the tab locks up.
+
+New guards: `packages/maps/tests/component-mount.test.ts` (4),
+`packages/graphics/tests/component-mount.test.ts` (6). Both packages needed
+`resolve.conditions: ['browser']`, or Svelte resolves to its server build under
+Vitest and `mount()` throws.
+
+`NodeCanvas` has no mount test yet — SvelteFlow in jsdom is heavy, and the real
+guard is `svelte-check`, which cannot run on `code` until S5 adds it. Tracked
+there rather than claimed as covered here.
+
+### R2. Chat XSS — FIXED, mutation-verified
+
+`renderMarkdown` now sanitises with DOMPurify (`isomorphic-dompurify`, a regular
+dependency of `chat`). `isomorphic-dompurify` rather than plain `dompurify` is
+required, not preferred: `renderMarkdown` is called from `$derived`, so it runs
+during SSR, and plain `dompurify` in Node reports `isSupported: false` with
+`sanitize` not even a function.
+
+Chat defines its **own** allowlist. Core's `defaultSanitizeOptions` is blog-tuned
+and allows none of `del`, `span`, `table`, `input`, nor the `class` attribute —
+sanitizing with it would have silently stripped every table, task list and syntax
+highlight.
+
+Verified in both environments: 13 tests in chromium, plus the built package
+imported into plain Node, where `<script>`, `onerror` and a `javascript:` href
+are all neutralised while tables and `language-*` classes survive. Reverting the
+one-line sanitise call fails all 6 XSS tests and no formatting test.
 
 Baseline on the current tree: `pnpm -r build` clean, `pnpm -r typecheck` clean
 across 19 workspaces, `pnpm -r test` 2131 passing, `pnpm -r check` 0/0 — but see

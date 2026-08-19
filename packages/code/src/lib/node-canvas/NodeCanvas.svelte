@@ -7,7 +7,13 @@
    */
 
   import { SvelteFlow, Controls, MiniMap, Background } from '@xyflow/svelte';
-  import type { Node, Edge, Connection, ConnectionLineType } from '@xyflow/svelte';
+  import type {
+    Node,
+    Edge,
+    Connection,
+    ConnectionLineType,
+    OnConnectStartParams
+  } from '@xyflow/svelte';
   import type { Store } from '@composable-svelte/core';
   import type { NodeCanvasState, NodeCanvasAction } from './types.js';
   import { nodesToArray, edgesToArray } from './types.js';
@@ -192,7 +198,7 @@
   /**
    * Handle connection creation.
    */
-  function handleConnect({ connection }: { connection: Connection }) {
+  function handleConnect(connection: Connection) {
     store.dispatch(
       liftAction({
         type: 'connect',
@@ -207,7 +213,7 @@
   /**
    * Handle connection start (user starts dragging from a port).
    */
-  function handleConnectStart({ nodeId, handleId }: { nodeId: string | null; handleId: string | null; handleType: string | null }) {
+  function handleConnectStart(_event: MouseEvent | TouchEvent, { nodeId, handleId }: OnConnectStartParams) {
     if (!nodeId) return;
 
     store.dispatch(
