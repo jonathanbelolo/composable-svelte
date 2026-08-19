@@ -760,9 +760,6 @@ importers:
       intl-messageformat:
         specifier: ^10.7.18
         version: 10.7.18
-      isomorphic-dompurify:
-        specifier: ^2.16.0
-        version: 2.31.0
       motion:
         specifier: ^12.23.24
         version: 12.23.24
@@ -803,6 +800,9 @@ importers:
       autoprefixer:
         specifier: ^10.4.16
         version: 10.4.21(postcss@8.5.6)
+      isomorphic-dompurify:
+        specifier: ^2.16.0
+        version: 2.31.0
       playwright:
         specifier: ^1.56.1
         version: 1.56.1

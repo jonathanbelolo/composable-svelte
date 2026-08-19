@@ -1,15 +1,18 @@
 /**
- * Server-only SSR middleware.
+ * Server-only SSR middleware: security headers and rate limiting.
  *
- * Split out of the `./ssr` barrel deliberately. `html-sanitization.ts` imports
- * `isomorphic-dompurify`, which depends on `jsdom`; while these exports lived
- * on the `./ssr` barrel, every consumer of that entry — and of the root entry,
- * which re-exports through it — pulled DOMPurify into their module graph. A
- * browser bundle would tree-shake it back out, but only after parsing it, and
- * jsdom ships CommonJS that not every bundler can parse.
+ * Split out of the `./ssr` barrel deliberately. That barrel is browser-safe —
+ * the root entry re-exports through it, so anything server-side placed there
+ * lands in every consumer's bundle graph.
  *
- * Import these from `@composable-svelte/core/ssr/middleware`. Nothing here is
- * meant to run in a browser.
+ * Neither module here has any dependency of its own, so this entry always
+ * resolves. HTML sanitisation lives at `@composable-svelte/core/ssr/sanitize`
+ * instead, because it needs `isomorphic-dompurify` (and therefore jsdom); if it
+ * were re-exported here, importing this barrel for rate limiting alone would
+ * eagerly load it.
+ *
+ * Both `fastify*` functions take the Fastify instance as a plain argument —
+ * core does not depend on fastify.
  *
  * @example
  * ```typescript
@@ -32,14 +35,6 @@ export {
   defaultSecurityHeaders,
   type SecurityHeadersConfig
 } from './security-headers.js';
-
-// HTML sanitisation — the one module here with a server-only dependency.
-export {
-  sanitizeHTML,
-  createSanitizer,
-  defaultSanitizeOptions,
-  type SanitizeOptions
-} from './html-sanitization.js';
 
 // Rate limiting
 export {

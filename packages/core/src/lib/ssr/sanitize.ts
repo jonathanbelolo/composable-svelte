@@ -1,7 +1,16 @@
 /**
- * HTML sanitization utilities for SSR.
+ * HTML sanitization for SSR.
  *
  * Provides safe HTML rendering to prevent XSS attacks.
+ *
+ * Its own entry point — `@composable-svelte/core/ssr/sanitize` — rather than
+ * part of `./ssr/middleware`, because it is the only server-side helper with a
+ * dependency: `isomorphic-dompurify`, which pulls in jsdom (72 packages, ~22MB).
+ * That dependency is an *optional peer*, so only consumers who sanitise pay for
+ * it. Security headers and rate limiting have no dependencies at all and stay
+ * on `./ssr/middleware`, which therefore always resolves.
+ *
+ * @packageDocumentation
  */
 
 import DOMPurify from 'isomorphic-dompurify';

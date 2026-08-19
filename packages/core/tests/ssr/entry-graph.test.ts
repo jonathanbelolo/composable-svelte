@@ -29,7 +29,7 @@ const pkg = JSON.parse(readFileSync(join(pkgDir, 'package.json'), 'utf8'));
  * Entries that are allowed to reach server-only code, because that is what they
  * are for. Anything not listed here is treated as client-reachable.
  */
-const SERVER_ONLY_ENTRIES = new Set(['./ssr/ssg', './ssr/middleware', './tailwind-preset']);
+const SERVER_ONLY_ENTRIES = new Set(['./ssr/ssg', './ssr/sanitize', './tailwind-preset']);
 
 /** Packages and builtins that must never appear in a client-reachable graph. */
 const FORBIDDEN = [
@@ -160,8 +160,8 @@ describe('package entry graphs', () => {
 		const ssg = bareSpecifiersFrom(join(pkgDir, 'dist/ssr/ssg.js'));
 		expect([...ssg.keys()].some(isForbidden)).toBe(true);
 
-		const middleware = bareSpecifiersFrom(join(pkgDir, 'dist/ssr/middleware/index.js'));
-		expect([...middleware.keys()]).toContain('isomorphic-dompurify');
+		const sanitize = bareSpecifiersFrom(join(pkgDir, 'dist/ssr/sanitize.js'));
+		expect([...sanitize.keys()]).toContain('isomorphic-dompurify');
 
 		const preset = bareSpecifiersFrom(join(pkgDir, 'dist/tailwind-preset.js'));
 		expect([...preset.keys()].some(isForbidden)).toBe(true);

@@ -307,6 +307,7 @@ generateStaticSite(App, { routes, outDir }, { reducer, dependencies })
 generateStaticPage(App, path, outDir, storeConfig)
 
 // Security — from '@composable-svelte/core/ssr/middleware'
+//   (sanitizeHTML lives at '@composable-svelte/core/ssr/sanitize')
 fastify.register(fastifyRateLimit, { max: 100, windowMs: 60_000 })
 fastify.register(fastifySecurityHeaders, { contentSecurityPolicy, frameOptions: 'DENY' })
 ```

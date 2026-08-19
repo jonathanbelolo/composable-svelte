@@ -7,7 +7,8 @@
  * show it preserved behaviour, and so the code is not left uncovered.
  *
  * Node environment: `sanitizeHTML` reaches isomorphic-dompurify, which resolves
- * to a jsdom-backed build under Node.
+ * to a jsdom-backed build under Node. It lives at `./ssr/sanitize`; the other two
+ * are on `./ssr/middleware` and have no dependencies at all.
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
@@ -20,7 +21,7 @@ import {
 	sanitizeHTML,
 	createSanitizer,
 	defaultSanitizeOptions
-} from '../../src/lib/ssr/middleware/html-sanitization.js';
+} from '../../src/lib/ssr/sanitize.js';
 import {
 	RateLimiter,
 	fastifyRateLimit

@@ -83,11 +83,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — SSR entry points
 
-- **Server-only middleware moved to `@composable-svelte/core/ssr/middleware`.**
-  `sanitizeHTML`, `createSanitizer`, `defaultSanitizeOptions`,
-  `createSecurityHeaders`, `fastifySecurityHeaders`, `defaultSecurityHeaders`,
-  `RateLimiter`, `fastifyRateLimit` and their config types are no longer
-  exported from `/ssr`. The names are unchanged.
+- **Server-only middleware moved off `/ssr`.** `createSecurityHeaders`,
+  `fastifySecurityHeaders`, `defaultSecurityHeaders`, `RateLimiter`,
+  `fastifyRateLimit` and their config types are now at
+  `@composable-svelte/core/ssr/middleware`; `sanitizeHTML`, `createSanitizer`
+  and `defaultSanitizeOptions` are at `@composable-svelte/core/ssr/sanitize`.
+  None of them is exported from `/ssr` any more. The names are unchanged.
 
   They had to move because `html-sanitization` imports `isomorphic-dompurify`,
   which depends on `jsdom`, and the root entry re-exports through the `/ssr`
@@ -102,6 +103,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   is now browser-safe. A new test walks the built module graph of every entry in
   the `exports` map and fails any client-reachable one that can reach jsdom,
   DOMPurify, fastify or a Node builtin.
+
+- **`isomorphic-dompurify` is now an optional peer dependency, not a runtime
+  dependency.** It was installing for every consumer — 72 transitive packages,
+  roughly 22 MB — including browser-only apps that never sanitise anything.
+  Measured against a packed tarball: a fresh install is 14 packages without it
+  and 80 with it.
+
+  It is the only server-side helper in core with a dependency, which is why
+  sanitisation gets its own entry rather than sharing `/ssr/middleware`. Security
+  headers and rate limiting have no dependencies at all, so that entry always
+  resolves; if sanitisation were re-exported there, importing it for rate
+  limiting alone would eagerly load jsdom. Consumers who call `sanitizeHTML`
+  should add `isomorphic-dompurify` to their own dependencies; without it the
+  import fails immediately with `Cannot find package 'isomorphic-dompurify'`
+  rather than silently skipping sanitisation.
 
 - For the record: importing `generateStaticSite` from `/ssr` has never worked —
   the barrel only ever re-exported SSG *types*, deliberately, to keep `fs` out

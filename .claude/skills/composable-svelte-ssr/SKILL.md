@@ -1109,7 +1109,8 @@ console.log(defaultSecurityHeaders);
 ### HTML Sanitization
 
 ```typescript
-import { sanitizeHTML, createSanitizer, defaultSanitizeOptions } from '@composable-svelte/core/ssr/middleware';
+// `isomorphic-dompurify` is an optional peer dependency — install it to use this.
+import { sanitizeHTML, createSanitizer, defaultSanitizeOptions } from '@composable-svelte/core/ssr/sanitize';
 
 // Quick sanitize
 const clean = sanitizeHTML('<script>alert("xss")</script><p>Safe</p>');
