@@ -8,7 +8,7 @@
  * @module routing/browser-history
  */
 
-import type { Store } from '../types';
+import type { Store } from '../types.js';
 
 /**
  * Configuration for browser history synchronization.

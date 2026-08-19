@@ -7,8 +7,8 @@
  * @module routing/sync-effect
  */
 
-import { Effect } from '../effect';
-import type { Effect as EffectType } from '../types';
+import { Effect } from '../effect.js';
+import type { Effect as EffectType } from '../types.js';
 
 /**
  * Normalize query string for comparison.

@@ -9,7 +9,7 @@
  * @module routing/query-params
  */
 
-import type { Schema } from './schemas';
+import type { Schema } from './schemas.js';
 
 /**
  * Safely decode a URI component, returning the original string if decoding fails.

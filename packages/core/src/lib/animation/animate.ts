@@ -8,8 +8,8 @@
  */
 
 import { animate as motionAnimate } from 'motion';
-import type { SpringConfig } from './spring-config';
-import { springPresets, mergeSpringConfig } from './spring-config';
+import type { SpringConfig } from './spring-config.js';
+import { springPresets, mergeSpringConfig } from './spring-config.js';
 
 // Re-export animate for use in components
 export { motionAnimate as animate };

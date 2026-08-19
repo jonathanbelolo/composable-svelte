@@ -7,8 +7,8 @@
  * @module routing/types
  */
 
-import type { SerializerConfig } from './serializer';
-import type { ParserConfig } from './parser';
+import type { SerializerConfig } from './serializer.js';
+import type { ParserConfig } from './parser.js';
 
 /**
  * Complete route configuration combining serialization and parsing.
