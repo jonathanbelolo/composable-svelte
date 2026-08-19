@@ -117,7 +117,8 @@
       <div class="flex justify-between items-center pt-4 border-t flex-wrap gap-4">
         <Pagination
           totalItems={245}
-          bind:itemsPerPage
+          {itemsPerPage}
+          onItemsPerPageChange={(n) => (itemsPerPage = n)}
           bind:currentPage={currentPage3}
           showItemsPerPage={true}
           itemsPerPageOptions={[10, 20, 30, 50]}

@@ -29,7 +29,7 @@ import type {
   GeometryConfig,
   MaterialConfig,
   Vector3
-} from '../core/types';
+} from '../core/types.js';
 
 /**
  * Babylon.js adapter - handles WebGPU/WebGL rendering

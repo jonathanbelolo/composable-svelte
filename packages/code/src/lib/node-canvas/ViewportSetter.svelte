@@ -16,7 +16,7 @@
     onApplied?: () => void;
   }
 
-  const props = $props<Props>();
+  const props: Props = $props();
 
   const { setViewport, getViewport } = useSvelteFlow();
 

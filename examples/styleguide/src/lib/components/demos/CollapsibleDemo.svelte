@@ -107,7 +107,7 @@
         <CollapsibleTrigger>
           <div class="flex items-center gap-2">
             <span class="font-medium">Product Details</span>
-            <Badge variant="primary">Featured</Badge>
+            <Badge variant="default">Featured</Badge>
           </div>
         </CollapsibleTrigger>
         <CollapsibleContent>

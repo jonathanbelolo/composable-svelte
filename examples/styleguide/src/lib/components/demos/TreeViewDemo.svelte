@@ -68,29 +68,29 @@
       id: 'ceo',
       label: 'Sarah Johnson',
       icon: '👤',
-      data: { role: 'CEO' },
+      data: 'CEO',
       children: [
         {
           id: 'cto',
           label: 'Michael Chen',
           icon: '👤',
-          data: { role: 'CTO' },
+          data: 'CTO',
           children: [
             {
               id: 'eng-lead',
               label: 'Emily Rodriguez',
               icon: '👤',
-              data: { role: 'Engineering Lead' },
+              data: 'Engineering Lead',
               children: [
-                { id: 'dev-1', label: 'Alex Kim', icon: '👤', data: { role: 'Senior Developer' } },
-                { id: 'dev-2', label: 'Jordan Lee', icon: '👤', data: { role: 'Developer' } },
+                { id: 'dev-1', label: 'Alex Kim', icon: '👤', data: 'Senior Developer' },
+                { id: 'dev-2', label: 'Jordan Lee', icon: '👤', data: 'Developer' },
               ],
             },
             {
               id: 'devops-lead',
               label: 'Chris Taylor',
               icon: '👤',
-              data: { role: 'DevOps Lead' },
+              data: 'DevOps Lead',
             },
           ],
         },
@@ -98,10 +98,10 @@
           id: 'cmo',
           label: 'David Brown',
           icon: '👤',
-          data: { role: 'CMO' },
+          data: 'CMO',
           children: [
-            { id: 'marketing-1', label: 'Lisa Wang', icon: '👤', data: { role: 'Marketing Manager' } },
-            { id: 'marketing-2', label: 'Tom Anderson', icon: '👤', data: { role: 'Content Lead' } },
+            { id: 'marketing-1', label: 'Lisa Wang', icon: '👤', data: 'Marketing Manager' },
+            { id: 'marketing-2', label: 'Tom Anderson', icon: '👤', data: 'Content Lead' },
           ],
         },
       ],
@@ -252,7 +252,7 @@
       </p>
       {#if selectedNode}
         <div class="mt-2">
-          <Badge variant="primary">Selected: {selectedNode}</Badge>
+          <Badge variant="default">Selected: {selectedNode}</Badge>
         </div>
       {/if}
     </div>

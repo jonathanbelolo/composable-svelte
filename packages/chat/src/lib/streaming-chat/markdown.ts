@@ -8,8 +8,18 @@
  * If not installed, syntax highlighting and video extraction will be disabled gracefully.
  */
 
-import { marked } from 'marked';
-import DOMPurify from 'isomorphic-dompurify';
+import { Marked } from 'marked';
+import { sanitizeRenderedMarkdown } from './sanitize.js';
+
+/**
+ * This module's own renderer instance.
+ *
+ * Not the shared `marked` singleton: `simple-markdown.ts` configures its own
+ * renderer too, and both modules load at import time, so whichever landed last
+ * used to win for both — SimpleChatMessage silently acquiring Prism markup, or
+ * this one losing it.
+ */
+const marked = new Marked();
 
 // Language map for Prism
 const LANGUAGE_MAP: Record<string, string> = {
@@ -134,59 +144,6 @@ function escapeHtml(text: string): string {
 	return text.replace(/[&<>"']/g, (char) => map[char]!);
 }
 
-/**
- * Tags this module's own markdown pipeline legitimately produces.
- *
- * Derived by rendering GFM through the marked configuration below and reading
- * the output: tables, task lists and `<del>` come from `gfm: true`, `<br>` from
- * `breaks: true`, and `<span class="token …">` from Prism highlighting.
- *
- * Core's `defaultSanitizeOptions` (`@composable-svelte/core/ssr/sanitize`) is
- * deliberately not reused here — it is tuned for blog posts and allows none of
- * `del`, `span`, `table`, `input`, nor the `class` attribute, so sanitizing
- * with it would silently strip every table, task list and code highlight.
- */
-const ALLOWED_TAGS = [
-	'p', 'br', 'hr', 'span', 'div',
-	'strong', 'em', 'del', 's', 'u', 'sup', 'sub',
-	'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-	'ul', 'ol', 'li', 'input',
-	'blockquote', 'code', 'pre',
-	'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
-	'a', 'img'
-];
-
-/**
- * Attributes kept alongside those tags.
- *
- * `class` carries `language-*`, `inline-code` and Prism's token classes, so
- * dropping it would remove all syntax highlighting. DOMPurify applies
- * ALLOWED_ATTR globally rather than per tag; that is safe because event
- * handlers and `javascript:` URLs are stripped regardless of this list.
- * `target` is deliberately absent, so no link can open a tab it could then
- * reach back through.
- */
-const ALLOWED_ATTR = [
-	'class', 'align',
-	'href', 'title', 'rel',
-	'src', 'alt', 'width', 'height',
-	'type', 'checked', 'disabled'
-];
-
-/**
- * Strip anything executable from rendered markdown.
- *
- * Model output is untrusted: it reaches `{@html}` in ChatMessage, so raw
- * `<script>`, `<img onerror=…>` and `javascript:` hrefs would otherwise
- * execute. Runs on both the server and the client — `renderMarkdown` is called
- * from `$derived`, so it executes during SSR too.
- */
-function sanitizeRenderedMarkdown(html: string): string {
-	return DOMPurify.sanitize(html, {
-		ALLOWED_TAGS,
-		ALLOWED_ATTR
-	}) as unknown as string;
-}
 
 /**
  * Render markdown to HTML

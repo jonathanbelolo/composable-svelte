@@ -118,24 +118,23 @@ async function hydrate() {
   } catch (error) {
     console.error('❌ Hydration failed:', error);
 
-    // Show error to user
-    document.body.innerHTML = `
-      <div style="
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 100vh;
-        background: #fee;
-        color: #c00;
-        font-family: monospace;
-        padding: 2rem;
-      ">
-        <div>
-          <h1>Hydration Error</h1>
-          <p>${error instanceof Error ? error.message : 'Unknown error'}</p>
-        </div>
-      </div>
-    `;
+    // Show error to user. Built as DOM nodes rather than an innerHTML template
+    // so the message — which can carry server-influenced text — is never parsed
+    // as markup.
+    const shell = document.createElement('div');
+    shell.setAttribute(
+      'style',
+      'display:flex;align-items:center;justify-content:center;min-height:100vh;' +
+        'background:#fee;color:#c00;font-family:monospace;padding:2rem;'
+    );
+    const inner = document.createElement('div');
+    const heading = document.createElement('h1');
+    heading.textContent = 'Hydration Error';
+    const detail = document.createElement('p');
+    detail.textContent = error instanceof Error ? error.message : 'Unknown error';
+    inner.append(heading, detail);
+    shell.append(inner);
+    document.body.replaceChildren(shell);
   }
 }
 

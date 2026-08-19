@@ -1,5 +1,9 @@
 <script lang="ts">
   import { Box } from '@composable-svelte/core/components/ui';
+
+  // `as const` so these narrow to Box's literal size union rather than string.
+  const spacingSizes = ['xs', 'sm', 'md', 'lg', 'xl'] as const;
+  const marginSizes = ['xs', 'sm', 'md', 'lg'] as const;
 </script>
 
 <div class="space-y-12">
@@ -12,7 +16,7 @@
     </div>
 
     <div class="space-y-4">
-      {#each ['xs', 'sm', 'md', 'lg', 'xl'] as size}
+      {#each spacingSizes as size}
         <div>
           <p class="text-xs text-muted-foreground mb-2">Padding: {size}</p>
           <Box p={size} class="border bg-muted/50">
@@ -34,7 +38,7 @@
     </div>
 
     <div class="border rounded-lg p-4 bg-muted/50">
-      {#each ['xs', 'sm', 'md', 'lg'] as size}
+      {#each marginSizes as size}
         <Box m={size} class="bg-primary/10 border border-primary/20 p-2">
           Content with {size} margin
         </Box>

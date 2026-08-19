@@ -84,7 +84,7 @@
         <AccordionTrigger>
           <div class="flex items-center gap-2">
             <span>Testability</span>
-            <Badge variant="primary">Core</Badge>
+            <Badge variant="default">Core</Badge>
           </div>
         </AccordionTrigger>
         <AccordionContent>

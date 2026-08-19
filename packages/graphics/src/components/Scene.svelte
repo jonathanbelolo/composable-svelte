@@ -7,8 +7,8 @@
 import { onMount } from 'svelte';
 import type { Snippet } from 'svelte';
 import type { Store } from '@composable-svelte/core';
-import type { GraphicsState, GraphicsAction } from '../core/types';
-import { BabylonAdapter } from '../adapters/babylon-adapter';
+import type { GraphicsState, GraphicsAction } from '../core/types.js';
+import { BabylonAdapter } from '../adapters/babylon-adapter.js';
 
 // Props
 let {

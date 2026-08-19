@@ -12,7 +12,7 @@ import type {
   GeometryConfig,
   MaterialConfig,
   Vector3
-} from '../core/types';
+} from '../core/types.js';
 
 // Props
 let {

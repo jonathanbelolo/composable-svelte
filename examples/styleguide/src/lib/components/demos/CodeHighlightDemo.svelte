@@ -1,4 +1,6 @@
 <script lang="ts">
+	// `as const` so these narrow to SupportedLanguage rather than string.
+	const demoLanguages = ['typescript', 'javascript', 'python', 'rust', 'sql'] as const;
 	import { createStore } from '@composable-svelte/core';
 	import {
 		CodeHighlight,
@@ -239,7 +241,7 @@ LIMIT 10;`;
 				<div class="space-y-4">
 					<!-- Language Selector -->
 					<div class="flex gap-2">
-						{#each ['typescript', 'javascript', 'python', 'rust', 'sql'] as lang}
+						{#each demoLanguages as lang}
 							<Button
 								variant={$interactiveStore.language === lang ? 'default' : 'outline'}
 								size="sm"

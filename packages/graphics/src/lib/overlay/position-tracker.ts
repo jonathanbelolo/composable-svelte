@@ -5,7 +5,7 @@
  * Automatically updates element bounds when they move, resize, or scroll.
  */
 
-import type { ElementBounds } from './overlay-types';
+import type { ElementBounds } from './overlay-types.js';
 
 /**
  * Position update callback

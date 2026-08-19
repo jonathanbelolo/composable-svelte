@@ -21,7 +21,7 @@
     const newLevels = ['accessories', 'chargers', 'cables', 'adapters', 'usb-c'];
     // Use modulo with positive offset to cycle through levels
     const index = (currentPath.length - 5 + newLevels.length * 100) % newLevels.length;
-    const nextLevel = newLevels[index];
+    const nextLevel = newLevels[index]!;
     currentPath = [...currentPath, nextLevel];
   }
 </script>

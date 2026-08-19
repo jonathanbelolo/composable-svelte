@@ -13,7 +13,7 @@ file and line, says whether it was **verified** (something was run) or
 | **Open — components that crash** | **0** (was 6 — all fixed, see R1) |
 | Open — breaks a consumer at install/build | 8 |
 | Open — silently-wrong behaviour | 11 (was 12 — `connectionStart` fixed) |
-| Open — security | 0 (was 1 — fixed, see R2) |
+| Open — security | 0 (was 1; **the R2 fix was incomplete — see R3**) |
 | Open — `svelte-check` errors, previously invisible | **142** |
 | Open — `svelte-check` warnings | 19 |
 
@@ -48,6 +48,87 @@ Vitest and `mount()` throws.
 `NodeCanvas` has no mount test yet — SvelteFlow in jsdom is heavy, and the real
 guard is `svelte-check`, which cannot run on `code` until S5 adds it. Tracked
 there rather than claimed as covered here.
+
+### R3. The R2 fix was incomplete — two live XSS paths closed
+
+**Correction.** R2 claimed the chat XSS was fixed. It sanitised `renderMarkdown`,
+which feeds two of the three `{@html}` sites. The third,
+`primitives/SimpleChatMessage.svelte:53`, is fed by `renderSimpleMarkdown` in a
+*different* module with the identical defect. The original sweep attributed all
+three sites to one function; that was never checked, and R2 repeated it. The
+package still shipped a working XSS after R2.
+
+A full sink audit now backs the scope: six `{@html}` sites and five
+`innerHTML`-class sites across all packages and examples.
+
+- **`renderSimpleMarkdown`** — now sanitised. The allowlist moved to a shared
+  `streaming-chat/sanitize.ts` used by both modules, so the next fix cannot land
+  on only one of them again.
+- **`code/CodeHighlight.svelte:53`** — rendered `{@html highlightedCode || code}`,
+  and `state.code` is never escaped. Reachable before the async highlight
+  resolves, on every `codeChanged`, and *permanently* after `highlightFailed`.
+  Now `{#if}`/`{:else}` with plain interpolation, which Svelte escapes. I had
+  previously recorded this package's `{@html}` as safe — that assessment was
+  about markdown fallbacks in a different file and was generalised without
+  checking this one.
+- **`examples/ssr-server/src/client/index.ts:122`** — interpolated `error.message`
+  into `document.body.innerHTML`; now built from DOM nodes with `textContent`.
+- **`marked` global cross-talk** — both chat modules configured the shared
+  `marked` singleton at import time, so whichever loaded last won for both.
+  Each now owns a `new Marked()` instance; pinned by a test asserting the full
+  renderer emits `language-javascript` while the simple one emits `language-js`.
+
+Verified: 21 chat tests in chromium plus the built package in plain Node.
+Reverting either sanitise call fails exactly its own XSS tests and no formatting
+test. Streaming cost measured in the browser rather than inferred from jsdom:
+**0.641 ms** mean per render (jsdom suggested 4.41 ms), so no material regression.
+
+### R4. `code` and `styleguide` are now checked and gated
+
+The NodeCanvas and AudioPlayerDemo fixes in R1 shipped without a regression
+guard. Both are now covered by `svelte-check`, which is the right guard for
+prop-contract bugs of that shape.
+
+- **`packages/code`: 16 errors → 0, gated.** Most shared one root cause — the
+  `NodeData`/`EdgeData` generics lacked `extends Record<string, unknown>`.
+  Fixing that surfaced four *silently ignored* SvelteFlow props underneath:
+  `defaultViewport` (not a prop in v1; the stored viewport never applied — it is
+  `initialViewport`), `selectable` (it is `elementsSelectable`), and
+  `onnodeschange`/`onedgeschange`, which do not exist at all — so the two empty
+  `handleNodesChange`/`handleEdgesChange` bodies were wired to nothing and have
+  been removed. `connectionLineType`'s `'bezier'` default is also fixed
+  (`ConnectionLineType.Bezier === "default"`).
+- **`examples/styleguide`: 72 errors + 21 warnings → 0/0, gated.** Real defects
+  among them: 11 `<Badge variant="primary">` (no such variant — they rendered
+  unstyled), a `<Spinner size="xl">` showcase for a size Spinner does not have,
+  and `bind:itemsPerPage` on a Pagination prop that is not `$bindable`, so the
+  control never fed back.
+- **`SceneDemo.svelte` was not a tooling artifact.** svelte-check parsed the whole
+  file as TypeScript. The cause was an unescaped `</script>` inside a template
+  literal used as a code sample, which terminated the parser early; escaping it
+  as `<\/script>` cleared all six errors. Worth recording because the file
+  compiled, transformed via svelte2tsx standalone, and shipped under `vite build`
+  — only svelte-check saw it.
+
+Mutation-verified: reverting either R1 fix makes `pnpm check` fail.
+
+### R5. `graphics` packaging
+
+Its build was `vite build && tsc --emitDeclarationOnly`, and `tsc` silently
+ignores `.svelte` — so `dist/index.d.ts` re-exported `./components/*.svelte`
+files that were never emitted. Consumers got no component types at all. Now
+`svelte-package`, like every sibling, and the components ship real prop
+declarations.
+
+That change exposed a second defect the old bundle had hidden: graphics used
+extensionless relative specifiers throughout, so the preserved module graph did
+not resolve in Node. Fixed across 10 files. `maps` and `charts` still fail the
+same probe with `ERR_MODULE_NOT_FOUND` — that is the outstanding S2 work, not a
+regression from this change.
+
+The "component CSS is never loaded" finding is resolved as a side effect:
+svelte-package keeps styles scoped inside components, so there is no orphaned
+`dist/index.css` any more.
 
 ### R2. Chat XSS — FIXED, mutation-verified
 

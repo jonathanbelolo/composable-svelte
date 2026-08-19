@@ -13,7 +13,7 @@ import type {
   LightConfig,
   AnimationConfig,
   Vector3
-} from './types';
+} from './types.js';
 
 /** True for a plain data object (not an array, not null). */
 function isPlainObject(value: unknown): value is Record<string, unknown> {

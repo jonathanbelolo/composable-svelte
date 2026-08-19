@@ -6,7 +6,7 @@
 
 import { onMount } from 'svelte';
 import type { Store } from '@composable-svelte/core';
-import type { GraphicsState, GraphicsAction, Vector3, CameraType } from '../core/types';
+import type { GraphicsState, GraphicsAction, Vector3, CameraType } from '../core/types.js';
 
 // Props
 let {

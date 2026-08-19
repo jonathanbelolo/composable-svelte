@@ -9,6 +9,7 @@
     mapReducer,
     createInitialMapState
   } from '@composable-svelte/maps';
+  import type { GeoJSON } from '@composable-svelte/maps';
   import {
     Card,
     CardHeader,
@@ -139,7 +140,7 @@
   }
 
   // Sample GeoJSON data
-  const statesGeoJSON = {
+  const statesGeoJSON: GeoJSON = {
     type: 'FeatureCollection',
     features: [
       {
@@ -162,7 +163,7 @@
   };
 
   // Sample heatmap data
-  const crimeHeatmapData = {
+  const crimeHeatmapData: GeoJSON = {
     type: 'FeatureCollection',
     features: Array.from({ length: 200 }, () => {
       const clusterCenterLng = -118.2437 + (Math.random() - 0.5) * 0.4;

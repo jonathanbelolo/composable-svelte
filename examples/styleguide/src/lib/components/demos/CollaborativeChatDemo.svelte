@@ -172,7 +172,7 @@
 
 		const presenceOrder: UserPresence[] = ['active', 'idle', 'away', 'offline'];
 		const currentIndex = presenceOrder.indexOf(user.presence);
-		const nextPresence = presenceOrder[(currentIndex + 1) % presenceOrder.length];
+		const nextPresence = presenceOrder[(currentIndex + 1) % presenceOrder.length]!;
 
 		store.dispatch({
 			type: 'userPresenceChanged',

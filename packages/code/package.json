@@ -1,104 +1,106 @@
 {
-  "name": "@composable-svelte/code",
-  "version": "0.1.4",
-  "description": "Code editor, syntax highlighting, and node-based canvas components for Composable Svelte - Built with Prism.js, CodeMirror, and SvelteFlow",
-  "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "svelte": "./dist/index.js",
-      "default": "./dist/index.js"
-    },
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "svelte": "./dist/*.js",
-      "default": "./dist/*.js"
-    }
-  },
-  "svelte": "./dist/index.js",
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
-  ],
-  "scripts": {
-    "build": "svelte-package -o dist",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:ui": "vitest --ui",
-    "test:coverage": "vitest run --coverage",
-    "prepublishOnly": "pnpm run build && pnpm run typecheck",
-    "prepack": "pnpm run build"
-  },
-  "keywords": [
-    "svelte",
-    "svelte5",
-    "code-editor",
-    "syntax-highlighting",
-    "node-editor",
-    "node-canvas",
-    "flow-editor",
-    "visual-programming",
-    "prismjs",
-    "codemirror",
-    "svelteflow",
-    "composable-architecture",
-    "typescript"
-  ],
-  "author": "Jonathan Belolo",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/jbelolo/composable-svelte.git",
-    "directory": "packages/code"
-  },
-  "homepage": "https://github.com/jbelolo/composable-svelte#readme",
-  "bugs": {
-    "url": "https://github.com/jbelolo/composable-svelte/issues"
-  },
-  "peerDependencies": {
-    "@composable-svelte/core": "^0.4.0 || ^0.5.0 || ^0.6.0",
-    "svelte": "^5.0.0"
-  },
-  "devDependencies": {
-    "@composable-svelte/core": "workspace:*",
-    "@sveltejs/package": "^2.5.4",
-    "@sveltejs/vite-plugin-svelte": "^6.2.1",
-    "@types/node": "^20.0.0",
-    "@types/prismjs": "^1.26.0",
-    "@vitest/browser-playwright": "^4.0.7",
-    "@vitest/coverage-v8": "^4.0.7",
-    "@vitest/ui": "^4.0.7",
-    "playwright": "^1.56.1",
-    "svelte": "^5.0.0",
-    "typescript": "^5.5.4",
-    "vite": "^6.4.1",
-    "vitest": "^4.0.7"
-  },
-  "dependencies": {
-    "@codemirror/autocomplete": "^6.19.1",
-    "@codemirror/lang-css": "^6.3.1",
-    "@codemirror/lang-html": "^6.4.11",
-    "@codemirror/lang-javascript": "^6.2.4",
-    "@codemirror/lang-json": "^6.0.2",
-    "@codemirror/lang-markdown": "^6.5.0",
-    "@codemirror/lang-python": "^6.2.1",
-    "@codemirror/lang-rust": "^6.0.2",
-    "@codemirror/lang-sql": "^6.10.0",
-    "@codemirror/lint": "^6.9.2",
-    "@codemirror/search": "^6.5.11",
-    "@codemirror/state": "^6.5.2",
-    "@codemirror/theme-one-dark": "^6.1.3",
-    "@codemirror/view": "^6.38.6",
-    "@xyflow/svelte": "^1.4.1",
-    "codemirror": "^6.0.2",
-    "prism-themes": "^1.9.0",
-    "prismjs": "^1.29.0"
-  },
-  "publishConfig": {
-    "access": "public"
-  }
+	"name": "@composable-svelte/code",
+	"version": "0.1.4",
+	"description": "Code editor, syntax highlighting, and node-based canvas components for Composable Svelte - Built with Prism.js, CodeMirror, and SvelteFlow",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"svelte": "./dist/index.js",
+			"default": "./dist/index.js"
+		},
+		"./*": {
+			"types": "./dist/*.d.ts",
+			"svelte": "./dist/*.js",
+			"default": "./dist/*.js"
+		}
+	},
+	"svelte": "./dist/index.js",
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
+	"scripts": {
+		"build": "svelte-package -o dist",
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"test:ui": "vitest --ui",
+		"test:coverage": "vitest run --coverage",
+		"prepublishOnly": "pnpm run build && pnpm run typecheck",
+		"prepack": "pnpm run build",
+		"check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings"
+	},
+	"keywords": [
+		"svelte",
+		"svelte5",
+		"code-editor",
+		"syntax-highlighting",
+		"node-editor",
+		"node-canvas",
+		"flow-editor",
+		"visual-programming",
+		"prismjs",
+		"codemirror",
+		"svelteflow",
+		"composable-architecture",
+		"typescript"
+	],
+	"author": "Jonathan Belolo",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/jbelolo/composable-svelte.git",
+		"directory": "packages/code"
+	},
+	"homepage": "https://github.com/jbelolo/composable-svelte#readme",
+	"bugs": {
+		"url": "https://github.com/jbelolo/composable-svelte/issues"
+	},
+	"peerDependencies": {
+		"@composable-svelte/core": "^0.4.0 || ^0.5.0 || ^0.6.0",
+		"svelte": "^5.0.0"
+	},
+	"devDependencies": {
+		"@composable-svelte/core": "workspace:*",
+		"@sveltejs/package": "^2.5.4",
+		"@sveltejs/vite-plugin-svelte": "^6.2.1",
+		"@types/node": "^20.0.0",
+		"@types/prismjs": "^1.26.0",
+		"@vitest/browser-playwright": "^4.0.7",
+		"@vitest/coverage-v8": "^4.0.7",
+		"@vitest/ui": "^4.0.7",
+		"playwright": "^1.56.1",
+		"svelte": "^5.0.0",
+		"svelte-check": "^4.3.3",
+		"typescript": "^5.5.4",
+		"vite": "^6.4.1",
+		"vitest": "^4.0.7"
+	},
+	"dependencies": {
+		"@codemirror/autocomplete": "^6.19.1",
+		"@codemirror/lang-css": "^6.3.1",
+		"@codemirror/lang-html": "^6.4.11",
+		"@codemirror/lang-javascript": "^6.2.4",
+		"@codemirror/lang-json": "^6.0.2",
+		"@codemirror/lang-markdown": "^6.5.0",
+		"@codemirror/lang-python": "^6.2.1",
+		"@codemirror/lang-rust": "^6.0.2",
+		"@codemirror/lang-sql": "^6.10.0",
+		"@codemirror/lint": "^6.9.2",
+		"@codemirror/search": "^6.5.11",
+		"@codemirror/state": "^6.5.2",
+		"@codemirror/theme-one-dark": "^6.1.3",
+		"@codemirror/view": "^6.38.6",
+		"@xyflow/svelte": "^1.4.1",
+		"codemirror": "^6.0.2",
+		"prism-themes": "^1.9.0",
+		"prismjs": "^1.29.0"
+	},
+	"publishConfig": {
+		"access": "public"
+	}
 }

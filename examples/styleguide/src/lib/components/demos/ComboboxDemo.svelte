@@ -159,7 +159,7 @@
       </p>
       {#if selectedFruit}
         <div class="mt-2">
-          <Badge variant="primary">Selected: {selectedFruit}</Badge>
+          <Badge variant="default">Selected: {selectedFruit}</Badge>
         </div>
       {/if}
     </div>
@@ -167,7 +167,7 @@
     <Card>
       <CardContent class="p-6">
         <div class="max-w-md">
-          <label class="text-sm font-medium mb-2 block">Choose a fruit</label>
+          <span class="text-sm font-medium mb-2 block">Choose a fruit</span>
           <Combobox
             options={fruitOptions}
             bind:value={selectedFruit}
@@ -194,7 +194,7 @@
       </CardHeader>
       <CardContent class="space-y-4">
         <div>
-          <label class="text-sm font-medium mb-2 block">Country</label>
+          <span class="text-sm font-medium mb-2 block">Country</span>
           <Combobox
             options={countryOptions}
             bind:value={selectedCountry}
@@ -203,7 +203,7 @@
         </div>
 
         <div>
-          <label class="text-sm font-medium mb-2 block">Favorite Language</label>
+          <span class="text-sm font-medium mb-2 block">Favorite Language</span>
           <Combobox
             options={languageOptions}
             bind:value={selectedLanguage}
@@ -212,7 +212,7 @@
         </div>
 
         <div>
-          <label class="text-sm font-medium mb-2 block">Preferred Framework</label>
+          <span class="text-sm font-medium mb-2 block">Preferred Framework</span>
           <Combobox
             options={frameworkOptions}
             bind:value={selectedFramework}
@@ -283,7 +283,7 @@
       </p>
       {#if selectedCity}
         <div class="mt-2">
-          <Badge variant="primary">City ID: {selectedCity}</Badge>
+          <Badge variant="default">City ID: {selectedCity}</Badge>
         </div>
       {/if}
     </div>
@@ -320,7 +320,7 @@
     <Card>
       <CardContent class="p-6">
         <div class="max-w-md">
-          <label class="text-sm font-medium mb-2 block">Disabled Combobox</label>
+          <span class="text-sm font-medium mb-2 block">Disabled Combobox</span>
           <Combobox
             options={fruitOptions}
             placeholder="This combobox is disabled"

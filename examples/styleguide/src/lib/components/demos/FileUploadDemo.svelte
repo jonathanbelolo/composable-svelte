@@ -29,7 +29,7 @@
   function handleSingleFileChange(files: UploadedFile[]) {
     singleFile = files;
     if (files.length > 0) {
-      logEvent(`Single: ${files[0].file.name} selected`);
+      logEvent(`Single: ${files[0]!.file.name} selected`);
     } else {
       logEvent('Single: File cleared');
     }
@@ -116,7 +116,7 @@
       {#if imageFiles.length > 0}
         <div class="text-sm space-y-2">
           <div class="flex items-center gap-2">
-            <Badge variant="primary">
+            <Badge variant="default">
               {imageFiles.length} image{imageFiles.length === 1 ? '' : 's'} selected
             </Badge>
             <span class="text-muted-foreground">•</span>
@@ -152,9 +152,9 @@
         <div class="p-4 bg-muted rounded-lg">
           <p class="text-sm font-medium mb-2">Selected Document:</p>
           <div class="space-y-1">
-            <p class="text-sm">{singleFile[0].file.name}</p>
+            <p class="text-sm">{singleFile[0]!.file.name}</p>
             <p class="text-xs text-muted-foreground">
-              {formatBytes(singleFile[0].file.size)} • {singleFile[0].file.type || 'Unknown type'}
+              {formatBytes(singleFile[0]!.file.size)} • {singleFile[0]!.file.type || 'Unknown type'}
             </p>
           </div>
         </div>

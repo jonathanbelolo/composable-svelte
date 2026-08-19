@@ -234,7 +234,7 @@
                   <div class="text-9xl">{slide.data?.image}</div>
                   {#if slide.data?.badge}
                     <div class="absolute top-4 right-4">
-                      <Badge variant="primary">{slide.data.badge}</Badge>
+                      <Badge variant="default">{slide.data.badge}</Badge>
                     </div>
                   {/if}
                 </div>

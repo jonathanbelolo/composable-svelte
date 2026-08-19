@@ -50,7 +50,9 @@
 		class="code-highlight__pre language-{$store.language}"
 		class:line-numbers={$store.showLineNumbers}
 		style:counter-reset={$store.showLineNumbers ? `line-number ${$store.startLine - 1}` : undefined}
-	><code class="code-highlight__code">{@html $store.highlightedCode || $store.code}</code></pre>
+	><code class="code-highlight__code"
+		>{#if $store.highlightedCode}{@html $store.highlightedCode}{:else}{$store.code}{/if}</code
+		></pre>
 </div>
 
 <style>

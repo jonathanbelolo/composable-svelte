@@ -57,7 +57,7 @@
 
       <div class="text-sm">
         {#if singleDate}
-          <Badge variant="primary">
+          <Badge variant="default">
             Selected: {singleDate.toLocaleDateString('en-US', {
               weekday: 'long',
               year: 'numeric',
@@ -125,7 +125,7 @@
 
       <div class="text-sm">
         {#if birthdayDate}
-          <Badge variant="primary">
+          <Badge variant="default">
             Birthday: {birthdayDate.toLocaleDateString('en-US', {
               month: 'long',
               day: 'numeric',
@@ -199,7 +199,7 @@
           <Badge variant="secondary">{maxDate.toLocaleDateString()}</Badge>
         </div>
         {#if constrainedDate}
-          <Badge variant="primary">
+          <Badge variant="default">
             Selected: {constrainedDate.toLocaleDateString()}
           </Badge>
         {:else}

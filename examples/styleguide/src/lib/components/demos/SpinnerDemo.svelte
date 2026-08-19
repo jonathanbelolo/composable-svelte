@@ -31,11 +31,6 @@
             <Spinner size="lg" />
             <span class="text-xs text-muted-foreground">Large</span>
           </div>
-
-          <div class="flex flex-col items-center gap-2">
-            <Spinner size="xl" />
-            <span class="text-xs text-muted-foreground">X-Large</span>
-          </div>
         </div>
       </CardContent>
     </Card>
@@ -58,7 +53,7 @@
             Loading...
           </Button>
 
-          <Button variant="primary" disabled>
+          <Button variant="default" disabled>
             <Spinner size="sm" class="mr-2" />
             Submitting
           </Button>
@@ -138,7 +133,7 @@
       <CardContent class="pt-6">
         <div class="relative min-h-[400px] rounded-lg border-2 border-dashed flex items-center justify-center">
           <div class="text-center space-y-4">
-            <Spinner size="xl" />
+            <Spinner size="lg" />
             <div>
               <p class="font-medium">Loading Application</p>
               <p class="text-sm text-muted-foreground mt-1">Please wait while we prepare your dashboard</p>
@@ -264,7 +259,7 @@
           </div>
 
           <div class="flex items-center gap-3 p-4 rounded-lg bg-muted/30">
-            <div class="w-4 h-4 rounded-full bg-muted" />
+            <div class="w-4 h-4 rounded-full bg-muted"></div>
             <div class="flex-1">
               <p class="text-sm font-medium text-muted-foreground">Step 2: Processing payment</p>
               <p class="text-xs text-muted-foreground mt-1">Waiting...</p>
@@ -272,7 +267,7 @@
           </div>
 
           <div class="flex items-center gap-3 p-4 rounded-lg bg-muted/30">
-            <div class="w-4 h-4 rounded-full bg-muted" />
+            <div class="w-4 h-4 rounded-full bg-muted"></div>
             <div class="flex-1">
               <p class="text-sm font-medium text-muted-foreground">Step 3: Sending confirmation</p>
               <p class="text-xs text-muted-foreground mt-1">Waiting...</p>

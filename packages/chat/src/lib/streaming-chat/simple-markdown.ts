@@ -7,7 +7,17 @@
  * Use this for minimal chat implementations that don't need heavy dependencies.
  */
 
-import { marked } from 'marked';
+import { Marked } from 'marked';
+import { sanitizeRenderedMarkdown } from './sanitize.js';
+
+/**
+ * This module's own renderer instance.
+ *
+ * Not the shared `marked` singleton: `markdown.ts` configures its own renderer
+ * too, and both modules load at import time, so whichever landed last used to
+ * win for both.
+ */
+const marked = new Marked();
 
 /**
  * Configure marked with basic settings (no syntax highlighting)
@@ -68,7 +78,7 @@ export function renderSimpleMarkdown(markdown: string, isStreaming = false): str
 		}
 
 		const html = marked.parse(processedMarkdown, { async: false }) as string;
-		return html;
+		return sanitizeRenderedMarkdown(html);
 	} catch (error) {
 		console.error('Error rendering markdown:', error);
 		// Fallback to escaped plain text

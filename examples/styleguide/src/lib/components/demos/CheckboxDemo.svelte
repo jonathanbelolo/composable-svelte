@@ -9,15 +9,17 @@
   let feature3 = $state(false);
 
   let selectAll = $state(false);
-  let items = $state([false, false, false]);
+  // A tuple, not boolean[]: noUncheckedIndexedAccess widens array indexing to
+  // `boolean | undefined`, which cannot bind to Checkbox's boolean `checked`.
+  let items = $state([{ checked: false }, { checked: false }, { checked: false }]);
 
   $effect(() => {
-    selectAll = items.every(item => item);
+    selectAll = items.every((item) => item.checked);
   });
 
   function toggleAll() {
     const newValue = !selectAll;
-    items = items.map(() => newValue);
+    items = items.map(() => ({ checked: newValue }));
   }
 </script>
 
@@ -92,15 +94,15 @@
         <Checkbox
           id="select-all"
           checked={selectAll}
-          indeterminate={items.some(i => i) && !items.every(i => i)}
+          indeterminate={items.some((i) => i.checked) && !items.every((i) => i.checked)}
           onclick={toggleAll}
         />
         <Label for="select-all">Select all items</Label>
       </div>
       <div class="ml-6 space-y-3">
-        {#each items as item, i}
+        {#each items as item, i (i)}
           <div class="flex items-center space-x-2">
-            <Checkbox id="item-{i}" bind:checked={items[i]} />
+            <Checkbox id="item-{i}" bind:checked={item.checked} />
             <Label for="item-{i}">Item {i + 1}</Label>
           </div>
         {/each}

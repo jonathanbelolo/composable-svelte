@@ -24,7 +24,7 @@
           </Tooltip>
 
           <Tooltip content="Click to save your changes">
-            <Button variant="primary">Save</Button>
+            <Button variant="default">Save</Button>
           </Tooltip>
 
           <Tooltip content="This action cannot be undone">
@@ -302,12 +302,13 @@
       <CardContent class="space-y-4">
         <div class="space-y-2">
           <div class="flex items-center gap-2">
-            <label class="text-sm font-medium">Email Address</label>
+            <label class="text-sm font-medium" for="tooltip-field-1">Email Address</label>
             <Tooltip content="We'll never share your email with anyone">
               <span class="text-muted-foreground cursor-help">ℹ️</span>
             </Tooltip>
           </div>
           <input
+            id="tooltip-field-1"
             type="email"
             placeholder="you@example.com"
             class="w-full px-3 py-2 text-sm rounded border"
@@ -316,12 +317,13 @@
 
         <div class="space-y-2">
           <div class="flex items-center gap-2">
-            <label class="text-sm font-medium">Display Name</label>
+            <label class="text-sm font-medium" for="tooltip-field-2">Display Name</label>
             <Tooltip content="This will be visible to other users">
               <span class="text-muted-foreground cursor-help">ℹ️</span>
             </Tooltip>
           </div>
           <input
+            id="tooltip-field-2"
             type="text"
             placeholder="John Doe"
             class="w-full px-3 py-2 text-sm rounded border"
@@ -330,12 +332,13 @@
 
         <div class="space-y-2">
           <div class="flex items-center gap-2">
-            <label class="text-sm font-medium">API Key</label>
+            <label class="text-sm font-medium" for="tooltip-field-3">API Key</label>
             <Tooltip content="Keep this secret! Used for API authentication">
               <span class="text-muted-foreground cursor-help">⚠️</span>
             </Tooltip>
           </div>
           <input
+            id="tooltip-field-3"
             type="password"
             value="sk_live_..."
             class="w-full px-3 py-2 text-sm rounded border font-mono"

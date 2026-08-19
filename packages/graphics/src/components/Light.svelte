@@ -6,7 +6,7 @@
 
 import { onMount, onDestroy } from 'svelte';
 import type { Store } from '@composable-svelte/core';
-import type { GraphicsState, GraphicsAction, LightConfig } from '../core/types';
+import type { GraphicsState, GraphicsAction, LightConfig } from '../core/types.js';
 
 // Props
 let {

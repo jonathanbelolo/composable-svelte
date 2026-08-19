@@ -5,7 +5,7 @@
  * NDC range from -1 to +1, with (0,0) at the center.
  */
 
-import type { ElementBounds } from '../overlay/overlay-types';
+import type { ElementBounds } from '../overlay/overlay-types.js';
 
 /**
  * NDC (Normalized Device Coordinates) bounds

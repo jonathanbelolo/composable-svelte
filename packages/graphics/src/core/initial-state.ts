@@ -3,7 +3,7 @@
  * @description Helper to create initial graphics state
  */
 
-import type { GraphicsState, RendererConfig } from './types';
+import type { GraphicsState, RendererConfig } from './types.js';
 
 export interface InitialGraphicsConfig {
   renderer?: Partial<RendererConfig>;

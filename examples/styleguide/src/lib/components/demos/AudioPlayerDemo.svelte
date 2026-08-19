@@ -75,13 +75,17 @@
 	];
 
 	// Create store for minimal player (single track)
+	// The sample data is a non-empty literal, but noUncheckedIndexedAccess
+	// widens every index access to `| undefined`.
+	const firstTrack = sampleTracks[0]!;
+
 	const minimalStore = createStore({
 		initialState: {
 			...createInitialAudioPlayerState(),
-			playlist: [sampleTracks[0]],
-			currentTrack: sampleTracks[0],
+			playlist: [firstTrack],
+			currentTrack: firstTrack,
 			currentTrackIndex: 0,
-			duration: sampleTracks[0].duration!
+			duration: firstTrack.duration!
 		},
 		reducer: audioPlayerReducer,
 		dependencies: {
@@ -109,9 +113,9 @@
 		initialState: {
 			...createInitialAudioPlayerState(),
 			playlist: sampleTracks,
-			currentTrack: sampleTracks[0],
+			currentTrack: firstTrack,
 			currentTrackIndex: 0,
-			duration: sampleTracks[0].duration!
+			duration: firstTrack.duration!
 		},
 		reducer: audioPlayerReducer,
 		dependencies: {

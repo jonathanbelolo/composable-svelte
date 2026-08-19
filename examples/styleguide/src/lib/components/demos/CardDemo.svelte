@@ -111,7 +111,7 @@
               <CardTitle>New Comment</CardTitle>
               <CardDescription>2 minutes ago</CardDescription>
             </div>
-            <Badge variant="primary">Unread</Badge>
+            <Badge variant="default">Unread</Badge>
           </div>
         </CardHeader>
         <CardContent>

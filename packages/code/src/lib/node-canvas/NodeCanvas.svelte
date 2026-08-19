@@ -1,4 +1,4 @@
-<script lang="ts" generics="NodeData = any, EdgeData = any, Action = any">
+<script lang="ts" generics="NodeData extends Record<string, unknown> = Record<string, unknown>, EdgeData extends Record<string, unknown> = Record<string, unknown>, Action = any">
   /**
    * NodeCanvas Component
    *
@@ -12,6 +12,7 @@
     Edge,
     Connection,
     ConnectionLineType,
+    BackgroundVariant,
     OnConnectStartParams
   } from '@xyflow/svelte';
   import type { Store } from '@composable-svelte/core';
@@ -25,7 +26,7 @@
   // Props
   // ==========================================================================
 
-  interface NodeCanvasProps<NodeData, EdgeData, Action> {
+  interface NodeCanvasProps<NodeData extends Record<string, unknown>, EdgeData extends Record<string, unknown>, Action> {
     /**
      * Composable Architecture store managing canvas state.
      */
@@ -117,9 +118,12 @@
   const {
     store,
     liftAction,
-    nodeTypes,
-    edgeTypes,
-    connectionLineType = 'bezier',
+    // Defaulted rather than forwarded as-is: SvelteFlow's nodeTypes/edgeTypes
+    // do not accept an explicit undefined under exactOptionalPropertyTypes.
+    nodeTypes = {},
+    edgeTypes = {},
+    // ConnectionLineType.Bezier is the string "default", not "bezier".
+    connectionLineType = 'default' as ConnectionLineType,
     panOnDrag = true,
     zoomOnScroll = true,
     selectable = true,
@@ -141,6 +145,9 @@
   const nodes = $derived(nodesToArray($store.nodes));
   const edges = $derived(edgesToArray($store.edges));
   const storeViewport = $derived($store.viewport);
+  // SvelteFlow has no snapToGrid boolean — snapping is on when snapGrid is
+  // present and off when it is absent, so it is spread in conditionally below
+  // rather than passed as an explicit undefined.
   const snapGrid = $derived(
     $store.snapToGrid
       ? ([$store.gridSize, $store.gridSize] as [number, number])
@@ -233,23 +240,6 @@
   }
 
   /**
-   * Handle nodes change (positions, selections, etc.).
-   */
-  function handleNodesChange(changes: any[]) {
-    // In Svelte 5, this receives the changes array directly
-    // We need to apply changes to current nodes
-    // For now, we'll skip bulk updates as individual drag events handle positions
-  }
-
-  /**
-   * Handle edges change.
-   */
-  function handleEdgesChange(changes: any[]) {
-    // In Svelte 5, this receives the changes array directly
-    // We'll skip bulk updates for now
-  }
-
-  /**
    * Handle viewport change completion.
    * With bind:viewport, SvelteFlow updates localViewport directly.
    * This just calls the callback for persistence.
@@ -313,14 +303,14 @@
     {edges}
     {nodeTypes}
     {edgeTypes}
-    defaultViewport={storeViewport}
+    initialViewport={storeViewport}
     {connectionLineType}
     {panOnDrag}
     {zoomOnScroll}
-    {selectable}
+    elementsSelectable={selectable}
     {minZoom}
     {maxZoom}
-    snapGrid={snapGrid}
+    {...(snapGrid ? { snapGrid } : {})}
     {fitView}
     defaultEdgeOptions={{
       type: 'smoothstep',
@@ -331,8 +321,6 @@
     onconnect={handleConnect}
     onconnectstart={handleConnectStart}
     onconnectend={handleConnectEnd}
-    onnodeschange={handleNodesChange}
-    onedgeschange={handleEdgesChange}
     onmoveend={handleMoveEnd}
     onnodeclick={handleNodeClick}
     onedgeclick={handleEdgeClick}
@@ -340,7 +328,7 @@
   >
     <!-- ViewportSetter uses useSvelteFlow() to programmatically set viewport -->
     <ViewportSetter
-      viewport={props.externalViewport}
+      viewport={props.externalViewport ?? null}
       onApplied={handleViewportApplied}
     />
 
@@ -353,7 +341,7 @@
     {/if}
 
     <Background
-      variant={$store.snapToGrid ? 'dots' : 'lines'}
+      variant={($store.snapToGrid ? 'dots' : 'lines') as BackgroundVariant}
       gap={$store.gridSize}
     />
   </SvelteFlow>

@@ -177,21 +177,21 @@
 
               <!-- Navigation Links -->
               <nav class="flex-1 space-y-1">
-                <a href="#" class="block px-3 py-2 rounded-lg hover:bg-accent transition-colors">
+                <button type="button" class="block px-3 py-2 rounded-lg hover:bg-accent transition-colors w-full text-left">
                   Dashboard
-                </a>
-                <a href="#" class="block px-3 py-2 rounded-lg hover:bg-accent transition-colors">
+                </button>
+                <button type="button" class="block px-3 py-2 rounded-lg hover:bg-accent transition-colors w-full text-left">
                   Projects
-                </a>
-                <a href="#" class="block px-3 py-2 rounded-lg hover:bg-accent transition-colors">
+                </button>
+                <button type="button" class="block px-3 py-2 rounded-lg hover:bg-accent transition-colors w-full text-left">
                   Team
-                </a>
-                <a href="#" class="block px-3 py-2 rounded-lg bg-accent font-medium transition-colors">
+                </button>
+                <button type="button" class="block px-3 py-2 rounded-lg bg-accent font-medium transition-colors w-full text-left">
                   Settings
-                </a>
-                <a href="#" class="block px-3 py-2 rounded-lg hover:bg-accent transition-colors">
+                </button>
+                <button type="button" class="block px-3 py-2 rounded-lg hover:bg-accent transition-colors w-full text-left">
                   Help
-                </a>
+                </button>
               </nav>
 
               <!-- Sidebar Footer -->

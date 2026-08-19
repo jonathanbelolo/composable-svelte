@@ -369,15 +369,17 @@
 						<NavigationStack store={simpleStore} stack={simpleStack} onBack={popSimpleScreen}>
 							{#snippet children({ currentScreen })}
 								{#if currentScreen}
-									<div class="h-full {currentScreen.color} p-6 space-y-4">
+									<!-- NavigationStack types its props as <unknown, unknown>. -->
+									{@const screen = currentScreen as ScreenState}
+									<div class="h-full {screen.color} p-6 space-y-4">
 										<div class="space-y-1">
-											<h2 class="text-2xl font-bold">{currentScreen.title}</h2>
-											<p class="text-sm text-muted-foreground">{currentScreen.content}</p>
+											<h2 class="text-2xl font-bold">{screen.title}</h2>
+											<p class="text-sm text-muted-foreground">{screen.content}</p>
 										</div>
 
 										<div class="space-y-3">
 											<div class="p-3 bg-background/50 rounded border text-xs">
-												<p><strong>Screen ID:</strong> {currentScreen.id}</p>
+												<p><strong>Screen ID:</strong> {screen.id}</p>
 												<p><strong>Stack Depth:</strong> {simpleStack.length}</p>
 											</div>
 
@@ -447,15 +449,17 @@
 						>
 							{#snippet children({ currentScreen })}
 								{#if currentScreen}
-									<div class="h-full {currentScreen.color} p-6 space-y-4">
+									<!-- NavigationStack types its props as <unknown, unknown>. -->
+									{@const screen = currentScreen as ScreenState}
+									<div class="h-full {screen.color} p-6 space-y-4">
 										<div class="space-y-1">
-											<h2 class="text-2xl font-bold">{currentScreen.title}</h2>
-											<p class="text-sm text-muted-foreground">{currentScreen.content}</p>
+											<h2 class="text-2xl font-bold">{screen.title}</h2>
+											<p class="text-sm text-muted-foreground">{screen.content}</p>
 										</div>
 
 										<div class="space-y-3">
 											<div class="p-3 bg-background/50 rounded border text-xs">
-												<p><strong>Screen ID:</strong> {currentScreen.id}</p>
+												<p><strong>Screen ID:</strong> {screen.id}</p>
 												<p><strong>Stack Depth:</strong> {animatedStack.length}</p>
 												<p><strong>Animation:</strong> {$demoStore.presentation.status}</p>
 											</div>

@@ -4,9 +4,9 @@
  */
 
 // Core types and state
-export type * from './core/types';
-export { graphicsReducer } from './core/reducer';
-export { createInitialGraphicsState } from './core/initial-state';
+export type * from './core/types.js';
+export { graphicsReducer } from './core/reducer.js';
+export { createInitialGraphicsState } from './core/initial-state.js';
 
 // Components
 export { default as Scene } from './components/Scene.svelte';
@@ -16,10 +16,10 @@ export { default as Light } from './components/Light.svelte';
 
 // WebGL Overlay
 export { default as WebGLOverlay } from './lib/overlay/WebGLOverlay.svelte';
-export type * from './lib/overlay/overlay-types';
+export type * from './lib/overlay/overlay-types.js';
 
 // Shader presets
-export * from './lib/shaders/index';
+export * from './lib/shaders/index.js';
 
 // Adapters (for advanced usage)
-export { BabylonAdapter } from './adapters/babylon-adapter';
+export { BabylonAdapter } from './adapters/babylon-adapter.js';

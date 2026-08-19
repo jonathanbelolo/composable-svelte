@@ -144,7 +144,7 @@ function rotateShapes() {
     reducer: graphicsReducer,
     dependencies: {}
   });
-</script>
+<\/script>
 
 <Scene {store}>
   <Camera {store} position={[0, 4, 12]} lookAt={[0, 0, 0]} />

@@ -200,7 +200,7 @@
         </CardHeader>
         <CardContent class="space-y-4">
           <div class="space-y-2">
-            <label class="text-sm font-medium">Personal Information</label>
+            <h4 class="text-sm font-medium">Personal Information</h4>
             <input
               type="text"
               placeholder="Full Name"
@@ -216,7 +216,7 @@
           <Separator />
 
           <div class="space-y-2">
-            <label class="text-sm font-medium">Contact Details</label>
+            <h4 class="text-sm font-medium">Contact Details</h4>
             <input
               type="tel"
               placeholder="Phone"
