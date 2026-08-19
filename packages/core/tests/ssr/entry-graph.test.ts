@@ -162,5 +162,8 @@ describe('package entry graphs', () => {
 
 		const middleware = bareSpecifiersFrom(join(pkgDir, 'dist/ssr/middleware/index.js'));
 		expect([...middleware.keys()]).toContain('isomorphic-dompurify');
+
+		const preset = bareSpecifiersFrom(join(pkgDir, 'dist/tailwind-preset.js'));
+		expect([...preset.keys()].some(isForbidden)).toBe(true);
 	});
 });
