@@ -35,6 +35,44 @@ function filterOptions<T>(
 }
 
 /**
+ * Whether two option lists are equivalent.
+ *
+ * `optionsChanged` is dispatched from an unguarded `$effect`, and `dispatch`
+ * reads store state inside that effect's tracking scope — so returning a fresh
+ * state object on every dispatch re-triggers the effect forever
+ * (`effect_update_depth_exceeded`). A reference check is not enough either:
+ * a consumer writing `options={[...]}` inline produces a new array each render.
+ * The reducer therefore has to be idempotent by value.
+ */
+function sameOptions<T>(a: SelectOption<T>[], b: SelectOption<T>[]): boolean {
+	if (a === b) return true;
+	if (a.length !== b.length) return false;
+	return a.every((option, i) => {
+		const other = b[i]!;
+		return (
+			option.value === other.value &&
+			option.label === other.label &&
+			option.disabled === other.disabled &&
+			option.description === other.description
+		);
+	});
+}
+
+/**
+ * Whether two selections are equivalent, comparing multi-select arrays by value.
+ *
+ * Same reasoning as `sameOptions`: `value={[...]}` inline would otherwise never
+ * settle.
+ */
+function sameSelection<T>(a: T | T[] | null, b: T | T[] | null): boolean {
+	if (a === b) return true;
+	if (Array.isArray(a) && Array.isArray(b)) {
+		return a.length === b.length && a.every((v, i) => v === b[i]);
+	}
+	return false;
+}
+
+/**
  * Find next non-disabled option index.
  */
 function findNextEnabledIndex<T>(
@@ -382,13 +420,16 @@ export const selectReducer: Reducer<
 		}
 
 		case 'valueChanged': {
-			if (state.selected === action.value) {
+			if (sameSelection(state.selected, action.value)) {
 				return [state, Effect.none()];
 			}
 			return [{ ...state, selected: action.value }, Effect.none()];
 		}
 
 		case 'optionsChanged': {
+			if (sameOptions(state.options, action.options)) {
+				return [state, Effect.none()];
+			}
 			return [
 				{
 					...state,
