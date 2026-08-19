@@ -40,7 +40,7 @@ export interface ScopedDestinationStore<State, Action> {
    * </script>
    *
    * {#if scopedStore.state}
-   *   <Modal state={scopedStore.state} dispatch={scopedStore.dispatch} />
+   *   <Modal store={scopedStore} />
    * {/if}
    * ```
    */
