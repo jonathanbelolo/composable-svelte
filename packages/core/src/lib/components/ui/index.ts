@@ -54,45 +54,147 @@ export { Empty } from './empty/index.js';
 
 // Content Organization
 //
-// These use `export *` rather than naming the components, so that each
-// component's reducer, state factory and — most importantly — its prop types
-// travel with it. Naming only the components left `SelectOption`, `TreeNode`,
-// `ComboboxOption` and friends unreachable from every public entry point, which
-// made those props impossible to type and `Collapsible` impossible to use at
-// all (it hard-requires a store whose reducer could not be imported).
-export * from './accordion/index.js';
-export * from './collapsible/index.js';
+// Listed explicitly rather than with `export *`. Each component's reducer,
+// state factory and — most importantly — its prop types have to travel with it:
+// naming only the components left `SelectOption`, `TreeNode`, `ComboboxOption`
+// and friends unreachable from every public entry point, which made those props
+// impossible to type and `Collapsible` impossible to use at all. But `export *`
+// then swept up internal helpers (`formatFileSize`, `getCalendarDays`, …) that
+// nothing outside their own directory references, so the surface is enumerated
+// here instead of inferred.
 
-// Interactive
-export * from './tooltip/index.js';
-export * from './dropdown-menu/index.js';
-export * from './select/index.js';
-export * from './combobox/index.js';
-export * from './pagination/index.js';
-export * from './calendar/index.js';
-export * from './carousel/index.js';
-export * from './tree-view/index.js';
-export * from './file-upload/index.js';
-
-// `AccordionItem` is both a component (accordion/AccordionItem.svelte) and the
-// item type in accordion.types.ts. The component wins the `export *` above, so
-// the type is re-exported under a distinct name to keep it usable.
+export {
+	Accordion,
+	AccordionItem,
+	AccordionTrigger,
+	AccordionContent,
+	createInitialAccordionState,
+	accordionReducer
+} from './accordion/index.js';
+export type {
+	AccordionState,
+	AccordionAction,
+	AccordionDependencies
+} from './accordion/index.js';
+// `AccordionItem` is both a component and the item type in accordion.types.ts.
+// The component keeps the name; the type gets a distinct one.
 export type { AccordionItem as AccordionItemData } from './accordion/accordion.types.js';
 
-// Command Palette
 export {
-	Command,
-	CommandInput,
-	CommandList,
-	CommandGroup,
-	CommandItem
-} from '../command/index.js';
+	Collapsible,
+	CollapsibleTrigger,
+	CollapsibleContent,
+	createInitialCollapsibleState,
+	collapsibleReducer
+} from './collapsible/index.js';
+export type {
+	CollapsibleState,
+	CollapsibleAction,
+	CollapsibleDependencies
+} from './collapsible/index.js';
 
-// Toast/Notifications
+// Interactive
+
+export { Tooltip, TooltipPrimitive, tooltipReducer, initialTooltipState } from './tooltip/index.js';
+export type {
+	TooltipState,
+	TooltipAction,
+	TooltipDependencies,
+	TooltipContent
+} from './tooltip/index.js';
+
 export {
-	Toaster,
-	Toast,
-	ToastTitle,
-	ToastDescription,
-	ToastAction
-} from '../toast/index.js';
+	DropdownMenu,
+	createInitialDropdownMenuState,
+	dropdownMenuReducer
+} from './dropdown-menu/index.js';
+export type {
+	MenuItem,
+	DropdownMenuState,
+	DropdownMenuAction,
+	DropdownMenuDependencies,
+	DropdownMenuPresentationEvent
+} from './dropdown-menu/index.js';
+
+export { Select, createInitialSelectState, selectReducer } from './select/index.js';
+export type {
+	SelectOption,
+	SelectState,
+	SelectAction,
+	SelectDependencies
+} from './select/index.js';
+
+export { Combobox, createInitialComboboxState, comboboxReducer } from './combobox/index.js';
+export type {
+	ComboboxOption,
+	ComboboxState,
+	ComboboxAction,
+	ComboboxDependencies
+} from './combobox/index.js';
+// `DropdownState` / `DropdownStatus` are members of `ComboboxState`, so they
+// have to be nameable — but those names are too generic to sit in a shared
+// namespace.
+export type {
+	DropdownState as ComboboxDropdownState,
+	DropdownStatus as ComboboxDropdownStatus
+} from './combobox/combobox.types.js';
+
+export {
+	Pagination,
+	createInitialPaginationState,
+	paginationReducer
+} from './pagination/index.js';
+export type {
+	PaginationState,
+	PaginationAction,
+	PaginationDependencies
+} from './pagination/index.js';
+
+// The six date helpers in calendar.types.ts are deliberately not re-exported —
+// nothing outside calendar/ uses them.
+export { Calendar, createInitialCalendarState, calendarReducer } from './calendar/index.js';
+export type {
+	CalendarMode,
+	DateRange,
+	CalendarState,
+	CalendarAction,
+	CalendarDependencies
+} from './calendar/index.js';
+
+export { Carousel, createInitialCarouselState, carouselReducer } from './carousel/index.js';
+export type {
+	CarouselSlide,
+	CarouselDirection,
+	CarouselState,
+	CarouselAction,
+	CarouselDependencies,
+	CarouselProps
+} from './carousel/index.js';
+
+export { TreeView, createInitialTreeViewState, treeViewReducer } from './tree-view/index.js';
+export type {
+	TreeNode,
+	TreeViewState,
+	TreeViewAction,
+	TreeViewDependencies
+} from './tree-view/index.js';
+
+// `generateFileId` and `formatFileSize` are deliberately not re-exported.
+export {
+	FileUpload,
+	createInitialFileUploadState,
+	fileUploadReducer
+} from './file-upload/index.js';
+export type {
+	UploadStatus,
+	UploadedFile,
+	ValidationErrorType,
+	FileUploadState,
+	FileUploadAction,
+	FileValidationConfig,
+	FileUploadDependencies,
+	FileUploadProps
+} from './file-upload/index.js';
+// Renamed: the API layer exports a `ValidationError` *class* from the root
+// entry, and two different `ValidationError`s in one package is a trap.
+export type { ValidationError as FileValidationError } from './file-upload/file-upload.types.js';

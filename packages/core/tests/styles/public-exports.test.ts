@@ -19,7 +19,9 @@ import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 
 const uiDir = fileURLToPath(new URL('../../src/lib/components/ui/', import.meta.url));
-const barrel = readFileSync(join(uiDir, 'index.ts'), 'utf8');
+const barrelSource = readFileSync(join(uiDir, 'index.ts'), 'utf8');
+/** Comments name some of these symbols to explain their absence — scan code only. */
+const barrel = barrelSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
 
 /** Named exports declared by a sub-barrel's own `index.ts`. */
 function subBarrelExports(dir: string): string[] {
@@ -46,6 +48,27 @@ function subBarrelExports(dir: string): string[] {
 	return [...new Set(names)];
 }
 
+/**
+ * Names a sub-barrel exports that `components/ui` deliberately does not.
+ *
+ * These are internal helpers with no reference outside their own directory.
+ * They only ever became public because the barrel used `export *`; core 0.6.0
+ * is unpublished, so dropping them costs nothing. Keeping the list here rather
+ * than as a silent omission means re-adding one is a decision, not an accident.
+ */
+const INTENTIONALLY_PRIVATE = new Set([
+	// calendar date maths
+	'isDateInBounds',
+	'isSameDay',
+	'isDateInRange',
+	'getFirstDayOfMonth',
+	'getLastDayOfMonth',
+	'getCalendarDays',
+	// file-upload internals
+	'generateFileId',
+	'formatFileSize'
+]);
+
 const subBarrels = readdirSync(uiDir, { withFileTypes: true })
 	.filter((e) => e.isDirectory() && existsSync(join(uiDir, e.name, 'index.ts')))
 	.map((e) => e.name);
@@ -62,8 +85,17 @@ describe('components/ui public surface', () => {
 		if (barrel.includes(`export * from './${dir}/index.js'`)) return;
 
 		// Otherwise every symbol must be named explicitly in the barrel.
-		const missing = declared.filter((name) => !new RegExp(`\\b${name}\\b`).test(barrel));
+		const missing = declared
+			.filter((name) => !INTENTIONALLY_PRIVATE.has(name))
+			.filter((name) => !new RegExp(`\\b${name}\\b`).test(barrel));
 		expect(missing, `${dir}: unreachable from components/ui`).toEqual([]);
+	});
+
+	it('keeps the intentionally-private helpers out of the public surface', () => {
+		const leaked = [...INTENTIONALLY_PRIVATE].filter((name) =>
+			new RegExp(`\\b${name}\\b`).test(barrel)
+		);
+		expect(leaked, 'internal helpers must stay off components/ui').toEqual([]);
 	});
 
 	it('keeps Collapsible usable', () => {
