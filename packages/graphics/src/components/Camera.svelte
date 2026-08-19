@@ -27,14 +27,22 @@ let {
   far?: number;
 } = $props();
 
-// Build camera config
+// Build camera config.
+//
+// The optionals are spread in only when present. An object literal always
+// carries every key it names, so `{ fov }` with no `fov` prop sends
+// `fov: undefined` — and the reducer merges with `{ ...state.camera,
+// ...action.camera }`, where an explicit `undefined` overwrites. Mounting
+// `<Camera {store} {position} {lookAt} />` used to wipe the configured fov,
+// near and far, and babylon-adapter.ts:136,141,144 guard on `!== undefined`,
+// so the adapter then silently never applied any of them.
 const cameraConfig = $derived({
   type,
   position,
   lookAt,
-  fov,
-  near,
-  far
+  ...(fov !== undefined && { fov }),
+  ...(near !== undefined && { near }),
+  ...(far !== undefined && { far })
 });
 
 // Update camera on mount and when props change
