@@ -12,6 +12,12 @@
  * inline literals on purpose: that is what a consumer writes, and it is a fresh
  * array identity on every render, which is exactly what a reference-equality
  * guard fails to absorb.
+ *
+ * NOTE when this fails: a runaway effect poisons Svelte's error state for the
+ * rest of the file, so one real failure shows up as several. Re-run the first
+ * failing case on its own (`vitest -t "<Name> mounts"`) before assuming the
+ * later ones are real — when ImageGallery was broken, four healthy components
+ * failed alongside it.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -26,6 +32,11 @@ import Calendar from '../src/lib/components/ui/calendar/Calendar.svelte';
 import Carousel from '../src/lib/components/ui/carousel/Carousel.svelte';
 import Accordion from '../src/lib/components/ui/accordion/Accordion.svelte';
 import FileUpload from '../src/lib/components/ui/file-upload/FileUpload.svelte';
+import ImageGallery from '../src/lib/components/image-gallery/ImageGallery.svelte';
+import Toaster from '../src/lib/components/toast/Toaster.svelte';
+import FormMountTest from './test-components/FormMountTest.svelte';
+import TooltipMountTest from './test-components/TooltipMountTest.svelte';
+import DropdownMenuMountTest from './test-components/DropdownMenuMountTest.svelte';
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 120));
 
@@ -39,7 +50,13 @@ const cases: Array<[string, any, () => Record<string, unknown>]> = [
 	['Calendar', Calendar, () => ({ mode: 'single' as const })],
 	['Carousel', Carousel, () => ({ slides: [{ id: '1', content: 'one' }] })],
 	['Accordion', Accordion, () => ({ items: [{ id: '1', title: 'One', content: 'c' }] })],
-	['FileUpload', FileUpload, () => ({ accept: 'image/*', maxSize: 1024 })]
+	['FileUpload', FileUpload, () => ({ accept: 'image/*', maxSize: 1024 })],
+	['ImageGallery', ImageGallery, () => ({ images: [{ id: '1', url: '/a.jpg', alt: 'A' }] })],
+	['Toaster', Toaster, () => ({ toasts: [] })],
+	// These three require a `children` snippet, which a .ts file cannot express.
+	['Form', FormMountTest, () => ({})],
+	['Tooltip', TooltipMountTest, () => ({})],
+	['DropdownMenu', DropdownMenuMountTest, () => ({})]
 ];
 
 describe('store-owning components mount cleanly', () => {
