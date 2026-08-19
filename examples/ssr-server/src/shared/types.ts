@@ -45,7 +45,7 @@ export interface PageMeta {
  * - comments: Show post comments - nested route (/posts/:id/comments)
  */
 export type AppDestination =
-  | { type: 'list' }
+  | { type: 'list'; state: Record<string, never> }
   | { type: 'post'; state: { postId: number } }
   | { type: 'comments'; state: { postId: number } };
 
@@ -70,7 +70,7 @@ export type AppAction =
 export const initialState: AppState = {
   posts: [],
   comments: [],
-  destination: { type: 'list' },
+  destination: { type: 'list', state: {} },
   isLoading: false,
   error: null,
   meta: {

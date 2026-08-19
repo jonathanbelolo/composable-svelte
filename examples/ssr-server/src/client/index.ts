@@ -7,11 +7,12 @@
 import { hydrate as hydrateComponent } from 'svelte';
 import { hydrateStore } from '@composable-svelte/core/ssr';
 import { syncBrowserHistory } from '@composable-svelte/core/routing';
+import { createLocalStorage } from '@composable-svelte/core/dependencies';
 import { BundledTranslationLoader, createStaticLocaleDetector, browserDOM } from '@composable-svelte/core/i18n';
 import App from '../shared/App.svelte';
 import { appReducer } from '../shared/reducer';
 import type { AppDependencies } from '../shared/reducer';
-import type { AppState, AppAction } from '../shared/types';
+import type { AppState, AppAction, AppDestination } from '../shared/types';
 import { parseDestinationFromURL, destinationURL } from '../shared/routing';
 
 // Import translation files
@@ -46,51 +47,10 @@ async function hydrate() {
     const parsedState = JSON.parse(stateElement.textContent) as AppState;
     const locale = parsedState.i18n.currentLocale;
 
-    // 3. Create client storage that persists locale to localStorage
-    const clientStorage = {
-      getItem: (key: string) => {
-        try {
-          return localStorage.getItem(key);
-        } catch {
-          return null;
-        }
-      },
-      setItem: (key: string, value: unknown) => {
-        try {
-          localStorage.setItem(key, String(value));
-        } catch {
-          // Ignore storage errors
-        }
-      },
-      removeItem: (key: string) => {
-        try {
-          localStorage.removeItem(key);
-        } catch {
-          // Ignore storage errors
-        }
-      },
-      keys: () => {
-        try {
-          return Object.keys(localStorage);
-        } catch {
-          return [];
-        }
-      },
-      has: (key: string) => {
-        try {
-          return localStorage.getItem(key) !== null;
-        } catch {
-          return false;
-        }
-      },
-      clear: () => {
-        try {
-          localStorage.clear();
-        } catch {
-          // Ignore storage errors
-        }
-      }
-    };
+    // 3. Client storage that persists the locale to localStorage.
+    //    `createLocalStorage` is the library's own implementation of the
+    //    `Storage` interface `I18nDependencies` asks for.
+    const clientStorage = createLocalStorage<string>();
 
     // Create i18n dependencies (same as server)
     const i18nDependencies = {
@@ -118,7 +78,7 @@ async function hydrate() {
             return [];
           },
           ...i18nDependencies
-        } as AppDependencies
+        } satisfies AppDependencies
       }
     );
 
@@ -131,12 +91,12 @@ async function hydrate() {
       // Serialize state to URL
       serialize: (state) => destinationURL(state.destination),
       // Map destination → action for back/forward navigation
-      destinationToAction: (dest) => {
+      destinationToAction: (dest: AppDestination | null): AppAction | null => {
         if (dest) {
           return { type: 'navigate', destination: dest };
         }
         // If no destination, navigate to list
-        return { type: 'navigate', destination: { type: 'list' } };
+        return { type: 'navigate', destination: { type: 'list', state: {} } };
       }
     });
 

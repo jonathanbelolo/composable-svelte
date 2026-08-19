@@ -3,9 +3,9 @@
  * Shared between server and client.
  */
 
-import { Effect, scope } from '@composable-svelte/core';
+import { Effect } from '@composable-svelte/core';
 import { createURLSyncEffect } from '@composable-svelte/core/routing';
-import type { Reducer } from '@composable-svelte/core';
+import type { Reducer, EffectType } from '@composable-svelte/core';
 import { i18nReducer, type I18nDependencies } from '@composable-svelte/core/i18n';
 import type { AppState, AppAction } from './types';
 import { destinationURL } from './routing';
@@ -62,9 +62,10 @@ function computeMeta(state: AppState): AppState['meta'] {
  * This updates the browser URL when state changes.
  * Only runs on client (window is not defined on server).
  */
-const urlSyncEffect = typeof window !== 'undefined'
-  ? createURLSyncEffect<AppState, AppAction>((state) => destinationURL(state.destination))
-  : () => Effect.none();
+const urlSyncEffect: (state: AppState) => EffectType<AppAction> =
+  typeof window !== 'undefined'
+    ? createURLSyncEffect<AppState, AppAction>((state) => destinationURL(state.destination))
+    : () => Effect.none<AppAction>();
 
 const coreReducer: Reducer<AppState, AppAction, AppDependencies> = (
   state,
@@ -162,10 +163,7 @@ const coreReducer: Reducer<AppState, AppAction, AppDependencies> = (
       if (typeof action.type === 'string' && action.type.startsWith('i18n/')) {
         // Pass the action directly to i18n reducer
         const [newI18nState, i18nEffect] = i18nReducer(state.i18n, action as any, deps);
-        return [
-          { ...state, i18n: newI18nState },
-          i18nEffect as Effect<AppAction>
-        ];
+        return [{ ...state, i18n: newI18nState }, i18nEffect];
       }
 
       return [state, Effect.none()];

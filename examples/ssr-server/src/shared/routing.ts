@@ -52,7 +52,7 @@ export const parserConfig: ParserConfig<AppDestination> = {
     // Match / (root - list page)
     (path) => {
       if (path === '/' || path === '') {
-        return { type: 'list' };
+        return { type: 'list', state: {} };
       }
       return null;
     }
@@ -92,7 +92,7 @@ export const serializerConfig: SerializerConfig<AppDestination> = {
  */
 export function parseDestinationFromURL(path: string): AppDestination {
   const destination = parseDestination(path, parserConfig);
-  return destination ?? { type: 'list' };
+  return destination ?? { type: 'list', state: {} };
 }
 
 /**

@@ -1,10 +1,7 @@
 import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
-import { resolve } from 'path';
 
 export default defineConfig(({ command, mode, isSsrBuild }) => {
-  const coreLibPath = resolve(__dirname, '../../packages/core/src/lib');
-
   if (isSsrBuild) {
     // Server build configuration
     return {
@@ -24,12 +21,6 @@ export default defineConfig(({ command, mode, isSsrBuild }) => {
         },
         target: 'node18',
         minify: false
-      },
-      resolve: {
-        alias: {
-          '@composable-svelte/core': coreLibPath,
-          '$lib': coreLibPath
-        }
       },
       ssr: {
         noExternal: ['@composable-svelte/core']
@@ -54,12 +45,6 @@ export default defineConfig(({ command, mode, isSsrBuild }) => {
       },
       target: 'es2022',
       minify: true
-    },
-    resolve: {
-      alias: {
-        '@composable-svelte/core': coreLibPath,
-        '$lib': coreLibPath
-      }
     }
   };
 });

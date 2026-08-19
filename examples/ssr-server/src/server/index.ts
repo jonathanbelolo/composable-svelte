@@ -13,6 +13,8 @@ import { createStore } from '@composable-svelte/core';
 import { renderToHTML } from '@composable-svelte/core/ssr';
 import { fastifySecurityHeaders, fastifyRateLimit } from '@composable-svelte/core/ssr';
 import { createInitialI18nState, BundledTranslationLoader, createStaticLocaleDetector, serverDOM } from '@composable-svelte/core/i18n';
+import type { I18nState } from '@composable-svelte/core/i18n';
+import { createNoopStorage } from '@composable-svelte/core/dependencies';
 import App from '../shared/App.svelte';
 import { appReducer } from '../shared/reducer';
 import type { AppDependencies } from '../shared/reducer';
@@ -130,22 +132,15 @@ async function renderApp(request: any, reply: any) {
 
     // Preload common namespace
     const translations = await translationLoader.load('common', locale);
-    const updatedI18nState = {
+    // `TranslationLoader.load` returns null when the namespace is missing; the
+    // annotation puts the failure here rather than 70 lines later at createStore.
+    const updatedI18nState: I18nState = {
       ...i18nState,
-      translations: {
-        [`${locale}:common`]: translations
-      }
+      translations: translations ? { [`${locale}:common`]: translations } : {}
     };
 
-    // Create SSR-safe mock storage
-    const mockStorage = {
-      getItem: (key: string) => null,
-      setItem: (key: string, value: unknown) => {}, // No-op on server
-      removeItem: (key: string) => {},
-      keys: () => [],
-      has: (key: string) => false,
-      clear: () => {}
-    };
+    // SSR-safe storage: the library's own no-op implementation.
+    const mockStorage = createNoopStorage<string>();
 
     // Create i18n dependencies for the store
     const i18nDependencies = {
@@ -211,7 +206,7 @@ async function renderApp(request: any, reply: any) {
         fetchPosts: loadPosts,
         fetchComments: loadCommentsByPostId,
         ...i18nDependencies
-      } as AppDependencies
+      } satisfies AppDependencies
       // ssr.deferEffects defaults to true, so effects are automatically skipped
     });
 
