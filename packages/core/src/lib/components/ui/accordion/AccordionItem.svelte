@@ -1,4 +1,4 @@
-<script lang="ts" context="module">
+<script lang="ts" module>
 	import { setContext, getContext } from 'svelte';
 
 	const ACCORDION_ITEM_CONTEXT_KEY = Symbol('accordion-item');

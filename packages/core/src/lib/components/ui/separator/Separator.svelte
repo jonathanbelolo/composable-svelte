@@ -46,4 +46,4 @@
 	aria-orientation={decorative ? undefined : orientation}
 	class={separatorClasses}
 	{...restProps}
-/>
+></div>

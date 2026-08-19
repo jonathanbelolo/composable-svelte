@@ -41,10 +41,21 @@
   const store = createStore({
     initialState: createInitialFileUploadState(),
     reducer: fileUploadReducer,
+    // Getters, not values: `createStore` re-reads `config.dependencies` on
+    // every dispatch, but a plain object literal freezes what these resolve to
+    // at setup. Changing `maxSize` / `accept` / `maxFiles` after mount left the
+    // store validating against the original config, and swapping `onUpload`
+    // left it calling the original handler.
     dependencies: {
-      onFilesChange,
-      onUpload,
-      validation
+      get onFilesChange() {
+        return onFilesChange;
+      },
+      get onUpload() {
+        return onUpload;
+      },
+      get validation() {
+        return validation;
+      }
     }
   });
 

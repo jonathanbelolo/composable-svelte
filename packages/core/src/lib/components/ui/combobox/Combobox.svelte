@@ -273,10 +273,12 @@
 				<button
 					type="button"
 					class="text-muted-foreground hover:text-foreground"
+					aria-label="Clear selection"
 					onclick={handleClear}
 					tabindex="-1"
 				>
 					<svg
+						aria-hidden="true"
 						xmlns="http://www.w3.org/2000/svg"
 						width="16"
 						height="16"

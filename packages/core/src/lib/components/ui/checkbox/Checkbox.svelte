@@ -73,7 +73,6 @@
 			className
 		)}
 		data-state={checked ? 'checked' : indeterminate ? 'indeterminate' : 'unchecked'}
-		role="checkbox"
 		aria-checked={indeterminate ? 'mixed' : checked}
 		{...restProps}
 	/>

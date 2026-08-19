@@ -71,8 +71,7 @@
 				'disabled:cursor-not-allowed disabled:opacity-50',
 				className
 			)}
-			role="radio"
-			aria-checked={isChecked}
+				aria-checked={isChecked}
 			{...restProps}
 		/>
 

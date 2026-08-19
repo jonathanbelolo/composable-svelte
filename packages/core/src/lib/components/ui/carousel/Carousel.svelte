@@ -138,6 +138,12 @@
   const currentSlide = $derived($store.slides[$store.currentIndex]);
 </script>
 
+<!-- A focusable carousel region with arrow-key navigation is the intended UX.
+     `role="region"` is a landmark, so the tabindex and keydown handler both trip
+     the non-interactive-element rules; removing either would delete keyboard
+     navigation rather than improve accessibility. -->
+<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
   class={`carousel-container relative overflow-hidden ${className}`}
   role="region"
@@ -245,7 +251,7 @@
           role="tab"
           aria-label={`Go to slide ${index + 1}`}
           aria-selected={index === $store.currentIndex}
-        />
+        ></button>
       {/each}
     </div>
   {/if}

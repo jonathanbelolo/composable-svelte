@@ -1,4 +1,4 @@
-<script lang="ts" context="module">
+<script lang="ts" module>
 	import { setContext, getContext } from 'svelte';
 	import type { Store } from '../../../types.js';
 	import type { AccordionState, AccordionAction } from './accordion.types.js';

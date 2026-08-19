@@ -71,7 +71,7 @@
 				{command.icon}
 			{:else}
 				<!-- Component icon -->
-				<svelte:component this={command.icon} />
+				<command.icon />
 			{/if}
 		</span>
 	{/if}

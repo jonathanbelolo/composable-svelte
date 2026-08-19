@@ -175,6 +175,10 @@
 	{@const hasChildren = node.children && node.children.length > 0}
 	{@const canExpand = hasChildren || node.lazy}
 
+	<!-- Keyboard input is handled once on the `role="tree"` container below,
+	     with roving tabindex on the items — the WAI-ARIA tree pattern. A
+	     per-item keydown handler would double-handle every keystroke. -->
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<div
 		role="treeitem"
 		aria-expanded={canExpand ? isExpanded : undefined}

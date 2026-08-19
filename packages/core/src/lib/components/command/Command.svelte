@@ -192,6 +192,7 @@
 			bind:this={contentElement}
 			class="command-dialog {className}"
 			role="dialog"
+			tabindex="-1"
 			aria-modal="true"
 			aria-label="Command palette"
 			onkeydown={handleKeyDown}
