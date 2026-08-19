@@ -63,8 +63,12 @@ jobs:
       - name: Run tests
         run: pnpm -r test
 
-      # `tsc` never reads .svelte, which is how a broken `spring.js` import and
-      # 21 components with an undeclared `children` prop stayed invisible.
-      # Errors gate; the a11y and unused-CSS warnings do not.
+      # `tsc` never reads .svelte, which is how a broken `spring.js` import, 21
+      # components with an undeclared `children` prop, and a <button> nested in a
+      # <button> all stayed invisible. Warnings gate too: the nested button was
+      # reported for months as a warning while this step passed, because
+      # `--threshold` only filters what is printed and never affected the exit
+      # code. `--fail-on-warnings` is the flag that gates. The script carries it
+      # so a local `pnpm check` matches CI.
       - name: Svelte check
-        run: pnpm --filter @composable-svelte/core check --threshold error
+        run: pnpm -r check

@@ -144,7 +144,7 @@
   ],
   "scripts": {
     "build": "svelte-package -o dist",
-    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
     "typecheck": "tsc --noEmit --project tsconfig.test.json",
     "test": "vitest run && vitest run --config vitest.node.config.ts",
     "test:watch": "vitest",
