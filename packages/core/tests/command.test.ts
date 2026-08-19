@@ -760,4 +760,36 @@ describe('Command Palette', () => {
 			store.assertNoPendingActions();
 		});
 	});
+
+	describe('Reducer idempotency', () => {
+		// `Command.svelte` dispatches `commandsUpdated` from an unguarded `$effect`,
+		// and `dispatch` reads store state inside that effect's tracking scope. A
+		// reducer returning a fresh object every time therefore re-triggers the
+		// effect forever — `<Command open commands={[...]} />` threw
+		// `effect_update_depth_exceeded` on mount. Comparison is by value, since an
+		// inline array is a new reference on every render.
+		it('returns the same state when commands are unchanged by value', async () => {
+			const initial = createInitialCommandState({ commands: sampleCommands });
+			const store = createTestStore({ initialState: initial, reducer: commandReducer });
+
+			await store.send({ type: 'commandsUpdated', commands: sampleCommands.map((c) => ({ ...c })) });
+
+			expect(store.state).toBe(initial);
+			store.assertNoPendingActions();
+		});
+
+		it('still applies genuinely changed commands', async () => {
+			const initial = createInitialCommandState({ commands: sampleCommands });
+			const store = createTestStore({ initialState: initial, reducer: commandReducer });
+
+			await store.send(
+				{ type: 'commandsUpdated', commands: [{ id: 'zzz', label: 'Brand New' }] },
+				(state) => {
+					expect(state.commands).toEqual([{ id: 'zzz', label: 'Brand New' }]);
+				}
+			);
+			expect(store.state).not.toBe(initial);
+			store.assertNoPendingActions();
+		});
+	});
 });

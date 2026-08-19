@@ -15,6 +15,30 @@ import type {
 import { defaultFilterFunction, getSelectedCommand } from './command.types.js';
 
 /**
+ * Whether two command lists are equivalent.
+ *
+ * `Command.svelte` dispatches `commandsUpdated` from an unguarded `$effect`,
+ * and `dispatch` reads store state inside that effect's tracking scope — so
+ * returning a fresh state object on every dispatch re-triggers the effect
+ * forever (`effect_update_depth_exceeded`). Comparing by reference is not
+ * enough: `commands={[...]}` inline is a new array on every render.
+ */
+function sameCommands(a: CommandItem[], b: CommandItem[]): boolean {
+	if (a === b) return true;
+	if (a.length !== b.length) return false;
+	return a.every((command, i) => {
+		const other = b[i]!;
+		return (
+			command.id === other.id &&
+			command.label === other.label &&
+			command.description === other.description &&
+			command.group === other.group &&
+			command.disabled === other.disabled
+		);
+	});
+}
+
+/**
  * Command Palette Reducer.
  *
  * Handles:
@@ -139,6 +163,10 @@ export const commandReducer: Reducer<CommandState, CommandAction, CommandDepende
 		}
 
 		case 'commandsUpdated': {
+			if (sameCommands(state.commands, action.commands)) {
+				return [state, Effect.none()];
+			}
+
 			const filterFn = deps?.filterFunction ?? defaultFilterFunction;
 			let filtered = filterFn(action.commands, state.query);
 
