@@ -4,7 +4,7 @@
  */
 
 import type { Post, Comment } from '../shared/types';
-import { sanitizeHTML } from '@composable-svelte/core/ssr';
+import { sanitizeHTML } from '@composable-svelte/core/ssr/middleware';
 
 const mockPosts: Post[] = [
   {

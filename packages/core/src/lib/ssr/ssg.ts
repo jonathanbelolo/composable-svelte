@@ -6,7 +6,7 @@
  *
  * @example Basic SSG
  * ```typescript
- * import { generateStaticSite } from '@composable-svelte/core/ssr';
+ * import { generateStaticSite } from '@composable-svelte/core/ssr/ssg';
  * import App from './App.svelte';
  * import { appReducer } from './reducer';
  *
@@ -56,7 +56,6 @@ import { createStore } from '../store.svelte.js';
 // These are only called during build, never in browser
 import { mkdir, writeFile } from 'fs/promises';
 import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
 
 /**
  * Svelte component type (compatible with Svelte 5).

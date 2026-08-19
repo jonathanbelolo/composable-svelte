@@ -4,7 +4,7 @@
  * Converts store state to JSON for transmission to the client.
  */
 
-import type { Store } from '../types';
+import type { Store } from '../types.js';
 
 /**
  * Serializes store state to JSON string for client hydration.

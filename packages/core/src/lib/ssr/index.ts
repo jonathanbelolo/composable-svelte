@@ -8,6 +8,13 @@
  * - Static site generation (build-time HTML generation)
  * - Environment detection (server vs browser)
  *
+ * This entry must stay browser-safe. `hydrateStore` is client-side by
+ * definition, and the root entry re-exports through this barrel, so anything
+ * added here lands in every consumer's bundle graph. Server-only middleware
+ * (HTML sanitisation, security headers, rate limiting) lives at
+ * `@composable-svelte/core/ssr/middleware`; SSG lives at
+ * `@composable-svelte/core/ssr/ssg`. Neither belongs here.
+ *
  * @example Server-Side Rendering
  * ```typescript
  * // server.ts
@@ -121,24 +128,3 @@ export type {
   SSGResult,
   SSGGenerateOptions
 } from './ssg.js';
-
-// Security
-export {
-  createSecurityHeaders,
-  fastifySecurityHeaders,
-  defaultSecurityHeaders,
-  type SecurityHeadersConfig
-} from './middleware/security-headers.js';
-
-export {
-  sanitizeHTML,
-  createSanitizer,
-  defaultSanitizeOptions,
-  type SanitizeOptions
-} from './middleware/html-sanitization.js';
-
-export {
-  RateLimiter,
-  fastifyRateLimit,
-  type RateLimitConfig
-} from './middleware/rate-limiting.js';

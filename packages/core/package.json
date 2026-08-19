@@ -96,6 +96,11 @@
       "svelte": "./dist/ssr/index.js",
       "default": "./dist/ssr/index.js"
     },
+    "./ssr/middleware": {
+      "types": "./dist/ssr/middleware/index.d.ts",
+      "node": "./dist/ssr/middleware/index.js",
+      "default": "./dist/ssr/middleware/index.js"
+    },
     "./ssr/ssg": {
       "types": "./dist/ssr/ssg.d.ts",
       "node": "./dist/ssr/ssg.js",

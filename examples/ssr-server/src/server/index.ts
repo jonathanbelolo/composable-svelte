@@ -11,7 +11,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { createStore } from '@composable-svelte/core';
 import { renderToHTML } from '@composable-svelte/core/ssr';
-import { fastifySecurityHeaders, fastifyRateLimit } from '@composable-svelte/core/ssr';
+import { fastifySecurityHeaders, fastifyRateLimit } from '@composable-svelte/core/ssr/middleware';
 import { createInitialI18nState, BundledTranslationLoader, createStaticLocaleDetector, serverDOM } from '@composable-svelte/core/i18n';
 import type { I18nState } from '@composable-svelte/core/i18n';
 import { createNoopStorage } from '@composable-svelte/core/dependencies';
