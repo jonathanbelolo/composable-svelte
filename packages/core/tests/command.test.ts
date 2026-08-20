@@ -45,17 +45,37 @@ describe('Command Palette', () => {
 			store.assertNoPendingActions();
 		});
 
-		it('closes the command palette', async () => {
+		it('closes the command palette, animating out first', async () => {
+			// This test used to assert that `closed` set `isOpen: false` in one step.
+			// It only did so because `createInitialCommandState({ isOpen: true })`
+			// produced `presentation: 'idle'`, which sent `closed` down its
+			// "not yet presented, just close immediately" branch.
+			//
+			// That inconsistency is the defect fixed in `command.types.ts`: an
+			// initially-open palette is now genuinely `presented`, so it dismisses
+			// through the same animated path as one opened by `opened`. Uniform
+			// behaviour is the point — the two-step lifecycle below is what a
+			// palette closing on screen has always done.
 			const store = createTestStore({
 				initialState: createInitialCommandState({ commands: sampleCommands, isOpen: true }),
 				reducer: commandReducer
 			});
 
 			await store.send({ type: 'closed' }, (state) => {
-				expect(state.isOpen).toBe(false);
-				expect(state.query).toBe('');
-				expect(state.selectedIndex).toBe(0);
+				// Still open, now animating out.
+				expect(state.presentation.status).toBe('dismissing');
+				expect(state.isOpen).toBe(true);
 			});
+
+			await store.receive(
+				{ type: 'presentation', event: { type: 'dismissalCompleted' } },
+				(state) => {
+					expect(state.isOpen).toBe(false);
+					expect(state.query).toBe('');
+					expect(state.selectedIndex).toBe(0);
+					expect(state.presentation.status).toBe('idle');
+				}
+			);
 
 			store.assertNoPendingActions();
 		});

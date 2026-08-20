@@ -185,7 +185,18 @@ export function createInitialCommandState(config?: {
 		filteredCommands: commands,
 		selectedIndex: 0,
 		isOpen: config?.isOpen ?? false,
-		presentation: { status: 'idle' },
+		// Must agree with `isOpen`. `Command.svelte` renders on
+		// `presentation.status !== 'idle'`, and its prop-sync effect is guarded
+		// on `$store.isOpen !== open` — already satisfied at mount, so nothing
+		// ever dispatched `opened` to move presentation off idle. An
+		// initially-open palette therefore rendered nothing at all.
+		//
+		// `presented`, not `presenting`: this is the state the reducer settles
+		// on once an open animation finishes (`command.reducer.ts:309-317`), and
+		// there is no prior frame for an initially-open palette to animate from.
+		presentation: config?.isOpen
+			? ({ status: 'presented', content: true } as const)
+			: ({ status: 'idle' } as const),
 		caseSensitive: config?.caseSensitive ?? false,
 		...(config?.maxResults !== undefined && { maxResults: config.maxResults })
 	};
