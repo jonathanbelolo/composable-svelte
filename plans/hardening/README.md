@@ -536,7 +536,7 @@ escapes its input (verified: `<img` becomes `&lt;img`) and both fallback paths i
 
 ## S4. Silently-wrong behaviour
 
-### S4.1 `Combobox` external `value` sync is a no-op — VERIFIED
+### S4.1 `Combobox` external `value` sync is a no-op — **CLOSED (a4006e5)**
 
 `packages/core/src/lib/components/ui/combobox/Combobox.svelte:104`
 
@@ -566,7 +566,7 @@ test block at `tests/select.test.ts:582`).
 
 This is the last direct `store.state.X =` write in the repo.
 
-### S4.2 `VoiceInput` wipes transcript history on every dispatch — VERIFIED
+### S4.2 `VoiceInput` wipes transcript history on every dispatch — **CLOSED (b1b334a)**
 
 `packages/media/src/lib/voice-input/VoiceInput.svelte:96`
 
@@ -620,12 +620,26 @@ because it is never called.
 Fix: wire it up or drop it from the type. Leaving a required-but-ignored callback
 is what let the `require()` bug sit undetected.
 
-### S4.5 Six core components freeze their store dependencies — INFERRED
+### S4.5 Core components freeze their store dependencies — **CLOSED (6f73e96)**
 
 `createStore` re-reads `config.dependencies` on every dispatch
 (`store.svelte.ts:72`), so a plain object literal freezes what the props resolved
 to at mount. `FileUpload.svelte:43` and `Tooltip.svelte:65` already carry the
 getter fix and a comment explaining it. These still use frozen literals:
+
+Corrected while fixing: this is **seven** components, not six, and Toaster is a
+separate and worse problem. Now VERIFIED rather than INFERRED, by
+`packages/core/tests/dependency-freshness.test.ts` — each case confirmed red
+first with `(first=1, second=0)`, and reverting any one component's fix fails
+exactly its own test.
+
+**Toaster is not fixed, and a getter there would be a fake fix.** Its
+`dependencies` prop is entirely *dead*, not merely frozen: `toastDismissed`
+returns early for any toast not in the internal store, prop-supplied toasts
+never enter it, and nothing can put one in — no `store` prop, no context, no
+component export. `onToastAdded`, `onToastDismissed` and `generateId` can never
+fire. Needs its own decision: expose the store, or delete the prop. Tracked as
+`it.skip` in the test file with the reasoning inline.
 
 | file | frozen |
 |---|---|
@@ -661,13 +675,13 @@ already destructured to a string. All four buttons render
 `data-testid="share-method-undefined"`. No test selects it yet, so this is a
 pre-broken hook that will silently match nothing, or four things, on first use.
 
-### S4.8 `charts/Chart.svelte:86` — selection callback misfires — INFERRED
+### S4.8 `charts/Chart.svelte:86` — selection callback misfires — **CLOSED (567fd4d)**
 
 Depends on the whole `$store`, so `onSelectionChange` re-fires on every action
 (including 60fps zoom progress) with unchanged data; and because it is guarded on
 `selectedData.length > 0`, consumers are **never** notified when selection clears.
 
-### S4.9 `code` exports four functions that do nothing — VERIFIED
+### S4.9 `code` exports four functions that do nothing — **CLOSED (23d6b44)**
 
 `packages/code/src/lib/code-editor/codemirror-wrapper.ts:240-288` —
 `updateEditorLanguage`, `updateEditorTheme`, `updateEditorReadOnly`,
@@ -681,12 +695,36 @@ caller today gets silence, and after removal gets a compile error pointing at th
 problem. Recommend removing with a minor bump rather than shipping no-ops a fifth
 time.
 
-### S4.10 `AuthGuard.onAnonymous` re-fires on every dispatch — INFERRED
+**Resolved by implementing rather than removing.** All four now reconfigure
+through `Compartment`s, signatures unchanged, and `CodeEditor.svelte` calls them
+from a guarded sync effect — the toolbar's language `<select>` and theme button
+were wired to these and did nothing. Covered by
+`packages/code/tests/code-editor-reconfigure.test.ts`, which asserts against the
+live `EditorView` (a store-only assertion passes with the no-ops restored).
 
-`packages/auth/src/lib/components/AuthGuard.svelte:69`. `const state =
-$derived(store.state)` changes identity on every dispatch, so the effect re-runs.
-Documented use is dispatching a redirect, usually idempotent — low severity, and
-`auth` is otherwise the cleanest package in the repo.
+**Still open, split out deliberately: a fifth dead control.** `showLineNumbers`
+is accepted by `createEditorView` and never read — `basicSetup` hardcodes
+`lineNumbers()` and is not customizable — so the toolbar's "Line Numbers:
+On/Off" button still does nothing. Unlike the other four it has no exported
+updater at all, so fixing it means either inlining basicSetup's contents or a
+`Prec` override, **plus new public API**. Different change, different review.
+
+### S4.10 `AuthGuard.onAnonymous` re-fires on every dispatch — NOT A DEFECT (corrected)
+
+The premise was right and the conclusion did not follow. `const state =
+$derived(store.state)` does change identity on every dispatch **that produces a
+new state** — but no action in `sessionReducer` transitions anonymous ->
+anonymous. Measured, applying every member of the union to a resolved-anonymous
+state: `sessionResolved` (both shapes), `sessionResolveFailed`,
+`loginSucceeded`, `loginFailed` and `loggedOut` all return the **identical**
+object (the last three via the epoch guard), which `dispatchCore` does not
+notify on; `resolveSession`, `login` and `logout` genuinely leave anonymous. So
+`onAnonymous` fires exactly once per entry, which is correct.
+
+Closed by `e994ff4`, which adds `tests/auth-guard-anonymous.test.ts` pinning
+that reducer property from both ends, and narrows the effect's dependency to a
+boolean as hardening. The tests pass **before and after** the narrowing — they
+guard a future anonymous -> anonymous transition, not the change itself.
 
 ---
 
@@ -898,10 +936,14 @@ above. Nested interactive elements in satellites: zero.
   components in raw `<button>` elements — a genuine `<button>`-in-`<button>` in
   the rendered DOM. The compiler cannot warn, because the nesting crosses a
   component boundary, so no svelte-check gate will ever catch it.
-- `<Command open={true} />` never opens at mount. Two effects fight; one writes
-  `open = $store.isOpen` and clobbers the incoming prop. Verified: dialog absent
-  at mount, present when toggled afterwards. Fixing it means redesigning the
-  bidirectional binding.
+- `<Command open={true} />` never opens at mount — **CLOSED (c533691)**, and the
+  mechanism recorded here was wrong. It was not "two effects fighting": the
+  second effect writes `true` over `true` and is inert, and no binding needed
+  redesigning. `createInitialCommandState` honoured `isOpen` but hardcoded
+  `presentation: { status: 'idle' }`, while the markup renders on
+  `presentation.status !== 'idle'` and the prop-sync effect's guard
+  (`$store.isOpen !== open`) is already satisfied at mount — so `opened` never
+  dispatched. One line in `command.types.ts`.
 - `ssr/render.ts:9` imports `svelte/server`, which the `/ssr` barrel pulls into
   any client bundle importing `hydrateStore`. Verified fully tree-shaken — the
   bundles are byte-identical — so this is tidiness, not weight.
