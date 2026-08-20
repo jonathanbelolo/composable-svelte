@@ -88,8 +88,17 @@ async function loadOptionalDependencies(): Promise<void> {
 	}
 }
 
-// Start loading optional dependencies (non-blocking)
-loadOptionalDependencies();
+/**
+ * Resolves once the optional dependencies have been attempted.
+ *
+ * The load is kicked off eagerly and does not block, so `renderMarkdown` and
+ * `extractVideosFromMarkdown` degrade to un-highlighted output and an empty
+ * video list until it settles. Nothing could previously observe that moment —
+ * the promise was fired and discarded — so a component that rendered once,
+ * early, and was never invalidated again would silently show no videos and no
+ * syntax highlighting, forever. Await this before reading either.
+ */
+export const optionalDependenciesReady: Promise<void> = loadOptionalDependencies();
 
 /**
  * Configure marked with Prism syntax highlighting (if available)

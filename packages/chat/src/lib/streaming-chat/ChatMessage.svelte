@@ -4,7 +4,7 @@
 	import { onMount } from 'svelte';
 	import type { VideoEmbedType } from '@composable-svelte/media';
 	import type { Message, StreamingChatState, StreamingChatAction } from './types.js';
-	import { renderMarkdown, attachCopyButtons, extractImagesFromMarkdown, extractVideosFromMarkdown } from './markdown.js';
+	import { renderMarkdown, attachCopyButtons, extractImagesFromMarkdown, extractVideosFromMarkdown, optionalDependenciesReady } from './markdown.js';
 	import { ImageGallery } from '@composable-svelte/core/components/image-gallery';
 	import AttachmentGallery from './attachment-components/AttachmentGallery.svelte';
 
@@ -33,6 +33,12 @@
 	let VideoEmbed = $state<Component<{ video: VideoEmbedType }> | null>(null);
 
 	onMount(async () => {
+		// Wait for markdown.ts's own optional-dependency load first: until it
+		// settles, `extractVideosFromMarkdown` returns []. Assigning `VideoEmbed`
+		// last means the state write that reveals the block happens only once the
+		// extractor can actually find anything — otherwise the one invalidation
+		// this component gets would be spent too early.
+		await optionalDependenciesReady;
 		try {
 			({ VideoEmbed } = await import('@composable-svelte/media'));
 		} catch {
