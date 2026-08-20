@@ -19,6 +19,10 @@ import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 
 const uiDir = fileURLToPath(new URL('../../src/lib/components/ui/', import.meta.url));
+const componentsExports = readFileSync(
+	fileURLToPath(new URL('../../src/lib/components-exports.ts', import.meta.url)),
+	'utf8'
+);
 const barrelSource = readFileSync(join(uiDir, 'index.ts'), 'utf8');
 /** Comments name some of these symbols to explain their absence — scan code only. */
 const barrel = barrelSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
@@ -105,5 +109,30 @@ describe('components/ui public surface', () => {
 				barrel.includes(`export * from './collapsible/index.js'`) || barrel.includes(name);
 			expect(reachable, `${name} must be reachable`).toBe(true);
 		}
+	});
+});
+
+/**
+ * The same defect, one level up.
+ *
+ * `src/lib/index.ts`'s only component re-export is `export * from
+ * './components-exports.js'`, and that file was a hand-written list of component
+ * *values*. So the fix above — making every type, reducer and state factory
+ * reachable from `components/ui` — stopped there and never reached the package
+ * root. 75 names, across 11 root-exported components, and `Collapsible` was
+ * unusable from `@composable-svelte/core` for exactly the reason the header
+ * comment describes.
+ *
+ * This asserts on source rather than on the built `dist`, so it runs without a
+ * build. The star is what carries the names; naming them individually here
+ * would just be a second list to drift.
+ */
+describe('package root public surface', () => {
+	it('re-exports the component sub-barrels', () => {
+		expect(
+			componentsExports.includes(`export * from './components/ui/index.js'`),
+			'components-exports.ts must star-export components/ui, or every prop type, ' +
+				'reducer and state factory becomes unreachable from the package root'
+		).toBe(true);
 	});
 });

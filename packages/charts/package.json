@@ -11,6 +11,7 @@
       "svelte": "./dist/index.js",
       "default": "./dist/index.js"
     },
+    "./package.json": "./package.json",
     "./*": {
       "types": "./dist/*.d.ts",
       "svelte": "./dist/*.js",
@@ -93,9 +94,7 @@
     "@observablehq/plot": "^0.6.0",
     "d3-array": "^3.2.0",
     "d3-brush": "^3.0.0",
-    "d3-scale": "^4.0.0",
     "d3-selection": "^3.0.0",
-    "d3-shape": "^3.2.0",
     "d3-zoom": "^3.0.0",
     "motion": "^12.23.24"
   },

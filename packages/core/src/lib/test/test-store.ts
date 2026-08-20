@@ -216,7 +216,16 @@ export type PartialAction<Action> = Partial<Action> & { type: string };
  * ```
  */
 export class TestStore<State, Action, Dependencies = any> {
-  private state: State;
+  /**
+   * Current state.
+   *
+   * Public because every documented testing example reads it — `TestStore`'s
+   * whole purpose is asserting on state. It was `private`, which TypeScript
+   * erases, so tests ran fine and only consumers who typecheck their tests ever
+   * saw it. That was 74 of the errors hidden behind core's own untypechecked
+   * test suite.
+   */
+  state: State;
   private reducer: Reducer<State, Action, Dependencies>;
   private dependencies: Dependencies;
   private actionHistory: Action[] = [];
