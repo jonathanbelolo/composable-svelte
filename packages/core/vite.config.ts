@@ -39,6 +39,8 @@ export default defineConfig({
       'tests/ssr/entry-graph.test.ts',
       // Reads every workspace's package.json from disk; same reason.
       'tests/repo/check-coverage.test.ts',
+      // Reads every package's dist from disk; same reason.
+      'tests/repo/side-effects.test.ts',
       // Needs the Cookie request header, which the browser Request API refuses
       // to expose; runs under vitest.node.config.ts instead.
       'tests/i18n/ssr.test.ts'
