@@ -44,7 +44,10 @@
 		{:else if attachment.type === 'video'}
 			<!-- Video thumbnail -->
 			<div class="pending-attachment__thumbnail pending-attachment__thumbnail--video">
-				<video src={attachment.url} preload="metadata" />
+				<!-- Decorative: no controls, never played, and the wrapping button
+				     already names it. muted + aria-hidden is why the captions rule
+				     does not apply, rather than a token <track>. -->
+				<video src={attachment.url} preload="metadata" muted aria-hidden="true"></video>
 				<div class="pending-attachment__play-icon">▶</div>
 			</div>
 		{:else}

@@ -130,15 +130,22 @@
 			</div>
 		{/if}
 
-		<img
-			bind:this={imgRef}
-			src={attachment.url}
-			alt={attachment.filename}
-			class:loaded={!isLoading && !error}
-			onload={handleLoad}
-			onerror={handleError}
+		<button
+			type="button"
+			class="image-preview__zoom"
 			onclick={handleImageClick}
-		/>
+			disabled={!allowFullscreen || isFullscreen}
+			aria-label="View {attachment.filename} fullscreen"
+		>
+			<img
+				bind:this={imgRef}
+				src={attachment.url}
+				alt={attachment.filename}
+				class:loaded={!isLoading && !error}
+				onload={handleLoad}
+				onerror={handleError}
+			/>
+		</button>
 
 		<!-- Fullscreen overlay controls -->
 		{#if isFullscreen}

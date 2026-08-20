@@ -58,15 +58,35 @@
 
 		return items.length > 0 ? items.join(' • ') : null;
 	});
+
+	let dialogElement: HTMLDivElement | undefined = $state();
+	let previouslyFocused: HTMLElement | null = null;
+
+	// Without this the dialog is never focused, so keydown never reaches it and
+	// Escape does nothing — the warning about the missing tabindex was pointing
+	// at a modal with no keyboard exit. Mirrors ImageLightbox in core.
+	$effect(() => {
+		if (!open || !dialogElement) return;
+		previouslyFocused = document.activeElement as HTMLElement | null;
+		dialogElement.focus();
+		return () => previouslyFocused?.focus();
+	});
 </script>
 
 {#if open && attachment}
-	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+	<!-- This element is itself the backdrop (fixed, inset 0, dark), so
+	     handleBackdropClick's target check is what distinguishes a click outside
+	     the container from one inside it. The dropped
+	     `svelte-ignore a11y_no_noninteractive_element_interactions` suppressed
+	     nothing: `dialog` is an interactive role, so that rule could never fire
+	     here. -->
 	<div
+		bind:this={dialogElement}
 		class="attachment-preview-modal"
 		role="dialog"
 		aria-modal="true"
 		aria-labelledby="preview-title"
+		tabindex="-1"
 		onclick={handleBackdropClick}
 		onkeydown={handleKeydown}
 	>

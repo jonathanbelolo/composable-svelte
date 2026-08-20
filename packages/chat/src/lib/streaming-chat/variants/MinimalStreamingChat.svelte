@@ -136,7 +136,7 @@
 				disabled={$store.isWaitingForResponse}
 				rows="1"
 				aria-label="Chat message input"
-			/>
+			></textarea>
 			<button
 				type="submit"
 				class="minimal-streaming-chat__button"

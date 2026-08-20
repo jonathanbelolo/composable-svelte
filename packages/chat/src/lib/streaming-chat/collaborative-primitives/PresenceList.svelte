@@ -31,11 +31,7 @@
 	let { users, groupByPresence = false, showEmptyState = true, class: className = '' }: Props = $props();
 
 	// Group users by presence if requested
-	const groupedUsers = $derived(() => {
-		if (!groupByPresence) {
-			return { all: users };
-		}
-
+	const groupedUsers = $derived.by(() => {
 		const groups: Record<UserPresence, User[]> = {
 			active: [],
 			idle: [],
@@ -43,8 +39,14 @@
 			offline: []
 		};
 
+		// Only the grouped branch of the template reads this; when grouping is off
+		// the template iterates `users` directly, so skip the work.
+		if (!groupByPresence) return groups;
+
 		for (const user of users) {
-			groups[user.presence].push(user);
+			// `presence` arrives over a WebSocket, so an out-of-range value is a
+			// server bug away — bucket it rather than throwing on undefined.push.
+			(groups[user.presence] ?? groups.offline).push(user);
 		}
 
 		return groups;
@@ -77,7 +79,7 @@
 		</div>
 	{:else if groupByPresence}
 		{#each presenceOrder as presenceStatus}
-			{@const usersInGroup = groupedUsers()[presenceStatus]}
+			{@const usersInGroup = groupedUsers[presenceStatus]}
 			{#if usersInGroup.length > 0}
 				<div class="presence-group">
 					<h3 class="group-header">

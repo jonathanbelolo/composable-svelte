@@ -25,9 +25,9 @@
 		/** Custom label for assistant messages (default: "Assistant") */
 		assistantLabel?: string;
 		/** Avatar URL for user messages */
-		userAvatarUrl?: string;
+		userAvatarUrl?: string | undefined;
 		/** Avatar URL for assistant messages */
-		assistantAvatarUrl?: string;
+		assistantAvatarUrl?: string | undefined;
 	}
 
 	const { message, isStreaming = false, headerActions, onReactionClick, onAddReaction, userLabel = 'You', assistantLabel = 'Assistant', userAvatarUrl, assistantAvatarUrl }: Props = $props();
@@ -71,10 +71,8 @@
 
 	// Attach copy buttons to code blocks after content is rendered
 	$effect(() => {
-		if (contentElement && message.role === 'assistant' && !isStreaming) {
-			const cleanup = attachCopyButtons(contentElement);
-			return cleanup;
-		}
+		if (!contentElement || message.role !== 'assistant' || isStreaming) return;
+		return attachCopyButtons(contentElement);
 	});
 </script>
 

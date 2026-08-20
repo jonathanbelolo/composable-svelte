@@ -193,6 +193,9 @@
 	bind:this={containerRef}
 	class="video-player {className}"
 	class:fullscreen={isFullscreen}
+	role="group"
+	aria-label="Video player"
+	onfocusin={handleMouseMove}
 	onmousemove={handleMouseMove}
 	onmouseleave={() => isPlaying && (showControls = false)}
 >
@@ -224,7 +227,18 @@
 			onerror={handleError}
 			preload="metadata"
 			onclick={togglePlay}
-		></video>
+		>
+			<!-- Rendered unconditionally: the a11y check looks for a literal
+			     <track> child and an {#if}-wrapped one does not satisfy it. With no
+			     captions in metadata the element carries no src, so the browser
+			     creates an empty disabled TextTrack and makes no request. -->
+			<track
+				kind="captions"
+				src={attachment.metadata?.captions?.src}
+				srclang={attachment.metadata?.captions?.srclang}
+				label={attachment.metadata?.captions?.label}
+			/>
+		</video>
 
 		<!-- Loading Overlay -->
 		{#if isLoading}

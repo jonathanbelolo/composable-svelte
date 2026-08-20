@@ -8,7 +8,7 @@
  * packages that had never had svelte-check run on them at all — were never
  * measured. The step was green and meant almost nothing.
  *
- * Adding the missing scripts fixes that today. It does not stop the twentieth
+ * Adding the missing scripts fixed that. It does not stop the twentieth
  * workspace from being added ungated tomorrow, or a script from being quietly
  * deleted the first time it turns red. This test is the part that holds.
  *
@@ -37,18 +37,6 @@ const repoRoot = fileURLToPath(new URL('../../../../', import.meta.url));
  * nested in a `<button>` was reported for months while the step stayed green.
  */
 const CHECK_SCRIPT = 'svelte-check --tsconfig ./tsconfig.json --fail-on-warnings';
-
-/**
- * Workspaces not yet enrolled, with the error/warning counts measured when they
- * were added here. Every entry is a debt, not a dispensation: it exists so the
- * gap is visible in a test that fails when forgotten, rather than in a document
- * that does not.
- *
- * Shrink this map. When it is empty, delete it and the branch that reads it.
- */
-const NOT_YET_GATED: Record<string, { errors: number; warnings: number }> = {
-	'packages/chat': { errors: 15, warnings: 13 }
-};
 
 interface Workspace {
 	dir: string;
@@ -94,24 +82,16 @@ describe('svelte-check gate coverage', () => {
 		expect(workspaces.length).toBeGreaterThanOrEqual(19);
 	});
 
-	it.each(workspaces.map((w) => [w.dir, w] as const))(
-		'%s is either gated or explicitly listed as not yet gated',
-		(dir, w) => {
-			const gated = isGated(w);
-			const allowlisted = dir in NOT_YET_GATED;
-
-			expect(
-				gated || allowlisted,
-				`${dir} has no \`check\` script and is not in NOT_YET_GATED. ` +
-					`Add the script, or add an entry with its measured counts.`
-			).toBe(true);
-
-			expect(
-				gated && allowlisted,
-				`${dir} is gated but still listed in NOT_YET_GATED — remove the entry.`
-			).toBe(false);
-		}
-	);
+	it.each(workspaces.map((w) => [w.dir, w] as const))('%s is gated', (dir, w) => {
+		// Unconditional. This assertion carried a NOT_YET_GATED allowlist while the
+		// gap was being closed; the allowlist is gone because it reached zero.
+		// Adding a workspace now means gating it in the same change.
+		expect(
+			isGated(w),
+			`${dir} has no \`check\` script. Every workspace in this repo ships ` +
+				`.svelte files, and \`tsc\` does not read them.`
+		).toBe(true);
+	});
 
 	const gatedWorkspaces = workspaces.filter(isGated);
 
@@ -149,13 +129,4 @@ describe('svelte-check gate coverage', () => {
 		}
 	);
 
-	it('the allowlist has no stale entries', () => {
-		// A stale entry is dead permission — it would let a workspace silently
-		// leave the gate again. Same failure `b148426` removed from the SSR
-		// entry allowlist.
-		const known = new Set(workspaces.map((w) => w.dir));
-		for (const dir of Object.keys(NOT_YET_GATED)) {
-			expect(known.has(dir), `NOT_YET_GATED lists ${dir}, which is not a workspace`).toBe(true);
-		}
-	});
 });

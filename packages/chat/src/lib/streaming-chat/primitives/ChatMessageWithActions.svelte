@@ -21,15 +21,27 @@
 		/** Custom label for assistant messages (default: "Assistant") */
 		assistantLabel?: string;
 		/** Avatar URL for user messages */
-		userAvatarUrl?: string;
+		userAvatarUrl?: string | undefined;
 		/** Avatar URL for assistant messages */
-		assistantAvatarUrl?: string;
+		assistantAvatarUrl?: string | undefined;
 	}
 
 	const { message, store, isStreaming = false, userLabel = 'You', assistantLabel = 'Assistant', userAvatarUrl, assistantAvatarUrl }: Props = $props();
 
 	// Check if this message is being edited
 	const isEditing = $derived($store.editingMessage?.id === message.id);
+
+	let editTextarea: HTMLTextAreaElement | undefined = $state();
+
+	// Replaces `autofocus`. Runs once per edit session, since the textarea only
+	// exists while editing. Caret at the end rather than 0, matching the prefill
+	// behaviour in FullStreamingChat.
+	$effect(() => {
+		if (!isEditing || !editTextarea) return;
+		editTextarea.focus();
+		const end = editTextarea.value.length;
+		editTextarea.setSelectionRange(end, end);
+	});
 	const editContent = $derived($store.editingMessage?.content ?? '');
 
 	// Reaction picker state
@@ -54,6 +66,7 @@
 		</div>
 		<div class="chat-message__edit-form">
 			<textarea
+				bind:this={editTextarea}
 				class="chat-message__edit-textarea"
 				value={editContent}
 				oninput={(e) => store.dispatch({
@@ -61,8 +74,7 @@
 					content: (e.target as HTMLTextAreaElement).value
 				})}
 				rows="3"
-				autofocus
-			/>
+			></textarea>
 			<div class="chat-message__edit-actions">
 				<button
 					type="button"

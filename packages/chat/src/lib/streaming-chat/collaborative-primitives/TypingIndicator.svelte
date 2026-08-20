@@ -16,19 +16,11 @@
 	let { users, class: className = '' }: Props = $props();
 
 	// Format typing text
-	const typingText = $derived(() => {
-		if (users.length === 0) {
-			return '';
-		}
-
-		if (users.length === 1) {
-			return `${users[0].name} is typing`;
-		}
-
-		if (users.length === 2) {
-			return `${users[0].name} and ${users[1].name} are typing`;
-		}
-
+	const typingText = $derived.by(() => {
+		const [first, second] = users;
+		if (!first) return '';
+		if (!second) return `${first.name} is typing`;
+		if (users.length === 2) return `${first.name} and ${second.name} are typing`;
 		return `${users.length} people are typing`;
 	});
 </script>
@@ -40,7 +32,7 @@
 			<span class="dot"></span>
 			<span class="dot"></span>
 		</div>
-		<span class="typing-text">{typingText()}</span>
+		<span class="typing-text">{typingText}</span>
 	</div>
 {/if}
 

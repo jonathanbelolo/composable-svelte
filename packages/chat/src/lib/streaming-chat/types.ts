@@ -19,6 +19,20 @@ export interface AttachmentMetadata {
 	pageCount?: number;
 	/** Thumbnail URL (optional preview) */
 	thumbnail?: string;
+	/**
+	 * Caption track for videos.
+	 *
+	 * The library cannot caption a user's uploaded video, but a consumer that
+	 * has a track can supply one here and VideoPlayer will render it.
+	 */
+	captions?: {
+		/** URL of the WebVTT file */
+		src: string;
+		/** BCP 47 language tag, e.g. 'en' */
+		srclang: string;
+		/** Human-readable label shown in the track menu */
+		label: string;
+	};
 }
 
 /**

@@ -33,10 +33,8 @@
 
 	// Attach copy buttons to code blocks after content is rendered
 	$effect(() => {
-		if (contentElement && message.role === 'assistant' && !isStreaming) {
-			const cleanup = attachSimpleCopyButtons(contentElement);
-			return cleanup;
-		}
+		if (!contentElement || message.role !== 'assistant' || isStreaming) return;
+		return attachSimpleCopyButtons(contentElement);
 	});
 </script>
 

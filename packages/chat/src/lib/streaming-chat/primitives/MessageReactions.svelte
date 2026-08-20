@@ -11,7 +11,7 @@
 		/** Array of reactions to display */
 		reactions: MessageReaction[];
 		/** Click handler for reactions */
-		onclick?: (emoji: string) => void;
+		onclick?: ((emoji: string) => void) | undefined;
 		/** Optional class name */
 		class?: string;
 	}

@@ -108,7 +108,7 @@
 		store.dispatch({
 			type: 'sendMessage',
 			message: message || '(Attachments)',
-			attachments
+			...(attachments !== undefined && { attachments })
 		});
 	}
 
@@ -298,7 +298,7 @@
 				disabled={$store.isWaitingForResponse}
 				rows="1"
 				aria-label="Chat message input"
-			/>
+			></textarea>
 			<div class="streaming-chat__actions">
 				{#if showClearButton && $store.messages.length > 0}
 					<button
