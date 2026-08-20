@@ -2,8 +2,19 @@
 	import { onMount } from 'svelte';
 	import type { Store } from '@composable-svelte/core';
 	import type { EditorView } from 'codemirror';
-	import type { CodeEditorState, CodeEditorAction } from './code-editor.types.js';
-	import { createEditorView, updateEditorValue } from './codemirror-wrapper.js';
+	import type {
+		CodeEditorState,
+		CodeEditorAction,
+		SupportedLanguage
+	} from './code-editor.types.js';
+	import {
+		createEditorView,
+		updateEditorValue,
+		updateEditorLanguage,
+		updateEditorTheme,
+		updateEditorReadOnly,
+		updateTabSize
+	} from './codemirror-wrapper.js';
 
 	/**
 	 * Store containing all component state
@@ -15,12 +26,61 @@
 	let editorElement: HTMLElement;
 	let view: EditorView | null = null;
 
-	// Track CodeMirror's internal value to prevent circular updates
-	let codemirrorValue = $state('');
+	// Track CodeMirror's internal value to prevent circular updates.
+	//
+	// Not $state: this is read AND written inside the effect below, which is the
+	// shape that produces `effect_update_depth_exceeded`. It terminated only
+	// because the write falsified its own condition. It is never read from the
+	// template, so a plain `let` is both sufficient and safer.
+	let codemirrorValue = '';
+
+	// Not $state, for the same reason: the sync effect reads and writes these.
+	// A reactive guard re-triggers the effect it lives in. Same pattern and same
+	// rationale as `DropdownMenu.svelte` in core.
+	let appliedLanguage: SupportedLanguage | null = null;
+	let appliedTheme: 'light' | 'dark' | 'auto' | null = null;
+	let appliedReadOnly: boolean | null = null;
+	let appliedTabSize: number | null = null;
+
+	/**
+	 * Push store config into the live view, skipping anything already applied.
+	 *
+	 * Idempotent by value, and that is load-bearing rather than an optimisation:
+	 * flipping `readOnly` while the editor has focus blurs `contentDOM`, the
+	 * update listener sees `focusChanged` and dispatches `blurred` back into the
+	 * store, which re-runs this effect. These guards are what make that second
+	 * pass a no-op instead of a cycle. The same applies to the ~2 dispatches per
+	 * keystroke.
+	 */
+	function syncConfig(
+		editor: EditorView,
+		language: SupportedLanguage,
+		theme: 'light' | 'dark' | 'auto',
+		readOnly: boolean,
+		tabSize: number
+	): void {
+		if (theme !== appliedTheme) {
+			appliedTheme = theme;
+			updateEditorTheme(editor, theme);
+		}
+		if (readOnly !== appliedReadOnly) {
+			appliedReadOnly = readOnly;
+			updateEditorReadOnly(editor, readOnly);
+		}
+		if (tabSize !== appliedTabSize) {
+			appliedTabSize = tabSize;
+			updateTabSize(editor, tabSize);
+		}
+		if (language !== appliedLanguage) {
+			appliedLanguage = language;
+			// Stale-request guarded inside the wrapper.
+			void updateEditorLanguage(editor, language);
+		}
+	}
 
 	// Initialize CodeMirror on mount
 	onMount(() => {
-		createEditorView(editorElement, store, {
+		const initial = {
 			value: $store.value,
 			language: $store.language,
 			theme: $store.theme,
@@ -28,9 +88,34 @@
 			readOnly: $store.readOnly,
 			enableAutocomplete: $store.enableAutocomplete,
 			tabSize: $store.tabSize
-		}).then((editorView) => {
+		};
+
+		createEditorView(editorElement, store, initial).then((editorView) => {
 			view = editorView;
-			codemirrorValue = $store.value;
+			// Record what CodeMirror actually received, not what the store says
+			// by the time this promise resolves.
+			codemirrorValue = initial.value;
+			appliedLanguage = initial.language;
+			appliedTheme = initial.theme;
+			appliedReadOnly = initial.readOnly;
+			appliedTabSize = initial.tabSize;
+
+			// Catch up on anything dispatched while the view was being built.
+			// The effect below cannot do this: `view` is deliberately not
+			// reactive, so its dependency set is the store scalars only and it
+			// does not re-run when the view lands.
+			const current = store.state;
+			syncConfig(
+				editorView,
+				current.language,
+				current.theme,
+				current.readOnly,
+				current.tabSize
+			);
+			if (current.value !== codemirrorValue) {
+				updateEditorValue(editorView, current.value);
+				codemirrorValue = current.value;
+			}
 		});
 
 		return () => {
@@ -45,6 +130,20 @@
 			updateEditorValue(view, $store.value);
 			codemirrorValue = $store.value;
 		}
+	});
+
+	// Sync editor configuration (store -> CodeMirror).
+	$effect(() => {
+		// Read every tracked value first. An early `return` above these would
+		// leave the effect depending only on `view`, which is deliberately not
+		// reactive — and it would then never re-run.
+		const language = $store.language;
+		const theme = $store.theme;
+		const readOnly = $store.readOnly;
+		const tabSize = $store.tabSize;
+
+		if (!view) return;
+		syncConfig(view, language, theme, readOnly, tabSize);
 	});
 
 	// Use Svelte's auto-subscription pattern - ZERO boilerplate!

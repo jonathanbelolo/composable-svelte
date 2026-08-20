@@ -9,7 +9,7 @@
  */
 
 import { EditorView, basicSetup } from 'codemirror';
-import { EditorState, type Extension } from '@codemirror/state';
+import { Compartment, EditorState, type Extension } from '@codemirror/state';
 import { keymap } from '@codemirror/view';
 import { oneDark } from '@codemirror/theme-one-dark';
 import type { Store } from '@composable-svelte/core';
@@ -19,6 +19,48 @@ import type {
 	SupportedLanguage,
 	EditorSelection
 } from './code-editor.types.js';
+
+/**
+ * Configuration compartments.
+ *
+ * A `Compartment` is an identity token, not a container: `compartment.of(ext)`
+ * is resolved per-`EditorState`, so one module-level instance serves every view
+ * this module creates without them interfering. Verified against the installed
+ * packages — reconfiguring one state's language leaves another state built from
+ * the same compartment untouched.
+ *
+ * Reconfiguring a compartment absent from a state's configuration is a silent
+ * no-op rather than a throw (also verified), which is what makes the exported
+ * updaters safe to call on an `EditorView` this module did not create: they did
+ * nothing for such a view before and still do nothing now.
+ */
+const languageCompartment = new Compartment();
+const themeCompartment = new Compartment();
+const readOnlyCompartment = new Compartment();
+const tabSizeCompartment = new Compartment();
+
+/**
+ * Latest language *requested* per view.
+ *
+ * `loadLanguage` is a dynamic import, so two quick switches race and the loser
+ * can resolve last and win. This keeps the last language requested rather than
+ * the last one to arrive. It lives in the wrapper rather than the component so
+ * a consumer calling `updateEditorLanguage` directly gets the same guarantee.
+ */
+const pendingLanguage = new WeakMap<EditorView, SupportedLanguage>();
+
+/**
+ * `readOnly`, as both facets.
+ *
+ * `EditorView.editable` alone only removes `contenteditable`; keymap commands
+ * still edit the document. `EditorState.readOnly` is the facet those commands
+ * consult, so this makes `readOnly: true` actually mean read-only. Verified
+ * that it does not block *programmatic* changes — `state.update({changes})`
+ * still applies — so `updateEditorValue` and the format flow keep working.
+ */
+function readOnlyExtension(readOnly: boolean): Extension {
+	return [EditorView.editable.of(!readOnly), EditorState.readOnly.of(readOnly)];
+}
 
 /**
  * Load language extension for CodeMirror
@@ -184,14 +226,17 @@ export async function createEditorView(
 	]);
 
 	// Build extensions array
+	// Array positions preserved deliberately: CodeMirror precedence is
+	// positional, and oneDark's highlight style must keep out-ranking
+	// basicSetup's `{ fallback: true }` default.
 	const extensions: Extension[] = [
 		basicSetup,
-		languageExtension,
-		...themeExtensions,
+		languageCompartment.of(languageExtension),
+		themeCompartment.of(themeExtensions),
 		updateListener,
 		customKeymap,
-		EditorView.editable.of(!config.readOnly),
-		EditorState.tabSize.of(config.tabSize)
+		readOnlyCompartment.of(readOnlyExtension(config.readOnly)),
+		tabSizeCompartment.of(EditorState.tabSize.of(config.tabSize))
 	];
 
 	// Add autocomplete if enabled
@@ -229,62 +274,58 @@ export function updateEditorValue(view: EditorView, newValue: string): void {
 }
 
 /**
- * Update editor language
+ * Update editor language, reconfiguring in place.
  *
- * Note: For dynamic language changes, the view needs to be recreated
- * This is a placeholder for future implementation with Compartments
+ * The document, selection and undo history survive — this is a compartment
+ * reconfigure, not a rebuild.
  *
- * @param _view CodeMirror view
- * @param _language New language
+ * @param view CodeMirror view
+ * @param language New language
  */
 export async function updateEditorLanguage(
-	_view: EditorView,
-	_language: SupportedLanguage
+	view: EditorView,
+	language: SupportedLanguage
 ): Promise<void> {
-	// TODO: Implement with Compartment for dynamic reconfiguration
-	// For now, language changes require recreating the view
+	pendingLanguage.set(view, language);
+	const extension = await loadLanguage(language);
+	// The last language *requested* wins, not the last import to resolve.
+	if (pendingLanguage.get(view) !== language) return;
+	// Dispatching into a destroyed view is safe: `EditorView.update`
+	// short-circuits when destroyed, so a late import after unmount is inert.
+	view.dispatch({ effects: languageCompartment.reconfigure(extension) });
 }
 
 /**
- * Update editor theme
+ * Update editor theme, reconfiguring in place.
  *
- * Note: For dynamic theme changes, the view needs to be recreated
- * This is a placeholder for future implementation with Compartments
+ * `'auto'` reads `prefers-color-scheme` at call time and installs no listener,
+ * which is unchanged from `createEditorView`.
  *
- * @param _view CodeMirror view
- * @param _theme New theme
+ * @param view CodeMirror view
+ * @param theme New theme
  */
-export function updateEditorTheme(_view: EditorView, _theme: 'light' | 'dark' | 'auto'): void {
-	// TODO: Implement with Compartment for dynamic reconfiguration
-	// For now, theme changes require recreating the view
+export function updateEditorTheme(view: EditorView, theme: 'light' | 'dark' | 'auto'): void {
+	view.dispatch({ effects: themeCompartment.reconfigure(getThemeExtensions(theme)) });
 }
 
 /**
- * Update editor read-only state
+ * Update editor read-only state, reconfiguring in place.
  *
- * Note: For dynamic readonly changes, the view needs to be recreated
- * This is a placeholder for future implementation with Compartments
- *
- * @param _view CodeMirror view
- * @param _readOnly Whether editor should be read-only
+ * @param view CodeMirror view
+ * @param readOnly Whether editor should be read-only
  */
-export function updateEditorReadOnly(_view: EditorView, _readOnly: boolean): void {
-	// TODO: Implement with Compartment for dynamic reconfiguration
-	// For now, readonly changes require recreating the view
+export function updateEditorReadOnly(view: EditorView, readOnly: boolean): void {
+	view.dispatch({ effects: readOnlyCompartment.reconfigure(readOnlyExtension(readOnly)) });
 }
 
 /**
- * Update tab size
+ * Update tab size, reconfiguring in place.
  *
- * Note: For dynamic tab size changes, the view needs to be recreated
- * This is a placeholder for future implementation with Compartments
- *
- * @param _view CodeMirror view
- * @param _tabSize New tab size
+ * @param view CodeMirror view
+ * @param tabSize New tab size
  */
-export function updateTabSize(_view: EditorView, _tabSize: number): void {
-	// TODO: Implement with Compartment for dynamic reconfiguration
-	// For now, tab size changes require recreating the view
+export function updateTabSize(view: EditorView, tabSize: number): void {
+	view.dispatch({ effects: tabSizeCompartment.reconfigure(EditorState.tabSize.of(tabSize)) });
 }
 
 /**
