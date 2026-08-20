@@ -216,16 +216,24 @@ export type PartialAction<Action> = Partial<Action> & { type: string };
  * ```
  */
 export class TestStore<State, Action, Dependencies = any> {
+  private _state: State;
+
   /**
-   * Current state.
+   * Current state (read-only).
    *
-   * Public because every documented testing example reads it — `TestStore`'s
-   * whole purpose is asserting on state. It was `private`, which TypeScript
-   * erases, so tests ran fine and only consumers who typecheck their tests ever
-   * saw it. That was 74 of the errors hidden behind core's own untypechecked
+   * Readable because every documented testing example reads it — asserting on
+   * state is what `TestStore` is for. It was `private`, which TypeScript erases,
+   * so tests ran fine and only consumers who typecheck their own tests ever saw
+   * it; that accounted for 74 of the errors hidden behind core's untypechecked
    * test suite.
+   *
+   * A getter rather than a field, mirroring `store.svelte.ts`: making it a
+   * mutable public field would have let `store.state = x` bypass the reducer
+   * silently, which is the one invariant a test store exists to hold.
    */
-  state: State;
+  get state(): State {
+    return this._state;
+  }
   private reducer: Reducer<State, Action, Dependencies>;
   private dependencies: Dependencies;
   private actionHistory: Action[] = [];
@@ -241,7 +249,7 @@ export class TestStore<State, Action, Dependencies = any> {
   public exhaustivity: 'on' | 'off' = 'on';
 
   constructor(config: TestStoreConfig<State, Action, Dependencies>) {
-    this.state = config.initialState;
+    this._state = config.initialState;
     this.reducer = config.reducer;
     this.dependencies = config.dependencies ?? ({} as Dependencies);
   }
@@ -258,15 +266,15 @@ export class TestStore<State, Action, Dependencies = any> {
   ): Promise<void> {
     this.actionHistory.push(action);
 
-    const [newState, effect] = this.reducer(this.state, action, this.dependencies);
-    this.state = newState;
+    const [newState, effect] = this.reducer(this._state, action, this.dependencies);
+    this._state = newState;
 
     if (effect._tag !== 'None') {
       this.pendingEffects.push(this._executeEffect(effect));
     }
 
     if (assert) {
-      await assert(this.state);
+      await assert(this._state);
     }
   }
 
@@ -327,7 +335,7 @@ export class TestStore<State, Action, Dependencies = any> {
     }, { timeout });
 
     if (assert) {
-      await assert(this.state);
+      await assert(this._state);
     }
   }
 
@@ -367,7 +375,7 @@ export class TestStore<State, Action, Dependencies = any> {
    * Get current state.
    */
   getState(): State {
-    return this.state;
+    return this._state;
   }
 
   /**
@@ -426,8 +434,8 @@ export class TestStore<State, Action, Dependencies = any> {
   private async _executeEffect(effect: Effect<Action>): Promise<void> {
     const dispatch: Dispatch<Action> = (action: Action) => {
       this.receivedActions.push(action);
-      const [newState, newEffect] = this.reducer(this.state, action, this.dependencies);
-      this.state = newState;
+      const [newState, newEffect] = this.reducer(this._state, action, this.dependencies);
+      this._state = newState;
 
       if (newEffect._tag !== 'None') {
         this.pendingEffects.push(this._executeEffect(newEffect));

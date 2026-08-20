@@ -12,6 +12,11 @@
       "default": "./dist/index.js"
     },
     "./package.json": "./package.json",
+    "./*.js": {
+      "types": "./dist/*.d.ts",
+      "svelte": "./dist/*.js",
+      "default": "./dist/*.js"
+    },
     "./*": {
       "types": "./dist/*.d.ts",
       "svelte": "./dist/*.js",

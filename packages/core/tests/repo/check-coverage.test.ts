@@ -130,3 +130,41 @@ describe('svelte-check gate coverage', () => {
 	);
 
 });
+
+/**
+ * A wildcard `exports` map must accept the `.js` form of its own subpaths.
+ *
+ * `"./*"` substitutes the match verbatim, so `pkg/foo.js` resolves to
+ * `dist/foo.js.js` — which does not exist. A consumer under
+ * `moduleResolution: nodenext` writes `.js` by habit and cannot reach any
+ * subpath at all. That is the exact configuration the 58-specifier sweep in
+ * fa796ee was justified by, and all six wildcard packages were broken on it.
+ *
+ * Verified against Node's real resolver before relying on it: with `"./*.js"`
+ * listed alongside `"./*"`, Node prefers the longer pattern and both forms
+ * resolve, while the exact `"./package.json"` key still wins over both.
+ */
+describe('wildcard exports accept the .js form', () => {
+	const wildcardPackages = workspaces.filter(
+		(w) => (w.pkg as { exports?: Record<string, unknown> }).exports?.['./*'] !== undefined
+	);
+
+	it('found the wildcard packages', () => {
+		expect(wildcardPackages.length).toBeGreaterThan(0);
+	});
+
+	it.each(wildcardPackages.map((w) => [w.dir, w] as const))(
+		'%s also maps ./*.js',
+		(dir, w) => {
+			const exports = (w.pkg as { exports: Record<string, unknown> }).exports;
+			expect(
+				exports['./*.js'],
+				`${dir}: has a "./*" wildcard but no "./*.js", so ` +
+					`\`${w.pkg.name}/some/module.js\` resolves to \`dist/some/module.js.js\` ` +
+					`and fails. nodenext consumers write the .js form.`
+			).toBeDefined();
+			// The two must agree, or the .js form silently resolves somewhere else.
+			expect(exports['./*.js']).toEqual(exports['./*']);
+		}
+	);
+});

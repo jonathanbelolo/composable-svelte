@@ -89,7 +89,15 @@ async function loadOptionalDependencies(): Promise<void> {
 		// @composable-svelte/code not installed
 	}
 
-	// Try to load @composable-svelte/media for video extraction
+	// Try to load @composable-svelte/media for video extraction.
+	//
+	// The `catch` is not the only path that matters, and under this repo's own
+	// bundler it is not even the usual one: Vite resolves an absent optional peer
+	// to a stub `{}` rather than throwing, so both assignments below land as
+	// `undefined` and the catch never fires. Callers must therefore treat a
+	// missing value as normal — `extractVideosFromMarkdown` null-checks, and the
+	// components gate on `VideoEmbed` being truthy. The catch covers bundlers
+	// that do hard-fail the dynamic import.
 	try {
 		const mediaModule = await import('@composable-svelte/media');
 		extractVideosFromMarkdownFn = mediaModule.extractVideosFromMarkdown;

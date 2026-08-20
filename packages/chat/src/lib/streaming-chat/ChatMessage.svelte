@@ -164,7 +164,7 @@
 			{/if}
 
 			<!-- Video embeds for detected videos -->
-			{#if VideoEmbed && videos().length > 0}
+			{#if videos().length > 0 && VideoEmbed}
 				<div class="chat-message__videos">
 					{#each videos() as video (video.url)}
 						<VideoEmbed {video} />

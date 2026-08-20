@@ -2071,7 +2071,9 @@ const counterReducer: Reducer<CounterState, CounterAction, Dependencies> = (
 // test.ts
 
 export class TestStore<State, Action, Dependencies = any> {
-  private state: State;
+  private _state: State;
+  /** Read-only: a setter would let a test bypass the reducer. */
+  get state(): State;
   private reducer: Reducer<State, Action, Dependencies>;
   private dependencies: Dependencies;
   private actionHistory: Action[] = [];
