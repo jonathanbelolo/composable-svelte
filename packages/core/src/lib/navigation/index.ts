@@ -87,7 +87,7 @@ export {
   scopeToOptional
 } from './scope-to-destination.js';
 
-export type { ScopedDestinationStore } from './scope-to-destination.js';
+export type { ScopedDestinationStore, ScopableStore } from './scope-to-destination.js';
 
 export { scopeToElement } from './scope-to-element.js';
 

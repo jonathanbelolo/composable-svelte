@@ -89,6 +89,7 @@ export type {
   CasePath,
   StackResult,
   ScopedDestinationStore,
+  ScopableStore,
   ScopedStore,
   DismissDependency
 } from './navigation/index.js';
