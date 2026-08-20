@@ -374,6 +374,9 @@ importers:
       '@types/node':
         specifier: ^20.14.0
         version: 20.19.24
+      svelte-check:
+        specifier: ^4.3.3
+        version: 4.3.3(picomatch@4.0.3)(svelte@5.43.3)(typescript@5.9.3)
       tsx:
         specifier: ^4.16.0
         version: 4.20.6

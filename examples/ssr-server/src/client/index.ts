@@ -4,7 +4,7 @@
  * This hydrates the server-rendered HTML and makes the application interactive.
  */
 
-import { hydrate as hydrateComponent } from 'svelte';
+import { hydrate as hydrateComponent, unmount } from 'svelte';
 import { hydrateStore } from '@composable-svelte/core/ssr';
 import { syncBrowserHistory } from '@composable-svelte/core/routing';
 import { createLocalStorage } from '@composable-svelte/core/dependencies';
@@ -112,7 +112,7 @@ async function hydrate() {
     // Cleanup on unmount (for HMR during development)
     if (import.meta.hot) {
       import.meta.hot.dispose(() => {
-        app.$destroy?.();
+        unmount(app);
       });
     }
   } catch (error) {

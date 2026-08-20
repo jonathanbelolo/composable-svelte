@@ -21,7 +21,7 @@
   function navigateToList() {
     store.dispatch({
       type: 'navigate',
-      destination: { type: 'list' }
+      destination: { type: 'list', state: {} }
     });
   }
 

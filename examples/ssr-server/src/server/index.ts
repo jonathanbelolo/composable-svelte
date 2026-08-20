@@ -83,9 +83,12 @@ function detectLocale(request: any): string {
     // Parse Accept-Language header (e.g., "fr-FR,fr;q=0.9,en;q=0.8")
     const languages = acceptLanguage
       .split(',')
-      .map((lang: string) => {
-        const [code] = lang.trim().split(';');
-        return code.split('-')[0]; // Extract language code (fr from fr-FR)
+      .flatMap((lang: string) => {
+        // Both splits can yield undefined under noUncheckedIndexedAccess, and
+        // a malformed header really can produce an empty segment.
+        const code = lang.trim().split(';')[0];
+        const base = code?.split('-')[0];
+        return base ? [base] : [];
       });
 
     // Find first supported language

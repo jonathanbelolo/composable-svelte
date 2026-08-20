@@ -30,7 +30,7 @@ export const parserConfig: ParserConfig<AppDestination> = {
     // Note: basePath is stripped, so relative path doesn't have leading /
     (path) => {
       const params = matchPath('posts/:id/comments', path);
-      if (params) {
+      if (params?.id) {
         const postId = parseInt(params.id, 10);
         if (!isNaN(postId)) {
           return { type: 'comments', state: { postId } };
@@ -41,7 +41,7 @@ export const parserConfig: ParserConfig<AppDestination> = {
     // Match posts/:id
     (path) => {
       const params = matchPath('posts/:id', path);
-      if (params) {
+      if (params?.id) {
         const postId = parseInt(params.id, 10);
         if (!isNaN(postId)) {
           return { type: 'post', state: { postId } };
