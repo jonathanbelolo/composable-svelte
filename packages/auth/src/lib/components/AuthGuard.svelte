@@ -66,8 +66,23 @@
 	);
 	const isRevalidating = $derived(showChildren && state.status !== 'authenticated');
 
+	/**
+	 * Narrowed to a boolean on purpose. `state` is `$derived(store.state)`,
+	 * whose identity changes on every dispatch that produces a new state — so
+	 * an effect reading `state.status` re-runs on all of them. Today that is
+	 * harmless: no action in `sessionReducer` transitions anonymous ->
+	 * anonymous, so the effect never re-runs while anonymous. That is a
+	 * property of the reducer, not of this component, and it is pinned by
+	 * `tests/auth-guard-anonymous.test.ts`.
+	 *
+	 * Depending on the boolean means this stays correct even if that property
+	 * stops holding — an anonymous -> anonymous transition would leave the
+	 * derived unchanged and `onAnonymous` would still fire once per entry.
+	 */
+	const isAnonymous = $derived(state.status === 'anonymous');
+
 	$effect(() => {
-		if (state.status === 'anonymous') {
+		if (isAnonymous) {
 			onAnonymous?.();
 		}
 	});
