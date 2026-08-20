@@ -86,11 +86,38 @@ onMount(() => {
   };
 });
 
-// Watch for selection changes
+// Watch for selection changes.
+//
+// Narrowed to the array itself, not the whole `$store`. `$state.raw` replaces
+// the state object on every dispatch, so depending on `$store` re-ran this on
+// every action — including the per-frame `zoomProgress` of a zoom animation,
+// re-invoking the consumer's callback with a selection that had not changed.
+// The reducer's zoom/resize cases spread `...state`, preserving `selection` by
+// reference, so the derived's equality check now absorbs all of them.
+//
+// And no `length > 0` guard: `clearSelection` allocates a fresh `[]`
+// (`chart.reducer.ts:179-191`), so the derived does change identity on a clear
+// and the consumer is told. Under the old guard it never was, and a details
+// panel wired to this callback showed dismissed rows forever.
+const selectedData = $derived($store.selection.selectedData);
+
+// Not $state: written and read inside the effect below. A reactive flag would
+// re-trigger the effect it lives in (`effect_update_depth_exceeded`).
+let reportedInitial = false;
+
 $effect(() => {
-  if (onSelectionChange && $store.selection.selectedData.length > 0) {
-    onSelectionChange($store.selection.selectedData);
+  // Report *changes*, which is what the prop is called. The effect's first run
+  // carries the selection the consumer supplied in the initial state, so
+  // delivering it back is unsolicited noise — and it is a real call, not a
+  // theoretical one: measured as `MOUNT_CALLS=1 [[[]]]` once `ResizeObserver`
+  // exists. jsdom lacks it, `onMount` throws, and the effect is suppressed, so
+  // this is invisible in this package's own environment.
+  const selection = selectedData;
+  if (!reportedInitial) {
+    reportedInitial = true;
+    return;
   }
+  onSelectionChange?.(selection);
 });
 
 // Provide plot builder to primitive
