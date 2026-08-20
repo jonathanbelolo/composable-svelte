@@ -357,6 +357,18 @@ export function getPreviousTrackIndex(
 /**
  * Clamp a value between min and max.
  */
+/**
+ * The loop mode that follows `mode` in the none -> one -> all -> none cycle.
+ *
+ * A total mapping rather than an index into an array: `noUncheckedIndexedAccess`
+ * cannot see that `(i + 1) % 3` is in range, and a `Record` over the union means
+ * adding a fourth LoopMode is a compile error instead of a broken cycle.
+ */
+export function nextLoopMode(mode: LoopMode): LoopMode {
+	const next: Record<LoopMode, LoopMode> = { none: 'one', one: 'all', all: 'none' };
+	return next[mode];
+}
+
 export function clamp(value: number, min: number, max: number): number {
 	return Math.min(Math.max(value, min), max);
 }

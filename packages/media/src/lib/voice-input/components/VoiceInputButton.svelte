@@ -10,7 +10,7 @@
 	interface Props {
 		store: Store<VoiceInputState, VoiceInputAction>;
 		variant?: 'icon' | 'button' | 'fab';
-		label?: string;
+		label?: string | undefined;
 		disabled?: boolean;
 		isRecording?: boolean;
 		mode?: 'push-to-talk' | 'conversation'; // Interaction mode

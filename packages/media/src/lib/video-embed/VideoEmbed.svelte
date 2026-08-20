@@ -28,11 +28,19 @@
 		showTitle?: boolean;
 	}
 
-	const props = $props<Props>();
+	let {
+		video,
+		class: className = '',
+		// Currently inert: detectVideo and extractVideosFromMarkdown both call
+		// buildEmbedUrl with no options, so nothing reaches the embed URL. Kept
+		// because removing a public prop is breaking; filed separately.
+		autoplay = false,
+		showTitle = false
+	}: Props = $props();
 
 	// Get aspect ratio padding-bottom percentage
 	const aspectRatioPadding = $derived(() => {
-		switch (props.video.aspectRatio) {
+		switch (video.aspectRatio) {
 			case '16:9':
 				return '56.25%'; // 9/16 * 100
 			case '4:3':
@@ -60,21 +68,21 @@
 			dailymotion: 'Dailymotion',
 			generic: 'Video'
 		};
-		return names[props.video.platform] || 'Video';
+		return names[video.platform] || 'Video';
 	});
 </script>
 
-<div class="video-embed {props.class ?? ''}" role="region" aria-label="Embedded video">
-	{#if props.showTitle && props.video.title}
+<div class="video-embed {className}" role="region" aria-label="Embedded video">
+	{#if showTitle && video.title}
 		<div class="video-embed__title">
-			{props.video.title}
+			{video.title}
 		</div>
 	{/if}
 
 	<div class="video-embed__container" style="padding-bottom: {aspectRatioPadding()};">
 		<iframe
-			src={props.video.embedUrl}
-			title={props.video.title || `${platformName()} video player`}
+			src={video.embedUrl}
+			title={video.title || `${platformName()} video player`}
 			class="video-embed__iframe"
 			frameborder="0"
 			allow={iframeAllow}
@@ -83,7 +91,7 @@
 			sandbox="allow-scripts allow-same-origin allow-presentation"
 			referrerpolicy="no-referrer"
 			aria-label={`${platformName()} video player`}
-		/>
+		></iframe>
 	</div>
 </div>
 

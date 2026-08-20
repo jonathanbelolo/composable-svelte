@@ -39,7 +39,7 @@
 		enableRemove = true
 	}: Props = $props();
 
-	const state = $derived($store);
+	const playerState = $derived($store);
 
 	// Drag and drop state
 	let draggedIndex = $state<number | null>(null);
@@ -61,7 +61,9 @@
 
 	// Handle track removal
 	function removeTrack(index: number, event: Event) {
-		event.stopPropagation();
+		// No stopPropagation: the row itself no longer has a click handler, so
+		// there is nothing to stop.
+		void event;
 		store.dispatch({ type: 'trackRemoved', index });
 	}
 
@@ -105,7 +107,7 @@
 </script>
 
 <div class="playlist-view {className}" role="list" aria-label="Playlist">
-	{#if state.playlist.length === 0}
+	{#if playerState.playlist.length === 0}
 		<div class="empty-playlist">
 			<svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor" opacity="0.3">
 				<path
@@ -115,11 +117,10 @@
 			<p>No tracks in playlist</p>
 		</div>
 	{:else}
-		{#each state.playlist as track, index (track.id)}
+		{#each playerState.playlist as track, index (track.id)}
 			<div
-				class="playlist-item {index === state.currentTrackIndex ? 'active' : ''} {draggedIndex === index ? 'dragging' : ''} {dragOverIndex === index ? 'drag-over' : ''}"
+				class="playlist-item {index === playerState.currentTrackIndex ? 'active' : ''} {draggedIndex === index ? 'dragging' : ''} {dragOverIndex === index ? 'drag-over' : ''}"
 				role="listitem"
-				onclick={() => selectTrack(index)}
 				ondragstart={(e) => handleDragStart(index, e)}
 				ondragover={(e) => handleDragOver(index, e)}
 				ondragleave={handleDragLeave}
@@ -138,10 +139,19 @@
 					</div>
 				{/if}
 
+				<!-- Selecting the track is a real button, so Enter and Space work and
+				     it takes a focus ring. It wraps the informational region only:
+				     the drag handle and remove button stay outside it. -->
+				<button
+					type="button"
+					class="playlist-item__select"
+					onclick={() => selectTrack(index)}
+					aria-current={index === playerState.currentTrackIndex ? 'true' : undefined}
+				>
 				<!-- Track number -->
 				{#if showTrackNumbers}
 					<div class="track-number">
-						{#if index === state.currentTrackIndex && state.isPlaying}
+						{#if index === playerState.currentTrackIndex && playerState.isPlaying}
 							<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="playing-icon">
 								<path d="M8 5v14l11-7z" />
 							</svg>
@@ -173,6 +183,7 @@
 				{#if showDuration}
 					<div class="track-duration">{formatDuration(track.duration)}</div>
 				{/if}
+				</button>
 
 				<!-- Remove button -->
 				{#if enableRemove}
@@ -228,9 +239,31 @@
 		padding: 0.75rem;
 		background: white;
 		border-radius: 6px;
-		cursor: pointer;
 		transition: all 0.2s;
 		border: 2px solid transparent;
+	}
+
+	/* The track-selection button. Reset to inherit the row's look; it carries the
+	   pointer cursor the row used to. */
+	.playlist-item__select {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		flex: 1;
+		min-width: 0;
+		border: 0;
+		padding: 0;
+		background: none;
+		font: inherit;
+		color: inherit;
+		text-align: left;
+		cursor: pointer;
+	}
+
+	.playlist-item__select:focus-visible {
+		outline: 2px solid #3498db;
+		outline-offset: 2px;
+		border-radius: 4px;
 	}
 
 	.playlist-item:hover {
