@@ -10,8 +10,12 @@ export type {
 	FormConfig,
 	FormAction,
 	FormDependencies,
+	FormStore,
 	FieldState,
-	ValidationMode
+	ValidationMode,
+	FormProps,
+	FormFieldProps,
+	FieldRenderProps
 } from './form.types.js';
 
 // Reducer

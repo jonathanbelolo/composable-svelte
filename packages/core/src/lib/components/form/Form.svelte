@@ -2,9 +2,8 @@
 	import { setContext } from 'svelte';
 	import { createStore } from '../../store.svelte.js';
 	import { createFormReducer } from './form.reducer.js';
-	import type { FormConfig, FormState, FormAction, FormProps } from './form.types.js';
+	import type { FormConfig, FormAction, FormProps, FormStore } from './form.types.js';
 	import { createInitialFormState } from './form.reducer.js';
-	import type { Store } from '../../types.js';
 
 	// Form component - Creates and manages form state using the reducer pattern.
 	//
@@ -24,7 +23,7 @@
 	}
 
 	// Determine which store to use
-	let store: Store<FormState<T>, FormAction<T>>;
+	let store: FormStore<T>;
 
 	if (externalStore) {
 		// Integrated mode - use external store

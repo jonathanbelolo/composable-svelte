@@ -7,7 +7,6 @@
  */
 
 import type { ZodSchema } from 'zod';
-import type { Store } from '../../types.js';
 
 /**
  * Complete form state for a given data shape.
@@ -352,6 +351,25 @@ export interface FieldRenderProps<T extends Record<string, any>> {
 }
 
 /**
+ * The part of a store the form components actually consume.
+ *
+ * Narrower than `Store` on purpose. In integrated mode the caller passes a store
+ * scoped to a slice of a parent's state, and every scoping helper in this
+ * library returns `{state, dispatch, …}` — never a full `Store`. Demanding
+ * `select`, `history` and `destroy` meant the documented integrated-mode pattern
+ * could not typecheck, which is why three of the examples hand-roll this exact
+ * shape and cast around it.
+ *
+ * `subscribe` is genuinely needed, not padding: `FormField.svelte` reads
+ * `$store.data[name]`, the auto-subscription form.
+ */
+export interface FormStore<T extends Record<string, any>> {
+	readonly state: FormState<T>;
+	dispatch(action: FormAction<T>): void;
+	subscribe(listener: (state: FormState<T>) => void): () => void;
+}
+
+/**
  * Props for the `Form` component.
  *
  * Declared here rather than inside the component: a generic `<script generics=...>`
@@ -368,7 +386,7 @@ export interface FormProps<T extends Record<string, any>> {
 	 * External store from parent reducer (integrated mode).
 	 * Mutually exclusive with `config`.
 	 */
-	store?: Store<FormState<T>, FormAction<T>> | undefined;
+	store?: FormStore<T> | undefined;
 	/**
 	 * Optional class name for the form element.
 	 */

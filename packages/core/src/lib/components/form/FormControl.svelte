@@ -1,7 +1,6 @@
 <script lang="ts" generics="T extends Record<string, any>">
 	import { getContext } from 'svelte';
-	import type { Store } from '../../types.js';
-	import type { FormState, FormAction, FieldState } from './form.types.js';
+	import type { FormAction, FieldState, FormStore } from './form.types.js';
 
 	/**
 	 * FormControl component - Wraps form input elements and handles events.
@@ -39,7 +38,7 @@
 
 	// Get store and field info from context. fieldState is a holder with a
 	// getter so reads of .current re-evaluate the parent's $derived reactively.
-	const store = getContext<Store<FormState<T>, FormAction<T>>>('formStore');
+	const store = getContext<FormStore<T>>('formStore');
 	const fieldName = getContext<keyof T & string>('fieldName');
 	const fieldStateCtx = getContext<{ current: FieldState }>('fieldState');
 

@@ -1,7 +1,6 @@
 <script lang="ts" generics="T extends Record<string, any>">
 	import { getContext, setContext } from 'svelte';
-	import type { Store } from '../../types.js';
-	import type { FormState, FormAction, FieldState, FormFieldProps } from './form.types.js';
+	import type { FormAction, FieldState, FormFieldProps, FormStore } from './form.types.js';
 
 	/**
 	 * FormField component - Connects a form field to the form store.
@@ -24,7 +23,7 @@
 	let { name, class: className, children }: FormFieldProps<T> = $props();
 
 	// Get form store from context
-	const store = getContext<Store<FormState<T>, FormAction<T>>>('formStore');
+	const store = getContext<FormStore<T>>('formStore');
 
 	if (!store) {
 		throw new Error('FormField must be used within a Form component');
