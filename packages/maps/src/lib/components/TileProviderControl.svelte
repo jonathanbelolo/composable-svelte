@@ -4,8 +4,8 @@
  */
 
 import type { Store } from '@composable-svelte/core';
-import type { MapState, MapAction, TileProvider } from '../types/map.types';
-import { getAvailableTileProviders, type TileProviderConfig } from '../utils/tile-providers';
+import type { MapState, MapAction, TileProvider } from '../types/map.types.js';
+import { getAvailableTileProviders, type TileProviderConfig } from '../utils/tile-providers.js';
 
 // Props
 let {

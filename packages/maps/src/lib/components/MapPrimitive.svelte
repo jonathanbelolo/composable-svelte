@@ -6,9 +6,16 @@
 
 import { onMount } from 'svelte';
 import type { Store } from '@composable-svelte/core';
-import type { MapState, MapAction, MapAdapter } from '../types/map.types';
-import { createMapAdapter } from '../utils/map-adapter';
-import { getStyleURL } from '../utils/tile-providers';
+import type { MapState, MapAction, MapAdapter } from '../types/map.types.js';
+import { createMapAdapter } from '../utils/map-adapter.js';
+import { getStyleURL } from '../utils/tile-providers.js';
+
+// MapLibre's own stylesheet. Without it markers, popups and controls render
+// broken, and the adapter constructs all three. Imported here rather than left
+// to the consumer, matching code's NodeCanvas.svelte:23 — and note the repo's
+// own MapDemo already imports it at app level, so the requirement was understood
+// and simply never pushed into the package.
+import 'maplibre-gl/dist/maplibre-gl.css';
 
 // Props
 let {

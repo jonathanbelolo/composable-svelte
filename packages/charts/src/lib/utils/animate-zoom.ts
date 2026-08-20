@@ -3,9 +3,9 @@
  * Animation utilities for zoom transitions
  */
 
-import type { ZoomTransform } from '../types/chart.types';
+import type { ZoomTransform } from '../types/chart.types.js';
 import type { Dispatch } from '@composable-svelte/core';
-import type { ChartAction } from '../types/chart.types';
+import type { ChartAction } from '../types/chart.types.js';
 
 /**
  * Easing function: easeOutCubic for smooth deceleration

@@ -7,9 +7,9 @@
 import { onMount } from 'svelte';
 import ChartPrimitive from './ChartPrimitive.svelte';
 import type { Store } from '@composable-svelte/core';
-import type { ChartState, ChartAction, ChartConfig } from '../types/chart.types';
-import { createResizeObserver } from '../utils/responsive';
-import { buildPlot } from '../utils/plot-builder';
+import type { ChartState, ChartAction, ChartConfig } from '../types/chart.types.js';
+import { createResizeObserver } from '../utils/responsive.js';
+import { buildPlot } from '../utils/plot-builder.js';
 
 // Props
 let {

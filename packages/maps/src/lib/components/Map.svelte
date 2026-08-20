@@ -6,7 +6,7 @@
 
 import MapPrimitive from './MapPrimitive.svelte';
 import type { Store } from '@composable-svelte/core';
-import type { MapState, MapAction } from '../types/map.types';
+import type { MapState, MapAction } from '../types/map.types.js';
 import type { Snippet } from 'svelte';
 
 // Props

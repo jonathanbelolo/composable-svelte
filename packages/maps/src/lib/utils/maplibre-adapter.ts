@@ -14,7 +14,7 @@ import type {
   Layer,
   LayerStyle,
   Popup
-} from '../types/map.types';
+} from '../types/map.types.js';
 
 /**
  * Maplibre GL adapter

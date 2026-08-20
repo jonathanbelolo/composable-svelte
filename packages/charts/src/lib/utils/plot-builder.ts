@@ -4,7 +4,7 @@
  */
 
 import * as Plot from '@observablehq/plot';
-import type { PlotSpec, ChartState, ChartConfig } from '../types/chart.types';
+import type { PlotSpec, ChartState, ChartConfig } from '../types/chart.types.js';
 
 /**
  * Build a scatter plot specification

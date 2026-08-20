@@ -5,12 +5,12 @@
  */
 
 export { default as CodeHighlight } from './CodeHighlight.svelte';
-export { codeHighlightReducer } from './code-highlight.reducer';
-export { highlightCode, loadLanguage } from './prism-wrapper';
+export { codeHighlightReducer } from './code-highlight.reducer.js';
+export { highlightCode, loadLanguage } from './prism-wrapper.js';
 export {
 	createInitialState,
 	type CodeHighlightState,
 	type CodeHighlightAction,
 	type CodeHighlightDependencies,
 	type SupportedLanguage
-} from './code-highlight.types';
+} from './code-highlight.types.js';

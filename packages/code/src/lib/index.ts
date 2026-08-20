@@ -19,7 +19,7 @@ export {
 	type CodeHighlightAction,
 	type CodeHighlightDependencies,
 	type SupportedLanguage
-} from './code-highlight/index';
+} from './code-highlight/index.js';
 
 // CodeEditor - Interactive code editor with CodeMirror
 export {
@@ -40,7 +40,7 @@ export {
 	type CodeEditorDependencies,
 	type SupportedLanguage as EditorLanguage,
 	type EditorSelection
-} from './code-editor/index';
+} from './code-editor/index.js';
 
 // NodeCanvas - Node-based canvas editor with SvelteFlow
 export {
@@ -60,4 +60,4 @@ export {
 	type PortDefinition,
 	type ConnectionValidation,
 	type ConnectionValidator
-} from './node-canvas/index';
+} from './node-canvas/index.js';

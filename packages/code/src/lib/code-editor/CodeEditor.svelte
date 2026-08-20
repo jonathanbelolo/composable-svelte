@@ -2,8 +2,8 @@
 	import { onMount } from 'svelte';
 	import type { Store } from '@composable-svelte/core';
 	import type { EditorView } from 'codemirror';
-	import type { CodeEditorState, CodeEditorAction } from './code-editor.types';
-	import { createEditorView, updateEditorValue } from './codemirror-wrapper';
+	import type { CodeEditorState, CodeEditorAction } from './code-editor.types.js';
+	import { createEditorView, updateEditorValue } from './codemirror-wrapper.js';
 
 	/**
 	 * Store containing all component state

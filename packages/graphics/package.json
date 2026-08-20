@@ -80,5 +80,6 @@
     "shaders",
     "composable-architecture",
     "typescript"
-  ]
+  ],
+  "sideEffects": false
 }

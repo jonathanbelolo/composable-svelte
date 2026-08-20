@@ -28,7 +28,7 @@ export {
 	type AudioPlayerAction,
 	type AudioPlayerDependencies,
 	type AudioManagerConfig as AudioPlayerManagerConfig
-} from './audio-player/index';
+} from './audio-player/index.js';
 
 // VideoEmbed - Video embedding for external platforms (YouTube, Vimeo, Twitch, etc.)
 export {
@@ -42,7 +42,7 @@ export {
 	type AspectRatio,
 	type PlatformConfig,
 	type EmbedOptions
-} from './video-embed/index';
+} from './video-embed/index.js';
 
 // VoiceInput - Standalone voice input component with push-to-talk and conversation modes
 export {
@@ -56,4 +56,4 @@ export {
 	type VoiceInputState,
 	type VoiceInputAction,
 	type VoiceInputDependencies
-} from './voice-input/index';
+} from './voice-input/index.js';

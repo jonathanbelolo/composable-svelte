@@ -14,7 +14,7 @@ import type {
 	CodeHighlightState,
 	CodeHighlightAction,
 	CodeHighlightDependencies
-} from './code-highlight.types';
+} from './code-highlight.types.js';
 
 /**
  * CodeHighlight reducer

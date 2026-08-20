@@ -26,14 +26,14 @@ export type {
   FlyToOptions,
   MapAdapter,
   MapInitOptions
-} from './types/map.types';
+} from './types/map.types.js';
 
-export type { TileProviderConfig } from './utils/tile-providers';
+export type { TileProviderConfig } from './utils/tile-providers.js';
 
 // ============================================================================
 // Reducers
 // ============================================================================
-export { mapReducer, createInitialMapState } from './reducers/map.reducer';
+export { mapReducer, createInitialMapState } from './reducers/map.reducer.js';
 
 // ============================================================================
 // Components
@@ -48,12 +48,12 @@ export { default as TileProviderControl } from './components/TileProviderControl
 // ============================================================================
 // Utils
 // ============================================================================
-export { createMapAdapter } from './utils/map-adapter';
-export { MaplibreAdapter } from './utils/maplibre-adapter';
+export { createMapAdapter } from './utils/map-adapter.js';
+export { MaplibreAdapter } from './utils/maplibre-adapter.js';
 export {
   TILE_PROVIDERS,
   getTileProviderConfig,
   getStyleURL,
   getAvailableTileProviders,
   requiresAPIKey
-} from './utils/tile-providers';
+} from './utils/tile-providers.js';

@@ -5,8 +5,8 @@
 
 import type { Reducer } from '@composable-svelte/core';
 import { Effect } from '@composable-svelte/core';
-import type { MapState, MapAction, LngLat, TileProvider, LayerStyle } from '../types/map.types';
-import { getStyleURL } from '../utils/tile-providers';
+import type { MapState, MapAction, LngLat, TileProvider, LayerStyle } from '../types/map.types.js';
+import { getStyleURL } from '../utils/tile-providers.js';
 
 /**
  * Structural equality for a single style value.

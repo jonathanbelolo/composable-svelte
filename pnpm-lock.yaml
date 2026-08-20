@@ -915,6 +915,9 @@ importers:
 
   packages/maps:
     dependencies:
+      '@types/geojson':
+        specifier: ^7946.0.16
+        version: 7946.0.16
       maplibre-gl:
         specifier: ^4.7.1
         version: 4.7.1
@@ -932,9 +935,6 @@ importers:
       '@sveltejs/vite-plugin-svelte':
         specifier: ^6.2.1
         version: 6.2.1(svelte@5.43.3)(vite@6.4.1(@types/node@20.19.24)(jiti@1.21.7)(tsx@4.20.6))
-      '@types/geojson':
-        specifier: ^7946.0.16
-        version: 7946.0.16
       '@types/node':
         specifier: ^20.0.0
         version: 20.19.24

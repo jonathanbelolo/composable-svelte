@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { Store } from '@composable-svelte/core';
-	import type { CodeHighlightState, CodeHighlightAction } from './code-highlight.types';
+	import type { CodeHighlightState, CodeHighlightAction } from './code-highlight.types.js';
 
 	/**
 	 * Store containing all component state

@@ -3,8 +3,8 @@
  * @description Factory for creating map adapters
  */
 
-import type { MapAdapter, MapProvider } from '../types/map.types';
-import { MaplibreAdapter } from './maplibre-adapter';
+import type { MapAdapter, MapProvider } from '../types/map.types.js';
+import { MaplibreAdapter } from './maplibre-adapter.js';
 
 /**
  * Create a map adapter based on the provider

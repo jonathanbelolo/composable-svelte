@@ -242,5 +242,9 @@
   },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "sideEffects": [
+    "**/*.css",
+    "**/websocket/effect-websocket.js"
+  ]
 }

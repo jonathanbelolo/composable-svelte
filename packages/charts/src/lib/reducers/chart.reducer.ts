@@ -7,7 +7,7 @@
  */
 
 import type { Reducer } from '@composable-svelte/core';
-import type { ChartState, ChartAction } from '../types/chart.types';
+import type { ChartState, ChartAction } from '../types/chart.types.js';
 import { Effect } from '@composable-svelte/core';
 
 /**

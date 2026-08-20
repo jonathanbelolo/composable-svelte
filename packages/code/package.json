@@ -100,5 +100,9 @@
   },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "sideEffects": [
+    "**/*.css",
+    "**/*.svelte"
+  ]
 }

@@ -75,4 +75,4 @@ export {
 	CleanupTracker,
 	createCleanupTracker,
 	type CleanupFunction
-} from './streaming-chat/index';
+} from './streaming-chat/index.js';

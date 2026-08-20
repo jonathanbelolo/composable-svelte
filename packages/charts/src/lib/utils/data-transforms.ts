@@ -22,7 +22,7 @@
  * ```
  */
 
-import type { DataTransform } from '../types/chart.types';
+import type { DataTransform } from '../types/chart.types.js';
 import { bin as d3Bin, extent, mean as d3Mean, median as d3Median, sum as d3Sum } from 'd3-array';
 
 /**

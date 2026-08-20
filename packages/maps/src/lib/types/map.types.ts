@@ -3,7 +3,7 @@
  * @description Type definitions for interactive map components
  */
 
-import type { TileProvider } from '../utils/tile-providers';
+import type { TileProvider } from '../utils/tile-providers.js';
 import type { GeoJSON as GeoJSONType } from 'geojson';
 
 /**

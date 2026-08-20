@@ -18,7 +18,7 @@ import type {
 	CodeEditorAction,
 	SupportedLanguage,
 	EditorSelection
-} from './code-editor.types';
+} from './code-editor.types.js';
 
 /**
  * Load language extension for CodeMirror

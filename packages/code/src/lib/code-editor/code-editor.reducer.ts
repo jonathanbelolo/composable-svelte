@@ -14,7 +14,7 @@ import type {
 	CodeEditorState,
 	CodeEditorAction,
 	CodeEditorDependencies
-} from './code-editor.types';
+} from './code-editor.types.js';
 
 /**
  * CodeEditor Reducer

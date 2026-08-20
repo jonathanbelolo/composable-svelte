@@ -9,10 +9,10 @@ import { animate } from 'motion';
 import { zoom as d3Zoom } from 'd3-zoom';
 import { brush as d3Brush } from 'd3-brush';
 import { select } from 'd3-selection';
-import type { ChartState, ChartConfig } from '../types/chart.types';
+import type { ChartState, ChartConfig } from '../types/chart.types.js';
 import type { Dispatch } from '@composable-svelte/core';
-import type { ChartAction } from '../types/chart.types';
-import { animateZoomTransition } from '../utils/animate-zoom';
+import type { ChartAction } from '../types/chart.types.js';
+import { animateZoomTransition } from '../utils/animate-zoom.js';
 
 import type { Store } from '@composable-svelte/core';
 
