@@ -50,9 +50,7 @@ const NOT_YET_GATED: Record<string, { errors: number; warnings: number }> = {
 	'packages/chat': { errors: 15, warnings: 13 },
 	'packages/media': { errors: 14, warnings: 5 },
 	'examples/file-browser': { errors: 5, warnings: 0 },
-	'examples/multi-step-form': { errors: 4, warnings: 0 },
 	'examples/product-gallery': { errors: 11, warnings: 6 },
-	'examples/registration-form': { errors: 1, warnings: 1 },
 	'examples/shader-gallery': { errors: 2, warnings: 0 },
 	'examples/ssr-server': { errors: 5, warnings: 0 },
 	'examples/url-routing': { errors: 2, warnings: 4 }
