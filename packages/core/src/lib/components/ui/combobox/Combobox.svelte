@@ -101,10 +101,15 @@
 		}
 	});
 
-	// Sync external value changes to store
+	// Sync external value changes to store.
+	//
+	// Dispatch, never assign: `store.state` is `$state.raw` behind a getter with
+	// no setter, so a direct write lands on the underlying object, notifies
+	// nobody, and skips the reducer — leaving `searchQuery` uncleared and the
+	// filtering stale. Mirrors Select.svelte:105.
 	$effect(() => {
-		if (store.state.selected !== value) {
-			store.state.selected = value;
+		if ($store.selected !== value) {
+			store.dispatch({ type: 'valueChanged', value });
 		}
 	});
 

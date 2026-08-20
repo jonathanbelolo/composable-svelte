@@ -127,7 +127,11 @@ export const comboboxReducer: Reducer<
 				{
 					...state,
 					dropdown: { status: 'idle' },
-					highlightedIndex: -1
+					highlightedIndex: -1,
+					// Same reason as `optionSelected`: a dropdown that closes with a
+					// query still applied reopens filtered, with an empty search box.
+					searchQuery: '',
+					filteredOptions: state.options
 				},
 				Effect.none<ComboboxAction>()
 			];
@@ -146,7 +150,12 @@ export const comboboxReducer: Reducer<
 			const newState: ComboboxState = {
 				...state,
 				selected: action.value,
-				searchQuery: '' // Clear search after selection
+				// Clear the search *and* the filtering it produced. Leaving
+				// `filteredOptions` filtered by a query the box no longer shows
+				// meant reopening after a search displayed a stale one-item list.
+				// Select does both — select.reducer.ts:177.
+				searchQuery: '',
+				filteredOptions: state.options
 			};
 
 			// Trigger onChange callback and close dropdown
@@ -458,6 +467,35 @@ export const comboboxReducer: Reducer<
 				},
 				Effect.none<ComboboxAction>()
 			];
+		}
+
+		case 'valueChanged': {
+			// Idempotent by value, returning the *identical* state object. This is
+			// load-bearing, not defensive: `dispatchCore` only notifies subscribers
+			// when `!Object.is(state, newState)`, and the component dispatches this
+			// from an `$effect` that reads store state in its own tracking scope. A
+			// fresh object here would re-trigger that effect forever — which is
+			// exactly how Select's `optionsChanged` once turned a silent no-op into
+			// `effect_update_depth_exceeded`.
+			//
+			// `selected` is `T | null` (single-select), so `Object.is` suffices; the
+			// array branch Select's `sameSelection` carries is unnecessary here.
+			if (Object.is(state.selected, action.value)) {
+				return [state, Effect.none<ComboboxAction>()];
+			}
+			return [
+				{
+					...state,
+					selected: action.value,
+					// An inbound sync clears the search, as picking an option does.
+					searchQuery: '',
+					filteredOptions: state.options,
+					highlightedIndex: -1
+				},
+				Effect.none<ComboboxAction>()
+			];
+			// No `deps.onChange` here: this is an *inbound* sync from the prop.
+			// Calling it would write back to the bindable `value` and loop.
 		}
 
 		default: {

@@ -415,7 +415,18 @@ describe('Combobox', () => {
 			const onChange = vi.fn();
 
 			const store = new TestStore({
-				initialState: { ...createInitialComboboxState(testOptions), selected: '2' },
+				// Seeded dirty on purpose. This started from a pristine state, where
+				// every assertion below was already true before the action ran — so a
+				// `cleared` that preserved the search instead of resetting it passed.
+				// Verified by mutation: swapping the resets for `state.searchQuery` &c.
+				// left all 41 tests green.
+				initialState: {
+					...createInitialComboboxState(testOptions),
+					selected: '2',
+					searchQuery: 'App',
+					filteredOptions: [testOptions[0]!],
+					highlightedIndex: 0
+				},
 				reducer: comboboxReducer,
 				dependencies: { onChange }
 			});
@@ -731,6 +742,103 @@ describe('Combobox', () => {
 
 			await store.send({ type: 'highlightChanged', index: -5 }, (state) => {
 				expect(state.highlightedIndex).toBe(-1);
+			});
+		});
+	});
+	describe('External prop sync', () => {
+		// `Combobox.svelte` mirrored its `value` prop into the store by writing
+		// `store.state.selected = value` directly. `state` is `$state.raw` behind a
+		// getter with no setter, so the write landed on the underlying object,
+		// notified no subscriber, and skipped the reducer entirely — which is why
+		// the search query and the filtering it produced were never reset. It was
+		// the last direct state write in the repo.
+		it('applies an externally changed value', async () => {
+			const store = new TestStore({
+				initialState: createInitialComboboxState(testOptions, '1'),
+				reducer: comboboxReducer
+			});
+
+			await store.send({ type: 'valueChanged', value: '2' }, (state) => {
+				expect(state.selected).toBe('2');
+			});
+
+			store.assertNoPendingActions();
+		});
+
+		it('clears an active search and its filtering', async () => {
+			// The half a direct mutation could never have done, and the reason the
+			// dispatch matters rather than being a stylistic preference.
+			const store = new TestStore({
+				initialState: {
+					...createInitialComboboxState(testOptions, '1'),
+					searchQuery: 'App',
+					filteredOptions: [testOptions[0]!],
+					highlightedIndex: 0
+				},
+				reducer: comboboxReducer
+			});
+
+			await store.send({ type: 'valueChanged', value: '3' }, (state) => {
+				expect(state.selected).toBe('3');
+				expect(state.searchQuery).toBe('');
+				expect(state.filteredOptions).toEqual(testOptions);
+				expect(state.highlightedIndex).toBe(-1);
+			});
+
+			store.assertNoPendingActions();
+		});
+
+		it('returns the identical state object when the value already matches', async () => {
+			const initial = createInitialComboboxState(testOptions, '1');
+			const store = new TestStore({ initialState: initial, reducer: comboboxReducer });
+
+			await store.send({ type: 'valueChanged', value: '1' });
+
+			// Reference identity, not deep equality: `dispatchCore` only notifies
+			// subscribers when `!Object.is(state, newState)`, and the component
+			// dispatches this from an `$effect` that reads store state. A fresh
+			// object here re-triggers that effect forever. Deep equality would pass
+			// on the loop-causing version.
+			expect(store.state).toBe(initial);
+			store.assertNoPendingActions();
+		});
+	});
+
+	describe('Search state resets on close', () => {
+		// Select resets both `searchQuery` and `filteredOptions` when the dropdown
+		// closes or an option is picked (select.reducer.ts:147,177). Combobox reset
+		// only the query, so: type "App", pick Apple, reopen — a one-item list with
+		// an empty search box.
+		it('optionSelected clears the filtering, not just the query', async () => {
+			const store = new TestStore({
+				initialState: {
+					...createInitialComboboxState(testOptions),
+					searchQuery: 'App',
+					filteredOptions: [testOptions[0]!]
+				},
+				reducer: comboboxReducer
+			});
+
+			await store.send({ type: 'optionSelected', value: '1' }, (state) => {
+				expect(state.searchQuery).toBe('');
+				expect(state.filteredOptions).toEqual(testOptions);
+			});
+		});
+
+		it('closingCompleted clears the filtering, not just the query', async () => {
+			const store = new TestStore({
+				initialState: {
+					...createInitialComboboxState(testOptions),
+					searchQuery: 'App',
+					filteredOptions: [testOptions[0]!],
+					dropdown: { status: 'closing' }
+				},
+				reducer: comboboxReducer
+			});
+
+			await store.send({ type: 'closingCompleted' }, (state) => {
+				expect(state.searchQuery).toBe('');
+				expect(state.filteredOptions).toEqual(testOptions);
 			});
 		});
 	});
