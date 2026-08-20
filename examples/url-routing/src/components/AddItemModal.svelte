@@ -37,9 +37,15 @@
 		quantity = 0;
 		price = 0;
 	}
+
+	function handleWindowKeydown(event: KeyboardEvent) {
+		if (event.key === 'Escape') onClose();
+	}
 </script>
 
-<div class="backdrop" onclick={onClose}></div>
+<svelte:window onkeydown={handleWindowKeydown} />
+
+<div class="backdrop" onclick={onClose} aria-hidden="true"></div>
 <div class="modal">
 	<form onsubmit={handleSubmit}>
 		<div class="modal-header">

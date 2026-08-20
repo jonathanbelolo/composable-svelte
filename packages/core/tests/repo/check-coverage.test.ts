@@ -50,9 +50,10 @@ const NOT_YET_GATED: Record<string, { errors: number; warnings: number }> = {
 	'packages/chat': { errors: 15, warnings: 13 },
 	'packages/media': { errors: 14, warnings: 5 },
 	'examples/product-gallery': { errors: 11, warnings: 6 },
-	'examples/shader-gallery': { errors: 2, warnings: 0 },
-	'examples/ssr-server': { errors: 5, warnings: 0 },
-	'examples/url-routing': { errors: 2, warnings: 4 }
+	// 3, not 2, once its tsconfig extends the root — see the enrollment commit.
+	'examples/shader-gallery': { errors: 3, warnings: 0 },
+	// 10, not 5, once its tsconfig extends the root.
+	'examples/ssr-server': { errors: 10, warnings: 0 }
 };
 
 interface Workspace {

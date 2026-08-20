@@ -472,15 +472,24 @@ importers:
       '@sveltejs/vite-plugin-svelte':
         specifier: ^6.2.1
         version: 6.2.1(svelte@5.43.3)(vite@6.4.1(@types/node@20.19.24)(jiti@1.21.7)(tsx@4.20.6))
+      jsdom:
+        specifier: ^25.0.1
+        version: 25.0.1
       svelte:
         specifier: ^5.17.0
         version: 5.43.3
+      svelte-check:
+        specifier: ^4.3.3
+        version: 4.3.3(picomatch@4.0.3)(svelte@5.43.3)(typescript@5.9.3)
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
       vite:
         specifier: ^6.4.1
         version: 6.4.1(@types/node@20.19.24)(jiti@1.21.7)(tsx@4.20.6)
+      vitest:
+        specifier: ^4.0.7
+        version: 4.0.7(@types/node@20.19.24)(@vitest/browser-playwright@4.0.7)(@vitest/ui@4.0.7)(jiti@1.21.7)(jsdom@25.0.1)(tsx@4.20.6)
 
   packages/auth:
     devDependencies:

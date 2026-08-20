@@ -3,8 +3,7 @@
 	import { syncBrowserHistory, createInitialStateFromURL } from '@composable-svelte/core/routing';
 	import { onMount, onDestroy } from 'svelte';
 	import { inventoryReducer, createInitialState } from './reducer';
-	import { parseInventoryURL, destinationToAction } from './routing';
-	import type { InventoryItem } from './types';
+	import { parseInventoryURL, destinationToAction, serializeInventoryState } from './routing';
 	import ItemList from './components/ItemList.svelte';
 	import ItemDetail from './components/ItemDetail.svelte';
 	import AddItemModal from './components/AddItemModal.svelte';
@@ -30,10 +29,7 @@
 	onMount(() => {
 		cleanup = syncBrowserHistory(store, {
 			parse: parseInventoryURL,
-			serialize: (state) => {
-				const { serializeInventoryState } = require('./routing');
-				return serializeInventoryState(state.destination);
-			},
+			serialize: (state) => serializeInventoryState(state.destination),
 			destinationToAction
 		});
 	});

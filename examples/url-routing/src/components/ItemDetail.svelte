@@ -8,9 +8,15 @@
 	}
 
 	let { item, onClose, onDelete }: Props = $props();
+
+	function handleWindowKeydown(event: KeyboardEvent) {
+		if (event.key === 'Escape') onClose();
+	}
 </script>
 
-<div class="backdrop" onclick={onClose}></div>
+<svelte:window onkeydown={handleWindowKeydown} />
+
+<div class="backdrop" onclick={onClose} aria-hidden="true"></div>
 <div class="modal">
 	<div class="modal-header">
 		<h2>{item.name}</h2>
