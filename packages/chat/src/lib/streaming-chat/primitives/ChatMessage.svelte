@@ -1,9 +1,10 @@
 <script lang="ts">
 	import type { Message } from '../types.js';
-	import type { Snippet } from 'svelte';
+	import type { Snippet, Component } from 'svelte';
+	import { onMount } from 'svelte';
+	import type { VideoEmbedType } from '@composable-svelte/media';
 	import { renderMarkdown, attachCopyButtons, extractImagesFromMarkdown, extractVideosFromMarkdown } from '../markdown.js';
 	import { ImageGallery } from '@composable-svelte/core/components/image-gallery';
-	import { VideoEmbed } from '@composable-svelte/media';
 	import AttachmentGallery from '../attachment-components/AttachmentGallery.svelte';
 	import MessageReactions from './MessageReactions.svelte';
 
@@ -31,6 +32,23 @@
 	}
 
 	const { message, isStreaming = false, headerActions, onReactionClick, onAddReaction, userLabel = 'You', assistantLabel = 'Assistant', userAvatarUrl, assistantAvatarUrl }: Props = $props();
+
+	// `@composable-svelte/media` is an OPTIONAL peer, so it cannot be imported
+	// statically — a consumer who installs chat without it would get a hard
+	// bundler resolution failure on a component the root barrel re-exports.
+	// Loaded the way markdown.ts already loads this same package: a dynamic
+	// import in a try/catch, held in state, with the markup gated on it. Videos
+	// simply do not render when media is absent, which is the documented
+	// contract for an optional peer.
+	let VideoEmbed = $state<Component<{ video: VideoEmbedType }> | null>(null);
+
+	onMount(async () => {
+		try {
+			({ VideoEmbed } = await import('@composable-svelte/media'));
+		} catch {
+			// @composable-svelte/media not installed — videos stay unrendered.
+		}
+	});
 
 	// Get the appropriate avatar URL based on message role
 	const avatarUrl = $derived(message.role === 'user' ? userAvatarUrl : assistantAvatarUrl);
@@ -127,7 +145,7 @@
 			{/if}
 
 			<!-- Video embeds for detected videos -->
-			{#if videos().length > 0}
+			{#if VideoEmbed && videos().length > 0}
 				<div class="chat-message__videos">
 					{#each videos() as video (video.url)}
 						<VideoEmbed {video} />

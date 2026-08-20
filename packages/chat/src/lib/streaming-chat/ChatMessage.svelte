@@ -1,9 +1,11 @@
 <script lang="ts">
 	import type { Store } from '@composable-svelte/core';
+	import type { Component } from 'svelte';
+	import { onMount } from 'svelte';
+	import type { VideoEmbedType } from '@composable-svelte/media';
 	import type { Message, StreamingChatState, StreamingChatAction } from './types.js';
 	import { renderMarkdown, attachCopyButtons, extractImagesFromMarkdown, extractVideosFromMarkdown } from './markdown.js';
 	import { ImageGallery } from '@composable-svelte/core/components/image-gallery';
-	import { VideoEmbed } from '@composable-svelte/media';
 	import AttachmentGallery from './attachment-components/AttachmentGallery.svelte';
 
 	/**
@@ -20,6 +22,23 @@
 	}
 
 	const { message, store, isStreaming = false, userLabel = 'You', assistantLabel = 'Assistant' }: Props = $props();
+
+	// `@composable-svelte/media` is an OPTIONAL peer, so it cannot be imported
+	// statically — a consumer who installs chat without it would get a hard
+	// bundler resolution failure on a component the root barrel re-exports.
+	// Loaded the way markdown.ts already loads this same package: a dynamic
+	// import in a try/catch, held in state, with the markup gated on it. Videos
+	// simply do not render when media is absent, which is the documented
+	// contract for an optional peer.
+	let VideoEmbed = $state<Component<{ video: VideoEmbedType }> | null>(null);
+
+	onMount(async () => {
+		try {
+			({ VideoEmbed } = await import('@composable-svelte/media'));
+		} catch {
+			// @composable-svelte/media not installed — videos stay unrendered.
+		}
+	});
 
 	let contentElement: HTMLDivElement | undefined = $state();
 
@@ -137,7 +156,7 @@
 			{/if}
 
 			<!-- Video embeds for detected videos -->
-			{#if videos().length > 0}
+			{#if VideoEmbed && videos().length > 0}
 				<div class="chat-message__videos">
 					{#each videos() as video (video.url)}
 						<VideoEmbed {video} />
