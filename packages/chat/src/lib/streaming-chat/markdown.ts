@@ -39,6 +39,16 @@ import type { VideoEmbedType } from '@composable-svelte/media';
 let Prism: typeof import('prismjs') | null = null;
 let loadLanguage: ((lang: string) => Promise<void>) | null = null;
 let extractVideosFromMarkdownFn: ((markdown: string) => VideoEmbedType[]) | null = null;
+/**
+ * The `VideoEmbed` component itself, captured alongside the extractor.
+ *
+ * Loaded here at module scope rather than in a component's `onMount`, because
+ * `onMount` does not run on the server: a component that resolved it there
+ * could never render a video into server HTML. Module scope is evaluated once
+ * per process, so from the second request onward a server render sees it — the
+ * same reason the extractor above works on a warm server.
+ */
+let videoEmbedComponent: unknown = null;
 
 // Track if we've attempted to load optional deps
 let optionalDepsLoaded = false;
@@ -83,6 +93,7 @@ async function loadOptionalDependencies(): Promise<void> {
 	try {
 		const mediaModule = await import('@composable-svelte/media');
 		extractVideosFromMarkdownFn = mediaModule.extractVideosFromMarkdown;
+		videoEmbedComponent = mediaModule.VideoEmbed;
 	} catch {
 		// @composable-svelte/media not installed
 	}
@@ -99,6 +110,18 @@ async function loadOptionalDependencies(): Promise<void> {
  * syntax highlighting, forever. Await this before reading either.
  */
 export const optionalDependenciesReady: Promise<void> = loadOptionalDependencies();
+
+/**
+ * `VideoEmbed` from the optional media peer, or `null` if it is absent or has
+ * not finished loading.
+ *
+ * Read synchronously so a server render can use it; awaiting
+ * `optionalDependenciesReady` first is what makes it deterministic on the
+ * client.
+ */
+export function getVideoEmbedComponent(): unknown {
+	return videoEmbedComponent;
+}
 
 /**
  * Configure marked with Prism syntax highlighting (if available)

@@ -4,7 +4,7 @@
 	import { onMount } from 'svelte';
 	import type { VideoEmbedType } from '@composable-svelte/media';
 	import type { Message, StreamingChatState, StreamingChatAction } from './types.js';
-	import { renderMarkdown, attachCopyButtons, extractImagesFromMarkdown, extractVideosFromMarkdown, optionalDependenciesReady } from './markdown.js';
+	import { renderMarkdown, attachCopyButtons, extractImagesFromMarkdown, extractVideosFromMarkdown, optionalDependenciesReady, getVideoEmbedComponent } from './markdown.js';
 	import { ImageGallery } from '@composable-svelte/core/components/image-gallery';
 	import AttachmentGallery from './attachment-components/AttachmentGallery.svelte';
 
@@ -30,20 +30,23 @@
 	// import in a try/catch, held in state, with the markup gated on it. Videos
 	// simply do not render when media is absent, which is the documented
 	// contract for an optional peer.
-	let VideoEmbed = $state<Component<{ video: VideoEmbedType }> | null>(null);
+	// Read synchronously at init so a *server* render can use it. `onMount` does
+	// not run on the server, so resolving it there alone meant videos could never
+	// appear in server HTML — a regression against the previous static import,
+	// which this initialiser restores. markdown.ts loads the module once per
+	// process, so a warm server has it.
+	let VideoEmbed = $state<Component<{ video: VideoEmbedType }> | null>(
+		getVideoEmbedComponent() as Component<{ video: VideoEmbedType }> | null
+	);
 
 	onMount(async () => {
-		// Wait for markdown.ts's own optional-dependency load first: until it
-		// settles, `extractVideosFromMarkdown` returns []. Assigning `VideoEmbed`
-		// last means the state write that reveals the block happens only once the
-		// extractor can actually find anything — otherwise the one invalidation
-		// this component gets would be spent too early.
+		// Cold start on the client: wait for the same load markdown.ts kicked off,
+		// then re-read. Awaiting it (rather than importing media directly) matters
+		// because the component's own import resolves first — the extractor still
+		// returns [] at that moment, and this is the one invalidation the block
+		// gets.
 		await optionalDependenciesReady;
-		try {
-			({ VideoEmbed } = await import('@composable-svelte/media'));
-		} catch {
-			// @composable-svelte/media not installed — videos stay unrendered.
-		}
+		VideoEmbed = getVideoEmbedComponent() as Component<{ video: VideoEmbedType }> | null;
 	});
 
 	let contentElement: HTMLDivElement | undefined = $state();

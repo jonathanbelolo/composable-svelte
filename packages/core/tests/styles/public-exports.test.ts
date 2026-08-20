@@ -19,10 +19,17 @@ import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 
 const uiDir = fileURLToPath(new URL('../../src/lib/components/ui/', import.meta.url));
+/**
+ * Comment-stripped, for the same reason `barrel` above is: a raw substring match
+ * passes on a commented-out export. This guard shipped with that flaw and a
+ * hostile review caught it — `// export * from …` left the assertion green.
+ */
 const componentsExports = readFileSync(
 	fileURLToPath(new URL('../../src/lib/components-exports.ts', import.meta.url)),
 	'utf8'
-);
+)
+	.replace(/\/\*[\s\S]*?\*\//g, '')
+	.replace(/\/\/.*$/gm, '');
 const barrelSource = readFileSync(join(uiDir, 'index.ts'), 'utf8');
 /** Comments name some of these symbols to explain their absence — scan code only. */
 const barrel = barrelSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');

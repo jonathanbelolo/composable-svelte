@@ -20,6 +20,12 @@
  *
  * This is the cheap structural stand-in for that experiment, so CI does not need
  * a bundler.
+ *
+ * It walks the whole chain from each package entry, not just the module holding
+ * the bare import — a hostile review demonstrated that checking one hop is not
+ * enough. Move the bare import one re-export outward and a one-hop check passes
+ * while Vite still drops the registration, because a side-effect-free
+ * *intermediate* deletes the re-export before the leaf's flag is ever consulted.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -73,6 +79,46 @@ function covered(sideEffects: unknown, relPath: string): boolean {
 	return sideEffects.some((pattern: string) => globToRegExp(pattern).test(relPath));
 }
 
+/** Every relative specifier a module imports or re-exports from. */
+function relativeDeps(source: string): string[] {
+	const out: string[] = [];
+	for (const re of [
+		/(?:^|\n)\s*import\s+[^;'"]*?from\s*['"](\.[^'"]+)['"]/g,
+		/(?:^|\n)\s*import\s*['"](\.[^'"]+)['"]/g,
+		/(?:^|\n)\s*export\s+[^;'"]*?from\s*['"](\.[^'"]+)['"]/g
+	]) {
+		for (const m of source.matchAll(re)) out.push(m[1]!);
+	}
+	return out;
+}
+
+/** The entry files a consumer can reach, from the package's exports map. */
+function entryFiles(pkgDir: string, pkg: { exports?: Record<string, unknown> }): string[] {
+	const targets = new Set<string>();
+	const collect = (t: unknown) => {
+		if (typeof t === 'string') {
+			if (t.endsWith('.js')) targets.add(t);
+		} else if (t && typeof t === 'object') {
+			Object.values(t as Record<string, unknown>).forEach(collect);
+		}
+	};
+	Object.entries(pkg.exports ?? {}).forEach(([subpath, t]) => {
+		if (subpath.includes('*')) return; // wildcards cannot be enumerated
+		collect(t);
+	});
+	return [...targets]
+		.map((t) => join(pkgDir, t.replace(/^\.\//, '')))
+		.filter((f) => existsSync(f));
+}
+
+function resolveFrom(fromFile: string, spec: string): string | null {
+	const base = join(fromFile, '..', spec);
+	for (const c of [base, `${base}.js`, join(base, 'index.js'), base.replace(/\.js$/, '.svelte')]) {
+		if (existsSync(c) && statSync(c).isFile()) return c;
+	}
+	return null;
+}
+
 const packages = readdirSync(packagesDir, { withFileTypes: true })
 	.filter((e) => e.isDirectory() && existsSync(join(packagesDir, e.name, 'package.json')))
 	.map((e) => e.name);
@@ -85,30 +131,66 @@ describe('side-effect imports survive tree-shaking', () => {
 		expect(globToRegExp('**/*.svelte').test('dist/node-canvas/NodeCanvas.svelte')).toBe(true);
 	});
 
+	it.each(packages)('%s is built, so this guard is not vacuous', (name) => {
+		// `return`-ing on a missing dist scores as a pass, which made this silently
+		// meaningless on a fresh clone: dist is gitignored and the root `test`
+		// script has no build dependency.
+		expect(
+			existsSync(join(packagesDir, name, 'dist')),
+			`${name}/dist is missing — run \`pnpm -r build\` first, or this test proves nothing`
+		).toBe(true);
+	});
+
 	it.each(packages)('%s declares every bare import it relies on', (name) => {
 		const pkgDir = join(packagesDir, name);
-		const dist = join(pkgDir, 'dist');
-		if (!existsSync(dist) || !statSync(dist).isDirectory()) return; // not built
+		const pkg = JSON.parse(readFileSync(join(pkgDir, 'package.json'), 'utf8'));
+		const { sideEffects } = pkg;
 
-		const { sideEffects } = JSON.parse(readFileSync(join(pkgDir, 'package.json'), 'utf8'));
+		const problems: string[] = [];
+		const seen = new Set<string>();
 
-		const uncovered: string[] = [];
-		for (const file of walk(dist)) {
+		// Walk down from every entry, carrying the path. When a module with a bare
+		// import is reached, every module on that path must be covered — any
+		// side-effect-free link in the chain can delete the edge above it.
+		const visit = (file: string, path: string[]) => {
+			if (seen.has(file)) return;
+			seen.add(file);
+
 			const source = readFileSync(file, 'utf8');
-			const bare = [...source.matchAll(BARE_IMPORT)].map((m) => m[1]!);
-			if (bare.length === 0) continue;
+			const chain = [...path, file];
+			// CSS is exempt, and that is measured rather than assumed: a real Vite
+			// build keeps `import 'maplibre-gl/dist/maplibre-gl.css'` in a retained
+			// component even under `sideEffects: false`, because the CSS pipeline
+			// treats it as a side effect independently of the flag. A bare *JS*
+			// import gets no such treatment — that is the one that vanished.
+			const bare = [...source.matchAll(BARE_IMPORT)]
+				.map((m) => m[1]!)
+				.filter((spec) => !/\.(css|scss|sass|less)$/.test(spec));
 
-			const rel = relative(pkgDir, file);
-			if (!covered(sideEffects, rel)) {
-				uncovered.push(`${rel} (bare: ${bare.join(', ')})`);
+			if (bare.length > 0) {
+				const gap = chain.find((m) => !covered(sideEffects, relative(pkgDir, m)));
+				if (gap) {
+					problems.push(
+						`${relative(pkgDir, file)} (bare: ${bare.join(', ')}) — ` +
+							`unprotected link: ${relative(pkgDir, gap)}`
+					);
+				}
 			}
-		}
+
+			for (const spec of relativeDeps(source)) {
+				const next = resolveFrom(file, spec);
+				if (next) visit(next, chain);
+			}
+		};
+
+		for (const entry of entryFiles(pkgDir, pkg)) visit(entry, []);
 
 		expect(
-			uncovered,
-			`${name}: these modules contain a bare side-effect import but are marked ` +
-				`side-effect-free, so a bundler may drop the statement. List the ` +
-				`importing module in "sideEffects", not only its target.`
+			problems,
+			`${name}: a bare side-effect import is reachable only through a module ` +
+				`marked side-effect-free, so a bundler may drop the edge before it ever ` +
+				`consults the target's flag. Every module on the chain from the entry ` +
+				`must be listed in "sideEffects", not only the one holding the import.`
 		).toEqual([]);
 	});
 });
