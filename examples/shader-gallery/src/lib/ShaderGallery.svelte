@@ -52,7 +52,7 @@ function registerImageElement(
     id,
     domElement: element,
     shader,
-    onTextureLoaded
+    ...(onTextureLoaded !== undefined && { onTextureLoaded })
   });
 
   // Dispatch to store for tracking

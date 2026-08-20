@@ -16,7 +16,9 @@ let {
   id: string;
   src: string;
   alt: string;
-  shader: string | CustomShaderEffect;
+  // Optional: the gallery's "None" option produces no shader, and that is a
+  // state the app can actually reach.
+  shader?: string | CustomShaderEffect | undefined;
 } = $props();
 
 // Get gallery context
@@ -25,11 +27,11 @@ const gallery = getContext<{
     id: string,
     element: HTMLImageElement,
     src: string,
-    shader: string | CustomShaderEffect,
+    shader: string | CustomShaderEffect | undefined,
     onTextureLoaded?: () => void
   ) => void;
   unregisterImageElement: (id: string) => void;
-  updateImageShader: (id: string, shader: string | CustomShaderEffect) => void;
+  updateImageShader: (id: string, shader: string | CustomShaderEffect | undefined) => void;
   updateImagePosition: (id: string) => void;
 }>('shader-gallery');
 

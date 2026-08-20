@@ -337,6 +337,9 @@ importers:
       '@sveltejs/vite-plugin-svelte':
         specifier: ^6.2.1
         version: 6.2.1(svelte@5.43.3)(vite@6.4.1(@types/node@20.19.24)(jiti@1.21.7)(tsx@4.20.6))
+      svelte-check:
+        specifier: ^4.3.3
+        version: 4.3.3(picomatch@4.0.3)(svelte@5.43.3)(typescript@5.9.3)
       typescript:
         specifier: ^5.5.4
         version: 5.9.3
