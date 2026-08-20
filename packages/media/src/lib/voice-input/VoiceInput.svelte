@@ -93,9 +93,21 @@
 		}
 	});
 
-	// Reset transcript history when mode changes
+	// Reset transcript history when mode changes.
+	//
+	// Keyed on a `$derived` primitive, not on `$store`. Reading `$store.mode`
+	// inside the effect tracks the whole-store subscription, which `$state.raw`
+	// replaces on every dispatch — so every action re-ran this effect and every
+	// re-run fired the teardown first. While recording, `audioLevelUpdated`
+	// arrives per animation frame, so the history was wiped continuously and the
+	// conversation panel was permanently empty. A primitive's equality check
+	// absorbs the dispatches that leave the mode alone.
+	const currentMode = $derived($store.mode);
+
 	$effect(() => {
-		const mode = $store.mode;
+		// Referenced so the effect depends on the mode and nothing else; the reset
+		// itself belongs in the teardown, which runs when the mode changes away.
+		currentMode;
 		return () => {
 			transcriptHistory = [];
 		};
