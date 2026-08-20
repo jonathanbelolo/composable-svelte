@@ -74,8 +74,8 @@ describe('StreamingChat Attachments', () => {
 			store.dispatch({ type: 'addAttachment', attachment: attachment2 });
 
 			expect(store.state.pendingAttachments).toHaveLength(2);
-			expect(store.state.pendingAttachments[0].filename).toBe('file1.jpg');
-			expect(store.state.pendingAttachments[1].filename).toBe('file2.png');
+			expect(store.state.pendingAttachments[0]!.filename).toBe('file1.jpg');
+			expect(store.state.pendingAttachments[1]!.filename).toBe('file2.png');
 		});
 
 		it('handles removeAttachment action', () => {
@@ -93,7 +93,7 @@ describe('StreamingChat Attachments', () => {
 			store.dispatch({ type: 'removeAttachment', attachmentId: 'att-1' });
 
 			expect(store.state.pendingAttachments).toHaveLength(1);
-			expect(store.state.pendingAttachments[0].id).toBe('att-2');
+			expect(store.state.pendingAttachments[0]!.id).toBe('att-2');
 		});
 
 		it('handles clearAttachments action', () => {
@@ -128,9 +128,9 @@ describe('StreamingChat Attachments', () => {
 
 			// Check message was created with attachment
 			expect(store.state.messages).toHaveLength(1);
-			expect(store.state.messages[0].content).toBe('Hello with attachment');
-			expect(store.state.messages[0].attachments).toHaveLength(1);
-			expect(store.state.messages[0].attachments![0]).toEqual(attachment);
+			expect(store.state.messages[0]!.content).toBe('Hello with attachment');
+			expect(store.state.messages[0]!.attachments).toHaveLength(1);
+			expect(store.state.messages[0]!.attachments![0]).toEqual(attachment);
 		});
 
 		it('clears pending attachments after sending', () => {
@@ -158,7 +158,7 @@ describe('StreamingChat Attachments', () => {
 			store.dispatch({ type: 'sendMessage', message: 'Hello without attachment' });
 
 			expect(store.state.messages).toHaveLength(1);
-			expect(store.state.messages[0].attachments).toBeUndefined();
+			expect(store.state.messages[0]!.attachments).toBeUndefined();
 		});
 
 		it('handles multiple attachments in one message', () => {
@@ -177,7 +177,7 @@ describe('StreamingChat Attachments', () => {
 			store.dispatch({ type: 'addAttachment', attachment: attachment3 });
 			store.dispatch({ type: 'sendMessage', message: 'Multiple files' });
 
-			expect(store.state.messages[0].attachments).toHaveLength(3);
+			expect(store.state.messages[0]!.attachments).toHaveLength(3);
 			expect(store.state.pendingAttachments).toHaveLength(0);
 		});
 	});

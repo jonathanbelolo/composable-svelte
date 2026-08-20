@@ -6,6 +6,45 @@
  */
 
 /**
+ * A video detected in message markdown.
+ *
+ * Structurally the same as `VideoEmbed` from `@composable-svelte/media`, and
+ * declared here rather than imported from it on purpose: media is an **optional**
+ * peer, and a type-only import of it lands in this package's emitted `.d.ts`.
+ * `@composable-svelte/chat/streaming-chat/markdown` is a public subpath, so a
+ * consumer without media, typechecking with `skipLibCheck: false`, got
+ * `TS2307: Cannot find module '@composable-svelte/media'` — the optional peer
+ * turning out not to be optional, which is the defect this package has already
+ * been through once.
+ *
+ * `platform` and `aspectRatio` are widened to `string` because chat only passes
+ * this object through to media's `VideoEmbed` component and never inspects
+ * either field. Every other field is carried at full fidelity — an earlier
+ * version of this type declared only `url` and `platform`, which broke the
+ * component that consumes it.
+ *
+ * `tests/media-type-conformance.test.ts` asserts media's own type still
+ * satisfies this one, and `tsconfig.test.json` is what makes that assertion
+ * actually run.
+ */
+export interface VideoEmbedData {
+	/** Original URL from markdown */
+	url: string;
+	/** Detected platform, e.g. 'youtube' */
+	platform: string;
+	/** Extracted video ID */
+	videoId: string;
+	/** Optional video title */
+	title?: string;
+	/** Aspect ratio, e.g. '16:9' */
+	aspectRatio: string;
+	/** Platform-specific embed URL */
+	embedUrl: string;
+	/** Optional start time in seconds */
+	startTime?: number;
+}
+
+/**
  * Attachment metadata for images and videos
  */
 export interface AttachmentMetadata {

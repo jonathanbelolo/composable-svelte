@@ -2,8 +2,7 @@
 	import type { Store } from '@composable-svelte/core';
 	import type { Component } from 'svelte';
 	import { onMount } from 'svelte';
-	import type { VideoEmbedType } from '@composable-svelte/media';
-	import type { Message, StreamingChatState, StreamingChatAction } from './types.js';
+	import type { Message, StreamingChatState, StreamingChatAction, VideoEmbedData } from './types.js';
 	import { renderMarkdown, attachCopyButtons, extractImagesFromMarkdown, extractVideosFromMarkdown, optionalDependenciesReady, getVideoEmbedComponent } from './markdown.js';
 	import { ImageGallery } from '@composable-svelte/core/components/image-gallery';
 	import AttachmentGallery from './attachment-components/AttachmentGallery.svelte';
@@ -35,8 +34,8 @@
 	// appear in server HTML — a regression against the previous static import,
 	// which this initialiser restores. markdown.ts loads the module once per
 	// process, so a warm server has it.
-	let VideoEmbed = $state<Component<{ video: VideoEmbedType }> | null>(
-		getVideoEmbedComponent() as Component<{ video: VideoEmbedType }> | null
+	let VideoEmbed = $state<Component<{ video: VideoEmbedData }> | null>(
+		getVideoEmbedComponent() as Component<{ video: VideoEmbedData }> | null
 	);
 
 	onMount(async () => {
@@ -46,7 +45,7 @@
 		// returns [] at that moment, and this is the one invalidation the block
 		// gets.
 		await optionalDependenciesReady;
-		VideoEmbed = getVideoEmbedComponent() as Component<{ video: VideoEmbedType }> | null;
+		VideoEmbed = getVideoEmbedComponent() as Component<{ video: VideoEmbedData }> | null;
 	});
 
 	let contentElement: HTMLDivElement | undefined = $state();

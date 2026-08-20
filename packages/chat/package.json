@@ -26,7 +26,7 @@
   ],
   "scripts": {
     "build": "svelte-package -o dist",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit --project tsconfig.test.json",
     "test": "vitest run && vitest run --config vitest.ssr.config.ts",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",

@@ -33,12 +33,12 @@ const LANGUAGE_MAP: Record<string, string> = {
 	yml: 'yaml'
 };
 
-import type { VideoEmbedType } from '@composable-svelte/media';
+import type { VideoEmbedData } from './types.js';
 
 // Lazy-loaded optional dependencies
 let Prism: typeof import('prismjs') | null = null;
 let loadLanguage: ((lang: string) => Promise<void>) | null = null;
-let extractVideosFromMarkdownFn: ((markdown: string) => VideoEmbedType[]) | null = null;
+let extractVideosFromMarkdownFn: ((markdown: string) => VideoEmbedData[]) | null = null;
 /**
  * The `VideoEmbed` component itself, captured alongside the extractor.
  *
@@ -301,7 +301,7 @@ export function extractImagesFromMarkdown(markdown: string): Array<{
  * Requires @composable-svelte/media to be installed.
  * Returns empty array if the dependency is not available.
  */
-export function extractVideosFromMarkdown(markdown: string): VideoEmbedType[] {
+export function extractVideosFromMarkdown(markdown: string): VideoEmbedData[] {
 	if (!extractVideosFromMarkdownFn) {
 		return [];
 	}
