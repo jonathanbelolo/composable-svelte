@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Store } from '@composable-svelte/core';
+  import type { ScopedDestinationStore } from '@composable-svelte/core';
   import type { AddToCartState, AddToCartAction } from './add-to-cart.types.js';
   import type { Product } from '../../models/product.js';
   import { formatPrice } from '../../models/product.js';
@@ -9,7 +9,7 @@
   // ============================================================================
 
   interface AddToCartProps {
-    store: Store<AddToCartState, AddToCartAction>;
+    store: ScopedDestinationStore<AddToCartState, AddToCartAction>;
     product: Product;
   }
 
@@ -57,8 +57,8 @@
     </div>
 
     <!-- Quantity Stepper -->
-    <div class="space-y-2">
-      <label class="text-sm font-medium">Quantity</label>
+    <div class="space-y-2" role="group" aria-label="Quantity">
+      <span class="text-sm font-medium">Quantity</span>
       <div class="flex items-center gap-4">
         <button
           aria-label="Decrement quantity"

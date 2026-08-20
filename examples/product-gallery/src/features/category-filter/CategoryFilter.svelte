@@ -50,7 +50,6 @@
     {#each categories as category}
       <Button
         variant={selectedCategories.includes(category.id) ? 'default' : 'outline'}
-        size="default"
         onclick={() => onCategoryToggle(category.id)}
         class="w-full justify-start gap-4 transition-all h-auto py-4 {selectedCategories.includes(category.id) ? 'shadow-lg' : 'hover:shadow-md'}"
       >
@@ -68,7 +67,6 @@
     <Separator class="my-6 bg-border/50" />
     <Button
       variant="outline"
-      size="default"
       onclick={() => {
         selectedCategories.forEach((cat) => onCategoryToggle(cat));
       }}

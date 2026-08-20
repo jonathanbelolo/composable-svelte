@@ -156,12 +156,18 @@
     onDismissalComplete={() =>
       store.dispatch({ type: 'presentation', event: { type: 'dismissalCompleted' } })}
   >
-    {#snippet children({ store: detailStore })}
-      <ProductDetail
-        store={detailStore}
-        product={currentProduct}
-        onBack={() => detailStore.dismiss()}
-      />
+    {#snippet children()}
+      <!-- Closes over the typed scoped store rather than taking the snippet's
+           parameter, which Modal pins to ScopedDestinationStore<unknown, unknown>
+           because it is not a generic component. Same shape core's own
+           DestinationRouter uses. -->
+      {#if productDetailStore?.state}
+        <ProductDetail
+          store={productDetailStore}
+          product={currentProduct}
+          onBack={() => productDetailStore.dismiss()}
+        />
+      {/if}
     {/snippet}
   </Modal>
 {/if}

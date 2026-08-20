@@ -136,7 +136,7 @@
 
           {#if selectedCategories.length > 0}
             {#snippet actions()}
-              <Button variant="outline" size="default" onclick={() => onViewModeChange('grid')}>
+              <Button variant="outline" onclick={() => onViewModeChange('grid')}>
                 Clear Filters
               </Button>
             {/snippet}

@@ -53,6 +53,31 @@
   <Card
     class="group relative overflow-hidden h-full flex flex-col transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 cursor-pointer border-2 hover:border-primary/50"
   >
+    <!-- Favorite control: a sibling of the card button, not a child of it.
+         Nesting it inside produced a <button> inside a <button>, which no
+         svelte-check gate can see because the nesting crosses a component
+         boundary — and it forced a stopPropagation wrapper that was itself an
+         unkeyboardable click target. -->
+    <div class="absolute top-4 right-4 z-10">
+      {#if product.isFavorite}
+        <Tooltip content="Remove from favorites" delay={300}>
+          {#snippet children()}
+            <Button variant="ghost" size="icon" class="h-10 w-10 rounded-full bg-background/90 backdrop-blur-sm hover:bg-background shadow-lg hover:shadow-xl transition-all">
+              <span class="text-xl">❤️</span>
+            </Button>
+          {/snippet}
+        </Tooltip>
+      {:else}
+        <Tooltip content="Add to favorites" delay={300}>
+          {#snippet children()}
+            <Button variant="ghost" size="icon" class="h-10 w-10 rounded-full bg-background/90 backdrop-blur-sm hover:bg-background shadow-lg hover:shadow-xl transition-all">
+              <span class="text-xl">🤍</span>
+            </Button>
+          {/snippet}
+        </Tooltip>
+      {/if}
+    </div>
+
     <button
       {onclick}
       data-testid="product-card"
@@ -68,26 +93,6 @@
           </Badge>
         </div>
 
-        <!-- Favorite Button Overlay -->
-        <div class="absolute top-4 right-4 z-10" onclick={(e) => e.stopPropagation()}>
-          {#if product.isFavorite}
-            <Tooltip content="Remove from favorites" delay={300}>
-              {#snippet children()}
-                <Button variant="ghost" size="icon" class="h-10 w-10 rounded-full bg-background/90 backdrop-blur-sm hover:bg-background shadow-lg hover:shadow-xl transition-all">
-                  <span class="text-xl">❤️</span>
-                </Button>
-              {/snippet}
-            </Tooltip>
-          {:else}
-            <Tooltip content="Add to favorites" delay={300}>
-              {#snippet children()}
-                <Button variant="ghost" size="icon" class="h-10 w-10 rounded-full bg-background/90 backdrop-blur-sm hover:bg-background shadow-lg hover:shadow-xl transition-all">
-                  <span class="text-xl">🤍</span>
-                </Button>
-              {/snippet}
-            </Tooltip>
-          {/if}
-        </div>
 
         <!-- Product Image with Enhanced Background -->
         <div class="relative py-12 px-8 rounded-xl bg-gradient-to-br from-muted/60 to-muted/30 shadow-inner">
@@ -110,15 +115,42 @@
       </CardContent>
 
       <CardFooter class="pt-4 pb-6 px-6">
-        <Button variant="outline" size="default" class="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-all font-semibold">
+        <!-- Not a <Button>: the whole card is already the click target, so a
+             real button here would be a third <button> nested inside it. -->
+        <div
+          class="w-full inline-flex items-center justify-center rounded-md border border-input h-10 px-4 py-2 text-sm group-hover:bg-primary group-hover:text-primary-foreground transition-all font-semibold"
+        >
           View Details
-        </Button>
+        </div>
       </CardFooter>
     </button>
   </Card>
 {:else}
   <!-- List View - Dramatically Enhanced Design -->
   <Card class="group relative overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-x-1 cursor-pointer border-2 hover:border-primary/50">
+    <!-- Favorite control: a sibling of the card button, for the same reason as
+         the grid view above. Absolutely positioned to sit where it did when it
+         was the second item in the price column. -->
+    <div class="absolute bottom-6 right-6 z-10">
+      {#if product.isFavorite}
+        <Tooltip content="Remove from favorites" delay={300}>
+          {#snippet children()}
+            <Button variant="ghost" size="icon" class="h-10 w-10 rounded-full shadow-lg hover:shadow-xl transition-all">
+              <span class="text-xl">❤️</span>
+            </Button>
+          {/snippet}
+        </Tooltip>
+      {:else}
+        <Tooltip content="Add to favorites" delay={300}>
+          {#snippet children()}
+            <Button variant="ghost" size="icon" class="h-10 w-10 rounded-full shadow-lg hover:shadow-xl transition-all">
+              <span class="text-xl">🤍</span>
+            </Button>
+          {/snippet}
+        </Tooltip>
+      {/if}
+    </div>
+
     <button
       {onclick}
       data-testid="product-card"
@@ -158,25 +190,6 @@
               <div class="text-right flex-shrink-0 flex flex-col items-end gap-3">
                 <div class="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
                   {formatPrice(product.price)}
-                </div>
-                <div onclick={(e) => e.stopPropagation()}>
-                  {#if product.isFavorite}
-                    <Tooltip content="Remove from favorites" delay={300}>
-                      {#snippet children()}
-                        <Button variant="ghost" size="icon" class="h-10 w-10 rounded-full shadow-lg hover:shadow-xl transition-all">
-                          <span class="text-xl">❤️</span>
-                        </Button>
-                      {/snippet}
-                    </Tooltip>
-                  {:else}
-                    <Tooltip content="Add to favorites" delay={300}>
-                      {#snippet children()}
-                        <Button variant="ghost" size="icon" class="h-10 w-10 rounded-full shadow-lg hover:shadow-xl transition-all">
-                          <span class="text-xl">🤍</span>
-                        </Button>
-                      {/snippet}
-                    </Tooltip>
-                  {/if}
                 </div>
               </div>
             </div>

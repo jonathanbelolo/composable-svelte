@@ -48,8 +48,7 @@ const CHECK_SCRIPT = 'svelte-check --tsconfig ./tsconfig.json --fail-on-warnings
  */
 const NOT_YET_GATED: Record<string, { errors: number; warnings: number }> = {
 	'packages/chat': { errors: 15, warnings: 13 },
-	'packages/media': { errors: 14, warnings: 5 },
-	'examples/product-gallery': { errors: 11, warnings: 6 }
+	'packages/media': { errors: 14, warnings: 5 }
 };
 
 interface Workspace {

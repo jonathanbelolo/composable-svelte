@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Store } from '@composable-svelte/core';
+  import type { ScopedDestinationStore } from '@composable-svelte/core';
   import type { ShareState, ShareAction, ShareMethod } from './share.types.js';
   import type { Product } from '../../models/product.js';
 
@@ -8,7 +8,7 @@
   // ============================================================================
 
   interface ShareProps {
-    store: Store<ShareState, ShareAction>;
+    store: ScopedDestinationStore<ShareState, ShareAction>;
     product: Product;
   }
 
@@ -68,11 +68,11 @@
     </div>
 
     <!-- Share Methods -->
-    <div class="space-y-2">
-      <label class="text-sm font-medium block mb-3">Share via</label>
+    <div class="space-y-2" role="group" aria-label="Share via">
+      <span class="text-sm font-medium block mb-3">Share via</span>
       {#each shareMethods as { method, label, icon }}
         <button
-          data-testid="share-method-{method.method}"
+          data-testid="share-method-{method}"
           onclick={() => store.dispatch({ type: 'methodSelected', method })}
           class="w-full flex items-center gap-4 p-4 rounded-lg border-2 transition-all {state?.selectedMethod ===
           method
