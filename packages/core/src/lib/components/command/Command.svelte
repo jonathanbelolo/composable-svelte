@@ -69,13 +69,22 @@
 	}: CommandProps = $props();
 
 	// Create dependencies
+	// Getters, not values: `createStore` re-reads `config.dependencies` on every
+	// dispatch, but a plain object literal freezes what these resolve to at
+	// setup. Note the ternary was frozen too, not just the callback it wrapped —
+	// a palette mounted without `onCommandExecute` kept `undefined` forever even
+	// after the prop arrived. Mirrors `ui/file-upload/FileUpload.svelte:43-59`.
 	const dependencies: CommandDependencies = {
-		onCommandExecute: onCommandExecute
-			? (command, dispatch) => {
-					onCommandExecute(command);
-				}
-			: undefined,
-		filterFunction
+		get onCommandExecute() {
+			return onCommandExecute
+				? (command: CommandItem) => {
+						onCommandExecute?.(command);
+					}
+				: undefined;
+		},
+		get filterFunction() {
+			return filterFunction;
+		}
 	};
 
 	// Create store

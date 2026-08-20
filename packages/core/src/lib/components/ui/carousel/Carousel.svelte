@@ -25,10 +25,20 @@
   const store = createStore({
     initialState: createInitialCarouselState<T>(slides, initialIndex, loop, autoPlayInterval),
     reducer: carouselReducer<T>,
+    // Getters, not values: `createStore` re-reads `config.dependencies` on
+    // every dispatch, but a plain object literal freezes what these resolve
+    // to at setup, so swapping a callback prop left the store calling the
+    // original. Mirrors `ui/file-upload/FileUpload.svelte:43-59`.
     dependencies: {
-      onSlideChange,
-      onAutoPlayStart,
-      onAutoPlayStop
+      get onSlideChange() {
+        return onSlideChange;
+      },
+      get onAutoPlayStart() {
+        return onAutoPlayStart;
+      },
+      get onAutoPlayStop() {
+        return onAutoPlayStop;
+      }
     }
   });
 

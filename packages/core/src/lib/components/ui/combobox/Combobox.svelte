@@ -92,12 +92,20 @@
 	const store = createStore({
 		initialState: createInitialComboboxState(options, value, debounceDelay),
 		reducer: comboboxReducer,
+		// Getters, not values: `createStore` re-reads `config.dependencies` on
+		// every dispatch, but a plain object literal freezes what these resolve
+		// to at setup, so swapping a callback prop left the store calling the
+		// original. Mirrors `ui/file-upload/FileUpload.svelte:43-59`.
 		dependencies: {
+			// `onChange` is a closure over live bindings, so it is already fresh;
+			// `loadOptions` is the prop that was frozen.
 			onChange: (newValue) => {
 				value = newValue;
 				onchange?.(newValue);
 			},
-			loadOptions
+			get loadOptions() {
+				return loadOptions;
+			}
 		}
 	});
 

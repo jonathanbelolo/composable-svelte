@@ -82,10 +82,21 @@
 
 	if (!isAdvancedMode) {
 		const simpleProps = props as SimpleProps;
+		// Getters, not values: `createStore` re-reads `config.dependencies` on
+		// every dispatch, but a plain object literal freezes what these resolve
+		// to at setup. `simpleProps` is `$props()`' rest object, which is a live
+		// proxy, so reading through it inside a getter yields the current prop.
+		// Mirrors `ui/file-upload/FileUpload.svelte:43-59`.
 		const dependencies: ImageGalleryDependencies = {
-			onImageClick: simpleProps.onImageClick,
-			onImageLoad: simpleProps.onImageLoad,
-			onImageError: simpleProps.onImageError
+			get onImageClick() {
+				return simpleProps.onImageClick;
+			},
+			get onImageLoad() {
+				return simpleProps.onImageLoad;
+			},
+			get onImageError() {
+				return simpleProps.onImageError;
+			}
 		};
 
 		internalStore = createStore({

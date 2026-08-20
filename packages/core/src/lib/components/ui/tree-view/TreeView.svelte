@@ -93,11 +93,23 @@
 			return state;
 		})(),
 		reducer: treeViewReducer,
+		// Getters, not values: `createStore` re-reads `config.dependencies` on
+		// every dispatch, but a plain object literal freezes what these resolve
+		// to at setup, so swapping a callback prop left the store calling the
+		// original. Mirrors `ui/file-upload/FileUpload.svelte:43-59`.
 		dependencies: {
-			onSelect,
-			onExpand,
-			onCollapse,
-			loadChildren
+			get onSelect() {
+				return onSelect;
+			},
+			get onExpand() {
+				return onExpand;
+			},
+			get onCollapse() {
+				return onCollapse;
+			},
+			get loadChildren() {
+				return loadChildren;
+			}
 		}
 	});
 
