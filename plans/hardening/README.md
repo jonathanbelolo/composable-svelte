@@ -9,16 +9,108 @@ file and line, says whether it was **verified** (something was run) or
 
 | | count |
 |---|---|
-| Fixed and committed | 55 commits |
+| Fixed and committed | 68 commits |
 | **Open — components that crash** | **0** (was 6 — all fixed, see R1) |
-| Open — breaks a consumer at install/build | 6 (S2.6 closed here; S2.7 and S2.8 were already closed and the count was stale) |
-| Open — silently-wrong behaviour | 10 (S4.3 was already closed by R4; the count was stale) |
+| Open — breaks a consumer at install/build | 6 (S2.6 closed in R6; S2.7 and S2.8 were already closed and the count was stale) |
+| Open — silently-wrong behaviour | 6 (S4.3 closed by R4; **S4.4, S4.6, S4.7 closed in R7**) |
 | Open — security | 0 (was 1; **the R2 fix was incomplete — see R3**) |
-| Open — `svelte-check` errors | **61** (was 142; see R6 for the recount) |
-| Open — `svelte-check` warnings | **29** (was 19 — the examples had never been counted) |
-| Workspaces covered by `pnpm -r check` | **9 of 19** (was 4) |
+| Open — `svelte-check` errors | **0** (was 142, recounted to 69 in R6) |
+| Open — `svelte-check` warnings | **0** (was 30) |
+| Workspaces covered by `pnpm -r check` | **19 of 19** — the gate is complete |
 
 ## Remediation log
+
+### R7. The gate is complete — 19 of 19 workspaces
+
+`NOT_YET_GATED` is empty and deleted. `tests/repo/check-coverage.test.ts` now
+asserts unconditionally that every workspace carries the byte-identical `check`
+script and declares `svelte-check`, so a new workspace has to be gated in the
+change that adds it. Baseline: `pnpm -r build`, `typecheck`, `test` (**2249
+passing**, was 2166 at the start of this effort) and `check` all clean, and
+`pnpm install --frozen-lockfile` clean.
+
+Two corrections to R6's own numbers, both found by measuring rather than
+inferring:
+
+- **shader-gallery is 3, not 2**, and **ssr-server is 10, not 5**, once their
+  tsconfigs extend the root. They were the last two that did not. A `tsc`-only
+  probe had put shader-gallery's delta at +0, and that number meant nothing:
+  `tsc` sees only its four `.ts` files and both its errors live in `.svelte`.
+  The real delta is one `exactOptionalPropertyTypes` error at
+  `ShaderGallery.svelte:51` that no `tsc` run could ever have found.
+- **Widening `scopeToDestination` does not fix product-gallery.** R6 and the plan
+  before it attributed that cluster first to an untyped call site, then to the
+  parent-parameter type. Neither. Core's navigation components are **not
+  generic** — `Modal.svelte:94` destructures as `ModalProps<unknown, unknown>`
+  with no `<script generics=...>`, as do Sheet, Alert, Popover, Drawer, Sidebar,
+  Tabs and NavigationStack — so the `children` snippet hands back `unknown`
+  whatever the caller passes. Only `DestinationRouter` is generic. Fixed by
+  adopting the house pattern (snippet with no parameter, closing over the outer
+  typed store) rather than by making eight components generic mid-effort.
+
+Defects closed, beyond the type errors:
+
+- **`ssr-server`'s post list was dead and orphaned.** It dispatched `selectPost`
+  (not in `AppAction`) and read `state.selectedPostId` (not on `AppState`), and
+  nothing rendered it — `PostListPage` had superseded it. Deleted. This also
+  explains **S6.2**: the e2e suite asserts on `selectedPostId` at
+  `ssr.spec.ts:54,68`, a property that never existed. The component and those
+  tests were left behind together when the app moved to a destination union.
+- **Neither `url-routing` modal could be dismissed by keyboard** — no Escape, no
+  keydown, anywhere in either file. **Closes S4.4** as well: the `require()` in a
+  browser ESM bundle is gone, and the example's tsconfig now carries a note that
+  its missing `types: ["node"]` is load-bearing, since adding it would make that
+  error silently disappear.
+- **`AttachmentPreviewModal` could not be closed with Escape** — `onkeydown` on a
+  `role="dialog"` div that nothing ever focused.
+- **`VideoPlayer`'s controls tab-trapped invisible buttons** (`opacity: 0;
+  pointer-events: none` does not remove them from the tab order).
+- **Both audio scrubbers were focusable sliders with no key handler.**
+- **`ImagePreview`'s fullscreen was mouse-only**, and unreachable entirely for a
+  `showHeader={false}` consumer.
+- **S4.6 and S4.7 closed** in product-gallery, both gate-caught as predicted.
+- **S9's `<button>`-in-`<button>` is fixed** as a side effect of unnesting the
+  card controls — but **not gated**: the nesting crosses a component boundary and
+  no svelte-check gate can see it.
+- `ssr-server` and `chat` both called the Svelte 4 `$destroy`; the `?.` made it a
+  silent no-op, so HMR leaked an instance per update.
+
+Two core contracts were widening rather than defects, but both had made the
+documented pattern impossible to typecheck: `scopeToDestination`/`scopeToOptional`
+now take a `ScopableStore` (`{state, dispatch}`), which is what they actually
+consume and what every scoping helper actually returns; and `Form` now takes a
+`FormStore<T>`, which is why three examples had each hand-rolled the same wrapper.
+
+### New: core's tests are typechecked by nothing
+
+`packages/core/tsconfig.json` excludes every `.test.ts`, and `tsconfig.test.json`
+inherits that exclude — so `pnpm typecheck` compiles **no test file in core at
+all**, and vitest transpiles without typechecking. Overriding it surfaces **573**
+real errors across the suite. Not touched here; recorded because it means any
+type-level guard written as a `.test.ts` in core is not actually a guard.
+
+### New: 75 names are unreachable from core's package root
+
+`TreeNode` is exported from `@composable-svelte/core/components/ui` but not from
+the root barrel, though `TreeView` is — so no consumer can type the data the
+component requires. It is one of **75** such names (53 types, 22 values) across
+**11 root-exported components**. The worst case is `Collapsible`: its required
+store type, its reducer and its state factory are all unreachable from the root,
+so the component cannot be used from `@composable-svelte/core` at all. The
+comment at `components/ui/index.ts:55-64` documents this exact fix being applied
+one level down and never propagated up. `file-browser` works around it with the
+subpath import, as six styleguide demos already do.
+
+### New: `TreeView` is not generic
+
+`TreeViewProps<T = string>` is declared generic but `TreeView.svelte` carries no
+`generics=` attribute, so `T` is pinned to `string` and `TreeNode<T>`'s parameter
+is unreachable. Attempted and backed out: adding it propagates `T` into
+`createInitialTreeViewState`, `treeViewReducer` and the recursive `TreeNodeItem`
+snippet, and then stops, because `TreeViewAction` is not generic either — it
+carries `nodes: TreeNode<string>[]`. Making the module genuinely generic means
+changing a public action union. Same family as the navigation components.
+
 
 ### R6. `pnpm -r check` is a real gate for 9 of 19 workspaces
 
@@ -505,7 +597,14 @@ Original finding:
   bulk node changes — multi-select, keyboard delete, programmatic — are dropped.
   Check `handleEdgesChange` alongside it.
 
-### S4.4 `syncBrowserHistory`'s required `serialize` is never called — VERIFIED
+### S4.4 `syncBrowserHistory`'s required `serialize` is never called — **PARTLY CLOSED (R7)**
+
+The `require()` it hid is gone — replaced with the static import that was already
+one line above — and `url-routing` is gated, so it cannot come back. The
+underlying design point stands: `serialize` is still declared required and still
+never called by the 172-line implementation.
+
+Original finding:
 
 `packages/core/src/lib/routing/browser-history.ts:30` declares `serialize` as a
 required field. The string appears nowhere in the 172-line implementation; only
@@ -539,7 +638,11 @@ getter fix and a comment explaining it. These still use frozen literals:
 
 `Select`, `Calendar` and `Pagination` are already safe.
 
-### S4.6 `product-gallery` — `size="default"` strips all sizing — VERIFIED
+### S4.6 `product-gallery` — `size="default"` strips all sizing — **CLOSED (R7)**
+
+Gate-caught and gate-protected.
+
+Original finding:
 
 Four call sites: `CategoryFilter.svelte:53,71`, `ProductList.svelte:139`,
 `ProductCard.svelte:113`. `Button.svelte:98` defines only `sm/md/lg/icon`, so
@@ -547,7 +650,11 @@ Four call sites: `CategoryFilter.svelte:53,71`, `ProductList.svelte:139`,
 with no height and no padding. The trap: `variantClasses` *does* have a `default`
 key, so `variant="default"` works and this looks like it should too.
 
-### S4.7 `product-gallery` — every share button has the same broken test hook — VERIFIED
+### S4.7 `product-gallery` — every share button has the same broken test hook — **CLOSED (R7)**
+
+Gate-caught and gate-protected.
+
+Original finding:
 
 `Share.svelte:75` — `data-testid="share-method-{method.method}"` where `method` is
 already destructured to a string. All four buttons render
@@ -585,14 +692,14 @@ Documented use is dispatching a redirect, usually idempotent — low severity, a
 
 ## S5. The `svelte-check` backlog
 
-### C1. `pnpm -r check` was a near no-op — **PARTLY CLOSED (R6)**
+### C1. `pnpm -r check` was a near no-op — **CLOSED (R7)**
 
 CI runs `pnpm -r check`, but `pnpm -r` only runs the script where it exists. The
 commit that introduced this said "check every package that can be" — literally
 true, but the effect was nearly nil, and it is why the satellite errors below
 stayed invisible after it landed.
 
-**R6 took coverage from 4 workspaces to 9** and encoded the invariant in
+**R6 took coverage from 4 workspaces to 9; R7 took it to all 19** and encoded the invariant in
 `packages/core/tests/repo/check-coverage.test.ts`, so the remaining ten cannot be
 forgotten. This entry also understated the gap twice over: it said "six packages
 are ungated" and counted only packages — **ten of the eleven examples were
