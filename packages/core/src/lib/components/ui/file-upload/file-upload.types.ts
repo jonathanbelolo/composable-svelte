@@ -91,7 +91,17 @@ export interface FileUploadDependencies {
   /** Callback when files change */
   onFilesChange?: ((files: UploadedFile[]) => void) | undefined;
   /** Callback to handle file upload (returns promise) */
-  onUpload?: ((file: File) => Promise<void>) | undefined;
+  /**
+   * Handle an upload, reporting progress.
+   *
+   * `onProgress` is a widening, not a breaking change: an existing
+   * `(file) => Promise<void>` stays assignable under TypeScript's
+   * fewer-parameters rule. Without it there was no channel to report through,
+   * so `uploadProgress` had no dispatcher and the bar sat at 0% throughout.
+   */
+  onUpload?:
+    | ((file: File, onProgress: (percent: number) => void) => Promise<void>)
+    | undefined;
   /** File validation configuration */
   validation?: FileValidationConfig | undefined;
 }
@@ -115,7 +125,7 @@ export interface FileUploadProps {
   /** Callback when files are selected */
   onFilesChange?: (files: UploadedFile[]) => void;
   /** Callback to handle file upload */
-  onUpload?: (file: File) => Promise<void>;
+  onUpload?: (file: File, onProgress: (percent: number) => void) => Promise<void>;
   /** Custom class for container */
   class?: string;
   /** Whether the component is disabled */

@@ -584,7 +584,9 @@ describe('File Upload Component', () => {
       await store.receive({ type: 'uploadStarted' });
       await store.receive({ type: 'uploadCompleted' });
 
-      expect(onUpload).toHaveBeenCalledWith(files[0]);
+      // Widened: `onUpload` now also receives a progress callback, which is
+      // what gives `uploadProgress` a dispatcher at all.
+      expect(onUpload).toHaveBeenCalledWith(files[0], expect.any(Function));
     });
 
     it('should handle upload errors from onUpload', async () => {
@@ -639,4 +641,81 @@ describe('File Upload Component', () => {
       expect(state.isUploading).toBe(false);
     });
   });
+});
+
+// ================================================================
+// Test Suite: Upload progress
+// ================================================================
+
+describe('Upload progress', () => {
+	/**
+	 * The progress bar sat at 0% for every upload. `uploadProgress` existed as
+	 * an action and a reducer case, and NOTHING dispatched it — `onUpload` was
+	 * `(file) => Promise<void>`, so a consumer had no channel to report through.
+	 * The bar went 0 → (gone), never a value in between.
+	 */
+	it('reports progress from the consumer', async () => {
+		let report: ((percent: number) => void) | undefined;
+		const settled: { resolve?: () => void } = {};
+		const onUpload = vi.fn(
+			(_file: File, onProgress: (percent: number) => void) =>
+				new Promise<void>((resolve) => {
+					report = onProgress;
+					settled.resolve = resolve;
+				})
+		);
+
+		const store = new TestStore({
+			initialState: createInitialFileUploadState(),
+			reducer: fileUploadReducer,
+			dependencies: { onUpload }
+		});
+
+		await store.send({
+			type: 'filesSelected',
+			files: [new File(['x'], 'a.txt', { type: 'text/plain' })]
+		});
+		await store.receive({ type: 'filesValidated' });
+		await store.receive({ type: 'uploadStarted' });
+
+		expect(onUpload, 'onUpload was given no progress callback').toHaveBeenCalledTimes(1);
+		expect(typeof report, 'the second argument is missing').toBe('function');
+
+		report!(37);
+		await store.receive({ type: 'uploadProgress' }, (state) => {
+			expect(state.files[0]!.progress).toBe(37);
+			expect(state.files[0]!.status).toBe('uploading');
+		});
+
+		settled.resolve!();
+		await store.receive({ type: 'uploadCompleted' }, (state) => {
+			expect(state.files[0]!.progress).toBe(100);
+		});
+	});
+
+	it('ignores progress reported after the upload finished', async () => {
+		// A late callback must not rewind a finished bar back to mid-upload.
+		// The naive implementation updates any matching file regardless of state.
+		const store = new TestStore({
+			initialState: createInitialFileUploadState(),
+			reducer: fileUploadReducer,
+			dependencies: {}
+		});
+
+		await store.send({
+			type: 'filesSelected',
+			files: [new File(['x'], 'a.txt', { type: 'text/plain' })]
+		});
+		await store.receive({ type: 'filesValidated' });
+
+		const id = store.state.files[0]!.id;
+		await store.send({ type: 'uploadStarted', fileId: id });
+		await store.send({ type: 'uploadCompleted', fileId: id }, (state) => {
+			expect(state.files[0]!.progress).toBe(100);
+		});
+
+		await store.send({ type: 'uploadProgress', fileId: id, progress: 40 }, (state) => {
+			expect(state.files[0]!.progress, 'a late callback rewound a finished upload').toBe(100);
+		});
+	});
 });

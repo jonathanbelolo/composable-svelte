@@ -307,23 +307,44 @@
 					</svg>
 				</button>
 			{/if}
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				width="16"
-				height="16"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-				class={cn(
-					'text-muted-foreground transition-transform',
-					$store.dropdown.status !== 'idle' && 'rotate-180'
-				)}
+			<!--
+				A real control, not decoration. This was a bare <svg> with no
+				handler that nevertheless rotated with `dropdown.status`, so it
+				looked like the toggle while doing nothing — sitting over the
+				exact spot users click to open a combobox. The `toggled` action
+				existed and nothing dispatched it.
+
+				`tabindex="-1"` because the input already owns keyboard access to
+				the dropdown; this is a pointer affordance.
+			-->
+			<button
+				type="button"
+				class="text-muted-foreground hover:text-foreground flex items-center"
+				aria-label="Toggle options"
+				aria-expanded={$store.dropdown.status !== 'idle'}
+				{disabled}
+				tabindex="-1"
+				onclick={() => store.dispatch({ type: 'toggled' })}
 			>
-				<polyline points="6 9 12 15 18 9"></polyline>
-			</svg>
+				<svg
+					aria-hidden="true"
+					xmlns="http://www.w3.org/2000/svg"
+					width="16"
+					height="16"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					class={cn(
+						'transition-transform',
+						$store.dropdown.status !== 'idle' && 'rotate-180'
+					)}
+				>
+					<polyline points="6 9 12 15 18 9"></polyline>
+				</svg>
+			</button>
 		</div>
 	</div>
 

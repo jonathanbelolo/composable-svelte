@@ -300,7 +300,19 @@
 
               <!-- Progress Bar (for uploading files) -->
               {#if file.status === 'uploading'}
-                <div class="mt-2 w-full bg-gray-200 rounded-full h-1.5">
+                <!--
+                  `role="progressbar"` + `aria-valuenow` so the value is
+                  announced and assertable. Asserting the inline width would
+                  test the style attribute; this tests what is reported.
+                -->
+                <div
+                  class="mt-2 w-full bg-gray-200 rounded-full h-1.5"
+                  role="progressbar"
+                  aria-valuenow={file.progress}
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  aria-label={`Uploading ${file.file.name}`}
+                >
                   <div
                     class="bg-blue-500 h-1.5 rounded-full"
                     style:width={`${file.progress}%`}
