@@ -194,6 +194,17 @@ export function createInitialCommandState(config?: {
 		// `presented`, not `presenting`: this is the state the reducer settles
 		// on once an open animation finishes (`command.reducer.ts:309-317`), and
 		// there is no prior frame for an initially-open palette to animate from.
+		//
+		// Coupled invariant: because this skips the `presenting` branch of
+		// `Command.svelte`'s animation effect, that component must seed
+		// `lastAnimatedContent` from this value or the palette loses its
+		// *dismissal* animation. It does, and the parity test in
+		// `tests/command-initially-open.test.ts` pins it.
+		//
+		// (`presenting` would also work — the component dispatches
+		// `presentationCompleted` itself once `animateModalIn` resolves, so it
+		// does not stall. It is simply the wrong description of an already-open
+		// palette.)
 		presentation: config?.isOpen
 			? ({ status: 'presented', content: true } as const)
 			: ({ status: 'idle' } as const),

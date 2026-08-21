@@ -76,8 +76,11 @@ function shimSvgGeometry() {
 shimSvgGeometry();
 
 /**
- * jsdom has no `ResizeObserver`, and `Chart`'s `onMount` constructs one
- * unconditionally. Without this stub that throw suppresses the selection
+ * jsdom has no `ResizeObserver`, and `Chart`'s `onMount` constructs one when no
+ * explicit `width`/`height` is passed (`Chart.svelte:69`) — which is exactly
+ * this file's case. (An earlier version of this note said "unconditionally",
+ * which is wrong; it happened to reach the right conclusion for these tests.)
+ * Without this stub that throw suppresses the selection
  * `$effect` on its first run, so the component under test is in an error state
  * and mount-time behaviour cannot be observed at all — measured directly:
  * the same probe reports `MOUNT_CALLS=0` without the stub and `MOUNT_CALLS=1`
@@ -215,6 +218,51 @@ describe('onSelectionChange', () => {
 		expect(
 			onSelectionChange,
 			'the selection never changed, so the consumer should not have been told it did'
+		).not.toHaveBeenCalled();
+	});
+
+	it('stays silent when a selection is re-made identically', async () => {
+		// An adversarial review found the commit's "only when they change" claim
+		// was false here. `selectPoint` allocated `[action.data]` unconditionally,
+		// so re-clicking the same point changed the array's identity and notified
+		// again with equal contents. Ordinary chart use.
+		const { store, onSelectionChange } = mountChart();
+		await settle();
+
+		store.dispatch({ type: 'selectPoint', data: sampleData[0]!, index: 0 });
+		flushSync();
+		await settle();
+		expect(onSelectionChange).toHaveBeenCalledTimes(1);
+		onSelectionChange.mockClear();
+
+		for (let i = 0; i < 3; i += 1) {
+			store.dispatch({ type: 'selectPoint', data: sampleData[0]!, index: 0 });
+			flushSync();
+			await settle();
+		}
+
+		expect(
+			onSelectionChange,
+			're-selecting the same point notified again; the selection did not change'
+		).not.toHaveBeenCalled();
+	});
+
+	it('stays silent when clearing an already-empty selection', async () => {
+		// Same class. `clearSelection` allocated a fresh `[]` unconditionally, and
+		// it is reachable from `ChartPrimitive.svelte:245` whenever a brush is
+		// cleared — including when nothing was selected.
+		const { store, onSelectionChange } = mountChart();
+		await settle();
+
+		for (let i = 0; i < 3; i += 1) {
+			store.dispatch({ type: 'clearSelection' });
+			flushSync();
+			await settle();
+		}
+
+		expect(
+			onSelectionChange,
+			'clearing an already-empty selection notified; nothing changed'
 		).not.toHaveBeenCalled();
 	});
 });

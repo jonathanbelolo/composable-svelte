@@ -29,7 +29,7 @@ import { render } from 'vitest-browser-svelte';
 import Command from '../src/lib/components/command/Command.svelte';
 import { createInitialCommandState } from '../src/lib/components/command/command.types.js';
 
-const settle = () => new Promise((r) => setTimeout(r, 150));
+const settle = (ms = 150) => new Promise((r) => setTimeout(r, ms));
 
 describe('createInitialCommandState is internally consistent', () => {
 	it('gives an initially-open palette a non-idle presentation', () => {
@@ -75,5 +75,108 @@ describe('<Command open={true} />', () => {
 		// The other half. Without this, a `visible` that is simply always true
 		// would pass the test above.
 		expect(container.querySelector('[role="dialog"]')).toBeNull();
+	});
+});
+
+describe('<Command /> can be dismissed', () => {
+	// These exist because the original two render tests asserted only that the
+	// dialog was PRESENT at mount, and a palette that renders but can never be
+	// closed passes that. An adversarial review found exactly that hole.
+	//
+	// The dismissal loop pre-dated the initial-state fix — verified by reverting
+	// it, after which a prop-opened palette fails these identically. What the
+	// initial-state fix changed was the consequence: an initially-open palette
+	// went from rendering nothing to rendering a modal with no way out.
+	//
+	// Cause: two effects owned one bidirectional binding. After
+	// `dismissalCompleted` set `isOpen: false`, the prop-sync effect — declared
+	// first — ran before the sync-back effect had written `open = false`, saw
+	// `$store.isOpen (false) !== open (true)`, and re-dispatched `opened`.
+	// Two independent effects cannot tell "the prop changed" from "the store
+	// changed"; one effect with a non-reactive record of the last agreed value
+	// can.
+
+	const dialogVisible = () =>
+		document.querySelector('[role="dialog"][aria-label="Command palette"]') !== null;
+
+	it('closes on Escape', async () => {
+		const { container } = render(Command, {
+			props: { open: true, commands: [{ id: 'a', label: 'Alpha' }] }
+		});
+		await settle();
+		expect(dialogVisible(), 'precondition: it opened').toBe(true);
+
+		const dialog = container.querySelector('[role="dialog"]') as HTMLElement;
+		dialog.focus();
+		dialog.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+		await settle(800);
+
+		expect(dialogVisible(), 'still visible long after Escape').toBe(false);
+	});
+
+	it('closes when the open prop goes false', async () => {
+		const { rerender } = render(Command, {
+			props: { open: true, commands: [{ id: 'a', label: 'Alpha' }] }
+		});
+		await settle();
+		expect(dialogVisible(), 'precondition: it opened').toBe(true);
+
+		await rerender({ open: false });
+		await settle(800);
+
+		expect(dialogVisible(), 'still visible long after open={false}').toBe(false);
+	});
+
+	it('reopens after being closed', async () => {
+		// The other direction, so a fix that simply nails the palette shut fails.
+		const { rerender } = render(Command, {
+			props: { open: true, commands: [{ id: 'a', label: 'Alpha' }] }
+		});
+		await settle();
+
+		await rerender({ open: false });
+		await settle(800);
+		expect(dialogVisible()).toBe(false);
+
+		await rerender({ open: true });
+		await settle(800);
+		expect(dialogVisible(), 'could not reopen').toBe(true);
+	});
+
+	it('animates out, like a palette opened by a prop change', async () => {
+		// An adversarial review found the initially-open palette skipped its
+		// dismissal animation. `lastAnimatedContent` was only ever set in the
+		// `presenting` branch of the animation effect, so a palette that starts
+		// at `presented` left it null, and the `dismissing` branch's
+		// `lastAnimatedContent === currentContent` guard never matched.
+		//
+		// Asserted against a control rather than in absolute terms: what matters
+		// is parity with the path that already worked.
+		const runningDuringDismissal = async (initiallyOpen: boolean) => {
+			const r = render(Command, {
+				props: { open: initiallyOpen, commands: [{ id: 'a', label: 'Alpha' }] }
+			});
+			if (!initiallyOpen) {
+				await r.rerender({ open: true });
+				await settle(600);
+			}
+			await settle(400);
+			expect(dialogVisible(), 'precondition: open').toBe(true);
+
+			await r.rerender({ open: false });
+			await settle(60);
+			const count = document.getAnimations().length;
+			await settle(800);
+			return count;
+		};
+
+		const control = await runningDuringDismissal(false);
+		expect(control, 'control: a prop-opened palette should animate out').toBeGreaterThan(0);
+
+		const initiallyOpen = await runningDuringDismissal(true);
+		expect(
+			initiallyOpen,
+			'an initially-open palette ran no dismissal animation, unlike the control'
+		).toBeGreaterThan(0);
 	});
 });

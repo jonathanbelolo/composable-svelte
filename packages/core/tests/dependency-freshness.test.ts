@@ -206,6 +206,46 @@ describe('dependencies are read live', () => {
 		expectSwapped(a, b, 'Combobox.loadOptions');
 	});
 
+	it('Command onCommandExecute, arriving after mount', async () => {
+		// The shape the frozen literal made worst, and the one nothing covered.
+		// `dependencies.onCommandExecute` was built from a *ternary* evaluated at
+		// setup, so a palette mounted without the prop kept `undefined` forever
+		// even after the prop arrived. Note the plain swap (a -> b) passes even
+		// with the frozen literal, because the wrapped closure body reads the
+		// live prop — the ternary is the only observable half, so this test goes
+		// undefined -> function deliberately.
+		const onCommandExecute = vi.fn();
+		// The reducer falls through `deps?.onCommandExecute` to `command.onSelect`.
+		// If the fallback fires, the dependency was still undefined.
+		const sentinel = vi.fn();
+
+		const { rerender, container } = render(Command, {
+			props: {
+				open: false,
+				commands: [{ id: 'a', label: 'Alpha', onSelect: sentinel }]
+			}
+		});
+		await settle();
+
+		await rerender({ open: true, onCommandExecute });
+		await settle(400);
+
+		const dialog = container.querySelector('[role="dialog"]') as HTMLElement;
+		expect(dialog, 'the palette did not open, so nothing was triggered').not.toBeNull();
+		dialog.focus();
+		dialog.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+		await settle();
+
+		expect(
+			onCommandExecute,
+			'the late-arriving onCommandExecute must fire'
+		).toHaveBeenCalledTimes(1);
+		expect(
+			sentinel,
+			'the command.onSelect fallback fired, which means dependencies.onCommandExecute was still undefined'
+		).not.toHaveBeenCalled();
+	});
+
 	it('Command filterFunction', async () => {
 		const a = vi.fn((c: unknown[]) => c);
 		const b = vi.fn((c: unknown[]) => c);
@@ -214,11 +254,12 @@ describe('dependencies are read live', () => {
 		});
 		await settle();
 
-		// No DOM route exists: `CommandInput` takes `store` as a prop and
+		// The commands-sync effect is the trigger here, so `commands` must differ
+		// by value or `sameCommands` short-circuits it. (`filterFunction` has no
+		// DOM route of its own: `CommandInput` takes `store` as a prop and
 		// `Command` renders `{@render children()}` with no arguments and provides
-		// no context, so a child can never reach the store. The commands-sync
-		// effect is the trigger, so `commands` must differ by value or
-		// `sameCommands` short-circuits it.
+		// no context, so a child cannot reach the store. `onCommandExecute` does
+		// have one — see the next test.)
 		a.mockClear();
 		await rerender({ commands: [{ id: 'b', label: 'Beta' }], filterFunction: b });
 		await settle();

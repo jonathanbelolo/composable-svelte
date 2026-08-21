@@ -104,6 +104,19 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
     // ========================================================================
 
     case 'selectPoint': {
+      // Idempotent by value, returning the *identical* state object. Re-clicking
+      // an already-selected point is ordinary chart use, and allocating a fresh
+      // `[action.data]` every time changed the array's identity, so `Chart`'s
+      // narrowed `$derived` fired `onSelectionChange` again with equal contents.
+      const sel = state.selection;
+      if (
+        sel.type === 'point' &&
+        sel.selectedIndices.length === 1 &&
+        sel.selectedIndices[0] === action.index &&
+        sel.selectedData[0] === action.data
+      ) {
+        return [state, Effect.none()];
+      }
       return [
         {
           ...state,
@@ -177,6 +190,11 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
     }
 
     case 'clearSelection': {
+      // Idempotent by value, same reasoning. Reachable with nothing selected —
+      // `ChartPrimitive.svelte:245` dispatches it whenever a brush is cleared.
+      if (state.selection.type === 'none' && state.selection.selectedData.length === 0) {
+        return [state, Effect.none()];
+      }
       return [
         {
           ...state,

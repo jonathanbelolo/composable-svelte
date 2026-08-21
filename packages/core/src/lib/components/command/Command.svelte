@@ -94,16 +94,43 @@
 		dependencies
 	});
 
-	// Sync open prop to store
-	$effect(() => {
-		if ($store.isOpen !== open) {
-			store.dispatch({ type: open ? 'opened' : 'closed' });
-		}
-	});
+	/**
+	 * Last value the prop and the store agreed on.
+	 *
+	 * Not $state: read and written by the effect below, and a reactive guard
+	 * re-triggers the effect it lives in.
+	 */
+	let lastSyncedOpen = open;
 
-	// Sync store to open prop
+	/**
+	 * One effect owns the two-way binding, because two cannot.
+	 *
+	 * This used to be a pair — "prop -> store" and "store -> prop" — and they
+	 * fought. After a dismissal completed and set `isOpen: false`, the first
+	 * effect ran before the second had written `open = false`, saw
+	 * `$store.isOpen (false) !== open (true)`, and re-dispatched `opened`. The
+	 * palette reopened itself: Escape, a backdrop click and `open={false}` were
+	 * all unable to close it.
+	 *
+	 * The missing information is *which side changed*, which neither effect
+	 * could know on its own. `lastSyncedOpen` supplies it: if the prop differs
+	 * from it the consumer moved, otherwise the store did.
+	 */
 	$effect(() => {
-		open = $store.isOpen;
+		const storeOpen = $store.isOpen;
+		const propOpen = open;
+
+		if (propOpen !== lastSyncedOpen) {
+			// The consumer changed the prop.
+			lastSyncedOpen = propOpen;
+			if (storeOpen !== propOpen) {
+				store.dispatch({ type: propOpen ? 'opened' : 'closed' });
+			}
+		} else if (storeOpen !== lastSyncedOpen) {
+			// The store changed on its own (Escape, backdrop, command executed).
+			lastSyncedOpen = storeOpen;
+			open = storeOpen;
+		}
 	});
 
 	// Sync commands prop to store
@@ -145,7 +172,15 @@
 	let backdropElement: HTMLElement | undefined = $state();
 	// Not $state: the effect below reads and writes this. A reactive guard
 	// re-triggers the effect it lives in (effect_update_depth_exceeded).
-	let lastAnimatedContent: any = null;
+	//
+	// Seeded from the initial presentation rather than always `null`. A palette
+	// mounted open starts at `presented` and so never passes through the
+	// `presenting` branch below — which is the only place this was assigned. It
+	// therefore stayed null, the `dismissing` branch's
+	// `lastAnimatedContent === currentContent` guard never matched, and the
+	// palette vanished without its out-animation while a prop-opened one faded.
+	let lastAnimatedContent: any =
+		store.state.presentation.status === 'idle' ? null : store.state.presentation.content;
 
 	// Watch presentation status and trigger animations
 	$effect(() => {
