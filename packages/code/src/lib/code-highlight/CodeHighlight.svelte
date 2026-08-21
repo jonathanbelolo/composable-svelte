@@ -9,9 +9,30 @@
 	 */
 	const { store }: { store: Store<CodeHighlightState, CodeHighlightAction> } = $props();
 
-	// Dispatch init action on mount
+	// Not $state: read and written by the effect below, and a reactive guard
+	// re-triggers the effect it lives in. Seeded in onMount so `init` and the
+	// effect do not both highlight on the first frame.
+	let appliedCode: string | null = null;
+
 	onMount(() => {
+		appliedCode = store.state.code;
 		store.dispatch({ type: 'init' });
+	});
+
+	/**
+	 * Re-highlight when the code changes from outside.
+	 *
+	 * The component only dispatched `init` on mount, so a parent reducer scoped
+	 * over this state could replace `code` without `codeChanged` ever running —
+	 * leaving `highlightedCode` stale forever while the markup kept rendering it.
+	 */
+	$effect(() => {
+		// Read first: an early return above this would leave the effect tracking
+		// nothing and never re-running.
+		const code = $store.code;
+		if (code === appliedCode) return;
+		appliedCode = code;
+		store.dispatch({ type: 'codeChanged', code });
 	});
 
 	// Use Svelte's auto-subscription pattern - ZERO boilerplate!
@@ -21,9 +42,28 @@
 			? 'Copied!'
 			: $store.copyStatus === 'copying'
 				? 'Copying...'
-				: 'Copy'
+				: $store.copyStatus === 'failed'
+					? 'Failed'
+					: 'Copy'
 	);
 	const copyButtonDisabled = $derived($store.copyStatus === 'copying');
+
+	/**
+	 * One entry per rendered line, derived from the SOURCE — never from
+	 * `highlightedCode`, which is HTML and would miscount.
+	 */
+	const lineCount = $derived(
+		Math.max(1, $store.code.split('\n').length - ($store.code.endsWith('\n') ? 1 : 0))
+	);
+	const lineNumbers = $derived(
+		Array.from({ length: lineCount }, (_, i) => $store.startLine + i)
+	);
+	/** Requested highlights, dropped if they fall outside the document. */
+	const highlightedLines = $derived(
+		$store.highlightLines.filter(
+			(n) => n >= $store.startLine && n < $store.startLine + lineCount
+		)
+	);
 </script>
 
 <div class="code-highlight" data-theme={$store.theme}>
@@ -33,6 +73,7 @@
 				class="code-highlight__copy-button"
 				onclick={() => store.dispatch({ type: 'copyCode' })}
 				disabled={copyButtonDisabled}
+				title={$store.copyError ?? undefined}
 				aria-label="Copy code to clipboard"
 			>
 				{copyButtonText}
@@ -49,8 +90,15 @@
 	<pre
 		class="code-highlight__pre language-{$store.language}"
 		class:line-numbers={$store.showLineNumbers}
-		style:counter-reset={$store.showLineNumbers ? `line-number ${$store.startLine - 1}` : undefined}
-	><code class="code-highlight__code"
+	>{#each highlightedLines as n (n)}<span
+			class="code-highlight__line-highlight"
+			style:top="calc({n - $store.startLine} * var(--chl-line-height))"
+			aria-hidden="true"
+		></span>{/each}{#if $store.showLineNumbers}<span
+			class="code-highlight__line-numbers"
+			aria-hidden="true"
+		>{#each lineNumbers as n (n)}<span>{n}</span>{/each}</span
+		>{/if}<code class="code-highlight__code"
 		>{#if $store.highlightedCode}{@html $store.highlightedCode}{:else}{$store.code}{/if}</code
 		></pre>
 </div>
@@ -151,10 +199,68 @@
 		color: #333;
 	}
 
-	/* Line numbers */
+	/*
+	 * Line numbers.
+	 *
+	 * Rendered as real spans, not CSS counters. `counter-increment` + `::before`
+	 * lives only in the CSSOM, so `getComputedStyle(el, '::before').content`
+	 * returns the literal `counter(...)` expression rather than the digits — no
+	 * test can assert what the reader actually sees. The previous CSS reserved
+	 * this 3.8em gutter and never filled it.
+	 *
+	 * `--chl-line-height` is declared here so the number column and the
+	 * highlight bands cannot drift from the code's own line-height.
+	 */
+	.code-highlight__pre {
+		--chl-line-height: 1.5em;
+		position: relative;
+	}
+
 	.code-highlight__pre.line-numbers {
 		padding-left: 3.8em;
-		counter-reset: linenumber;
+	}
+
+	.code-highlight__line-numbers {
+		position: absolute;
+		top: 16px;
+		left: 0;
+		width: 3.8em;
+		padding-right: 1em;
+		text-align: right;
+		color: #858585;
+		/* Keeps the numbers out of the clipboard; aria-hidden keeps them out of
+		   the accessibility tree. Both are required — copying code and getting
+		   line numbers back is worse than having none. */
+		user-select: none;
+		-webkit-user-select: none;
+		pointer-events: none;
+	}
+
+	.code-highlight__line-numbers > span {
+		display: block;
+		line-height: var(--chl-line-height);
+	}
+
+	.code-highlight[data-theme='light'] .code-highlight__line-numbers {
+		color: #999;
+	}
+
+	.code-highlight__line-highlight {
+		position: absolute;
+		left: 0;
+		right: 0;
+		height: var(--chl-line-height);
+		margin-top: 16px;
+		background: rgba(255, 255, 255, 0.08);
+		pointer-events: none;
+	}
+
+	.code-highlight[data-theme='light'] .code-highlight__line-highlight {
+		background: rgba(0, 0, 0, 0.06);
+	}
+
+	.code-highlight__code {
+		line-height: var(--chl-line-height);
 	}
 
 	.code-highlight__pre.line-numbers .code-highlight__code {
