@@ -492,6 +492,44 @@ describe('TreeView', () => {
 			});
 		});
 
+		it('expands only nodes that can actually expand', async () => {
+			// `getAllNodeIds` returns every id, leaves included, so `expandAll` marked
+			// files as expanded. Nothing renders differently for an expanded leaf, so
+			// it was invisible — until `expandedCount` in the controls snippet started
+			// reporting it, and a three-branch tree read as six expanded.
+			const store = new TestStore({
+				initialState: createInitialTreeViewState(testNodes),
+				reducer: treeViewReducer
+			});
+
+			await store.send({ type: 'expandAll' }, (state) => {
+				expect(state.expandedIds.has('3'), 'File 3 is a leaf').toBe(false);
+				expect(state.expandedIds.has('1-1'), 'File 1-1 is a leaf').toBe(false);
+				expect(state.expandedIds.size, 'only the three folders').toBe(3);
+			});
+		});
+
+		it('leaves an unloaded lazy node alone', async () => {
+			// Worse than cosmetic. `nodeExpanded` on a lazy node adds it to
+			// `loadingIds` and dispatches the load; `expandAll` marked it expanded and
+			// loaded nothing, so the branch rendered open, empty, and with no spinner
+			// — permanently. Skipping it is the honest reading of "expand all": open
+			// every branch whose children are here.
+			const store = new TestStore({
+				initialState: createInitialTreeViewState([
+					{ id: 'lazy', label: 'Remote', lazy: true },
+					{ id: 'local', label: 'Local', children: [{ id: 'leaf', label: 'Leaf' }] }
+				]),
+				reducer: treeViewReducer
+			});
+
+			await store.send({ type: 'expandAll' }, (state) => {
+				expect(state.expandedIds.has('lazy')).toBe(false);
+				expect(state.loadingIds.size, 'and no load was started').toBe(0);
+				expect(state.expandedIds.has('local')).toBe(true);
+			});
+		});
+
 		it('should collapse all nodes', async () => {
 			const store = new TestStore({ initialState: createInitialTreeViewState(testNodes), reducer: treeViewReducer });
 

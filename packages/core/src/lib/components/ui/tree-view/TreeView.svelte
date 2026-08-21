@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import { createStore } from '../../../store.svelte.js';
 	import { treeViewReducer } from './tree-view.reducer.js';
 	import { createInitialTreeViewState } from './tree-view.types.js';
@@ -70,6 +71,30 @@
 		 * Additional CSS classes.
 		 */
 		class?: string;
+
+		/**
+		 * Toolbar rendered above the tree, receiving the bulk operations.
+		 *
+		 * This is how `expandAll` / `collapseAll` / `allNodesDeselected` are
+		 * reached. They cannot be exposed through a `store` prop instead: the
+		 * state is `Set<string>` (`expandedIds`, `selectedIds`, `loadingIds`),
+		 * which is not JSON-serialisable, so hoisting it into a consumer's store
+		 * would break SSR hydration.
+		 *
+		 * The counts come with them because a toolbar that cannot see the
+		 * selection renders a "Deselect all" that does nothing.
+		 */
+		controls?: Snippet<
+			[
+				{
+					expandAll: () => void;
+					collapseAll: () => void;
+					deselectAll: () => void;
+					expandedCount: number;
+					selectedCount: number;
+				}
+			]
+		>;
 	}
 
 	let {
@@ -80,7 +105,8 @@
 		onExpand,
 		onCollapse,
 		loadChildren,
-		class: className
+		class: className,
+		controls
 	}: TreeViewProps = $props();
 
 	// Create tree view store with reducer
@@ -169,11 +195,6 @@
 		store.dispatch({ type: 'highlightChanged', nodeId });
 	}
 
-	// Recursive component for rendering tree nodes
-	interface TreeNodeItemProps {
-		node: TreeNode;
-		level: number;
-	}
 </script>
 
 <!-- Recursive TreeNode component -->
@@ -282,6 +303,16 @@
 		{/each}
 	{/if}
 {/snippet}
+
+{#if controls}
+	{@render controls({
+		expandAll: () => store.dispatch({ type: 'expandAll' }),
+		collapseAll: () => store.dispatch({ type: 'collapseAll' }),
+		deselectAll: () => store.dispatch({ type: 'allNodesDeselected' }),
+		expandedCount: $store.expandedIds.size,
+		selectedCount: $store.selectedIds.size
+	})}
+{/if}
 
 <!-- Main tree container -->
 <div

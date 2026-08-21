@@ -3,6 +3,7 @@
   import type { TreeNode } from '@composable-svelte/core/components/ui';
   import { Card, CardContent, CardHeader, CardTitle } from '@composable-svelte/core/components/ui';
   import { Badge } from '@composable-svelte/core/components/ui';
+  import { Button } from '@composable-svelte/core/components/ui';
 
   // File system example
   const fileSystemNodes: TreeNode[] = [
@@ -264,7 +265,22 @@
           initialExpandedIds={['1', '1-1']}
           onSelect={handleFileSelect}
           class="border rounded-md p-2"
-        />
+        >
+          {#snippet controls({ expandAll, collapseAll, deselectAll, expandedCount, selectedCount })}
+            <div class="flex items-center gap-2 pb-3">
+              <Button variant="outline" size="sm" onclick={expandAll}>Expand all</Button>
+              <Button variant="outline" size="sm" onclick={collapseAll} disabled={expandedCount === 0}>
+                Collapse all
+              </Button>
+              <Button variant="ghost" size="sm" onclick={deselectAll} disabled={selectedCount === 0}>
+                Clear selection
+              </Button>
+              <span class="text-muted-foreground ml-auto text-xs">
+                {expandedCount} open · {selectedCount} selected
+              </span>
+            </div>
+          {/snippet}
+        </TreeView>
       </CardContent>
     </Card>
   </section>

@@ -94,6 +94,24 @@ function getAllNodeIds<T>(nodes: TreeNode<T>[]): string[] {
 }
 
 /**
+ * Ids of nodes that have loaded children, so expanding them shows something.
+ *
+ * Deliberately excludes `lazy` nodes with no children yet: expanding one is only
+ * meaningful alongside the load `nodeExpanded` dispatches, and a bulk action
+ * firing one request per branch is a different feature.
+ */
+function getExpandableNodeIds<T>(nodes: TreeNode<T>[]): string[] {
+	const ids: string[] = [];
+	for (const node of nodes) {
+		if (node.children && node.children.length > 0) {
+			ids.push(node.id);
+			ids.push(...getExpandableNodeIds(node.children));
+		}
+	}
+	return ids;
+}
+
+/**
  * TreeView reducer.
  *
  * Handles:
@@ -529,8 +547,15 @@ export const treeViewReducer: Reducer<
 		}
 
 		case 'expandAll': {
-			const allIds = getAllNodeIds(state.nodes);
-			const newExpandedIds = new Set(allIds);
+			// Only branches whose children are already here.
+			//
+			// `getAllNodeIds` returns every id, so this used to mark leaves as
+			// expanded — invisible, since nothing renders differently for an
+			// expanded leaf — and, worse, marked *lazy* nodes expanded without
+			// dispatching their load. `nodeExpanded` adds a lazy node to
+			// `loadingIds` and fetches; this did neither, so the branch rendered
+			// open, empty and with no spinner, permanently.
+			const newExpandedIds = new Set(getExpandableNodeIds(state.nodes));
 
 			return [
 				{
