@@ -336,34 +336,23 @@ export function nodeCanvasReducer<
       ];
     }
 
-    case 'zoomIn': {
-      const newZoom = Math.min(state.viewport.zoom * 1.2, 2);
-      return [
-        {
-          ...state,
-          viewport: { ...state.viewport, zoom: newZoom }
-        },
-        Effect.none()
-      ];
-    }
-
-    case 'zoomOut': {
-      const newZoom = Math.max(state.viewport.zoom / 1.2, 0.1);
-      return [
-        {
-          ...state,
-          viewport: { ...state.viewport, zoom: newZoom }
-        },
-        Effect.none()
-      ];
-    }
-
+    // === Viewport command markers ===
+    //
+    // These carry no state. The view (`FlowCommands`) performs them against the
+    // live canvas via `useSvelteFlow()`, and the canvas reports the resulting
+    // viewport back inward through `onmoveend` as `setViewport`. So the store
+    // still ends up holding the true viewport — it is just no longer the thing
+    // computing it.
+    //
+    // `zoomIn`/`zoomOut` used to compute a new zoom here with hardcoded clamps
+    // of 2 and 0.1, which ignored the component's `minZoom`/`maxZoom` props and
+    // wrote a value the canvas never read. Letting the flow own the clamping
+    // removes a second, disagreeing source of truth.
+    case 'zoomIn':
+    case 'zoomOut':
     case 'fitView':
-    case 'centerView': {
-      // These will be handled by SvelteFlow's built-in functions via effects
-      // Return current state, let the component handle the actual viewport change
+    case 'centerView':
       return [state, Effect.none()];
-    }
 
     // ========================================================================
     // Configuration Operations
@@ -454,14 +443,6 @@ export function nodeCanvasReducer<
         },
         Effect.none()
       ];
-    }
-
-    case 'undo':
-    case 'redo': {
-      // Undo/redo will be implemented as a higher-order reducer
-      // For now, return current state
-      console.warn(`[NodeCanvas] ${action.type} not yet implemented`);
-      return [state, Effect.none()];
     }
 
     default: {

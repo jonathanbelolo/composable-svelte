@@ -18,7 +18,7 @@
   import type { Store } from '@composable-svelte/core';
   import type { NodeCanvasState, NodeCanvasAction } from './types.js';
   import { nodesToArray, edgesToArray } from './types.js';
-  import ViewportSetter from './ViewportSetter.svelte';
+  import FlowCommands from './FlowCommands.svelte';
 
   import '@xyflow/svelte/dist/style.css';
 
@@ -37,6 +37,15 @@
      * Required to dispatch canvas actions through the store.
      */
     liftAction: (action: NodeCanvasAction<NodeData, EdgeData>) => Action;
+
+    /**
+     * Inverse of `liftAction`, used to recognise this canvas's viewport
+     * commands in the store's action stream. Optional: the default handles the
+     * common case where `liftAction` is the identity. Supply it when the parent
+     * wraps canvas actions, or `setViewport` / `zoomIn` / `zoomOut` / `fitView`
+     * / `centerView` will not reach the canvas.
+     */
+    unliftAction?: ((action: Action) => NodeCanvasAction<NodeData, EdgeData> | null) | undefined;
 
     /**
      * Custom node components by type.
@@ -105,11 +114,6 @@
      */
     onViewportChange?: (viewport: { zoom: number; x: number; y: number }) => void;
 
-    /**
-     * External viewport to apply programmatically (e.g., for restoration).
-     * When provided, this viewport will be used instead of the store's viewport.
-     */
-    externalViewport?: { zoom: number; x: number; y: number } | null;
   }
 
   const props: NodeCanvasProps<NodeData, EdgeData, Action> = $props();
@@ -123,6 +127,19 @@
   // Only `store` and `liftAction` stay plain — they are identity-stable by
   // contract, and `liftAction` is called, not rendered.
   const { store, liftAction } = props;
+
+  /** The commands `FlowCommands` acts on; everything else is ignored. */
+  const VIEWPORT_COMMANDS = new Set(['setViewport', 'zoomIn', 'zoomOut', 'fitView', 'centerView']);
+
+  const unliftAction = $derived(
+    props.unliftAction ??
+      ((action: Action): NodeCanvasAction<NodeData, EdgeData> | null => {
+        const candidate = action as { type?: unknown };
+        return candidate && typeof candidate.type === 'string' && VIEWPORT_COMMANDS.has(candidate.type)
+          ? (action as unknown as NodeCanvasAction<NodeData, EdgeData>)
+          : null;
+      })
+  );
 
   // Defaulted rather than forwarded as-is: SvelteFlow's nodeTypes/edgeTypes
   // do not accept an explicit undefined under exactOptionalPropertyTypes.
@@ -147,8 +164,33 @@
 
   // Use Svelte's auto-subscription pattern - ZERO boilerplate!
   // The store implements subscribe(), so we can use $store syntax
-  const nodes = $derived(nodesToArray($store.nodes));
-  const edges = $derived(edgesToArray($store.edges));
+  // `selected` is mapped on from the store, which is what makes
+  // `selectedNodes` / `selectedEdges` mean anything. They were fully maintained
+  // by the reducer and read by nobody — what looked like working selection was
+  // SvelteFlow's own internal state agreeing by coincidence.
+  //
+  // The identity-preserving branch is load-bearing, not an optimisation:
+  // `$state.raw` replaces the whole state object on every dispatch, so this
+  // recomputes constantly, and xyflow's `adoptUserNodes` compares by reference
+  // (`checkEquality: true`). Returning `{ ...n }` unconditionally would force a
+  // full re-adoption of every node on every action.
+  const nodes = $derived(
+    nodesToArray($store.nodes).map((n) => {
+      const selected = $store.selectedNodes.has(n.id);
+      return (n.selected ?? false) === selected ? n : { ...n, selected };
+    })
+  );
+  const edges = $derived(
+    edgesToArray($store.edges).map((e) => {
+      const selected = $store.selectedEdges.has(e.id);
+      return (e.selected ?? false) === selected ? e : { ...e, selected };
+    })
+  );
+  // Seeds SvelteFlow's initial viewport only — it is read once at construction.
+  // That is exactly why every viewport ACTION used to do nothing; live changes
+  // now go through `FlowCommands`. Kept because restoring a saved viewport at
+  // mount is a real use, but note it loses to the `fitView` prop, which queues
+  // an auto-fit after nodes initialise.
   const storeViewport = $derived($store.viewport);
   // SvelteFlow has no snapToGrid boolean — snapping is on when snapGrid is
   // present and off when it is absent, so it is spread in conditionally below
@@ -160,33 +202,17 @@
   );
 
   // ==========================================================================
-  // Viewport Restoration
+  // Viewport
   // ==========================================================================
-  // We use ViewportSetter (rendered inside SvelteFlow) to programmatically set
-  // the viewport using useSvelteFlow().setViewport(). This is the official way
-  // to control SvelteFlow's internal viewport state without sync issues.
-
-  // Flag to prevent onViewportChange callback during restoration
-  let isRestoring = $state(false);
-
-  /**
-   * Called by ViewportSetter when viewport is successfully applied.
-   * Clears the restoration flag after a delay.
-   */
-  function handleViewportApplied() {
-    // Clear flag after SvelteFlow has fully processed the change
-    setTimeout(() => {
-      isRestoring = false;
-    }, 100);
-  }
-
-  // Set restoration flag when external viewport is provided
-  $effect(() => {
-    const extVp = props.externalViewport;
-    if (extVp) {
-      isRestoring = true;
-    }
-  });
+  // `FlowCommands` (rendered inside SvelteFlow) turns the store's viewport
+  // actions into `useSvelteFlow()` calls; `handleMoveEnd` below reports the
+  // canvas's own movement back inward. Between them the store's `viewport` is
+  // a live projection rather than the frozen mount-time value it used to be.
+  //
+  // The old `isRestoring` timing flag is gone. It suppressed `onViewportChange`
+  // for 100ms after any external viewport, whether or not the value actually
+  // differed — a race standing in for a comparison. `handleMoveEnd` now guards
+  // by value, which makes the programmatic echo a provable no-op.
 
   // ==========================================================================
   // Event Handlers (Svelte 5 event prop format - data passed directly)
@@ -249,15 +275,20 @@
    * With bind:viewport, SvelteFlow updates localViewport directly.
    * This just calls the callback for persistence.
    */
-  function handleMoveEnd(event: any, newViewport: { x: number; y: number; zoom: number }) {
-    // Don't call callback during restoration (prevents sending stale viewport to server)
-    if (isRestoring) {
+  function handleMoveEnd(_event: unknown, newViewport: { x: number; y: number; zoom: number }) {
+    // Value guard, read non-reactively. Dispatching `setViewport` moves the
+    // canvas, which fires `onmoveend` again — this is what terminates that.
+    const current = store.state.viewport;
+    if (
+      current.x === newViewport.x &&
+      current.y === newViewport.y &&
+      current.zoom === newViewport.zoom
+    ) {
       return;
     }
-    // Call direct callback for persistence
-    if (onViewportChange) {
-      onViewportChange(newViewport);
-    }
+
+    store.dispatch(liftAction({ type: 'setViewport', viewport: newViewport }));
+    onViewportChange?.(newViewport);
   }
 
   /**
@@ -302,7 +333,16 @@
 <!-- Canvas -->
 <!-- ========================================================================== -->
 
-<div class="node-canvas {className}" style="width: 100%; height: 100%;">
+<!--
+  `data-connecting` exposes `connectionInProgress`, which the reducer has
+  always maintained and nothing ever read. Consumers can style the canvas
+  while a connection is being dragged.
+-->
+<div
+  class="node-canvas {className}"
+  style="width: 100%; height: 100%;"
+  data-connecting={$store.connectionInProgress ? '' : undefined}
+>
   <SvelteFlow
     {nodes}
     {edges}
@@ -312,7 +352,9 @@
     {connectionLineType}
     {panOnDrag}
     {zoomOnScroll}
-    elementsSelectable={selectable}
+    elementsSelectable={selectable && !$store.readonly}
+    nodesDraggable={!$store.readonly}
+    nodesConnectable={!$store.readonly}
     {minZoom}
     {maxZoom}
     {...(snapGrid ? { snapGrid } : {})}
@@ -331,11 +373,8 @@
     onedgeclick={handleEdgeClick}
     onpaneclick={handlePaneClick}
   >
-    <!-- ViewportSetter uses useSvelteFlow() to programmatically set viewport -->
-    <ViewportSetter
-      viewport={props.externalViewport ?? null}
-      onApplied={handleViewportApplied}
-    />
+    <!-- Turns store viewport actions into useSvelteFlow() calls. -->
+    <FlowCommands {store} {unliftAction} />
 
     {#if $store.showControls}
       <Controls />
