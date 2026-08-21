@@ -48,9 +48,21 @@ export const toastReducer: Reducer<ToastState, ToastAction, ToastDependencies> =
 			// Add toast to queue
 			let newToasts = [...state.toasts, toast];
 
-			// Enforce max toasts limit (remove oldest)
-			if (newToasts.length > state.maxToasts) {
-				newToasts = newToasts.slice(newToasts.length - state.maxToasts);
+			// Enforce the cap, evicting toasts that are already animating out
+			// FIRST. Two problems appeared once removal was deferred: a toast
+			// mid-dismissal held a slot and a fully live one was evicted in its
+			// place, and a dismissing toast sliced out here never reached
+			// `toastRemoved`, so `onToastDismissed` fired zero times for a
+			// dismissal the user had actually performed.
+			//
+			// Evicted dismissing toasts are reported here instead, so the
+			// callback fires exactly once on every path.
+			const evicted: Toast[] = [];
+			while (newToasts.length > state.maxToasts) {
+				const victimIndex = newToasts.findIndex((t) => t.dismissing);
+				const index = victimIndex === -1 ? 0 : victimIndex;
+				evicted.push(newToasts[index]!);
+				newToasts = [...newToasts.slice(0, index), ...newToasts.slice(index + 1)];
 			}
 
 			const newState: ToastState = {
@@ -67,6 +79,18 @@ export const toastReducer: Reducer<ToastState, ToastAction, ToastDependencies> =
 						dispatch({ type: 'toastAutoDismissed', id: toast.id });
 					})
 				);
+			}
+
+			// Report any dismissal the cap cut short, so `onToastDismissed` fires
+			// exactly once per dismissed toast on every path.
+			for (const victim of evicted) {
+				if (victim.dismissing && deps?.onToastDismissed) {
+					effects.push(
+						Effect.run<ToastAction>(async () => {
+							deps.onToastDismissed?.(victim);
+						})
+					);
+				}
 			}
 
 			// Call onToastAdded callback
@@ -135,7 +159,11 @@ export const toastReducer: Reducer<ToastState, ToastAction, ToastDependencies> =
 
 		case 'toastActionClicked': {
 			const toast = state.toasts.find((t) => t.id === action.id);
-			if (!toast || !toast.action) {
+			// `dismissing` guard, matching `toastDismissed`. Removal is deferred
+			// for the exit animation, so the action button stays in the DOM and
+			// clickable for that whole window — without this a second click
+			// re-ran `onClick`, which for an "Undo" or "Retry" is a data bug.
+			if (!toast || !toast.action || toast.dismissing) {
 				return [state, Effect.none<ToastAction>()];
 			}
 
@@ -159,23 +187,30 @@ export const toastReducer: Reducer<ToastState, ToastAction, ToastDependencies> =
 		}
 
 		case 'allToastsDismissed': {
-			const dismissedToasts = state.toasts;
+			// Marks, like every other dismissal path. Clearing the array outright
+			// meant these toasts still popped out of existence with no exit
+			// animation — the very thing the two-step dismissal exists to fix,
+			// left unfixed on this path.
+			const pending = state.toasts.filter((t) => !t.dismissing);
+			if (pending.length === 0) {
+				return [state, Effect.none<ToastAction>()];
+			}
 
 			const newState: ToastState = {
 				...state,
-				toasts: []
+				toasts: state.toasts.map((t) => (t.dismissing ? t : { ...t, dismissing: true }))
 			};
 
-			// Call onToastDismissed for each toast
-			const effect = deps?.onToastDismissed
-				? Effect.run<ToastAction>(async () => {
-						dismissedToasts.forEach((toast) => {
-							deps.onToastDismissed?.(toast);
-						});
-					})
-				: Effect.none<ToastAction>();
-
-			return [newState, effect];
+			return [
+				newState,
+				Effect.batch(
+					...pending.map((toast) =>
+						Effect.afterDelay<ToastAction>(state.exitDurationMs, (dispatch) =>
+							dispatch({ type: 'toastRemoved', id: toast.id })
+						)
+					)
+				)
+			];
 		}
 
 		case 'maxToastsChanged': {

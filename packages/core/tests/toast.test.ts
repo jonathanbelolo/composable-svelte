@@ -377,9 +377,18 @@ describe('Dismiss All', () => {
 
 		expect(store.state.toasts).toHaveLength(3);
 
+		// Now marks and defers, like every other dismissal path, so the toasts
+		// animate out instead of vanishing.
 		await store.send({ type: 'allToastsDismissed' }, (state) => {
-			expect(state.toasts).toHaveLength(0);
+			expect(state.toasts).toHaveLength(3);
+			expect(state.toasts.every((t) => t.dismissing)).toBe(true);
 		});
+
+		for (const id of store.state.toasts.map((t) => t.id)) {
+			await store.receive({ type: 'toastRemoved', id });
+		}
+
+		expect(store.state.toasts).toHaveLength(0);
 	});
 
 	it('calls onToastDismissed for each toast', async () => {
@@ -391,10 +400,16 @@ describe('Dismiss All', () => {
 		const toasts = [...store.state.toasts];
 
 		await store.send({ type: 'allToastsDismissed' });
+		// Fires on removal, not on the mark — the same rule as a single dismiss.
+		expect(onToastDismissed, 'fired before the toasts were removed').not.toHaveBeenCalled();
+
+		for (const id of store.state.toasts.map((t) => t.id)) {
+			await store.receive({ type: 'toastRemoved', id });
+		}
 
 		expect(onToastDismissed).toHaveBeenCalledTimes(3);
 		toasts.forEach((toast) => {
-			expect(onToastDismissed).toHaveBeenCalledWith(toast);
+			expect(onToastDismissed).toHaveBeenCalledWith({ ...toast, dismissing: true });
 		});
 	});
 });
@@ -550,5 +565,84 @@ describe('Custom ID Generator', () => {
 		);
 
 		expect(customGenerateId).toHaveBeenCalledTimes(2);
+	});
+});
+
+// ================================================================
+// Test Suite: Two-step dismissal edge cases
+// ================================================================
+
+describe('Dismissal edge cases', () => {
+	let store: ReturnType<typeof createTestStore<ToastState, ToastAction>>;
+	let onToastDismissed: ReturnType<typeof vi.fn>;
+
+	beforeEach(() => {
+		onToastDismissed = vi.fn();
+		store = createTestStore({
+			initialState: createInitialToastState({ maxToasts: 2 }),
+			reducer: toastReducer,
+			dependencies: { onToastDismissed }
+		});
+	});
+
+	it('a toast evicted by the cap while dismissing still reports', async () => {
+		// Deferring removal opened a window the old immediate-removal code did
+		// not have: `toastAdded`'s cap could slice a dismissing toast out of the
+		// array before its `toastRemoved` landed, so `toastRemoved` found nothing
+		// and returned early — `onToastDismissed` fired ZERO times for a toast
+		// the user had actually dismissed.
+		await store.send({ type: 'toastAdded', toast: createToast('A') });
+		const a = store.state.toasts[0].id;
+		await store.send({ type: 'toastAdded', toast: createToast('B') });
+		await store.send({ type: 'toastDismissed', id: a });
+		await store.send({ type: 'toastAdded', toast: createToast('C') });
+
+		expect(
+			onToastDismissed,
+			'a dismissed toast was evicted by the cap and never reported'
+		).toHaveBeenCalledTimes(1);
+	});
+
+	it('the cap evicts a live toast before a dismissing one', async () => {
+		// A toast already animating away should give up its slot first. It used
+		// to be kept while a fully live toast was evicted in its place.
+		await store.send({ type: 'toastAdded', toast: createToast('A') });
+		await store.send({ type: 'toastAdded', toast: createToast('B') });
+		const b = store.state.toasts[1].id;
+		await store.send({ type: 'toastDismissed', id: b });
+		await store.send({ type: 'toastAdded', toast: createToast('C') });
+
+		const descriptions = store.state.toasts.map((t) => t.description);
+		expect(descriptions, 'the live toast was evicted, not the dismissing one').toContain('A');
+	});
+
+	it('an action can only be triggered once', async () => {
+		// The action button stays in the DOM for the whole exit-animation window
+		// now, so it stays clickable. `toastDismissed` is idempotent;
+		// `toastActionClicked` was not, so a second click re-ran `onClick`.
+		// For an "Undo" or "Retry" action that is a data bug.
+		const onClick = vi.fn();
+		await store.send({
+			type: 'toastAdded',
+			toast: createToast('X', { action: { label: 'Undo', onClick } })
+		});
+		const id = store.state.toasts[0].id;
+
+		await store.send({ type: 'toastActionClicked', id });
+		await store.send({ type: 'toastActionClicked', id });
+
+		expect(onClick, 'the action ran twice during the exit window').toHaveBeenCalledTimes(1);
+	});
+
+	it('allToastsDismissed animates out like every other path', async () => {
+		// The commit's thesis is that `animateToastOut` had no caller. On this
+		// path it still had none — the array was cleared outright.
+		await store.send({ type: 'toastAdded', toast: createToast('A') });
+		await store.send({ type: 'toastAdded', toast: createToast('B') });
+
+		await store.send({ type: 'allToastsDismissed' }, (state) => {
+			expect(state.toasts, 'toasts vanished instead of animating out').toHaveLength(2);
+			expect(state.toasts.every((t) => t.dismissing)).toBe(true);
+		});
 	});
 });

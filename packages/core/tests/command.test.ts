@@ -844,3 +844,60 @@ describe('Command Palette', () => {
 		});
 	});
 });
+
+describe('commandsUpdated convergence', () => {
+	/**
+	 * `Command.svelte` dispatches this from an unguarded `$effect` that reads
+	 * store state, so a case returning a fresh object on every dispatch loops
+	 * forever. `sameCommands`/`sameGroups` exist to stop that.
+	 *
+	 * They did not, for one path: `sameGroups(array, undefined)` returned false,
+	 * but the case only wrote `groups` when `action.groups !== undefined` — so
+	 * clearing groups produced a new state object on EVERY dispatch while
+	 * `groups` never actually cleared. Measured: 10 identical dispatches, 10 new
+	 * states, groups unchanged. In a browser that pinned a core at 100% with no
+	 * error, because it never reaches Svelte's depth guard.
+	 */
+	it('converges when groups is cleared', () => {
+		let state = createInitialCommandState({
+			commands: [{ id: 'a', label: 'A' }],
+			groups: [{ id: 'file', label: 'Files' }]
+		});
+
+		let changed = 0;
+		for (let i = 0; i < 10; i += 1) {
+			const [next] = commandReducer(
+				state,
+				{ type: 'commandsUpdated', commands: state.commands, groups: undefined },
+				undefined
+			);
+			if (next !== state) changed += 1;
+			state = next;
+		}
+
+		expect(changed, 'the guard never converged — this is an infinite effect loop').toBe(1);
+		expect(state.groups, 'groups never actually cleared').toBeUndefined();
+	});
+
+	it('stays converged when nothing changes', () => {
+		// The other half: a fix that always returns a new state would pass the
+		// test above only by never converging at all.
+		let state = createInitialCommandState({
+			commands: [{ id: 'a', label: 'A' }],
+			groups: [{ id: 'file', label: 'Files' }]
+		});
+
+		let changed = 0;
+		for (let i = 0; i < 5; i += 1) {
+			const [next] = commandReducer(
+				state,
+				{ type: 'commandsUpdated', commands: state.commands, groups: state.groups },
+				undefined
+			);
+			if (next !== state) changed += 1;
+			state = next;
+		}
+
+		expect(changed).toBe(0);
+	});
+});

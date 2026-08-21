@@ -149,7 +149,14 @@
 
 	// Create store
 	const store = createStore({
-		initialState: createInitialCommandState({ commands, isOpen: open, maxResults, groups, caseSensitive }),
+		initialState: createInitialCommandState({
+			commands,
+			isOpen: open,
+			maxResults,
+			groups,
+			caseSensitive,
+			filterFunction
+		}),
 		reducer: commandReducer,
 		dependencies
 	});

@@ -34,6 +34,7 @@ import Accordion from '../src/lib/components/ui/accordion/Accordion.svelte';
 import FileUpload from '../src/lib/components/ui/file-upload/FileUpload.svelte';
 import ImageGallery from '../src/lib/components/image-gallery/ImageGallery.svelte';
 import Toaster from '../src/lib/components/toast/Toaster.svelte';
+import { createToastStore } from '../src/lib/components/toast/index.js';
 import FormMountTest from './test-components/FormMountTest.svelte';
 import TooltipMountTest from './test-components/TooltipMountTest.svelte';
 import DropdownMenuMountTest from './test-components/DropdownMenuMountTest.svelte';
@@ -52,7 +53,9 @@ const cases: Array<[string, any, () => Record<string, unknown>]> = [
 	['Accordion', Accordion, () => ({ items: [{ id: '1', title: 'One', content: 'c' }] })],
 	['FileUpload', FileUpload, () => ({ accept: 'image/*', maxSize: 1024 })],
 	['ImageGallery', ImageGallery, () => ({ images: [{ id: '1', url: '/a.jpg', alt: 'A' }] })],
-	['Toaster', Toaster, () => ({})],
+	// Toaster is presentational now: the store is required, because an internal
+	// one was unreachable and rendered nothing.
+	['Toaster', Toaster, () => ({ store: createToastStore() })],
 	// These three require a `children` snippet, which a .ts file cannot express.
 	['Form', FormMountTest, () => ({})],
 	['Tooltip', TooltipMountTest, () => ({})],

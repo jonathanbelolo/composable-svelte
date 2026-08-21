@@ -93,7 +93,13 @@
 				`filterFunction`, `maxResults` and `groups` had nowhere to become
 				visible and a consumer passing no children saw only the empty state.
 			-->
-			{#each sections as section (section.label ?? '__ungrouped__')}
+			<!--
+				Keyed by index, not label. Labels are not unique by construction —
+				`applyFilter` now buckets every group so a run-length section
+				cannot repeat one, but keying on data that only happens to be
+				unique is how the duplicate-key crash happened in the first place.
+			-->
+			{#each sections as section, sectionIndex (sectionIndex)}
 				{#if section.label}
 					<CommandGroup label={section.label}>
 						{#snippet children()}

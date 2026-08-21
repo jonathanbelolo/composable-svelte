@@ -183,3 +183,84 @@ describe('groups', () => {
 		).toBe(visible[2]);
 	});
 });
+
+describe('grouping cannot produce a duplicate key', () => {
+	/**
+	 * `CommandList` builds its sections by run-length grouping over
+	 * `filteredCommands` and keyed them by label. Any interleaving of the same
+	 * group therefore produced a duplicate key, which Svelte throws on
+	 * (`each_key_duplicate`) — and the whole palette rendered EMPTY.
+	 *
+	 * Two independent triggers, both ordinary usage:
+	 *  - `groups` omitted entirely. `applyFilter` only bucketed when `groups`
+	 *    was non-empty, so interleaved membership survived untouched.
+	 *  - an undeclared group when `groups` IS given: every unknown group got the
+	 *    same rank (`order.size`), so the tiebreak preserved their interleaving.
+	 *    Measured directly: `xx, yy, xx` came back as `xx, yy, xx`.
+	 */
+	it('renders interleaved groups with no `groups` prop', async () => {
+		render(CommandCompositionTest, {
+			props: {
+				commands: [
+					{ id: '1', label: 'One', group: 'alpha' },
+					{ id: '2', label: 'Two', group: 'beta' },
+					{ id: '3', label: 'Three', group: 'alpha' }
+				]
+			}
+		});
+		await settle(400);
+
+		expect(options(), 'the palette rendered nothing — duplicate each key').toHaveLength(3);
+		expect(headings()).toEqual(['alpha', 'beta']);
+	});
+
+	it('renders interleaved undeclared groups alongside declared ones', async () => {
+		render(CommandCompositionTest, {
+			props: {
+				commands: [
+					{ id: '1', label: 'One', group: 'xx' },
+					{ id: '2', label: 'Two', group: 'yy' },
+					{ id: '3', label: 'Three', group: 'xx' }
+				],
+				groups: [{ id: 'known', label: 'Known' }]
+			}
+		});
+		await settle(400);
+
+		expect(options(), 'the palette rendered nothing — duplicate each key').toHaveLength(3);
+	});
+
+	it('interleaves ungrouped commands without colliding', async () => {
+		render(CommandCompositionTest, {
+			props: {
+				commands: [
+					{ id: '1', label: 'Loose one' },
+					{ id: '2', label: 'Filed', group: 'file' },
+					{ id: '3', label: 'Loose two' }
+				]
+			}
+		});
+		await settle(400);
+
+		expect(options()).toHaveLength(3);
+	});
+});
+
+describe('the initial list uses the same filter as every later one', () => {
+	it('applies a custom filterFunction before the user types', async () => {
+		// `createInitialCommandState` called `applyFilter` with no deps, so the
+		// DEFAULT filter produced the first list. The mount effect then dispatched
+		// `commandsUpdated` with the same array references, so `sameCommands` and
+		// `sameGroups` both short-circuited and the reducer returned the identical
+		// state — the consumer's filter never ran until the first keystroke.
+		const filterFunction = vi.fn((cmds: CommandItem[]) => cmds.slice(0, 1));
+		render(CommandCompositionTest, { props: { commands: five, filterFunction } });
+		await settle(400);
+
+		expect(
+			options(),
+			'the consumer filter was skipped for the initial list'
+		).toHaveLength(1);
+		expect(filterFunction).toHaveBeenCalled();
+	});
+});

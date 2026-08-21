@@ -88,9 +88,15 @@ export interface CommandState {
 	commands: CommandItem[];
 
 	/**
-	 * Optional grouped commands.
+	 * Group definitions: display labels and the order groups appear in.
+	 * Membership comes from each command's own `group` id.
+	 *
+	 * Explicitly `| undefined` under `exactOptionalPropertyTypes`, because
+	 * `commandsUpdated` assigns it unconditionally — writing it only when
+	 * defined left groups permanently unclearable and the guarded effect
+	 * looping forever.
 	 */
-	groups?: CommandGroup[];
+	groups?: CommandGroup[] | undefined;
 
 	/**
 	 * Current search query.
@@ -174,6 +180,15 @@ export function createInitialCommandState(config?: {
 	isOpen?: boolean | undefined;
 	caseSensitive?: boolean | undefined;
 	maxResults?: number | undefined;
+	/**
+	 * The same filter the store's dependencies carry.
+	 *
+	 * Without it the factory computes the first list with the DEFAULT filter, so
+	 * a consumer's `filterFunction` did not run until the first keystroke — and
+	 * `commandsUpdated`'s guard then short-circuited on unchanged inputs, so
+	 * nothing ever corrected it.
+	 */
+	filterFunction?: ((commands: CommandItem[], query: string) => CommandItem[]) | undefined;
 }): CommandState {
 	const commands = config?.commands ?? [];
 
@@ -193,7 +208,7 @@ export function createInitialCommandState(config?: {
 			},
 			commands,
 			'',
-			undefined
+			config?.filterFunction ? { filterFunction: config.filterFunction } : undefined
 		),
 		selectedIndex: 0,
 		isOpen: config?.isOpen ?? false,
@@ -248,20 +263,34 @@ export function applyFilter(
 		? deps.filterFunction(commands, query)
 		: defaultFilterFunction(commands, query, { caseSensitive: state.caseSensitive });
 
-	// Ungrouped first, then each declared group in order, then any command whose
-	// group matches no declaration — each bucket keeping its original order.
+	// Ungrouped first, then each declared group in declared order, then any
+	// undeclared group in first-appearance order. Each bucket keeps its original
+	// order (the decorate/sort/undecorate makes that stable regardless of the
+	// engine's own sort stability).
+	//
+	// EVERY group gets its own rank, and the bucketing runs even when no
+	// `groups` are declared. Both matter: `CommandList` builds its sections by
+	// run-length grouping, so any interleaving of the same group would emit that
+	// group's heading twice — a duplicate `{#each}` key, which Svelte throws on,
+	// rendering the whole palette empty. Previously undeclared groups all shared
+	// one rank and so stayed interleaved, and with no `groups` prop nothing was
+	// bucketed at all.
 	const order = new Map((state.groups ?? []).map((g, i) => [g.id, i]));
-	const rank = (command: CommandItem) => {
+	let nextRank = order.size;
+	const rankOf = (command: CommandItem) => {
 		if (!command.group) return -1;
-		return order.get(command.group) ?? order.size;
+		let rank = order.get(command.group);
+		if (rank === undefined) {
+			rank = nextRank;
+			nextRank += 1;
+			order.set(command.group, rank);
+		}
+		return rank;
 	};
-	const ordered =
-		state.groups && state.groups.length > 0
-			? filtered
-					.map((command, i) => ({ command, i }))
-					.sort((x, y) => rank(x.command) - rank(y.command) || x.i - y.i)
-					.map(({ command }) => command)
-			: filtered;
+	const ordered = filtered
+		.map((command, i) => ({ command, i, rank: rankOf(command) }))
+		.sort((x, y) => x.rank - y.rank || x.i - y.i)
+		.map(({ command }) => command);
 
 	return state.maxResults ? ordered.slice(0, state.maxResults) : ordered;
 }

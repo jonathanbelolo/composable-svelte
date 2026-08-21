@@ -24,6 +24,12 @@ import { applyFilter, getSelectedCommand } from './command.types.js';
  * forever (`effect_update_depth_exceeded`). Comparing by reference is not
  * enough: `commands={[...]}` inline is a new array on every render.
  */
+function sameKeywords(a: string[] | undefined, b: string[] | undefined): boolean {
+	if (a === b) return true;
+	if (!a || !b) return false;
+	return a.length === b.length && a.every((keyword, i) => keyword === b[i]);
+}
+
 function sameCommands(a: CommandItem[], b: CommandItem[]): boolean {
 	if (a === b) return true;
 	if (a.length !== b.length) return false;
@@ -34,7 +40,18 @@ function sameCommands(a: CommandItem[], b: CommandItem[]): boolean {
 			command.label === other.label &&
 			command.description === other.description &&
 			command.group === other.group &&
-			command.disabled === other.disabled
+			command.disabled === other.disabled &&
+			// `icon` and `shortcut` are compared because `CommandList` now renders
+			// them from store state — before it did, a change to either was
+			// invisible and harmless; now it would leave stale pixels on screen.
+			command.icon === other.icon &&
+			command.shortcut === other.shortcut &&
+			// `onSelect`/`action` decide what EXECUTING does, and `keywords` what
+			// matches. A change to any of them that the guard swallowed left the
+			// store running a stale closure or filtering on stale terms.
+			command.onSelect === other.onSelect &&
+			command.action === other.action &&
+			sameKeywords(command.keywords, other.keywords)
 		);
 	});
 }
@@ -158,18 +175,26 @@ export const commandReducer: Reducer<CommandState, CommandAction, CommandDepende
 		}
 
 		case 'commandsUpdated': {
-			// Both compared by value: this is dispatched from an unguarded
-			// `$effect`, and `commands={[...]}` / `groups={[...]}` inline are
-			// fresh arrays on every render. Returning the identical state is what
-			// stops that effect re-triggering forever.
+			// Guard FIRST, before computing anything. This is dispatched from an
+			// unguarded `$effect`, and `commands={[...]}` / `groups={[...]}`
+			// inline are fresh arrays every render, so returning the identical
+			// state is what stops that effect re-triggering forever.
+			//
+			// Computing before the guard also ran `deps.filterFunction` on the
+			// converging dispatch — measured at 2 calls per change for a
+			// consumer's filter, which for an expensive one is real waste.
 			if (sameCommands(state.commands, action.commands) && sameGroups(state.groups, action.groups)) {
 				return [state, Effect.none()];
 			}
 
+			// `groups` is assigned unconditionally, including to undefined.
+			// Writing it only when defined meant clearing groups produced a fresh
+			// state object forever while `groups` never actually cleared — not a
+			// stale value but an unterminating loop.
 			const nextState: CommandState = {
 				...state,
 				commands: action.commands,
-				...(action.groups !== undefined && { groups: action.groups })
+				groups: action.groups
 			};
 			const filtered = applyFilter(nextState, action.commands, state.query, deps);
 
