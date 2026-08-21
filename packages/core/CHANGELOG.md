@@ -12,8 +12,52 @@ click or import that produces no effect. Everything below was reachable and
 inert, not merely unimplemented. Nothing here is deprecated-then-removed —
 0.x, and the alternative to a breaking change was leaving a lie in place.
 
+### Animation compliance
+
+`guides/ANIMATION-GUIDELINES.md` is rewritten and now mechanically enforced. An
+audit found **135 CSS animation sites** in shipped source that the previous
+version could not adjudicate — it contradicted itself on Pattern A, treated
+`@keyframes` as allowed regardless of whether it repeated, and had an
+exceptions category with no criteria.
+
+- **The rule is now one question**: what *drives* the change — a pseudo-class, a
+  state change, an endless loop, or a continuous external source. A one-shot
+  `@keyframes` is a lifecycle animation, not an allowed keyframe animation; the
+  `infinite` keyword is the test.
+- **`PresentationState` is required only where the lifecycle must be in the
+  store** — something sequencing on completion, or an element that must animate
+  out before unmounting. Elsewhere a plain boolean plus Motion One is the
+  sanctioned pattern, and the guide is explicit that it is fire-and-forget.
+- **Reduced motion is mandatory**, and a skipped animation must still dispatch
+  its completion — otherwise skipping it deadlocks the state machine. No helper
+  in `animate.ts` honours the preference yet; that gap is now recorded rather
+  than silently carried.
+- **`packages/core/tests/repo/animation-policy.test.ts`** enforces the CSS ban as
+  a ratchet: it fails on any violation outside a recorded backlog *and* on any
+  backlog entry whose file has become clean, so an excuse cannot outlive its
+  defect.
+- **Converted**: the four disclosure chevrons (Accordion, Collapsible, Select,
+  Combobox) onto `animateChevron`; `Select`'s dropdown, which had no animation at
+  all and a bound-but-unread `dropdownElement`; and the `Switch` thumb, which had
+  three authors for one property.
+
 ### Fixed
 
+- **Collapsible's collapse animated from 0 to 0.** The `{#if}` sat inside the
+  element being measured, so Svelte emptied it before the effect read
+  `scrollHeight`. Measured: five consecutive height samples of exactly 0.
+- **Accordion and Collapsible content had three authors** for height, opacity and
+  overflow — a reactive style attribute, Tailwind utilities, and Motion One. The
+  reactive attribute compiles to a `cssText` assignment, which wipes every inline
+  style Motion wrote, and fires exactly when an animation is starting or being
+  interrupted.
+- **Server rendering of animated elements.** Moving an element's position from
+  markup into an `$effect` means the server emits it at rest, because effects do
+  not run there: a checked `<Switch>` was sent with `bg-primary` on the track and
+  its thumb at zero. Positions are now placed declaratively from a non-reactive
+  value and animated by Motion One thereafter, and
+  `tests/ssr/animated-initial-state.test.ts` compiles the components the way the
+  server does — the entire browser-mode suite is blind to this class of defect.
 - **`Toaster` could not display anything a consumer controlled.** It rendered
   `externalToasts ?? $store.toasts`, the only dispatch any rendered element
   could produce was `toastDismissed`, and that case returned early for any toast
@@ -188,6 +232,16 @@ inert, not merely unimplemented. Nothing here is deprecated-then-removed —
   constrained nothing: a type-level no-op wearing the shape of a contract.
 - **`TreeNodeItemProps`.** `TreeNodeItem` is a snippet that types its own
   parameter inline, so the interface described nothing.
+- **`Effect.animated()` and `Effect.transition()`.** Both had zero callers, and
+  they exist to time a fixed-duration CSS animation from the reducer — which the
+  animation guideline now prohibits. Investigating whether they were needed as a
+  timeout fallback produced a finding worth keeping: Motion One's `.finished`
+  captures no `reject` and never settles when an animation is interrupted, so
+  the `try/catch` in every helper is dead code for that path. The components
+  survive it because the `(status, content)` guard means the live promise always
+  matches the live status, and `tests/animation-interruption.test.ts` pins that.
+  A fallback is required only where that correspondence breaks, so adding one by
+  default would have been unreachable code.
 - **`FieldState.value` and `FieldState.focused`** from the *stored* per-field
   record. The reducer wrote both exactly once, at init, and never again: the real
   value lives in `state.data` and focus in `state.focusedField`, so both stored

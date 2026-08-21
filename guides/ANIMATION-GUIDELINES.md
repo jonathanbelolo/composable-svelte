@@ -138,23 +138,38 @@ to catch.
 ## Completion, and what happens when it never arrives
 
 A store-owned lifecycle is a promise that a completion event will be dispatched.
-Anything that can break that promise — a failed animation, a preference that
-skips it, an element that unmounts mid-flight — leaves the machine stuck, because
-the reducer guards (`status !== 'presented'` and friends) then refuse every
-subsequent transition.
+If that promise is broken the machine sticks, because the reducer guards
+(`status !== 'presented'` and friends) then refuse every later transition.
 
-- Dispatch `presentationCompleted` / `dismissalCompleted` from the animation's
-  `.then()`, inside `queueMicrotask`.
-- For anything the user can get stuck behind, add a **timeout fallback** at 2–3×
-  the expected duration, dispatching `presentationTimeout` / `dismissalTimeout`
-  (`PresentationEvent`, `navigation/types.ts:483`). Guard the completion cases so
-  whichever of the two arrives second is a no-op returning the identical state.
+**Motion One's `.finished` can break it, and in a specific way worth knowing.**
+Verified in `motion@12.23.24`: `motion-dom`'s `WithPromise` builds
+`new Promise((resolve) => …)` and captures **no `reject`**. `notifyFinished()` is
+called only from `finish()`; `cancel()` and `stop()` go straight to `teardown()`.
+And `MotionValue.start()` stops the previous animation before starting a new one.
 
-`Effect.animated()` and `Effect.transition()` (`effect.ts:368`, `:451`) exist for
-the fixed-duration version of this and have **zero callers in shipped source**.
-They are for CSS-timed animations, which this document now prohibits — so either
-delete them or repurpose them as the timeout-fallback helper. Leaving them
-exported, blessed by the spec and unmentioned here is what let them rot.
+So an **interrupted animation's promise never settles** — not resolved, not
+rejected, pending for the life of the page. Two consequences:
+
+- The `try/catch` in every helper in `animate.ts` is **dead code for that path**.
+  There is nothing to catch. Do not reach for `.catch()` as your recovery.
+- A `.then()` that dispatches completion will simply never run.
+
+**Why the components here survive that**, and it is structural rather than luck:
+the `(status, content)` guard starts a new animation only when the status has
+actually changed, so the *live* promise always matches the *live* status. A hung
+promise is therefore always a superseded one — and the reducer's own status guard
+would have rejected its dispatch anyway. `tests/animation-interruption.test.ts`
+pins both halves.
+
+**When you do need a timeout fallback:** when that correspondence breaks. Two
+effects animating the same element, an element re-keyed mid-flight, or any design
+where the live status can have no live promise. Then dispatch a timeout event at
+2–3× the expected duration and guard the completion cases so whichever arrives
+second returns the identical state.
+
+Do **not** add a fallback where the correspondence holds. A recovery path with no
+reachable trigger is unreachable code, and this codebase is being cleaned of
+exactly that.
 
 ## Invariants for the guarded `$effect`
 

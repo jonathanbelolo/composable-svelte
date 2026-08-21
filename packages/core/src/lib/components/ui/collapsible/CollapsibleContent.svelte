@@ -90,6 +90,26 @@
 			if (!$store.isExpanded) renderContent = false;
 		});
 	});
+
+	// The resting appearance, captured once and never reactive.
+	//
+	// This element has exactly one author for height, opacity and overflow after
+	// mount: Motion One. It used to have three. A reactive style attribute
+	// compiles to `set_style`, which assigns `cssText` — a total wipe of every
+	// inline style Motion had written — and it fires exactly on an expand or
+	// collapse, i.e. while an animation is starting or being interrupted. The
+	// Tailwind height/overflow/opacity utilities were a third author, and an
+	// unreliable one: `cn` is `twMerge`, so a consumer className setting its own
+	// height deletes them outright.
+	//
+	// They cannot simply be dropped, either: `$effect` does not run on the server,
+	// so without a declarative resting value a collapsed section is sent at full
+	// height anywhere Tailwind is not compiled. Bound per-property below, which
+	// Svelte diffs rather than rebuilding — and since this never changes, it is
+	// written once and then left to Motion One.
+	const initialContentStyle = $store.isExpanded
+		? { height: 'auto', overflow: undefined, opacity: undefined }
+		: { height: '0px', overflow: 'hidden', opacity: '0' };
 </script>
 
 <div
@@ -97,12 +117,10 @@
 	id={contentId}
 	role="region"
 	aria-labelledby={triggerId}
-	class={cn(
-		'text-sm',
-		!$store.isExpanded && 'h-0 overflow-hidden opacity-0',
-		className
-	)}
-	style={$store.isExpanded ? 'height: auto;' : 'height: 0; overflow: hidden; opacity: 0;'}
+	class={cn('text-sm', className)}
+	style:height={initialContentStyle.height}
+	style:overflow={initialContentStyle.overflow}
+	style:opacity={initialContentStyle.opacity}
 >
 	{#if renderContent}
 		<div class="pb-4 pt-0">

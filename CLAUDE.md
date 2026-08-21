@@ -345,14 +345,14 @@ if (result.matched) {
 ```
 
 ### Timeout Fallbacks
-Always include timeout fallbacks for critical animations:
 
-```typescript
-Effect.batch(
-  Effect.afterDelay(300, (d) => d({ type: 'presentationCompleted' })),
-  Effect.afterDelay(600, (d) => d({ type: 'presentationTimeout' }))  // 2x expected duration
-)
-```
+Only where they are reachable. Motion One's `.finished` never rejects and hangs
+forever when an animation is interrupted, so a `.catch()` is not recovery — but
+the `(status, content)` guard means the live promise always matches the live
+status, which makes a hung promise harmless in the components here. Add a
+fallback when that correspondence breaks (two effects on one element, an element
+re-keyed mid-flight), not by default. `guides/ANIMATION-GUIDELINES.md` has the
+rule and the evidence; `tests/animation-interruption.test.ts` pins it.
 
 ### Blocked Actions During Animation
 Disable UI elements when animations are in progress:

@@ -33,6 +33,7 @@ export default defineConfig({
       // cannot do. Run by vitest.node.config.ts instead.
       'tests/ssr/ssg.test.ts',
       'tests/ssr/animated-initial-state.test.ts',
+      'tests/ssr/content-initial-state.test.ts',
       'tests/styles/**',
       // Reaches isomorphic-dompurify, which needs its Node (jsdom) build.
       'tests/ssr/middleware.test.ts',

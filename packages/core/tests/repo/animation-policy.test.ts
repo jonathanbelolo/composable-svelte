@@ -97,9 +97,14 @@ const sourceFiles = readdirSync(packagesDir, { withFileTypes: true })
  * comment from a protocol-relative URL, and it keeps trailing comments strippable.
  */
 function stripComments(source: string): string {
+	// Newlines are preserved rather than deleted: a multi-line comment collapsed
+	// to nothing shifts every later line number, and reported numbers were running
+	// 4-17 lines low. A guard that points at the wrong line gets distrusted, then
+	// disabled.
+	const blank = (match: string) => match.replace(/[^\n]/g, '');
 	const withoutBlocks = source
-		.replace(/<!--[\s\S]*?-->/g, '')
-		.replace(/\/\*[\s\S]*?\*\//g, '');
+		.replace(/<!--[\s\S]*?-->/g, blank)
+		.replace(/\/\*[\s\S]*?\*\//g, blank);
 
 	return withoutBlocks
 		.split('\n')
@@ -115,6 +120,29 @@ function stripComments(source: string): string {
 			return line;
 		})
 		.join('\n');
+}
+
+/**
+ * The CSS properties a `transition` declaration actually animates.
+ *
+ * Handles the shorthand's comma-separated list and both spellings —
+ * `transition: height 0.1s, opacity 0.2s` and `transition-property: height`.
+ * Returns [] for `transition: all` and for a bare Tailwind `transition`, which
+ * the caller treats as "everything" rather than "nothing".
+ */
+export function extractProperties(declaration: string): string[] {
+	const tailwind = [...declaration.matchAll(/transition-(?!property\b)([a-z]+)(?![-\w])/g)].map(
+		(m) => m[1]!
+	);
+	if (tailwind.length > 0) return tailwind.filter((p) => p !== 'all');
+
+	const colon = declaration.match(/transition(?:-property)?\s*:\s*([\s\S]*)$/);
+	if (!colon) return [];
+
+	return colon[1]!
+		.split(',')
+		.map((part) => part.trim().split(/\s+/)[0] ?? '')
+		.filter((p) => p.length > 0 && p !== 'all' && !/^[\d.]/.test(p));
 }
 
 interface Violation {
@@ -207,21 +235,41 @@ function scan(file: string): Violation[] {
 		}
 
 		if (registered) {
-			// Registered files may transition only the properties they were
-			// granted. `transition-all` and a bare `transition:` are never
-			// grantable — they promise every property.
-			const grantsAll = /transition-all|(^|[\s;{])transition\s*:\s*all\b/.test(line);
-			const named = registered.properties.some((p) =>
-				new RegExp(`transition(-${p}\\b|\\s*:\\s*[^;]*\\b${p}\\b)`).test(line)
-			);
-			if (named && !grantsAll) continue;
+			// Registered files may transition only the properties they were granted.
+			//
+			// Read the whole *declaration*, not the line. `AudioVisualizer` writes
+			// `transition:` alone with its property list on the two following lines,
+			// and a line-at-a-time check finds no property name there — reporting a
+			// false positive on the very file the guideline holds up as the model
+			// entry.
+			const declaration = lines
+				.slice(i, i + 6)
+				.join(' ')
+				.split(';')[0]!;
+
+			// Anything that promises every property is never grantable.
+			const grantsAll =
+				/transition-all(?![-\w])/.test(declaration) ||
+				/transition(-property)?\s*:\s*all\b/.test(declaration) ||
+				/(^|[\s'"`:])transition(?![-\w:])/.test(declaration);
+
+			// Every property it transitions must be granted — not merely one of
+			// them. `transition: width 0.3s, background-color 0.3s` used to pass on
+			// the strength of `width` alone, which is how a grant silently widens.
+			const transitioned = extractProperties(declaration);
+			const allGranted =
+				transitioned.length > 0 &&
+				transitioned.every((p) => registered.properties.includes(p));
+
+			if (allGranted && !grantsAll) continue;
 			out.push({
 				file: rel,
 				line: i + 1,
 				text: line.trim(),
 				why: grantsAll
 					? `registered for [${registered.properties.join(', ')}] but transitions everything`
-					: `registered for [${registered.properties.join(', ')}] only`
+					: `registered for [${registered.properties.join(', ')}], but this transitions ` +
+						`[${extractProperties(lines.slice(i, i + 6).join(' ').split(';')[0]!).join(', ') || '?'}]`
 			});
 			continue;
 		}
@@ -299,7 +347,6 @@ const BACKLOG = new Set([
 	'media/src/lib/audio-player/FullAudioPlayer.svelte',
 	'media/src/lib/audio-player/MinimalAudioPlayer.svelte',
 	'media/src/lib/audio-player/PlaylistView.svelte',
-	'media/src/lib/voice-input/components/AudioVisualizer.svelte',
 	'media/src/lib/voice-input/components/ConversationModePanel.svelte',
 	'media/src/lib/voice-input/components/PushToTalkPanel.svelte',
 	'media/src/lib/voice-input/components/VoiceInputButton.svelte',
@@ -342,6 +389,51 @@ describe('animation policy', () => {
 		expect(DISABLES_ANIMATION.test('\ttransition: opacity 0.2s;')).toBe(false);
 		// A CSS pseudo-selector is not a Svelte directive.
 		expect(SVELTE_TRANSITION.test('\t.a:hover { color: red; }')).toBe(false);
+	});
+
+	it('reads what a transition declaration actually animates', () => {
+		// `extractProperties` is what makes a Register grant mean something, and it
+		// had never run against an assertion: every Register file was also in the
+		// backlog, so every verdict the branch produced was filtered out before it
+		// could fail anything. These fixtures exercise it directly.
+		expect(extractProperties('transition: width 0.3s;')).toEqual(['width']);
+
+		// Multi-line, the shape that produced a false positive on the very file the
+		// guideline holds up as its model Register entry.
+		expect(
+			extractProperties('transition: height 0.1s ease-out, opacity 0.2s ease')
+		).toEqual(['height', 'opacity']);
+
+		// The list matters in full — a grant covering only `width` must not be
+		// satisfied by a declaration that also moves a colour.
+		expect(extractProperties('transition: width 0.3s, background-color 0.3s')).toEqual([
+			'width',
+			'background-color'
+		]);
+
+		expect(extractProperties('transition-property: transform')).toEqual(['transform']);
+		expect(extractProperties("'transition-opacity',")).toEqual(['opacity']);
+
+		// "Everything" reads as no named property; the caller treats that as
+		// ungrantable rather than as a vacuous pass.
+		expect(extractProperties('transition: all 0.2s ease')).toEqual([]);
+		expect(extractProperties("'transition-all',")).toEqual([]);
+	});
+
+	it('a Register grant covers only the properties it names', () => {
+		// The end-to-end shape, via the same helper the branch uses.
+		const granted = ['width'];
+		const covers = (declaration: string) => {
+			const props = extractProperties(declaration);
+			return props.length > 0 && props.every((p) => granted.includes(p));
+		};
+
+		expect(covers('transition: width 0.1s;')).toBe(true);
+		expect(covers('transition: opacity 0.2s;')).toBe(false);
+		expect(covers('transition: width 0.3s, background-color 0.3s'), 'a grant widened').toBe(
+			false
+		);
+		expect(covers('transition: all 0.2s'), 'all is never grantable').toBe(false);
 	});
 
 	it('strips comments without eating code', () => {

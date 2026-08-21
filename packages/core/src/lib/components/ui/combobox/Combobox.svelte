@@ -138,6 +138,15 @@
 	let containerElement: HTMLElement | null = $state(null);
 	let inputElement: HTMLInputElement | null = $state(null);
 	let dropdownElement: HTMLElement | null = $state(null);
+	// Captured once, never reactive. The other three disclosure chevrons place
+	// themselves declaratively so the server can render them at the right angle;
+	// this one did not, which left its resting transform as `none` — correct by
+	// accident, since a combobox always mounts closed, and inconsistent enough
+	// that the shared test could not assert the same thing about all four.
+	const initialChevronTransform = $store.dropdown.status !== 'idle'
+		? 'rotate(180deg)'
+		: 'rotate(0deg)';
+
 	let chevronElement: SVGElement | null = $state(null);
 
 	// Get display value for input
@@ -335,6 +344,7 @@
 				<svg
 					bind:this={chevronElement}
 					data-combobox-chevron
+					style:transform={initialChevronTransform}
 					aria-hidden="true"
 					xmlns="http://www.w3.org/2000/svg"
 					width="16"

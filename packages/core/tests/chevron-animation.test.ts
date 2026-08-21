@@ -38,6 +38,19 @@ afterEach(() => {
 });
 
 /** Rotation in degrees, read off the live transform matrix. */
+/**
+ * Is the element positioned deliberately, or merely untransformed?
+ *
+ * `rotationOf` returns 0 for a real `rotate(0deg)` *and* for `transform: none`,
+ * so "starts unrotated" could not tell a correctly-placed chevron from a
+ * reverted, utility-class-driven one — Tailwind is not compiled here, so the
+ * reverted state has no transform at all. This is the other half of the pair.
+ */
+function isPlaced(el: HTMLElement): boolean {
+	const { transform } = getComputedStyle(el);
+	return Boolean(transform) && transform !== 'none';
+}
+
 function rotationOf(el: HTMLElement): number {
 	const { transform } = getComputedStyle(el);
 	if (!transform || transform === 'none') return 0;
@@ -66,8 +79,9 @@ function mount() {
 }
 
 describe('the combobox chevron', () => {
-	it('starts unrotated', () => {
+	it('starts placed, and unrotated', () => {
 		const cb = mount();
+		expect(isPlaced(cb.chevron()), 'the chevron has no transform at all').toBe(true);
 		expect(rotationOf(cb.chevron())).toBe(0);
 	});
 
@@ -125,9 +139,11 @@ describe('the rest of the disclosure family', () => {
 		{ name: 'select', host: 'select-host', settled: 180 }
 	] as const;
 
-	it.each(cases)('$name starts unrotated', ({ host }) => {
+	it.each(cases)('$name starts placed, and unrotated', ({ host }) => {
 		const all = mountAll();
-		expect(rotationOf(all.chevron(host) as unknown as HTMLElement)).toBe(0);
+		const el = all.chevron(host) as unknown as HTMLElement;
+		expect(isPlaced(el), 'the chevron has no transform at all').toBe(true);
+		expect(rotationOf(el)).toBe(0);
 	});
 
 	it.each(cases)('$name animates rather than snapping', async ({ host }) => {
