@@ -150,7 +150,7 @@ export type {
 	PaginationDependencies
 } from './pagination/index.js';
 
-// The six date helpers in calendar.types.ts are deliberately not re-exported —
+// The seven date helpers in calendar.types.ts are deliberately not re-exported —
 // nothing outside calendar/ uses them.
 export { Calendar, createInitialCalendarState, calendarReducer } from './calendar/index.js';
 export type {

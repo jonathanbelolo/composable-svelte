@@ -76,7 +76,9 @@
 		/**
 		 * Custom header snippet (month/year display).
 		 */
-		header?: Snippet<[{ month: Date; prevMonth: () => void; nextMonth: () => void }]>;
+		header?: Snippet<
+			[{ month: Date; prevMonth: () => void; nextMonth: () => void; setMonth: (date: Date) => void }]
+		>;
 
 		/**
 		 * Custom day cell snippet.
@@ -185,8 +187,20 @@
 
 	const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-	const monthName = $derived(monthNames[currentMonthDate.getMonth()]);
 	const year = $derived(currentMonthDate.getFullYear());
+
+	// A decade either side of the displayed year, clamped to the bounds the
+	// consumer set — offering a year the reducer would refuse is the same class
+	// of lie this component is being cleaned of.
+	const selectableYears = $derived.by(() => {
+		const first = $store.minDate ? $store.minDate.getFullYear() : year - 10;
+		const last = $store.maxDate ? $store.maxDate.getFullYear() : year + 10;
+		// The displayed year is always offered, even if props moved out from under
+		// it, so the select can never show a blank value.
+		const lo = Math.min(first, year);
+		const hi = Math.max(last, year);
+		return Array.from({ length: hi - lo + 1 }, (_, i) => lo + i);
+	});
 
 	// Actions
 	const prevMonth = () => {
@@ -195,6 +209,15 @@
 
 	const nextMonth = () => {
 		store.dispatch({ type: 'monthChanged', direction: 'next' });
+	};
+
+	/**
+	 * Jump straight to a month. The `monthSet` action existed with no dispatcher
+	 * anywhere in the repo, so reaching a distant month meant clicking a chevron
+	 * once per month.
+	 */
+	const setMonth = (date: Date) => {
+		store.dispatch({ type: 'monthSet', date });
 	};
 
 	const selectDate = (date: Date) => {
@@ -245,7 +268,7 @@
 
 <div class="calendar {className}">
 	{#if header}
-		{@render header({ month: currentMonthDate, prevMonth, nextMonth })}
+		{@render header({ month: currentMonthDate, prevMonth, nextMonth, setMonth })}
 	{:else}
 		<!-- Default header -->
 		<div class="calendar-header">
@@ -266,8 +289,31 @@
 			</button>
 
 			<div class="calendar-month-year">
-				{monthName}
-				{year}
+				<select
+					data-calendar-month
+					class="calendar-month-select"
+					aria-label="Month"
+					value={currentMonthDate.getMonth()}
+					onchange={(event) =>
+						setMonth(new Date(year, Number(event.currentTarget.value), 1))}
+				>
+					{#each monthNames as name, index}
+						<option value={index}>{name}</option>
+					{/each}
+				</select>
+
+				<select
+					data-calendar-year
+					class="calendar-year-select"
+					aria-label="Year"
+					value={year}
+					onchange={(event) =>
+						setMonth(new Date(Number(event.currentTarget.value), currentMonthDate.getMonth(), 1))}
+				>
+					{#each selectableYears as selectableYear}
+						<option value={selectableYear}>{selectableYear}</option>
+					{/each}
+				</select>
 			</div>
 
 			<button type="button" class="calendar-nav-button" onclick={nextMonth} aria-label="Next month">
@@ -386,6 +432,21 @@
 		color: #111827;
 		min-width: 8rem;
 		text-align: center;
+	}
+
+	.calendar-month-select,
+	.calendar-year-select {
+		font: inherit;
+		color: inherit;
+		background: transparent;
+		border: none;
+		border-radius: 0.375rem;
+		padding: 0.125rem 0.25rem;
+		cursor: pointer;
+	}
+	.calendar-month-select:hover,
+	.calendar-year-select:hover {
+		background: #f3f4f6;
 	}
 
 	.calendar-day-names {

@@ -588,6 +588,48 @@ describe('Calendar', () => {
 			store.assertNoPendingActions();
 		});
 
+		it('follows an externally set range into another month', async () => {
+			// Range mode has the identical defect: the picker sets `from` and the grid
+			// stays where it was, so the range start is off-screen.
+			const store = createTestStore({
+				initialState: { ...createInitialCalendarState(), currentMonth: new Date(2024, 2, 1) },
+				reducer: calendarReducer
+			});
+
+			await store.send(
+				{
+					type: 'propsChanged',
+					props: { selectedRange: { from: new Date(2024, 8, 10), to: new Date(2024, 8, 20) } }
+				},
+				(state) => {
+					expect(state.currentMonth.getMonth()).toBe(8);
+					expect(state.currentMonth.getDate()).toBe(1);
+				}
+			);
+
+			store.assertNoPendingActions();
+		});
+
+		it('does not navigate for a date already in the displayed month', async () => {
+			// The convergence guard. `monthSet` normalises to the 1st, so a date-level
+			// comparison reports a difference forever — the component's sync effect
+			// would dispatch on every settle and never reach a fixed point.
+			const currentMonth = new Date(2024, 2, 1);
+			const store = createTestStore({
+				initialState: { ...createInitialCalendarState(), currentMonth },
+				reducer: calendarReducer
+			});
+
+			await store.send(
+				{ type: 'propsChanged', props: { selectedDate: new Date(2024, 2, 28) } },
+				(state) => {
+					expect(state.currentMonth, 'the same Date object, not an equal one').toBe(currentMonth);
+				}
+			);
+
+			store.assertNoPendingActions();
+		});
+
 		it('leaves untouched fields alone', async () => {
 			const currentMonth = new Date(2024, 5, 1);
 			const selected = new Date(2024, 5, 15);

@@ -13,7 +13,7 @@ import type {
 	CalendarAction,
 	CalendarDependencies
 } from './calendar.types.js';
-import { isDateInBounds, isSameDay } from './calendar.types.js';
+import { isDateInBounds, isSameDay, isSameMonth } from './calendar.types.js';
 
 /**
  * Calendar reducer.
@@ -181,7 +181,25 @@ export const calendarReducer: Reducer<CalendarState, CalendarAction, CalendarDep
 		}
 
 		case 'propsChanged': {
-			return [{ ...state, ...action.props }, Effect.none()];
+			const merged: CalendarState = { ...state, ...action.props };
+
+			// A date arriving from outside in another month is a navigation
+			// instruction, not just a value. Without this the grid stays on the old
+			// month and the selection is off-screen — which is indistinguishable
+			// from nothing being selected, and is the default way a date picker
+			// drives this component.
+			//
+			// Compared by month: `monthSet` normalises to the first, so a date-level
+			// comparison never converges.
+			const focus = action.props.selectedDate ?? action.props.selectedRange?.from ?? null;
+			if (focus && !isSameMonth(focus, state.currentMonth)) {
+				return [
+					{ ...merged, currentMonth: new Date(focus.getFullYear(), focus.getMonth(), 1) },
+					Effect.none()
+				];
+			}
+
+			return [merged, Effect.none()];
 		}
 
 		default: {

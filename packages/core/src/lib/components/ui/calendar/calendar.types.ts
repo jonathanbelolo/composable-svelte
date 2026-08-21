@@ -112,6 +112,17 @@ export function isSameDay(date1: Date, date2: Date): boolean {
 }
 
 /**
+ * Are two dates in the same calendar month?
+ *
+ * Month-level, not day-level, on purpose: `monthSet` normalises to the first of
+ * the month, so anything comparing whole dates against `currentMonth` reports a
+ * difference forever and livelocks the effect that acts on it.
+ */
+export function isSameMonth(date1: Date, date2: Date): boolean {
+	return date1.getFullYear() === date2.getFullYear() && date1.getMonth() === date2.getMonth();
+}
+
+/**
  * Check if date is in range.
  */
 export function isDateInRange(date: Date, range: DateRange): boolean {

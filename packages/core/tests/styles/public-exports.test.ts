@@ -75,6 +75,7 @@ const INTENTIONALLY_PRIVATE = new Set([
 	'getFirstDayOfMonth',
 	'getLastDayOfMonth',
 	'getCalendarDays',
+	'isSameMonth',
 	// file-upload internals
 	'generateFileId',
 	'formatFileSize'
