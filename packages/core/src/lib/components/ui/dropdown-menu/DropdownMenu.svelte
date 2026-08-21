@@ -83,10 +83,19 @@
 	let triggerElement: HTMLElement | null = $state(null);
 	let menuElement: HTMLElement | null = $state(null);
 
-	// Animation state
-	// Not $state: the effect below reads and writes this. A reactive guard
-	// re-triggers the effect it lives in (effect_update_depth_exceeded).
-	let lastAnimatedContent: any = null;
+
+	// The (status, content) pair this effect last acted on.
+	//
+	// Not $state: the effect below reads and writes it, and a reactive guard would
+	// re-trigger the effect it lives in (effect_update_depth_exceeded).
+	//
+	// Keyed on the *pair*, not on "have I animated anything yet". Those two
+	// questions only diverge when the component mounts already `presented` — SSR
+	// hydration of a page rendered with this overlay open — and the difference is
+	// a permanent deadlock: the collapse branch is refused, `dismissalCompleted`
+	// never fires, and the reducer's own `status !== 'presented'` guard then
+	// rejects every further dismiss.
+	let lastAnimated: { status: string; content: unknown } | null = null;
 
 	function handleTriggerClick() {
 		store.dispatch({ type: 'toggled' });
@@ -177,15 +186,16 @@
 	$effect(() => {
 		if (!menuElement) return;
 
-		// `content` exists on every status except `idle`.
-		const currentContent =
-			$store.presentation.status === 'idle' ? null : $store.presentation.content;
+		if ($store.presentation.status === 'idle') {
+			lastAnimated = null;
+			return;
+		}
 
-		if (
-			$store.presentation.status === 'presenting' &&
-			lastAnimatedContent !== currentContent
-		) {
-			lastAnimatedContent = currentContent;
+		const { status, content } = $store.presentation;
+		if (lastAnimated?.status === status && lastAnimated.content === content) return;
+		lastAnimated = { status, content };
+
+		if (status === 'presenting') {
 			animateDropdownIn(menuElement).then(() => {
 				queueMicrotask(() =>
 					store.dispatch({ type: 'presentation', event: { type: 'presentationCompleted' } })
@@ -193,8 +203,7 @@
 			});
 		}
 
-		if ($store.presentation.status === 'dismissing' && lastAnimatedContent !== null) {
-			lastAnimatedContent = null;
+		if (status === 'dismissing') {
 			animateDropdownOut(menuElement).then(() => {
 				queueMicrotask(() =>
 					store.dispatch({ type: 'presentation', event: { type: 'dismissalCompleted' } })

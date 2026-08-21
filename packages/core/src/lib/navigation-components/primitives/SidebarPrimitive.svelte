@@ -3,6 +3,7 @@
   import type { ScopedDestinationStore } from '../../navigation/scope-to-destination.js';
   import type { PresentationState } from '../../navigation/types.js';
   import type { SpringConfig } from '../../animation/spring-config.js';
+  import { animateSidebarExpand, animateSidebarCollapse } from '../../animation/animate.js';
 
   // ============================================================================
   // Props
@@ -64,9 +65,7 @@
           store: ScopedDestinationStore<State, Action> | null;
           side: 'left' | 'right';
           width: string;
-          targetWidth: string;
           bindContent: (node: HTMLElement) => void;
-          onTransitionEnd: (event: TransitionEvent) => void;
         }
       ]
     >;
@@ -100,43 +99,52 @@
   );
 
   // ============================================================================
-  // CSS Transition Integration
+  // Animation Integration
   // ============================================================================
 
   let contentElement: HTMLElement | undefined = $state();
 
-  // Compute target width based on presentation state
-  const targetWidth = $derived.by(() => {
-    if (!presentation) return visible ? width : '0px';
+  // The (status, content) pair this effect last acted on.
+  //
+  // Not $state: the effect below reads and writes it, and a reactive guard would
+  // re-trigger the effect it lives in (effect_update_depth_exceeded).
+  //
+  // Keyed on the *pair*, not on "have I animated anything yet". A sidebar is
+  // routinely mounted already `presented` — that is what persistent desktop
+  // navigation looks like, and SidebarDemo does exactly that — and a guard that
+  // only remembers a prior presentation refuses the first collapse, so
+  // `onDismissalComplete` never fires and the sidebar sticks in `dismissing`
+  // forever. Recording `presented` at mount without animating is what lets the
+  // dismissal through.
+  let lastAnimated: { status: string; content: unknown } | null = null;
 
-    switch (presentation.status) {
-      case 'presented':
-      case 'presenting':
-        return width;
-      case 'dismissing':
-      case 'idle':
-      default:
-        return '0px';
-    }
-  });
+  // Watch presentation status and drive Motion One. This replaces a CSS
+  // `transition-[width]` + `transitionend` handshake that could never complete:
+  // the wrapper is only mounted once `visible` is already true, so it was born
+  // at its target width, no transition ever ran, and `presenting` never advanced
+  // to `presented`.
+  $effect(() => {
+    if (!presentation || !contentElement) return;
 
-  // Handle transitionend event to trigger callbacks
-  function handleTransitionEnd(event: TransitionEvent) {
-    // Only handle width transitions on the content element itself
-    if (event.target !== contentElement || event.propertyName !== 'width') {
+    if (presentation.status === 'idle') {
+      lastAnimated = null;
       return;
     }
 
-    if (!presentation) return;
+    const { status, content } = presentation;
+    if (lastAnimated?.status === status && lastAnimated.content === content) return;
+    lastAnimated = { status, content };
 
-
-    // Trigger appropriate callback based on current status
-    if (presentation.status === 'presenting') {
-      queueMicrotask(() => onPresentationComplete?.());
-    } else if (presentation.status === 'dismissing') {
-      queueMicrotask(() => onDismissalComplete?.());
+    if (status === 'presenting') {
+      animateSidebarExpand(contentElement, width, springConfig, side).then(() => {
+        queueMicrotask(() => onPresentationComplete?.());
+      });
+    } else if (status === 'dismissing') {
+      animateSidebarCollapse(contentElement, width, springConfig, side).then(() => {
+        queueMicrotask(() => onDismissalComplete?.());
+      });
     }
-  }
+  });
 
   // ============================================================================
   // Event Handlers
@@ -176,8 +184,6 @@
     store,
     side,
     width,
-    targetWidth,
-    bindContent: (node: HTMLElement) => { contentElement = node; },
-    onTransitionEnd: handleTransitionEnd
+    bindContent: (node: HTMLElement) => { contentElement = node; }
   })}
 </div>

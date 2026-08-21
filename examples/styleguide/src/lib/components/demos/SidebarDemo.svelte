@@ -39,7 +39,10 @@
                 duration: 300
               }
             },
-            Effect.afterDelay(300, (d) => d({ type: 'presentation', event: { type: 'presentationCompleted' } }))
+            // Fallback only. Motion One drives the real `onPresentationComplete`;
+            // this is the 3x-duration recovery CLAUDE.md asks for, and the guard
+            // in the `presentation` case makes the loser of the race a no-op.
+            Effect.afterDelay(1200, (d) => d({ type: 'presentation', event: { type: 'presentationCompleted' } }))
           ];
 
         case 'closeSidebar':
@@ -56,7 +59,7 @@
                 duration: 200
               }
             },
-            Effect.afterDelay(200, (d) => d({ type: 'presentation', event: { type: 'dismissalCompleted' } }))
+            Effect.afterDelay(1200, (d) => d({ type: 'presentation', event: { type: 'dismissalCompleted' } }))
           ];
 
         case 'toggleSidebar':
@@ -74,7 +77,7 @@
                   duration: 200
                 }
               },
-              Effect.afterDelay(200, (d) => d({ type: 'presentation', event: { type: 'dismissalCompleted' } }))
+              Effect.afterDelay(1200, (d) => d({ type: 'presentation', event: { type: 'dismissalCompleted' } }))
             ];
           } else {
             // Open if closed
@@ -87,24 +90,31 @@
                   duration: 300
                 }
               },
-              Effect.afterDelay(300, (d) => d({ type: 'presentation', event: { type: 'presentationCompleted' } }))
+              // Fallback only. Motion One drives the real `onPresentationComplete`;
+            // this is the 3x-duration recovery CLAUDE.md asks for, and the guard
+            // in the `presentation` case makes the loser of the race a no-op.
+            Effect.afterDelay(1200, (d) => d({ type: 'presentation', event: { type: 'presentationCompleted' } }))
             ];
           }
 
         case 'presentation':
           if (action.event.type === 'presentationCompleted') {
+            // Identical state when already presented — the animation callback and
+            // the fallback timer both fire, and the loser must change nothing.
+            if (state.presentation.status !== 'presenting') return [state, Effect.none()];
             return [
               {
                 ...state,
                 presentation: {
                   status: 'presented' as const,
-                  content: state.presentation.status === 'presenting' ? state.presentation.content : true
+                  content: state.presentation.content
                 }
               },
               Effect.none()
             ];
           }
           if (action.event.type === 'dismissalCompleted') {
+            if (state.presentation.status !== 'dismissing') return [state, Effect.none()];
             return [
               {
                 showSidebar: false,

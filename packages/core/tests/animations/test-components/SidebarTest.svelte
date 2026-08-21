@@ -1,8 +1,16 @@
 <script lang="ts">
-	let { startOpen = false }: { startOpen?: boolean } = $props();
+	/**
+	 * Sidebar animation harness. There was no Sidebar entry in `tests/animations/`
+	 * at all, which is why `springConfig` could sit destructured-and-unused and a
+	 * CSS transition could stand in for Motion One unnoticed.
+	 */
+	let {
+		springConfig,
+		startOpen = false
+	}: { springConfig?: Record<string, unknown>; startOpen?: boolean } = $props();
 
 	import { createStore } from '../../../src/lib/store.svelte.js';
-	import Drawer from '../../../src/lib/navigation-components/Drawer.svelte';
+	import Sidebar from '../../../src/lib/navigation-components/Sidebar.svelte';
 	import type { PresentationState } from '../../../src/lib/navigation/types.js';
 	import { Effect } from '../../../src/lib/effect.js';
 
@@ -11,13 +19,13 @@
 	// ============================================================================
 
 	interface TestState {
-		drawerContent: string | null;
+		sidebarContent: string | null;
 		presentation: PresentationState<string>;
 	}
 
 	type TestAction =
-		| { type: 'openDrawer' }
-		| { type: 'dismissDrawer' }
+		| { type: 'openSidebar' }
+		| { type: 'dismissSidebar' }
 		| { type: 'presentation'; event: { type: 'presentationCompleted' | 'dismissalCompleted' } };
 
 	// ============================================================================
@@ -26,17 +34,17 @@
 
 	function testReducer(state: TestState, action: TestAction): [TestState, Effect<TestAction>] {
 		switch (action.type) {
-			case 'openDrawer':
+			case 'openSidebar':
 				return [
 					{
 						...state,
-						drawerContent: 'Test Drawer Content',
-						presentation: { status: 'presenting', content: 'Test Drawer Content', duration: 300 }
+						sidebarContent: 'Test Sidebar Content',
+						presentation: { status: 'presenting', content: 'Test Sidebar Content', duration: 300 }
 					},
 					Effect.none()
 				];
 
-			case 'dismissDrawer':
+			case 'dismissSidebar':
 				if (state.presentation.status !== 'presented') {
 					return [state, Effect.none()]; // Guard: only dismiss when presented
 				}
@@ -62,7 +70,7 @@
 					return [
 						{
 							...state,
-							drawerContent: null,
+							sidebarContent: null,
 							presentation: { status: 'idle' }
 						},
 						Effect.none()
@@ -80,52 +88,57 @@
 	// ============================================================================
 
 	const store = createStore({
-		// `startOpen` mounts already `presented` — what SSR hydration produces for a
-		// page whose overlay was open when the HTML was generated. It reaches a path
-		// the open-then-close flow cannot: a dismissal the animation guard never saw
-		// presented.
+		// `startOpen` mounts the sidebar already `presented`. That is the *normal*
+		// configuration for a persistent desktop sidebar — SidebarDemo does exactly
+		// this — and it exercises a path the open-then-close flow never reaches:
+		// the animation guard has to allow a dismissal it never saw presented.
 		initialState: (startOpen
 			? {
-					drawerContent: 'Test Drawer Content',
-					presentation: { status: 'presented' as const, content: 'Test Drawer Content' }
+					sidebarContent: 'Test Sidebar Content',
+					presentation: { status: 'presented' as const, content: 'Test Sidebar Content' }
 				}
 			: {
-					drawerContent: null,
+					sidebarContent: null,
 					presentation: { status: 'idle' as const }
 				}) satisfies TestState,
 		reducer: testReducer
 	});
 
-	// Scoped store for drawer
-	const drawerStore = $derived(
-		store.state.drawerContent
+	// Scoped store for sheet
+	const sidebarStore = $derived(
+		store.state.sidebarContent
 			? {
-					state: store.state.drawerContent,
+					state: store.state.sidebarContent,
 					dispatch: store.dispatch,
-					dismiss: () => store.dispatch({ type: 'dismissDrawer' })
+					dismiss: () => store.dispatch({ type: 'dismissSidebar' })
 				}
 			: null
 	);
 
 	// Expose store for testing (attach to window)
 	if (typeof window !== 'undefined') {
-		(window as any).__drawerTestStore = store;
+		(window as any).__sidebarTestStore = store;
 	}
 </script>
 
 <!-- Test Controls -->
 <div>
-	<button data-testid="open-drawer" onclick={() => store.dispatch({ type: 'openDrawer' })}>
-		Open Drawer
+	<button data-testid="open-sidebar" onclick={() => store.dispatch({ type: 'openSidebar' })}>
+		Open Sidebar
+	</button>
+
+	<button data-testid="dismiss-sidebar" onclick={() => store.dispatch({ type: 'dismissSidebar' })}>
+		Dismiss Sidebar
 	</button>
 
 	<!-- Display presentation status for testing -->
 	<div data-testid="presentation-status">{store.state.presentation.status}</div>
 </div>
 
-<!-- Drawer Component (default side='left') -->
-<Drawer
-	store={drawerStore}
+<!-- Sidebar Component -->
+<Sidebar
+	{springConfig}
+	store={sidebarStore}
 	presentation={store.state.presentation}
 	onPresentationComplete={() =>
 		store.dispatch({ type: 'presentation', event: { type: 'presentationCompleted' } })}
@@ -133,41 +146,27 @@
 		store.dispatch({ type: 'presentation', event: { type: 'dismissalCompleted' } })}
 >
 	{#snippet children({ store: scopedStore })}
-		<div data-testid="drawer-backdrop" class="drawer-test-backdrop"></div>
-		<div data-testid="drawer-content" class="drawer-test-content">
-			<h2>Test Drawer</h2>
+		<div data-testid="sidebar-content" class="sidebar-test-content">
+			<h2>Test Sidebar</h2>
 			<p>{scopedStore.state}</p>
 
 			<button
-				data-testid="drawer-action-button"
+				data-testid="sidebar-action-button"
 				disabled={store.state.presentation.status === 'presenting' ||
 					store.state.presentation.status === 'dismissing'}
 			>
 				Action Button
 			</button>
 
-			<button data-testid="dismiss-drawer" onclick={() => scopedStore.dismiss()}>
+			<button data-testid="dismiss-via-scope" onclick={() => scopedStore.dismiss()}>
 				Dismiss
 			</button>
 		</div>
 	{/snippet}
-</Drawer>
+</Sidebar>
 
 <style>
-	.drawer-test-backdrop {
-		position: fixed;
-		inset: 0;
-		background: rgba(0, 0, 0, 0.5);
-	}
-
-	.drawer-test-content {
-		position: fixed;
-		left: 0;
-		top: 0;
-		bottom: 0;
-		width: 320px;
-		background: white;
-		padding: 2rem;
-		box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+	.sidebar-test-content {
+		padding: 1rem;
 	}
 </style>

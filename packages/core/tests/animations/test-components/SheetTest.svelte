@@ -1,4 +1,6 @@
 <script lang="ts">
+	let { startOpen = false }: { startOpen?: boolean } = $props();
+
 	import { createStore } from '../../../src/lib/store.svelte.js';
 	import Sheet from '../../../src/lib/navigation-components/Sheet.svelte';
 	import type { PresentationState } from '../../../src/lib/navigation/types.js';
@@ -78,10 +80,19 @@
 	// ============================================================================
 
 	const store = createStore({
-		initialState: {
-			sheetContent: null,
-			presentation: { status: 'idle' as const }
-		} satisfies TestState,
+		// `startOpen` mounts already `presented` — what SSR hydration produces for a
+		// page whose overlay was open when the HTML was generated. It reaches a path
+		// the open-then-close flow cannot: a dismissal the animation guard never saw
+		// presented.
+		initialState: (startOpen
+			? {
+					sheetContent: 'Test Sheet Content',
+					presentation: { status: 'presented' as const, content: 'Test Sheet Content' }
+				}
+			: {
+					sheetContent: null,
+					presentation: { status: 'idle' as const }
+				}) satisfies TestState,
 		reducer: testReducer
 	});
 

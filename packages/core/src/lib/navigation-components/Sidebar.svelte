@@ -128,14 +128,14 @@
   {side}
   {width}
 >
-  {#snippet children({ visible, store, side, width, targetWidth, bindContent, onTransitionEnd })}
+  {#snippet children({ visible, store, side, width, bindContent })}
     {#if visible && store}
-      <!-- Outer wrapper: animates width with overflow hidden -->
+      <!-- Outer wrapper: Motion One animates its margin and transform. -->
       <div
         use:bindContent
-        class="h-full transition-[width] duration-300 ease-out overflow-hidden"
-        style="width: {targetWidth}"
-        ontransitionend={onTransitionEnd}
+        data-sidebar-wrapper
+        class="h-full overflow-hidden"
+        style="width: {width}"
       >
         <!-- Inner content: stays at full width, gets clipped -->
         <nav
