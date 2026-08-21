@@ -114,27 +114,32 @@
 
   const props: NodeCanvasProps<NodeData, EdgeData, Action> = $props();
 
-  // Destructure with defaults for convenience, but use props.externalViewport for reactivity
-  const {
-    store,
-    liftAction,
-    // Defaulted rather than forwarded as-is: SvelteFlow's nodeTypes/edgeTypes
-    // do not accept an explicit undefined under exactOptionalPropertyTypes.
-    nodeTypes = {},
-    edgeTypes = {},
-    // ConnectionLineType.Bezier is the string "default", not "bezier".
-    connectionLineType = 'default' as ConnectionLineType,
-    panOnDrag = true,
-    zoomOnScroll = true,
-    selectable = true,
-    class: className = '',
-    minZoom = 0.1,
-    maxZoom = 2,
-    fitView = true,
-    onViewportChange
-  } = props;
+  // `$derived` accessors, NOT a second destructure.
+  //
+  // `const { nodeTypes, ... } = props` destructures a plain variable rather
+  // than the `$props()` call site, so each name is read exactly once at init
+  // and never again. Eleven props were frozen that way: changing `minZoom`,
+  // `nodeTypes`, `panOnDrag` or any of the others after mount did nothing.
+  // Only `store` and `liftAction` stay plain — they are identity-stable by
+  // contract, and `liftAction` is called, not rendered.
+  const { store, liftAction } = props;
 
-  // Debug: Log when component renders with props
+  // Defaulted rather than forwarded as-is: SvelteFlow's nodeTypes/edgeTypes
+  // do not accept an explicit undefined under exactOptionalPropertyTypes.
+  const nodeTypes = $derived(props.nodeTypes ?? {});
+  const edgeTypes = $derived(props.edgeTypes ?? {});
+  // ConnectionLineType.Bezier is the string "default", not "bezier".
+  const connectionLineType = $derived(
+    props.connectionLineType ?? ('default' as ConnectionLineType)
+  );
+  const panOnDrag = $derived(props.panOnDrag ?? true);
+  const zoomOnScroll = $derived(props.zoomOnScroll ?? true);
+  const selectable = $derived(props.selectable ?? true);
+  const className = $derived(props.class ?? '');
+  const minZoom = $derived(props.minZoom ?? 0.1);
+  const maxZoom = $derived(props.maxZoom ?? 2);
+  const fitView = $derived(props.fitView ?? true);
+  const onViewportChange = $derived(props.onViewportChange);
 
   // ==========================================================================
   // Reactive State from Store

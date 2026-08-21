@@ -8,7 +8,8 @@
 import type {
   NodeCanvasState,
   ConnectionValidation,
-  NodeTypeDefinition
+  NodeTypeDefinition,
+  ConnectionValidator
 } from './types.js';
 
 /**
@@ -216,17 +217,35 @@ function detectCycle(
 }
 
 /**
- * Helper to create permissive validator (allows all connections).
+ * Allows every connection. Equivalent to omitting `validateConnection`.
  */
-export function permissiveValidator(): ConnectionValidation {
-  return { valid: true };
-}
+export const permissiveValidator: ConnectionValidator = () => ({ valid: true });
 
 /**
- * Helper to create strict validator (blocks all connections).
+ * Blocks every connection.
+ *
+ * Declared as a `ConnectionValidator` rather than a factory. It used to be
+ * `strictValidator(error = 'Connections not allowed')`, which does not match
+ * the contract: validators are called with five positional arguments
+ * (`reducer.ts:221-227`), so `error` received the whole `NodeCanvasState`.
+ * Under `strictFunctionTypes` that assignment does not even compile, which
+ * made this export — and the `composeValidators(strictValidator, …)` example
+ * in the README — unusable.
+ *
+ * For a custom message, use {@link createStrictValidator}.
  */
-export function strictValidator(error: string = 'Connections not allowed'): ConnectionValidation {
-  return { valid: false, error };
+export const strictValidator: ConnectionValidator = () => ({
+  valid: false,
+  error: 'Connections not allowed'
+});
+
+/**
+ * Builds a {@link strictValidator} with a custom rejection message.
+ */
+export function createStrictValidator(
+  error: string = 'Connections not allowed'
+): ConnectionValidator {
+  return () => ({ valid: false, error });
 }
 
 /**

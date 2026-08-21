@@ -49,6 +49,7 @@ export {
 	createConnectionValidator,
 	permissiveValidator,
 	strictValidator,
+	createStrictValidator,
 	composeValidators,
 	createInitialNodeCanvasState,
 	nodesToArray,
