@@ -702,6 +702,9 @@ importers:
       '@codemirror/autocomplete':
         specifier: ^6.19.1
         version: 6.19.1
+      '@codemirror/commands':
+        specifier: ^6.10.0
+        version: 6.10.0
       '@codemirror/lang-css':
         specifier: ^6.3.1
         version: 6.3.1
@@ -726,6 +729,15 @@ importers:
       '@codemirror/lang-sql':
         specifier: ^6.10.0
         version: 6.10.0
+      '@codemirror/language':
+        specifier: ^6.11.3
+        version: 6.11.3
+      '@codemirror/lint':
+        specifier: ^6.9.2
+        version: 6.9.2
+      '@codemirror/search':
+        specifier: ^6.5.11
+        version: 6.5.11
       '@codemirror/state':
         specifier: ^6.5.2
         version: 6.5.2

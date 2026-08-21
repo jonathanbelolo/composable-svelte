@@ -101,6 +101,7 @@ export type CodeEditorAction =
 	| { type: 'themeChanged'; theme: 'light' | 'dark' | 'auto' }
 	| { type: 'toggleLineNumbers' }
 	| { type: 'toggleAutocomplete' }
+	| { type: 'toggleFolding' }
 	| { type: 'setReadOnly'; readOnly: boolean }
 	| { type: 'tabSizeChanged'; size: number }
 

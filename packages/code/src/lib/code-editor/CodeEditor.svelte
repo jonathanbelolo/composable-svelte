@@ -13,7 +13,10 @@
 		updateEditorLanguage,
 		updateEditorTheme,
 		updateEditorReadOnly,
-		updateTabSize
+		updateTabSize,
+		updateLineNumbers,
+		updateFolding,
+		updateAutocomplete
 	} from './codemirror-wrapper.js';
 
 	/**
@@ -41,6 +44,9 @@
 	let appliedTheme: 'light' | 'dark' | 'auto' | null = null;
 	let appliedReadOnly: boolean | null = null;
 	let appliedTabSize: number | null = null;
+	let appliedShowLineNumbers: boolean | null = null;
+	let appliedFolding: boolean | null = null;
+	let appliedAutocomplete: boolean | null = null;
 
 	/**
 	 * Push store config into the live view, skipping anything already applied.
@@ -57,7 +63,10 @@
 		language: SupportedLanguage,
 		theme: 'light' | 'dark' | 'auto',
 		readOnly: boolean,
-		tabSize: number
+		tabSize: number,
+		showLineNumbers: boolean,
+		enableFolding: boolean,
+		enableAutocomplete: boolean
 	): void {
 		if (theme !== appliedTheme) {
 			appliedTheme = theme;
@@ -70,6 +79,18 @@
 		if (tabSize !== appliedTabSize) {
 			appliedTabSize = tabSize;
 			updateTabSize(editor, tabSize);
+		}
+		if (showLineNumbers !== appliedShowLineNumbers) {
+			appliedShowLineNumbers = showLineNumbers;
+			updateLineNumbers(editor, showLineNumbers);
+		}
+		if (enableFolding !== appliedFolding) {
+			appliedFolding = enableFolding;
+			updateFolding(editor, enableFolding);
+		}
+		if (enableAutocomplete !== appliedAutocomplete) {
+			appliedAutocomplete = enableAutocomplete;
+			updateAutocomplete(editor, enableAutocomplete);
 		}
 		if (language !== appliedLanguage) {
 			appliedLanguage = language;
@@ -95,6 +116,7 @@
 			showLineNumbers: $store.showLineNumbers,
 			readOnly: $store.readOnly,
 			enableAutocomplete: $store.enableAutocomplete,
+			enableFolding: $store.enableFolding,
 			tabSize: $store.tabSize
 		};
 
@@ -107,6 +129,9 @@
 			appliedTheme = initial.theme;
 			appliedReadOnly = initial.readOnly;
 			appliedTabSize = initial.tabSize;
+			appliedShowLineNumbers = initial.showLineNumbers;
+			appliedFolding = initial.enableFolding;
+			appliedAutocomplete = initial.enableAutocomplete;
 
 			// Catch up on anything dispatched while the view was being built.
 			// The effect below cannot do this: `view` is deliberately not
@@ -118,7 +143,10 @@
 				current.language,
 				current.theme,
 				current.readOnly,
-				current.tabSize
+				current.tabSize,
+				current.showLineNumbers,
+				current.enableFolding,
+				current.enableAutocomplete
 			);
 			if (current.value !== codemirrorValue) {
 				updateEditorValue(editorView, current.value);
@@ -160,9 +188,21 @@
 		const theme = $store.theme;
 		const readOnly = $store.readOnly;
 		const tabSize = $store.tabSize;
+		const showLineNumbers = $store.showLineNumbers;
+		const enableFolding = $store.enableFolding;
+		const enableAutocomplete = $store.enableAutocomplete;
 
 		if (!view) return;
-		syncConfig(view, language, theme, readOnly, tabSize);
+		syncConfig(
+			view,
+			language,
+			theme,
+			readOnly,
+			tabSize,
+			showLineNumbers,
+			enableFolding,
+			enableAutocomplete
+		);
 	});
 
 	// Use Svelte's auto-subscription pattern - ZERO boilerplate!
@@ -211,10 +251,19 @@
 			</div>
 
 			<div class="code-editor__toolbar-right">
+				<!--
+					Disabled by read-only alone. It also used to disable on
+					`formatError !== null`, which was a one-way trap: `formatError` is
+					cleared inside `case 'format'` (code-editor.reducer.ts:156), and a
+					disabled button can never dispatch `format` to reach it. One failed
+					format killed the button for the session — and with no `formatter`
+					dependency the very first click fails, which is exactly what the
+					README's example configures. The error still shows in the banner below.
+				-->
 				<button
 					class="code-editor__button"
 					onclick={() => store.dispatch({ type: 'format' })}
-					disabled={$store.readOnly || $store.formatError !== null}
+					disabled={$store.readOnly}
 					aria-label="Format code"
 				>
 					Format

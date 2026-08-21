@@ -96,6 +96,9 @@ export const codeEditorReducer: Reducer<
 		case 'toggleAutocomplete':
 			return [{ ...state, enableAutocomplete: !state.enableAutocomplete }, Effect.none()];
 
+		case 'toggleFolding':
+			return [{ ...state, enableFolding: !state.enableFolding }, Effect.none()];
+
 		case 'setReadOnly':
 			return [{ ...state, readOnly: action.readOnly }, Effect.none()];
 

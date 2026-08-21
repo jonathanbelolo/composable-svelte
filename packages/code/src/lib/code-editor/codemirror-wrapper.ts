@@ -8,9 +8,38 @@
  * - Manages language extensions and themes
  */
 
-import { EditorView, basicSetup } from 'codemirror';
+import {
+	EditorView,
+	keymap,
+	lineNumbers,
+	highlightActiveLineGutter,
+	highlightSpecialChars,
+	drawSelection,
+	dropCursor,
+	rectangularSelection,
+	crosshairCursor,
+	highlightActiveLine
+} from '@codemirror/view';
 import { Compartment, EditorState, type Extension } from '@codemirror/state';
-import { keymap } from '@codemirror/view';
+import {
+	codeFolding,
+	foldGutter,
+	foldKeymap,
+	indentOnInput,
+	indentUnit,
+	bracketMatching,
+	syntaxHighlighting,
+	defaultHighlightStyle
+} from '@codemirror/language';
+import { history, historyKeymap, defaultKeymap } from '@codemirror/commands';
+import {
+	autocompletion,
+	completionKeymap,
+	closeBrackets,
+	closeBracketsKeymap,
+	closeCompletion
+} from '@codemirror/autocomplete';
+import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
 import { oneDark } from '@codemirror/theme-one-dark';
 import type { Store } from '@composable-svelte/core';
 import type {
@@ -38,6 +67,9 @@ const languageCompartment = new Compartment();
 const themeCompartment = new Compartment();
 const readOnlyCompartment = new Compartment();
 const tabSizeCompartment = new Compartment();
+const lineNumbersCompartment = new Compartment();
+const foldingCompartment = new Compartment();
+const autocompleteCompartment = new Compartment();
 
 /**
  * Latest language *requested* per view.
@@ -61,6 +93,53 @@ const pendingLanguage = new WeakMap<EditorView, SupportedLanguage>();
 function readOnlyExtension(readOnly: boolean): Extension {
 	return [EditorView.editable.of(!readOnly), EditorState.readOnly.of(readOnly)];
 }
+
+/**
+ * Line numbers, with the active-line gutter highlight that belongs to them.
+ *
+ * `highlightActiveLineGutter()` is paired here rather than installed
+ * unconditionally: with no gutter it has nothing to highlight, and leaving it
+ * behind would render an empty active-line strip once numbers are hidden.
+ */
+function lineNumbersExtension(show: boolean): Extension {
+	return show ? [lineNumbers(), highlightActiveLineGutter()] : [];
+}
+
+/**
+ * Code folding — the gutter and its keybindings, which travel together.
+ *
+ * `codeFolding()` itself is installed outside this compartment so that folds
+ * already made survive the gutter being hidden and shown again.
+ */
+function foldingExtension(enabled: boolean): Extension {
+	return enabled ? [foldGutter(), keymap.of(foldKeymap)] : [];
+}
+
+/**
+ * Autocompletion, with bracket closing and both keymaps.
+ *
+ * `closeBrackets()` belongs here rather than in the fixed section: it is part
+ * of the same completion experience, and leaving `closeBracketsKeymap` bound
+ * with no `closeBrackets()` behind it would be a dead keybinding set.
+ */
+function autocompleteExtension(enabled: boolean): Extension {
+	return enabled
+		? [closeBrackets(), autocompletion(), keymap.of([...closeBracketsKeymap, ...completionKeymap])]
+		: [];
+}
+
+/**
+ * Indent width, as both facets.
+ *
+ * `EditorState.tabSize` only sets the *display width of a literal tab*. What
+ * `indentOnInput` and the Enter key actually consult is `indentUnit`, which
+ * defaults to two spaces — so `tabSize: 4` visibly did nothing on a
+ * space-indented document. Setting both makes the number mean one thing.
+ */
+function tabSizeExtension(tabSize: number): Extension {
+	return [EditorState.tabSize.of(tabSize), indentUnit.of(' '.repeat(tabSize))];
+}
+
 
 /**
  * Load language extension for CodeMirror
@@ -150,6 +229,7 @@ export async function createEditorView(
 		showLineNumbers: boolean;
 		readOnly: boolean;
 		enableAutocomplete: boolean;
+		enableFolding: boolean;
 		tabSize: number;
 	}
 ): Promise<EditorView> {
@@ -206,7 +286,7 @@ export async function createEditorView(
 	});
 
 	// Custom keybindings for save and format
-	const customKeymap = keymap.of([
+	const customKeymapBindings = [
 		{
 			key: 'Mod-s',
 			preventDefault: true,
@@ -223,27 +303,65 @@ export async function createEditorView(
 				return true;
 			}
 		}
-	]);
+	];
 
-	// Build extensions array
-	// Array positions preserved deliberately: CodeMirror precedence is
-	// positional, and oneDark's highlight style must keep out-ranking
-	// basicSetup's `{ fallback: true }` default.
+	// `basicSetup` inlined.
+	//
+	// It bundles the eighteen extensions below and hardcodes three of them —
+	// `lineNumbers()`, `foldGutter()` and `autocompletion()` — which is why
+	// `showLineNumbers`, `enableFolding` and `enableAutocomplete` were all
+	// inert. `enableAutocomplete` was inert in *both* directions: `false` did
+	// not remove basicSetup's copy, and `true` pushed a second one that
+	// CodeMirror deduped via the module-level `completionState` field.
+	//
+	// CodeMirror's own docs prescribe this: basicSetup "does not allow
+	// customization… copy it into your own code, and adjust it as desired".
+	//
+	// What ordering here actually buys, since it is easy to assert too much:
+	//
+	//  - Gutters render left-to-right in array order, so line numbers sit left
+	//    of the fold marker.
+	//  - Keymaps are consulted in order and the first matching binding wins, so
+	//    `customKeymap` (Mod-s / Mod-Shift-f) is placed FIRST.
+	//  - `syntaxHighlighting(defaultHighlightStyle, { fallback: true })` is NOT
+	//    order-sensitive against oneDark, contrary to what this comment used to
+	//    claim. `{ fallback: true }` routes into a separate `fallbackHighlighter`
+	//    facet that `getHighlighters` consults only when the main one is empty
+	//    (`@codemirror/language/dist/index.js:1707-1713`). It is not a
+	//    precedence race, and no position preserves or breaks it.
+	//
+	// `history()` is deliberately NOT in a compartment: reconfiguring it would
+	// drop and recreate `historyField`, wiping the user's undo stack.
+	//
+	// `codeFolding()` is hoisted out of `foldingCompartment` for the same
+	// reason. `foldGutter()` already returns `[markers, gutter, codeFolding()]`,
+	// and `foldState` is a module-level StateField — so folding the gutter in
+	// and out would reset every existing fold. Only the gutter is toggleable.
 	const extensions: Extension[] = [
-		basicSetup,
+		keymap.of(customKeymapBindings),
+		lineNumbersCompartment.of(lineNumbersExtension(config.showLineNumbers)),
+		foldingCompartment.of(foldingExtension(config.enableFolding)),
+		codeFolding(),
+		highlightSpecialChars(),
+		history(),
+		drawSelection(),
+		dropCursor(),
+		EditorState.allowMultipleSelections.of(true),
+		indentOnInput(),
+		syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+		bracketMatching(),
+		autocompleteCompartment.of(autocompleteExtension(config.enableAutocomplete)),
+		rectangularSelection(),
+		crosshairCursor(),
+		highlightActiveLine(),
+		highlightSelectionMatches(),
+		keymap.of([...defaultKeymap, ...searchKeymap, ...historyKeymap]),
 		languageCompartment.of(languageExtension),
 		themeCompartment.of(themeExtensions),
 		updateListener,
-		customKeymap,
 		readOnlyCompartment.of(readOnlyExtension(config.readOnly)),
-		tabSizeCompartment.of(EditorState.tabSize.of(config.tabSize))
+		tabSizeCompartment.of(tabSizeExtension(config.tabSize))
 	];
-
-	// Add autocomplete if enabled
-	if (config.enableAutocomplete) {
-		const { autocompletion } = await import('@codemirror/autocomplete');
-		extensions.push(autocompletion());
-	}
 
 	// Create view
 	const view = new EditorView({
@@ -325,7 +443,43 @@ export function updateEditorReadOnly(view: EditorView, readOnly: boolean): void 
  * @param tabSize New tab size
  */
 export function updateTabSize(view: EditorView, tabSize: number): void {
-	view.dispatch({ effects: tabSizeCompartment.reconfigure(EditorState.tabSize.of(tabSize)) });
+	view.dispatch({ effects: tabSizeCompartment.reconfigure(tabSizeExtension(tabSize)) });
+}
+
+/**
+ * Show or hide the line-number gutter, reconfiguring in place.
+ *
+ * @param view CodeMirror view
+ * @param show Whether to show line numbers
+ */
+export function updateLineNumbers(view: EditorView, show: boolean): void {
+	view.dispatch({ effects: lineNumbersCompartment.reconfigure(lineNumbersExtension(show)) });
+}
+
+/**
+ * Enable or disable code folding, reconfiguring in place.
+ *
+ * @param view CodeMirror view
+ * @param enabled Whether folding is available
+ */
+export function updateFolding(view: EditorView, enabled: boolean): void {
+	view.dispatch({ effects: foldingCompartment.reconfigure(foldingExtension(enabled)) });
+}
+
+/**
+ * Enable or disable autocompletion, reconfiguring in place.
+ *
+ * @param view CodeMirror view
+ * @param enabled Whether autocompletion is active
+ */
+export function updateAutocomplete(view: EditorView, enabled: boolean): void {
+	// Close any in-flight completion BEFORE removing the extension. Completion
+	// queries are async, and `completionState` is a StateField that goes away
+	// with the compartment — a pending query resolving afterwards throws
+	// `RangeError: Field is not present in this state`. Found by a test that
+	// toggled autocomplete off while a completion was open.
+	if (!enabled) closeCompletion(view);
+	view.dispatch({ effects: autocompleteCompartment.reconfigure(autocompleteExtension(enabled)) });
 }
 
 /**
