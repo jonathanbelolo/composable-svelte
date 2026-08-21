@@ -702,12 +702,20 @@ were wired to these and did nothing. Covered by
 `packages/code/tests/code-editor-reconfigure.test.ts`, which asserts against the
 live `EditorView` (a store-only assertion passes with the no-ops restored).
 
-**Still open, split out deliberately: a fifth dead control.** `showLineNumbers`
-is accepted by `createEditorView` and never read — `basicSetup` hardcodes
-`lineNumbers()` and is not customizable — so the toolbar's "Line Numbers:
-On/Off" button still does nothing. Unlike the other four it has no exported
-updater at all, so fixing it means either inlining basicSetup's contents or a
-`Prec` override, **plus new public API**. Different change, different review.
+**Still open, split out deliberately: TWO more dead controls.**
+
+- `showLineNumbers` is accepted by `createEditorView` and never read —
+  `basicSetup` hardcodes `lineNumbers()` and is not customizable — so the
+  toolbar's "Line Numbers: On/Off" button does nothing.
+- `enableAutocomplete` is applied only at creation
+  (`codemirror-wrapper.ts:243`) and has a live `toggleAutocomplete` reducer
+  case (`code-editor.reducer.ts:96`) that reaches no compartment.
+
+Unlike the four that were fixed, neither has an exported updater, so closing
+them means **new public API** — and for line numbers, either inlining
+basicSetup's contents or a `Prec` override. Different change, different review.
+The second was found by the review that followed the fix, which is a reminder
+that "the fifth" was an enumeration I asserted rather than derived.
 
 ### S4.10 `AuthGuard.onAnonymous` re-fires on every dispatch — NOT A DEFECT (corrected)
 

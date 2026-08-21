@@ -74,7 +74,15 @@
 		if (language !== appliedLanguage) {
 			appliedLanguage = language;
 			// Stale-request guarded inside the wrapper.
-			void updateEditorLanguage(editor, language);
+			updateEditorLanguage(editor, language).catch(() => {
+				// The dynamic import failed — a stale chunk after a deploy, or
+				// offline. Without this the guard still reads "applied", so
+				// re-selecting the same language is a permanent no-op and the
+				// editor stays on the previous grammar with no way back. Clearing
+				// it lets a retry actually retry. The `catch` also stops this
+				// becoming an unhandled rejection.
+				if (appliedLanguage === language) appliedLanguage = null;
+			});
 		}
 	}
 
@@ -123,12 +131,23 @@
 		};
 	});
 
-	// Sync programmatic value updates (from store → CodeMirror)
-	// This handles external changes like loading a file or formatting
+	// Sync programmatic value updates (from store → CodeMirror).
+	// This handles external changes like loading a file or formatting.
 	$effect(() => {
-		if (view && $store.value !== codemirrorValue) {
-			updateEditorValue(view, $store.value);
-			codemirrorValue = $store.value;
+		// Read the store FIRST. This was `if (view && $store.value !== ...)`, and
+		// `view` is a deliberately non-reactive `let` that is null on the effect's
+		// first run because `createEditorView` is async. `&&` short-circuited
+		// before `$store.value` was ever read, so the effect captured no
+		// dependencies at all and never ran again — programmatic value changes,
+		// including the whole format flow, never reached the editor.
+		//
+		// Exactly the hazard noted on the config effect below; this one had it in
+		// `&&` form rather than early-`return` form and was missed.
+		const nextValue = $store.value;
+
+		if (view && nextValue !== codemirrorValue) {
+			updateEditorValue(view, nextValue);
+			codemirrorValue = nextValue;
 		}
 	});
 

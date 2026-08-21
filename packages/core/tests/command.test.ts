@@ -450,7 +450,21 @@ describe('Command Palette', () => {
 				expect(state.isOpen).toBe(false);
 				expect(state.query).toBe('');
 				expect(state.selectedIndex).toBe(0);
+				// `executeCommand` now routes its dismissal through `closed`
+				// instead of hand-rolling it. It used to set `isOpen: false` and
+				// leave `presentation` at `presented`, and the markup renders on
+				// `presentation.status !== 'idle'` — so the palette stayed on
+				// screen. This assertion is what makes that visible here.
+				expect(state.presentation.status).toBe('dismissing');
 			});
+
+			await store.receive(
+				{ type: 'presentation', event: { type: 'dismissalCompleted' } },
+				(state) => {
+					expect(state.presentation.status).toBe('idle');
+					expect(state.isOpen).toBe(false);
+				}
+			);
 
 			store.assertNoPendingActions();
 			expect(executedCommands).toEqual([command]);

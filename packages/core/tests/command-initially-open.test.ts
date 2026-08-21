@@ -24,7 +24,7 @@
  * no "before" for it to animate from.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import Command from '../src/lib/components/command/Command.svelte';
 import { createInitialCommandState } from '../src/lib/components/command/command.types.js';
@@ -178,5 +178,68 @@ describe('<Command /> can be dismissed', () => {
 			initiallyOpen,
 			'an initially-open palette ran no dismissal animation, unlike the control'
 		).toBeGreaterThan(0);
+	});
+
+	it('closes when a command is executed', async () => {
+		// The primary way a command palette closes, and the route the previous
+		// round's dismissal fix missed. `executeCommand` set `isOpen: false` but
+		// never touched `presentation`, and the markup renders on
+		// `presentation.status !== 'idle'` — so the dialog stayed on screen with
+		// the store believing it was closed.
+		//
+		// The F3 test added in the same round drives Enter -> executeCommand and
+		// asserts only that the callback fired. It walked straight past this.
+		const onSelect = vi.fn();
+		const { container } = render(Command, {
+			props: { open: true, commands: [{ id: 'a', label: 'Alpha', onSelect }] }
+		});
+		await settle();
+		expect(dialogVisible(), 'precondition: it opened').toBe(true);
+
+		const dialog = container.querySelector('[role="dialog"]') as HTMLElement;
+		dialog.focus();
+		dialog.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+		await settle(800);
+
+		expect(onSelect, 'precondition: the command ran').toHaveBeenCalledTimes(1);
+		expect(dialogVisible(), 'still visible long after executing a command').toBe(false);
+	});
+
+	it('closes on a backdrop click', async () => {
+		// Asserted rather than assumed: the previous round's commit message
+		// claimed this route worked and shipped no test for it.
+		const { container } = render(Command, {
+			props: { open: true, commands: [{ id: 'a', label: 'Alpha' }] }
+		});
+		await settle();
+		expect(dialogVisible()).toBe(true);
+
+		const backdrop = container.querySelector('.command-backdrop') as HTMLElement;
+		expect(backdrop, 'no backdrop element').not.toBeNull();
+		backdrop.click();
+		await settle(800);
+
+		expect(dialogVisible(), 'still visible long after a backdrop click').toBe(false);
+	});
+
+	it('can be reopened by the prop after executing a command', async () => {
+		// The recovery half. When the palette closed itself, the binding effect
+		// syncs `open` back to false — so a consumer that then sets `open = false`
+		// is already in agreement and dispatches nothing. This pins that a
+		// subsequent `open = true` still works rather than needing a round trip.
+		const { rerender, container } = render(Command, {
+			props: { open: true, commands: [{ id: 'a', label: 'Alpha', onSelect: vi.fn() }] }
+		});
+		await settle();
+
+		const dialog = container.querySelector('[role="dialog"]') as HTMLElement;
+		dialog.focus();
+		dialog.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+		await settle(800);
+		expect(dialogVisible()).toBe(false);
+
+		await rerender({ open: true });
+		await settle(800);
+		expect(dialogVisible(), 'could not reopen after a command executed').toBe(true);
 	});
 });

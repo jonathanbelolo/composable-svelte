@@ -270,7 +270,15 @@ export const commandReducer: Reducer<CommandState, CommandAction, CommandDepende
 				}
 			});
 
-			return [newState, effect];
+			// Route the dismissal through `closed` rather than hand-rolling it.
+			// This case used to set `isOpen: false` and stop, leaving
+			// `presentation` at `presented` — and the markup renders on
+			// `presentation.status !== 'idle'`, so the palette stayed on screen
+			// with the store believing it had closed. Executing a command is the
+			// primary way a palette closes, so this was the most-used route.
+			const [closedState, closeEffect] = commandReducer(newState, { type: 'closed' }, deps);
+
+			return [closedState, Effect.batch(effect, closeEffect)];
 		}
 
 		case 'clearQuery': {

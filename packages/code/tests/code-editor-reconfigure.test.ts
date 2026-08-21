@@ -181,8 +181,13 @@ describe('tab size reconfiguration', () => {
 describe('idempotence', () => {
 	it('unrelated store activity does not reconfigure the editor', async () => {
 		// Counts CodeMirror transactions rather than hoping Svelte throws.
-		// `cursorMoved` returns a fresh state object every time, so the sync
-		// effect genuinely re-runs on each of the twenty dispatches.
+		//
+		// `flushSync()` is INSIDE the loop deliberately. With a single flush after
+		// the loop, Svelte coalesces all twenty dispatches into one effect run —
+		// measured: 1 run batched, 20 runs flushed individually — so the loop was
+		// decorative and the test proved only that a single redundant run is
+		// absorbed. `cursorMoved` returns a fresh state object each time, so
+		// flushing per dispatch makes all twenty re-runs real.
 		const { store, view } = await mountEditor();
 		await settle(200);
 
@@ -198,13 +203,101 @@ describe('idempotence', () => {
 
 		for (let i = 0; i < 20; i += 1) {
 			store.dispatch({ type: 'cursorMoved', position: { line: 1, column: i } });
+			flushSync();
 		}
-		flushSync();
 		await settle(300);
 
 		expect(
 			transactions,
 			'the editor was reconfigured by dispatches that changed none of its config'
 		).toBe(0);
+	});
+});
+
+describe('programmatic value sync', () => {
+	it('a store value change reaches the editor', async () => {
+		// This effect never ran. `if (view && $store.value !== codemirrorValue)`
+		// short-circuits on a non-reactive `view` that is null on the first run
+		// (`createEditorView` is async), so the effect captured no dependencies
+		// and was never re-invoked. Loading a file or formatting silently did
+		// nothing to the editor.
+		const { store, view } = await mountEditor({ value: 'ORIGINAL' });
+		expect(view.state.doc.toString()).toBe('ORIGINAL');
+
+		store.dispatch({ type: 'valueChanged', value: 'FROM-STORE' });
+		flushSync();
+		await settle(300);
+
+		expect(
+			view.state.doc.toString(),
+			'a programmatic store value change never reached the editor'
+		).toBe('FROM-STORE');
+	});
+
+	it('reaches the editor even while read-only', async () => {
+		// The end-to-end half of a claim the Compartment commit made only at the
+		// facet level: `EditorState.readOnly` blocks user commands, not
+		// programmatic changes, so formatting a read-only document must work.
+		const { store, view } = await mountEditor({ value: 'ORIGINAL', readOnly: true });
+		expect(view.state.readOnly).toBe(true);
+
+		store.dispatch({ type: 'valueChanged', value: 'FORMATTED' });
+		flushSync();
+		await settle(300);
+
+		expect(view.state.doc.toString()).toBe('FORMATTED');
+	});
+});
+
+describe('language race and isolation', () => {
+	it('rapid switches land on the language the user last picked', async () => {
+		// NOT coverage for the wrapper's `pendingLanguage` WeakMap, despite
+		// looking like it. Measured: deleting that guard entirely leaves this
+		// test — and the whole suite — green, because `mountEditor` pre-warms
+		// every language import, so both resolve in a microtask in dispatch
+		// order and there is no race to lose.
+		//
+		// Reproducing a genuine out-of-order import would mean controlling module
+		// resolution timing, which this harness cannot do without a sleep-based
+		// test that would be flaky. So the guard is deliberately ungated, and
+		// this test pins the weaker end-state invariant instead: after rapid
+		// switching, the editor agrees with the store.
+		const { store, view } = await mountEditor({ language: 'typescript' });
+
+		store.dispatch({ type: 'languageChanged', language: 'python' });
+		flushSync();
+		store.dispatch({ type: 'languageChanged', language: 'sql' });
+		flushSync();
+
+		await waitFor(() => commentLine(view) === '--' || null, 'sql to be applied');
+		await settle(500);
+		expect(commentLine(view), 'the editor disagrees with the store').toBe('--');
+		expect(store.state.language).toBe('sql');
+	});
+
+	it('two editors on one page do not share configuration', async () => {
+		// The load-bearing claim of the module-level Compartment design, verified
+		// in node against bare EditorStates but never against mounted components.
+		// This is a regression guard for a future refactor (someone moving to
+		// per-view compartments, or reconfiguring the wrong instance) rather than
+		// a test that can fail on the current design.
+		const a = await mountEditor({ language: 'typescript', tabSize: 2, theme: 'dark' });
+		const b = await mountEditor({ language: 'python', tabSize: 8, theme: 'light' });
+
+		expect(a.view).not.toBe(b.view);
+		await waitFor(() => commentLine(a.view) === '//' || null, 'A typescript');
+		await waitFor(() => commentLine(b.view) === '#' || null, 'B python');
+
+		a.store.dispatch({ type: 'languageChanged', language: 'sql' });
+		a.store.dispatch({ type: 'tabSizeChanged', size: 4 });
+		flushSync();
+		await waitFor(() => commentLine(a.view) === '--' || null, 'A sql');
+		await settle(200);
+
+		// B must be untouched by any of it.
+		expect(commentLine(b.view), 'B lost its language when A changed').toBe('#');
+		expect(b.view.state.tabSize, 'B lost its tab size when A changed').toBe(8);
+		expect(b.view.state.facet(EditorView.darkTheme), 'B lost its theme').toBe(false);
+		expect(a.view.state.tabSize).toBe(4);
 	});
 });

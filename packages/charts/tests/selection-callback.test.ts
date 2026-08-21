@@ -265,4 +265,48 @@ describe('onSelectionChange', () => {
 			'clearing an already-empty selection notified; nothing changed'
 		).not.toHaveBeenCalled();
 	});
+
+	it('stays silent when a range is re-selected identically', async () => {
+		// The sibling case the first round of idempotence fixes missed.
+		// `selectRange` sits between `selectPoint` and `clearSelection` in the
+		// same block and allocated fresh arrays the same way. It is the one a
+		// real brush gesture hits — `ChartPrimitive.svelte:275` dispatches it on
+		// every brush end, so re-brushing the same points re-notified.
+		const { store, onSelectionChange } = mountChart();
+		await settle();
+
+		store.dispatch({ type: 'selectRange', range: [0, 1] });
+		flushSync();
+		await settle();
+		expect(onSelectionChange).toHaveBeenCalledTimes(1);
+		onSelectionChange.mockClear();
+
+		for (let i = 0; i < 3; i += 1) {
+			store.dispatch({ type: 'selectRange', range: [0, 1] });
+			flushSync();
+			await settle();
+		}
+
+		expect(
+			onSelectionChange,
+			're-selecting the same range notified again; the selection did not change'
+		).not.toHaveBeenCalled();
+	});
+
+	it('still reports a genuinely different range', async () => {
+		// So an over-eager idempotence guard cannot pass by never notifying.
+		const { store, onSelectionChange } = mountChart();
+		await settle();
+
+		store.dispatch({ type: 'selectRange', range: [0, 1] });
+		flushSync();
+		await settle();
+		onSelectionChange.mockClear();
+
+		store.dispatch({ type: 'selectRange', range: [1, 2] });
+		flushSync();
+		await settle();
+
+		expect(onSelectionChange).toHaveBeenCalledTimes(1);
+	});
 });

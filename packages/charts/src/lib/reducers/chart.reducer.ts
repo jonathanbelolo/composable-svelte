@@ -142,6 +142,21 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
         }
       });
 
+      // Idempotent by value, same reasoning as `selectPoint` and
+      // `clearSelection`. This is the case a real brush gesture hits:
+      // `ChartPrimitive.svelte:275` dispatches it on every brush end, so
+      // re-brushing the same points re-notified with equal contents.
+      const prev = state.selection;
+      if (
+        prev.type === 'range' &&
+        prev.range?.[0] === action.range[0] &&
+        prev.range?.[1] === action.range[1] &&
+        prev.selectedIndices.length === selectedIndices.length &&
+        prev.selectedIndices.every((v, i) => v === selectedIndices[i])
+      ) {
+        return [state, Effect.none()];
+      }
+
       return [
         {
           ...state,
