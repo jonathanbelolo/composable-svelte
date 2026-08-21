@@ -69,7 +69,7 @@
 
 	const indicatorClasses = $derived(
 		cn(
-			'h-full bg-primary transition-all duration-300 ease-in-out',
+			'h-full bg-primary transition-[width] duration-300 ease-in-out',
 			value === undefined && 'animate-pulse',
 			indicatorClass
 		)

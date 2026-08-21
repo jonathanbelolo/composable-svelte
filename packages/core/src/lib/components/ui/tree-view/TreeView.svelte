@@ -236,7 +236,6 @@
 				class={cn(
 					'flex-shrink-0 w-4 h-4 flex items-center justify-center',
 					'hover:bg-accent hover:text-accent-foreground rounded-sm',
-					'transition-transform',
 					isExpanded && 'rotate-90'
 				)}
 				onclick={(e) => handleExpandClick(node.id, e)}

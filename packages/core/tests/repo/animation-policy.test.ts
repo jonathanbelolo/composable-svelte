@@ -66,6 +66,10 @@ const REGISTER: Record<string, { properties: string[]; why: string }> = {
 		properties: ['width'],
 		why: 'Playback position from timeupdate.'
 	},
+	'core/src/lib/components/ui/progress/Progress.svelte': {
+		properties: ['width'],
+		why: 'Determinate progress from an external count — bytes transferred, steps done. Not the user\'s own input, so the feedback-is-instant rule does not reach it.'
+	},
 	'media/src/lib/voice-input/components/ConversationModePanel.svelte': {
 		properties: ['width'],
 		why: 'VAD silence countdown; a linear tween is the countdown semantics.'
@@ -131,6 +135,15 @@ function stripComments(source: string): string {
  * the caller treats as "everything" rather than "nothing".
  */
 export function extractProperties(declaration: string): string[] {
+	// `transition-[width]` — the idiomatic Tailwind way to name one property, and
+	// therefore exactly what a narrowed Register grant is written as. Without this
+	// the extractor returned [] for it, so a correctly-narrowed grant scanned as a
+	// violation and the Register could not be satisfied through Tailwind at all.
+	const arbitrary = [...declaration.matchAll(/transition-\[([^\]]+)\]/g)].flatMap((m) =>
+		m[1]!.split(',').map((p) => p.trim())
+	);
+	if (arbitrary.length > 0) return arbitrary.filter((p) => p !== 'all');
+
 	const tailwind = [...declaration.matchAll(/transition-(?!property\b)([a-z]+)(?![-\w])/g)].map(
 		(m) => m[1]!
 	);
@@ -320,9 +333,6 @@ const BACKLOG = new Set([
 	'chat/src/lib/streaming-chat/variants/StandardStreamingChat.svelte',
 	'code/src/lib/code-editor/CodeEditor.svelte',
 	'code/src/lib/code-highlight/CodeHighlight.svelte',
-	'core/src/lib/components/ui/carousel/Carousel.svelte',
-	'core/src/lib/components/ui/progress/Progress.svelte',
-	'core/src/lib/components/ui/tree-view/TreeView.svelte',
 	'maps/src/lib/components/TileProviderControl.svelte',
 	'media/src/lib/audio-player/FullAudioPlayer.svelte',
 	'media/src/lib/audio-player/MinimalAudioPlayer.svelte',
@@ -392,6 +402,12 @@ describe('animation policy', () => {
 		]);
 
 		expect(extractProperties('transition-property: transform')).toEqual(['transform']);
+
+		// The arbitrary-value form, which a narrowed grant is written as.
+		expect(extractProperties("'h-full bg-primary transition-[width] duration-300',")).toEqual([
+			'width'
+		]);
+		expect(extractProperties('transition-[width,opacity]')).toEqual(['width', 'opacity']);
 		expect(extractProperties("'transition-opacity',")).toEqual(['opacity']);
 
 		// "Everything" reads as no named property; the caller treats that as

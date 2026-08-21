@@ -271,6 +271,18 @@ document was rewritten to remove.
 user's own drag, so a transition makes the fill lag the thumb they are holding. A
 transition that delays feedback on direct manipulation is a defect.
 
+### Animate both halves of a gesture, or neither
+
+An indicator may only animate if the thing it indicates does. `TreeView`'s twisty
+is the worked example: its branch has no wrapper element and its children appear
+instantly, so rotating the twisty on a spring would render one gesture on two
+timelines — the same defect as a CSS chevron beside a Motion One dropdown, just
+inverted. It rotates instantly, and that is correct rather than a shortcut.
+
+Note what this rules *out*: reaching for Motion One because the rule table says
+"state". If nothing animates, there is no animation to route anywhere, and a
+state-driven static style is always fine.
+
 ### That refusal generalises: feedback is instant
 
 Anything that tracks the user's **current input position** is feedback, not a
@@ -330,7 +342,7 @@ nothing — it is what `Switch.svelte` uses for a one-property tween.
 | `animateSidebarExpand(el, targetWidth, …)` / `animateSidebarCollapse(el, currentWidth, …)` | note the differing second parameter |
 | `animateStackPushIn` / `animateStackPushOut` / `animateStackPopIn` / `animateStackPopOut` | |
 | `animateAccordionExpand` / `animateAccordionCollapse` | duration-based, not springs; both measure `scrollHeight` — see invariant 5 |
-| `animateChevron(el, expanded, options?)` | accepts `SVGElement`; `options.degrees` defaults to 180 (a tree twisty wants 90) |
+| `animateChevron(el, expanded, springConfig?)` | accepts `SVGElement`; rotates 180° |
 
 Springs come from `springPresets` in `spring-config.ts` — `modal`, `sheet`,
 `drawer`, `alert`, `toast`, `dropdown`, `popover`, `tooltip`, `button`,

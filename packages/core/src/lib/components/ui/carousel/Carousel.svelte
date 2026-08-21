@@ -1,5 +1,6 @@
 <script lang="ts" generics="T = unknown">
   import { createStore } from '../../../store.svelte.js';
+  import { animateCarouselTrack } from '../../../animation/animate.js';
   import { carouselReducer } from './carousel.reducer.js';
   import { createInitialCarouselState } from './carousel.types.js';
   import type { CarouselSlide, CarouselProps } from './carousel.types.js';
@@ -70,33 +71,40 @@
     }
   });
 
-  // Handle transition completion
-  // Track previous state with regular let (not $state) to prevent tracking
-  let previousTransitioning: boolean | undefined = undefined;
-  let transitionTimeout: ReturnType<typeof setTimeout> | null = null;
+  // Captured once, never reactive — the track's position before any animation,
+  // and the only thing the server can emit. Reactive here would re-assert the
+  // endpoint on every index change, and Motion One would then animate from the
+  // destination to itself, i.e. not at all.
+  const initialTrackTransform = `translateX(-${$store.currentIndex * 100}%)`;
+
+  // Move the track, and let the movement itself report completion.
+  //
+  // This was a bare timer dispatching `transitionCompleted`, while the same
+  // duration was also handed to CSS — two independent clocks for one gesture,
+  // with nothing tying the dispatch to the slide actually arriving. The
+  // guideline names this component as its cautionary example for exactly that.
+  //
+  // No timeout fallback, and that is checked rather than assumed: the reducer
+  // refuses navigation and autoplay while `isTransitioning`, so this animation
+  // cannot be interrupted and its promise always settles. An interrupted Motion
+  // One promise never settles at all.
+  //
+  // Plain `let` guard: the effect reads and writes it, and a reactive guard
+  // re-triggers the effect it lives in.
+  let trackElement: HTMLElement | null = $state(null);
+  let lastAnimatedIndex: number | undefined = undefined;
 
   $effect(() => {
-    const currentTransitioning = store.state.isTransitioning;
+    const index = $store.currentIndex;
+    if (!trackElement || lastAnimatedIndex === index) return;
 
-    // Skip on initial render
-    if (previousTransitioning === undefined) {
-      previousTransitioning = currentTransitioning;
-      return;
-    }
+    const first = lastAnimatedIndex === undefined;
+    lastAnimatedIndex = index;
+    if (first) return; // the markup already placed the track
 
-    // Only act when transitioning changes from false to true
-    if (!previousTransitioning && currentTransitioning) {
-      if (transitionTimeout) clearTimeout(transitionTimeout);
-      transitionTimeout = setTimeout(() => {
-        store.dispatch({ type: 'transitionCompleted' });
-      }, transitionDuration);
-    }
-
-    previousTransitioning = currentTransitioning;
-
-    return () => {
-      if (transitionTimeout) clearTimeout(transitionTimeout);
-    };
+    animateCarouselTrack(trackElement, -index * 100, transitionDuration).then(() => {
+      queueMicrotask(() => store.dispatch({ type: 'transitionCompleted' }));
+    });
   });
 
   function handlePrevious() {
@@ -168,9 +176,9 @@
     style="height: 100%;"
   >
     <div
-      class="carousel-slides flex transition-transform"
-      style:transform={`translateX(-${$store.currentIndex * 100}%)`}
-      style:transition-duration={`${transitionDuration}ms`}
+      bind:this={trackElement}
+      class="carousel-slides flex"
+      style:transform={initialTrackTransform}
     >
       {#each $store.slides as slide, index (slide.id)}
         <div
@@ -197,8 +205,7 @@
     <button
       class="carousel-prev absolute left-4 top-1/2 -translate-y-1/2 z-10
              bg-white/90 hover:bg-white rounded-full p-2 shadow-lg
-             disabled:opacity-50 disabled:cursor-not-allowed
-             transition-all duration-200"
+             disabled:opacity-50 disabled:cursor-not-allowed"
       onclick={handlePrevious}
       disabled={!canGoPrevious || $store.isTransitioning}
       aria-label="Previous slide"
@@ -222,8 +229,7 @@
     <button
       class="carousel-next absolute right-4 top-1/2 -translate-y-1/2 z-10
              bg-white/90 hover:bg-white rounded-full p-2 shadow-lg
-             disabled:opacity-50 disabled:cursor-not-allowed
-             transition-all duration-200"
+             disabled:opacity-50 disabled:cursor-not-allowed"
       onclick={handleNext}
       disabled={!canGoNext || $store.isTransitioning}
       aria-label="Next slide"
@@ -254,7 +260,7 @@
     >
       {#each $store.slides as slide, index (slide.id)}
         <button
-          class="carousel-dot w-2 h-2 rounded-full transition-all duration-200
+          class="carousel-dot w-2 h-2 rounded-full
                  {index === $store.currentIndex ? 'bg-gray-800 w-6' : 'bg-gray-400 hover:bg-gray-600'}"
           onclick={() => handleDotClick(index)}
           disabled={$store.isTransitioning}

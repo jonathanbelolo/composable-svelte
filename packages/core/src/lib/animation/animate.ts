@@ -482,6 +482,38 @@ export async function animateToastOut(
  * @returns Promise that resolves when animation completes (or fails gracefully)
  */
 /**
+ * Slide a carousel track to a given offset.
+ *
+ * Duration-based rather than a spring, because the carousel's reducer owns
+ * `isTransitioning` and a consumer sets `transitionDuration` — the store needs
+ * to know how long this takes, which a spring's settling time does not tell it.
+ *
+ * The caller dispatches `transitionCompleted` from the returned promise. That is
+ * safe here specifically: the reducer refuses navigation and autoplay while
+ * transitioning, so this animation cannot be interrupted, and an interrupted
+ * Motion One promise never settles.
+ */
+export async function animateCarouselTrack(
+	element: HTMLElement,
+	offsetPercent: number,
+	durationMs: number
+): Promise<void> {
+	const target = `${offsetPercent}%`;
+	try {
+		await motionAnimate(
+			element,
+			{ x: target },
+			{ duration: durationMs / 1000, ease: [0.4, 0, 0.2, 1] }
+		).finished;
+	} catch (error) {
+		console.error('[animateCarouselTrack] Animation failed:', error);
+		if (element) {
+			element.style.transform = `translateX(${target})`;
+		}
+	}
+}
+
+/**
  * Rotate a disclosure chevron to match the thing it discloses.
  *
  * A chevron that turns on a CSS `transition-transform` while its dropdown
@@ -498,13 +530,11 @@ export async function animateChevron(
 	// the fallback path needs.
 	element: HTMLElement | SVGElement,
 	expanded: boolean,
-	// `degrees` because disclosure chevrons do not agree on an angle: a dropdown
-	// caret flips 180°, a tree twisty turns 90°. Defaults to 180.
-	options?: Partial<SpringConfig> & { degrees?: number }
+	springConfig?: Partial<SpringConfig>
 ): Promise<void> {
-	const degrees = expanded ? (options?.degrees ?? 180) : 0;
+	const degrees = expanded ? 180 : 0;
 	try {
-		const config = getSpringConfig(springPresets.dropdown, options);
+		const config = getSpringConfig(springPresets.dropdown, springConfig);
 
 		await motionAnimate(
 			element,
