@@ -6,6 +6,8 @@
  * @packageDocumentation
  */
 
+import type { PresentationState } from '../../../navigation/types.js';
+
 /**
  * Select option configuration.
  */
@@ -51,6 +53,15 @@ export interface SelectState<T = string> {
 	isOpen: boolean;
 
 	/**
+	 * Animation lifecycle for the dropdown.
+	 *
+	 * Separate from `isOpen` on purpose. `isOpen` backs `aria-expanded` and flips
+	 * the moment the user acts; this keeps the list mounted through its exit
+	 * animation, which `{#if isOpen}` alone cannot do.
+	 */
+	presentation: PresentationState<boolean>;
+
+	/**
 	 * Currently highlighted option index.
 	 */
 	highlightedIndex: number;
@@ -74,6 +85,10 @@ export interface SelectState<T = string> {
 /**
  * Select actions.
  */
+export type SelectPresentationEvent =
+	| { type: 'presentationCompleted' }
+	| { type: 'dismissalCompleted' };
+
 export type SelectAction<T = string> =
 	| { type: 'opened' }
 	| { type: 'closed' }
@@ -92,7 +107,8 @@ export type SelectAction<T = string> =
 	// Sync actions: the component dispatches these when its `value` / `options`
 	// props change externally.
 	| { type: 'valueChanged'; value: T | T[] | null }
-	| { type: 'optionsChanged'; options: SelectOption<T>[] };
+	| { type: 'optionsChanged'; options: SelectOption<T>[] }
+	| { type: 'presentation'; event: SelectPresentationEvent };
 
 /**
  * Select dependencies.
@@ -116,6 +132,7 @@ export function createInitialSelectState<T = string>(
 		options,
 		selected: initialValue,
 		isOpen: false,
+		presentation: { status: 'idle' },
 		highlightedIndex: -1,
 		searchQuery: '',
 		filteredOptions: options,

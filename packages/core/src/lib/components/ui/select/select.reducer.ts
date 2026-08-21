@@ -126,10 +126,14 @@ export const selectReducer: Reducer<
 > = (state, action, deps) => {
 	switch (action.type) {
 		case 'opened': {
+			if (state.isOpen) {
+				return [state, Effect.none()];
+			}
 			return [
 				{
 					...state,
 					isOpen: true,
+					presentation: { status: 'presenting' as const, content: true },
 					highlightedIndex: -1,
 					searchQuery: '',
 					filteredOptions: state.options
@@ -143,6 +147,7 @@ export const selectReducer: Reducer<
 				{
 					...state,
 					isOpen: false,
+					presentation: { status: 'dismissing' as const, content: true },
 					highlightedIndex: -1,
 					searchQuery: '',
 					filteredOptions: state.options
@@ -157,6 +162,9 @@ export const selectReducer: Reducer<
 				{
 					...state,
 					isOpen: newIsOpen,
+					presentation: newIsOpen
+						? { status: 'presenting' as const, content: true }
+						: { status: 'dismissing' as const, content: true },
 					highlightedIndex: newIsOpen ? -1 : state.highlightedIndex,
 					searchQuery: newIsOpen ? '' : state.searchQuery,
 					filteredOptions: newIsOpen ? state.options : state.filteredOptions
@@ -173,6 +181,7 @@ export const selectReducer: Reducer<
 				...state,
 				selected: value,
 				isOpen: false,
+				presentation: { status: 'dismissing' as const, content: true },
 				highlightedIndex: -1,
 				searchQuery: '',
 				filteredOptions: state.options
@@ -366,6 +375,7 @@ export const selectReducer: Reducer<
 					...state,
 					selected: option.value,
 					isOpen: false,
+					presentation: { status: 'dismissing' as const, content: true },
 					highlightedIndex: -1,
 					searchQuery: '',
 					filteredOptions: state.options
@@ -393,6 +403,7 @@ export const selectReducer: Reducer<
 				{
 					...state,
 					isOpen: false,
+					presentation: { status: 'dismissing' as const, content: true },
 					highlightedIndex: -1,
 					searchQuery: '',
 					filteredOptions: state.options
@@ -438,6 +449,26 @@ export const selectReducer: Reducer<
 				},
 				Effect.none()
 			];
+		}
+
+		case 'presentation': {
+			if (action.event.type === 'presentationCompleted') {
+				if (state.presentation.status !== 'presenting') {
+					return [state, Effect.none()];
+				}
+				return [
+					{ ...state, presentation: { status: 'presented' as const, content: true } },
+					Effect.none()
+				];
+			}
+
+			// `dismissalCompleted` only clears the lifecycle. `isOpen` went false the
+			// moment the user acted — it backs `aria-expanded`, and a list on its way
+			// out is not expanded.
+			if (state.presentation.status !== 'dismissing') {
+				return [state, Effect.none()];
+			}
+			return [{ ...state, presentation: { status: 'idle' as const } }, Effect.none()];
 		}
 
 		default:

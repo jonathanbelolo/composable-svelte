@@ -121,6 +121,7 @@ export type {
 	SelectOption,
 	SelectState,
 	SelectAction,
+	SelectPresentationEvent,
 	SelectDependencies
 } from './select/index.js';
 

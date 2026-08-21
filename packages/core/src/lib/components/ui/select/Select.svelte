@@ -4,7 +4,11 @@
 	import { createInitialSelectState } from './select.types.js';
 	import type { SelectOption } from './select.types.js';
 	import { cn } from '../../../utils.js';
-	import { animateChevron } from '../../../animation/animate.js';
+	import {
+		animateChevron,
+		animateDropdownIn,
+		animateDropdownOut
+	} from '../../../animation/animate.js';
 
 	/**
 	 * Select component - Dropdown select with search and multi-select support.
@@ -266,6 +270,43 @@
 		}
 		animateChevron(chevronElement, open);
 	});
+
+	// Drive the dropdown's own lifecycle. `dropdownElement` was bound and read by
+	// nothing — it is precisely the handle these helpers need.
+	//
+	// Plain `let` guard keyed on the (status, content) pair, per
+	// guides/ANIMATION-GUIDELINES.md: a reactive guard would re-trigger the effect
+	// it lives in, and a "have I animated yet" guard deadlocks a component that
+	// mounts already open.
+	let lastAnimated: { status: string; content: unknown } | null = null;
+
+	$effect(() => {
+		const presentation = $store.presentation;
+		if (!dropdownElement) return;
+
+		if (presentation.status === 'idle') {
+			lastAnimated = null;
+			return;
+		}
+
+		const { status, content } = presentation;
+		if (lastAnimated?.status === status && lastAnimated.content === content) return;
+		lastAnimated = { status, content };
+
+		if (status === 'presenting') {
+			animateDropdownIn(dropdownElement).then(() => {
+				queueMicrotask(() =>
+					store.dispatch({ type: 'presentation', event: { type: 'presentationCompleted' } })
+				);
+			});
+		} else if (status === 'dismissing') {
+			animateDropdownOut(dropdownElement).then(() => {
+				queueMicrotask(() =>
+					store.dispatch({ type: 'presentation', event: { type: 'dismissalCompleted' } })
+				);
+			});
+		}
+	});
 </script>
 
 <svelte:window onkeydown={handleDropdownKeyDown} />
@@ -346,9 +387,12 @@
 	</div>
 
 	<!-- Dropdown -->
-	{#if $store.isOpen}
+	<!-- Mounted while open *and* while dismissing, so the exit animation has
+	     something to animate. `isOpen` alone unmounts on the same tick. -->
+	{#if $store.isOpen || $store.presentation.status === 'dismissing'}
 		<div
 			bind:this={dropdownElement}
+			style:opacity={$store.presentation.status === 'presenting' ? '0' : undefined}
 			class="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border border-border bg-popover shadow-md"
 			role="listbox"
 			aria-multiselectable={multiple}
