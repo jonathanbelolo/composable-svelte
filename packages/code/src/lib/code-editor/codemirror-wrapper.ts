@@ -20,7 +20,7 @@ import {
 	crosshairCursor,
 	highlightActiveLine
 } from '@codemirror/view';
-import { Compartment, EditorState, type Extension } from '@codemirror/state';
+import { Compartment, EditorState, Transaction, type Extension } from '@codemirror/state';
 import {
 	codeFolding,
 	foldGutter,
@@ -31,7 +31,16 @@ import {
 	syntaxHighlighting,
 	defaultHighlightStyle
 } from '@codemirror/language';
-import { history, historyKeymap, defaultKeymap } from '@codemirror/commands';
+import {
+	history,
+	historyKeymap,
+	defaultKeymap,
+	undo,
+	redo,
+	undoDepth,
+	redoDepth,
+	selectAll as selectAllCommand
+} from '@codemirror/commands';
 import {
 	autocompletion,
 	completionKeymap,
@@ -238,6 +247,10 @@ export async function createEditorView(
 	const themeExtensions = getThemeExtensions(config.theme);
 
 	// Create update listener to sync CodeMirror changes to store
+	// Plain locals, not reactive state: read and written by the listener below.
+	let lastCanUndo = false;
+	let lastCanRedo = false;
+
 	const updateListener = EditorView.updateListener.of((update) => {
 		// Document changed
 		if (update.docChanged) {
@@ -273,6 +286,20 @@ export async function createEditorView(
 				const cursorPos = getLineColumn(update.state, from);
 				store.dispatch({ type: 'cursorMoved', position: cursorPos });
 			}
+		}
+
+		// Undo/redo availability, edge-triggered.
+		//
+		// `undoDepth`/`redoDepth` are cheap, but dispatching them per keystroke
+		// would be a storm. These are booleans that flip only at session
+		// boundaries — first edit, stack exhausted, first undo — so typing 500
+		// characters produces one dispatch, not 500.
+		const canUndo = undoDepth(update.state) > 0;
+		const canRedo = redoDepth(update.state) > 0;
+		if (canUndo !== lastCanUndo || canRedo !== lastCanRedo) {
+			lastCanUndo = canUndo;
+			lastCanRedo = canRedo;
+			store.dispatch({ type: 'historyChanged', canUndo, canRedo });
 		}
 
 		// Focus changed
@@ -382,11 +409,22 @@ export async function createEditorView(
  * @param view CodeMirror view
  * @param newValue New value to set
  */
-export function updateEditorValue(view: EditorView, newValue: string): void {
+export function updateEditorValue(
+	view: EditorView,
+	newValue: string,
+	options?: { addToHistory?: boolean }
+): void {
 	const currentValue = view.state.doc.toString();
 	if (currentValue !== newValue) {
 		view.dispatch({
-			changes: { from: 0, to: view.state.doc.length, insert: newValue }
+			changes: { from: 0, to: view.state.doc.length, insert: newValue },
+			// Programmatic replacements are undoable by default — a formatted
+			// document should be revertable. The mount-time catch-up passes
+			// `false`, because the editor agreeing with the state it was built
+			// from is not an edit the user made.
+			...(options?.addToHistory === false
+				? { annotations: Transaction.addToHistory.of(false) }
+				: {})
 		});
 	}
 }
@@ -444,6 +482,61 @@ export function updateEditorReadOnly(view: EditorView, readOnly: boolean): void 
  */
 export function updateTabSize(view: EditorView, tabSize: number): void {
 	view.dispatch({ effects: tabSizeCompartment.reconfigure(tabSizeExtension(tabSize)) });
+}
+
+/**
+ * Run an editing command against the live view.
+ *
+ * These correspond to the store's command actions, which carry no state. The
+ * reducer stays pure and the view calls these on the action stream — CodeMirror
+ * then reports the result back as `valueChanged` / `selectionChanged` /
+ * `historyChanged`, so the store stays the source of truth for state while the
+ * editor owns the document.
+ *
+ * `readOnly` is honoured here because a programmatic `view.dispatch({changes})`
+ * bypasses the `EditorState.readOnly` facet, which only blocks *commands*.
+ */
+export function runEditorCommand(
+	view: EditorView,
+	command:
+		| { type: 'undo' }
+		| { type: 'redo' }
+		| { type: 'selectAll' }
+		| { type: 'insertText'; text: string; position?: { line: number; column: number } | undefined }
+		| { type: 'deleteSelection' }
+): void {
+	switch (command.type) {
+		case 'undo':
+			undo(view);
+			return;
+		case 'redo':
+			redo(view);
+			return;
+		case 'selectAll':
+			selectAllCommand(view);
+			return;
+		case 'insertText': {
+			if (view.state.readOnly) return;
+			if (command.position) {
+				// The action carries a 1-based line/column, matching what the
+				// update listener reports back as `cursorMoved`. CodeMirror wants
+				// a document offset, so convert — and clamp, because a stale
+				// position from a since-shortened document would otherwise throw.
+				const lineCount = view.state.doc.lines;
+				const lineNo = Math.min(Math.max(command.position.line, 1), lineCount);
+				const line = view.state.doc.line(lineNo);
+				const anchor = Math.min(line.from + Math.max(command.position.column, 0), line.to);
+				view.dispatch({ selection: { anchor } });
+			}
+			view.dispatch(view.state.replaceSelection(command.text), { userEvent: 'input.type' });
+			return;
+		}
+		case 'deleteSelection': {
+			if (view.state.readOnly) return;
+			view.dispatch(view.state.replaceSelection(''), { userEvent: 'delete.selection' });
+			return;
+		}
+	}
 }
 
 /**

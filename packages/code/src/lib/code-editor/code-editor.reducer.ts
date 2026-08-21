@@ -62,29 +62,31 @@ export const codeEditorReducer: Reducer<
 			return [{ ...state, selection: action.selection }, Effect.none()];
 
 		// Editing actions
+		// === Command markers ===
+		//
+		// These five carry no state change. They are *commands*: the view
+		// subscribes to the action stream and performs the corresponding
+		// CodeMirror operation, which then reports back through the update
+		// listener as `valueChanged` / `selectionChanged` / `historyChanged`.
+		//
+		// Returning the identical `state` is deliberate — `dispatchCore` only
+		// notifies subscribers when the object changes, so a command costs no
+		// re-render. `undo` used to set `canRedo` and `redo` used to set
+		// `canUndo` (inverted), and nothing read either.
 		case 'undo':
-			// Note: CodeMirror handles the actual undo operation internally
-			// Our reducer just updates the state flags
-			return [{ ...state, canRedo: true }, Effect.none()];
-
 		case 'redo':
-			// Note: CodeMirror handles the actual redo operation internally
-			// Our reducer just updates the state flags
-			return [{ ...state, canUndo: true }, Effect.none()];
-
 		case 'insertText':
-			// This action is primarily for testing or programmatic text insertion
-			// The actual insertion would be handled by CodeMirror, which would then
-			// dispatch a 'valueChanged' action
-			return [state, Effect.none()];
-
 		case 'deleteSelection':
-			// Similar to insertText - handled by CodeMirror
+		case 'selectAll':
 			return [state, Effect.none()];
 
-		case 'selectAll':
-			// Handled by CodeMirror
-			return [state, Effect.none()];
+		case 'historyChanged':
+			// Reported by the editor's update listener, edge-triggered on the
+			// boolean flipping — not on every keystroke.
+			if (state.canUndo === action.canUndo && state.canRedo === action.canRedo) {
+				return [state, Effect.none()];
+			}
+			return [{ ...state, canUndo: action.canUndo, canRedo: action.canRedo }, Effect.none()];
 
 		// Configuration
 		case 'themeChanged':

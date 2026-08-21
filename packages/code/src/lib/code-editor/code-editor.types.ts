@@ -102,6 +102,8 @@ export type CodeEditorAction =
 	| { type: 'toggleLineNumbers' }
 	| { type: 'toggleAutocomplete' }
 	| { type: 'toggleFolding' }
+	/** Reported by the editor when the undo/redo availability changes. */
+	| { type: 'historyChanged'; canUndo: boolean; canRedo: boolean }
 	| { type: 'setReadOnly'; readOnly: boolean }
 	| { type: 'tabSizeChanged'; size: number }
 

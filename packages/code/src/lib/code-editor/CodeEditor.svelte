@@ -16,7 +16,8 @@
 		updateTabSize,
 		updateLineNumbers,
 		updateFolding,
-		updateAutocomplete
+		updateAutocomplete,
+		runEditorCommand
 	} from './codemirror-wrapper.js';
 
 	/**
@@ -149,12 +150,48 @@
 				current.enableAutocomplete
 			);
 			if (current.value !== codemirrorValue) {
-				updateEditorValue(editorView, current.value);
+				// Not undoable: this is the editor catching up to state it was
+				// built from, not an edit. Without this the editor opens with
+				// Undo already enabled and one press wipes the seeded content.
+				updateEditorValue(editorView, current.value, { addToHistory: false });
 				codemirrorValue = current.value;
 			}
 		});
 
+		// Command actions reach the editor here.
+		//
+		// Deliberately `subscribeToActions` and not an `$effect`: Svelte
+		// coalesces effect runs, so two commands dispatched in the same tick
+		// would collapse into one. This fires synchronously, once per dispatch.
+		// It reads no store *state*, so it never re-subscribes.
+		const unsubscribe = store.subscribeToActions?.((action) => {
+			if (!view) return;
+			switch (action.type) {
+				case 'undo':
+				case 'redo':
+				case 'selectAll':
+				case 'deleteSelection':
+					runEditorCommand(view, action);
+					return;
+				case 'insertText':
+					runEditorCommand(view, action);
+					return;
+			}
+		});
+
+		if (!unsubscribe) {
+			// `subscribeToActions` is optional on the Store contract
+			// (`core/types.ts:239`). Without it the command actions silently do
+			// nothing, which is the exact defect class this component is being
+			// cleaned of — so say so loudly rather than degrade quietly.
+			console.warn(
+				'[CodeEditor] this store does not implement subscribeToActions, so ' +
+					'undo / redo / insertText / deleteSelection / selectAll cannot reach the editor.'
+			);
+		}
+
 		return () => {
+			unsubscribe?.();
 			view?.destroy();
 		};
 	});
@@ -232,6 +269,24 @@
 					<option value="python">Python</option>
 					<option value="rust">Rust</option>
 				</select>
+
+				<button
+					class="code-editor__button"
+					onclick={() => store.dispatch({ type: 'undo' })}
+					disabled={!$store.canUndo}
+					aria-label="Undo"
+				>
+					Undo
+				</button>
+
+				<button
+					class="code-editor__button"
+					onclick={() => store.dispatch({ type: 'redo' })}
+					disabled={!$store.canRedo}
+					aria-label="Redo"
+				>
+					Redo
+				</button>
 
 				<button
 					class="code-editor__button"
