@@ -2,6 +2,7 @@
 	import { animate } from 'motion';
 	import type { Store } from '../../types.js';
 	import type { ImageGalleryState, ImageGalleryAction } from './image-gallery.types.js';
+	import { Spinner } from '../ui/spinner/index.js';
 
 	/**
 	 * Image Lightbox Component
@@ -376,6 +377,13 @@
 						</button>
 					</div>
 				{:else if currentImage}
+					<!-- Sits over the image rather than replacing it, so navigating
+					     between loaded images does not blank the frame. -->
+					{#if storeState.lightbox.isImageLoading}
+						<div class="image-lightbox__loading">
+							<Spinner size="lg" />
+						</div>
+					{/if}
 					{#key storeState.lightbox.currentIndex}
 					<img
 						bind:this={imageElement}
@@ -561,6 +569,17 @@
 		100% {
 			background-position: -200% 0;
 		}
+	}
+
+	/* Loading state */
+	.image-lightbox__loading {
+		position: absolute;
+		inset: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		pointer-events: none;
+		color: white;
 	}
 
 	/* Error state */
