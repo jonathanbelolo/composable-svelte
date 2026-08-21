@@ -10,9 +10,10 @@ import type {
 	CommandState,
 	CommandAction,
 	CommandDependencies,
-	CommandItem
+	CommandItem,
+	CommandGroup
 } from './command.types.js';
-import { defaultFilterFunction, getSelectedCommand } from './command.types.js';
+import { applyFilter, getSelectedCommand } from './command.types.js';
 
 /**
  * Whether two command lists are equivalent.
@@ -36,6 +37,19 @@ function sameCommands(a: CommandItem[], b: CommandItem[]): boolean {
 			command.disabled === other.disabled
 		);
 	});
+}
+
+/**
+ * Are two group lists equal by value?
+ *
+ * Same reasoning as `sameCommands` — `groups={[...]}` inline is a fresh array
+ * every render, and `groups` now travels in the same guarded effect.
+ */
+function sameGroups(a: CommandGroup[] | undefined, b: CommandGroup[] | undefined): boolean {
+	if (a === b) return true;
+	if (!a || !b) return false;
+	if (a.length !== b.length) return false;
+	return a.every((group, i) => group.id === b[i]!.id && group.label === b[i]!.label);
 }
 
 /**
@@ -72,7 +86,7 @@ export const commandReducer: Reducer<CommandState, CommandAction, CommandDepende
 					...state,
 					isOpen: true,
 					query: '',
-					filteredCommands: state.commands,
+					filteredCommands: applyFilter(state, state.commands, '', deps),
 					selectedIndex: 0,
 					presentation: {
 						status: 'presenting',
@@ -120,7 +134,7 @@ export const commandReducer: Reducer<CommandState, CommandAction, CommandDepende
 					...state,
 					isOpen: false,
 					query: '',
-					filteredCommands: state.commands,
+					filteredCommands: applyFilter(state, state.commands, '', deps),
 					selectedIndex: 0,
 					presentation: { status: 'idle' }
 				},
@@ -128,27 +142,8 @@ export const commandReducer: Reducer<CommandState, CommandAction, CommandDepende
 			];
 		}
 
-		case 'toggled': {
-			// Toggle by dispatching open or close
-			const newIsOpen = !state.isOpen;
-
-			if (newIsOpen) {
-				// Dispatch 'opened' action to trigger animation
-				return commandReducer(state, { type: 'opened' }, deps);
-			} else {
-				// Dispatch 'closed' action to trigger animation
-				return commandReducer(state, { type: 'closed' }, deps);
-			}
-		}
-
 		case 'queryChanged': {
-			const filterFn = deps?.filterFunction ?? defaultFilterFunction;
-			let filtered = filterFn(state.commands, action.query);
-
-			// Apply max results limit
-			if (state.maxResults && filtered.length > state.maxResults) {
-				filtered = filtered.slice(0, state.maxResults);
-			}
+			const filtered = applyFilter(state, state.commands, action.query, deps);
 
 			return [
 				{
@@ -163,22 +158,24 @@ export const commandReducer: Reducer<CommandState, CommandAction, CommandDepende
 		}
 
 		case 'commandsUpdated': {
-			if (sameCommands(state.commands, action.commands)) {
+			// Both compared by value: this is dispatched from an unguarded
+			// `$effect`, and `commands={[...]}` / `groups={[...]}` inline are
+			// fresh arrays on every render. Returning the identical state is what
+			// stops that effect re-triggering forever.
+			if (sameCommands(state.commands, action.commands) && sameGroups(state.groups, action.groups)) {
 				return [state, Effect.none()];
 			}
 
-			const filterFn = deps?.filterFunction ?? defaultFilterFunction;
-			let filtered = filterFn(action.commands, state.query);
-
-			// Apply max results limit
-			if (state.maxResults && filtered.length > state.maxResults) {
-				filtered = filtered.slice(0, state.maxResults);
-			}
+			const nextState: CommandState = {
+				...state,
+				commands: action.commands,
+				...(action.groups !== undefined && { groups: action.groups })
+			};
+			const filtered = applyFilter(nextState, action.commands, state.query, deps);
 
 			return [
 				{
-					...state,
-					commands: action.commands,
+					...nextState,
 					filteredCommands: filtered,
 					selectedIndex: Math.min(state.selectedIndex, filtered.length - 1)
 				},
@@ -255,7 +252,7 @@ export const commandReducer: Reducer<CommandState, CommandAction, CommandDepende
 				...state,
 				isOpen: false,
 				query: '',
-				filteredCommands: state.commands,
+				filteredCommands: applyFilter(state, state.commands, '', deps),
 				selectedIndex: 0
 			};
 
@@ -286,7 +283,7 @@ export const commandReducer: Reducer<CommandState, CommandAction, CommandDepende
 				{
 					...state,
 					query: '',
-					filteredCommands: state.commands,
+					filteredCommands: applyFilter(state, state.commands, '', deps),
 					selectedIndex: 0
 				},
 				Effect.none()
@@ -298,7 +295,7 @@ export const commandReducer: Reducer<CommandState, CommandAction, CommandDepende
 				{
 					...state,
 					query: '',
-					filteredCommands: state.commands,
+					filteredCommands: applyFilter(state, state.commands, '', deps),
 					selectedIndex: 0,
 					isOpen: false,
 					presentation: { status: 'idle' }
@@ -337,7 +334,7 @@ export const commandReducer: Reducer<CommandState, CommandAction, CommandDepende
 						...state,
 						isOpen: false,
 						query: '',
-						filteredCommands: state.commands,
+						filteredCommands: applyFilter(state, state.commands, '', deps),
 						selectedIndex: 0,
 						presentation: { status: 'idle' }
 					},

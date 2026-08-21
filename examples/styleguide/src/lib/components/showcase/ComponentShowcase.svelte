@@ -24,6 +24,7 @@
   import FormDemo from '../demos/FormDemo.svelte';
   // Form Components - Advanced
   import ComboboxDemo from '../demos/ComboboxDemo.svelte';
+  import CommandDemo from '../demos/CommandDemo.svelte';
   import CalendarDemo from '../demos/CalendarDemo.svelte';
   import FileUploadDemo from '../demos/FileUploadDemo.svelte';
   // Foundational Components
@@ -103,6 +104,7 @@
     'form': FormDemo,
     // Form Components - Advanced
     'combobox': ComboboxDemo,
+    'command': CommandDemo,
     'calendar': CalendarDemo,
     'file-upload': FileUploadDemo,
     // Foundational Components

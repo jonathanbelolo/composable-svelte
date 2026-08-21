@@ -7,6 +7,7 @@
 	@component
 -->
 <script lang="ts">
+	import { getCommandContext } from './Command.svelte';
 	import type { Store } from '../../types.js';
 	import type { CommandState, CommandAction } from './command.types.js';
 
@@ -14,7 +15,12 @@
 		/**
 		 * Store managing command state.
 		 */
-		store: Store<CommandState, CommandAction>;
+		/**
+		 * The palette store. Optional: inside `<Command>` it comes from
+		 * context. Pass it explicitly only for standalone (non-modal) use
+		 * with a store you own.
+		 */
+		store?: Store<CommandState, CommandAction>;
 
 		/**
 		 * Placeholder text.
@@ -33,11 +39,16 @@
 	}
 
 	let {
-		store,
+		store: storeProp,
 		placeholder = 'Search commands...',
 		class: className = '',
 		autofocus = true
 	}: CommandInputProps = $props();
+
+	// Falls back to the palette's context. This used to be a REQUIRED prop, so a
+	// consumer had to build a second store — and everything `<Command>` was
+	// configured with fed the internal one that nothing rendered.
+	const store = $derived(storeProp ?? getCommandContext());
 
 	let inputRef: HTMLInputElement;
 

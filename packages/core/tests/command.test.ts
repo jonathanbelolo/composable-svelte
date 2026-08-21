@@ -80,22 +80,39 @@ describe('Command Palette', () => {
 			store.assertNoPendingActions();
 		});
 
-		it('toggles open state', async () => {
+		it('opens and closes through the explicit actions', async () => {
+			// Was `toggles open state`, driving the removed `toggled` action.
+			// `toggled` was only reachable from inside the open palette, where it
+			// could only ever close — half of what its name said. `open` is
+			// `$bindable`, so a consumer already opens and closes by binding it,
+			// and `opened`/`closed` are the actions that say what they do.
 			const store = createTestStore({
 				initialState: createInitialCommandState({ commands: sampleCommands }),
 				reducer: commandReducer
 			});
 
-			// Toggle open
-			await store.send({ type: 'toggled' }, (state) => {
+			await store.send({ type: 'opened' }, (state) => {
 				expect(state.isOpen).toBe(true);
 			});
 
-			// Toggle closed
-			await store.send({ type: 'toggled' }, (state) => {
-				expect(state.isOpen).toBe(false);
-				expect(state.query).toBe('');
+			await store.receive(
+				{ type: 'presentation', event: { type: 'presentationCompleted' } },
+				(state) => {
+					expect(state.presentation.status).toBe('presented');
+				}
+			);
+
+			await store.send({ type: 'closed' }, (state) => {
+				expect(state.presentation.status).toBe('dismissing');
 			});
+
+			await store.receive(
+				{ type: 'presentation', event: { type: 'dismissalCompleted' } },
+				(state) => {
+					expect(state.isOpen).toBe(false);
+					expect(state.query).toBe('');
+				}
+			);
 
 			store.assertNoPendingActions();
 		});

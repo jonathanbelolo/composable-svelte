@@ -76,10 +76,6 @@ export interface CommandGroup {
 	 */
 	label: string;
 
-	/**
-	 * Commands in this group.
-	 */
-	items: CommandItem[];
 }
 
 /**
@@ -138,9 +134,12 @@ export interface CommandState {
 export type CommandAction =
 	| { type: 'opened' }
 	| { type: 'closed' }
-	| { type: 'toggled' }
+	// `toggled` was removed: `open` is $bindable, so a consumer opens and closes
+	// by binding it. The action was only reachable from inside the palette —
+	// where it could only ever close — so it did half of what its name said.
+
 	| { type: 'queryChanged'; query: string }
-	| { type: 'commandsUpdated'; commands: CommandItem[] }
+	| { type: 'commandsUpdated'; commands: CommandItem[]; groups?: CommandGroup[] | undefined }
 	| { type: 'nextCommand' } // Arrow down
 	| { type: 'previousCommand' } // Arrow up
 	| { type: 'selectCommand'; index: number }
@@ -182,7 +181,20 @@ export function createInitialCommandState(config?: {
 		commands,
 		...(config?.groups !== undefined && { groups: config.groups }),
 		query: '',
-		filteredCommands: commands,
+		// Bounded from the start. This used to hand back the unbounded list, so
+		// a palette exceeded its own `maxResults` before the user typed anything.
+		// Through the same path every other reset uses, so the initial list is
+		// grouped and bounded exactly like the ones that follow it.
+		filteredCommands: applyFilter(
+			{
+				...(config?.groups !== undefined && { groups: config.groups }),
+				...(config?.maxResults !== undefined && { maxResults: config.maxResults }),
+				caseSensitive: config?.caseSensitive ?? false
+			},
+			commands,
+			'',
+			undefined
+		),
 		selectedIndex: 0,
 		isOpen: config?.isOpen ?? false,
 		// Must agree with `isOpen`. `Command.svelte` renders on
@@ -214,15 +226,65 @@ export function createInitialCommandState(config?: {
 }
 
 /**
+ * The single place `filteredCommands` is computed.
+ *
+ * Filter, then order by group, then bound by `maxResults`. It exists because
+ * `maxResults` was applied by two cases and ignored by six others plus the
+ * state factory — so the palette silently exceeded its own limit after every
+ * open, close, clear, reset and execute.
+ *
+ * Ordering happens HERE and not in the view, which is load-bearing:
+ * `nextCommand`, `selectCommand` and `executeCommand` all index into
+ * `filteredCommands`, so sorting anywhere else would make the highlighted item
+ * and the executed item disagree.
+ */
+export function applyFilter(
+	state: Pick<CommandState, 'groups' | 'maxResults' | 'caseSensitive'>,
+	commands: CommandItem[],
+	query: string,
+	deps?: CommandDependencies
+): CommandItem[] {
+	const filtered = deps?.filterFunction
+		? deps.filterFunction(commands, query)
+		: defaultFilterFunction(commands, query, { caseSensitive: state.caseSensitive });
+
+	// Ungrouped first, then each declared group in order, then any command whose
+	// group matches no declaration — each bucket keeping its original order.
+	const order = new Map((state.groups ?? []).map((g, i) => [g.id, i]));
+	const rank = (command: CommandItem) => {
+		if (!command.group) return -1;
+		return order.get(command.group) ?? order.size;
+	};
+	const ordered =
+		state.groups && state.groups.length > 0
+			? filtered
+					.map((command, i) => ({ command, i }))
+					.sort((x, y) => rank(x.command) - rank(y.command) || x.i - y.i)
+					.map(({ command }) => command)
+			: filtered;
+
+	return state.maxResults ? ordered.slice(0, state.maxResults) : ordered;
+}
+
+/**
  * Default fuzzy filter function for commands.
  * Matches query against label, description, and keywords.
  */
-export function defaultFilterFunction(commands: CommandItem[], query: string): CommandItem[] {
+export function defaultFilterFunction(
+	commands: CommandItem[],
+	query: string,
+	options?: { caseSensitive?: boolean }
+): CommandItem[] {
 	if (!query.trim()) {
 		return commands;
 	}
 
-	const lowerQuery = query.toLowerCase();
+	// `caseSensitive` was state nothing read: this lowercased unconditionally.
+	// A consumer-supplied `filterFunction` stays two-argument and owns its own
+	// semantics — passing it a flag it never asked for would be a new lie.
+	const caseSensitive = options?.caseSensitive ?? false;
+	const fold = (value: string) => (caseSensitive ? value : value.toLowerCase());
+	const needle = fold(query);
 
 	return commands.filter((command) => {
 		if (command.disabled) {
@@ -230,17 +292,17 @@ export function defaultFilterFunction(commands: CommandItem[], query: string): C
 		}
 
 		// Search in label
-		if (command.label.toLowerCase().includes(lowerQuery)) {
+		if (fold(command.label).includes(needle)) {
 			return true;
 		}
 
 		// Search in description
-		if (command.description?.toLowerCase().includes(lowerQuery)) {
+		if (command.description && fold(command.description).includes(needle)) {
 			return true;
 		}
 
 		// Search in keywords
-		if (command.keywords?.some((keyword) => keyword.toLowerCase().includes(lowerQuery))) {
+		if (command.keywords?.some((keyword) => fold(keyword).includes(needle))) {
 			return true;
 		}
 

@@ -12,11 +12,51 @@
 
 	@component
 -->
+<script lang="ts" module>
+	import { setContext, getContext } from 'svelte';
+	import type { Store as CommandStore } from '../../types.js';
+	import type { CommandState as CmdState, CommandAction as CmdAction } from './command.types.js';
+
+	const COMMAND_CONTEXT_KEY = Symbol('command');
+
+	/**
+	 * Shares the palette's own store with `CommandInput` / `CommandList` /
+	 * `CommandItem`.
+	 *
+	 * Without it those components each required a `store` prop, so a consumer
+	 * built a SECOND store — and everything `<Command>` was configured with
+	 * (`commands`, `filterFunction`, `maxResults`, `caseSensitive`, `groups`)
+	 * fed the internal one that nothing rendered. Mirrors the pattern in
+	 * `ui/accordion/Accordion.svelte`.
+	 */
+	export function setCommandContext(store: CommandStore<CmdState, CmdAction>) {
+		setContext(COMMAND_CONTEXT_KEY, store);
+	}
+
+	export function getCommandContext(): CommandStore<CmdState, CmdAction> {
+		const store = getContext<CommandStore<CmdState, CmdAction>>(COMMAND_CONTEXT_KEY);
+		if (!store) {
+			throw new Error(
+				'Command context not found. Use CommandInput, CommandList and CommandItem ' +
+					'inside <Command>, or pass them a `store` prop explicitly for standalone use.'
+			);
+		}
+		return store;
+	}
+</script>
+
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { createStore } from '../../store.svelte.js';
 	import { commandReducer } from './command.reducer.js';
-	import type { CommandState, CommandItem, CommandDependencies } from './command.types.js';
+	import type {
+		CommandState,
+		CommandAction,
+		CommandItem,
+		CommandGroup,
+		CommandDependencies
+	} from './command.types.js';
+	import type { Store } from '../../types.js';
 	import { createInitialCommandState } from './command.types.js';
 	import { animateModalIn, animateModalOut, animateBackdropIn, animateBackdropOut } from '../../animation/animate.js';
 
@@ -48,6 +88,15 @@
 		maxResults?: number;
 
 		/**
+		 * Group definitions: display labels and the order groups appear in.
+		 * Membership comes from each command's own `group` id.
+		 */
+		groups?: CommandGroup[];
+
+		/** Whether the built-in filter matches case. Default: false. */
+		caseSensitive?: boolean;
+
+		/**
 		 * Additional CSS classes.
 		 */
 		class?: string;
@@ -55,7 +104,16 @@
 		/**
 		 * Default content snippet.
 		 */
-		children?: Snippet;
+		/**
+		 * Palette content. Receives the palette's own store, so a consumer can
+		 * drive it without rebuilding one — though `CommandInput` / `CommandList`
+		 * / `CommandItem` read it from context and need nothing passed.
+		 *
+		 * Widening the payload is non-breaking: `Snippet` is a call-signature
+		 * interface, so an existing zero-argument `{#snippet children()}` stays
+		 * assignable under TypeScript's fewer-parameters rule.
+		 */
+		children?: Snippet<[{ store: Store<CommandState, CommandAction> }]>;
 	}
 
 	let {
@@ -64,6 +122,8 @@
 		onCommandExecute,
 		filterFunction,
 		maxResults,
+		groups,
+		caseSensitive,
 		class: className = '',
 		children
 	}: CommandProps = $props();
@@ -89,7 +149,7 @@
 
 	// Create store
 	const store = createStore({
-		initialState: createInitialCommandState({ commands, isOpen: open, maxResults }),
+		initialState: createInitialCommandState({ commands, isOpen: open, maxResults, groups, caseSensitive }),
 		reducer: commandReducer,
 		dependencies
 	});
@@ -133,9 +193,18 @@
 		}
 	});
 
-	// Sync commands prop to store
+	setCommandContext(store);
+
+	// Sync commands AND groups in one effect, deliberately.
+	//
+	// This effect dispatches while reading store state, which is the shape that
+	// has produced `effect_update_depth_exceeded` here before. It converges
+	// because `sameCommands` compares by value and returns the identical state
+	// when nothing changed — adding a SECOND effect for `groups` would give that
+	// guard nothing to hold, so `groups` folds in here and `sameCommands` was
+	// extended to compare it.
 	$effect(() => {
-		store.dispatch({ type: 'commandsUpdated', commands });
+		store.dispatch({ type: 'commandsUpdated', commands, groups });
 	});
 
 	// Handle keyboard events
@@ -242,7 +311,7 @@
 			onkeydown={handleKeyDown}
 		>
 			{#if children}
-				{@render children()}
+				{@render children({ store })}
 			{/if}
 		</div>
 	</div>
