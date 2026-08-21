@@ -249,25 +249,29 @@
 	// Not $state: the effect below reads and writes this. A reactive guard
 	// re-triggers the effect it lives in (effect_update_depth_exceeded).
 	//
-	// Seeded from the initial presentation rather than always `null`. A palette
-	// mounted open starts at `presented` and so never passes through the
-	// `presenting` branch below — which is the only place this was assigned. It
-	// therefore stayed null, the `dismissing` branch's
-	// `lastAnimatedContent === currentContent` guard never matched, and the
-	// palette vanished without its out-animation while a prop-opened one faded.
-	let lastAnimatedContent: any =
-		store.state.presentation.status === 'idle' ? null : store.state.presentation.content;
+	// Keyed on the (status, content) pair, matching the six overlay primitives.
+	// A palette mounted open starts at `presented`, which the pair records
+	// without animating — so the dismissal that follows is allowed through. The
+	// three earlier spellings of this guard each got that case wrong in a
+	// different way.
+	let lastAnimated: { status: string; content: unknown } | null = null;
 
 	// Watch presentation status and trigger animations
 	$effect(() => {
 		if (!$store.presentation || !contentElement || !backdropElement) return;
 
 		const presentation = $store.presentation;
-		// `content` exists on every status except `idle`.
-		const currentContent = presentation.status === 'idle' ? null : presentation.content;
 
-		if (presentation.status === 'presenting' && lastAnimatedContent !== currentContent) {
-			lastAnimatedContent = currentContent;
+		if (presentation.status === 'idle') {
+			lastAnimated = null;
+			return;
+		}
+
+		const { status, content } = presentation;
+		if (lastAnimated?.status === status && lastAnimated.content === content) return;
+		lastAnimated = { status, content };
+
+		if (status === 'presenting') {
 			// Animate in: content + backdrop in parallel
 			Promise.all([
 				animateModalIn(contentElement),
@@ -280,8 +284,7 @@
 			});
 		}
 
-		if (presentation.status === 'dismissing' && lastAnimatedContent === currentContent) {
-			lastAnimatedContent = null;
+		if (status === 'dismissing') {
 			// Animate out: content + backdrop in parallel
 			Promise.all([
 				animateModalOut(contentElement),

@@ -1,6 +1,6 @@
 <script lang="ts" generics="T extends Record<string, any>">
 	import { getContext } from 'svelte';
-	import type { FormAction, FieldState, FormStore } from './form.types.js';
+	import type { FormAction, FieldRenderState, FormStore } from './form.types.js';
 
 	/**
 	 * FormControl component - Wraps form input elements and handles events.
@@ -30,7 +30,7 @@
 		 * Children - input elements
 		 */
 		children?: import('svelte').Snippet<
-			[{ props: Record<string, any>; field: FieldState }]
+			[{ props: Record<string, any>; field: FieldRenderState }]
 		>;
 	}
 
@@ -40,7 +40,7 @@
 	// getter so reads of .current re-evaluate the parent's $derived reactively.
 	const store = getContext<FormStore<T>>('formStore');
 	const fieldName = getContext<keyof T & string>('fieldName');
-	const fieldStateCtx = getContext<{ current: FieldState }>('fieldState');
+	const fieldStateCtx = getContext<{ current: FieldRenderState }>('fieldState');
 
 	if (!store || !fieldName) {
 		throw new Error('FormControl must be used within a FormField component');

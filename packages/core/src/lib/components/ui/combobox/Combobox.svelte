@@ -3,7 +3,7 @@
 	import { comboboxReducer } from './combobox.reducer.js';
 	import { createInitialComboboxState } from './combobox.types.js';
 	import type { ComboboxOption } from './combobox.types.js';
-	import { animateDropdownIn, animateDropdownOut } from '../../../animation/animate.js';
+	import { animateChevron, animateDropdownIn, animateDropdownOut } from '../../../animation/animate.js';
 	import { Spinner } from '../spinner/index.js';
 	import { cn } from '../../../utils.js';
 
@@ -138,6 +138,7 @@
 	let containerElement: HTMLElement | null = $state(null);
 	let inputElement: HTMLInputElement | null = $state(null);
 	let dropdownElement: HTMLElement | null = $state(null);
+	let chevronElement: SVGElement | null = $state(null);
 
 	// Get display value for input
 	const displayValue = $derived.by(() => {
@@ -240,12 +241,17 @@
 	$effect(() => {
 		const status = $store.dropdown.status;
 
-		if (!dropdownElement) return;
-
+		// The chevron turns on this same effect rather than on a Tailwind
+		// transition class, so the two halves of one gesture share a timeline.
+		// `guides/ANIMATION-GUIDELINES.md` routes anything that appears or
+		// disappears to Motion One precisely because a CSS transition "cannot be
+		// coordinated with other animations".
 		if (status === 'opening') {
-			animateDropdownIn(dropdownElement);
+			if (dropdownElement) animateDropdownIn(dropdownElement);
+			if (chevronElement) animateChevron(chevronElement, true);
 		} else if (status === 'closing') {
-			animateDropdownOut(dropdownElement);
+			if (dropdownElement) animateDropdownOut(dropdownElement);
+			if (chevronElement) animateChevron(chevronElement, false);
 		}
 	});
 </script>
@@ -327,6 +333,8 @@
 				onclick={() => store.dispatch({ type: 'toggled' })}
 			>
 				<svg
+					bind:this={chevronElement}
+					data-combobox-chevron
 					aria-hidden="true"
 					xmlns="http://www.w3.org/2000/svg"
 					width="16"
@@ -337,10 +345,6 @@
 					stroke-width="2"
 					stroke-linecap="round"
 					stroke-linejoin="round"
-					class={cn(
-						'transition-transform',
-						$store.dropdown.status !== 'idle' && 'rotate-180'
-					)}
 				>
 					<polyline points="6 9 12 15 18 9"></polyline>
 				</svg>

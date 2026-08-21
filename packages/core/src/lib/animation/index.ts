@@ -22,6 +22,7 @@ export {
 	animateTooltipOut,
 	animateToastIn,
 	animateToastOut,
+	animateChevron,
 	animateDropdownIn,
 	animateDropdownOut,
 	animateSidebarExpand,

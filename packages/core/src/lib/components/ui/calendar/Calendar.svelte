@@ -129,41 +129,60 @@
 		dependencies
 	});
 
-	// Sync external props to store.
-	// `store.state` is a getter with no setter, so the assignments these effects
-	// used to perform threw a TypeError in strict mode the moment a consumer
-	// changed one of these props after mount.
+	// Sync external props to the store.
+	//
+	// Keyed on each prop's own previous value, held in plain `let`s — never on a
+	// comparison against store state. An effect that compares the two reads both,
+	// so it re-runs when *either* moves and cannot tell which did: an internal
+	// change looks exactly like a prop that must be restored.
+	//
+	// That is not hypothetical. It made range mode unusable. `dateSelected` calls
+	// `deps.onDateSelect`, which writes the `selectedDate` prop, so single mode
+	// converged by accident; `rangeStarted` notifies nobody, so the first click
+	// set `selectedRange.from` in the store, the effect saw a difference, and
+	// `propsChanged` put the stale prop back. `rangeCompleted` was unreachable
+	// because it needs a `from` that could never survive.
+	//
+	// Not `$state`: these are read and written by the effects that depend on
+	// them, and a reactive guard re-triggers the effect it lives in
+	// (`effect_update_depth_exceeded`).
+	let lastMode = mode;
+	let lastSelectedDate = selectedDate;
+	let lastRange = selectedRange;
+	let lastMinDate = minDate;
+	let lastMaxDate = maxDate;
+
 	$effect(() => {
-		if (store.state.mode !== mode) {
-			store.dispatch({ type: 'propsChanged', props: { mode } });
-		}
+		if (mode === lastMode) return;
+		lastMode = mode;
+		store.dispatch({ type: 'propsChanged', props: { mode } });
 	});
 
 	$effect(() => {
-		if (store.state.selectedDate !== selectedDate) {
-			store.dispatch({ type: 'propsChanged', props: { selectedDate } });
-		}
+		if (selectedDate === lastSelectedDate) return;
+		lastSelectedDate = selectedDate;
+		store.dispatch({ type: 'propsChanged', props: { selectedDate } });
 	});
 
 	$effect(() => {
-		if (
-			store.state.selectedRange.from !== selectedRange.from ||
-			store.state.selectedRange.to !== selectedRange.to
-		) {
-			store.dispatch({ type: 'propsChanged', props: { selectedRange } });
-		}
+		// By endpoint, not by object identity: `bind:` hands back a fresh object
+		// every time the range advances, and re-dispatching an unchanged range
+		// would restart the cycle this guard exists to end.
+		if (selectedRange.from === lastRange.from && selectedRange.to === lastRange.to) return;
+		lastRange = selectedRange;
+		store.dispatch({ type: 'propsChanged', props: { selectedRange } });
 	});
 
 	$effect(() => {
-		if (store.state.minDate !== minDate) {
-			store.dispatch({ type: 'propsChanged', props: { minDate } });
-		}
+		if (minDate === lastMinDate) return;
+		lastMinDate = minDate;
+		store.dispatch({ type: 'propsChanged', props: { minDate } });
 	});
 
 	$effect(() => {
-		if (store.state.maxDate !== maxDate) {
-			store.dispatch({ type: 'propsChanged', props: { maxDate } });
-		}
+		if (maxDate === lastMaxDate) return;
+		lastMaxDate = maxDate;
+		store.dispatch({ type: 'propsChanged', props: { maxDate } });
 	});
 
 	// Derived values
@@ -190,8 +209,9 @@
 	const year = $derived(currentMonthDate.getFullYear());
 
 	// A decade either side of the displayed year, clamped to the bounds the
-	// consumer set — offering a year the reducer would refuse is the same class
-	// of lie this component is being cleaned of.
+	// consumer set. Not because the reducer would refuse anything — `monthSet`
+	// performs no bounds check, and the chevrons navigate freely — but because
+	// there is nothing selectable once you arrive.
 	const selectableYears = $derived.by(() => {
 		const first = $store.minDate ? $store.minDate.getFullYear() : year - 10;
 		const last = $store.maxDate ? $store.maxDate.getFullYear() : year + 10;
@@ -201,6 +221,20 @@
 		const hi = Math.max(last, year);
 		return Array.from({ length: hi - lo + 1 }, (_, i) => lo + i);
 	});
+
+	// Months are offered on the same basis as years: a month whose every day
+	// falls outside `minDate`/`maxDate` has nothing to select, so it is disabled
+	// rather than silently useless. Without this the two controls disagreed —
+	// the year select was clamped while the month select offered all twelve.
+	const selectableMonths = $derived.by(() =>
+		monthNames.map((name, index) => {
+			const lastDay = new Date(year, index + 1, 0);
+			const firstDay = new Date(year, index, 1);
+			const beforeMin = $store.minDate ? lastDay < $store.minDate : false;
+			const afterMax = $store.maxDate ? firstDay > $store.maxDate : false;
+			return { name, index, disabled: beforeMin || afterMax };
+		})
+	);
 
 	// Actions
 	const prevMonth = () => {
@@ -228,6 +262,11 @@
 			if (!$store.selectedRange.from || $store.selectedRange.to) {
 				// Start new range
 				store.dispatch({ type: 'rangeStarted', date });
+				// `rangeStarted` has no dependency callback, so the component is what
+				// keeps the bound prop in step — `onRangeSelect` only fires on
+				// completion, and a half-built range is still worth reporting.
+				lastRange = $store.selectedRange;
+				selectedRange = lastRange;
 			} else {
 				// Complete range
 				store.dispatch({ type: 'rangeCompleted', date });
@@ -297,8 +336,8 @@
 					onchange={(event) =>
 						setMonth(new Date(year, Number(event.currentTarget.value), 1))}
 				>
-					{#each monthNames as name, index}
-						<option value={index}>{name}</option>
+					{#each selectableMonths as month}
+						<option value={month.index} disabled={month.disabled}>{month.name}</option>
 					{/each}
 				</select>
 

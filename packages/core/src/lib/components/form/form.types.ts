@@ -116,11 +116,6 @@ export interface FormState<T extends Record<string, any>> {
  */
 export interface FieldState {
 	/**
-	 * Current field value.
-	 */
-	value: any;
-
-	/**
 	 * Has user interacted with this field (focused/blurred)?
 	 */
 	touched: boolean;
@@ -144,10 +139,23 @@ export interface FieldState {
 	 * Non-blocking validation warnings.
 	 */
 	warnings: string[];
+}
 
-	/**
-	 * Does this field currently have focus?
-	 */
+/**
+ * What `FormField` hands to `FormControl`, `FormLabel` and `FormMessage`.
+ *
+ * The stored `FieldState` plus the two things the form tracks in one place
+ * rather than per field: the value (`state.data[name]`) and focus
+ * (`state.focusedField`). Both used to sit on the stored record, where the
+ * reducer wrote them once at init and never again — `value` went stale on the
+ * first keystroke and `focused` stayed `false` forever, while the component
+ * quietly derived the right answers anyway.
+ */
+export interface FieldRenderState extends FieldState {
+	/** Current field value, from `state.data`. */
+	value: any;
+
+	/** Does this field currently have focus, from `state.focusedField`. */
 	focused: boolean;
 }
 
@@ -353,7 +361,7 @@ export type FormAction<T extends Record<string, any>> =
  * The value a `FormField` hands to its children snippet.
  */
 export interface FieldRenderProps<T extends Record<string, any>> {
-	field: FieldState;
+	field: FieldRenderState;
 	send: (action: FormAction<T>) => void;
 }
 

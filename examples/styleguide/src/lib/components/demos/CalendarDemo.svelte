@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Calendar } from '@composable-svelte/core/components/ui';
   import { Badge } from '@composable-svelte/core/components/ui';
+  import { Button } from '@composable-svelte/core/components/ui';
   import type { DateRange } from '@composable-svelte/core/components/ui';
 
   // State for different calendar demos
@@ -256,6 +257,32 @@
       mode="single"
       class="border-2 border-primary rounded-lg shadow-lg"
     />
+  </section>
+
+  <!-- Custom Header -->
+  <section class="space-y-6">
+    <div>
+      <h3 class="text-xl font-semibold mb-2">Custom Header</h3>
+      <p class="text-muted-foreground text-sm">
+        The <code>header</code> snippet receives <code>setMonth</code>, so a custom header can jump
+        to any month rather than stepping one at a time.
+      </p>
+    </div>
+
+    <Calendar mode="single">
+      {#snippet header({ month, prevMonth, nextMonth, setMonth })}
+        <div class="flex items-center justify-between gap-2 pb-3">
+          <Button variant="outline" size="sm" onclick={prevMonth}>‹</Button>
+          <span class="font-medium">
+            {month.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+          </span>
+          <div class="flex gap-2">
+            <Button variant="ghost" size="sm" onclick={() => setMonth(new Date())}>Today</Button>
+            <Button variant="outline" size="sm" onclick={nextMonth}>›</Button>
+          </div>
+        </div>
+      {/snippet}
+    </Calendar>
   </section>
 
   <!-- Use Cases -->

@@ -11,6 +11,7 @@ export type {
 	FormAction,
 	FormStore,
 	FieldState,
+	FieldRenderState,
 	ValidationMode,
 	FormProps,
 	FormFieldProps,

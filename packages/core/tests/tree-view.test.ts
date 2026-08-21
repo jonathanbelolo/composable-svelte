@@ -530,6 +530,30 @@ describe('TreeView', () => {
 			});
 		});
 
+		it('never closes a branch that was already open', async () => {
+			// The narrowing from `getAllNodeIds` to expandable-only replaced
+			// `expandedIds` wholesale, so any open node outside the new set was
+			// silently *closed* by "Expand all" — the opposite of the button. A lazy
+			// node the user opened is exactly that: it is in `expandedIds` and in
+			// `loadingIds` with `children` still undefined.
+			const store = new TestStore({
+				initialState: {
+					...createInitialTreeViewState([
+						{ id: 'lazy', label: 'Remote', lazy: true },
+						{ id: 'local', label: 'Local', children: [{ id: 'leaf', label: 'Leaf' }] }
+					]),
+					expandedIds: new Set(['lazy']),
+					loadingIds: new Set(['lazy'])
+				},
+				reducer: treeViewReducer
+			});
+
+			await store.send({ type: 'expandAll' }, (state) => {
+				expect(state.expandedIds.has('lazy'), 'expandAll closed an open branch').toBe(true);
+				expect(state.expandedIds.has('local')).toBe(true);
+			});
+		});
+
 		it('should collapse all nodes', async () => {
 			const store = new TestStore({ initialState: createInitialTreeViewState(testNodes), reducer: treeViewReducer });
 

@@ -481,6 +481,47 @@ export async function animateToastOut(
  * @param element - The dropdown element to animate
  * @returns Promise that resolves when animation completes (or fails gracefully)
  */
+/**
+ * Rotate a disclosure chevron to match the thing it discloses.
+ *
+ * A chevron that turns on a CSS `transition-transform` while its dropdown
+ * animates through Motion One is two uncoordinated timelines for one gesture —
+ * exactly what `guides/ANIMATION-GUIDELINES.md` says state-driven animation
+ * exists to prevent. Driving both from the same lifecycle status keeps them in
+ * step, and makes the rotation observable to a test.
+ *
+ * Uses the same preset as the dropdown itself, so the two finish together.
+ */
+export async function animateChevron(
+	// `SVGElement` too: a chevron is almost always an inline `<svg>`, and an
+	// `SVGSVGElement` is not an `HTMLElement`. Both carry `.style`, which is all
+	// the fallback path needs.
+	element: HTMLElement | SVGElement,
+	expanded: boolean,
+	springConfig?: Partial<SpringConfig>
+): Promise<void> {
+	const degrees = expanded ? 180 : 0;
+	try {
+		const config = getSpringConfig(springPresets.dropdown, springConfig);
+
+		await motionAnimate(
+			element,
+			{ rotate: degrees },
+			{
+				type: 'spring',
+				visualDuration: config.visualDuration,
+				bounce: config.bounce
+			}
+		).finished;
+	} catch (error) {
+		console.error('[animateChevron] Animation failed:', error);
+		// Land on the correct orientation even if the animation fails.
+		if (element) {
+			element.style.transform = `rotate(${degrees}deg)`;
+		}
+	}
+}
+
 export async function animateDropdownIn(element: HTMLElement): Promise<void> {
 	try {
 		const config = getSpringConfig(springPresets.tooltip); // Fast like tooltip

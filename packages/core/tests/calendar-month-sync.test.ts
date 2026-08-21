@@ -25,6 +25,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import CalendarPropsTest from './test-components/CalendarPropsTest.svelte';
+import CalendarBoundsTest from './test-components/CalendarBoundsTest.svelte';
 
 const MONTHS = [
 	'January', 'February', 'March', 'April', 'May', 'June',
@@ -138,6 +139,30 @@ describe('the default header can reach a distant month', () => {
 		await settle();
 
 		expect(cal.displayed()).toBe('March 2027');
+	});
+
+	it('disables months with nothing selectable in them', async () => {
+		// The year select was clamped to minDate/maxDate while the month select
+		// offered all twelve, so the two controls disagreed: in the boundary year
+		// you could pick a month whose every day is disabled.
+		//
+		// The rationale recorded in the commit that added them was wrong — it said
+		// such a month would be "refused by the reducer". `monthSet` performs no
+		// bounds check at all and refuses nothing; the chevrons navigate freely
+		// too. What is actually wrong with offering it is that there is nothing to
+		// select once you arrive.
+		const screen = render(CalendarBoundsTest);
+		cleanup.push(() => screen.unmount());
+		const months = [
+			...screen.container.querySelectorAll<HTMLOptionElement>('select[data-calendar-month] option')
+		];
+
+		// Bounds are 2024-03-10 .. 2024-09-20, displaying March.
+		expect(months[0]!.disabled, 'January is entirely before minDate').toBe(true);
+		expect(months[1]!.disabled, 'February is entirely before minDate').toBe(true);
+		expect(months[2]!.disabled, 'March holds minDate itself').toBe(false);
+		expect(months[8]!.disabled, 'September holds maxDate').toBe(false);
+		expect(months[9]!.disabled, 'October is entirely after maxDate').toBe(true);
 	});
 
 	it('keeps the day grid consistent with the chosen month', async () => {

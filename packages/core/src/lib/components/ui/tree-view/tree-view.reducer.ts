@@ -555,7 +555,12 @@ export const treeViewReducer: Reducer<
 			// dispatching their load. `nodeExpanded` adds a lazy node to
 			// `loadingIds` and fetches; this did neither, so the branch rendered
 			// open, empty and with no spinner, permanently.
-			const newExpandedIds = new Set(getExpandableNodeIds(state.nodes));
+			// A union, not a replacement. Narrowing the set alone would let
+			// "Expand all" *close* anything already open that is not in it — a lazy
+			// node the user opened is in `expandedIds` and in `loadingIds` with no
+			// children yet, so it fell outside the new set and got collapsed
+			// mid-load, leaving `childrenLoaded` to land on a closed node.
+			const newExpandedIds = new Set([...state.expandedIds, ...getExpandableNodeIds(state.nodes)]);
 
 			return [
 				{

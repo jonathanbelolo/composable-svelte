@@ -61,14 +61,15 @@ describe('createInitialFormState', () => {
 		const state = createInitialFormState(config);
 
 		expect(state.data).toEqual({ name: '', email: '', message: '' });
+		// The stored record holds only what the reducer maintains. `value` lives in
+		// `state.data` and `focused` in `state.focusedField`; both used to be
+		// duplicated here and written exactly once, so both went stale.
 		expect(state.fields.name).toEqual({
-			value: '',
 			touched: false,
 			dirty: false,
 			error: null,
 			isValidating: false,
-			warnings: [],
-			focused: false
+			warnings: []
 		});
 		expect(state.focusedField).toBe(null);
 		expect(state.isValidating).toBe(false);

@@ -1,6 +1,6 @@
 <script lang="ts" generics="T extends Record<string, any>">
 	import { getContext, setContext } from 'svelte';
-	import type { FormAction, FieldState, FormFieldProps, FormStore } from './form.types.js';
+	import type { FormAction, FieldRenderState, FormFieldProps, FormStore } from './form.types.js';
 
 	/**
 	 * FormField component - Connects a form field to the form store.
@@ -30,7 +30,7 @@
 	}
 
 	// Derive field state from store
-	const fieldState = $derived<FieldState>({
+	const fieldState = $derived<FieldRenderState>({
 		value: $store.data[name],
 		error: $store.fields[name]?.error ?? null,
 		touched: $store.fields[name]?.touched ?? false,

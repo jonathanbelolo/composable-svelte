@@ -439,12 +439,39 @@ describe('createMockAPI', () => {
     });
 
     it('rethrows when no onError recovers', async () => {
+      // Registers an actual `onError` that declines by throwing. The earlier
+      // version of this test registered only an `onRequest`, so it never
+      // entered the error loop at all and could not see that the loop returned
+      // from the first hook without a try — which made a rethrowing hook
+      // surface a *different* error under the mock than under the real client.
       const mockAPI = createMockAPI({
         'GET /api/boom': { error: new APIError('nope', 500, null, {}, false) }
       });
-      mockAPI.addInterceptor({ onRequest: (_u, c) => c });
+      mockAPI.addInterceptor({
+        onError: () => {
+          throw new Error('mapped, but still an error');
+        }
+      });
 
       await expect(mockAPI.get('/api/boom')).rejects.toThrow('nope');
+    });
+
+    it('falls through to a later onError when an earlier one declines', async () => {
+      const mockAPI = createMockAPI({
+        'GET /api/boom': { error: new APIError('nope', 500, null, {}, false) }
+      });
+
+      mockAPI.addInterceptor({
+        onError: () => {
+          throw new Error('not mine');
+        }
+      });
+      mockAPI.addInterceptor({
+        onError: () => ({ status: 200, headers: {}, data: { rescuedBySecond: true } })
+      });
+
+      const response = await mockAPI.get<{ rescuedBySecond: boolean }>('/api/boom');
+      expect(response.data.rescuedBySecond).toBe(true);
     });
 
     it('the returned function removes the interceptor', async () => {

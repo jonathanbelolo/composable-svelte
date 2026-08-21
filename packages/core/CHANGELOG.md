@@ -5,6 +5,195 @@ All notable changes to `@composable-svelte/core` will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-08-21
+
+A sweep to remove **dead behaviour**: anything a consumer can pass, configure,
+click or import that produces no effect. Everything below was reachable and
+inert, not merely unimplemented. Nothing here is deprecated-then-removed —
+0.x, and the alternative to a breaking change was leaving a lie in place.
+
+### Fixed
+
+- **`Toaster` could not display anything a consumer controlled.** It rendered
+  `externalToasts ?? $store.toasts`, the only dispatch any rendered element
+  could produce was `toastDismissed`, and that case returned early for any toast
+  not in the internal store. Prop-supplied toasts never entered it and nothing
+  could put one in — no `store` prop, no context, no export. `position` was
+  written by `positionChanged` and read by nothing, since the container was
+  classed from the component's own prop. `toastActionClicked` had no dispatcher:
+  `Toast.svelte` called `toast.action.onClick()` locally and then dismissed,
+  making "acted on it" and "discarded it" indistinguishable to
+  `onToastDismissed` and in the action history. `animateToastOut` was exported
+  with no caller, so toasts vanished rather than animating out; dismissal is now
+  two-step (`toastDismissed` marks, `toastRemoved` removes) so the exit
+  animation has somewhere to happen.
+- **i18n `setLocale` validated against the wrong list.** It checked
+  `deps.localeDetector.getSupportedLocales()` while the UI renders from
+  `state.availableLocales` — `examples/ssr-server`'s LanguageSwitcher builds its
+  buttons from exactly that — so a shipped switcher could offer a locale the
+  reducer silently refused with a `console.warn`. It failed both ways: a locale
+  the app lists but the detector does not was rejected, and one the detector
+  knows but the app does not was accepted. The detector detects a starting
+  locale; it does not authorise a switch.
+- **`Command`'s children drove a different store.** `Command.svelte` rendered
+  `{@render children()}` with no arguments and provided no context, while
+  `CommandInput` / `CommandList` / `CommandItem` each *required* a `store` prop
+  — so a consumer built a second store and everything `<Command>` was configured
+  with (`commands`, `filterFunction`, `maxResults`, `caseSensitive`, `groups`)
+  fed an internal store nothing rendered. `CommandList` never iterated
+  `filteredCommands` at all, so there was nowhere for that configuration to
+  become visible even in principle. Children now take the palette's store from
+  context, with a `{@render children({ store })}` payload as the escape hatch;
+  `store` stays optional because standalone use with a consumer-owned store was
+  the one configuration that worked.
+- **`maxResults` was ignored by seven of nine paths.** Applied by `queryChanged`
+  and `commandsUpdated`, ignored by `opened`, `closed`, `executeCommand`,
+  `clearQuery`, `reset`, `dismissalCompleted` and the state factory — so the
+  palette exceeded its own limit after every open, close, clear and execute. All
+  nine now route through one `applyFilter` (filter, order by group, bound).
+  Ordering happens there rather than in the view because `nextCommand`,
+  `selectCommand` and `executeCommand` index into `filteredCommands`, so sorting
+  anywhere else makes the keyboard highlight and the executed command disagree.
+- **The Combobox chevron was a dead click zone.** A bare `<svg>` with no handler
+  that nevertheless rotated with `$store.dropdown.status` — it looked like the
+  toggle, sat exactly where a user clicks to open a combobox, and did nothing.
+  The `toggled` action existed with no dispatcher. It is now a real button with
+  `aria-expanded`.
+- **FileUpload's progress bar sat at 0% for every upload.** `uploadProgress`
+  existed as an action and a reducer case with no dispatcher, because `onUpload`
+  was `(file) => Promise<void>` and gave a consumer no channel to report
+  through. The bar went 0 → gone, never a value between.
+- **`Sidebar` never finished presenting, and `springConfig` did nothing.** It
+  animated through a CSS `transition-[width]` + `transitionend` handshake that
+  could not complete: the wrapper mounts only once it is already visible, so it
+  was born at its target width, no transition ran, `transitionend` never fired
+  and `onPresentationComplete` was unreachable. With no spring there was nothing
+  for `springConfig` to configure, so it sat destructured and unused. It is now
+  Motion One, which CLAUDE.md requires for lifecycle animation, using the
+  `animateSidebarExpand` / `animateSidebarCollapse` helpers that had shipped
+  exported with zero callers.
+- **An overlay hydrated in the open state could never be dismissed.** Five
+  primitives spelled their animation guard `lastAnimatedContent !== null` —
+  "have I animated anything yet?" — which differs from "is this a transition I
+  have already run" whenever a component mounts already `presented`. The
+  collapse branch was refused, `dismissalCompleted` never fired, and the
+  reducer's own `status !== 'presented'` guard then rejected every further
+  dismiss: an undismissable overlay, permanently, with no error. That is what
+  SSR hydration produces for a page rendered with an overlay open, and what
+  every mount of a persistent desktop sidebar looks like. `ModalPrimitive` alone
+  carried an ad-hoc "deep linking" seed for this and it had never been
+  propagated; all six now key on the `(status, content)` pair.
+- **`Calendar` ignored a `selectedDate` in another month.** `propsChanged` never
+  touched `currentMonth`, so a date picker setting `selectedDate` to a date
+  elsewhere left the grid on the old month with the selection off-screen —
+  indistinguishable from nothing being selected, on the default path. Range mode
+  had the identical problem. `monthSet` was the action for exactly this and had
+  no dispatcher anywhere in the repo; the default header rendered month and year
+  as static text, so reaching a distant month meant one chevron click per month.
+- **TreeView's bulk operations had no dispatcher.** `expandAll`, `collapseAll`
+  and `allNodesDeselected` were implemented, tested at the reducer level, and
+  unreachable — the component owns its store privately and handed out no
+  reference. `expandAll` also used `getAllNodeIds`, marking leaves as expanded,
+  and marked `lazy` nodes expanded without dispatching their load, so such a
+  branch rendered open, empty and with no spinner, permanently.
+- **`fieldFocused` was a no-op that said so in a comment.** `FormControl`
+  dispatches it on every `onfocus`, so it was reachable, carried a field name
+  and changed nothing; its siblings `touched` and `dirty` reach the DOM as
+  `data-touched` / `data-dirty` and focus had no counterpart.
+- **The lightbox's loading state had no reader.** `lightbox.isImageLoading` was
+  written in eleven places and read in none, so opening a lightbox on a
+  full-size photo showed an empty frame with nothing to say the image was
+  coming.
+- **Range calendars could not select anything.** The prop-sync effects compared
+  `store.state.X` against the `X` prop, and that comparison cannot tell which
+  side moved — the effect reads both, so it re-runs on either. Single mode
+  survived only by accident, because `dateSelected` writes the `selectedDate`
+  prop through `deps.onDateSelect`. `rangeStarted` notifies nobody, so the first
+  click set `selectedRange.from` in the store, the effect saw a difference, and
+  `propsChanged` put the stale prop back; `rangeCompleted` was unreachable
+  because it needs a `from` that could never survive. Each effect now keys on its
+  own prop's previous value.
+- **`DropdownMenu` never animated, and its whole presentation subsystem was
+  unreachable.** No action wrote `presenting` or `dismissing` — `opened`,
+  `closed`, `toggled`, `escape` and `itemSelected` touched only `isOpen` — and
+  the only dispatcher of `{ type: 'presentation' }` was the component's own
+  `$effect`, which can fire only in those two statuses. A closed loop with no
+  entry point, so `animateDropdownIn`/`Out`, the `presenting` opacity gate, the
+  `dismissing` mount arm, the reducer's `presentation` case and
+  `DropdownMenuState.presentation` were all dead. The menu popped in with no
+  animation, against CLAUDE.md's Motion One requirement.
+- **Disclosure chevrons animated on a separate timeline from what they
+  disclose.** The Combobox chevron rotated via a Tailwind transition while its
+  dropdown animated through Motion One — two uncoordinated timelines for one
+  gesture, which `guides/ANIMATION-GUIDELINES.md` names as the reason
+  state-driven animation exists. Both halves now run from the same effect via a
+  new `animateChevron` helper.
+- **`MockAPIClient` stubbed a third of `APIClient`.** `addInterceptor` returned
+  an empty closure and `clearCache` / `invalidateCache` did nothing. Anything a
+  consumer builds on interceptors — auth headers, response shaping, error
+  mapping — silently stopped existing under test, so a test covering that code
+  proved the opposite of what it appeared to. All three are now real, and
+  `cache` defaults to `false` exactly as in `createAPIClient`.
+
+### Added
+
+- `createToastStore(config)`, and a `store` prop on `Toaster`.
+- `Command` exports `setCommandContext` / `getCommandContext`, and `Command`
+  accepts `groups` and `caseSensitive`.
+- `Calendar`'s default header has month and year `<select>`s, and its `header`
+  snippet payload gains `setMonth`. Offered years are clamped to `minDate` /
+  `maxDate` when set.
+- `TreeView` accepts a `controls` snippet receiving `expandAll`, `collapseAll`,
+  `deselectAll`, `expandedCount` and `selectedCount`. Not a `store` prop: the
+  state is `Set<string>`, which is not JSON-serialisable and would break SSR
+  hydration.
+- `FormState.focusedField`, `FieldState.focused`, and `data-focused` on control
+  props. Focus deliberately does **not** set `touched` — that gates error
+  display, so touching on focus fires "required" on every field the user tabs
+  through.
+- `role="progressbar"` and `aria-valuenow` on FileUpload's bar; a loading
+  spinner in `ImageLightbox`.
+- `animateChevron(element, expanded, springConfig?)` in the animation module.
+- `FieldRenderState`, the payload `FormField` hands its children — the stored
+  `FieldState` plus `value` and `focused`, which the form tracks centrally.
+- Calendar's month `<select>` disables months with no selectable day in them,
+  matching the year select's clamping.
+- Styleguide demos for Toast, Command and TreeView's toolbar. Toast and Command
+  had none, which is part of why these shipped unnoticed.
+
+### Changed
+
+- **`onUpload` is now `(file, onProgress) => Promise<void>`.** Source-compatible:
+  an existing one-argument function stays assignable under TypeScript's
+  fewer-parameters rule.
+- **`Command`'s `children` snippet receives `{ store }`.** Also
+  source-compatible — `Snippet` is a call-signature interface, so a
+  zero-argument `{#snippet children()}` stays assignable.
+- **`SidebarPrimitive`'s children snippet payload** drops `targetWidth` and
+  `onTransitionEnd`, which described the CSS-transition contract that is gone.
+
+### Removed
+
+- **`Toaster`'s `toasts` and `dependencies` props**, and its `maxToasts` /
+  `defaultDuration` / `position` config props. All were unreachable;
+  `dependencies` is exactly redundant with `createToastStore({ dependencies })`.
+  `store` and the config props are mutually exclusive and now **throw** when
+  both are given, rather than silently ignoring one.
+- **`Command`'s `toggled` action.** `open` is `$bindable`, and the only snippet
+  that could dispatch `toggled` renders while the palette is open — so it could
+  only ever close, and a half-reachable action is still a lie.
+- **`CommandGroup.items`** — a third source of truth for group membership,
+  alongside `groups` (labels and ordering) and `CommandItem.group`.
+- **`FormDependencies`.** An empty interface accepts any object, so it
+  constrained nothing: a type-level no-op wearing the shape of a contract.
+- **`TreeNodeItemProps`.** `TreeNodeItem` is a snippet that types its own
+  parameter inline, so the interface described nothing.
+- **`FieldState.value` and `FieldState.focused`** from the *stored* per-field
+  record. The reducer wrote both exactly once, at init, and never again: the real
+  value lives in `state.data` and focus in `state.focusedField`, so both stored
+  copies were stale the moment anything happened. They remain on
+  `FieldRenderState`, where they are derived correctly.
+
 ## [0.6.0] - 2026-08-18
 
 ### Fixed

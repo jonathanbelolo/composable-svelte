@@ -170,6 +170,12 @@ async function resolveMockResponse<T>(
  * - Error simulation ({ error: Error })
  * - 404 for unmatched routes
  *
+ * Caching delegates to the same module-level cache `createAPIClient` uses, so
+ * behaviour matches production — including the fact that the cache is shared
+ * process-wide. Two `createMockAPI` instances therefore see each other's cached
+ * GETs, and any mutation evicts matching entries even when `cache` is `false`.
+ * Call `clearCache()` between tests that opt into `cache: true`.
+ *
  * @example
  * ```typescript
  * const mockAPI = createMockAPI({
@@ -269,10 +275,20 @@ export function createMockAPI(routes: MockRoutes = {}): APIClient {
 
       return response;
     } catch (error) {
+      // Each hook in its own try, exactly as `createAPIClient` does: a hook that
+      // throws has declined to handle the error, so the loop moves to the next
+      // one and the *original* error is rethrown if none recovers. Returning
+      // from the first hook unconditionally would make the canonical mapping
+      // interceptor — `onError: (e) => { throw toDomainError(e) }` — surface a
+      // different error under the mock than in production, which is the
+      // "double that drops half the contract" problem this file exists to fix.
       for (const interceptor of interceptors) {
         if (interceptor.onError) {
-          // An `onError` hook may recover by returning a response, or rethrow.
-          return (await interceptor.onError(error)) as APIResponse<T>;
+          try {
+            return (await interceptor.onError(error)) as APIResponse<T>;
+          } catch {
+            // This hook declined; try the next.
+          }
         }
       }
       throw error;
