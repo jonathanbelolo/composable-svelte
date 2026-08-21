@@ -64,6 +64,16 @@ export interface FormState<T extends Record<string, any>> {
 	formErrors: string[];
 
 	/**
+	 * Which field currently has focus, or null.
+	 *
+	 * Form-level rather than per-field because only one field can hold focus.
+	 * Deliberately separate from `touched`: `touched` gates error display, so
+	 * marking a field touched on focus would fire its "required" error as the
+	 * user tabs in. `fieldBlurred` is what touches.
+	 */
+	focusedField: keyof T | null;
+
+	/**
 	 * Is entire form currently validating?
 	 */
 	isValidating: boolean;
@@ -134,6 +144,11 @@ export interface FieldState {
 	 * Non-blocking validation warnings.
 	 */
 	warnings: string[];
+
+	/**
+	 * Does this field currently have focus?
+	 */
+	focused: boolean;
 }
 
 /**
@@ -333,14 +348,6 @@ export type FormAction<T extends Record<string, any>> =
 			type: 'clearFieldError';
 			field: keyof T;
 	  };
-
-/**
- * Dependencies for form reducer.
- * Can be extended with custom dependencies if needed.
- */
-export interface FormDependencies {
-	// Currently empty - can add deps like API clients, etc.
-}
 
 /**
  * The value a `FormField` hands to its children snippet.

@@ -9,7 +9,6 @@ export type {
 	FormState,
 	FormConfig,
 	FormAction,
-	FormDependencies,
 	FormStore,
 	FieldState,
 	ValidationMode,

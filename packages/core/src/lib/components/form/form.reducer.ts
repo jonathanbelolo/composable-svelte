@@ -12,7 +12,6 @@ import type {
 	FormState,
 	FormConfig,
 	FormAction,
-	FormDependencies,
 	FieldState
 } from './form.types.js';
 import type { Reducer } from '../../types.js';
@@ -46,7 +45,8 @@ export function createInitialFormState<T extends Record<string, any>>(
 			dirty: false,
 			error: null,
 			isValidating: false,
-			warnings: []
+			warnings: [],
+			focused: false
 		} satisfies FieldState;
 	}
 
@@ -55,6 +55,7 @@ export function createInitialFormState<T extends Record<string, any>>(
 		fields,
 		schema: config.schema,
 		formErrors: [],
+		focusedField: null,
 		isValidating: false,
 		isSubmitting: false,
 		submitCount: 0,
@@ -82,7 +83,7 @@ export function createInitialFormState<T extends Record<string, any>>(
  */
 export function createFormReducer<T extends Record<string, any>>(
 	config: FormConfig<T>
-): Reducer<FormState<T>, FormAction<T>, FormDependencies> {
+): Reducer<FormState<T>, FormAction<T>> {
 	const { schema, mode = 'all', debounceMs = 300, asyncValidators, onSubmit } = config;
 
 	return (state, action, deps) => {
@@ -133,6 +134,10 @@ export function createFormReducer<T extends Record<string, any>>(
 
 				const newState: FormState<T> = {
 					...state,
+					// Only if it is still the focused one. Focus can have moved on by
+					// the time a stale blur is processed, and clearing unconditionally
+					// would blank the attribute on the live field.
+					focusedField: state.focusedField === field ? null : state.focusedField,
 					fields: {
 						...state.fields,
 						[field]: {
@@ -159,8 +164,14 @@ export function createFormReducer<T extends Record<string, any>>(
 			// FIELD FOCUSED
 			// ================================================================
 			case 'fieldFocused': {
-				// Currently no-op, but can be extended for focus tracking
-				return [state, Effect.none()];
+				if (state.focusedField === action.field) {
+					return [state, Effect.none()];
+				}
+
+				// Note what is NOT here: `touched`. That gates error display, so
+				// touching on focus shows "required" on every field the user tabs
+				// through. `fieldBlurred` is the one that touches.
+				return [{ ...state, focusedField: action.field }, Effect.none()];
 			}
 
 			// ================================================================

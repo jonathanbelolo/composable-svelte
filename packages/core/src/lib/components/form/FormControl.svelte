@@ -84,6 +84,7 @@
 		'data-touched': fieldStateCtx.current.touched || undefined,
 		'data-dirty': fieldStateCtx.current.dirty || undefined,
 		'data-validating': fieldStateCtx.current.isValidating || undefined,
+		'data-focused': fieldStateCtx.current.focused || undefined,
 		onchange: handleChange,
 		onblur: handleBlur,
 		onfocus: handleFocus

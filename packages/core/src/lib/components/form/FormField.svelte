@@ -36,7 +36,10 @@
 		touched: $store.fields[name]?.touched ?? false,
 		dirty: $store.fields[name]?.dirty ?? false,
 		isValidating: $store.fields[name]?.isValidating ?? false,
-		warnings: $store.fields[name]?.warnings ?? []
+		warnings: $store.fields[name]?.warnings ?? [],
+		// Read off the form-level `focusedField` rather than a per-field flag, so
+		// there is one source of truth for "which field has focus".
+		focused: $store.focusedField === name
 	});
 
 	// Provide send function for dispatching actions

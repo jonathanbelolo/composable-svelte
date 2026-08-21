@@ -17,8 +17,7 @@ import {
 import type {
 	FormState,
 	FormConfig,
-	FormAction,
-	FormDependencies
+	FormAction
 } from '../src/lib/components/form/form.types.js';
 
 // ================================================================
@@ -68,8 +67,10 @@ describe('createInitialFormState', () => {
 			dirty: false,
 			error: null,
 			isValidating: false,
-			warnings: []
+			warnings: [],
+			focused: false
 		});
+		expect(state.focusedField).toBe(null);
 		expect(state.isValidating).toBe(false);
 		expect(state.isSubmitting).toBe(false);
 		expect(state.submitCount).toBe(0);

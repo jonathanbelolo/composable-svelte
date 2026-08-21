@@ -4,7 +4,7 @@
 
 	const config = {
 		schema: z.object({ name: z.string() }),
-		initialValues: { name: '' },
+		initialData: { name: '' },
 		onSubmit: async () => {}
 	};
 </script>
