@@ -13,6 +13,7 @@ import type {
 } from './types.js';
 import type { EffectType } from '@composable-svelte/core';
 import { Effect } from '@composable-svelte/core';
+import { nodesToArray, edgesToArray } from './types.js';
 
 /**
  * Node canvas reducer - pure function handling all state transitions.
@@ -429,6 +430,33 @@ export function nodeCanvasReducer<
         },
         Effect.none()
       ];
+    }
+
+    case 'autoLayout': {
+      // `deps.autoLayout` was declared and documented and had no call site —
+      // there was no action that could reach it.
+      const positions = deps.autoLayout?.(nodesToArray(state.nodes), edgesToArray(state.edges));
+      if (!positions) {
+        return [state, Effect.none()];
+      }
+
+      // Identity-preserving: a node that did not move is returned as-is.
+      // `$state.raw` means the component's `$derived` recomputes on every
+      // dispatch and xyflow compares by reference, so cloning everything would
+      // force a full re-adoption of the graph.
+      let moved = false;
+      const nodes = Object.fromEntries(
+        Object.entries(state.nodes).map(([id, node]) => {
+          const next = positions[id];
+          if (!next || (node.position.x === next.x && node.position.y === next.y)) {
+            return [id, node];
+          }
+          moved = true;
+          return [id, { ...node, position: { x: next.x, y: next.y } }];
+        })
+      );
+
+      return moved ? [{ ...state, nodes }, Effect.none()] : [state, Effect.none()];
     }
 
     case 'clearCanvas': {

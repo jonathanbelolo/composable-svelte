@@ -96,7 +96,15 @@
 		if (language !== appliedLanguage) {
 			appliedLanguage = language;
 			// Stale-request guarded inside the wrapper.
-			updateEditorLanguage(editor, language).catch(() => {
+			updateEditorLanguage(editor, language).catch((e: unknown) => {
+				// Surface it. This used to reset the guard and drop the reason,
+				// which is why `state.error` had no writer and its banner was
+				// unreachable markup.
+				store.dispatch({
+					type: 'languageLoadFailed',
+					language,
+					error: e instanceof Error ? e.message : String(e)
+				});
 				// The dynamic import failed — a stale chunk after a deploy, or
 				// offline. Without this the guard still reads "applied", so
 				// re-selecting the same language is a permanent no-op and the
@@ -171,6 +179,8 @@
 				case 'redo':
 				case 'selectAll':
 				case 'deleteSelection':
+				case 'focus':
+				case 'blur':
 					runEditorCommand(view, action);
 					return;
 				case 'insertText':
@@ -247,7 +257,11 @@
 	const saveButtonDisabled = $derived(!$store.hasUnsavedChanges);
 </script>
 
-<div class="code-editor" data-theme={$store.theme}>
+<div
+	class="code-editor"
+	class:code-editor--focused={$store.isFocused}
+	data-theme={$store.theme}
+>
 	{#if showToolbar}
 		<div class="code-editor__toolbar">
 			<div class="code-editor__toolbar-left">
@@ -386,6 +400,10 @@
 		overflow: hidden;
 		background: #1e1e1e;
 		font-family: 'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace;
+	}
+
+	.code-editor--focused {
+		border-color: #007acc;
 	}
 
 	.code-editor[data-theme='light'] {

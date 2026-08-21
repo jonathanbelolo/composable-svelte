@@ -23,6 +23,8 @@ export {
 	updateEditorTheme,
 	updateEditorReadOnly,
 	updateTabSize,
-	focusEditor,
-	blurEditor
+	updateLineNumbers,
+	updateFolding,
+	updateAutocomplete,
+	runEditorCommand,
 } from './codemirror-wrapper.js';

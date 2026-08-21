@@ -52,7 +52,8 @@ export const codeEditorReducer: Reducer<
 			];
 
 		case 'languageChanged':
-			return [{ ...state, language: action.language }, Effect.none()];
+			// Clears any previous load failure: picking a language is the retry.
+			return [{ ...state, language: action.language, error: null }, Effect.none()];
 
 		// Cursor & Selection
 		case 'cursorMoved':
@@ -75,10 +76,20 @@ export const codeEditorReducer: Reducer<
 		// `canUndo` (inverted), and nothing read either.
 		case 'undo':
 		case 'redo':
+		case 'focus':
+		case 'blur':
 		case 'insertText':
 		case 'deleteSelection':
 		case 'selectAll':
 			return [state, Effect.none()];
+
+		case 'languageLoadFailed':
+			// Makes the error banner reachable. It was declared, initialised, and
+			// set by nothing — while the one place a failure occurred swallowed it.
+			return [
+				{ ...state, error: `Failed to load ${action.language}: ${action.error}` },
+				Effect.none()
+			];
 
 		case 'historyChanged':
 			// Reported by the editor's update listener, edge-triggered on the

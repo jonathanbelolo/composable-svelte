@@ -195,7 +195,7 @@ export async function loadLanguage(lang: SupportedLanguage): Promise<Extension> 
  * @param theme Theme name
  * @returns Array of theme extensions
  */
-export function getThemeExtensions(theme: 'light' | 'dark' | 'auto'): Extension[] {
+function getThemeExtensions(theme: 'light' | 'dark' | 'auto'): Extension[] {
 	if (theme === 'dark') {
 		return [oneDark];
 	}
@@ -501,6 +501,8 @@ export function runEditorCommand(
 	command:
 		| { type: 'undo' }
 		| { type: 'redo' }
+		| { type: 'focus' }
+		| { type: 'blur' }
 		| { type: 'selectAll' }
 		| { type: 'insertText'; text: string; position?: { line: number; column: number } | undefined }
 		| { type: 'deleteSelection' }
@@ -514,6 +516,12 @@ export function runEditorCommand(
 			return;
 		case 'selectAll':
 			selectAllCommand(view);
+			return;
+		case 'focus':
+			view.focus();
+			return;
+		case 'blur':
+			view.contentDOM.blur();
 			return;
 		case 'insertText': {
 			if (view.state.readOnly) return;
@@ -575,20 +583,3 @@ export function updateAutocomplete(view: EditorView, enabled: boolean): void {
 	view.dispatch({ effects: autocompleteCompartment.reconfigure(autocompleteExtension(enabled)) });
 }
 
-/**
- * Focus the editor
- *
- * @param view CodeMirror view
- */
-export function focusEditor(view: EditorView): void {
-	view.focus();
-}
-
-/**
- * Blur the editor
- *
- * @param view CodeMirror view
- */
-export function blurEditor(view: EditorView): void {
-	view.contentDOM.blur();
-}

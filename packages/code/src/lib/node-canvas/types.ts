@@ -141,7 +141,9 @@ export type NodeCanvasAction<
 
   // Batch operations
   | { type: 'importGraph'; nodes: Node<NodeData>[]; edges: Edge<EdgeData>[] }
-  | { type: 'clearCanvas' };
+  | { type: 'clearCanvas' }
+  /** Reposition nodes using the `autoLayout` dependency, if one is supplied. */
+  | { type: 'autoLayout' };
 
 // `undo` / `redo` were removed. They were `console.warn` placeholders, and a
 // history that only snapshots this reducer's own actions would silently
@@ -252,11 +254,6 @@ export interface NodeCanvasDependencies {
    * Validates if a connection between two ports is allowed.
    */
   validateConnection?: ConnectionValidator;
-
-  /**
-   * Node type registry for validation and rendering.
-   */
-  nodeTypes?: Record<string, NodeTypeDefinition>;
 
   /**
    * Generate unique IDs for new nodes/edges.

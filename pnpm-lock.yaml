@@ -732,9 +732,6 @@ importers:
       '@codemirror/language':
         specifier: ^6.11.3
         version: 6.11.3
-      '@codemirror/lint':
-        specifier: ^6.9.2
-        version: 6.9.2
       '@codemirror/search':
         specifier: ^6.5.11
         version: 6.5.11
