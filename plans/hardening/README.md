@@ -1004,3 +1004,35 @@ Applied to everything above, and to anything added later:
    concluding. When ImageGallery was broken, four healthy components failed
    alongside it.
 5. Core's browser suite is flaky under load; re-run before believing a failure.
+6. **A concurrent agent mutating the tree looks exactly like a flaky test.**
+   During Wave 3, `dependency-freshness` failed intermittently with the precise
+   defect signature `(first=1, second=0)` while a review agent was reverting
+   source files to run its own mutations. Every case passed in isolation. Do not
+   run the full suite while another agent has the working tree.
+
+---
+
+## S10. Wave 3 — behavioural defects, and what the hostile review caught
+
+Seven items closed (S4.1, S4.2, S4.5, S4.8, S4.9, S4.10, S9(b)), each with a
+mutation-verified test written *before* the fix. An independent adversarial
+review of the six contained fixes then found **five more real defects**, all
+reproduced before being fixed (`7c9cbd8`). Worth recording because the pattern
+repeats:
+
+| # | what the review found | why the original guard missed it |
+|---|---|---|
+| F1 | `<Command />` could not be dismissed by Escape, backdrop or `open={false}` | both render tests asserted only that the dialog was PRESENT at mount; the reducer test drove a `TestStore` and never rendered. Nothing opened the palette and then tried to close it. |
+| F2 | charts still notified on re-selecting the same point and on clearing an empty selection | the fix targeted the *storm* and the *clear*; nobody tested a non-change that still allocated |
+| F3 | Command's frozen ternary — the shape the commit called "the worst" — had no test | the test file asserted "no DOM route exists", which was false (`Enter` on the dialog) |
+| F4 | an initially-open palette lost its dismissal animation | no test compared it against a prop-opened control |
+| F5 | commit claimed `ResizeObserver` was constructed unconditionally; it is conditional | reasoning reached the right conclusion from a wrong premise |
+
+**The generalisable lesson: F1, F3 and F4 are all the same miss.** Each test
+asserted a *state* (dialog present, callback swapped, palette renders) where the
+defect lived in a *transition* (dialog dismissed, prop arriving after mount,
+palette animating out). An assertion at one point in a lifecycle cannot see a
+lifecycle that is broken elsewhere. Where a component has an open/close, a
+mount/update, or an in/out pair, **test the round trip and pin it against a
+control that already works** — F4 was only legible because the prop-opened
+palette animated and the initially-open one did not.
