@@ -58,6 +58,18 @@
 	// test, an unobservable one. The guard is a plain `let`: the effect reads and
 	// writes it, and a reactive guard re-triggers the effect it lives in
 	// (`effect_update_depth_exceeded`).
+
+	// Captured once, never reactive — this is the element's position *before* any
+	// animation, and it is the only thing the server can emit. `$effect` does not
+	// run during SSR, so a purely effect-driven transform renders every chevron
+	// unrotated on the server and pops on hydration. Verified by compiling with
+	// `generate: 'server'`.
+	//
+	// Because it never changes, Svelte writes it once and then leaves the property
+	// alone, which keeps invariant 6 (one property, one author): the markup places,
+	// Motion One animates.
+	const initialChevronTransform = $store.isExpanded ? 'rotate(180deg)' : 'rotate(0deg)';
+
 	let chevronElement: SVGElement | null = $state(null);
 	let lastRotated: boolean | undefined = undefined;
 
@@ -67,9 +79,9 @@
 		const first = lastRotated === undefined;
 		lastRotated = expanded;
 		if (first) {
-			// Nothing to animate on the first run — land on the angle rather than
-			// spinning a chevron that has only just mounted.
-			chevronElement.style.transform = expanded ? 'rotate(180deg)' : 'rotate(0deg)';
+			// Placement is the markup's job (see `initialChevronTransform`); the
+			// first run only seeds the guard, so a chevron that mounts already open
+			// does not spin on arrival.
 			return;
 		}
 		animateChevron(chevronElement, expanded);
@@ -105,7 +117,7 @@
 		stroke-linecap="round"
 		stroke-linejoin="round"
 		bind:this={chevronElement}
-		data-disclosure-chevron
+		style:transform={initialChevronTransform}
 		class="shrink-0"
 	>
 		<polyline points="6 9 12 15 18 9"></polyline>

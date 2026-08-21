@@ -39,6 +39,7 @@ export default defineConfig({
     environment: 'node',
     include: [
       'tests/ssr/ssg.test.ts',
+      'tests/ssr/animated-initial-state.test.ts',
       'tests/ssr/middleware.test.ts',
       'tests/ssr/entry-graph.test.ts',
       'tests/repo/check-coverage.test.ts',

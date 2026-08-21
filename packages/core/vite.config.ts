@@ -32,6 +32,7 @@ export default defineConfig({
       // Node-environment tests: they read files from disk, which browser mode
       // cannot do. Run by vitest.node.config.ts instead.
       'tests/ssr/ssg.test.ts',
+      'tests/ssr/animated-initial-state.test.ts',
       'tests/styles/**',
       // Reaches isomorphic-dompurify, which needs its Node (jsdom) build.
       'tests/ssr/middleware.test.ts',

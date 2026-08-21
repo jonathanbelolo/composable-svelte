@@ -57,6 +57,15 @@
 	//
 	// Plain `let`, not $state: the effect reads and writes it, and a reactive
 	// guard re-triggers the effect it lives in.
+	// Captured once, never reactive — the thumb's position *before* any animation,
+	// and the only thing the server can emit. `$effect` does not run during SSR,
+	// so an effect-only transform renders a checked switch with its thumb at rest.
+	// Verified by compiling with `generate: 'server'`.
+	//
+	// Because it never changes, Svelte writes it once and then leaves the property
+	// alone: the markup places, Motion One animates. Invariant 6 holds.
+	const initialThumbTransform = checked ? 'translateX(100%)' : 'translateX(0%)';
+
 	let lastAnimatedChecked: boolean | undefined = undefined;
 
 	$effect(() => {
@@ -70,7 +79,7 @@
 			// A switch that mounts already on has not just been switched on. The
 			// effect was previously unguarded, so it sprang the thumb in from zero
 			// on first render — indistinguishable from the user toggling it.
-			thumbRef.style.transform = `translateX(${isChecked ? '100%' : '0%'})`;
+			// Placement is the markup's job (see `initialThumbTransform`).
 			return;
 		}
 
@@ -111,5 +120,6 @@
 			'pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0',
 			'will-change-transform'
 		)}
+		style:transform={initialThumbTransform}
 	></div>
 </button>

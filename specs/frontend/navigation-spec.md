@@ -4,6 +4,12 @@
 **Date:** 2025-10-25
 **Status:** Draft
 
+> **Note on animation.** The `transition:` / `in:` / `out:` examples in this
+> document are illustrative of an approach that was never shipped. Motion One is
+> the only animation driver; see `guides/ANIMATION-GUIDELINES.md`, which is
+> enforced by `packages/core/tests/repo/animation-policy.test.ts`.
+
+
 ## Table of Contents
 
 1. [Overview](#overview)

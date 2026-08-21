@@ -256,6 +256,18 @@
 	// would be a second, unrelated one — and unobservable under test, since
 	// Tailwind is not compiled here. Plain `let` guard: the effect reads and
 	// writes it, and a reactive guard re-triggers the effect it lives in.
+
+	// Captured once, never reactive — this is the element's position *before* any
+	// animation, and it is the only thing the server can emit. `$effect` does not
+	// run during SSR, so a purely effect-driven transform renders every chevron
+	// unrotated on the server and pops on hydration. Verified by compiling with
+	// `generate: 'server'`.
+	//
+	// Because it never changes, Svelte writes it once and then leaves the property
+	// alone, which keeps invariant 6 (one property, one author): the markup places,
+	// Motion One animates.
+	const initialChevronTransform = $store.isOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+
 	let chevronElement: SVGElement | null = $state(null);
 	let lastRotated: boolean | undefined = undefined;
 
@@ -265,7 +277,8 @@
 		const first = lastRotated === undefined;
 		lastRotated = open;
 		if (first) {
-			chevronElement.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
+			// Placement is the markup's job (see `initialChevronTransform`); the
+			// first run only seeds the guard.
 			return;
 		}
 		animateChevron(chevronElement, open);
@@ -379,7 +392,7 @@
 				stroke-linecap="round"
 				stroke-linejoin="round"
 				bind:this={chevronElement}
-				data-disclosure-chevron
+				style:transform={initialChevronTransform}
 			>
 				<polyline points="6 9 12 15 18 9"></polyline>
 			</svg>

@@ -635,17 +635,25 @@ like. `guides/ANIMATION-GUIDELINES.md` is the authority and
   playback position) may use a CSS transition **if it is listed in the Exception
   Register** in `guides/ANIMATION-GUIDELINES.md`.
 
-**Which state-driven mechanism** — one question: must the element still be on
-screen after the state says it is gone?
-- No, it stays mounted → a plain boolean plus Motion One in a guarded `$effect`.
-- Yes, it must animate *out* → `PresentationState`. That is the only reason to
-  reach for it; a lifecycle is what keeps the element mounted through
-  `dismissing`.
+**Which state-driven mechanism** — two questions, in order:
+1. Must anything in the store react to this animation *finishing* (sequencing,
+   cancellation, a guard, a reducer test)?
+2. Must the element outlive the state that renders it — animate *out* before
+   unmounting?
 
-**Atomic (Pattern A) components** — Badge, Button, Card, Checkbox, Input, Label,
-Radio, Separator, Slider, Switch, Textarea — do not animate their own
-interaction or value states. A composed child that is legitimately animated (a
-`<Spinner>` inside a loading Button) is not a violation.
+Yes to either → the lifecycle belongs in the store (`PresentationState`, or a
+domain flag with a store-owned duration, as Toast does). No to both → a plain
+boolean plus Motion One in a guarded `$effect`, which is deliberately
+fire-and-forget: observable, but not coordinatable.
+
+**Reduced motion is mandatory.** Every animation must be skippable, and skipping
+it must still dispatch the completion event — otherwise a skipped animation is a
+deadlocked state machine. No helper in `animate.ts` honours the preference yet.
+
+**Atomic (Pattern A) components do not animate their own interaction or value
+states.** The list lives in `guides/ANIMATION-GUIDELINES.md` and is not repeated
+here — duplicating it across two files is how it went out of sync in the first
+place, with one file saying `Switch` animates and the other saying it must not.
 
 **Why This Approach**:
 - ✅ Predictable: State-driven animations are fully controlled by reducers

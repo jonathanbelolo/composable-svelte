@@ -42,15 +42,18 @@ const packagesDir = join(repoRoot, 'packages');
  * `guides/ANIMATION-GUIDELINES.md`. A site is legal only if it is here.
  *
  * Keyed by repo-relative path. The value lists the CSS properties that file is
- * permitted to transition — deliberately narrow, so that widening an exception
- * is a visible edit rather than a silent one. `Progress` is the illustration:
- * it was granted "CSS for bar fills" and had quietly become `transition-all`.
+ * permitted to transition — deliberately narrow, so widening an exception is a
+ * visible edit rather than a silent one.
+ *
+ * `Carousel` and `Progress` are deliberately NOT here, though the previous
+ * version of the guideline granted them. Both are driven by reducer state
+ * (`currentIndex`, `value`), which is the state-driven row of the rule, not the
+ * continuous-external-source row. They sit in the BACKLOG awaiting conversion,
+ * because recording them as principled exceptions would be exactly the wishful
+ * accounting this policy exists to remove — the old guide granted `Progress`
+ * "CSS for bar fills" and it had quietly become `transition-all`.
  */
 const REGISTER: Record<string, { properties: string[]; why: string }> = {
-	'core/src/lib/components/ui/carousel/Carousel.svelte': {
-		properties: ['transform'],
-		why: 'GPU translateX at 60fps; currentIndex is reducer-owned. Slide track only.'
-	},
 	'media/src/lib/voice-input/components/AudioVisualizer.svelte': {
 		properties: ['transform', 'height', 'opacity'],
 		why: 'Live microphone level, sampled faster than a spring could settle.'
@@ -66,10 +69,6 @@ const REGISTER: Record<string, { properties: string[]; why: string }> = {
 	'media/src/lib/voice-input/components/ConversationModePanel.svelte': {
 		properties: ['width'],
 		why: 'VAD silence countdown; a linear tween is the countdown semantics.'
-	},
-	'core/src/lib/components/ui/progress/Progress.svelte': {
-		properties: ['width'],
-		why: 'Determinate progress from a value prop.'
 	}
 };
 
@@ -87,12 +86,35 @@ const sourceFiles = readdirSync(packagesDir, { withFileTypes: true })
 	.flatMap((e) => walk(join(packagesDir, e.name, 'src')))
 	.filter((f) => statSync(f).isFile());
 
-/** Strip `<!-- -->`, `/* *\/` and `//` so commentary never counts as a violation. */
+/**
+ * Strip `<!-- -->`, block comments and `//` line comments, so commentary never
+ * counts as a violation.
+ *
+ * The `//` handling is quote-aware, which it needs to be: the previous version
+ * discarded everything after the first `//` not preceded by a colon, so
+ * `<a href="//cdn.example.com" class="transition-colors">` lost its class and the
+ * line scanned clean. Counting quotes before the marker is enough to tell a
+ * comment from a protocol-relative URL, and it keeps trailing comments strippable.
+ */
 function stripComments(source: string): string {
-	return source
+	const withoutBlocks = source
 		.replace(/<!--[\s\S]*?-->/g, '')
-		.replace(/\/\*[\s\S]*?\*\//g, '')
-		.replace(/(^|[^:])\/\/.*$/gm, '$1');
+		.replace(/\/\*[\s\S]*?\*\//g, '');
+
+	return withoutBlocks
+		.split('\n')
+		.map((line) => {
+			for (let i = 0; i < line.length - 1; i += 1) {
+				if (line[i] !== '/' || line[i + 1] !== '/') continue;
+				const before = line.slice(0, i);
+				// Inside a string? Then this is data, not a comment.
+				const quotes = (before.match(/(?<!\\)["'`]/g) ?? []).length;
+				if (quotes % 2 === 1) continue;
+				return before;
+			}
+			return line;
+		})
+		.join('\n');
 }
 
 interface Violation {
@@ -102,12 +124,44 @@ interface Violation {
 	why: string;
 }
 
-/** Tailwind `transition-*`, but not `transition-duration`/`delay` alone. */
-const TAILWIND_TRANSITION = /(?:^|[\s'"`:[])(transition(?:-(?:all|colors|opacity|transform|shadow))?)(?![-\w])/;
-/** A raw CSS `transition:` / `transition-property:` declaration. */
-const RAW_TRANSITION = /(^|[\s;{])transition(-property)?\s*:/;
-/** A raw CSS `animation:` shorthand (not `animation-delay`, `animation-name`). */
-const RAW_ANIMATION = /(^|[\s;{])animation\s*:/;
+/**
+ * Tailwind `transition-*`, including arbitrary values.
+ *
+ * The `-\[` alternative is not decoration: `transition-[width]` is the idiomatic
+ * way to transition one named property, so without it the scanner was blind to
+ * exactly the spelling a Register grant invites. It also made the Register
+ * unreachable through Tailwind — a granted file written that way scans clean,
+ * which then trips the stale-backlog check and removes it from enforcement
+ * entirely.
+ */
+const TAILWIND_TRANSITION =
+	/(?:^|[\s'"`:])(transition(?:-(?:all|colors|opacity|transform|shadow))?(?![-\w])|transition-\[[^\]]*\])/;
+/** A raw CSS `transition:` / `transition-property:` declaration, or a Svelte `style:` directive. */
+const RAW_TRANSITION = /(^|[\s;{:])transition(-property|-duration|-timing-function)?\s*[:=]/;
+/**
+ * A CSS `animation` declaration — shorthand *or* the longhands that start one.
+ *
+ * `animation-name` and `animation-duration` were deliberately excluded before,
+ * which left `animation-name: slideIn; animation-duration: .2s;` fully compliant
+ * with the guard and a flat violation of the policy.
+ */
+const RAW_ANIMATION = /(^|[\s;{])animation(-name|-duration)?\s*:/;
+/**
+ * Svelte's own transitions. Prohibited for the same reason as CSS ones — the
+ * store cannot see them — and previously invisible: `in:`, `out:` and `animate:`
+ * matched none of the three patterns above, so a contributor could write a
+ * completely store-invisible lifecycle animation and the ratchet would approve.
+ */
+const SVELTE_TRANSITION = /(?:^|\s)(transition|in|out|animate):[a-zA-Z_$][\w$]*/;
+/**
+ * Turning an animation *off* is not an animation.
+ *
+ * `transition: none` / `animation: none` is what a `prefers-reduced-motion`
+ * block contains, i.e. the correct thing to write. Flagging it would force the
+ * author to delete accessibility code or widen the pattern, and the guideline
+ * forbids widening the pattern.
+ */
+const DISABLES_ANIMATION = /:\s*none\b/;
 
 function scan(file: string): Violation[] {
 	const rel = relative(packagesDir, file);
@@ -119,10 +173,23 @@ function scan(file: string): Violation[] {
 	for (let i = 0; i < lines.length; i += 1) {
 		const line = lines[i]!;
 
+		if (DISABLES_ANIMATION.test(line)) continue;
+
+		const isSvelte = SVELTE_TRANSITION.test(line);
 		const isTailwind = TAILWIND_TRANSITION.test(line);
 		const isRaw = RAW_TRANSITION.test(line);
 		const isAnimation = RAW_ANIMATION.test(line);
-		if (!isTailwind && !isRaw && !isAnimation) continue;
+		if (!isSvelte && !isTailwind && !isRaw && !isAnimation) continue;
+
+		if (isSvelte) {
+			out.push({
+				file: rel,
+				line: i + 1,
+				text: line.trim(),
+				why: "Svelte transition directive — the store cannot see it; use Motion One"
+			});
+			continue;
+		}
 
 		// An animation that repeats forever is allowed outright. Check the
 		// declaration and, for a multi-line shorthand, the couple of lines after
@@ -235,7 +302,6 @@ const BACKLOG = new Set([
 	'media/src/lib/voice-input/components/AudioVisualizer.svelte',
 	'media/src/lib/voice-input/components/ConversationModePanel.svelte',
 	'media/src/lib/voice-input/components/PushToTalkPanel.svelte',
-	'media/src/lib/voice-input/components/RecordingTimer.svelte',
 	'media/src/lib/voice-input/components/VoiceInputButton.svelte',
 ]);
 
@@ -246,15 +312,47 @@ describe('animation policy', () => {
 
 	it('the scanner recognises what it claims to', () => {
 		// A guard whose matcher is wrong reports zero violations and looks green.
+		// Every entry below is a spelling that was, or could have been, missed.
 		expect(TAILWIND_TRANSITION.test("'transition-colors',")).toBe(true);
 		expect(TAILWIND_TRANSITION.test("'shrink-0 transition-transform duration-200',")).toBe(true);
 		expect(TAILWIND_TRANSITION.test('class="flex transition-transform"')).toBe(true);
+		// Arbitrary values — the spelling a Register grant invites, and the one the
+		// first version of this scanner could not see at all.
+		expect(TAILWIND_TRANSITION.test('class="transition-[width] duration-200"')).toBe(true);
+		expect(TAILWIND_TRANSITION.test("'transition-[color,background-color]',")).toBe(true);
 		expect(RAW_TRANSITION.test('\ttransition: background 0.2s ease;')).toBe(true);
+		// Svelte style directives set the same property from markup.
+		expect(RAW_TRANSITION.test('\t\tstyle:transition-duration={`${ms}ms`}')).toBe(true);
 		expect(RAW_ANIMATION.test('\tanimation: spin 1s linear infinite;')).toBe(true);
-		// And what it must not flag:
-		expect(TAILWIND_TRANSITION.test("duration-200 ease-out")).toBe(false);
+		// Longhands start a one-shot animation just as well as the shorthand.
+		expect(RAW_ANIMATION.test('\tanimation-name: slideIn;')).toBe(true);
+		expect(RAW_ANIMATION.test('\tanimation-duration: 0.3s;')).toBe(true);
+		// Svelte's own transitions are store-invisible and were matched by nothing.
+		expect(SVELTE_TRANSITION.test('\t<div transition:fade>')).toBe(true);
+		expect(SVELTE_TRANSITION.test('\t<div in:fly={{ y: 8 }}>')).toBe(true);
+		expect(SVELTE_TRANSITION.test('\t<div out:fade>')).toBe(true);
+		expect(SVELTE_TRANSITION.test('\t<li animate:flip>')).toBe(true);
+
+		// And what it must NOT flag:
+		expect(TAILWIND_TRANSITION.test('duration-200 ease-out')).toBe(false);
 		expect(RAW_ANIMATION.test('\tanimation-delay: var(--delay);')).toBe(false);
-		expect(RAW_TRANSITION.test('// a comment about transition: foo')).toBe(true); // stripped earlier
+		// Turning animation off is the correct content of a reduced-motion block.
+		expect(DISABLES_ANIMATION.test('\t\tanimation: none;')).toBe(true);
+		expect(DISABLES_ANIMATION.test('\t\ttransition: none;')).toBe(true);
+		expect(DISABLES_ANIMATION.test('\ttransition: opacity 0.2s;')).toBe(false);
+		// A CSS pseudo-selector is not a Svelte directive.
+		expect(SVELTE_TRANSITION.test('\t.a:hover { color: red; }')).toBe(false);
+	});
+
+	it('strips comments without eating code', () => {
+		// `stripComments` is the guard's single point of blindness and had no test.
+		// A `//` inside a URL used to discard the rest of the line, taking any
+		// class on it with it.
+		expect(stripComments('<a href="//cdn.example.com" class="transition-colors">')).toContain(
+			'transition-colors'
+		);
+		expect(stripComments('\t// transition: all 0.2s;')).not.toContain('transition:');
+		expect(stripComments('<!-- transition: all -->')).not.toContain('transition:');
 	});
 
 	it('no file outside the backlog violates the guideline', () => {
