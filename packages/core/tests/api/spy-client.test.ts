@@ -6,6 +6,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { createSpyAPI } from '../../src/lib/api/testing/spy-client.js';
 import { createMockAPI } from '../../src/lib/api/testing/mock-client.js';
 import { APIError } from '../../src/lib/api/errors.js';
+import { clearCache } from '../../src/lib/api/cache.js';
 
 describe('createSpyAPI', () => {
   describe('Call Tracking', () => {
@@ -460,23 +461,50 @@ describe('createSpyAPI', () => {
   });
 
   describe('Proxy Methods', () => {
-    it('addInterceptor delegates to base client', () => {
-      const spy = createSpyAPI();
-      const cleanup = spy.addInterceptor({});
+    // These asserted `typeof cleanup === 'function'` and two `not.toThrow()`s,
+    // which passed while the underlying mock's three methods were empty
+    // closures. Now that the mock implements them, "delegates" is a claim with
+    // observable consequences, so it is asserted as one.
 
-      expect(typeof cleanup).toBe('function');
+    it('addInterceptor delegates to the base client', async () => {
+      const spy = createSpyAPI(
+        createMockAPI({ 'GET /api/me': (config) => ({ seen: config.headers?.['x-test'] ?? null }) })
+      );
+
+      const remove = spy.addInterceptor({
+        onRequest: (_url, config) => ({ ...config, headers: { ...config.headers, 'x-test': 'yes' } })
+      });
+
+      const withInterceptor = await spy.get<{ seen: string | null }>('/api/me');
+      expect(withInterceptor.data.seen).toBe('yes');
+
+      remove();
+      const without = await spy.get<{ seen: string | null }>('/api/me');
+      expect(without.data.seen).toBeNull();
     });
 
-    it('clearCache delegates to base client', () => {
-      const spy = createSpyAPI();
+    it('clearCache delegates to the base client', async () => {
+      clearCache();
+      let hits = 0;
+      const spy = createSpyAPI(createMockAPI({ 'GET /api/count': () => ({ n: (hits += 1) }) }));
 
-      expect(() => spy.clearCache()).not.toThrow();
+      await spy.get('/api/count', { cache: true });
+      spy.clearCache();
+      const second = await spy.get<{ n: number }>('/api/count', { cache: true });
+
+      expect(second.data.n).toBe(2);
     });
 
-    it('invalidateCache delegates to base client', () => {
-      const spy = createSpyAPI();
+    it('invalidateCache delegates to the base client', async () => {
+      clearCache();
+      let hits = 0;
+      const spy = createSpyAPI(createMockAPI({ 'GET /api/items': () => ({ n: (hits += 1) }) }));
 
-      expect(() => spy.invalidateCache('/api/*')).not.toThrow();
+      await spy.get('/api/items', { cache: true });
+      spy.invalidateCache('/api/items');
+      const second = await spy.get<{ n: number }>('/api/items', { cache: true });
+
+      expect(second.data.n).toBe(2);
     });
   });
 
