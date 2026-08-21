@@ -224,7 +224,6 @@ const BACKLOG = new Set([
 	'core/src/lib/components/ui/progress/Progress.svelte',
 	'core/src/lib/components/ui/select/Select.svelte',
 	'core/src/lib/components/ui/slider/Slider.svelte',
-	'core/src/lib/components/ui/switch/Switch.svelte',
 	'core/src/lib/components/ui/tree-view/TreeView.svelte',
 	'core/src/lib/navigation-components/AnimatedNavigationStack.svelte',
 	'core/src/lib/navigation-components/NavigationStack.svelte',

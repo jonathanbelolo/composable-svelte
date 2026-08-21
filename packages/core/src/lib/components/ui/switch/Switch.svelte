@@ -48,19 +48,41 @@
 
 	let thumbRef: HTMLDivElement;
 
-	// Animate the thumb when checked state changes
+	// Motion One is the *only* author of the thumb's transform.
+	//
+	// It used to share the property with a Tailwind transition class and a
+	// reactive inline `style` writing the same translate — three mechanisms on
+	// one property. Motion happened to win each frame, so it looked fine, but
+	// "looked fine" is not an ownership rule.
+	//
+	// Plain `let`, not $state: the effect reads and writes it, and a reactive
+	// guard re-triggers the effect it lives in.
+	let lastAnimatedChecked: boolean | undefined = undefined;
+
 	$effect(() => {
-		if (thumbRef) {
-			animate(
-				thumbRef,
-				{ x: checked ? '100%' : '0%' },
-				{
-					type: 'spring',
-					visualDuration: SPRING_PRESETS.button.visualDuration,
-					bounce: SPRING_PRESETS.button.bounce
-				}
-			);
+		const isChecked = checked;
+		if (!thumbRef || lastAnimatedChecked === isChecked) return;
+
+		const first = lastAnimatedChecked === undefined;
+		lastAnimatedChecked = isChecked;
+
+		if (first) {
+			// A switch that mounts already on has not just been switched on. The
+			// effect was previously unguarded, so it sprang the thumb in from zero
+			// on first render — indistinguishable from the user toggling it.
+			thumbRef.style.transform = `translateX(${isChecked ? '100%' : '0%'})`;
+			return;
 		}
+
+		animate(
+			thumbRef,
+			{ x: isChecked ? '100%' : '0%' },
+			{
+				type: 'spring',
+				visualDuration: SPRING_PRESETS.button.visualDuration,
+				bounce: SPRING_PRESETS.button.bounce
+			}
+		);
 	});
 </script>
 
@@ -71,7 +93,7 @@
 	{disabled}
 	class={cn(
 		'peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent',
-		'transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+		'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
 		'disabled:cursor-not-allowed disabled:opacity-50',
 		checked ? 'bg-primary' : 'bg-input',
 		className
@@ -86,9 +108,8 @@
 	<div
 		bind:this={thumbRef}
 		class={cn(
-			'pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform',
+			'pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0',
 			'will-change-transform'
 		)}
-		style="transform: translateX({checked ? '100%' : '0%'})"
 	></div>
 </button>

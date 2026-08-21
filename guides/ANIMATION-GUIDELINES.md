@@ -118,7 +118,14 @@ no transition on hover, focus, press, checked, disabled, or on the value it
 displays.
 
 Badge · Button · Card · Checkbox · Input · Label · Radio · Separator · Slider ·
-Switch · Textarea
+Textarea
+
+**`Switch` is deliberately not on that list.** Its thumb travels between two
+positions — that is a genuine state transition with a start, an end and a
+distance, not decoration on a hover — and it has been driven by Motion One and
+the `button` spring preset since before this document was rewritten. The
+original list named it anyway, which made the list wrong rather than the code.
+Its *track colour* still changes instantly, because that part is decoration.
 
 **A composed child that is legitimately animated is not a violation.** A
 `<Spinner>` rendered inside a Button in its loading state is a spinner — an
