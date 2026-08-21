@@ -20,6 +20,12 @@ export interface Toast {
 	id: string;
 
 	/**
+	 * True while the toast is animating out. It is still rendered — removal
+	 * happens on `toastRemoved`, once the exit animation has had its time.
+	 */
+	dismissing?: boolean;
+
+	/**
 	 * Toast variant for styling.
 	 */
 	variant: ToastVariant;
@@ -70,6 +76,15 @@ export interface ToastState {
 	toasts: Toast[];
 
 	/**
+	 * How long a toast's exit animation runs before it is removed, in ms.
+	 *
+	 * Dismissal is two-step — `toastDismissed` marks the toast `dismissing` and
+	 * schedules `toastRemoved` — so the view has time to animate it out. Without
+	 * this a toast popped out of existence.
+	 */
+	exitDurationMs: number;
+
+	/**
 	 * Maximum number of toasts to show at once.
 	 * Default: 3
 	 */
@@ -96,6 +111,8 @@ export type ToastAction =
 	| { type: 'toastDismissed'; id: string }
 	| { type: 'toastAutoDismissed'; id: string }
 	| { type: 'toastActionClicked'; id: string }
+	/** Removes a toast once its exit animation has finished. */
+	| { type: 'toastRemoved'; id: string }
 	| { type: 'allToastsDismissed' }
 	| { type: 'maxToastsChanged'; maxToasts: number }
 	| { type: 'defaultDurationChanged'; duration: number }
@@ -129,12 +146,14 @@ export function createInitialToastState(config?: {
 	maxToasts?: number;
 	defaultDuration?: number;
 	position?: ToastState['position'];
+	exitDurationMs?: number;
 }): ToastState {
 	return {
 		toasts: [],
 		maxToasts: config?.maxToasts ?? 3,
 		defaultDuration: config?.defaultDuration ?? 5000,
-		position: config?.position ?? 'bottom-right'
+		position: config?.position ?? 'bottom-right',
+		exitDurationMs: config?.exitDurationMs ?? 200
 	};
 }
 

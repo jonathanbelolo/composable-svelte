@@ -52,9 +52,19 @@ export const i18nReducer: Reducer<I18nState, I18nAction, I18nDependencies> = (
     case 'i18n/setLocale': {
       const { locale, preloadNamespaces = [] } = action;
 
-      // Validate locale is supported
-      if (!deps.localeDetector.getSupportedLocales().includes(locale)) {
-        console.warn(`Unsupported locale: ${locale}, falling back to ${state.defaultLocale}`);
+      // Validate against the app's OWN locale list, not the detector's.
+      //
+      // `state.availableLocales` is what the UI renders from — the SSR example's
+      // LanguageSwitcher builds its buttons from `$store.i18n.availableLocales`.
+      // Validating against `deps.localeDetector.getSupportedLocales()` compared
+      // against a different list entirely, so the reducer could refuse a locale
+      // the app was actively offering (and accept one it was not). The detector
+      // is for *detecting* a starting locale, not for authorising a switch.
+      if (!state.availableLocales.includes(locale)) {
+        console.warn(
+          `Unsupported locale: ${locale}, falling back to ${state.defaultLocale}. ` +
+            `Available: ${state.availableLocales.join(', ')}`
+        );
         return [state, EffectBuilder.none()];
       }
 

@@ -27,6 +27,8 @@ import { describe, it, expect, vi, type Mock } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import RerenderProbe, { probe, resetProbe } from './test-components/RerenderProbe.svelte';
 import RerenderProbeParent from './test-components/RerenderProbeParent.svelte';
+import Toaster from '../src/lib/components/toast/Toaster.svelte';
+import { createToastStore } from '../src/lib/components/toast/index.js';
 import TreeView from '../src/lib/components/ui/tree-view/TreeView.svelte';
 import Carousel from '../src/lib/components/ui/carousel/Carousel.svelte';
 import ImageGallery from '../src/lib/components/image-gallery/ImageGallery.svelte';
@@ -306,24 +308,24 @@ describe('dependencies are read live — snippet-taking components', () => {
 });
 
 describe('Toaster', () => {
-	it.skip('dependencies are read live — BLOCKED, see comment', () => {
-		// Not an omission. `Toaster`'s `dependencies` prop is entirely dead
-		// today, not merely frozen, so there is nothing here to observe:
+	it('dependencies fire, now that the store is reachable', async () => {
+		// This was `it.skip` with a comment explaining that `Toaster`'s
+		// `dependencies` prop was entirely dead — nothing could put a toast into
+		// the store they were attached to, so `onToastAdded`/`onToastDismissed`/
+		// `generateId` could never fire. A gate someone had already written and
+		// could not close.
 		//
-		//   - It renders `externalToasts ?? $store.toasts`. The only dispatch any
-		//     rendered element can produce is `toastDismissed`, whose reducer case
-		//     opens `const toast = state.toasts.find(...); if (!toast) return`.
-		//   - Toasts supplied via the `toasts` prop are never in the internal
-		//     store, so dismissal is a no-op.
-		//   - Nothing can put one *into* the internal store: `Toaster` exposes no
-		//     `store` prop, no context and no component export
-		//     (`dist/components/toast/Toaster.svelte.d.ts` is
-		//     `Component<ToasterProps, {}, "">`).
-		//
-		// So `onToastAdded`, `onToastDismissed` and `generateId` can never fire.
-		// Quietly adding a getter here would look like a fix and change nothing.
-		// This needs its own register entry and its own decision: either expose
-		// the store, or delete the `dependencies` prop.
+		// `dependencies` is gone from the component; `createToastStore` is the
+		// path that works, and this asserts it does.
+		const onToastAdded = vi.fn();
+		const store = createToastStore({ dependencies: { onToastAdded } });
+		render(Toaster, { props: { store } });
+		await settle();
+
+		store.dispatch({ type: 'toastAdded', toast: { variant: 'info', description: 'x' } });
+		await settle();
+
+		expect(onToastAdded).toHaveBeenCalledTimes(1);
 	});
 });
 

@@ -177,12 +177,18 @@ describe('Auto-Dismiss', () => {
 		// Wait for auto-dismiss effect
 		await advanceTime(150);
 
-		await store.receive(
-			{ type: 'toastAutoDismissed', id: toastId },
-			(state) => {
-				expect(state.toasts).toHaveLength(0);
-			}
-		);
+		// An auto-dismissed toast now takes the same two-step path as a manual
+		// one, so it animates out instead of vanishing.
+		await store.receive({ type: 'toastAutoDismissed', id: toastId }, (state) => {
+			expect(state.toasts).toHaveLength(1);
+			expect(state.toasts[0].dismissing).toBe(true);
+		});
+
+		await advanceTime(250);
+
+		await store.receive({ type: 'toastRemoved', id: toastId }, (state) => {
+			expect(state.toasts).toHaveLength(0);
+		});
 	});
 
 	it('skips auto-dismiss if duration is 0', async () => {
@@ -241,7 +247,13 @@ describe('Manual Dismiss', () => {
 		});
 	});
 
-	it('dismisses toast by ID', async () => {
+	it('dismisses toast by ID, animating out first', async () => {
+		// Dismissal is two-step now: `toastDismissed` marks the toast
+		// `dismissing` and schedules `toastRemoved`, so the view has time to
+		// animate it out. It used to delete immediately, which is why
+		// `animateToastOut` existed with no caller and toasts popped out of
+		// existence. These assertions follow the transition rather than
+		// asserting the end state and calling it done.
 		await store.send({
 			type: 'toastAdded',
 			toast: createToast('Test')
@@ -249,15 +261,18 @@ describe('Manual Dismiss', () => {
 
 		const toastId = store.state.toasts[0].id;
 
-		await store.send(
-			{ type: 'toastDismissed', id: toastId },
-			(state) => {
-				expect(state.toasts).toHaveLength(0);
-			}
-		);
+		await store.send({ type: 'toastDismissed', id: toastId }, (state) => {
+			// Still present, now marked.
+			expect(state.toasts).toHaveLength(1);
+			expect(state.toasts[0].dismissing).toBe(true);
+		});
+
+		await store.receive({ type: 'toastRemoved', id: toastId }, (state) => {
+			expect(state.toasts).toHaveLength(0);
+		});
 	});
 
-	it('calls onToastDismissed dependency', async () => {
+	it('calls onToastDismissed once, when the toast is actually gone', async () => {
 		await store.send({
 			type: 'toastAdded',
 			toast: createToast('Test')
@@ -266,9 +281,15 @@ describe('Manual Dismiss', () => {
 		const toast = store.state.toasts[0];
 
 		await store.send({ type: 'toastDismissed', id: toast.id });
+		// Deliberately asserted mid-flight: firing the callback on the mark
+		// rather than the removal would report a dismissal that has not
+		// happened yet, and would fire twice if the toast were re-dismissed.
+		expect(onToastDismissed, 'fired before the toast was removed').not.toHaveBeenCalled();
+
+		await store.receive({ type: 'toastRemoved', id: toast.id });
 
 		expect(onToastDismissed).toHaveBeenCalledOnce();
-		expect(onToastDismissed).toHaveBeenCalledWith(toast);
+		expect(onToastDismissed).toHaveBeenCalledWith({ ...toast, dismissing: true });
 	});
 });
 
@@ -318,12 +339,14 @@ describe('Toast Action', () => {
 
 		const toastId = store.state.toasts[0].id;
 
-		await store.send(
-			{ type: 'toastActionClicked', id: toastId },
-			(state) => {
-				expect(state.toasts).toHaveLength(0);
-			}
-		);
+		await store.send({ type: 'toastActionClicked', id: toastId }, (state) => {
+			expect(state.toasts).toHaveLength(1);
+			expect(state.toasts[0].dismissing).toBe(true);
+		});
+
+		await store.receive({ type: 'toastRemoved', id: toastId }, (state) => {
+			expect(state.toasts).toHaveLength(0);
+		});
 
 		expect(onToastDismissed).toHaveBeenCalledOnce();
 	});

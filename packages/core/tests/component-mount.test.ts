@@ -52,7 +52,7 @@ const cases: Array<[string, any, () => Record<string, unknown>]> = [
 	['Accordion', Accordion, () => ({ items: [{ id: '1', title: 'One', content: 'c' }] })],
 	['FileUpload', FileUpload, () => ({ accept: 'image/*', maxSize: 1024 })],
 	['ImageGallery', ImageGallery, () => ({ images: [{ id: '1', url: '/a.jpg', alt: 'A' }] })],
-	['Toaster', Toaster, () => ({ toasts: [] })],
+	['Toaster', Toaster, () => ({})],
 	// These three require a `children` snippet, which a .ts file cannot express.
 	['Form', FormMountTest, () => ({})],
 	['Tooltip', TooltipMountTest, () => ({})],

@@ -123,6 +123,47 @@ describe('i18nReducer', () => {
   });
 
   describe('i18n/setLocale', () => {
+    /**
+     * `availableLocales` is the list the UI renders from — `examples/ssr-server`'s
+     * LanguageSwitcher builds its buttons from `$store.i18n.availableLocales`
+     * (`:14`). The reducer validated against
+     * `deps.localeDetector.getSupportedLocales()` instead, a DIFFERENT list, so
+     * a shipped switcher could offer a locale the reducer silently refused with
+     * a `console.warn`.
+     *
+     * Both directions are asserted: a one-sided fix that simply dropped the
+     * validation would pass the first test and fail the second.
+     */
+    it('accepts a locale in availableLocales that the detector does not list', () => {
+      mockDeps.localeDetector.getSupportedLocales = vi.fn(() => ['en']);
+
+      const [newState] = i18nReducer(
+        initialState,
+        { type: 'i18n/setLocale', locale: 'pt-BR' },
+        mockDeps
+      );
+
+      expect(
+        newState.currentLocale,
+        'the reducer refused a locale the UI offers'
+      ).toBe('pt-BR');
+    });
+
+    it('still refuses a locale that is not in availableLocales', () => {
+      mockDeps.localeDetector.getSupportedLocales = vi.fn(() => ['en', 'de']);
+
+      const [newState] = i18nReducer(
+        initialState,
+        { type: 'i18n/setLocale', locale: 'de' },
+        mockDeps
+      );
+
+      expect(
+        newState.currentLocale,
+        'validation was dropped rather than redirected'
+      ).toBe('en');
+    });
+
     it('should change locale', () => {
       const action: I18nAction = {
         type: 'i18n/setLocale',
@@ -158,15 +199,18 @@ describe('i18nReducer', () => {
     });
 
     it('should update DOM language and direction', async () => {
-      // Add 'ar' to supported locales for this test
-      mockDeps.localeDetector.getSupportedLocales = vi.fn(() => ['en', 'pt-BR', 'es', 'ar']);
+      // 'ar' is made valid by putting it in the app's OWN locale list. It used
+      // to be added to the detector's list, which is what the reducer consulted
+      // before — the detector now only *detects* a starting locale and does not
+      // authorise a switch.
+      const arabicState = createInitialI18nState('en', ['en', 'pt-BR', 'es', 'ar'], 'en');
 
       const action: I18nAction = {
         type: 'i18n/setLocale',
         locale: 'ar'
       };
 
-      const [newState, effect] = i18nReducer(initialState, action, mockDeps);
+      const [newState, effect] = i18nReducer(arabicState, action, mockDeps);
 
       // Execute effects
       if (effect._tag === 'Batch') {

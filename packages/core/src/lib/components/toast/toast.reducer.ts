@@ -86,26 +86,28 @@ export const toastReducer: Reducer<ToastState, ToastAction, ToastDependencies> =
 
 		case 'toastDismissed': {
 			const toast = state.toasts.find((t) => t.id === action.id);
-			if (!toast) {
+			// Idempotent: a second dismiss while already animating out is a no-op,
+			// returning the identical state so `dispatchCore` does not notify.
+			if (!toast || toast.dismissing) {
 				return [state, Effect.none<ToastAction>()];
 			}
 
+			// Marked, not removed. The view animates it out and `toastRemoved`
+			// takes it away — toasts used to pop out of existence.
 			const newState: ToastState = {
 				...state,
-				toasts: state.toasts.filter((t) => t.id !== action.id)
+				toasts: state.toasts.map((t) => (t.id === action.id ? { ...t, dismissing: true } : t))
 			};
 
-			// Call onToastDismissed callback
-			const effect = deps?.onToastDismissed
-				? Effect.run<ToastAction>(async () => {
-						deps.onToastDismissed?.(toast);
-					})
-				: Effect.none<ToastAction>();
-
-			return [newState, effect];
+			return [
+				newState,
+				Effect.afterDelay<ToastAction>(state.exitDurationMs, (dispatch) =>
+					dispatch({ type: 'toastRemoved', id: action.id })
+				)
+			];
 		}
 
-		case 'toastAutoDismissed': {
+		case 'toastRemoved': {
 			const toast = state.toasts.find((t) => t.id === action.id);
 			if (!toast) {
 				return [state, Effect.none<ToastAction>()];
@@ -116,7 +118,7 @@ export const toastReducer: Reducer<ToastState, ToastAction, ToastDependencies> =
 				toasts: state.toasts.filter((t) => t.id !== action.id)
 			};
 
-			// Call onToastDismissed callback
+			// The dependency fires here, once, when the toast is actually gone.
 			const effect = deps?.onToastDismissed
 				? Effect.run<ToastAction>(async () => {
 						deps.onToastDismissed?.(toast);
@@ -125,6 +127,11 @@ export const toastReducer: Reducer<ToastState, ToastAction, ToastDependencies> =
 
 			return [newState, effect];
 		}
+
+		case 'toastAutoDismissed':
+			// Same path as a manual dismiss, so an auto-dismissed toast animates
+			// out too rather than vanishing.
+			return toastReducer(state, { type: 'toastDismissed', id: action.id }, deps);
 
 		case 'toastActionClicked': {
 			const toast = state.toasts.find((t) => t.id === action.id);
@@ -132,27 +139,23 @@ export const toastReducer: Reducer<ToastState, ToastAction, ToastDependencies> =
 				return [state, Effect.none<ToastAction>()];
 			}
 
-			// Execute the action and dismiss the toast
-			const newState: ToastState = {
-				...state,
-				toasts: state.toasts.filter((t) => t.id !== action.id)
-			};
+			// Run the action, then dismiss through the normal path so it animates
+			// out and fires `onToastDismissed` exactly once, in one place.
+			const [dismissedState, dismissEffect] = toastReducer(
+				state,
+				{ type: 'toastDismissed', id: action.id },
+				deps
+			);
 
-			const effects: EffectType<ToastAction>[] = [
-				Effect.run<ToastAction>(async () => {
-					toast.action?.onClick();
-				})
-			];
-
-			if (deps?.onToastDismissed) {
-				effects.push(
+			return [
+				dismissedState,
+				Effect.batch(
 					Effect.run<ToastAction>(async () => {
-						deps.onToastDismissed?.(toast);
-					})
-				);
-			}
-
-			return [newState, Effect.batch(...effects)];
+						toast.action?.onClick();
+					}),
+					dismissEffect
+				)
+			];
 		}
 
 		case 'allToastsDismissed': {
