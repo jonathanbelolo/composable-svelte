@@ -223,7 +223,7 @@
 		<button
 			type="button"
 			class={cn(
-				'flex h-9 w-9 items-center justify-center rounded-md text-sm transition-colors',
+				'flex h-9 w-9 items-center justify-center rounded-md text-sm',
 				'hover:bg-accent hover:text-accent-foreground',
 				'disabled:pointer-events-none disabled:opacity-50'
 			)}
@@ -251,7 +251,7 @@
 		<button
 			type="button"
 			class={cn(
-				'flex h-9 w-9 items-center justify-center rounded-md text-sm transition-colors',
+				'flex h-9 w-9 items-center justify-center rounded-md text-sm',
 				'hover:bg-accent hover:text-accent-foreground',
 				'disabled:pointer-events-none disabled:opacity-50'
 			)}
@@ -284,7 +284,7 @@
 				<button
 					type="button"
 					class={cn(
-						'flex h-9 w-9 items-center justify-center rounded-md text-sm transition-colors',
+						'flex h-9 w-9 items-center justify-center rounded-md text-sm',
 						$store.currentPage === button
 							? 'bg-primary text-primary-foreground'
 							: 'hover:bg-accent hover:text-accent-foreground'
@@ -302,7 +302,7 @@
 		<button
 			type="button"
 			class={cn(
-				'flex h-9 w-9 items-center justify-center rounded-md text-sm transition-colors',
+				'flex h-9 w-9 items-center justify-center rounded-md text-sm',
 				'hover:bg-accent hover:text-accent-foreground',
 				'disabled:pointer-events-none disabled:opacity-50'
 			)}
@@ -329,7 +329,7 @@
 		<button
 			type="button"
 			class={cn(
-				'flex h-9 w-9 items-center justify-center rounded-md text-sm transition-colors',
+				'flex h-9 w-9 items-center justify-center rounded-md text-sm',
 				'hover:bg-accent hover:text-accent-foreground',
 				'disabled:pointer-events-none disabled:opacity-50'
 			)}

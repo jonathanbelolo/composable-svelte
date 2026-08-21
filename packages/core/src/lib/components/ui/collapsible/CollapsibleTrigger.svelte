@@ -93,7 +93,7 @@
 	id={triggerId}
 	class={cn(
 		'flex w-full items-center justify-between py-4 text-sm font-medium',
-		'transition-all hover:underline',
+		'hover:underline',
 		$store.disabled ? 'cursor-not-allowed' : 'cursor-pointer',
 		className
 	)}

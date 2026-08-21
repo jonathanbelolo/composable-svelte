@@ -120,7 +120,6 @@
 		border-radius: 0.375rem;
 		cursor: pointer;
 		text-align: left;
-		transition: all 0.15s;
 	}
 
 	.command-item:hover:not(:disabled) {

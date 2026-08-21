@@ -502,7 +502,6 @@
 		border-radius: 50%;
 		color: white;
 		cursor: pointer;
-		transition: background 0.2s ease;
 		z-index: 10;
 	}
 
@@ -612,7 +611,6 @@
 		font-size: 14px;
 		font-weight: 500;
 		cursor: pointer;
-		transition: background 0.2s ease;
 	}
 
 	.image-lightbox__retry:hover {
@@ -655,7 +653,6 @@
 		border-radius: 50%;
 		color: white;
 		cursor: pointer;
-		transition: background 0.2s ease;
 		z-index: 10;
 	}
 

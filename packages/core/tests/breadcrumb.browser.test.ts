@@ -121,8 +121,12 @@ describe('BreadcrumbLink', () => {
 		const link = container.querySelector('a');
 		expect(link).toBeTruthy();
 		expect(link?.getAttribute('href')).toBe('#');
-		expect(link?.className).toContain('transition-colors');
+		// The hover *style* is kept; the transition is not. This assertion used to
+		// require `transition-colors` to be present — a test pinning the thing
+		// `guides/ANIMATION-GUIDELINES.md` prohibits, which would have made the
+		// policy sweep look like a regression.
 		expect(link?.className).toContain('hover:text-foreground');
+		expect(link?.className, 'hover colour changes instantly now').not.toContain('transition');
 	});
 
 	test('renders anchor element with custom href', async () => {

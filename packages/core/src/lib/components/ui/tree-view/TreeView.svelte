@@ -221,7 +221,6 @@
 		tabindex={isHighlighted ? 0 : -1}
 		class={cn(
 			'flex items-center gap-1 px-2 py-1.5 rounded-sm cursor-pointer select-none',
-			'transition-colors',
 			isHighlighted && 'bg-accent text-accent-foreground',
 			isSelected && 'font-medium',
 			node.disabled && 'opacity-50 cursor-not-allowed pointer-events-none'

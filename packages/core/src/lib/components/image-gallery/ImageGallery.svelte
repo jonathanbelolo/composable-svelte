@@ -317,7 +317,6 @@
 		cursor: pointer;
 		overflow: hidden;
 		display: block;
-		transition: transform 0.2s ease;
 	}
 
 	.image-gallery__button:hover {

@@ -75,7 +75,7 @@
 
 	const toastClasses = $derived(
 		cn(
-			'group pointer-events-auto relative flex w-full max-w-md items-start gap-3 overflow-hidden rounded-lg border p-4 pr-8 shadow-lg transition-all',
+			'group pointer-events-auto relative flex w-full max-w-md items-start gap-3 overflow-hidden rounded-lg border p-4 pr-8 shadow-lg',
 			variantClasses[toast.variant],
 			className
 		)
@@ -140,7 +140,7 @@
 	{#if toast.dismissible !== false}
 		<button
 			type="button"
-			class="absolute right-2 top-2 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100"
+			class="absolute right-2 top-2 rounded-md p-1 text-foreground/50 opacity-0 hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100"
 			onclick={handleDismiss}
 			aria-label="Dismiss"
 		>

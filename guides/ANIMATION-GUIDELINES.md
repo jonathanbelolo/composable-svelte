@@ -271,6 +271,29 @@ document was rewritten to remove.
 user's own drag, so a transition makes the fill lag the thumb they are holding. A
 transition that delays feedback on direct manipulation is a defect.
 
+### That refusal generalises: feedback is instant
+
+Anything that tracks the user's **current input position** is feedback, not a
+transition, and must not animate at all — not in CSS and not in Motion One. A
+slider fill following a drag, a list highlight following ArrowDown, the current
+page, the active tab, a carousel's position dot.
+
+The test is *is the user still moving?* If yes, the change is a readout of where
+they are, and delaying it is the defect. If no — they acted and are now waiting
+for the result — it is a transition and may animate.
+
+This resolves a genuine conflict between the rule table above and this Register.
+A list highlight is reducer state, so the table alone says Motion One; but it is
+also direct manipulation, so this section says instant. Instant wins, and the
+practical reason is decisive: `background-color` is not composited, so Motion One
+drives it on a JS ticker and the highlight visibly trails a held arrow key. The
+guidance would have made the library worse.
+
+Note how small the visible change usually is. `Combobox` and `Select` dispatch
+`highlightChanged` on `onmouseenter`, so their hover class and their highlight
+class paint the same colour on the same element — with the transition gone, the
+two are indistinguishable.
+
 ## The backlog
 
 `animation-policy.test.ts` also carries a `BACKLOG` of files not yet converted.

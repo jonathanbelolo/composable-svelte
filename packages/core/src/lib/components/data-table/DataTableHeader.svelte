@@ -75,7 +75,7 @@
 	}
 </script>
 
-<tr class={cn('border-b transition-colors hover:bg-muted/50', className)}>
+<tr class={cn('border-b hover:bg-muted/50', className)}>
 	{#each columns as col}
 		<th
 			class={cn(

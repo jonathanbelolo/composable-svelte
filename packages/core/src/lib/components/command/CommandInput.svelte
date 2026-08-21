@@ -169,7 +169,6 @@
 		border-radius: 0.25rem;
 		cursor: pointer;
 		color: #9ca3af;
-		transition: all 0.15s;
 	}
 
 	.command-input-clear:hover {

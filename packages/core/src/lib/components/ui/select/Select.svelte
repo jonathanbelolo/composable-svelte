@@ -434,7 +434,7 @@
 							type="button"
 							class={cn(
 								'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-left outline-none',
-								'transition-colors',
+								'',
 								$store.highlightedIndex === index
 									? 'bg-accent text-accent-foreground'
 									: 'text-foreground',
