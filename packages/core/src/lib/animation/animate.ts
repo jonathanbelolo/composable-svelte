@@ -498,11 +498,13 @@ export async function animateChevron(
 	// the fallback path needs.
 	element: HTMLElement | SVGElement,
 	expanded: boolean,
-	springConfig?: Partial<SpringConfig>
+	// `degrees` because disclosure chevrons do not agree on an angle: a dropdown
+	// caret flips 180°, a tree twisty turns 90°. Defaults to 180.
+	options?: Partial<SpringConfig> & { degrees?: number }
 ): Promise<void> {
-	const degrees = expanded ? 180 : 0;
+	const degrees = expanded ? (options?.degrees ?? 180) : 0;
 	try {
-		const config = getSpringConfig(springPresets.dropdown, springConfig);
+		const config = getSpringConfig(springPresets.dropdown, options);
 
 		await motionAnimate(
 			element,

@@ -4,6 +4,7 @@
 	import { createInitialSelectState } from './select.types.js';
 	import type { SelectOption } from './select.types.js';
 	import { cn } from '../../../utils.js';
+	import { animateChevron } from '../../../animation/animate.js';
 
 	/**
 	 * Select component - Dropdown select with search and multi-select support.
@@ -246,6 +247,25 @@
 			document.removeEventListener('click', handleClickOutside);
 		};
 	});
+
+	// Rotate the caret on the dropdown's own timeline. A utility-class transition
+	// would be a second, unrelated one — and unobservable under test, since
+	// Tailwind is not compiled here. Plain `let` guard: the effect reads and
+	// writes it, and a reactive guard re-triggers the effect it lives in.
+	let chevronElement: SVGElement | null = $state(null);
+	let lastRotated: boolean | undefined = undefined;
+
+	$effect(() => {
+		const open = $store.isOpen;
+		if (!chevronElement || lastRotated === open) return;
+		const first = lastRotated === undefined;
+		lastRotated = open;
+		if (first) {
+			chevronElement.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
+			return;
+		}
+		animateChevron(chevronElement, open);
+	});
 </script>
 
 <svelte:window onkeydown={handleDropdownKeyDown} />
@@ -317,10 +337,8 @@
 				stroke-width="2"
 				stroke-linecap="round"
 				stroke-linejoin="round"
-				class={cn(
-					'transition-transform',
-					$store.isOpen && 'rotate-180'
-				)}
+				bind:this={chevronElement}
+				data-disclosure-chevron
 			>
 				<polyline points="6 9 12 15 18 9"></polyline>
 			</svg>

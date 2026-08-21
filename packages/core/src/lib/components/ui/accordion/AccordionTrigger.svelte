@@ -3,6 +3,7 @@
 	import { getAccordionContext } from './Accordion.svelte';
 	import { getAccordionItemContext } from './AccordionItem.svelte';
 	import { cn } from '../../../utils.js';
+	import { animateChevron } from '../../../animation/animate.js';
 
 	/**
 	 * AccordionTrigger component - Clickable header for accordion item.
@@ -51,6 +52,30 @@
 			store.dispatch({ type: 'itemToggled', id: itemContext.id });
 		}
 	}
+
+	// Rotate the chevron on the same timeline as the content it discloses.
+	//
+	// A utility-class transition here would be a second, unrelated timeline next
+	// to `animateAccordionExpand` — and, because Tailwind is not compiled under
+	// test, an unobservable one. The guard is a plain `let`: the effect reads and
+	// writes it, and a reactive guard re-triggers the effect it lives in
+	// (`effect_update_depth_exceeded`).
+	let chevronElement: SVGElement | null = $state(null);
+	let lastRotated: boolean | undefined = undefined;
+
+	$effect(() => {
+		const expanded = isExpanded;
+		if (!chevronElement || lastRotated === expanded) return;
+		const first = lastRotated === undefined;
+		lastRotated = expanded;
+		if (first) {
+			// Nothing to animate on the first run — land on the angle rather than
+			// spinning a chevron that has only just mounted.
+			chevronElement.style.transform = expanded ? 'rotate(180deg)' : 'rotate(0deg)';
+			return;
+		}
+		animateChevron(chevronElement, expanded);
+	});
 </script>
 
 <button
@@ -80,10 +105,9 @@
 		stroke-width="2"
 		stroke-linecap="round"
 		stroke-linejoin="round"
-		class={cn(
-			'shrink-0 transition-transform duration-200',
-			isExpanded && 'rotate-180'
-		)}
+		bind:this={chevronElement}
+		data-disclosure-chevron
+		class="shrink-0"
 	>
 		<polyline points="6 9 12 15 18 9"></polyline>
 	</svg>

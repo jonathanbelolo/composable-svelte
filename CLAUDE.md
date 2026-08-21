@@ -616,10 +616,36 @@ case 'show': {
 }
 ```
 
-**CSS Animations (EXCEPTIONS ONLY)**:
-- ✅ **Allowed**: Infinite loops (Spinner, Skeleton shimmer effects, Progress indicators)
-- ❌ **Prohibited**: Hover states, Focus states, Click/Active states
-- ❌ **Prohibited**: Any lifecycle animations (appearing, disappearing, expanding, collapsing)
+**CSS Animations**: classify by what *drives* the change, never by what it looks
+like. `guides/ANIMATION-GUIDELINES.md` is the authority and
+`packages/core/tests/repo/animation-policy.test.ts` enforces it.
+
+- ✅ **Allowed**: animations that repeat forever with no state input — they must
+  carry `infinite` (Spinner, Skeleton shimmer). A **one-shot `@keyframes` is a
+  lifecycle animation and is prohibited**; the `infinite` keyword is the test,
+  not the `@keyframes` syntax.
+- ❌ **Prohibited**: transitions driven by a CSS pseudo-class — `:hover`,
+  `:focus`, `:focus-visible`, `:active`. Keep the end-state style; the change is
+  instant.
+- ❌ **Prohibited**: any lifecycle animation (appearing, disappearing, expanding,
+  collapsing) done in CSS. These use Motion One.
+- ❌ **Prohibited**: one declaration serving both a pseudo-class and a
+  state-driven class. Split it.
+- ⚠️ **By exception only**: a continuous external numeric source (audio level,
+  playback position) may use a CSS transition **if it is listed in the Exception
+  Register** in `guides/ANIMATION-GUIDELINES.md`.
+
+**Which state-driven mechanism** — one question: must the element still be on
+screen after the state says it is gone?
+- No, it stays mounted → a plain boolean plus Motion One in a guarded `$effect`.
+- Yes, it must animate *out* → `PresentationState`. That is the only reason to
+  reach for it; a lifecycle is what keeps the element mounted through
+  `dismissing`.
+
+**Atomic (Pattern A) components** — Badge, Button, Card, Checkbox, Input, Label,
+Radio, Separator, Slider, Switch, Textarea — do not animate their own
+interaction or value states. A composed child that is legitimately animated (a
+`<Spinner>` inside a loading Button) is not a violation.
 
 **Why This Approach**:
 - ✅ Predictable: State-driven animations are fully controlled by reducers
