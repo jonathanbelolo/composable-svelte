@@ -27,9 +27,14 @@
 		store: Store<NodeCanvasState<NodeData, EdgeData>, Action>;
 		/** Recognises this canvas's commands in the parent's action stream. */
 		unliftAction: (action: Action) => NodeCanvasAction<NodeData, EdgeData> | null;
+		/** The canvas's zoom bounds, so commands cannot exceed them. */
+		minZoom: number;
+		maxZoom: number;
 	} = $props();
 
-	const { setViewport, zoomIn, zoomOut, fitView, setCenter, getNodesBounds, getNodes } =
+	const clampZoom = (zoom: number) => Math.min(Math.max(zoom, props.minZoom), props.maxZoom);
+
+	const { setViewport, zoomIn, zoomOut, fitView, setCenter, getNodesBounds, getNodes, getViewport } =
 		useSvelteFlow();
 
 	onMount(() => {
@@ -41,7 +46,16 @@
 				case 'setViewport':
 					// `duration: 0` so the echo through `onmoveend` is synchronous and
 					// the value guard there settles it in one pass.
-					setViewport(canvasAction.viewport, { duration: 0 });
+					//
+					// Clamped: `setViewport` does no bounds checking of its own, and
+					// while this action was dead it could not violate anything. Now
+					// that it drives the canvas, ignoring `minZoom`/`maxZoom` would
+					// make those props advisory for one command and binding for the
+					// other two.
+					setViewport(
+						{ ...canvasAction.viewport, zoom: clampZoom(canvasAction.viewport.zoom) },
+						{ duration: 0 }
+					);
 					return;
 				case 'zoomIn':
 					// The flow owns the clamping, against the real minZoom/maxZoom.
@@ -56,7 +70,13 @@
 					return;
 				case 'centerView': {
 					const bounds = getNodesBounds(getNodes());
-					setCenter(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+					// The explicit zoom is required, not optional: `setCenter` defaults
+					// its zoom to `store.maxZoom`
+					// (`@xyflow/svelte/dist/lib/store/index.js:78-79`), so omitting it
+					// slams the canvas to maximum. Centring is a pan.
+					setCenter(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2, {
+						zoom: getViewport().zoom
+					});
 					return;
 				}
 			}

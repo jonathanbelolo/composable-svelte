@@ -131,13 +131,51 @@
   /** The commands `FlowCommands` acts on; everything else is ignored. */
   const VIEWPORT_COMMANDS = new Set(['setViewport', 'zoomIn', 'zoomOut', 'fitView', 'centerView']);
 
+  /**
+   * Is `liftAction` the identity?
+   *
+   * Probed once with a sentinel. The default unlift below matches on bare type
+   * names — `setViewport`, `zoomIn`, `fitView` and friends are generic enough
+   * that a parent could plausibly own actions with the same names. Applying it
+   * to a WRAPPING parent would both hijack those actions and hand
+   * `FlowCommands` an object of the wrong shape, so it is only safe when the
+   * parent's action type *is* the canvas action type.
+   *
+   * A wrapping parent that wants viewport commands supplies `unliftAction`.
+   */
+  const liftsIdentically = (() => {
+    const probe = { type: '__composable_svelte_probe__' } as unknown as NodeCanvasAction<
+      NodeData,
+      EdgeData
+    >;
+    try {
+      return (liftAction(probe) as unknown) === (probe as unknown);
+    } catch {
+      return false;
+    }
+  })();
+
   const unliftAction = $derived(
     props.unliftAction ??
       ((action: Action): NodeCanvasAction<NodeData, EdgeData> | null => {
-        const candidate = action as { type?: unknown };
-        return candidate && typeof candidate.type === 'string' && VIEWPORT_COMMANDS.has(candidate.type)
-          ? (action as unknown as NodeCanvasAction<NodeData, EdgeData>)
-          : null;
+        if (!liftsIdentically) return null;
+        const candidate = action as { type?: unknown; viewport?: unknown };
+        if (typeof candidate?.type !== 'string' || !VIEWPORT_COMMANDS.has(candidate.type)) {
+          return null;
+        }
+        // Shape-check the one command that carries a payload, so a same-named
+        // parent action cannot reach `canvasAction.viewport.x` and throw.
+        if (candidate.type === 'setViewport') {
+          const vp = candidate.viewport as { x?: unknown; y?: unknown; zoom?: unknown } | undefined;
+          if (
+            typeof vp?.x !== 'number' ||
+            typeof vp?.y !== 'number' ||
+            typeof vp?.zoom !== 'number'
+          ) {
+            return null;
+          }
+        }
+        return action as unknown as NodeCanvasAction<NodeData, EdgeData>;
       })
   );
 
@@ -174,17 +212,36 @@
   // recomputes constantly, and xyflow's `adoptUserNodes` compares by reference
   // (`checkEquality: true`). Returning `{ ...n }` unconditionally would force a
   // full re-adoption of every node on every action.
+  // Projections of selected items, cached by SOURCE OBJECT identity.
+  //
+  // The naive `(n.selected ?? false) === selected ? n : { ...n, selected }` is
+  // subtly wrong: stored nodes carry no `selected` key, so every node in
+  // `selectedNodes` fails the comparison and re-clones on EVERY dispatch —
+  // exactly the full re-adoption the branch was meant to avoid, and worse the
+  // more the user selects. A WeakMap keyed on the stored node gives a stable
+  // projection for as long as the source is unchanged, and is collected with it.
+  const selectedNodeProjection = new WeakMap<object, object>();
+  const selectedEdgeProjection = new WeakMap<object, object>();
+
+  function project<T extends object>(item: T, selected: boolean, cache: WeakMap<object, object>): T {
+    if (!selected) return item;
+    let projected = cache.get(item);
+    if (!projected) {
+      projected = { ...item, selected: true };
+      cache.set(item, projected);
+    }
+    return projected as T;
+  }
+
   const nodes = $derived(
-    nodesToArray($store.nodes).map((n) => {
-      const selected = $store.selectedNodes.has(n.id);
-      return (n.selected ?? false) === selected ? n : { ...n, selected };
-    })
+    nodesToArray($store.nodes).map((n) =>
+      project(n, $store.selectedNodes.has(n.id), selectedNodeProjection)
+    )
   );
   const edges = $derived(
-    edgesToArray($store.edges).map((e) => {
-      const selected = $store.selectedEdges.has(e.id);
-      return (e.selected ?? false) === selected ? e : { ...e, selected };
-    })
+    edgesToArray($store.edges).map((e) =>
+      project(e, $store.selectedEdges.has(e.id), selectedEdgeProjection)
+    )
   );
   // Seeds SvelteFlow's initial viewport only — it is read once at construction.
   // That is exactly why every viewport ACTION used to do nothing; live changes
@@ -374,7 +431,7 @@
     onpaneclick={handlePaneClick}
   >
     <!-- Turns store viewport actions into useSvelteFlow() calls. -->
-    <FlowCommands {store} {unliftAction} />
+    <FlowCommands {store} {unliftAction} {minZoom} {maxZoom} />
 
     {#if $store.showControls}
       <Controls />

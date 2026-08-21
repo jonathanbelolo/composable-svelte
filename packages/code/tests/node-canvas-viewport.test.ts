@@ -140,6 +140,66 @@ describe('viewport commands reach the canvas', () => {
 	});
 });
 
+describe('centerView', () => {
+	it('centres without changing the zoom', async () => {
+		// `useSvelteFlow().setCenter(x, y)` defaults its zoom to `store.maxZoom`
+		// (`@xyflow/svelte/dist/lib/store/index.js:78-79`), so calling it without
+		// an explicit zoom slams the canvas to maximum. Centring is a pan.
+		const { store, viewport } = await mountCanvas();
+		store.dispatch({ type: 'setViewport', viewport: { x: 0, y: 0, zoom: 1.25 } });
+		flushSync();
+		await settle(400);
+		expect(scaleOf(viewport)).toBeCloseTo(1.25, 3);
+		const before = transform(viewport);
+
+		store.dispatch({ type: 'centerView' });
+		flushSync();
+		await settle(500);
+
+		expect(transform(viewport), 'centerView did nothing').not.toBe(before);
+		expect(
+			scaleOf(viewport),
+			'centerView changed the zoom — it should only pan'
+		).toBeCloseTo(1.25, 3);
+	});
+});
+
+describe('setViewport respects the zoom bounds', () => {
+	it('clamps to maxZoom', async () => {
+		// Before this work the action was dead, so it could not violate anything.
+		// Now that it drives the canvas it has to honour the same bounds
+		// `zoomIn`/`zoomOut` do — otherwise the props are advisory.
+		const { store, viewport } = await mountCanvas();
+
+		store.dispatch({ type: 'setViewport', viewport: { x: 5, y: 5, zoom: 99 } });
+		flushSync();
+		await settle(400);
+
+		expect(scaleOf(viewport), 'zoom 99 was applied with maxZoom 2').toBeLessThanOrEqual(2);
+	});
+});
+
+describe('connectionInProgress', () => {
+	it('is exposed on the container', async () => {
+		const { target, store } = await mountCanvas();
+		const root = () => target.querySelector('.node-canvas')!;
+		expect(root().hasAttribute('data-connecting')).toBe(false);
+
+		store.dispatch({
+			type: 'connectionStart',
+			sourceNodeId: 'a',
+			sourceHandle: null
+		} as never);
+		flushSync();
+		await settle(300);
+
+		expect(
+			root().hasAttribute('data-connecting'),
+			'connectionInProgress is tracked and still not readable'
+		).toBe(true);
+	});
+});
+
 describe('selection is visible', () => {
 	it('selectNode highlights the node', async () => {
 		const { target, store } = await mountCanvas();
@@ -154,6 +214,34 @@ describe('selection is visible', () => {
 		expect(
 			nodeEl()!.className,
 			'the store tracked the selection but the canvas never showed it'
+		).toContain('selected');
+	});
+
+	it('keeps a selected node identical across unrelated dispatches', async () => {
+		// The identity-preserving branch compares `n.selected ?? false` against the
+		// store's set — but stored nodes carry no `selected` key, so every node in
+		// `selectedNodes` failed the comparison and re-cloned on EVERY dispatch.
+		// For a rubber-band selection of N nodes that is a full re-adoption of all
+		// N on every action, which is the cost the branch exists to avoid.
+		const { target, store } = await mountCanvas();
+		store.dispatch({ type: 'selectNode', nodeId: 'a', multi: false });
+		flushSync();
+		await settle(300);
+
+		const seen = new Set<unknown>();
+		for (let i = 0; i < 5; i += 1) {
+			store.dispatch({ type: 'setGridSize', size: 10 + i } as never);
+			flushSync();
+			await settle(60);
+			const node = (store.state.nodes as Record<string, unknown>).a;
+			seen.add(node);
+		}
+		expect(seen.size, 'the store node itself should not churn').toBe(1);
+
+		// And the projected node handed to SvelteFlow must be stable too.
+		expect(
+			target.querySelector('[data-id="a"]')!.className,
+			'the node lost its selection'
 		).toContain('selected');
 	});
 
@@ -186,5 +274,53 @@ describe('readonly', () => {
 			nodeEl().className,
 			'readonly was set in the store and the canvas ignored it'
 		).not.toContain('draggable');
+	});
+});
+
+describe('the default unliftAction refuses to guess', () => {
+	/**
+	 * The default matches on bare type names — `setViewport`, `zoomIn`,
+	 * `fitView` are generic enough that a parent can plausibly own actions with
+	 * the same names. Applied to a WRAPPING parent it would both hijack those
+	 * actions and hand `FlowCommands` an object of the wrong shape.
+	 *
+	 * It now probes `liftAction` with a sentinel and only applies when the lift
+	 * is the identity. A wrapping parent that wants viewport commands supplies
+	 * `unliftAction` explicitly.
+	 */
+	it('ignores a wrapping parent’s same-named actions', async () => {
+		const { default: Harness, wrappedStore } = await import(
+			'./test-components/NodeCanvasWrappedHarness.svelte'
+		);
+		const target = document.createElement('div');
+		document.body.appendChild(target);
+		const component = mount(Harness as never, { target, props: {} });
+		cleanup.push(() => {
+			unmount(component);
+			target.remove();
+		});
+		await settle(600);
+
+		const viewport = target.querySelector('.svelte-flow__viewport') as HTMLElement;
+		expect(viewport).not.toBeNull();
+		const before = transform(viewport);
+		// Guards the guard: at maxZoom a hijacked `zoomIn` cannot move anything,
+		// so this test would pass vacuously.
+		expect(scaleOf(viewport), 'harness must start below maxZoom').toBeLessThan(2);
+
+		const errors: string[] = [];
+		const onError = (e: ErrorEvent) => errors.push(String(e.message));
+		window.addEventListener('error', onError);
+		cleanup.push(() => window.removeEventListener('error', onError));
+
+		const store = (await import('./test-components/NodeCanvasWrappedHarness.svelte'))
+			.wrappedStore!;
+		store.dispatch({ type: 'zoomIn' });
+		store.dispatch({ type: 'setViewport', to: '/settings' });
+		flushSync();
+		await settle(500);
+
+		expect(transform(viewport), 'the parent’s own actions moved the canvas').toBe(before);
+		expect(errors, 'a same-named parent action crashed the canvas').toEqual([]);
 	});
 });

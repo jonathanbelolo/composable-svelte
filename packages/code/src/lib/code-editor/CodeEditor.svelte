@@ -402,7 +402,14 @@
 		font-family: 'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace;
 	}
 
-	.code-editor--focused {
+	/*
+	 * Specificity matters here, not just presence. `.code-editor--focused` is
+	 * (0,1,0) while `.code-editor[data-theme='light']` is (0,2,0) and always
+	 * matches — `data-theme` is unconditional on the root — so the plain class
+	 * lost every contest in the light theme and painted nothing. Matching on the
+	 * attribute too puts both selectors at (0,2,0), and the later rule wins.
+	 */
+	.code-editor[data-theme].code-editor--focused {
 		border-color: #007acc;
 	}
 

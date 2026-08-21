@@ -16,7 +16,18 @@
 
 	onMount(() => {
 		appliedCode = store.state.code;
+
+		// Keep the guard current for changes the store already knows about.
+		// Without this the effect below sees an externally-dispatched
+		// `codeChanged` as a change it did not cause and dispatches a SECOND one
+		// — doubling the highlighter call, which for a network-backed highlighter
+		// is a doubled request per edit.
+		const unsubscribe = store.subscribeToActions?.((action) => {
+			if (action.type === 'codeChanged') appliedCode = action.code;
+		});
+
 		store.dispatch({ type: 'init' });
+		return () => unsubscribe?.();
 	});
 
 	/**
@@ -29,6 +40,11 @@
 	$effect(() => {
 		// Read first: an early return above this would leave the effect tracking
 		// nothing and never re-running.
+		//
+		// This fires only for a `code` change the store did NOT learn about via
+		// `codeChanged` — i.e. a parent reducer writing the field directly, which
+		// is the stale-highlight case. Changes that came through `codeChanged`
+		// have already moved `appliedCode` in the action subscription above.
 		const code = $store.code;
 		if (code === appliedCode) return;
 		appliedCode = code;
@@ -221,9 +237,18 @@
 	}
 
 	.code-highlight__line-numbers {
-		position: absolute;
-		top: 16px;
+		/*
+		 * `sticky`, not `absolute`. The <pre> is `overflow-x: auto`, so an
+		 * absolutely positioned gutter scrolls away with the content — the
+		 * numbers slide out of view while the code keeps its 3.8em indent. Long
+		 * lines are the normal case for code, so this was not an edge case.
+		 * `sticky` pins the column to the scroll container's left edge.
+		 */
+		position: sticky;
+		float: left;
+		top: 0;
 		left: 0;
+		margin-left: -3.8em;
 		width: 3.8em;
 		padding-right: 1em;
 		text-align: right;
@@ -246,9 +271,15 @@
 	}
 
 	.code-highlight__line-highlight {
+		/*
+		 * `min-width: 100%` on a `max-content` box so a band spans the whole
+		 * scrollable width, not just the first viewport of it. `right: 0` sized
+		 * these to the client box, so a highlighted line stopped at the fold.
+		 */
 		position: absolute;
 		left: 0;
-		right: 0;
+		min-width: 100%;
+		width: max-content;
 		height: var(--chl-line-height);
 		margin-top: 16px;
 		background: rgba(255, 255, 255, 0.08);

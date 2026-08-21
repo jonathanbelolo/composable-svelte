@@ -88,7 +88,6 @@ interface CodeEditorState {
 
   // Features
   enableAutocomplete: boolean;
-  enableLinting: boolean;
   tabSize: number;
 
   // Editor Status
@@ -690,12 +689,14 @@ await store.send({
 - `createEditorView(config)` — Create a CodeMirror EditorView
 - `loadEditorLanguage(lang)` — Load a CodeMirror language extension
 - `updateEditorValue(view, value)`, `updateEditorLanguage(view, lang)`, `updateEditorTheme(view, theme)`, `updateEditorReadOnly(view, readOnly)`, `updateTabSize(view, size)` — Programmatic editor updates
-- `focusEditor(view)`, `blurEditor(view)` — Focus management
+- Focus is driven by dispatching `{ type: 'focus' }` / `{ type: 'blur' }` —
+  the raw `focusEditor(view)` / `blurEditor(view)` helpers were removed in
+  favour of the action stream, where the other editor commands live.
 - Types: `CodeEditorState`, `CodeEditorAction`, `CodeEditorDependencies`, `EditorLanguage`, `EditorSelection`
 
 ### NodeCanvas
 - `NodeCanvas` — Component
 - `nodeCanvasReducer`, `createInitialNodeCanvasState(config)` — State management
-- `createConnectionValidator(config)`, `permissiveValidator`, `strictValidator`, `composeValidators(...validators)` — Connection validation
+- `createConnectionValidator(config)`, `permissiveValidator`, `strictValidator`, `createStrictValidator(message)`, `composeValidators(...validators)` — Connection validation. `strictValidator` is a `ConnectionValidator` constant, not a factory; use `createStrictValidator` for a custom message.
 - `nodesToArray(nodes)`, `edgesToArray(edges)` — Conversion utilities
 - Types: `NodeCanvasState`, `NodeCanvasAction`, `NodeCanvasDependencies`, `NodeTypeDefinition`, `PortDefinition`, `ConnectionValidation`, `ConnectionValidator`

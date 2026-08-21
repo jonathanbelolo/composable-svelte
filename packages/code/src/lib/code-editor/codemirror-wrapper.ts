@@ -526,10 +526,12 @@ export function runEditorCommand(
 		case 'insertText': {
 			if (view.state.readOnly) return;
 			if (command.position) {
-				// The action carries a 1-based line/column, matching what the
-				// update listener reports back as `cursorMoved`. CodeMirror wants
-				// a document offset, so convert — and clamp, because a stale
-				// position from a since-shortened document would otherwise throw.
+				// The action carries a 1-based LINE and a 0-based COLUMN, matching
+				// what the update listener reports back as `cursorMoved`
+				// (`getLineColumn` returns `line.number` and `pos - line.from`).
+				// CodeMirror wants a document offset, so convert — and clamp,
+				// because a stale position from a since-shortened document would
+				// otherwise throw.
 				const lineCount = view.state.doc.lines;
 				const lineNo = Math.min(Math.max(command.position.line, 1), lineCount);
 				const line = view.state.doc.line(lineNo);

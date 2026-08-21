@@ -75,6 +75,23 @@ describe('isFocused', () => {
 		await settle(300);
 		expect(root().className).not.toContain('code-editor--focused');
 	});
+	it('is visible in the light theme too', async () => {
+		// The class alone proves nothing: `.code-editor--focused` is (0,1,0) while
+		// `.code-editor[data-theme='light']` is (0,2,0) and always matches, so the
+		// focus ring lost every specificity contest in light mode. `isFocused`
+		// was unfrozen precisely so it would be SEEN.
+		const { target, view } = await mountEditor({ theme: 'light' });
+		const root = target.querySelector('.code-editor') as HTMLElement;
+		const unfocused = getComputedStyle(root).borderTopColor;
+
+		view.focus();
+		await settle(300);
+
+		expect(
+			getComputedStyle(root).borderTopColor,
+			'the focus class applied but painted nothing in the light theme'
+		).not.toBe(unfocused);
+	});
 });
 
 describe('focus and blur commands', () => {
