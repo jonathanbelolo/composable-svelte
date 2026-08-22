@@ -146,7 +146,13 @@ function stripComments(source: string): string {
 				} else if (c === quote) quote = null;
 				continue;
 			}
-			if (c === '"' || c === "'" || c === '`') {
+			// An apostrophe straight after a letter is `don't` or `the store's`, not
+			// a string opener. Without this, prose before a real comment on the same
+			// line leaves that comment unstripped, and the scanner reports a
+			// violation on a line that is entirely commented out. Closing quotes are
+			// matched in the `if (quote)` branch above, so `'Apple Color Emoji'`
+			// still closes correctly.
+			if (c === '"' || c === '`' || (c === "'" && !/[A-Za-z]/.test(line[i - 1] ?? ''))) {
 				quote = c;
 				out += c;
 				continue;
@@ -167,6 +173,13 @@ function stripComments(source: string): string {
 		.map((line) => {
 			for (let i = 0; i < line.length - 1; i += 1) {
 				if (line[i] !== '/' || line[i + 1] !== '/') continue;
+				// `https://`, `file://` — a protocol, not a comment. Quote parity
+				// cannot see this one: `url()` is unquoted, so there are no quotes to
+				// count. An earlier version of this function keyed on the colon and
+				// was *replaced* by quote counting; the two cover disjoint cases
+				// (`href="//cdn"` has no colon, `url(https://…)` has no quote), so it
+				// needed adding back rather than swapping in.
+				if (line[i - 1] === ':') continue;
 				const before = line.slice(0, i);
 				// Inside a string? Then this is data, not a comment.
 				const quotes = (before.match(/(?<!\\)["'`]/g) ?? []).length;
@@ -520,7 +533,10 @@ describe('animation policy', () => {
 	});
 
 	it('strips comments without eating code', () => {
-		// `stripComments` is the guard's single point of blindness and had no test.
+		// `stripComments` is the guard's single point of blindness. Both of its
+		// passes are quote-aware; neither always was, and the asymmetry between
+		// them is what this function is shaped around. Every case below was live
+		// in the repo or one line away from being so.
 		// A `//` inside a URL used to discard the rest of the line, taking any
 		// class on it with it.
 		expect(stripComments('<a href="//cdn.example.com" class="transition-colors">')).toContain(
@@ -557,6 +573,26 @@ describe('animation policy', () => {
 
 		// Line numbers are load-bearing: a blanked comment must keep its lines.
 		expect(stripComments('a\n/*\nx\n*/\nb').split('\n')).toHaveLength(5);
+
+		// A protocol is not a comment, and quote parity cannot see this one —
+		// `url()` is unquoted, so there are zero quotes before the `//`. This is the
+		// same *class* of bug as the block-comment one above (a stripper eating a
+		// real declaration), left in the same function by the fix that removed its
+		// sibling. That is the failure this file keeps repeating.
+		expect(stripComments('\tbackground: url(https://x/y.png); transition: opacity 0.2s;')).toContain(
+			'transition:'
+		);
+
+		// An apostrophe in prose is not a string opener. The mirror image: quote
+		// awareness bought block-comment correctness and would otherwise pay for it
+		// by treating a real comment as code, reporting a violation on a line that
+		// is entirely commented out.
+		expect(stripComments("<p>don't</p> /* transition: all 0.2s; */")).not.toContain(
+			'transition:'
+		);
+		// …but a genuine quoted string still closes correctly.
+		expect(stripComments("\tfont-family: 'Apple Color Emoji'; /* x */ transition: opacity 1s;"))
+			.toContain('transition:');
 	});
 
 	it('sees scroll-behavior, which is an animation the browser runs for you', () => {
@@ -565,6 +601,15 @@ describe('animation policy', () => {
 		expect(SCROLL_ANIMATION.test('\tscroll-behavior: smooth;')).toBe(true);
 		// `auto` is the instant default; only `smooth` animates.
 		expect(SCROLL_ANIMATION.test('\tscroll-behavior: auto;')).toBe(false);
+		// `overscroll-behavior` *contains* `scroll-behavior`. The `(^|[\s;{])` anchor
+		// is the only thing stopping a match, and without this assertion dropping
+		// that anchor in a refactor would be invisible.
+		expect(SCROLL_ANIMATION.test('\toverscroll-behavior: contain;')).toBe(false);
+		expect(SCROLL_ANIMATION.test('{scroll-behavior:smooth}')).toBe(true);
+		// A recorded gap, measured rather than assumed: the JS spellings —
+		// `scrollIntoView({behavior:'smooth'})`, `scrollTo({behavior:'smooth'})` —
+		// and Tailwind's `scroll-smooth` are equally prohibited and matched by
+		// nothing here. Zero sites in the repo today.
 	});
 
 	it('no file outside the backlog violates the guideline', () => {
