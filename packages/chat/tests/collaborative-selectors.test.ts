@@ -60,6 +60,16 @@ describe('getCursorPositions', () => {
 });
 
 describe('getActiveUsers', () => {
+	it('leaves me out of my own roster', () => {
+		// Every fixture in the first draft of this file passed `currentUserId: 'me'`
+		// and never put an id `'me'` in the map, so `if (userId === currentUserId)
+		// continue` was never reached — deleting it from both this selector and
+		// `getTypingUsers` left all seven tests green.
+		const users = map(user({ id: 'me' }), user({ id: 'ada' }));
+
+		expect(getActiveUsers(users, 'me').map((u) => u.id)).toEqual(['ada']);
+	});
+
 	it('omits the avatar key entirely when a user has no avatar', () => {
 		// Not `{ avatar: undefined }`. The declared type says absent-or-string, and
 		// a consumer testing `'avatar' in user` gets the wrong answer otherwise.
@@ -83,6 +93,14 @@ describe('getActiveUsers', () => {
 });
 
 describe('getTypingUsers', () => {
+	it('never says I am typing', () => {
+		// "You are typing…" is the failure this prevents.
+		const typing = { target: 'message' as const, startedAt: 0, lastUpdate: 0 };
+		const users = map(user({ id: 'me', typing }), user({ id: 'ada', typing }));
+
+		expect(getTypingUsers(users, 'me', 'message').map((u) => u.id)).toEqual(['ada']);
+	});
+
 	it('reports only those typing at the requested target', () => {
 		const users = map(
 			user({ id: 'ada', typing: { target: 'message', startedAt: 0, lastUpdate: 0 } }),

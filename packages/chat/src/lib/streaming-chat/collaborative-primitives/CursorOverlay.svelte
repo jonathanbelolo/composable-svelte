@@ -42,7 +42,7 @@
 	 * pointing down at it. This overlay clips with `overflow: hidden`, so
 	 * without a gutter the flag is scissored off by its own parent however
 	 * visible its opacity says it is. Markers are pushed down by the same
-	 * amount, so the caret still lands exactly where the text does.
+	 * amount, so the gutter itself moves no caret.
 	 */
 	const LABEL_GUTTER = 24;
 
@@ -100,13 +100,20 @@
 
 		document.body.removeChild(measureSpan);
 
-		// Get input padding
-		const paddingLeft = parseInt(window.getComputedStyle(inputElement).paddingLeft) || 0;
-		const paddingTop = parseInt(window.getComputedStyle(inputElement).paddingTop) || 0;
+		// Distance from the element's *border-box* origin to where its text
+		// starts. The overlay is placed from `getBoundingClientRect()`, which is a
+		// border box, so leaving the border out put every caret one border-width
+		// up and to the left of the character it names — 1px in this repo's own
+		// demo, and invisible to a test that uses a border-less input.
+		const style = window.getComputedStyle(inputElement);
+		const insetLeft =
+			(parseFloat(style.borderLeftWidth) || 0) + (parseFloat(style.paddingLeft) || 0);
+		const insetTop =
+			(parseFloat(style.borderTopWidth) || 0) + (parseFloat(style.paddingTop) || 0);
 
 		return {
-			left: left + paddingLeft - inputScrollLeft,
-			top: paddingTop + LABEL_GUTTER,
+			left: left + insetLeft - inputScrollLeft,
+			top: insetTop + LABEL_GUTTER,
 			selectionWidth
 		};
 	}

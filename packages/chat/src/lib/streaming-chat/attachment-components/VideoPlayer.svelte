@@ -41,10 +41,16 @@
 	let controlsRef: HTMLDivElement | undefined = $state();
 
 	/**
-	 * What the controls were last animated to. A plain `let`, not `$state`: the
-	 * effect below writes it, and a rune would make that a self-trigger.
+	 * What the controls were last animated to, **and on which element**. A plain
+	 * `let`, not `$state`: the effect below writes it, and a rune would make that
+	 * a self-trigger.
+	 *
+	 * Keyed on the pair rather than the boolean alone. The control bar lives
+	 * inside `{#if !error}`, so it can be replaced by a different element while
+	 * `showControls` is unchanged — and a bare boolean would then take the
+	 * early return and leave the new element unplaced.
 	 */
-	let controlsShown: boolean | undefined;
+	let controlsShown: { element: HTMLElement; shown: boolean } | undefined;
 
 	/**
 	 * Was `transition: opacity 0.2s` between `.video-controls` and
@@ -65,10 +71,11 @@
 		const element = controlsRef;
 		const shown = showControls;
 
-		if (!element || controlsShown === shown) return;
+		if (!element) return;
+		if (controlsShown?.element === element && controlsShown.shown === shown) return;
 
-		const isFirstRun = controlsShown === undefined;
-		controlsShown = shown;
+		const isFirstRun = controlsShown?.element !== element;
+		controlsShown = { element, shown };
 
 		// On the first run, place — and placing here means writing nothing at all.
 		// The controls' resting state in CSS *is* visible, which is the whole
@@ -101,7 +108,12 @@
 			videoRef.pause();
 		} else {
 			videoRef.play().catch((err) => {
-				error = 'Failed to play video';
+				// Deliberately not `error`. Everything below — the whole control
+				// bar and the play overlay — renders behind `{#if !error}`, and
+				// nothing ever resets it, so one rejected `play()` used to remove
+				// the player permanently with no way back. A rejection here is
+				// transient (an interrupted play, an autoplay policy); a source
+				// that genuinely cannot load fires `onerror`, which still latches.
 				console.error('Video playback error:', err);
 			});
 		}

@@ -60,6 +60,34 @@
 	 */
 	let fadedInFor: string | undefined;
 
+	/** The source the load state below currently describes. Also a plain `let`. */
+	let sourceUrl: string | undefined;
+
+	/**
+	 * A new `attachment` is a new load, and nothing said so.
+	 *
+	 * `isLoading` was set once at construction and never reset, so swapping the
+	 * prop left `ready` already true: the fade fired immediately on the element
+	 * still painting the *previous* image — visible, blink out, fade back in —
+	 * and then never fired for the new one, which arrived at full opacity with no
+	 * entrance and no spinner. `AttachmentPreviewModal` reuses one instance
+	 * rather than keying, so this is reachable.
+	 */
+	$effect(() => {
+		const url = attachment.url;
+		if (sourceUrl === url) return;
+
+		const isFirstRun = sourceUrl === undefined;
+		sourceUrl = url;
+		// On the first run the markup already rendered in this state; writing it
+		// again would only risk clobbering a load that beat the effect.
+		if (isFirstRun) return;
+
+		isLoading = true;
+		error = null;
+		fadedInFor = undefined;
+	});
+
 	// Was `img { opacity: 0 }` plus `img.loaded { opacity: 1 }` and a CSS
 	// transition — a state-driven lifecycle the policy prohibits, and one that
 	// rendered every server-side image permanently invisible, since `$effect`
@@ -164,13 +192,19 @@
 			disabled={!allowFullscreen || isFullscreen}
 			aria-label="View {attachment.filename} fullscreen"
 		>
-			<img
-				bind:this={imgRef}
-				src={attachment.url}
-				alt={attachment.filename}
-				onload={handleLoad}
-				onerror={handleError}
-			/>
+			<!-- Hidden on error, and that is not cosmetic: with the fade moved to
+			     Motion One the `<img>`'s resting opacity is 1, so a failed load
+			     painted its broken-image placeholder straight over the ⚠️ card
+			     below. `opacity: 0` used to hide it as a side effect. -->
+			{#if !error}
+				<img
+					bind:this={imgRef}
+					src={attachment.url}
+					alt={attachment.filename}
+					onload={handleLoad}
+					onerror={handleError}
+				/>
+			{/if}
 		</button>
 
 		<!-- Fullscreen overlay controls -->

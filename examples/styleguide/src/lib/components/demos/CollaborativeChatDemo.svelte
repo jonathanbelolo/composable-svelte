@@ -112,6 +112,13 @@
 			conversationId: 'demo-conversation',
 			userId: currentUserId
 		});
+
+		// The showcase swaps demos in and out of one slot, so this component
+		// unmounts. `connectToConversation` registers a subscription whose cleanup
+		// runs on `Effect.cancel` or `destroy()` and nothing else — without this
+		// the socket outlives the page. `onMount`'s return value is the hook for
+		// it, and it was going unused.
+		return () => store.destroy();
 	});
 
 	// Get derived state
@@ -500,7 +507,6 @@ const typingUsers = getTypingUsers($store.users, currentUserId);
 		border-radius: 6px;
 		font-weight: 500;
 		cursor: pointer;
-		transition: background 0.2s;
 	}
 
 	.control-actions button:hover {

@@ -48,11 +48,13 @@ afterEach(() => {
 /**
  * Run every finite animation and transition in `root` to its end.
  *
- * Not a fixed sleep, and not a single pass: finishing the 3s keyframe changes
- * `--label-opacity`, which *spawns* a 0.2s transition that did not exist a
- * moment earlier. The first draft of this test read the opacity between those
- * two and saw `1` — it passed on the broken component. Loop until only the
- * infinite caret blink is left.
+ * On the shipped component this returns on the first pass, because the only
+ * animation left is the infinite caret blink and the helper skips those. That is
+ * the point: it has work to do exactly when something has regressed, and the
+ * regression it was written against needed two passes, not one — finishing the
+ * 3s keyframe changed `--label-opacity`, which *spawned* a 0.2s transition that
+ * did not exist a moment earlier. The first draft read the opacity between those
+ * two and saw `1`, passing on the broken component.
  */
 async function settleAnimations(root: Element) {
 	for (let pass = 0; pass < 5; pass += 1) {
@@ -101,6 +103,10 @@ describe('CursorMarker', () => {
 
 		expect(getComputedStyle(marker).opacity).toBe('1');
 		expect(marker.getAnimations(), 'the marker still animates itself').toHaveLength(0);
+		// `title` was the third dead behaviour here: `pointer-events: none` means
+		// no native tooltip can ever open, so re-adding one would be a promise the
+		// component cannot keep.
+		expect(marker.hasAttribute('title')).toBe(false);
 	});
 
 	it('keeps the caret blinking', () => {
@@ -134,6 +140,34 @@ describe('CursorOverlay', () => {
 		{ userId: 'u2', name: 'Ada Lovelace', color: '#ff0066', position: 5, selectionLength: 0 }
 	];
 
+	it('places the caret at the text, not at the border', () => {
+		// Two things at once: the 24px gutter added for the flag must shift no
+		// caret — it is a readout of a text position, and moving it makes it lie —
+		// and the offset must count the border. The overlay is positioned from
+		// `getBoundingClientRect()`, a border box, while the caret offset is
+		// measured from where the text starts; leaving the border out puts every
+		// marker one border-width off on both axes, which a border-less fixture
+		// cannot see.
+		const input = withInput();
+		input.style.border = '5px solid black';
+
+		const target = render(CursorOverlay, {
+			inputElement: input,
+			cursors: [{ ...CURSORS[0]!, position: 0 }],
+			text: input.value
+		});
+		flushSync();
+
+		const caret = (target.querySelector('.cursor-line') as HTMLElement).getBoundingClientRect();
+		const field = input.getBoundingClientRect();
+		const style = getComputedStyle(input);
+		const insetLeft = parseFloat(style.borderLeftWidth) + parseFloat(style.paddingLeft);
+		const insetTop = parseFloat(style.borderTopWidth) + parseFloat(style.paddingTop);
+
+		expect(caret.left).toBeCloseTo(field.left + insetLeft, 0);
+		expect(caret.top).toBeCloseTo(field.top + insetTop, 0);
+	});
+
 	it('renders the name flag inside its own clipping box', () => {
 		const input = withInput();
 		const target = render(CursorOverlay, {
@@ -150,31 +184,16 @@ describe('CursorOverlay', () => {
 		const box = overlay.getBoundingClientRect();
 		const flag = label.getBoundingClientRect();
 
-		// `overflow: hidden` on the overlay scissors anything above its top edge,
-		// and the flag deliberately sits above the caret it labels.
+		// Two halves, and the first is the one a previous draft left out: the
+		// gutter exists *because* the overlay clips, so a test that only measures
+		// geometry passes with `overflow: hidden` deleted — and then the clip the
+		// mechanism works around is unpinned.
+		expect(getComputedStyle(overlay).overflow, 'the overlay stopped clipping').toBe('hidden');
+
 		expect(flag.top, `flag at ${flag.top}, overlay starts at ${box.top}`).toBeGreaterThanOrEqual(
 			box.top
 		);
 		expect(flag.bottom).toBeLessThanOrEqual(box.bottom);
-	});
-
-	it('leaves the caret where the input actually puts it', () => {
-		// The gutter added for the flag must not shift the caret: it is a readout
-		// of a text position, and moving it by 24px makes it lie.
-		const input = withInput();
-		const target = render(CursorOverlay, {
-			inputElement: input,
-			cursors: CURSORS,
-			text: input.value
-		});
-		flushSync();
-
-		const line = target.querySelector('.cursor-line') as HTMLElement;
-		const caret = line.getBoundingClientRect();
-		const field = input.getBoundingClientRect();
-		const padding = parseFloat(getComputedStyle(input).paddingTop);
-
-		expect(caret.top).toBeCloseTo(field.top + padding, 0);
 	});
 
 	it('follows the field when it scrolls sideways', () => {
@@ -206,16 +225,34 @@ describe('CursorOverlay', () => {
 		expect(before - after).toBeCloseTo(input.scrollLeft, 0);
 	});
 
-	it('lets pointer events reach the input beneath it', () => {
+	it('lets pointer events reach the input through the marker itself', () => {
 		// The whole reason hover is unavailable, and so the reason the flag has to
 		// be always visible. If this ever inverts, typing breaks.
+		//
+		// The sample points matter more than the assertion does. An earlier draft
+		// probed the centre of the field — where no marker has ever been — so it
+		// proved only that the overlay is transparent, and `pointer-events: auto`
+		// on `.cursor-marker` passed every test in this file. Probe the caret and
+		// the flag, the two places a marker actually occupies.
 		const input = withInput();
-		render(CursorOverlay, { inputElement: input, cursors: CURSORS, text: input.value });
+		const target = render(CursorOverlay, {
+			inputElement: input,
+			cursors: CURSORS,
+			text: input.value
+		});
 		flushSync();
 
-		const field = input.getBoundingClientRect();
-		const hit = document.elementFromPoint(field.left + field.width / 2, field.top + field.height / 2);
+		const centre = (el: Element) => {
+			const r = el.getBoundingClientRect();
+			return [r.left + r.width / 2, r.top + r.height / 2] as const;
+		};
 
-		expect(hit).toBe(input);
+		const caret = target.querySelector('.cursor-line')!;
+		const flag = target.querySelector('.cursor-label')!;
+
+		expect(document.elementFromPoint(...centre(caret)), 'the caret swallows clicks').toBe(input);
+		// The flag hangs in the gutter above the field, so the element beneath it
+		// is the page, not the input — what matters is that it is not the flag.
+		expect(document.elementFromPoint(...centre(flag))).not.toBe(flag);
 	});
 });
