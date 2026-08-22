@@ -30,7 +30,8 @@ export type Selector<State, Value> = (state: State) => Value;
  * @template Action - The action type
  */
 export type EffectExecutor<Action> = (
-  dispatch: Dispatch<Action>
+  dispatch: Dispatch<Action>,
+  signal?: AbortSignal
 ) => void | Promise<void>;
 
 /**
@@ -58,7 +59,21 @@ export type Effect<Action> =
   | { readonly _tag: 'Run'; readonly execute: EffectExecutor<Action> }
   | { readonly _tag: 'FireAndForget'; readonly execute: () => void | Promise<void> }
   | { readonly _tag: 'Batch'; readonly effects: readonly Effect<Action>[] }
-  | { readonly _tag: 'Cancellable'; readonly id: string; readonly execute: EffectExecutor<Action> }
+  | {
+      readonly _tag: 'Cancellable';
+      readonly id: string;
+      readonly execute: EffectExecutor<Action>;
+      /**
+       * Marks `Effect.cancel(id)` — a cancellation with no work of its own.
+       *
+       * Structural, because the store used to tell the two apart by stringifying
+       * the executor and looking for `{}`. A real effect whose body happened to
+       * contain an empty object literal was silently classified as a bare cancel
+       * and never ran, and the check already needed to accept both `{}` and
+       * `{ }` because the build reformats the no-op it was matching.
+       */
+      readonly cancelOnly?: true;
+    }
   | { readonly _tag: 'Debounced'; readonly id: string; readonly ms: number; readonly execute: EffectExecutor<Action> }
   | { readonly _tag: 'Throttled'; readonly id: string; readonly ms: number; readonly execute: EffectExecutor<Action> }
   | { readonly _tag: 'AfterDelay'; readonly ms: number; readonly execute: EffectExecutor<Action> }

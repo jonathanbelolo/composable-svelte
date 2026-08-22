@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { Effect } from '../src/lib/effect';
+import { createStore } from '../src/lib/store.svelte';
 import type { Effect as EffectType } from '../src/lib/types';
 
 describe('Effect', () => {
@@ -68,6 +69,69 @@ describe('Effect', () => {
       expect(effect._tag).toBe('Cancellable');
       expect(effect.id).toBe('test-id');
       expect(effect.execute).toBe(execute);
+    });
+  });
+
+  describe('cancel() versus a cancellable whose body happens to contain {}', () => {
+    // The store used to tell these apart by stringifying the executor and looking
+    // for `{}` — so a real effect whose body contained an empty object literal was
+    // silently classified as a bare cancel and never run. Nothing in the repo
+    // tripped it, which is exactly why it needed a test rather than a reader.
+    //
+    // It was fragile in a second way too: the check had to accept both `{}` and
+    // `{ }` because the build reformats the no-op it is looking for.
+    it('runs a cancellable whose body contains an empty object literal', async () => {
+      const store = createStore<{ n: number }, { type: 'inc' } | { type: 'go' }>({
+        initialState: { n: 0 },
+        reducer: (state, action) => {
+          if (action.type === 'go') {
+            return [
+              state,
+              Effect.cancellable('work', async (dispatch) => {
+                const payload = {};
+                void payload;
+                dispatch({ type: 'inc' });
+              })
+            ];
+          }
+          return [{ n: state.n + 1 }, Effect.none()];
+        }
+      });
+
+      store.dispatch({ type: 'go' });
+      await new Promise((r) => setTimeout(r, 20));
+
+      expect(store.state.n, 'the effect was swallowed as if it were Effect.cancel()').toBe(1);
+      store.destroy?.();
+    });
+
+    it('still treats Effect.cancel() as a bare cancellation', async () => {
+      let started = 0;
+      const store = createStore<{ n: number }, { type: 'go' } | { type: 'stop' } | { type: 'inc' }>({
+        initialState: { n: 0 },
+        reducer: (state, action) => {
+          if (action.type === 'go') {
+            return [
+              state,
+              Effect.cancellable('work', async (dispatch) => {
+                started += 1;
+                await new Promise((r) => setTimeout(r, 50));
+                dispatch({ type: 'inc' });
+              })
+            ];
+          }
+          if (action.type === 'stop') return [state, Effect.cancel('work')];
+          return [{ n: state.n + 1 }, Effect.none()];
+        }
+      });
+
+      store.dispatch({ type: 'go' });
+      store.dispatch({ type: 'stop' });
+      await new Promise((r) => setTimeout(r, 80));
+
+      expect(started, 'the control failed — the work never started').toBe(1);
+      expect(store.state.n, 'Effect.cancel did not cancel').toBe(0);
+      store.destroy?.();
     });
   });
 

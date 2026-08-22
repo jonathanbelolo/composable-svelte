@@ -164,9 +164,8 @@ export function createStore<State, Action, Dependencies = any>(
         }
         throttleState.delete(effect.id);
 
-        // If execute is a no-op, this is Effect.cancel() - just cancel and return
-        const executeString = effect.execute.toString();
-        if (executeString.includes('{}') || executeString.includes('{ }')) {
+        // Effect.cancel() carries no work of its own — cancel and stop here.
+        if (effect.cancelOnly) {
           break;
         }
 
@@ -174,7 +173,21 @@ export function createStore<State, Action, Dependencies = any>(
         const controller = new AbortController();
         inFlightEffects.set(effect.id, controller);
 
-        Promise.resolve(effect.execute(dispatch))
+        // The signal is handed to the executor so it can cooperate — pass it to
+        // `fetch`, check it around an await. It used to be created, stored and
+        // aborted while never reaching anyone, so `Effect.cancel` on a cancellable
+        // was pure bookkeeping: the work ran to completion and still dispatched.
+        //
+        // Dispatch is gated on it as well, so cancellation means something even
+        // for an executor that ignores the signal entirely. A cancelled effect's
+        // actions are no longer wanted, and that must not depend on the author
+        // having opted in.
+        const guardedDispatch: Dispatch<Action> = action => {
+          if (controller.signal.aborted) return;
+          dispatch(action);
+        };
+
+        Promise.resolve(effect.execute(guardedDispatch, controller.signal))
           .catch(error => {
             if (error.name !== 'AbortError') {
               console.error('[Composable Svelte] Effect error:', error);

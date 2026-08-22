@@ -291,7 +291,7 @@ export const Effect = {
    * ```
    */
   cancel<A>(id: string): EffectType<A> {
-    return { _tag: 'Cancellable', id, execute: () => {} };
+    return { _tag: 'Cancellable', id, execute: () => {}, cancelOnly: true };
   },
 
 
