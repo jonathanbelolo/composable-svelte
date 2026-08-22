@@ -1,5 +1,12 @@
 # Collaborative Features - Composable Architecture
 
+> **Superseded.** This document designs collaboration as modules of a
+> `@composable-svelte/code` package — `code/collaborative`, `code/primitives`.
+> No such subpaths exist, and `@composable-svelte/code` is the syntax-highlighting
+> package. What shipped lives in `@composable-svelte/chat`: `collaborativeReducer`,
+> the presence and typing primitives, and live cursors. Kept for the design
+> reasoning; every import path below is wrong.
+
 ## Overview
 
 This document outlines the **composable architecture** for collaborative features, following the same primitive-based approach used in StreamingChat. The goal is to create reusable building blocks that can be mixed and matched to build different collaborative experiences.

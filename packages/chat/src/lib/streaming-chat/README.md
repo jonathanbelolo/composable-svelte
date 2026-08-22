@@ -446,16 +446,11 @@ refuses to pass while any dispatched action is unasserted. A one-chunk fake is
 what a reducer test wants.
 
 ```typescript
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { TestStore } from '@composable-svelte/core/test';
 import { streamingChatReducer, createInitialStreamingChatState } from '@composable-svelte/chat';
 
 describe('StreamingChat', () => {
-  // `finish()` advances virtual time, and throws outright if the timer APIs
-  // are not mocked.
-  beforeEach(() => vi.useFakeTimers());
-  afterEach(() => vi.useRealTimers());
-
   it('sends a message and receives the reply', async () => {
     let chunk!: (text: string) => void;
     let complete!: () => void;

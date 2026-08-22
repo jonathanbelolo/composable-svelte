@@ -35,6 +35,18 @@ const read = (name: string) =>
 
 const coreVersion: string = read('core').version;
 
+/**
+ * The range a package should declare for a workspace sibling at `version`.
+ *
+ * Minor granularity: `^0.11.0` already admits `0.11.4`, so a patch release must
+ * not force an edit in seven package.json files. A *minor* bump still must,
+ * which is the point — pre-1.0, `^0.11.0` refuses `0.12.0`.
+ */
+function expectedRange(version: string): string {
+	const [major, minor] = version.split('.');
+	return `^${major}.${minor}.0`;
+}
+
 /** Every relative-free import specifier appearing in a package's source. */
 function importsCore(pkgDir: string): boolean {
 	const src = join(pkgDir, 'src');
@@ -84,7 +96,7 @@ describe('sibling peer ranges', () => {
 			.filter(([dep]) => dep.startsWith('@composable-svelte/'))
 			.map(([dep, range]) => ({ dep, range, sibling: dep.split('/')[1]! }))
 			.filter(({ sibling }) => sibling === 'core' || WORKSPACE_PEERS.includes(sibling))
-			.filter(({ range, sibling }) => range !== `^${read(sibling).version}`);
+			.filter(({ range, sibling }) => range !== expectedRange(read(sibling).version));
 
 		expect(
 			stale.map((s) => `${s.dep}: "${s.range}"`),
@@ -104,9 +116,9 @@ describe('sibling peer ranges', () => {
 		expect(
 			declared,
 			`Edit packages/${name}/package.json: peerDependencies["@composable-svelte/core"] ` +
-				`should be "^${coreVersion}", not "${declared}". Appending a minor to a "||" ` +
+				`should be "${expectedRange(coreVersion)}", not "${declared}". Appending a minor to a "||" ` +
 				`list moves the ceiling and leaves the floor behind, so the package keeps ` +
 				`advertising versions that lack the exports it imports.`
-		).toBe(`^${coreVersion}`);
+		).toBe(expectedRange(coreVersion));
 	});
 });

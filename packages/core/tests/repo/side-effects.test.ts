@@ -109,6 +109,79 @@ function entryFiles(pkgDir: string, pkg: { exports?: Record<string, unknown> }):
 	return [...targets].map((t) => join(pkgDir, t.replace(/^\.\//, '')));
 }
 
+/** Files that might name a subpath: sources, and the documents about them. */
+function referencingFiles(): string[] {
+	const out: string[] = [];
+	const walk = (dir: string) => {
+		if (!existsSync(dir)) return;
+		for (const entry of readdirSync(dir, { withFileTypes: true })) {
+			const full = join(dir, entry.name);
+			if (entry.isDirectory()) {
+				// `plans/` holds historical design records — they describe APIs that
+				// were considered and often not built, are not published (`files`
+				// excludes them), and are not instructions to anyone.
+				if (
+					['node_modules', 'dist', '.svelte-kit', '.git', 'plans'].includes(entry.name)
+				) {
+					continue;
+				}
+				walk(full);
+				continue;
+			}
+			// A changelog quotes what used to be wrong — that is its job — so it is
+			// excluded for the same reason `plans/` is: both are records of the
+			// past, not instructions. Live documentation is still scanned.
+			if (entry.name === 'CHANGELOG.md') continue;
+			if (/\.(ts|js|svelte|md)$/.test(entry.name)) out.push(full);
+		}
+	};
+	for (const dir of ['packages', 'examples', 'guides', '.claude']) walk(join(repoRoot, dir));
+	return out;
+}
+
+/**
+ * What a package's exports map turns `subpath` into, or null if nothing matches.
+ *
+ * Exact keys win over patterns, and a longer pattern prefix wins over a shorter
+ * one — Node's own rule.
+ */
+function resolveSubpath(pkgDir: string, subpath: string): string | null {
+	const pkg = JSON.parse(readFileSync(join(pkgDir, 'package.json'), 'utf8'));
+	const exports: Record<string, unknown> = pkg.exports ?? {};
+
+	const target = (entry: unknown): string | null => {
+		if (typeof entry === 'string') return entry;
+		if (entry && typeof entry === 'object') {
+			const record = entry as Record<string, unknown>;
+			for (const condition of ['svelte', 'default', 'types']) {
+				const value = record[condition];
+				if (typeof value === 'string') return value;
+			}
+		}
+		return null;
+	};
+
+	if (subpath in exports) {
+		const file = target(exports[subpath]);
+		return file ? join(pkgDir, file.replace(/^\.\//, '')) : null;
+	}
+
+	const patterns = Object.keys(exports)
+		.filter((key) => key.includes('*'))
+		.sort((a, b) => b.indexOf('*') - a.indexOf('*'));
+
+	for (const pattern of patterns) {
+		const [prefix, suffix] = pattern.split('*') as [string, string];
+		if (!subpath.startsWith(prefix) || !subpath.endsWith(suffix)) continue;
+		const filled = subpath.slice(prefix.length, subpath.length - (suffix.length || 0));
+		const file = target(exports[pattern]);
+		if (!file) continue;
+		return join(pkgDir, file.replace('*', filled).replace(/^\.\//, ''));
+	}
+
+	return null;
+}
+
 function resolveFrom(fromFile: string, spec: string): string | null {
 	const base = join(fromFile, '..', spec);
 	for (const c of [base, `${base}.js`, join(base, 'index.js'), base.replace(/\.js$/, '.svelte')]) {
@@ -139,31 +212,44 @@ describe('side-effect imports survive tree-shaking', () => {
 		).toBe(true);
 	});
 
-	it.each(packages)('%s gives every dist directory an explicit exports entry', (name) => {
+	it('every referenced subpath resolves to a file that exists', () => {
 		// The wildcard `"./*": "./dist/*.js"` turns a *directory* subpath into a
 		// file that cannot exist: `@composable-svelte/chat/streaming-chat` became
-		// `dist/streaming-chat.js`. Documented in three places, and it had never
-		// resolved.
+		// `dist/streaming-chat.js`. It was named in three documents and had never
+		// resolved — and the existence check below could not see it, because that
+		// one only inspects explicit entries.
 		//
-		// The existence check below does not catch that — it only sees explicit
-		// entries, so restoring the exact broken state (deleting the entry and
-		// letting the wildcard take over) passed it. This is the arm that catches
-		// the regression the fix was for.
-		const pkgDir = join(packagesDir, name);
-		const pkg = JSON.parse(readFileSync(join(pkgDir, 'package.json'), 'utf8'));
-		const dist = join(pkgDir, 'dist');
-		if (!existsSync(dist)) return;
+		// The rule is deliberately "referenced", not "every dist directory with an
+		// index.js". The stronger version reads well and is wrong: it would force
+		// forty-odd internal build products in `core` — every `components/ui/*` —
+		// into public API to satisfy a lint. What matters is that a subpath
+		// someone actually writes down works.
+		const specifier = /@composable-svelte\/([a-z-]+)\/([A-Za-z0-9_./-]+)/g;
+		const broken: string[] = [];
+		const seen = new Set<string>();
 
-		const declared = new Set(Object.keys(pkg.exports ?? {}));
-		const missing = readdirSync(dist, { withFileTypes: true })
-			.filter((e) => e.isDirectory() && existsSync(join(dist, e.name, 'index.js')))
-			.map((e) => `./${e.name}`)
-			.filter((subpath) => !declared.has(subpath));
+		for (const file of referencingFiles()) {
+			const source = readFileSync(file, 'utf8');
+			for (const match of source.matchAll(specifier)) {
+				const [full, pkg, subpath] = match as unknown as [string, string, string];
+				// `…/dist/…` in prose is a file path being described, not a specifier
+				// anyone imports — the exports map deliberately does not expose it.
+				if (!packages.includes(pkg) || subpath.startsWith('dist') || seen.has(full)) continue;
+				seen.add(full);
+
+				const target = resolveSubpath(join(packagesDir, pkg), `./${subpath}`);
+				if (target === null) {
+					broken.push(`${full} — no exports entry matches`);
+				} else if (!existsSync(target)) {
+					broken.push(`${full} -> ${relative(repoRoot, target)} (missing)`);
+				}
+			}
+		}
 
 		expect(
-			missing,
-			`${name}: these dist directories have an index.js but no exports entry, so ` +
-				`the wildcard resolves them to a sibling .js file that does not exist.`
+			broken,
+			'these subpaths are written down somewhere and do not resolve. Add an ' +
+				'explicit exports entry, or stop referencing them.'
 		).toEqual([]);
 	});
 

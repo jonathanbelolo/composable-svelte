@@ -47,6 +47,7 @@ export default defineConfig({
       'tests/repo/dist-freshness.test.ts',
       'tests/repo/peer-ranges.test.ts',
       'tests/repo/published-files.test.ts',
+      'tests/repo/doc-examples.test.ts',
       // Needs the Cookie request header, which the browser Request API refuses
       // to expose; runs under vitest.node.config.ts instead.
       'tests/i18n/ssr.test.ts'

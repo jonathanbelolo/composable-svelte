@@ -5,6 +5,22 @@ All notable changes to `@composable-svelte/media` will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-08-23
+
+### Added
+
+- Explicit exports for `./audio-player`, `./video-embed` and `./voice-input`.
+  All three had an `index.js` in `dist` and no entry, so the wildcard `"./*"`
+  resolved them to `dist/audio-player.js` and siblings — files that have never
+  existed.
+
+### Fixed
+
+- `video-embed`'s own usage example imported from
+  `@composable-svelte/code/video-embed`. Wrong package: `code` is the
+  syntax-highlighting one, and that subpath does not exist. A reader following
+  the example got a resolution failure.
+
 ## [0.2.0] - 2026-08-22
 
 The package's first pass under the "no dead behaviour" rule: nothing a consumer

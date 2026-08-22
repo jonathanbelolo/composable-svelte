@@ -15,22 +15,19 @@
  *    `currentStreaming` already `null`, `messages` already 2.
  *
  * The shape below is what works: hand the callbacks out and call them when the
- * test is ready. `vi.useFakeTimers()` is required because `finish()` advances
- * virtual time, and it throws outright if the timer APIs are not mocked.
+ * test is ready. No faked clock — `finish()` used to demand one, which was a
+ * defect in `advanceTime` rather than in the examples, and is fixed there.
  *
  * The documents quote this file. If it stops passing, they are wrong again.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { TestStore } from '@composable-svelte/core/test';
 import { streamingChatReducer } from '../src/lib/streaming-chat/reducer.js';
 import { createInitialStreamingChatState } from '../src/lib/streaming-chat/types.js';
 import type { StreamingChatDependencies } from '../src/lib/streaming-chat/types.js';
 
 describe('StreamingChat', () => {
-	beforeEach(() => vi.useFakeTimers());
-	afterEach(() => vi.useRealTimers());
-
 	it('sends a message and receives the reply', async () => {
 		let chunk!: (text: string) => void;
 		let complete!: () => void;

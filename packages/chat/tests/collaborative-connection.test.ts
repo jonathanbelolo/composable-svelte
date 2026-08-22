@@ -305,6 +305,78 @@ describe('what actually leaves the browser', () => {
 		expect(store.state.currentUserId).toBe(ME);
 	});
 
+	it('sends no typing or cursor frames once the socket is closed either', async () => {
+		// These four bypassed `broadcast()` entirely with their own inlined
+		// `sendWebSocketMessage` calls, so the connection check only covered half
+		// the outgoing frames — while `broadcast`'s own docstring described an
+		// extraction that had not happened. Measured: four frames still went out
+		// after a disconnect.
+		const sent: unknown[] = [];
+		const store = connected(sent);
+
+		store.dispatch({ type: 'disconnectFromConversation' });
+		store.dispatch({ type: 'startTyping', target: 'message' });
+		store.dispatch({ type: 'stopTyping' });
+		store.dispatch({ type: 'updateCursor', position: 3, selectionLength: 0 });
+		store.dispatch({ type: 'clearCursor' });
+		await wait(10);
+
+		expect(sent).toEqual([]);
+	});
+
+	it('announces my presence when the socket finally opens', async () => {
+		// The gate drops anything dispatched while `connecting`, and
+		// `usePresenceTracking` only dispatches on *change* — so a transition made
+		// in that window was lost until the next one, and the room could see me as
+		// `away` indefinitely.
+		const sent: unknown[] = [];
+		let open!: (state: WebSocketConnectionState) => void;
+
+		const store = createStore<CollaborativeStreamingChatState, CollaborativeAction>({
+			initialState: createInitialCollaborativeState(),
+			reducer: collaborativeReducer,
+			dependencies: {
+				connectWebSocket: (
+					_conversationId: string,
+					_userId: string,
+					_onMessage: (m: unknown) => void,
+					onConnectionChange: (state: WebSocketConnectionState) => void
+				) => {
+					// Asynchronous, like a real `socket.onopen`.
+					open = onConnectionChange;
+					return () => {};
+				},
+				sendWebSocketMessage: async (message: unknown) => {
+					sent.push(message);
+				},
+				getTimestamp: () => 0
+			} as never
+		});
+		cleanup.push(() => store.destroy?.());
+
+		store.dispatch({
+			type: 'userJoined',
+			user: {
+				id: ME,
+				name: 'Me',
+				color: '#000',
+				presence: 'active',
+				typing: null,
+				cursor: null,
+				lastSeen: 0
+			}
+		});
+		store.dispatch({ type: 'connectToConversation', conversationId: 'c1', userId: ME });
+		store.dispatch({ type: 'updatePresence', presence: 'away' });
+		await wait(10);
+		expect(sent, 'a frame escaped before the socket was open').toEqual([]);
+
+		open({ status: 'connected', connectedAt: 0 });
+		await wait(10);
+
+		expect(sent).toEqual([{ type: 'presence_changed', userId: ME, presence: 'away' }]);
+	});
+
 	it('sends nothing once the socket is closed', async () => {
 		// `useHeartbeat` runs on a 30-second interval and
 		// `disconnectFromConversation` deliberately keeps `currentUserId` — the

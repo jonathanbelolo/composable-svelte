@@ -228,10 +228,10 @@ Each takes the **collaborative** store, and each only transmits once
 
 | Hook | Signature | Purpose |
 |------|-----------|---------|
-| `usePresenceTracking` | `(store, userId)` | Watches activity and broadcasts `active` / `idle` / `away`. It never reports `offline` — that is a disconnect, not an idle timer. |
+| `usePresenceTracking` | `(store)` | Watches activity and broadcasts `active` / `idle` / `away`. It never reports `offline` — that is a disconnect, not an idle timer. |
 | `useTypingEmitter` | `(store, target, messageId?)` | Returns `{ start, stop, update, cleanup }` rather than a bare teardown |
 | `useCursorTracking` | `(store, element, throttleMs?)` | Shares the caret position in `element` |
-| `useHeartbeat` | `(store, userId, intervalMs?)` | Periodic keep-alive so a server that drops idle connections does not drop a quiet one |
+| `useHeartbeat` | `(store, intervalMs?)` | Periodic keep-alive so a server that drops idle connections does not drop a quiet one |
 
 ### Supplying the connection
 
@@ -359,44 +359,45 @@ image/video fades are fire-and-forget.
 ## Testing
 
 ```typescript
-import { beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { createTestStore } from '@composable-svelte/core/test';
 import { streamingChatReducer, createInitialStreamingChatState } from '@composable-svelte/chat';
 
-// `finish()` advances virtual time, and throws if the timer APIs are not mocked.
-beforeEach(() => vi.useFakeTimers());
-afterEach(() => vi.useRealTimers());
+describe('StreamingChat', () => {
+  it('sends a message and receives the reply', async () => {
+    let chunk!: (text: string) => void;
+    let complete!: () => void;
 
-let chunk!: (text: string) => void;
-let complete!: () => void;
+    const store = createTestStore({
+      initialState: createInitialStreamingChatState(),
+      reducer: streamingChatReducer,
+      dependencies: {
+        // Hand the callbacks out rather than calling them here: `send` starts
+        // the effect *before* running its assertion, so a fake that streams
+        // synchronously means the whole reply lands first and every line of
+        // that assertion is wrong.
+        streamMessage: (_message, onChunk, onComplete) => {
+          chunk = onChunk;
+          complete = onComplete;
+        },
+        generateId: () => 'test-id',
+        getTimestamp: () => 1000
+      }
+    });
 
-const store = createTestStore({
-  initialState: createInitialStreamingChatState(),
-  reducer: streamingChatReducer,
-  dependencies: {
-    // Hand the callbacks out rather than calling them here. `send` starts the
-    // effect *before* running its assertion, so a fake that streams
-    // synchronously means the reply has already landed by the time you assert.
-    streamMessage: (_message, onChunk, onComplete) => {
-      chunk = onChunk;
-      complete = onComplete;
-    },
-    generateId: () => 'test-id',
-    getTimestamp: () => 1000
-  }
+    await store.send({ type: 'sendMessage', message: 'Hello' }, (state) => {
+      expect(state.messages).toHaveLength(1);
+      expect(state.isWaitingForResponse).toBe(true);
+    });
+
+    chunk('Hi');
+    await store.receive({ type: 'chunkReceived', chunk: 'Hi' });
+
+    complete();
+    await store.receive({ type: 'streamComplete' });
+    await store.finish();
+  });
 });
-
-await store.send({ type: 'sendMessage', message: 'Hello' }, (state) => {
-  expect(state.messages).toHaveLength(1);
-  expect(state.isWaitingForResponse).toBe(true);
-});
-
-chunk('Hi');
-await store.receive({ type: 'chunkReceived', chunk: 'Hi' });
-
-complete();
-await store.receive({ type: 'streamComplete' });
-await store.finish();
 ```
 
 The full version of this is `packages/chat/tests/teststore-example.test.ts`,
@@ -437,7 +438,7 @@ than this.
 |----------|-------------|
 | `streamingChatReducer` | Main chat reducer |
 | `createInitialStreamingChatState()` | Create initial state with defaults |
-| `createMockStreamingChat()` | Fakes a streamed reply (`streamMessage`, `generateId`, `getTimestamp`) that fakes a streamed reply |
+| `createMockStreamingChat()` | Fakes a streamed reply (`streamMessage`, `generateId`, `getTimestamp`) |
 | `collaborativeReducer` | Reducer for collaborative features |
 | `createInitialCollaborativeState()` | Initial state for the above |
 | `getActiveUsers(users, currentUserId)` | Everyone present but you, minus the offline |

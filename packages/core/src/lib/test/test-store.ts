@@ -417,10 +417,20 @@ export class TestStore<State, Action, Dependencies = any> {
     // Import vi dynamically to avoid issues in non-test environments
     const { vi } = await import('vitest');
 
-    // Check if vi is available (jsdom mode has it, browser mode doesn't)
-    if (typeof vi !== 'undefined' && vi.advanceTimersByTime) {
-      // Use synchronous timer advancement (this fires all timers up to ms)
+    // Only advance virtual time when there is virtual time to advance.
+    //
+    // This used to call `advanceTimersByTime` whenever the method existed —
+    // which it always does — and Vitest throws "a function to advance timers was
+    // called but the timers APIs are not mocked" when they are not. So
+    // `finish()`, whose documented job is "wait for pending effects and assert
+    // none remain", threw in any test that had no reason to fake time at all.
+    // Twenty-one documented examples in this repo were unrunnable because of it.
+    if (typeof vi !== 'undefined' && vi.isFakeTimers?.()) {
+      // Synchronous advancement: fires every timer due within `ms`.
       vi.advanceTimersByTime(ms);
+    } else if (ms > 0) {
+      // Real timers: the only way to reach the same point is to wait.
+      await new Promise((resolve) => setTimeout(resolve, ms));
     }
 
     // Flush microtask queue to let async callbacks execute

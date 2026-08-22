@@ -5,6 +5,19 @@ All notable changes to `@composable-svelte/code` will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-08-23
+
+### Added
+
+- Explicit exports for `./code-editor`, `./code-highlight` and `./node-canvas`.
+  All three had an `index.js` in `dist` and no entry, so the wildcard `"./*"`
+  resolved them to `dist/code-editor.js` and siblings — files that have never
+  existed. Any consumer who tried the obvious subpath got `ERR_MODULE_NOT_FOUND`.
+
+  Found by a guard written for the identical defect in
+  `@composable-svelte/chat`; `packages/core/tests/repo/side-effects.test.ts` now
+  fails when a subpath anyone references does not resolve.
+
 ## [0.2.0] - 2026-08-21
 
 A sweep to remove **dead behaviour**: anything a consumer can pass, configure,

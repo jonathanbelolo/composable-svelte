@@ -208,8 +208,9 @@ were first written:
 - **A restored session could show a progress bar frozen forever** at whatever
   percentage it had reached, since an upload from a previous session is not in
   flight.
-- **`ImagePreview`'s error latch survived an attachment swap**, exactly as
-  `VideoPlayer`'s did — the twin defect in the component the fix was modelled on.
+- **`ImagePreview`'s error latch** — pinned by a test rather than fixed here: it
+  had already been dealt with in the same commit that added the reset, and the
+  claim that it was fixed in this pass was wrong.
 - **`playbackNotice` outlived its video**, painting a complaint about the
   previous source over the new one.
 - **Presence and heartbeat frames were sent over closed sockets**, forever:

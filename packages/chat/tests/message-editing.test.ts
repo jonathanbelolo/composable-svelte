@@ -55,6 +55,15 @@ const conversation: Message[] = [
 	{ id: 'a1', role: 'assistant', content: 'first answer', timestamp: 1 }
 ];
 
+const attach = (id: string) => ({
+	id,
+	type: 'image' as const,
+	filename: `${id}.png`,
+	url: 'data:image/png;base64,iVBORw0KGgo=',
+	size: 10,
+	mimeType: 'image/png'
+});
+
 const contents = (store: { state: StreamingChatState }) =>
 	store.state.messages.map((m) => `${m.role}:${m.content}`);
 
@@ -189,6 +198,108 @@ describe('editing a message with attachments', () => {
 		await wait(40);
 
 		expect(streamed, 'a removed message still got a reply').not.toContain('look');
+	});
+});
+
+describe('one upload per message', () => {
+	// The cancellation id used to be a single constant for the whole store, which
+	// made the upload a singleton. Measured with two sends: the first message
+	// never streamed, never got a reply, and kept an attachment frozen at
+	// `uploadStatus: 'uploading'` — which renders a progress bar that can never
+	// move. Any attachment-free send did the same to an upload in flight.
+
+	const pending = () => {
+		let release!: (url: string) => void;
+		const promise = new Promise<string>((resolve) => (release = resolve));
+		return { promise, release: () => release('https://cdn.example.com/a.png') };
+	};
+
+	it('does not let a second send destroy the first send’s upload', async () => {
+		const first = pending();
+		const second = pending();
+		let call = 0;
+		const { store, streamed } = makeStore({
+			uploadFile: () => (call++ === 0 ? first.promise : second.promise)
+		});
+
+		store.dispatch({ type: 'addAttachment', attachment: attach('a1') });
+		store.dispatch({ type: 'sendMessage', message: 'first' });
+		await wait(20);
+		store.dispatch({ type: 'addAttachment', attachment: attach('a2') });
+		store.dispatch({ type: 'sendMessage', message: 'second' });
+		await wait(20);
+
+		first.release();
+		second.release();
+		await wait(40);
+
+		expect(streamed, 'the first message never got a reply').toContain('first');
+		expect(store.state.messages[0]!.attachments![0]!.uploadStatus).toBe('success');
+	});
+
+	it('does not let a plain send destroy an unrelated upload', async () => {
+		const upload = pending();
+		const { store, streamed } = makeStore({ uploadFile: () => upload.promise });
+
+		store.dispatch({ type: 'addAttachment', attachment: attach('a1') });
+		store.dispatch({ type: 'sendMessage', message: 'with file' });
+		await wait(20);
+		store.dispatch({ type: 'sendMessage', message: 'plain' });
+		await wait(20);
+
+		upload.release();
+		await wait(40);
+
+		expect(streamed).toContain('with file');
+		expect(store.state.messages[0]!.attachments![0]!.uploadStatus).toBe('success');
+	});
+
+	it('cancels the upload of a message that is deleted', async () => {
+		// The upload outlives the message, and its resolution streams a reply —
+		// into a conversation that no longer contains the question.
+		const upload = pending();
+		const { store, streamed } = makeStore({ uploadFile: () => upload.promise });
+
+		store.dispatch({ type: 'addAttachment', attachment: attach('a1') });
+		store.dispatch({ type: 'sendMessage', message: 'doomed' });
+		await wait(20);
+
+		store.dispatch({ type: 'deleteMessage', messageId: store.state.messages[0]!.id });
+		upload.release();
+		await wait(40);
+
+		expect(streamed, 'a deleted message still got a reply').toEqual([]);
+		expect(store.state.messages).toEqual([]);
+	});
+
+	it('cancels uploads when the conversation is cleared', async () => {
+		const upload = pending();
+		const { store, streamed } = makeStore({ uploadFile: () => upload.promise });
+
+		store.dispatch({ type: 'addAttachment', attachment: attach('a1') });
+		store.dispatch({ type: 'sendMessage', message: 'doomed' });
+		await wait(20);
+
+		store.dispatch({ type: 'clearMessages' });
+		upload.release();
+		await wait(40);
+
+		expect(streamed).toEqual([]);
+	});
+
+	it('cancels uploads when an older session is restored over them', async () => {
+		const upload = pending();
+		const { store, streamed } = makeStore({ uploadFile: () => upload.promise });
+
+		store.dispatch({ type: 'addAttachment', attachment: attach('a1') });
+		store.dispatch({ type: 'sendMessage', message: 'doomed' });
+		await wait(20);
+
+		store.dispatch({ type: 'restoreMessages', messages: conversation });
+		upload.release();
+		await wait(40);
+
+		expect(streamed).toEqual([]);
 	});
 });
 

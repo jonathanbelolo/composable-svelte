@@ -5,6 +5,21 @@ All notable changes to `@composable-svelte/core` will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.1] - 2026-08-23
+
+### Fixed
+
+- `TestStore.advanceTime` called `vi.advanceTimersByTime` whenever the method
+  existed — which it always does — and Vitest throws "a function to advance
+  timers was called but the timers APIs are not mocked" when they are not. So
+  `finish()`, whose documented job is to wait for pending effects and assert
+  none remain, threw in any test that had no reason to fake time. **Twenty-one
+  documented examples in this repo were unrunnable because of it.**
+
+  It now advances virtual time only when a clock is actually faked, and waits on
+  the real one otherwise — so `advanceTime(300)` means the same thing in both
+  modes.
+
 ## [0.11.0] - 2026-08-22
 
 ### Added

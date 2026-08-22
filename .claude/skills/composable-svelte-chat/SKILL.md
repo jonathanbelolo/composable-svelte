@@ -661,8 +661,10 @@ type CollaborativeAction =
   // User management
   | { type: 'userJoined'; user: CollaborativeUser }
   | { type: 'userLeft'; userId: string }
-  | { type: 'userPresenceChanged'; userId: string; presence: UserPresence }
-  | { type: 'heartbeatReceived'; userId: string; timestamp: number }
+  | { type: 'userPresenceChanged'; userId: string; presence: UserPresence }  // remote
+  | { type: 'heartbeatReceived'; userId: string; timestamp: number }         // remote
+  | { type: 'updatePresence'; presence: UserPresence }                       // local
+  | { type: 'sendHeartbeat' }                                                // local
 
   // Typing indicators
   | { type: 'userStartedTyping'; userId: string; info: TypingInfo }   // remote
@@ -678,9 +680,15 @@ type CollaborativeAction =
 ```
 
 The `user*` actions apply someone else's state, arriving from the socket. The
-bare `startTyping` / `stopTyping` / `updateCursor` / `clearCursor` actions are
-the local user's: they update `currentUserId`'s entry optimistically **and**
-send a `sendWebSocketMessage` frame. They no-op when `currentUserId` is null.
+local ones — `updatePresence`, `sendHeartbeat`, `startTyping`, `stopTyping`,
+`updateCursor`, `clearCursor` — update `currentUserId`'s entry optimistically
+**and** send a `sendWebSocketMessage` frame. They no-op when `currentUserId` is
+null, and send nothing unless the connection is `connected`.
+
+The split is not cosmetic. A server that fans a frame out to the whole room
+sends yours back to you, and it arrives carrying *your* id — so one action used
+for both directions cannot tell an echo from something you just did, and two
+clients ping-pong without bound.
 
 `connectionStateChanged` carries `connection`, not `state`.
 
@@ -786,8 +794,8 @@ onMount(() => {
     userId: currentUserId
   });
 
-  const stopPresence = usePresenceTracking(collabStore, currentUserId);
-  const stopHeartbeat = useHeartbeat(collabStore, currentUserId);
+  const stopPresence = usePresenceTracking(collabStore);
+  const stopHeartbeat = useHeartbeat(collabStore);
 
   return () => {
     stopPresence();
@@ -923,16 +931,11 @@ unasserted. A one-chunk fake is what a reducer test wants; the mock is for demos
 and component tests, where the delays are the point.
 
 ```typescript
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { TestStore } from '@composable-svelte/core/test';
 import { streamingChatReducer, createInitialStreamingChatState } from '@composable-svelte/chat';
 
 describe('StreamingChat', () => {
-  // `finish()` advances virtual time, and throws outright if the timer APIs
-  // are not mocked.
-  beforeEach(() => vi.useFakeTimers());
-  afterEach(() => vi.useRealTimers());
-
   it('sends a message and receives the reply', async () => {
     let chunk!: (text: string) => void;
     let complete!: () => void;
@@ -1108,12 +1111,12 @@ All exports from `@composable-svelte/chat`:
 
 ### Collaborative Hooks
 
-- `usePresenceTracking(store, userId)` - Activity-driven presence, broadcast over
+- `usePresenceTracking(store)` - Activity-driven presence, broadcast over
   the socket; returns cleanup. Reports `active`/`idle`/`away`, never `offline` —
   that is a disconnect, not an idle timer.
 - `useTypingEmitter(store, target, messageId?)` - Returns `{ start, stop, update, cleanup }`
 - `useCursorTracking(store, element, throttleMs = 100)` - Returns cleanup
-- `useHeartbeat(store, userId, intervalMs = 30000)` - Periodic keep-alive frame,
+- `useHeartbeat(store, intervalMs = 30000)` - Periodic keep-alive frame,
   so a server that drops idle connections does not drop a quiet one; returns
   cleanup
 

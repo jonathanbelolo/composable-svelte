@@ -63,7 +63,32 @@ function streamNow(
  * the repo keeps. An already-remote URL is left alone: a restored session must
  * not re-upload what it is already pointing at.
  */
-const UPLOAD_EFFECT_ID = 'streaming-chat/upload';
+/**
+ * The cancellation id for one message's uploads.
+ *
+ * Per message, not per store. A single shared id made the upload a singleton:
+ * sending a second message with an attachment aborted the first one's upload
+ * mid-flight, and because the store gates a cancelled effect's dispatch, the
+ * first message never streamed, never got a reply, and kept an attachment
+ * frozen at `uploadStatus: 'uploading'` — which now renders a progress bar that
+ * can never move. Any attachment-free send did the same to an upload in flight.
+ */
+const uploadIdFor = (messageId: string) => `streaming-chat/upload/${messageId}`;
+
+/**
+ * Cancel the uploads belonging to messages that are about to disappear.
+ *
+ * An upload outlives the message it was started for — it is an async effect —
+ * and when it lands it dispatches a resolution that streams a reply. Deleting,
+ * clearing or restoring over that message otherwise produced a reply to a
+ * conversation that no longer contains the question.
+ */
+function cancelUploadsFor(messages: Message[]): EffectType<StreamingChatAction> {
+	if (messages.length === 0) return Effect.none();
+	return Effect.batch<StreamingChatAction>(
+		...messages.map((message) => Effect.cancel<StreamingChatAction>(uploadIdFor(message.id)))
+	);
+}
 
 /**
  * Start a reply for `message`, uploading anything that still needs it first.
@@ -89,7 +114,9 @@ function streamFor(
 
 	return deps.uploadFile && attachments && outstanding
 		? uploadThenStream(messageId, message, attachments, deps)
-		: Effect.batch(Effect.cancel(UPLOAD_EFFECT_ID), streamNow(message, attachments, deps));
+		// Cancel only *this* message's upload: re-sending it supersedes whatever
+		// was in flight for it, and nothing else's upload is any of its business.
+		: Effect.batch(Effect.cancel(uploadIdFor(messageId)), streamNow(message, attachments, deps));
 }
 
 function uploadThenStream(
@@ -98,7 +125,7 @@ function uploadThenStream(
 	attachments: MessageAttachment[],
 	deps: StreamingChatDependencies
 ): EffectType<StreamingChatAction> {
-	return Effect.cancellable(UPLOAD_EFFECT_ID, async (dispatch) => {
+	return Effect.cancellable(uploadIdFor(messageId), async (dispatch) => {
 		const resolved = await Promise.all(
 			attachments.map(async (attachment) => {
 				if (!/^(blob:|data:)/.test(attachment.url)) return attachment;
@@ -374,7 +401,10 @@ export function streamingChatReducer(
 				// still in `newMessages`, so `sendMessage` would append a second
 				// copy of it beneath the regenerated reply — and a failed upload
 				// gets another attempt rather than being resent as a local URL.
-				streamFor(userMessage.id, userMessage.content, userMessage.attachments, deps)
+				Effect.batch(
+					cancelUploadsFor(state.messages.slice(messageIndex)),
+					streamFor(userMessage.id, userMessage.content, userMessage.attachments, deps)
+				)
 			];
 		}
 
@@ -442,13 +472,20 @@ export function streamingChatReducer(
 				];
 			}
 
+			const removed = state.messages.filter(
+				(m) => !newMessages.some((kept) => kept.id === m.id)
+			);
+
 			return [
 				{
 					...state,
 					messages: newMessages,
 					reactionPicker: pickerAfterMessages(state.reactionPicker, newMessages)
 				},
-				Effect.none()
+				// Otherwise the deleted message's upload lands afterwards and streams
+				// a reply into a conversation that no longer contains the question —
+				// measured: deleting the only message left an orphan assistant reply.
+				cancelUploadsFor(removed)
 			];
 		}
 
@@ -519,7 +556,9 @@ export function streamingChatReducer(
 					currentStreaming: { content: '' },
 					error: null
 				},
-				// Not `sendMessage`, which appends a user message unconditionally —
+				// The tail is being dropped, so its uploads must not land later and
+			// stream a reply into a conversation that no longer holds the question.
+			// Not `sendMessage`, which appends a user message unconditionally —
 				// editing used to leave two copies of it. The edited message is
 				// already in `newMessages` above; only the reply is missing.
 				//
@@ -527,7 +566,10 @@ export function streamingChatReducer(
 				// attachment whose upload failed the first time gets another
 				// attempt. Editing was otherwise the one action that could resend a
 				// message and silently keep a URL only the sender can open.
-				streamFor(updatedMessage.id, editedContent, updatedMessage.attachments, deps)
+				Effect.batch(
+					cancelUploadsFor(state.messages.slice(messageIndex + 1)),
+					streamFor(updatedMessage.id, editedContent, updatedMessage.attachments, deps)
+				)
 			];
 		}
 
@@ -711,7 +753,8 @@ export function streamingChatReducer(
 					editingMessage: null,
 					reactionPicker: { status: 'idle' }
 				},
-				Effect.none()
+				// Every message is going, so every upload in flight for one is too.
+				cancelUploadsFor(state.messages)
 			];
 		}
 
@@ -895,7 +938,9 @@ export function streamingChatReducer(
 					reactionPicker: { status: 'idle' },
 					attachmentPreview: { presentation: { status: 'idle' }, removeOnDismiss: false }
 				},
-				Effect.none()
+				// The session being replaced may have had uploads in flight. Their
+				// resolutions would land against messages that are no longer here.
+				cancelUploadsFor(state.messages)
 			];
 		}
 

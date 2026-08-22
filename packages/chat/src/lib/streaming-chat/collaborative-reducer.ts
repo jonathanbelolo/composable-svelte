@@ -31,8 +31,10 @@ const CONNECTION_SUBSCRIPTION = 'collaborative-websocket';
 /**
  * Broadcast a frame, swallowing transport failures.
  *
- * The same shape the typing cases already use, extracted because presence and
- * heartbeats need it too — and had it not.
+ * Every outgoing frame goes through here. The typing and cursor cases used to
+ * inline their own copy of this and so escaped the connection check below — the
+ * defect the check was added for was only half fixed, and this docstring
+ * described an extraction that had not happened.
  */
 function broadcast(
 	state: CollaborativeStreamingChatState,
@@ -160,6 +162,31 @@ export function collaborativeReducer(
 		}
 
 		case 'connectionStateChanged': {
+			// Anything dispatched before the socket opened was dropped by the gate
+			// in `broadcast`, and `usePresenceTracking` only dispatches on *change*
+			// — so a transition made during `connecting` was lost until the next
+			// one, and the room could see you as `away` indefinitely. Announcing on
+			// open is also just correct: a room that has only now heard of you
+			// needs your current state, not your next change.
+			if (
+				action.connection.status === 'connected' &&
+				state.connection.status !== 'connected' &&
+				state.currentUserId
+			) {
+				const me = state.users.get(state.currentUserId);
+				if (me) {
+					return [
+						{ ...state, connection: action.connection },
+						broadcast(
+							{ ...state, connection: action.connection },
+							deps,
+							{ type: 'presence_changed', userId: state.currentUserId, presence: me.presence },
+							'presence on connect'
+						)
+					];
+				}
+			}
+
 			return [
 				{
 					...state,
@@ -388,18 +415,12 @@ export function collaborativeReducer(
 					...state,
 					users
 				},
-				Effect.run(async (dispatch) => {
-					// Send to server
-					try {
-						await deps.sendWebSocketMessage({
-							type: 'typing_started',
-							userId: state.currentUserId,
-							info: typingInfo
-						});
-					} catch (error) {
-						console.error('[Collaborative] Failed to send typing indicator:', error);
-					}
-				})
+				broadcast(
+					state,
+					deps,
+					{ type: 'typing_started', userId: state.currentUserId, info: typingInfo },
+					'typing indicator'
+				)
 			];
 		}
 
@@ -424,17 +445,12 @@ export function collaborativeReducer(
 					...state,
 					users
 				},
-				Effect.run(async (dispatch) => {
-					// Send to server
-					try {
-						await deps.sendWebSocketMessage({
-							type: 'typing_stopped',
-							userId: state.currentUserId
-						});
-					} catch (error) {
-						console.error('[Collaborative] Failed to send typing stop:', error);
-					}
-				})
+				broadcast(
+					state,
+					deps,
+					{ type: 'typing_stopped', userId: state.currentUserId },
+					'typing stop'
+				)
 			];
 		}
 
@@ -507,19 +523,14 @@ export function collaborativeReducer(
 					...state,
 					users
 				},
-				Effect.run(async (dispatch) => {
-					// Throttle cursor updates (send at most every 100ms)
-					// This would need a more sophisticated throttling mechanism
-					try {
-						await deps.sendWebSocketMessage({
-							type: 'cursor_moved',
-							userId: state.currentUserId,
-							cursor: cursorPosition
-						});
-					} catch (error) {
-						console.error('[Collaborative] Failed to send cursor update:', error);
-					}
-				})
+				// Throttling is `useCursorTracking`'s job, and it does it — this is
+				// dispatched at most every `throttleMs`.
+				broadcast(
+					state,
+					deps,
+					{ type: 'cursor_moved', userId: state.currentUserId, cursor: cursorPosition },
+					'cursor update'
+				)
 			];
 		}
 
@@ -544,16 +555,12 @@ export function collaborativeReducer(
 					...state,
 					users
 				},
-				Effect.run(async (dispatch) => {
-					try {
-						await deps.sendWebSocketMessage({
-							type: 'cursor_cleared',
-							userId: state.currentUserId
-						});
-					} catch (error) {
-						console.error('[Collaborative] Failed to send cursor clear:', error);
-					}
-				})
+				broadcast(
+					state,
+					deps,
+					{ type: 'cursor_cleared', userId: state.currentUserId },
+					'cursor clear'
+				)
 			];
 		}
 

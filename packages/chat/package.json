@@ -78,8 +78,8 @@
   "peerDependencies": {
     "@composable-svelte/core": "^0.11.0",
     "svelte": "^5.0.0",
-    "@composable-svelte/code": "^0.2.0",
-    "@composable-svelte/media": "^0.2.0",
+    "@composable-svelte/code": "^0.3.0",
+    "@composable-svelte/media": "^0.3.0",
     "prismjs": "^1.29.0",
     "pdfjs-dist": "^5.0.0"
   },

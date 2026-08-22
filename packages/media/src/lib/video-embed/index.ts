@@ -7,7 +7,7 @@
  * @example
  * ```svelte
  * <script>
- *   import { VideoEmbed, detectVideo } from '@composable-svelte/code/video-embed';
+ *   import { VideoEmbed, detectVideo } from '@composable-svelte/media/video-embed';
  *
  *   const video = detectVideo('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
  * </script>
