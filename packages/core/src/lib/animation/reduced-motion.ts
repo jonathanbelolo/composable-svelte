@@ -1,11 +1,12 @@
 /**
  * Read the user's motion preference.
  *
- * `guides/ANIMATION-GUIDELINES.md` requires every animation to be skippable, and
- * records that not one of the helpers in `animate.ts` consults this. That is a
- * gap this file does not close on its own — it provides the reader, not the
- * plumbing. It exists because the scroll follower is the first animation written
- * after the rule, and honouring it there cost three lines.
+ * `guides/ANIMATION-GUIDELINES.md` requires every animation to be skippable.
+ * This file provides the reader, not the plumbing: reaching for it is still a
+ * per-helper decision, and most of `animate.ts` has not made it. Three helpers
+ * call this — `animateFadeIn`, `animateFadeOut`, `animateListItemIn` — plus
+ * `createScrollFollower`, which was the first animation written after the rule
+ * and where honouring it cost three lines.
  *
  * @packageDocumentation
  */

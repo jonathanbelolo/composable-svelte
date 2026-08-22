@@ -2,7 +2,14 @@
  * Animation utilities for Motion One.
  *
  * State-driven animation functions for all components.
- * All functions return Promise<void> and always resolve (even on error).
+ *
+ * All functions return `Promise<void>` and none of them ever **rejects**: a
+ * failure is logged and the end state set inline. That is not the same as always
+ * resolving. Motion One's `.finished` never settles when an animation is
+ * interrupted — measured, and relied on elsewhere in this repo — so a helper
+ * whose animation is superseded returns a promise that stays pending forever.
+ * Call sites that can be interrupted must therefore use `void`, never `await`,
+ * and nothing may sequence on one.
  *
  * @packageDocumentation
  */
@@ -47,8 +54,10 @@ function getSpringConfig(
  *
  * **It honours `prefers-reduced-motion` itself.** Skipping the animation cannot
  * skip the outcome here, because the outcome is the element's natural state, so
- * returning early leaves it correct. No other helper in this file consults the
- * preference yet; this and `createScrollFollower` are the two that do.
+ * returning early leaves it correct. Note that this is the easy case:
+ * `animateFadeOut` has to *write* the end state under the preference, because
+ * its outcome is not the resting one. Those two and this are the only helpers in
+ * this file that consult it.
  *
  * Uses `springPresets.listItem`, which was defined for exactly this and had
  * never been called.

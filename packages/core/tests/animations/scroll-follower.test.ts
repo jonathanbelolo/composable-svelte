@@ -127,6 +127,39 @@ describe('createScrollFollower', () => {
 		expect(follower.isSelfScroll(), 'a user scroll was mistaken for the follower').toBe(false);
 	});
 
+	it('reads the preference itself when the caller does not pass it', () => {
+		// The option used to default to `undefined`, which is falsy, so a follower
+		// constructed without config animated regardless of the user's setting —
+		// while the guideline claimed this was the one helper that honoured it.
+		// chat happened to pass the flag, so nothing was visibly broken and the
+		// documentation was simply false.
+		const original = window.matchMedia;
+		window.matchMedia = ((query: string) => ({
+			matches: /prefers-reduced-motion/.test(query),
+			media: query,
+			onchange: null,
+			addEventListener() {},
+			removeEventListener() {},
+			addListener() {},
+			removeListener() {},
+			dispatchEvent: () => false
+		})) as never;
+
+		try {
+			const { el } = scrollable();
+			const follower = createScrollFollower(el);
+			cleanup.push(() => follower.stop());
+
+			follower.follow();
+
+			expect(el.scrollTop, 'it animated despite the preference').toBe(
+				el.scrollHeight - el.clientHeight
+			);
+		} finally {
+			window.matchMedia = original;
+		}
+	});
+
 	it('jumps instantly under reduced motion, and still ends at the bottom', async () => {
 		// Skipping the animation must never skip the outcome. That is the rule the
 		// guideline states for every helper, and the one none of the others keeps.

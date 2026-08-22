@@ -18,6 +18,8 @@
  * @packageDocumentation
  */
 
+import { prefersReducedMotion } from './reduced-motion.js';
+
 /** How the follower eases. */
 export interface ScrollFollowerConfig {
 	/**
@@ -37,9 +39,13 @@ export interface ScrollFollowerConfig {
 	/**
 	 * Skip the animation and jump.
 	 *
-	 * Pass the user's `prefers-reduced-motion` preference. Skipping the animation
-	 * must never skip the outcome — the follower still lands at the bottom, it
-	 * simply gets there in one step.
+	 * Defaults to the user's `prefers-reduced-motion` setting, read at the moment
+	 * `follow()` is called rather than cached, so a preference changed mid-session
+	 * takes effect. Pass it explicitly only to override — a test pinning one
+	 * branch, or a caller that already holds the value in a store.
+	 *
+	 * Skipping the animation must never skip the outcome: the follower still
+	 * lands at the bottom, it simply gets there in one step.
 	 */
 	readonly reducedMotion?: boolean;
 }
@@ -132,7 +138,7 @@ export function createScrollFollower(
 
 	return {
 		follow(): void {
-			if (config.reducedMotion) {
+			if (config.reducedMotion ?? prefersReducedMotion()) {
 				settle();
 				return;
 			}

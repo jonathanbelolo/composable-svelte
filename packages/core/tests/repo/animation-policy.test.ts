@@ -251,7 +251,26 @@ const RAW_TRANSITION = /(^|[\s;{:])transition(-property|-duration|-timing-functi
  * which left `animation-name: slideIn; animation-duration: .2s;` fully compliant
  * with the guard and a flat violation of the policy.
  */
-const RAW_ANIMATION = /(^|[\s;{])animation(-name|-duration)?\s*:/;
+const RAW_ANIMATION = /(^|[\s;{:'"`])animation(-name|-duration)?\s*[:=]/;
+/**
+ * `tailwindcss-animate`'s enter/exit utilities.
+ *
+ * `animate-in`, `animate-out` and the `fade-in-*` / `zoom-in-*` / `slide-in-*`
+ * modifiers that configure them are one-shot lifecycle animations wearing
+ * Tailwind's clothes — exactly what the rule above prohibits, and exactly what
+ * shadcn-svelte ships by default. Nothing in this file matched `animate-*`, so
+ * the single most likely way for a prohibited animation to arrive in a package
+ * built on 77 shadcn components was invisible.
+ *
+ * `animate-spin`, `animate-pulse`, `animate-bounce` and `animate-ping` are the
+ * infinite ones and are legal, so only the enter/exit pair is matched.
+ *
+ * The `fade-in-0` / `zoom-in-95` / `slide-in-from-top-2` modifiers are
+ * deliberately **not** matched. They configure `animate-in` and do nothing on
+ * their own, so catching the trigger is sufficient — and matching them cost a
+ * false positive immediately: `cursor: zoom-in` is a CSS value, not a class.
+ */
+const TAILWIND_ANIMATION = /(?:^|[\s'"`:])animate-(?:in|out)(?![-\w])/;
 /**
  * Svelte's own transitions. Prohibited for the same reason as CSS ones — the
  * store cannot see them — and previously invisible: `in:`, `out:` and `animate:`
@@ -302,7 +321,7 @@ function scan(file: string): Violation[] {
 		}
 
 		const isSvelte = SVELTE_TRANSITION.test(line);
-		const isTailwind = TAILWIND_TRANSITION.test(line);
+		const isTailwind = TAILWIND_TRANSITION.test(line) || TAILWIND_ANIMATION.test(line);
 		const isRaw = RAW_TRANSITION.test(line);
 		const isAnimation = RAW_ANIMATION.test(line);
 		if (!isSvelte && !isTailwind && !isRaw && !isAnimation) continue;
@@ -408,13 +427,15 @@ const BACKLOG = new Set([
 	// form named two lines, and a later commit in the same batch deleted 28 lines
 	// above one of them, leaving the sole recorded justification for an exemption
 	// pointing past end-of-file.
-	// Converting them to Motion One today would delete the sole accessibility
-	// guard, because no helper in `animate.ts` consults the preference yet.
+	// The capability they were waiting for now exists: `animateFadeIn` and
+	// `animateFadeOut` read the preference themselves, so converting these no
+	// longer trades an accessibility guard for a policy tick. What is left is the
+	// work, not a blocker — this is the last stated reason these two are listed,
+	// and it has changed from "cannot" to "not yet".
 	//
 	// They do not qualify for the Register either: its criteria require freedom
 	// from any mount/unmount lifecycle, which is exactly what these are. The
-	// Register grants properties; the backlog grants time, and time is what these
-	// need — until the reduced-motion capability exists.
+	// Register grants properties; the backlog grants time.
 	'media/src/lib/voice-input/components/ConversationModePanel.svelte',
 	'media/src/lib/voice-input/components/PushToTalkPanel.svelte',
 ]);
@@ -507,6 +528,45 @@ describe('animation policy', () => {
 			false
 		);
 		expect(covers('transition: all 0.2s'), 'all is never grantable').toBe(false);
+	});
+
+	it('sees an animation hidden in an attribute or a Tailwind class', () => {
+		// Six spellings a hostile review found the scanner blind to. None was live
+		// — which is the only reason this is a test rather than a backlog entry —
+		// but `animate-in` is what shadcn-svelte ships by default, in a repo with
+		// 77 shadcn components, so it was the most likely way for a prohibited
+		// animation to arrive unseen.
+		const hidden = [
+			'<div style="animation: slideIn 0.3s ease-out"></div>',
+			'<svelte:element this={tag} style="animation: pop 0.2s" />',
+			'<div style:animation="pop 0.2s forwards"></div>',
+			'<div class="animate-in fade-in-0 zoom-in-95"></div>',
+			'<div class="data-[state=open]:animate-in"></div>'
+		];
+
+		for (const line of hidden) {
+			expect(
+				RAW_ANIMATION.test(line) || TAILWIND_ANIMATION.test(line),
+				`not detected: ${line}`
+			).toBe(true);
+		}
+	});
+
+	it('leaves the infinite Tailwind animations and lookalike CSS values alone', () => {
+		// The paired half. A detector that flags `animate-spin` would be turned
+		// off, and one that flags `cursor: zoom-in` was — that exact false
+		// positive appeared the first time this was widened.
+		const legal = [
+			'<div class="animate-spin"></div>',
+			'<div class="animate-pulse rounded"></div>',
+			'<div class="animate-bounce"></div>',
+			'\t\tcursor: zoom-in;',
+			'\t\tcursor: zoom-out;'
+		];
+
+		for (const line of legal) {
+			expect(TAILWIND_ANIMATION.test(line), `false positive: ${line}`).toBe(false);
+		}
 	});
 
 	it('strips comments without eating code', () => {

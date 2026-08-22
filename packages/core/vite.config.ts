@@ -44,6 +44,8 @@ export default defineConfig({
       // Reads every package's dist from disk; same reason.
       'tests/repo/side-effects.test.ts',
       'tests/repo/animation-policy.test.ts',
+      'tests/repo/dist-freshness.test.ts',
+      'tests/repo/peer-ranges.test.ts',
       // Needs the Cookie request header, which the browser Request API refuses
       // to expose; runs under vitest.node.config.ts instead.
       'tests/i18n/ssr.test.ts'

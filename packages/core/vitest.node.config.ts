@@ -46,6 +46,8 @@ export default defineConfig({
       'tests/repo/check-coverage.test.ts',
       'tests/repo/side-effects.test.ts',
       'tests/repo/animation-policy.test.ts',
+      'tests/repo/dist-freshness.test.ts',
+      'tests/repo/peer-ranges.test.ts',
       'tests/styles/**/*.test.ts',
       'tests/i18n/ssr.test.ts'
     ],

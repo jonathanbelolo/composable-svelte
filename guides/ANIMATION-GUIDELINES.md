@@ -86,9 +86,11 @@ the 31 helpers in `animate.ts` consult the user's preference** — `animateFadeI
 `animateFadeOut` and `animateListItemIn`, all written after this rule was.
 Modal, sheet, drawer, alert, tooltip, toast, dropdown, popover, sidebar, stack,
 accordion and chevron still run at full amplitude regardless. Outside that file,
-`createScrollFollower` honours it too. The rest of the honouring that exists is
-five CSS `@media (prefers-reduced-motion: reduce)` blocks in `media/`, and two of
-those guard one-shot `@keyframes` that the rule above orders converted.
+`createScrollFollower` honours it too, and `ImageGallery.svelte:197` reads it
+into the store so its reducer can branch. The rest of the honouring that exists
+is five CSS `@media (prefers-reduced-motion: reduce)` blocks in `media/`, and two
+of those guard one-shot `@keyframes` that the rule above orders converted — no
+longer blocked, now that a compliant fade exists to convert them to.
 
 Note the asymmetry the three compliant helpers encode, because it is the part
 that is easy to get wrong: an entrance may return early only when the element's
@@ -332,17 +334,27 @@ defect. It shrinks to empty and is then deleted.
 ## Available animation helpers
 
 `packages/core/src/lib/animation/animate.ts`, re-exported from
-`@composable-svelte/core/animation`. All 27 `animate*` helpers are `async`, return
-`Promise<void>`, and swallow their own errors after `console.error`. Most also
-restore the end state inline on failure — `animateBackdropIn`/`Out` and
-`animateTooltipOut` do not, which is a gap, not a pattern to copy.
+`@composable-svelte/core/animation`. All 31 `animate*` helpers are `async`, return
+`Promise<void>`, and never reject — a failure is logged and the end state set
+inline. Most also restore the end state inline on failure — `animateBackdropIn`/
+`Out` and `animateTooltipOut` do not, which is a gap, not a pattern to copy.
+
+**Never rejecting is not the same as always resolving.** An interrupted Motion
+One `.finished` never settles, so a helper whose animation is superseded returns
+a promise that stays pending for the life of the page. Call sites that can be
+interrupted use `void`, never `await`, and nothing sequences on one.
 
 The module additionally re-exports Motion One's own `animate` (`animate.ts:15`).
 That one is **not** async, returns `AnimationPlaybackControls`, and swallows
 nothing — it is what `Switch.svelte` uses for a one-property tween.
 
+Three of the 31 read `prefers-reduced-motion` themselves, marked ♿ below. The
+rest do not; see the rule above.
+
 | Helper | Notes |
 |---|---|
+| `animateFadeIn` / `animateFadeOut` | ♿ generic opacity; takes `FadeOptions` (`duration`, seconds), not a spring. `duration: 0` shows instantly *through* a running fade, which an inline `style.opacity` cannot |
+| `animateListItemIn` | ♿ an item appearing in a list; owns its start values so the resting state is visible |
 | `animateModalIn` / `animateModalOut` | |
 | `animateBackdropIn` / `animateBackdropOut` | no `springConfig` |
 | `animateSheetIn` / `animateSheetOut` | takes `side` |
@@ -369,6 +381,17 @@ Follow the existing shape: optional `springConfig`, resolve against a preset,
 `await motionAnimate(...).finished`, and `catch` by setting the end state inline
 so a failed animation still leaves the element correct. Export from
 `animation/index.ts`.
+
+Two deliberate departures, where the existing shape is the wrong one:
+
+- **A duration, not a spring**, when the helper replaces a CSS transition whose
+  feel is a duration — the accordion pair and the fades. `FadeOptions` is the
+  only options object in the file for that reason; a spring preset would be a
+  knob whose units do not match what it replaced.
+- **Read `prefersReducedMotion()`**, and be careful which side needs the write.
+  An entrance whose end state is the element's resting state may return early;
+  an exit may not, because returning early leaves it visible. Skipping the
+  animation must never skip the outcome.
 
 ## Testing an animation
 

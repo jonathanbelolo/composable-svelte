@@ -5,6 +5,56 @@ All notable changes to `@composable-svelte/core` will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] - 2026-08-22
+
+### Added
+
+- `animateFadeIn` / `animateFadeOut` and the `FadeOptions` they take — the
+  generic pair, for something that is not a modal, a toast or a list item. They
+  replace the last two state-driven CSS transitions in `@composable-svelte/chat`:
+  an image preview lifting `opacity` on a `.loaded` class, and a video player's
+  controls lifting it on `.visible`.
+
+  Three things about them are deliberate, and all three were measured rather than
+  designed:
+
+  - **They own the start value.** `opacity: [0, 1]` means the element's resting
+    state in CSS is "visible". Both sites they replace parked their element at
+    `opacity: 0` and lifted it from a client-side handler, so server-rendered
+    HTML — and any client with JavaScript off — showed nothing at all.
+  - **They write their own end state.** Motion commits its final style a frame or
+    two *after* `.finished` resolves: the promise settles with the inline style
+    still empty and the computed value back at the cascade's. For an element that
+    unmounts nobody sees it; for one that stays, it is a visible flash.
+  - **Reduced motion is asymmetric.** `animateFadeIn` cannot simply return early
+    — a previous fade-out may have left the element at zero — and `animateFadeOut`
+    has to write `opacity: 0` itself. Skipping the animation must never skip the
+    outcome.
+
+  An instant show should be `animateFadeIn(element, { duration: 0 })` rather than
+  an inline `style.opacity`: a running Web Animation outranks an inline style, so
+  assigning the style leaves a fade-out in flight to finish anyway.
+
+### Changed
+
+- `createScrollFollower` now reads `prefers-reduced-motion` itself when its
+  `reducedMotion` option is omitted, instead of animating regardless. Callers
+  that already pass the option are unaffected.
+
+### Fixed
+
+- Every sibling package declared `@composable-svelte/core` as an ever-growing
+  `"^0.4.1 || … || ^0.10.0"` list. Each core release appended a minor, which
+  moves the ceiling and never the floor, so packages kept advertising
+  compatibility with versions that lacked the exports they import. The ranges are
+  now exactly the core they are built against, and
+  `tests/repo/peer-ranges.test.ts` keeps them there.
+
+- `tests/repo/dist-freshness.test.ts` fails when a package's `dist/` is older
+  than its `src/`. Cross-package tests resolve through the exports map to built
+  output, so a stale build produced a green suite that said nothing about the
+  code under change — verified in both directions before the guard was written.
+
 ## [0.10.0] - 2026-08-22
 
 ### Added

@@ -648,7 +648,9 @@ fire-and-forget: observable, but not coordinatable.
 
 **Reduced motion is mandatory.** Every animation must be skippable, and skipping
 it must still dispatch the completion event — otherwise a skipped animation is a
-deadlocked state machine. No helper in `animate.ts` honours the preference yet.
+deadlocked state machine. Three helpers in `animate.ts` honour it —
+`animateFadeIn`, `animateFadeOut`, `animateListItemIn` — along with
+`createScrollFollower`. The other 28 do not.
 
 **Atomic (Pattern A) components do not animate their own interaction or value
 states.** The list lives in `guides/ANIMATION-GUIDELINES.md` and is not repeated
