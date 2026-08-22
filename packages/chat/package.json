@@ -1,6 +1,6 @@
 {
   "name": "@composable-svelte/chat",
-  "version": "0.2.4",
+  "version": "0.3.0",
   "description": "Streaming chat component with collaborative features for Composable Svelte - Built for LLM interactions with transport-agnostic design",
   "type": "module",
   "main": "./dist/index.js",
@@ -27,7 +27,8 @@
   "files": [
     "dist",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "svelte-package -o dist",
