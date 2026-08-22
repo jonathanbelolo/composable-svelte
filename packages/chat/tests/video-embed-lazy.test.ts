@@ -26,7 +26,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { mount, unmount, flushSync, tick } from 'svelte';
 import ChatMessage from '../src/lib/streaming-chat/primitives/ChatMessage.svelte';
-import LegacyChatMessage from '../src/lib/streaming-chat/ChatMessage.svelte';
 import {
 	extractVideosFromMarkdown,
 	optionalDependenciesReady
@@ -141,27 +140,5 @@ describe('ChatMessage video rendering', () => {
 		await settle();
 
 		expect(target.querySelector('.chat-message__videos')).toBeNull();
-	});
-
-	it('the legacy copy behaves identically', async () => {
-		// Two near-duplicate components; the register's standing warning is that a
-		// fix lands on one of them. This is the assertion that would catch it.
-		const target = mountMessage(LegacyChatMessage, {
-			message: assistantMessage,
-			isStreaming: false,
-			store: {
-				state: { isWaitingForResponse: false },
-				dispatch: () => {},
-				subscribe: (listener: (s: unknown) => void) => {
-					listener({ isWaitingForResponse: false });
-					return () => {};
-				}
-			}
-		});
-		const iframe = await waitFor(
-			() => target.querySelector('iframe'),
-			'the legacy ChatMessage to render the video'
-		);
-		expect(iframe.getAttribute('src')).toContain('dQw4w9WgXcQ');
 	});
 });

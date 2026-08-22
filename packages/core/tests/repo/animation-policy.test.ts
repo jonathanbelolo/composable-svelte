@@ -384,12 +384,11 @@ function scan(file: string): Violation[] {
  * Delete entries as packages are converted. When this is empty, delete it.
  */
 const BACKLOG = new Set([
-	'chat/src/lib/streaming-chat/ChatMessage.svelte',
-	// These two were never listed because the scanner could not see them: the
-	// `image/*` in their `accept` attribute opened a phantom block comment that
-	// blanked every declaration below it. Listed now that `stripComments` is
-	// quote-aware, and cleared as the chat pass reaches them.
-	'chat/src/lib/streaming-chat/StreamingChat.svelte',
+	// `FullStreamingChat` was never listed because the scanner could not see it:
+	// the `image/*` in its `accept` attribute opened a phantom block comment that
+	// blanked every declaration below. Listed now that `stripComments` is
+	// quote-aware. Its legacy twin carried the same defect and was deleted rather
+	// than cleaned.
 	'chat/src/lib/streaming-chat/variants/FullStreamingChat.svelte',
 	'chat/src/lib/streaming-chat/attachment-components/AttachmentPreviewModal.svelte',
 	'chat/src/lib/streaming-chat/attachment-components/AudioPlayer.svelte',

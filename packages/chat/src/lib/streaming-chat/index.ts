@@ -39,8 +39,6 @@ export {
 	ChatMessageWithActions
 } from './primitives/index.js';
 
-// Legacy export (use FullStreamingChat instead)
-export { default as StreamingChat } from './StreamingChat.svelte';
 
 // Core functionality
 export { streamingChatReducer } from './reducer.js';

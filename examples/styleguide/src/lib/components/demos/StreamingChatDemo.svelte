@@ -239,10 +239,10 @@
 				<pre
 					class="text-sm bg-slate-950 text-slate-50 p-4 rounded-lg overflow-x-auto">{`import { createStore } from '@composable-svelte/core';
 import {
-  StreamingChat,
+  FullStreamingChat,
   streamingChatReducer,
   createInitialStreamingChatState
-} from '@composable-svelte/code';
+} from '@composable-svelte/chat';
 
 // Implement your streaming transport
 const myStreamingTransport = {

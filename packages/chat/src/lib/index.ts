@@ -14,8 +14,6 @@ export {
 	MinimalStreamingChat,
 	StandardStreamingChat,
 	FullStreamingChat,
-	// Legacy
-	StreamingChat,
 	// Primitives
 	SimpleChatMessage,
 	ChatMessage,

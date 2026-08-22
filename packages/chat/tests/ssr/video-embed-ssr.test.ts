@@ -27,7 +27,6 @@
 import { describe, it, expect } from 'vitest';
 import { render } from 'svelte/server';
 import ChatMessage from '../../src/lib/streaming-chat/primitives/ChatMessage.svelte';
-import LegacyChatMessage from '../../src/lib/streaming-chat/ChatMessage.svelte';
 import { optionalDependenciesReady } from '../../src/lib/streaming-chat/markdown.js';
 
 const message = {
@@ -37,14 +36,6 @@ const message = {
 	timestamp: 0
 };
 
-const legacyStore = {
-	state: { isWaitingForResponse: false },
-	dispatch: () => {},
-	subscribe: (listener: (s: unknown) => void) => {
-		listener({ isWaitingForResponse: false });
-		return () => {};
-	}
-};
 
 describe('server-rendered video embeds', () => {
 	it('renders the embed once the process is warm', async () => {
@@ -62,16 +53,6 @@ describe('server-rendered video embeds', () => {
 		);
 		expect(warm.body, 'no iframe in server HTML on a warm render').toContain('<iframe');
 		expect(warm.body).toContain('dQw4w9WgXcQ');
-	});
-
-	it('the legacy copy behaves identically', async () => {
-		render(LegacyChatMessage, { props: { message, isStreaming: false, store: legacyStore } });
-		await optionalDependenciesReady;
-
-		const warm = render(LegacyChatMessage, {
-			props: { message, isStreaming: false, store: legacyStore }
-		});
-		expect(warm.body).toContain('<iframe');
 	});
 
 	it('emits no video block for a streaming message', async () => {
