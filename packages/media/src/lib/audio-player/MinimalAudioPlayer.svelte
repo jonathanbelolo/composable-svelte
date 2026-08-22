@@ -173,6 +173,11 @@
 
 	// Initialize audio manager on mount
 	onMount(() => {
+		// Ask for the user's saved volume and speed. `loadVolume`/`loadSpeed` are
+		// optional dependencies, and this is what makes them reachable — every
+		// change was persisted and nothing ever read it back.
+		store.dispatch({ type: 'restorePreferences' });
+
 		audioManager = getAudioManager(id, {
 			onAction: (action) => {
 				store.dispatch(action);

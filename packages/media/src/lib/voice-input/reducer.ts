@@ -200,8 +200,7 @@ export const voiceInputReducer: Reducer<
 						const audioBlob = await audioManager.stopRecording();
 						dispatch({
 							type: 'audioProcessingComplete',
-							audioBlob,
-							transcript: ''
+							audioBlob
 						});
 					} catch (error) {
 						dispatch({
@@ -487,17 +486,17 @@ export const voiceInputReducer: Reducer<
 					// Stop recording and get audio blob
 					const audioBlob = await audioManager.stopRecording();
 
-					// Send for transcription
-					const transcript = await deps.transcribeAudio(audioBlob);
-
 					// Restart recording immediately
 					audioManager.startRecording();
 
-					// Dispatch completion
+					// Transcription happens in `audioProcessingComplete`, once.
+					// This used to transcribe here as well and pass the result along,
+					// and that case transcribed the same blob again and used *its*
+					// result — two round-trips and two bills per utterance, with the
+					// first answer thrown away.
 					dispatch({
 						type: 'audioProcessingComplete',
-						audioBlob,
-						transcript
+						audioBlob
 					});
 				} catch (error) {
 					dispatch({

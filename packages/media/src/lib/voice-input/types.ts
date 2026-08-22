@@ -72,7 +72,9 @@ export type VoiceInputAction =
 	// Audio processing
 	| { type: 'audioLevelUpdated'; level: number }
 	| { type: 'liveTranscriptUpdated'; text: string }
-	| { type: 'audioProcessingComplete'; audioBlob: Blob; transcript: string }
+	// No `transcript` here: it was written by both dispatch sites and read by
+	// none, because this case does the transcribing.
+	| { type: 'audioProcessingComplete'; audioBlob: Blob }
 	| { type: 'audioProcessingFailed'; error: string }
 	| { type: 'transcriptionCompleted'; transcript: string }
 
@@ -113,23 +115,7 @@ export interface VoiceInputDependencies {
 	 */
 	createAudioManager?: (id: string) => AudioManager;
 
-	/**
-	 * Optional: Streaming transcription for conversation mode.
-	 *
-	 * Opens WebSocket/SSE connection to backend for real-time transcription.
-	 *
-	 * @param audioBlob - Audio chunk to transcribe
-	 * @returns Async iterator yielding transcript updates
-	 */
-	streamTranscription?: (audioBlob: Blob) => AsyncIterator<string>;
 
-	/**
-	 * Optional: Text-to-speech for assistant responses.
-	 *
-	 * @param text - Text to synthesize
-	 * @returns Audio buffer to play
-	 */
-	synthesizeSpeech?: (text: string) => Promise<AudioBuffer>;
 }
 
 /**

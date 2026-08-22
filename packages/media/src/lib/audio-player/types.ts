@@ -122,6 +122,11 @@ export type AudioPlayerAction =
 	| { type: 'seekTo'; time: number }
 
 	// Volume
+	// Ask the injected persistence for the user's saved volume and speed. The
+	// component dispatches this on mount; `loadVolume`/`loadSpeed` existed and
+	// were never called, so preferences were saved and never restored.
+	| { type: 'restorePreferences' }
+	| { type: 'preferencesRestored'; volume?: number; speed?: number }
 	| { type: 'volumeChanged'; volume: number }
 	| { type: 'toggleMute' }
 	| { type: 'volumeUp'; amount?: number }
@@ -159,11 +164,6 @@ export type AudioPlayerAction =
  * Audio player dependencies.
  */
 export interface AudioPlayerDependencies {
-	/**
-	 * Create an HTML audio element.
-	 * Default: () => new Audio()
-	 */
-	createAudioElement?: () => HTMLAudioElement;
 
 	/**
 	 * Clock dependency for time operations.
@@ -210,11 +210,6 @@ export interface AudioPlayerDependencies {
 	 */
 	trackSkip?: (track: AudioTrack) => void;
 
-	/**
-	 * Generate unique ID.
-	 * Default: crypto.randomUUID()
-	 */
-	generateId?: () => string;
 }
 
 /**

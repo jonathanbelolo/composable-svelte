@@ -9,7 +9,8 @@ import { Effect, type EffectType } from '@composable-svelte/core';
 import type {
 	AudioPlayerState,
 	AudioPlayerAction,
-	AudioPlayerDependencies
+	AudioPlayerDependencies,
+	AudioTrack
 } from './types.js';
 import {
 	clamp,
@@ -18,6 +19,33 @@ import {
 	getPreviousTrackIndex
 } from './types.js';
 import { createMockPlaybackEffect, cancelMockPlaybackEffect } from './mock-playback.js';
+
+/**
+ * Report a track skip alongside whatever the delegated transition returned.
+ *
+ * `trackSkip` is about skipping to another *track* — the shipped consumer logs
+ * "Track skipped: {title}" and its declared type takes an `AudioTrack` — not
+ * about seeking within one, which is what I first wired it to. Both `next` and
+ * `previous` delegate to `trackSelected`, so this wraps their result rather than
+ * duplicating that case.
+ */
+function withSkipTracking(
+	result: [AudioPlayerState, EffectType<AudioPlayerAction>],
+	track: AudioTrack | undefined,
+	deps: AudioPlayerDependencies
+): [AudioPlayerState, EffectType<AudioPlayerAction>] {
+	if (!deps.trackSkip || !track) return result;
+
+	return [
+		result[0],
+		Effect.batch(
+			result[1],
+			Effect.fireAndForget<AudioPlayerAction>(async () => {
+				deps.trackSkip!(track);
+			})
+		)
+	];
+}
 
 /**
  * Audio player reducer.
@@ -97,7 +125,11 @@ export function audioPlayerReducer(
 				return [state, Effect.none()];
 			}
 
-			return audioPlayerReducer(state, { type: 'trackSelected', index: nextIndex }, deps);
+			return withSkipTracking(
+				audioPlayerReducer(state, { type: 'trackSelected', index: nextIndex }, deps),
+				state.playlist[nextIndex],
+				deps
+			);
 		}
 
 		case 'previous': {
@@ -124,7 +156,11 @@ export function audioPlayerReducer(
 				return [state, Effect.none()];
 			}
 
-			return audioPlayerReducer(state, { type: 'trackSelected', index: prevIndex }, deps);
+			return withSkipTracking(
+				audioPlayerReducer(state, { type: 'trackSelected', index: prevIndex }, deps),
+				state.playlist[prevIndex],
+				deps
+			);
 		}
 
 		case 'skipForward': {
@@ -212,6 +248,41 @@ export function audioPlayerReducer(
 		}
 
 		// ==================== Volume ====================
+
+		case 'restorePreferences': {
+			if (!deps.loadVolume && !deps.loadSpeed) {
+				return [state, Effect.none()];
+			}
+
+			return [
+				state,
+				Effect.run<AudioPlayerAction>(async (dispatch) => {
+					const volume = deps.loadVolume?.();
+					const speed = deps.loadSpeed?.();
+					dispatch({
+						type: 'preferencesRestored',
+						...(volume === undefined ? {} : { volume }),
+						...(speed === undefined ? {} : { speed })
+					});
+				})
+			];
+		}
+
+		case 'preferencesRestored': {
+			// Both are optional: a consumer may persist one and not the other, and a
+			// missing value must leave the default alone rather than reset it.
+			// `clamp` because this comes back from storage the user can edit.
+			return [
+				{
+					...state,
+					volume: action.volume === undefined ? state.volume : clamp(action.volume, 0, 1),
+					previousVolume:
+						action.volume === undefined ? state.previousVolume : clamp(action.volume, 0, 1),
+					playbackSpeed: action.speed === undefined ? state.playbackSpeed : action.speed
+				},
+				Effect.none()
+			];
+		}
 
 		case 'volumeChanged': {
 			const volume = clamp(action.volume, 0, 1);
