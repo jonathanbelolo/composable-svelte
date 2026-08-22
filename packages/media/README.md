@@ -109,7 +109,7 @@ const manager = getAudioManager('player-1');
 
 ### VideoEmbed
 
-Responsive video embedding with automatic platform detection. Supports YouTube, Vimeo, Twitch, and generic video URLs.
+Responsive video embedding with automatic platform detection. Supports YouTube, Vimeo and Twitch.
 
 ```svelte
 <script lang="ts">

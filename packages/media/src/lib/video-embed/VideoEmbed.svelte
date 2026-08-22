@@ -1,5 +1,7 @@
 <script lang="ts">
 	import type { VideoEmbed as VideoEmbedType } from './types.js';
+	import { getPlatformConfig } from './video-detection.js';
+	import type { VideoPlatform } from './types.js';
 
 	/**
 	 * VideoEmbed Component
@@ -31,9 +33,6 @@
 	let {
 		video,
 		class: className = '',
-		// Currently inert: detectVideo and extractVideosFromMarkdown both call
-		// buildEmbedUrl with no options, so nothing reaches the embed URL. Kept
-		// because removing a public prop is breaking; filed separately.
 		autoplay = false,
 		showTitle = false
 	}: Props = $props();
@@ -54,21 +53,36 @@
 		}
 	});
 
+	// The embed URL, rebuilt when a prop needs to change it.
+	//
+	// `video.embedUrl` is produced by the extractors, which call `buildEmbedUrl`
+	// with no options — so nothing in `EmbedOptions` could ever reach it and this
+	// component's `autoplay` prop was inert. It rebuilds from the same platform
+	// config the extractor used, and falls back to the supplied URL for a video
+	// constructed by hand or from a platform with no registry entry.
+	const embedUrl = $derived.by(() => {
+		if (!autoplay) return video.embedUrl;
+		const config = getPlatformConfig(video.platform);
+		return config?.buildEmbedUrl(video.videoId, { autoplay: true }) ?? video.embedUrl;
+	});
+
 	// Build iframe allow attribute
 	const iframeAllow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
 
-	// Get platform display name
+	// Get platform display name.
+	//
+	// Typed as a total map over `VideoPlatform` rather than `Record<string, …>`,
+	// so adding a platform to the union without a name here is a compile error
+	// instead of a silent fallback to "Video". The four names removed alongside
+	// this — Twitter, TikTok, Dailymotion, generic — were for platforms the
+	// extractor has no registry entry for and can never produce.
 	const platformName = $derived(() => {
-		const names: Record<string, string> = {
+		const names: Record<VideoPlatform, string> = {
 			youtube: 'YouTube',
 			vimeo: 'Vimeo',
-			twitch: 'Twitch',
-			twitter: 'Twitter',
-			tiktok: 'TikTok',
-			dailymotion: 'Dailymotion',
-			generic: 'Video'
+			twitch: 'Twitch'
 		};
-		return names[video.platform] || 'Video';
+		return names[video.platform] ?? 'Video';
 	});
 </script>
 
@@ -81,7 +95,7 @@
 
 	<div class="video-embed__container" style="padding-bottom: {aspectRatioPadding()};">
 		<iframe
-			src={video.embedUrl}
+			src={embedUrl}
 			title={video.title || `${platformName()} video player`}
 			class="video-embed__iframe"
 			frameborder="0"

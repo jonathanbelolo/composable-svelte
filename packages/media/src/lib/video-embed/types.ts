@@ -8,14 +8,16 @@
 /**
  * Supported video platforms
  */
-export type VideoPlatform =
-	| 'youtube'
-	| 'vimeo'
-	| 'twitch'
-	| 'twitter'
-	| 'tiktok'
-	| 'dailymotion'
-	| 'generic';
+/**
+ * The platforms this package can actually detect and embed.
+ *
+ * Exactly the keys of the registry in `video-detection.ts`. It previously also
+ * named `twitter`, `tiktok`, `dailymotion` and `generic`, none of which had a
+ * registry entry — so nothing could ever produce them, `getPlatformConfig`
+ * returned `undefined` for all four while typechecking clean, and the README
+ * advertised generic-URL support that does not exist.
+ */
+export type VideoPlatform = 'youtube' | 'vimeo' | 'twitch';
 
 /**
  * Aspect ratio presets for video containers
@@ -44,8 +46,6 @@ export interface VideoEmbed {
 	/** Platform-specific embed URL */
 	embedUrl: string;
 
-	/** Optional start time in seconds */
-	startTime?: number;
 }
 
 /**
