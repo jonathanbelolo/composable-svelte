@@ -32,7 +32,7 @@ gained the behaviour the rest of it was already advertising.
   variants and `primitives/ChatMessage.svelte`. A single fix had already had to
   land in both copies once.
 - **`ImagePreview`'s `class:loaded`**, with the last rule that used it.
-- Roughly ten unused `CleanupTracker` members and several write-only timestamps.
+- Four unused `CleanupTracker` methods, and several write-only timestamps.
 
 ### Changed — breaking
 
@@ -107,11 +107,70 @@ gained the behaviour the rest of it was already advertising.
 
 ### Animation
 
-The package has **zero** CSS lifecycle animations, down from 19 recorded
-violations. Everything that appears, disappears, expands or collapses uses a
+The package has **zero** CSS lifecycle animations, down from 47 across 21 files
+when this pass began. Everything that appears, disappears, expands or collapses uses a
 Motion One helper from `@composable-svelte/core/animation`, so the store can
 sequence on it and a test can observe it. The attachment preview and the reaction
 picker carry a real `PresentationState` and animate both halves.
+
+### Removed — a second pass
+
+An acceptance sweep against the same rule found more, after 0.3.0's notes above
+were first written:
+
+- **`CollaborativeDependencies.generateId` and `generateUserColor`.** Both were
+  resolved at the top of the reducer and referenced nowhere else: nothing there
+  mints an id or a colour, because `userJoined` is handed a complete user.
+- **`createFileDataURL` and `hasMarkdownSyntax`** — no callers, no documentation,
+  no barrel entry between them.
+- **`AttachmentGallery`'s `layout`/`maxColumns` are live rather than removed**:
+  both call sites hard-coded `list`, so the grid was unreachable. More than one
+  image now lays out as a grid.
+
+### Fixed — a second pass
+
+- **Editing a message duplicated it**, and so did regenerating a reply. Both
+  rebuilt the list keeping the user's message and then dispatched `sendMessage`,
+  which appends one unconditionally. Neither action had a test.
+- **Every PDF opened blank.** `renderPage` ran before the `<canvas>` existed and
+  returned at its own guard, and nothing re-triggered it; the page appeared only
+  after the reader pressed a control.
+- **Upload progress could not reach the state.** The progress action only wrote
+  to an attachment already marked `'uploading'`, and nothing ever marked one — so
+  every value `onProgress` produced was discarded. Attachments are marked before
+  the message is appended, and the gallery renders a `role="progressbar"` and an
+  upload-failure notice, which is the first UI this feature has had.
+- **Escape could not close the reaction picker**: the handler sat on an element
+  nothing focused, while the control that opens it keeps focus.
+- **`usePresenceTracking` and `useHeartbeat` transmitted nothing.** Both
+  dispatched actions whose reducer cases returned no effect. A change to your own
+  presence, and your own heartbeat, now go out over the socket.
+- **A failed video stayed failed** across an attachment swap, and a rejected
+  `play()` is now a transient notice rather than either a permanent dead-end or
+  silence.
+- **`ImagePreview` left an enabled, empty, focusable fullscreen button** behind
+  its error card, and its wrapper button matched no CSS rule at all — so every
+  image rendered inside default browser button chrome.
+- **`ActionButtons` was invisible and clickable**, and revealed on `:hover` only,
+  so a keyboard user could never see it.
+- **`CleanupTracker.resourceCount` reported `0`** for a tracker holding live
+  timers — wrong in the reassuring direction, for a getter whose only use is
+  checking that nothing leaked.
+- **```rb and ```yml** resolved to Prism languages that were never loaded.
+- **`TypingIndicator`** required `id` and `color` and read neither, and
+  duplicated `formatTypingIndicator` with different punctuation.
+
+### Changed — a second pass
+
+- **`@composable-svelte/chat/streaming-chat` resolves.** It was documented in
+  three places and the wildcard export turned it into a file that has never
+  existed.
+- **`createAttachmentFromFile` is exported** — the one helper needed to build a
+  `MessageAttachment` for the documented `addAttachment` action.
+- **`formatTypingIndicator` no longer appends "…"**, because the indicator that
+  renders it draws animated dots.
+- **The optional peers on `code` and `media` are `^0.2.0`**, not an accumulated
+  `||` list.
 
 ### Known gaps
 

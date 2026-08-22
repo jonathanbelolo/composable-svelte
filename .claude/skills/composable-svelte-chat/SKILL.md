@@ -570,9 +570,8 @@ type; there is no `pendingActions` or `syncState` on the state.
 ```
 
 `PresenceList` renders a relative "last seen" label for users who are not
-`active`, using core's `createIntlFormatters()`. Its `User` shape accepts an
-optional `lastSeen` timestamp, which `getActiveUsers` does not currently carry
-through — pass the users yourself if you want the label.
+`active`, using core's `createIntlFormatters()`. `getActiveUsers` carries
+`lastSeen` through, so feeding it straight from that selector shows the label.
 
 ### Typing Indicators
 
@@ -864,7 +863,9 @@ const store = createStore({
 `createMockStreamingChat()` takes no configuration. It streams a canned markdown
 response word by word — 300ms lead-in, 50ms between words — honours the
 `AbortController` it returns, and picks an image-gallery or video-embed response
-when the message mentions images or videos.
+when the message mentions images or videos. It supplies no `uploadFile`, so
+attachments keep their local URLs under it, and its delays make it unsuitable
+for a `TestStore` (see StreamingChat Testing above).
 
 ---
 
@@ -915,18 +916,27 @@ when the message mentions images or videos.
 
 ### StreamingChat Testing
 
+**Do not use `createMockStreamingChat()` here.** It fakes a realistic reply — a
+300ms lead-in, then a word every 50ms, forty-odd words — while `receive` times
+out after one second and `finish()` refuses to pass with any dispatched action
+unasserted. A one-chunk fake is what a reducer test wants; the mock is for demos
+and component tests, where the delays are the point.
+
 ```typescript
 import { TestStore } from '@composable-svelte/core/test';
-import {
-  streamingChatReducer,
-  createInitialStreamingChatState,
-  createMockStreamingChat
-} from '@composable-svelte/chat';
+import { streamingChatReducer, createInitialStreamingChatState } from '@composable-svelte/chat';
 
 const store = new TestStore({
   initialState: createInitialStreamingChatState(),
   reducer: streamingChatReducer,
-  dependencies: createMockStreamingChat()
+  dependencies: {
+    streamMessage: (_message, onChunk, onComplete) => {
+      onChunk('Hi');
+      onComplete();
+    },
+    generateId: () => 'm1',
+    getTimestamp: () => 0
+  }
 });
 
 // Test message send
@@ -1079,10 +1089,14 @@ All exports from `@composable-svelte/chat`:
 
 ### Collaborative Hooks
 
-- `usePresenceTracking(store, userId)` - Activity-driven presence; returns cleanup
+- `usePresenceTracking(store, userId)` - Activity-driven presence, broadcast over
+  the socket; returns cleanup. Reports `active`/`idle`/`away`, never `offline` —
+  that is a disconnect, not an idle timer.
 - `useTypingEmitter(store, target, messageId?)` - Returns `{ start, stop, update, cleanup }`
 - `useCursorTracking(store, element, throttleMs = 100)` - Returns cleanup
-- `useHeartbeat(store, userId, intervalMs = 30000)` - Returns cleanup
+- `useHeartbeat(store, userId, intervalMs = 30000)` - Periodic keep-alive frame,
+  so a server that drops idle connections does not drop a quiet one; returns
+  cleanup
 
 ### Helper Functions
 
@@ -1129,10 +1143,14 @@ All exports from `@composable-svelte/chat`:
 Not re-exported from the package root:
 
 - `ActionButtons`, `ChatMessageWithActions` - components
-- `detectFileType`, `extractFileMetadata`, `formatFileSize`, `validateFileSize`,
-  `validateFileType`, `createFileDataURL`, `createFileBlobURL`,
+- `createAttachmentFromFile`, `detectFileType`, `extractFileMetadata`,
+  `formatFileSize`, `validateFileSize`, `validateFileType`, `createFileBlobURL`,
   `revokeFileBlobURL`, `getFileExtension`, `getFileTypeIcon` - file utilities
 
-Markdown helpers (`renderMarkdown`, `hasMarkdownSyntax`,
-`extractImagesFromMarkdown`, `extractVideosFromMarkdown`, `attachCopyButtons`)
-live at `@composable-svelte/chat/streaming-chat/markdown`.
+`ActionButtons` must be rendered inside a `ChatMessage`, through its
+`headerActions` snippet: the buttons stay hidden until the surrounding
+`.chat-message` is hovered or holds focus.
+
+Markdown helpers (`renderMarkdown`, `extractImagesFromMarkdown`,
+`extractVideosFromMarkdown`, `attachCopyButtons`) live at
+`@composable-svelte/chat/streaming-chat/markdown`.

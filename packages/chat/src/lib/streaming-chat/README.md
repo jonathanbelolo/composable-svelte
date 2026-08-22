@@ -439,22 +439,29 @@ send them from a component.
 
 ## Testing
 
-Use the mock implementation for testing:
+**Do not drive a `TestStore` with `createMockStreamingChat()`.** It fakes a
+realistic reply — a 300ms lead-in, then a word every 50ms, forty-odd words — and
+`TestStore` is exhaustive: `receive` gives up after one second, and `finish()`
+refuses to pass while any dispatched action is unasserted. A one-chunk fake is
+what a reducer test wants.
 
 ```typescript
 import { createTestStore } from '@composable-svelte/core/test';
-import {
-  streamingChatReducer,
-  createInitialStreamingChatState,
-  createMockStreamingChat
-} from '@composable-svelte/chat';
+import { streamingChatReducer, createInitialStreamingChatState } from '@composable-svelte/chat';
 
 describe('StreamingChat', () => {
-  it('sends message and receives streaming response', async () => {
+  it('sends a message and receives the reply', async () => {
     const store = createTestStore({
       initialState: createInitialStreamingChatState(),
       reducer: streamingChatReducer,
-      dependencies: createMockStreamingChat()
+      dependencies: {
+        streamMessage: (_message, onChunk, onComplete) => {
+          onChunk('Hi');
+          onComplete();
+        },
+        generateId: () => 'm1',
+        getTimestamp: () => 0
+      }
     });
 
     await store.send({ type: 'sendMessage', message: 'Hello' }, (state) => {
@@ -463,12 +470,10 @@ describe('StreamingChat', () => {
       expect(state.isWaitingForResponse).toBe(true);
     });
 
-    // Receive chunks
-    await store.receive({ type: 'chunkReceived' }, (state) => {
+    await store.receive({ type: 'chunkReceived', chunk: 'Hi' }, (state) => {
       expect(state.currentStreaming).not.toBeNull();
     });
 
-    // Stream completes
     await store.receive({ type: 'streamComplete' }, (state) => {
       expect(state.messages).toHaveLength(2);
       expect(state.currentStreaming).toBeNull();
@@ -479,9 +484,10 @@ describe('StreamingChat', () => {
 });
 ```
 
-`createMockStreamingChat()` takes no configuration. It streams a canned markdown
-response word by word, with a 300ms lead-in and 50ms between words, and honours
-the `AbortController` it returns.
+`createMockStreamingChat()` takes no configuration and is for demos and
+component tests, where the delays are the point. It supplies `streamMessage`,
+`generateId` and `getTimestamp` — no `uploadFile`, so attachments keep their
+local URLs under it — and honours the `AbortController` it returns.
 
 ## Styling
 

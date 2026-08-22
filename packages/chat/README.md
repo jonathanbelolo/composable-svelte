@@ -6,7 +6,7 @@ Streaming chat components with collaborative features for Composable Svelte. Bui
 
 - **Transport-agnostic** - Bring your own streaming backend (WebSocket, SSE, REST, etc.)
 - **Three UI tiers** - Minimal, Standard, and Full chat variants for different complexity needs
-- **Markdown rendering** - Built-in markdown support with code highlighting via marked
+- **Markdown rendering** - via `marked`, with optional Prism syntax highlighting
 - **File attachments** - Attach images, documents, and media to messages
 - **Message reactions** - Emoji reactions on messages
 - **Message editing** - Edit and delete sent messages
@@ -32,7 +32,7 @@ pnpm add @composable-svelte/core svelte
 
 ```bash
 pnpm add @composable-svelte/code   # Code block syntax highlighting
-pnpm add @composable-svelte/media  # Audio/video embeds in messages
+pnpm add @composable-svelte/media  # YouTube/Vimeo embeds detected in markdown
 pnpm add prismjs                   # Prism.js syntax highlighting
 pnpm add pdfjs-dist                # PDF attachment previews
 ```
@@ -122,27 +122,49 @@ message, not from a prop:
 <ChatMessage message={msg} userLabel="You" assistantLabel="Assistant" />
 ```
 
-`ChatMessage` renders markdown, attachments, reactions and video embeds;
-`SimpleChatMessage` renders text and a timestamp.
+`ChatMessage` renders markdown, attachments, reactions, image galleries and
+video embeds. `SimpleChatMessage` renders markdown for assistant messages too,
+with copy buttons on code blocks — it leaves out the attachment, reaction and
+embed machinery, not the formatting.
 
 ## Collaborative Features
 
-For multi-user chat with real-time presence:
+**Collaboration is a second store.** `collaborativeReducer` has its own state —
+`CollaborativeStreamingChatState` does not extend `StreamingChatState`, and the
+chat store has no `users` field. Build both and let each do its own job.
 
 ```svelte
 <script lang="ts">
+  import { createStore } from '@composable-svelte/core';
   import {
+    collaborativeReducer,
+    createInitialCollaborativeState,
     PresenceAvatarStack,
     TypingIndicator,
     getActiveUsers,
     getTypingUsers
   } from '@composable-svelte/chat';
 
+  const currentUserId = 'me';
+
+  const collabStore = createStore({
+    initialState: createInitialCollaborativeState(),
+    reducer: collaborativeReducer,
+    dependencies: {
+      connectWebSocket: (conversationId, userId, onMessage, onConnectionChange) => {
+        // See "Supplying the connection" below.
+      },
+      sendWebSocketMessage: async (message) => {
+        /* send it */
+      }
+    }
+  });
+
   // Users live in one flat Map — there is no `presence` sub-object. Both
   // selectors take your own id and leave you out, so nobody is shown their own
   // presence dot or told that they are typing.
-  const online = $derived(getActiveUsers($store.users, currentUserId));
-  const typing = $derived(getTypingUsers($store.users, currentUserId, 'message'));
+  const online = $derived(getActiveUsers($collabStore.users, currentUserId));
+  const typing = $derived(getTypingUsers($collabStore.users, currentUserId, 'message'));
 </script>
 
 <PresenceAvatarStack users={online} />
@@ -166,14 +188,14 @@ visible rather than shown on hover.
   // Returns its own teardown, which is what an effect wants returned.
   $effect(() => {
     if (!inputElement) return;
-    return useCursorTracking(store, inputElement);
+    return useCursorTracking(collabStore, inputElement);
   });
 </script>
 
 <input type="text" bind:this={inputElement} bind:value={draft} />
 {#if inputElement}
   <CursorOverlay {inputElement} text={draft}
-    cursors={getCursorPositions($store.users, currentUserId)} />
+    cursors={getCursorPositions($collabStore.users, currentUserId)} />
 {/if}
 ```
 
@@ -181,12 +203,14 @@ visible rather than shown on hover.
 
 ### Collaborative Hooks
 
-| Hook | Purpose |
-|------|---------|
-| `usePresenceTracking` | Track user online/offline/idle status |
-| `useTypingEmitter` | Broadcast typing start/stop events |
-| `useCursorTracking` | Share cursor position in real-time |
-| `useHeartbeat` | Keep-alive pings for connection health |
+Each takes the **collaborative** store and returns its own teardown.
+
+| Hook | Signature | Purpose |
+|------|-----------|---------|
+| `usePresenceTracking` | `(store, userId)` | Watches activity and broadcasts `active` / `idle` / `away`. It never reports `offline` — that is a disconnect, not an idle timer. |
+| `useTypingEmitter` | `(store, target, messageId?)` | Returns `{ start, stop, update, cleanup }` rather than a bare teardown |
+| `useCursorTracking` | `(store, element, throttleMs?)` | Shares the caret position in `element` |
+| `useHeartbeat` | `(store, userId, intervalMs?)` | Periodic keep-alive so a server that drops idle connections does not drop a quiet one |
 
 ### Supplying the connection
 
@@ -206,9 +230,10 @@ dependencies: {
 }
 ```
 
-Returning nothing is allowed but means nothing is ever closed. Reports made from
-inside a cleanup are ignored, so a socket's `onclose` cannot overwrite the state
-of the connection that replaced it.
+The return type is `() => void`, not optional: a cleanup is required on every
+path, including the failure path, because the store is what runs it. Reports made
+from inside a cleanup are ignored, so a socket's `onclose` cannot overwrite the
+state of the connection that replaced it.
 
 ## State Management
 
@@ -334,8 +359,15 @@ await store.send({ type: 'sendMessage', message: 'Hello' }, (state) => {
 });
 ```
 
-`createMockStreamingChat()` supplies a complete set of dependencies that fakes a
-streamed reply, for demos and for tests that do not care about the transport.
+`createMockStreamingChat()` supplies `streamMessage`, `generateId` and
+`getTimestamp`, faking a streamed reply — for demos and for tests that do not
+care about the transport. It supplies no `uploadFile`, so attachments keep their
+local URLs under it.
+
+It fakes a *slow* reply, several seconds long. `TestStore.receive` times out
+after one second and `finish()` refuses any unasserted action, so a `TestStore`
+driven by this mock needs its own `streamMessage` — like the one above — rather
+than this.
 
 ## API Reference
 
@@ -382,6 +414,7 @@ their own presence dot, told that they are typing, or given their own caret.
 
 ## Dependencies
 
-- **Runtime**: [marked](https://github.com/markedjs/marked) (markdown parsing)
+- **Runtime**: [marked](https://github.com/markedjs/marked) (markdown parsing),
+  [isomorphic-dompurify](https://github.com/kkomelin/isomorphic-dompurify) (sanitising it)
 - **Peer**: `@composable-svelte/core`, `svelte`
 - **Optional**: `@composable-svelte/code`, `@composable-svelte/media`, `prismjs`, `pdfjs-dist`
