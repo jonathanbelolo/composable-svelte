@@ -50,6 +50,31 @@ function withSkipTracking(
 /**
  * Audio player reducer.
  */
+/** Playback-rate bounds. Shared so the restore path cannot drift from `speedChanged`. */
+const MIN_SPEED = 0.25;
+const MAX_SPEED = 2.0;
+
+/**
+ * Call a preference loader without letting it break the other one.
+ *
+ * Returns `undefined` both when the loader is absent and when it throws, which
+ * are the same thing downstream: leave the default alone.
+ */
+function read(load: (() => number | undefined) | undefined): number | undefined {
+	if (!load) return undefined;
+	try {
+		return load();
+	} catch {
+		return undefined;
+	}
+}
+
+/** Clamp a restored preference, treating a missing or non-finite value as absent. */
+function sanitise(value: number | undefined, fallback: number, min: number, max: number): number {
+	if (value === undefined || !Number.isFinite(value)) return fallback;
+	return clamp(value, min, max);
+}
+
 export function audioPlayerReducer(
 	state: AudioPlayerState,
 	action: AudioPlayerAction,
@@ -67,7 +92,7 @@ export function audioPlayerReducer(
 				{
 					...state,
 					isPlaying: true,
-					
+
 					
 					error: null
 				},
@@ -102,7 +127,7 @@ export function audioPlayerReducer(
 				{
 					...state,
 					isPlaying: false,
-					
+
 					
 					currentTime: 0,
 					seekPosition: null
@@ -256,8 +281,13 @@ export function audioPlayerReducer(
 			return [
 				state,
 				Effect.run<AudioPlayerAction>(async (dispatch) => {
-					const volume = deps.loadVolume?.();
-					const speed = deps.loadSpeed?.();
+					// Each loader is guarded on its own. `localStorage.getItem` throws
+					// `SecurityError` in a sandboxed iframe and under Safari's stricter
+					// privacy modes — the environment the styleguide demo runs in — and
+					// with one shared `try` a throwing `loadVolume` meant `loadSpeed`
+					// was never even called, so neither preference came back.
+					const volume = read(deps.loadVolume);
+					const speed = read(deps.loadSpeed);
 					dispatch({
 						type: 'preferencesRestored',
 						...(volume === undefined ? {} : { volume }),
@@ -270,14 +300,30 @@ export function audioPlayerReducer(
 		case 'preferencesRestored': {
 			// Both are optional: a consumer may persist one and not the other, and a
 			// missing value must leave the default alone rather than reset it.
-			// `clamp` because this comes back from storage the user can edit.
+			//
+			// Everything here is clamped, because this comes back from storage the
+			// user can edit. `speed` used to be exempt from that despite the comment
+			// claiming otherwise: a stored `50` reached `setPlaybackSpeed`, and
+			// `HTMLMediaElement.playbackRate` throws `NotSupportedError` out of
+			// range. `NaN` needs its own guard — `Math.min(Math.max(NaN, …))` is
+			// `NaN`, and `audio.volume = NaN` throws a `TypeError` inside the sync
+			// effect that also drives loading, play/pause and seeking, so one corrupt
+			// key bricked the player for the session. A shipped consumer reaches it
+			// with a plain `parseFloat` on a missing key.
+			const volume = sanitise(action.volume, state.volume, 0, 1);
+			const speed = sanitise(action.speed, state.playbackSpeed, MIN_SPEED, MAX_SPEED);
+
 			return [
 				{
 					...state,
-					volume: action.volume === undefined ? state.volume : clamp(action.volume, 0, 1),
-					previousVolume:
-						action.volume === undefined ? state.previousVolume : clamp(action.volume, 0, 1),
-					playbackSpeed: action.speed === undefined ? state.playbackSpeed : action.speed
+					volume,
+					// Matches `volumeChanged`: `previousVolume` is what un-muting
+					// restores, so a restored 0 must not overwrite it with 0.
+					previousVolume: volume > 0 ? volume : state.previousVolume,
+					// A restored 0 means muted. Leaving `isMuted` false desynced the
+					// speaker button — the first click "muted" an already-silent player.
+					isMuted: volume === 0,
+					playbackSpeed: speed
 				},
 				Effect.none()
 			];
@@ -339,7 +385,7 @@ export function audioPlayerReducer(
 		// ==================== Speed ====================
 
 		case 'speedChanged': {
-			const speed = clamp(action.speed, 0.25, 2.0);
+			const speed = clamp(action.speed, MIN_SPEED, MAX_SPEED);
 
 			const effect = deps.saveSpeed
 				? Effect.fireAndForget<AudioPlayerAction>(async () => {
@@ -412,7 +458,7 @@ export function audioPlayerReducer(
 					buffered: 0,
 					seekPosition: null,
 					isPlaying: wasPlaying,
-					
+
 					isLoading: true,
 					error: null
 				},
@@ -431,7 +477,7 @@ export function audioPlayerReducer(
 										buffered: 0,
 										seekPosition: null,
 										isPlaying: wasPlaying,
-										
+
 										isLoading: true,
 										error: null
 									},
@@ -489,7 +535,7 @@ export function audioPlayerReducer(
 							currentTrack: null,
 							currentTrackIndex: -1,
 							isPlaying: false,
-							
+
 							
 							currentTime: 0,
 							duration: 0,
@@ -542,7 +588,7 @@ export function audioPlayerReducer(
 					currentTrack: null,
 					currentTrackIndex: -1,
 					isPlaying: false,
-					
+
 					
 					currentTime: 0,
 					duration: 0,
@@ -603,7 +649,7 @@ export function audioPlayerReducer(
 					seekPosition: null,
 					shuffleOrder,
 					isLoading: track ? true : false,
-					
+
 					error: null
 				},
 				Effect.none()
@@ -702,7 +748,7 @@ export function audioPlayerReducer(
 				{
 					...state,
 					isPlaying: false,
-					
+
 				},
 				Effect.none()
 			];
@@ -737,7 +783,7 @@ export function audioPlayerReducer(
 					isLoading: false,
 					isBuffering: false,
 					isPlaying: false,
-					
+
 				},
 				Effect.none()
 			];

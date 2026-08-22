@@ -49,14 +49,28 @@ afterEach(() => {
  * destroy assertion below pass vacuously in its first form. Counting the poll
  * itself is independent of anything the store does afterwards.
  */
-function fakeAudioManager() {
-	const state = { polls: 0 };
+function fakeAudioManager(options: { failRecording?: boolean } = {}) {
+	// `polls` alone was not enough. The VAD interval is deduped by the store —
+	// `Effect.subscription` cancels the previous cleanup for the same id — so the
+	// poll rate is capped no matter what the reducer does. The resources that
+	// genuinely stacked are the recorder and the level meter, and nothing counted
+	// them.
+	const state = { polls: 0, startRecording: 0, levelMonitoring: 0, stopInterval: 0 };
 	return {
 		state,
 		manager: {
-			startRecording: () => {},
+			startRecording: () => {
+				state.startRecording += 1;
+				if (options.failRecording) throw new Error('no stream');
+			},
 			stopRecording: async () => new Blob(),
-			startAudioLevelMonitoring: () => 0,
+			startAudioLevelMonitoring: () => {
+				state.levelMonitoring += 1;
+				return state.levelMonitoring;
+			},
+			stopInterval: () => {
+				state.stopInterval += 1;
+			},
 			detectVoiceActivity: () => {
 				state.polls += 1;
 				return false;
@@ -66,8 +80,8 @@ function fakeAudioManager() {
 	};
 }
 
-function makeStore() {
-	const { state, manager } = fakeAudioManager();
+function makeStore(options: { failRecording?: boolean } = {}) {
+	const { state, manager } = fakeAudioManager(options);
 	const store = createStore<VoiceInputState, VoiceInputAction>({
 		initialState: { ...createInitialVoiceInputState(), permission: 'granted' },
 		reducer: voiceInputReducer,
@@ -78,7 +92,7 @@ function makeStore() {
 	});
 	cleanup.push(() => store.destroy?.());
 
-	return { store, countSilence: () => state.polls };
+	return { store, state, countSilence: () => state.polls };
 }
 
 describe('the VAD polling loop', () => {
@@ -118,26 +132,45 @@ describe('the VAD polling loop', () => {
 		await wait(400);
 
 		expect(countSilence(), 'the loop outlived the store').toBe(atDestroy);
+		expect(atDestroy, 'the loop never ran, so "stopped" proves nothing').toBeGreaterThan(0);
 	});
 
-	it('does not start a second loop when activated twice', async () => {
-		// No already-active guard meant every dispatch stacked another interval,
-		// so the dispatch rate doubled each time.
-		const single = makeStore();
-		single.store.dispatch({ type: 'activateConversationMode' });
-		await wait(400);
-		const oneLoop = single.countSilence();
+	it('does not stack a recorder or a level meter when activated repeatedly', async () => {
+		// This is what the already-active guard is actually for, and the first
+		// version of this test could not see it.
+		//
+		// It compared poll counts between one activation and three — but
+		// `Effect.subscription` is deduped by id inside the store, which cancels
+		// the previous cleanup before installing the new one. The poll rate is
+		// therefore capped by *core*, not by the reducer, and deleting the guard
+		// entirely left that assertion green. Meanwhile three dispatches meant
+		// three `startRecording()` calls constructing three `MediaRecorder`s on one
+		// stream, and three 20fps level intervals that nothing tracked.
+		const { store, state } = makeStore();
+		store.dispatch({ type: 'activateConversationMode' });
+		store.dispatch({ type: 'activateConversationMode' });
+		store.dispatch({ type: 'activateConversationMode' });
+		await wait(250);
 
-		const double = makeStore();
-		double.store.dispatch({ type: 'activateConversationMode' });
-		double.store.dispatch({ type: 'activateConversationMode' });
-		double.store.dispatch({ type: 'activateConversationMode' });
-		await wait(400);
+		expect(state.startRecording, 'a second recorder was constructed').toBe(1);
+		expect(state.levelMonitoring, 'a second level-meter interval was started').toBe(1);
+	});
 
-		expect(
-			double.countSilence(),
-			`three activations produced ${double.countSilence()} dispatches against ${oneLoop} for one`
-		).toBeLessThan(oneLoop * 2);
+	it('installs nothing when the recorder refuses to start', async () => {
+		// The ordering trap. `Effect.batch` runs members in order, synchronously,
+		// and an `Effect.run` body executes to its first `await` inside that loop —
+		// so a throwing `startRecording()` dispatched `audioProcessingFailed`
+		// re-entrantly, its `Effect.cancel` found an empty subscription table and
+		// did nothing, and the batch then installed the very intervals it had just
+		// tried to cancel. Permanently unreachable, which is the exact leak the
+		// subscription rewrite exists to prevent.
+		const { store, state, countSilence } = makeStore({ failRecording: true });
+		store.dispatch({ type: 'activateConversationMode' });
+		await wait(300);
+
+		expect(state.startRecording, 'the recorder was never attempted').toBe(1);
+		expect(store.state.status, 'the failure was not reported').toBe('error');
+		expect(countSilence(), 'a VAD loop survived a failed start').toBe(0);
 	});
 
 	it('stops after a processing failure, rather than looping on it', async () => {
@@ -149,6 +182,7 @@ describe('the VAD polling loop', () => {
 
 		store.dispatch({ type: 'audioProcessingFailed', error: 'nope' });
 		const atFailure = countSilence();
+		expect(atFailure, 'the loop never ran, so "stopped" proves nothing').toBeGreaterThan(0);
 		await wait(400);
 
 		expect(countSilence(), 'the loop survived the failure').toBe(atFailure);

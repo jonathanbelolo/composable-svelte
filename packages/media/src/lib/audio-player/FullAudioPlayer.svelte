@@ -772,12 +772,6 @@
 		background: rgba(255, 255, 255, 0.3);
 	}
 
-	.skip-label {
-		position: absolute;
-		font-size: 0.7rem;
-		font-weight: 600;
-		pointer-events: none;
-	}
 
 	.loop-icon {
 		font-size: 1.3rem;

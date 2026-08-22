@@ -22,19 +22,34 @@ afterEach(() => {
 	cleanup = [];
 });
 
-function mountVoiceInput() {
+/** A manager that does nothing but exist, for the paths that need one present. */
+const workingManager = {
+	startRecording: () => {},
+	stopRecording: async () => new Blob(),
+	startAudioLevelMonitoring: () => 1,
+	stopInterval: () => {},
+	detectVoiceActivity: () => false,
+	cleanup: () => {},
+	requestMicrophone: async () => {}
+} as never;
+
+function mountVoiceInput(options: { withManager?: boolean } = {}) {
+	const manager = options.withManager ? workingManager : undefined;
 	const store = createStore<VoiceInputState, VoiceInputAction>({
 		initialState: createInitialVoiceInputState(),
 		reducer: voiceInputReducer,
 		dependencies: {
 			transcribeAudio: async () => '',
-			getAudioManager: () => undefined,
-			createAudioManager: () => undefined as never
+			getAudioManager: () => manager,
+			createAudioManager: () => workingManager
 		}
 	});
 	const target = document.createElement('div');
 	document.body.appendChild(target);
-	const component = mount(VoiceInput as never, { target, props: { store } });
+	const component = mount(VoiceInput as never, {
+		target,
+		props: { store, onTranscript: () => {} }
+	});
 	flushSync();
 	cleanup.push(() => {
 		unmount(component);
@@ -43,6 +58,41 @@ function mountVoiceInput() {
 	});
 	return { store, target };
 }
+
+describe('the error message clears', () => {
+	// The alert had exactly one clearing site — `deactivateVoiceInput` — and the
+	// only things that dispatch it are the conversation panel's Stop button and
+	// the button toggle. Neither is reachable from push-to-talk, so a single
+	// failed transcription left the red alert under the button for the rest of
+	// the session, through every subsequent successful recording.
+	it('when a new push-to-talk recording starts', () => {
+		const { store, target } = mountVoiceInput({ withManager: true });
+		store.dispatch({ type: 'audioProcessingFailed', error: 'Transcription failed' });
+		flushSync();
+		expect(target.textContent, 'the control failed — no error was shown').toContain(
+			'Transcription failed'
+		);
+
+		store.dispatch({ type: 'microphonePermissionGranted', managerId: 'm1' });
+		store.dispatch({ type: 'startPushToTalkRecording' });
+		flushSync();
+
+		expect(store.state.errorMessage, 'a stale error survived a new attempt').toBeNull();
+		expect(target.textContent).not.toContain('Transcription failed');
+	});
+
+	it('when an utterance finally succeeds', () => {
+		const { store, target } = mountVoiceInput();
+		store.dispatch({ type: 'audioProcessingFailed', error: 'Transcription failed' });
+		flushSync();
+		expect(target.textContent).toContain('Transcription failed');
+
+		store.dispatch({ type: 'audioProcessingComplete', audioBlob: new Blob() });
+		flushSync();
+
+		expect(store.state.errorMessage, 'a stale error survived a success').toBeNull();
+	});
+});
 
 describe('the error message', () => {
 	it('is shown to the user', () => {

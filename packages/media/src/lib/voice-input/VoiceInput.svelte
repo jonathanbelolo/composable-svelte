@@ -86,9 +86,18 @@
 		};
 	});
 
-	// Only set default mode for conversation mode (push-to-talk doesn't need pre-activation)
+	// Keyed on a `$derived` primitive for the same reason as the effect below:
+	// reading `$store.mode` inside the effect subscribes to the whole store,
+	// which `$state.raw` replaces on every dispatch, so this re-ran on every
+	// action. Paired with a mode that briefly went null between utterances, that
+	// re-dispatched `activateConversationMode` unboundedly — a new recorder and a
+	// new level interval per utterance, and a runaway loop whenever activation
+	// failed and reset the mode. The primitive's equality check absorbs the
+	// dispatches that leave the mode alone.
+	const activeMode = $derived($store.mode);
+
 	$effect(() => {
-		if ($store.mode === null && defaultMode === 'conversation') {
+		if (activeMode === null && defaultMode === 'conversation') {
 			store.dispatch({ type: 'activateConversationMode' });
 		}
 	});

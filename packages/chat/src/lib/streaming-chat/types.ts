@@ -40,8 +40,6 @@ export interface VideoEmbedData {
 	aspectRatio: string;
 	/** Platform-specific embed URL */
 	embedUrl: string;
-	/** Optional start time in seconds */
-	startTime?: number;
 }
 
 /**

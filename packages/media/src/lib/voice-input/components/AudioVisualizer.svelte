@@ -81,9 +81,11 @@
 		background: var(--color, #007aff);
 		border-radius: 2px;
 		height: var(--height, 10%);
-		transition:
-			height 0.1s ease-out,
-			opacity 0.2s ease;
+		/* height only. `barPulse` below already owns opacity, and a transition on
+		   the same property made two authors for one value — invariant 6. The
+		   infinite keyframe is the legitimate owner; the 0.2s fade was not
+		   granted by the Exception Register either. */
+		transition: height 0.1s ease-out;
 		animation: barPulse 1s ease-in-out infinite;
 		animation-delay: var(--delay, 0s);
 	}

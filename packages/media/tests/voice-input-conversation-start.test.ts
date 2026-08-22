@@ -41,7 +41,7 @@ afterEach(() => {
 });
 
 function makeStore(overrides: Partial<VoiceInputState> = {}) {
-	const calls = { startRecording: 0, polls: 0, levelMonitoring: 0, created: 0 };
+	const calls = { startRecording: 0, polls: 0, levelMonitoring: 0, created: 0, stopInterval: 0 };
 	const manager = {
 		startRecording: () => {
 			calls.startRecording += 1;
@@ -49,7 +49,10 @@ function makeStore(overrides: Partial<VoiceInputState> = {}) {
 		stopRecording: async () => new Blob(),
 		startAudioLevelMonitoring: () => {
 			calls.levelMonitoring += 1;
-			return 0;
+			return calls.levelMonitoring;
+		},
+		stopInterval: () => {
+			calls.stopInterval += 1;
 		},
 		detectVoiceActivity: () => {
 			calls.polls += 1;
@@ -110,13 +113,25 @@ describe('conversation mode, from a cold start', () => {
 		expect(store.state.vadState, 'VAD state was never initialised').not.toBeNull();
 	});
 
-	it('does not hijack push-to-talk', async () => {
-		// The existing handoff for the other mode must keep working.
+	it('drives the push-to-talk handoff too, and does not hijack it', async () => {
+		// The previous version of this test dispatched only `activatePushToTalk`,
+		// which is a two-line state set returning `Effect.none()` — it requests no
+		// permission and starts nothing, so `polls === 0` was true under every
+		// possible mutation of the conversation branch and the test could not go
+		// red. It also claimed to prove "the existing handoff still works" while
+		// never executing that handoff at all.
+		//
+		// This drives the real sequence: request, grant, record.
 		const { store, calls } = makeStore();
 		store.dispatch({ type: 'activatePushToTalk' });
-		await wait(50);
+		store.dispatch({ type: 'startPushToTalkRecording' });
 
+		await wait(80);
+
+		expect(calls.created, 'no audio manager was created').toBe(1);
+		expect(calls.startRecording, 'the push-to-talk handoff never reached the device').toBe(1);
 		expect(store.state.mode).toBe('push-to-talk');
-		expect(calls.polls, 'push-to-talk must not start the VAD loop').toBe(0);
+		// The conversation branch must not have run: no VAD loop in push-to-talk.
+		expect(calls.polls, 'a VAD loop started in push-to-talk').toBe(0);
 	});
 });

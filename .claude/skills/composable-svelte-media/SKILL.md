@@ -445,7 +445,6 @@ const voiceStore = createStore({
 interface VoiceInputState {
   // Recording
   isRecording: boolean;
-  isPaused: boolean;
   mode: 'push-to-talk' | 'conversation';
 
   // Audio

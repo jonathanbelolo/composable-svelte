@@ -244,9 +244,6 @@
 		text-align: center;
 	}
 
-
-
-
 	.transcript-history {
 		padding: 12px;
 		background: rgba(0, 0, 0, 0.02);

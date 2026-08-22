@@ -14,6 +14,7 @@
  * support that does not exist.
  */
 
+import type { VideoPlatform } from '../src/lib/video-embed/types.js';
 import { describe, it, expect, afterEach } from 'vitest';
 import { mount, unmount, flushSync } from 'svelte';
 import VideoEmbed from '../src/lib/video-embed/VideoEmbed.svelte';
@@ -43,6 +44,21 @@ function renderEmbed(props: Record<string, unknown>) {
 }
 
 const YOUTUBE = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+
+/**
+ * The type union must name exactly the platforms the registry can produce.
+ *
+ * The defect was a union of seven with a registry of three: `'tiktok'`,
+ * `'dailymotion'`, `'twitter'` and `'generic'` typechecked everywhere and could
+ * never be returned by any extractor. Re-adding one leaves every runtime
+ * assertion in this file green — the only thing that catches it is a type-level
+ * check, so here is one. `Exclude` in both directions, because a union that is
+ * too *narrow* is a different bug with the same smell.
+ */
+type AssertNever<T extends never> = T;
+type NoPhantomPlatforms = AssertNever<Exclude<VideoPlatform, 'youtube' | 'vimeo' | 'twitch'>>;
+type NoMissingPlatforms = AssertNever<Exclude<'youtube' | 'vimeo' | 'twitch', VideoPlatform>>;
+const _platformUnionIsExact: [NoPhantomPlatforms[], NoMissingPlatforms[]] = [[], []];
 
 describe('the autoplay prop', () => {
 	// The defect is one level above the config. `buildEmbedUrl` has honoured
@@ -77,8 +93,12 @@ describe('the platform union describes reality', () => {
 	});
 
 	it('has a config for every platform it names', () => {
-		// The union used to name four platforms with no registry entry, so
-		// `getPlatformConfig` returned undefined while typechecking clean.
+		// Kept, but note what it does *not* prove: `getSupportedPlatforms()` is
+		// `Array.from(platforms.keys())` and `getPlatformConfig` is
+		// `platforms.get`, so this asserts a Map returns values for its own keys —
+		// true of every possible registry. The registry contents are pinned by the
+		// `toEqual` above, and the *type union* by `NoPhantomPlatforms` below,
+		// which is the half nothing checked.
 		for (const platform of getSupportedPlatforms()) {
 			expect(getPlatformConfig(platform), `${platform} has no config`).toBeDefined();
 		}

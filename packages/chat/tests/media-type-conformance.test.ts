@@ -39,7 +39,19 @@ const mediaSatisfiesChat = (video: VideoEmbedType): VideoEmbedData => video;
  */
 type SharedKeys = keyof VideoEmbedData & keyof VideoEmbedType;
 type ChatOnlyKeys = Exclude<keyof VideoEmbedData, SharedKeys>;
-const noChatOnlyKeys: ChatOnlyKeys[] = [];
+
+/**
+ * `const x: ChatOnlyKeys[] = []` was the first form of this, and it could not
+ * fail: an empty array literal is assignable to `never[]` and to `'startTime'[]`
+ * alike. It stayed green through the first real drift it existed to catch —
+ * media dropped `VideoEmbed.startTime` and chat kept declaring it.
+ *
+ * This form cannot: the assignment only compiles when `ChatOnlyKeys` is exactly
+ * `never`, because nothing else is assignable to `never`.
+ */
+type AssertNever<T extends never> = T;
+type NoChatOnlyKeys = AssertNever<ChatOnlyKeys>;
+const noChatOnlyKeys: NoChatOnlyKeys[] = [];
 
 describe('VideoEmbedData conformance with @composable-svelte/media', () => {
 	it('accepts every VideoEmbed media produces', () => {

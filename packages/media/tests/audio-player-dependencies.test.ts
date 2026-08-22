@@ -17,6 +17,7 @@
 
 import { describe, it, expect, afterEach } from 'vitest';
 import { createStore } from '@composable-svelte/core';
+import type { AudioPlayerDependencies } from '../src/lib/audio-player/types.js';
 import { audioPlayerReducer } from '../src/lib/audio-player/reducer.js';
 import { createInitialAudioPlayerState } from '../src/lib/audio-player/types.js';
 import type { AudioPlayerAction, AudioPlayerState } from '../src/lib/audio-player/types.js';
@@ -31,15 +32,81 @@ afterEach(() => {
 
 const track = { id: 't1', title: 'One', url: 'about:blank' };
 
-function makeStore(deps: Record<string, unknown> = {}) {
+// Typed against the real interface rather than `Record<string, unknown>` cast
+// through `as never`. The cast made a renamed dependency member invisible to
+// `tsc` here — in a file whose whole subject is that a dependency a consumer
+// passes must actually be called.
+function makeStore(deps: AudioPlayerDependencies = {}) {
 	const store = createStore<AudioPlayerState, AudioPlayerAction>({
 		initialState: createInitialAudioPlayerState(),
 		reducer: audioPlayerReducer,
-		dependencies: deps as never
+		dependencies: deps
 	});
 	cleanup.push(() => store.destroy?.());
 	return store;
 }
+
+/** `toContain` would not notice a duplicate call; `toEqual` on the whole log does. */
+function trackTitles(log: string[]) {
+	return log;
+}
+
+describe('restoring a hostile stored value', () => {
+	// These come back from storage the user can edit, and the shipped consumer
+	// reads them with a bare `parseFloat`.
+	it('ignores a NaN volume rather than poisoning the audio element', async () => {
+		// `clamp(NaN, 0, 1)` is `NaN` — `Math.min(Math.max(NaN, 0), 1)` propagates.
+		// `audio.volume = NaN` throws a TypeError inside the sync effect that also
+		// drives loading, play/pause and seeking, so one corrupt key bricked the
+		// whole player for the session.
+		const store = makeStore({ loadVolume: () => Number.NaN });
+		const before = store.state.volume;
+		store.dispatch({ type: 'restorePreferences' });
+		await wait(30);
+
+		expect(store.state.volume).toBe(before);
+		expect(Number.isFinite(store.state.volume)).toBe(true);
+	});
+
+	it('clamps a stored speed, as it already clamped volume', async () => {
+		// `speedChanged` clamps to [0.25, 2]; the restore path did not, despite its
+		// own comment saying it did. `playbackRate` throws out of range.
+		const store = makeStore({ loadSpeed: () => 50 });
+		store.dispatch({ type: 'restorePreferences' });
+		await wait(30);
+
+		expect(store.state.playbackSpeed).toBeLessThanOrEqual(2);
+		expect(store.state.playbackSpeed).toBeGreaterThanOrEqual(0.25);
+	});
+
+	it('still restores speed when the volume loader throws', async () => {
+		// `localStorage.getItem` throws SecurityError in a sandboxed iframe and
+		// under Safari's privacy modes. With one shared try/catch, a throwing
+		// `loadVolume` meant `loadSpeed` was never called at all.
+		const store = makeStore({
+			loadVolume: () => {
+				throw new Error('SecurityError');
+			},
+			loadSpeed: () => 1.5
+		});
+		store.dispatch({ type: 'restorePreferences' });
+		await wait(30);
+
+		expect(store.state.playbackSpeed, 'one throwing loader discarded the other').toBe(1.5);
+	});
+
+	it('treats a restored zero as muted', async () => {
+		// `volume: 0, isMuted: false` desynced the speaker button — the first
+		// click "muted" an already-silent player.
+		const store = makeStore({ loadVolume: () => 0 });
+		store.dispatch({ type: 'restorePreferences' });
+		await wait(30);
+
+		expect(store.state.volume).toBe(0);
+		expect(store.state.isMuted).toBe(true);
+		expect(store.state.previousVolume, 'un-muting would restore silence').toBeGreaterThan(0);
+	});
+});
 
 describe('restoring saved preferences', () => {
 	it('applies a stored volume', async () => {
@@ -128,7 +195,9 @@ describe('skip tracking', () => {
 		store.dispatch({ type: 'previous' });
 		await wait(30);
 
-		expect(skipped).toContain('One');
+		// `trackSelected` is not a skip, so only `previous` logs. `toEqual` rather
+	// than `toContain`, which would not notice a duplicate call.
+	expect(trackTitles(skipped)).toEqual(['One']);
 	});
 
 	it('still changes track when no tracker is supplied', async () => {

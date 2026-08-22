@@ -18,6 +18,7 @@ export {
 	createShuffleOrder,
 	getNextTrackIndex,
 	getPreviousTrackIndex,
+	nextLoopMode,
 	AudioManager as AudioPlayerManager,
 	createAudioManager as createAudioPlayerManager,
 	getAudioManager as getAudioPlayerManager,

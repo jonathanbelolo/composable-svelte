@@ -1,6 +1,5 @@
 <script lang="ts">
 	import type { VideoEmbed as VideoEmbedType } from './types.js';
-	import { getPlatformConfig } from './video-detection.js';
 	import type { VideoPlatform } from './types.js';
 
 	/**
@@ -53,17 +52,26 @@
 		}
 	});
 
-	// The embed URL, rebuilt when a prop needs to change it.
+	// The embed URL, with autoplay applied to the URL the caller supplied.
 	//
-	// `video.embedUrl` is produced by the extractors, which call `buildEmbedUrl`
-	// with no options — so nothing in `EmbedOptions` could ever reach it and this
-	// component's `autoplay` prop was inert. It rebuilds from the same platform
-	// config the extractor used, and falls back to the supplied URL for a video
-	// constructed by hand or from a platform with no registry entry.
+	// `video.embedUrl` comes from the extractors, which call `buildEmbedUrl` with
+	// no options — so nothing in `EmbedOptions` reached it and this component's
+	// `autoplay` prop was inert.
+	//
+	// Applied as a parameter rather than by rebuilding from the platform config,
+	// which was the first fix and was wrong: a caller who supplies
+	// `youtube-nocookie.com/embed/abc?start=90&rel=0` would have had the host,
+	// the start offset and `rel=0` all silently replaced by a canonical URL —
+	// toggling one boolean changing four things. It also made Twitch's `parent`
+	// parameter recompute at render time, and that reads `window.location`, so
+	// the server emitted `parent=localhost` and the client disagreed on
+	// hydration.
 	const embedUrl = $derived.by(() => {
 		if (!autoplay) return video.embedUrl;
-		const config = getPlatformConfig(video.platform);
-		return config?.buildEmbedUrl(video.videoId, { autoplay: true }) ?? video.embedUrl;
+		const url = new URL(video.embedUrl);
+		// Twitch spells it `true`; YouTube and Vimeo spell it `1`.
+		url.searchParams.set('autoplay', video.platform === 'twitch' ? 'true' : '1');
+		return url.toString();
 	});
 
 	// Build iframe allow attribute
@@ -82,7 +90,10 @@
 			vimeo: 'Vimeo',
 			twitch: 'Twitch'
 		};
-		return names[video.platform] ?? 'Video';
+		// No `?? 'Video'`: the map is total over the union, so the fallback had no
+		// reachable trigger. An unreachable recovery path is the same dead
+		// behaviour this campaign is removing everywhere else.
+		return names[video.platform];
 	});
 </script>
 

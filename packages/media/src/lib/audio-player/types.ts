@@ -183,7 +183,7 @@ export interface AudioPlayerDependencies {
 	/**
 	 * Load volume from persistent storage.
 	 */
-	loadVolume?: () => number;
+	loadVolume?: () => number | undefined;
 
 	/**
 	 * Save playback speed to persistent storage.
@@ -193,7 +193,7 @@ export interface AudioPlayerDependencies {
 	/**
 	 * Load playback speed from persistent storage.
 	 */
-	loadSpeed?: () => number;
+	loadSpeed?: () => number | undefined;
 
 	/**
 	 * Track playback analytics (optional).
@@ -342,9 +342,6 @@ export function getPreviousTrackIndex(
 }
 
 /**
- * Clamp a value between min and max.
- */
-/**
  * The loop mode that follows `mode` in the none -> one -> all -> none cycle.
  *
  * A total mapping rather than an index into an array: `noUncheckedIndexedAccess`
@@ -356,6 +353,12 @@ export function nextLoopMode(mode: LoopMode): LoopMode {
 	return next[mode];
 }
 
+/**
+ * Clamp a value between min and max.
+ *
+ * Internal to this package. It is deliberately not re-exported from either
+ * barrel: a three-line numeric helper is not part of a media library's API.
+ */
 export function clamp(value: number, min: number, max: number): number {
 	return Math.min(Math.max(value, min), max);
 }

@@ -13,14 +13,35 @@
 		label?: string | undefined;
 		disabled?: boolean;
 		isRecording?: boolean;
-		mode?: 'push-to-talk' | 'conversation'; // Interaction mode
+		/**
+		 * Force an interaction mode. Left unset — the normal case — the button
+		 * follows the store, so enabling conversation mode makes the button a
+		 * toggle.
+		 */
+		mode?: 'push-to-talk' | 'conversation' | undefined;
 		class?: string;
 	}
 
-	const { store, variant = 'icon', label = 'Voice Input', disabled = false, isRecording: isRecordingProp = false, mode = 'push-to-talk', class: className = '' }: Props = $props();
+	const {
+		store,
+		variant = 'icon',
+		label = 'Voice Input',
+		disabled = false,
+		isRecording: isRecordingProp = false,
+		mode = undefined,
+		class: className = ''
+	}: Props = $props();
 
-	// Determine interaction mode from store or prop
-	const interactionMode = $derived(mode || ($store.mode === 'conversation' ? 'conversation' : 'push-to-talk'));
+	// No default on `mode`. It used to default to `'push-to-talk'`, which is
+	// truthy, so `mode || (…)` short-circuited on it and the store-derived
+	// fallback below never once evaluated — `interactionMode` was pinned to
+	// push-to-talk and `handleClick` returned at its guard every time. The
+	// conversation toggle was therefore unreachable, and clicking the button
+	// during a live conversation fell through to `handlePointerDown` and
+	// corrupted the session into push-to-talk instead of stopping it.
+	const interactionMode = $derived(
+		mode ?? ($store.mode === 'conversation' ? 'conversation' : 'push-to-talk')
+	);
 
 	// Handle click for conversation mode (toggle)
 	function handleClick(e: MouseEvent) {

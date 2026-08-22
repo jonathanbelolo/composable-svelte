@@ -62,8 +62,6 @@ interface AudioPlayerState {
 
   // Playback state
   isPlaying: boolean;
-  isPaused: boolean;
-  isStopped: boolean;
   isLoading: boolean;
   isBuffering: boolean;
 
@@ -163,14 +161,11 @@ type AudioPlayerAction =
 
 ```typescript
 interface AudioPlayerDependencies {
-  // Audio element control
-  createAudioElement?: () => HTMLAudioElement;
-
   // Persistence
   saveVolume?: (volume: number) => void;
-  loadVolume?: () => number;
+  loadVolume?: () => number | undefined;
   saveSpeed?: (speed: number) => void;
-  loadSpeed?: () => number;
+  loadSpeed?: () => number | undefined;
 
   // Analytics (optional)
   trackPlayback?: (track: AudioTrack) => void;

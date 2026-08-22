@@ -55,7 +55,10 @@ const packagesDir = join(repoRoot, 'packages');
  */
 const REGISTER: Record<string, { properties: string[]; why: string }> = {
 	'media/src/lib/voice-input/components/AudioVisualizer.svelte': {
-		properties: ['transform', 'height', 'opacity'],
+		// `transform`, `height` — exactly what the guide grants. `opacity` was
+		// listed here and nowhere in the guide, so the mechanically-enforced list
+		// silently outranked the document it claims to mirror.
+		properties: ['transform', 'height'],
 		why: 'Live microphone level, sampled faster than a spring could settle.'
 	},
 	'media/src/lib/audio-player/FullAudioPlayer.svelte': {
@@ -337,7 +340,10 @@ const BACKLOG = new Set([
 	// These two are blocked, not merely unconverted. Each carries a one-shot
 	// `fadeIn` on mount — a lifecycle animation the policy prohibits — and each is
 	// the *only* thing its own `@media (prefers-reduced-motion: reduce)` block
-	// disables (`ConversationModePanel.svelte:395`, `PushToTalkPanel.svelte:107`).
+	// disables them. Cited by rule name rather than line number: the previous
+	// form named two lines, and a later commit in the same batch deleted 28 lines
+	// above one of them, leaving the sole recorded justification for an exemption
+	// pointing past end-of-file.
 	// Converting them to Motion One today would delete the sole accessibility
 	// guard, because no helper in `animate.ts` consults the preference yet.
 	//
