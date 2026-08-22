@@ -18,6 +18,16 @@ import type {
  *
  * Handles all collaborative features with optimistic updates and rollback.
  */
+/**
+ * Identifies the WebSocket subscription so it can be cancelled.
+ *
+ * One id for the whole reducer: a store holds at most one collaborative
+ * connection, and re-registering the same id cancels the previous cleanup
+ * before installing the new one — which is what makes `reconnectRequested`
+ * close-then-open without needing to know it is doing so.
+ */
+const CONNECTION_SUBSCRIPTION = 'collaborative-websocket';
+
 export function collaborativeReducer(
 	state: CollaborativeStreamingChatState,
 	action: CollaborativeAction,
@@ -46,10 +56,21 @@ export function collaborativeReducer(
 					currentUserId: action.userId,
 					connection: { status: 'connecting', attempt: 1 }
 				},
-				Effect.run(async (dispatch) => {
+				// A subscription, not `Effect.run`. `connectWebSocket` hands back a
+				// cleanup function; it used to be assigned to a `const` inside an async
+				// closure and dropped on the floor, under a comment saying it "would
+				// need to be tracked in state". Nothing ever called it, so the socket
+				// outlived disconnect, outlived reconnect, and outlived the store.
+				//
+				// The store owns it now: `Effect.cancel` runs it, `destroy()` runs it,
+				// and re-registering the same id cancels the previous one first — which
+				// is why `reconnectRequested` needs no change of its own.
+				//
+				// Setup is synchronous and must return a cleanup on every path,
+				// including the failure path.
+				Effect.subscription(CONNECTION_SUBSCRIPTION, (dispatch) => {
 					try {
-						// Connect to WebSocket
-						const cleanup = deps.connectWebSocket(
+						return deps.connectWebSocket(
 							action.conversationId,
 							action.userId,
 							(message) => {
@@ -97,7 +118,6 @@ export function collaborativeReducer(
 							}
 						);
 
-						// Store cleanup function (would need to be tracked in state)
 					} catch (error) {
 						dispatch({
 							type: 'connectionStateChanged',
@@ -107,6 +127,9 @@ export function collaborativeReducer(
 								canRetry: true
 							}
 						});
+						// Nothing was opened, so there is nothing to close — but a
+						// subscription must always hand back a cleanup.
+						return () => {};
 					}
 				})
 			];
@@ -129,9 +152,12 @@ export function collaborativeReducer(
 					connection: { status: 'disconnected', reason: 'User disconnected' },
 					conversationId: null
 				},
-				Effect.run(async (dispatch) => {
-					// Cleanup handled by WebSocket manager
-				})
+				// This was an `Effect.run` with an empty body, under a comment claiming
+				// "Cleanup handled by WebSocket manager". There was no manager on this
+				// path and no reference held to anything, so the action only relabelled
+				// the state: it reported `disconnected` over a socket that was still
+				// open and still delivering messages.
+				Effect.cancel(CONNECTION_SUBSCRIPTION)
 			];
 		}
 
