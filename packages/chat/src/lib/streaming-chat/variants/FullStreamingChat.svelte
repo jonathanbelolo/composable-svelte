@@ -14,6 +14,8 @@
 	 * - Full-featured AI assistants
 	 */
 
+	import { createScrollFollower, prefersReducedMotion } from '@composable-svelte/core/animation';
+	import type { ScrollFollower } from '@composable-svelte/core/animation';
 	import { onDestroy } from 'svelte';
 	import type { Store } from '@composable-svelte/core';
 	import type { StreamingChatState, StreamingChatAction, MessageAttachment } from '../types.js';
@@ -142,20 +144,47 @@
 			(inputValue.trim().length > 0 || pendingAttachments.length > 0)
 	);
 
-	// Auto-scroll to bottom when new messages arrive
+	// The follower owns the smooth scroll, because the browser must not.
+	//
+	// `scroll-behavior: smooth` used to do this, and it was quietly breaking the
+	// gate below: `handleScroll` listens to the same `scroll` event and cannot
+	// tell a programmatic scroll from a user's, so the browser's intermediate
+	// animation frames — each more than 50px short of the bottom — kept setting
+	// `shouldAutoScroll = false` and latching auto-scroll off mid-response.
+	let follower: ScrollFollower | null = null;
+
 	$effect(() => {
-		if (
-			messagesContainer &&
-			shouldAutoScroll &&
-			($store.currentStreaming || $store.messages.length > 0)
-		) {
-			messagesContainer.scrollTop = messagesContainer.scrollHeight;
+		if (!messagesContainer) return;
+		follower = createScrollFollower(messagesContainer, {
+			reducedMotion: prefersReducedMotion()
+		});
+		return () => {
+			follower?.stop();
+			follower = null;
+		};
+	});
+
+	// Re-runs per streamed chunk, which is the point: `follow()` is idempotent and
+	// the running loop re-reads the target, so a chunk retargets the animation in
+	// flight rather than starting a competing one.
+	$effect(() => {
+		if (!messagesContainer) return;
+
+		if (shouldAutoScroll && ($store.currentStreaming || $store.messages.length > 0)) {
+			follower?.follow();
+		} else {
+			// Stopping matters as much as starting. `follow()` runs until it reaches
+			// the bottom, so gating only the *call* would let a loop already in
+			// flight drag the user back down the moment they scrolled away.
+			follower?.stop();
 		}
 	});
 
 	// Detect if user has scrolled up
 	function handleScroll() {
 		if (!messagesContainer) return;
+		// Our own frames are not the user leaving.
+		if (follower?.isSelfScroll()) return;
 
 		const { scrollTop, scrollHeight, clientHeight } = messagesContainer;
 		const isAtBottom = scrollHeight - scrollTop - clientHeight < 50;
@@ -425,7 +454,6 @@
 		padding: 16px;
 		display: flex;
 		flex-direction: column;
-		scroll-behavior: smooth;
 	}
 
 	.full-streaming-chat__empty {

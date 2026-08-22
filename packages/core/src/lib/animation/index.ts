@@ -6,6 +6,10 @@
  * @packageDocumentation
  */
 
+export { prefersReducedMotion, watchReducedMotion } from './reduced-motion.js';
+export { createScrollFollower } from './scroll.js';
+export type { ScrollFollower, ScrollFollowerConfig } from './scroll.js';
+
 export {
 	animate,
 	animateModalIn,

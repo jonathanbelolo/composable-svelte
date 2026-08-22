@@ -5,6 +5,30 @@ All notable changes to `@composable-svelte/core` will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-08-22
+
+### Added
+
+- `createScrollFollower` — smooth scrolling the caller owns, for following a
+  target that keeps moving. `scroll-behavior: smooth` is prohibited by the
+  animation guideline (the store cannot see, sequence on or cancel it), and the
+  case that needed replacing is a chat list auto-scrolling as tokens stream in:
+  the target moves every chunk, so a one-shot animation per chunk would be
+  interrupted by the next, and an interrupted Motion One `.finished` never
+  settles. A single `requestAnimationFrame` loop that re-reads the target each
+  frame retargets for nothing.
+
+  Its `isSelfScroll()` answers "was that scroll event mine?" by comparing the
+  live position against the last value written — deliberately not "am I
+  running?". A listener that went deaf while the animation ran would leave a user
+  unable to scroll away from a stream at all.
+
+- `prefersReducedMotion()` and `watchReducedMotion()`. The guideline requires
+  every animation to be skippable and records that none of the 28 helpers in
+  `animate.ts` consults the preference. This does not close that gap — it
+  provides the reader, not the plumbing — but `createScrollFollower` honours it,
+  which makes it the first animation in the package that does.
+
 ## [0.8.0] - 2026-08-22
 
 The effect system's cancellation was inert. Found while building a package's
