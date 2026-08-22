@@ -170,7 +170,6 @@
 		font-weight: 500;
 		color: #666;
 		cursor: pointer;
-		transition: all 0.2s ease;
 	}
 
 	.stop-button:hover {
@@ -199,7 +198,6 @@
 		height: 8px;
 		border-radius: 50%;
 		background: #ccc;
-		transition: all 0.2s ease;
 	}
 
 	.status-dot.active {
@@ -334,7 +332,6 @@
 		font-size: 14px;
 		font-weight: 600;
 		cursor: pointer;
-		transition: all 0.2s ease;
 	}
 
 	.send-button:hover:not(:disabled) {

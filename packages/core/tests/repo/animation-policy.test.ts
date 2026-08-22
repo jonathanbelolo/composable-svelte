@@ -334,12 +334,19 @@ const BACKLOG = new Set([
 	'code/src/lib/code-editor/CodeEditor.svelte',
 	'code/src/lib/code-highlight/CodeHighlight.svelte',
 	'maps/src/lib/components/TileProviderControl.svelte',
-	'media/src/lib/audio-player/FullAudioPlayer.svelte',
-	'media/src/lib/audio-player/MinimalAudioPlayer.svelte',
-	'media/src/lib/audio-player/PlaylistView.svelte',
+	// These two are blocked, not merely unconverted. Each carries a one-shot
+	// `fadeIn` on mount — a lifecycle animation the policy prohibits — and each is
+	// the *only* thing its own `@media (prefers-reduced-motion: reduce)` block
+	// disables (`ConversationModePanel.svelte:395`, `PushToTalkPanel.svelte:107`).
+	// Converting them to Motion One today would delete the sole accessibility
+	// guard, because no helper in `animate.ts` consults the preference yet.
+	//
+	// They do not qualify for the Register either: its criteria require freedom
+	// from any mount/unmount lifecycle, which is exactly what these are. The
+	// Register grants properties; the backlog grants time, and time is what these
+	// need — until the reduced-motion capability exists.
 	'media/src/lib/voice-input/components/ConversationModePanel.svelte',
 	'media/src/lib/voice-input/components/PushToTalkPanel.svelte',
-	'media/src/lib/voice-input/components/VoiceInputButton.svelte',
 ]);
 
 describe('animation policy', () => {

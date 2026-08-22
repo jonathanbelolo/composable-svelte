@@ -9,6 +9,15 @@ import { createAudioManager } from './audio/audio-manager-registry.js';
  * Handles all state transitions for the VoiceInput component.
  * Implements push-to-talk and conversation modes.
  */
+/**
+ * Identifies the VAD polling subscription so it can be cancelled.
+ *
+ * Re-setting up the same id replaces the previous subscription rather than
+ * stacking a second one, which is what `activateConversationMode` used to do on
+ * every dispatch.
+ */
+const VAD_SUBSCRIPTION = 'voice-input-vad';
+
 export const voiceInputReducer: Reducer<
 	VoiceInputState,
 	VoiceInputAction,
@@ -28,7 +37,11 @@ export const voiceInputReducer: Reducer<
 				},
 				Effect.run(async (dispatch) => {
 					try {
-						const manager = createAudioManager(managerId);
+						// Through the dependency, not the module import: acquiring a
+						// microphone is a device side effect, and this is the seam that
+						// lets a test drive the permission path at all.
+						const create = deps.createAudioManager ?? createAudioManager;
+						const manager = create(managerId);
 						await manager.requestMicrophone();
 						dispatch({
 							type: 'microphonePermissionGranted',
@@ -58,6 +71,25 @@ export const voiceInputReducer: Reducer<
 				Effect.run(async (dispatch) => {
 					// Automatically start recording now that we have permission
 					dispatch({ type: 'startPushToTalkRecording' });
+				})
+			];
+		}
+
+		// The same handoff for conversation mode, which was missing entirely.
+		//
+		// `activateConversationMode` returns early when permission has not been
+		// granted yet — which is always true on a cold start — so without this the
+		// panel rendered, said "Listening…", and nothing was ever recording. The
+		// user saw a live-looking feature that did nothing.
+		if (state.mode === 'conversation') {
+			return [
+				{
+					...state,
+					permission: 'granted',
+					_audioManagerId: action.managerId
+				},
+				Effect.run(async (dispatch) => {
+					dispatch({ type: 'activateConversationMode' });
 				})
 			];
 		}
@@ -196,9 +228,19 @@ export const voiceInputReducer: Reducer<
 					status: 'idle',
 					mode: null,
 					recordingStartTime: null,
-					audioLevel: 0
+					audioLevel: 0,
+					// Clearing this is what breaks the loop. Leaving it intact let
+					// silence keep accumulating to the auto-send threshold, which
+					// re-triggered the very failure being handled — a self-sustaining
+					// error cycle at roughly 1.5s.
+					vadState: null
 				},
-				Effect.none()
+				Effect.batch(
+					Effect.cancel(VAD_SUBSCRIPTION),
+					Effect.run(async () => {
+						deps.getAudioManager(state._audioManagerId!)?.cleanup();
+					})
+				)
 			];
 		}
 
@@ -255,15 +297,29 @@ export const voiceInputReducer: Reducer<
 					errorMessage: action.error,
 					mode: null,
 					recordingStartTime: null,
-					audioLevel: 0
+					audioLevel: 0,
+					// Clearing this is what breaks the loop. Left intact, silence kept
+					// accumulating to the auto-send threshold and re-triggered the very
+					// failure being handled — a self-sustaining cycle at ~1.5s.
+					vadState: null
 				},
-				Effect.none()
+				// Stop the VAD loop, but do NOT tear down the audio device: a failed
+				// transcription is transient, and the user may retry. Only the two
+				// explicit teardown actions release the microphone.
+				Effect.cancel(VAD_SUBSCRIPTION)
 			];
 		}
 
 	// === Conversation Mode === //
 
 	case 'activateConversationMode': {
+		// Already running. Without this guard every dispatch started another
+		// recording, another level monitor and another VAD interval on top of the
+		// live ones.
+		if (state.mode === 'conversation' && state.status === 'recording') {
+			return [state, Effect.none()];
+		}
+
 		// Check if permission is granted
 		if (state.permission !== 'granted') {
 			return [
@@ -320,8 +376,16 @@ export const voiceInputReducer: Reducer<
 						dispatch({ type: 'audioLevelUpdated', level });
 					}, 50);
 				}),
-				// Start VAD monitoring loop
-				Effect.run(async (dispatch) => {
+				// Start VAD monitoring loop.
+				//
+				// A subscription, not `Effect.run`: the store keeps the cleanup this
+				// returns and runs it on `Effect.cancel(VAD_SUBSCRIPTION)` and on
+				// `destroy()`. `Effect.run` leaves the store no handle at all, so the
+				// interval this used to create was unreachable — never cleared on any
+				// path, still dispatching ten times a second after teardown, and
+				// pinning the AudioManager, its MediaStream and its AudioContext
+				// against collection.
+				Effect.subscription(VAD_SUBSCRIPTION, (dispatch) => {
 					const vadCheck = setInterval(() => {
 						const hasVoice = audioManager.detectVoiceActivity(15);
 						if (hasVoice) {
@@ -330,6 +394,8 @@ export const voiceInputReducer: Reducer<
 							dispatch({ type: 'silenceDetected', duration: 0 });
 						}
 					}, 100); // Check every 100ms
+
+					return () => clearInterval(vadCheck);
 				})
 			)
 		];
@@ -456,10 +522,10 @@ export const voiceInputReducer: Reducer<
 	// === Cleanup === //
 
 	case 'deactivateVoiceInput': {
-			const audioManager = deps.getAudioManager(state._audioManagerId!);
-			if (audioManager) {
-				audioManager.cleanup();
-			}
+			// `cleanup()` runs in the effect below, not here. A reducer is a pure
+			// function of (state, action, deps) — calling into the audio device from
+			// its body makes the transition unrepeatable and untestable, and is the
+			// rule CLAUDE.md states first.
 
 			return [
 				{
@@ -472,15 +538,20 @@ export const voiceInputReducer: Reducer<
 					recordingStartTime: null,
 					errorMessage: null
 				},
-				Effect.none()
+				Effect.batch(
+					Effect.cancel(VAD_SUBSCRIPTION),
+					Effect.run(async () => {
+						deps.getAudioManager(state._audioManagerId!)?.cleanup();
+					})
+				)
 			];
 		}
 
 		case 'cleanupAudioResources': {
-			const audioManager = deps.getAudioManager(state._audioManagerId!);
-			if (audioManager) {
-				audioManager.cleanup();
-			}
+			// `cleanup()` runs in the effect below, not here. A reducer is a pure
+			// function of (state, action, deps) — calling into the audio device from
+			// its body makes the transition unrepeatable and untestable, and is the
+			// rule CLAUDE.md states first.
 
 			return [
 				{
@@ -491,7 +562,12 @@ export const voiceInputReducer: Reducer<
 					audioLevel: 0,
 					recordingStartTime: null
 				},
-				Effect.none()
+				Effect.batch(
+					Effect.cancel(VAD_SUBSCRIPTION),
+					Effect.run(async () => {
+						deps.getAudioManager(state._audioManagerId!)?.cleanup();
+					})
+				)
 			];
 		}
 

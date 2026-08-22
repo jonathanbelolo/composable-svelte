@@ -239,7 +239,6 @@
 		padding: 0.75rem;
 		background: white;
 		border-radius: 6px;
-		transition: all 0.2s;
 		border: 2px solid transparent;
 	}
 
@@ -357,7 +356,6 @@
 		align-items: center;
 		justify-content: center;
 		border-radius: 4px;
-		transition: all 0.2s;
 		flex-shrink: 0;
 		opacity: 0;
 	}

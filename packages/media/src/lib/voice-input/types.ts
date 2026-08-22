@@ -101,6 +101,19 @@ export interface VoiceInputDependencies {
 	getAudioManager: (id: string) => AudioManager | undefined;
 
 	/**
+	 * Create the audio manager that will own the microphone.
+	 *
+	 * Injectable because acquiring a microphone is a side effect on a real
+	 * device, and the permission path is the one path a test most needs to drive.
+	 * The reducer used to import `createAudioManager` from the registry and call
+	 * it inside the effect — so the *reading* side of the audio manager was
+	 * injectable via `getAudioManager` while the *creating* side was hard-wired,
+	 * and no test could reach `microphonePermissionGranted` without a real
+	 * microphone. Defaults to the registry.
+	 */
+	createAudioManager?: (id: string) => AudioManager;
+
+	/**
 	 * Optional: Streaming transcription for conversation mode.
 	 *
 	 * Opens WebSocket/SSE connection to backend for real-time transcription.

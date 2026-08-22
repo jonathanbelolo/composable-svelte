@@ -718,7 +718,6 @@
 		border-radius: 50%;
 		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 		opacity: 0;
-		transition: opacity 0.2s;
 	}
 
 	.progress-bar-large:hover .progress-thumb-large,
@@ -751,7 +750,6 @@
 		justify-content: center;
 		color: white;
 		cursor: pointer;
-		transition: all 0.2s;
 		position: relative;
 	}
 
@@ -792,7 +790,6 @@
 		align-items: center;
 		justify-content: center;
 		flex-shrink: 0;
-		transition: all 0.2s;
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 	}
 
@@ -833,7 +830,6 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		transition: transform 0.2s;
 	}
 
 	.volume-icon-large:hover {
@@ -884,7 +880,6 @@
 		cursor: pointer;
 		font-size: 0.9rem;
 		font-weight: 600;
-		transition: background 0.2s;
 		min-width: 60px;
 	}
 
@@ -916,7 +911,6 @@
 		cursor: pointer;
 		font-size: 0.85rem;
 		font-weight: 600;
-		transition: background 0.2s;
 	}
 
 	.speed-option:hover {
@@ -939,7 +933,6 @@
 		justify-content: center;
 		color: white;
 		cursor: pointer;
-		transition: all 0.2s;
 	}
 
 	.expand-btn:hover {

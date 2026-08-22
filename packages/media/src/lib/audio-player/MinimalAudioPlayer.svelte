@@ -423,7 +423,6 @@
 		align-items: center;
 		justify-content: center;
 		flex-shrink: 0;
-		transition: background 0.2s;
 	}
 
 	.play-pause-btn:hover:not(:disabled) {
@@ -470,7 +469,6 @@
 		background: #007bff;
 		border-radius: 50%;
 		opacity: 0;
-		transition: opacity 0.2s;
 	}
 
 	.progress-bar:hover .progress-thumb,

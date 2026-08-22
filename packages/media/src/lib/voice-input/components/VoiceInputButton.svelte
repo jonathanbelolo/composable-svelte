@@ -136,10 +136,6 @@
 		cursor: pointer;
 		user-select: none;
 		touch-action: none; /* Prevent scroll on mobile */
-		transition:
-			background 0.2s ease,
-			transform 0.1s ease,
-			color 0.2s ease;
 		border: none;
 		outline: none;
 		position: relative;
