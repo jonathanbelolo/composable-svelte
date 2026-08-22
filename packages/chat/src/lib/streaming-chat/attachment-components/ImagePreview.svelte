@@ -246,7 +246,6 @@
 		border-radius: 0.375rem;
 		color: #374151;
 		cursor: pointer;
-		transition: all 0.15s;
 		flex-shrink: 0;
 	}
 
@@ -363,7 +362,6 @@
 		border-radius: 0.375rem;
 		color: white;
 		cursor: pointer;
-		transition: background-color 0.15s;
 	}
 
 	.fullscreen-close-btn:hover {

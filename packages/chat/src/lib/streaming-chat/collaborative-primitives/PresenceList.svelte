@@ -206,7 +206,6 @@
 		gap: 12px;
 		padding: 8px 12px;
 		border-radius: 8px;
-		transition: background-color 0.15s;
 	}
 
 	.user-item:hover {

@@ -195,7 +195,6 @@
 		font-size: 13px;
 		font-weight: 600;
 		cursor: pointer;
-		transition: opacity 0.2s;
 	}
 
 	.chat-message__edit-button:hover:not(:disabled) {

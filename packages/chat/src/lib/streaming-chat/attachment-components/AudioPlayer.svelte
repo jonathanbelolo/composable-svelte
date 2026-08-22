@@ -321,7 +321,6 @@
 		border-radius: 50%;
 		color: white;
 		cursor: pointer;
-		transition: background-color 0.15s;
 		flex-shrink: 0;
 	}
 

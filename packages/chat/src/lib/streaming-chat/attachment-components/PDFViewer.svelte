@@ -332,7 +332,6 @@
 		font-weight: 500;
 		color: #374151;
 		cursor: pointer;
-		transition: all 0.15s;
 	}
 
 	.pdf-btn:hover:not(:disabled) {

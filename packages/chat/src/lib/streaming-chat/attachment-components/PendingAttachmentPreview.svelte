@@ -104,7 +104,6 @@
 		background: white;
 		border: 1px solid #e0e0e0;
 		border-radius: 8px;
-		transition: border-color 0.2s, box-shadow 0.2s;
 	}
 
 	.pending-attachment:hover {
@@ -221,7 +220,6 @@
 		align-items: center;
 		justify-content: center;
 		cursor: pointer;
-		transition: background 0.2s, color 0.2s, border-color 0.2s;
 		flex-shrink: 0;
 	}
 

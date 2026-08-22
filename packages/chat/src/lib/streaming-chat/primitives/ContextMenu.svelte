@@ -151,7 +151,6 @@
 		align-items: center;
 		justify-content: center;
 		color: currentColor;
-		transition: background 0.2s ease, transform 0.1s ease;
 		width: 24px;
 		height: 24px;
 	}
@@ -190,7 +189,6 @@
 		font-size: 14px;
 		color: #1a1a1a;
 		text-align: left;
-		transition: background 0.15s ease;
 	}
 
 	.context-menu__item:hover:not(:disabled) {

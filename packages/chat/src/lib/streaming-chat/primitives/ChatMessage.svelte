@@ -415,7 +415,6 @@
 		padding: 6px;
 		cursor: pointer;
 		opacity: 0;
-		transition: opacity 0.2s ease, background 0.2s ease;
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -577,7 +576,6 @@
 		font-weight: 500;
 		color: rgba(0, 0, 0, 0.7);
 		cursor: pointer;
-		transition: background 0.2s, border-color 0.2s, transform 0.1s;
 	}
 
 	.chat-message__add-reaction:hover {

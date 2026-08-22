@@ -501,7 +501,6 @@
 		border: none;
 		color: white;
 		cursor: pointer;
-		transition: opacity 0.2s, transform 0.2s;
 	}
 
 	.video-play-overlay:hover {
@@ -596,7 +595,6 @@
 		border: none;
 		color: white;
 		cursor: pointer;
-		transition: opacity 0.15s;
 		flex-shrink: 0;
 	}
 

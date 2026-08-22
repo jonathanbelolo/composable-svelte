@@ -519,7 +519,6 @@
 		border-radius: 6px;
 		font-size: 20px;
 		cursor: pointer;
-		transition: background 0.2s, border-color 0.2s;
 		flex-shrink: 0;
 		display: flex;
 		align-items: center;
@@ -573,7 +572,6 @@
 		font-size: 14px;
 		font-weight: 600;
 		cursor: pointer;
-		transition: opacity 0.2s;
 		white-space: nowrap;
 	}
 

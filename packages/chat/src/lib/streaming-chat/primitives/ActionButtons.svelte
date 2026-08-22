@@ -60,7 +60,6 @@
 		gap: 4px;
 		margin-left: auto;
 		opacity: 0;
-		transition: opacity 0.2s ease;
 	}
 
 	:global(.chat-message:hover) .action-buttons {
@@ -77,7 +76,6 @@
 		align-items: center;
 		justify-content: center;
 		color: currentColor;
-		transition: background 0.2s ease, transform 0.1s ease;
 		width: 24px;
 		height: 24px;
 	}

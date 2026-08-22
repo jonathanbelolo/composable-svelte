@@ -55,7 +55,6 @@
 		border: 1px solid rgba(0, 0, 0, 0.1);
 		border-radius: 12px;
 		cursor: pointer;
-		transition: background 0.2s, border-color 0.2s, transform 0.1s;
 		font-size: 14px;
 	}
 

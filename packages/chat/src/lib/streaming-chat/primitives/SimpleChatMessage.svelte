@@ -275,9 +275,6 @@
 		padding: 6px;
 		cursor: pointer;
 		opacity: 0;
-		transition:
-			opacity 0.2s ease,
-			background 0.2s ease;
 		display: flex;
 		align-items: center;
 		justify-content: center;

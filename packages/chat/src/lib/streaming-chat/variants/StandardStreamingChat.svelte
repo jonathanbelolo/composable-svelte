@@ -330,7 +330,6 @@
 		font-size: 14px;
 		font-weight: 600;
 		cursor: pointer;
-		transition: opacity 0.2s;
 		white-space: nowrap;
 	}
 
