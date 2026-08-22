@@ -63,15 +63,15 @@ export class CleanupTracker {
 			callback();
 		}, delay);
 
+		// Tracked in the Set and nowhere else. This used to also push a closure
+		// into `cleanups[]`, which nothing ever removed — not `clearTimeout`, not
+		// the timer firing — so `resourceCount` grew by one per call for the life
+		// of the tracker. `useTypingEmitter` starts one of these per keystroke.
+		//
+		// The closure was redundant as well as unbounded: `dispose()` clears this
+		// Set directly *before* running `cleanups`, so by the time each closure ran
+		// its own `has()` check was already false and it did nothing.
 		this.timers.add(timer);
-
-		// Auto-cleanup on execution
-		this.add(() => {
-			if (this.timers.has(timer)) {
-				clearTimeout(timer);
-				this.timers.delete(timer);
-			}
-		});
 
 		return timer;
 	}
@@ -86,14 +86,8 @@ export class CleanupTracker {
 		}
 
 		const timer = setInterval(callback, interval);
+		// Same redundancy as `setTimeout` above; `dispose()` clears this Set itself.
 		this.intervals.add(timer);
-
-		this.add(() => {
-			if (this.intervals.has(timer)) {
-				clearInterval(timer);
-				this.intervals.delete(timer);
-			}
-		});
 
 		return timer;
 	}
@@ -138,94 +132,12 @@ export class CleanupTracker {
 	}
 
 	/**
-	 * Request animation frame and track it for cleanup.
-	 */
-	requestAnimationFrame(callback: FrameRequestCallback): number {
-		if (this.isDisposed) {
-			console.warn('[CleanupTracker] Requesting animation frame after dispose');
-			return 0;
-		}
-
-		const handle = requestAnimationFrame((time) => {
-			callback(time);
-		});
-
-		this.add(() => {
-			cancelAnimationFrame(handle);
-		});
-
-		return handle;
-	}
-
-	/**
-	 * Create an AbortController and track it for cleanup.
-	 */
-	createAbortController(): AbortController {
-		if (this.isDisposed) {
-			console.warn('[CleanupTracker] Creating abort controller after dispose');
-			const controller = new AbortController();
-			controller.abort();
-			return controller;
-		}
-
-		const controller = new AbortController();
-
-		this.add(() => {
-			if (!controller.signal.aborted) {
-				controller.abort();
-			}
-		});
-
-		return controller;
-	}
-
-	/**
-	 * Track a Promise and allow cancellation via AbortController.
-	 */
-	trackPromise<T>(
-		factory: (signal: AbortSignal) => Promise<T>,
-		onCancel?: () => void
-	): Promise<T> {
-		if (this.isDisposed) {
-			console.warn('[CleanupTracker] Tracking promise after dispose');
-			return Promise.reject(new Error('CleanupTracker already disposed'));
-		}
-
-		const controller = this.createAbortController();
-
-		return new Promise((resolve, reject) => {
-			factory(controller.signal)
-				.then(resolve)
-				.catch((error) => {
-					if (controller.signal.aborted) {
-						if (onCancel) {
-							onCancel();
-						}
-						reject(new Error('Promise cancelled'));
-					} else {
-						reject(error);
-					}
-				});
-		});
-	}
-
-	/**
 	 * Clear a specific timeout.
 	 */
 	clearTimeout(timer: ReturnType<typeof setTimeout>): void {
 		if (this.timers.has(timer)) {
 			clearTimeout(timer);
 			this.timers.delete(timer);
-		}
-	}
-
-	/**
-	 * Clear a specific interval.
-	 */
-	clearInterval(timer: ReturnType<typeof setInterval>): void {
-		if (this.intervals.has(timer)) {
-			clearInterval(timer);
-			this.intervals.delete(timer);
 		}
 	}
 

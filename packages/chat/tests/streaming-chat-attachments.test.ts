@@ -327,7 +327,7 @@ describe('StreamingChat Attachments', () => {
 			const store = createStore({
 				initialState: {
 					...createInitialStreamingChatState(),
-					currentStreaming: { content: 'partial...', isComplete: false },
+				currentStreaming: { content: 'partial...' },
 					isWaitingForResponse: true,
 					error: 'some error'
 				},
@@ -344,7 +344,6 @@ describe('StreamingChat Attachments', () => {
 			expect(store.state.isWaitingForResponse).toBe(false);
 			expect(store.state.error).toBeNull();
 			expect(store.state.editingMessage).toBeNull();
-			expect(store.state.contextMenu).toBeNull();
 		});
 
 		it('restoreMessages replaces existing messages', () => {

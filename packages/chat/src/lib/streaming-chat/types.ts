@@ -133,7 +133,6 @@ export interface StreamingChatState {
 	/** Currently streaming message (if any) */
 	currentStreaming: {
 		content: string;
-		isComplete: boolean;
 		/** Controller for cancelling the stream */
 		abortController?: AbortController;
 	} | null;
@@ -150,12 +149,6 @@ export interface StreamingChatState {
 		content: string;
 	} | null;
 
-	/** Context menu state */
-	contextMenu: {
-		isOpen: boolean;
-		messageId: string | null;
-		position: { x: number; y: number };
-	} | null;
 
 	/** Pending file attachments (before sending message) */
 	pendingAttachments: MessageAttachment[];
@@ -183,8 +176,6 @@ export type StreamingChatAction =
 	| { type: 'submitEditedMessage' }
 	| { type: 'cancelEditing' }
 	// Context menu
-	| { type: 'openContextMenu'; messageId: string; position: { x: number; y: number } }
-	| { type: 'closeContextMenu' }
 	// File attachments
 	| { type: 'addAttachment'; attachment: MessageAttachment }
 	| { type: 'removeAttachment'; attachmentId: string }
@@ -259,7 +250,6 @@ export function createInitialStreamingChatState(): StreamingChatState {
 		isWaitingForResponse: false,
 		error: null,
 		editingMessage: null,
-		contextMenu: null,
 		pendingAttachments: []
 	};
 }

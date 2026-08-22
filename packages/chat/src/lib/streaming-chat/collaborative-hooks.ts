@@ -118,7 +118,7 @@ export function useTypingEmitter(
 
 		// Reset auto-stop timer
 		if (stopTypingTimer) {
-			clearTimeout(stopTypingTimer);
+			cleanup.clearTimeout(stopTypingTimer);
 		}
 
 		stopTypingTimer = cleanup.setTimeout(() => {
@@ -132,7 +132,7 @@ export function useTypingEmitter(
 			store.dispatch({ type: 'stopTyping' });
 
 			if (stopTypingTimer) {
-				clearTimeout(stopTypingTimer);
+				cleanup.clearTimeout(stopTypingTimer);
 				stopTypingTimer = null;
 			}
 		}
@@ -142,7 +142,7 @@ export function useTypingEmitter(
 		if (isTyping) {
 			// Reset auto-stop timer
 			if (stopTypingTimer) {
-				clearTimeout(stopTypingTimer);
+				cleanup.clearTimeout(stopTypingTimer);
 			}
 
 			stopTypingTimer = cleanup.setTimeout(() => {

@@ -47,7 +47,7 @@ export function streamingChatReducer(
 				{
 					...state,
 					messages: [...state.messages, userMessage],
-					currentStreaming: { content: '', isComplete: false },
+					currentStreaming: { content: '' },
 					isWaitingForResponse: true,
 					error: null,
 					pendingAttachments: [] // Clear attachments after sending
@@ -80,7 +80,6 @@ export function streamingChatReducer(
 					currentStreaming: {
 						...state.currentStreaming,
 						content: state.currentStreaming.content + action.chunk,
-						isComplete: false
 					},
 					isWaitingForResponse: false
 				},
@@ -188,9 +187,8 @@ export function streamingChatReducer(
 					...state,
 					messages: newMessages,
 					isWaitingForResponse: true,
-					currentStreaming: { content: '', isComplete: false },
+					currentStreaming: { content: '' },
 					error: null,
-					contextMenu: null
 				},
 				Effect.run(async (dispatch) => {
 					// Re-send the user message
@@ -206,7 +204,7 @@ export function streamingChatReducer(
 			}
 
 			return [
-				{ ...state, contextMenu: null },
+				{ ...state },
 				Effect.run(async (dispatch) => {
 					try {
 						await navigator.clipboard.writeText(message.content);
@@ -260,7 +258,6 @@ export function streamingChatReducer(
 				{
 					...state,
 					messages: newMessages,
-					contextMenu: null
 				},
 				Effect.none()
 			];
@@ -279,7 +276,6 @@ export function streamingChatReducer(
 						id: action.messageId,
 						content: message.content
 					},
-					contextMenu: null
 				},
 				Effect.none()
 			];
@@ -329,7 +325,7 @@ export function streamingChatReducer(
 					messages: newMessages,
 					editingMessage: null,
 					isWaitingForResponse: true,
-					currentStreaming: { content: '', isComplete: false },
+					currentStreaming: { content: '' },
 					error: null
 				},
 				Effect.run(async (dispatch) => {
@@ -344,30 +340,6 @@ export function streamingChatReducer(
 				{
 					...state,
 					editingMessage: null
-				},
-				Effect.none()
-			];
-		}
-
-		case 'openContextMenu': {
-			return [
-				{
-					...state,
-					contextMenu: {
-						isOpen: true,
-						messageId: action.messageId,
-						position: action.position
-					}
-				},
-				Effect.none()
-			];
-		}
-
-		case 'closeContextMenu': {
-			return [
-				{
-					...state,
-					contextMenu: null
 				},
 				Effect.none()
 			];
@@ -525,7 +497,6 @@ export function streamingChatReducer(
 					isWaitingForResponse: false,
 					error: null,
 					editingMessage: null,
-					contextMenu: null
 				},
 				Effect.none()
 			];
@@ -542,7 +513,6 @@ export function streamingChatReducer(
 					isWaitingForResponse: false,
 					error: null,
 					editingMessage: null,
-					contextMenu: null
 				},
 				Effect.none()
 			];
