@@ -332,6 +332,11 @@ export const Effect = {
         return Effect.batch(...effect.effects.map(e => Effect.map(e, f)));
 
       case 'Cancellable':
+        // `Effect.cancel(id)` is a Cancellable carrying no work. Mapping it
+        // through `Effect.cancellable` would drop the marker, so a cancel
+        // returned by a scoped child reducer came out the other side looking like
+        // real work and registered a phantom AbortController under that id.
+        if (effect.cancelOnly) return Effect.cancel(effect.id);
         return Effect.cancellable(effect.id, async (dispatch) => {
           await effect.execute((a) => dispatch(f(a)));
         });

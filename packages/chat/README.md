@@ -121,16 +121,15 @@ For multi-user chat with real-time presence:
     PresenceAvatarStack,
     TypingIndicator,
     usePresenceTracking,
-    useTypingEmitter,
-    WebSocketManager
+    useTypingEmitter
   } from '@composable-svelte/chat';
 </script>
 
-<!-- Show who's online -->
-<PresenceAvatarStack users={$store.presence.users} />
+<!-- Show who's online. Users live in a flat Map, not under `presence`. -->
+<PresenceAvatarStack users={[...$store.users.values()]} />
 
 <!-- Show who's typing -->
-<TypingIndicator users={$store.typing.activeUsers} />
+<TypingIndicator users={getTypingUsers($store.users)} />
 ```
 
 ### Collaborative Hooks
@@ -142,18 +141,27 @@ For multi-user chat with real-time presence:
 | `useCursorTracking` | Share cursor position in real-time |
 | `useHeartbeat` | Keep-alive pings for connection health |
 
-### WebSocketManager
+### Supplying the connection
 
-Manages WebSocket lifecycle with automatic reconnection:
+There is no `WebSocketManager`. The socket is yours: pass a `connectWebSocket`
+dependency that opens it and **returns a cleanup function**. The store owns that
+cleanup — `disconnectFromConversation` runs it, re-connecting runs it before
+opening the next one, and destroying the store runs it too.
 
 ```typescript
-import { WebSocketManager } from '@composable-svelte/chat';
-
-const ws = new WebSocketManager('wss://chat.example.com', {
-  reconnect: true,
-  maxRetries: 5
-});
+dependencies: {
+  connectWebSocket: (conversationId, userId, onMessage, onConnectionChange) => {
+    const socket = new WebSocket(`wss://chat.example.com/${conversationId}`);
+    socket.onmessage = (e) => onMessage(JSON.parse(e.data));
+    socket.onopen = () => onConnectionChange({ status: 'connected', connectedAt: Date.now() });
+    return () => socket.close();
+  }
+}
 ```
+
+Returning nothing is allowed but means nothing is ever closed. Reports made from
+inside a cleanup are ignored, so a socket's `onclose` cannot overwrite the state
+of the connection that replaced it.
 
 ## State Management
 

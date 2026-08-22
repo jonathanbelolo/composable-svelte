@@ -112,6 +112,33 @@ export function createStore<State, Action, Dependencies = any>(
   /**
    * Execute an effect based on its type.
    */
+  /**
+   * Invoke a subscription cleanup without letting it take anything else down.
+   *
+   * Three failures this absorbs, all of which only became reachable once
+   * cleanups started actually running:
+   *
+   * - a setup that returned nothing, which the documented consumer shape for a
+   *   WebSocket dependency does. Calling `undefined` threw a *synchronous*
+   *   TypeError the surrounding `.catch` could not see, so `destroy()` threw and
+   *   every later teardown step — the remaining cleanups, the subscription map,
+   *   the debounce and throttle timers, the subscriber list — was skipped.
+   * - a cleanup that throws synchronously, which escaped through `dispatch()`
+   *   and out of the caller's event handler, leaving the entry installed to
+   *   throw again at destroy.
+   * - a cleanup that rejects, which was already handled.
+   */
+  function runCleanup(cleanup: (() => void | Promise<void>) | undefined): void {
+    if (typeof cleanup !== 'function') return;
+    try {
+      Promise.resolve(cleanup()).catch(error => {
+        console.error('[Composable Svelte] Subscription cleanup error:', error);
+      });
+    } catch (error) {
+      console.error('[Composable Svelte] Subscription cleanup error:', error);
+    }
+  }
+
   function executeEffect(effect: Effect<Action>): void {
     // Check if we should defer effects (SSR)
     const deferEffects = config.ssr?.deferEffects ?? true; // Default to true
@@ -142,13 +169,11 @@ export function createStore<State, Action, Dependencies = any>(
         }
 
         // Cancel existing subscription with same id
-        const existingSubscription = subscriptionCleanups.get(effect.id);
-        if (existingSubscription) {
-          Promise.resolve(existingSubscription()).catch(error => {
-            console.error('[Composable Svelte] Subscription cleanup error:', error);
-          });
-          subscriptionCleanups.delete(effect.id);
-        }
+        // Deleted unconditionally: the entry used to be removed only inside the
+        // truthy branch, so a subscription whose setup returned nothing could
+        // never be cancelled at all.
+        runCleanup(subscriptionCleanups.get(effect.id));
+        subscriptionCleanups.delete(effect.id);
 
         // Clear debounce timer with same id
         const existingTimer = debounceTimers.get(effect.id);
@@ -189,12 +214,23 @@ export function createStore<State, Action, Dependencies = any>(
 
         Promise.resolve(effect.execute(guardedDispatch, controller.signal))
           .catch(error => {
-            if (error.name !== 'AbortError') {
+            // Optional chaining because a rejection is not required to be an
+            // object: `throw null` or a bare `Promise.reject()` used to throw a
+            // second TypeError *inside* this handler, turning a handled failure
+            // into an unhandled rejection.
+            if ((error as { name?: string } | null)?.name !== 'AbortError') {
               console.error('[Composable Svelte] Effect error:', error);
             }
           })
           .finally(() => {
-            inFlightEffects.delete(effect.id);
+            // Only if this execution is still the current one. A superseded
+            // effect settling later used to delete its *successor's* controller,
+            // after which `Effect.cancel` for that id found nothing and the live
+            // work ran on uncancelled and ungated — the opposite of the guarantee
+            // `Effect.cancellable` exists to give.
+            if (inFlightEffects.get(effect.id) === controller) {
+              inFlightEffects.delete(effect.id);
+            }
           });
         break;
       }
@@ -264,18 +300,32 @@ export function createStore<State, Action, Dependencies = any>(
 
       case 'Subscription': {
         // Cancel existing subscription with same id
-        const existingCleanup = subscriptionCleanups.get(effect.id);
-        if (existingCleanup) {
-          Promise.resolve(existingCleanup()).catch(error => {
-            console.error('[Composable Svelte] Subscription cleanup error:', error);
-          });
-        }
+        runCleanup(subscriptionCleanups.get(effect.id));
+        subscriptionCleanups.delete(effect.id);
 
-        // Setup new subscription and store cleanup function
+        // Dispatch is gated on this subscription still being the live one.
+        //
+        // A real socket's `close()` fires `onclose` on a later task, and consumers
+        // report that through the connection callback — so without the gate a
+        // deliberate disconnect ends with the store believing the connection
+        // failed, and a reconnect has the *old* socket's close clobber the new
+        // one's healthy state. `Cancellable` got this gate and `Subscription` did
+        // not, which is backwards: subscriptions are the ones that outlive their
+        // own cancellation.
+        let live = true;
+        const gatedDispatch: Dispatch<Action> = action => {
+          if (!live) return;
+          dispatch(action);
+        };
+
         try {
-          const cleanup = effect.setup(dispatch);
-          subscriptionCleanups.set(effect.id, cleanup);
+          const cleanup = effect.setup(gatedDispatch);
+          subscriptionCleanups.set(effect.id, () => {
+            live = false;
+            if (typeof cleanup === 'function') cleanup();
+          });
         } catch (error) {
+          live = false;
           console.error('[Composable Svelte] Subscription setup error:', error);
         }
         break;
@@ -332,11 +382,7 @@ export function createStore<State, Action, Dependencies = any>(
     inFlightEffects.clear();
 
     // Call all subscription cleanups
-    subscriptionCleanups.forEach((cleanup, id) => {
-      Promise.resolve(cleanup()).catch(error => {
-        console.error(`[Composable Svelte] Error cleaning up subscription "${id}":`, error);
-      });
-    });
+    subscriptionCleanups.forEach(cleanup => runCleanup(cleanup));
     subscriptionCleanups.clear();
 
     // Clear all timers

@@ -447,9 +447,24 @@ export class TestStore<State, Action, Dependencies = any> {
         break;
 
       case 'Run':
-      case 'Cancellable':
         await effect.execute(dispatch);
         break;
+
+      case 'Cancellable': {
+        // `Effect.cancel(id)` carries no work — it cancels. TestStore used to run
+        // its no-op executor and stop there, so a reducer whose disconnect is
+        // `Effect.cancel(subscriptionId)` tore nothing down under test while
+        // doing so correctly in production. A consumer writing the obvious
+        // TestStore disconnect test got a green vacuous pass.
+        const cleanup = this._subscriptionCleanups.get(effect.id);
+        if (typeof cleanup === 'function') {
+          this._subscriptionCleanups.delete(effect.id);
+          await cleanup();
+        }
+        if (effect.cancelOnly) break;
+        await effect.execute(dispatch);
+        break;
+      }
 
       case 'AfterDelay':
         // Schedule the effect to execute after delay using setTimeout
@@ -478,11 +493,14 @@ export class TestStore<State, Action, Dependencies = any> {
         await effect.execute();
         break;
 
-      case 'Subscription':
-        // Set up subscription and store cleanup
-        const cleanup = effect.setup(dispatch);
-        this._subscriptionCleanups.set(effect.id, cleanup);
+      case 'Subscription': {
+        // Re-registering the same id replaces the previous subscription, as the
+        // real store does.
+        const previous = this._subscriptionCleanups.get(effect.id);
+        if (typeof previous === 'function') await previous();
+        this._subscriptionCleanups.set(effect.id, effect.setup(dispatch));
         break;
+      }
 
       default:
         // Exhaustiveness check

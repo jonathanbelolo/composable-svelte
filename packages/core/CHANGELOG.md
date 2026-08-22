@@ -5,6 +5,60 @@ All notable changes to `@composable-svelte/core` will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-08-22
+
+The effect system's cancellation was inert. Found while building a package's
+socket teardown on top of it.
+
+### Fixed
+
+- **`Effect.cancel` could not cancel an `Effect.cancellable`.** The store created
+  an `AbortController`, stored it and aborted it — but `EffectExecutor` took only
+  `dispatch`, so the signal never reached anyone. The work ran to completion and
+  still dispatched. Executors now receive the signal as a second argument, and
+  dispatches from a cancelled effect are dropped whether or not the executor
+  observes it, so cancellation is correct without the author opting in.
+- **`Effect.cancel` was identified by stringifying the executor** and testing for
+  `{}`, so a real effect whose body contained an empty object literal was
+  silently treated as a cancellation and never ran. It already had to accept both
+  `{}` and `{ }` because the build reformats the no-op it was matching. There is
+  a structural `cancelOnly` marker now, and `Effect.map` preserves it — mapping a
+  cancel through a scoped child reducer used to turn it into a phantom
+  cancellable.
+- **Subscription cleanups could take down the whole teardown.** A setup that
+  returned nothing — the shape this repo's own examples use for a WebSocket
+  dependency — meant `undefined` was stored and later called, throwing a
+  *synchronous* TypeError that the surrounding `.catch` could not see. `destroy()`
+  threw, and every later step (remaining cleanups, the subscription map, debounce
+  and throttle timers, the subscriber list) was skipped. A cleanup that throws
+  synchronously escaped through `dispatch()` into the caller's event handler and
+  left itself installed to throw again at destroy. Both are absorbed now.
+- **A cancelled subscription could still dispatch.** A real socket's `close()`
+  fires `onclose` on a later task, so a dead subscription's report overwrote the
+  live one's state: a deliberate disconnect displayed "connection failed", and a
+  reconnect reported failed while a healthy socket delivered messages. Dispatch
+  is gated on the subscription still being current.
+- **A superseded cancellable deleted its successor's controller** when it settled,
+  after which `Effect.cancel` for that id found nothing.
+- A non-object rejection (`throw null`, bare `Promise.reject()`) threw a second
+  `TypeError` inside the error handler, turning a handled failure into an
+  unhandled rejection.
+- **`TestStore` ignored cancellation entirely** — it never ran subscription
+  cleanups on `Effect.cancel` and never honoured `cancelOnly`, so a reducer whose
+  disconnect is `Effect.cancel(subscriptionId)` tore nothing down under test while
+  behaving correctly in production. The obvious test passed vacuously.
+
+### Changed
+
+- **BREAKING** — `EffectExecutor` takes an optional `signal: AbortSignal` second
+  parameter. Additive, so existing executors are unaffected. It is supplied for
+  `Effect.cancellable` only and is `undefined` for `run`, `debounced`, `throttled`
+  and `afterDelay`; since `fetch` accepts an undefined signal without complaint,
+  that distinction is documented on the type.
+- **BREAKING** — a cancelled effect's dispatches are dropped where they
+  previously landed. Any code depending on that was depending on `Effect.cancel`
+  not working.
+
 ## [0.7.0] - 2026-08-21
 
 A sweep to remove **dead behaviour**: anything a consumer can pass, configure,

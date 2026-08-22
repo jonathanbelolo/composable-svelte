@@ -135,6 +135,26 @@ describe('Effect', () => {
     });
   });
 
+  describe('the cancelOnly marker', () => {
+    // A review found that the two tests above did not pin this at all: deleting
+    // the `cancelOnly` check from the store left both green, because the second
+    // passed via the *dispatch gate* rather than the marker. These assert the
+    // marker directly, in the one place it can be lost.
+    it('is set by cancel() and not by cancellable()', () => {
+      expect(Effect.cancel('x')).toMatchObject({ _tag: 'Cancellable', cancelOnly: true });
+      expect(Effect.cancellable('x', async () => {}).cancelOnly).toBeUndefined();
+    });
+
+    it('survives Effect.map', () => {
+      // `Effect.map` rebuilt a Cancellable through `Effect.cancellable`, which
+      // does not set the marker — so a cancel returned by a scoped child reducer
+      // came out looking like real work and registered a phantom AbortController
+      // under that id.
+      const mapped = Effect.map(Effect.cancel<{ type: 'a' }>('x'), (a) => a);
+      expect(mapped).toMatchObject({ _tag: 'Cancellable', id: 'x', cancelOnly: true });
+    });
+  });
+
   describe('debounced()', () => {
     it('creates a Debounced effect with ID and delay', () => {
       const execute = vi.fn();

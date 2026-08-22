@@ -212,9 +212,13 @@ describe('createStore', () => {
   });
 
   it('manages Cancellable effects by ID', async () => {
-    // Test that cancellable effects use the same ID mechanism
-    // (actual cancellation testing is complex with fake timers,
-    // so we just verify the effect is created correctly)
+    // This asserts construction and dispatch only, and its previous comment said
+    // so: "actual cancellation testing is complex with fake timers, so we just
+    // verify the effect is created correctly". That excuse is why `Effect.cancel`
+    // was able to not cancel anything for the life of the package — the store
+    // created an AbortController, aborted it, and never handed the signal to
+    // anyone. Real cancellation is covered in `effect.test.ts` and
+    // `subscription-teardown.test.ts`; this one keeps the id-routing coverage.
     const reducer: Reducer<TestState, TestAction> = (state, action) => {
       if (action.type === 'startLoading') {
         return [

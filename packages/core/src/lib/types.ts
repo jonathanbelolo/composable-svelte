@@ -27,6 +27,16 @@ export type Selector<State, Value> = (state: State) => Value;
 /**
  * Function that executes an effect and may dispatch actions.
  *
+ * `signal` is provided for `Effect.cancellable` only, because that is the one
+ * kind the store holds a controller for. It is `undefined` for `run`,
+ * `debounced`, `throttled` and `afterDelay` — and since `fetch` accepts an
+ * `undefined` signal without complaint, passing it there fails silently rather
+ * than loudly. Check before relying on it.
+ *
+ * Observing it is optional: dispatches from a cancelled effect are dropped
+ * regardless, so cancellation is correct without cooperation. Using the signal
+ * additionally stops the work in flight.
+ *
  * @template Action - The action type
  */
 export type EffectExecutor<Action> = (

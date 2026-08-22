@@ -44,13 +44,15 @@ afterEach(() => {
 /**
  * A fake transport that counts opens and closes.
  *
- * `onCleanup` lets a test run arbitrary code at teardown — which is how the
- * runaway guard below simulates a consumer whose close handler reports a
- * connection-state change.
+ * `reportOnClose` models the one thing a real `WebSocket` consumer does that the
+ * naive fake does not: `close()` fires `onclose` on a later task, and the
+ * standard shape reports that through the very `onConnectionChange` callback the
+ * reducer handed in. So the report must go through *that* callback, not through
+ * `store.dispatch` — otherwise the test bypasses the exact seam the fix installs
+ * and proves nothing about it.
  */
-function makeStore(options: { onCleanup?: (dispatch: (a: CollaborativeAction) => void) => void } = {}) {
+function makeStore(options: { reportOnClose?: WebSocketConnectionState } = {}) {
 	const calls = { opened: 0, closed: 0 };
-	let lastDispatch: ((a: CollaborativeAction) => void) | null = null;
 
 	const store = createStore<CollaborativeStreamingChatState, CollaborativeAction>({
 		initialState: createInitialCollaborativeState(),
@@ -66,14 +68,17 @@ function makeStore(options: { onCleanup?: (dispatch: (a: CollaborativeAction) =>
 				onConnectionChange({ status: 'connected', connectedAt: 0 });
 				return () => {
 					calls.closed += 1;
-					if (options.onCleanup && lastDispatch) options.onCleanup(lastDispatch);
+					if (options.reportOnClose) {
+						// Asynchronously, like a real onclose.
+						const report = options.reportOnClose;
+						setTimeout(() => onConnectionChange(report), 0);
+					}
 				};
 			},
 			sendWebSocketMessage: () => {},
 			getTimestamp: () => 0
 		} as never
 	});
-	lastDispatch = (a) => store.dispatch(a);
 	cleanup.push(() => store.destroy?.());
 	return { store, calls };
 }
@@ -140,32 +145,59 @@ describe('the collaborative socket', () => {
 	});
 
 	/**
-	 * The runaway guard, and the reason this file exists in this shape.
+	 * The runaway guard — aimed at the door that is actually open.
 	 *
-	 * The media pass shipped a defect of exactly this form: repairing a feature's
-	 * entry made a broken exit reachable, and the exit re-triggered the entry — an
-	 * unbounded loop billing an API every 1.5 seconds, with no UI to stop it.
+	 * The first version of this test triggered cleanup through
+	 * `disconnectFromConversation`, and that case nulls `conversationId` in the
+	 * same reducer return, *before* the effect runs. So by the time the cleanup
+	 * dispatched anything, every auto-reconnect edge was already short-circuited
+	 * by the `!state.conversationId` guard. The test could not fail: adding the
+	 * exact edge its comment forbade would have left it green.
 	 *
-	 * Here the equivalent edge would be a cleanup that reports a connection-state
-	 * change which something turns back into a connect. Nothing does that today,
-	 * and nothing may: `connectionStateChanged` must stay a pure state write. This
-	 * test is what fails if anyone ever wires it up.
+	 * Reconnect is the dangerous path, because there `conversationId` survives.
+	 * That is where a cleanup reporting a failure could feed back into another
+	 * connect, and where the media pass's defect would live if it were here.
 	 */
-	it('a cleanup that reports a failure does not cascade into more connections', async () => {
+	it('a cleanup that reports a failure does not cascade, on the reconnect path', async () => {
 		const { store, calls } = makeStore({
-			onCleanup: (dispatch) =>
-				dispatch({
-					type: 'connectionStateChanged',
-					connection: { status: 'failed', reason: 'closed', canRetry: true }
-				})
+			reportOnClose: { status: 'failed', reason: 'closed', canRetry: true }
+		});
+
+		store.dispatch(connect);
+		await wait(20);
+
+		// conversationId is still set here — the guard that saved the old test is
+		// not in play.
+		expect(store.state.conversationId, 'the control failed').toBe('c1');
+		store.dispatch({ type: 'reconnectRequested' });
+		await wait(80);
+
+		expect(calls.opened, 'the cleanup fed back into another connection').toBe(2);
+		expect(calls.opened - calls.closed, 'more than one socket is live').toBe(1);
+	});
+
+	/**
+	 * The other half of the same hazard, and the one that bites a real consumer.
+	 *
+	 * A real socket's `close()` fires `onclose` on a later task, and the standard
+	 * shape reports that through `onConnectionChange`. Without a gate, the dead
+	 * socket's close overwrites the live socket's state: a deliberate disconnect
+	 * ends up displaying "connection failed", and a reconnect ends up reporting
+	 * failed while a healthy socket delivers messages.
+	 */
+	it('a dead socket cannot clobber the connection state', async () => {
+		const { store } = makeStore({
+			reportOnClose: { status: 'failed', reason: 'socket closed', canRetry: true }
 		});
 
 		store.dispatch(connect);
 		await wait(20);
 		store.dispatch({ type: 'disconnectFromConversation' });
-		await wait(60);
+		await wait(40);
 
-		expect(calls.opened, 'a cleanup re-entered the connect path').toBe(1);
-		expect(calls.closed).toBe(1);
+		expect(
+			store.state.connection.status,
+			'the closing socket reported failure over a deliberate disconnect'
+		).toBe('disconnected');
 	});
 });
