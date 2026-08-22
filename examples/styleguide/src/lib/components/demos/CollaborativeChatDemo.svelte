@@ -27,16 +27,7 @@
 		presence: 'active',
 		typing: null,
 		cursor: null,
-		permissions: {
-			canSendMessages: true,
-			canEditMessages: true,
-			canDeleteMessages: true,
-			canSeePresence: true,
-			canSeeTyping: true,
-			isAdmin: false
-		},
-		lastSeen: Date.now(),
-		lastHeartbeat: Date.now()
+		lastSeen: Date.now()
 	};
 
 	// Mock other users
@@ -49,16 +40,7 @@
 			presence: 'active',
 			typing: null,
 			cursor: null,
-			permissions: {
-				canSendMessages: true,
-				canEditMessages: true,
-				canDeleteMessages: true,
-				canSeePresence: true,
-				canSeeTyping: true,
-				isAdmin: false
-			},
-			lastSeen: Date.now(),
-			lastHeartbeat: Date.now()
+			lastSeen: Date.now()
 		},
 		{
 			id: 'user-3',
@@ -67,16 +49,7 @@
 			presence: 'idle',
 			typing: null,
 			cursor: null,
-			permissions: {
-				canSendMessages: true,
-				canEditMessages: true,
-				canDeleteMessages: true,
-				canSeePresence: true,
-				canSeeTyping: true,
-				isAdmin: false
-			},
-			lastSeen: Date.now() - 120000,
-			lastHeartbeat: Date.now() - 120000
+			lastSeen: Date.now() - 120000
 		},
 		{
 			id: 'user-4',
@@ -86,16 +59,7 @@
 			presence: 'away',
 			typing: null,
 			cursor: null,
-			permissions: {
-				canSendMessages: true,
-				canEditMessages: true,
-				canDeleteMessages: true,
-				canSeePresence: true,
-				canSeeTyping: true,
-				isAdmin: false
-			},
-			lastSeen: Date.now() - 300000,
-			lastHeartbeat: Date.now() - 300000
+			lastSeen: Date.now() - 300000
 		}
 	];
 
@@ -282,11 +246,11 @@
 					<li>✅ Real-time presence tracking (active, idle, away, offline)</li>
 					<li>✅ Typing indicators with smart aggregation</li>
 					<li>✅ WebSocket state machine with reconnection</li>
-					<li>✅ Optimistic updates with rollback</li>
 					<li>✅ Single source of truth state management</li>
 					<li>✅ Composable primitives for custom UIs</li>
-					<li>⏳ Live cursors (coming soon)</li>
-					<li>⏳ CRDT integration for conflict resolution</li>
+					<li>⏳ Live cursors (the pipeline exists; no consumer wires it yet)</li>
+					<li>❌ Optimistic updates — removed; the queues could never be written to</li>
+					<li>❌ CRDT — removed, along with the yjs dependency it never used</li>
 				</ul>
 
 				<h3>Usage Example</h3>

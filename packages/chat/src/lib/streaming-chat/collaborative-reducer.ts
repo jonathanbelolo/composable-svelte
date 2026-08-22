@@ -10,8 +10,7 @@ import type {
 	CollaborativeStreamingChatState,
 	CollaborativeAction,
 	CollaborativeDependencies,
-	CollaborativeUser,
-	PendingAction
+	CollaborativeUser
 } from './collaborative-types.js';
 
 /**
@@ -91,10 +90,6 @@ export function collaborativeReducer(
 									console.warn(
 										'[Collaborative] Received a sync_update, but CRDT sync is not implemented. Ignoring.'
 									);
-								} else if (msg.type === 'action_confirmed') {
-									dispatch({ type: 'actionConfirmed', tempId: msg.tempId, serverId: msg.serverId });
-								} else if (msg.type === 'action_failed') {
-									dispatch({ type: 'actionFailed', tempId: msg.tempId, error: msg.error });
 								}
 							},
 							(connectionState) => {
@@ -213,7 +208,6 @@ export function collaborativeReducer(
 			if (user) {
 				users.set(action.userId, {
 					...user,
-					lastHeartbeat: action.timestamp,
 					lastSeen: action.timestamp
 				});
 			}
@@ -468,202 +462,7 @@ export function collaborativeReducer(
 
 		// === Optimistic Updates === //
 
-		case 'actionConfirmed': {
-			// Remove from pending actions
-			const pendingActions = new Map(state.sync.pendingActions);
-			pendingActions.delete(action.tempId);
-
-			return [
-				{
-					...state,
-					sync: {
-						...state.sync,
-						pendingActions
-					}
-				},
-				Effect.none()
-			];
-		}
-
-		case 'actionFailed': {
-			// Move to failed actions
-			const pendingActions = new Map(state.sync.pendingActions);
-			const pendingAction = pendingActions.get(action.tempId);
-
-			if (pendingAction) {
-				pendingActions.delete(action.tempId);
-
-				return [
-					{
-						...state,
-						sync: {
-							...state.sync,
-							pendingActions,
-							failedActions: [
-								...state.sync.failedActions,
-								{
-									tempId: action.tempId,
-									error: action.error,
-									action: pendingAction
-								}
-							]
-						}
-					},
-					Effect.none()
-				];
-			}
-
-			return [state, Effect.none()];
-		}
-
-		case 'retryFailedAction': {
-			const failedAction = state.sync.failedActions.find((a) => a.tempId === action.tempId);
-
-			if (!failedAction) {
-				return [state, Effect.none()];
-			}
-
-			// Remove from failed actions
-			const failedActions = state.sync.failedActions.filter((a) => a.tempId !== action.tempId);
-
-			// Add back to pending with incremented retry count
-			const pendingActions = new Map(state.sync.pendingActions);
-			pendingActions.set(action.tempId, {
-				...failedAction.action,
-				retryCount: failedAction.action.retryCount + 1
-			});
-
-			return [
-				{
-					...state,
-					sync: {
-						...state.sync,
-						pendingActions,
-						failedActions
-					}
-				},
-				Effect.run(async (dispatch) => {
-					// Retry the action
-					try {
-						await deps.sendWebSocketMessage(failedAction.action.action);
-					} catch (error) {
-						dispatch({
-							type: 'actionFailed',
-							tempId: action.tempId,
-							error: error instanceof Error ? error.message : 'Retry failed'
-						});
-					}
-				})
-			];
-		}
-
-		case 'discardFailedAction': {
-			const failedActions = state.sync.failedActions.filter((a) => a.tempId !== action.tempId);
-
-			return [
-				{
-					...state,
-					sync: {
-						...state.sync,
-						failedActions
-					}
-				},
-				Effect.none()
-			];
-		}
-
 		// === Sync === //
-
-		case 'syncCompleted': {
-			return [
-				{
-					...state,
-					sync: {
-						...state.sync,
-						lastSequenceNumber: action.sequenceNumber,
-						isSyncing: false
-					}
-				},
-				Effect.none()
-			];
-		}
-
-		case 'syncFailed': {
-			return [
-				{
-					...state,
-					sync: {
-						...state.sync,
-						isSyncing: false
-					}
-				},
-				Effect.none()
-			];
-		}
-
-		case 'flushOfflineQueue': {
-			if (state.sync.offlineQueue.length === 0) {
-				return [state, Effect.none()];
-			}
-
-			const queue = [...state.sync.offlineQueue];
-
-			return [
-				{
-					...state,
-					sync: {
-						...state.sync,
-						offlineQueue: [],
-						isSyncing: true
-					}
-				},
-				Effect.run(async (dispatch) => {
-					// Send queued actions
-					for (const item of queue) {
-						try {
-							await deps.sendWebSocketMessage(item.action);
-						} catch (error) {
-							console.error('[Collaborative] Failed to flush queue item:', error);
-						}
-					}
-
-					dispatch({ type: 'syncCompleted', sequenceNumber: state.sync.lastSequenceNumber + queue.length });
-				})
-			];
-		}
-
-		case 'serverMessageReceived': {
-			return [
-				{
-					...state,
-					sync: {
-						...state.sync,
-						lastSequenceNumber: Math.max(state.sync.lastSequenceNumber, action.sequenceNumber)
-					}
-				},
-				Effect.none()
-			];
-		}
-
-		case 'userPermissionsChanged': {
-			const users = new Map(state.users);
-			const user = users.get(action.userId);
-
-			if (user) {
-				users.set(action.userId, {
-					...user,
-					permissions: action.permissions
-				});
-			}
-
-			return [
-				{
-					...state,
-					users
-				},
-				Effect.none()
-			];
-		}
 
 		default: {
 			const _never: never = action;

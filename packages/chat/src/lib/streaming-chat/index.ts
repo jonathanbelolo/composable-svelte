@@ -78,14 +78,10 @@ export {
 	type UserPresence,
 	type TypingInfo,
 	type CursorPosition,
-	type UserPermissions,
 	type CollaborativeStreamingChatState,
 	type CollaborativeAction,
 	type CollaborativeDependencies,
 	type WebSocketConnectionState,
-	type PendingAction,
-	type SyncState,
-	DEFAULT_USER_PERMISSIONS
 } from './collaborative-types.js';
 
 // Collaborative primitives
@@ -110,14 +106,6 @@ export {
 	getCursorPositions,
 	formatTypingIndicator
 } from './collaborative-hooks.js';
-
-// WebSocket manager
-export {
-	WebSocketManager,
-	createWebSocketManager,
-	type WebSocketConfig,
-	type WebSocketMessage
-} from './websocket-manager.js';
 
 // Cleanup utilities
 export { CleanupTracker, createCleanupTracker, type CleanupFunction } from './cleanup-tracker.js';
