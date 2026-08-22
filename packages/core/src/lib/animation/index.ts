@@ -13,6 +13,8 @@ export type { ScrollFollower, ScrollFollowerConfig } from './scroll.js';
 export {
 	animate,
 	animateListItemIn,
+	animateFadeIn,
+	animateFadeOut,
 	animateModalIn,
 	animateModalOut,
 	animateBackdropIn,
@@ -42,6 +44,7 @@ export {
 	animateAccordionExpand,
 	animateAccordionCollapse
 } from './animate.js';
+export type { FadeOptions } from './animate.js';
 
 export type { SpringConfig } from './spring-config.js';
 export { springPresets, mergeSpringConfig } from './spring-config.js';

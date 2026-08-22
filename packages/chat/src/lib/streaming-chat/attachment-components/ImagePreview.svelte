@@ -6,6 +6,7 @@
 	 * Supports various image formats (JPEG, PNG, GIF, WebP, SVG).
 	 */
 	import { onMount } from 'svelte';
+	import { animateFadeIn } from '@composable-svelte/core/animation';
 	import type { MessageAttachment } from '../types.js';
 	import { formatFileSize } from '../utils.js';
 
@@ -49,6 +50,32 @@
 		error = 'Failed to load image';
 		isLoading = false;
 	}
+
+	/**
+	 * Which image has already faded in.
+	 *
+	 * A plain `let`, not `$state` — writing it inside the effect that reads it
+	 * would re-trigger that effect. Keyed on the URL rather than a bare boolean
+	 * so a component handed a different attachment fades the new one in too.
+	 */
+	let fadedInFor: string | undefined;
+
+	// Was `img { opacity: 0 }` plus `img.loaded { opacity: 1 }` and a CSS
+	// transition — a state-driven lifecycle the policy prohibits, and one that
+	// rendered every server-side image permanently invisible, since `$effect`
+	// never runs there and `.loaded` is only ever added by a client-side load
+	// handler. `animateFadeIn` supplies its own `opacity: [0, 1]`, so the resting
+	// state in CSS is simply "visible".
+	$effect(() => {
+		const element = imgRef;
+		const ready = !isLoading && !error;
+		const url = attachment.url;
+
+		if (!element || !ready || fadedInFor === url) return;
+
+		fadedInFor = url;
+		void animateFadeIn(element);
+	});
 
 	async function toggleFullscreen() {
 		if (!containerRef || !allowFullscreen) return;
@@ -141,7 +168,6 @@
 				bind:this={imgRef}
 				src={attachment.url}
 				alt={attachment.filename}
-				class:loaded={!isLoading && !error}
 				onload={handleLoad}
 				onerror={handleError}
 			/>
@@ -279,12 +305,6 @@
 		max-height: 600px;
 		width: auto;
 		height: auto;
-		opacity: 0;
-		transition: opacity 0.2s;
-	}
-
-	img.loaded {
-		opacity: 1;
 	}
 
 	.fullscreen img {
@@ -298,7 +318,10 @@
 	}
 
 	.image-preview.clickable img:hover {
-		opacity: 0.9;
+		/* Was `opacity: 0.9`, which the fade-in's committed inline opacity now
+		   outranks — one property, one author. `filter` keeps the same feedback
+		   on a property nothing else writes. */
+		filter: brightness(0.92);
 	}
 
 	.image-loading,

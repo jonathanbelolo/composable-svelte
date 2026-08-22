@@ -397,11 +397,7 @@ function scan(file: string): Violation[] {
  * Delete entries as packages are converted. When this is empty, delete it.
  */
 const BACKLOG = new Set([
-	// All that is left of chat: one `transition: opacity` apiece, each driven by a
-	// state class rather than a pseudo-class, so each needs Motion One rather than
-	// deletion. They convert together.
-	'chat/src/lib/streaming-chat/attachment-components/ImagePreview.svelte',
-	'chat/src/lib/streaming-chat/attachment-components/VideoPlayer.svelte',
+	// chat is clear. It entered this campaign with 19 entries.
 	'code/src/lib/code-editor/CodeEditor.svelte',
 	'code/src/lib/code-highlight/CodeHighlight.svelte',
 	'maps/src/lib/components/TileProviderControl.svelte',

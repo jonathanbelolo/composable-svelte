@@ -57,9 +57,15 @@ Three consequences worth stating, because all three were being violated:
 - **A single declaration may not serve two masters.** One `transition-colors`
   covering both a `hover:` class and a state-driven class must be split: the
   hover half goes, the state half becomes Motion One.
-- **`scroll-behavior: smooth` is an animation.** Four sites in `chat/` set
-  `scrollTop = scrollHeight` on a new message and let the browser animate it —
-  a state-driven lifecycle animation in CSS, unguarded for reduced motion.
+- **`scroll-behavior: smooth` is an animation.** Four sites in `chat/` used to
+  set `scrollTop = scrollHeight` and let the browser animate it — a state-driven
+  lifecycle animation in CSS, unguarded for reduced motion. It was also breaking
+  the feature it belonged to: the browser fires a scroll event per intermediate
+  frame, and the listener that decides "has the user scrolled away?" could not
+  tell those from a real one, so auto-scroll latched *off* mid-response. Use
+  `createScrollFollower` from `@composable-svelte/core/animation`, which eases
+  toward a target that keeps moving, distinguishes its own frames from the
+  user's, and honours reduced motion.
 
 ### Why pseudo-class transitions go
 
@@ -75,13 +81,20 @@ Instant hover feedback is not a downgrade; it is the platform default.
 **Every animation this library runs must be skippable, and skipping it must not
 change what the store believes.**
 
-This is not optional polish. The library animates by default, and today **not one
-of the 27 helpers in `animate.ts` consults the user's preference** — modal,
-sheet, drawer, alert, tooltip, toast, dropdown, popover, sidebar, stack,
-accordion and chevron all run at full amplitude regardless. The only honouring
-that exists is five CSS `@media (prefers-reduced-motion: reduce)` blocks in
-`media/`, and two of those guard one-shot `@keyframes` that the rule above orders
-converted.
+This is not optional polish. The library animates by default, and today **3 of
+the 31 helpers in `animate.ts` consult the user's preference** — `animateFadeIn`,
+`animateFadeOut` and `animateListItemIn`, all written after this rule was.
+Modal, sheet, drawer, alert, tooltip, toast, dropdown, popover, sidebar, stack,
+accordion and chevron still run at full amplitude regardless. Outside that file,
+`createScrollFollower` honours it too. The rest of the honouring that exists is
+five CSS `@media (prefers-reduced-motion: reduce)` blocks in `media/`, and two of
+those guard one-shot `@keyframes` that the rule above orders converted.
+
+Note the asymmetry the three compliant helpers encode, because it is the part
+that is easy to get wrong: an entrance may return early only when the element's
+resting state is already the end state. `animateFadeOut` has to *write*
+`opacity: 0` under the preference — skipping the animation must never skip the
+outcome.
 
 So the migration has a trap in it, and it must be stated: **converting a CSS
 animation that sits under a reduced-motion block, without carrying the preference

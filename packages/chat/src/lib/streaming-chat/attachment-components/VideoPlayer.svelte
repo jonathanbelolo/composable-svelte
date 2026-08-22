@@ -6,6 +6,7 @@
 	 * Features play/pause, seek, volume, fullscreen, picture-in-picture.
 	 */
 	import { onMount } from 'svelte';
+	import { animateFadeIn, animateFadeOut } from '@composable-svelte/core/animation';
 	import type { MessageAttachment } from '../types.js';
 	import { formatFileSize } from '../utils.js';
 
@@ -37,6 +38,46 @@
 	let isFullscreen = $state(false);
 	let showControls = $state(true);
 	let controlsTimeout: number | undefined;
+	let controlsRef: HTMLDivElement | undefined = $state();
+
+	/**
+	 * What the controls were last animated to. A plain `let`, not `$state`: the
+	 * effect below writes it, and a rune would make that a self-trigger.
+	 */
+	let controlsShown: boolean | undefined;
+
+	/**
+	 * Was `transition: opacity 0.2s` between `.video-controls` and
+	 * `.video-controls.visible` — a state-driven lifecycle in CSS, and one whose
+	 * resting `opacity: 0` meant server-rendered controls never appeared.
+	 *
+	 * Deliberately asymmetric. Showing is instant: the user is moving the mouse
+	 * right now, and 0.2s of fade before the controls answer is latency, not
+	 * polish. Hiding fades, because that one happens *to* the user after three
+	 * idle seconds rather than in reply to them.
+	 *
+	 * The instant show still goes through Motion rather than an inline style: a
+	 * fade-out already in flight is a Web Animation, and a Web Animation outranks
+	 * inline style, so assigning `opacity` would let it finish and hide the
+	 * controls the user just asked for.
+	 */
+	$effect(() => {
+		const element = controlsRef;
+		const shown = showControls;
+
+		if (!element || controlsShown === shown) return;
+
+		const isFirstRun = controlsShown === undefined;
+		controlsShown = shown;
+
+		// On the first run, place — and placing here means writing nothing at all.
+		// The controls' resting state in CSS *is* visible, which is the whole
+		// point of moving the fade out of CSS, so an opening inline `opacity: 1`
+		// would only paper over a regression back to `opacity: 0`.
+		if (isFirstRun) return;
+
+		void (shown ? animateFadeIn(element, { duration: 0 }) : animateFadeOut(element));
+	});
 
 	onMount(() => {
 		if (videoRef) {
@@ -267,7 +308,7 @@
 
 		<!-- Controls -->
 		{#if !error}
-			<div class="video-controls" class:visible={showControls}>
+			<div bind:this={controlsRef} class="video-controls" class:visible={showControls}>
 				<!-- Progress Bar -->
 				<div class="video-progress-container">
 					<input
@@ -514,13 +555,13 @@
 		right: 0;
 		background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
 		padding: 2rem 1rem 1rem;
-		opacity: 0;
-		transition: opacity 0.2s;
+		/* No `opacity` here on purpose: the resting state is visible, and the
+		   fade is Motion One's. Parking it at 0 awaiting an effect is what made
+		   the server render controls that never appeared. */
 		pointer-events: none;
 	}
 
 	.video-controls.visible {
-		opacity: 1;
 		pointer-events: all;
 	}
 

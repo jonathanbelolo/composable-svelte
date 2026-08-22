@@ -84,6 +84,88 @@ export async function animateListItemIn(
 }
 
 // ============================================================================
+// Fade Animations
+// ============================================================================
+
+/** Options shared by the generic fades. */
+export interface FadeOptions {
+	/** Seconds. Defaults to 0.2 — what the CSS transitions these replace used. */
+	duration?: number;
+}
+
+/**
+ * Fade an element in.
+ *
+ * The generic counterpart to the named entrance helpers: for something that is
+ * not a modal, a toast or a list item — an image finishing its load, a video's
+ * controls coming back.
+ *
+ * **It supplies its own start value.** `opacity: [0, 1]` means the element's
+ * resting CSS state is "visible", so server HTML and a JavaScript-less client
+ * render it rather than parking it at `opacity: 0` awaiting an effect that never
+ * runs. The trade is that interrupting a fade-out restarts from 0 rather than
+ * from wherever it had reached; pass `duration: 0` where the interruption should
+ * be invisible.
+ *
+ * **Show something instantly through here rather than through
+ * `element.style.opacity`.** A running Web Animation outranks an inline style,
+ * so assigning the style does not stop a fade-out already in flight. Starting a
+ * new animation does.
+ *
+ * Honours `prefers-reduced-motion` by jumping to the end state — which here
+ * means *setting* opacity, not returning early: a previous fade-out may have
+ * left the element at 0, and skipping the animation must not skip the outcome.
+ */
+export async function animateFadeIn(element: HTMLElement, options?: FadeOptions): Promise<void> {
+	if (prefersReducedMotion()) {
+		element.style.opacity = '1';
+		return;
+	}
+
+	try {
+		await motionAnimate(
+			element,
+			{ opacity: [0, 1] },
+			{ duration: options?.duration ?? 0.2, ease: [0.4, 0, 1, 1] }
+		).finished;
+		element.style.opacity = '1';
+	} catch (error) {
+		console.error('[animateFadeIn] Animation failed:', error);
+		element.style.opacity = '1';
+	}
+}
+
+/**
+ * Fade an element out, leaving it at `opacity: 0`.
+ *
+ * The end state is written explicitly rather than left to the animation, because
+ * these elements stay mounted — unlike a modal, nothing unmounts to make the
+ * final frame stick. Under `prefers-reduced-motion` that write *is* the whole
+ * implementation.
+ *
+ * An interrupted fade never settles, so the trailing write is not reached when a
+ * fade-in takes over. That is the intended behaviour, not an oversight.
+ */
+export async function animateFadeOut(element: HTMLElement, options?: FadeOptions): Promise<void> {
+	if (prefersReducedMotion()) {
+		element.style.opacity = '0';
+		return;
+	}
+
+	try {
+		await motionAnimate(
+			element,
+			{ opacity: [1, 0] },
+			{ duration: options?.duration ?? 0.2, ease: [0.4, 0, 1, 1] }
+		).finished;
+		element.style.opacity = '0';
+	} catch (error) {
+		console.error('[animateFadeOut] Animation failed:', error);
+		element.style.opacity = '0';
+	}
+}
+
+// ============================================================================
 // Modal Animations
 // ============================================================================
 
