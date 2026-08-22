@@ -251,7 +251,8 @@ const RAW_TRANSITION = /(^|[\s;{:])transition(-property|-duration|-timing-functi
  * which left `animation-name: slideIn; animation-duration: .2s;` fully compliant
  * with the guard and a flat violation of the policy.
  */
-const RAW_ANIMATION = /(^|[\s;{:'"`])animation(-name|-duration)?\s*[:=]/;
+const RAW_ANIMATION =
+	/(^|[\s;{'"`])animation(-name|-duration)?\s*:|(^|\s)style:animation(-name|-duration)?\s*=/;
 /**
  * `tailwindcss-animate`'s enter/exit utilities.
  *
@@ -567,6 +568,12 @@ describe('animation policy', () => {
 		for (const line of legal) {
 			expect(TAILWIND_ANIMATION.test(line), `false positive: ${line}`).toBe(false);
 		}
+
+		// `=` is matched only after `style:animation`, never after a bare
+		// `animation`, so a component prop cannot trip it.
+		expect(RAW_ANIMATION.test('<Chart animation={false} />')).toBe(false);
+		expect(RAW_ANIMATION.test('<Chart animation-duration={200} />')).toBe(false);
+		expect(RAW_ANIMATION.test('<div style:animation="pop 0.2s"></div>')).toBe(true);
 	});
 
 	it('strips comments without eating code', () => {

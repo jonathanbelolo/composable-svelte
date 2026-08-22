@@ -23,12 +23,49 @@ const packages = readdirSync(packagesDir, { withFileTypes: true })
 	.filter((e) => e.isDirectory() && existsSync(join(packagesDir, e.name, 'package.json')))
 	.map((e) => e.name);
 
-/** Documents that are written for a consumer, so they have to reach one. */
-const CONSUMER_FACING = ['README.md', 'CHANGELOG.md'];
+/**
+ * Documents that are written for a consumer, so they have to reach one.
+ *
+ * `README.md` is deliberately absent: npm packs it regardless of `files`, so
+ * requiring it here could only ever produce a false alarm — measured against
+ * npm 11.6.0, `files: ["dist","LICENSE"]` still packs the README. CHANGELOG.md
+ * gets no such treatment, which is the whole reason this test exists.
+ */
+const CONSUMER_FACING = ['CHANGELOG.md'];
+
+/**
+ * Does `files` cover this document?
+ *
+ * `files` entries are globs, so a literal `includes` reports a package that
+ * ships everything via `*.md` as though it shipped nothing. Only the two forms
+ * that occur in practice are handled — an exact name and a `*`-bearing pattern —
+ * because a full glob implementation here would be a second thing to get wrong.
+ */
+function covers(files: string[], doc: string): boolean {
+	return files.some((entry) => {
+		const pattern = entry.replace(/^\.\//, '');
+		if (!pattern.includes('*')) return pattern === doc;
+		const source = pattern
+			.split('*')
+			.map((part) => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&'))
+			.join('[^/]*');
+		return new RegExp(`^${source}$`).test(doc);
+	});
+}
 
 describe('published files', () => {
 	it('there are packages to check', () => {
 		expect(packages.length).toBeGreaterThan(0);
+	});
+
+	it('the glob handling is right', () => {
+		// Both halves, because a matcher that says yes to everything is the same
+		// as no test at all.
+		expect(covers(['dist', 'CHANGELOG.md'], 'CHANGELOG.md')).toBe(true);
+		expect(covers(['dist', '*.md'], 'CHANGELOG.md')).toBe(true);
+		expect(covers(['dist', './CHANGELOG.md'], 'CHANGELOG.md')).toBe(true);
+		expect(covers(['dist', 'LICENSE'], 'CHANGELOG.md')).toBe(false);
+		expect(covers(['dist', 'CHANGELOG.mdx'], 'CHANGELOG.md')).toBe(false);
 	});
 
 	it.each(packages)('%s ships the documents it maintains', (name) => {
@@ -41,7 +78,7 @@ describe('published files', () => {
 		if (pkg.files === undefined) return;
 
 		const missing = CONSUMER_FACING.filter(
-			(doc) => existsSync(join(pkgDir, doc)) && !files.includes(doc)
+			(doc) => existsSync(join(pkgDir, doc)) && !covers(files, doc)
 		);
 
 		expect(

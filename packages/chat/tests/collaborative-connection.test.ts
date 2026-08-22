@@ -201,3 +201,82 @@ describe('the collaborative socket', () => {
 		).toBe('disconnected');
 	});
 });
+
+const ME = 'u1';
+
+/** A connected store whose outgoing frames land in `sent`. */
+function connected(sent: unknown[]) {
+	const store = createStore<CollaborativeStreamingChatState, CollaborativeAction>({
+		initialState: createInitialCollaborativeState(),
+		reducer: collaborativeReducer,
+		dependencies: {
+			connectWebSocket: (
+				_conversationId: string,
+				_userId: string,
+				_onMessage: (m: unknown) => void,
+				onConnectionChange: (state: WebSocketConnectionState) => void
+			) => {
+				onConnectionChange({ status: 'connected', connectedAt: 0 });
+				return () => {};
+			},
+			sendWebSocketMessage: async (message: unknown) => {
+				sent.push(message);
+			},
+			getTimestamp: () => 0
+		} as never
+	});
+	cleanup.push(() => store.destroy?.());
+	store.dispatch({ type: 'connectToConversation', conversationId: 'c1', userId: ME });
+	return store;
+}
+
+describe('what actually leaves the browser', () => {
+	// `usePresenceTracking` and `useHeartbeat` are documented as tracking status
+	// and keeping the connection alive. Both dispatched actions whose reducer
+	// cases returned `Effect.none()`, so no frame ever left: a keep-alive that
+	// kept nothing alive, and a presence change nobody else could see.
+	//
+	// The rule now is directional — a change to *my own* state is broadcast, a
+	// change to anyone else's arrived from the wire — which is also what stops it
+	// echoing.
+
+	it('broadcasts my own presence change', async () => {
+		const sent: unknown[] = [];
+		const store = connected(sent);
+
+		store.dispatch({ type: 'userPresenceChanged', userId: ME, presence: 'away' });
+		await wait(10);
+
+		expect(sent).toEqual([{ type: 'presence_changed', userId: ME, presence: 'away' }]);
+	});
+
+	it('does not echo someone else’s presence change back at them', async () => {
+		const sent: unknown[] = [];
+		const store = connected(sent);
+
+		store.dispatch({ type: 'userPresenceChanged', userId: 'someone-else', presence: 'away' });
+		await wait(10);
+
+		expect(sent, 'a remote change was reflected back to the server').toEqual([]);
+	});
+
+	it('broadcasts my own heartbeat', async () => {
+		const sent: unknown[] = [];
+		const store = connected(sent);
+
+		store.dispatch({ type: 'heartbeatReceived', userId: ME, timestamp: 1234 });
+		await wait(10);
+
+		expect(sent).toEqual([{ type: 'heartbeat', userId: ME, timestamp: 1234 }]);
+	});
+
+	it('does not echo someone else’s heartbeat', async () => {
+		const sent: unknown[] = [];
+		const store = connected(sent);
+
+		store.dispatch({ type: 'heartbeatReceived', userId: 'someone-else', timestamp: 1234 });
+		await wait(10);
+
+		expect(sent).toEqual([]);
+	});
+});

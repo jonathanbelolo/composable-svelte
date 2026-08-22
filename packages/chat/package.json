@@ -12,6 +12,16 @@
       "default": "./dist/index.js"
     },
     "./package.json": "./package.json",
+    "./streaming-chat": {
+      "types": "./dist/streaming-chat/index.d.ts",
+      "svelte": "./dist/streaming-chat/index.js",
+      "default": "./dist/streaming-chat/index.js"
+    },
+    "./streaming-chat/markdown": {
+      "types": "./dist/streaming-chat/markdown.d.ts",
+      "svelte": "./dist/streaming-chat/markdown.js",
+      "default": "./dist/streaming-chat/markdown.js"
+    },
     "./*.js": {
       "types": "./dist/*.d.ts",
       "svelte": "./dist/*.js",
@@ -68,8 +78,8 @@
   "peerDependencies": {
     "@composable-svelte/core": "^0.11.0",
     "svelte": "^5.0.0",
-    "@composable-svelte/code": "^0.1.0 || ^0.2.0",
-    "@composable-svelte/media": "^0.1.0 || ^0.2.0",
+    "@composable-svelte/code": "^0.2.0",
+    "@composable-svelte/media": "^0.2.0",
     "prismjs": "^1.29.0",
     "pdfjs-dist": "^5.0.0"
   },

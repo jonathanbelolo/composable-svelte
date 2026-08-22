@@ -137,19 +137,10 @@ export interface CollaborativeDependencies {
 	sendWebSocketMessage: (message: unknown) => Promise<void>;
 
 	/**
-	 * Generate unique ID.
-	 */
-	generateId?: () => string;
-
-	/**
 	 * Get current timestamp.
+	 * @default Date.now()
 	 */
 	getTimestamp?: () => number;
-
-	/**
-	 * Generate user color.
-	 */
-	generateUserColor?: (userId: string) => string;
 }
 
 /**

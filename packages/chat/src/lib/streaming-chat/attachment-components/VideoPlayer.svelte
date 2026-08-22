@@ -128,13 +128,20 @@
 	});
 
 	onMount(() => {
+		// Read *from* the element rather than writing to it. Both assignments used
+		// to go the other way, setting `volume` and `playbackRate` to the values
+		// the element already had — two statements that could not change anything,
+		// and a silent trap if either initial value were ever edited. Seeding the
+		// state from the element makes the element the authority for where
+		// playback starts, which is what the controls then follow.
 		if (videoRef) {
-			videoRef.volume = volume;
-			videoRef.playbackRate = playbackRate;
-
-			// Handle fullscreen change
-			document.addEventListener('fullscreenchange', handleFullscreenChange);
+			volume = videoRef.volume;
+			playbackRate = videoRef.playbackRate;
 		}
+
+		// Outside the `if`: the teardown below removes this unconditionally, so
+		// registering it conditionally is an asymmetry waiting to bite.
+		document.addEventListener('fullscreenchange', handleFullscreenChange);
 
 		return () => {
 			document.removeEventListener('fullscreenchange', handleFullscreenChange);

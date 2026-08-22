@@ -85,6 +85,19 @@
 	const defaultLabel = $derived(message.role === 'user' ? userLabel : assistantLabel);
 	const avatarLabel = $derived(message.senderName ?? defaultLabel);
 
+	/**
+	 * Several pictures read better side by side; anything else stacks.
+	 *
+	 * Both call sites hard-coded `layout="list"`, so `AttachmentGallery`'s grid —
+	 * its `maxColumns` prop, its `gridColumns` derivation and its
+	 * `[data-layout='grid']` rules — was unreachable. The component is not
+	 * exported from any barrel and `.svelte` files cannot be deep-imported here,
+	 * so no consumer could reach it either.
+	 */
+	const attachmentLayout = $derived(
+		(message.attachments ?? []).filter((a) => a.type === 'image').length > 1 ? 'grid' : 'list'
+	);
+
 	let contentElement: HTMLDivElement | undefined = $state();
 
 	// Format timestamp
@@ -158,7 +171,7 @@
 			<!-- Message attachments -->
 			{#if message.attachments && message.attachments.length > 0}
 				<div class="chat-message__attachments">
-					<AttachmentGallery attachments={message.attachments} layout="list" />
+					<AttachmentGallery attachments={message.attachments} layout={attachmentLayout} />
 				</div>
 			{/if}
 
@@ -188,7 +201,7 @@
 			<!-- Message attachments for user messages -->
 			{#if message.attachments && message.attachments.length > 0}
 				<div class="chat-message__attachments">
-					<AttachmentGallery attachments={message.attachments} layout="list" />
+					<AttachmentGallery attachments={message.attachments} layout={attachmentLayout} />
 				</div>
 			{/if}
 		{/if}

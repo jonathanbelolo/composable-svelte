@@ -35,7 +35,33 @@ const read = (name: string) =>
 
 const coreVersion: string = read('core').version;
 
+/** Every relative-free import specifier appearing in a package's source. */
+function importsCore(pkgDir: string): boolean {
+	const src = join(pkgDir, 'src');
+	if (!existsSync(src)) return false;
+
+	const walk = (dir: string): boolean =>
+		readdirSync(dir, { withFileTypes: true }).some((entry) => {
+			const full = join(dir, entry.name);
+			if (entry.isDirectory()) return entry.name === 'node_modules' ? false : walk(full);
+			if (!/\.(ts|js|svelte)$/.test(entry.name)) return false;
+			return readFileSync(full, 'utf8').includes('@composable-svelte/core');
+		});
+
+	return walk(src);
+}
+
+// Scoped to packages that actually import core, rather than to "everything that
+// is not core". A future workspace package with no dependency on it should not
+// be forced to declare one, and nothing states that policy anywhere.
 const siblings = readdirSync(packagesDir, { withFileTypes: true })
+	.filter((e) => e.isDirectory() && existsSync(join(packagesDir, e.name, 'package.json')))
+	.map((e) => e.name)
+	.filter((name) => name !== 'core')
+	.filter((name) => importsCore(join(packagesDir, name)));
+
+/** Workspace siblings other than core that a package may declare as a peer. */
+const WORKSPACE_PEERS = readdirSync(packagesDir, { withFileTypes: true })
 	.filter((e) => e.isDirectory() && existsSync(join(packagesDir, e.name, 'package.json')))
 	.map((e) => e.name)
 	.filter((name) => name !== 'core');
@@ -47,16 +73,40 @@ describe('sibling peer ranges', () => {
 		expect(siblings.length).toBeGreaterThan(0);
 	});
 
+	it.each(siblings)('%s pins every workspace peer to the current version', (name) => {
+		// Not only core. chat kept `"^0.1.0 || ^0.2.0"` for its optional peers on
+		// `code` and `media` — the same accumulate-a-ceiling pattern, in the same
+		// file, unenforced because the original guard only knew about core.
+		const pkg = read(name);
+		const peers: Record<string, string> = pkg.peerDependencies ?? {};
+
+		const stale = Object.entries(peers)
+			.filter(([dep]) => dep.startsWith('@composable-svelte/'))
+			.map(([dep, range]) => ({ dep, range, sibling: dep.split('/')[1]! }))
+			.filter(({ sibling }) => sibling === 'core' || WORKSPACE_PEERS.includes(sibling))
+			.filter(({ range, sibling }) => range !== `^${read(sibling).version}`);
+
+		expect(
+			stale.map((s) => `${s.dep}: "${s.range}"`),
+			`Edit packages/${name}/package.json: each workspace peer should be "^" plus ` +
+				`that package's current version.`
+		).toEqual([]);
+	});
+
 	it.each(siblings)('%s requires exactly the current core', (name) => {
 		const pkg = read(name);
 		const declared = pkg.peerDependencies?.['@composable-svelte/core'];
 
-		expect(declared, `${name} does not declare core as a peer at all`).toBeDefined();
 		expect(
 			declared,
-			`${name} declares "${declared}" while core is ${coreVersion}. Appending a ` +
-				`minor to a "||" list moves the ceiling and leaves the floor behind, so ` +
-				`the package keeps advertising versions that lack the exports it imports.`
+			`${name} imports @composable-svelte/core but does not declare it as a peer`
+		).toBeDefined();
+		expect(
+			declared,
+			`Edit packages/${name}/package.json: peerDependencies["@composable-svelte/core"] ` +
+				`should be "^${coreVersion}", not "${declared}". Appending a minor to a "||" ` +
+				`list moves the ceiling and leaves the floor behind, so the package keeps ` +
+				`advertising versions that lack the exports it imports.`
 		).toBe(`^${coreVersion}`);
 	});
 });

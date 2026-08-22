@@ -106,9 +106,7 @@ function entryFiles(pkgDir: string, pkg: { exports?: Record<string, unknown> }):
 		if (subpath.includes('*')) return; // wildcards cannot be enumerated
 		collect(t);
 	});
-	return [...targets]
-		.map((t) => join(pkgDir, t.replace(/^\.\//, '')))
-		.filter((f) => existsSync(f));
+	return [...targets].map((t) => join(pkgDir, t.replace(/^\.\//, '')));
 }
 
 function resolveFrom(fromFile: string, spec: string): string | null {
@@ -139,6 +137,28 @@ describe('side-effect imports survive tree-shaking', () => {
 			existsSync(join(packagesDir, name, 'dist')),
 			`${name}/dist is missing — run \`pnpm -r build\` first, or this test proves nothing`
 		).toBe(true);
+	});
+
+	it.each(packages)('%s exports map points at files that exist', (name) => {
+		// A subpath whose target is missing fails at *import* time with
+		// ERR_MODULE_NOT_FOUND, which no build step and no typecheck catches.
+		// `@composable-svelte/chat/streaming-chat` was documented in three places
+		// and resolved to `dist/streaming-chat.js` — a file that has never
+		// existed, because the wildcard `"./*"` entry cannot see that
+		// `streaming-chat` is a directory.
+		//
+		// This used to be a `.filter(existsSync)` in `entryFiles`, which silently
+		// dropped exactly the case worth reporting.
+		const pkgDir = join(packagesDir, name);
+		const pkg = JSON.parse(readFileSync(join(pkgDir, 'package.json'), 'utf8'));
+
+		const missing = entryFiles(pkgDir, pkg).filter((f) => !existsSync(f));
+
+		expect(
+			missing.map((f) => relative(pkgDir, f)),
+			`${name} declares subpaths whose targets are not in dist — run ` +
+				`\`pnpm -r build\`, then check the exports map.`
+		).toEqual([]);
 	});
 
 	it.each(packages)('%s declares every bare import it relies on', (name) => {
@@ -183,7 +203,9 @@ describe('side-effect imports survive tree-shaking', () => {
 			}
 		};
 
-		for (const entry of entryFiles(pkgDir, pkg)) visit(entry, []);
+		for (const entry of entryFiles(pkgDir, pkg)) {
+			if (existsSync(entry)) visit(entry, []);
+		}
 
 		expect(
 			problems,

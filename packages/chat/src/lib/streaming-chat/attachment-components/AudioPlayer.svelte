@@ -32,10 +32,12 @@
 	let error = $state<string | null>(null);
 
 	onMount(() => {
+		// Read *from* the element, not to it: these assignments used to set the
+		// element to the values it already had. Seeding the state from the element
+		// makes it the authority for where playback starts.
 		if (audioRef) {
-			// Set initial volume
-			audioRef.volume = volume;
-			audioRef.playbackRate = playbackRate;
+			volume = audioRef.volume;
+			playbackRate = audioRef.playbackRate;
 		}
 	});
 

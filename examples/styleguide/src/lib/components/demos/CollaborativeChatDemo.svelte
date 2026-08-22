@@ -77,9 +77,7 @@
 		sendWebSocketMessage: async (message) => {
 			console.log('[Mock] Sending message:', message);
 		},
-		generateId: () => crypto.randomUUID(),
-		getTimestamp: () => Date.now(),
-		generateUserColor: generateRandomUserColor
+		getTimestamp: () => Date.now()
 	};
 
 	// Create collaborative store

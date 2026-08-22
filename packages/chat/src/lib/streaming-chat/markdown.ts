@@ -75,12 +75,18 @@ async function loadOptionalDependencies(): Promise<void> {
 
 		// Pre-load common languages if available
 		if (loadLanguage && Prism) {
+			// Every language `LANGUAGE_MAP` can produce must be here, or the alias
+			// resolves to a name Prism will never have and the block silently
+			// renders as plain text. `rb` → `ruby` and `yml` → `yaml` were exactly
+			// that: entries that could not affect anything.
 			await Promise.all([
 				loadLanguage('javascript'),
 				loadLanguage('typescript'),
 				loadLanguage('python'),
 				loadLanguage('bash'),
-				loadLanguage('json')
+				loadLanguage('json'),
+				loadLanguage('ruby'),
+				loadLanguage('yaml')
 			]).catch(() => {
 				// Ignore language loading errors
 			});
@@ -231,28 +237,6 @@ function fixPartialMarkdown(markdown: string): string {
 	}
 
 	return fixed;
-}
-
-/**
- * Check if text contains markdown syntax
- */
-export function hasMarkdownSyntax(text: string): boolean {
-	if (!text) return false;
-
-	// Check for common markdown patterns
-	const patterns = [
-		/^#{1,6}\s/, // Headers
-		/\*\*.*\*\*/, // Bold
-		/\*.*\*/, // Italic
-		/`.*`/, // Code
-		/```/, // Code blocks
-		/^\s*[-*+]\s/, // Unordered lists
-		/^\s*\d+\.\s/, // Ordered lists
-		/\[.*\]\(.*\)/, // Links
-		/^\s*>/ // Blockquotes
-	];
-
-	return patterns.some((pattern) => pattern.test(text));
 }
 
 /**

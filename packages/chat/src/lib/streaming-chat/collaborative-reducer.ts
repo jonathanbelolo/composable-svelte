@@ -28,22 +28,37 @@ import type {
  */
 const CONNECTION_SUBSCRIPTION = 'collaborative-websocket';
 
+/**
+ * Broadcast a frame, swallowing transport failures.
+ *
+ * The same shape the typing cases already use, extracted because presence and
+ * heartbeats need it too — and had it not.
+ */
+function broadcast(
+	deps: CollaborativeDependencies,
+	message: Record<string, unknown>,
+	what: string
+): EffectType<CollaborativeAction> {
+	return Effect.run(async () => {
+		try {
+			await deps.sendWebSocketMessage(message);
+		} catch (error) {
+			console.error(`[Collaborative] Failed to send ${what}:`, error);
+		}
+	});
+}
+
 export function collaborativeReducer(
 	state: CollaborativeStreamingChatState,
 	action: CollaborativeAction,
 	deps: CollaborativeDependencies
 ): [CollaborativeStreamingChatState, EffectType<CollaborativeAction>] {
-	const generateId = deps.generateId || (() => crypto.randomUUID());
+	// `generateId` and `generateUserColor` used to be resolved here too, and
+	// referenced nowhere else in the file. Nothing in this reducer mints an id or
+	// a colour — `userJoined` is handed a complete `CollaborativeUser`, colour
+	// included — so both were dependencies a consumer could supply that changed
+	// nothing. `generateRandomUserColor` is still exported for building that user.
 	const getTimestamp = deps.getTimestamp || (() => Date.now());
-	const generateColor = deps.generateUserColor || ((id: string) => {
-		// Simple hash-based color generation
-		let hash = 0;
-		for (let i = 0; i < id.length; i++) {
-			hash = id.charCodeAt(i) + ((hash << 5) - hash);
-		}
-		const hue = Math.abs(hash % 360);
-		return `hsl(${hue}, 70%, 60%)`;
-	});
 
 	switch (action.type) {
 		// === Connection Management === //
@@ -218,12 +233,21 @@ export function collaborativeReducer(
 				});
 			}
 
+			// A change to *my own* presence is news; a change to anyone else's
+			// arrived from the wire and must not be echoed back. That test is also
+			// what keeps this from looping. `usePresenceTracking` dispatches this
+			// with the local id, and until now the result never left the browser:
+			// a hook documented as tracking online/away status that nobody else
+			// could see.
 			return [
-				{
-					...state,
-					users
-				},
-				Effect.none()
+				{ ...state, users },
+				action.userId === state.currentUserId
+					? broadcast(
+							deps,
+							{ type: 'presence_changed', userId: action.userId, presence: action.presence },
+							'presence'
+						)
+					: Effect.none()
 			];
 		}
 
@@ -238,12 +262,18 @@ export function collaborativeReducer(
 				});
 			}
 
+			// Same rule, and the same defect: `useHeartbeat` is documented as a
+			// keep-alive, and no frame ever left the browser. A server that times
+			// out idle connections dropped every client that was merely quiet.
 			return [
-				{
-					...state,
-					users
-				},
-				Effect.none()
+				{ ...state, users },
+				action.userId === state.currentUserId
+					? broadcast(
+							deps,
+							{ type: 'heartbeat', userId: action.userId, timestamp: action.timestamp },
+							'heartbeat'
+						)
+					: Effect.none()
 			];
 		}
 

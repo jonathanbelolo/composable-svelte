@@ -393,25 +393,28 @@ export function getCursorPositions(
 /**
  * Smart typing indicator aggregation.
  *
- * Shows individual names for 1-2 users, "X people typing" for more.
+ * Shows individual names for 1-2 users, "X people are typing" for more.
+ *
+ * No trailing ellipsis: `TypingIndicator` renders animated dots beside this, and
+ * the two together read as "Alice is typing...•••". The component used to carry
+ * its own copy of this logic — same phrasing, different punctuation — and this
+ * one had no caller at all.
  *
  * @param typingUsers - Array of typing users
  * @returns Formatted typing indicator text
  */
-export function formatTypingIndicator(
-	typingUsers: Array<{ id: string; name: string; color: string }>
-): string {
+export function formatTypingIndicator(typingUsers: Array<{ name: string }>): string {
 	if (typingUsers.length === 0) {
 		return '';
 	}
 
 	if (typingUsers.length === 1) {
-		return `${typingUsers[0]!.name} is typing...`;
+		return `${typingUsers[0]!.name} is typing`;
 	}
 
 	if (typingUsers.length === 2) {
-		return `${typingUsers[0]!.name} and ${typingUsers[1]!.name} are typing...`;
+		return `${typingUsers[0]!.name} and ${typingUsers[1]!.name} are typing`;
 	}
 
-	return `${typingUsers.length} people are typing...`;
+	return `${typingUsers.length} people are typing`;
 }

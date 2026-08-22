@@ -128,9 +128,10 @@
 	}
 
 	function handleImageClick() {
-		if (allowFullscreen && !isFullscreen) {
-			toggleFullscreen();
-		}
+		// No guard: the button's `disabled` is the exact same condition, so this
+		// only runs when it is already satisfied. Repeating it here was a branch
+		// that could not be false, and two places to keep in step.
+		toggleFullscreen();
 	}
 
 	// Format dimensions

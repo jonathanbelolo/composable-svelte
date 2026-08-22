@@ -57,12 +57,12 @@ export {
 
 // Utilities
 export {
+	createAttachmentFromFile,
 	detectFileType,
 	extractFileMetadata,
 	formatFileSize,
 	validateFileSize,
 	validateFileType,
-	createFileDataURL,
 	createFileBlobURL,
 	revokeFileBlobURL,
 	getFileExtension,

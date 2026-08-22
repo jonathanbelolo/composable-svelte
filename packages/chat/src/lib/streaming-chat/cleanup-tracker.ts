@@ -150,9 +150,15 @@ export class CleanupTracker {
 
 	/**
 	 * Get number of tracked resources.
+	 *
+	 * All three kinds. Timers and intervals stopped pushing closures into
+	 * `cleanups[]` when that was found to grow by one per keystroke — which fixed
+	 * the leak and left this reporting `0` for a tracker holding twenty live
+	 * intervals, so a consumer using it to check for leaks got the wrong answer
+	 * in the reassuring direction.
 	 */
 	get resourceCount(): number {
-		return this.cleanups.length;
+		return this.cleanups.length + this.timers.size + this.intervals.size;
 	}
 
 	/**

@@ -81,3 +81,30 @@ describe('CleanupTracker resource accounting', () => {
 		expect(tracker.disposed).toBe(true);
 	});
 });
+
+describe('resourceCount', () => {
+	// It counted only `cleanups[]`. Timers and intervals stopped pushing into
+	// that array when the per-keystroke leak was fixed, so this reported `0` for
+	// a tracker holding live timers — wrong in the reassuring direction, for a
+	// getter whose only plausible use is checking that nothing leaked.
+
+	it('counts live timers and intervals, not just cleanups', () => {
+		const tracker = new CleanupTracker();
+
+		tracker.setTimeout(() => {}, 10_000);
+		tracker.setInterval(() => {}, 10_000);
+		tracker.add(() => {});
+
+		expect(tracker.resourceCount).toBe(3);
+		tracker.dispose();
+	});
+
+	it('drops back to zero once everything is disposed', () => {
+		const tracker = new CleanupTracker();
+		tracker.setTimeout(() => {}, 10_000);
+		tracker.setInterval(() => {}, 10_000);
+		tracker.dispose();
+
+		expect(tracker.resourceCount).toBe(0);
+	});
+});

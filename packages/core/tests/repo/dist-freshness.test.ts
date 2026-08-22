@@ -63,10 +63,13 @@ describe('built output is not stale', () => {
 				`test that imports ${name} is proving nothing`
 		).not.toBeNull();
 
-		// A second of slack: `svelte-package` copies some files with their source
-		// mtime, so an untouched build can tie rather than exceed.
+		// No slack. The original had a second of it, justified by `svelte-package`
+		// copying some files with their source mtime — measured on a real build,
+		// that does not happen: of 121 files in chat's dist, 26 share a path with
+		// a source file and none preserved its mtime. A second of tolerance is a
+		// second-wide window in which a genuinely stale build passes.
 		expect(
-			dist!.at + 1000,
+			dist!.at,
 			`${name}/dist is older than ${relative(pkgDir, src!.file)} — run ` +
 				`\`pnpm -r build\`. Cross-package tests import the built output, so a ` +
 				`stale dist means they ran against code that is not in the diff.`

@@ -3,26 +3,24 @@
 	 * Typing Indicator
 	 *
 	 * Animated dots showing someone is typing.
-	 * Shows formatted text like "Alice is typing..." or "3 people are typing...".
+	 * Shows formatted text like "Alice is typing" or "3 people are typing",
+	 * beside the dots that supply the ellipsis.
 	 */
+	import { formatTypingIndicator } from '../collaborative-hooks.js';
 
 	interface Props {
 		/** Array of user names currently typing */
-		users: Array<{ id: string; name: string; color: string }>;
+		users: Array<{ name: string }>;
 		/** Custom class */
 		class?: string;
 	}
 
 	let { users, class: className = '' }: Props = $props();
 
-	// Format typing text
-	const typingText = $derived.by(() => {
-		const [first, second] = users;
-		if (!first) return '';
-		if (!second) return `${first.name} is typing`;
-		if (users.length === 2) return `${first.name} and ${second.name} are typing`;
-		return `${users.length} people are typing`;
-	});
+	// Shared with `formatTypingIndicator`, which is exported for consumers
+	// building their own indicator. This component used to carry a second copy of
+	// the same logic, and the two had drifted on punctuation.
+	const typingText = $derived(formatTypingIndicator(users));
 </script>
 
 {#if users.length > 0}

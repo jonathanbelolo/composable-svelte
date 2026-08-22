@@ -356,8 +356,10 @@ export function streamingChatReducer(
 				return [state, Effect.none()];
 			}
 
+			// `state`, not `{ ...state }`: a fresh object with identical contents
+			// notifies every subscriber that nothing changed.
 			return [
-				{ ...state },
+				state,
 				Effect.run(async (dispatch) => {
 					try {
 						await navigator.clipboard.writeText(message.content);
@@ -373,7 +375,12 @@ export function streamingChatReducer(
 		}
 
 		case 'copySuccess': {
-			// Could show temporary success feedback in the future
+			// Changes no state on purpose: the copy already happened, in the effect
+			// above. It exists so a consumer can hear it through
+			// `subscribeToActions` and show their own confirmation — the exhaustive
+			// switch below is why it needs a case at all rather than falling
+			// through. The previous comment here ("could show temporary success
+			// feedback in the future") read as unfinished work; it is a decision.
 			return [state, Effect.none()];
 		}
 
