@@ -78,14 +78,6 @@
 			</div>
 		{/if}
 
-		<!-- Live Transcript -->
-		{#if $store.liveTranscript}
-			<div class="live-transcript">
-				<div class="transcript-label">Current:</div>
-				<div class="transcript-text">{$store.liveTranscript}</div>
-			</div>
-		{/if}
-
 		<!-- Transcript History -->
 		{#if transcripts.length > 0}
 			<div class="transcript-history">
@@ -252,27 +244,8 @@
 		text-align: center;
 	}
 
-	.live-transcript {
-		padding: 12px;
-		background: rgba(59, 130, 246, 0.05);
-		border-left: 3px solid #3b82f6;
-		border-radius: 4px;
-	}
 
-	.transcript-label {
-		font-size: 11px;
-		font-weight: 600;
-		color: #3b82f6;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
-		margin-bottom: 4px;
-	}
 
-	.transcript-text {
-		font-size: 14px;
-		color: #1a1a1a;
-		line-height: 1.5;
-	}
 
 	.transcript-history {
 		padding: 12px;
@@ -379,7 +352,6 @@
 			color: #aaa;
 		}
 
-		.transcript-text,
 		.item-text {
 			color: #e0e0e0;
 		}

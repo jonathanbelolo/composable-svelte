@@ -43,10 +43,6 @@ export interface AudioPlayerState {
 	// Playback state
 	/** Audio is actively playing */
 	isPlaying: boolean;
-	/** Audio is paused */
-	isPaused: boolean;
-	/** Audio is stopped */
-	isStopped: boolean;
 	/** Track is loading */
 	isLoading: boolean;
 	/** Track is buffering */
@@ -164,7 +160,6 @@ export type AudioPlayerAction =
  * Audio player dependencies.
  */
 export interface AudioPlayerDependencies {
-
 	/**
 	 * Clock dependency for time operations.
 	 * Used for mock playback simulation.
@@ -209,7 +204,6 @@ export interface AudioPlayerDependencies {
 	 * Track skip analytics (optional).
 	 */
 	trackSkip?: (track: AudioTrack) => void;
-
 }
 
 /**
@@ -226,8 +220,6 @@ export function createInitialAudioPlayerState(
 	return {
 		currentTrack: null,
 		isPlaying: false,
-		isPaused: false,
-		isStopped: true,
 		isLoading: false,
 		isBuffering: false,
 		currentTime: 0,

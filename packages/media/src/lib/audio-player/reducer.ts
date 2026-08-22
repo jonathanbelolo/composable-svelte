@@ -67,11 +67,11 @@ export function audioPlayerReducer(
 				{
 					...state,
 					isPlaying: true,
-					isPaused: false,
-					isStopped: false,
+					
+					
 					error: null
 				},
-				createMockPlaybackEffect({ ...state, isPlaying: true, isPaused: false, isStopped: false, error: null }, deps)
+				createMockPlaybackEffect({ ...state, isPlaying: true, error: null }, deps)
 			];
 		}
 
@@ -84,7 +84,6 @@ export function audioPlayerReducer(
 				{
 					...state,
 					isPlaying: false,
-					isPaused: true
 				},
 				cancelMockPlaybackEffect()
 			];
@@ -103,8 +102,8 @@ export function audioPlayerReducer(
 				{
 					...state,
 					isPlaying: false,
-					isPaused: false,
-					isStopped: true,
+					
+					
 					currentTime: 0,
 					seekPosition: null
 				},
@@ -413,8 +412,7 @@ export function audioPlayerReducer(
 					buffered: 0,
 					seekPosition: null,
 					isPlaying: wasPlaying,
-					isPaused: !wasPlaying && !state.isStopped,
-					isStopped: false,
+					
 					isLoading: true,
 					error: null
 				},
@@ -433,8 +431,7 @@ export function audioPlayerReducer(
 										buffered: 0,
 										seekPosition: null,
 										isPlaying: wasPlaying,
-										isPaused: !wasPlaying && !state.isStopped,
-										isStopped: false,
+										
 										isLoading: true,
 										error: null
 									},
@@ -492,8 +489,8 @@ export function audioPlayerReducer(
 							currentTrack: null,
 							currentTrackIndex: -1,
 							isPlaying: false,
-							isPaused: false,
-							isStopped: true,
+							
+							
 							currentTime: 0,
 							duration: 0,
 							buffered: 0
@@ -545,8 +542,8 @@ export function audioPlayerReducer(
 					currentTrack: null,
 					currentTrackIndex: -1,
 					isPlaying: false,
-					isPaused: false,
-					isStopped: true,
+					
+					
 					currentTime: 0,
 					duration: 0,
 					buffered: 0,
@@ -606,7 +603,7 @@ export function audioPlayerReducer(
 					seekPosition: null,
 					shuffleOrder,
 					isLoading: track ? true : false,
-					isStopped: !track,
+					
 					error: null
 				},
 				Effect.none()
@@ -705,8 +702,7 @@ export function audioPlayerReducer(
 				{
 					...state,
 					isPlaying: false,
-					isPaused: false,
-					isStopped: true
+					
 				},
 				Effect.none()
 			];
@@ -741,8 +737,7 @@ export function audioPlayerReducer(
 					isLoading: false,
 					isBuffering: false,
 					isPlaying: false,
-					isPaused: false,
-					isStopped: true
+					
 				},
 				Effect.none()
 			];

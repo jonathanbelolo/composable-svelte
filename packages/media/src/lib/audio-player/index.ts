@@ -29,7 +29,7 @@ export {
 	createShuffleOrder,
 	getNextTrackIndex,
 	getPreviousTrackIndex,
-	clamp,
+	nextLoopMode,
 	type AudioTrack,
 	type LoopMode,
 	type AudioPlayerState,

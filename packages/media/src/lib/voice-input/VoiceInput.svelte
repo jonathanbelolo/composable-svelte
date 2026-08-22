@@ -122,11 +122,27 @@
 	{#if $store.status === 'recording' || $store.mode === 'conversation'}
 		<VoiceInputPanel {store} transcripts={transcriptHistory} />
 	{/if}
+
+	<!--
+		The reducer captures a reason on every failure path and nothing rendered it,
+		so the user saw a tinted icon and never learned what went wrong. `role="alert"`
+		because colour alone does not reach a screen reader, and this is the message a
+		user needs in order to act on it.
+	-->
+	{#if $store.errorMessage}
+		<div class="voice-input__error" role="alert">{$store.errorMessage}</div>
+	{/if}
 </div>
 
 <style>
 	.voice-input {
 		display: inline-block;
 		position: relative;
+	}
+
+	.voice-input__error {
+		margin-top: 0.5rem;
+		font-size: 0.8125rem;
+		color: #c33;
 	}
 </style>

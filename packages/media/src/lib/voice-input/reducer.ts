@@ -508,16 +508,6 @@ export const voiceInputReducer: Reducer<
 		];
 	}
 
-	case 'liveTranscriptUpdated': {
-		return [
-			{
-				...state,
-				liveTranscript: action.text
-			},
-			Effect.none()
-		];
-	}
-
 	// === Cleanup === //
 
 	case 'deactivateVoiceInput': {
@@ -533,33 +523,8 @@ export const voiceInputReducer: Reducer<
 					status: 'idle',
 					vadState: null,
 					audioLevel: 0,
-					liveTranscript: '',
 					recordingStartTime: null,
 					errorMessage: null
-				},
-				Effect.batch(
-					Effect.cancel(VAD_SUBSCRIPTION),
-					Effect.run(async () => {
-						deps.getAudioManager(state._audioManagerId!)?.cleanup();
-					})
-				)
-			];
-		}
-
-		case 'cleanupAudioResources': {
-			// `cleanup()` runs in the effect below, not here. A reducer is a pure
-			// function of (state, action, deps) — calling into the audio device from
-			// its body makes the transition unrepeatable and untestable, and is the
-			// rule CLAUDE.md states first.
-
-			return [
-				{
-					...state,
-					status: 'idle',
-					mode: null,
-					vadState: null,
-					audioLevel: 0,
-					recordingStartTime: null
 				},
 				Effect.batch(
 					Effect.cancel(VAD_SUBSCRIPTION),

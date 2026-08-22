@@ -18,9 +18,6 @@ export interface VoiceInputState {
 	/** Current audio level (0-100) for visualization */
 	audioLevel: number;
 
-	/** Live transcription text (conversation mode) */
-	liveTranscript: string;
-
 	/** Recording start time (for duration display) */
 	recordingStartTime: number | null;
 
@@ -71,16 +68,11 @@ export type VoiceInputAction =
 
 	// Audio processing
 	| { type: 'audioLevelUpdated'; level: number }
-	| { type: 'liveTranscriptUpdated'; text: string }
 	// No `transcript` here: it was written by both dispatch sites and read by
 	// none, because this case does the transcribing.
 	| { type: 'audioProcessingComplete'; audioBlob: Blob }
 	| { type: 'audioProcessingFailed'; error: string }
-	| { type: 'transcriptionCompleted'; transcript: string }
-
-	// Cleanup
-	| { type: 'cleanupAudioResources' };
-
+	| { type: 'transcriptionCompleted'; transcript: string };
 /**
  * Voice Input Dependencies
  *
@@ -114,8 +106,6 @@ export interface VoiceInputDependencies {
 	 * microphone. Defaults to the registry.
 	 */
 	createAudioManager?: (id: string) => AudioManager;
-
-
 }
 
 /**
@@ -128,7 +118,6 @@ export function createInitialVoiceInputState(): VoiceInputState {
 		status: 'idle',
 		permission: null,
 		audioLevel: 0,
-		liveTranscript: '',
 		recordingStartTime: null,
 		vadState: null,
 		errorMessage: null,
