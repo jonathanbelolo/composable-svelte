@@ -397,14 +397,11 @@ function scan(file: string): Violation[] {
  * Delete entries as packages are converted. When this is empty, delete it.
  */
 const BACKLOG = new Set([
-	// `FullStreamingChat` was never listed because the scanner could not see it:
-	// the `image/*` in its `accept` attribute opened a phantom block comment that
-	// blanked every declaration below. Listed now that `stripComments` is
-	// quote-aware. Its legacy twin carried the same defect and was deleted rather
-	// than cleaned.
+	// All that is left of chat: one `transition: opacity` apiece, each driven by a
+	// state class rather than a pseudo-class, so each needs Motion One rather than
+	// deletion. They convert together.
 	'chat/src/lib/streaming-chat/attachment-components/ImagePreview.svelte',
 	'chat/src/lib/streaming-chat/attachment-components/VideoPlayer.svelte',
-	'chat/src/lib/streaming-chat/collaborative-primitives/CursorMarker.svelte',
 	'code/src/lib/code-editor/CodeEditor.svelte',
 	'code/src/lib/code-highlight/CodeHighlight.svelte',
 	'maps/src/lib/components/TileProviderControl.svelte',

@@ -2,8 +2,13 @@
 	/**
 	 * Cursor Marker
 	 *
-	 * Visual marker showing where another user's cursor is.
-	 * Shows user name on hover.
+	 * Visual marker showing where another user's cursor is: a blinking caret in
+	 * the user's colour, with a name flag hanging above it.
+	 *
+	 * The flag is **always visible**, not shown on hover. `CursorOverlay` floats
+	 * this over a live text input, so the marker must not take pointer events —
+	 * intercepting one would stop the user typing. That rules out hover, and it
+	 * rules out `title` too, which is why neither is here.
 	 */
 
 	interface Props {
@@ -34,11 +39,7 @@
 	}: Props = $props();
 </script>
 
-<div
-	class="cursor-marker {className}"
-	style="left: {left}px; top: {top}px;"
-	title={name}
->
+<div class="cursor-marker {className}" style="left: {left}px; top: {top}px;">
 	<!-- Selection highlight (if user has text selected) -->
 	{#if hasSelection && selectionWidth > 0}
 		<div
@@ -59,20 +60,9 @@
 <style>
 	.cursor-marker {
 		position: absolute;
+		/* Unclickable by design — see the note at the top of this file. */
 		pointer-events: none;
 		z-index: 100;
-		animation: cursor-fade-in 0.2s ease-out;
-	}
-
-	@keyframes cursor-fade-in {
-		from {
-			opacity: 0;
-			transform: translateY(-4px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
 	}
 
 	.selection-highlight {
@@ -103,6 +93,9 @@
 
 	.cursor-label {
 		position: absolute;
+		/* Hangs above the caret; the squared bottom-left corner is its tail.
+		   `CursorOverlay` reserves exactly this much room above the input, or
+		   its `overflow: hidden` scissors the flag off. */
 		top: -24px;
 		left: 0;
 		padding: 2px 6px;
@@ -112,35 +105,5 @@
 		color: white;
 		white-space: nowrap;
 		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-		opacity: 0;
-		transition: opacity 0.2s;
-	}
-
-	.cursor-marker:hover .cursor-label {
-		opacity: 1;
-	}
-
-	/* Show label initially, then fade out */
-	.cursor-marker {
-		animation:
-			cursor-fade-in 0.2s ease-out,
-			cursor-label-show 3s ease-out;
-	}
-
-	@keyframes cursor-label-show {
-		0% {
-			--label-opacity: 1;
-		}
-		80% {
-			--label-opacity: 1;
-		}
-		100% {
-			--label-opacity: 0;
-		}
-	}
-
-	/* Use CSS custom property for initial label visibility */
-	.cursor-marker .cursor-label {
-		opacity: var(--label-opacity, 0);
 	}
 </style>

@@ -215,6 +215,24 @@ type TypingAction =
 
 ### 3. Live Cursors
 
+> **Superseded — read this before the section below.** What shipped is a
+> different feature from the one planned here. This section describes cursors as
+> *scroll positions* in the conversation (`CursorPosition` = `{ scrollTop,
+> scrollHeight, viewportHeight, focusedMessageId }`); the implementation tracks a
+> *caret offset in the composer* (`{ position, selectionLength, lastUpdate }`),
+> drawn by `CursorOverlay` over the input and demonstrated in the styleguide's
+> Collaborative Chat page.
+>
+> Two planned tasks below are **not buildable as written**, not merely unbuilt.
+> Task 3.4's hover tooltip and click-to-jump both need pointer events, and the
+> overlay floats over a live text field: taking a pointer there would stop the
+> user typing. `CursorMarker` is `pointer-events: none` on purpose, so the name
+> flag is simply always visible instead — and there is no `title` fallback for
+> the same reason. Task 3.3's "smooth position interpolation" is likewise absent
+> by policy; a cursor marker is a live readout, and easing it makes it lag.
+>
+> Kept for the requirements and the WebSocket framing, which did survive.
+
 **Description:** Show where other users are scrolled/focused in the conversation.
 
 #### Requirements

@@ -9,6 +9,7 @@ import type { Store } from '@composable-svelte/core';
 import type {
 	CollaborativeStreamingChatState,
 	CollaborativeAction,
+	CollaborativeUser,
 	UserPresence
 } from './collaborative-types.js';
 import { CleanupTracker } from './cleanup-tracker.js';
@@ -264,7 +265,7 @@ export function useHeartbeat(
  * @returns Array of typing users
  */
 export function getTypingUsers(
-	users: Map<string, any>,
+	users: Map<string, CollaborativeUser>,
 	currentUserId: string | null,
 	target?: 'message' | 'edit'
 ): Array<{ id: string; name: string; color: string }> {
@@ -298,7 +299,7 @@ export function getTypingUsers(
  * @returns Array of active users
  */
 export function getActiveUsers(
-	users: Map<string, any>,
+	users: Map<string, CollaborativeUser>,
 	currentUserId: string | null
 ): Array<{ id: string; name: string; color: string; presence: UserPresence; avatar?: string }> {
 	const activeUsers: Array<{
@@ -320,7 +321,11 @@ export function getActiveUsers(
 				name: user.name,
 				color: user.color,
 				presence: user.presence,
-				avatar: user.avatar
+				// Spread rather than `avatar: user.avatar`: under
+				// `exactOptionalPropertyTypes` the declared `avatar?: string` means
+				// "absent or a string", and writing the key as `undefined` is
+				// neither. The `Map<string, any>` this used to take hid that.
+				...(user.avatar === undefined ? {} : { avatar: user.avatar })
 			});
 		}
 	}
@@ -336,7 +341,7 @@ export function getActiveUsers(
  * @returns Array of cursor positions with user info
  */
 export function getCursorPositions(
-	users: Map<string, any>,
+	users: Map<string, CollaborativeUser>,
 	currentUserId: string | null
 ): Array<{
 	userId: string;
