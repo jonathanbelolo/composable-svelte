@@ -109,11 +109,60 @@ function stripComments(source: string): string {
 	// 4-17 lines low. A guard that points at the wrong line gets distrusted, then
 	// disabled.
 	const blank = (match: string) => match.replace(/[^\n]/g, '');
-	const withoutBlocks = source
-		.replace(/<!--[\s\S]*?-->/g, blank)
-		.replace(/\/\*[\s\S]*?\*\//g, blank);
+	const withoutHtml = source.replace(/<!--[\s\S]*?-->/g, blank);
 
-	return withoutBlocks
+	// Block comments, quote-aware — a `/*` inside a string is data, not a comment.
+	//
+	// This was a plain `.replace(/\/\*[\s\S]*?\*\//g, blank)` while the `//` pass
+	// below it was already quote-aware, and the asymmetry cost two files: the
+	// literal `image/*` in an `accept="…"` attribute opened a phantom comment that
+	// ran to the next genuine `*/` hundreds of lines later, blanking every
+	// declaration between. Both files scanned clean while violating, and neither
+	// was in the backlog, so nothing anywhere reported it.
+	//
+	// Quote state is tracked per line, matching the `//` pass. A string spanning a
+	// newline is not a shape this repo produces, and resetting each line stops one
+	// stray apostrophe in prose from swallowing the rest of a file.
+	const stripped: string[] = [];
+	let inBlock = false;
+	for (const line of withoutHtml.split('\n')) {
+		let out = '';
+		let quote: string | null = null;
+		for (let i = 0; i < line.length; i += 1) {
+			const c = line[i]!;
+			if (inBlock) {
+				if (c === '*' && line[i + 1] === '/') {
+					inBlock = false;
+					out += '  ';
+					i += 1;
+				} else out += ' ';
+				continue;
+			}
+			if (quote) {
+				out += c;
+				if (c === '\\' && i + 1 < line.length) {
+					out += line[i + 1];
+					i += 1;
+				} else if (c === quote) quote = null;
+				continue;
+			}
+			if (c === '"' || c === "'" || c === '`') {
+				quote = c;
+				out += c;
+				continue;
+			}
+			if (c === '/' && line[i + 1] === '*') {
+				inBlock = true;
+				out += '  ';
+				i += 1;
+				continue;
+			}
+			out += c;
+		}
+		stripped.push(out);
+	}
+
+	return stripped.join('\n')
 		.split('\n')
 		.map((line) => {
 			for (let i = 0; i < line.length - 1; i += 1) {
@@ -206,6 +255,16 @@ const SVELTE_TRANSITION = /(?:^|\s)(transition|in|out|animate):[a-zA-Z_$][\w$]*/
  * forbids widening the pattern.
  */
 const DISABLES_ANIMATION = /:\s*none\b/;
+/**
+ * `scroll-behavior: smooth` — an animation the browser runs on your behalf.
+ *
+ * The guide names it prohibited for the same reason as a CSS transition: the
+ * store cannot see it, cannot sequence on it and cannot cancel it. It matched
+ * none of the four patterns above, so the four sites the guide explicitly cites
+ * could never have failed a build. `auto` is the instant default and is fine —
+ * only `smooth` animates.
+ */
+const SCROLL_ANIMATION = /(^|[\s;{])scroll-behavior\s*:\s*smooth\b/;
 
 function scan(file: string): Violation[] {
 	const rel = relative(packagesDir, file);
@@ -218,6 +277,16 @@ function scan(file: string): Violation[] {
 		const line = lines[i]!;
 
 		if (DISABLES_ANIMATION.test(line)) continue;
+
+		if (SCROLL_ANIMATION.test(line)) {
+			out.push({
+				file: rel,
+				line: i + 1,
+				text: line.trim(),
+				why: 'scroll-behavior: smooth — a browser-run animation the store cannot see; use a scroll helper'
+			});
+			continue;
+		}
 
 		const isSvelte = SVELTE_TRANSITION.test(line);
 		const isTailwind = TAILWIND_TRANSITION.test(line);
@@ -316,6 +385,12 @@ function scan(file: string): Violation[] {
  */
 const BACKLOG = new Set([
 	'chat/src/lib/streaming-chat/ChatMessage.svelte',
+	// These two were never listed because the scanner could not see them: the
+	// `image/*` in their `accept` attribute opened a phantom block comment that
+	// blanked every declaration below it. Listed now that `stripComments` is
+	// quote-aware, and cleared as the chat pass reaches them.
+	'chat/src/lib/streaming-chat/StreamingChat.svelte',
+	'chat/src/lib/streaming-chat/variants/FullStreamingChat.svelte',
 	'chat/src/lib/streaming-chat/attachment-components/AttachmentPreviewModal.svelte',
 	'chat/src/lib/streaming-chat/attachment-components/AudioPlayer.svelte',
 	'chat/src/lib/streaming-chat/attachment-components/FileAttachment.svelte',
@@ -454,6 +529,43 @@ describe('animation policy', () => {
 		);
 		expect(stripComments('\t// transition: all 0.2s;')).not.toContain('transition:');
 		expect(stripComments('<!-- transition: all -->')).not.toContain('transition:');
+
+		// The symmetric case, which the version above did not cover and which cost
+		// this guard two whole files.
+		//
+		// `image/*` inside an `accept` string opened a phantom block comment that
+		// ran to the next real `*/` — in `StreamingChat.svelte` that blanked lines
+		// 277-544 and hid every declaration in them. Both files scanned clean while
+		// carrying violations, and neither was in the backlog.
+		//
+		// The lesson is in the shape, not the instance: the previous test was
+		// written right after a `//`-in-a-URL bug and checked exactly that string,
+		// so the identical hazard one line down in the same function survived.
+		// The trailing real comment matters: without a closing `*/` the greedy
+		// regex never matched at all and this assertion passed while proving
+		// nothing. That is the shape of the live bug — `image/*` opens it and the
+		// next genuine comment, hundreds of lines later, closes it.
+		const accept =
+			'<input accept="image/*,video/*" />\n\ttransition: opacity 0.2s;\n\t/* Dark mode */';
+		expect(stripComments(accept)).toContain('transition:');
+		expect(
+			stripComments("{ok ? 'image/*' : 'x'}\n\ttransition: opacity 0.2s;\n\t/* Dark mode */")
+		).toContain('transition:');
+
+		// …while a real block comment is still stripped, on one line and across many.
+		expect(stripComments('/* transition: all 0.2s; */')).not.toContain('transition:');
+		expect(stripComments('/*\ntransition: all 0.2s;\n*/')).not.toContain('transition:');
+
+		// Line numbers are load-bearing: a blanked comment must keep its lines.
+		expect(stripComments('a\n/*\nx\n*/\nb').split('\n')).toHaveLength(5);
+	});
+
+	it('sees scroll-behavior, which is an animation the browser runs for you', () => {
+		// Named as prohibited by the guide, which cites four sites in chat/ — and
+		// matched by none of the four regexes above, so it could never fail a build.
+		expect(SCROLL_ANIMATION.test('\tscroll-behavior: smooth;')).toBe(true);
+		// `auto` is the instant default; only `smooth` animates.
+		expect(SCROLL_ANIMATION.test('\tscroll-behavior: auto;')).toBe(false);
 	});
 
 	it('no file outside the backlog violates the guideline', () => {
