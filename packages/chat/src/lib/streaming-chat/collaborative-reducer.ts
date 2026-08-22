@@ -83,7 +83,14 @@ export function collaborativeReducer(
 								} else if (msg.type === 'cursor_cleared') {
 									dispatch({ type: 'userCursorCleared', userId: msg.userId });
 								} else if (msg.type === 'sync_update') {
-									dispatch({ type: 'serverStateUpdate', update: msg.update });
+									// Deliberately unhandled, and now deliberately loud. This used
+									// to dispatch `serverStateUpdate`, whose only meaningful line
+									// (`Y.applyUpdate`) was commented out — so a server sending
+									// real CRDT payloads had them silently discarded. There is no
+									// CRDT layer to apply them to; saying so beats pretending.
+									console.warn(
+										'[Collaborative] Received a sync_update, but CRDT sync is not implemented. Ignoring.'
+									);
 								} else if (msg.type === 'action_confirmed') {
 									dispatch({ type: 'actionConfirmed', tempId: msg.tempId, serverId: msg.serverId });
 								} else if (msg.type === 'action_failed') {
@@ -623,13 +630,6 @@ export function collaborativeReducer(
 					dispatch({ type: 'syncCompleted', sequenceNumber: state.sync.lastSequenceNumber + queue.length });
 				})
 			];
-		}
-
-		case 'serverStateUpdate': {
-			// Apply Yjs update
-			// Y.applyUpdate(state.ydoc, action.update);
-
-			return [state, Effect.none()];
 		}
 
 		case 'serverMessageReceived': {

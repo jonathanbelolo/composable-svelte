@@ -635,9 +635,6 @@ importers:
       marked:
         specifier: ^16.4.1
         version: 16.4.1
-      yjs:
-        specifier: ^13.6.27
-        version: 13.6.27
     devDependencies:
       '@composable-svelte/code':
         specifier: workspace:*
@@ -2787,9 +2784,6 @@ packages:
     resolution: {integrity: sha512-/XPACpfVJeEiy28UgkBWUWdhgKN8xwFYkoVFsqrcSJJ5pXZ3HStuF3ih/Hr8PwhCXHqFAys+b4tcgw0pbUT4rw==}
     engines: {node: '>=20.19.5'}
 
-  isomorphic.js@0.2.5:
-    resolution: {integrity: sha512-PIeMbHqMt4DnUP3MA/Flc0HElYjMXArsw1qwJZcm9sqR8mq3l8NYizFMty0pWwE/tzIGH3EKK5+jes5mAr85yw==}
-
   istanbul-lib-coverage@3.2.2:
     resolution: {integrity: sha512-O8dpsF+r0WV/8MNRKfnmrtCWhuKjxrq2w+jpzBL5UZKTi2LeVWnWOmWRxFlesJONmc+wLAGvKQZEOanko0LFTg==}
     engines: {node: '>=8'}
@@ -2869,11 +2863,6 @@ packages:
 
   kolorist@1.8.0:
     resolution: {integrity: sha512-Y+60/zizpJ3HRH8DCss+q95yr6145JXZo46OTpFvDZWLfRCE4qChOyk1b26nMaNpfHHgxagk9dXT5OP0Tfe+dQ==}
-
-  lib0@0.2.114:
-    resolution: {integrity: sha512-gcxmNFzA4hv8UYi8j43uPlQ7CGcyMJ2KQb5kZASw6SnAKAf10hK12i2fjrS3Cl/ugZa5Ui6WwIu1/6MIXiHttQ==}
-    engines: {node: '>=16'}
-    hasBin: true
 
   light-my-request@5.14.0:
     resolution: {integrity: sha512-aORPWntbpH5esaYpGOOmri0OHDOe3wC5M2MQxZ9dvMLZm6DnaAn0kJlcbU9hwsQgLzmZyReKwFwwPkR+nHu5kA==}
@@ -3831,10 +3820,6 @@ packages:
 
   yallist@4.0.0:
     resolution: {integrity: sha512-3wdGidZyq5PB084XLES5TpOSRA3wjXAlIWMhum2kRcv/41Sn2emQ0dycQW4uZXLejwKvg6EsvbdlVL+FYEct7A==}
-
-  yjs@13.6.27:
-    resolution: {integrity: sha512-OIDwaflOaq4wC6YlPBy2L6ceKeKuF7DeTxx+jPzv1FHn9tCZ0ZwSRnUBxD05E3yed46fv/FWJbvR+Ud7x0L7zw==}
-    engines: {node: '>=16.0.0', npm: '>=8.0.0'}
 
   zimmerframe@1.1.4:
     resolution: {integrity: sha512-B58NGBEoc8Y9MWWCQGl/gq9xBCe4IiKM0a2x7GZdQKOW5Exr8S1W24J6OgM1njK8xCRGvAJIL/MxXHf6SkmQKQ==}
@@ -5836,8 +5821,6 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  isomorphic.js@0.2.5: {}
-
   istanbul-lib-coverage@3.2.2: {}
 
   istanbul-lib-report@3.0.1:
@@ -5951,10 +5934,6 @@ snapshots:
   kleur@4.1.5: {}
 
   kolorist@1.8.0: {}
-
-  lib0@0.2.114:
-    dependencies:
-      isomorphic.js: 0.2.5
 
   light-my-request@5.14.0:
     dependencies:
@@ -6951,10 +6930,6 @@ snapshots:
   xmlchars@2.2.0: {}
 
   yallist@4.0.0: {}
-
-  yjs@13.6.27:
-    dependencies:
-      lib0: 0.2.114
 
   zimmerframe@1.1.4: {}
 

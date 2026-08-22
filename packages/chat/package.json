@@ -109,8 +109,7 @@
   },
   "dependencies": {
     "isomorphic-dompurify": "^2.16.0",
-    "marked": "^16.4.1",
-    "yjs": "^13.6.27"
+    "marked": "^16.4.1"
   },
   "publishConfig": {
     "access": "public"

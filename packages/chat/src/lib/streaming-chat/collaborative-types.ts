@@ -5,7 +5,6 @@
  * Avoids data duplication across multiple state fields.
  */
 
-import * as Y from 'yjs';
 import type { Message } from './types.js';
 
 /**
@@ -145,9 +144,6 @@ export interface SyncState {
  * Extends base streaming chat with collaboration features.
  */
 export interface CollaborativeStreamingChatState {
-	/** Yjs document for CRDT sync */
-	ydoc: Y.Doc;
-
 	/** All collaborative users (single source of truth) */
 	users: Map<string, CollaborativeUser>;
 
@@ -205,7 +201,6 @@ export type CollaborativeAction =
 	| { type: 'syncFailed'; error: string }
 	| { type: 'flushOfflineQueue' }
 	// Server updates
-	| { type: 'serverStateUpdate'; update: Uint8Array }
 	| { type: 'serverMessageReceived'; message: Message; sequenceNumber: number }
 	// Permissions
 	| { type: 'userPermissionsChanged'; userId: string; permissions: UserPermissions };
@@ -251,7 +246,6 @@ export interface CollaborativeDependencies {
  */
 export function createInitialCollaborativeState(): CollaborativeStreamingChatState {
 	return {
-		ydoc: new Y.Doc(),
 		users: new Map(),
 		currentUserId: null,
 		connection: { status: 'disconnected' },
