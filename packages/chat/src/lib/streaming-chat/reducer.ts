@@ -7,12 +7,14 @@
 
 import type { EffectType } from '@composable-svelte/core';
 import { Effect } from '@composable-svelte/core';
+import { revokeFileBlobURL } from './utils.js';
 import type {
 	StreamingChatState,
 	StreamingChatAction,
 	StreamingChatDependencies,
 	Message,
-	MessageReaction
+	MessageReaction,
+	MessageAttachment
 } from './types.js';
 
 /**
@@ -20,6 +22,89 @@ import type {
  *
  * Manages conversation state and coordinates with streaming transport.
  */
+/**
+ * Start the stream, handing the transport whatever attachments the message has.
+ *
+ * `streamMessage` used to be called with the text alone, so a file the user
+ * attached reached the rendered bubble and stopped there — the backend and the
+ * model never saw it.
+ */
+function streamNow(
+	message: string,
+	attachments: MessageAttachment[] | undefined,
+	deps: StreamingChatDependencies
+): EffectType<StreamingChatAction> {
+	return Effect.run(async (dispatch) => {
+		const abortController = deps.streamMessage(
+			message,
+			(chunk) => dispatch({ type: 'chunkReceived', chunk }),
+			() => dispatch({ type: 'streamComplete' }),
+			(error) => dispatch({ type: 'streamError', error }),
+			attachments
+		);
+
+		if (abortController) {
+			dispatch({ type: '_internal_setAbortController', abortController });
+		}
+	});
+}
+
+/**
+ * Upload every attachment, then stream.
+ *
+ * One effect rather than a per-file state machine: `Promise.all` settles them
+ * all and dispatches a single resolved list, so the reducer never has to work
+ * out whether the last one is done.
+ *
+ * The file is recovered from its own URL rather than kept in state. `uploadFile`
+ * needs a `File` and `MessageAttachment` holds only a URL — and putting a `File`
+ * into reducer state would break the serializable-state discipline the rest of
+ * the repo keeps. An already-remote URL is left alone: a restored session must
+ * not re-upload what it is already pointing at.
+ */
+function uploadThenStream(
+	messageId: string,
+	message: string,
+	attachments: MessageAttachment[],
+	deps: StreamingChatDependencies
+): EffectType<StreamingChatAction> {
+	return Effect.run(async (dispatch) => {
+		const resolved = await Promise.all(
+			attachments.map(async (attachment) => {
+				if (!/^(blob:|data:)/.test(attachment.url)) return attachment;
+
+				try {
+					const blob = await fetch(attachment.url).then((r) => r.blob());
+					const file = new File([blob], attachment.filename, { type: attachment.mimeType });
+
+					const url = await deps.uploadFile!(file, (loaded, total) => {
+						dispatch({
+							type: '_internal_attachmentUploadProgress',
+							messageId,
+							attachmentId: attachment.id,
+							// The public dependency reports bytes; the state holds a
+							// percentage, because that is what a progress bar announces.
+							progress: total > 0 ? (loaded / total) * 100 : 0
+						});
+					});
+
+					return { ...attachment, url, uploadStatus: 'success' as const, uploadProgress: 100 };
+				} catch (error) {
+					// Deliberately keeps the local URL. The sender can still see their
+					// own file and the message still sends; only its reach is reduced.
+					return {
+						...attachment,
+						uploadStatus: 'error' as const,
+						uploadError: error instanceof Error ? error.message : 'Upload failed'
+					};
+				}
+			})
+		);
+
+		dispatch({ type: '_internal_attachmentsResolved', messageId, message, attachments: resolved });
+	});
+}
+
 export function streamingChatReducer(
 	state: StreamingChatState,
 	action: StreamingChatAction,
@@ -52,20 +137,52 @@ export function streamingChatReducer(
 					error: null,
 					pendingAttachments: [] // Clear attachments after sending
 				},
-				Effect.run(async (dispatch) => {
-					// Call user's streaming implementation
-					const abortController = deps.streamMessage(
-						action.message,
-						(chunk) => dispatch({ type: 'chunkReceived', chunk }),
-						() => dispatch({ type: 'streamComplete' }),
-						(error) => dispatch({ type: 'streamError', error })
-					);
+				// Uploads first, if there are any and the consumer can do them.
+				// Streaming waits, because the whole point of uploading is that the
+				// URL the backend receives resolves for someone other than the sender.
+				attachments && attachments.length > 0 && deps.uploadFile
+					? uploadThenStream(userMessage.id, action.message, attachments, deps)
+					: streamNow(action.message, attachments, deps)
+			];
+		}
 
-					// Store abort controller if returned
-					if (abortController) {
-						dispatch({ type: '_internal_setAbortController', abortController });
-					}
-				})
+		case '_internal_attachmentUploadProgress': {
+			// Clamped, and ignored unless the attachment is still uploading. A
+			// callback arriving after the upload settled would otherwise rewind a
+			// finished bar — the same two guards core's file-upload reducer carries.
+			const progress = Math.min(100, Math.max(0, action.progress));
+
+			return [
+				{
+					...state,
+					messages: state.messages.map((message) =>
+						message.id !== action.messageId || !message.attachments
+							? message
+							: {
+									...message,
+									attachments: message.attachments.map((a) =>
+										a.id === action.attachmentId && a.uploadStatus === 'uploading'
+											? { ...a, uploadProgress: progress }
+											: a
+									)
+								}
+					)
+				},
+				Effect.none()
+			];
+		}
+
+		case '_internal_attachmentsResolved': {
+			return [
+				{
+					...state,
+					messages: state.messages.map((message) =>
+						message.id === action.messageId
+							? { ...message, attachments: action.attachments }
+							: message
+					)
+				},
+				streamNow(action.message, action.attachments, deps)
 			];
 		}
 
@@ -373,6 +490,8 @@ export function streamingChatReducer(
 		}
 
 		case 'removeAttachment': {
+			const removed = state.pendingAttachments.find((a) => a.id === action.attachmentId);
+
 			return [
 				{
 					...state,
@@ -380,7 +499,14 @@ export function streamingChatReducer(
 						(attachment) => attachment.id !== action.attachmentId
 					)
 				},
-				Effect.none()
+				// Revoking belongs here rather than in the component that happened to
+				// dispatch. A blob URL is a browser resource owned by the list, and
+				// the list lives in the store now — a caller who forgets leaks it.
+				removed
+					? Effect.fireAndForget(async () => {
+							revokeFileBlobURL(removed.url);
+						})
+					: Effect.none()
 			];
 		}
 

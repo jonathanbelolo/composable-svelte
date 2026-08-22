@@ -113,7 +113,11 @@
 	let messagesContainer: HTMLDivElement;
 	let shouldAutoScroll = $state(true);
 	let fileInputRef: HTMLInputElement;
-	let pendingAttachments = $state<MessageAttachment[]>([]);
+	// The store is the single source of truth. This used to be a component-local
+	// `$state` array, which meant `state.pendingAttachments` was permanently `[]`
+	// — its three reducer actions had no dispatcher, its exhaustive tests covered
+	// a path nothing took, and attachments could not survive a session restore.
+	const pendingAttachments = $derived($store.pendingAttachments);
 	let previewingAttachment = $state<MessageAttachment | null>(null);
 	let inputRef: HTMLTextAreaElement;
 
@@ -164,15 +168,13 @@
 		if (!canSendMessage) return;
 
 		const message = inputValue.trim();
-		const attachments = pendingAttachments.length > 0 ? [...pendingAttachments] : undefined;
-
 		inputValue = '';
-		pendingAttachments = [];
 
+		// No `attachments` field: the reducer reads `state.pendingAttachments` and
+		// clears it. Passing them here is what made that branch unreachable.
 		store.dispatch({
 			type: 'sendMessage',
-			message: message || '(Attachments)',
-			...(attachments !== undefined && { attachments })
+			message: message || '(Attachments)'
 		});
 	}
 
@@ -235,7 +237,9 @@
 				validFiles.map((file) => createAttachmentFromFile(file))
 			);
 
-			pendingAttachments = [...pendingAttachments, ...newAttachments];
+			for (const attachment of newAttachments) {
+				store.dispatch({ type: 'addAttachment', attachment });
+			}
 		} catch (error) {
 			store.dispatch({
 				type: 'streamError',
@@ -247,18 +251,18 @@
 		input.value = '';
 	}
 
-	function removeAttachment(index: number) {
-		// Revoke blob URL to prevent memory leak
-		const attachment = pendingAttachments[index];
-		if (attachment) {
-			revokeFileBlobURL(attachment.url);
-		}
-		pendingAttachments = pendingAttachments.filter((_, i) => i !== index);
+	// By id, not by index. The reducer removes by id, this removed by array index
+	// and the preview modal resolved by object *reference* — three identities for
+	// one list, of which only the reducer's survives the move into the store.
+	// Revoking the blob URL is the reducer's job now, in an effect.
+	function removeAttachment(attachmentId: string) {
+		store.dispatch({ type: 'removeAttachment', attachmentId });
 	}
 
-	// Cleanup blob URLs on unmount to prevent memory leaks
+	// Unmount still revokes: the store outlives this component, and the URLs
+	// belong to the browser rather than to either of them.
 	onDestroy(() => {
-		pendingAttachments.forEach((attachment) => {
+		$store.pendingAttachments.forEach((attachment) => {
 			revokeFileBlobURL(attachment.url);
 		});
 	});
@@ -314,11 +318,11 @@
 		<!-- Pending Attachments Preview -->
 		{#if pendingAttachments.length > 0}
 			<div class="full-streaming-chat__attachments-preview">
-				{#each pendingAttachments as attachment, index (attachment.id || `${attachment.filename}-${index}`)}
+				{#each pendingAttachments as attachment (attachment.id)}
 					<PendingAttachmentPreview
 						{attachment}
 						onclick={() => (previewingAttachment = attachment)}
-						onremove={() => removeAttachment(index)}
+						onremove={() => removeAttachment(attachment.id)}
 					/>
 				{/each}
 			</div>
@@ -400,12 +404,7 @@
 	open={previewingAttachment !== null}
 	onclose={() => (previewingAttachment = null)}
 	onremove={() => {
-		if (previewingAttachment) {
-			const index = pendingAttachments.findIndex((a) => a === previewingAttachment);
-			if (index !== -1) {
-				removeAttachment(index);
-			}
-		}
+		if (previewingAttachment) removeAttachment(previewingAttachment.id);
 	}}
 />
 

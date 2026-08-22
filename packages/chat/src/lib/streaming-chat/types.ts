@@ -90,6 +90,18 @@ export interface MessageAttachment {
 	mimeType: string;
 	/** Optional metadata */
 	metadata?: AttachmentMetadata;
+
+	/**
+	 * Upload lifecycle, present only once a send has attempted one.
+	 *
+	 * `'error'` is not a failure to send: the attachment keeps its local URL and
+	 * the message goes out anyway, so the sender still sees their file. It will
+	 * not resolve for anyone else, which is what `uploadError` is for.
+	 */
+	uploadStatus?: 'uploading' | 'success' | 'error';
+	/** 0-100, clamped. */
+	uploadProgress?: number;
+	uploadError?: string;
 }
 
 /**
@@ -160,6 +172,20 @@ export interface StreamingChatState {
 export type StreamingChatAction =
 	// Message sending and streaming
 	| { type: 'sendMessage'; message: string; attachments?: MessageAttachment[] }
+	/** Internal: an upload reported progress for one attachment of a sent message. */
+	| {
+			type: '_internal_attachmentUploadProgress';
+			messageId: string;
+			attachmentId: string;
+			progress: number;
+	  }
+	/** Internal: every upload for a message has settled; stream it. */
+	| {
+			type: '_internal_attachmentsResolved';
+			messageId: string;
+			message: string;
+			attachments: MessageAttachment[];
+	  }
 	| { type: 'chunkReceived'; chunk: string }
 	| { type: 'streamComplete' }
 	| { type: 'streamError'; error: string }
@@ -205,13 +231,19 @@ export interface StreamingChatDependencies {
 	 * @param onChunk - Called for each chunk of the response
 	 * @param onComplete - Called when streaming is complete
 	 * @param onError - Called if an error occurs
+	 * @param attachments - Files sent with the message, with `uploadFile`'s URLs
+	 *   already resolved. Trailing and optional, so an existing four-parameter
+	 *   implementation stays assignable under TypeScript's fewer-parameters rule.
+	 *   Without it, attachments reached the rendered message and stopped there —
+	 *   the backend and the model never saw them.
 	 * @returns AbortController for cancellation (optional)
 	 */
 	streamMessage: (
 		message: string,
 		onChunk: (chunk: string) => void,
 		onComplete: () => void,
-		onError: (error: string) => void
+		onError: (error: string) => void,
+		attachments?: MessageAttachment[]
 	) => AbortController | void;
 
 	/**
