@@ -113,6 +113,22 @@ export interface MessageReaction {
 	emoji: string;
 	/** Number of times this emoji was reacted */
 	count: number;
+
+	/**
+	 * Whether the current user is one of them.
+	 *
+	 * One bit rather than the list of who reacted. A popular message would have
+	 * to ship thousands of user ids just to render "👍 12", and paging that list
+	 * means carrying a separate count anyway — so `count` stays the aggregate a
+	 * server can supply cheaply and this answers the only question the UI asks.
+	 *
+	 * It is also why nothing here needs a current-user identity: the flag *is*
+	 * the answer to "did I react?", so no code compares ids.
+	 *
+	 * Optional because `restoreMessages` assigns whatever the caller persisted,
+	 * which for older data is nothing. Absent means "not mine".
+	 */
+	reactedByMe?: boolean;
 }
 
 /**
@@ -185,6 +201,18 @@ export interface StreamingChatState {
 
 	/** Attachment preview modal lifecycle. */
 	attachmentPreview: AttachmentPreviewState;
+
+	/**
+	 * Which message's reaction picker is open, and where in its lifecycle.
+	 *
+	 * One slot for the whole conversation. Each message used to own a boolean
+	 * *and* render its own full-viewport backdrop, so opening a second picker
+	 * stacked two of them and left the first unclosable. A single slot makes
+	 * one-at-a-time an invariant rather than something usage has to respect.
+	 *
+	 * `content` is the message id.
+	 */
+	reactionPicker: PresentationState<string>;
 }
 
 /**
@@ -272,6 +300,10 @@ export type StreamingChatAction =
 	| { type: 'attachmentPreviewDismissed' }
 	| { type: 'attachmentPreviewRemoveRequested' }
 	| { type: 'attachmentPreviewPresentation'; event: ChatPresentationEvent }
+	// Reaction picker
+	| { type: 'reactionPickerOpened'; messageId: string }
+	| { type: 'reactionPickerDismissed' }
+	| { type: 'reactionPickerPresentation'; event: ChatPresentationEvent }
 	// Internal actions
 	| { type: '_internal_setAbortController'; abortController: AbortController };
 
@@ -342,7 +374,8 @@ export function createInitialStreamingChatState(): StreamingChatState {
 		editingMessage: null,
 		pendingAttachments: [],
 		lastAppendedId: null,
-		attachmentPreview: { presentation: { status: 'idle' }, removeOnDismiss: false }
+		attachmentPreview: { presentation: { status: 'idle' }, removeOnDismiss: false },
+		reactionPicker: { status: 'idle' }
 	};
 }
 

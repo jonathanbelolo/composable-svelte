@@ -16,6 +16,7 @@ import type {
 	MessageReaction,
 	MessageAttachment
 } from './types.js';
+import type { PresentationState } from '@composable-svelte/core';
 
 /**
  * Streaming chat reducer.
@@ -103,6 +104,26 @@ function uploadThenStream(
 
 		dispatch({ type: '_internal_attachmentsResolved', messageId, message, attachments: resolved });
 	});
+}
+
+/**
+ * Close the reaction picker if the message it belongs to has gone.
+ *
+ * Its element unmounts with the message, and Motion One's promise for an
+ * unmounted element never settles — so the completion never arrives and the
+ * lifecycle sticks at `presenting` forever, after which the reducer's own
+ * `status !== 'presented'` guard refuses every later dismiss.
+ *
+ * Keyed on presence in the surviving list rather than on the deleted id, because
+ * deleting a *user* message truncates every message after it: a picker several
+ * messages below dies without ever being named.
+ */
+function pickerAfterMessages(
+	picker: PresentationState<string>,
+	messages: Message[]
+): PresentationState<string> {
+	if (picker.status === 'idle') return picker;
+	return messages.some((m) => m.id === picker.content) ? picker : { status: 'idle' };
 }
 
 export function streamingChatReducer(
@@ -376,6 +397,7 @@ export function streamingChatReducer(
 				{
 					...state,
 					messages: newMessages,
+					reactionPicker: pickerAfterMessages(state.reactionPicker, newMessages)
 				},
 				Effect.none()
 			];
@@ -394,6 +416,8 @@ export function streamingChatReducer(
 						id: action.messageId,
 						content: message.content
 					},
+					// The picker lives in the display branch, so editing unmounts it.
+					reactionPicker: { status: 'idle' }
 				},
 				Effect.none()
 			];
@@ -533,13 +557,16 @@ export function streamingChatReducer(
 
 			let updatedReactions: MessageReaction[];
 			if (existingReactionIndex !== -1) {
-				// Increment count for existing reaction
+				const existing = reactions[existingReactionIndex]!;
+				// Idempotent. This used to increment unconditionally, so clicking your
+				// own reaction ten times reported ten people.
+				if (existing.reactedByMe) return [state, Effect.none()];
+
 				updatedReactions = reactions.map((r, i) =>
-					i === existingReactionIndex ? { ...r, count: r.count + 1 } : r
+					i === existingReactionIndex ? { ...r, count: r.count + 1, reactedByMe: true } : r
 				);
 			} else {
-				// Add new reaction
-				updatedReactions = [...reactions, { emoji: action.emoji, count: 1 }];
+				updatedReactions = [...reactions, { emoji: action.emoji, count: 1, reactedByMe: true }];
 			}
 
 			const newMessages = [...state.messages];
@@ -572,12 +599,16 @@ export function streamingChatReducer(
 			}
 
 			const existingReaction = reactions[existingReactionIndex]!;
+
+			// Only your own reaction is yours to remove. Without this the button
+			// would decrement a count made up of other people.
+			if (!existingReaction.reactedByMe) return [state, Effect.none()];
+
 			let updatedReactions: MessageReaction[];
 
 			if (existingReaction.count > 1) {
-				// Decrement count
 				updatedReactions = reactions.map((r, i) =>
-					i === existingReactionIndex ? { ...r, count: r.count - 1 } : r
+					i === existingReactionIndex ? { ...r, count: r.count - 1, reactedByMe: false } : r
 				);
 			} else {
 				// Remove reaction entirely
@@ -624,9 +655,53 @@ export function streamingChatReducer(
 					isWaitingForResponse: false,
 					error: null,
 					editingMessage: null,
+					reactionPicker: { status: 'idle' }
 				},
 				Effect.none()
 			];
+		}
+
+		// === Reaction picker lifecycle === //
+
+		case 'reactionPickerOpened': {
+			const current = state.reactionPicker;
+			if (
+				(current.status === 'presenting' || current.status === 'presented') &&
+				current.content === action.messageId
+			) {
+				return [state, Effect.none()];
+			}
+
+			// One slot: opening on another message moves it rather than stacking.
+			return [
+				{ ...state, reactionPicker: { status: 'presenting', content: action.messageId } },
+				Effect.none()
+			];
+		}
+
+		case 'reactionPickerDismissed': {
+			const current = state.reactionPicker;
+			if (current.status !== 'presented') return [state, Effect.none()];
+
+			return [
+				{ ...state, reactionPicker: { status: 'dismissing', content: current.content } },
+				Effect.none()
+			];
+		}
+
+		case 'reactionPickerPresentation': {
+			const current = state.reactionPicker;
+
+			if (action.event.type === 'presentationCompleted') {
+				if (current.status !== 'presenting') return [state, Effect.none()];
+				return [
+					{ ...state, reactionPicker: { status: 'presented', content: current.content } },
+					Effect.none()
+				];
+			}
+
+			if (current.status !== 'dismissing') return [state, Effect.none()];
+			return [{ ...state, reactionPicker: { status: 'idle' } }, Effect.none()];
 		}
 
 		// === Attachment preview lifecycle === //
@@ -741,7 +816,12 @@ export function streamingChatReducer(
 					editingMessage: null,
 					// Nothing restored is new. Without this, a session recovery would
 					// animate every message in as though it had just arrived.
-					lastAppendedId: null
+					lastAppendedId: null,
+					// Both overlays belonged to the session being replaced. Leaving the
+					// preview standing was a gap in the commit that introduced it: a
+					// restore left it pointing at an attachment that no longer exists.
+					reactionPicker: { status: 'idle' },
+					attachmentPreview: { presentation: { status: 'idle' }, removeOnDismiss: false }
 				},
 				Effect.none()
 			];

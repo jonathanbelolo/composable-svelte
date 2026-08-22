@@ -5,6 +5,13 @@
 	 * Quick emoji picker popover for adding reactions to messages.
 	 * Shows default reaction set in a compact layout.
 	 */
+	import type { PresentationState } from '@composable-svelte/core';
+	import {
+		animateBackdropIn,
+		animateBackdropOut,
+		animatePopoverIn,
+		animatePopoverOut
+	} from '@composable-svelte/core/animation';
 	import { DEFAULT_REACTIONS } from '../types.js';
 
 	interface Props {
@@ -16,38 +23,98 @@
 		onclose?: () => void;
 		/** Optional class name */
 		class?: string;
+		/**
+		 * Animation lifecycle, when a store owns one. Left undefined the picker
+		 * appears and disappears instantly, as it did before it could animate.
+		 */
+		presentation?: PresentationState<string> | undefined;
+		onPresentationComplete?: (() => void) | undefined;
+		onDismissalComplete?: (() => void) | undefined;
 	}
 
-	let { open, onselect, onclose, class: className = '' }: Props = $props();
+	let {
+		open,
+		onselect,
+		onclose,
+		class: className = '',
+		presentation = undefined,
+		onPresentationComplete = undefined,
+		onDismissalComplete = undefined
+	}: Props = $props();
+
+	// The element must outlive `open` so the exit has something to animate.
+	const visible = $derived(open || presentation?.status === 'dismissing');
+
+	// Refused until the entrance finishes, mirroring the reducer's guards. With
+	// no `presentation` there is no entrance to wait for, so a standalone mount
+	// stays fully interactive.
+	const interactive = $derived(presentation ? presentation.status === 'presented' : true);
+
+	let backdropElement: HTMLDivElement | undefined = $state();
+	let pickerElement: HTMLDivElement | undefined = $state();
+
+	// The (status, content) pair, in a plain `let` — a reactive guard would
+	// re-trigger the effect it lives in, and keying on "have I animated yet"
+	// deadlocks anything mounted already `presented`.
+	let lastAnimated: { status: string; content: unknown } | null = null;
+
+	$effect(() => {
+		if (!presentation || !backdropElement || !pickerElement) return;
+
+		if (presentation.status === 'idle') {
+			lastAnimated = null;
+			return;
+		}
+
+		const { status, content } = presentation;
+		if (lastAnimated?.status === status && lastAnimated.content === content) return;
+		lastAnimated = { status, content };
+
+		if (status === 'presenting') {
+			Promise.all([
+				animateBackdropIn(backdropElement),
+				animatePopoverIn(pickerElement)
+			]).then(() => queueMicrotask(() => onPresentationComplete?.()));
+		}
+
+		if (status === 'dismissing') {
+			Promise.all([
+				animateBackdropOut(backdropElement),
+				animatePopoverOut(pickerElement)
+			]).then(() => queueMicrotask(() => onDismissalComplete?.()));
+		}
+	});
 
 	// Handle escape key
 	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === 'Escape') {
+		if (e.key === 'Escape' && interactive) {
 			onclose?.();
 		}
 	}
 
 	// Handle backdrop click
 	function handleBackdropClick(e: MouseEvent) {
-		if (e.target === e.currentTarget) {
+		if (e.target === e.currentTarget && interactive) {
 			onclose?.();
 		}
 	}
 
 	function handleEmojiClick(emoji: string) {
+		if (!interactive) return;
 		onselect?.(emoji);
 		onclose?.();
 	}
 </script>
 
-{#if open}
+{#if visible}
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
+		bind:this={backdropElement}
 		class="reaction-picker-backdrop"
 		onclick={handleBackdropClick}
 		onkeydown={handleKeydown}
 	>
-		<div class="reaction-picker {className}">
+		<div bind:this={pickerElement} class="reaction-picker {className}">
 			<div class="reaction-picker__header">
 				<span class="reaction-picker__title">React</span>
 				<button
@@ -95,19 +162,8 @@
 			0 10px 25px rgba(0, 0, 0, 0.15);
 		padding: 8px;
 		min-width: 200px;
-		animation: slideUp 0.2s ease-out;
 	}
 
-	@keyframes slideUp {
-		from {
-			opacity: 0;
-			transform: translateY(10px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
 
 	.reaction-picker__header {
 		display: flex;
@@ -137,7 +193,6 @@
 		align-items: center;
 		justify-content: center;
 		cursor: pointer;
-		transition: background 0.2s, color 0.2s;
 	}
 
 	.reaction-picker__close:hover {
@@ -159,7 +214,6 @@
 		border-radius: 8px;
 		font-size: 24px;
 		cursor: pointer;
-		transition: background 0.2s, transform 0.1s;
 		display: flex;
 		align-items: center;
 		justify-content: center;

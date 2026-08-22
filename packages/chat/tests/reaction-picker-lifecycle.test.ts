@@ -1,0 +1,194 @@
+/**
+ * One picker at a time, and it survives its own message disappearing.
+ *
+ * Every message owned a `showReactionPicker` boolean **and rendered its own
+ * `position: fixed; inset: 0` backdrop**. Opening a second picker stacked two
+ * full-viewport backdrops: only the last-painted one received clicks, so the
+ * first became impossible to close. Moving the lifecycle into the store makes
+ * one-at-a-time an invariant of the reducer rather than an accident of usage.
+ *
+ * The other half is what happens when the element vanishes mid-animation. Motion
+ * One's promise for an unmounted element never settles, so the completion never
+ * arrives and the lifecycle sticks at `presenting` forever — after which the
+ * reducer's own `status !== 'presented'` guard refuses every later dismiss. There
+ * are three ways in, and the sharpest is not the obvious one: deleting a *user*
+ * message truncates every message after it, so a picker several messages below
+ * dies too.
+ */
+
+import { describe, it, expect, afterEach } from 'vitest';
+import { createStore } from '@composable-svelte/core';
+import { streamingChatReducer } from '../src/lib/streaming-chat/reducer.js';
+import { createInitialStreamingChatState } from '../src/lib/streaming-chat/types.js';
+import type {
+	Message,
+	StreamingChatState,
+	StreamingChatAction,
+	StreamingChatDependencies
+} from '../src/lib/streaming-chat/types.js';
+
+let cleanup: Array<() => void> = [];
+afterEach(() => {
+	cleanup.forEach((fn) => fn());
+	cleanup = [];
+});
+
+const msg = (id: string, role: Message['role'] = 'assistant'): Message => ({
+	id,
+	role,
+	content: id,
+	timestamp: 0
+});
+
+function makeStore(messages: Message[] = [msg('m1'), msg('m2')]) {
+	const store = createStore<StreamingChatState, StreamingChatAction>({
+		initialState: { ...createInitialStreamingChatState(), messages },
+		reducer: streamingChatReducer,
+		dependencies: { streamMessage: () => {} } satisfies StreamingChatDependencies
+	});
+	cleanup.push(() => store.destroy?.());
+	return store;
+}
+
+const picker = (s: StreamingChatState) => s.reactionPicker;
+
+function openOn(store: ReturnType<typeof makeStore>, messageId: string) {
+	store.dispatch({ type: 'reactionPickerOpened', messageId });
+	store.dispatch({
+		type: 'reactionPickerPresentation',
+		event: { type: 'presentationCompleted' }
+	});
+}
+
+describe('the picker lifecycle', () => {
+	it('starts idle', () => {
+		expect(picker(makeStore().state).status).toBe('idle');
+	});
+
+	it('opens onto a message and completes', () => {
+		const store = makeStore();
+		store.dispatch({ type: 'reactionPickerOpened', messageId: 'm1' });
+		expect(picker(store.state).status).toBe('presenting');
+
+		store.dispatch({
+			type: 'reactionPickerPresentation',
+			event: { type: 'presentationCompleted' }
+		});
+		const p = picker(store.state);
+		expect(p.status).toBe('presented');
+		expect(p.status !== 'idle' && p.content).toBe('m1');
+	});
+
+	it('holds one slot — opening on another message moves it', () => {
+		// The defect this fixes: two component-local booleans meant two stacked
+		// full-viewport backdrops, and the first became unclosable.
+		const store = makeStore();
+		openOn(store, 'm1');
+		store.dispatch({ type: 'reactionPickerOpened', messageId: 'm2' });
+
+		const p = picker(store.state);
+		expect(p.status !== 'idle' && p.content, 'the slot did not move').toBe('m2');
+	});
+
+	it('refuses a dismiss until the entrance finishes', () => {
+		const store = makeStore();
+		store.dispatch({ type: 'reactionPickerOpened', messageId: 'm1' });
+		store.dispatch({ type: 'reactionPickerDismissed' });
+
+		expect(picker(store.state).status).toBe('presenting');
+	});
+
+	it('runs the full lifecycle back to idle', () => {
+		const store = makeStore();
+		openOn(store, 'm1');
+		store.dispatch({ type: 'reactionPickerDismissed' });
+		expect(picker(store.state).status).toBe('dismissing');
+
+		store.dispatch({
+			type: 'reactionPickerPresentation',
+			event: { type: 'dismissalCompleted' }
+		});
+		expect(picker(store.state).status).toBe('idle');
+	});
+});
+
+describe('when the picker’s element disappears', () => {
+	it('resets when its own message is deleted', () => {
+		const store = makeStore();
+		openOn(store, 'm2');
+		store.dispatch({ type: 'deleteMessage', messageId: 'm2' });
+
+		expect(picker(store.state).status, 'stuck presented on a deleted message').toBe('idle');
+	});
+
+	it('resets when a message ABOVE it is deleted', () => {
+		// The sharp one. Deleting a *user* message truncates the tail, so a picker
+		// several messages below unmounts without ever being mentioned.
+		const store = makeStore([msg('m1', 'user'), msg('m2'), msg('m3')]);
+		openOn(store, 'm3');
+		store.dispatch({ type: 'deleteMessage', messageId: 'm1' });
+
+		expect(store.state.messages, 'precondition: the tail was truncated').toHaveLength(0);
+		expect(picker(store.state).status, 'stuck on a message that no longer exists').toBe('idle');
+	});
+
+	it('survives a deletion that does not touch it', () => {
+		// The discriminator: a blanket reset would pass the two above while
+		// closing the picker on every unrelated delete.
+		const store = makeStore([msg('m1'), msg('m2')]);
+		openOn(store, 'm2');
+		store.dispatch({ type: 'deleteMessage', messageId: 'm1' });
+
+		expect(picker(store.state).status, 'an unrelated deletion closed the picker').toBe(
+			'presented'
+		);
+	});
+
+	it('resets when the conversation is cleared', () => {
+		const store = makeStore();
+		openOn(store, 'm1');
+		store.dispatch({ type: 'clearMessages' });
+
+		expect(picker(store.state).status).toBe('idle');
+	});
+
+	it('resets when the message enters edit mode', () => {
+		// The picker lives in the display branch, so editing unmounts it.
+		const store = makeStore([msg('m1', 'user')]);
+		openOn(store, 'm1');
+		store.dispatch({ type: 'startEditingMessage', messageId: 'm1' });
+
+		expect(picker(store.state).status).toBe('idle');
+	});
+});
+
+describe('a gap the attachment preview left', () => {
+	it('restoring a session clears an open attachment preview', () => {
+		// Step J added the preview lifecycle and did not reset it here, so a
+		// restore left it pointing at an attachment from the previous session.
+		const attachment = {
+			id: 'a1',
+			type: 'image' as const,
+			filename: 'p.png',
+			url: 'blob:x',
+			size: 1,
+			mimeType: 'image/png'
+		};
+		const store = createStore<StreamingChatState, StreamingChatAction>({
+			initialState: {
+				...createInitialStreamingChatState(),
+				attachmentPreview: {
+					presentation: { status: 'presented', content: attachment },
+					removeOnDismiss: false
+				}
+			},
+			reducer: streamingChatReducer,
+			dependencies: { streamMessage: () => {} } satisfies StreamingChatDependencies
+		});
+		cleanup.push(() => store.destroy?.());
+
+		store.dispatch({ type: 'restoreMessages', messages: [msg('m1')] });
+
+		expect(store.state.attachmentPreview.presentation.status).toBe('idle');
+	});
+});

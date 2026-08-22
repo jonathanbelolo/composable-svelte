@@ -405,7 +405,6 @@ const BACKLOG = new Set([
 	'chat/src/lib/streaming-chat/attachment-components/ImagePreview.svelte',
 	'chat/src/lib/streaming-chat/attachment-components/VideoPlayer.svelte',
 	'chat/src/lib/streaming-chat/collaborative-primitives/CursorMarker.svelte',
-	'chat/src/lib/streaming-chat/primitives/ReactionPicker.svelte',
 	'code/src/lib/code-editor/CodeEditor.svelte',
 	'code/src/lib/code-highlight/CodeHighlight.svelte',
 	'maps/src/lib/components/TileProviderControl.svelte',

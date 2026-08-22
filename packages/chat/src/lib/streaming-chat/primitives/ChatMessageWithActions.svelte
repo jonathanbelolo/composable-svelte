@@ -47,11 +47,26 @@
 	const editContent = $derived($store.editingMessage?.content ?? '');
 
 	// Reaction picker state
-	let showReactionPicker = $state(false);
+	// One slot in the store, not a boolean per message. Two component-local
+	// booleans meant two stacked full-viewport backdrops, and the first became
+	// unclosable.
+	const picker = $derived($store.reactionPicker);
+	const pickerIsMine = $derived(picker.status !== 'idle' && picker.content === message.id);
+	const pickerOpen = $derived(
+		pickerIsMine && (picker.status === 'presenting' || picker.status === 'presented')
+	);
 
-	// Handle reaction click (toggle or add/remove)
+	// A real toggle. This was byte-identical to `handleAddReaction` below — it
+	// dispatched `addReaction` unconditionally while its comment claimed to
+	// toggle, so a reaction count could only ever go up and `removeReaction` had
+	// no dispatcher anywhere in the repo.
 	function handleReactionClick(emoji: string) {
-		store.dispatch({ type: 'addReaction', messageId: message.id, emoji });
+		const mine = message.reactions?.find((r) => r.emoji === emoji)?.reactedByMe;
+		store.dispatch({
+			type: mine ? 'removeReaction' : 'addReaction',
+			messageId: message.id,
+			emoji
+		});
 	}
 
 	// Handle adding reaction from picker
@@ -113,20 +128,31 @@
 			{userAvatarUrl}
 			{assistantAvatarUrl}
 			onReactionClick={handleReactionClick}
-			onAddReaction={() => (showReactionPicker = true)}
+			onAddReaction={() => store.dispatch({ type: 'reactionPickerOpened', messageId: message.id })}
 		>
 			{#snippet headerActions()}
 				{#if !isStreaming}
-					<ContextMenu {message} {store} onAddReaction={() => (showReactionPicker = true)} />
+					<ContextMenu {message} {store} onAddReaction={() => store.dispatch({ type: 'reactionPickerOpened', messageId: message.id })} />
 				{/if}
 			{/snippet}
 		</ChatMessage>
 
 		<!-- Reaction Picker -->
 		<ReactionPicker
-			open={showReactionPicker}
+			open={pickerOpen}
+			presentation={pickerIsMine ? picker : undefined}
 			onselect={handleAddReaction}
-			onclose={() => (showReactionPicker = false)}
+			onclose={() => store.dispatch({ type: 'reactionPickerDismissed' })}
+			onPresentationComplete={() =>
+				store.dispatch({
+					type: 'reactionPickerPresentation',
+					event: { type: 'presentationCompleted' }
+				})}
+			onDismissalComplete={() =>
+				store.dispatch({
+					type: 'reactionPickerPresentation',
+					event: { type: 'dismissalCompleted' }
+				})}
 		/>
 	</div>
 {/if}

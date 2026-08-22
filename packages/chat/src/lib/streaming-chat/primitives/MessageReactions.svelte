@@ -25,8 +25,10 @@
 			<button
 				type="button"
 				class="message-reaction"
+				class:message-reaction--mine={reaction.reactedByMe}
 				onclick={() => onclick?.(reaction.emoji)}
 				disabled={!onclick}
+				aria-pressed={reaction.reactedByMe ?? false}
 				aria-label="{reaction.emoji} {reaction.count}"
 			>
 				<span class="message-reaction__emoji">{reaction.emoji}</span>
@@ -56,6 +58,13 @@
 		border-radius: 12px;
 		cursor: pointer;
 		font-size: 14px;
+	}
+
+	/* Which reactions are yours. There was no selected state at all before the
+	   chips could be toggled — only `:hover` and `:disabled`. */
+	.message-reaction--mine {
+		background: rgba(0, 122, 255, 0.12);
+		border-color: rgba(0, 122, 255, 0.4);
 	}
 
 	.message-reaction:hover:not(:disabled) {
