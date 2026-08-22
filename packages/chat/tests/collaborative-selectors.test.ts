@@ -85,6 +85,15 @@ describe('getActiveUsers', () => {
 		expect(ada!.avatar).toBe('a.png');
 	});
 
+	it('carries lastSeen, which is the only way PresenceList can show it', () => {
+		// `PresenceList` renders a "last seen" label, and this selector is the
+		// documented way to feed it. The field was dropped here, so the label was
+		// unreachable through the only path anyone follows.
+		const [ada] = getActiveUsers(map(user({ id: 'ada', presence: 'away', lastSeen: 1234 })), 'me');
+
+		expect(ada!.lastSeen).toBe(1234);
+	});
+
 	it('drops users who are offline', () => {
 		const users = map(user({ id: 'ada', presence: 'offline' }), user({ id: 'bob' }));
 

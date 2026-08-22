@@ -301,13 +301,21 @@ export function getTypingUsers(
 export function getActiveUsers(
 	users: Map<string, CollaborativeUser>,
 	currentUserId: string | null
-): Array<{ id: string; name: string; color: string; presence: UserPresence; avatar?: string }> {
+): Array<{
+	id: string;
+	name: string;
+	color: string;
+	presence: UserPresence;
+	avatar?: string;
+	lastSeen: number;
+}> {
 	const activeUsers: Array<{
 		id: string;
 		name: string;
 		color: string;
 		presence: UserPresence;
 		avatar?: string;
+		lastSeen: number;
 	}> = [];
 
 	for (const [userId, user] of users.entries()) {
@@ -321,6 +329,11 @@ export function getActiveUsers(
 				name: user.name,
 				color: user.color,
 				presence: user.presence,
+				// Carried through because `PresenceList` renders a "last seen" label
+				// from it, and this selector is the documented way to feed that
+				// component — dropping the field here made the label unreachable
+				// through the only path anyone follows.
+				lastSeen: user.lastSeen,
 				// Spread rather than `avatar: user.avatar`: under
 				// `exactOptionalPropertyTypes` the declared `avatar?: string` means
 				// "absent or a string", and writing the key as `undefined` is
