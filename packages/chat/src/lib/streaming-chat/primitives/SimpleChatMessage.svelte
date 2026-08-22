@@ -11,9 +11,26 @@
 	interface Props {
 		message: Message;
 		isStreaming?: boolean;
+		/** Custom label for user messages (default: "You"). */
+		userLabel?: string;
+		/** Custom label for assistant messages (default: "Assistant"). */
+		assistantLabel?: string;
 	}
 
-	const { message, isStreaming = false }: Props = $props();
+	const {
+		message,
+		isStreaming = false,
+		userLabel = 'You',
+		assistantLabel = 'Assistant'
+	}: Props = $props();
+
+	// `senderName` wins, matching `ChatMessage` — `??` rather than `||`, so an
+	// empty string is honoured as a name and only undefined falls through. This
+	// component hardcoded 'You' / 'Assistant', so a message carrying a sender name
+	// showed the generic label instead, and `MinimalStreamingChat` had no way to
+	// pass one either.
+	const defaultLabel = $derived(message.role === 'user' ? userLabel : assistantLabel);
+	const roleLabel = $derived(message.senderName ?? defaultLabel);
 
 	let contentElement: HTMLDivElement | undefined = $state();
 
@@ -41,7 +58,7 @@
 <div class="chat-message" data-role={message.role} data-streaming={isStreaming}>
 	<div class="chat-message__header">
 		<span class="chat-message__role">
-			{message.role === 'user' ? 'You' : 'Assistant'}
+			{roleLabel}
 		</span>
 		<span class="chat-message__time">{timeString()}</span>
 	</div>

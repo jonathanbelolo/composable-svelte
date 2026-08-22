@@ -7,6 +7,7 @@
 	 */
 
 	import PresenceBadge from './PresenceBadge.svelte';
+	import { createIntlFormatters } from '@composable-svelte/core/i18n';
 	import type { UserPresence } from '../collaborative-types.js';
 
 	interface User {
@@ -15,6 +16,15 @@
 		avatar?: string;
 		color: string;
 		presence: UserPresence;
+		/**
+		 * When this user was last seen, as a timestamp.
+		 *
+		 * Optional so existing callers keep compiling — `CollaborativeUser`
+		 * declares it as required, and the reducer has always written it on
+		 * `userPresenceChanged` and `heartbeatReceived`. Nothing read it until
+		 * now, which is why it is being surfaced here rather than deleted.
+		 */
+		lastSeen?: number;
 	}
 
 	interface Props {
@@ -26,9 +36,32 @@
 		showEmptyState?: boolean;
 		/** Custom class */
 		class?: string;
+		/** Locale for the "last seen" text. Defaults to the browser's. */
+		locale?: string | undefined;
 	}
 
-	let { users, groupByPresence = false, showEmptyState = true, class: className = '' }: Props = $props();
+	let {
+		users,
+		groupByPresence = false,
+		showEmptyState = true,
+		class: className = '',
+		locale = undefined
+	}: Props = $props();
+
+	// Core's formatter rather than another hand-rolled one — it picks the unit and
+	// falls back safely when `Intl.RelativeTimeFormat` is unavailable. Core is a
+	// required peer, so this costs no new dependency.
+	const formatters = createIntlFormatters();
+	const resolvedLocale = $derived(
+		locale ?? (typeof navigator !== 'undefined' ? navigator.language : 'en')
+	);
+
+	// Only for users who are not currently here. "Last seen 2 minutes ago" next to
+	// an active badge is noise.
+	function lastSeenLabel(user: User): string | null {
+		if (user.presence === 'active' || user.lastSeen === undefined) return null;
+		return formatters.formatRelativeTime(new Date(user.lastSeen), resolvedLocale);
+	}
 
 	// Group users by presence if requested
 	const groupedUsers = $derived.by(() => {
@@ -97,6 +130,9 @@
 								</div>
 								<div class="user-info">
 									<span class="user-name">{user.name}</span>
+									{#if lastSeenLabel(user)}
+										<span class="user-last-seen">Last seen {lastSeenLabel(user)}</span>
+									{/if}
 								</div>
 								<PresenceBadge presence={user.presence} size="sm" />
 							</div>
@@ -118,6 +154,9 @@
 					</div>
 					<div class="user-info">
 						<span class="user-name">{user.name}</span>
+						{#if lastSeenLabel(user)}
+							<span class="user-last-seen">Last seen {lastSeenLabel(user)}</span>
+						{/if}
 					</div>
 					<PresenceBadge presence={user.presence} size="sm" />
 				</div>
@@ -196,6 +235,11 @@
 
 	.avatar-initials {
 		user-select: none;
+	}
+
+	.user-last-seen {
+		font-size: 11px;
+		color: #94a3b8;
 	}
 
 	.user-info {

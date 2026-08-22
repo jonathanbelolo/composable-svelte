@@ -30,12 +30,24 @@
 		 * Custom CSS class.
 		 */
 		class?: string;
+
+		/**
+		 * Custom label for user messages (default: "You").
+		 */
+		userLabel?: string;
+
+		/**
+		 * Custom label for assistant messages (default: "Assistant").
+		 */
+		assistantLabel?: string;
 	}
 
 	const {
 		store,
 		placeholder = 'Type your message...',
-		class: className = ''
+		class: className = '',
+		userLabel = 'You',
+		assistantLabel = 'Assistant'
 	}: Props = $props();
 
 	// Input state
@@ -94,7 +106,7 @@
 			</div>
 		{:else}
 			{#each $store.messages as message (message.id)}
-				<SimpleChatMessage {message} />
+				<SimpleChatMessage {message} {userLabel} {assistantLabel} />
 			{/each}
 
 			{#if $store.currentStreaming}
@@ -106,6 +118,8 @@
 						timestamp: Date.now()
 					}}
 					isStreaming={true}
+					{userLabel}
+					{assistantLabel}
 				/>
 			{/if}
 		{/if}

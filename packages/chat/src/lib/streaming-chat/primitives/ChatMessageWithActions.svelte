@@ -62,7 +62,12 @@
 	<!-- Edit mode for user messages -->
 	<div class="chat-message chat-message--editing" data-role="user">
 		<div class="chat-message__header">
-			<span class="chat-message__role">{userLabel} (editing)</span>
+			<!--
+				`senderName` first, as everywhere else. This branch showed the generic
+				label, so a message from "Alice" became "You (editing)" the moment the
+				edit button was pressed and reverted on save.
+			-->
+			<span class="chat-message__role">{message.senderName ?? userLabel} (editing)</span>
 		</div>
 		<div class="chat-message__edit-form">
 			<textarea
