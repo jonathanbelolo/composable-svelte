@@ -1,3 +1,4 @@
+import type { PresentationState } from '@composable-svelte/core';
 /**
  * Streaming Chat Types
  *
@@ -181,6 +182,41 @@ export interface StreamingChatState {
 	 * has been watching, in place.
 	 */
 	lastAppendedId: string | null;
+
+	/** Attachment preview modal lifecycle. */
+	attachmentPreview: AttachmentPreviewState;
+}
+
+/**
+ * Presentation lifecycle events chat's own overlays dispatch.
+ *
+ * Deliberately narrower than core's canonical `PresentationEvent`, and named
+ * apart from it — the precedent is `DropdownMenuPresentationEvent`. These two
+ * members are the ones anything here actually sends; importing the wider union
+ * would invite timeout cases with no reachable trigger, which is the dead
+ * behaviour this package is being cleared of.
+ */
+export type ChatPresentationEvent =
+	| { type: 'presentationCompleted' }
+	| { type: 'dismissalCompleted' };
+
+/**
+ * The attachment preview modal's lifecycle.
+ *
+ * `content` is the attachment **object**, not its id. An id would be resolved
+ * against `pendingAttachments` on every render, and anything that empties that
+ * list while the exit animation is in flight would resolve to nothing and blank
+ * the modal mid-fade. One transient copy is cheaper than that class of bug.
+ */
+export interface AttachmentPreviewState {
+	presentation: PresentationState<MessageAttachment>;
+
+	/**
+	 * The user pressed Remove. Recorded rather than performed: `removeAttachment`
+	 * revokes the blob URL that the `<img>` in this very modal is still showing,
+	 * so the removal waits until the exit animation has finished.
+	 */
+	removeOnDismiss: boolean;
 }
 
 /**
@@ -231,6 +267,11 @@ export type StreamingChatAction =
 	| { type: 'clearMessages' }
 	// Session restore (for persistence/recovery)
 	| { type: 'restoreMessages'; messages: Message[] }
+	// Attachment preview modal
+	| { type: 'attachmentPreviewOpened'; attachment: MessageAttachment }
+	| { type: 'attachmentPreviewDismissed' }
+	| { type: 'attachmentPreviewRemoveRequested' }
+	| { type: 'attachmentPreviewPresentation'; event: ChatPresentationEvent }
 	// Internal actions
 	| { type: '_internal_setAbortController'; abortController: AbortController };
 
@@ -300,7 +341,8 @@ export function createInitialStreamingChatState(): StreamingChatState {
 		error: null,
 		editingMessage: null,
 		pendingAttachments: [],
-		lastAppendedId: null
+		lastAppendedId: null,
+		attachmentPreview: { presentation: { status: 'idle' }, removeOnDismiss: false }
 	};
 }
 

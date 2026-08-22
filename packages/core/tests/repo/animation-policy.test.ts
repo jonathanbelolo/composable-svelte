@@ -402,7 +402,6 @@ const BACKLOG = new Set([
 	// blanked every declaration below. Listed now that `stripComments` is
 	// quote-aware. Its legacy twin carried the same defect and was deleted rather
 	// than cleaned.
-	'chat/src/lib/streaming-chat/attachment-components/AttachmentPreviewModal.svelte',
 	'chat/src/lib/streaming-chat/attachment-components/ImagePreview.svelte',
 	'chat/src/lib/streaming-chat/attachment-components/VideoPlayer.svelte',
 	'chat/src/lib/streaming-chat/collaborative-primitives/CursorMarker.svelte',

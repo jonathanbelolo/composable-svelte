@@ -120,7 +120,16 @@
 	// — its three reducer actions had no dispatcher, its exhaustive tests covered
 	// a path nothing took, and attachments could not survive a session restore.
 	const pendingAttachments = $derived($store.pendingAttachments);
-	let previewingAttachment = $state<MessageAttachment | null>(null);
+	// The preview lifecycle lives in the store, like `pendingAttachments` before
+	// it. A component-local boolean could not hold the element on screen for its
+	// exit animation, nor defer the removal until that exit finished.
+	const previewPresentation = $derived($store.attachmentPreview.presentation);
+	const previewingAttachment = $derived(
+		previewPresentation.status === 'idle' ? null : previewPresentation.content
+	);
+	const previewOpen = $derived(
+		previewPresentation.status === 'presenting' || previewPresentation.status === 'presented'
+	);
 	let inputRef: HTMLTextAreaElement;
 
 	// Handle prefill value changes
@@ -358,7 +367,7 @@
 				{#each pendingAttachments as attachment (attachment.id)}
 					<PendingAttachmentPreview
 						{attachment}
-						onclick={() => (previewingAttachment = attachment)}
+						onclick={() => store.dispatch({ type: 'attachmentPreviewOpened', attachment })}
 						onremove={() => removeAttachment(attachment.id)}
 					/>
 				{/each}
@@ -438,11 +447,20 @@
 <!-- Attachment Preview Modal -->
 <AttachmentPreviewModal
 	attachment={previewingAttachment}
-	open={previewingAttachment !== null}
-	onclose={() => (previewingAttachment = null)}
-	onremove={() => {
-		if (previewingAttachment) removeAttachment(previewingAttachment.id);
-	}}
+	open={previewOpen}
+	presentation={previewPresentation}
+	onclose={() => store.dispatch({ type: 'attachmentPreviewDismissed' })}
+	onremove={() => store.dispatch({ type: 'attachmentPreviewRemoveRequested' })}
+	onPresentationComplete={() =>
+		store.dispatch({
+			type: 'attachmentPreviewPresentation',
+			event: { type: 'presentationCompleted' }
+		})}
+	onDismissalComplete={() =>
+		store.dispatch({
+			type: 'attachmentPreviewPresentation',
+			event: { type: 'dismissalCompleted' }
+		})}
 />
 
 <style>

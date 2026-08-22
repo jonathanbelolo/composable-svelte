@@ -629,6 +629,105 @@ export function streamingChatReducer(
 			];
 		}
 
+		// === Attachment preview lifecycle === //
+
+		case 'attachmentPreviewOpened': {
+			const current = state.attachmentPreview.presentation;
+			// Only a redundant open is refused. Re-opening while an exit is still in
+			// flight is allowed: blocking it would make the preview ignore a click
+			// for the length of the animation, and the component's (status, content)
+			// guard restarts the entrance from wherever the element currently is.
+			if (
+				(current.status === 'presenting' || current.status === 'presented') &&
+				current.content === action.attachment
+			) {
+				return [state, Effect.none()];
+			}
+
+			return [
+				{
+					...state,
+					attachmentPreview: {
+						presentation: { status: 'presenting', content: action.attachment },
+						removeOnDismiss: false
+					}
+				},
+				Effect.none()
+			];
+		}
+
+		case 'attachmentPreviewDismissed': {
+			const current = state.attachmentPreview.presentation;
+			// Refused until the entrance has finished, or a dismiss would run
+			// against an entry animation still in flight.
+			if (current.status !== 'presented') return [state, Effect.none()];
+
+			return [
+				{
+					...state,
+					attachmentPreview: {
+						...state.attachmentPreview,
+						presentation: { status: 'dismissing', content: current.content }
+					}
+				},
+				Effect.none()
+			];
+		}
+
+		case 'attachmentPreviewRemoveRequested': {
+			const current = state.attachmentPreview.presentation;
+			if (current.status !== 'presented') return [state, Effect.none()];
+
+			// Recorded, not performed. `removeAttachment` revokes the blob URL that
+			// the <img> in this modal is still displaying, so doing it now would
+			// leave a blank box fading out for the length of the exit animation.
+			return [
+				{
+					...state,
+					attachmentPreview: {
+						presentation: { status: 'dismissing', content: current.content },
+						removeOnDismiss: true
+					}
+				},
+				Effect.none()
+			];
+		}
+
+		case 'attachmentPreviewPresentation': {
+			const current = state.attachmentPreview.presentation;
+
+			if (action.event.type === 'presentationCompleted') {
+				if (current.status !== 'presenting') return [state, Effect.none()];
+				return [
+					{
+						...state,
+						attachmentPreview: {
+							...state.attachmentPreview,
+							presentation: { status: 'presented', content: current.content }
+						}
+					},
+					Effect.none()
+				];
+			}
+
+			if (current.status !== 'dismissing') return [state, Effect.none()];
+
+			// The deferred removal, now that the element is off screen.
+			const removing = state.attachmentPreview.removeOnDismiss ? current.content.id : null;
+
+			return [
+				{
+					...state,
+					attachmentPreview: { presentation: { status: 'idle' }, removeOnDismiss: false }
+				},
+				removing
+					? Effect.run(async (dispatch) => {
+							dispatch({ type: 'removeAttachment', attachmentId: removing });
+						})
+					: Effect.none()
+			];
+		}
+
 		case 'restoreMessages': {
 			// Restore messages from persistence (e.g., session recovery)
 			// Resets streaming state to clean slate
