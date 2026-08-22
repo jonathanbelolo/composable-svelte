@@ -12,6 +12,7 @@ export type { ScrollFollower, ScrollFollowerConfig } from './scroll.js';
 
 export {
 	animate,
+	animateListItemIn,
 	animateModalIn,
 	animateModalOut,
 	animateBackdropIn,

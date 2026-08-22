@@ -164,6 +164,23 @@ export interface StreamingChatState {
 
 	/** Pending file attachments (before sending message) */
 	pendingAttachments: MessageAttachment[];
+
+	/**
+	 * The message the user has just sent — the one thing on screen that is
+	 * genuinely *new* rather than merely present.
+	 *
+	 * A keyed `{#each}` gives each message component exactly one run, so a
+	 * component cannot tell "I have just appeared" from "I was restored". That
+	 * distinction lives in the list's diff and nothing recorded it: appending and
+	 * restoring produced structurally identical state, so a restored session
+	 * animated every message in as though it had just arrived.
+	 *
+	 * Set only by `sendMessage`, cleared by `restoreMessages`. A completed
+	 * assistant reply is deliberately excluded — it was already on screen as the
+	 * streaming placeholder, so animating it in would re-animate text the reader
+	 * has been watching, in place.
+	 */
+	lastAppendedId: string | null;
 }
 
 /**
@@ -282,7 +299,8 @@ export function createInitialStreamingChatState(): StreamingChatState {
 		isWaitingForResponse: false,
 		error: null,
 		editingMessage: null,
-		pendingAttachments: []
+		pendingAttachments: [],
+		lastAppendedId: null
 	};
 }
 

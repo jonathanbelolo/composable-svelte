@@ -16,6 +16,8 @@
 		message: Message;
 		store: Store<StreamingChatState, StreamingChatAction>;
 		isStreaming?: boolean;
+		/** Forwarded to `ChatMessage`; the list decides. */
+		animateIn?: boolean;
 		/** Custom label for user messages (default: "You") */
 		userLabel?: string;
 		/** Custom label for assistant messages (default: "Assistant") */
@@ -26,7 +28,7 @@
 		assistantAvatarUrl?: string | undefined;
 	}
 
-	const { message, store, isStreaming = false, userLabel = 'You', assistantLabel = 'Assistant', userAvatarUrl, assistantAvatarUrl }: Props = $props();
+	const { message, store, isStreaming = false, animateIn = false, userLabel = 'You', assistantLabel = 'Assistant', userAvatarUrl, assistantAvatarUrl }: Props = $props();
 
 	// Check if this message is being edited
 	const isEditing = $derived($store.editingMessage?.id === message.id);
@@ -103,6 +105,7 @@
 	<!-- Normal display mode -->
 	<div class="chat-message-with-actions">
 		<ChatMessage
+		{animateIn}
 			{message}
 			{isStreaming}
 			{userLabel}

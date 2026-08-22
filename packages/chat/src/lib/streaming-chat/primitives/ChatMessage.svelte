@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { animateListItemIn } from '@composable-svelte/core/animation';
 	import type { Message, VideoEmbedData } from '../types.js';
 	import type { Snippet, Component } from 'svelte';
 	import { onMount } from 'svelte';
@@ -15,6 +16,8 @@
 	interface Props {
 		message: Message;
 		isStreaming?: boolean;
+		/** Animate this message in. The list decides; see `lastAppendedId`. */
+		animateIn?: boolean;
 		headerActions?: Snippet;
 		/** Optional reaction click handler */
 		onReactionClick?: (emoji: string) => void;
@@ -30,7 +33,26 @@
 		assistantAvatarUrl?: string | undefined;
 	}
 
-	const { message, isStreaming = false, headerActions, onReactionClick, onAddReaction, userLabel = 'You', assistantLabel = 'Assistant', userAvatarUrl, assistantAvatarUrl }: Props = $props();
+	const { message, isStreaming = false, animateIn = false, headerActions, onReactionClick, onAddReaction, userLabel = 'You', assistantLabel = 'Assistant', userAvatarUrl, assistantAvatarUrl }: Props = $props();
+
+	let rootElement: HTMLElement | undefined = $state();
+
+	// Animate in only if this message is the one the user has just sent.
+	//
+	// A keyed `{#each}` gives this component exactly one run, so the usual
+	// first-run guard would suppress every animation forever — invariant 7 does
+	// not transplant onto a list item, because newness is a property of the
+	// list's diff rather than of the item's own lifecycle. The store records it.
+	//
+	// The guard is a plain `let`, never `$state`: the effect reads and writes it,
+	// and a reactive guard re-triggers the effect it lives in.
+	let hasEntered = false;
+
+	$effect(() => {
+		if (hasEntered || !rootElement) return;
+		hasEntered = true;
+		if (animateIn) animateListItemIn(rootElement);
+	});
 
 	// `@composable-svelte/media` is an OPTIONAL peer, so it cannot be imported
 	// statically — a consumer who installs chat without it would get a hard
@@ -102,7 +124,7 @@
 	});
 </script>
 
-<div class="chat-message" data-role={message.role} data-streaming={isStreaming}>
+<div class="chat-message" data-role={message.role} data-streaming={isStreaming} bind:this={rootElement}>
 	<div class="chat-message__header">
 		<div class="chat-message__header-left">
 			{#if avatarUrl}
@@ -192,19 +214,8 @@
 		margin: 8px 0;
 		border-radius: 8px;
 		max-width: 85%;
-		animation: slideIn 0.2s ease-out;
 	}
 
-	@keyframes slideIn {
-		from {
-			opacity: 0;
-			transform: translateY(8px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
 
 	.chat-message[data-role='user'] {
 		background: #007aff;

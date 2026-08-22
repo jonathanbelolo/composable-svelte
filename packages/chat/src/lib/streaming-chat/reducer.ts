@@ -132,6 +132,7 @@ export function streamingChatReducer(
 				{
 					...state,
 					messages: [...state.messages, userMessage],
+					lastAppendedId: userMessage.id,
 					currentStreaming: { content: '' },
 					isWaitingForResponse: true,
 					error: null,
@@ -639,6 +640,9 @@ export function streamingChatReducer(
 					isWaitingForResponse: false,
 					error: null,
 					editingMessage: null,
+					// Nothing restored is new. Without this, a session recovery would
+					// animate every message in as though it had just arrived.
+					lastAppendedId: null
 				},
 				Effect.none()
 			];

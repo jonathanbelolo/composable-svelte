@@ -5,6 +5,25 @@ All notable changes to `@composable-svelte/core` will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0] - 2026-08-22
+
+### Added
+
+- `animateListItemIn` — the entry animation for an item appearing in a list,
+  replacing the one-shot `@keyframes` chat used on message bubbles. It uses
+  `springPresets.listItem`, which had been defined for exactly this and never
+  called by anything.
+
+  It supplies its own start values (`opacity: [0, 1]`) rather than relying on a
+  CSS `opacity: 0`, because `$effect` never runs on the server: an element parked
+  at zero opacity awaiting an effect renders permanently invisible in server HTML
+  and with JavaScript disabled. Owning the start value keeps the resting state —
+  and the server's output — simply "visible".
+
+  It consults `prefersReducedMotion()`, making it the second animation in the
+  package to honour the preference. Skipping it cannot skip the outcome, because
+  the outcome is the element's natural state.
+
 ## [0.9.0] - 2026-08-22
 
 ### Added

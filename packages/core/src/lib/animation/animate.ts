@@ -10,6 +10,7 @@
 import { animate as motionAnimate } from 'motion';
 import type { SpringConfig } from './spring-config.js';
 import { springPresets, mergeSpringConfig } from './spring-config.js';
+import { prefersReducedMotion } from './reduced-motion.js';
 
 // Re-export animate for use in components
 export { motionAnimate as animate };
@@ -24,6 +25,62 @@ function getSpringConfig(
 	const result = mergeSpringConfig(preset, override);
 	// Explicit assertion to help TypeScript understand this is never undefined
 	return result as Required<SpringConfig>;
+}
+
+// ============================================================================
+// List Item Animations
+// ============================================================================
+
+/**
+ * Animate a list item entering.
+ *
+ * Replaces the `@keyframes` one-shots that chat used on message bubbles. Two
+ * things about it are deliberate:
+ *
+ * **It supplies its own start values.** `opacity: [0, 1]` sets the initial frame
+ * itself rather than relying on a CSS `opacity: 0` the element would otherwise
+ * carry. That matters for server rendering: `$effect` never runs on the server,
+ * so an element parked at `opacity: 0` awaiting an effect renders permanently
+ * invisible in server HTML and with JavaScript disabled. Owning the start value
+ * means the resting state — and therefore the server's output — is simply
+ * "visible".
+ *
+ * **It honours `prefers-reduced-motion` itself.** Skipping the animation cannot
+ * skip the outcome here, because the outcome is the element's natural state, so
+ * returning early leaves it correct. No other helper in this file consults the
+ * preference yet; this and `createScrollFollower` are the two that do.
+ *
+ * Uses `springPresets.listItem`, which was defined for exactly this and had
+ * never been called.
+ */
+export async function animateListItemIn(
+	element: HTMLElement,
+	springConfig?: Partial<SpringConfig>
+): Promise<void> {
+	if (prefersReducedMotion()) return;
+
+	try {
+		const config = getSpringConfig(springPresets.listItem, springConfig);
+
+		await motionAnimate(
+			element,
+			{
+				opacity: [0, 1],
+				y: [8, 0]
+			},
+			{
+				type: 'spring',
+				visualDuration: config.visualDuration,
+				bounce: config.bounce
+			}
+		).finished;
+	} catch (error) {
+		console.error('[animateListItemIn] Animation failed:', error);
+		if (element) {
+			element.style.opacity = '1';
+			element.style.transform = 'none';
+		}
+	}
 }
 
 // ============================================================================

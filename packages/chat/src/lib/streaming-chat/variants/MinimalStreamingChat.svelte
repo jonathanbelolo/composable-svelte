@@ -135,7 +135,12 @@
 			</div>
 		{:else}
 			{#each $store.messages as message (message.id)}
-				<SimpleChatMessage {message} {userLabel} {assistantLabel} />
+				<SimpleChatMessage
+					{message}
+					{userLabel}
+					{assistantLabel}
+					animateIn={message.id === $store.lastAppendedId}
+				/>
 			{/each}
 
 			{#if $store.currentStreaming}
