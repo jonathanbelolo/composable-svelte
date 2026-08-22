@@ -139,6 +139,20 @@ export function streamingChatReducer(
 			// Use attachments from action if provided, otherwise use pending attachments from state
 			const attachments = action.attachments ?? (state.pendingAttachments.length > 0 ? state.pendingAttachments : undefined);
 
+			// Anything about to be uploaded is marked before the message is
+			// appended. `_internal_attachmentUploadProgress` only writes to an
+			// attachment already in `'uploading'`, and nothing ever put one there —
+			// so every progress report a consumer's `onProgress` produced was
+			// dispatched, clamped and discarded. The predicate is the same one
+			// `uploadThenStream` uses to decide what to upload; anything else keeps
+			// no upload status at all, because no upload happens to it.
+			const willUpload = deps.uploadFile !== undefined;
+			const trackedAttachments = attachments?.map((attachment) =>
+				willUpload && /^(blob:|data:)/.test(attachment.url)
+					? { ...attachment, uploadStatus: 'uploading' as const, uploadProgress: 0 }
+					: attachment
+			);
+
 			// Add user message to conversation
 			const userMessage: Message = {
 				id: generateId(),
@@ -146,7 +160,7 @@ export function streamingChatReducer(
 				content: action.message,
 				timestamp: getTimestamp(),
 				// Include attachments if any
-				...(attachments !== undefined && { attachments })
+				...(trackedAttachments !== undefined && { attachments: trackedAttachments })
 			};
 
 			return [
@@ -162,9 +176,9 @@ export function streamingChatReducer(
 				// Uploads first, if there are any and the consumer can do them.
 				// Streaming waits, because the whole point of uploading is that the
 				// URL the backend receives resolves for someone other than the sender.
-				attachments && attachments.length > 0 && deps.uploadFile
-					? uploadThenStream(userMessage.id, action.message, attachments, deps)
-					: streamNow(action.message, attachments, deps)
+				trackedAttachments && trackedAttachments.length > 0 && deps.uploadFile
+					? uploadThenStream(userMessage.id, action.message, trackedAttachments, deps)
+					: streamNow(action.message, trackedAttachments, deps)
 			];
 		}
 
@@ -329,10 +343,10 @@ export function streamingChatReducer(
 					currentStreaming: { content: '' },
 					error: null,
 				},
-				Effect.run(async (dispatch) => {
-					// Re-send the user message
-					dispatch({ type: 'sendMessage', message: userMessage.content });
-				})
+				// Directly, for the same reason as `submitEditedMessage`: the user
+				// message is still in `newMessages`, and `sendMessage` would append
+				// a second copy of it beneath the regenerated reply.
+				streamNow(userMessage.content, userMessage.attachments, deps)
 			];
 		}
 
@@ -470,10 +484,13 @@ export function streamingChatReducer(
 					currentStreaming: { content: '' },
 					error: null
 				},
-				Effect.run(async (dispatch) => {
-					// Send the edited message
-					dispatch({ type: 'sendMessage', message: editedContent });
-				})
+				// Stream directly rather than dispatching `sendMessage`, which
+				// appends a user message unconditionally — so editing a message
+				// used to leave two copies of it in the conversation. The edited
+				// one is already in `newMessages` above; only the reply is missing.
+				// Its attachments go with it: they are the same files, already
+				// uploaded, so there is nothing to redo.
+				streamNow(editedContent, updatedMessage.attachments, deps)
 			];
 		}
 

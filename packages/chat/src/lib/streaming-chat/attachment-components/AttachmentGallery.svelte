@@ -67,6 +67,31 @@
 		>
 			{#each categorizedAttachments as { attachment, category }, index (attachment.id || `${attachment.filename}-${index}`)}
 				<div class="gallery-item" data-category={category}>
+					<!-- The upload's only visible output. `uploadFile` reports
+					     progress through a documented callback, the reducer records
+					     it, and until now nothing rendered it — so a consumer who
+					     implemented `onProgress` got a number that went nowhere. -->
+					{#if attachment.uploadStatus === 'uploading'}
+						<div
+							class="attachment-progress"
+							role="progressbar"
+							aria-valuemin="0"
+							aria-valuemax="100"
+							aria-valuenow={Math.round(attachment.uploadProgress ?? 0)}
+							aria-label="Uploading {attachment.filename}"
+						>
+							<div
+								class="attachment-progress-bar"
+								style="width: {attachment.uploadProgress ?? 0}%"
+							></div>
+						</div>
+					{:else if attachment.uploadStatus === 'error'}
+						<p class="attachment-upload-error" role="status">
+							Upload failed{attachment.uploadError ? `: ${attachment.uploadError}` : ''}. Only you
+							can see this file.
+						</p>
+					{/if}
+
 					{#if category === 'image'}
 						<ImagePreview {attachment} />
 					{:else if category === 'pdf'}
@@ -85,6 +110,28 @@
 </div>
 
 <style>
+	.attachment-progress {
+		height: 4px;
+		margin-bottom: 0.25rem;
+		border-radius: 2px;
+		background: #e5e7eb;
+		overflow: hidden;
+	}
+
+	/* Width tracks an external byte count, not a lifecycle — the same shape the
+	   Exception Register grants elsewhere — and it is set directly rather than
+	   transitioned, so nothing here animates. */
+	.attachment-progress-bar {
+		height: 100%;
+		background: #3b82f6;
+	}
+
+	.attachment-upload-error {
+		margin: 0 0 0.25rem 0;
+		font-size: 0.75rem;
+		color: #b91c1c;
+	}
+
 	.attachment-gallery {
 		display: flex;
 		flex-direction: column;

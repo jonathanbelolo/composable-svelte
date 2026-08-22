@@ -18,7 +18,7 @@ import { mount, unmount, flushSync } from 'svelte';
 import ImagePreview from '../src/lib/streaming-chat/attachment-components/ImagePreview.svelte';
 import VideoPlayer from '../src/lib/streaming-chat/attachment-components/VideoPlayer.svelte';
 import type { MessageAttachment } from '../src/lib/streaming-chat/types.js';
-import { TINY_VIDEO } from './__mocks__/tiny-video.js';
+import { TINY_VIDEO, OTHER_TINY_VIDEO } from './__mocks__/tiny-video.js';
 import { propsBox } from './props-box.svelte.js';
 
 let cleanup: Array<() => void> = [];
@@ -60,6 +60,17 @@ const frames = (n: number) =>
 	});
 
 const opacity = (el: Element) => parseFloat(getComputedStyle(el).opacity);
+
+/** Poll rather than guess a frame count for something driven by a media event. */
+async function waitFor<T>(read: () => T | null, what: string, tries = 60): Promise<T> {
+	for (let i = 0; i < tries; i += 1) {
+		flushSync();
+		const found = read();
+		if (found) return found;
+		await new Promise((r) => setTimeout(r, 25));
+	}
+	throw new Error(`timed out waiting for ${what}`);
+}
 
 /**
  * Drive the element's running animation to `fraction` of its length and read the
@@ -226,6 +237,39 @@ describe('ImagePreview', () => {
 		expect(img().getAnimations(), 'the returning image skipped its entrance').toHaveLength(1);
 	});
 
+	it('does not leave an enabled, empty fullscreen button behind the error card', () => {
+		// Hiding the `<img>` left its wrapper — a real `<button>` with an
+		// aria-label — enabled, focusable and 16×6px, sitting beside the ⚠️ card.
+		// Activating it opened fullscreen on the error message.
+		const target = render(ImagePreview, { attachment: image });
+		target.querySelector('img')!.dispatchEvent(new Event('error'));
+		flushSync();
+
+		const zoom = target.querySelector('.image-preview__zoom') as HTMLButtonElement;
+		expect(zoom.disabled).toBe(true);
+	});
+
+	it('does not describe the previous image while the next one loads', async () => {
+		// The header reads `naturalWidth`/`naturalHeight`, which the source-change
+		// reset did not clear.
+		const props = propsBox({ attachment: image });
+		const target = renderReactive(ImagePreview, props);
+		const img = () => target.querySelector('img') as HTMLImageElement;
+
+		img().dispatchEvent(new Event('load'));
+		flushSync();
+		await frames(2);
+		const first = target.textContent ?? '';
+
+		props.attachment = { ...image, id: 'a4', url: OTHER_PIXEL, filename: 'other.png' };
+		flushSync();
+
+		// Whatever dimensions the first image reported, the header must not still
+		// be claiming them for a source that has not loaded.
+		const dimensions = target.querySelector('.image-dimensions');
+		expect(dimensions, `header still reads "${first}"`).toBeNull();
+	});
+
 	it('hides the broken-image placeholder when the source fails', () => {
 		// With the fade moved to Motion One the resting opacity is 1, so the
 		// browser's own broken-image box would paint straight over the error card.
@@ -271,6 +315,80 @@ describe('VideoPlayer controls', () => {
 		// Paired: neither an instant hide nor no change at all passes.
 		expect(mid, `mid-fade opacity was ${mid}`).toBeLessThan(1);
 		expect(mid).toBeGreaterThan(0);
+	});
+
+	it('recovers when handed a working video after a failed one', async () => {
+		// `error` gates the whole control bar and the play overlay, and nothing
+		// cleared it. `AttachmentPreviewModal` renders `<VideoPlayer {attachment} />`
+		// unkeyed, so a second, perfectly good video rendered as a permanently
+		// broken player. The identical defect in `ImagePreview` was fixed and this
+		// one was missed.
+		const props = propsBox({ attachment: { ...video, url: 'data:video/webm;base64,AAAA' } });
+		const target = renderReactive(VideoPlayer, props);
+
+		await waitFor(() => target.querySelector('.video-error'), 'the bad source to fail');
+		expect(target.querySelector('.video-controls'), 'controls survived a failure').toBeNull();
+
+		props.attachment = { ...video };
+		flushSync();
+
+		expect(target.querySelector('.video-error'), 'the error card outlived its source').toBeNull();
+		expect(target.querySelector('.video-controls'), 'the controls never came back').not.toBeNull();
+	});
+
+	it('rebuilds controls that can actually be clicked', async () => {
+		// The subtle half. `showControls` drives the `.visible` class, and that
+		// class is the only thing restoring `pointer-events`. Rebuild the bar with
+		// `showControls` still `false` from before the failure and it comes back
+		// at its resting CSS opacity — fully visible — and inert. That reads as a
+		// broken player, not a hidden one, which is why opacity alone cannot tell
+		// this apart.
+		const props = propsBox({ attachment: { ...video } });
+		const target = renderReactive(VideoPlayer, props);
+		const element = target.querySelector('video') as HTMLVideoElement;
+
+		// Play, then let the pointer leave: the controls fade out and
+		// `showControls` goes false.
+		element.dispatchEvent(new Event('play'));
+		flushSync();
+		target.querySelector('.video-player')!.dispatchEvent(new MouseEvent('mouseleave'));
+		flushSync();
+
+		// Now fail the source and hand over a working one.
+		element.dispatchEvent(new Event('error'));
+		flushSync();
+		props.attachment = { ...video, id: 'v2', url: OTHER_TINY_VIDEO };
+		flushSync();
+
+		const controls = target.querySelector('.video-controls') as HTMLElement;
+		expect(controls, 'the controls never came back').not.toBeNull();
+		expect(getComputedStyle(controls).pointerEvents, 'the rebuilt controls are inert').not.toBe(
+			'none'
+		);
+	});
+
+	it('says so when playback will not start', async () => {
+		// A rejected `play()` used to latch the fatal error and remove the player
+		// for good. Logging it instead traded a permanent dead-end for an
+		// invisible one — a click that does nothing at all.
+		const target = render(VideoPlayer, { attachment: video });
+		const element = target.querySelector('video') as HTMLVideoElement;
+		element.play = () => Promise.reject(new DOMException('no', 'NotAllowedError'));
+
+		// The overlay only appears once metadata has loaded.
+		const overlay = await waitFor(
+			() => target.querySelector('.video-play-overlay') as HTMLButtonElement | null,
+			'the play overlay'
+		);
+		overlay.click();
+		await waitFor(() => target.querySelector('.video-playback-notice'), 'a complaint');
+
+		// And it is transient: a play that works clears it.
+		element.dispatchEvent(new Event('play'));
+		flushSync();
+		expect(target.querySelector('.video-playback-notice')).toBeNull();
+		// Not the fatal path — the player is still usable.
+		expect(target.querySelector('.video-error')).toBeNull();
 	});
 
 	it('snaps back the moment the pointer returns', async () => {

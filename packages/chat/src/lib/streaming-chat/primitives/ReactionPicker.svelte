@@ -85,6 +85,29 @@
 		}
 	});
 
+	let previouslyFocused: HTMLElement | null = null;
+
+	// Without this the backdrop is never focused, so `onkeydown` never fires and
+	// Escape does nothing. The picker is opened from a button outside its own
+	// subtree — `ChatMessage`'s add-reaction control, or the context menu — and
+	// neither moves focus, so the keydown went to the still-focused trigger.
+	//
+	// This is the same defect that was found and fixed in
+	// `AttachmentPreviewModal`, one file over, complete with a comment explaining
+	// it; the picker was rewritten in the same pass and did not get it. The
+	// `a11y_no_static_element_interactions` suppression on the markup was
+	// silencing the exact warning that points at it.
+	//
+	// Keyed on `visible`, not `open`: focus is taken as soon as the element
+	// exists and restored on unmount, so a dismissal that is still animating does
+	// not snap focus back to the trigger while the overlay is still up.
+	$effect(() => {
+		if (!visible || !backdropElement) return;
+		previouslyFocused = document.activeElement as HTMLElement | null;
+		backdropElement.focus();
+		return () => previouslyFocused?.focus();
+	});
+
 	// Handle escape key
 	function handleKeydown(e: KeyboardEvent) {
 		if (e.key === 'Escape' && interactive) {
@@ -107,10 +130,13 @@
 </script>
 
 {#if visible}
+	<!-- `tabindex="-1"` is load-bearing, not decoration: it is what lets the
+	     effect above focus this element, which is what lets `onkeydown` fire. -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		bind:this={backdropElement}
 		class="reaction-picker-backdrop"
+		tabindex="-1"
 		onclick={handleBackdropClick}
 		onkeydown={handleKeydown}
 	>
@@ -143,6 +169,11 @@
 {/if}
 
 <style>
+	.reaction-picker-backdrop:focus {
+		/* Focused only so it can hear Escape; it is not a control. */
+		outline: none;
+	}
+
 	.reaction-picker-backdrop {
 		position: fixed;
 		inset: 0;

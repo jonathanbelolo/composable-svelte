@@ -88,23 +88,57 @@ describe('uploading on send', () => {
 		expect(sent.uploadStatus).toBe('success');
 	});
 
-	it('reports progress, clamped', async () => {
-		const seen: number[] = [];
-		const { store } = await sendWithAttachment({
-			uploadFile: async (_file, onProgress) => {
-				onProgress?.(5, 10); // 50%
-				onProgress?.(30, 10); // over 100 — must clamp
-				return 'https://cdn.example.com/a1.png';
-			}
-		});
-		void seen;
+	it('marks an attachment uploading, so progress has somewhere to land', () => {
+		// `_internal_attachmentUploadProgress` only writes to an attachment already
+		// in `'uploading'`, and nothing ever put one there — so every value a
+		// consumer's `onProgress` produced was dispatched, clamped and discarded.
+		// Read synchronously: the mark must be on the message the moment it is
+		// appended, not after the upload resolves.
+		const { store } = makeStore({ uploadFile: () => new Promise<string>(() => {}) });
+		store.dispatch({ type: 'addAttachment', attachment: attachment() });
+		store.dispatch({ type: 'sendMessage', message: 'look at this' });
 
-		// The final state is `success`; what matters is that no progress value
-		// escaped the range on the way. Core's file-upload reducer clamps for the
-		// same reason, and its test is the precedent.
 		const sent = store.state.messages[0]!.attachments![0]!;
-		expect(sent.uploadProgress).toBeLessThanOrEqual(100);
-		expect(sent.uploadProgress).toBeGreaterThanOrEqual(0);
+		expect(sent.uploadStatus).toBe('uploading');
+		expect(sent.uploadProgress).toBe(0);
+	});
+
+	it('does not mark an attachment that will not be uploaded', () => {
+		// No `uploadFile`, so nothing uploads and a status would be a lie. Same
+		// for an already-remote URL, which `uploadThenStream` skips.
+		const { store } = makeStore();
+		store.dispatch({ type: 'addAttachment', attachment: attachment() });
+		store.dispatch({ type: 'sendMessage', message: 'look at this' });
+
+		expect(store.state.messages[0]!.attachments![0]!.uploadStatus).toBeUndefined();
+	});
+
+	it('reports progress into the state, clamped', async () => {
+		let report: ((loaded: number, total: number) => void) | undefined;
+		let finish: ((url: string) => void) | undefined;
+
+		const { store } = makeStore({
+			uploadFile: (_file, onProgress) =>
+				new Promise<string>((resolve) => {
+					report = onProgress;
+					finish = resolve;
+				})
+		});
+		store.dispatch({ type: 'addAttachment', attachment: attachment() });
+		store.dispatch({ type: 'sendMessage', message: 'look at this' });
+		await wait(20);
+
+		const progress = () => store.state.messages[0]!.attachments![0]!.uploadProgress;
+
+		report!(5, 10);
+		expect(progress(), 'the reported value never reached the state').toBe(50);
+
+		report!(30, 10); // over 100 — must clamp
+		expect(progress()).toBe(100);
+
+		finish!('https://cdn.example.com/a1.png');
+		await wait(20);
+		expect(store.state.messages[0]!.attachments![0]!.uploadStatus).toBe('success');
 	});
 
 	it('keeps the local URL and marks the failure, and still sends', async () => {

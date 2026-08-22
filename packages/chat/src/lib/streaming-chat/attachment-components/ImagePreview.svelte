@@ -86,6 +86,10 @@
 		isLoading = true;
 		error = null;
 		fadedInFor = undefined;
+		// The header reads these. Left alone, it described image A while the
+		// spinner was up for image B.
+		naturalWidth = 0;
+		naturalHeight = 0;
 	});
 
 	// Was `img { opacity: 0 }` plus `img.loaded { opacity: 1 }` and a CSS
@@ -189,7 +193,7 @@
 			type="button"
 			class="image-preview__zoom"
 			onclick={handleImageClick}
-			disabled={!allowFullscreen || isFullscreen}
+			disabled={!allowFullscreen || isFullscreen || error !== null}
 			aria-label="View {attachment.filename} fullscreen"
 		>
 			<!-- Hidden on error, and that is not cosmetic: with the fade moved to
@@ -331,6 +335,19 @@
 	.fullscreen .image-container {
 		min-height: 100vh;
 		background: black;
+	}
+
+	/* The wrapper is a real button for keyboard access, and had no rule at all —
+	   so every image in the gallery and the preview modal rendered inside default
+	   UA button chrome: a grey `buttonface` box with a 2px outset border. */
+	.image-preview__zoom {
+		display: block;
+		padding: 0;
+		border: none;
+		background: none;
+		font: inherit;
+		color: inherit;
+		max-width: 100%;
 	}
 
 	img {

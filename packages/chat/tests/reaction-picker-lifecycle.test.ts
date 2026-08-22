@@ -17,7 +17,9 @@
  */
 
 import { describe, it, expect, afterEach } from 'vitest';
+import { mount, unmount, flushSync } from 'svelte';
 import { createStore } from '@composable-svelte/core';
+import ReactionPicker from '../src/lib/streaming-chat/primitives/ReactionPicker.svelte';
 import { streamingChatReducer } from '../src/lib/streaming-chat/reducer.js';
 import { createInitialStreamingChatState } from '../src/lib/streaming-chat/types.js';
 import type {
@@ -190,5 +192,67 @@ describe('a gap the attachment preview left', () => {
 		store.dispatch({ type: 'restoreMessages', messages: [msg('m1')] });
 
 		expect(store.state.attachmentPreview.presentation.status).toBe('idle');
+	});
+});
+
+describe('closing the picker from the keyboard', () => {
+	// `onkeydown` sat on a `<div>` with no `tabindex` and nothing that focused
+	// it, so Escape never reached the handler: the picker is opened from a
+	// control outside its own subtree, and that control keeps focus. The
+	// suppression comment on the markup was silencing the warning that says so.
+	//
+	// The same defect was found and fixed in `AttachmentPreviewModal` during this
+	// pass. The picker was rewritten in the same pass and missed it.
+
+	function mountPicker(props: Record<string, unknown> = {}) {
+		const target = document.createElement('div');
+		document.body.appendChild(target);
+		const trigger = document.createElement('button');
+		document.body.appendChild(trigger);
+		trigger.focus();
+
+		const closed: number[] = [];
+		const component = mount(ReactionPicker as never, {
+			target,
+			props: { open: true, onclose: () => closed.push(1), ...props }
+		});
+		flushSync();
+
+		let mounted = true;
+		const unmountPicker = () => {
+			if (mounted) unmount(component);
+			mounted = false;
+		};
+		// Registered separately from the element removal: asserting where focus
+		// lands requires the trigger to still be in the document.
+		cleanup.push(() => {
+			unmountPicker();
+			target.remove();
+			trigger.remove();
+		});
+		return { target, trigger, closed, unmountPicker };
+	}
+
+	it('takes focus, so Escape reaches it', () => {
+		const { target, closed } = mountPicker();
+		const backdrop = target.querySelector('.reaction-picker-backdrop') as HTMLElement;
+
+		expect(document.activeElement, 'the picker never took focus').toBe(backdrop);
+
+		// Dispatched from wherever focus actually is, which is the point.
+		document.activeElement!.dispatchEvent(
+			new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+		);
+		flushSync();
+
+		expect(closed, 'Escape did not close the picker').toHaveLength(1);
+	});
+
+	it('gives focus back to the control that opened it', () => {
+		const { trigger, unmountPicker } = mountPicker();
+		unmountPicker();
+		flushSync();
+
+		expect(document.activeElement).toBe(trigger);
 	});
 });

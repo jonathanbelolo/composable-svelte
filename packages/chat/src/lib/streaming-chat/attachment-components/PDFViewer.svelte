@@ -5,7 +5,7 @@
 	 * Renders PDF attachments using PDF.js with navigation controls.
 	 * Supports zoom, page navigation, and responsive rendering.
 	 */
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import type { MessageAttachment } from '../types.js';
 
 	// Lazy-load pdfjs-dist to avoid Node.js dependency issues in tests
@@ -59,8 +59,15 @@
 			pdf = await loadingTask.promise;
 			totalPages = pdf.numPages;
 
-			await renderPage(currentPage);
+			// Order matters, and it was the other way round. `renderPage` bails on
+			// `!canvasRef`, and the `<canvas>` lives behind `{#if !isLoading}` — so
+			// rendering before clearing the flag meant the canvas did not exist
+			// yet, the call returned immediately, and nothing retriggered it. Every
+			// PDF opened blank, showing "Page 1 of N" over an empty canvas, and
+			// painted only once the reader pressed a control.
 			isLoading = false;
+			await tick();
+			await renderPage(currentPage);
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to load PDF';
 			isLoading = false;

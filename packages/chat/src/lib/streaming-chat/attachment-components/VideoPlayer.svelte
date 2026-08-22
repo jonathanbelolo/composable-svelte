@@ -35,22 +35,64 @@
 	let isSeeking = $state(false);
 	let isLoading = $state(true);
 	let error = $state<string | null>(null);
+	/**
+	 * A transient playback complaint, distinct from `error`.
+	 *
+	 * `error` means the source is unusable and latches the whole player behind
+	 * `{#if !error}`. This one means "that attempt did not start" and clears
+	 * itself the moment one does.
+	 */
+	let playbackNotice = $state<string | null>(null);
 	let isFullscreen = $state(false);
 	let showControls = $state(true);
 	let controlsTimeout: number | undefined;
 	let controlsRef: HTMLDivElement | undefined = $state();
 
+	/** The source the playback state below currently describes. A plain `let`. */
+	let sourceUrl: string | undefined;
+
 	/**
-	 * What the controls were last animated to, **and on which element**. A plain
-	 * `let`, not `$state`: the effect below writes it, and a rune would make that
-	 * a self-trigger.
+	 * A new `attachment` is a new video, and `error` never unset itself.
 	 *
-	 * Keyed on the pair rather than the boolean alone. The control bar lives
-	 * inside `{#if !error}`, so it can be replaced by a different element while
-	 * `showControls` is unchanged — and a bare boolean would then take the
-	 * early return and leave the new element unplaced.
+	 * `error` gates the entire control bar and the play overlay behind
+	 * `{#if !error}`, and nothing cleared it — so a failed load turned the
+	 * component into a permanently broken player, and handing it a perfectly
+	 * good second video left the ⚠️ card up with no controls.
+	 * `AttachmentPreviewModal` renders `<VideoPlayer {attachment} />` unkeyed, so
+	 * it reuses one instance; the identical defect in `ImagePreview` was fixed
+	 * and this one was missed.
 	 */
-	let controlsShown: { element: HTMLElement; shown: boolean } | undefined;
+	$effect(() => {
+		const url = attachment.url;
+		if (sourceUrl === url) return;
+
+		const isFirstRun = sourceUrl === undefined;
+		sourceUrl = url;
+		if (isFirstRun) return;
+
+		error = null;
+		isLoading = true;
+		isPlaying = false;
+		currentTime = 0;
+		duration = 0;
+		// Not cosmetic. `showControls` also drives the `.visible` class, which is
+		// the only thing restoring `pointer-events`. Leaving it `false` across a
+		// swap rebuilds the bar at its resting CSS opacity — fully visible — and
+		// unclickable, which reads as a broken player rather than a hidden one.
+		showControls = true;
+	});
+
+	/**
+	 * What the controls were last animated to. A plain `let`, not `$state`: the
+	 * effect below writes it, and a rune would make that a self-trigger.
+	 *
+	 * A boolean is enough, and an earlier `{ element, shown }` pair was not the
+	 * improvement its comment claimed. The bar can be replaced — it lives inside
+	 * `{#if !error}` and `error` now clears on a new source — but the same reset
+	 * puts `showControls` back to `true`, and "visible" is the resting state in
+	 * CSS. So a replacement never needs placing.
+	 */
+	let controlsShown: boolean | undefined;
 
 	/**
 	 * Was `transition: opacity 0.2s` between `.video-controls` and
@@ -71,11 +113,10 @@
 		const element = controlsRef;
 		const shown = showControls;
 
-		if (!element) return;
-		if (controlsShown?.element === element && controlsShown.shown === shown) return;
+		if (!element || controlsShown === shown) return;
 
-		const isFirstRun = controlsShown?.element !== element;
-		controlsShown = { element, shown };
+		const isFirstRun = controlsShown === undefined;
+		controlsShown = shown;
 
 		// On the first run, place — and placing here means writing nothing at all.
 		// The controls' resting state in CSS *is* visible, which is the whole
@@ -109,11 +150,16 @@
 		} else {
 			videoRef.play().catch((err) => {
 				// Deliberately not `error`. Everything below — the whole control
-				// bar and the play overlay — renders behind `{#if !error}`, and
-				// nothing ever resets it, so one rejected `play()` used to remove
-				// the player permanently with no way back. A rejection here is
-				// transient (an interrupted play, an autoplay policy); a source
-				// that genuinely cannot load fires `onerror`, which still latches.
+				// bar and the play overlay — renders behind `{#if !error}`, so one
+				// rejected `play()` used to remove the player permanently. A
+				// rejection here is transient (an interrupted play, an autoplay
+				// policy); a source that genuinely cannot load fires `onerror`,
+				// which still latches.
+				//
+				// It is not silent either: dropping the assignment altogether
+				// traded a permanent dead-end for an invisible one — a click that
+				// does nothing, with only a console line to show for it.
+				playbackNotice = 'Could not start playback. Try again.';
 				console.error('Video playback error:', err);
 			});
 		}
@@ -132,6 +178,8 @@
 
 	function handlePlay() {
 		isPlaying = true;
+		// Whatever the last attempt could not do, this one did.
+		playbackNotice = null;
 	}
 
 	function handlePause() {
@@ -306,6 +354,12 @@
 				<span class="error-icon">⚠️</span>
 				<p>{error}</p>
 			</div>
+		{/if}
+
+		<!-- Transient playback complaint. `role="status"` rather than an alert:
+		     it is feedback on the click just made, not an interruption. -->
+		{#if playbackNotice && !error}
+			<p class="video-playback-notice" role="status">{playbackNotice}</p>
 		{/if}
 
 		<!-- Play Button Overlay -->
@@ -543,6 +597,20 @@
 	.video-error p {
 		margin: 0;
 		font-size: 1rem;
+	}
+
+	.video-playback-notice {
+		position: absolute;
+		left: 50%;
+		bottom: 5rem;
+		transform: translateX(-50%);
+		margin: 0;
+		padding: 0.375rem 0.75rem;
+		border-radius: 0.375rem;
+		background: rgba(0, 0, 0, 0.75);
+		color: white;
+		font-size: 0.8125rem;
+		z-index: 3;
 	}
 
 	.video-play-overlay {
