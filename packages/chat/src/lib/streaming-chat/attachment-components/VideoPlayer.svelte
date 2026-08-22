@@ -71,6 +71,9 @@
 		if (isFirstRun) return;
 
 		error = null;
+		// Or the complaint about the *previous* source is painted over the new one
+		// — the same latch this reset exists to break, one variable along.
+		playbackNotice = null;
 		isLoading = true;
 		isPlaying = false;
 		currentTime = 0;
@@ -96,8 +99,14 @@
 
 	/**
 	 * Was `transition: opacity 0.2s` between `.video-controls` and
-	 * `.video-controls.visible` — a state-driven lifecycle in CSS, and one whose
-	 * resting `opacity: 0` meant server-rendered controls never appeared.
+	 * `.video-controls.visible` — a state-driven lifecycle in CSS, which the
+	 * policy prohibits because the store can neither sequence on it nor cancel it.
+	 *
+	 * Not, as an earlier version of this comment claimed, because the resting
+	 * `opacity: 0` hid server-rendered controls: `showControls` starts `true`, so
+	 * the server emits the `visible` class and they were visible. That claim is
+	 * true of `ImagePreview`, whose `.loaded` class only a client handler adds,
+	 * and it was copied here without being checked.
 	 *
 	 * Deliberately asymmetric. Showing is instant: the user is moving the mouse
 	 * right now, and 0.2s of fade before the controls answer is latency, not
@@ -642,9 +651,8 @@
 		right: 0;
 		background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
 		padding: 2rem 1rem 1rem;
-		/* No `opacity` here on purpose: the resting state is visible, and the
-		   fade is Motion One's. Parking it at 0 awaiting an effect is what made
-		   the server render controls that never appeared. */
+		/* No `opacity` here on purpose: the fade belongs to Motion One, and one
+		   property may have only one author. */
 		pointer-events: none;
 	}
 

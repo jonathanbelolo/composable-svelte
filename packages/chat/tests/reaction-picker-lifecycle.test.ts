@@ -193,6 +193,61 @@ describe('a gap the attachment preview left', () => {
 
 		expect(store.state.attachmentPreview.presentation.status).toBe('idle');
 	});
+
+	it('also resets an open picker', () => {
+		// The other half of the same block, and it was the half with no assertion.
+		const store = createStore<StreamingChatState, StreamingChatAction>({
+			initialState: {
+				...createInitialStreamingChatState(),
+				reactionPicker: { status: 'presented', content: 'm-from-the-last-session' }
+			},
+			reducer: streamingChatReducer,
+			dependencies: { streamMessage: () => {} } satisfies StreamingChatDependencies
+		});
+		cleanup.push(() => store.destroy?.());
+
+		store.dispatch({ type: 'restoreMessages', messages: [msg('m1')] });
+
+		expect(store.state.reactionPicker.status).toBe('idle');
+	});
+
+	it('does not restore a progress bar that can never move', () => {
+		// An upload from a previous session is not in flight. Left alone, the
+		// gallery renders `role="progressbar"` frozen at whatever percentage it
+		// had reached, forever. Only reachable since attachments started being
+		// marked `'uploading'` at all.
+		const store = createStore<StreamingChatState, StreamingChatAction>({
+			initialState: createInitialStreamingChatState(),
+			reducer: streamingChatReducer,
+			dependencies: { streamMessage: () => {} } satisfies StreamingChatDependencies
+		});
+		cleanup.push(() => store.destroy?.());
+
+		store.dispatch({
+			type: 'restoreMessages',
+			messages: [
+				{
+					...msg('m1'),
+					attachments: [
+						{
+							id: 'a1',
+							type: 'image',
+							filename: 'a.png',
+							url: 'https://cdn.example.com/a.png',
+							size: 1,
+							mimeType: 'image/png',
+							uploadStatus: 'uploading',
+							uploadProgress: 37
+						}
+					]
+				}
+			]
+		});
+
+		const restored = store.state.messages[0]!.attachments![0]!;
+		expect(restored.uploadStatus).toBeUndefined();
+		expect(restored.uploadProgress).toBeUndefined();
+	});
 });
 
 describe('closing the picker from the keyboard', () => {

@@ -190,6 +190,14 @@
 
 	.gallery-item {
 		display: flex;
+		/*
+		 * A column, not a row. The upload progress bar and the failure notice are
+		 * siblings of the preview, and this container defaulted to `row` — so
+		 * during every upload the image was squeezed into half the width with a
+		 * 4px bar beside it, then snapped back when the upload landed. The failure
+		 * variant put a full-height red paragraph next to a half-width preview.
+		 */
+		flex-direction: column;
 		min-width: 0; /* Prevent grid overflow */
 	}
 

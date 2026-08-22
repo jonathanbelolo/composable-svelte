@@ -3,12 +3,17 @@
  * they shared: **the resting state was invisible.**
  *
  * `ImagePreview` parked its `<img>` at `opacity: 0` and lifted it with a
- * `.loaded` class the client-side `load` handler adds. `VideoPlayer` parked its
- * controls at `opacity: 0` and lifted them with `.visible`. Both are prohibited
- * as CSS lifecycles, but the sharper problem is what they do where `$effect`
- * never runs: the server renders an invisible image, and a client with
- * JavaScript disabled never sees either. Motion One's `opacity: [0, 1]` supplies
- * its own start value, so the CSS resting state is now simply "visible".
+ * `.loaded` class the client-side `load` handler adds, so the server rendered a
+ * permanently invisible image and a client with JavaScript off never saw one.
+ * Motion One's `opacity: [0, 1]` supplies its own start value, so the CSS resting
+ * state is now simply "visible".
+ *
+ * `VideoPlayer` had the same CSS-lifecycle violation but **not** the same
+ * consequence: `showControls` starts `true`, so the server emits the `visible`
+ * class and the controls appeared. An earlier version of this file said
+ * otherwise, having copied the reasoning across without checking it — which is
+ * also why the VideoPlayer assertion below is about inline styles rather than
+ * about server output.
  *
  * These are the first tests of either component's visibility.
  */
@@ -270,6 +275,36 @@ describe('ImagePreview', () => {
 		expect(dimensions, `header still reads "${first}"`).toBeNull();
 	});
 
+	it('recovers when handed a working image after a failed one', async () => {
+		// The exact twin of the `VideoPlayer` latch, in the component the fix was
+		// modelled on. `AttachmentPreviewModal` reuses one instance rather than
+		// keying, so a failed image followed by a good one is reachable.
+		const props = propsBox({ attachment: image });
+		const target = renderReactive(ImagePreview, props);
+
+		target.querySelector('img')!.dispatchEvent(new Event('error'));
+		flushSync();
+		expect(target.querySelector('.image-error'), 'the bad source did not fail').not.toBeNull();
+
+		props.attachment = { ...image, id: 'a5', url: OTHER_PIXEL };
+		flushSync();
+
+		expect(target.querySelector('.image-error'), 'the error card outlived its source').toBeNull();
+		expect(target.querySelector('img'), 'the image never came back').not.toBeNull();
+	});
+
+	it('gives its fullscreen wrapper a style of its own', () => {
+		// The button had no rule at all, so every image in the gallery and the
+		// preview modal rendered inside default UA button chrome — a grey box with
+		// a 2px outset border.
+		const target = render(ImagePreview, { attachment: image });
+		const zoom = target.querySelector('.image-preview__zoom') as HTMLElement;
+		const style = getComputedStyle(zoom);
+
+		expect(style.borderTopStyle, 'the browser default border is back').toBe('none');
+		expect(style.paddingTop).toBe('0px');
+	});
+
 	it('hides the broken-image placeholder when the source fails', () => {
 		// With the fade moved to Motion One the resting opacity is 1, so the
 		// browser's own broken-image box would paint straight over the error card.
@@ -290,16 +325,18 @@ describe('VideoPlayer controls', () => {
 		flushSync();
 	}
 
-	it('starts visible, from CSS alone', () => {
+	it('starts visible, from CSS alone', async () => {
 		const target = render(VideoPlayer, { attachment: video });
 		const controls = target.querySelector('.video-controls') as HTMLElement;
 
 		expect(opacity(controls)).toBe(1);
-		// The second half is what the effect's first-run early return is *for*: an
-		// opening inline `opacity: 1` would paper over a regression back to
-		// `opacity: 0` in the stylesheet, and the assertion above would keep
-		// passing while server-rendered controls went invisible again.
-		expect(controls.style.opacity, 'the first run wrote an inline opacity').toBe('');
+
+		// A frame, then the real assertion. Without the wait this could not detect
+		// the removal of the effect's first-run return: `animateFadeIn(el, {
+		// duration: 0 })` writes its inline `opacity` asynchronously, so reading
+		// immediately after mount sees `''` either way.
+		await frames(2);
+		expect(controls.style.opacity, 'the first run animated instead of placing').toBe('');
 	});
 
 	it('fades out when the pointer leaves a playing video', async () => {
@@ -334,6 +371,27 @@ describe('VideoPlayer controls', () => {
 
 		expect(target.querySelector('.video-error'), 'the error card outlived its source').toBeNull();
 		expect(target.querySelector('.video-controls'), 'the controls never came back').not.toBeNull();
+	});
+
+	it('forgets the previous video’s playback state', async () => {
+		// `currentTime`, `duration` and `isPlaying` all described the old source.
+		// Left alone, the scrubber shows the previous video's position on the new
+		// one until its metadata arrives.
+		const props = propsBox({ attachment: { ...video } });
+		const target = renderReactive(VideoPlayer, props);
+		const element = target.querySelector('video') as HTMLVideoElement;
+
+		element.dispatchEvent(new Event('play'));
+		flushSync();
+		expect(target.querySelector('.video-play-overlay'), 'it never started playing').toBeNull();
+
+		props.attachment = { ...video, id: 'v2', url: OTHER_TINY_VIDEO };
+		flushSync();
+
+		await waitFor(
+			() => target.querySelector('.video-play-overlay'),
+			'the play overlay, which only returns when isPlaying is false'
+		);
 	});
 
 	it('rebuilds controls that can actually be clicked', async () => {

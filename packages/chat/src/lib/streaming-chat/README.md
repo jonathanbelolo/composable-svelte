@@ -446,18 +446,31 @@ refuses to pass while any dispatched action is unasserted. A one-chunk fake is
 what a reducer test wants.
 
 ```typescript
-import { createTestStore } from '@composable-svelte/core/test';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { TestStore } from '@composable-svelte/core/test';
 import { streamingChatReducer, createInitialStreamingChatState } from '@composable-svelte/chat';
 
 describe('StreamingChat', () => {
+  // `finish()` advances virtual time, and throws outright if the timer APIs
+  // are not mocked.
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
   it('sends a message and receives the reply', async () => {
-    const store = createTestStore({
+    let chunk!: (text: string) => void;
+    let complete!: () => void;
+
+    const store = new TestStore({
       initialState: createInitialStreamingChatState(),
       reducer: streamingChatReducer,
       dependencies: {
+        // Hand the callbacks out rather than calling them here: `send` starts
+        // the effect *before* running its assertion, so a fake that streams
+        // synchronously means the whole reply lands first and every line of
+        // that assertion is wrong.
         streamMessage: (_message, onChunk, onComplete) => {
-          onChunk('Hi');
-          onComplete();
+          chunk = onChunk;
+          complete = onComplete;
         },
         generateId: () => 'm1',
         getTimestamp: () => 0
@@ -466,23 +479,28 @@ describe('StreamingChat', () => {
 
     await store.send({ type: 'sendMessage', message: 'Hello' }, (state) => {
       expect(state.messages).toHaveLength(1);
-      expect(state.messages[0].content).toBe('Hello');
       expect(state.isWaitingForResponse).toBe(true);
+      expect(state.currentStreaming).toEqual({ content: '' });
     });
 
+    chunk('Hi');
     await store.receive({ type: 'chunkReceived', chunk: 'Hi' }, (state) => {
-      expect(state.currentStreaming).not.toBeNull();
+      expect(state.currentStreaming?.content).toBe('Hi');
     });
 
+    complete();
     await store.receive({ type: 'streamComplete' }, (state) => {
-      expect(state.messages).toHaveLength(2);
       expect(state.currentStreaming).toBeNull();
+      expect(state.messages).toHaveLength(2); // User + assistant
     });
 
     await store.finish();
   });
 });
 ```
+
+This example is `packages/chat/tests/teststore-example.test.ts`, so it is run on
+every build rather than trusted.
 
 `createMockStreamingChat()` takes no configuration and is for demos and
 component tests, where the delays are the point. It supplies `streamMessage`,

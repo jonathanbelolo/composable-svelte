@@ -63,13 +63,42 @@ function streamNow(
  * the repo keeps. An already-remote URL is left alone: a restored session must
  * not re-upload what it is already pointing at.
  */
+const UPLOAD_EFFECT_ID = 'streaming-chat/upload';
+
+/**
+ * Start a reply for `message`, uploading anything that still needs it first.
+ *
+ * The single entry point for `sendMessage`, `submitEditedMessage` and
+ * `regenerateMessage`. The last two used to dispatch `sendMessage` — which
+ * appended a duplicate — and then, when that was fixed, skipped uploads
+ * entirely, so a failed upload could never be retried.
+ *
+ * `Effect.cancel` on the streaming path is the other half. Editing a message
+ * while its upload was in flight left that upload to land afterwards and start a
+ * *second* stream, carrying the pre-edit text. Cancelling by id stops the
+ * resolution being dispatched at all — the store gates dispatch on the abort
+ * signal — and re-registering the same id supersedes an earlier upload for free.
+ */
+function streamFor(
+	messageId: string,
+	message: string,
+	attachments: MessageAttachment[] | undefined,
+	deps: StreamingChatDependencies
+): EffectType<StreamingChatAction> {
+	const outstanding = attachments?.some((a) => /^(blob:|data:)/.test(a.url)) ?? false;
+
+	return deps.uploadFile && attachments && outstanding
+		? uploadThenStream(messageId, message, attachments, deps)
+		: Effect.batch(Effect.cancel(UPLOAD_EFFECT_ID), streamNow(message, attachments, deps));
+}
+
 function uploadThenStream(
 	messageId: string,
 	message: string,
 	attachments: MessageAttachment[],
 	deps: StreamingChatDependencies
 ): EffectType<StreamingChatAction> {
-	return Effect.run(async (dispatch) => {
+	return Effect.cancellable(UPLOAD_EFFECT_ID, async (dispatch) => {
 		const resolved = await Promise.all(
 			attachments.map(async (attachment) => {
 				if (!/^(blob:|data:)/.test(attachment.url)) return attachment;
@@ -176,9 +205,7 @@ export function streamingChatReducer(
 				// Uploads first, if there are any and the consumer can do them.
 				// Streaming waits, because the whole point of uploading is that the
 				// URL the backend receives resolves for someone other than the sender.
-				trackedAttachments && trackedAttachments.length > 0 && deps.uploadFile
-					? uploadThenStream(userMessage.id, action.message, trackedAttachments, deps)
-					: streamNow(action.message, trackedAttachments, deps)
+				streamFor(userMessage.id, action.message, trackedAttachments, deps)
 			];
 		}
 
@@ -343,10 +370,11 @@ export function streamingChatReducer(
 					currentStreaming: { content: '' },
 					error: null,
 				},
-				// Directly, for the same reason as `submitEditedMessage`: the user
-				// message is still in `newMessages`, and `sendMessage` would append
-				// a second copy of it beneath the regenerated reply.
-				streamNow(userMessage.content, userMessage.attachments, deps)
+				// For the same reasons as `submitEditedMessage`: the user message is
+				// still in `newMessages`, so `sendMessage` would append a second
+				// copy of it beneath the regenerated reply — and a failed upload
+				// gets another attempt rather than being resent as a local URL.
+				streamFor(userMessage.id, userMessage.content, userMessage.attachments, deps)
 			];
 		}
 
@@ -491,13 +519,15 @@ export function streamingChatReducer(
 					currentStreaming: { content: '' },
 					error: null
 				},
-				// Stream directly rather than dispatching `sendMessage`, which
-				// appends a user message unconditionally — so editing a message
-				// used to leave two copies of it in the conversation. The edited
-				// one is already in `newMessages` above; only the reply is missing.
-				// Its attachments go with it: they are the same files, already
-				// uploaded, so there is nothing to redo.
-				streamNow(editedContent, updatedMessage.attachments, deps)
+				// Not `sendMessage`, which appends a user message unconditionally —
+				// editing used to leave two copies of it. The edited message is
+				// already in `newMessages` above; only the reply is missing.
+				//
+				// Through `streamFor` rather than straight to `streamNow`, so an
+				// attachment whose upload failed the first time gets another
+				// attempt. Editing was otherwise the one action that could resend a
+				// message and silently keep a URL only the sender can open.
+				streamFor(updatedMessage.id, editedContent, updatedMessage.attachments, deps)
 			];
 		}
 
@@ -828,12 +858,30 @@ export function streamingChatReducer(
 		}
 
 		case 'restoreMessages': {
+			// An upload from a previous session is not in flight. Left alone, a
+			// message restored mid-upload renders a progress bar frozen at whatever
+			// percentage it had reached, forever. Only reachable since attachments
+			// started being marked `'uploading'` at all.
+			const restored: Message[] = action.messages.map((message) => {
+				if (!message.attachments?.some((a) => a.uploadStatus === 'uploading')) return message;
+
+				return {
+					...message,
+					attachments: message.attachments.map((attachment) => {
+						if (attachment.uploadStatus !== 'uploading') return attachment;
+						const { uploadStatus, uploadProgress, ...rest } = attachment;
+						void uploadStatus;
+						void uploadProgress;
+						return rest;
+					})
+				};
+			});
 			// Restore messages from persistence (e.g., session recovery)
 			// Resets streaming state to clean slate
 			return [
 				{
 					...state,
-					messages: action.messages,
+					messages: restored,
 					currentStreaming: null,
 					isWaitingForResponse: false,
 					error: null,

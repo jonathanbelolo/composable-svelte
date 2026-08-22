@@ -32,7 +32,7 @@ pnpm add @composable-svelte/core svelte
 
 ```bash
 pnpm add @composable-svelte/code   # Code block syntax highlighting
-pnpm add @composable-svelte/media  # YouTube/Vimeo embeds detected in markdown
+pnpm add @composable-svelte/media  # YouTube/Vimeo/Twitch embeds detected in markdown
 pnpm add prismjs                   # Prism.js syntax highlighting
 pnpm add pdfjs-dist                # PDF attachment previews
 ```
@@ -135,6 +135,7 @@ chat store has no `users` field. Build both and let each do its own job.
 
 ```svelte
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { createStore } from '@composable-svelte/core';
   import {
     collaborativeReducer,
@@ -152,12 +153,27 @@ chat store has no `users` field. Build both and let each do its own job.
     reducer: collaborativeReducer,
     dependencies: {
       connectWebSocket: (conversationId, userId, onMessage, onConnectionChange) => {
-        // See "Supplying the connection" below.
+        // See "Supplying the connection" below. A cleanup is required.
+        const socket = new WebSocket(`wss://chat.example.com/${conversationId}`);
+        socket.onmessage = (e) => onMessage(JSON.parse(e.data));
+        socket.onopen = () => onConnectionChange({ status: 'connected', connectedAt: Date.now() });
+        return () => socket.close();
       },
       sendWebSocketMessage: async (message) => {
         /* send it */
       }
     }
+  });
+
+  // Nothing works until this: it is what opens the socket and what tells the
+  // store who you are. Presence, typing and cursors all no-op without it.
+  onMount(() => {
+    collabStore.dispatch({
+      type: 'connectToConversation',
+      conversationId: 'room-1',
+      userId: currentUserId
+    });
+    return () => collabStore.destroy();
   });
 
   // Users live in one flat Map — there is no `presence` sub-object. Both
@@ -177,6 +193,8 @@ chat store has no `users` field. Build both and let each do its own job.
 single line, so give it an `<input>` rather than a wrapping `<textarea>`, and it
 must not take pointer events — which is why each marker's name flag is always
 visible rather than shown on hover.
+
+Continuing from the collaborative store above:
 
 ```svelte
 <script lang="ts">
@@ -199,11 +217,14 @@ visible rather than shown on hover.
 {/if}
 ```
 
-`examples/styleguide`'s Collaborative Chat page runs this end to end.
+`examples/styleguide`'s Collaborative Chat page is the full working version —
+same wiring, plus seeded users and a mock socket so it runs without a server.
 
 ### Collaborative Hooks
 
-Each takes the **collaborative** store and returns its own teardown.
+Each takes the **collaborative** store, and each only transmits once
+`connectToConversation` has run. Three return a teardown function;
+`useTypingEmitter` returns an object with one on it.
 
 | Hook | Signature | Purpose |
 |------|-----------|---------|
@@ -338,17 +359,28 @@ image/video fades are fire-and-forget.
 ## Testing
 
 ```typescript
+import { beforeEach, afterEach, vi } from 'vitest';
 import { createTestStore } from '@composable-svelte/core/test';
 import { streamingChatReducer, createInitialStreamingChatState } from '@composable-svelte/chat';
+
+// `finish()` advances virtual time, and throws if the timer APIs are not mocked.
+beforeEach(() => vi.useFakeTimers());
+afterEach(() => vi.useRealTimers());
+
+let chunk!: (text: string) => void;
+let complete!: () => void;
 
 const store = createTestStore({
   initialState: createInitialStreamingChatState(),
   reducer: streamingChatReducer,
   dependencies: {
-    streamMessage: vi.fn((msg, onChunk, onComplete) => {
-      setTimeout(() => onComplete(), 0);
-      return new AbortController();
-    }),
+    // Hand the callbacks out rather than calling them here. `send` starts the
+    // effect *before* running its assertion, so a fake that streams
+    // synchronously means the reply has already landed by the time you assert.
+    streamMessage: (_message, onChunk, onComplete) => {
+      chunk = onChunk;
+      complete = onComplete;
+    },
     generateId: () => 'test-id',
     getTimestamp: () => 1000
   }
@@ -356,15 +388,26 @@ const store = createTestStore({
 
 await store.send({ type: 'sendMessage', message: 'Hello' }, (state) => {
   expect(state.messages).toHaveLength(1);
+  expect(state.isWaitingForResponse).toBe(true);
 });
+
+chunk('Hi');
+await store.receive({ type: 'chunkReceived', chunk: 'Hi' });
+
+complete();
+await store.receive({ type: 'streamComplete' });
+await store.finish();
 ```
+
+The full version of this is `packages/chat/tests/teststore-example.test.ts`,
+which runs on every build.
 
 `createMockStreamingChat()` supplies `streamMessage`, `generateId` and
 `getTimestamp`, faking a streamed reply — for demos and for tests that do not
 care about the transport. It supplies no `uploadFile`, so attachments keep their
 local URLs under it.
 
-It fakes a *slow* reply, several seconds long. `TestStore.receive` times out
+It fakes a *slow* reply — two to three seconds. `TestStore.receive` times out
 after one second and `finish()` refuses any unasserted action, so a `TestStore`
 driven by this mock needs its own `streamMessage` — like the one above — rather
 than this.
@@ -394,13 +437,13 @@ than this.
 |----------|-------------|
 | `streamingChatReducer` | Main chat reducer |
 | `createInitialStreamingChatState()` | Create initial state with defaults |
-| `createMockStreamingChat()` | A full set of dependencies that fakes a streamed reply |
+| `createMockStreamingChat()` | Fakes a streamed reply (`streamMessage`, `generateId`, `getTimestamp`) that fakes a streamed reply |
 | `collaborativeReducer` | Reducer for collaborative features |
 | `createInitialCollaborativeState()` | Initial state for the above |
 | `getActiveUsers(users, currentUserId)` | Everyone present but you, minus the offline |
 | `getTypingUsers(users, currentUserId, target?)` | Everyone typing but you |
 | `getCursorPositions(users, currentUserId)` | Every caret but yours, for `CursorOverlay` |
-| `formatTypingIndicator(users)` | "Ada is typing…", "3 people are typing…" |
+| `formatTypingIndicator(users)` | "Ada is typing", "3 people are typing" — no ellipsis; `TypingIndicator` draws animated dots beside it |
 | `generateRandomUserColor(userId)` | Stable colour from an id |
 
 Markdown helpers — `renderMarkdown`, `extractVideosFromMarkdown`,

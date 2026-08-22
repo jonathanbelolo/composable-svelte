@@ -121,8 +121,8 @@ were first written:
 - **`CollaborativeDependencies.generateId` and `generateUserColor`.** Both were
   resolved at the top of the reducer and referenced nowhere else: nothing there
   mints an id or a colour, because `userJoined` is handed a complete user.
-- **`createFileDataURL` and `hasMarkdownSyntax`** — no callers, no documentation,
-  no barrel entry between them.
+- **`createFileDataURL` and `hasMarkdownSyntax`** — no callers anywhere, in
+  source, tests or examples.
 - **`AttachmentGallery`'s `layout`/`maxColumns` are live rather than removed**:
   both call sites hard-coded `list`, so the grid was unreachable. More than one
   image now lays out as a grid.
@@ -156,7 +156,10 @@ were first written:
 - **`CleanupTracker.resourceCount` reported `0`** for a tracker holding live
   timers — wrong in the reassuring direction, for a getter whose only use is
   checking that nothing leaked.
-- **```rb and ```yml** resolved to Prism languages that were never loaded.
+- **```yml** resolved to a Prism language that was never loaded. ```rb resolved
+  to `ruby`, which `@composable-svelte/code` does not support at all, so that
+  alias is removed rather than fixed. The preload list is derived from the alias
+  map now, so the two cannot drift again.
 - **`TypingIndicator`** required `id` and `color` and read neither, and
   duplicated `formatTypingIndicator` with different punctuation.
 
@@ -171,6 +174,50 @@ were first written:
   renders it draws animated dots.
 - **The optional peers on `code` and `media` are `^0.2.0`**, not an accumulated
   `||` list.
+
+### Changed — breaking, third pass
+
+- **`usePresenceTracking(store)` and `useHeartbeat(store)` no longer take a user
+  id.** The store already knows who you are, from `connectToConversation`; the
+  parameter was one a consumer could get wrong and that changed nothing.
+- **`updatePresence` and `sendHeartbeat` are the outbound actions.**
+  `userPresenceChanged` and `heartbeatReceived` are now inbound only. Splitting
+  them is the only way to stop a loop: a server that fans out to the whole room
+  sends your own frame back to you, carrying your own id, so the
+  `userId === currentUserId` test the first version relied on could not tell an
+  echo from something you had just done. Measured: one echo produced a second
+  outgoing frame. `startTyping` / `userStartedTyping` had the right shape all
+  along.
+- **`@composable-svelte/code` and `@composable-svelte/media` now declare their
+  directory subpaths** — `code/code-editor`, `media/video-embed` and four others.
+  All six had `index.js` in `dist` and no exports entry, so the wildcard turned
+  them into sibling files that never existed. Found by the guard written for
+  chat's identical defect.
+
+### Fixed — third pass
+
+- **The upload progress bar was laid out beside the attachment**, not above it:
+  `.gallery-item` is a flex container that defaulted to a row, so an image
+  shrank to half width for the duration of every upload.
+- **Editing a message could not retry a failed upload.** The duplication fix
+  streamed directly, which also skipped the upload path — so an attachment that
+  failed the first time was resent as a URL only the sender can open. Editing
+  while an upload was still in flight was worse: the upload landed afterwards
+  and started a second stream carrying the pre-edit text. Both go through one
+  upload-aware path now, cancellable by id.
+- **A restored session could show a progress bar frozen forever** at whatever
+  percentage it had reached, since an upload from a previous session is not in
+  flight.
+- **`ImagePreview`'s error latch survived an attachment swap**, exactly as
+  `VideoPlayer`'s did — the twin defect in the component the fix was modelled on.
+- **`playbackNotice` outlived its video**, painting a complaint about the
+  previous source over the new one.
+- **Presence and heartbeat frames were sent over closed sockets**, forever:
+  `useHeartbeat` is a 30-second interval and `disconnectFromConversation`
+  deliberately keeps `currentUserId`.
+- **`useHeartbeat` dispatched a presence change on every tick**, overwriting the
+  `lastSeen` it had just written and claiming activity on a timer — which is what
+  `usePresenceTracking` decides by watching real input.
 
 ### Known gaps
 

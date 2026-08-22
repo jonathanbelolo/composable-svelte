@@ -113,6 +113,53 @@ describe('uploading on send', () => {
 		expect(store.state.messages[0]!.attachments![0]!.uploadStatus).toBeUndefined();
 	});
 
+	it('leaves an already-remote attachment alone', () => {
+		// `uploadThenStream` skips a URL that is not `blob:`/`data:` — a restored
+		// session must not re-upload what it already points at — so marking one
+		// `'uploading'` would leave it there forever with no upload behind it.
+		// Every other fixture here uses a data: URL, which is how this went
+		// untested while a comment asserted it.
+		const { store } = makeStore({ uploadFile: () => new Promise<string>(() => {}) });
+		store.dispatch({
+			type: 'addAttachment',
+			attachment: { ...attachment(), url: 'https://cdn.example.com/already.png' }
+		});
+		store.dispatch({ type: 'sendMessage', message: 'look at this' });
+
+		expect(store.state.messages[0]!.attachments![0]!.uploadStatus).toBeUndefined();
+	});
+
+	it('ignores a progress report that arrives after the upload finished', async () => {
+		// A late callback would otherwise rewind a finished bar. Core's file-upload
+		// reducer guards the same way, and its test is the precedent.
+		let report: ((loaded: number, total: number) => void) | undefined;
+		const { store } = makeStore({
+			uploadFile: async (_file, onProgress) => {
+				report = onProgress;
+				return 'https://cdn.example.com/a1.png';
+			}
+		});
+		store.dispatch({ type: 'addAttachment', attachment: attachment() });
+		store.dispatch({ type: 'sendMessage', message: 'look at this' });
+		await wait(40);
+
+		const settled = store.state.messages[0]!.attachments![0]!;
+		expect(settled.uploadStatus, 'the upload did not finish').toBe('success');
+
+		report!(1, 10);
+		expect(store.state.messages[0]!.attachments![0]!.uploadProgress).toBe(100);
+	});
+
+	it('clears the pending attachments once they are sent', () => {
+		const { store } = makeStore();
+		store.dispatch({ type: 'addAttachment', attachment: attachment() });
+		expect(store.state.pendingAttachments).toHaveLength(1);
+
+		store.dispatch({ type: 'sendMessage', message: 'look at this' });
+
+		expect(store.state.pendingAttachments).toEqual([]);
+	});
+
 	it('reports progress into the state, clamped', async () => {
 		let report: ((loaded: number, total: number) => void) | undefined;
 		let finish: ((url: string) => void) | undefined;

@@ -12,6 +12,21 @@
       "default": "./dist/index.js"
     },
     "./package.json": "./package.json",
+    "./audio-player": {
+      "types": "./dist/audio-player/index.d.ts",
+      "svelte": "./dist/audio-player/index.js",
+      "default": "./dist/audio-player/index.js"
+    },
+    "./video-embed": {
+      "types": "./dist/video-embed/index.d.ts",
+      "svelte": "./dist/video-embed/index.js",
+      "default": "./dist/video-embed/index.js"
+    },
+    "./voice-input": {
+      "types": "./dist/voice-input/index.d.ts",
+      "svelte": "./dist/voice-input/index.js",
+      "default": "./dist/voice-input/index.js"
+    },
     "./*.js": {
       "types": "./dist/*.d.ts",
       "svelte": "./dist/*.js",

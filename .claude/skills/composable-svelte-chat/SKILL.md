@@ -923,42 +923,61 @@ unasserted. A one-chunk fake is what a reducer test wants; the mock is for demos
 and component tests, where the delays are the point.
 
 ```typescript
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { TestStore } from '@composable-svelte/core/test';
 import { streamingChatReducer, createInitialStreamingChatState } from '@composable-svelte/chat';
 
-const store = new TestStore({
-  initialState: createInitialStreamingChatState(),
-  reducer: streamingChatReducer,
-  dependencies: {
-    streamMessage: (_message, onChunk, onComplete) => {
-      onChunk('Hi');
-      onComplete();
-    },
-    generateId: () => 'm1',
-    getTimestamp: () => 0
-  }
-});
+describe('StreamingChat', () => {
+  // `finish()` advances virtual time, and throws outright if the timer APIs
+  // are not mocked.
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
 
-// Test message send
-await store.send({ type: 'sendMessage', message: 'Hello' }, (state) => {
-  expect(state.messages).toHaveLength(1);
-  expect(state.isWaitingForResponse).toBe(true);
-  expect(state.currentStreaming).toEqual({ content: '' });
-});
+  it('sends a message and receives the reply', async () => {
+    let chunk!: (text: string) => void;
+    let complete!: () => void;
 
-// Partial matching: `receive` matches on the fields you give it
-await store.receive({ type: 'chunkReceived' }, (state) => {
-  expect(state.currentStreaming?.content).not.toBe('');
-  expect(state.isWaitingForResponse).toBe(false);
-});
+    const store = new TestStore({
+      initialState: createInitialStreamingChatState(),
+      reducer: streamingChatReducer,
+      dependencies: {
+        // Hand the callbacks out rather than calling them here: `send` starts
+        // the effect *before* running its assertion, so a fake that streams
+        // synchronously means the whole reply lands first and every line of
+        // that assertion is wrong.
+        streamMessage: (_message, onChunk, onComplete) => {
+          chunk = onChunk;
+          complete = onComplete;
+        },
+        generateId: () => 'm1',
+        getTimestamp: () => 0
+      }
+    });
 
-await store.receive({ type: 'streamComplete' }, (state) => {
-  expect(state.currentStreaming).toBeNull();
-  expect(state.messages).toHaveLength(2); // User + assistant
-});
+    await store.send({ type: 'sendMessage', message: 'Hello' }, (state) => {
+      expect(state.messages).toHaveLength(1);
+      expect(state.isWaitingForResponse).toBe(true);
+      expect(state.currentStreaming).toEqual({ content: '' });
+    });
 
-await store.finish();
+    chunk('Hi');
+    await store.receive({ type: 'chunkReceived', chunk: 'Hi' }, (state) => {
+      expect(state.currentStreaming?.content).toBe('Hi');
+    });
+
+    complete();
+    await store.receive({ type: 'streamComplete' }, (state) => {
+      expect(state.currentStreaming).toBeNull();
+      expect(state.messages).toHaveLength(2); // User + assistant
+    });
+
+    await store.finish();
+  });
+});
 ```
+
+This example is `packages/chat/tests/teststore-example.test.ts`, so it is run on
+every build rather than trusted.
 
 `createTestStore(config)` is the function form of the same thing; both are
 exported from `@composable-svelte/core/test`.
@@ -1103,7 +1122,7 @@ All exports from `@composable-svelte/chat`:
 - `getTypingUsers(users, currentUserId, target?)` - Users currently typing
 - `getActiveUsers(users, currentUserId)` - Non-offline users
 - `getCursorPositions(users, currentUserId)` - Cursor positions of other users
-- `formatTypingIndicator(users)` - e.g. "Alice is typing..."
+- `formatTypingIndicator(users)` - e.g. "Alice is typing"
 - `generateRandomUserColor(userId)` - Deterministic HSL colour from an id
 
 ### Testing Utilities

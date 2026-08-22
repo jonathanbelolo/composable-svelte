@@ -244,37 +244,78 @@ describe('what actually leaves the browser', () => {
 		const sent: unknown[] = [];
 		const store = connected(sent);
 
-		store.dispatch({ type: 'userPresenceChanged', userId: ME, presence: 'away' });
+		store.dispatch({ type: 'updatePresence', presence: 'away' });
 		await wait(10);
 
 		expect(sent).toEqual([{ type: 'presence_changed', userId: ME, presence: 'away' }]);
-	});
-
-	it('does not echo someone else’s presence change back at them', async () => {
-		const sent: unknown[] = [];
-		const store = connected(sent);
-
-		store.dispatch({ type: 'userPresenceChanged', userId: 'someone-else', presence: 'away' });
-		await wait(10);
-
-		expect(sent, 'a remote change was reflected back to the server').toEqual([]);
 	});
 
 	it('broadcasts my own heartbeat', async () => {
 		const sent: unknown[] = [];
 		const store = connected(sent);
 
-		store.dispatch({ type: 'heartbeatReceived', userId: ME, timestamp: 1234 });
+		store.dispatch({ type: 'sendHeartbeat' });
 		await wait(10);
 
-		expect(sent).toEqual([{ type: 'heartbeat', userId: ME, timestamp: 1234 }]);
+		expect(sent).toEqual([{ type: 'heartbeat', userId: ME, timestamp: 0 }]);
 	});
 
-	it('does not echo someone else’s heartbeat', async () => {
+	it('does not re-broadcast a frame the server sent back to me', async () => {
+		// The reason these are separate action names. A server that fans out to
+		// the whole room sends my own frame back to me, and it arrives carrying
+		// *my* id — so the `userId === currentUserId` test an earlier version used
+		// could not tell an echo from something I had just done, and two clients
+		// ping-ponged without bound. Measured: one echo produced a second outgoing
+		// frame.
 		const sent: unknown[] = [];
 		const store = connected(sent);
 
+		store.dispatch({ type: 'userPresenceChanged', userId: ME, presence: 'away' });
+		store.dispatch({ type: 'heartbeatReceived', userId: ME, timestamp: 1234 });
+		await wait(10);
+
+		expect(sent, 'an echo of my own frame was sent straight back').toEqual([]);
+	});
+
+	it('does not echo someone else’s frames either', async () => {
+		const sent: unknown[] = [];
+		const store = connected(sent);
+
+		store.dispatch({ type: 'userPresenceChanged', userId: 'someone-else', presence: 'away' });
 		store.dispatch({ type: 'heartbeatReceived', userId: 'someone-else', timestamp: 1234 });
+		await wait(10);
+
+		expect(sent).toEqual([]);
+	});
+
+	it('forgets the conversation on disconnect', () => {
+		// `conversationId` being nulled is what makes `reconnectRequested` a no-op
+		// after a deliberate disconnect. The file devotes fourteen lines to that
+		// fact — as the reason an earlier version of another test could not fail —
+		// and never asserted it.
+		const sent: unknown[] = [];
+		const store = connected(sent);
+		expect(store.state.conversationId).toBe('c1');
+
+		store.dispatch({ type: 'disconnectFromConversation' });
+
+		expect(store.state.conversationId).toBeNull();
+		// `currentUserId` deliberately survives: the selectors need it to leave you
+		// out of your own roster.
+		expect(store.state.currentUserId).toBe(ME);
+	});
+
+	it('sends nothing once the socket is closed', async () => {
+		// `useHeartbeat` runs on a 30-second interval and
+		// `disconnectFromConversation` deliberately keeps `currentUserId` — the
+		// selectors need it to exclude you — so without a connection check a
+		// disconnected tab drips send failures into the console forever.
+		const sent: unknown[] = [];
+		const store = connected(sent);
+
+		store.dispatch({ type: 'disconnectFromConversation' });
+		store.dispatch({ type: 'sendHeartbeat' });
+		store.dispatch({ type: 'updatePresence', presence: 'away' });
 		await wait(10);
 
 		expect(sent).toEqual([]);

@@ -139,6 +139,34 @@ describe('side-effect imports survive tree-shaking', () => {
 		).toBe(true);
 	});
 
+	it.each(packages)('%s gives every dist directory an explicit exports entry', (name) => {
+		// The wildcard `"./*": "./dist/*.js"` turns a *directory* subpath into a
+		// file that cannot exist: `@composable-svelte/chat/streaming-chat` became
+		// `dist/streaming-chat.js`. Documented in three places, and it had never
+		// resolved.
+		//
+		// The existence check below does not catch that — it only sees explicit
+		// entries, so restoring the exact broken state (deleting the entry and
+		// letting the wildcard take over) passed it. This is the arm that catches
+		// the regression the fix was for.
+		const pkgDir = join(packagesDir, name);
+		const pkg = JSON.parse(readFileSync(join(pkgDir, 'package.json'), 'utf8'));
+		const dist = join(pkgDir, 'dist');
+		if (!existsSync(dist)) return;
+
+		const declared = new Set(Object.keys(pkg.exports ?? {}));
+		const missing = readdirSync(dist, { withFileTypes: true })
+			.filter((e) => e.isDirectory() && existsSync(join(dist, e.name, 'index.js')))
+			.map((e) => `./${e.name}`)
+			.filter((subpath) => !declared.has(subpath));
+
+		expect(
+			missing,
+			`${name}: these dist directories have an index.js but no exports entry, so ` +
+				`the wildcard resolves them to a sibling .js file that does not exist.`
+		).toEqual([]);
+	});
+
 	it.each(packages)('%s exports map points at files that exist', (name) => {
 		// A subpath whose target is missing fails at *import* time with
 		// ERR_MODULE_NOT_FOUND, which no build step and no typecheck catches.

@@ -21,17 +21,35 @@ import { sanitizeRenderedMarkdown } from './sanitize.js';
  */
 const marked = new Marked();
 
-// Language map for Prism
-const LANGUAGE_MAP: Record<string, string> = {
+/**
+ * Aliases a fenced code block may use, and the Prism language each means.
+ *
+ * Every value here must be one `@composable-svelte/code` can load — its
+ * `SupportedLanguage` union — or the alias resolves to a name Prism never has
+ * and the block renders as plain text, exactly as if the entry were absent.
+ * `rb: 'ruby'` was that: `ruby` is not in the union, so `loadLanguage('ruby')`
+ * logs "Unsupported language" and the alias could not work. Dropped rather than
+ * left in place looking supported.
+ */
+export const LANGUAGE_MAP: Record<string, string> = {
 	js: 'javascript',
 	ts: 'typescript',
 	jsx: 'javascript',
 	tsx: 'typescript',
 	py: 'python',
-	rb: 'ruby',
 	sh: 'bash',
 	yml: 'yaml'
 };
+
+/**
+ * What gets loaded up front.
+ *
+ * Derived from the map rather than listed beside it, because a hand-kept second
+ * list is how `rb` and `yml` came to point at languages nothing loaded.
+ */
+export const PRELOADED_LANGUAGES = [
+	...new Set(['javascript', 'typescript', 'python', 'bash', 'json', ...Object.values(LANGUAGE_MAP)])
+];
 
 import type { VideoEmbedData } from './types.js';
 
@@ -75,21 +93,12 @@ async function loadOptionalDependencies(): Promise<void> {
 
 		// Pre-load common languages if available
 		if (loadLanguage && Prism) {
-			// Every language `LANGUAGE_MAP` can produce must be here, or the alias
-			// resolves to a name Prism will never have and the block silently
-			// renders as plain text. `rb` → `ruby` and `yml` → `yaml` were exactly
-			// that: entries that could not affect anything.
-			await Promise.all([
-				loadLanguage('javascript'),
-				loadLanguage('typescript'),
-				loadLanguage('python'),
-				loadLanguage('bash'),
-				loadLanguage('json'),
-				loadLanguage('ruby'),
-				loadLanguage('yaml')
-			]).catch(() => {
-				// Ignore language loading errors
-			});
+			const load = loadLanguage;
+			await Promise.all(PRELOADED_LANGUAGES.map((language) => load(language))).catch(
+				() => {
+					// Ignore language loading errors
+				}
+			);
 		}
 	} catch {
 		// @composable-svelte/code not installed

@@ -417,7 +417,9 @@ function scan(file: string): Violation[] {
  * Delete entries as packages are converted. When this is empty, delete it.
  */
 const BACKLOG = new Set([
-	// chat is clear. It entered this campaign with 19 entries.
+	// chat is clear. It entered this campaign with 47 violations across 21 files —
+	// 19 of which were listed here; the other two were invisible to a scanner
+	// whose comment stripper could be opened by an `image/*` in an attribute.
 	'code/src/lib/code-editor/CodeEditor.svelte',
 	'code/src/lib/code-highlight/CodeHighlight.svelte',
 	'maps/src/lib/components/TileProviderControl.svelte',

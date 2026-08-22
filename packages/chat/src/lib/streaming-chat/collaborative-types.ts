@@ -103,8 +103,16 @@ export type CollaborativeAction =
 	// User management
 	| { type: 'userJoined'; user: CollaborativeUser }
 	| { type: 'userLeft'; userId: string }
+	// Wire arrivals. Never broadcast — echoing one back is how a room-wide
+	// server turns two clients into a loop.
 	| { type: 'userPresenceChanged'; userId: string; presence: UserPresence }
 	| { type: 'heartbeatReceived'; userId: string; timestamp: number }
+	// Local intent. These are the ones that leave the browser, and they are
+	// separate action names for exactly the reason `startTyping` is separate from
+	// `userStartedTyping`: an echo of my own frame carries my own id, so a
+	// `userId === currentUserId` test cannot tell it from something I just did.
+	| { type: 'updatePresence'; presence: UserPresence }
+	| { type: 'sendHeartbeat' }
 	// Typing indicators
 	| { type: 'userStartedTyping'; userId: string; info: TypingInfo }
 	| { type: 'userStoppedTyping'; userId: string }

@@ -22,13 +22,15 @@ import { CleanupTracker } from './cleanup-tracker.js';
  * - 'idle' after 2 minutes of inactivity
  * - 'away' after 5 minutes of inactivity
  *
+ * Takes no user id: the store already knows who you are, from
+ * `connectToConversation`. Passing one alongside was a parameter a consumer
+ * could get wrong and that changed nothing.
+ *
  * @param store - Collaborative store
- * @param userId - Current user ID
  * @returns Cleanup function
  */
 export function usePresenceTracking(
-	store: Store<CollaborativeStreamingChatState, CollaborativeAction>,
-	userId: string
+	store: Store<CollaborativeStreamingChatState, CollaborativeAction>
 ): () => void {
 	const cleanup = new CleanupTracker();
 
@@ -41,7 +43,7 @@ export function usePresenceTracking(
 
 		if (currentPresence !== 'active') {
 			currentPresence = 'active';
-			store.dispatch({ type: 'userPresenceChanged', userId, presence: 'active' });
+			store.dispatch({ type: 'updatePresence', presence: 'active' });
 		}
 	};
 
@@ -67,7 +69,7 @@ export function usePresenceTracking(
 
 		if (newPresence !== currentPresence) {
 			currentPresence = newPresence;
-			store.dispatch({ type: 'userPresenceChanged', userId, presence: newPresence });
+			store.dispatch({ type: 'updatePresence', presence: newPresence });
 		}
 	}, 30000); // Check every 30 seconds
 
@@ -232,25 +234,25 @@ export function useCursorTracking(
 /**
  * Send periodic heartbeat to prevent timeout.
  *
+ * Takes no user id, for the same reason as `usePresenceTracking`.
+ *
  * @param store - Collaborative store
- * @param userId - Current user ID
  * @param intervalMs - Heartbeat interval in milliseconds
  * @returns Cleanup function
  */
 export function useHeartbeat(
 	store: Store<CollaborativeStreamingChatState, CollaborativeAction>,
-	userId: string,
 	intervalMs = 30000
 ): () => void {
 	const cleanup = new CleanupTracker();
 
-	// Send heartbeat periodically
+	// One dispatch, not two. `sendHeartbeat` already stamps `lastSeen`, and the
+	// second dispatch — a presence change to `active` — used to overwrite the very
+	// timestamp the first had just written. It also claimed the user was active
+	// on a timer, which is what `usePresenceTracking` is for and what it watches
+	// real input to decide.
 	cleanup.setInterval(() => {
-		const timestamp = Date.now();
-		store.dispatch({ type: 'heartbeatReceived', userId, timestamp });
-
-		// Also update last seen
-		store.dispatch({ type: 'userPresenceChanged', userId, presence: 'active' });
+		store.dispatch({ type: 'sendHeartbeat' });
 	}, intervalMs);
 
 	return () => cleanup.dispose();

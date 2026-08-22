@@ -12,6 +12,21 @@
       "default": "./dist/index.js"
     },
     "./package.json": "./package.json",
+    "./code-editor": {
+      "types": "./dist/code-editor/index.d.ts",
+      "svelte": "./dist/code-editor/index.js",
+      "default": "./dist/code-editor/index.js"
+    },
+    "./code-highlight": {
+      "types": "./dist/code-highlight/index.d.ts",
+      "svelte": "./dist/code-highlight/index.js",
+      "default": "./dist/code-highlight/index.js"
+    },
+    "./node-canvas": {
+      "types": "./dist/node-canvas/index.d.ts",
+      "svelte": "./dist/node-canvas/index.js",
+      "default": "./dist/node-canvas/index.js"
+    },
     "./*.js": {
       "types": "./dist/*.d.ts",
       "svelte": "./dist/*.js",

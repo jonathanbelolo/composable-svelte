@@ -35,10 +35,19 @@ const CONNECTION_SUBSCRIPTION = 'collaborative-websocket';
  * heartbeats need it too — and had it not.
  */
 function broadcast(
+	state: CollaborativeStreamingChatState,
 	deps: CollaborativeDependencies,
 	message: Record<string, unknown>,
 	what: string
 ): EffectType<CollaborativeAction> {
+	// Nothing goes out over a socket that is not open. `useHeartbeat` runs on a
+	// 30-second interval and `disconnectFromConversation` leaves `currentUserId`
+	// set — deliberately, since the selectors need it to exclude you — so without
+	// this a disconnected tab drips send failures into the console forever.
+	if (state.connection.status !== 'connected') {
+		return Effect.none();
+	}
+
 	return Effect.run(async () => {
 		try {
 			await deps.sendWebSocketMessage(message);
@@ -233,22 +242,12 @@ export function collaborativeReducer(
 				});
 			}
 
-			// A change to *my own* presence is news; a change to anyone else's
-			// arrived from the wire and must not be echoed back. That test is also
-			// what keeps this from looping. `usePresenceTracking` dispatches this
-			// with the local id, and until now the result never left the browser:
-			// a hook documented as tracking online/away status that nobody else
-			// could see.
-			return [
-				{ ...state, users },
-				action.userId === state.currentUserId
-					? broadcast(
-							deps,
-							{ type: 'presence_changed', userId: action.userId, presence: action.presence },
-							'presence'
-						)
-					: Effect.none()
-			];
+			// Arrived from the wire. Never broadcast: a server that fans out to the
+			// whole room sends my own frame back to me, and it carries my own id —
+			// so the `userId === currentUserId` test this used to rely on could not
+			// tell an echo from something I had just done, and two clients would
+			// ping-pong without bound. `updatePresence` is the outbound half.
+			return [{ ...state, users }, Effect.none()];
 		}
 
 		case 'heartbeatReceived': {
@@ -262,18 +261,60 @@ export function collaborativeReducer(
 				});
 			}
 
-			// Same rule, and the same defect: `useHeartbeat` is documented as a
-			// keep-alive, and no frame ever left the browser. A server that times
-			// out idle connections dropped every client that was merely quiet.
+			// Inbound only, for the same reason. `sendHeartbeat` is the outbound
+			// half.
+			return [{ ...state, users }, Effect.none()];
+		}
+
+		case 'updatePresence': {
+			if (!state.currentUserId) {
+				return [state, Effect.none()];
+			}
+
+			const users = new Map(state.users);
+			const me = users.get(state.currentUserId);
+
+			if (me) {
+				users.set(state.currentUserId, {
+					...me,
+					presence: action.presence,
+					lastSeen: getTimestamp()
+				});
+			}
+
+			// `usePresenceTracking` dispatches this, and until this pass the result
+			// never left the browser: a hook documented as tracking online/away
+			// status that nobody else could see.
 			return [
 				{ ...state, users },
-				action.userId === state.currentUserId
-					? broadcast(
-							deps,
-							{ type: 'heartbeat', userId: action.userId, timestamp: action.timestamp },
-							'heartbeat'
-						)
-					: Effect.none()
+				broadcast(
+					state,
+					deps,
+					{ type: 'presence_changed', userId: state.currentUserId, presence: action.presence },
+					'presence'
+				)
+			];
+		}
+
+		case 'sendHeartbeat': {
+			if (!state.currentUserId) {
+				return [state, Effect.none()];
+			}
+
+			const timestamp = getTimestamp();
+			const users = new Map(state.users);
+			const me = users.get(state.currentUserId);
+
+			if (me) {
+				users.set(state.currentUserId, { ...me, lastSeen: timestamp });
+			}
+
+			// `useHeartbeat` is documented as a keep-alive, and no frame ever left
+			// the browser. A server that times out idle connections dropped every
+			// client that was merely quiet.
+			return [
+				{ ...state, users },
+				broadcast(state, deps, { type: 'heartbeat', userId: state.currentUserId, timestamp }, 'heartbeat')
 			];
 		}
 
