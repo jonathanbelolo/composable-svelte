@@ -971,22 +971,48 @@ named so the next person can re-run them rather than trust them.
 Ordered as listed. T1 goes first because it is a *detector*: it may surface real
 errors inside T3 and T4 before either is started.
 
-### T1. Five packages never typecheck their tests — VERIFIED
+### T1. No workspace typechecked its tests — DONE
 
-`auth`, `charts`, `code`, `graphics`, `maps` have no `tsconfig.test.json`; only
-`chat`, `core` and `media` do. Their `typecheck` script is `tsc --noEmit` over
-`src` alone, so nothing checks `tests/`.
+The entry below said three of eight packages did. **None did.** Two claims in it
+were wrong, and both mattered:
 
-This is not hypothetical: vitest transpiles without typechecking, so a test
-passes while its types are wrong. In `chat` it let `as never` fixtures make every
-callback implicitly `any`, and the drift was invisible until the second pass was
-added. `packages/chat/tests/media-type-conformance.test.ts` is enforced *only* by
-that second pass.
+- `chat` and `media` were credited with a second `tsc` pass. Their `typecheck`
+  script is `tsc --noEmit`, one pass, over `src` alone. Every workspace's was.
+- `core` was credited with a working `tsconfig.test.json`. It had one, correctly
+  spelled, adding `tests/**` to `include` — and it resolved **zero** of core's
+  123 test files. `extends` *replaces* `include`/`exclude` rather than merging,
+  so redefining only `include` left the parent's `"**/*.test.ts"` in `exclude`,
+  which filtered every test straight back out.
 
-Copy the `chat` pattern (`tsconfig.test.json` + `tsc --noEmit && tsc --noEmit
---project tsconfig.test.json`), then fix whatever it surfaces. Worth a repo guard
-afterwards, in the shape of `tests/repo/check-coverage.test.ts`, which already
-does exactly this for the `check` script.
+So eleven `tsconfig.test.json` files existed and **nothing invoked any of them**:
+`check` and `typecheck` both pointed at `tsconfig.json`, which excludes tests.
+
+Resolved by pointing `check` at `tsconfig.test.json` wherever one exists (twelve
+workspaces; `data-table` and `product-gallery` cover their tests through their
+main config, five examples have no tests). `svelte-check` rather than the `tsc`
+pass this entry recommended — it reports TS diagnostics for plain `.ts` files
+too, making it a strict superset, while `tsc` cannot read `.svelte` at all and
+reports TS2614 false positives for named imports from `<script module>`.
+
+The blind spot was hiding real defects, not just drift. In `core` alone:
+
+- `Effect.api` / `Effect.websocket` typed as non-existent for consumers.
+- `deps.dismiss()` never dismissed through `ifLet` — an unbounded dispatch loop
+  ending in `RangeError`, plus eight wrong documented call shapes.
+- `combineReducers` could not infer `Action`; `Destination.match` could not take
+  handlers returning different types; `scopeTo(...).into()` could not chain past
+  an optional level. In each case the form in the function's own JSDoc
+  typechecked for nobody.
+- Two of `matchPath`'s five documented examples threw rather than matched.
+- `TestStore.advanceTime` threw without fake timers, making 21 documented
+  examples unrunnable.
+
+Guarded by `packages/core/tests/repo/typecheck-coverage.test.ts`, which asks
+`tsc --showConfig` what each workspace's checked config actually resolves and
+compares it against disk. A byte-comparison of the script could not have caught
+core: its script looked more thorough than the ones that worked. Mutation-
+verified by reproducing core's exact original failure — strip `exclude`, all 123
+files report missing.
 
 ### T2. `media`'s two animation holdouts are unblocked — VERIFIED
 
@@ -1137,3 +1163,33 @@ lifecycle that is broken elsewhere. Where a component has an open/close, a
 mount/update, or an in/out pair, **test the round trip and pin it against a
 control that already works** — F4 was only legible because the prop-opened
 palette animated and the initially-open one did not.
+
+### T8. 266 optional props cannot be forwarded from a wrapper — VERIFIED
+
+Under `exactOptionalPropertyTypes` (set repo-wide), an optional prop read from
+`$props()` has type `T | undefined`, and that cannot be assigned to a bare `T?`.
+So a component that forwards its own props to a library component does not
+typecheck — the library component cannot be wrapped.
+
+Measured over `packages/core/src/lib/**/*.svelte`:
+
+```
+grep -rhoE "^\s+[a-zA-Z_]+\?: [^;]+;" src/lib/**/*.svelte | grep -vc "| undefined"   # 266
+grep -rhoE "^\s+[a-zA-Z_]+\?: [^;]+;" src/lib/**/*.svelte | grep -c  "| undefined"   # 134
+```
+
+Found via `Command`, whose seven optional props were fixed and pinned by
+`tests/test-components/CommandPropForwarding.svelte` — a fixture that exists to
+be typechecked, not rendered. The claim in that commit that "the rest of the
+codebase already writes `| undefined`; these were the holdouts" was wrong: the
+majority do not.
+
+The remedy is mechanical — append `| undefined` — and safe: a prop destructured
+with a default already treats explicit `undefined` as absent, and the component
+body already saw `T | undefined` under this flag. The work is the blast radius,
+not the difficulty.
+
+Nothing catches a new bare optional prop today. A guard belongs with it, in the
+shape of `tests/repo/animation-policy.test.ts`: parse the `interface *Props`
+blocks and require `| undefined` on every optional member, with a REGISTER for
+anything deliberately narrower.

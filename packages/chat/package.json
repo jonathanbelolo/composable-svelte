@@ -49,7 +49,7 @@
     "test:coverage": "vitest run --coverage",
     "prepublishOnly": "pnpm run build && pnpm run typecheck && pnpm run check",
     "prepack": "pnpm run build",
-    "check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings"
+    "check": "svelte-check --tsconfig ./tsconfig.test.json --fail-on-warnings"
   },
   "keywords": [
     "svelte",

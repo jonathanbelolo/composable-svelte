@@ -1270,11 +1270,11 @@ interface Destination<Reducers> {
   ): ExtractState<Reducers[K]> | null;
 
   // Multi-case matching with handlers
-  match<T>(
+  match<H extends Record<string, (childState: any) => unknown>>(
     action: unknown,
     state: DestinationState<Reducers> | null,
-    handlers: Record<string, (childState: any) => T>
-  ): { matched: true; value: T } | { matched: false };
+    handlers: H
+  ): { matched: true; value: ReturnType<H[keyof H]> } | { matched: false };
 }
 ```
 

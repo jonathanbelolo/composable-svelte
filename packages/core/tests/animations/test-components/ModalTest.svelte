@@ -145,7 +145,7 @@
 		<div data-testid="modal-backdrop" class="modal-test-backdrop"></div>
 		<div data-testid="modal-content" class="modal-test-content">
 			<h2>Test Modal</h2>
-			<p>{scopedStore?.state}</p>
+			<p>{scopedStore!.state}</p>
 
 			<button
 				data-testid="modal-action-button"
@@ -155,7 +155,7 @@
 				Action Button
 			</button>
 
-			<button data-testid="dismiss-modal" onclick={() => scopedStore?.dismiss()}>
+			<button data-testid="dismiss-modal" onclick={() => scopedStore!.dismiss()}>
 				Dismiss
 			</button>
 		</div>

@@ -38,7 +38,7 @@
   "scripts": {
     "build": "svelte-package -o dist",
     "typecheck": "tsc --noEmit",
-    "check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
+    "check": "svelte-check --tsconfig ./tsconfig.test.json --fail-on-warnings",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",

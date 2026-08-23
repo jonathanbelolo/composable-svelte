@@ -163,7 +163,7 @@
 	{#snippet children({ store: scopedStore })}
 		<div data-testid="sidebar-content" class="sidebar-test-content">
 			<h2>Test Sidebar</h2>
-			<p>{scopedStore?.state}</p>
+			<p>{scopedStore!.state}</p>
 
 			<button
 				data-testid="sidebar-action-button"
@@ -173,7 +173,7 @@
 				Action Button
 			</button>
 
-			<button data-testid="dismiss-via-scope" onclick={() => scopedStore?.dismiss()}>
+			<button data-testid="dismiss-via-scope" onclick={() => scopedStore!.dismiss()}>
 				Dismiss
 			</button>
 		</div>

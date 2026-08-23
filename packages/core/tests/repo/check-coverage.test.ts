@@ -29,14 +29,22 @@ import { join } from 'node:path';
 const repoRoot = fileURLToPath(new URL('../../../../', import.meta.url));
 
 /**
- * The one true script. Byte-identical everywhere, so that a local `pnpm check`
- * and CI cannot disagree.
+ * The script, byte-identical everywhere for a given config, so that a local
+ * `pnpm check` and CI cannot disagree.
  *
  * `--fail-on-warnings` is the flag that gates. `--threshold error` does not —
  * it only filters which diagnostics are printed, which is why a `<button>`
  * nested in a `<button>` was reported for months while the step stayed green.
+ *
+ * Two variants, and which one a workspace gets is not a preference: a
+ * `tsconfig.json` here excludes `**\/*.test.ts`, so checking against it leaves
+ * the test files unmeasured. A workspace that has a `tsconfig.test.json` must
+ * point `check` at it — that config is the only thing that puts tests under the
+ * gate. `tests/repo/typecheck-coverage.test.ts` is what verifies the config
+ * then actually resolves them.
  */
-const CHECK_SCRIPT = 'svelte-check --tsconfig ./tsconfig.json --fail-on-warnings';
+const checkScript = (tsconfig: string) =>
+	`svelte-check --tsconfig ./${tsconfig} --fail-on-warnings`;
 
 interface Workspace {
 	dir: string;
@@ -99,7 +107,14 @@ describe('svelte-check gate coverage', () => {
 		'%s runs the canonical check script and declares svelte-check',
 		(dir, w) => {
 			// Byte-identical, so `pnpm check` locally is the same command CI runs.
-			expect(w.pkg.scripts!.check, `${dir}'s check script has drifted`).toBe(CHECK_SCRIPT);
+			// A workspace carrying a `tsconfig.test.json` must check against it;
+			// checking against `tsconfig.json` would exclude every test file.
+			const expected = checkScript(
+				existsSync(join(repoRoot, dir, 'tsconfig.test.json'))
+					? 'tsconfig.test.json'
+					: 'tsconfig.json'
+			);
+			expect(w.pkg.scripts!.check, `${dir}'s check script has drifted`).toBe(expected);
 
 			// pnpm puts the workspace-root `.bin` on PATH, so an undeclared
 			// svelte-check would still resolve — by accident. Declaring it is the

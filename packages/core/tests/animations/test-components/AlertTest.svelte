@@ -145,7 +145,7 @@
 		<div data-testid="alert-backdrop" class="alert-test-backdrop"></div>
 		<div data-testid="alert-content" class="alert-test-content">
 			<h2>Test Alert</h2>
-			<p>{scopedStore?.state}</p>
+			<p>{scopedStore!.state}</p>
 
 			<button
 				data-testid="alert-action-button"
@@ -155,7 +155,7 @@
 				Action Button
 			</button>
 
-			<button data-testid="dismiss-alert" onclick={() => scopedStore?.dismiss()}>
+			<button data-testid="dismiss-alert" onclick={() => scopedStore!.dismiss()}>
 				Dismiss
 			</button>
 		</div>

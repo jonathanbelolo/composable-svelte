@@ -145,7 +145,7 @@
 		<div data-testid="drawer-backdrop" class="drawer-test-backdrop"></div>
 		<div data-testid="drawer-content" class="drawer-test-content">
 			<h2>Test Drawer</h2>
-			<p>{scopedStore?.state}</p>
+			<p>{scopedStore!.state}</p>
 
 			<button
 				data-testid="drawer-action-button"
@@ -155,7 +155,7 @@
 				Action Button
 			</button>
 
-			<button data-testid="dismiss-drawer" onclick={() => scopedStore?.dismiss()}>
+			<button data-testid="dismiss-drawer" onclick={() => scopedStore!.dismiss()}>
 				Dismiss
 			</button>
 		</div>

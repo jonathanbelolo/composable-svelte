@@ -145,7 +145,7 @@
 		<div data-testid="sheet-backdrop" class="sheet-test-backdrop"></div>
 		<div data-testid="sheet-content" class="sheet-test-content">
 			<h2>Test Sheet</h2>
-			<p>{scopedStore?.state}</p>
+			<p>{scopedStore!.state}</p>
 
 			<button
 				data-testid="sheet-action-button"
@@ -155,7 +155,7 @@
 				Action Button
 			</button>
 
-			<button data-testid="dismiss-sheet" onclick={() => scopedStore?.dismiss()}>
+			<button data-testid="dismiss-sheet" onclick={() => scopedStore!.dismiss()}>
 				Dismiss
 			</button>
 		</div>

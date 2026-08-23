@@ -41,6 +41,8 @@ export default defineConfig({
       'tests/ssr/entry-graph.test.ts',
       // Reads every workspace's package.json from disk; same reason.
       'tests/repo/check-coverage.test.ts',
+      // Shells out to `tsc --showConfig` per workspace; same reason.
+      'tests/repo/typecheck-coverage.test.ts',
       // Reads every package's dist from disk; same reason.
       'tests/repo/side-effects.test.ts',
       'tests/repo/animation-policy.test.ts',

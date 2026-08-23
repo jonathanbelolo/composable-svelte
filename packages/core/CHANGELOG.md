@@ -46,11 +46,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`Command`'s optional props did not accept an explicit `undefined`**, so
   under `exactOptionalPropertyTypes` a component forwarding its own `$props()`
-  to `<Command>` did not typecheck — the palette could not be wrapped. The rest
-  of the codebase already writes `| undefined` on optional props; these were the
-  holdouts.
+  to `<Command>` did not typecheck — the palette could not be wrapped. All seven
+  now say `| undefined`, pinned by
+  `tests/test-components/CommandPropForwarding.svelte`, which exists to be
+  typechecked rather than rendered.
+
+  `Command` is not special: 266 optional props across `src/lib/**/*.svelte` are
+  still bare, against 134 that are not, so most components in this library
+  cannot be wrapped either. Recorded in `plans/hardening/README.md` §S11 as its
+  own item rather than claimed fixed here.
 
 - **`Destination.match` could not take handlers returning different types.**
+  BREAKING: the type parameter is now the handler map rather than the result, so
+  an explicit `Destination.match<MyResult>(…)` no longer compiles — let it
+  infer. No in-repo caller used that form. `docs/api/reference.md` and
+  `docs/dsl/destinations.md` are updated.
   It inferred a single `T` from the handler map, so `T` came from the first
   handler and every other one was checked against it — the multi-case form in
   its own JSDoc, the form the helper exists for, typechecked for nobody. It now

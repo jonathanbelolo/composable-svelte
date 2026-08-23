@@ -44,6 +44,7 @@ export default defineConfig({
       'tests/ssr/middleware.test.ts',
       'tests/ssr/entry-graph.test.ts',
       'tests/repo/check-coverage.test.ts',
+      'tests/repo/typecheck-coverage.test.ts',
       'tests/repo/side-effects.test.ts',
       'tests/repo/animation-policy.test.ts',
       'tests/repo/dist-freshness.test.ts',

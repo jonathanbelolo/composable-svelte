@@ -99,11 +99,8 @@
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 
-		/**
-		 * Default content snippet.
-		 */
 		/**
 		 * Palette content. Receives the palette's own store, so a consumer can
 		 * drive it without rebuilding one — though `CommandInput` / `CommandList`
@@ -113,7 +110,7 @@
 		 * interface, so an existing zero-argument `{#snippet children()}` stays
 		 * assignable under TypeScript's fewer-parameters rule.
 		 */
-		children?: Snippet<[{ store: Store<CommandState, CommandAction> }]>;
+		children?: Snippet<[{ store: Store<CommandState, CommandAction> }]> | undefined;
 	}
 
 	let {
