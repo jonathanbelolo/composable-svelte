@@ -136,9 +136,9 @@ describe('Tabs Component', () => {
     });
 
     const tabButtons = page.getByRole('tab').elements();
-    expect(tabButtons[0].getAttribute('aria-selected')).toBe('false');
-    expect(tabButtons[1].getAttribute('aria-selected')).toBe('true');
-    expect(tabButtons[2].getAttribute('aria-selected')).toBe('false');
+    expect(tabButtons[0]!.getAttribute('aria-selected')).toBe('false');
+    expect(tabButtons[1]!.getAttribute('aria-selected')).toBe('true');
+    expect(tabButtons[2]!.getAttribute('aria-selected')).toBe('false');
   });
 
   it('calls onTabChange when tab is clicked', async () => {

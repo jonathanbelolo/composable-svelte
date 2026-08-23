@@ -91,7 +91,7 @@ describe('createDismissDependency()', () => {
       effect.execute(dispatch);
     }
 
-    expect(dispatched[0].type).toBe('modal');
+    expect(dispatched[0]!.type).toBe('modal');
     expect(dispatched[0]).toMatchObject({
       type: 'modal',
       action: { type: 'dismiss' }
@@ -442,8 +442,8 @@ describe('Dismiss Dependency Integration', () => {
     // Test cancel action
     const [newState1, effect1] = childReducer(state, { type: 'cancel' }, deps);
 
-    if (effect1._tag === 'Run') {
-      effect1.execute(dispatch);
+    if (effect1!._tag === 'Run') {
+      effect1!.execute(dispatch);
     }
 
     expect(dispatched).toHaveLength(1);
@@ -457,11 +457,11 @@ describe('Dismiss Dependency Integration', () => {
 
     const [newState2, effect2] = childReducer(state, { type: 'save' }, deps);
 
-    expect(newState2.isDirty).toBe(false);
-    expect(effect2._tag).toBe('Batch');
+    expect(newState2!.isDirty).toBe(false);
+    expect(effect2!._tag).toBe('Batch');
 
-    if (effect2._tag === 'Batch') {
-      effect2.effects.forEach((e) => {
+    if (effect2!._tag === 'Batch') {
+      effect2.effects!.forEach((e) => {
         if (e._tag === 'Run') {
           e.execute(dispatch);
         }
@@ -526,8 +526,8 @@ describe('Dismiss Dependency Integration', () => {
 
     // Execute with first parent structure
     const [, effect1] = childReducer(state, { type: 'cancel' }, deps1);
-    if (effect1._tag === 'Run') {
-      effect1.execute(dispatch1);
+    if (effect1!._tag === 'Run') {
+      effect1!.execute(dispatch1);
     }
 
     expect(dispatched1[0]).toEqual({
@@ -537,8 +537,8 @@ describe('Dismiss Dependency Integration', () => {
 
     // Execute with second parent structure
     const [, effect2] = childReducer(state, { type: 'cancel' }, deps2);
-    if (effect2._tag === 'Run') {
-      effect2.execute(dispatch2);
+    if (effect2!._tag === 'Run') {
+      effect2!.execute(dispatch2);
     }
 
     expect(dispatched2[0]).toEqual({

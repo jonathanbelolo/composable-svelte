@@ -123,7 +123,7 @@ describe('Combobox', () => {
 			await store.send({ type: 'searchChanged', query: 'ban' }, (state) => {
 				expect(state.searchQuery).toBe('ban');
 				expect(state.filteredOptions).toHaveLength(1);
-				expect(state.filteredOptions[0].label).toBe('Banana');
+				expect(state.filteredOptions[0]!.label).toBe('Banana');
 				expect(state.highlightedIndex).toBe(0);
 			});
 
@@ -147,8 +147,8 @@ describe('Combobox', () => {
 			await store.send({ type: 'searchChanged', query: 'red fruit' }, (state) => {
 				expect(state.searchQuery).toBe('red fruit');
 				expect(state.filteredOptions).toHaveLength(2);
-				expect(state.filteredOptions[0].label).toBe('Apple');
-				expect(state.filteredOptions[1].label).toBe('Cherry');
+				expect(state.filteredOptions[0]!.label).toBe('Apple');
+				expect(state.filteredOptions[1]!.label).toBe('Cherry');
 			});
 		});
 
@@ -306,7 +306,7 @@ describe('Combobox', () => {
 			await store.receive({ type: 'loadingCompleted' }, (state) => {
 				expect(state.isLoading).toBe(false);
 				expect(state.filteredOptions).toHaveLength(1);
-				expect(state.filteredOptions[0].label).toBe('Result: test');
+				expect(state.filteredOptions[0]!.label).toBe('Result: test');
 			});
 
 			expect(loadOptions).toHaveBeenCalledWith('test');

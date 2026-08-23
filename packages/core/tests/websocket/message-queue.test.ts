@@ -136,8 +136,8 @@ describe('Message Queue', () => {
 
       const messages = queue.flush();
 
-      expect(messages[0].user).toBe('Alice');
-      expect(messages[1].user).toBe('Bob');
+      expect(messages[0]!.user).toBe('Alice');
+      expect(messages[1]!.user).toBe('Bob');
     });
 
     it('should work with complex object types', () => {
@@ -162,7 +162,7 @@ describe('Message Queue', () => {
       queue.enqueue(msg);
 
       const messages = queue.flush();
-      expect(messages[0].data.nested.value).toBe('test');
+      expect(messages[0]!.data.nested.value).toBe('test');
     });
   });
 
@@ -428,8 +428,8 @@ describe('Queued WebSocket Client', () => {
 
       await new Promise(resolve => setTimeout(resolve, 10));
 
-      expect(baseClient.sentMessages[0].user).toBe('Alice');
-      expect(baseClient.sentMessages[0].text).toBe('Hello');
+      expect(baseClient.sentMessages[0]!.user).toBe('Alice');
+      expect(baseClient.sentMessages[0]!.text).toBe('Hello');
     });
   });
 

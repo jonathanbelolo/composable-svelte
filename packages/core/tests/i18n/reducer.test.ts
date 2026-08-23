@@ -358,9 +358,9 @@ describe('i18nReducer', () => {
       }
 
       expect(dispatched).toHaveLength(1);
-      expect(dispatched[0].type).toBe('i18n/namespaceLoadFailed');
-      if (dispatched[0].type === 'i18n/namespaceLoadFailed') {
-        expect(dispatched[0].error).toBe(error);
+      expect(dispatched[0]!.type).toBe('i18n/namespaceLoadFailed');
+      if (dispatched[0]!.type === 'i18n/namespaceLoadFailed') {
+        expect(dispatched[0]!.error).toBe(error);
       }
     });
   });

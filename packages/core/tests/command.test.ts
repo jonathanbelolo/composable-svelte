@@ -178,7 +178,7 @@ describe('Command Palette', () => {
 
 			await store.send({ type: 'queryChanged', query: 'directory' }, (state) => {
 				expect(state.filteredCommands).toHaveLength(1);
-				expect(state.filteredCommands[0].id).toBe('5');
+				expect(state.filteredCommands[0]!.id).toBe('5');
 			});
 
 			store.assertNoPendingActions();
@@ -732,7 +732,7 @@ describe('Command Palette', () => {
 
 			await store.send({ type: 'queryChanged', query: 'New File' }, (state) => {
 				expect(state.filteredCommands).toHaveLength(1);
-				expect(state.filteredCommands[0].id).toBe('1');
+				expect(state.filteredCommands[0]!.id).toBe('1');
 			});
 
 			store.assertNoPendingActions();

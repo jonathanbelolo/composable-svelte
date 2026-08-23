@@ -477,7 +477,7 @@ describe('Routing Integration', () => {
 
 			// Items should be preserved
 			expect(store.state.items).toHaveLength(1);
-			expect(store.state.items[0].id).toBe('456');
+			expect(store.state.items[0]!.id).toBe('456');
 		});
 
 		it('falls back to default state for invalid URL', () => {

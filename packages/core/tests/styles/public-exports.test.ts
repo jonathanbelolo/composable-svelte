@@ -42,7 +42,7 @@ function subBarrelExports(dir: string): string[] {
 	const names: string[] = [];
 
 	for (const [, clause] of source.matchAll(/export\s+(?:type\s+)?\{([^}]+)\}/g)) {
-		for (const entry of clause.split(',')) {
+		for (const entry of clause!.split(',')) {
 			const name = entry.trim().split(/\s+as\s+/).pop()?.trim();
 			if (name && name !== 'default') names.push(name);
 		}

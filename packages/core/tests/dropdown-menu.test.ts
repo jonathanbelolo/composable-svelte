@@ -294,8 +294,8 @@ describe('DropdownMenu', () => {
 			store.assertNoPendingActions();
 
 			expect(selectedItems).toHaveLength(1);
-			expect(selectedItems[0].id).toBe('1');
-			expect(selectedItems[0].label).toBe('Edit');
+			expect(selectedItems[0]!.id).toBe('1');
+			expect(selectedItems[0]!.label).toBe('Edit');
 		});
 
 		it('ignores selection of disabled item', async () => {
@@ -401,7 +401,7 @@ describe('DropdownMenu', () => {
 			store.assertNoPendingActions();
 
 			expect(selectedItems).toHaveLength(1);
-			expect(selectedItems[0].label).toBe('Archive');
+			expect(selectedItems[0]!.label).toBe('Archive');
 		});
 
 		it('complete mouse interaction flow', async () => {
@@ -433,7 +433,7 @@ describe('DropdownMenu', () => {
 			store.assertNoPendingActions();
 
 			expect(selectedItems).toHaveLength(1);
-			expect(selectedItems[0].label).toBe('Duplicate');
+			expect(selectedItems[0]!.label).toBe('Duplicate');
 		});
 
 		it('escape key closes menu', async () => {

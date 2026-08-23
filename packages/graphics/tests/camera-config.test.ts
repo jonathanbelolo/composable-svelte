@@ -23,6 +23,7 @@
 
 import { describe, it, expect, afterEach } from 'vitest';
 import { mount, unmount, flushSync } from 'svelte';
+import type { ComponentProps } from 'svelte';
 import { createStore } from '@composable-svelte/core';
 import Camera from '../src/components/Camera.svelte';
 import { graphicsReducer } from '../src/core/reducer.js';
@@ -124,8 +125,15 @@ describe('the Camera component', () => {
 		cleanup = [];
 	});
 
-	/** Mounts into a real detached node, as tests/component-mount.test.ts does. */
-	function mountCamera(props: Record<string, unknown>) {
+	/**
+	 * Mounts into a real detached node, as tests/component-mount.test.ts does.
+	 *
+	 * Props derived from the component rather than typed `Record<string,
+	 * unknown>`: `Camera` requires `position` and `lookAt`, and the loose record
+	 * meant nothing checked that a call site supplied them. `svelte-check` reads
+	 * the component; `tsc` cannot, which is why this went unseen.
+	 */
+	function mountCamera(props: Omit<ComponentProps<typeof Camera>, 'store'>) {
 		const store = makeStore();
 		const target = document.createElement('div');
 		document.body.appendChild(target);

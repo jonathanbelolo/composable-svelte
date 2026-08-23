@@ -3,6 +3,7 @@
 	import { createStore } from '@composable-svelte/core';
 	import { nodeCanvasReducer } from '../../src/lib/node-canvas/reducer.js';
 	import { createInitialNodeCanvasState } from '../../src/lib/node-canvas/types.js';
+	import type { NodeCanvasState, NodeCanvasAction } from '../../src/lib/node-canvas/types.js';
 
 	/**
 	 * Exists so a test can change a NodeCanvas prop AFTER mount. `packages/code`
@@ -13,7 +14,7 @@
 	let canvasClass = $state('first');
 	let minZoom = $state(0.1);
 
-	const store = createStore({
+	const store = createStore<NodeCanvasState, NodeCanvasAction>({
 		initialState: createInitialNodeCanvasState(),
 		reducer: nodeCanvasReducer,
 		dependencies: {}

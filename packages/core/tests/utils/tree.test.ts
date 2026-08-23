@@ -236,7 +236,7 @@ describe('createTreeHelpers', () => {
 			expect(deleted).toBeDefined();
 			const root = tree.findNode(deleted!, 'root') as FolderNode;
 			expect(root.children).toHaveLength(1);
-			expect(root.children[0].id).toBe('notes');
+			expect(root.children[0]!.id).toBe('notes');
 			expect(tree.findNode(deleted!, 'projects')).toBeNull();
 		});
 

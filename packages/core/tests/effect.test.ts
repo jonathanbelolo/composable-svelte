@@ -1,7 +1,27 @@
 import { describe, it, expect, vi } from 'vitest';
 import { Effect } from '../src/lib/effect';
 import { createStore } from '../src/lib/store.svelte';
-import type { Effect as EffectType } from '../src/lib/types';
+import type { Effect as EffectType, EffectOfTag } from '../src/lib/types';
+
+/**
+ * Narrow an effect to one member of the union, or fail loudly.
+ *
+ * The constructors now return the member they build, so most of this file needs
+ * nothing — but `Effect.batch()` collapses an empty batch to `None` and
+ * `Effect.map()` returns whatever it was handed, so those genuinely produce a
+ * union. Asserting `_tag` with `expect` does not narrow anything for the
+ * compiler; this does, and it throws on the same condition `expect` would have
+ * failed on, so no assertion gets weaker.
+ */
+function narrow<A, Tag extends EffectType<A>['_tag']>(
+	effect: EffectType<A>,
+	tag: Tag
+): EffectOfTag<A, Tag> {
+	if (effect._tag !== tag) {
+		throw new Error(`expected a ${tag} effect, got ${effect._tag}`);
+	}
+	return effect as EffectOfTag<A, Tag>;
+}
 
 describe('Effect', () => {
   describe('none()', () => {
@@ -33,7 +53,7 @@ describe('Effect', () => {
     it('creates a Batch effect with multiple effects', () => {
       const effect1 = Effect.run(async () => {});
       const effect2 = Effect.run(async () => {});
-      const batchEffect = Effect.batch(effect1, effect2);
+      const batchEffect = narrow(Effect.batch(effect1, effect2), 'Batch');
 
       expect(batchEffect._tag).toBe('Batch');
       expect(batchEffect.effects).toHaveLength(2);
@@ -42,7 +62,7 @@ describe('Effect', () => {
     });
 
     it('optimizes empty batch to None', () => {
-      const batchEffect = Effect.batch();
+      const batchEffect = narrow(Effect.batch(), 'None');
       expect(batchEffect._tag).toBe('None');
     });
 
@@ -193,7 +213,7 @@ describe('Effect', () => {
   describe('map()', () => {
     it('maps None effect', () => {
       const effect = Effect.none<number>();
-      const mapped = Effect.map(effect, (n) => String(n));
+      const mapped = narrow(Effect.map(effect, (n) => String(n)), 'None');
 
       expect(mapped._tag).toBe('None');
     });
@@ -203,7 +223,7 @@ describe('Effect', () => {
       const effect = Effect.run<number>((dispatch) => {
         dispatch(42);
       });
-      const mapped = Effect.map(effect, (n) => `num:${n}`);
+      const mapped = narrow(Effect.map(effect, (n) => `num:${n}`), 'Run');
 
       expect(mapped._tag).toBe('Run');
 
@@ -215,7 +235,7 @@ describe('Effect', () => {
     it('maps FireAndForget effect without transformation', () => {
       const execute = vi.fn();
       const effect = Effect.fireAndForget(execute);
-      const mapped = Effect.map(effect, (n: number) => String(n));
+      const mapped = narrow(Effect.map(effect, (n: number) => String(n)), 'FireAndForget');
 
       expect(mapped._tag).toBe('FireAndForget');
       expect(mapped.execute).toBe(execute);
@@ -225,18 +245,18 @@ describe('Effect', () => {
       const effect1 = Effect.run<number>((d) => d(1));
       const effect2 = Effect.run<number>((d) => d(2));
       const batch = Effect.batch(effect1, effect2);
-      const mapped = Effect.map(batch, (n) => String(n));
+      const mapped = narrow(Effect.map(batch, (n) => String(n)), 'Batch');
 
       expect(mapped._tag).toBe('Batch');
       expect(mapped.effects).toHaveLength(2);
-      expect(mapped.effects[0]._tag).toBe('Run');
-      expect(mapped.effects[1]._tag).toBe('Run');
+      expect(mapped.effects[0]!._tag).toBe('Run');
+      expect(mapped.effects[1]!._tag).toBe('Run');
     });
 
     it('maps Cancellable effect preserving ID', async () => {
       const actions: string[] = [];
       const effect = Effect.cancellable<number>('my-id', (d) => d(42));
-      const mapped = Effect.map(effect, (n) => `num:${n}`);
+      const mapped = narrow(Effect.map(effect, (n) => `num:${n}`), 'Cancellable');
 
       expect(mapped._tag).toBe('Cancellable');
       expect(mapped.id).toBe('my-id');
@@ -248,7 +268,7 @@ describe('Effect', () => {
     it('maps Debounced effect preserving ID and delay', async () => {
       const actions: string[] = [];
       const effect = Effect.debounced<number>('my-id', 300, (d) => d(42));
-      const mapped = Effect.map(effect, (n) => `num:${n}`);
+      const mapped = narrow(Effect.map(effect, (n) => `num:${n}`), 'Debounced');
 
       expect(mapped._tag).toBe('Debounced');
       expect(mapped.id).toBe('my-id');
@@ -261,7 +281,7 @@ describe('Effect', () => {
     it('maps Throttled effect preserving ID and interval', async () => {
       const actions: string[] = [];
       const effect = Effect.throttled<number>('my-id', 100, (d) => d(42));
-      const mapped = Effect.map(effect, (n) => `num:${n}`);
+      const mapped = narrow(Effect.map(effect, (n) => `num:${n}`), 'Throttled');
 
       expect(mapped._tag).toBe('Throttled');
       expect(mapped.id).toBe('my-id');
@@ -274,7 +294,7 @@ describe('Effect', () => {
     it('maps AfterDelay effect preserving delay', async () => {
       const actions: string[] = [];
       const effect = Effect.afterDelay<number>(500, (d) => d(42));
-      const mapped = Effect.map(effect, (n) => `num:${n}`);
+      const mapped = narrow(Effect.map(effect, (n) => `num:${n}`), 'AfterDelay');
 
       expect(mapped._tag).toBe('AfterDelay');
       expect(mapped.ms).toBe(500);

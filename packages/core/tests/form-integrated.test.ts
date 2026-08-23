@@ -279,8 +279,8 @@ describe('Form - Integrated Mode', () => {
 
 			// 🔑 KEY ASSERTION: Parent observed submission success
 			expect(store.state.submissionHistory).toHaveLength(1);
-			expect(store.state.submissionHistory[0].name).toBe('John Doe');
-			expect(store.state.submissionHistory[0].email).toBe('john@example.com');
+			expect(store.state.submissionHistory[0]!.name).toBe('John Doe');
+			expect(store.state.submissionHistory[0]!.email).toBe('john@example.com');
 			expect(store.state.successMessage).toBe('Thank you, John Doe!');
 		});
 

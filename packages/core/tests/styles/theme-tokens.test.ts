@@ -52,7 +52,7 @@ function valuesIn(css: string, selector: string): Record<string, string> {
 	const start = css.indexOf(`${selector} {`);
 	const body = css.slice(start, css.indexOf('}', start));
 	return Object.fromEntries(
-		[...body.matchAll(/(--[\w-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()])
+		[...body.matchAll(/(--[\w-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2]!.trim()])
 	);
 }
 
@@ -250,7 +250,7 @@ describe('back-compatibility', () => {
 			const start = css.indexOf(`${selector} {`);
 			const body = css.slice(start, css.indexOf('}', start));
 			return [...body.matchAll(/(--[\w-]+):\s*([^;]+);/g)]
-				.map((m) => `${m[1]}:${m[2].trim()}`)
+				.map((m) => `${m[1]}:${m[2]!.trim()}`)
 				.sort();
 		};
 		expect(pairs(globalsCss, ':root')).toEqual(pairs(tokensCss, ':root'));

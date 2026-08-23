@@ -59,7 +59,12 @@ describe('the Effect namespace extensions', () => {
 		const client = createMockAPI({ 'GET /things': { data: [] } });
 		const effect = Effect.api(
 			client,
-			{ method: 'GET', path: '/things' },
+			// `url`, not `path`. The first version of this file said `path`, and
+			// nothing caught it: `Effect.api` builds a `Run` effect without ever
+			// touching the request, so the only assertion below passed. A type test
+			// shipped inside the blind spot it documents — which is the argument
+			// for typechecking tests, made against itself.
+			{ method: 'GET', url: '/things' },
 			(response) => ({ type: 'loaded' as const, response }),
 			(error) => ({ type: 'failed' as const, error })
 		);

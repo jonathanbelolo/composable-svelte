@@ -312,8 +312,8 @@ describe('Effect.apiAll()', () => {
       ],
       ([productsRes, categoriesRes]) => ({
         type: 'dataLoaded',
-        products: productsRes.data,
-        categories: categoriesRes.data
+        products: productsRes!.data,
+        categories: categoriesRes!.data
       }),
       (error) => ({ type: 'dataLoadFailed', error: error.message })
     );
@@ -588,9 +588,9 @@ describe('Real-world Usage Examples', () => {
       ],
       ([productsRes, categoriesRes, statsRes]) => ({
         type: 'dashboardLoaded',
-        products: productsRes.data,
-        categories: categoriesRes.data,
-        stats: statsRes.data
+        products: productsRes!.data,
+        categories: categoriesRes!.data,
+        stats: statsRes!.data
       }),
       (error) => ({ type: 'dashboardFailed', error: error.message })
     );

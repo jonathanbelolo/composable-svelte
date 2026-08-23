@@ -3,13 +3,14 @@
 	import { createStore } from '@composable-svelte/core';
 	import { nodeCanvasReducer } from '../../src/lib/node-canvas/reducer.js';
 	import { createInitialNodeCanvasState } from '../../src/lib/node-canvas/types.js';
+	import type { NodeCanvasState, NodeCanvasAction } from '../../src/lib/node-canvas/types.js';
 	import { harness } from './harness-stores.js';
 
 	/**
 	 * Two spread-out nodes so `fitView` and `centerView` have something to act on,
 	 * and so selection is observable in the rendered DOM.
 	 */
-	const store = createStore({
+	const store = createStore<NodeCanvasState, NodeCanvasAction>({
 		initialState: createInitialNodeCanvasState({
 			nodes: {
 				a: { id: 'a', type: 'default', position: { x: 0, y: 0 }, data: { label: 'A' } },

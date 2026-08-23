@@ -7,7 +7,7 @@
  * Key principle: Effects describe WHAT to do, not HOW or WHEN.
  */
 
-import type { Effect as EffectType, EffectExecutor, Dispatch } from './types.js';
+import type { Effect as EffectType, EffectOfTag, EffectExecutor, Dispatch } from './types.js';
 
 /**
  * Extensions other modules attach to the `Effect` namespace at import time.
@@ -41,7 +41,7 @@ const EffectImpl = {
    *   return [initialState, Effect.none()];
    * ```
    */
-  none<A>(): EffectType<A> {
+  none<A>(): EffectOfTag<A, 'None'> {
     return { _tag: 'None' };
   },
 
@@ -61,7 +61,7 @@ const EffectImpl = {
    * })
    * ```
    */
-  run<A>(execute: EffectExecutor<A>): EffectType<A> {
+  run<A>(execute: EffectExecutor<A>): EffectOfTag<A, 'Run'> {
     return { _tag: 'Run', execute };
   },
 
@@ -81,7 +81,7 @@ const EffectImpl = {
    * })
    * ```
    */
-  fireAndForget<A>(execute: () => void | Promise<void>): EffectType<A> {
+  fireAndForget<A>(execute: () => void | Promise<void>): EffectOfTag<A, 'FireAndForget'> {
     return { _tag: 'FireAndForget', execute };
   },
 
@@ -142,7 +142,7 @@ const EffectImpl = {
    * })
    * ```
    */
-  cancellable<A>(id: string, execute: EffectExecutor<A>): EffectType<A> {
+  cancellable<A>(id: string, execute: EffectExecutor<A>): EffectOfTag<A, 'Cancellable'> {
     return { _tag: 'Cancellable', id, execute };
   },
 
@@ -166,7 +166,7 @@ const EffectImpl = {
    * })
    * ```
    */
-  debounced<A>(id: string, ms: number, execute: EffectExecutor<A>): EffectType<A> {
+  debounced<A>(id: string, ms: number, execute: EffectExecutor<A>): EffectOfTag<A, 'Debounced'> {
     if (ms < 0) {
       throw new TypeError(`debounced: ms must be non-negative, got ${ms}`);
     }
@@ -191,7 +191,7 @@ const EffectImpl = {
    * })
    * ```
    */
-  throttled<A>(id: string, ms: number, execute: EffectExecutor<A>): EffectType<A> {
+  throttled<A>(id: string, ms: number, execute: EffectExecutor<A>): EffectOfTag<A, 'Throttled'> {
     if (ms < 0) {
       throw new TypeError(`throttled: ms must be non-negative, got ${ms}`);
     }
@@ -213,7 +213,7 @@ const EffectImpl = {
    * })
    * ```
    */
-  afterDelay<A>(ms: number, create: EffectExecutor<A>): EffectType<A> {
+  afterDelay<A>(ms: number, create: EffectExecutor<A>): EffectOfTag<A, 'AfterDelay'> {
     if (ms < 0) {
       throw new TypeError(`afterDelay: ms must be non-negative, got ${ms}`);
     }
@@ -280,7 +280,7 @@ const EffectImpl = {
    *   ];
    * ```
    */
-  subscription<A>(id: string, setup: (dispatch: Dispatch<A>) => (() => void | Promise<void>)): EffectType<A> {
+  subscription<A>(id: string, setup: (dispatch: Dispatch<A>) => (() => void | Promise<void>)): EffectOfTag<A, 'Subscription'> {
     return { _tag: 'Subscription', id, setup };
   },
 
@@ -309,7 +309,7 @@ const EffectImpl = {
    *   ];
    * ```
    */
-  cancel<A>(id: string): EffectType<A> {
+  cancel<A>(id: string): EffectOfTag<A, 'Cancellable'> {
     return { _tag: 'Cancellable', id, execute: () => {}, cancelOnly: true };
   },
 

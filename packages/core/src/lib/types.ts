@@ -90,6 +90,21 @@ export type Effect<Action> =
   | { readonly _tag: 'Subscription'; readonly id: string; readonly setup: SubscriptionSetup<Action> };
 
 /**
+ * One member of the `Effect` union, by tag.
+ *
+ * The constructors below return these rather than the whole union. They always
+ * did at runtime — `Effect.run()` has only ever produced a `Run` — but each was
+ * annotated with `Effect<Action>`, so `Effect.run(fn).execute` did not
+ * typecheck for a consumer any more than it did for the tests that navigate
+ * these structures. Narrowing a return type is backwards compatible: every
+ * member is still assignable to the union.
+ */
+export type EffectOfTag<Action, Tag extends Effect<Action>['_tag']> = Extract<
+  Effect<Action>,
+  { readonly _tag: Tag }
+>;
+
+/**
  * A pure function that transforms state based on an action.
  *
  * Requirements:

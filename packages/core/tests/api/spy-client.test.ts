@@ -19,9 +19,9 @@ describe('createSpyAPI', () => {
       await spy.get('/api/products');
 
       expect(spy.calls).toHaveLength(1);
-      expect(spy.calls[0].method).toBe('GET');
-      expect(spy.calls[0].url).toBe('/api/products');
-      expect(spy.calls[0].timestamp).toBeDefined();
+      expect(spy.calls[0]!.method).toBe('GET');
+      expect(spy.calls[0]!.url).toBe('/api/products');
+      expect(spy.calls[0]!.timestamp).toBeDefined();
     });
 
     it('tracks POST request calls with config', async () => {
@@ -33,11 +33,11 @@ describe('createSpyAPI', () => {
       await spy.post('/api/products', { name: 'Product' }, { headers: { 'X-Custom': 'value' } });
 
       expect(spy.calls).toHaveLength(1);
-      expect(spy.calls[0].method).toBe('POST');
-      expect(spy.calls[0].url).toBe('/api/products');
-      expect(spy.calls[0].config).toBeDefined();
-      expect(spy.calls[0].config?.body).toEqual({ name: 'Product' });
-      expect(spy.calls[0].config?.headers).toEqual({ 'X-Custom': 'value' });
+      expect(spy.calls[0]!.method).toBe('POST');
+      expect(spy.calls[0]!.url).toBe('/api/products');
+      expect(spy.calls[0]!.config).toBeDefined();
+      expect(spy.calls[0]!.config?.body).toEqual({ name: 'Product' });
+      expect(spy.calls[0]!.config?.headers).toEqual({ 'X-Custom': 'value' });
     });
 
     it('tracks PUT request calls', async () => {
@@ -49,8 +49,8 @@ describe('createSpyAPI', () => {
       await spy.put('/api/products/1', { name: 'Updated' });
 
       expect(spy.calls).toHaveLength(1);
-      expect(spy.calls[0].method).toBe('PUT');
-      expect(spy.calls[0].url).toBe('/api/products/1');
+      expect(spy.calls[0]!.method).toBe('PUT');
+      expect(spy.calls[0]!.url).toBe('/api/products/1');
     });
 
     it('tracks PATCH request calls', async () => {
@@ -62,7 +62,7 @@ describe('createSpyAPI', () => {
       await spy.patch('/api/products/1', { name: 'Patched' });
 
       expect(spy.calls).toHaveLength(1);
-      expect(spy.calls[0].method).toBe('PATCH');
+      expect(spy.calls[0]!.method).toBe('PATCH');
     });
 
     it('tracks DELETE request calls', async () => {
@@ -74,7 +74,7 @@ describe('createSpyAPI', () => {
       await spy.delete('/api/products/1');
 
       expect(spy.calls).toHaveLength(1);
-      expect(spy.calls[0].method).toBe('DELETE');
+      expect(spy.calls[0]!.method).toBe('DELETE');
     });
 
     it('tracks HEAD request calls', async () => {
@@ -86,7 +86,7 @@ describe('createSpyAPI', () => {
       await spy.head('/api/products');
 
       expect(spy.calls).toHaveLength(1);
-      expect(spy.calls[0].method).toBe('HEAD');
+      expect(spy.calls[0]!.method).toBe('HEAD');
     });
 
     it('tracks request() method calls', async () => {
@@ -101,8 +101,8 @@ describe('createSpyAPI', () => {
       });
 
       expect(spy.calls).toHaveLength(1);
-      expect(spy.calls[0].method).toBe('GET');
-      expect(spy.calls[0].url).toBe('/api/products');
+      expect(spy.calls[0]!.method).toBe('GET');
+      expect(spy.calls[0]!.url).toBe('/api/products');
     });
 
     it('tracks multiple calls in order', async () => {
@@ -118,9 +118,9 @@ describe('createSpyAPI', () => {
       await spy.delete('/api/products/1');
 
       expect(spy.calls).toHaveLength(3);
-      expect(spy.calls[0].method).toBe('GET');
-      expect(spy.calls[1].method).toBe('POST');
-      expect(spy.calls[2].method).toBe('DELETE');
+      expect(spy.calls[0]!.method).toBe('GET');
+      expect(spy.calls[1]!.method).toBe('POST');
+      expect(spy.calls[2]!.method).toBe('DELETE');
     });
 
     it('tracks timestamps for each call', async () => {
@@ -133,8 +133,8 @@ describe('createSpyAPI', () => {
       await spy.get('/api/products');
       const after = Date.now();
 
-      expect(spy.calls[0].timestamp).toBeGreaterThanOrEqual(before);
-      expect(spy.calls[0].timestamp).toBeLessThanOrEqual(after);
+      expect(spy.calls[0]!.timestamp).toBeGreaterThanOrEqual(before);
+      expect(spy.calls[0]!.timestamp).toBeLessThanOrEqual(after);
     });
   });
 
@@ -148,8 +148,8 @@ describe('createSpyAPI', () => {
       await spy.get('/api/products');
 
       expect(spy.responses).toHaveLength(1);
-      expect(spy.responses[0].data).toEqual([{ id: '1', name: 'Product 1' }]);
-      expect(spy.responses[0].status).toBe(200);
+      expect(spy.responses[0]!.data).toEqual([{ id: '1', name: 'Product 1' }]);
+      expect(spy.responses[0]!.status).toBe(200);
     });
 
     it('tracks multiple responses', async () => {
@@ -163,8 +163,8 @@ describe('createSpyAPI', () => {
       await spy.post('/api/products', { name: 'New' });
 
       expect(spy.responses).toHaveLength(2);
-      expect(spy.responses[0].data).toEqual([{ id: '1' }]);
-      expect(spy.responses[1].data).toEqual({ id: '2' });
+      expect(spy.responses[0]!.data).toEqual([{ id: '1' }]);
+      expect(spy.responses[1]!.data).toEqual({ id: '2' });
     });
 
     it('returns response to caller', async () => {
@@ -193,7 +193,7 @@ describe('createSpyAPI', () => {
 
       expect(spy.errors).toHaveLength(1);
       expect(spy.errors[0]).toBeInstanceOf(APIError);
-      expect(spy.errors[0].message).toBe('Server error');
+      expect(spy.errors[0]!.message).toBe('Server error');
     });
 
     it('tracks multiple errors', async () => {
@@ -207,8 +207,8 @@ describe('createSpyAPI', () => {
       await expect(spy.get('/api/error2')).rejects.toThrow();
 
       expect(spy.errors).toHaveLength(2);
-      expect(spy.errors[0].message).toBe('Error 1');
-      expect(spy.errors[1].message).toBe('Error 2');
+      expect(spy.errors[0]!.message).toBe('Error 1');
+      expect(spy.errors[1]!.message).toBe('Error 2');
     });
 
     it('re-throws error to caller', async () => {
@@ -249,8 +249,8 @@ describe('createSpyAPI', () => {
       const getCalls = spy.callsTo('GET', '/api/products');
 
       expect(getCalls).toHaveLength(1);
-      expect(getCalls[0].method).toBe('GET');
-      expect(getCalls[0].url).toBe('/api/products');
+      expect(getCalls[0]!.method).toBe('GET');
+      expect(getCalls[0]!.url).toBe('/api/products');
     });
 
     it('returns empty array when no matches', async () => {
@@ -328,7 +328,7 @@ describe('createSpyAPI', () => {
       const calls = spy.callsMatching('GET', /\/api\/products\/\d+/);
 
       expect(calls).toHaveLength(1);
-      expect(calls[0].url).toBe('/api/products/123');
+      expect(calls[0]!.url).toBe('/api/products/123');
     });
 
     it('combines method and URL pattern filtering', async () => {
@@ -344,7 +344,7 @@ describe('createSpyAPI', () => {
       const calls = spy.callsMatching('GET', '/api/products/*');
 
       expect(calls).toHaveLength(1);
-      expect(calls[0].method).toBe('GET');
+      expect(calls[0]!.method).toBe('GET');
     });
   });
 
@@ -524,14 +524,14 @@ describe('createSpyAPI', () => {
 
       // Verify call sequence
       expect(spy.calls).toHaveLength(3);
-      expect(spy.calls[0].method).toBe('GET');
-      expect(spy.calls[1].method).toBe('POST');
-      expect(spy.calls[2].method).toBe('DELETE');
+      expect(spy.calls[0]!.method).toBe('GET');
+      expect(spy.calls[1]!.method).toBe('POST');
+      expect(spy.calls[2]!.method).toBe('DELETE');
 
       // Verify responses
-      expect(spy.responses[0].data).toHaveLength(1);
-      expect(spy.responses[1].data).toEqual({ id: '2', name: 'New Product' });
-      expect(spy.responses[2].data).toEqual({ success: true });
+      expect(spy.responses[0]!.data).toHaveLength(1);
+      expect(spy.responses[1]!.data).toEqual({ id: '2', name: 'New Product' });
+      expect(spy.responses[2]!.data).toEqual({ success: true });
     });
 
     it('verifies retry behavior', async () => {
@@ -582,8 +582,8 @@ describe('createSpyAPI', () => {
 
       // Verify sequence
       expect(spy.calls).toHaveLength(2);
-      expect(spy.calls[0].method).toBe('POST');
-      expect(spy.calls[1].config?.headers?.['Authorization']).toBe('Bearer abc123');
+      expect(spy.calls[0]!.method).toBe('POST');
+      expect(spy.calls[1]!.config?.headers?.['Authorization']).toBe('Bearer abc123');
     });
   });
 });

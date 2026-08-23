@@ -425,8 +425,8 @@ describe('SSG (Static Site Generation)', () => {
 
       expect(result.pagesGenerated).toBe(2); // / and /about (error skipped)
       expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].path).toBe('/error');
-      expect(result.errors[0].error.message).toBe('Failed to load data');
+      expect(result.errors[0]!.path).toBe('/error');
+      expect(result.errors[0]!.error.message).toBe('Failed to load data');
     });
 
     it('uses default outDir when not provided', async () => {

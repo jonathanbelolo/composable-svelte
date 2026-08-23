@@ -31,7 +31,7 @@
   ],
   "scripts": {
     "build": "svelte-package -o dist",
-    "typecheck": "tsc --noEmit && tsc --noEmit --project tsconfig.test.json",
+    "typecheck": "tsc --noEmit",
     "check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -4,6 +4,7 @@ import { carouselReducer } from '../src/lib/components/ui/carousel/carousel.redu
 import {
   createInitialCarouselState,
   type CarouselSlide,
+  type CarouselState,
   type CarouselAction
 } from '../src/lib/components/ui/carousel/carousel.types.js';
 
@@ -16,7 +17,7 @@ describe('Carousel Component', () => {
 
   describe('Navigation Actions', () => {
     it('should move to next slide', async () => {
-      const store = new TestStore({
+      const store = new TestStore<CarouselState<unknown>, CarouselAction>({
         initialState: createInitialCarouselState(testSlides),
         reducer: carouselReducer
       });
@@ -30,7 +31,7 @@ describe('Carousel Component', () => {
     });
 
     it('should move to previous slide', async () => {
-      const store = new TestStore({
+      const store = new TestStore<CarouselState<unknown>, CarouselAction>({
         initialState: createInitialCarouselState(testSlides, 1),
         reducer: carouselReducer
       });
@@ -44,7 +45,7 @@ describe('Carousel Component', () => {
     });
 
     it('should go to specific slide', async () => {
-      const store = new TestStore({
+      const store = new TestStore<CarouselState<unknown>, CarouselAction>({
         initialState: createInitialCarouselState(testSlides),
         reducer: carouselReducer
       });
@@ -58,7 +59,7 @@ describe('Carousel Component', () => {
     });
 
     it('should not move when already on target slide', async () => {
-      const store = new TestStore({
+      const store = new TestStore<CarouselState<unknown>, CarouselAction>({
         initialState: createInitialCarouselState(testSlides),
         reducer: carouselReducer
       });
@@ -70,7 +71,7 @@ describe('Carousel Component', () => {
     });
 
     it('should ignore invalid slide index', async () => {
-      const store = new TestStore({
+      const store = new TestStore<CarouselState<unknown>, CarouselAction>({
         initialState: createInitialCarouselState(testSlides),
         reducer: carouselReducer
       });
@@ -87,7 +88,7 @@ describe('Carousel Component', () => {
 
   describe('Loop Behavior', () => {
     it('should loop from last to first when loop is enabled', async () => {
-      const store = new TestStore({
+      const store = new TestStore<CarouselState<unknown>, CarouselAction>({
         initialState: createInitialCarouselState(testSlides, 2, true),
         reducer: carouselReducer
       });
@@ -100,7 +101,7 @@ describe('Carousel Component', () => {
     });
 
     it('should loop from first to last when going backward', async () => {
-      const store = new TestStore({
+      const store = new TestStore<CarouselState<unknown>, CarouselAction>({
         initialState: createInitialCarouselState(testSlides, 0, true),
         reducer: carouselReducer
       });
@@ -113,7 +114,7 @@ describe('Carousel Component', () => {
     });
 
     it('should not loop when loop is disabled', async () => {
-      const store = new TestStore({
+      const store = new TestStore<CarouselState<unknown>, CarouselAction>({
         initialState: createInitialCarouselState(testSlides, 2, false),
         reducer: carouselReducer
       });
@@ -124,7 +125,7 @@ describe('Carousel Component', () => {
     });
 
     it('should not go backward when at first slide and loop is disabled', async () => {
-      const store = new TestStore({
+      const store = new TestStore<CarouselState<unknown>, CarouselAction>({
         initialState: createInitialCarouselState(testSlides, 0, false),
         reducer: carouselReducer
       });
@@ -137,7 +138,7 @@ describe('Carousel Component', () => {
 
   describe('Transition State', () => {
     it('should mark transition as started', async () => {
-      const store = new TestStore({
+      const store = new TestStore<CarouselState<unknown>, CarouselAction>({
         initialState: createInitialCarouselState(testSlides),
         reducer: carouselReducer
       });
@@ -148,7 +149,7 @@ describe('Carousel Component', () => {
     });
 
     it('should mark transition as completed', async () => {
-      const store = new TestStore({
+      const store = new TestStore<CarouselState<unknown>, CarouselAction>({
         initialState: {
           ...createInitialCarouselState(testSlides),
           isTransitioning: true
@@ -162,7 +163,7 @@ describe('Carousel Component', () => {
     });
 
     it('should block navigation during transition', async () => {
-      const store = new TestStore({
+      const store = new TestStore<CarouselState<unknown>, CarouselAction>({
         initialState: {
           ...createInitialCarouselState(testSlides),
           isTransitioning: true
@@ -178,7 +179,7 @@ describe('Carousel Component', () => {
 
   describe('Auto-play', () => {
     it('should start auto-play', async () => {
-      const store = new TestStore({
+      const store = new TestStore<CarouselState<unknown>, CarouselAction>({
         initialState: createInitialCarouselState(testSlides, 0, true, 1000),
         reducer: carouselReducer
       });
@@ -189,7 +190,7 @@ describe('Carousel Component', () => {
     });
 
     it('should stop auto-play', async () => {
-      const store = new TestStore({
+      const store = new TestStore<CarouselState<unknown>, CarouselAction>({
         initialState: {
           ...createInitialCarouselState(testSlides, 0, true, 1000),
           isAutoPlaying: true
@@ -203,7 +204,7 @@ describe('Carousel Component', () => {
     });
 
     it('should not start auto-play when interval is 0', async () => {
-      const store = new TestStore({
+      const store = new TestStore<CarouselState<unknown>, CarouselAction>({
         initialState: createInitialCarouselState(testSlides, 0, true, 0),
         reducer: carouselReducer
       });
@@ -214,7 +215,7 @@ describe('Carousel Component', () => {
     });
 
     it('should advance to next slide on auto-play tick', async () => {
-      const store = new TestStore({
+      const store = new TestStore<CarouselState<unknown>, CarouselAction>({
         initialState: {
           ...createInitialCarouselState(testSlides, 0, true, 1000),
           isAutoPlaying: true
@@ -230,7 +231,7 @@ describe('Carousel Component', () => {
     });
 
     it('should loop to first slide on auto-play tick at end', async () => {
-      const store = new TestStore({
+      const store = new TestStore<CarouselState<unknown>, CarouselAction>({
         initialState: {
           ...createInitialCarouselState(testSlides, 2, true, 1000),
           isAutoPlaying: true
@@ -246,7 +247,7 @@ describe('Carousel Component', () => {
     });
 
     it('should not tick when not auto-playing', async () => {
-      const store = new TestStore({
+      const store = new TestStore<CarouselState<unknown>, CarouselAction>({
         initialState: {
           ...createInitialCarouselState(testSlides, 0, true, 1000),
           isAutoPlaying: false
@@ -260,7 +261,7 @@ describe('Carousel Component', () => {
     });
 
     it('should not tick during transition', async () => {
-      const store = new TestStore({
+      const store = new TestStore<CarouselState<unknown>, CarouselAction>({
         initialState: {
           ...createInitialCarouselState(testSlides, 0, true, 1000),
           isAutoPlaying: true,
@@ -278,7 +279,7 @@ describe('Carousel Component', () => {
   describe('Callbacks', () => {
     it('should call onSlideChange when slide changes', async () => {
       const onSlideChange = vi.fn();
-      const store = new TestStore({
+      const store = new TestStore<CarouselState<unknown>, CarouselAction>({
         initialState: createInitialCarouselState(testSlides),
         reducer: carouselReducer,
         dependencies: { onSlideChange }
@@ -293,7 +294,7 @@ describe('Carousel Component', () => {
 
     it('should call onAutoPlayStart when auto-play starts', async () => {
       const onAutoPlayStart = vi.fn();
-      const store = new TestStore({
+      const store = new TestStore<CarouselState<unknown>, CarouselAction>({
         initialState: createInitialCarouselState(testSlides, 0, true, 1000),
         reducer: carouselReducer,
         dependencies: { onAutoPlayStart }
@@ -306,7 +307,7 @@ describe('Carousel Component', () => {
 
     it('should call onAutoPlayStop when auto-play stops', async () => {
       const onAutoPlayStop = vi.fn();
-      const store = new TestStore({
+      const store = new TestStore<CarouselState<unknown>, CarouselAction>({
         initialState: {
           ...createInitialCarouselState(testSlides, 0, true, 1000),
           isAutoPlaying: true
@@ -323,7 +324,7 @@ describe('Carousel Component', () => {
 
   describe('Slides Update', () => {
     it('should update slides', async () => {
-      const store = new TestStore({
+      const store = new TestStore<CarouselState<unknown>, CarouselAction>({
         initialState: createInitialCarouselState(testSlides),
         reducer: carouselReducer
       });
@@ -340,7 +341,7 @@ describe('Carousel Component', () => {
     });
 
     it('should adjust current index when slides are updated to fewer slides', async () => {
-      const store = new TestStore({
+      const store = new TestStore<CarouselState<unknown>, CarouselAction>({
         initialState: createInitialCarouselState(testSlides, 2),
         reducer: carouselReducer
       });
@@ -353,7 +354,7 @@ describe('Carousel Component', () => {
     });
 
     it('should keep current index valid when slides are updated', async () => {
-      const store = new TestStore({
+      const store = new TestStore<CarouselState<unknown>, CarouselAction>({
         initialState: createInitialCarouselState(testSlides, 1),
         reducer: carouselReducer
       });
@@ -373,7 +374,7 @@ describe('Carousel Component', () => {
 
   describe('Edge Cases', () => {
     it('should handle empty slides array', async () => {
-      const store = new TestStore({
+      const store = new TestStore<CarouselState<unknown>, CarouselAction>({
         initialState: createInitialCarouselState([]),
         reducer: carouselReducer
       });
@@ -384,7 +385,7 @@ describe('Carousel Component', () => {
 
     it('should handle single slide', async () => {
       const singleSlide: CarouselSlide[] = [{ id: '1', data: 'Only Slide' }];
-      const store = new TestStore({
+      const store = new TestStore<CarouselState<unknown>, CarouselAction>({
         initialState: createInitialCarouselState(singleSlide, 0, false),
         reducer: carouselReducer
       });

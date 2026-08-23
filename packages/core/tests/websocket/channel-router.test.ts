@@ -504,8 +504,8 @@ describe('Channel Router', () => {
         payload: { user: 'Alice', content: 'Hello' }
       });
 
-      expect(messages[0].data.payload.user).toBe('Alice');
-      expect(messages[0].data.payload.content).toBe('Hello');
+      expect(messages[0]!.data.payload.user).toBe('Alice');
+      expect(messages[0]!.data.payload.content).toBe('Hello');
     });
   });
 });

@@ -112,8 +112,8 @@ describe('Mock WebSocket Client', () => {
       client.simulateMessage({ type: 'test', data: 'hello' });
 
       expect(messages).toHaveLength(1);
-      expect(messages[0].data).toEqual({ type: 'test', data: 'hello' });
-      expect(messages[0].timestamp).toBeGreaterThan(0);
+      expect(messages[0]!.data).toEqual({ type: 'test', data: 'hello' });
+      expect(messages[0]!.timestamp).toBeGreaterThan(0);
     });
 
     it('should notify multiple message listeners', async () => {
@@ -166,7 +166,7 @@ describe('Mock WebSocket Client', () => {
       await client.connect('wss://example.com');
 
       expect(events).toHaveLength(1);
-      expect(events[0].type).toBe('connected');
+      expect(events[0]!.type).toBe('connected');
       expect((events[0] as any).url).toBe('wss://example.com');
     });
 
@@ -180,7 +180,7 @@ describe('Mock WebSocket Client', () => {
       await client.disconnect(1000, 'Normal closure');
 
       expect(events).toHaveLength(1);
-      expect(events[0].type).toBe('disconnected');
+      expect(events[0]!.type).toBe('disconnected');
       expect((events[0] as any).code).toBe(1000);
       expect((events[0] as any).reason).toBe('Normal closure');
     });
@@ -199,7 +199,7 @@ describe('Mock WebSocket Client', () => {
       });
 
       expect(events).toHaveLength(1);
-      expect(events[0].type).toBe('reconnecting');
+      expect(events[0]!.type).toBe('reconnecting');
     });
 
     it('should allow unsubscribing from events', async () => {
@@ -232,7 +232,7 @@ describe('Mock WebSocket Client', () => {
       client.simulateError(error);
 
       expect(events).toHaveLength(1);
-      expect(events[0].type).toBe('error');
+      expect(events[0]!.type).toBe('error');
       expect((events[0] as any).error).toBe(error);
       expect(client.state.lastError).toBe(error);
     });
@@ -355,8 +355,8 @@ describe('Mock WebSocket Client', () => {
 
       client.simulateMessage({ type: 'chat', user: 'Alice', text: 'Hello' });
 
-      expect(messages[0].user).toBe('Alice');
-      expect(messages[0].text).toBe('Hello');
+      expect(messages[0]!.user).toBe('Alice');
+      expect(messages[0]!.text).toBe('Hello');
     });
   });
 });

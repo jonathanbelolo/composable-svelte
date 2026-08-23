@@ -185,7 +185,7 @@ describe('Select', () => {
 
 			await store.send({ type: 'searchChanged', query: 'yellow' }, (state) => {
 				expect(state.filteredOptions).toHaveLength(1);
-				expect(state.filteredOptions[0].value).toBe('banana');
+				expect(state.filteredOptions[0]!.value).toBe('banana');
 			});
 
 			store.assertNoPendingActions();
@@ -510,7 +510,7 @@ describe('Select', () => {
 			// Search
 			await store.send({ type: 'searchChanged', query: 'man' }, (state) => {
 				expect(state.filteredOptions).toHaveLength(1);
-				expect(state.filteredOptions[0].value).toBe('mango');
+				expect(state.filteredOptions[0]!.value).toBe('mango');
 				expect(state.highlightedIndex).toBe(0); // Auto-highlight first
 			});
 
