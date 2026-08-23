@@ -172,7 +172,14 @@ class ScopeBuilder<State, Action, Current = State> {
 	 * scopeTo(store).into('invalid');      // ✗ Compile error
 	 * ```
 	 */
-	into<K extends keyof Current>(key: K): ScopeBuilder<State, Action, Current[K]> {
+	// `keyof Current` is `never` the moment `Current` is nullable, so a chain
+	// could not continue past an optional level — while `getValue()` below
+	// explicitly walks through one and returns null. The signature forbade what
+	// the implementation documents and does. Looking through the null here
+	// carries the nullability forward into the result instead.
+	into<K extends keyof NonNullable<Current>>(
+		key: K
+	): ScopeBuilder<State, Action, NonNullable<Current>[K] | Extract<Current, null | undefined>> {
 		return new ScopeBuilder(this.store, [...this.path, String(key)]);
 	}
 

@@ -16,6 +16,7 @@
 import { describe, it, expect } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import SidebarTest from './test-components/SidebarTest.svelte';
+import type { SpringConfig } from '../../src/lib/animation/spring-config.js';
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -130,7 +131,7 @@ describe('Sidebar animation lifecycle', () => {
 	it('honours springConfig', async () => {
 		// The ONLY test that proves `springConfig` is wired. It was destructured
 		// and never referenced, so every value behaved identically.
-		const timeTo = async (springConfig?: Record<string, unknown>) => {
+		const timeTo = async (springConfig: Partial<SpringConfig> | undefined) => {
 			const { container } = render(SidebarTest, { springConfig });
 			const started = performance.now();
 			container.querySelector<HTMLButtonElement>('[data-testid="open-sidebar"]')!.click();

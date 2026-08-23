@@ -38,6 +38,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the dismiss. All corrected, and `tests/repo/doc-examples.test.ts` now checks
   these shapes across every markdown file in the repo.
 
+- **`scopeTo(...).into()` could not chain past an optional level.** `keyof
+  Current` is `never` the moment `Current` is nullable, while the builder's own
+  `getValue()` explicitly walks through a null and returns null — the signature
+  forbade what the implementation documents and does. It looks through the null
+  now and carries the nullability into the result.
+
+- **`Command`'s optional props did not accept an explicit `undefined`**, so
+  under `exactOptionalPropertyTypes` a component forwarding its own `$props()`
+  to `<Command>` did not typecheck — the palette could not be wrapped. The rest
+  of the codebase already writes `| undefined` on optional props; these were the
+  holdouts.
+
 - **`Destination.match` could not take handlers returning different types.**
   It inferred a single `T` from the handler map, so `T` came from the first
   handler and every other one was checked against it — the multi-case form in

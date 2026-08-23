@@ -53,7 +53,7 @@ function subBarrelExports(dir: string): string[] {
 		if (!existsSync(tsFile)) continue;
 		const decls = readFileSync(tsFile, 'utf8');
 		for (const [, name] of decls.matchAll(/^export\s+(?:type|interface|const|function)\s+(\w+)/gm)) {
-			names.push(name);
+			names.push(name!);
 		}
 	}
 	return [...new Set(names)];

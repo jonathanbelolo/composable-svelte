@@ -7,9 +7,15 @@
 	let {
 		springConfig,
 		startOpen = false
-	}: { springConfig?: Record<string, unknown>; startOpen?: boolean } = $props();
+		// `Partial<SpringConfig>`, which is what `Sidebar` takes — as
+		// `Record<string, unknown>` this harness accepted values the component
+		// would reject. The explicit `| undefined` is required under
+		// `exactOptionalPropertyTypes` because the test passes the prop through
+		// even when it has nothing to pass.
+	}: { springConfig?: Partial<SpringConfig> | undefined; startOpen?: boolean } = $props();
 
 	import { createStore } from '../../../src/lib/store.svelte.js';
+	import type { SpringConfig } from '../../../src/lib/animation/spring-config.js';
 	import Sidebar from '../../../src/lib/navigation-components/Sidebar.svelte';
 	import type { PresentationState } from '../../../src/lib/navigation/types.js';
 	import { Effect } from '../../../src/lib/effect.js';

@@ -38,6 +38,7 @@ import FileUpload from '../src/lib/components/ui/file-upload/FileUpload.svelte';
 import AccordionCallbackTest from './test-components/AccordionCallbackTest.svelte';
 import DropdownMenuCallbackTest from './test-components/DropdownMenuCallbackTest.svelte';
 import TooltipDelayTest from './test-components/TooltipDelayTest.svelte';
+import type { CommandItem } from '../src/lib/components/command/command.types.js';
 
 const settle = (ms = 250) => new Promise((r) => setTimeout(r, ms));
 
@@ -138,10 +139,9 @@ describe('dependencies are read live', () => {
 		const a = vi.fn();
 		const b = vi.fn();
 		const { rerender, container } = render(Carousel, {
-				slides: [
-					{ id: '1', content: 'one' },
-					{ id: '2', content: 'two' }
-				],
+				// `CarouselSlide` is `{ id, data? }` — there is no `content` field, and
+				// nothing here reads one. Two slides is all this test needs.
+				slides: [{ id: '1' }, { id: '2' }],
 				onSlideChange: a
 			});
 		await settle();
@@ -235,8 +235,10 @@ describe('dependencies are read live', () => {
 	});
 
 	it('Command filterFunction', async () => {
-		const a = vi.fn((c: unknown[]) => c);
-		const b = vi.fn((c: unknown[]) => c);
+		// `filterFunction` is `(commands: CommandItem[], query: string) => CommandItem[]`;
+		// typing the spies as `(c: unknown[]) => unknown[]` did not match it.
+		const a = vi.fn((c: CommandItem[], _query: string) => c);
+		const b = vi.fn((c: CommandItem[], _query: string) => c);
 		const { rerender } = render(Command, { open: true, commands: [{ id: 'a', label: 'Alpha' }], filterFunction: a });
 		await settle();
 

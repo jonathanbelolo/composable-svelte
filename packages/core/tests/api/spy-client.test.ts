@@ -4,7 +4,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createSpyAPI } from '../../src/lib/api/testing/spy-client.js';
-import { createMockAPI } from '../../src/lib/api/testing/mock-client.js';
+import { createMockAPI, type MockHandler } from '../../src/lib/api/testing/mock-client.js';
 import { APIError } from '../../src/lib/api/errors.js';
 import { clearCache } from '../../src/lib/api/cache.js';
 
@@ -468,7 +468,11 @@ describe('createSpyAPI', () => {
 
     it('addInterceptor delegates to the base client', async () => {
       const spy = createSpyAPI(
-        createMockAPI({ 'GET /api/me': (config) => ({ seen: config.headers?.['x-test'] ?? null }) })
+        createMockAPI({
+          'GET /api/me': ((config) => ({
+            seen: config.headers?.['x-test'] ?? null
+          })) satisfies MockHandler
+        })
       );
 
       const remove = spy.addInterceptor({
@@ -512,7 +516,10 @@ describe('createSpyAPI', () => {
     it('verifies API call sequence in component test', async () => {
       const mock = createMockAPI({
         'GET /api/products': [{ id: '1', name: 'Product 1' }],
-        'POST /api/products': (config) => ({ id: '2', ...config.body }),
+        'POST /api/products': ((config) => ({
+          id: '2',
+          ...(config.body as Record<string, unknown>)
+        })) satisfies MockHandler,
         'DELETE /api/products/1': { success: true }
       });
       const spy = createSpyAPI(mock);
@@ -563,11 +570,11 @@ describe('createSpyAPI', () => {
     it('verifies authentication flow', async () => {
       const mock = createMockAPI({
         'POST /api/login': { token: 'abc123' },
-        'GET /api/profile': (config) => {
+        'GET /api/profile': ((config) => {
           const auth = config.headers?.['Authorization'];
           if (!auth) throw new APIError('Unauthorized', 401, null, {}, false);
           return { name: 'John Doe' };
-        }
+        }) satisfies MockHandler
       });
       const spy = createSpyAPI(mock);
 

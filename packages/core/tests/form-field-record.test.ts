@@ -49,7 +49,7 @@ describe('the stored field record', () => {
 		await store.send({ type: 'fieldChanged', field: 'name', value: 'Ada' }, (state) => {
 			expect(state.data.name, 'the real value').toBe('Ada');
 			expect(
-				'value' in (state.fields.name as Record<string, unknown>),
+				'value' in state.fields.name,
 				'fields.name.value is a second source of truth and goes stale immediately'
 			).toBe(false);
 		});
@@ -61,7 +61,7 @@ describe('the stored field record', () => {
 		await store.send({ type: 'fieldFocused', field: 'name' }, (state) => {
 			expect(state.focusedField, 'the real answer').toBe('name');
 			expect(
-				'focused' in (state.fields.name as Record<string, unknown>),
+				'focused' in state.fields.name,
 				'fields.name.focused was written once as false and never updated'
 			).toBe(false);
 		});

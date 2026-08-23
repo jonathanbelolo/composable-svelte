@@ -52,12 +52,25 @@ type ParentAction =
 	| { type: 'destination'; action: PresentationAction<DestinationAction> }
 	| { type: 'modal'; action: PresentationAction<AddItemAction> };
 
-// Create mock store
+// Create mock store. A real `Store` also carries `select`, `subscribe`,
+// `history` and `destroy`; `scopeTo` reads only `state` and `dispatch`, but
+// declaring the return as `Store` while providing two of six was a claim the
+// object could not honour — anything that scoped this store and then
+// subscribed would have thrown.
 function createMockStore(state: ParentState): Store<ParentState, ParentAction> {
 	const dispatch = vi.fn();
+	const history: ParentAction[] = [];
+	const listeners = new Set<(state: ParentState) => void>();
 	return {
 		state,
-		dispatch
+		dispatch,
+		select: (selector) => selector(state),
+		subscribe: (listener) => {
+			listeners.add(listener);
+			return () => listeners.delete(listener);
+		},
+		history,
+		destroy: () => listeners.clear()
 	};
 }
 

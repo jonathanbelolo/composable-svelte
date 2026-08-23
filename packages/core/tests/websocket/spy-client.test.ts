@@ -93,7 +93,9 @@ describe('Spy WebSocket Client', () => {
     });
 
     it('should record multiple sent messages', async () => {
-      const mockClient = createMockWebSocket();
+      // Typed, so `sentMessages` is `Msg[]` rather than `unknown[]` — the
+      // message type is what makes the recorded messages inspectable at all.
+      const mockClient = createMockWebSocket<{ type: string }>();
       const spyClient = createSpyWebSocket(mockClient);
 
       await spyClient.connect('wss://example.com');
@@ -102,7 +104,7 @@ describe('Spy WebSocket Client', () => {
       await spyClient.send({ type: 'msg3' });
 
       expect(spyClient.sentMessages).toHaveLength(3);
-      expect(spyClient.sentMessages.map(m => m.type)).toEqual(['msg1', 'msg2', 'msg3']);
+      expect(spyClient.sentMessages.map((m) => m.type)).toEqual(['msg1', 'msg2', 'msg3']);
     });
 
     it('should delegate send to real client', async () => {
@@ -135,7 +137,7 @@ describe('Spy WebSocket Client', () => {
     });
 
     it('should record multiple received messages', async () => {
-      const mockClient = createMockWebSocket();
+      const mockClient = createMockWebSocket<{ type: string }>();
       const spyClient = createSpyWebSocket(mockClient);
 
       await spyClient.connect('wss://example.com');
@@ -146,7 +148,7 @@ describe('Spy WebSocket Client', () => {
       mockClient.simulateMessage({ type: 'msg3' });
 
       expect(spyClient.receivedMessages).toHaveLength(3);
-      expect(spyClient.receivedMessages.map(m => m.data.type)).toEqual(['msg1', 'msg2', 'msg3']);
+      expect(spyClient.receivedMessages.map((m) => m.data.type)).toEqual(['msg1', 'msg2', 'msg3']);
     });
 
     it('should notify original listeners', async () => {

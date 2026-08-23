@@ -111,7 +111,10 @@ describe('i18nReducer', () => {
         removeItem: vi.fn(),
         keys: vi.fn(() => []),
         has: vi.fn(() => false),
-        clear: vi.fn()
+        clear: vi.fn(),
+        // `Storage` also declares `size()`; the mock was one member short, so
+        // anything asking this stub how many items it held would have thrown.
+        size: vi.fn(() => 0)
       },
       dom: {
         setLanguage: vi.fn(),

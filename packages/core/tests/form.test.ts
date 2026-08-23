@@ -494,7 +494,7 @@ describe('Form Submission', () => {
 
 		// Check callback was called
 		expect(onSubmitError).toHaveBeenCalledWith(expect.any(Error));
-		expect(onSubmitError.mock!.calls[0][0].message).toBe('Server error');
+		expect(onSubmitError.mock.calls[0]![0].message).toBe('Server error');
 	});
 });
 

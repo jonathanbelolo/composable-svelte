@@ -564,8 +564,10 @@ describe('File Upload Component', () => {
       await store.receive({ type: 'filesValidated' });
 
       expect(onFilesChange).toHaveBeenCalled();
-      expect(onFilesChange.mock!.calls[0][0].length).toBe(1);
-      expect(onFilesChange.mock!.calls[0][0][0].file.name).toBe('file.png');
+      // The `!` belongs on the indexed reads, not on `.mock`, which is not
+      // optional. `calls[0]` and `[0][0]` are what may be absent.
+      expect(onFilesChange.mock.calls[0]![0].length).toBe(1);
+      expect(onFilesChange.mock.calls[0]![0][0].file.name).toBe('file.png');
     });
 
     it('should trigger upload when onUpload is provided', async () => {

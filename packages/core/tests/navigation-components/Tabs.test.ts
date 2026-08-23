@@ -161,7 +161,7 @@ describe('Tabs Component', () => {
       });
 
     const tabButtons = page.getByRole('tab').elements();
-    await userEvent.click(tabButtons[2]);
+    await userEvent.click(tabButtons[2]!);
 
     expect(clickedIndex).toBe(2);
   });

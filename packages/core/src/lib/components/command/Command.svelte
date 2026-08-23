@@ -75,26 +75,26 @@
 		/**
 		 * Callback when a command is executed.
 		 */
-		onCommandExecute?: (command: CommandItem) => void;
+		onCommandExecute?: ((command: CommandItem) => void) | undefined;
 
 		/**
 		 * Optional custom filter function.
 		 */
-		filterFunction?: (commands: CommandItem[], query: string) => CommandItem[];
+		filterFunction?: ((commands: CommandItem[], query: string) => CommandItem[]) | undefined;
 
 		/**
 		 * Maximum number of results to show.
 		 */
-		maxResults?: number;
+		maxResults?: number | undefined;
 
 		/**
 		 * Group definitions: display labels and the order groups appear in.
 		 * Membership comes from each command's own `group` id.
 		 */
-		groups?: CommandGroup[];
+		groups?: CommandGroup[] | undefined;
 
 		/** Whether the built-in filter matches case. Default: false. */
-		caseSensitive?: boolean;
+		caseSensitive?: boolean | undefined;
 
 		/**
 		 * Additional CSS classes.

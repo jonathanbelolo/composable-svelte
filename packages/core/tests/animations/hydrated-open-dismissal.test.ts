@@ -25,6 +25,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import type { Component } from 'svelte';
 import ModalTest from './test-components/ModalTest.svelte';
 import SheetTest from './test-components/SheetTest.svelte';
 import DrawerTest from './test-components/DrawerTest.svelte';
@@ -52,16 +53,30 @@ function waitForState<State>(
 	});
 }
 
-const cases = [
+/**
+ * All four harnesses take the same prop. Naming that common shape is what lets
+ * `render` be called with real types: a union of four component types
+ * intersects their props to `never`, which is why this used to say
+ * `render(Component as never, …)` — and a `never` options bag accepts nothing,
+ * so `startOpen: true` was unchecked.
+ */
+type OverlayHarness = Component<{ startOpen?: boolean }>;
+
+const cases: ReadonlyArray<{
+	name: string;
+	Component: OverlayHarness;
+	global: string;
+	dismiss: string;
+}> = [
 	{ name: 'Modal', Component: ModalTest, global: '__modalTestStore', dismiss: 'dismissModal' },
 	{ name: 'Sheet', Component: SheetTest, global: '__sheetTestStore', dismiss: 'dismissSheet' },
 	{ name: 'Drawer', Component: DrawerTest, global: '__drawerTestStore', dismiss: 'dismissDrawer' },
 	{ name: 'Alert', Component: AlertTest, global: '__alertTestStore', dismiss: 'dismissAlert' }
-] as const;
+];
 
 describe('an overlay hydrated in the open state', () => {
 	it.each(cases)('$name dismisses', async ({ Component, global, dismiss }) => {
-		render(Component as never, { startOpen: true });
+		render(Component, { startOpen: true });
 		const store = (window as never as Record<string, any>)[global];
 
 		expect(store.state.presentation.status, 'precondition: mounted presented').toBe('presented');
