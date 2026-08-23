@@ -10,9 +10,28 @@
 import type { Effect as EffectType, EffectExecutor, Dispatch } from './types.js';
 
 /**
+ * Extensions other modules attach to the `Effect` namespace at import time.
+ *
+ * Empty here on purpose: `api/effect-api.ts` and `websocket/effect-websocket.ts`
+ * fill it by declaration merging, and they are the modules that also perform the
+ * runtime attachment. Keeping the seam here is what makes `Effect.api(…)` and
+ * `Effect.websocket.connect(…)` typecheck at all.
+ *
+ * They did not, until now. Both modules augmented a name that has no declaration
+ * to merge with — one wrote `interface Effect`, the other `interface
+ * EffectNamespace` — while `Effect` below is a `const`. Merging an interface
+ * contributes nothing to a const of the same name, so both augmentations were
+ * inert and the runtime attachments were cast through `any`. The result was a
+ * documented public namespace (`docs/backend/api-client.md`,
+ * `docs/backend/websocket.md`) that a consumer could not use without a type
+ * error, and nothing noticed because core's test typecheck resolved no files.
+ */
+export interface EffectExtensions {}
+
+/**
  * Effect namespace containing all effect constructors.
  */
-export const Effect = {
+const EffectImpl = {
   /**
    * No side effects.
    *
@@ -357,7 +376,7 @@ export const Effect = {
         });
 
       case 'Subscription':
-        return Effect.subscription(effect.id, (dispatch) => {
+        return EffectImpl.subscription(effect.id, (dispatch) => {
           const cleanup = effect.setup((a) => dispatch(f(a)));
           return cleanup;
         });
@@ -369,3 +388,15 @@ export const Effect = {
     }
   }
 };
+
+/**
+ * The namespace as consumers see it: the constructors above, plus whatever the
+ * extension modules have attached.
+ *
+ * The assertion is doing real work rather than papering over a mismatch — the
+ * members in `EffectExtensions` genuinely are on this object at runtime, put
+ * there by the modules that declare them. It cannot be an annotation instead,
+ * because those modules import `Effect` from here and assigning an object that
+ * does not yet have their members would not typecheck.
+ */
+export const Effect = EffectImpl as typeof EffectImpl & EffectExtensions;

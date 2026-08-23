@@ -161,7 +161,7 @@ export function apiAll<Requests extends readonly APIRequest<any>[], SuccessActio
 // ============================================================================
 
 declare module '../effect.js' {
-  interface Effect {
+  interface EffectExtensions {
     /**
      * Create an effect for making an API call.
      */

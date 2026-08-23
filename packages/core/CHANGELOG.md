@@ -5,6 +5,26 @@ All notable changes to `@composable-svelte/core` will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.2] - 2026-08-23
+
+### Fixed
+
+- **`Effect.api`, `Effect.apiAll`, `Effect.apiFireAndForget` and
+  `Effect.websocket` were typed as non-existent.** Both extension modules
+  augmented a name with nothing to merge into — `api/effect-api.ts` declared
+  `interface Effect`, `websocket/effect-websocket.ts` declared `interface
+  EffectNamespace` — while `Effect` is a `const`. Merging an interface
+  contributes nothing to a const of the same name, so both augmentations were
+  inert while `(Effect as any).api = api` made the runtime work anyway.
+
+  All of it is documented — `docs/backend/api-client.md`,
+  `docs/backend/websocket.md`, and the JSDoc example at
+  `src/lib/websocket/index.ts:26` — so a consumer following the documentation
+  wrote code that ran and did not typecheck.
+
+  `Effect` now carries an `EffectExtensions` seam that both modules merge into.
+  Purely additive: nothing that compiled before stops compiling.
+
 ## [0.11.1] - 2026-08-23
 
 ### Fixed
