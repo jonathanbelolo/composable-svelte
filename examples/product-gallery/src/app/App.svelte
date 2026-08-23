@@ -104,7 +104,7 @@
   <!-- Sidebar (Desktop) - Enhanced with Shadow -->
   <aside
     aria-label="Sidebar navigation"
-    class="h-full border-r bg-background overflow-hidden transition-all duration-300 lg:block"
+    class="h-full border-r bg-background overflow-hidden lg:block"
     class:hidden={!state.sidebarExpanded}
     style="width: 320px;"
   >
@@ -120,7 +120,7 @@
     <div class="lg:hidden px-6 py-5 border-b-2 flex items-center gap-4 bg-gradient-to-r from-background to-muted/20 shadow-md">
       <button
         onclick={() => store.dispatch({ type: 'sidebarToggled' })}
-        class="w-12 h-12 rounded-xl hover:bg-accent flex items-center justify-center text-2xl transition-all hover:shadow-lg"
+        class="w-12 h-12 rounded-xl hover:bg-accent flex items-center justify-center text-2xl hover:shadow-lg"
         aria-label="Toggle sidebar"
       >
         ☰

@@ -96,7 +96,6 @@
 		width: 32px;
 		height: 32px;
 		border-radius: 4px;
-		transition: all 0.2s;
 	}
 
 	.close-button:hover {
@@ -149,7 +148,6 @@
 		border-radius: 8px;
 		font-size: 1rem;
 		cursor: pointer;
-		transition: background 0.2s;
 	}
 
 	.delete-button:hover {
@@ -164,7 +162,6 @@
 		border-radius: 8px;
 		font-size: 1rem;
 		cursor: pointer;
-		transition: background 0.2s;
 	}
 
 	.close-button-footer:hover {

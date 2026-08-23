@@ -241,7 +241,7 @@
                 <div class="p-6 text-center">
                   <h4 class="text-xl font-semibold mb-2">{slide.data?.name}</h4>
                   <p class="text-2xl font-bold text-primary mb-4">{slide.data?.price}</p>
-                  <button class="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
+                  <button class="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">
                     Add to Cart
                   </button>
                 </div>

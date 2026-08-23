@@ -453,7 +453,6 @@ const store = createStore({
 		font-size: 1rem;
 		font-weight: 600;
 		color: #6c757d;
-		transition: all 0.2s;
 	}
 
 	.tab:hover {
@@ -505,7 +504,6 @@ const store = createStore({
 		font-size: 0.9rem;
 		font-weight: 600;
 		cursor: pointer;
-		transition: background 0.2s;
 	}
 
 	.control-button:hover {

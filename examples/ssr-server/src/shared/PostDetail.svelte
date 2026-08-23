@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { animateFadeIn } from '@composable-svelte/core/animation';
   import type { Post } from './types';
 
   interface Props {
@@ -6,9 +7,23 @@
   }
 
   let { post }: Props = $props();
+
+  let rootElement: HTMLElement | undefined = $state();
+
+  // A plain `let`, never `$state`: a reactive guard would re-trigger the effect
+  // it lives in. `$effect` does not run during SSR, and with the keyframe gone
+  // the resting opacity is 1 — so a server-rendered page with no JS shows the
+  // post rather than starting it invisible, which the keyframe did.
+  let hasEntered = false;
+
+  $effect(() => {
+    if (hasEntered || !rootElement) return;
+    hasEntered = true;
+    animateFadeIn(rootElement);
+  });
 </script>
 
-<article class="post-detail">
+<article class="post-detail" bind:this={rootElement}>
   <header>
     <h1>{post.title}</h1>
     <div class="meta">
@@ -33,21 +48,6 @@
 </article>
 
 <style>
-  .post-detail {
-    animation: fadeIn 0.3s ease-in-out;
-  }
-
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
   header {
     margin-bottom: 2rem;
     padding-bottom: 1rem;

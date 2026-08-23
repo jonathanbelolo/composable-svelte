@@ -163,7 +163,7 @@
       <div class="flex items-center gap-4">
         <button
           onclick={onBack}
-          class="w-10 h-10 rounded-lg hover:bg-accent flex items-center justify-center transition-colors"
+          class="w-10 h-10 rounded-lg hover:bg-accent flex items-center justify-center"
           aria-label="Back to home"
         >
           ←

@@ -300,7 +300,7 @@
             { name: 'API Documentation', status: 'destructive', priority: 'Low', team: 'Backend', progress: '30%' },
             { name: 'User Analytics', status: 'outline', priority: 'Medium', team: 'Data', progress: '45%' }
           ] as project}
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg border hover:bg-accent/50 transition-colors">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg border hover:bg-accent/50">
               <div class="flex-1">
                 <p class="font-medium text-sm">{project.name}</p>
                 <div class="flex flex-wrap gap-2 mt-2">

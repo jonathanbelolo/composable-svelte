@@ -93,38 +93,38 @@
       <CardContent class="pt-6">
         <div class="flex flex-wrap gap-3">
           <Tooltip content="Settings">
-            <button class="p-2 rounded hover:bg-accent transition-colors">
+            <button class="p-2 rounded hover:bg-accent">
               ⚙️
             </button>
           </Tooltip>
 
           <Tooltip content="Notifications">
-            <button class="p-2 rounded hover:bg-accent transition-colors relative">
+            <button class="p-2 rounded hover:bg-accent relative">
               🔔
               <span class="absolute top-1 right-1 h-2 w-2 bg-destructive rounded-full"></span>
             </button>
           </Tooltip>
 
           <Tooltip content="Search">
-            <button class="p-2 rounded hover:bg-accent transition-colors">
+            <button class="p-2 rounded hover:bg-accent">
               🔍
             </button>
           </Tooltip>
 
           <Tooltip content="User Profile">
-            <button class="p-2 rounded hover:bg-accent transition-colors">
+            <button class="p-2 rounded hover:bg-accent">
               👤
             </button>
           </Tooltip>
 
           <Tooltip content="Help & Documentation">
-            <button class="p-2 rounded hover:bg-accent transition-colors">
+            <button class="p-2 rounded hover:bg-accent">
               ❓
             </button>
           </Tooltip>
 
           <Tooltip content="Dark Mode">
-            <button class="p-2 rounded hover:bg-accent transition-colors">
+            <button class="p-2 rounded hover:bg-accent">
               🌙
             </button>
           </Tooltip>
@@ -393,28 +393,28 @@
           <!-- Quick Stats with Tooltips -->
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t">
             <Tooltip content="Total revenue this month">
-              <div class="p-3 rounded border cursor-help hover:border-primary/50 transition-colors">
+              <div class="p-3 rounded border cursor-help hover:border-primary/50">
                 <p class="text-xs text-muted-foreground">Revenue</p>
                 <p class="text-lg font-bold">$12,450</p>
               </div>
             </Tooltip>
 
             <Tooltip content="New customers acquired">
-              <div class="p-3 rounded border cursor-help hover:border-primary/50 transition-colors">
+              <div class="p-3 rounded border cursor-help hover:border-primary/50">
                 <p class="text-xs text-muted-foreground">Customers</p>
                 <p class="text-lg font-bold">142</p>
               </div>
             </Tooltip>
 
             <Tooltip content="Conversion rate (last 30 days)">
-              <div class="p-3 rounded border cursor-help hover:border-primary/50 transition-colors">
+              <div class="p-3 rounded border cursor-help hover:border-primary/50">
                 <p class="text-xs text-muted-foreground">Conversion</p>
                 <p class="text-lg font-bold">3.2%</p>
               </div>
             </Tooltip>
 
             <Tooltip content="Average order value">
-              <div class="p-3 rounded border cursor-help hover:border-primary/50 transition-colors">
+              <div class="p-3 rounded border cursor-help hover:border-primary/50">
                 <p class="text-xs text-muted-foreground">Avg Order</p>
                 <p class="text-lg font-bold">$87.50</p>
               </div>

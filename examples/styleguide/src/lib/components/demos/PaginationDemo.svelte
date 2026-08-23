@@ -102,7 +102,7 @@
       <!-- Display items -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {#each items3 as item}
-          <div class="border rounded-lg p-3 hover:bg-accent transition-colors">
+          <div class="border rounded-lg p-3 hover:bg-accent">
             <div class="flex items-center justify-between">
               <div>
                 <p class="font-medium text-sm">{item.title}</p>

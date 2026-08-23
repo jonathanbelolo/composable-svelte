@@ -117,7 +117,7 @@ function rotateShapes() {
     <div class="flex gap-2">
       <button
         onclick={rotateShapes}
-        class="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+        class="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
       >
         Rotate All Shapes 45°
       </button>

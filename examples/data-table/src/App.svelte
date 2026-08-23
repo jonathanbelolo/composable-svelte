@@ -95,7 +95,7 @@
 
 			{#snippet row(product: Product)}
 				<tr
-					class="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+					class="border-b hover:bg-muted/50 data-[state=selected]:bg-muted"
 					data-testid="table-row-{product.id}"
 				>
 					<td class="p-4 align-middle">{product.name}</td>

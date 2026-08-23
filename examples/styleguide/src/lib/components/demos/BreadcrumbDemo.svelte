@@ -65,13 +65,13 @@
       <div class="flex gap-3">
         <button
           onclick={addLevel}
-          class="px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 text-sm transition-colors"
+          class="px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 text-sm"
         >
           Add Level
         </button>
         <button
           onclick={() => currentPath = ['home']}
-          class="px-4 py-2 rounded-md border hover:bg-accent text-sm transition-colors"
+          class="px-4 py-2 rounded-md border hover:bg-accent text-sm"
           disabled={currentPath.length === 1}
         >
           Reset

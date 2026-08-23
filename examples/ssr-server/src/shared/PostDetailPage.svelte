@@ -85,7 +85,6 @@
     color: #1976d2;
     text-decoration: none;
     font-weight: 500;
-    transition: color 0.2s;
   }
 
   .breadcrumb a:hover {
@@ -169,7 +168,6 @@
     border-radius: 8px;
     text-decoration: none;
     font-weight: 500;
-    transition: background 0.2s;
   }
 
   .comments-link:hover {

@@ -74,7 +74,7 @@
         <button
           data-testid="share-method-{method}"
           onclick={() => store.dispatch({ type: 'methodSelected', method })}
-          class="w-full flex items-center gap-4 p-4 rounded-lg border-2 transition-all {state?.selectedMethod ===
+          class="w-full flex items-center gap-4 p-4 rounded-lg border-2 {state?.selectedMethod ===
           method
             ? 'border-primary bg-primary/10'
             : 'border-border hover:bg-accent'}"

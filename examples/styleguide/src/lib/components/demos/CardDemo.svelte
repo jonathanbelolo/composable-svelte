@@ -142,7 +142,7 @@
         { title: 'Settings', icon: '⚙️', description: 'Manage your preferences' },
         { title: 'Support', icon: '💬', description: 'Get help and support' }
       ] as item}
-        <Card class="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all">
+        <Card class="cursor-pointer hover:shadow-lg hover:border-primary/50">
           <CardHeader>
             <div class="text-4xl mb-2">{item.icon}</div>
             <CardTitle>{item.title}</CardTitle>

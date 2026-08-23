@@ -185,7 +185,6 @@
 		border: 2px solid #e0e0e0;
 		border-radius: 8px;
 		font-size: 1rem;
-		transition: border-color 0.2s;
 	}
 
 	.search-input:focus {
@@ -200,7 +199,6 @@
 		font-size: 1rem;
 		background: white;
 		cursor: pointer;
-		transition: border-color 0.2s;
 	}
 
 	.category-select:focus {
@@ -217,7 +215,6 @@
 		font-size: 1rem;
 		font-weight: 600;
 		cursor: pointer;
-		transition: background 0.2s;
 	}
 
 	.add-button:hover {

@@ -35,7 +35,16 @@ import { fileURLToPath } from 'node:url';
 import { join, relative } from 'node:path';
 
 const repoRoot = fileURLToPath(new URL('../../../../', import.meta.url));
-const packagesDir = join(repoRoot, 'packages');
+
+/**
+ * Both trees, and violations keyed relative to the repo so both can be named.
+ *
+ * `examples/` was never scanned. It is what a consumer copies, and the library's
+ * own components carry no hover transitions — so an example that does was
+ * teaching the opposite of what the library practises, ungated, for the whole
+ * life of this guard.
+ */
+const SOURCE_ROOTS = ['packages', 'examples'];
 
 /**
  * The Exception Register, mirroring the table in
@@ -54,26 +63,26 @@ const packagesDir = join(repoRoot, 'packages');
  * "CSS for bar fills" and it had quietly become `transition-all`.
  */
 const REGISTER: Record<string, { properties: string[]; why: string }> = {
-	'media/src/lib/voice-input/components/AudioVisualizer.svelte': {
+	'packages/media/src/lib/voice-input/components/AudioVisualizer.svelte': {
 		// `transform`, `height` — exactly what the guide grants. `opacity` was
 		// listed here and nowhere in the guide, so the mechanically-enforced list
 		// silently outranked the document it claims to mirror.
 		properties: ['transform', 'height'],
 		why: 'Live microphone level, sampled faster than a spring could settle.'
 	},
-	'media/src/lib/audio-player/FullAudioPlayer.svelte': {
+	'packages/media/src/lib/audio-player/FullAudioPlayer.svelte': {
 		properties: ['width'],
 		why: 'Playback position and buffer fill from media events.'
 	},
-	'media/src/lib/audio-player/MinimalAudioPlayer.svelte': {
+	'packages/media/src/lib/audio-player/MinimalAudioPlayer.svelte': {
 		properties: ['width'],
 		why: 'Playback position from timeupdate.'
 	},
-	'core/src/lib/components/ui/progress/Progress.svelte': {
+	'packages/core/src/lib/components/ui/progress/Progress.svelte': {
 		properties: ['width'],
 		why: 'Determinate progress from an external count — bytes transferred, steps done. Not the user\'s own input, so the feedback-is-instant rule does not reach it.'
 	},
-	'media/src/lib/voice-input/components/ConversationModePanel.svelte': {
+	'packages/media/src/lib/voice-input/components/ConversationModePanel.svelte': {
 		properties: ['width'],
 		why: 'VAD silence countdown; a linear tween is the countdown semantics.'
 	}
@@ -96,10 +105,12 @@ function walk(dir: string): string[] {
 	});
 }
 
-const sourceFiles = readdirSync(packagesDir, { withFileTypes: true })
-	.filter((e) => e.isDirectory())
-	.flatMap((e) => walk(join(packagesDir, e.name, 'src')))
-	.filter((f) => statSync(f).isFile());
+const sourceFiles = SOURCE_ROOTS.flatMap((root) =>
+	readdirSync(join(repoRoot, root), { withFileTypes: true })
+		.filter((e) => e.isDirectory())
+		.flatMap((e) => walk(join(repoRoot, root, e.name, 'src')))
+		.filter((f) => statSync(f).isFile())
+);
 
 /**
  * Strip `<!-- -->`, block comments and `//` line comments, so commentary never
@@ -370,7 +381,7 @@ function hasTailwindAnimation(line: string): boolean {
 }
 
 function scan(file: string): Violation[] {
-	const rel = relative(packagesDir, file);
+	const rel = relative(repoRoot, file);
 	const registered = REGISTER[rel];
 	const source = stripComments(readFileSync(file, 'utf8'));
 	const lines = source.split('\n');
@@ -492,8 +503,29 @@ function scan(file: string): Violation[] {
  */
 
 describe('animation policy', () => {
-	it('finds source to scan, so this guard is not vacuous', () => {
-		expect(sourceFiles.length).toBeGreaterThan(100);
+	it('finds source to scan in every root, so this guard is not vacuous', () => {
+		expect(sourceFiles.length).toBeGreaterThan(200);
+
+		// Per root, not just in total. A count alone cannot tell you a root has
+		// silently stopped being walked: `packages/` on its own clears any
+		// threshold `examples/` would have helped it reach, which is how
+		// `examples/` went unscanned for the whole life of this guard while the
+		// suite stayed green.
+		for (const root of SOURCE_ROOTS) {
+			expect(
+				sourceFiles.filter((f) => relative(repoRoot, f).startsWith(`${root}/`)).length,
+				`nothing scanned under ${root}/`
+			).toBeGreaterThan(20);
+		}
+
+		// Stylesheets too. There are no `.css` violations today, so dropping the
+		// extension from `walk()` would change no result and no other assertion
+		// here would notice — the walk kept only `.svelte` for the whole life of
+		// this guard, and `core/src/lib/styles/*.css` was never scanned.
+		expect(
+			sourceFiles.filter((f) => f.endsWith('.css')).length,
+			'no stylesheet is being scanned'
+		).toBeGreaterThan(0);
 	});
 
 	it('the scanner recognises what it claims to', () => {

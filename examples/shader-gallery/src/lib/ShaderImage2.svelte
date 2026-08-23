@@ -5,6 +5,7 @@
  */
 
 import { onMount, getContext } from 'svelte';
+import { animateFadeOut } from '@composable-svelte/core/animation';
 import type { CustomShaderEffect } from '@composable-svelte/graphics';
 
 let {
@@ -38,6 +39,16 @@ const gallery = getContext<{
 let imgRef: HTMLImageElement | null = $state(null);
 let wrapperRef: HTMLDivElement | null = $state(null);
 let webglLoaded = $state(false);
+
+// The DOM image fades out once the WebGL texture has taken over. That is a
+// state-driven lifecycle, so it belongs to Motion One rather than a CSS
+// transition the store cannot see — and `animateFadeOut` honours
+// `prefers-reduced-motion` by writing the end state, which a `transition` on a
+// class toggle could not.
+//
+// A plain `let`, never `$state`: a reactive guard would re-trigger the effect it
+// lives in.
+let hasFadedOut = false;
 let isRegistered = $state(false);
 
 // Watch for shader changes and update WebGL overlay
@@ -45,6 +56,12 @@ $effect(() => {
   if (isRegistered && gallery) {
     gallery.updateImageShader(id, shader);
   }
+});
+
+$effect(() => {
+  if (hasFadedOut || !webglLoaded || !imgRef) return;
+  hasFadedOut = true;
+  animateFadeOut(imgRef);
 });
 
 onMount(() => {
@@ -156,7 +173,6 @@ onMount(() => {
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-    transition: transform 0.3s, box-shadow 0.3s;
   }
 
   .shader-image-wrapper:hover {
@@ -168,11 +184,6 @@ onMount(() => {
     width: 100%;
     height: auto;
     display: block;
-    transition: opacity 0.3s ease;
-  }
-
-  img.webgl-loaded {
-    opacity: 0;
   }
 </style>
 
@@ -181,7 +192,6 @@ onMount(() => {
     bind:this={imgRef}
     {src}
     {alt}
-    class:webgl-loaded={webglLoaded}
     crossorigin="anonymous"
   />
 </div>

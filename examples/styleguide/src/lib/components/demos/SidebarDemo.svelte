@@ -187,19 +187,19 @@
 
               <!-- Navigation Links -->
               <nav class="flex-1 space-y-1">
-                <button type="button" class="block px-3 py-2 rounded-lg hover:bg-accent transition-colors w-full text-left">
+                <button type="button" class="block px-3 py-2 rounded-lg hover:bg-accent w-full text-left">
                   Dashboard
                 </button>
-                <button type="button" class="block px-3 py-2 rounded-lg hover:bg-accent transition-colors w-full text-left">
+                <button type="button" class="block px-3 py-2 rounded-lg hover:bg-accent w-full text-left">
                   Projects
                 </button>
-                <button type="button" class="block px-3 py-2 rounded-lg hover:bg-accent transition-colors w-full text-left">
+                <button type="button" class="block px-3 py-2 rounded-lg hover:bg-accent w-full text-left">
                   Team
                 </button>
-                <button type="button" class="block px-3 py-2 rounded-lg bg-accent font-medium transition-colors w-full text-left">
+                <button type="button" class="block px-3 py-2 rounded-lg bg-accent font-medium w-full text-left">
                   Settings
                 </button>
-                <button type="button" class="block px-3 py-2 rounded-lg hover:bg-accent transition-colors w-full text-left">
+                <button type="button" class="block px-3 py-2 rounded-lg hover:bg-accent w-full text-left">
                   Help
                 </button>
               </nav>

@@ -201,7 +201,7 @@
             { initials: 'CW', name: 'Carol White', status: 'offline', role: 'Designer' },
             { initials: 'DB', name: 'David Brown', status: 'online', role: 'Manager' }
           ] as contact}
-            <div class="flex items-center gap-3 p-2 rounded hover:bg-accent transition-colors">
+            <div class="flex items-center gap-3 p-2 rounded hover:bg-accent">
               <div class="relative">
                 <Avatar fallback={contact.initials} size="sm" />
                 <span class="absolute bottom-0 right-0 h-2 w-2 rounded-full ring-1 ring-background {
@@ -234,7 +234,7 @@
             { initials: 'IJ', name: 'Iris Jackson', email: 'iris@example.com' },
             { initials: 'KL', name: 'Kyle Lopez', email: 'kyle@example.com' }
           ] as member}
-            <div class="flex items-center gap-3 p-2 rounded hover:bg-accent transition-colors cursor-pointer">
+            <div class="flex items-center gap-3 p-2 rounded hover:bg-accent cursor-pointer">
               <Avatar fallback={member.initials} />
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium">{member.name}</p>
@@ -332,7 +332,7 @@
             { initials: 'KW', name: 'Kate Wilson' },
             { initials: 'LX', name: 'Leo Xavier' }
           ] as member}
-            <div class="flex flex-col items-center text-center gap-2 p-3 rounded hover:bg-accent transition-colors cursor-pointer">
+            <div class="flex flex-col items-center text-center gap-2 p-3 rounded hover:bg-accent cursor-pointer">
               <Avatar fallback={member.initials} size="lg" />
               <p class="text-xs font-medium truncate w-full">{member.name}</p>
             </div>
