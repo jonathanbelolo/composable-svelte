@@ -17,10 +17,10 @@ file and line, says whether it was **verified** (something was run) or
 | Open — `svelte-check` errors | **0** (was 142, recounted to 69 in R6) |
 | Open — `svelte-check` warnings | **0** (was 30) |
 | Workspaces covered by `pnpm -r check` | **19 of 19** — the gate is complete |
-| **Open — dead behaviour** | **7 items, S11** — `core`, `media` and `chat` are done |
-| Packages that typecheck their tests | 3 of 8 (S11 T1) |
-| Animation-policy backlog | 5 files: `code` 2, `maps` 1, `media` 2 |
-| `examples/` animation violations | 24 across 13 files, **ungated** (S11 T5) |
+| **Open — dead behaviour** | **4 items, S11** — T1–T5 done; `core`, `media` and `chat` swept |
+| Workspaces that typecheck their tests | **14 of 14 that have tests** (S11 T1) |
+| Animation-policy backlog | **none** — emptied and deleted (S11 T2–T4) |
+| `examples/` animation violations | **0** — gated and cleared; was 78 across 33, not the 24 recorded (S11 T5) |
 
 ## Remediation log
 
@@ -968,8 +968,9 @@ have been through it; `chat` shipped 0.3.0 after four review rounds. Everything
 below is measured, not estimated — the commands that produced each count are
 named so the next person can re-run them rather than trust them.
 
-Ordered as listed. T1 goes first because it is a *detector*: it may surface real
-errors inside T3 and T4 before either is started.
+T1–T5 are done. T6, T7 and T8 remain, and are independent of each other — T8
+(266 optional props) is mechanical but wide, T6 is an open-ended sweep whose size
+is unknown until it runs, and T7 is a review rather than a fix.
 
 ### T1. No workspace typechecked its tests — DONE
 
@@ -1014,52 +1015,52 @@ core: its script looked more thorough than the ones that worked. Mutation-
 verified by reproducing core's exact original failure — strip `exclude`, all 123
 files report missing.
 
-### T2. `media`'s two animation holdouts are unblocked — VERIFIED
+### T2–T5. The animation policy is finished — DONE
 
-`media/src/lib/voice-input/components/ConversationModePanel.svelte` and
-`PushToTalkPanel.svelte`, the last two entries in `BACKLOG` that were exempt for
-a *reason* rather than for time. That reason — "converting them would delete the
-sole accessibility guard, because no helper in `animate.ts` consults the
-preference" — expired: `animateFadeIn`, `animateFadeOut` and `animateListItemIn`
-all read it, and `animateFadeOut` writes the end state under the preference,
-which is the half an entrance does not need.
+The `BACKLOG` is empty and deleted, and `examples/` is under the gate. Every file
+under `packages/*/src` and `examples/*/src` now either complies or is in the
+Exception Register.
 
-Each carries a one-shot `fadeIn` on mount guarded by the only
-`@media (prefers-reduced-motion: reduce)` blocks in the repo. Converting with
-`animateFadeIn` keeps the guard instead of deleting it.
+**T2 (`media` ×2), T3 (`code` ×2), T4 (`maps` ×1)** — five files, five
+violations. Four were a base-rule `transition:` serving only a `:hover`/`:focus`
+change and were deleted. The two `media` panels were the blocked ones: converting
+would have deleted the only `prefers-reduced-motion` guard each had, and
+`animateFadeIn` reading the preference itself is what removed that trade. Both
+are now `animateFadeIn` in a guarded `$effect`; the `translateY(4px)` rise was
+dropped so `transform` keeps a single author.
 
-### T3. `code` — 2 backlog entries — VERIFIED
+The `BACKLOG` comment contained a trap. It said each panel's `fadeIn` was "the
+only thing its own `@media (prefers-reduced-motion: reduce)` block disables" —
+true for `PushToTalkPanel`, false for `ConversationModePanel`, whose block also
+stops the `.status-dot` spinners and is their only escape. Following it literally
+would have deleted a live accessibility guard as a side effect of a policy tick.
+The scanner cannot see that class of loss — it looks for prohibited animations,
+not for a missing guard on a permitted one — so
+`media/tests/voice-input-panel-entrance.test.ts` pins it.
 
-`code/src/lib/code-editor/CodeEditor.svelte` and
-`code-highlight/CodeHighlight.svelte`. Also the package with the T1 hole, which
-is why T1 comes first.
+**T5 (`examples/`)** — the recorded count was **24 across 13 files**. That is the
+raw-`<style>` subset; the stated method, "running the scanner's own five
+detectors", was never applied, and `TAILWIND_TRANSITION` is one of the five. The
+real count, from the scanner once the root was added, is **78 across 33 files** —
+`product-gallery` and `styleguide`, the two largest example apps, appear nowhere
+in the old table. All 78 cleared: 76 deletions, and two genuine lifecycles
+converted to Motion One (`ShaderImage2`'s WebGL fade-out, `PostDetail`'s mount
+fade).
 
-### T4. `maps` — 1 backlog entry — VERIFIED
+Two scanner defects were found and fixed first, in `60da1c0`:
 
-`maps/src/lib/components/TileProviderControl.svelte`.
+- The Tailwind detectors read English prose as a class list —
+  `<li>… CSS transition effects</li>` matched. They now read only quoted spans,
+  which is where a utility class can live and prose cannot. A `class`-attribute
+  gate was the obvious alternative and was wrong: it drops `Progress.svelte`'s
+  `cn('… transition-[width] …')`, a live hit on a line with no `class` token.
+- No `.css` file anywhere was scanned; `walk()` kept only `.svelte`. Latent, not
+  live — but a `@keyframes` in `globals.css` would have been invisible.
 
-### T5. `examples/` — 24 violations across 13 files, and unenforced — VERIFIED
-
-`tests/repo/animation-policy.test.ts` walks `packages/*/src` only, so none of
-this has ever been gated. Counted by running the scanner's own five detectors
-over `examples/**/*.svelte`:
-
-| file | count |
-|---|---|
-| `url-routing/src/components/AddItemModal.svelte` | 4 |
-| `url-routing/src/App.svelte` | 3 |
-| `url-routing/src/components/ItemDetail.svelte` | 3 |
-| `shader-gallery/src/lib/ShaderImage2.svelte` | 2 |
-| `ssr-server/src/shared/PostCommentsPage.svelte` | 2 |
-| `ssr-server/src/shared/PostDetailPage.svelte` | 2 |
-| eight more | 1 each |
-
-Two decisions to make first, and they are the substance of this item rather than
-the conversions: whether examples are held to the same rule as packages (they are
-what consumers copy, which argues yes), and whether the scanner's walk is
-extended or a second backlog is opened. Until one of them is answered, any claim
-that a package's backlog is "empty" is narrower than it sounds — a mistake
-already made once in a commit message.
+Three prose claims about the policy were false and are corrected: the test's own
+header said `Carousel` and `Progress` "sit in the BACKLOG" (one is converted, the
+other is in the REGISTER twenty lines below the comment denying it); the guide
+repeated it; and the guide's Register table had four rows to the test's five.
 
 ### T6. `auth`, `charts` and `graphics` have had no dead-behaviour pass — INFERRED
 

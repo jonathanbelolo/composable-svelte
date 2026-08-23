@@ -255,7 +255,7 @@ component escapes Pattern A by extracting a wrapper.
 ## Exception Register
 
 An entry grants a **named set of properties** on a named file. Nothing outside
-this table and outside the temporary backlog (below) may animate in CSS.
+this table may animate in CSS. (There was a temporary backlog; see below.)
 
 To be admitted, a site must be:
 - driven by a continuous external numeric source — audio level, playback
@@ -275,12 +275,17 @@ call to be slower than.
 | `audio-player/FullAudioPlayer.svelte` — progress, buffered | `width` | Playback position from `timeupdate`; buffered uses 0.3s because the source is chunky. |
 | `audio-player/MinimalAudioPlayer.svelte` — progress | `width` | As above. |
 | `voice-input/components/ConversationModePanel.svelte` — silence countdown | `width` | VAD countdown; a linear tween is the countdown's semantics. |
+| `components/ui/progress/Progress.svelte` — bar fill | `width` | Determinate progress from an external count — bytes transferred, steps done. Not the user's own input, so the feedback-is-instant rule does not reach it. |
 
-**Not exceptions — grandfathered, pending conversion.** `Carousel`'s slide track
-and `Progress`'s bar are state-driven (`currentIndex`, `value`), which is row 2 of
-the one rule, not row 4. They are listed in the backlog rather than here, because
-calling them principled exceptions would be the same wishful accounting this
-document was rewritten to remove.
+**`Carousel` is not an exception.** Its slide track is state-driven
+(`currentIndex`), which is row 2 of the one rule, not row 4, and it is converted:
+`animateCarouselTrack` drives it and dispatches `transitionCompleted`.
+
+`Progress` was refused alongside it while its bar was `transition-all` — a
+blanket grant the old guide gave as "CSS for bar fills". Narrowed to
+`transition-[width]` and driven by an external count rather than by the user's
+own input, it meets row 4 and is in the table above. Granting properties rather
+than files is what makes that difference expressible.
 
 **Refused, despite fitting the shape:** `Slider`'s fill. The number comes from the
 user's own drag, so a transition makes the fill lag the thumb they are holding. A
@@ -321,15 +326,21 @@ Note how small the visible change usually is. `Combobox` and `Select` dispatch
 class paint the same colour on the same element — with the transition gone, the
 two are indistinguishable.
 
-## The backlog
+## The backlog — there isn't one
 
-`animation-policy.test.ts` also carries a `BACKLOG` of files not yet converted.
-**The Register grants properties; the backlog grants time.** A file in the
-backlog is not adjudicated — it is merely not yet failing the build.
+`animation-policy.test.ts` carried a `BACKLOG` of files not yet converted.
+**The Register grants properties; the backlog granted time.** It reached empty
+and was deleted, along with the two ratchet arms that held it honest — an arm
+iterating an empty set passes trivially, and a guard that cannot fail is not a
+guard.
 
-It is a ratchet in both directions: a violation in a file *not* listed fails, and
-a listed file that has become *clean* also fails, so an excuse cannot outlive its
-defect. It shrinks to empty and is then deleted.
+Every file under `packages/*/src` and `examples/*/src` is now adjudicated: it
+either complies or it is in the Register above.
+
+If a file ever needs time again, restore the set **and** both arms together. The
+important one is "no stale entries": a listed file that has become *clean* must
+fail, so an excuse cannot outlive its defect. A backlog without it is a permanent
+exemption list wearing a ratchet's name.
 
 ## Available animation helpers
 

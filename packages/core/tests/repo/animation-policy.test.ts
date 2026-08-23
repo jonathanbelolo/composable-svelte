@@ -54,13 +54,23 @@ const SOURCE_ROOTS = ['packages', 'examples'];
  * permitted to transition — deliberately narrow, so widening an exception is a
  * visible edit rather than a silent one.
  *
- * `Carousel` and `Progress` are deliberately NOT here, though the previous
- * version of the guideline granted them. Both are driven by reducer state
- * (`currentIndex`, `value`), which is the state-driven row of the rule, not the
- * continuous-external-source row. They sit in the BACKLOG awaiting conversion,
- * because recording them as principled exceptions would be exactly the wishful
- * accounting this policy exists to remove — the old guide granted `Progress`
- * "CSS for bar fills" and it had quietly become `transition-all`.
+ * `Carousel` is deliberately NOT here, though the previous version of the
+ * guideline granted it. It is driven by reducer state (`currentIndex`), which is
+ * the state-driven row of the rule, not the continuous-external-source row, and
+ * it is now fully converted to Motion One — `animateCarouselTrack`, dispatching
+ * `transitionCompleted`.
+ *
+ * `Progress` **is** here, granted `width`. It was refused for the same reason as
+ * `Carousel` while it was `transition-all`; narrowed to `transition-[width]` and
+ * driven by an external count rather than by the user's own input, it meets the
+ * criteria. That distinction is the whole point of granting properties rather
+ * than files: the old guide granted `Progress` "CSS for bar fills" as a blanket,
+ * and it had quietly become `transition-all`.
+ *
+ * (Both were previously described here as sitting in the BACKLOG. Neither did —
+ * one was converted and the other was granted twenty lines below the comment
+ * denying it. The data in this file outranks any prose about it, including
+ * this.)
  */
 const REGISTER: Record<string, { properties: string[]; why: string }> = {
 	'packages/media/src/lib/voice-input/components/AudioVisualizer.svelte': {
