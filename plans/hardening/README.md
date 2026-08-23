@@ -9,7 +9,7 @@ file and line, says whether it was **verified** (something was run) or
 
 | | count |
 |---|---|
-| Fixed and committed | 68 commits |
+| Fixed and committed | 68 commits through R7, plus 99 in the dead-behaviour campaign since `2443ab4` |
 | **Open — components that crash** | **0** (was 6 — all fixed, see R1) |
 | Open — breaks a consumer at install/build | 6 (S2.6 closed in R6; S2.7 and S2.8 were already closed and the count was stale) |
 | Open — silently-wrong behaviour | 6 (S4.3 closed by R4; **S4.4, S4.6, S4.7 closed in R7**) |
@@ -17,6 +17,10 @@ file and line, says whether it was **verified** (something was run) or
 | Open — `svelte-check` errors | **0** (was 142, recounted to 69 in R6) |
 | Open — `svelte-check` warnings | **0** (was 30) |
 | Workspaces covered by `pnpm -r check` | **19 of 19** — the gate is complete |
+| **Open — dead behaviour** | **7 items, S11** — `core`, `media` and `chat` are done |
+| Packages that typecheck their tests | 3 of 8 (S11 T1) |
+| Animation-policy backlog | 5 files: `code` 2, `maps` 1, `media` 2 |
+| `examples/` animation violations | 24 across 13 files, **ungated** (S11 T5) |
 
 ## Remediation log
 
@@ -955,6 +959,95 @@ above. Nested interactive elements in satellites: zero.
 - `ssr/render.ts:9` imports `svelte/server`, which the `/ssr` barrel pulls into
   any client bundle importing `hydrateStore`. Verified fully tree-shaken — the
   bundles are byte-identical — so this is tidiness, not weight.
+
+## S11. Outstanding — the dead-behaviour campaign
+
+The rule this section is measured against: **nothing a consumer can pass,
+configure, click, or import may produce no effect.** `core`, `media` and `chat`
+have been through it; `chat` shipped 0.3.0 after four review rounds. Everything
+below is measured, not estimated — the commands that produced each count are
+named so the next person can re-run them rather than trust them.
+
+Ordered as listed. T1 goes first because it is a *detector*: it may surface real
+errors inside T3 and T4 before either is started.
+
+### T1. Five packages never typecheck their tests — VERIFIED
+
+`auth`, `charts`, `code`, `graphics`, `maps` have no `tsconfig.test.json`; only
+`chat`, `core` and `media` do. Their `typecheck` script is `tsc --noEmit` over
+`src` alone, so nothing checks `tests/`.
+
+This is not hypothetical: vitest transpiles without typechecking, so a test
+passes while its types are wrong. In `chat` it let `as never` fixtures make every
+callback implicitly `any`, and the drift was invisible until the second pass was
+added. `packages/chat/tests/media-type-conformance.test.ts` is enforced *only* by
+that second pass.
+
+Copy the `chat` pattern (`tsconfig.test.json` + `tsc --noEmit && tsc --noEmit
+--project tsconfig.test.json`), then fix whatever it surfaces. Worth a repo guard
+afterwards, in the shape of `tests/repo/check-coverage.test.ts`, which already
+does exactly this for the `check` script.
+
+### T2. `media`'s two animation holdouts are unblocked — VERIFIED
+
+`media/src/lib/voice-input/components/ConversationModePanel.svelte` and
+`PushToTalkPanel.svelte`, the last two entries in `BACKLOG` that were exempt for
+a *reason* rather than for time. That reason — "converting them would delete the
+sole accessibility guard, because no helper in `animate.ts` consults the
+preference" — expired: `animateFadeIn`, `animateFadeOut` and `animateListItemIn`
+all read it, and `animateFadeOut` writes the end state under the preference,
+which is the half an entrance does not need.
+
+Each carries a one-shot `fadeIn` on mount guarded by the only
+`@media (prefers-reduced-motion: reduce)` blocks in the repo. Converting with
+`animateFadeIn` keeps the guard instead of deleting it.
+
+### T3. `code` — 2 backlog entries — VERIFIED
+
+`code/src/lib/code-editor/CodeEditor.svelte` and
+`code-highlight/CodeHighlight.svelte`. Also the package with the T1 hole, which
+is why T1 comes first.
+
+### T4. `maps` — 1 backlog entry — VERIFIED
+
+`maps/src/lib/components/TileProviderControl.svelte`.
+
+### T5. `examples/` — 24 violations across 13 files, and unenforced — VERIFIED
+
+`tests/repo/animation-policy.test.ts` walks `packages/*/src` only, so none of
+this has ever been gated. Counted by running the scanner's own five detectors
+over `examples/**/*.svelte`:
+
+| file | count |
+|---|---|
+| `url-routing/src/components/AddItemModal.svelte` | 4 |
+| `url-routing/src/App.svelte` | 3 |
+| `url-routing/src/components/ItemDetail.svelte` | 3 |
+| `shader-gallery/src/lib/ShaderImage2.svelte` | 2 |
+| `ssr-server/src/shared/PostCommentsPage.svelte` | 2 |
+| `ssr-server/src/shared/PostDetailPage.svelte` | 2 |
+| eight more | 1 each |
+
+Two decisions to make first, and they are the substance of this item rather than
+the conversions: whether examples are held to the same rule as packages (they are
+what consumers copy, which argues yes), and whether the scanner's walk is
+extended or a second backlog is opened. Until one of them is answered, any claim
+that a package's backlog is "empty" is narrower than it sounds — a mistake
+already made once in a commit message.
+
+### T6. `auth`, `charts` and `graphics` have had no dead-behaviour pass — INFERRED
+
+No sweep has been run against them. Listed so their absence is a decision rather
+than an oversight.
+
+### T7. `ed855dd` is unreviewed — VERIFIED
+
+The last commit of the chat pass. Every review round in this campaign found real
+defects in the previous round's repairs — including two fixes that were outright
+wrong, and three repo guards that could not fail. The prior is that this one is
+not the exception.
+
+---
 
 ---
 
