@@ -24,12 +24,32 @@ import type {
 // ============================================================================
 
 /**
+ * A route handler: called with the request config and the matched URL params.
+ *
+ * Exported because it cannot be inferred at the call site. `MockResponse<T>`
+ * includes a bare `T`, and `MockRoutes` fixes `T = any` — a union containing
+ * `any` *is* `any`, so the whole route value collapses and nothing contextually
+ * types an inline handler. Annotating the parameters, or the handler with this
+ * type, is the way to get them checked:
+ *
+ * ```ts
+ * createMockAPI({
+ *   'GET /api/products': ((config) => [{ id: '1' }]) satisfies MockHandler
+ * });
+ * ```
+ */
+export type MockHandler<T = unknown> = (
+  config: RequestConfig,
+  params: Record<string, string>
+) => T | Promise<T>;
+
+/**
  * Mock response types - supports various patterns for flexibility.
  */
 export type MockResponse<T> =
   | T
   | Promise<T>
-  | ((config: RequestConfig, params: Record<string, string>) => T | Promise<T>)
+  | MockHandler<T>
   | { delay: number; data: T | Promise<T> }
   | { error: Error };
 

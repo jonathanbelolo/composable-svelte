@@ -39,6 +39,7 @@ export { createAPIClient } from './client.js';
 export {
   createMockAPI,
   type MockResponse,
+  type MockHandler,
   type MockRoutes
 } from './testing/mock-client.js';
 

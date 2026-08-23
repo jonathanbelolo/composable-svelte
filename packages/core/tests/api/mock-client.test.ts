@@ -90,7 +90,7 @@ describe('createMockAPI', () => {
   describe('Function Responses', () => {
     it('calls function to generate response', async () => {
       const mockAPI = createMockAPI({
-        'GET /api/products': (config) => {
+        'GET /api/products': (config: RequestConfig) => {
           return [{ id: '1', name: 'Product from function' }];
         }
       });
@@ -102,8 +102,10 @@ describe('createMockAPI', () => {
 
     it('passes config to response function', async () => {
       const mockAPI = createMockAPI({
-        'POST /api/products': (config) => {
-          return { ...config.body, id: '123' };
+        'POST /api/products': (config: RequestConfig) => {
+          // `body` is `unknown` on the public type — the mock does not know what
+          // a route was sent. The cast says what this test posts, three lines up.
+          return { ...(config.body as Record<string, unknown>), id: '123' };
         }
       });
 
@@ -114,7 +116,7 @@ describe('createMockAPI', () => {
 
     it('passes params to response function', async () => {
       const mockAPI = createMockAPI({
-        'GET /api/products/:id': (config, params) => {
+        'GET /api/products/:id': (config: RequestConfig, params: Record<string, string>) => {
           return { id: params.id, name: `Product ${params.id}` };
         }
       });
@@ -172,7 +174,10 @@ describe('createMockAPI', () => {
       const mockAPI = createMockAPI({
         'GET /api/products/:id': {
           delay: 10,
-          data: (config, params) => ({ id: params.id, name: 'Delayed Product' })
+          data: (config: RequestConfig, params: Record<string, string>) => ({
+            id: params.id,
+            name: 'Delayed Product'
+          })
         }
       });
 
@@ -207,7 +212,7 @@ describe('createMockAPI', () => {
   describe('Pattern Matching', () => {
     it('matches single path parameter', async () => {
       const mockAPI = createMockAPI({
-        'GET /api/products/:id': (config, params) => ({
+        'GET /api/products/:id': (config: RequestConfig, params: Record<string, string>) => ({
           id: params.id,
           name: `Product ${params.id}`
         })
@@ -220,7 +225,7 @@ describe('createMockAPI', () => {
 
     it('matches multiple path parameters', async () => {
       const mockAPI = createMockAPI({
-        'GET /api/users/:userId/posts/:postId': (config, params) => ({
+        'GET /api/users/:userId/posts/:postId': (config: RequestConfig, params: Record<string, string>) => ({
           userId: params.userId,
           postId: params.postId
         })
@@ -233,7 +238,7 @@ describe('createMockAPI', () => {
 
     it('matches slug parameters', async () => {
       const mockAPI = createMockAPI({
-        'GET /api/posts/:slug': (config, params) => ({
+        'GET /api/posts/:slug': (config: RequestConfig, params: Record<string, string>) => ({
           slug: params.slug,
           title: `Post: ${params.slug}`
         })
@@ -247,7 +252,7 @@ describe('createMockAPI', () => {
     it('prefers exact match over pattern match', async () => {
       const mockAPI = createMockAPI({
         'GET /api/products/new': { type: 'new-form' },
-        'GET /api/products/:id': (config, params) => ({ type: 'product', id: params.id })
+        'GET /api/products/:id': (config: RequestConfig, params: Record<string, string>) => ({ type: 'product', id: params.id })
       });
 
       const exactResponse = await mockAPI.get('/api/products/new');
@@ -271,7 +276,7 @@ describe('createMockAPI', () => {
 
     it('passes query params in config', async () => {
       const mockAPI = createMockAPI({
-        'GET /api/products': (config) => {
+        'GET /api/products': (config: RequestConfig) => {
           return {
             page: config.params?.page,
             limit: config.params?.limit
@@ -341,7 +346,7 @@ describe('createMockAPI', () => {
 
     it('handles POST request with body', async () => {
       const mockAPI = createMockAPI({
-        'POST /api/products': (config) => config.body
+        'POST /api/products': (config: RequestConfig) => config.body
       });
 
       const response = await mockAPI.request({
@@ -355,7 +360,7 @@ describe('createMockAPI', () => {
 
     it('handles path parameters in request', async () => {
       const mockAPI = createMockAPI({
-        'GET /api/products/:id': (config, params) => ({ id: params.id })
+        'GET /api/products/:id': (config: RequestConfig, params: Record<string, string>) => ({ id: params.id })
       });
 
       const response = await mockAPI.request({
@@ -388,7 +393,7 @@ describe('createMockAPI', () => {
     it('runs onRequest before the route is resolved', async () => {
       const seen: RequestConfig[] = [];
       const mockAPI = createMockAPI({
-        'GET /api/me': (config) => ({ token: config.headers?.authorization ?? null })
+        'GET /api/me': (config: RequestConfig) => ({ token: config.headers?.authorization ?? null })
       });
 
       mockAPI.addInterceptor({
@@ -586,16 +591,16 @@ describe('createMockAPI', () => {
 
       const mockAPI = createMockAPI({
         'GET /api/products': products,
-        'GET /api/products/:id': (config, params) => {
+        'GET /api/products/:id': (config: RequestConfig, params: Record<string, string>) => {
           return products.find(p => p.id === params.id) || null;
         },
-        'POST /api/products': (config) => ({
+        'POST /api/products': (config: RequestConfig) => ({
           id: '3',
-          ...config.body
+          ...(config.body as Record<string, unknown>)
         }),
-        'PUT /api/products/:id': (config, params) => ({
+        'PUT /api/products/:id': (config: RequestConfig, params: Record<string, string>) => ({
           id: params.id,
-          ...config.body
+          ...(config.body as Record<string, unknown>)
         }),
         'DELETE /api/products/:id': { success: true }
       });
@@ -623,7 +628,7 @@ describe('createMockAPI', () => {
 
     it('mocks API with pagination', async () => {
       const mockAPI = createMockAPI({
-        'GET /api/products': (config) => {
+        'GET /api/products': (config: RequestConfig) => {
           const page = config.params?.page || 1;
           const pageSize = config.params?.pageSize || 10;
 
@@ -650,7 +655,7 @@ describe('createMockAPI', () => {
 
     it('mocks API with authentication', async () => {
       const mockAPI = createMockAPI({
-        'GET /api/protected': (config) => {
+        'GET /api/protected': (config: RequestConfig) => {
           const token = config.headers?.['Authorization'];
 
           if (!token || token !== 'Bearer valid-token') {

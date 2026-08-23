@@ -3,6 +3,8 @@ import { TestStore } from '../src/lib/test/test-store.js';
 import { comboboxReducer } from '../src/lib/components/ui/combobox/combobox.reducer.js';
 import {
 	createInitialComboboxState,
+	type ComboboxState,
+	type ComboboxAction,
 	type ComboboxOption
 } from '../src/lib/components/ui/combobox/combobox.types.js';
 
@@ -46,7 +48,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(testOptions),
-					dropdown: { status: 'open' }
+					dropdown: { status: 'open' as const }
 				},
 				reducer: comboboxReducer
 			});
@@ -95,7 +97,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(testOptions),
-					dropdown: { status: 'open' }
+					dropdown: { status: 'open' as const }
 				},
 				reducer: comboboxReducer
 			});
@@ -217,8 +219,11 @@ describe('Combobox', () => {
 				{ value: '1', label: `Result: ${query}` }
 			]);
 
-			const store = new TestStore({
-				initialState: createInitialComboboxState([], null, 300),
+			// Explicit `<string>`: `createInitialComboboxState([], null, 300)` gets no
+			// options to infer from, so `T` lands on `null` and the reducer — which
+			// is `ComboboxState<string>` — stops being assignable.
+			const store = new TestStore<ComboboxState<string>, ComboboxAction>({
+				initialState: createInitialComboboxState<string>([], null, 300),
 				reducer: comboboxReducer,
 				dependencies: { loadOptions }
 			});
@@ -237,8 +242,11 @@ describe('Combobox', () => {
 				{ value: '1', label: `Result: ${query}` }
 			]);
 
-			const store = new TestStore({
-				initialState: createInitialComboboxState([], null, 300),
+			// Explicit `<string>`: `createInitialComboboxState([], null, 300)` gets no
+			// options to infer from, so `T` lands on `null` and the reducer — which
+			// is `ComboboxState<string>` — stops being assignable.
+			const store = new TestStore<ComboboxState<string>, ComboboxAction>({
+				initialState: createInitialComboboxState<string>([], null, 300),
 				reducer: comboboxReducer,
 				dependencies: { loadOptions }
 			});
@@ -284,8 +292,11 @@ describe('Combobox', () => {
 				{ value: '1', label: `Result: ${query}` }
 			]);
 
-			const store = new TestStore({
-				initialState: createInitialComboboxState([], null, 300),
+			// Explicit `<string>`: `createInitialComboboxState([], null, 300)` gets no
+			// options to infer from, so `T` lands on `null` and the reducer — which
+			// is `ComboboxState<string>` — stops being assignable.
+			const store = new TestStore<ComboboxState<string>, ComboboxAction>({
+				initialState: createInitialComboboxState<string>([], null, 300),
 				reducer: comboboxReducer,
 				dependencies: { loadOptions }
 			});
@@ -318,8 +329,11 @@ describe('Combobox', () => {
 				{ value: '1', label: `Result: ${query}` }
 			]);
 
-			const store = new TestStore({
-				initialState: createInitialComboboxState([], null, 300),
+			// Explicit `<string>`: `createInitialComboboxState([], null, 300)` gets no
+			// options to infer from, so `T` lands on `null` and the reducer — which
+			// is `ComboboxState<string>` — stops being assignable.
+			const store = new TestStore<ComboboxState<string>, ComboboxAction>({
+				initialState: createInitialComboboxState<string>([], null, 300),
 				reducer: comboboxReducer,
 				dependencies: { loadOptions }
 			});
@@ -376,7 +390,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(testOptions),
-					dropdown: { status: 'open' }
+					dropdown: { status: 'open' as const }
 				},
 				reducer: comboboxReducer
 			});
@@ -447,7 +461,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(testOptions),
-					dropdown: { status: 'open' },
+					dropdown: { status: 'open' as const },
 					highlightedIndex: 0
 				},
 				reducer: comboboxReducer
@@ -462,7 +476,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(testOptions),
-					dropdown: { status: 'open' },
+					dropdown: { status: 'open' as const },
 					highlightedIndex: 2
 				},
 				reducer: comboboxReducer
@@ -477,7 +491,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(testOptions),
-					dropdown: { status: 'open' },
+					dropdown: { status: 'open' as const },
 					highlightedIndex: 4
 				},
 				reducer: comboboxReducer
@@ -492,7 +506,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(testOptions),
-					dropdown: { status: 'open' },
+					dropdown: { status: 'open' as const },
 					highlightedIndex: 0
 				},
 				reducer: comboboxReducer
@@ -507,7 +521,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(testOptions),
-					dropdown: { status: 'open' },
+					dropdown: { status: 'open' as const },
 					highlightedIndex: 3
 				},
 				reducer: comboboxReducer
@@ -522,7 +536,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(testOptions),
-					dropdown: { status: 'open' },
+					dropdown: { status: 'open' as const },
 					highlightedIndex: 1
 				},
 				reducer: comboboxReducer
@@ -537,7 +551,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(testOptions),
-					dropdown: { status: 'open' },
+					dropdown: { status: 'open' as const },
 					highlightedIndex: 2
 				},
 				reducer: comboboxReducer
@@ -568,7 +582,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(optionsWithDisabled),
-					dropdown: { status: 'open' },
+					dropdown: { status: 'open' as const },
 					highlightedIndex: 0
 				},
 				reducer: comboboxReducer
@@ -655,7 +669,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(disabledOptions),
-					dropdown: { status: 'open' }
+					dropdown: { status: 'open' as const }
 				},
 				reducer: comboboxReducer
 			});
@@ -675,7 +689,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(singleOption),
-					dropdown: { status: 'open' },
+					dropdown: { status: 'open' as const },
 					highlightedIndex: 0
 				},
 				reducer: comboboxReducer
@@ -718,7 +732,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(optionsWithDisabled),
-					dropdown: { status: 'open' },
+					dropdown: { status: 'open' as const },
 					highlightedIndex: 1
 				},
 				reducer: comboboxReducer
@@ -831,7 +845,7 @@ describe('Combobox', () => {
 					...createInitialComboboxState(testOptions),
 					searchQuery: 'App',
 					filteredOptions: [testOptions[0]!],
-					dropdown: { status: 'closing' }
+					dropdown: { status: 'closing' as const }
 				},
 				reducer: comboboxReducer
 			});
