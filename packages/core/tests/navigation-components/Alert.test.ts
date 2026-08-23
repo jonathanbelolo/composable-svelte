@@ -44,18 +44,14 @@ describe('Alert Component', () => {
       'destination'
     );
 
-    render(Alert, {
-      props: { store: scopedStore }
-    });
+    render(Alert, { store: scopedStore });
 
     const alert = page.getByRole('alertdialog');
     await expect.element(alert).toBeInTheDocument();
   });
 
   it('hides when store is null', async () => {
-    render(Alert, {
-      props: { store: null }
-    });
+    render(Alert, { store: null });
 
     // Check that no alertdialog exists
     const alerts = page.getByRole('alertdialog').elements();
@@ -88,9 +84,7 @@ describe('Alert Component', () => {
       'destination'
     );
 
-    render(Alert, {
-      props: { store: scopedStore }
-    });
+    render(Alert, { store: scopedStore });
 
     // Alert should be visible
     const alert = page.getByRole('alertdialog');
@@ -132,9 +126,7 @@ describe('Alert Component', () => {
       'destination'
     );
 
-    render(Alert, {
-      props: { store: scopedStore }
-    });
+    render(Alert, { store: scopedStore });
 
     // Alert should be visible
     const alert = page.getByRole('alertdialog');
@@ -178,9 +170,7 @@ describe('Alert Component', () => {
       'destination'
     );
 
-    render(Alert, {
-      props: { store: scopedStore, disableEscapeKey: true }
-    });
+    render(Alert, { store: scopedStore, disableEscapeKey: true });
 
     // Press Escape
     await userEvent.keyboard('{Escape}');
@@ -216,9 +206,7 @@ describe('Alert Component', () => {
       'destination'
     );
 
-    render(Alert, {
-      props: { store: scopedStore, disableClickOutside: true }
-    });
+    render(Alert, { store: scopedStore, disableClickOutside: true });
 
     // Trigger pointerdown event on document
     const pointerEvent = new PointerEvent('pointerdown', {
@@ -253,12 +241,10 @@ describe('Alert Component', () => {
     );
 
     render(Alert, {
-      props: {
         store: scopedStore,
         class: 'custom-alert-content',
         backdropClass: 'custom-backdrop'
-      }
-    });
+      });
 
     const alert = page.getByRole('alertdialog');
     await expect.element(alert).toHaveClass(/custom-alert-content/);
@@ -279,9 +265,7 @@ describe('Alert Component', () => {
       'destination'
     );
 
-    render(Alert, {
-      props: { store: scopedStore, unstyled: true }
-    });
+    render(Alert, { store: scopedStore, unstyled: true });
 
     const alert = page.getByRole('alertdialog');
     const className = alert.element().className;
@@ -303,9 +287,7 @@ describe('Alert Component', () => {
       'destination'
     );
 
-    render(Alert, {
-      props: { store: scopedStore }
-    });
+    render(Alert, { store: scopedStore });
 
     // Check body overflow style directly
     const bodyStyle = document.body.style.overflow;
@@ -327,9 +309,7 @@ describe('Alert Component', () => {
       'destination'
     );
 
-    render(Alert, {
-      props: { store: scopedStore }
-    });
+    render(Alert, { store: scopedStore });
 
     const alert = page.getByRole('alertdialog');
     await expect.element(alert).toHaveClass(/max-w-md/);

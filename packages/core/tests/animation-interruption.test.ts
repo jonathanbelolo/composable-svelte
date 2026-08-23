@@ -111,7 +111,7 @@ describe('the components survive it anyway', () => {
 	];
 
 	function mountSelect() {
-		const screen = render(Select, { props: { options } });
+		const screen = render(Select, { options });
 		cleanup.push(() => screen.unmount());
 		const root = screen.container;
 		return {

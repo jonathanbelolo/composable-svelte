@@ -32,7 +32,7 @@ const toasts = () => [...document.querySelectorAll('[role="alert"]')];
 describe('a consumer-owned store', () => {
 	it('renders a toast dispatched into it', async () => {
 		const store = createToastStore();
-		render(Toaster, { props: { store } });
+		render(Toaster, { store });
 		await settle();
 		expect(toasts()).toHaveLength(0);
 
@@ -47,7 +47,7 @@ describe('a consumer-owned store', () => {
 		// The half that was provably dead: `toastDismissed` returned early for
 		// any toast not in the store, and prop-supplied toasts never were.
 		const store = createToastStore();
-		render(Toaster, { props: { store } });
+		render(Toaster, { store });
 		store.dispatch({ type: 'toastAdded', toast: { variant: 'info', description: 'Hello' } });
 		await settle();
 		expect(toasts()).toHaveLength(1);
@@ -66,7 +66,7 @@ describe('a consumer-owned store', () => {
 		const onToastAdded = vi.fn();
 		const onToastDismissed = vi.fn();
 		const store = createToastStore({ dependencies: { onToastAdded, onToastDismissed } });
-		render(Toaster, { props: { store } });
+		render(Toaster, { store });
 
 		store.dispatch({ type: 'toastAdded', toast: { variant: 'info', description: 'x' } });
 		await settle();
@@ -83,7 +83,7 @@ describe('position', () => {
 		// `ToastState.position` was written by `positionChanged` and read by
 		// nothing — the container was classed from the component's own prop.
 		const store = createToastStore({ position: 'top-left' });
-		const { container } = render(Toaster, { props: { store } });
+		const { container } = render(Toaster, { store });
 		store.dispatch({ type: 'toastAdded', toast: { variant: 'info', description: 'x' } });
 		await settle();
 
@@ -111,7 +111,7 @@ describe('the action button', () => {
 		const seen: string[] = [];
 		store.subscribeToActions?.((action) => seen.push(action.type));
 
-		render(Toaster, { props: { store } });
+		render(Toaster, { store });
 		store.dispatch({
 			type: 'toastAdded',
 			toast: { variant: 'info', description: 'Undo?', action: { label: 'Undo', onClick } }
@@ -139,7 +139,7 @@ describe('the exit animation', () => {
 		// popped out of existence. CLAUDE.md lists toast animations under the
 		// Motion One REQUIRED set.
 		const store = createToastStore();
-		render(Toaster, { props: { store } });
+		render(Toaster, { store });
 		store.dispatch({ type: 'toastAdded', toast: { variant: 'info', description: 'x' } });
 		await settle(400);
 

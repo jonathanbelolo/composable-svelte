@@ -35,7 +35,7 @@ describe('Select markup', () => {
 	it('does not nest the clear button inside the trigger', async () => {
 		// A value is required: the clear button only renders when something is
 		// selected, so without one this would pass vacuously.
-		const { container } = render(Select, { props: { options, value: 'apple' } });
+		const { container } = render(Select, { options, value: 'apple' });
 		await settle();
 
 		const trigger = triggerOf(container);
@@ -48,7 +48,7 @@ describe('Select markup', () => {
 	});
 
 	it('renders the clear button as a sibling of the trigger', async () => {
-		const { container } = render(Select, { props: { options, value: 'apple' } });
+		const { container } = render(Select, { options, value: 'apple' });
 		await settle();
 
 		const buttons = [...container.querySelectorAll('button')];
@@ -64,7 +64,7 @@ describe('Select markup', () => {
 	});
 
 	it('gives the clear button an accessible name', async () => {
-		const { container } = render(Select, { props: { options, value: 'apple' } });
+		const { container } = render(Select, { options, value: 'apple' });
 		await settle();
 
 		const clear = [...container.querySelectorAll('button')].find(
@@ -77,18 +77,14 @@ describe('Select markup', () => {
 	});
 
 	it('renders no clear button when disabled', async () => {
-		const { container } = render(Select, {
-			props: { options, value: 'apple', disabled: true }
-		});
+		const { container } = render(Select, { options, value: 'apple', disabled: true });
 		await settle();
 
 		expect(container.querySelectorAll('button').length).toBe(1);
 	});
 
 	it('clearing empties the selection without opening the dropdown', async () => {
-		const { container } = render(Select, {
-			props: { options, value: 'apple', placeholder: 'Pick one' }
-		});
+		const { container } = render(Select, { options, value: 'apple', placeholder: 'Pick one' });
 		await settle();
 
 		const clear = [...container.querySelectorAll('button')].find(
@@ -105,7 +101,7 @@ describe('Select markup', () => {
 	});
 
 	it('opens the dropdown when the trigger itself is clicked', async () => {
-		const { container } = render(Select, { props: { options, value: 'apple' } });
+		const { container } = render(Select, { options, value: 'apple' });
 		await settle();
 
 		await userEvent.click(triggerOf(container)!);

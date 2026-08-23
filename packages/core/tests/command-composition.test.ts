@@ -51,14 +51,14 @@ async function type(text: string) {
 
 describe('the children share the palette store', () => {
 	it('renders the configured commands', async () => {
-		render(CommandCompositionTest, { props: { commands: five } });
+		render(CommandCompositionTest, { commands: five });
 		await settle(400);
 
 		expect(options(), 'CommandList rendered nothing from state').toHaveLength(5);
 	});
 
 	it('filters as you type', async () => {
-		render(CommandCompositionTest, { props: { commands: five } });
+		render(CommandCompositionTest, { commands: five });
 		await settle(400);
 
 		await type('al');
@@ -71,7 +71,7 @@ describe('the children share the palette store', () => {
 
 	it('uses a custom filterFunction', async () => {
 		const filterFunction = vi.fn((cmds: CommandItem[]) => cmds.slice(0, 1));
-		render(CommandCompositionTest, { props: { commands: five, filterFunction } });
+		render(CommandCompositionTest, { commands: five, filterFunction });
 		await settle(400);
 
 		await type('x');
@@ -85,7 +85,7 @@ describe('maxResults', () => {
 	it('bounds the list at mount and after every reset', async () => {
 		// Applied by `queryChanged`/`commandsUpdated` only; six other cases and
 		// the state factory reset `filteredCommands` to the unbounded list.
-		render(CommandCompositionTest, { props: { commands: five, maxResults: 2 } });
+		render(CommandCompositionTest, { commands: five, maxResults: 2 });
 		await settle(400);
 		expect(options(), 'unbounded at mount').toHaveLength(2);
 
@@ -99,9 +99,7 @@ describe('maxResults', () => {
 
 describe('caseSensitive', () => {
 	it('is honoured when set', async () => {
-		render(CommandCompositionTest, {
-			props: { commands: [{ id: 'x', label: 'ABC' }], caseSensitive: true }
-		});
+		render(CommandCompositionTest, { commands: [{ id: 'x', label: 'ABC' }], caseSensitive: true });
 		await settle(400);
 
 		await type('abc');
@@ -113,7 +111,7 @@ describe('caseSensitive', () => {
 
 	it('defaults to insensitive', async () => {
 		// The other half, so a fix cannot pass by always being case-sensitive.
-		render(CommandCompositionTest, { props: { commands: [{ id: 'x', label: 'ABC' }] } });
+		render(CommandCompositionTest, { commands: [{ id: 'x', label: 'ABC' }] });
 		await settle(400);
 
 		await type('abc');
@@ -124,7 +122,6 @@ describe('caseSensitive', () => {
 describe('groups', () => {
 	it('renders headings in the declared order, ungrouped first', async () => {
 		render(CommandCompositionTest, {
-			props: {
 				commands: [
 					{ id: 'loose', label: 'Loose' },
 					{ id: 'e1', label: 'Edit one', group: 'edit' },
@@ -134,8 +131,7 @@ describe('groups', () => {
 					{ id: 'file', label: 'Files' },
 					{ id: 'edit', label: 'Edit' }
 				]
-			}
-		});
+			});
 		await settle(400);
 
 		expect(headings(), 'groups were never rendered').toEqual(['Files', 'Edit']);
@@ -152,7 +148,6 @@ describe('groups', () => {
 		// per-feature test would catch.
 		const onCommandExecute = vi.fn();
 		render(CommandCompositionTest, {
-			props: {
 				commands: [
 					{ id: 'e1', label: 'Edit one', group: 'edit' },
 					{ id: 'f1', label: 'File one', group: 'file' },
@@ -162,8 +157,7 @@ describe('groups', () => {
 					{ id: 'file', label: 'Files' },
 					{ id: 'edit', label: 'Edit' }
 				]
-			}
-		});
+			});
 		await settle(400);
 
 		const visible = options().map((o) => o.textContent?.trim());
@@ -200,14 +194,12 @@ describe('grouping cannot produce a duplicate key', () => {
 	 */
 	it('renders interleaved groups with no `groups` prop', async () => {
 		render(CommandCompositionTest, {
-			props: {
 				commands: [
 					{ id: '1', label: 'One', group: 'alpha' },
 					{ id: '2', label: 'Two', group: 'beta' },
 					{ id: '3', label: 'Three', group: 'alpha' }
 				]
-			}
-		});
+			});
 		await settle(400);
 
 		expect(options(), 'the palette rendered nothing — duplicate each key').toHaveLength(3);
@@ -216,15 +208,13 @@ describe('grouping cannot produce a duplicate key', () => {
 
 	it('renders interleaved undeclared groups alongside declared ones', async () => {
 		render(CommandCompositionTest, {
-			props: {
 				commands: [
 					{ id: '1', label: 'One', group: 'xx' },
 					{ id: '2', label: 'Two', group: 'yy' },
 					{ id: '3', label: 'Three', group: 'xx' }
 				],
 				groups: [{ id: 'known', label: 'Known' }]
-			}
-		});
+			});
 		await settle(400);
 
 		expect(options(), 'the palette rendered nothing — duplicate each key').toHaveLength(3);
@@ -232,14 +222,12 @@ describe('grouping cannot produce a duplicate key', () => {
 
 	it('interleaves ungrouped commands without colliding', async () => {
 		render(CommandCompositionTest, {
-			props: {
 				commands: [
 					{ id: '1', label: 'Loose one' },
 					{ id: '2', label: 'Filed', group: 'file' },
 					{ id: '3', label: 'Loose two' }
 				]
-			}
-		});
+			});
 		await settle(400);
 
 		expect(options()).toHaveLength(3);
@@ -254,7 +242,7 @@ describe('the initial list uses the same filter as every later one', () => {
 		// `sameGroups` both short-circuited and the reducer returned the identical
 		// state — the consumer's filter never ran until the first keystroke.
 		const filterFunction = vi.fn((cmds: CommandItem[]) => cmds.slice(0, 1));
-		render(CommandCompositionTest, { props: { commands: five, filterFunction } });
+		render(CommandCompositionTest, { commands: five, filterFunction });
 		await settle(400);
 
 		expect(

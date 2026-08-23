@@ -13,7 +13,7 @@ const settle = (ms = 400) => new Promise((resolve) => setTimeout(resolve, ms));
 
 describe('Tooltip keyboard access', () => {
 	it('shows on focus of the wrapped trigger', async () => {
-		const { container } = render(TooltipKeyboardTest, { props: { content: 'Saved' } });
+		const { container } = render(TooltipKeyboardTest, { content: 'Saved' });
 		await settle(50);
 
 		expect(container.querySelector('[role="tooltip"]'), 'hidden before focus').toBeNull();

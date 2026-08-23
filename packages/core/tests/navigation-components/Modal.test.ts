@@ -45,9 +45,7 @@ describe('Modal Component', () => {
       'destination'
     );
 
-    render(Modal, {
-      props: { store: scopedStore }
-    });
+    render(Modal, { store: scopedStore });
 
     const dialog = page.getByRole('dialog');
     await expect.element(dialog).toBeInTheDocument();
@@ -68,9 +66,7 @@ describe('Modal Component', () => {
 
     // When destination is null, scopedStore is null
     // So we pass null to Modal
-    render(Modal, {
-      props: { store: null }
-    });
+    render(Modal, { store: null });
 
     // Check that no dialog exists
     const dialogs = page.getByRole('dialog').elements();
@@ -94,9 +90,7 @@ describe('Modal Component', () => {
     });
 
     // Use wrapper component that reactively renders Modal based on store state
-    render(ModalTestWrapper, {
-      props: { parentStore }
-    });
+    render(ModalTestWrapper, { parentStore });
 
     // Modal should be visible
     const dialog = page.getByRole('dialog');
@@ -141,9 +135,7 @@ describe('Modal Component', () => {
       'destination'
     );
 
-    render(Modal, {
-      props: { store: scopedStore }
-    });
+    render(Modal, { store: scopedStore });
 
     // Modal should be visible
     const dialog = page.getByRole('dialog');
@@ -188,9 +180,7 @@ describe('Modal Component', () => {
       'destination'
     );
 
-    render(Modal, {
-      props: { store: scopedStore, disableEscapeKey: true }
-    });
+    render(Modal, { store: scopedStore, disableEscapeKey: true });
 
     // Press Escape
     await userEvent.keyboard('{Escape}');
@@ -226,9 +216,7 @@ describe('Modal Component', () => {
       'destination'
     );
 
-    render(Modal, {
-      props: { store: scopedStore, disableClickOutside: true }
-    });
+    render(Modal, { store: scopedStore, disableClickOutside: true });
 
     // Trigger pointerdown event on document (simulates clicking outside)
     const pointerEvent = new PointerEvent('pointerdown', {
@@ -263,12 +251,10 @@ describe('Modal Component', () => {
     );
 
     render(Modal, {
-      props: {
         store: scopedStore,
         class: 'custom-modal-content',
         backdropClass: 'custom-backdrop'
-      }
-    });
+      });
 
     const dialog = page.getByRole('dialog');
     await expect.element(dialog).toHaveClass(/custom-modal-content/);
@@ -289,9 +275,7 @@ describe('Modal Component', () => {
       'destination'
     );
 
-    render(Modal, {
-      props: { store: scopedStore, unstyled: true }
-    });
+    render(Modal, { store: scopedStore, unstyled: true });
 
     const dialog = page.getByRole('dialog');
     const className = dialog.element().className;
@@ -313,9 +297,7 @@ describe('Modal Component', () => {
       'destination'
     );
 
-    render(Modal, {
-      props: { store: scopedStore }
-    });
+    render(Modal, { store: scopedStore });
 
     // Check body overflow style directly
     const bodyStyle = document.body.style.overflow;

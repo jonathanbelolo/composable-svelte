@@ -62,13 +62,11 @@ function rotationOf(el: HTMLElement): number {
 
 function mount() {
 	const screen = render(Combobox, {
-		props: {
 			options: [
 				{ value: 'a', label: 'Alpha' },
 				{ value: 'b', label: 'Beta' }
 			]
-		}
-	});
+		});
 	cleanup.push(() => screen.unmount());
 	const root = screen.container;
 	return {

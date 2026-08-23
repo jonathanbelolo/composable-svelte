@@ -116,7 +116,7 @@ describe('Sidebar animation lifecycle', () => {
 		// cannot reach: nothing ever animated *in*, so a guard keyed on "have I
 		// animated something" refuses the collapse, `onDismissalComplete` never
 		// fires, and the sidebar is stuck in `dismissing` forever.
-		const { container } = render(SidebarTest, { props: { startOpen: true } });
+		const { container } = render(SidebarTest, { startOpen: true });
 		expect(store().state.presentation.status, 'precondition').toBe('presented');
 
 		store().dispatch({ type: 'dismissSidebar' });
@@ -131,7 +131,7 @@ describe('Sidebar animation lifecycle', () => {
 		// The ONLY test that proves `springConfig` is wired. It was destructured
 		// and never referenced, so every value behaved identically.
 		const timeTo = async (springConfig?: Record<string, unknown>) => {
-			const { container } = render(SidebarTest, { props: { springConfig } });
+			const { container } = render(SidebarTest, { springConfig });
 			const started = performance.now();
 			container.querySelector<HTMLButtonElement>('[data-testid="open-sidebar"]')!.click();
 			await waitForState(store(), (s: any) => s.presentation.status === 'presented', {

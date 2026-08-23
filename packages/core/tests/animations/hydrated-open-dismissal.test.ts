@@ -61,7 +61,7 @@ const cases = [
 
 describe('an overlay hydrated in the open state', () => {
 	it.each(cases)('$name dismisses', async ({ Component, global, dismiss }) => {
-		render(Component as never, { props: { startOpen: true } });
+		render(Component as never, { startOpen: true });
 		const store = (window as never as Record<string, any>)[global];
 
 		expect(store.state.presentation.status, 'precondition: mounted presented').toBe('presented');

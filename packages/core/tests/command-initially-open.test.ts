@@ -52,9 +52,7 @@ describe('createInitialCommandState is internally consistent', () => {
 
 describe('<Command open={true} />', () => {
 	it('renders the dialog at mount', async () => {
-		const { container } = render(Command, {
-			props: { open: true, commands: [{ id: 'a', label: 'Alpha' }] }
-		});
+		const { container } = render(Command, { open: true, commands: [{ id: 'a', label: 'Alpha' }] });
 		await settle();
 
 		// Query the document, not `container`: the backdrop is `position: fixed`
@@ -67,9 +65,7 @@ describe('<Command open={true} />', () => {
 	});
 
 	it('renders nothing when mounted closed', async () => {
-		const { container } = render(Command, {
-			props: { open: false, commands: [{ id: 'a', label: 'Alpha' }] }
-		});
+		const { container } = render(Command, { open: false, commands: [{ id: 'a', label: 'Alpha' }] });
 		await settle();
 
 		// The other half. Without this, a `visible` that is simply always true
@@ -100,9 +96,7 @@ describe('<Command /> can be dismissed', () => {
 		document.querySelector('[role="dialog"][aria-label="Command palette"]') !== null;
 
 	it('closes on Escape', async () => {
-		const { container } = render(Command, {
-			props: { open: true, commands: [{ id: 'a', label: 'Alpha' }] }
-		});
+		const { container } = render(Command, { open: true, commands: [{ id: 'a', label: 'Alpha' }] });
 		await settle();
 		expect(dialogVisible(), 'precondition: it opened').toBe(true);
 
@@ -115,9 +109,7 @@ describe('<Command /> can be dismissed', () => {
 	});
 
 	it('closes when the open prop goes false', async () => {
-		const { rerender } = render(Command, {
-			props: { open: true, commands: [{ id: 'a', label: 'Alpha' }] }
-		});
+		const { rerender } = render(Command, { open: true, commands: [{ id: 'a', label: 'Alpha' }] });
 		await settle();
 		expect(dialogVisible(), 'precondition: it opened').toBe(true);
 
@@ -129,9 +121,7 @@ describe('<Command /> can be dismissed', () => {
 
 	it('reopens after being closed', async () => {
 		// The other direction, so a fix that simply nails the palette shut fails.
-		const { rerender } = render(Command, {
-			props: { open: true, commands: [{ id: 'a', label: 'Alpha' }] }
-		});
+		const { rerender } = render(Command, { open: true, commands: [{ id: 'a', label: 'Alpha' }] });
 		await settle();
 
 		await rerender({ open: false });
@@ -153,9 +143,7 @@ describe('<Command /> can be dismissed', () => {
 		// Asserted against a control rather than in absolute terms: what matters
 		// is parity with the path that already worked.
 		const runningDuringDismissal = async (initiallyOpen: boolean) => {
-			const r = render(Command, {
-				props: { open: initiallyOpen, commands: [{ id: 'a', label: 'Alpha' }] }
-			});
+			const r = render(Command, { open: initiallyOpen, commands: [{ id: 'a', label: 'Alpha' }] });
 			if (!initiallyOpen) {
 				await r.rerender({ open: true });
 				await settle(600);
@@ -190,9 +178,7 @@ describe('<Command /> can be dismissed', () => {
 		// The F3 test added in the same round drives Enter -> executeCommand and
 		// asserts only that the callback fired. It walked straight past this.
 		const onSelect = vi.fn();
-		const { container } = render(Command, {
-			props: { open: true, commands: [{ id: 'a', label: 'Alpha', onSelect }] }
-		});
+		const { container } = render(Command, { open: true, commands: [{ id: 'a', label: 'Alpha', onSelect }] });
 		await settle();
 		expect(dialogVisible(), 'precondition: it opened').toBe(true);
 
@@ -208,9 +194,7 @@ describe('<Command /> can be dismissed', () => {
 	it('closes on a backdrop click', async () => {
 		// Asserted rather than assumed: the previous round's commit message
 		// claimed this route worked and shipped no test for it.
-		const { container } = render(Command, {
-			props: { open: true, commands: [{ id: 'a', label: 'Alpha' }] }
-		});
+		const { container } = render(Command, { open: true, commands: [{ id: 'a', label: 'Alpha' }] });
 		await settle();
 		expect(dialogVisible()).toBe(true);
 
@@ -227,9 +211,7 @@ describe('<Command /> can be dismissed', () => {
 		// syncs `open` back to false — so a consumer that then sets `open = false`
 		// is already in agreement and dispatches nothing. This pins that a
 		// subsequent `open = true` still works rather than needing a round trip.
-		const { rerender, container } = render(Command, {
-			props: { open: true, commands: [{ id: 'a', label: 'Alpha', onSelect: vi.fn() }] }
-		});
+		const { rerender, container } = render(Command, { open: true, commands: [{ id: 'a', label: 'Alpha', onSelect: vi.fn() }] });
 		await settle();
 
 		const dialog = container.querySelector('[role="dialog"]') as HTMLElement;

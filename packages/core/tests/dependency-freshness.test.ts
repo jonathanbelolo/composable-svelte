@@ -47,9 +47,7 @@ const second = () => 'SECOND';
 describe('H0 — the methodology itself', () => {
 	it('rerender updates props in place and can tell the two shapes apart', async () => {
 		resetProbe();
-		const { rerender, container } = render(RerenderProbe, {
-			props: { cb: first, marker: 'a' }
-		});
+		const { rerender, container } = render(RerenderProbe, { cb: first, marker: 'a' });
 		await settle(50);
 
 		await rerender({ cb: second, marker: 'b' });
@@ -79,9 +77,7 @@ describe('H0 — the methodology itself', () => {
 		// Tooltip), which cannot be expressed as props from a .ts file because
 		// they need a `children` snippet.
 		resetProbe();
-		const { rerender } = render(RerenderProbeParent, {
-			props: { cb: first, marker: 'a' }
-		});
+		const { rerender } = render(RerenderProbeParent, { cb: first, marker: 'a' });
 		await settle(50);
 
 		await rerender({ cb: second, marker: 'b' });
@@ -124,9 +120,7 @@ describe('dependencies are read live', () => {
 	it('TreeView onSelect', async () => {
 		const a = vi.fn();
 		const b = vi.fn();
-		const { rerender, container } = render(TreeView, {
-			props: { nodes: [{ id: '1', label: 'One' }], onSelect: a }
-		});
+		const { rerender, container } = render(TreeView, { nodes: [{ id: '1', label: 'One' }], onSelect: a });
 		await settle();
 
 		// `nodes` deliberately omitted: rerender merges, so leaving it out keeps
@@ -144,14 +138,12 @@ describe('dependencies are read live', () => {
 		const a = vi.fn();
 		const b = vi.fn();
 		const { rerender, container } = render(Carousel, {
-			props: {
 				slides: [
 					{ id: '1', content: 'one' },
 					{ id: '2', content: 'two' }
 				],
 				onSlideChange: a
-			}
-		});
+			});
 		await settle();
 
 		await rerender({ onSlideChange: b });
@@ -166,9 +158,7 @@ describe('dependencies are read live', () => {
 	it('ImageGallery onImageClick', async () => {
 		const a = vi.fn();
 		const b = vi.fn();
-		const { rerender, container } = render(ImageGallery, {
-			props: { images: [{ id: '1', url: '/a.jpg', alt: 'A' }], onImageClick: a }
-		});
+		const { rerender, container } = render(ImageGallery, { images: [{ id: '1', url: '/a.jpg', alt: 'A' }], onImageClick: a });
 		await settle();
 
 		await rerender({ onImageClick: b });
@@ -191,9 +181,7 @@ describe('dependencies are read live', () => {
 	it('Combobox loadOptions', async () => {
 		const a = vi.fn(async () => []);
 		const b = vi.fn(async () => []);
-		const { rerender, container } = render(Combobox, {
-			props: { options: [], loadOptions: a, debounceDelay: 20 }
-		});
+		const { rerender, container } = render(Combobox, { options: [], loadOptions: a, debounceDelay: 20 });
 		await settle();
 
 		await rerender({ loadOptions: b });
@@ -222,11 +210,9 @@ describe('dependencies are read live', () => {
 		const sentinel = vi.fn();
 
 		const { rerender, container } = render(Command, {
-			props: {
 				open: false,
 				commands: [{ id: 'a', label: 'Alpha', onSelect: sentinel }]
-			}
-		});
+			});
 		await settle();
 
 		await rerender({ open: true, onCommandExecute });
@@ -251,9 +237,7 @@ describe('dependencies are read live', () => {
 	it('Command filterFunction', async () => {
 		const a = vi.fn((c: unknown[]) => c);
 		const b = vi.fn((c: unknown[]) => c);
-		const { rerender } = render(Command, {
-			props: { open: true, commands: [{ id: 'a', label: 'Alpha' }], filterFunction: a }
-		});
+		const { rerender } = render(Command, { open: true, commands: [{ id: 'a', label: 'Alpha' }], filterFunction: a });
 		await settle();
 
 		// The commands-sync effect is the trigger here, so `commands` must differ
@@ -274,7 +258,7 @@ describe('dependencies are read live — snippet-taking components', () => {
 	it('Accordion onExpand', async () => {
 		const a = vi.fn();
 		const b = vi.fn();
-		const { rerender, container } = render(AccordionCallbackTest, { props: { onExpand: a } });
+		const { rerender, container } = render(AccordionCallbackTest, { onExpand: a });
 		await settle();
 
 		await rerender({ onExpand: b });
@@ -289,7 +273,7 @@ describe('dependencies are read live — snippet-taking components', () => {
 	it('DropdownMenu onSelect', async () => {
 		const a = vi.fn();
 		const b = vi.fn();
-		const { rerender, container } = render(DropdownMenuCallbackTest, { props: { onSelect: a } });
+		const { rerender, container } = render(DropdownMenuCallbackTest, { onSelect: a });
 		await settle();
 
 		await rerender({ onSelect: b });
@@ -319,7 +303,7 @@ describe('Toaster', () => {
 		// path that works, and this asserts it does.
 		const onToastAdded = vi.fn();
 		const store = createToastStore({ dependencies: { onToastAdded } });
-		render(Toaster, { props: { store } });
+		render(Toaster, { store });
 		await settle();
 
 		store.dispatch({ type: 'toastAdded', toast: { variant: 'info', description: 'x' } });
@@ -337,9 +321,7 @@ describe('positive controls — components already carrying the fix', () => {
 	it('FileUpload onUpload (already fixed)', async () => {
 		const a = vi.fn();
 		const b = vi.fn();
-		const { rerender, container } = render(FileUpload, {
-			props: { accept: 'image/*', maxSize: 1024, onUpload: a }
-		});
+		const { rerender, container } = render(FileUpload, { accept: 'image/*', maxSize: 1024, onUpload: a });
 		await settle();
 
 		await rerender({ onUpload: b });
@@ -359,7 +341,7 @@ describe('positive controls — components already carrying the fix', () => {
 		// A numeric dependency has no first/second, so it is checked in both
 		// directions. The second half is what stops the first from passing for a
 		// component that simply always used a short delay.
-		const long = render(TooltipDelayTest, { props: { delay: 5000 } });
+		const long = render(TooltipDelayTest, { delay: 5000 });
 		await settle();
 		await long.rerender({ delay: 0 });
 		await settle();
@@ -372,7 +354,7 @@ describe('positive controls — components already carrying the fix', () => {
 		long.unmount();
 		await settle(50);
 
-		const short = render(TooltipDelayTest, { props: { delay: 0 } });
+		const short = render(TooltipDelayTest, { delay: 0 });
 		await settle();
 		await short.rerender({ delay: 5000 });
 		await settle();

@@ -22,10 +22,8 @@ const waitForUpdates = () => new Promise(resolve => setTimeout(resolve, 50));
 describe('Breadcrumb', () => {
 	test('renders nav element with aria-label', async () => {
 		const { container } = render(Breadcrumb, {
-			props: {
 				children: () => {}
-			}
-		});
+			});
 		await waitForUpdates();
 
 		const nav = container.querySelector('nav');
@@ -35,12 +33,10 @@ describe('Breadcrumb', () => {
 
 	test('renders nav element with custom attributes', async () => {
 		const { container } = render(Breadcrumb, {
-			props: {
 				children: () => {},
 				class: 'custom-breadcrumb',
 				'data-testid': 'test-breadcrumb'
-			}
-		});
+			});
 		await waitForUpdates();
 
 		const nav = container.querySelector('nav');
@@ -52,10 +48,8 @@ describe('Breadcrumb', () => {
 describe('BreadcrumbList', () => {
 	test('renders ordered list with correct classes', async () => {
 		const { container } = render(BreadcrumbList, {
-			props: {
 				children: () => {}
-			}
-		});
+			});
 		await waitForUpdates();
 
 		const ol = container.querySelector('ol');
@@ -68,11 +62,9 @@ describe('BreadcrumbList', () => {
 
 	test('applies custom class name', async () => {
 		const { container } = render(BreadcrumbList, {
-			props: {
 				children: () => {},
 				class: 'custom-list'
-			}
-		});
+			});
 		await waitForUpdates();
 
 		const ol = container.querySelector('ol');
@@ -83,10 +75,8 @@ describe('BreadcrumbList', () => {
 describe('BreadcrumbItem', () => {
 	test('renders list item with correct classes', async () => {
 		const { container } = render(BreadcrumbItem, {
-			props: {
 				children: () => {}
-			}
-		});
+			});
 		await waitForUpdates();
 
 		const li = container.querySelector('li');
@@ -97,11 +87,9 @@ describe('BreadcrumbItem', () => {
 
 	test('applies custom class name', async () => {
 		const { container } = render(BreadcrumbItem, {
-			props: {
 				children: () => {},
 				class: 'custom-item'
-			}
-		});
+			});
 		await waitForUpdates();
 
 		const li = container.querySelector('li');
@@ -112,10 +100,8 @@ describe('BreadcrumbItem', () => {
 describe('BreadcrumbLink', () => {
 	test('renders anchor element with default href', async () => {
 		const { container } = render(BreadcrumbLink, {
-			props: {
 				children: () => {}
-			}
-		});
+			});
 		await waitForUpdates();
 
 		const link = container.querySelector('a');
@@ -131,11 +117,9 @@ describe('BreadcrumbLink', () => {
 
 	test('renders anchor element with custom href', async () => {
 		const { container } = render(BreadcrumbLink, {
-			props: {
 				href: '/home',
 				children: () => {}
-			}
-		});
+			});
 		await waitForUpdates();
 
 		const link = container.querySelector('a');
@@ -144,11 +128,9 @@ describe('BreadcrumbLink', () => {
 
 	test('applies custom class name', async () => {
 		const { container } = render(BreadcrumbLink, {
-			props: {
 				children: () => {},
 				class: 'custom-link'
-			}
-		});
+			});
 		await waitForUpdates();
 
 		const link = container.querySelector('a');
@@ -159,10 +141,8 @@ describe('BreadcrumbLink', () => {
 describe('BreadcrumbPage', () => {
 	test('renders span with aria attributes for current page', async () => {
 		const { container } = render(BreadcrumbPage, {
-			props: {
 				children: () => {}
-			}
-		});
+			});
 		await waitForUpdates();
 
 		const span = container.querySelector('span');
@@ -176,11 +156,9 @@ describe('BreadcrumbPage', () => {
 
 	test('applies custom class name', async () => {
 		const { container } = render(BreadcrumbPage, {
-			props: {
 				children: () => {},
 				class: 'custom-page'
-			}
-		});
+			});
 		await waitForUpdates();
 
 		const span = container.querySelector('span');
@@ -190,9 +168,7 @@ describe('BreadcrumbPage', () => {
 
 describe('BreadcrumbSeparator', () => {
 	test('renders list item with aria attributes', async () => {
-		const { container } = render(BreadcrumbSeparator, {
-			props: {}
-		});
+		const { container } = render(BreadcrumbSeparator, {});
 		await waitForUpdates();
 
 		const li = container.querySelector('li');
@@ -202,9 +178,7 @@ describe('BreadcrumbSeparator', () => {
 	});
 
 	test('renders default chevron icon when no children provided', async () => {
-		const { container } = render(BreadcrumbSeparator, {
-			props: {}
-		});
+		const { container } = render(BreadcrumbSeparator, {});
 		await waitForUpdates();
 
 		const svg = container.querySelector('svg');
@@ -219,9 +193,7 @@ describe('BreadcrumbSeparator', () => {
 	// The component correctly renders children when provided, as shown in the demo
 	// This test verifies the default behavior when no children are provided
 	test('renders default icon when no children provided (verified via demo)', async () => {
-		const { container } = render(BreadcrumbSeparator, {
-			props: {}
-		});
+		const { container } = render(BreadcrumbSeparator, {});
 		await waitForUpdates();
 
 		const li = container.querySelector('li');
@@ -239,9 +211,7 @@ describe('BreadcrumbSeparator', () => {
 
 describe('BreadcrumbEllipsis', () => {
 	test('renders span with aria attributes', async () => {
-		const { container } = render(BreadcrumbEllipsis, {
-			props: {}
-		});
+		const { container } = render(BreadcrumbEllipsis, {});
 		await waitForUpdates();
 
 		const span = container.querySelector('span[role="presentation"]');
@@ -257,9 +227,7 @@ describe('BreadcrumbEllipsis', () => {
 	});
 
 	test('renders ellipsis icon', async () => {
-		const { container } = render(BreadcrumbEllipsis, {
-			props: {}
-		});
+		const { container } = render(BreadcrumbEllipsis, {});
 		await waitForUpdates();
 
 		const svg = container.querySelector('svg');
@@ -276,9 +244,7 @@ describe('BreadcrumbEllipsis', () => {
 	});
 
 	test('renders screen reader text', async () => {
-		const { container } = render(BreadcrumbEllipsis, {
-			props: {}
-		});
+		const { container } = render(BreadcrumbEllipsis, {});
 		await waitForUpdates();
 
 		const srText = container.querySelector('.sr-only');
@@ -288,10 +254,8 @@ describe('BreadcrumbEllipsis', () => {
 
 	test('applies custom class name', async () => {
 		const { container } = render(BreadcrumbEllipsis, {
-			props: {
 				class: 'custom-ellipsis'
-			}
-		});
+			});
 		await waitForUpdates();
 
 		const span = container.querySelector('span[role="presentation"]');

@@ -25,18 +25,14 @@ const makeStore = (icon: unknown) =>
 describe('<command.icon /> replaces <svelte:component>', () => {
 	it('renders a component icon', async () => {
 		const store = makeStore(IconStub);
-		const { container } = render(CommandItem, {
-			props: { store, command: { id: 'a', label: 'Alpha', icon: IconStub } as any, index: 0 }
-		});
+		const { container } = render(CommandItem, { store, command: { id: 'a', label: 'Alpha', icon: IconStub } as any, index: 0 });
 		await settle();
 		expect(container.querySelector('[data-testid="icon-stub"]')).not.toBeNull();
 	});
 
 	it('renders a string icon', async () => {
 		const store = makeStore('STARICON');
-		const { container } = render(CommandItem, {
-			props: { store, command: { id: 'a', label: 'Alpha', icon: 'STARICON' } as any, index: 0 }
-		});
+		const { container } = render(CommandItem, { store, command: { id: 'a', label: 'Alpha', icon: 'STARICON' } as any, index: 0 });
 		await settle();
 		expect(container.textContent).toContain('STARICON');
 	});

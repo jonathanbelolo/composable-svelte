@@ -44,7 +44,7 @@ const options = [
 ];
 
 function mount(props: Record<string, unknown> = {}) {
-	const screen = render(Select, { props: { options, ...props } });
+	const screen = render(Select, { options, ...props });
 	cleanup.push(() => screen.unmount());
 	const root = screen.container;
 	return {

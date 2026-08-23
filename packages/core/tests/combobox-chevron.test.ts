@@ -37,7 +37,7 @@ const chevron = () => document.querySelector<HTMLButtonElement>('[aria-label="To
 
 describe('the chevron', () => {
 	it('opens the dropdown', async () => {
-		render(Combobox, { props: { options } });
+		render(Combobox, { options });
 		await settle();
 		expect(listbox(), 'precondition: closed').toBeNull();
 
@@ -51,7 +51,7 @@ describe('the chevron', () => {
 	it('closes it again', async () => {
 		// The round trip, not just the open — `toggled` has to do both, and a
 		// fix that dispatched `opened` would pass the first test alone.
-		render(Combobox, { props: { options } });
+		render(Combobox, { options });
 		await settle();
 		chevron()!.click();
 		await settle(400);
@@ -68,7 +68,7 @@ describe('the chevron', () => {
 		// The icon strip also holds "Clear selection". Making the strip
 		// click-through must not take that with it.
 		const onchange = vi.fn();
-		render(Combobox, { props: { options, value: '1', onchange } });
+		render(Combobox, { options, value: '1', onchange });
 		await settle(300);
 
 		const clear = document.querySelector<HTMLButtonElement>('[aria-label="Clear selection"]');
@@ -82,7 +82,7 @@ describe('the chevron', () => {
 	it('does not block clicks on the input beneath it', async () => {
 		// The strip covered the input's right edge. Even with the chevron wired,
 		// leaving it opaque would keep swallowing clicks aimed at the field.
-		render(Combobox, { props: { options } });
+		render(Combobox, { options });
 		await settle();
 
 		const input = document.querySelector<HTMLInputElement>('[role="combobox"]')!;
