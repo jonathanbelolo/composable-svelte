@@ -98,9 +98,16 @@ export interface SessionDependencies {
 	 * builds — in production this call fails and sign-in happens through the
 	 * backend's real identity flows. Dev/preview only.
 	 */
-	fetchLogin: (seededUserId: string) => Promise<SessionSnapshot>;
-	/** `POST /auth/logout` — server-side session invalidation. */
-	fetchLogout: () => Promise<void>;
+	fetchLogin: (seededUserId: string, signal?: AbortSignal) => Promise<SessionSnapshot>;
+	/**
+	 * `POST /auth/logout` — server-side session invalidation.
+	 *
+	 * The `signal` is supplied when the store supersedes an in-flight logout —
+	 * a second `logout` dispatch cancels the first. Honouring it aborts the
+	 * request; ignoring it is safe, because the store drops a cancelled
+	 * effect's dispatches either way.
+	 */
+	fetchLogout: (signal?: AbortSignal) => Promise<void>;
 	/**
 	 * Resolve the current session. Resolves `null` when anonymous (no/
 	 * expired session); rejects only on unexpected failures.
@@ -109,5 +116,5 @@ export interface SessionDependencies {
 	 * signal — an `authenticated` store can be stale. The consumer's hook is
 	 * a 401 from any domain API call: dispatch `resolveSession` to re-sync.
 	 */
-	fetchSession: () => Promise<SessionSnapshot | null>;
+	fetchSession: (signal?: AbortSignal) => Promise<SessionSnapshot | null>;
 }

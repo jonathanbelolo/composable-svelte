@@ -68,12 +68,13 @@ export function createHttpSessionDeps(baseUrl: string = ''): SessionDependencies
 	const url = (path: string): string => `${base}${path}`;
 
 	return {
-		async fetchLogin(seededUserId: string): Promise<SessionSnapshot> {
+		async fetchLogin(seededUserId: string, signal?: AbortSignal): Promise<SessionSnapshot> {
 			const response = await fetch(url('/auth/login'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ user_id: seededUserId })
+				body: JSON.stringify({ user_id: seededUserId }),
+				...(signal !== undefined && { signal })
 			});
 			if (!response.ok) {
 				throw new Error(`Login failed (${response.status})`);
@@ -81,20 +82,22 @@ export function createHttpSessionDeps(baseUrl: string = ''): SessionDependencies
 			return parseSessionSnapshot(await response.json());
 		},
 
-		async fetchLogout(): Promise<void> {
+		async fetchLogout(signal?: AbortSignal): Promise<void> {
 			const response = await fetch(url('/auth/logout'), {
 				method: 'POST',
-				credentials: 'include'
+				credentials: 'include',
+				...(signal !== undefined && { signal })
 			});
 			if (!response.ok) {
 				throw new Error(`Logout failed (${response.status})`);
 			}
 		},
 
-		async fetchSession(): Promise<SessionSnapshot | null> {
+		async fetchSession(signal?: AbortSignal): Promise<SessionSnapshot | null> {
 			const response = await fetch(url('/auth/session'), {
 				method: 'GET',
-				credentials: 'include'
+				credentials: 'include',
+				...(signal !== undefined && { signal })
 			});
 			// 401 = no/expired session; 204 = explicit empty — both anonymous.
 			if (response.status === 401 || response.status === 204) {

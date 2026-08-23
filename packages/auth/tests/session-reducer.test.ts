@@ -263,26 +263,43 @@ describe('logout', () => {
 		store.assertNoPendingActions();
 	});
 
-	it('ignores a duplicate logout while one is in flight (single request)', async () => {
-		// Hold the first logout open so the second send provably races it.
-		const gate = deferred<void>();
-		const deps = mockDeps({ fetchLogout: vi.fn(() => gate.promise) });
+	it('supersedes a duplicate logout rather than swallowing it', async () => {
+		// This used to assert the opposite — that the second dispatch was a
+		// guarded no-op firing a single request. That guard made logout the only
+		// operation with no way out of its own in-flight state: nothing else is
+		// honoured from `loggingOut`, and the only thing that leaves it is this
+		// effect's own `loggedOut`. A request that never settled trapped the
+		// store permanently, and clicking sign out again did nothing.
+		//
+		// It is `Effect.cancellable` under a fixed id now, so re-dispatching
+		// cancels the in-flight request and starts a fresh one. The mock does
+		// not honour the abort signal, so it records two calls; the real
+		// `fetchLogout` is handed the signal and aborts (`http.ts`).
+		// `tests/logout-liveness.test.ts` covers the journey end to end.
+		// A fresh gate per call, so the superseded request can be left hanging —
+		// which is what the abort does in the real implementation.
+		const gates: Array<ReturnType<typeof deferred<void>>> = [];
+		const deps = mockDeps({
+			fetchLogout: vi.fn(() => {
+				const gate = deferred<void>();
+				gates.push(gate);
+				return gate.promise;
+			})
+		});
 		const store = makeStore(deps, authenticatedState);
 
 		await store.send({ type: 'logout' }, (state) => {
 			expect(state.status).toBe('loggingOut');
 		});
-		// Second logout while the first is still in flight: guarded no-op.
 		await store.send({ type: 'logout' }, (state) => {
 			expect(state.status).toBe('loggingOut');
 		});
-		expect(deps.fetchLogout).toHaveBeenCalledTimes(1);
+		expect(deps.fetchLogout, 'the retry was swallowed').toHaveBeenCalledTimes(2);
 
-		gate.resolve(undefined);
-		await store.receive({ type: 'loggedOut' }, (state) => {
+		gates[1]!.resolve(undefined);
+		await store.receive({ type: 'loggedOut', epoch: 2 }, (state) => {
 			expect(state.status).toBe('anonymous');
 		});
-		expect(deps.fetchLogout).toHaveBeenCalledTimes(1);
 		store.assertNoPendingActions();
 	});
 });

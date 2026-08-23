@@ -37,6 +37,12 @@ function errorMessage(error: unknown, fallback: string): string {
 	return error instanceof Error ? error.message : fallback;
 }
 
+/**
+ * The in-flight logout. Fixed rather than per-dispatch, because re-registering
+ * the same id is what cancels the previous one.
+ */
+const LOGOUT_EFFECT_ID = 'auth/session/logout';
+
 export const sessionReducer: Reducer<SessionState, SessionAction, SessionDependencies> = (
 	state,
 	action,
@@ -182,20 +188,29 @@ export const sessionReducer: Reducer<SessionState, SessionAction, SessionDepende
 		}
 
 		case 'logout': {
-			// Guard: one logout at a time — a double dispatch fires a single
-			// request. Logout from any other status (including mid-resolve or
-			// mid-login) is always honored: it is the user's exit hatch, and
-			// the stale feedback of the superseded operation is discarded by
-			// the epoch + status guards above.
-			if (state.status === 'loggingOut') {
-				return [state, Effect.none()];
-			}
+			// No guard on `loggingOut`, deliberately.
+			//
+			// There used to be one — "one logout at a time, a double dispatch
+			// fires a single request" — and it made logout the only operation
+			// with no way out of its own in-flight state. Every action is a
+			// no-op from `loggingOut` except a matching `loggedOut`, and the
+			// only thing that produces one is this effect. A `fetchLogout` that
+			// never settled trapped the store permanently: the authenticated UI
+			// stayed up with `isRevalidating: true`, and clicking sign out
+			// again did nothing. The comment three lines above called logout
+			// "the user's exit hatch".
+			//
+			// `Effect.cancellable` under a fixed id keeps what the guard was
+			// protecting — re-dispatching cancels the in-flight request rather
+			// than racing a second one alongside it — while letting the user
+			// retry. The epoch below discards the superseded request's feedback
+			// if it lands anyway.
 			const epoch = state.epoch + 1;
 			return [
 				{ ...state, status: 'loggingOut', error: null, epoch },
-				Effect.run(async (dispatch) => {
+				Effect.cancellable(LOGOUT_EFFECT_ID, async (dispatch, signal) => {
 					try {
-						await deps.fetchLogout();
+						await deps.fetchLogout(signal);
 						dispatch({ type: 'loggedOut', epoch });
 					} catch (error) {
 						// Fail-closed: the client still goes anonymous. The cookie is

@@ -11,10 +11,12 @@
 
 	Rendering (stale-while-revalidate):
 	- `authenticated`                     → children (`isRevalidating: false`)
-	- `resolving` / `loggingOut` with a retained authenticated subject
+	- any in-flight status with a retained authenticated subject
+	  (`resolving`, `loggingIn`, `loggingOut`)
 	                                      → children (`isRevalidating: true`)
-	  — a background re-resolve or an in-flight logout does NOT blank an
-	  already-authenticated UI; the store settles it a moment later.
+	  — a background re-resolve, an account switch or an in-flight logout does
+	  NOT blank an already-authenticated UI; the store settles it a moment
+	  later.
 	- `anonymous` / `loginFailed`         → fallback (if provided)
 	- anything else (no authenticated subject to keep showing)
 	                                      → pending (if provided)
@@ -56,14 +58,25 @@
 
 	const state = $derived(store.state);
 
-	// Stale-while-revalidate: keep the authenticated UI up while a background
-	// resolve (or the brief logout window) is in flight — pending is only for
-	// the case where there is no authenticated subject to keep showing.
-	const showChildren = $derived(
-		state.status === 'authenticated' ||
-			((state.status === 'resolving' || state.status === 'loggingOut') &&
-				state.subject.kind === 'authenticated')
-	);
+	// Stale-while-revalidate: keep the authenticated UI up whenever there is an
+	// authenticated subject to keep showing. Pending is for the case where
+	// there is not.
+	//
+	// Stated as the rule rather than as a list of statuses, which is what this
+	// was and why it was wrong: the list held `resolving` and `loggingOut` and
+	// omitted `loggingIn`, while `sessionReducer` builds the `loggingIn` state
+	// with `{ ...state, ... }` and deliberately retains an authenticated
+	// subject — `loginFailed` restores it when the old session is still valid.
+	// So account switching from a signed-in state, the one flow the reducer
+	// works hardest to keep alive, was the one that blanked the screen for the
+	// whole attempt. Both this file's header and the README described the rule
+	// correctly; only the code disagreed.
+	//
+	// `anonymous` and `loginFailed` are excluded by the reducer rather than by
+	// a clause here: `loginFailed` is reachable only when the entering subject
+	// was NOT authenticated (`reducer.ts:171-180`), and `anonymous` always
+	// carries the anonymous subject.
+	const showChildren = $derived(state.subject.kind === 'authenticated');
 	const isRevalidating = $derived(showChildren && state.status !== 'authenticated');
 
 	/**
