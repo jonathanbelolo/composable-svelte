@@ -20,11 +20,14 @@ ssr-server/
 │   ├── client/
 │   │   └── index.ts       # Client hydration entry point
 │   └── shared/
-│       ├── App.svelte     # Main application component
-│       ├── PostList.svelte
-│       ├── PostDetail.svelte
-│       ├── types.ts       # Shared types
-│       └── reducer.ts     # Application reducer
+│       ├── App.svelte            # Main application component
+│       ├── PostListPage.svelte
+│       ├── PostDetailPage.svelte
+│       ├── PostCommentsPage.svelte
+│       ├── LanguageSwitcher.svelte
+│       ├── routing.ts            # Path <-> destination mapping
+│       ├── types.ts              # Shared types
+│       └── reducer.ts            # Application reducer
 ├── package.json
 ├── vite.config.ts
 └── tsconfig.json

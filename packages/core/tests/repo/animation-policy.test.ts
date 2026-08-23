@@ -132,7 +132,15 @@ const sourceFiles = SOURCE_ROOTS.flatMap((root) =>
  * line scanned clean. Counting quotes before the marker is enough to tell a
  * comment from a protocol-relative URL, and it keeps trailing comments strippable.
  */
-function stripComments(source: string): string {
+/**
+ * @param isCss - a plain stylesheet, where `//` is never a comment. Passing
+ * `.css` through the `//` pass discards everything after a protocol-relative
+ * `url(//cdn…)`, including any declaration that follows it on the line. Both
+ * existing guards miss that shape: `url()` is unquoted, so quote parity sees
+ * nothing, and the character before the slashes is `(`, not `:`. Latent until
+ * `.css` came under the walk; free to close now.
+ */
+function stripComments(source: string, isCss = false): string {
 	// Newlines are preserved rather than deleted: a multi-line comment collapsed
 	// to nothing shifts every later line number, and reported numbers were running
 	// 4-17 lines low. A guard that points at the wrong line gets distrusted, then
@@ -196,6 +204,8 @@ function stripComments(source: string): string {
 		}
 		stripped.push(out);
 	}
+
+	if (isCss) return stripped.join('\n');
 
 	return stripped.join('\n')
 		.split('\n')
@@ -354,12 +364,16 @@ const SCROLL_ANIMATION = /(^|[\s;{])scroll-behavior\s*:\s*smooth\b/;
  * Only the Tailwind detectors are gated. The raw-CSS ones are not, because a
  * `transition:` declaration is *never* quoted.
  */
-export function quotedSpans(line: string): string[] {
+export function quotedSpans(line: string, carried: string | null = null): {
+	spans: string[];
+	open: string | null;
+} {
 	const spans: string[] = [];
-	let quote: string | null = null;
+	let quote: string | null = carried;
 	let buffer = '';
 
-	for (const character of line) {
+	for (let i = 0; i < line.length; i += 1) {
+		const character = line[i]!;
 		if (quote !== null) {
 			if (character === quote) {
 				spans.push(buffer);
@@ -370,35 +384,87 @@ export function quotedSpans(line: string): string[] {
 			}
 			continue;
 		}
-		if (character === '"' || character === "'" || character === '`') quote = character;
+		if (character === '"' || character === '`') {
+			quote = character;
+			continue;
+		}
+		// An apostrophe inside a word is not a string opener. Without this,
+		// `<p>Don't use CSS transition effects</p>` opens a span that swallows the
+		// rest of the line and the prose is read as a class list after all — the
+		// exact failure this gate exists to prevent, arriving by another door.
+		// `stripComments` has carried the same guard for the same reason.
+		if (character === "'" && !/[A-Za-z]/.test(line[i - 1] ?? '')) {
+			quote = character;
+		}
 	}
 
 	if (quote !== null) spans.push(buffer);
-	return spans;
+	return { spans, open: quote };
 }
 
 /**
- * A Tailwind transition/animation utility, found inside a quoted string.
+ * Every place on a line where a Tailwind utility can actually appear.
  *
+ * Quoted spans are the common case, but three others are real and were each
+ * caught before this gate existed:
+ *
+ * - **`@apply`**, which is unquoted and is how a stylesheet uses a utility.
+ *   `.css` files came under the walk in the same commit that added this gate,
+ *   so the newly-scanned file type arrived with the Tailwind detectors disabled
+ *   on it — `globals.css` and `theme.css` both use `@apply` today.
+ * - **`class:` directives** — `class:transition-all={active}`. Unquoted, and a
+ *   live idiom here (`NavigationStackDemo.svelte`, `Avatar.svelte`).
+ * - **a class attribute wrapped onto the next line**, where the utility sits on
+ *   a continuation line that contains no quote of its own. `carried` is what
+ *   picks that up, which is why `scan` threads the quote state through.
+ */
+function tailwindContexts(
+	line: string,
+	carried: string | null
+): { texts: string[]; open: string | null } {
+	const { spans, open } = quotedSpans(line, carried);
+	const texts = [...spans];
+
+	// `@apply border-border transition-colors;` — the whole declaration is a
+	// class list.
+	if (/@apply\b/.test(line)) texts.push(line);
+
+	// `class:transition-all={…}` — the utility is the directive's name.
+	for (const match of line.matchAll(/(?:^|\s)class:([\w-]+)/g)) texts.push(match[1]!);
+
+	return { texts, open };
+}
+
+/**
  * The leading space matters: both detectors anchor on `(?:^|[\s'"`:])`, and a
  * span begins at the character after the opening quote, so a class list that
  * *starts* with the utility would otherwise not match.
  */
-function hasTailwindAnimation(line: string): boolean {
-	return quotedSpans(line).some(
-		(span) => TAILWIND_TRANSITION.test(` ${span}`) || TAILWIND_ANIMATION.test(` ${span}`)
+function hasTailwindAnimation(texts: string[]): boolean {
+	return texts.some(
+		(text) => TAILWIND_TRANSITION.test(` ${text}`) || TAILWIND_ANIMATION.test(` ${text}`)
 	);
 }
 
-function scan(file: string): Violation[] {
+/**
+ * @param applyRegister - false to scan as though the file were not registered,
+ * which is how a grant is checked for still covering anything.
+ */
+function scan(file: string, applyRegister = true): Violation[] {
 	const rel = relative(repoRoot, file);
-	const registered = REGISTER[rel];
-	const source = stripComments(readFileSync(file, 'utf8'));
+	const registered = applyRegister ? REGISTER[rel] : undefined;
+	const source = stripComments(readFileSync(file, 'utf8'), file.endsWith('.css'));
 	const lines = source.split('\n');
 	const out: Violation[] = [];
 
+	// Threaded through the loop so a class attribute wrapped across lines is
+	// still read as one string.
+	let openQuote: string | null = null;
+
 	for (let i = 0; i < lines.length; i += 1) {
 		const line = lines[i]!;
+		const { texts, open } = tailwindContexts(line, openQuote);
+		openQuote = open;
 
 		if (DISABLES_ANIMATION.test(line)) continue;
 
@@ -413,7 +479,7 @@ function scan(file: string): Violation[] {
 		}
 
 		const isSvelte = SVELTE_TRANSITION.test(line);
-		const isTailwind = hasTailwindAnimation(line);
+		const isTailwind = hasTailwindAnimation(texts);
 		const isRaw = RAW_TRANSITION.test(line);
 		const isAnimation = RAW_ANIMATION.test(line);
 		if (!isSvelte && !isTailwind && !isRaw && !isAnimation) continue;
@@ -645,41 +711,54 @@ describe('animation policy', () => {
 		}
 	});
 
-	it('reads a Tailwind class only where one can live — inside a quoted string', () => {
-		// The reason this exists: `<li>… CSS transition effects</li>` matched
-		// `TAILWIND_TRANSITION` and would have failed the build the day `examples/`
-		// came under the walk. It is prose, not a class list.
-		//
-		// The paired half is the more important one. A `class`-attribute gate would
-		// have fixed the prose case and silently dropped `Progress.svelte`'s
-		// `cn('…')` line, which carries a real utility and no `class` token — and a
-		// detector that stops seeing a live violation is worse than one that sees a
-		// sentence.
-		const prose = [
-			'<li>Instant tab switching with CSS transition effects</li>',
-			'<p>Animations use a transition between states</p>',
-			'\t\t\t\t<span>no transition-colors here, just words</span>'
-		];
+	it('reads a Tailwind class everywhere one can live, and nowhere else', () => {
+		const reads = (line: string, carried: string | null = null) =>
+			hasTailwindAnimation(tailwindContexts(line, carried).texts);
 
-		for (const line of prose) {
-			expect(hasTailwindAnimation(line), `prose read as a class: ${line}`).toBe(false);
-		}
+		// Why this gate exists: `<li>… CSS transition effects</li>` matched
+		// `TAILWIND_TRANSITION` and would have failed the build the day
+		// `examples/` came under the walk. It is prose, not a class list.
+		expect(reads('<li>Instant tab switching with CSS transition effects</li>')).toBe(false);
+		expect(reads('<p>Animations use a transition between states</p>')).toBe(false);
+		// …including when an apostrophe is in the way. Without the word-boundary
+		// guard in `quotedSpans`, the `'` opens a span that swallows the rest of
+		// the sentence and the prose is read as a class list after all.
+		expect(reads("<p>Don't use CSS transition effects</p>")).toBe(false);
 
-		const classes = [
+		// The paired half, and the more important one. A `class`-attribute gate
+		// would have fixed the prose case and silently dropped `Progress.svelte`'s
+		// `cn('…')` line, which carries a real utility and no `class` token — a
+		// detector that stops seeing a live violation is worse than one that reads
+		// a sentence.
+		const live = [
 			'<button class="p-2 rounded hover:bg-accent transition-colors">',
 			"\t'h-full bg-primary transition-[width] duration-300 ease-in-out',",
 			'<div class="animate-in fade-in-0"></div>',
-			// A class attribute that wraps onto the next line: the quote never
-			// closes, and the span still has to be read.
-			'\t\tclass="flex items-center transition-all {isStepCurrent(step.step)',
-			// The utility first in the list, so there is no separator before it —
-			// which is what the leading space in `hasTailwindAnimation` supplies.
-			'<div class="transition-opacity opacity-50"></div>'
+			// The utility first in the list, so there is no separator before it.
+			'<div class="transition-opacity opacity-50"></div>',
+			// Unquoted, and how a stylesheet uses a utility. `.css` files came
+			// under the walk in the same commit as this gate, so without it the
+			// Tailwind detectors were blind to every stylesheet they had just been
+			// pointed at.
+			'\t\t@apply border-border transition-colors;',
+			// Unquoted, and a live idiom in this repo.
+			'<div class:transition-all={active}></div>',
+			'<span class:animate-in={entering}></span>'
 		];
 
-		for (const line of classes) {
-			expect(hasTailwindAnimation(line), `class not detected: ${line}`).toBe(true);
+		for (const line of live) {
+			expect(reads(line), `not detected: ${line}`).toBe(true);
 		}
+
+		// A class attribute wrapped across lines, with the utility on the
+		// continuation line — which carries no quote of its own. The first-line
+		// variant and this one are mirror images, and only one of them used to be
+		// covered.
+		const first = '\t\tclass="flex items-center';
+		const { open } = quotedSpans(first);
+		expect(open, 'the attribute should still be open at end of line').toBe('"');
+		expect(reads(first)).toBe(false);
+		expect(reads('\t\t\ttransition-colors duration-200"', open)).toBe(true);
 	});
 
 	it('leaves the infinite Tailwind animations and lookalike CSS values alone', () => {
@@ -768,6 +847,21 @@ describe('animation policy', () => {
 			.toContain('transition:');
 	});
 
+	it('does not treat `//` as a comment in a stylesheet', () => {
+		// `//` is never a comment in plain CSS. Stripping it discards the rest of
+		// the line, and a protocol-relative `url(//cdn…)` defeats both existing
+		// guards at once — `url()` is unquoted, so quote parity counts zero, and
+		// the preceding character is `(`, not `:`.
+		const css = '.x { background: url(//cdn.example.com/a.png); transition: opacity .2s; }';
+
+		expect(stripComments(css, true)).toContain('transition:');
+		// The `.svelte` path keeps its `//` handling, since there `//` really can
+		// open a comment.
+		expect(stripComments('\tconst x = 1; // transition: all 0.2s;')).not.toContain(
+			'transition:'
+		);
+	});
+
 	it('sees scroll-behavior, which is an animation the browser runs for you', () => {
 		// Named as prohibited by the guide, which cites four sites in chat/ — and
 		// matched by none of the four regexes above, so it could never fail a build.
@@ -785,8 +879,79 @@ describe('animation policy', () => {
 		// nothing here. Zero sites in the repo today.
 	});
 
+	it('committed build artifacts carry no prohibited animation', () => {
+		// `examples/ssr-server/static/` is SSG output that is *committed* — 34
+		// pages plus a bundled stylesheet — and `src/server/index.ts` serves it.
+		// The walk covers `<pkg>/src`, so it never saw this, and it went stale:
+		// six `transition:` declarations deleted from the components in 33f1276
+		// were still being served from the checked-in bundle, which is what a
+		// consumer who clones the repo and runs `npm start` actually gets.
+		//
+		// Scanned as content rather than by line: the bundle is minified onto one
+		// line, so a line number would say nothing. The remedy is to rebuild, not
+		// to edit — this file is generated.
+		const artifacts = ['examples/ssr-server/static/assets/index.css'];
+
+		for (const artifact of artifacts) {
+			const path = join(repoRoot, artifact);
+			expect(existsSync(path), `${artifact} is missing`).toBe(true);
+
+			const css = readFileSync(path, 'utf8');
+			const offenders = [
+				...css.matchAll(/transition\s*:[^;}]*/g),
+				...css.matchAll(/animation\s*:[^;}]*/g)
+			]
+				.map((m) => m[0].trim())
+				.filter((declaration) => !/:\s*none\b/.test(declaration))
+				.filter((declaration) => !/\binfinite\b/.test(declaration));
+
+			expect(
+				offenders,
+				`${artifact} is a committed, served build artifact and has drifted ` +
+					`from its sources. Rebuild it — \`pnpm --filter ssr-server build:ssg\` ` +
+					`— rather than editing it.`
+			).toEqual([]);
+		}
+	});
+
+	it('the register has no stale entries', () => {
+		// The other direction of the ratchet, and the half that went missing when
+		// the BACKLOG was deleted: its "no stale entries" arm went with it, and
+		// the REGISTER never had an equivalent. A grant that covers nothing is a
+		// permanent, invisible licence on a file — delete the transition it was
+		// written for and the entry keeps excusing whatever lands there next.
+		//
+		// `guides/ANIMATION-GUIDELINES.md` states the principle for the backlog in
+		// as many words: an excuse cannot outlive its defect. It applies here too.
+		const known = new Set(sourceFiles.map((f) => relative(repoRoot, f)));
+
+		const missing = Object.keys(REGISTER).filter((key) => !known.has(key));
+		expect(
+			missing,
+			`registered files that are not scanned — renamed, moved, or deleted:\n${missing
+				.map((f) => `  ${f}`)
+				.join('\n')}`
+		).toEqual([]);
+
+		// Scanned as though unregistered: if that finds nothing, the grant is
+		// covering nothing.
+		const dead = Object.keys(REGISTER)
+			.filter((key) => known.has(key))
+			.filter((key) => scan(join(repoRoot, key), false).length === 0);
+
+		expect(
+			dead,
+			`These files no longer transition anything — delete them from REGISTER:\n${dead
+				.map((f) => `  ${f}`)
+				.join('\n')}`
+		).toEqual([]);
+	});
+
 	it('no file violates the guideline', () => {
-		const violations = sourceFiles.flatMap(scan);
+		// Not `flatMap(scan)`: `flatMap` passes (value, index, array), so the index
+		// would land in `applyRegister` and the first file — index 0, falsy — would
+		// silently be scanned as though it had no Register grant.
+		const violations = sourceFiles.flatMap((file) => scan(file));
 
 		const report = violations
 			.map((v) => `  ${v.file}:${v.line}  ${v.why}\n      ${v.text}`)

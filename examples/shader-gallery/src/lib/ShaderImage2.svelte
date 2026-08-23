@@ -83,65 +83,21 @@ onMount(() => {
     imgRef.addEventListener('load', handleLoad);
   }
 
-  // Track active animations
-  let activeAnimation: number | null = null;
-
-  // Add hover listeners to update position during CSS transform
-  const handleMouseEnter = () => {
-    if (gallery && isRegistered) {
-      // Cancel any existing animation
-      if (activeAnimation !== null) {
-        cancelAnimationFrame(activeAnimation);
-      }
-
-      // Update position every frame during the transition
-      const startTime = performance.now();
-      const duration = 300; // Match CSS transition duration
-
-      const updateFrame = (currentTime: number) => {
-        const elapsed = currentTime - startTime;
-
-        if (elapsed < duration) {
-          gallery.updateImagePosition(id); // Update position every frame
-          activeAnimation = requestAnimationFrame(updateFrame);
-        } else {
-          // Final update at the end
-          gallery.updateImagePosition(id);
-          activeAnimation = null;
-        }
-      };
-
-      activeAnimation = requestAnimationFrame(updateFrame);
-    }
+  // Re-sync the WebGL overlay to the wrapper's new position on hover.
+  //
+  // This used to be a 300ms `requestAnimationFrame` loop on each handler,
+  // "matching the CSS transition duration" — the `transition: transform 0.3s`
+  // on `.shader-image-wrapper:hover`. That transition is gone: it was
+  // pseudo-class-driven, which the animation policy prohibits, so the transform
+  // now lands in a single frame. The loops were spending ~18 frames each
+  // tracking something that had already finished, and the two comments naming
+  // the transition outlived it.
+  const syncOverlayPosition = () => {
+    if (gallery && isRegistered) gallery.updateImagePosition(id);
   };
 
-  const handleMouseLeave = () => {
-    if (gallery && isRegistered) {
-      // Cancel any existing animation
-      if (activeAnimation !== null) {
-        cancelAnimationFrame(activeAnimation);
-      }
-
-      // Update position every frame during the transition
-      const startTime = performance.now();
-      const duration = 300; // Match CSS transition duration
-
-      const updateFrame = (currentTime: number) => {
-        const elapsed = currentTime - startTime;
-
-        if (elapsed < duration) {
-          gallery.updateImagePosition(id); // Update position every frame
-          activeAnimation = requestAnimationFrame(updateFrame);
-        } else {
-          // Final update at the end
-          gallery.updateImagePosition(id);
-          activeAnimation = null;
-        }
-      };
-
-      activeAnimation = requestAnimationFrame(updateFrame);
-    }
-  };
+  const handleMouseEnter = syncOverlayPosition;
+  const handleMouseLeave = syncOverlayPosition;
 
   if (wrapperRef) {
     wrapperRef.addEventListener('mouseenter', handleMouseEnter);
@@ -149,12 +105,6 @@ onMount(() => {
   }
 
   return () => {
-    // Cancel any active animation
-    if (activeAnimation !== null) {
-      cancelAnimationFrame(activeAnimation);
-      activeAnimation = null;
-    }
-
     gallery.unregisterImageElement(id);
     if (imgRef) {
       imgRef.removeEventListener('load', handleLoad);

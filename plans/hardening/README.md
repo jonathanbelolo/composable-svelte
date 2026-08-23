@@ -21,6 +21,7 @@ file and line, says whether it was **verified** (something was run) or
 | Workspaces that typecheck their tests | **14 of 14 that have tests** (S11 T1) |
 | Animation-policy backlog | **none** — emptied and deleted (S11 T2–T4) |
 | `examples/` animation violations | **0** — gated and cleared; was 78 across 33, not the 24 recorded (S11 T5) |
+| Committed build artifacts under the gate | `ssr-server/static` — was serving 6 deleted transitions |
 
 ## Remediation log
 
