@@ -38,6 +38,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the dismiss. All corrected, and `tests/repo/doc-examples.test.ts` now checks
   these shapes across every markdown file in the repo.
 
+- **`Destination.match` could not take handlers returning different types.**
+  It inferred a single `T` from the handler map, so `T` came from the first
+  handler and every other one was checked against it — the multi-case form in
+  its own JSDoc, the form the helper exists for, typechecked for nobody. It now
+  infers the map and distributes `ReturnType` over it, giving the union the
+  caller actually receives.
+
 - **`combineReducers` could not infer its `Action` type**, so the form shown in
   its own JSDoc did not typecheck for anyone — `Action` resolved to `unknown`
   because a reverse-mapped type yields inference candidates only for the

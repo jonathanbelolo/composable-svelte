@@ -276,10 +276,12 @@ describe('createDestination', () => {
 			});
 
 			const initialState = Destination.initial('addItem', { name: 'Test', quantity: 5 });
+			// Deliberately outside `DestinationAction` — an unknown case type is the
+			// subject here, so the cast is the test, not a workaround for it.
 			const action = {
-				type: 'unknownCase' as any,
+				type: 'unknownCase',
 				action: { type: 'presented' as const, action: { type: 'someAction' as const } }
-			};
+			} as unknown as typeof Destination._types.Action;
 
 			const [newState, effect] = Destination.reducer(initialState, action, {});
 

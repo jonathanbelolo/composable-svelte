@@ -13,6 +13,9 @@
 	import Sidebar from '../../../src/lib/navigation-components/Sidebar.svelte';
 	import type { PresentationState } from '../../../src/lib/navigation/types.js';
 	import { Effect } from '../../../src/lib/effect.js';
+	// The value `Effect` shadows the type of the same name, which lives in
+	// `types.ts`. Aliased so the reducer's return type resolves.
+	import type { Effect as EffectType } from '../../../src/lib/types.js';
 
 	// ============================================================================
 	// State & Actions
@@ -32,7 +35,7 @@
 	// Reducer
 	// ============================================================================
 
-	function testReducer(state: TestState, action: TestAction): [TestState, Effect<TestAction>] {
+	function testReducer(state: TestState, action: TestAction): [TestState, EffectType<TestAction>] {
 		switch (action.type) {
 			case 'openSidebar':
 				return [
@@ -58,10 +61,16 @@
 
 			case 'presentation':
 				if (action.event.type === 'presentationCompleted') {
+					// Guard: a completion only means something while presenting. Spreading
+					// any other status here builds `{ status: 'presented' }` with no
+					// content, which is not a `PresentationState`.
+					if (state.presentation.status !== 'presenting') {
+						return [state, Effect.none()];
+					}
 					return [
 						{
 							...state,
-							presentation: { ...state.presentation, status: 'presented' }
+							presentation: { status: 'presented', content: state.presentation.content }
 						},
 						Effect.none()
 					];
@@ -148,7 +157,7 @@
 	{#snippet children({ store: scopedStore })}
 		<div data-testid="sidebar-content" class="sidebar-test-content">
 			<h2>Test Sidebar</h2>
-			<p>{scopedStore.state}</p>
+			<p>{scopedStore?.state}</p>
 
 			<button
 				data-testid="sidebar-action-button"
@@ -158,7 +167,7 @@
 				Action Button
 			</button>
 
-			<button data-testid="dismiss-via-scope" onclick={() => scopedStore.dismiss()}>
+			<button data-testid="dismiss-via-scope" onclick={() => scopedStore?.dismiss()}>
 				Dismiss
 			</button>
 		</div>

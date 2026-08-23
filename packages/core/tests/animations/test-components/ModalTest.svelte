@@ -5,6 +5,9 @@
 	import Modal from '../../../src/lib/navigation-components/Modal.svelte';
 	import type { PresentationState } from '../../../src/lib/navigation/types.js';
 	import { Effect } from '../../../src/lib/effect.js';
+	// The value `Effect` shadows the type of the same name, which lives in
+	// `types.ts`. Aliased so the reducer's return type resolves.
+	import type { Effect as EffectType } from '../../../src/lib/types.js';
 
 	// ============================================================================
 	// State & Actions
@@ -24,7 +27,7 @@
 	// Reducer
 	// ============================================================================
 
-	function testReducer(state: TestState, action: TestAction): [TestState, Effect<TestAction>] {
+	function testReducer(state: TestState, action: TestAction): [TestState, EffectType<TestAction>] {
 		switch (action.type) {
 			case 'openModal':
 				return [
@@ -50,10 +53,16 @@
 
 			case 'presentation':
 				if (action.event.type === 'presentationCompleted') {
+					// Guard: a completion only means something while presenting. Spreading
+					// any other status here builds `{ status: 'presented' }` with no
+					// content, which is not a `PresentationState`.
+					if (state.presentation.status !== 'presenting') {
+						return [state, Effect.none()];
+					}
 					return [
 						{
 							...state,
-							presentation: { ...state.presentation, status: 'presented' }
+							presentation: { status: 'presented', content: state.presentation.content }
 						},
 						Effect.none()
 					];
@@ -136,7 +145,7 @@
 		<div data-testid="modal-backdrop" class="modal-test-backdrop"></div>
 		<div data-testid="modal-content" class="modal-test-content">
 			<h2>Test Modal</h2>
-			<p>{scopedStore.state}</p>
+			<p>{scopedStore?.state}</p>
 
 			<button
 				data-testid="modal-action-button"
@@ -146,7 +155,7 @@
 				Action Button
 			</button>
 
-			<button data-testid="dismiss-modal" onclick={() => scopedStore.dismiss()}>
+			<button data-testid="dismiss-modal" onclick={() => scopedStore?.dismiss()}>
 				Dismiss
 			</button>
 		</div>

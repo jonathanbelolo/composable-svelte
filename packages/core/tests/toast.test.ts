@@ -7,7 +7,7 @@
  * @packageDocumentation
  */
 
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach, type Mock } from 'vitest';
 import { createTestStore } from '../src/lib/test/test-store.js';
 import { toastReducer } from '../src/lib/components/toast/toast.reducer.js';
 import {
@@ -35,10 +35,10 @@ function advanceTime(ms: number): Promise<void> {
 
 describe('Adding Toasts', () => {
 	let store: ReturnType<typeof createTestStore<ToastState, ToastAction>>;
-	let onToastAdded: ReturnType<typeof vi.fn>;
+	let onToastAdded: Mock<(toast: Toast) => void>;
 
 	beforeEach(() => {
-		onToastAdded = vi.fn();
+		onToastAdded = vi.fn<(toast: Toast) => void>();
 		store = createTestStore({
 			initialState: createInitialToastState(),
 			reducer: toastReducer,
@@ -236,10 +236,10 @@ describe('Auto-Dismiss', () => {
 
 describe('Manual Dismiss', () => {
 	let store: ReturnType<typeof createTestStore<ToastState, ToastAction>>;
-	let onToastDismissed: ReturnType<typeof vi.fn>;
+	let onToastDismissed: Mock<(toast: Toast) => void>;
 
 	beforeEach(() => {
-		onToastDismissed = vi.fn();
+		onToastDismissed = vi.fn<(toast: Toast) => void>();
 		store = createTestStore({
 			initialState: createInitialToastState(),
 			reducer: toastReducer,
@@ -299,10 +299,10 @@ describe('Manual Dismiss', () => {
 
 describe('Toast Action', () => {
 	let store: ReturnType<typeof createTestStore<ToastState, ToastAction>>;
-	let onToastDismissed: ReturnType<typeof vi.fn>;
+	let onToastDismissed: Mock<(toast: Toast) => void>;
 
 	beforeEach(() => {
-		onToastDismissed = vi.fn();
+		onToastDismissed = vi.fn<(toast: Toast) => void>();
 		store = createTestStore({
 			initialState: createInitialToastState(),
 			reducer: toastReducer,
@@ -358,10 +358,10 @@ describe('Toast Action', () => {
 
 describe('Dismiss All', () => {
 	let store: ReturnType<typeof createTestStore<ToastState, ToastAction>>;
-	let onToastDismissed: ReturnType<typeof vi.fn>;
+	let onToastDismissed: Mock<(toast: Toast) => void>;
 
 	beforeEach(() => {
-		onToastDismissed = vi.fn();
+		onToastDismissed = vi.fn<(toast: Toast) => void>();
 		store = createTestStore({
 			initialState: createInitialToastState(),
 			reducer: toastReducer,
@@ -574,10 +574,10 @@ describe('Custom ID Generator', () => {
 
 describe('Dismissal edge cases', () => {
 	let store: ReturnType<typeof createTestStore<ToastState, ToastAction>>;
-	let onToastDismissed: ReturnType<typeof vi.fn>;
+	let onToastDismissed: Mock<(toast: Toast) => void>;
 
 	beforeEach(() => {
-		onToastDismissed = vi.fn();
+		onToastDismissed = vi.fn<(toast: Toast) => void>();
 		store = createTestStore({
 			initialState: createInitialToastState({ maxToasts: 2 }),
 			reducer: toastReducer,

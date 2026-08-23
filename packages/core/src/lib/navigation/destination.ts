@@ -202,11 +202,16 @@ export interface Destination<Reducers extends Record<string, Reducer<any, any, a
 	 * }
 	 * ```
 	 */
-	match<T>(
+	// Inferring a single `T` from the handler map meant `T` came from the first
+	// handler and every other one was checked against it — so the multi-case
+	// form in the example above, the form this helper exists for, typechecked
+	// for nobody. Inferring the map and distributing `ReturnType` over it gives
+	// the union the caller actually gets back.
+	match<H extends Record<string, (childState: any) => unknown>>(
 		action: unknown,
 		state: DestinationState<Reducers> | null,
-		handlers: Record<string, (childState: any) => T>
-	): { matched: true; value: T } | { matched: false };
+		handlers: H
+	): { matched: true; value: ReturnType<H[keyof H]> } | { matched: false };
 
 	/**
 	 * Type information for the destination (for type-level programming).
@@ -449,16 +454,19 @@ export function createDestination<Reducers extends Record<string, Reducer<any, a
 	};
 
 	// Helper: Multi-case matching with handlers
-	const match = <T>(
+	const match = <H extends Record<string, (childState: any) => unknown>>(
 		action: unknown,
 		state: DestinationState<Reducers> | null,
-		handlers: Record<string, (childState: any) => T>
-	): { matched: true; value: T } | { matched: false } => {
+		handlers: H
+	): { matched: true; value: ReturnType<H[keyof H]> } | { matched: false } => {
 		// Try each handler in order (first match wins)
 		for (const [casePath, handler] of Object.entries(handlers)) {
 			const childState = matchCase(action, state, casePath);
 			if (childState !== null) {
-				return { matched: true, value: handler(childState) };
+				// `Object.entries` erases which handler this is, so the return type
+				// cannot be recovered structurally here. The declaration above is the
+				// contract; this cast is the one place it is asserted.
+				return { matched: true, value: handler(childState) as ReturnType<H[keyof H]> };
 			}
 		}
 

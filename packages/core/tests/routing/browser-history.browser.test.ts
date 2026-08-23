@@ -50,13 +50,13 @@ const parseURL = (path: string): TestDestination | null => {
 	// Check edit pattern first (more specific)
 	const editMatch = path.match(/^\/inventory\/item-([^/]+)\/edit$/);
 	if (editMatch) {
-		return { type: 'edit', state: { id: editMatch[1] } };
+		return { type: 'edit', state: { id: editMatch[1]! } };
 	}
 
 	// Then check detail pattern
 	const detailMatch = path.match(/^\/inventory\/item-([^/]+)$/);
 	if (detailMatch) {
-		return { type: 'detail', state: { id: detailMatch[1] } };
+		return { type: 'detail', state: { id: detailMatch[1]! } };
 	}
 
 	return null;
@@ -236,13 +236,13 @@ describe('syncBrowserHistory', () => {
 			window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
 			await new Promise((resolve) => setTimeout(resolve, 50));
 
-			expect(store.state.destination?.state.id).toBe('2');
+			expect(store.state.destination).toEqual({ type: 'detail', state: { id: '2' } });
 
 			history.back();
 			window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
 			await new Promise((resolve) => setTimeout(resolve, 50));
 
-			expect(store.state.destination?.state.id).toBe('1');
+			expect(store.state.destination).toEqual({ type: 'detail', state: { id: '1' } });
 
 			cleanup();
 		});
@@ -558,7 +558,7 @@ describe('syncBrowserHistory', () => {
 			await new Promise((resolve) => setTimeout(resolve, 50));
 
 			// Should end up at item-1 (after final back click)
-			expect(store.state.destination?.state.id).toBe('1');
+			expect(store.state.destination).toEqual({ type: 'detail', state: { id: '1' } });
 
 			cleanup();
 		});

@@ -284,7 +284,10 @@ describe('ifLetPresentation()', () => {
       action: { type: 'presented', action: { type: 'increment' } }
     };
 
-    const reducer = ifLetPresentation<ParentState, ParentAction, ChildState, ChildAction, null>(
+    const reducer = // The fifth parameter is `ActionType extends string`, not `Dependencies`;
+    // these calls were one position out and were pinning `null` against a
+    // `string` constraint.
+    ifLetPresentation<ParentState, ParentAction, ChildState, ChildAction, 'child', null>(
       (s) => s.child,
       (s, c) => ({ ...s, child: c }),
       'child',
@@ -308,7 +311,10 @@ describe('ifLetPresentation()', () => {
       action: { type: 'dismiss' }
     };
 
-    const reducer = ifLetPresentation<ParentState, ParentAction, ChildState, ChildAction, null>(
+    const reducer = // The fifth parameter is `ActionType extends string`, not `Dependencies`;
+    // these calls were one position out and were pinning `null` against a
+    // `string` constraint.
+    ifLetPresentation<ParentState, ParentAction, ChildState, ChildAction, 'child', null>(
       (s) => s.child,
       (s, c) => ({ ...s, child: c }),
       'child',
@@ -329,7 +335,10 @@ describe('ifLetPresentation()', () => {
     };
     const action: ParentAction = { type: 'incrementParent' };
 
-    const reducer = ifLetPresentation<ParentState, ParentAction, ChildState, ChildAction, null>(
+    const reducer = // The fifth parameter is `ActionType extends string`, not `Dependencies`;
+    // these calls were one position out and were pinning `null` against a
+    // `string` constraint.
+    ifLetPresentation<ParentState, ParentAction, ChildState, ChildAction, 'child', null>(
       (s) => s.child,
       (s, c) => ({ ...s, child: c }),
       'child',
@@ -350,7 +359,10 @@ describe('ifLetPresentation()', () => {
       action: { type: 'presented', action: { type: 'increment' } }
     };
 
-    const reducer = ifLetPresentation<ParentState, ParentAction, ChildState, ChildAction, null>(
+    const reducer = // The fifth parameter is `ActionType extends string`, not `Dependencies`;
+    // these calls were one position out and were pinning `null` against a
+    // `string` constraint.
+    ifLetPresentation<ParentState, ParentAction, ChildState, ChildAction, 'child', null>(
       (s) => s.child,
       (s, c) => ({ ...s, child: c }),
       'child',
@@ -391,7 +403,10 @@ describe('ifLetPresentation()', () => {
       action: { type: 'presented', action: { type: 'increment' } }
     };
 
-    const reducer = ifLetPresentation<ParentState, ParentAction, ChildState, ChildAction, null>(
+    const reducer = // The fifth parameter is `ActionType extends string`, not `Dependencies`;
+    // these calls were one position out and were pinning `null` against a
+    // `string` constraint.
+    ifLetPresentation<ParentState, ParentAction, ChildState, ChildAction, 'child', null>(
       (s) => s.child,
       (s, c) => ({ ...s, child: c }),
       'child',
@@ -552,7 +567,7 @@ describe('isDestinationType()', () => {
       state: { item: 'apple', quantity: 1 }
     };
 
-    expect(isDestinationType(dest, 'editItem')).toBe(false);
+    expect(isDestinationType<Destination, 'editItem'>(dest, 'editItem')).toBe(false);
   });
 
   it('returns false for null destination', () => {
@@ -590,7 +605,7 @@ describe('extractDestinationState()', () => {
       state: { item: 'apple', quantity: 1 }
     };
 
-    const state = extractDestinationState(dest, 'editItem');
+    const state = extractDestinationState<Destination, 'editItem'>(dest, 'editItem');
 
     expect(state).toBeNull();
   });
