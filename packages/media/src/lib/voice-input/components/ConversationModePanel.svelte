@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { animateFadeIn } from '@composable-svelte/core/animation';
 	import type { Store } from '@composable-svelte/core';
 	import type { VoiceInputState, VoiceInputAction } from '../types.js';
 	import AudioVisualizer from './AudioVisualizer.svelte';
@@ -15,6 +16,22 @@
 	}
 
 	const { store, transcripts = [] }: Props = $props();
+
+	let rootElement: HTMLDivElement | undefined = $state();
+
+	// A plain `let`, never `$state`: a reactive guard would re-trigger the effect
+	// it lives in. The panel is mounted by an `{#if}` in `VoiceInputPanel`, so the
+	// entrance runs once per mount and nothing in the store sequences on it.
+	// `animateFadeIn` reads `prefers-reduced-motion` and writes `opacity: 1`
+	// under it, which is what lets this replace the CSS keyframe without deleting
+	// the accessibility guard the keyframe needed.
+	let hasEntered = false;
+
+	$effect(() => {
+		if (hasEntered || !rootElement) return;
+		hasEntered = true;
+		animateFadeIn(rootElement);
+	});
 
 	// Derived states
 	const isSpeaking = $derived($store.vadState?.isSpeaking ?? false);
@@ -41,7 +58,7 @@
 
 <svelte:window onkeydown={handleKeyDown} />
 
-<div class="conversation-panel">
+<div class="conversation-panel" bind:this={rootElement}>
 	<div class="panel-content">
 		<!-- Header -->
 		<div class="panel-header">
@@ -113,18 +130,6 @@
 		pointer-events: auto;
 		min-width: 320px;
 		max-width: 480px;
-		animation: fadeIn 0.2s ease-out;
-	}
-
-	@keyframes fadeIn {
-		from {
-			opacity: 0;
-			transform: translateX(-50%) translateY(4px);
-		}
-		to {
-			opacity: 1;
-			transform: translateX(-50%) translateY(0);
-		}
 	}
 
 	.panel-content {
@@ -359,10 +364,10 @@
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.conversation-panel {
-			animation: none;
-		}
-
+		/* The panel's own entrance is Motion One's now, and `animateFadeIn`
+		   consults this preference itself. These two remain: they are legal
+		   `infinite` animations, and this block is the only thing that stops
+		   them. */
 		.status-dot.active,
 		.status-dot.processing {
 			animation: none;

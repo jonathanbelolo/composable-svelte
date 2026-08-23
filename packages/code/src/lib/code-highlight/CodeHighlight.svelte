@@ -156,7 +156,6 @@
 		border: 1px solid rgba(255, 255, 255, 0.2);
 		border-radius: 4px;
 		cursor: pointer;
-		transition: all 0.2s;
 	}
 
 	.code-highlight__copy-button:hover:not(:disabled) {

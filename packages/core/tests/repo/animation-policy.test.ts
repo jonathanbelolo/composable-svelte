@@ -474,44 +474,22 @@ function scan(file: string): Violation[] {
 }
 
 /**
- * Files not yet converted, shrinking to empty.
+ * There is no backlog.
  *
- * A ratchet rather than a knowingly-red suite: CI stays green while the sweep
- * proceeds, and the list cannot rot in either direction. A violation in a file
- * that is **not** listed fails, so nothing new lands. A listed file that has
- * become clean **also** fails, so an entry cannot outlive the defect it excuses.
+ * There was one, and it is gone because it reached empty — which was always the
+ * instruction attached to it. It held five files across `code`, `maps` and
+ * `media`; the last two were listed as *blocked* rather than merely unconverted,
+ * because converting them would have deleted the only `prefers-reduced-motion`
+ * guard they had. `animateFadeIn` reading the preference itself is what removed
+ * that trade.
  *
- * Keyed by file, not by line, because line numbers move under unrelated edits
- * and a guard that reports false positives gets disabled.
+ * Its two ratchet arms went with it. An arm iterating an empty set passes
+ * trivially, and a guard that cannot fail is not a guard.
  *
- * Delete entries as packages are converted. When this is empty, delete it.
+ * If a file ever needs time again, restore the set *and* both arms together —
+ * the "no stale entries" one is what stops an excuse outliving its defect, and a
+ * backlog without it is just a permanent exemption list.
  */
-const BACKLOG = new Set([
-	// chat is clear. It entered this campaign with 47 violations across 21 files —
-	// 19 of which were listed here; the other two were invisible to a scanner
-	// whose comment stripper could be opened by an `image/*` in an attribute.
-	'code/src/lib/code-editor/CodeEditor.svelte',
-	'code/src/lib/code-highlight/CodeHighlight.svelte',
-	'maps/src/lib/components/TileProviderControl.svelte',
-	// These two are blocked, not merely unconverted. Each carries a one-shot
-	// `fadeIn` on mount — a lifecycle animation the policy prohibits — and each is
-	// the *only* thing its own `@media (prefers-reduced-motion: reduce)` block
-	// disables them. Cited by rule name rather than line number: the previous
-	// form named two lines, and a later commit in the same batch deleted 28 lines
-	// above one of them, leaving the sole recorded justification for an exemption
-	// pointing past end-of-file.
-	// The capability they were waiting for now exists: `animateFadeIn` and
-	// `animateFadeOut` read the preference themselves, so converting these no
-	// longer trades an accessibility guard for a policy tick. What is left is the
-	// work, not a blocker — this is the last stated reason these two are listed,
-	// and it has changed from "cannot" to "not yet".
-	//
-	// They do not qualify for the Register either: its criteria require freedom
-	// from any mount/unmount lifecycle, which is exactly what these are. The
-	// Register grants properties; the backlog grants time.
-	'media/src/lib/voice-input/components/ConversationModePanel.svelte',
-	'media/src/lib/voice-input/components/PushToTalkPanel.svelte',
-]);
 
 describe('animation policy', () => {
 	it('finds source to scan, so this guard is not vacuous', () => {
@@ -765,8 +743,8 @@ describe('animation policy', () => {
 		// nothing here. Zero sites in the repo today.
 	});
 
-	it('no file outside the backlog violates the guideline', () => {
-		const violations = sourceFiles.flatMap(scan).filter((v) => !BACKLOG.has(v.file));
+	it('no file violates the guideline', () => {
+		const violations = sourceFiles.flatMap(scan);
 
 		const report = violations
 			.map((v) => `  ${v.file}:${v.line}  ${v.why}\n      ${v.text}`)
@@ -784,21 +762,4 @@ describe('animation policy', () => {
 		).toEqual([]);
 	});
 
-	it('the backlog has no stale entries', () => {
-		// An entry that no longer names a violation is an excuse outliving its
-		// defect. Removing it is what makes the ratchet tighten.
-		const offending = new Set(sourceFiles.flatMap(scan).map((v) => v.file));
-		const stale = [...BACKLOG].filter((f) => !offending.has(f));
-
-		expect(
-			stale,
-			`These files are now clean — delete them from BACKLOG:\n${stale.map((f) => `  ${f}`).join('\n')}`
-		).toEqual([]);
-	});
-
-	it('the backlog names files that exist', () => {
-		// A rename would otherwise silently un-enforce a file.
-		const known = new Set(sourceFiles.map((f) => relative(packagesDir, f)));
-		expect([...BACKLOG].filter((f) => !known.has(f))).toEqual([]);
-	});
 });

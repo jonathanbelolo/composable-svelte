@@ -90,7 +90,6 @@ const positionClass = $derived({
     background: white;
     font-size: 13px;
     cursor: pointer;
-    transition: border-color 0.2s;
   }
 
   .tile-provider-select:hover {

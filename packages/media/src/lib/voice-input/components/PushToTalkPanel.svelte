@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { animateFadeIn } from '@composable-svelte/core/animation';
 	import type { Store } from '@composable-svelte/core';
 	import type { VoiceInputState, VoiceInputAction } from '../types.js';
 	import AudioVisualizer from './AudioVisualizer.svelte';
@@ -16,6 +17,22 @@
 
 	const { store }: Props = $props();
 
+	let rootElement: HTMLDivElement | undefined = $state();
+
+	// A plain `let`, never `$state`: a reactive guard would re-trigger the effect
+	// it lives in. The popover is mounted by an `{#if}` in `VoiceInputPanel`, so
+	// the entrance runs once per mount and nothing in the store sequences on it.
+	// `animateFadeIn` reads `prefers-reduced-motion` and writes `opacity: 1`
+	// under it, which is what lets this replace the CSS keyframe without
+	// deleting the accessibility guard the keyframe needed.
+	let hasEntered = false;
+
+	$effect(() => {
+		if (hasEntered || !rootElement) return;
+		hasEntered = true;
+		animateFadeIn(rootElement);
+	});
+
 	function handleCancel() {
 		store.dispatch({ type: 'cancelPushToTalkRecording' });
 	}
@@ -30,7 +47,7 @@
 
 <svelte:window onkeydown={handleKeyDown} />
 
-<div class="push-to-talk-popover">
+<div class="push-to-talk-popover" bind:this={rootElement}>
 	<div class="popover-content">
 		<!-- Audio Visualizer -->
 		<AudioVisualizer audioLevel={$store.audioLevel} variant="bars" />
@@ -57,18 +74,6 @@
 		transform: translateX(-50%);
 		z-index: 1000;
 		pointer-events: none; /* Don't intercept pointer events */
-		animation: fadeIn 0.2s ease-out;
-	}
-
-	@keyframes fadeIn {
-		from {
-			opacity: 0;
-			transform: translateX(-50%) translateY(4px);
-		}
-		to {
-			opacity: 1;
-			transform: translateX(-50%) translateY(0);
-		}
 	}
 
 	.popover-content {
@@ -101,12 +106,6 @@
 
 		.hint-text {
 			color: #999;
-		}
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		.push-to-talk-popover {
-			animation: none;
 		}
 	}
 </style>
