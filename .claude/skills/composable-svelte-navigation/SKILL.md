@@ -1365,24 +1365,48 @@ const destState = extractDestinationOnAction(action, state, 'confirmDelete.confi
 
 Children can dismiss themselves via an injectable dependency. Use for simple close/cancel; prefer parent observation when the parent needs to react.
 
+The first argument is the parent's **dispatch**, not the store, and the second
+is a function wrapping a `PresentationAction` into a parent action (or, for the
+`dismissDependency` shorthand, the action field name). The effect dispatches
+through that captured dispatch rather than through the effect stream, so `ifLet`
+cannot wrap the dismiss a second time.
+
+Build it where the store is built — a reducer is `(state, action, dependencies)`
+and has no `dispatch` in scope — capturing the dispatch lazily.
+
 ```typescript
 import { createDismissDependency, createDismissDependencyWithCleanup, dismissDependency } from '@composable-svelte/core/navigation';
 
-// Create dismiss function for a child
-const dismiss = createDismissDependency(parentStore, 'destination');
+let dispatch: Dispatch<ParentAction> = () => {};
 
-// With cleanup callback
-const dismiss = createDismissDependencyWithCleanup(parentStore, 'destination', () => {
-  console.log('child dismissed');
+const store = createStore({
+  initialState,
+  reducer: parentReducer,
+  dependencies: {
+    // Full form: supply the wrapper yourself.
+    dismiss: createDismissDependency(
+      (action) => dispatch(action),
+      (pa) => ({ type: 'destination', action: pa })
+    )
+
+    // Shorthand for that exact shape:
+    // dismiss: dismissDependency((action) => dispatch(action), 'destination')
+
+    // With a cleanup callback, awaited before the dismiss lands:
+    // dismiss: createDismissDependencyWithCleanup(
+    //   (action) => dispatch(action),
+    //   (pa) => ({ type: 'destination', action: pa }),
+    //   async () => { await analytics.track('child_dismissed'); }
+    // )
+  }
 });
 
-// Shorthand helper
-const deps = { dismiss: dismissDependency(parentStore, 'destination') };
+dispatch = (action) => store.dispatch(action);
 
-// Child reducer uses it
+// Child reducer uses it. `deps.dismiss()` IS the effect — RETURN it.
+// Calling it and returning `Effect.none()` discards the dismiss entirely.
 case 'closeButtonTapped':
-  deps.dismiss();  // OK for simple close
-  return [state, Effect.none()];
+  return [state, deps.dismiss()];
 ```
 
 ---

@@ -71,14 +71,14 @@ const parserConfig: ParserConfig<InventoryDestination> = {
 		(path) => {
 			const params = matchPath('/item-:itemId/edit', path);
 			if (params) {
-				return { type: 'edit', state: { itemId: params.itemId } };
+				return { type: 'edit', state: { itemId: params.itemId! } };
 			}
 			return null;
 		},
 		(path) => {
 			const params = matchPath('/item-:itemId', path);
 			if (params) {
-				return { type: 'detail', state: { itemId: params.itemId } };
+				return { type: 'detail', state: { itemId: params.itemId! } };
 			}
 			return null;
 		},
@@ -244,7 +244,7 @@ describe('Routing Integration', () => {
 
 			// URL should reflect final state
 			expect(window.location.pathname).toBe('/inventory/item-3');
-			expect(store.state.destination?.state.itemId).toBe('3');
+			expect(store.state.destination).toEqual({ type: 'detail', state: { itemId: '3' } });
 		});
 	});
 
@@ -366,14 +366,14 @@ describe('Routing Integration', () => {
 			await new Promise((resolve) => setTimeout(resolve, 50));
 
 			expect(window.location.pathname).toBe('/inventory/item-abc');
-			expect(store.state.destination?.state.itemId).toBe('abc');
+			expect(store.state.destination).toEqual({ type: 'detail', state: { itemId: 'abc' } });
 
 			// 2. URL → State: Browser navigation
 			history.pushState(null, '', '/inventory/item-xyz');
 			window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
 			await new Promise((resolve) => setTimeout(resolve, 50));
 
-			expect(store.state.destination?.state.itemId).toBe('xyz');
+			expect(store.state.destination).toEqual({ type: 'detail', state: { itemId: 'xyz' } });
 
 			// 3. State → URL: Another action
 			store.dispatch({ type: 'editTapped', itemId: 'xyz' });
@@ -418,7 +418,7 @@ describe('Routing Integration', () => {
 
 			// URL was updated, but popstate handler should ignore it (metadata flag)
 			expect(window.location.pathname).toBe('/inventory/item-123');
-			expect(store.state.destination?.state.itemId).toBe('123');
+			expect(store.state.destination).toEqual({ type: 'detail', state: { itemId: '123' } });
 
 			// No loop should occur (test passes if no infinite recursion)
 
@@ -569,7 +569,7 @@ describe('Routing Integration', () => {
 			await new Promise((resolve) => setTimeout(resolve, 50));
 
 			// Destination remains (orphaned state - app logic could handle this)
-			expect(store.state.destination?.state.itemId).toBe('1');
+			expect(store.state.destination).toEqual({ type: 'detail', state: { itemId: '1' } });
 			expect(store.state.items).toHaveLength(0);
 		});
 
@@ -609,8 +609,8 @@ describe('Routing Integration', () => {
 			window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
 			await new Promise((resolve) => setTimeout(resolve, 50));
 
-			expect(store1.state.destination?.state.itemId).toBe('multi');
-			expect(store2.state.destination?.state.itemId).toBe('multi');
+			expect(store1.state.destination).toEqual({ type: 'detail', state: { itemId: 'multi' } });
+			expect(store2.state.destination).toEqual({ type: 'detail', state: { itemId: 'multi' } });
 
 			cleanup1();
 			cleanup2();
@@ -667,7 +667,7 @@ describe('Routing Integration', () => {
 			await new Promise((resolve) => setTimeout(resolve, 50));
 
 			expect(window.location.pathname).toBe('/inventory/item-1000');
-			expect(store.state.destination?.state.itemId).toBe('1000');
+			expect(store.state.destination).toEqual({ type: 'detail', state: { itemId: '1000' } });
 
 			// 4. User searches (URL unchanged)
 			store.dispatch({ type: 'searchChanged', query: 'another' });

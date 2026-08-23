@@ -121,3 +121,148 @@ describe('documented TestStore examples', () => {
 		).toEqual([]);
 	});
 });
+
+/**
+ * Every documented call to a dismiss-dependency factory, checked against the
+ * real signatures.
+ *
+ * All three take the parent's **dispatch** first and an action **wrapper**
+ * second (`dismissDependency` takes the action field name instead). Passing a
+ * store, or a string where the wrapper goes, throws
+ * `TypeError: actionWrapper is not a function` at execute time — and until the
+ * captured dispatch was actually used, passing the wrong thing first was
+ * silently harmless, which is how six documented sites drifted.
+ *
+ * `docs/api/reference.md` had gone further and documented an API that never
+ * existed: a one-argument form, a `DismissDependency<Action>` type parameter,
+ * and `deps.dismiss.dismiss(dispatch)` on what is a plain function.
+ */
+describe('documented dismiss dependency call shapes', () => {
+	const calls = blocks.flatMap((b) => {
+		const out: Array<{ where: string; fn: string; first: string; second: string }> = [];
+		const names = [
+			'createDismissDependencyWithCleanup',
+			'createDismissDependency',
+			'dismissDependency'
+		];
+
+		for (let i = 0; i < b.body.length; i += 1) {
+			const name = names.find(
+				(n) => b.body.startsWith(n, i) && !/[A-Za-z0-9_$]/.test(b.body[i - 1] ?? '')
+			);
+			if (!name) continue;
+
+			let j = i + name.length;
+			while (j < b.body.length && /\s/.test(b.body[j]!)) j += 1;
+			if (b.body[j] !== '(') {
+				i = j;
+				continue;
+			}
+
+			// Balanced scan to the matching close paren — the arguments here are
+			// arrow functions and object literals, so a regex cannot find the end.
+			let depth = 0;
+			let k = j;
+			for (; k < b.body.length; k += 1) {
+				const ch = b.body[k]!;
+				if ('([{'.includes(ch)) depth += 1;
+				else if (')]}'.includes(ch)) {
+					depth -= 1;
+					if (depth === 0) break;
+				}
+			}
+			const args = b.body.slice(j + 1, k);
+
+			// Split on top-level commas only.
+			const parts: string[] = [];
+			let d = 0;
+			let cur = '';
+			for (const ch of args) {
+				if ('([{'.includes(ch)) d += 1;
+				if (')]}'.includes(ch)) d -= 1;
+				if (ch === ',' && d === 0) {
+					parts.push(cur.trim());
+					cur = '';
+					continue;
+				}
+				cur += ch;
+			}
+			if (cur.trim()) parts.push(cur.trim());
+
+			// Skip commented-out lines: they are prose, not a call.
+			const lineStart = b.body.lastIndexOf('\n', i) + 1;
+			const prefix = b.body.slice(lineStart, i);
+			if (/^\s*(\/\/|\*)/.test(prefix)) {
+				i = k;
+				continue;
+			}
+
+			out.push({
+				where: `${b.file}:${b.line}`,
+				fn: name,
+				first: (parts[0] ?? '').replace(/\s+/g, ' '),
+				second: (parts[1] ?? '').replace(/\s+/g, ' ')
+			});
+			i = k;
+		}
+		return out;
+	});
+
+	it('finds the documented calls at all', () => {
+		// Guards the regex: if it stops matching, the arms below pass vacuously.
+		expect(calls.length).toBeGreaterThan(5);
+	});
+
+	it('passes a dispatch first, never a store', () => {
+		const offenders = calls
+			.filter((c) => /store\b/i.test(c.first) && !/=>/.test(c.first) && !/\.dispatch\b/.test(c.first))
+			.map((c) => `${c.where} ${c.fn}(${c.first}, …)`);
+
+		expect(
+			offenders,
+			'the first argument is the parent dispatch, not the store. Pass ' +
+				'`(action) => dispatch(action)`.'
+		).toEqual([]);
+	});
+
+	it('passes a wrapper function second, never the action field name', () => {
+		// `dismissDependency` is the one that takes a field name; the other two
+		// take a function that wraps a PresentationAction into a parent action.
+		const offenders = calls
+			.filter((c) => c.fn !== 'dismissDependency')
+			.filter((c) => c.second !== '' && /^['"`]/.test(c.second))
+			.map((c) => `${c.where} ${c.fn}(…, ${c.second})`);
+
+		expect(
+			offenders,
+			'a string here throws `actionWrapper is not a function` at execute ' +
+				'time. Either pass a wrapper, or use `dismissDependency`, which ' +
+				'takes the field name.'
+		).toEqual([]);
+	});
+
+	it('never calls the one-argument form', () => {
+		const offenders = calls
+			.filter((c) => c.second === '' && c.first !== '')
+			.map((c) => `${c.where} ${c.fn}(${c.first})`);
+
+		expect(
+			offenders,
+			'all three factories require at least a dispatch and a wrapper or ' +
+				'field name; the one-argument form leaves `actionWrapper` undefined.'
+		).toEqual([]);
+	});
+
+	it('returns the dismiss effect rather than discarding it', () => {
+		const offenders = blocks
+			.filter((b) => /deps\.dismiss\s*\(\s*\)\s*;/.test(b.body))
+			.map((b) => `${b.file}:${b.line}`);
+
+		expect(
+			offenders,
+			'`deps.dismiss()` IS the effect. Calling it as a statement and ' +
+				'returning `Effect.none()` discards the dismiss entirely.'
+		).toEqual([]);
+	});
+});
+

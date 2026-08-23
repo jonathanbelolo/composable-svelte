@@ -55,8 +55,9 @@ import { createDismissDependency } from '@composable-svelte/core/navigation';
 // Simple child that just needs to close itself
 const childReducer = (state, action, deps) => {
   case 'closeButtonTapped':
-    deps.dismiss();  // OK when parent doesn't need to observe this
-    return [state, Effect.none()];
+    // `deps.dismiss()` IS the effect — return it. Calling it and returning
+    // `Effect.none()` discards the dismiss and nothing happens.
+    return [state, deps.dismiss()];  // OK when parent doesn't need to observe this
 }
 ```
 
@@ -287,8 +288,7 @@ const [newState, effect] = ifLetPresentation(
 ```typescript
 // ❌ WRONG when parent needs to handle the save
 case 'saveButtonTapped':
-  deps.dismiss();  // Parent never sees this action!
-  return [state, Effect.none()];
+  return [state, deps.dismiss()];  // Parent never sees this action!
 ```
 
 **Solution**: Let parent observe the action so it can handle both the save and the dismissal.

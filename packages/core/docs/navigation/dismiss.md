@@ -169,34 +169,44 @@ function createDismissDependency<ParentAction>(
 
 **Example:**
 
+Build the dependency where the **store** is built, not inside a reducer: a
+reducer is `(state, action, dependencies)` and has no `dispatch` in scope. The
+dependency needs the store's dispatch and the store needs the dependencies, so
+take the reference lazily.
+
 ```typescript
 import { createDismissDependency } from '@composable-svelte/core/navigation';
 
-// In parent reducer when presenting child:
-case 'addButtonTapped': {
-  const childDeps: AddItemDeps = {
+let dispatch: Dispatch<ParentAction> = () => {};
+
+const store = createStore({
+  initialState,
+  reducer: parentReducer,
+  dependencies: {
     ...deps,
     dismiss: createDismissDependency(
-      dispatch,
+      (action) => dispatch(action),
       (presentationAction) => ({
         type: 'destination',
         action: presentationAction
       })
     )
-  };
+  }
+});
 
-  // Create child store with dismiss capability
-  const childStore = createStore({
-    initialState: { name: '', quantity: 0 },
-    reducer: addItemReducer,
-    dependencies: childDeps
-  });
+dispatch = (action) => store.dispatch(action);
+```
 
+The parent reducer then presents the child by populating state — no store is
+created per presentation, and the child reaches the same dependencies through
+`ifLet`:
+
+```typescript
+case 'addButtonTapped':
   return [
     { ...state, destination: { name: '', quantity: 0 } },
     Effect.none()
   ];
-}
 ```
 
 ### dismissDependency (Helper)
@@ -221,24 +231,26 @@ function dismissDependency<ParentAction>(
 ```typescript
 import { dismissDependency } from '@composable-svelte/core/navigation';
 
-// Simpler API for standard pattern
-case 'addButtonTapped': {
-  const childDeps: AddItemDeps = {
+// Simpler API for the standard shape. As above, this goes where the store is
+// built and captures its dispatch lazily.
+let dispatch: Dispatch<ParentAction> = () => {};
+
+const store = createStore({
+  initialState,
+  reducer: parentReducer,
+  dependencies: {
     ...deps,
-    dismiss: dismissDependency(dispatch, 'destination')
-  };
+    dismiss: dismissDependency((action) => dispatch(action), 'destination')
+  }
+});
 
-  // Equivalent to:
-  // createDismissDependency(
-  //   dispatch,
-  //   (pa) => ({ type: 'destination', action: pa })
-  // )
+dispatch = (action) => store.dispatch(action);
 
-  return [
-    { ...state, destination: { name: '', quantity: 0 } },
-    Effect.none()
-  ];
-}
+// Equivalent to:
+// createDismissDependency(
+//   (action) => dispatch(action),
+//   (pa) => ({ type: 'destination', action: pa })
+// )
 ```
 
 ### createDismissDependencyWithCleanup
@@ -265,11 +277,16 @@ function createDismissDependencyWithCleanup<ParentAction>(
 ```typescript
 import { createDismissDependencyWithCleanup } from '@composable-svelte/core/navigation';
 
-case 'addButtonTapped': {
-  const childDeps: AddItemDeps = {
+// Where the store is built — a reducer has no `dispatch` in scope.
+let dispatch: Dispatch<ParentAction> = () => {};
+
+const store = createStore({
+  initialState,
+  reducer: parentReducer,
+  dependencies: {
     ...deps,
     dismiss: createDismissDependencyWithCleanup(
-      dispatch,
+      (action) => dispatch(action),
       (pa) => ({ type: 'destination', action: pa }),
       async () => {
         // Analytics
@@ -278,52 +295,54 @@ case 'addButtonTapped': {
         });
 
         // Save draft
-        localStorage.setItem('addItemDraft', JSON.stringify(state.destination));
+        localStorage.setItem('addItemDraft', JSON.stringify(store.state.destination));
 
         // Cleanup
         console.log('Modal dismissed');
       }
     )
-  };
+  }
+});
 
-  return [
-    { ...state, destination: { name: '', quantity: 0 } },
-    Effect.none()
-  ];
-}
+dispatch = (action) => store.dispatch(action);
 ```
 
 ## Dependency Injection
 
 ### Store Creation Pattern
 
+This is the one place the dependency is built. Every `dispatch` appearing in a
+fragment below refers to the binding declared here — the parent store's
+dispatch, captured lazily because the dependency has to exist before the store
+does.
+
 ```typescript
 import { createStore } from '@composable-svelte/core';
 import { dismissDependency } from '@composable-svelte/core/navigation';
 
-// Parent creates child store with dismiss dependency
-case 'addButtonTapped': {
-  const childDeps: AddItemDeps = {
-    api: deps.api,
-    dismiss: dismissDependency(
-      (action) => store.dispatch(action),
-      'destination'
-    )
-  };
+let dispatch: Dispatch<ParentAction> = () => {};
 
-  const childStore = createStore({
-    initialState: { name: '', quantity: 0 },
-    reducer: addItemReducer,
-    dependencies: childDeps
-  });
+const store = createStore({
+  initialState,
+  reducer: parentReducer,
+  dependencies: {
+    api,
+    dismiss: dismissDependency((action) => dispatch(action), 'destination')
+  }
+});
 
-  // Store childStore somewhere accessible (context, parent state, etc.)
+dispatch = (action) => store.dispatch(action);
+```
 
+There is no separate child store. The child's state lives in the parent's
+`destination` field, and `ifLet` runs the child reducer with these same
+dependencies — which is how `deps.dismiss` reaches it.
+```typescript
+case 'addButtonTapped':
   return [
     { ...state, destination: { name: '', quantity: 0 } },
     Effect.none()
   ];
-}
 ```
 
 ### Via Svelte Context
@@ -1054,7 +1073,11 @@ function createSmartDismiss(
   state: ParentState
 ): DismissDependency {
   return () => {
-    return Effect.run(async (d) => {
+    // Note the captured `dispatch`, NOT the effect's own dispatch. This effect
+    // is returned from a *child* reducer, so `ifLet` maps it with
+    // `fromChildAction`; a parent-shaped action sent through the effect stream
+    // would be wrapped a second time and the parent could not route it.
+    return Effect.run(async () => {
       // Custom logic before dismiss
       if (state.destination?.hasChanges) {
         await showToast('Changes discarded');
@@ -1065,7 +1088,7 @@ function createSmartDismiss(
       await analytics.track('modal_closed', { duration });
 
       // Finally dismiss
-      d({
+      dispatch({
         type: 'destination',
         action: { type: 'dismiss' }
       });

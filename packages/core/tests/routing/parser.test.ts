@@ -22,21 +22,21 @@ const basicConfig: ParserConfig<InventoryDestination> = {
 		(path) => {
 			const params = matchPath('/item-:id/edit/:field', path);
 			if (params) {
-				return { type: 'editItem', state: { itemId: params.id, field: params.field } };
+				return { type: 'editItem', state: { itemId: params.id!, field: params.field! } };
 			}
 			return null;
 		},
 		(path) => {
 			const params = matchPath('/item-:id/edit', path);
 			if (params) {
-				return { type: 'editItem', state: { itemId: params.id } };
+				return { type: 'editItem', state: { itemId: params.id! } };
 			}
 			return null;
 		},
 		(path) => {
 			const params = matchPath('/item-:id', path);
 			if (params) {
-				return { type: 'detailItem', state: { itemId: params.id } };
+				return { type: 'detailItem', state: { itemId: params.id! } };
 			}
 			return null;
 		},
@@ -62,7 +62,7 @@ describe('parseDestination', () => {
 				parsers: [
 					(path) => {
 						const params = matchPath('/item-:id', path);
-						return params ? { type: 'detailItem', state: { itemId: params.id } } : null;
+						return params ? { type: 'detailItem', state: { itemId: params.id! } } : null;
 					}
 				]
 			};
@@ -75,7 +75,7 @@ describe('parseDestination', () => {
 				parsers: [
 					(path) => {
 						const params = matchPath('/item-:id', path);
-						return params ? { type: 'detailItem', state: { itemId: params.id } } : null;
+						return params ? { type: 'detailItem', state: { itemId: params.id! } } : null;
 					}
 				]
 			};
@@ -174,7 +174,7 @@ describe('parseDestination', () => {
 						// Path received should be relative (without /inventory)
 						expect(path).toBe('/item-123');
 						const params = matchPath('/item-:id', path);
-						return params ? { type: 'detailItem', state: { itemId: params.id } } : null;
+						return params ? { type: 'detailItem', state: { itemId: params.id! } } : null;
 					}
 				]
 			};
@@ -187,7 +187,7 @@ describe('parseDestination', () => {
 				parsers: [
 					(path) => {
 						const params = matchPath('item-:id', path);
-						return params ? { type: 'detailItem', state: { itemId: params.id } } : null;
+						return params ? { type: 'detailItem', state: { itemId: params.id! } } : null;
 					}
 				]
 			};
@@ -204,7 +204,7 @@ describe('parseDestination', () => {
 				parsers: [
 					(path) => {
 						const params = matchPath('/item-:id', path);
-						return params ? { type: 'detailItem', state: { itemId: params.id } } : null;
+						return params ? { type: 'detailItem', state: { itemId: params.id! } } : null;
 					}
 				]
 			};
@@ -408,19 +408,57 @@ describe('matchPath', () => {
 			expect(result).toEqual({ filepath: 'docs/readme.md' });
 		});
 
-		// Note: Optional segments require END option configuration in v8.x
-		// We'll implement this in v1.1 with proper options handling
-		it.skip('supports optional segments (v8.x syntax - v1.1 feature)', () => {
-			// path-to-regexp v8.x optional segments require { end: false } option
-			// This will be implemented in v1.1
-			const result = matchPath('/item-:id/{action}', '/item-123');
+		// These two were skipped as "requires the END option, deferred to v1.1".
+		// Neither is true: `{action}` is an optional *literal* segment, so it
+		// never captured anything and no `end` option would have helped. The
+		// parameter form is `{/:action}`, and it works today.
+		it('supports optional segments', () => {
+			const result = matchPath('/item-:id{/:action}', '/item-123');
 			expect(result).toEqual({ id: '123' });
 		});
 
-		it.skip('supports optional segments with value (v1.1 feature)', () => {
-			// Optional segments will be implemented in v1.1 with proper options
-			const result = matchPath('/item-:id/{action}', '/item-123/edit');
+		it('supports optional segments with value', () => {
+			const result = matchPath('/item-:id{/:action}', '/item-123/edit');
 			expect(result).toEqual({ id: '123', action: 'edit' });
 		});
+	});
+});
+
+describe('matchPath, exactly as documented', () => {
+	/**
+	 * Every example in `matchPath`'s JSDoc, run. Two of them used to throw
+	 * rather than match — `:action?` gave `Unexpected ?` and a bare `*` gave
+	 * `Missing parameter name`, both pre-v8 path-to-regexp syntax — while the
+	 * doc block above them claimed support for "optional params, wildcards".
+	 * They were labelled "deferred"; they work today, in v8 syntax.
+	 */
+	it('named parameter', () => {
+		expect(matchPath('/item-:id', '/item-123')).toEqual({ id: '123' });
+	});
+
+	it('multiple parameters', () => {
+		expect(matchPath('/item-:id/edit/:field', '/item-123/edit/name')).toEqual({
+			id: '123',
+			field: 'name'
+		});
+	});
+
+	it('no match', () => {
+		expect(matchPath('/item-:id', '/other/123')).toBeNull();
+	});
+
+	it('optional segment, present and absent', () => {
+		expect(matchPath('/item-:id{/:action}', '/item-123/edit')).toEqual({
+			id: '123',
+			action: 'edit'
+		});
+		expect(matchPath('/item-:id{/:action}', '/item-123')).toEqual({ id: '123' });
+	});
+
+	it('named wildcard', () => {
+		expect(matchPath('/files/*path', '/files/docs/readme.md')).toEqual({
+			path: 'docs/readme.md'
+		});
+		expect(matchPath('/files/*path', '/files/readme.md')).toEqual({ path: 'readme.md' });
 	});
 });

@@ -13,6 +13,7 @@ import {
 } from '../../src/lib/navigation/index.js';
 import type { Dispatch, Reducer } from '../../src/lib/types.js';
 import { ifLet } from '../../src/lib/navigation/if-let.js';
+import { createTestStore } from '../../src/lib/test/test-store.js';
 
 // ============================================================================
 // Test Fixtures
@@ -46,7 +47,7 @@ describe('createDismissDependency()', () => {
     expect(typeof dismiss).toBe('function');
 
     const effect = dismiss();
-    expect(effect._tag).toBe('Run');
+    expect(effect._tag).toBe('FireAndForget');
   });
 
   it('dispatches PresentationAction.dismiss when effect is executed', () => {
@@ -63,8 +64,8 @@ describe('createDismissDependency()', () => {
     const effect = dismiss();
 
     // Execute the effect
-    if (effect._tag === 'Run') {
-      effect.execute(dispatch);
+    if (effect._tag === 'FireAndForget') {
+      effect.execute();
     }
 
     expect(dispatched).toHaveLength(1);
@@ -88,8 +89,8 @@ describe('createDismissDependency()', () => {
 
     const effect = dismiss();
 
-    if (effect._tag === 'Run') {
-      effect.execute(dispatch);
+    if (effect._tag === 'FireAndForget') {
+      effect.execute();
     }
 
     expect(dispatched[0]!.type).toBe('modal');
@@ -114,11 +115,11 @@ describe('createDismissDependency()', () => {
     const effect1 = dismiss();
     const effect2 = dismiss();
 
-    if (effect1._tag === 'Run') {
-      effect1.execute(dispatch);
+    if (effect1._tag === 'FireAndForget') {
+      effect1.execute();
     }
-    if (effect2._tag === 'Run') {
-      effect2.execute(dispatch);
+    if (effect2._tag === 'FireAndForget') {
+      effect2.execute();
     }
 
     expect(dispatched).toHaveLength(2);
@@ -149,8 +150,8 @@ describe('createDismissDependency()', () => {
 
     const effect = dismiss();
 
-    if (effect._tag === 'Run') {
-      effect.execute(dispatch);
+    if (effect._tag === 'FireAndForget') {
+      effect.execute();
     }
 
     expect(dispatched[0]).toEqual({
@@ -183,8 +184,8 @@ describe('createDismissDependencyWithCleanup()', () => {
 
     const effect = dismiss();
 
-    if (effect._tag === 'Run') {
-      await effect.execute(dispatch);
+    if (effect._tag === 'FireAndForget') {
+      await effect.execute();
     }
 
     expect(cleanupCalls).toHaveLength(1);
@@ -215,8 +216,8 @@ describe('createDismissDependencyWithCleanup()', () => {
 
     const effect = dismiss();
 
-    if (effect._tag === 'Run') {
-      await effect.execute(dispatch);
+    if (effect._tag === 'FireAndForget') {
+      await effect.execute();
     }
 
     expect(cleanupCalls).toHaveLength(1);
@@ -247,8 +248,8 @@ describe('createDismissDependencyWithCleanup()', () => {
 
     const effect = dismiss();
 
-    if (effect._tag === 'Run') {
-      await effect.execute(dispatch);
+    if (effect._tag === 'FireAndForget') {
+      await effect.execute();
     }
 
     // Verify order: cleanup runs before dispatch
@@ -269,8 +270,8 @@ describe('createDismissDependencyWithCleanup()', () => {
 
     const effect = dismiss();
 
-    if (effect._tag === 'Run') {
-      await effect.execute(dispatch);
+    if (effect._tag === 'FireAndForget') {
+      await effect.execute();
     }
 
     expect(dispatched).toHaveLength(1);
@@ -297,8 +298,9 @@ describe('createDismissDependencyWithCleanup()', () => {
     const effect = dismiss();
 
     // Cleanup error should be thrown/caught by effect executor
-    if (effect._tag === 'Run') {
-      await expect(effect.execute(dispatch)).rejects.toThrow('Cleanup failed');
+    expect(effect._tag).toBe('FireAndForget');
+    if (effect._tag === 'FireAndForget') {
+      await expect(effect.execute()).rejects.toThrow('Cleanup failed');
     }
   });
 });
@@ -318,8 +320,8 @@ describe('dismissDependency()', () => {
 
     const effect = dismiss();
 
-    if (effect._tag === 'Run') {
-      effect.execute(dispatch);
+    if (effect._tag === 'FireAndForget') {
+      effect.execute();
     }
 
     expect(dispatched).toHaveLength(1);
@@ -353,11 +355,11 @@ describe('dismissDependency()', () => {
     const effect1 = dismiss1();
     const effect2 = dismiss2();
 
-    if (effect1._tag === 'Run') {
-      effect1.execute(dispatch1);
+    if (effect1._tag === 'FireAndForget') {
+      effect1.execute();
     }
-    if (effect2._tag === 'Run') {
-      effect2.execute(dispatch2);
+    if (effect2._tag === 'FireAndForget') {
+      effect2.execute();
     }
 
     // Both should produce the same result
@@ -378,8 +380,8 @@ describe('dismissDependency()', () => {
 
     const effect = dismiss();
 
-    if (effect._tag === 'Run') {
-      effect.execute(dispatch);
+    if (effect._tag === 'FireAndForget') {
+      effect.execute();
     }
 
     expect(dispatched[0]).toEqual({
@@ -443,8 +445,8 @@ describe('Dismiss Dependency Integration', () => {
     // Test cancel action
     const [newState1, effect1] = childReducer(state, { type: 'cancel' }, deps);
 
-    if (effect1!._tag === 'Run') {
-      effect1!.execute(() => {});
+    if (effect1!._tag === 'FireAndForget') {
+      effect1!.execute();
     }
 
     expect(dispatched).toHaveLength(1);
@@ -463,9 +465,10 @@ describe('Dismiss Dependency Integration', () => {
 
     if (effect2!._tag === 'Batch') {
       effect2.effects!.forEach((e) => {
-        if (e._tag === 'Run') {
-          e.execute(() => {});
-        }
+        // The batch holds both kinds: the save's `Run`, which takes a dispatch,
+        // and the dismiss, which is a `FireAndForget` and takes none.
+        if (e._tag === 'Run') e.execute(() => {});
+        if (e._tag === 'FireAndForget') e.execute();
       });
     }
 
@@ -527,8 +530,8 @@ describe('Dismiss Dependency Integration', () => {
 
     // Execute with first parent structure
     const [, effect1] = childReducer(state, { type: 'cancel' }, deps1);
-    if (effect1!._tag === 'Run') {
-      effect1!.execute(() => {});
+    if (effect1!._tag === 'FireAndForget') {
+      effect1!.execute();
     }
 
     expect(dispatched1[0]).toEqual({
@@ -538,8 +541,8 @@ describe('Dismiss Dependency Integration', () => {
 
     // Execute with second parent structure
     const [, effect2] = childReducer(state, { type: 'cancel' }, deps2);
-    if (effect2!._tag === 'Run') {
-      effect2!.execute(() => {});
+    if (effect2!._tag === 'FireAndForget') {
+      effect2!.execute();
     }
 
     expect(dispatched2[0]).toEqual({
@@ -568,8 +571,8 @@ describe('Dismiss Dependency Integration', () => {
 
     const effect = dismiss();
 
-    if (effect._tag === 'Run') {
-      await effect.execute(dispatch);
+    if (effect._tag === 'FireAndForget') {
+      await effect.execute();
     }
 
     expect(analyticsEvents).toHaveLength(1);
@@ -625,7 +628,7 @@ describe('Dismiss Dependency Integration', () => {
       };
 
       const [, effect] = parentReducerWith(deps)({ child: { n: 1 } }, presentedCancel, deps);
-      if (effect._tag === 'Run') await effect.execute(() => {});
+      if (effect._tag === 'FireAndForget') await effect.execute();
 
       expect(dispatched).toEqual([{ type: 'child', action: { type: 'dismiss' } }]);
     });
@@ -649,7 +652,7 @@ describe('Dismiss Dependency Integration', () => {
       };
 
       const [, effect] = parentReducerWith(deps)({ child: { n: 1 } }, presentedCancel, deps);
-      if (effect._tag === 'Run') await effect.execute(() => {});
+      if (effect._tag === 'FireAndForget') await effect.execute();
 
       expect(dispatched).toEqual([{ type: 'child', action: { type: 'dismiss' } }]);
       expect(order, 'cleanup must finish before the dismiss lands').toEqual([
@@ -673,7 +676,9 @@ describe('Dismiss Dependency Integration', () => {
         (a) => dispatched.push(a),
         (action) => ({ type: 'destination', action })
       );
-      await dep().execute(() => {});
+      const effect = dep();
+      expect(effect._tag).toBe('FireAndForget');
+      if (effect._tag === 'FireAndForget') await effect.execute();
       expect(dispatched).toEqual([{ type: 'destination', action: { type: 'dismiss' } }]);
     });
 
@@ -684,8 +689,52 @@ describe('Dismiss Dependency Integration', () => {
         (presentationAction) => ({ type: 'destination', action: presentationAction }),
         async () => {}
       );
-      await dep().execute(() => {});
+      const effect = dep();
+      expect(effect._tag).toBe('FireAndForget');
+      if (effect._tag === 'FireAndForget') await effect.execute();
       expect(dispatched).toEqual([{ type: 'destination', action: { type: 'dismiss' } }]);
+    });
+  });
+
+  describe('under TestStore', () => {
+    /**
+     * The dismiss effect dispatches through the dispatch it captured, so a
+     * `TestStore` can only observe it if it can hand one out. Before
+     * `TestStore.dispatch` existed there was no such value: `receive()` could
+     * never match a dismiss, and — worse — a test asserting only on the state
+     * *before* the dismiss still passed, as did `assertNoPendingActions()`,
+     * because nothing was ever received.
+     */
+    type TSChildAction = { type: 'cancelTapped' };
+    type TSParentState = { child: { n: number } | null };
+    type TSParentAction = { type: 'child'; action: PresentationAction<TSChildAction> };
+
+    it('the parent receives a singly-wrapped dismiss', async () => {
+      let dispatch: Dispatch<TSParentAction> | null = null;
+      const deps = {
+        dismiss: dismissDependency<TSParentAction>((a) => dispatch!(a), 'child')
+      };
+
+      const reducer: Reducer<TSParentState, TSParentAction, typeof deps> = (state, action, d) => {
+        if (action.action.type === 'dismiss') return [{ child: null }, Effect.none()];
+        return [state, d.dismiss()];
+      };
+
+      const store = createTestStore({
+        initialState: { child: { n: 1 } } as TSParentState,
+        reducer,
+        dependencies: deps
+      });
+      dispatch = (a) => store.dispatch(a);
+
+      await store.send({
+        type: 'child',
+        action: { type: 'presented', action: { type: 'cancelTapped' } }
+      });
+      await store.receive({ type: 'child', action: { type: 'dismiss' } }, (state) => {
+        expect(state.child).toBeNull();
+      });
+      store.assertNoPendingActions();
     });
   });
 });

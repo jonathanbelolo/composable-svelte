@@ -24,7 +24,12 @@ interface AddItemState {
 type AddItemAction =
 	| { type: 'nameChanged'; value: string }
 	| { type: 'quantityChanged'; value: number }
-	| { type: 'saveButtonTapped' };
+	| { type: 'saveButtonTapped' }
+	// The save effect dispatches this, so it belongs in the union. Without it
+	// the reducer emitted an action outside its own action type and the
+	// exhaustiveness check below was checking a union that did not describe
+	// what the reducer actually produces.
+	| { type: 'saved' };
 
 const addItemReducer: Reducer<AddItemState, AddItemAction> = (state, action) => {
 	switch (action.type) {
@@ -34,6 +39,8 @@ const addItemReducer: Reducer<AddItemState, AddItemAction> = (state, action) => 
 			return [{ ...state, quantity: action.value }, Effect.none()];
 		case 'saveButtonTapped':
 			return [state, Effect.run(async (dispatch) => dispatch({ type: 'saved' as const }))];
+		case 'saved':
+			return [state, Effect.none()];
 		default:
 			const _exhaustive: never = action;
 			return [state, Effect.none()];
@@ -45,12 +52,14 @@ interface AlertState {
 	message: string;
 }
 
-type AlertAction = { type: 'okButtonTapped' };
+type AlertAction = { type: 'okButtonTapped' } | { type: 'confirmed' };
 
 const alertReducer: Reducer<AlertState, AlertAction> = (state, action) => {
 	switch (action.type) {
 		case 'okButtonTapped':
 			return [state, Effect.run(async (dispatch) => dispatch({ type: 'confirmed' as const }))];
+		case 'confirmed':
+			return [state, Effect.none()];
 		default:
 			const _exhaustive: never = action;
 			return [state, Effect.none()];
@@ -253,19 +262,21 @@ describe('integrate()', () => {
 			// Reducers that set flags to track execution order
 			let executionOrder: string[] = [];
 
-			const child1Reducer: Reducer<AddItemState, AddItemAction> = (state, action) => {
+			// A wrapper reducer must forward its dependencies; dropping them left
+			// the wrapped reducer receiving `undefined` for `deps`.
+			const child1Reducer: Reducer<AddItemState, AddItemAction> = (state, action, deps) => {
 				executionOrder.push('child1');
-				return addItemReducer(state, action);
+				return addItemReducer(state, action, deps);
 			};
 
-			const child2Reducer: Reducer<AlertState, AlertAction> = (state, action) => {
+			const child2Reducer: Reducer<AlertState, AlertAction> = (state, action, deps) => {
 				executionOrder.push('child2');
-				return alertReducer(state, action);
+				return alertReducer(state, action, deps);
 			};
 
-			const trackedCoreReducer: Reducer<ParentState, ParentAction> = (state, action) => {
+			const trackedCoreReducer: Reducer<ParentState, ParentAction> = (state, action, deps) => {
 				executionOrder.push('core');
-				return coreReducer(state, action);
+				return coreReducer(state, action, deps);
 			};
 
 			const reducer = integrate(trackedCoreReducer)
@@ -388,7 +399,7 @@ describe('integrate()', () => {
 
 	describe('error handling', () => {
 		it('throws when registering same field twice', () => {
-			const coreReducer: Reducer<InventoryState, any> = (state) => [state, Effect.none()];
+			const coreReducer: Reducer<ParentState, any> = (state) => [state, Effect.none()];
 			const childReducer: Reducer<AddItemState, any> = (state) => [state, Effect.none()];
 
 			expect(() => {
@@ -400,7 +411,7 @@ describe('integrate()', () => {
 		});
 
 		it('throws when childReducer is not a function', () => {
-			const coreReducer: Reducer<InventoryState, any> = (state) => [state, Effect.none()];
+			const coreReducer: Reducer<ParentState, any> = (state) => [state, Effect.none()];
 
 			expect(() => {
 				integrate(coreReducer)
@@ -410,7 +421,7 @@ describe('integrate()', () => {
 		});
 
 		it('throws when childReducer is undefined', () => {
-			const coreReducer: Reducer<InventoryState, any> = (state) => [state, Effect.none()];
+			const coreReducer: Reducer<ParentState, any> = (state) => [state, Effect.none()];
 
 			expect(() => {
 				integrate(coreReducer)

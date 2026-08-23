@@ -374,6 +374,46 @@ export class TestStore<State, Action, Dependencies = any> {
   /**
    * Get current state.
    */
+  /**
+   * Deliver an action from outside the reducer, exactly as an effect would.
+   *
+   * The action is recorded as *received* — so `receive()` matches it and
+   * `assertNoPendingActions()` will flag it if you never assert on it — rather
+   * than as a user action the way `send()` does.
+   *
+   * This is what a dependency holding the parent's dispatch needs. The dismiss
+   * dependency is the motivating case: it dispatches through the dispatch it
+   * captured, deliberately bypassing the child's effect stream so `ifLet`
+   * cannot wrap the dismiss a second time. Without a dispatch to capture there
+   * is no way to observe a dismiss under `TestStore` at all.
+   *
+   * @example
+   * ```typescript
+   * let dispatch: Dispatch<ParentAction>;
+   * const store = createTestStore({
+   *   initialState,
+   *   reducer,
+   *   // Lazily, because the dependency has to exist before the store does.
+   *   dependencies: { dismiss: dismissDependency((a) => dispatch(a), 'child') }
+   * });
+   * dispatch = (a) => store.dispatch(a);
+   *
+   * await store.send({ type: 'child', action: { type: 'presented', action } });
+   * await store.receive({ type: 'child', action: { type: 'dismiss' } });
+   * ```
+   *
+   * @param action - The action to deliver
+   */
+  dispatch(action: Action): void {
+    this.receivedActions.push(action);
+    const [newState, newEffect] = this.reducer(this._state, action, this.dependencies);
+    this._state = newState;
+
+    if (newEffect._tag !== 'None') {
+      this.pendingEffects.push(this._executeEffect(newEffect));
+    }
+  }
+
   getState(): State {
     return this._state;
   }
@@ -442,15 +482,7 @@ export class TestStore<State, Action, Dependencies = any> {
    * Execute an effect and track dispatched actions.
    */
   private async _executeEffect(effect: Effect<Action>): Promise<void> {
-    const dispatch: Dispatch<Action> = (action: Action) => {
-      this.receivedActions.push(action);
-      const [newState, newEffect] = this.reducer(this._state, action, this.dependencies);
-      this._state = newState;
-
-      if (newEffect._tag !== 'None') {
-        this.pendingEffects.push(this._executeEffect(newEffect));
-      }
-    };
+    const dispatch: Dispatch<Action> = (action: Action) => this.dispatch(action);
 
     switch (effect._tag) {
       case 'None':

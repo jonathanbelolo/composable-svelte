@@ -809,10 +809,10 @@ const childReducer = (state, action, deps) => {
     case 'increment':
       return [{ ...state, count: state.count + 1 }, Effect.none()];
     case 'save':
-      // Child dismisses itself via deps.dismiss()
-      return [state, Effect.run(async (dispatch) => {
-        await deps.dismiss();
-      })];
+      // Child dismisses itself via deps.dismiss(). It returns the Effect —
+      // return it. Wrapping it in `Effect.run` and awaiting it only awaits the
+      // Effect *object*, which never executes it.
+      return [state, deps.dismiss()];
     default:
       return [state, Effect.none()];
   }

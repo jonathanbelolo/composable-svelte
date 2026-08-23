@@ -9,6 +9,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`deps.dismiss()` never dismissed anything through `ifLet`.**
+  `createDismissDependency` and `createDismissDependencyWithCleanup` were handed
+  the parent's `dispatch` and ignored it, dispatching through the effect's own
+  executor argument instead. Child effects are mapped by `ifLet` with
+  `fromChildAction`, and the wrapper already produces a parent action, so the
+  dismiss arrived double-wrapped as
+  `{ child: { presented: { child: { dismiss } } } }`. Under a real store that is
+  not merely ignored: `ifLetPresentation` unwraps `presented` and hands the
+  result back to the child reducer, which dismisses again — an unbounded loop
+  ending in `RangeError: Maximum call stack size exceeded`.
+
+  Both factories now dispatch through the captured parent dispatch, which makes
+  `ifLet`'s mapping a no-op.
+
+  Every existing test executed the effect directly with the parent's dispatch,
+  so with no `ifLet` in the path there was no second wrapping and none of them
+  could see it.
+
+- **Documented call shapes for all three dismiss factories were wrong**, and
+  harmless only because the first argument was dead. `docs/api/reference.md`
+  documented an API that never existed (a one-argument form, a
+  `DismissDependency<Action>` type parameter, and `deps.dismiss.dismiss(dispatch)`
+  on what is a plain function); the navigation skill passed a *store* where the
+  dispatch goes and a string where the wrapper goes; several examples built the
+  dependency inside a reducer, which has no `dispatch` in scope; and several
+  called `deps.dismiss()` as a statement and returned `Effect.none()`, discarding
+  the dismiss. All corrected, and `tests/repo/doc-examples.test.ts` now checks
+  these shapes across every markdown file in the repo.
+
+- **`combineReducers` could not infer its `Action` type**, so the form shown in
+  its own JSDoc did not typecheck for anyone — `Action` resolved to `unknown`
+  because a reverse-mapped type yields inference candidates only for the
+  parameter under the key. The parameter now carries a second, non-mapped
+  inference site. Nothing that was rejected before is accepted now.
+
+- **Two of `matchPath`'s five documented examples threw** rather than matching:
+  `:action?` gave `Unexpected ?` and a bare `*` gave `Missing parameter name`,
+  both pre-v8 path-to-regexp syntax, while the doc block above them claimed
+  support for "optional params, wildcards". Rewritten in v8 syntax (`{/:action}`
+  and `*path`) and all five are now pinned by tests. Two tests skipped as
+  "requires the END option, deferred to v1.1" were testing `{action}`, an
+  optional *literal* segment that never captured anything; repaired and
+  un-skipped.
+
+### Added
+
+- **`TestStore.dispatch(action)`** — delivers an action from outside the
+  reducer, exactly as an effect would, so `receive()` matches it. A dependency
+  holding the parent's dispatch had no way to reach a `TestStore` before, which
+  meant a dismiss could not be observed under test at all: `receive()` could
+  never match it, and a test asserting only on the state before the dismiss
+  passed, as did `assertNoPendingActions()`.
+
 - **`Effect.api`, `Effect.apiAll`, `Effect.apiFireAndForget` and
   `Effect.websocket` were typed as non-existent.** Both extension modules
   augmented a name with nothing to merge into — `api/effect-api.ts` declared

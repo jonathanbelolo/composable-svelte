@@ -6,6 +6,7 @@
 
 import { expect, test, describe } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import type { Snippet } from 'svelte';
 import {
 	Breadcrumb,
 	BreadcrumbList,
@@ -16,13 +17,25 @@ import {
 	BreadcrumbEllipsis
 } from '../src/lib/components/ui/breadcrumb/index.js';
 
+/**
+ * `children` is a required `Snippet` on most breadcrumb parts, rendered
+ * unconditionally with `{@render children()}`, so these tests have to pass
+ * one. They assert on the wrapper element rather than on child content, so
+ * what they want is a snippet that renders *nothing* — which
+ * `createRawSnippet` cannot express, since it must return markup, and for
+ * `BreadcrumbSeparator` any markup at all would suppress the default chevron
+ * the test below checks for. A no-op function is precisely that snippet at
+ * runtime; the cast supplies only the brand on `Snippet`, and is erased.
+ */
+const emptyChildren = (() => {}) as unknown as Snippet;
+
 // Helper to wait for DOM updates
 const waitForUpdates = () => new Promise(resolve => setTimeout(resolve, 50));
 
 describe('Breadcrumb', () => {
 	test('renders nav element with aria-label', async () => {
 		const { container } = render(Breadcrumb, {
-				children: () => {}
+				children: emptyChildren
 			});
 		await waitForUpdates();
 
@@ -33,7 +46,7 @@ describe('Breadcrumb', () => {
 
 	test('renders nav element with custom attributes', async () => {
 		const { container } = render(Breadcrumb, {
-				children: () => {},
+				children: emptyChildren,
 				class: 'custom-breadcrumb',
 				'data-testid': 'test-breadcrumb'
 			});
@@ -48,7 +61,7 @@ describe('Breadcrumb', () => {
 describe('BreadcrumbList', () => {
 	test('renders ordered list with correct classes', async () => {
 		const { container } = render(BreadcrumbList, {
-				children: () => {}
+				children: emptyChildren
 			});
 		await waitForUpdates();
 
@@ -62,7 +75,7 @@ describe('BreadcrumbList', () => {
 
 	test('applies custom class name', async () => {
 		const { container } = render(BreadcrumbList, {
-				children: () => {},
+				children: emptyChildren,
 				class: 'custom-list'
 			});
 		await waitForUpdates();
@@ -75,7 +88,7 @@ describe('BreadcrumbList', () => {
 describe('BreadcrumbItem', () => {
 	test('renders list item with correct classes', async () => {
 		const { container } = render(BreadcrumbItem, {
-				children: () => {}
+				children: emptyChildren
 			});
 		await waitForUpdates();
 
@@ -87,7 +100,7 @@ describe('BreadcrumbItem', () => {
 
 	test('applies custom class name', async () => {
 		const { container } = render(BreadcrumbItem, {
-				children: () => {},
+				children: emptyChildren,
 				class: 'custom-item'
 			});
 		await waitForUpdates();
@@ -100,7 +113,7 @@ describe('BreadcrumbItem', () => {
 describe('BreadcrumbLink', () => {
 	test('renders anchor element with default href', async () => {
 		const { container } = render(BreadcrumbLink, {
-				children: () => {}
+				children: emptyChildren
 			});
 		await waitForUpdates();
 
@@ -118,7 +131,7 @@ describe('BreadcrumbLink', () => {
 	test('renders anchor element with custom href', async () => {
 		const { container } = render(BreadcrumbLink, {
 				href: '/home',
-				children: () => {}
+				children: emptyChildren
 			});
 		await waitForUpdates();
 
@@ -128,7 +141,7 @@ describe('BreadcrumbLink', () => {
 
 	test('applies custom class name', async () => {
 		const { container } = render(BreadcrumbLink, {
-				children: () => {},
+				children: emptyChildren,
 				class: 'custom-link'
 			});
 		await waitForUpdates();
@@ -141,7 +154,7 @@ describe('BreadcrumbLink', () => {
 describe('BreadcrumbPage', () => {
 	test('renders span with aria attributes for current page', async () => {
 		const { container } = render(BreadcrumbPage, {
-				children: () => {}
+				children: emptyChildren
 			});
 		await waitForUpdates();
 
@@ -156,7 +169,7 @@ describe('BreadcrumbPage', () => {
 
 	test('applies custom class name', async () => {
 		const { container } = render(BreadcrumbPage, {
-				children: () => {},
+				children: emptyChildren,
 				class: 'custom-page'
 			});
 		await waitForUpdates();

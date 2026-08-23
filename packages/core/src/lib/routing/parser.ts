@@ -131,13 +131,17 @@ export function parseDestination<Dest extends { type: string; state: any }>(
  * matchPath('/item-:id', '/other/123');
  * // → null
  *
- * // Optional parameter (v1.1 feature - deferred)
- * matchPath('/item-:id/:action?', '/item-123');
- * // → { id: '123', action: undefined }
+ * // Optional segment — a group, in path-to-regexp v8 syntax.
+ * // The pre-v8 `:action?` form throws `Unexpected ?`.
+ * matchPath('/item-:id{/:action}', '/item-123/edit');
+ * // → { id: '123', action: 'edit' }
+ * matchPath('/item-:id{/:action}', '/item-123');
+ * // → { id: '123' }   // the key is absent, not undefined
  *
- * // Wildcard (v1.1 feature - deferred)
- * matchPath('/files/*', '/files/docs/readme.md');
- * // → { '0': 'docs/readme.md' }
+ * // Wildcard — named, in path-to-regexp v8 syntax.
+ * // The pre-v8 bare `*` form throws `Missing parameter name`.
+ * matchPath('/files/*path', '/files/docs/readme.md');
+ * // → { path: 'docs/readme.md' }
  * ```
  */
 export function matchPath(pattern: string, path: string): Record<string, string> | null {

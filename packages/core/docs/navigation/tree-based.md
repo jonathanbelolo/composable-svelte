@@ -1166,11 +1166,20 @@ case 'destination':
 ### 4. Inject Dismiss Dependency
 
 ```typescript
-// ✅ Child can dismiss itself
-const childDeps = {
-  ...deps,
-  dismiss: dismissDependency(dispatch, 'destination')
-};
+// ✅ Child can dismiss itself. Built where the store is built — a reducer has
+// no `dispatch` in scope — capturing the store's dispatch lazily.
+let dispatch: Dispatch<ParentAction> = () => {};
+
+const store = createStore({
+  initialState,
+  reducer: parentReducer,
+  dependencies: {
+    ...deps,
+    dismiss: dismissDependency((action) => dispatch(action), 'destination')
+  }
+});
+
+dispatch = (action) => store.dispatch(action);
 ```
 
 ### 5. Test Navigation Flows
