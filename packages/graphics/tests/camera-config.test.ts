@@ -104,7 +104,12 @@ describe('camera config merging', () => {
 		// The shape Camera.svelte produced before the fix.
 		store.dispatch({
 			type: 'updateCamera',
-			camera: { type: 'perspective', position, lookAt, fov: undefined } as Partial<CameraConfig>
+			// `as unknown as` because the shape is the *subject*: under
+			// `exactOptionalPropertyTypes` an explicit `fov: undefined` is not a
+			// `Partial<CameraConfig>` at all, which is precisely the bug this test
+			// pins. A direct cast no longer compiles, and repairing the shape would
+			// delete the test.
+			camera: { type: 'perspective', position, lookAt, fov: undefined } as unknown as Partial<CameraConfig>
 		});
 
 		expect(store.state.camera.fov).toBeUndefined();

@@ -33,8 +33,8 @@ describe('Graphics Reducer', () => {
         },
         (state) => {
           expect(state.meshes).toHaveLength(1);
-          expect(state.meshes[0].id).toBe('cube-1');
-          expect(state.meshes[0].geometry.type).toBe('box');
+          expect(state.meshes[0]!.id).toBe('cube-1');
+          expect(state.meshes[0]!.geometry.type).toBe('box');
         }
       );
     });
@@ -220,7 +220,7 @@ describe('Graphics Reducer', () => {
         },
         (state) => {
           expect(state.lights).toHaveLength(2); // Initial ambient + new directional
-          const directional = state.lights[1];
+          const directional = state.lights[1]!;
           expect(directional.type).toBe('directional');
           expect(directional.intensity).toBe(0.8);
         }

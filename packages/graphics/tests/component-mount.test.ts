@@ -112,8 +112,13 @@ describe('reducer cases are idempotent by value', () => {
   it('updateMesh returns identical state for an equal config', () => {
     const mesh = {
       id: 'mesh-1',
-      geometry: { type: 'box' as const, width: 1, height: 1, depth: 1 },
-      material: { type: 'standard' as const, color: '#ff0000' },
+      // `size`, not `width`/`height`/`depth`, and a material with no `type`:
+      // this is what `GeometryConfig` declares and what
+      // `babylon-adapter.ts:369` actually reads. The old fixture's extra keys
+      // were ignored, so a box written that way renders at Babylon's default
+      // size — which nothing could see while these tests were untyped.
+      geometry: { type: 'box' as const, size: 1 },
+      material: { color: '#ff0000' },
       position: [0, 0, 0] as [number, number, number]
     };
 
@@ -130,8 +135,8 @@ describe('reducer cases are idempotent by value', () => {
         type: 'updateMesh',
         id: 'mesh-1',
         updates: {
-          geometry: { type: 'box', width: 1, height: 1, depth: 1 },
-          material: { type: 'standard', color: '#ff0000' },
+          geometry: { type: 'box', size: 1 },
+          material: { color: '#ff0000' },
           position: [0, 0, 0]
         }
       },
@@ -144,8 +149,13 @@ describe('reducer cases are idempotent by value', () => {
   it('updateMesh still applies a genuine change', () => {
     const mesh = {
       id: 'mesh-1',
-      geometry: { type: 'box' as const, width: 1, height: 1, depth: 1 },
-      material: { type: 'standard' as const, color: '#ff0000' },
+      // `size`, not `width`/`height`/`depth`, and a material with no `type`:
+      // this is what `GeometryConfig` declares and what
+      // `babylon-adapter.ts:369` actually reads. The old fixture's extra keys
+      // were ignored, so a box written that way renders at Babylon's default
+      // size — which nothing could see while these tests were untyped.
+      geometry: { type: 'box' as const, size: 1 },
+      material: { color: '#ff0000' },
       position: [0, 0, 0] as [number, number, number]
     };
 
