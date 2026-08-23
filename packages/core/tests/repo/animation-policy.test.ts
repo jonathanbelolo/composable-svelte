@@ -79,12 +79,20 @@ const REGISTER: Record<string, { properties: string[]; why: string }> = {
 	}
 };
 
+/**
+ * `.css` as well as `.svelte`.
+ *
+ * Keeping only `.svelte` meant no stylesheet anywhere in the repo was ever
+ * scanned — `core/src/lib/styles/*.css` included. They are clean today, so this
+ * was latent rather than live, but a `@keyframes` added to `globals.css` would
+ * have been invisible to a guard whose whole job is to see them.
+ */
 function walk(dir: string): string[] {
 	if (!existsSync(dir)) return [];
 	return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
 		const full = join(dir, e.name);
 		if (e.isDirectory()) return e.name === 'node_modules' ? [] : walk(full);
-		return e.name.endsWith('.svelte') ? [full] : [];
+		return e.name.endsWith('.svelte') || e.name.endsWith('.css') ? [full] : [];
 	});
 }
 
@@ -299,6 +307,68 @@ const DISABLES_ANIMATION = /:\s*none\b/;
  */
 const SCROLL_ANIMATION = /(^|[\s;{])scroll-behavior\s*:\s*smooth\b/;
 
+/**
+ * The quoted strings on a line, without their quotes.
+ *
+ * The Tailwind detectors are matched against these rather than against the raw
+ * line, because a utility class only ever lives inside a quoted string — a
+ * `class` attribute, or a bare string handed to `cn()`. Prose does not:
+ *
+ *     <li>Instant tab switching with CSS transition effects</li>
+ *
+ * matched `TAILWIND_TRANSITION` and would have failed the build the moment
+ * `examples/` came under the walk. The scan worked in `packages/` only because
+ * no package source happened to use the word in a sentence.
+ *
+ * A `class`-attribute gate was the obvious alternative and is wrong: it would
+ * drop `Progress.svelte`'s `cn('h-full bg-primary transition-[width] …')`,
+ * which spans lines and carries no `class` token on the line that holds the
+ * class. Losing a real hit is worse than the false positive being fixed.
+ *
+ * An unterminated quote still yields a span. That is deliberate — a class
+ * attribute wrapped onto the next line is the common case:
+ *
+ *     class="flex items-center transition-all {isStepCurrent(step.step)
+ *
+ * Only the Tailwind detectors are gated. The raw-CSS ones are not, because a
+ * `transition:` declaration is *never* quoted.
+ */
+export function quotedSpans(line: string): string[] {
+	const spans: string[] = [];
+	let quote: string | null = null;
+	let buffer = '';
+
+	for (const character of line) {
+		if (quote !== null) {
+			if (character === quote) {
+				spans.push(buffer);
+				buffer = '';
+				quote = null;
+			} else {
+				buffer += character;
+			}
+			continue;
+		}
+		if (character === '"' || character === "'" || character === '`') quote = character;
+	}
+
+	if (quote !== null) spans.push(buffer);
+	return spans;
+}
+
+/**
+ * A Tailwind transition/animation utility, found inside a quoted string.
+ *
+ * The leading space matters: both detectors anchor on `(?:^|[\s'"`:])`, and a
+ * span begins at the character after the opening quote, so a class list that
+ * *starts* with the utility would otherwise not match.
+ */
+function hasTailwindAnimation(line: string): boolean {
+	return quotedSpans(line).some(
+		(span) => TAILWIND_TRANSITION.test(` ${span}`) || TAILWIND_ANIMATION.test(` ${span}`)
+	);
+}
+
 function scan(file: string): Violation[] {
 	const rel = relative(packagesDir, file);
 	const registered = REGISTER[rel];
@@ -322,7 +392,7 @@ function scan(file: string): Violation[] {
 		}
 
 		const isSvelte = SVELTE_TRANSITION.test(line);
-		const isTailwind = TAILWIND_TRANSITION.test(line) || TAILWIND_ANIMATION.test(line);
+		const isTailwind = hasTailwindAnimation(line);
 		const isRaw = RAW_TRANSITION.test(line);
 		const isAnimation = RAW_ANIMATION.test(line);
 		if (!isSvelte && !isTailwind && !isRaw && !isAnimation) continue;
@@ -552,6 +622,43 @@ describe('animation policy', () => {
 				RAW_ANIMATION.test(line) || TAILWIND_ANIMATION.test(line),
 				`not detected: ${line}`
 			).toBe(true);
+		}
+	});
+
+	it('reads a Tailwind class only where one can live — inside a quoted string', () => {
+		// The reason this exists: `<li>… CSS transition effects</li>` matched
+		// `TAILWIND_TRANSITION` and would have failed the build the day `examples/`
+		// came under the walk. It is prose, not a class list.
+		//
+		// The paired half is the more important one. A `class`-attribute gate would
+		// have fixed the prose case and silently dropped `Progress.svelte`'s
+		// `cn('…')` line, which carries a real utility and no `class` token — and a
+		// detector that stops seeing a live violation is worse than one that sees a
+		// sentence.
+		const prose = [
+			'<li>Instant tab switching with CSS transition effects</li>',
+			'<p>Animations use a transition between states</p>',
+			'\t\t\t\t<span>no transition-colors here, just words</span>'
+		];
+
+		for (const line of prose) {
+			expect(hasTailwindAnimation(line), `prose read as a class: ${line}`).toBe(false);
+		}
+
+		const classes = [
+			'<button class="p-2 rounded hover:bg-accent transition-colors">',
+			"\t'h-full bg-primary transition-[width] duration-300 ease-in-out',",
+			'<div class="animate-in fade-in-0"></div>',
+			// A class attribute that wraps onto the next line: the quote never
+			// closes, and the span still has to be read.
+			'\t\tclass="flex items-center transition-all {isStepCurrent(step.step)',
+			// The utility first in the list, so there is no separator before it —
+			// which is what the leading space in `hasTailwindAnimation` supplies.
+			'<div class="transition-opacity opacity-50"></div>'
+		];
+
+		for (const line of classes) {
+			expect(hasTailwindAnimation(line), `class not detected: ${line}`).toBe(true);
 		}
 	});
 
