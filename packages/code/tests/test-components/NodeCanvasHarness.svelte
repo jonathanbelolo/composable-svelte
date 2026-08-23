@@ -1,16 +1,9 @@
-<script lang="ts" module>
-	import type { Store } from '@composable-svelte/core';
-	import type { NodeCanvasState, NodeCanvasAction } from '../../src/lib/node-canvas/types.js';
-
-	/** Handed out so a `.ts` test can dispatch without owning the store. */
-	export let harnessStore: Store<NodeCanvasState, NodeCanvasAction> | null = null;
-</script>
-
 <script lang="ts">
 	import NodeCanvas from '../../src/lib/node-canvas/NodeCanvas.svelte';
 	import { createStore } from '@composable-svelte/core';
 	import { nodeCanvasReducer } from '../../src/lib/node-canvas/reducer.js';
 	import { createInitialNodeCanvasState } from '../../src/lib/node-canvas/types.js';
+	import { harness } from './harness-stores.js';
 
 	/**
 	 * Two spread-out nodes so `fitView` and `centerView` have something to act on,
@@ -27,7 +20,7 @@
 		dependencies: {}
 	});
 
-	harnessStore = store;
+	harness.store = store;
 </script>
 
 <div style="width: 600px; height: 400px;">

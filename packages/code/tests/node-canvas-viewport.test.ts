@@ -25,7 +25,11 @@
 
 import { describe, it, expect, afterEach } from 'vitest';
 import { mount, unmount, flushSync } from 'svelte';
-import NodeCanvasHarness, { harnessStore } from './test-components/NodeCanvasHarness.svelte';
+import NodeCanvasHarness from './test-components/NodeCanvasHarness.svelte';
+// The stores come from a `.ts` module, not from the harnesses' `<script module>`
+// blocks: svelte's ambient `*.svelte` declaration has a default export only, so
+// a named import from a component cannot typecheck.
+import { harness, wrappedHarness } from './test-components/harness-stores.js';
 
 const settle = (ms = 300) => new Promise((r) => setTimeout(r, ms));
 
@@ -44,7 +48,7 @@ async function mountCanvas() {
 		target.remove();
 	});
 	await settle(600);
-	const store = harnessStore!;
+	const store = harness.store!;
 	expect(store, 'harness did not expose its store').not.toBeNull();
 	const viewport = target.querySelector('.svelte-flow__viewport') as HTMLElement;
 	expect(viewport, 'SvelteFlow did not initialise').not.toBeNull();
@@ -207,7 +211,7 @@ describe('selection is visible', () => {
 		expect(nodeEl(), 'node A did not render').not.toBeNull();
 		expect(nodeEl()!.className).not.toContain('selected');
 
-		store.dispatch({ type: 'selectNode', nodeId: 'a', multi: false });
+		store.dispatch({ type: 'selectNode', nodeId: 'a', multiSelect: false });
 		flushSync();
 		await settle(400);
 
@@ -224,7 +228,7 @@ describe('selection is visible', () => {
 		// For a rubber-band selection of N nodes that is a full re-adoption of all
 		// N on every action, which is the cost the branch exists to avoid.
 		const { target, store } = await mountCanvas();
-		store.dispatch({ type: 'selectNode', nodeId: 'a', multi: false });
+		store.dispatch({ type: 'selectNode', nodeId: 'a', multiSelect: false });
 		flushSync();
 		await settle(300);
 
@@ -247,7 +251,7 @@ describe('selection is visible', () => {
 
 	it('clearSelection unhighlights it', async () => {
 		const { target, store } = await mountCanvas();
-		store.dispatch({ type: 'selectNode', nodeId: 'a', multi: false });
+		store.dispatch({ type: 'selectNode', nodeId: 'a', multiSelect: false });
 		flushSync();
 		await settle(400);
 		expect(target.querySelector('[data-id="a"]')!.className).toContain('selected');
@@ -289,7 +293,7 @@ describe('the default unliftAction refuses to guess', () => {
 	 * `unliftAction` explicitly.
 	 */
 	it('ignores a wrapping parent’s same-named actions', async () => {
-		const { default: Harness, wrappedStore } = await import(
+		const { default: Harness } = await import(
 			'./test-components/NodeCanvasWrappedHarness.svelte'
 		);
 		const target = document.createElement('div');
@@ -313,8 +317,7 @@ describe('the default unliftAction refuses to guess', () => {
 		window.addEventListener('error', onError);
 		cleanup.push(() => window.removeEventListener('error', onError));
 
-		const store = (await import('./test-components/NodeCanvasWrappedHarness.svelte'))
-			.wrappedStore!;
+		const store = wrappedHarness.store!;
 		store.dispatch({ type: 'zoomIn' });
 		store.dispatch({ type: 'setViewport', to: '/settings' });
 		flushSync();

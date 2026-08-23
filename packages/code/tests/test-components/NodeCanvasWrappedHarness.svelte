@@ -1,21 +1,9 @@
-<script lang="ts" module>
-	import type { Store } from '@composable-svelte/core';
-	import type { NodeCanvasState, NodeCanvasAction } from '../../src/lib/node-canvas/types.js';
-
-	/** A parent that WRAPS canvas actions and owns same-named actions of its own. */
-	export type ParentAction =
-		| { type: 'canvas'; action: NodeCanvasAction }
-		| { type: 'zoomIn' }
-		| { type: 'setViewport'; to: string };
-
-	export let wrappedStore: Store<NodeCanvasState, ParentAction> | null = null;
-</script>
-
 <script lang="ts">
 	import NodeCanvas from '../../src/lib/node-canvas/NodeCanvas.svelte';
 	import { createStore } from '@composable-svelte/core';
 	import { nodeCanvasReducer } from '../../src/lib/node-canvas/reducer.js';
 	import { createInitialNodeCanvasState } from '../../src/lib/node-canvas/types.js';
+	import { wrappedHarness, type ParentAction } from './harness-stores.js';
 
 	const store = createStore<NodeCanvasState, ParentAction>({
 		// TWO spread-out nodes deliberately. With a single node the mount-time
@@ -35,7 +23,7 @@
 		dependencies: {}
 	});
 
-	wrappedStore = store;
+	wrappedHarness.store = store;
 </script>
 
 <div style="width: 600px; height: 400px;">

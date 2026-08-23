@@ -32,7 +32,13 @@ const makeStore = () =>
     dependencies: {}
   });
 
-const emptyFeatureCollection = { type: 'FeatureCollection', features: [] } as const;
+// Not `as const`: that makes `features` a `readonly []`, which `GeoJSON` does
+// not accept. An annotation says what the fixture actually claims to be, so a
+// drift in the accepted shape fails here rather than passing untyped.
+const emptyFeatureCollection: GeoJSON.FeatureCollection = {
+  type: 'FeatureCollection',
+  features: []
+};
 
 let cleanup: Array<() => void> = [];
 

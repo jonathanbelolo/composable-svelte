@@ -193,7 +193,7 @@ describe('mapReducer', () => {
       const [newState] = mapReducer(stateWithMarker, action, {});
 
       expect(newState.markers).toHaveLength(1);
-      expect(newState.markers[0].id).toBe('marker-2');
+      expect(newState.markers[0]!.id).toBe('marker-2');
     });
 
     it('updateMarker updates marker properties', () => {
@@ -210,7 +210,7 @@ describe('mapReducer', () => {
 
       const [newState] = mapReducer(stateWithMarker, action, {});
 
-      expect(newState.markers[0].draggable).toBe(true);
+      expect(newState.markers[0]!.draggable).toBe(true);
     });
 
     it('moveMarker updates marker position', () => {
@@ -227,7 +227,7 @@ describe('mapReducer', () => {
 
       const [newState] = mapReducer(stateWithMarker, action, {});
 
-      expect(newState.markers[0].position).toEqual([-118.2437, 34.0522]);
+      expect(newState.markers[0]!.position).toEqual([-118.2437, 34.0522]);
     });
 
     it('clearMarkers removes all markers', () => {
@@ -393,7 +393,7 @@ describe('layer actions', () => {
 
     const [newState] = mapReducer(stateWithLayer, action, {});
 
-    expect(newState.layers[0].visible).toBe(false);
+    expect(newState.layers[0]!.visible).toBe(false);
   });
 
   it('updateLayerStyle updates layer style', () => {
@@ -410,8 +410,8 @@ describe('layer actions', () => {
 
     const [newState] = mapReducer(stateWithLayer, action, {});
 
-    expect(newState.layers[0].style.fillColor).toBe('#ff0000');
-    expect(newState.layers[0].style.fillOpacity).toBe(0.8);
+    expect(newState.layers[0]!.style.fillColor).toBe('#ff0000');
+    expect(newState.layers[0]!.style.fillOpacity).toBe(0.8);
   });
 
   it('clearLayers removes all layers', () => {
@@ -472,7 +472,7 @@ describe('popup actions', () => {
     const [newState] = mapReducer(stateWithPopup, action, {});
 
     expect(newState.popups).toHaveLength(1);
-    expect(newState.popups[0].content).toBe('<h3>Updated</h3>');
+    expect(newState.popups[0]!.content).toBe('<h3>Updated</h3>');
   });
 
   it('closePopup closes a popup by id', () => {
@@ -488,7 +488,7 @@ describe('popup actions', () => {
 
     const [newState] = mapReducer(stateWithPopup, action, {});
 
-    expect(newState.popups[0].isOpen).toBe(false);
+    expect(newState.popups[0]!.isOpen).toBe(false);
   });
 
   it('closeAllPopups closes all popups', () => {
