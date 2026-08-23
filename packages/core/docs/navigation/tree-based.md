@@ -877,7 +877,7 @@ import { createDismissDependencyWithCleanup } from '@composable-svelte/core/navi
 
 const dismiss = createDismissDependencyWithCleanup(
   (action) => store.dispatch(action),
-  'destination',
+  (presentationAction) => ({ type: 'destination', action: presentationAction }),
   async () => {
     // Cleanup before dismissing
     await analytics.track('modal_dismissed');

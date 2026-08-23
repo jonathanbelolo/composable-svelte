@@ -665,10 +665,10 @@ Destination.is(action, 'addItem.saveButtonTapped')
 import { createDismissDependency } from '@composable-svelte/core';
 
 // In parent
-const dismissDep = createDismissDependency<ParentAction>((action) => ({
-  type: 'destination',
-  action: { type: 'dismiss' }
-}));
+const dismissDep = createDismissDependency<ParentAction>(
+  store.dispatch,
+  (action) => ({ type: 'destination', action })
+);
 
 // Pass to child
 const [newState, effect] = childReducer(

@@ -11,7 +11,8 @@ import {
   type DismissDependency,
   type PresentationAction
 } from '../../src/lib/navigation/index.js';
-import type { Dispatch } from '../../src/lib/types.js';
+import type { Dispatch, Reducer } from '../../src/lib/types.js';
+import { ifLet } from '../../src/lib/navigation/if-let.js';
 
 // ============================================================================
 // Test Fixtures
@@ -403,10 +404,10 @@ describe('Dismiss Dependency Integration', () => {
       dismiss: DismissDependency;
     }
 
-    const childReducer = (
-      state: ChildState,
-      action: ChildAction,
-      deps: ChildDeps
+    const childReducer: Reducer<ChildState, ChildAction, ChildDeps> = (
+      state,
+      action,
+      deps
     ) => {
       switch (action.type) {
         case 'cancel':
@@ -443,7 +444,7 @@ describe('Dismiss Dependency Integration', () => {
     const [newState1, effect1] = childReducer(state, { type: 'cancel' }, deps);
 
     if (effect1!._tag === 'Run') {
-      effect1!.execute(dispatch);
+      effect1!.execute(() => {});
     }
 
     expect(dispatched).toHaveLength(1);
@@ -463,7 +464,7 @@ describe('Dismiss Dependency Integration', () => {
     if (effect2!._tag === 'Batch') {
       effect2.effects!.forEach((e) => {
         if (e._tag === 'Run') {
-          e.execute(dispatch);
+          e.execute(() => {});
         }
       });
     }
@@ -484,10 +485,10 @@ describe('Dismiss Dependency Integration', () => {
       dismiss: DismissDependency;
     }
 
-    const childReducer = (
-      state: ChildState,
-      action: ChildAction,
-      deps: ChildDeps
+    const childReducer: Reducer<ChildState, ChildAction, ChildDeps> = (
+      state,
+      action,
+      deps
     ) => {
       if (action.type === 'cancel') {
         // Child just calls deps.dismiss() - no knowledge of parent
@@ -527,7 +528,7 @@ describe('Dismiss Dependency Integration', () => {
     // Execute with first parent structure
     const [, effect1] = childReducer(state, { type: 'cancel' }, deps1);
     if (effect1!._tag === 'Run') {
-      effect1!.execute(dispatch1);
+      effect1!.execute(() => {});
     }
 
     expect(dispatched1[0]).toEqual({
@@ -538,7 +539,7 @@ describe('Dismiss Dependency Integration', () => {
     // Execute with second parent structure
     const [, effect2] = childReducer(state, { type: 'cancel' }, deps2);
     if (effect2!._tag === 'Run') {
-      effect2!.execute(dispatch2);
+      effect2!.execute(() => {});
     }
 
     expect(dispatched2[0]).toEqual({
@@ -574,5 +575,117 @@ describe('Dismiss Dependency Integration', () => {
     expect(analyticsEvents).toHaveLength(1);
     expect(analyticsEvents[0]).toBe('modal_dismissed');
     expect(dispatched).toHaveLength(1);
+  });
+
+  describe('through ifLet', () => {
+    /**
+     * The dismiss effect has to reach the parent *directly*. `ifLet` maps every
+     * child effect with `fromChildAction`, and `actionWrapper` already produces
+     * a parent action, so an implementation that dispatched through the
+     * effect's own dispatch wrapped the dismiss twice — the parent received
+     * `{ child: { presented: { child: { dismiss } } } }` and could not route
+     * it, so the child never dismissed. Every test above executes the effect
+     * directly with the parent's dispatch, which is why none of them could see
+     * it: with no `ifLet` in the path there is no second wrapping.
+     */
+    type ChildState = { n: number };
+    type ChildAction = { type: 'cancelTapped' };
+    type ParentState = { child: ChildState | null };
+    type ParentAction = { type: 'child'; action: PresentationAction<ChildAction> };
+
+    const parentReducerWith = (
+      deps: { dismiss: DismissDependency }
+    ): Reducer<ParentState, ParentAction, { dismiss: DismissDependency }> => {
+      const childReducer: Reducer<ChildState, ChildAction, typeof deps> = (s, _a, d) => [
+        s,
+        d.dismiss()
+      ];
+      return ifLet<ParentState, ParentAction, ChildState, ChildAction, typeof deps>(
+        (s) => s.child,
+        (s, c) => ({ ...s, child: c }),
+        (a) => (a.type === 'child' && a.action.type === 'presented' ? a.action.action : null),
+        (ca) => ({ type: 'child', action: { type: 'presented', action: ca } }),
+        childReducer
+      );
+    };
+
+    const presentedCancel: ParentAction = {
+      type: 'child',
+      action: { type: 'presented', action: { type: 'cancelTapped' } }
+    };
+
+    it('delivers a singly-wrapped dismiss to the parent', async () => {
+      const dispatched: ParentAction[] = [];
+      const dispatch: Dispatch<ParentAction> = (a) => dispatched.push(a);
+      const deps = {
+        dismiss: createDismissDependency<ParentAction>(dispatch, (pa) => ({
+          type: 'child' as const,
+          action: pa as PresentationAction<ChildAction>
+        }))
+      };
+
+      const [, effect] = parentReducerWith(deps)({ child: { n: 1 } }, presentedCancel, deps);
+      if (effect._tag === 'Run') await effect.execute(() => {});
+
+      expect(dispatched).toEqual([{ type: 'child', action: { type: 'dismiss' } }]);
+    });
+
+    it('delivers a singly-wrapped dismiss with cleanup', async () => {
+      const dispatched: ParentAction[] = [];
+      const order: string[] = [];
+      const dispatch: Dispatch<ParentAction> = (a) => {
+        dispatched.push(a);
+        order.push('dispatch');
+      };
+      const deps = {
+        dismiss: createDismissDependencyWithCleanup<ParentAction>(
+          dispatch,
+          (pa) => ({ type: 'child' as const, action: pa as PresentationAction<ChildAction> }),
+          async () => {
+            await new Promise((r) => setTimeout(r, 1));
+            order.push('cleanup');
+          }
+        )
+      };
+
+      const [, effect] = parentReducerWith(deps)({ child: { n: 1 } }, presentedCancel, deps);
+      if (effect._tag === 'Run') await effect.execute(() => {});
+
+      expect(dispatched).toEqual([{ type: 'child', action: { type: 'dismiss' } }]);
+      expect(order, 'cleanup must finish before the dismiss lands').toEqual([
+        'cleanup',
+        'dispatch'
+      ]);
+    });
+  });
+
+  describe('documented call shapes', () => {
+    /**
+     * Both shapes below are copied from the docs. They used to throw
+     * `TypeError: actionWrapper is not a function` — quick-reference.md passed
+     * only the wrapper, and tree-based.md passed the action *field name* where
+     * a wrapper function is required. Nothing executed the documented form, so
+     * neither was visible.
+     */
+    it('createDismissDependency, as documented in quick-reference.md', async () => {
+      const dispatched: unknown[] = [];
+      const dep = createDismissDependency<{ type: string; action: unknown }>(
+        (a) => dispatched.push(a),
+        (action) => ({ type: 'destination', action })
+      );
+      await dep().execute(() => {});
+      expect(dispatched).toEqual([{ type: 'destination', action: { type: 'dismiss' } }]);
+    });
+
+    it('createDismissDependencyWithCleanup, as documented in tree-based.md', async () => {
+      const dispatched: unknown[] = [];
+      const dep = createDismissDependencyWithCleanup<{ type: string; action: unknown }>(
+        (a) => dispatched.push(a),
+        (presentationAction) => ({ type: 'destination', action: presentationAction }),
+        async () => {}
+      );
+      await dep().execute(() => {});
+      expect(dispatched).toEqual([{ type: 'destination', action: { type: 'dismiss' } }]);
+    });
   });
 });

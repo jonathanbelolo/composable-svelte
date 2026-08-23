@@ -93,11 +93,18 @@ export function createDismissDependency<ParentAction>(
   actionWrapper: (action: PresentationAction<any>) => ParentAction
 ): DismissDependency {
   return () => {
-    return Effect.run<ParentAction>((d) => {
-      const dismissAction = actionWrapper({
-        type: 'dismiss' as const
-      });
-      d(dismissAction);
+    // Dispatch through the *captured* parent dispatch, not the one this effect
+    // is executed with. A child's effects go through `ifLet`, which maps them
+    // with `fromChildAction`; since `actionWrapper` already produces a parent
+    // action, dispatching through `d` would wrap it a second time and the
+    // parent would receive an action it cannot route. Ignoring `d` makes that
+    // mapping a no-op, which is the point.
+    return Effect.run<ParentAction>(() => {
+      dispatch(
+        actionWrapper({
+          type: 'dismiss' as const
+        })
+      );
     });
   };
 }
@@ -131,17 +138,20 @@ export function createDismissDependencyWithCleanup<ParentAction>(
   cleanup?: () => void | Promise<void>
 ): DismissDependency {
   return () => {
-    return Effect.run<ParentAction>(async (d) => {
+    // As above: the captured parent dispatch, so `ifLet`'s mapping cannot
+    // double-wrap the dismiss action.
+    return Effect.run<ParentAction>(async () => {
       // Run cleanup if provided
       if (cleanup) {
         await cleanup();
       }
 
       // Dispatch dismiss action
-      const dismissAction = actionWrapper({
-        type: 'dismiss' as const
-      });
-      d(dismissAction);
+      dispatch(
+        actionWrapper({
+          type: 'dismiss' as const
+        })
+      );
     });
   };
 }

@@ -9,7 +9,8 @@ import { createTestStore } from '../src/lib/test/test-store.js';
 import { commandReducer } from '../src/lib/components/command/command.reducer.js';
 import {
 	createInitialCommandState,
-	type CommandItem
+	type CommandItem,
+	type CommandAction
 } from '../src/lib/components/command/command.types.js';
 
 describe('Command Palette', () => {
@@ -121,7 +122,7 @@ describe('Command Palette', () => {
 			const initialState = createInitialCommandState({ commands: sampleCommands });
 			initialState.query = 'test';
 			initialState.selectedIndex = 2;
-			initialState.filteredCommands = [sampleCommands[0]];
+			initialState.filteredCommands = [sampleCommands[0]!];
 
 			const store = createTestStore({
 				initialState,
@@ -234,7 +235,7 @@ describe('Command Palette', () => {
 				isOpen: true
 			});
 			initialState.query = 'file';
-			initialState.filteredCommands = [sampleCommands[0]];
+			initialState.filteredCommands = [sampleCommands[0]!];
 
 			const store = createTestStore({
 				initialState,
@@ -289,9 +290,9 @@ describe('Command Palette', () => {
 
 	describe('Keyboard Navigation', () => {
 		const filteredCommands: CommandItem[] = [
-			sampleCommands[0],
-			sampleCommands[1],
-			sampleCommands[2]
+			sampleCommands[0]!,
+			sampleCommands[1]!,
+			sampleCommands[2]!
 		];
 
 		it('navigates to next command', async () => {
@@ -446,7 +447,7 @@ describe('Command Palette', () => {
 	describe('Command Execution', () => {
 		it('executes selected command and closes palette', async () => {
 			const executedCommands: CommandItem[] = [];
-			const command = sampleCommands[1];
+			const command = sampleCommands[1]!;
 
 			const initialState = createInitialCommandState({
 				commands: sampleCommands,
@@ -489,7 +490,7 @@ describe('Command Palette', () => {
 
 		it('executes command by index', async () => {
 			const executedCommands: CommandItem[] = [];
-			const filteredCommands = [sampleCommands[0], sampleCommands[1], sampleCommands[2]];
+			const filteredCommands = [sampleCommands[0]!, sampleCommands[1]!, sampleCommands[2]!];
 
 			const initialState = createInitialCommandState({
 				commands: sampleCommands,
@@ -516,7 +517,7 @@ describe('Command Palette', () => {
 
 		it('ignores execution of disabled commands', async () => {
 			const executedCommands: CommandItem[] = [];
-			const disabledCommand = sampleCommands[3]; // Disabled
+			const disabledCommand = sampleCommands[3]!; // Disabled
 
 			const initialState = createInitialCommandState({
 				commands: sampleCommands,
@@ -548,7 +549,7 @@ describe('Command Palette', () => {
 				commands: sampleCommands,
 				isOpen: true
 			});
-			initialState.filteredCommands = [sampleCommands[0]];
+			initialState.filteredCommands = [sampleCommands[0]!];
 			initialState.selectedIndex = 0;
 
 			const store = createTestStore({
@@ -629,8 +630,14 @@ describe('Command Palette', () => {
 				expect(state.isOpen).toBe(false);
 			});
 
-			// Receive the dispatched custom action
-			await store.receive({ type: 'customAction', payload: 'test' }, (state) => {
+			// Receive the dispatched custom action. The cast is load-bearing, not
+			// noise: `CommandItem.action` is declared `any` (command.types.ts:52)
+			// so a command can carry a *host* store's action, and the reducer
+			// dispatches it straight into a `Dispatch<CommandAction>` stream
+			// (command.reducer.ts:291). This palette is therefore documented to
+			// emit actions outside its own action type, and that is what is
+			// being pinned here.
+			await store.receive({ type: 'customAction', payload: 'test' } as unknown as CommandAction, (state) => {
 				// The custom action doesn't change command state, so state should be unchanged
 				expect(state.isOpen).toBe(false);
 			});
@@ -643,11 +650,11 @@ describe('Command Palette', () => {
 	describe('Commands Update', () => {
 		it('updates commands and refilters', async () => {
 			const initialState = createInitialCommandState({
-				commands: [sampleCommands[0]],
+				commands: [sampleCommands[0]!],
 				isOpen: true
 			});
 			initialState.query = 'file';
-			initialState.filteredCommands = [sampleCommands[0]];
+			initialState.filteredCommands = [sampleCommands[0]!];
 
 			const store = createTestStore({
 				initialState,
@@ -677,7 +684,7 @@ describe('Command Palette', () => {
 				reducer: commandReducer
 			});
 
-			const newCommands = [sampleCommands[0], sampleCommands[1]]; // Only 2 items
+			const newCommands = [sampleCommands[0]!, sampleCommands[1]!]; // Only 2 items
 
 			await store.send({ type: 'commandsUpdated', commands: newCommands }, (state) => {
 				expect(state.selectedIndex).toBe(1); // Adjusted to last valid index
@@ -695,7 +702,7 @@ describe('Command Palette', () => {
 			});
 			initialState.query = 'test';
 			initialState.selectedIndex = 2;
-			initialState.filteredCommands = [sampleCommands[0]];
+			initialState.filteredCommands = [sampleCommands[0]!];
 
 			const store = createTestStore({
 				initialState,
@@ -869,7 +876,7 @@ describe('commandsUpdated convergence', () => {
 			const [next] = commandReducer(
 				state,
 				{ type: 'commandsUpdated', commands: state.commands, groups: undefined },
-				undefined
+				{}
 			);
 			if (next !== state) changed += 1;
 			state = next;
@@ -892,7 +899,7 @@ describe('commandsUpdated convergence', () => {
 			const [next] = commandReducer(
 				state,
 				{ type: 'commandsUpdated', commands: state.commands, groups: state.groups },
-				undefined
+				{}
 			);
 			if (next !== state) changed += 1;
 			state = next;

@@ -12,7 +12,11 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createTestStore } from '../../src/lib/test/test-store.js';
+// A real store, not a TestStore: `scopeTo` takes a `Store`, and `TestStore`
+// has no `dispatch`/`subscribe`/`destroy` for a scoped store to delegate to.
+// `parentReducer` returns `Effect.none()` throughout, so `dispatch` covers
+// what the single `send` below was doing, synchronously.
+import { createStore } from '../../src/lib/store.svelte.js';
 import type { Reducer } from '../../src/lib/types.js';
 import { Effect } from '../../src/lib/effect.js';
 import type { PresentationAction } from '../../src/lib/navigation/types.js';
@@ -81,7 +85,7 @@ const parentReducer: Reducer<ParentState, ParentAction> = (state, action) => {
 describe('DestinationRouter', () => {
 	describe('scoped store logic', () => {
 		it('creates scoped store when destination matches route', () => {
-			const store = createTestStore({
+			const store = createStore({
 				initialState: {
 					count: 0,
 					destination: { type: 'a', state: { value: 'Test' } }
@@ -102,7 +106,7 @@ describe('DestinationRouter', () => {
 		});
 
 		it('returns null scoped stores when destination is null', () => {
-			const store = createTestStore({
+			const store = createStore({
 				initialState: {
 					count: 0,
 					destination: null
@@ -119,7 +123,7 @@ describe('DestinationRouter', () => {
 		});
 
 		it('updates scoped stores when destination changes', () => {
-			const store = createTestStore({
+			const store = createStore({
 				initialState: {
 					count: 0,
 					destination: { type: 'a', state: { value: 'First' } }
@@ -135,7 +139,7 @@ describe('DestinationRouter', () => {
 			expect(scopedStoreB).toBeNull();
 
 			// Change to route 'b'
-			store.send({ type: 'showB' });
+			store.dispatch({ type: 'showB' });
 
 			// Re-scope (this is what $derived would do reactively)
 			scopedStoreA = scopeTo(store).into('destination').case('a');
@@ -217,7 +221,7 @@ describe('DestinationRouter', () => {
 		});
 
 		it('scopes correctly across multiple routes', () => {
-			const store = createTestStore({
+			const store = createStore({
 				initialState: {
 					count: 0,
 					destination: { type: 'b', state: { value: 99 } }

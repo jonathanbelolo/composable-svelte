@@ -6,6 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { MockInstance } from 'vitest';
 import { createURLSyncEffect } from '../../src/lib/routing/sync-effect';
 import { Effect } from '../../src/lib/effect';
 
@@ -38,8 +39,12 @@ const serializeState = (state: TestState): string => {
 };
 
 describe('createURLSyncEffect', () => {
-	let pushStateSpy: ReturnType<typeof vi.spyOn>;
-	let replaceStateSpy: ReturnType<typeof vi.spyOn>;
+	// `MockInstance<typeof …>` rather than `ReturnType<typeof vi.spyOn>`:
+	// `vi.spyOn` is generic and overloaded, so `ReturnType` resolves to the
+	// least-specific overload — a *construct* signature — and every assertion on
+	// these spies was being checked against the wrong shape.
+	let pushStateSpy: MockInstance<typeof history.pushState>;
+	let replaceStateSpy: MockInstance<typeof history.replaceState>;
 	let originalPathname: string;
 
 	beforeEach(() => {
@@ -101,7 +106,7 @@ describe('createURLSyncEffect', () => {
 
 			// Execute the effect
 			if (effect._tag === 'FireAndForget') {
-				await effect.execute(() => {});
+				await effect.execute();
 			}
 
 			expect(pushStateSpy).toHaveBeenCalledTimes(1);
@@ -122,7 +127,7 @@ describe('createURLSyncEffect', () => {
 			};
 			const effect1 = syncEffect(state1);
 			if (effect1._tag === 'FireAndForget') {
-				await effect1.execute(() => {});
+				await effect1.execute();
 			}
 			expect(pushStateSpy).toHaveBeenLastCalledWith(
 				{ composableSvelteSync: true },
@@ -137,7 +142,7 @@ describe('createURLSyncEffect', () => {
 			};
 			const effect2 = syncEffect(state2);
 			if (effect2._tag === 'FireAndForget') {
-				await effect2.execute(() => {});
+				await effect2.execute();
 			}
 			expect(pushStateSpy).toHaveBeenLastCalledWith(
 				{ composableSvelteSync: true },
@@ -149,7 +154,7 @@ describe('createURLSyncEffect', () => {
 			const state3: TestState = { destination: { type: 'add', state: {} }, items: [] };
 			const effect3 = syncEffect(state3);
 			if (effect3._tag === 'FireAndForget') {
-				await effect3.execute(() => {});
+				await effect3.execute();
 			}
 			expect(pushStateSpy).toHaveBeenLastCalledWith(
 				{ composableSvelteSync: true },
@@ -172,7 +177,7 @@ describe('createURLSyncEffect', () => {
 
 			const effect = syncEffect(state);
 			if (effect._tag === 'FireAndForget') {
-				await effect.execute(() => {});
+				await effect.execute();
 			}
 
 			expect(replaceStateSpy).toHaveBeenCalledTimes(1);
@@ -196,7 +201,7 @@ describe('createURLSyncEffect', () => {
 
 			const effect = syncEffect(state);
 			if (effect._tag === 'FireAndForget') {
-				await effect.execute(() => {});
+				await effect.execute();
 			}
 
 			expect(pushStateSpy).toHaveBeenCalledTimes(1);
@@ -235,17 +240,17 @@ describe('createURLSyncEffect', () => {
 			// Trigger multiple updates rapidly
 			const effect1 = syncEffect(state1);
 			if (effect1._tag === 'FireAndForget') {
-				await effect1.execute(() => {});
+				await effect1.execute();
 			}
 
 			const effect2 = syncEffect(state2);
 			if (effect2._tag === 'FireAndForget') {
-				await effect2.execute(() => {});
+				await effect2.execute();
 			}
 
 			const effect3 = syncEffect(state3);
 			if (effect3._tag === 'FireAndForget') {
-				await effect3.execute(() => {});
+				await effect3.execute();
 			}
 
 			// No updates yet
@@ -281,7 +286,7 @@ describe('createURLSyncEffect', () => {
 			// First update
 			const effect1 = syncEffect(state1);
 			if (effect1._tag === 'FireAndForget') {
-				await effect1.execute(() => {});
+				await effect1.execute();
 			}
 
 			// Wait 200ms (not enough to trigger)
@@ -291,7 +296,7 @@ describe('createURLSyncEffect', () => {
 			// Second update (should cancel first)
 			const effect2 = syncEffect(state2);
 			if (effect2._tag === 'FireAndForget') {
-				await effect2.execute(() => {});
+				await effect2.execute();
 			}
 
 			// Wait another 200ms (total 400ms from first, but only 200ms from second)
@@ -322,7 +327,7 @@ describe('createURLSyncEffect', () => {
 
 			const effect = syncEffect(state);
 			if (effect._tag === 'FireAndForget') {
-				await effect.execute(() => {});
+				await effect.execute();
 			}
 
 			expect(pushStateSpy).not.toHaveBeenCalled();
@@ -349,7 +354,7 @@ describe('createURLSyncEffect', () => {
 
 			const effect = syncEffect(state);
 			if (effect._tag === 'FireAndForget') {
-				await effect.execute(() => {});
+				await effect.execute();
 			}
 
 			expect(pushStateSpy).toHaveBeenCalledWith(
@@ -360,7 +365,7 @@ describe('createURLSyncEffect', () => {
 
 			// Verify the flag is present
 			const callArgs = pushStateSpy.mock.calls[0];
-			expect(callArgs[0]).toHaveProperty('composableSvelteSync', true);
+			expect(callArgs![0]).toHaveProperty('composableSvelteSync', true);
 		});
 
 		it('includes flag with replaceState as well', async () => {
@@ -375,7 +380,7 @@ describe('createURLSyncEffect', () => {
 
 			const effect = syncEffect(state);
 			if (effect._tag === 'FireAndForget') {
-				await effect.execute(() => {});
+				await effect.execute();
 			}
 
 			expect(replaceStateSpy).toHaveBeenCalledWith(
@@ -385,7 +390,7 @@ describe('createURLSyncEffect', () => {
 			);
 
 			const callArgs = replaceStateSpy.mock.calls[0];
-			expect(callArgs[0]).toHaveProperty('composableSvelteSync', true);
+			expect(callArgs![0]).toHaveProperty('composableSvelteSync', true);
 		});
 	});
 
@@ -427,7 +432,7 @@ describe('createURLSyncEffect', () => {
 
 			const effect = syncEffect(state);
 			if (effect._tag === 'FireAndForget') {
-				await effect.execute(() => {});
+				await effect.execute();
 			}
 
 			expect(pushStateSpy).toHaveBeenCalledWith(
@@ -455,7 +460,7 @@ describe('createURLSyncEffect', () => {
 			const state: TestState = { destination: null, items: [] };
 			const effect = syncEffect(state);
 			if (effect._tag === 'FireAndForget') {
-				await effect.execute(() => {});
+				await effect.execute();
 			}
 
 			expect(pushStateSpy).toHaveBeenCalledWith(
@@ -484,17 +489,17 @@ describe('createURLSyncEffect', () => {
 
 			const effect1 = syncEffect(state1);
 			if (effect1._tag === 'FireAndForget') {
-				await effect1.execute(() => {});
+				await effect1.execute();
 			}
 
 			const effect2 = syncEffect(state2);
 			if (effect2._tag === 'FireAndForget') {
-				await effect2.execute(() => {});
+				await effect2.execute();
 			}
 
 			const effect3 = syncEffect(state3);
 			if (effect3._tag === 'FireAndForget') {
-				await effect3.execute(() => {});
+				await effect3.execute();
 			}
 
 			// All updates should be applied immediately
