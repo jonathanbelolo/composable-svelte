@@ -48,10 +48,11 @@ session.dispatch({ type: 'logout' });
 
 <AuthGuard store={session} onAnonymous={() => nav.dispatch({ type: 'navigate', to: '/login' })}>
   {#snippet pending()}<p>Loading…</p>{/snippet}
-  {#snippet fallback()}<p>Please sign in.</p>{/snippet}
+  {#snippet fallback({ error })}<p>Please sign in. {error ?? ''}</p>{/snippet}
 
   <RoleGate store={session} roles={['admin']}>
     <AdminPanel />
+    {#snippet pending()}<p>Checking…</p>{/snippet}
     {#snippet fallback()}<p>Not authorized.</p>{/snippet}
   </RoleGate>
 </AuthGuard>
@@ -70,10 +71,15 @@ falls to anonymous":
   `authenticated` with that subject and surfaces the error — the server only
   replaces the session cookie on a successful login, so the old session is
   still valid. `loginFailed` is reached only when there was no prior session.
-- **`AuthGuard` is stale-while-revalidate.** While a background resolve (or a
-  logout) is in flight with a retained authenticated subject, children stay
-  rendered (the snippet receives `isRevalidating: true`); the pending snippet
-  shows only when there is no authenticated subject to keep showing.
+- **`AuthGuard` is stale-while-revalidate.** While *any* operation is in
+  flight with a retained authenticated subject — a background resolve, an
+  account switch, a logout — children stay rendered (the snippet receives
+  `isRevalidating: true`); the pending snippet shows only when there is no
+  authenticated subject to keep showing. `AuthGuard`'s `fallback` receives
+  `{ error }`, which is where a failed login surfaces.
+- **`RoleGate` distinguishes "denied" from "not yet known".** Until the
+  session resolves it renders `pending` (or nothing), never `fallback` — "not
+  authorized" is a claim about a resolved session.
 
 Feedback attribution is epoch-pinned: every initiator bumps a monotonic
 `epoch` and feedback applies only when both status and epoch match, so a
@@ -91,8 +97,10 @@ resolve → logout → resolve, or slow login A → logout → login B).
 Session JSON (`SessionSnapshot`, verbatim wire shape):
 `{ "subject_id": "<uuid>", "display_name": "...", "roles": ["..."] }`.
 A 2xx body is runtime-validated (`subject_id` string; `roles` an array when
-present) — a malformed payload throws `MalformedSessionError` and is treated
-as a failure, never fail-open authenticated.
+present, and it may be absent) — a malformed payload throws
+`MalformedSessionError` and is treated as a failure, never fail-open
+authenticated. That includes a 2xx whose body is not JSON at all, which is
+what an HTML proxy error page or an SPA index fallback looks like.
 
 ### Deployment notes
 

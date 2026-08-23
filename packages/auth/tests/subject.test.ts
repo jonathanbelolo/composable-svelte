@@ -49,9 +49,10 @@ describe('subjectFromSession', () => {
 	});
 
 	it('defaults roles to [] when absent on the wire (fail-safe)', () => {
-		// A backend variant may omit `roles` entirely — the wire type says
-		// string[], but the client must not trust the wire that far.
-		const wire = { subject_id: 'abc' } as SessionSnapshot;
+		// A backend variant may omit `roles` entirely. The wire type says so now
+		// — this used to need `as SessionSnapshot` to express a payload the
+		// parser deliberately admits.
+		const wire: SessionSnapshot = { subject_id: 'abc' };
 		const subject = subjectFromSession(wire);
 
 		expect(subject.attributes['roles']).toEqual([]);
@@ -60,7 +61,7 @@ describe('subjectFromSession', () => {
 	it('copies roles defensively (mutating the snapshot does not affect the subject)', () => {
 		const snapshot: SessionSnapshot = { subject_id: 'abc', roles: ['agent'] };
 		const subject = subjectFromSession(snapshot);
-		snapshot.roles.push('admin');
+		snapshot.roles!.push('admin');
 
 		expect(subject.attributes['roles']).toEqual(['agent']);
 	});

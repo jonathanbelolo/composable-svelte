@@ -185,14 +185,18 @@ describe('RoleGate', () => {
 		});
 
 		try {
-			// Anonymous subject holds no roles → fallback.
-			expect(target.querySelector('[data-testid="denied"]')).not.toBeNull();
+			// Unresolved: there is no answer yet, so neither branch. This used to
+			// assert `denied` — "not authorized" about a session that had not
+			// been fetched.
+			expect(target.querySelector('[data-testid="denied"]')).toBeNull();
+			expect(target.querySelector('[data-testid="admin-only"]')).toBeNull();
 
 			// Authenticated as 'agent' — still not 'admin' → fallback.
 			store.dispatch({ type: 'resolveSession' }); // epoch 1
 			store.dispatch({ type: 'sessionResolved', session, epoch: 1 });
 			flushSync();
 			expect(target.querySelector('[data-testid="admin-only"]')).toBeNull();
+			expect(target.querySelector('[data-testid="denied"]')).not.toBeNull();
 
 			// Authenticated with the required role → children (re-resolve:
 			// feedback only applies while its resolve is in flight).

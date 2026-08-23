@@ -71,6 +71,15 @@ export interface SessionSnapshot {
 	/**
 	 * The session's active role-set — becomes the subject's
 	 * `attributes["roles"]`, the convention authorization gates read.
+	 *
+	 * Optional, because that is what the wire and the code already say.
+	 * `parseSessionSnapshot` deliberately admits a payload with no `roles`
+	 * (it rejects only a *present* non-array), and `subjectFromSession`
+	 * defends with `?? []`. Declaring it required made those two agree with
+	 * the runtime and disagree with the type: `fetchSession` could resolve a
+	 * value that did not satisfy its own return type, and a consumer writing
+	 * their own `SessionDependencies` was forced by the compiler to supply a
+	 * field the real implementation does not require.
 	 */
-	roles: string[];
+	roles?: string[] | undefined;
 }

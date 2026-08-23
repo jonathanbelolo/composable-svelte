@@ -38,6 +38,23 @@ export class MalformedSessionError extends Error {
  * `subject_id` MUST be a string; `roles`, when present, MUST be an array
  * (`subjectFromSession` defaults an absent `roles` to `[]`).
  */
+async function decodeSessionSnapshot(response: Response): Promise<SessionSnapshot> {
+	// The decode belongs inside the guarantee, not before it. `await
+	// response.json()` used to sit at the call sites, so a 200 carrying a
+	// non-JSON body — an HTML proxy error page, an SPA index.html fallback:
+	// the canonical reason to validate a 2xx at all — threw a raw `SyntaxError`
+	// rather than the documented `MalformedSessionError`. A consumer branching
+	// on `instanceof MalformedSessionError`, which is why it is exported,
+	// silently missed exactly that case.
+	let payload: unknown;
+	try {
+		payload = await response.json();
+	} catch {
+		throw new MalformedSessionError('body is not JSON');
+	}
+	return parseSessionSnapshot(payload);
+}
+
 function parseSessionSnapshot(payload: unknown): SessionSnapshot {
 	if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
 		throw new MalformedSessionError('body is not a JSON object');
@@ -79,7 +96,7 @@ export function createHttpSessionDeps(baseUrl: string = ''): SessionDependencies
 			if (!response.ok) {
 				throw new Error(`Login failed (${response.status})`);
 			}
-			return parseSessionSnapshot(await response.json());
+			return decodeSessionSnapshot(response);
 		},
 
 		async fetchLogout(signal?: AbortSignal): Promise<void> {
@@ -106,7 +123,7 @@ export function createHttpSessionDeps(baseUrl: string = ''): SessionDependencies
 			if (!response.ok) {
 				throw new Error(`Session resolve failed (${response.status})`);
 			}
-			return parseSessionSnapshot(await response.json());
+			return decodeSessionSnapshot(response);
 		}
 	};
 }

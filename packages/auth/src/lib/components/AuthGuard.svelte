@@ -33,7 +33,12 @@
 		fallback,
 		pending
 	}: {
-		store: Store<SessionState, SessionAction>;
+		/**
+		 * Only `state` is read. Typing this as the full `Store<SessionState,
+		 * SessionAction>` blocked passing a scoped store whose action type a
+		 * parent has wrapped, for a `dispatch` this component never calls.
+		 */
+		store: { readonly state: SessionState };
 		/**
 		 * Invoked when the session settles on `anonymous` (NOT on
 		 * `loginFailed` — a failed login attempt is the login surface's
@@ -50,7 +55,14 @@
 		 */
 		children?: Snippet<[{ isRevalidating: boolean }]>;
 		/** Rendered when anonymous or after a failed login. */
-		fallback?: Snippet;
+		/**
+		 * Rendered when there is no session to show. Receives `error` — the
+		 * reducer records one on a failed login and on a logout that did not
+		 * reach the server, and this was the only place it could surface.
+		 * Without it `SessionState.error` was unreachable through the package's
+		 * own components.
+		 */
+		fallback?: Snippet<[{ error: string | null }]>;
 		/** Rendered while unresolved / logging in, or while resolving /
 		 * logging out WITHOUT a retained authenticated subject. */
 		pending?: Snippet;
@@ -104,7 +116,7 @@
 {#if showChildren}
 	{@render children?.({ isRevalidating })}
 {:else if state.status === 'anonymous' || state.status === 'loginFailed'}
-	{@render fallback?.()}
+	{@render fallback?.({ error: state.error })}
 {:else}
 	{@render pending?.()}
 {/if}
