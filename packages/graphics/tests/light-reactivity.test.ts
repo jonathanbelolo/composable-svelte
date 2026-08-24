@@ -13,7 +13,7 @@
  * unmounting several `<Light>` children removed the wrong ones.
  */
 
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { mount, unmount, flushSync } from 'svelte';
 import { createStore } from '@composable-svelte/core';
 import { graphicsReducer } from '../src/core/reducer';
@@ -21,6 +21,7 @@ import { createInitialGraphicsState } from '../src/core/initial-state';
 import Light from '../src/components/Light.svelte';
 import LightPropsHarness from './test-components/LightPropsHarness.svelte';
 import GeneratedIdHarness from './test-components/GeneratedIdHarness.svelte';
+import ChangingIdHarness from './test-components/ChangingIdHarness.svelte';
 import type { GraphicsAction, GraphicsState } from '../src/core/types';
 
 let cleanup: Array<() => void> = [];
@@ -124,5 +125,96 @@ describe('Light', () => {
 		expect(after, 'the update orphaned the original light').toHaveLength(1);
 		expect(after[0]!.id, 'the generated id changed between renders').toBe(before[0]!.id);
 		expect(after[0]!.intensity, 'the update never landed').toBe(0.9);
+	});
+
+	it('renaming a light moves it rather than orphaning it', () => {
+		// `updateLight` drops an id it does not know, in silence. So a changed
+		// `id` used to dispatch an update nobody received, leaving the original
+		// light in the store and in the scene — and `onDestroy` then removed the
+		// *new* id, so the orphan survived the component itself.
+		const store = makeStore();
+		const { target } = mountIn(ChangingIdHarness, { store });
+		flushSync();
+
+		expect(store.state.lights.map((l) => l.id)).toEqual(['ambient-default', 'first']);
+
+		target.querySelector<HTMLButtonElement>('[data-testid="rename"]')!.click();
+		flushSync();
+
+		expect(store.state.lights.map((l) => l.id), 'the rename left an orphan').toEqual([
+			'ambient-default',
+			'second'
+		]);
+	});
+
+	it('unmounting after a rename leaves nothing behind', () => {
+		const store = makeStore();
+		const { target, teardown } = mountIn(ChangingIdHarness, { store });
+		flushSync();
+		target.querySelector<HTMLButtonElement>('[data-testid="rename"]')!.click();
+		flushSync();
+
+		teardown();
+		flushSync();
+
+		expect(store.state.lights.map((l) => l.id)).toEqual(['ambient-default']);
+	});
+
+	it('registers itself once, not twice', () => {
+		// `onMount` dispatched `addLight` and the effect then skipped its own
+		// first run via a `mounted` flag — but that flag was `$state`, so writing
+		// it inside the effect that read it scheduled a second run, and mount
+		// dispatched `addLight` *then* `updateLight`. The gate turned one run
+		// into two; only value-idempotency in the reducer hid it.
+		const store = makeStore();
+		const seen: string[] = [];
+		const unsubscribe = store.subscribeToActions?.((action) => seen.push(action.type));
+
+		mountIn(Light, { store, id: 'once', type: 'point', position: [0, 1, 0], intensity: 1 });
+		flushSync();
+		unsubscribe?.();
+
+		expect(seen).toEqual(['addLight']);
+	});
+
+	it('stands aside instead of fighting a light that already owns the id', () => {
+		const store = makeStore();
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+		mountIn(Light, { store, id: 'shared', type: 'point', position: [0, 1, 0], intensity: 1 });
+		mountIn(Light, { store, id: 'shared', type: 'point', position: [0, 9, 0], intensity: 5 });
+		flushSync();
+
+		// The first one keeps the id and its own values; the second says so.
+		expect(store.state.lights.filter((l) => l.id === 'shared')).toHaveLength(1);
+		expect(store.state.lights.find((l) => l.id === 'shared')?.intensity).toBe(1);
+		expect(warn).toHaveBeenCalledWith(expect.stringContaining('already in use'));
+	});
+
+	it('unmounting the inert duplicate leaves the real light alone', () => {
+		// The paired half of standing aside: a component that failed to claim
+		// the id must not claim it on the way out either. Recording ownership
+		// regardless would make the duplicate's `onDestroy` remove the light
+		// belonging to the component that actually owns it.
+		const store = makeStore();
+		vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+		mountIn(Light, { store, id: 'shared', type: 'point', position: [0, 1, 0], intensity: 1 });
+		const duplicate = mountIn(Light, {
+			store,
+			id: 'shared',
+			type: 'point',
+			position: [0, 9, 0],
+			intensity: 5
+		});
+		flushSync();
+
+		duplicate.teardown();
+		flushSync();
+
+		expect(
+			store.state.lights.map((l) => l.id),
+			'the duplicate took the real light with it'
+		).toEqual(['ambient-default', 'shared']);
 	});
 });

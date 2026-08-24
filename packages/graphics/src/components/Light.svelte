@@ -4,7 +4,7 @@
  * Adds light to scene via store
  */
 
-import { onMount, onDestroy } from 'svelte';
+import { onDestroy, untrack } from 'svelte';
 import type { Store } from '@composable-svelte/core';
 import type { GraphicsState, GraphicsAction, LightConfig } from '../core/types.js';
 
@@ -73,47 +73,75 @@ const lightConfig = $derived(
   })()
 );
 
-// Add light on mount
-onMount(() => {
-  store.dispatch({
-    type: 'addLight',
-    light: lightConfig
-  });
-});
-
 /**
- * Keep the light in step with its props.
+ * The id this component currently owns in the store, or `null` if it owns none.
  *
- * This component had no effect at all, so `lightConfig` recomputed on every
- * prop change and nothing ever consumed the result — `<Light intensity={x} />`
- * with a changing `x` did nothing, forever. `Camera.svelte` and `Mesh.svelte`
- * both carry this shape; `Light` was simply never given one.
+ * Ownership is what makes the three lifecycle questions answerable: whether to
+ * add or update, whether an id change means "rename" or "claim", and whether
+ * unmounting should remove anything at all.
  *
- * The `mounted` gate skips the first run, because `onMount` has already
- * dispatched. `updateLight` is idempotent by value, which is what
- * `tests/component-mount.test.ts` pins for the other two.
+ * There is no `onMount` here any more. It dispatched `addLight`, and the
+ * `$effect` below then had to skip its own first run to avoid dispatching
+ * twice — via a `mounted` flag that was itself `$state`, so writing it inside
+ * the effect that read it scheduled a second run and produced `addLight` then
+ * `updateLight` anyway. The gate never skipped anything; only the reducer's
+ * value-idempotency made it harmless.
  */
-let mounted = $state(false);
+let ownedId: string | null = null;
+let warnedId: string | null = null;
 
 $effect(() => {
-  if (!mounted) {
-    mounted = true;
+  // `lightConfig` is the only tracked read: this effect exists to follow the
+  // props, and everything below is untracked so it does not also follow the
+  // store it is writing to. `store.dispatch` reads state internally, so without
+  // this the effect depended on its own output — mounting dispatched `addLight`
+  // and then a redundant `updateLight`, and only the reducer's value-idempotency
+  // stopped that becoming a loop.
+  const config = lightConfig;
+
+  untrack(() => syncToStore(config));
+});
+
+function syncToStore(config: LightConfig): void {
+  if (ownedId === config.id) {
+    store.dispatch({ type: 'updateLight', id: config.id, light: config });
     return;
   }
 
-  store.dispatch({
-    type: 'updateLight',
-    id: lightId,
-    light: lightConfig
-  });
-});
+  // The id changed, so release the old light before claiming the new one.
+  // Without this the update went to an id the store had never heard of,
+  // `updateLight` dropped it in silence, and the original light stayed in the
+  // scene for good — surviving even this component's own unmount, because
+  // `onDestroy` removes the *current* id.
+  if (ownedId !== null) {
+    store.dispatch({ type: 'removeLight', id: ownedId });
+    ownedId = null;
+  }
 
-// Remove light on unmount
+  const taken = store.state.lights.some((light) => light.id === config.id);
+
+  if (taken) {
+    // Two components owning one id used to overwrite each other's config
+    // forever — the reducer's guard compares against the first match while its
+    // update maps over every match — until Svelte aborted the app with
+    // `effect_update_depth_exceeded`. Standing aside is what breaks the cycle.
+    if (warnedId !== config.id) {
+      console.warn(
+        `[graphics] <Light> id "${config.id}" is already in use; this light is inert`
+      );
+      warnedId = config.id;
+    }
+    return;
+  }
+
+  store.dispatch({ type: 'addLight', light: config });
+  ownedId = config.id;
+}
+
 onDestroy(() => {
-  store.dispatch({
-    type: 'removeLight',
-    id: lightId
-  });
+  if (ownedId !== null) {
+    store.dispatch({ type: 'removeLight', id: ownedId });
+  }
 });
 </script>
 

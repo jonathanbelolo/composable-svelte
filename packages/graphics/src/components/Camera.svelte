@@ -4,7 +4,7 @@
  * Updates camera configuration via store
  */
 
-import { onMount } from 'svelte';
+import { untrack } from 'svelte';
 import type { Store } from '@composable-svelte/core';
 import type { GraphicsState, GraphicsAction, Vector3, CameraType } from '../core/types.js';
 
@@ -16,7 +16,8 @@ let {
   lookAt,
   fov,
   near,
-  far
+  far,
+  orthoSize
 }: {
   store: Store<GraphicsState, GraphicsAction>;
   type?: CameraType;
@@ -25,6 +26,14 @@ let {
   fov?: number;
   near?: number;
   far?: number;
+  /**
+   * Half-height of the view in world units, orthographic only.
+   *
+   * Documented in the skill file with a copy-pasteable example — and not
+   * accepted here, so the example set nothing. `CameraConfig` has carried the
+   * field all along and the adapter reads it.
+   */
+  orthoSize?: number;
 } = $props();
 
 // Build camera config.
@@ -42,31 +51,25 @@ const cameraConfig = $derived({
   lookAt,
   ...(fov !== undefined && { fov }),
   ...(near !== undefined && { near }),
-  ...(far !== undefined && { far })
+  ...(far !== undefined && { far }),
+  ...(orthoSize !== undefined && { orthoSize })
 });
 
-// Update camera on mount and when props change
-onMount(() => {
-  store.dispatch({
-    type: 'updateCamera',
-    camera: cameraConfig
-  });
-});
-
-// Track if mounted to skip first effect
-let mounted = $state(false);
-
-// Update camera when props change
+/**
+ * Follow the props.
+ *
+ * `cameraConfig` is the only tracked read, and the dispatch is untracked:
+ * `store.dispatch` reads store state internally, so a tracked dispatch makes
+ * this effect depend on its own output.
+ *
+ * There was an `onMount` dispatch here as well, with the effect skipping its
+ * own first run via a `mounted` flag. That flag was `$state`, so writing it
+ * inside the effect that read it scheduled a second run — mounting dispatched
+ * `updateCamera` twice, and the gate it was named for skipped nothing.
+ */
 $effect(() => {
-  if (!mounted) {
-    mounted = true;
-    return;
-  }
-
-  store.dispatch({
-    type: 'updateCamera',
-    camera: cameraConfig
-  });
+  const config = cameraConfig;
+  untrack(() => store.dispatch({ type: 'updateCamera', camera: config }));
 });
 </script>
 

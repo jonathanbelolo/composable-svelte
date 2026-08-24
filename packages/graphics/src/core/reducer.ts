@@ -109,6 +109,12 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
     }
 
     case 'setCameraPosition': {
+      // Identity is the signal `syncScene` reads, so returning a fresh camera
+      // for an unchanged position makes the renderer re-apply it for nothing.
+      if (sameConfig(state.camera.position, action.position)) {
+        return [state, Effect.none()];
+      }
+
       return [
         {
           ...state,
@@ -122,6 +128,10 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
     }
 
     case 'setCameraLookAt': {
+      if (sameConfig(state.camera.lookAt, action.lookAt)) {
+        return [state, Effect.none()];
+      }
+
       return [
         {
           ...state,
@@ -139,6 +149,17 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
     // ========================================================================
 
     case 'addMesh': {
+      // Ids must be unique or they are not identity. `syncScene` keys both its
+      // baseline and the incoming state by id, so a duplicate silently drops
+      // all but the last from the renderer while `removeMesh` — which filters —
+      // would remove every one of them at once.
+      if (state.meshes.some((mesh) => mesh.id === action.mesh.id)) {
+        console.warn(
+          `[graphics] addMesh: id "${action.mesh.id}" is already in use; ignoring`
+        );
+        return [state, Effect.none()];
+      }
+
       return [
         {
           ...state,
@@ -149,10 +170,20 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
     }
 
     case 'removeMesh': {
+      if (!state.meshes.some((mesh) => mesh.id === action.id)) {
+        return [state, Effect.none()];
+      }
+
+      // Animations targeting the mesh go with it. `startAnimation` checks the
+      // target exists, but nothing rechecked afterwards — so removing an
+      // animated mesh left a `loop: true` animation ticking forever against
+      // nothing, allocating a fresh `meshes` array every frame and making
+      // `syncScene` walk both Maps for no reason.
       return [
         {
           ...state,
-          meshes: state.meshes.filter((m) => m.id !== action.id)
+          meshes: state.meshes.filter((m) => m.id !== action.id),
+          animations: state.animations.filter((a) => a.config.targetId !== action.id)
         },
         Effect.none()
       ];
@@ -182,6 +213,11 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
     }
 
     case 'setMeshPosition': {
+      const target = state.meshes.find((mesh) => mesh.id === action.id);
+      if (!target || sameConfig(target.position, action.position)) {
+        return [state, Effect.none()];
+      }
+
       return [
         {
           ...state,
@@ -194,6 +230,11 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
     }
 
     case 'setMeshRotation': {
+      const target = state.meshes.find((mesh) => mesh.id === action.id);
+      if (!target || sameConfig(target.rotation, action.rotation)) {
+        return [state, Effect.none()];
+      }
+
       return [
         {
           ...state,
@@ -206,6 +247,11 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
     }
 
     case 'setMeshScale': {
+      const target = state.meshes.find((mesh) => mesh.id === action.id);
+      if (!target || sameConfig(target.scale, action.scale)) {
+        return [state, Effect.none()];
+      }
+
       return [
         {
           ...state,
@@ -218,11 +264,19 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
     }
 
     case 'toggleMeshVisibility': {
+      if (!state.meshes.some((mesh) => mesh.id === action.id)) {
+        return [state, Effect.none()];
+      }
+
       return [
         {
           ...state,
           meshes: state.meshes.map((mesh) =>
-            mesh.id === action.id ? { ...mesh, visible: !mesh.visible } : mesh
+            // `?? true`, because that is what the adapter reads. `visible` is
+            // optional, and `!undefined` is `true` — so the first toggle of a
+            // mesh added without an explicit `visible` set it to what it
+            // already was, and the user saw a dead button.
+            mesh.id === action.id ? { ...mesh, visible: !(mesh.visible ?? true) } : mesh
           )
         },
         Effect.none()
@@ -234,6 +288,18 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
     // ========================================================================
 
     case 'addLight': {
+      // Same uniqueness requirement as `addMesh`, and with a sharper failure:
+      // two `<Light>` components sharing an id used to overwrite each other's
+      // config forever — `updateLight`'s guard compares against the *first*
+      // match while its update maps over *every* match — until Svelte aborted
+      // the whole app with `effect_update_depth_exceeded`.
+      if (state.lights.some((light) => light.id === action.light.id)) {
+        console.warn(
+          `[graphics] addLight: id "${action.light.id}" is already in use; ignoring`
+        );
+        return [state, Effect.none()];
+      }
+
       return [
         {
           ...state,
@@ -244,6 +310,10 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
     }
 
     case 'removeLight': {
+      if (!state.lights.some((light) => light.id === action.id)) {
+        return [state, Effect.none()];
+      }
+
       return [
         {
           ...state,
@@ -320,6 +390,10 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
     }
 
     case 'stopAnimation': {
+      if (!state.animations.some((a) => a.id === action.id)) {
+        return [state, Effect.none()];
+      }
+
       return [
         {
           ...state,
@@ -337,7 +411,17 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
         if (!anim.isPlaying) return anim;
 
         const elapsed = action.time - anim.startTime;
-        const progress = Math.min(elapsed / anim.config.duration, 1);
+        // Clamped at both ends, and `duration <= 0` is complete rather than
+        // undefined. `elapsed / 0` is NaN when a tick lands in the same
+        // millisecond as the start — both are `Date.now()`, so that is ordinary
+        // — and NaN survives `Math.min(NaN, 1)`, flows into the mesh position,
+        // and fails `progress >= 1`, so the animation runs forever writing NaN.
+        // Nothing clamped the bottom either, so a tick timestamped before the
+        // start extrapolated backwards out of the animation's own range.
+        const progress =
+          anim.config.duration > 0
+            ? Math.min(Math.max(elapsed / anim.config.duration, 0), 1)
+            : 1;
 
         // Apply easing
         const easedProgress = applyEasing(progress, anim.config.easing || 'linear');
@@ -358,16 +442,26 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
         // Accumulated per mesh because `property` is one of three: up to three
         // animations can target one mesh at once, and applying them one at a
         // time would drop all but the last.
-        meshUpdates.set(anim.config.targetId, {
-          ...meshUpdates.get(anim.config.targetId),
-          [anim.config.property]: current
-        });
+        // Only when the value actually moved. Writing unconditionally meant a
+        // `from === to` animation — or any animation sitting at its final
+        // value — produced a fresh mesh array every frame, which `syncScene`
+        // reads as a change and pushes to the renderer.
+        const target = state.meshes.find((mesh) => mesh.id === anim.config.targetId);
+        if (target && !sameConfig(target[anim.config.property], current)) {
+          meshUpdates.set(anim.config.targetId, {
+            ...meshUpdates.get(anim.config.targetId),
+            [anim.config.property]: current
+          });
+        }
 
         // Check if animation is complete
         if (progress >= 1) {
           if (anim.config.loop) {
-            // Reset animation
-            return { ...anim, startTime: action.time };
+            // Carry the overshoot into the next lap. Resetting to the tick's
+            // own time discards however far past the boundary the frame landed,
+            // which on a 100ms loop ticked at 60fps drifts a whole frame a lap.
+            const overshoot = anim.config.duration > 0 ? elapsed % anim.config.duration : 0;
+            return { ...anim, startTime: action.time - overshoot };
           } else {
             // Stop animation
             return { ...anim, isPlaying: false };

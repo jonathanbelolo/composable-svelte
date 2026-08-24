@@ -215,7 +215,12 @@ describe('an animation reaches the renderer', () => {
 			});
 		}
 
-		const start = store.state.animations[0]!.startTime;
+		// The latest of the two, not the first: `startAnimation` stamps
+		// `Date.now()` per animation, so the second can be a millisecond behind
+		// and ticking off the first one's clock leaves it at 0.999 complete.
+		// This test passed only while both dispatches landed in the same
+		// millisecond.
+		const start = Math.max(...store.state.animations.map((a) => a.startTime));
 		store.dispatch({ type: 'tick', time: start + 1000 });
 		sync();
 

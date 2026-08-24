@@ -7,9 +7,16 @@
  * re-triggers the effect forever. It does not surface as a thrown Svelte error
  * either — the loop re-schedules, so it pins the CPU until the tab dies.
  *
- * The `mounted` flag both components carry does not help: after the first run
- * it is a constant `true`. Nor can a reference guard, since the derived config
- * is a new identity every render. The reducer has to be idempotent *by value*.
+ * Both components used to carry a `mounted` flag said to skip the effect's
+ * first run, since `onMount` had already dispatched. It skipped nothing: the
+ * flag was `$state`, so writing it inside the effect that read it scheduled a
+ * second run, and mounting dispatched twice regardless. Both now dispatch from
+ * the effect alone, with the dispatch untracked so the effect follows its props
+ * rather than the store it writes to.
+ *
+ * The reducer's value-idempotency still matters — it is what keeps a redundant
+ * dispatch from reaching the renderer — but it is no longer the only thing
+ * standing between a mounted component and a pinned CPU.
  *
  * Both are public exports that no example or test rendered, which is why they
  * shipped broken.

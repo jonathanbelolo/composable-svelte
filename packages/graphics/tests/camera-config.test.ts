@@ -133,13 +133,15 @@ describe('the Camera component', () => {
 	 * meant nothing checked that a call site supplied them. `svelte-check` reads
 	 * the component; `tsc` cannot, which is why this went unseen.
 	 */
-	function mountCamera(props: Omit<ComponentProps<typeof Camera>, 'store'>) {
-		const store = makeStore();
+	function mountInto(
+		store: ReturnType<typeof makeStore>,
+		props: Omit<ComponentProps<typeof Camera>, 'store'>
+	) {
 		const target = document.createElement('div');
 		document.body.appendChild(target);
 
 		const component = mount(Camera, { target, props: { store, ...props } });
-		// `onMount`'s dispatch lands after `mount()` returns. Without this the
+		// The effect's dispatch lands after `mount()` returns. Without this the
 		// assertions read the initial state and pass for the wrong reason — which
 		// they did on the first draft of this test.
 		flushSync();
@@ -148,6 +150,10 @@ describe('the Camera component', () => {
 			target.remove();
 		});
 		return store;
+	}
+
+	function mountCamera(props: Omit<ComponentProps<typeof Camera>, 'store'>) {
+		return mountInto(makeStore(), props);
 	}
 
 	it('does not clobber fov, near and far when they are not passed', () => {
@@ -165,5 +171,35 @@ describe('the Camera component', () => {
 		expect(store.state.camera.fov).toBe(60);
 		expect(store.state.camera.near).toBe(1);
 		expect(store.state.camera.far).toBe(500);
+	});
+
+	it('passes orthoSize through, so the documented example does something', () => {
+		// `orthoSize` is documented in the skill file as a `<Camera>` prop with a
+		// copy-pasteable example, `CameraConfig` has always carried the field and
+		// the adapter reads it — but the component did not accept it, so the
+		// example set nothing and the camera fell back to the default half-height.
+		const store = mountCamera({ position, lookAt, type: 'orthographic', orthoSize: 8 });
+
+		expect(store.state.camera.type).toBe('orthographic');
+		expect(store.state.camera.orthoSize, 'orthoSize never reached the store').toBe(8);
+	});
+
+	it('does not wipe a configured orthoSize when the prop is absent', () => {
+		// The paired half, and the same defect the fov/near/far case above pins:
+		// an object literal always carries every key it names, so an
+		// unconditional `{ orthoSize }` sends `orthoSize: undefined` and the
+		// reducer's `{ ...state.camera, ...action.camera }` merge overwrites with
+		// it. Asserting `toBeUndefined()` after a bare mount cannot catch that —
+		// absent and explicitly-undefined read identically — so the value has to
+		// already be set before the component mounts.
+		const store = makeStore();
+		store.dispatch({
+			type: 'updateCamera',
+			camera: { type: 'orthographic', position, lookAt, orthoSize: 12 }
+		});
+
+		mountInto(store, { position, lookAt, type: 'orthographic' });
+
+		expect(store.state.camera.orthoSize, 'mounting <Camera> wiped orthoSize').toBe(12);
 	});
 });

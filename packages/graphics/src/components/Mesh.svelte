@@ -4,13 +4,14 @@
  * Adds/updates mesh via store
  */
 
-import { onMount, onDestroy } from 'svelte';
+import { onDestroy, untrack } from 'svelte';
 import type { Store } from '@composable-svelte/core';
 import type {
   GraphicsState,
   GraphicsAction,
   GeometryConfig,
   MaterialConfig,
+  MeshConfig,
   Vector3
 } from '../core/types.js';
 
@@ -46,37 +47,58 @@ const meshConfig = $derived({
   visible
 });
 
-// Add mesh on mount
-onMount(() => {
-  store.dispatch({
-    type: 'addMesh',
-    mesh: meshConfig
-  });
+/**
+ * The id this component currently owns in the store, or `null` if it owns none.
+ *
+ * The same ownership model as `<Light>`, for the same three reasons: it decides
+ * add versus update, it makes a changed `id` a rename rather than an orphan,
+ * and it stops two components with one id from fighting over it.
+ *
+ * `onMount` dispatched `addMesh` and the effect skipped its first run through a
+ * `mounted` flag — which was `$state`, so writing it inside the effect that
+ * read it scheduled a second run and mount dispatched `addMesh` then
+ * `updateMesh` regardless.
+ */
+let ownedId: string | null = null;
+let warnedId: string | null = null;
+
+$effect(() => {
+  const config = meshConfig;
+  untrack(() => syncToStore(config));
 });
 
-// Track if mounted to skip first effect
-let mounted = $state(false);
-
-// Update mesh when props change
-$effect(() => {
-  if (!mounted) {
-    mounted = true;
+function syncToStore(config: MeshConfig): void {
+  if (ownedId === config.id) {
+    store.dispatch({ type: 'updateMesh', id: config.id, updates: config });
     return;
   }
 
-  store.dispatch({
-    type: 'updateMesh',
-    id,
-    updates: meshConfig
-  });
-});
+  // A changed `id` used to send the update to an id the store had never heard
+  // of; `updateMesh` drops those in silence, so the original mesh stayed in the
+  // scene and outlived the component, whose `onDestroy` removes the new id.
+  if (ownedId !== null) {
+    store.dispatch({ type: 'removeMesh', id: ownedId });
+    ownedId = null;
+  }
 
-// Remove mesh on unmount
+  if (store.state.meshes.some((mesh) => mesh.id === config.id)) {
+    if (warnedId !== config.id) {
+      console.warn(
+        `[graphics] <Mesh> id "${config.id}" is already in use; this mesh is inert`
+      );
+      warnedId = config.id;
+    }
+    return;
+  }
+
+  store.dispatch({ type: 'addMesh', mesh: config });
+  ownedId = config.id;
+}
+
 onDestroy(() => {
-  store.dispatch({
-    type: 'removeMesh',
-    id
-  });
+  if (ownedId !== null) {
+    store.dispatch({ type: 'removeMesh', id: ownedId });
+  }
 });
 </script>
 
