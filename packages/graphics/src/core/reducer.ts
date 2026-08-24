@@ -50,6 +50,19 @@ const ANIMATION_FRAME_EFFECT = 'graphics.animationFrame';
  * initial position, permanently, while still reporting `isPlaying: true`.
  */
 function frameEffectId(sceneId: string): string {
+  if (!sceneId) {
+    // A `GraphicsState` that did not come from `createInitialGraphicsState` —
+    // hand-built, or hydrated from a payload serialised before `sceneId`
+    // existed. The id would fall back to a constant, which is exactly the
+    // cross-feature cancellation this field was added to prevent, and a single
+    // such scene runs perfectly so nothing would ever surface it.
+    console.warn(
+      '[graphics] state has no sceneId; two scenes without one will cancel ' +
+        "each other's animation frame loop. Build state with createInitialGraphicsState()."
+    );
+    return ANIMATION_FRAME_EFFECT;
+  }
+
   return `${ANIMATION_FRAME_EFFECT}.${sceneId}`;
 }
 

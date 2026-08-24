@@ -317,3 +317,70 @@ describe('the adapter says something when it cannot do what was asked', () => {
     expect(warn).not.toHaveBeenCalled();
   });
 });
+
+describe('an adapter is initialized once', () => {
+  let h: ReturnType<typeof headlessAdapter>;
+  beforeEach(() => { h = headlessAdapter(); });
+  afterEach(() => { h.adapter.dispose(); h.engine.dispose(); vi.restoreAllMocks(); });
+
+  it('does not start a second render loop, and says why', async () => {
+    // `initialize` used to register a fresh `runRenderLoop` closure every call.
+    // Babylon dedupes render loops by function identity, so a new closure each
+    // time defeated it and the scene rendered twice per frame — while
+    // `attachControl` bound to a canvas the engine was not drawing to.
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const canvas = document.createElement('canvas');
+
+    // `headlessAdapter` has already attached an engine and built a scene, which
+    // is what `initialize` treats as "already running".
+    await h.adapter.initialize(canvas);
+
+    expect(
+      (h.engine as unknown as { _activeRenderLoops: unknown[] })._activeRenderLoops
+    ).toHaveLength(0);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('already initialized'));
+  });
+});
+
+describe('the unparseable-colour warning is bounded', () => {
+  let h: ReturnType<typeof headlessAdapter>;
+  beforeEach(() => { h = headlessAdapter(); });
+  afterEach(() => { h.adapter.dispose(); h.engine.dispose(); vi.restoreAllMocks(); });
+
+  const badColours = (n: number) =>
+    Array.from({ length: n }, (_, i) => `hsl(${i}, 50%, 50%)`);
+
+  it('stops after the cap, with one notice', () => {
+    // The set is keyed by the bad value itself, and the path this warning exists
+    // for is the animated one — where the colour *varies*, so every frame is a
+    // new key. 1800 distinct values produced 1800 warnings and 1800 retained
+    // strings: a leak fix that leaked.
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    badColours(200).forEach((color, i) => {
+      h.adapter.addMesh(cube({ id: `m${i}`, material: { color } }));
+    });
+
+    const messages = warn.mock.calls.map((c) => String(c[0]));
+    expect(messages.filter((m) => m.includes('not a 6-digit hex'))).toHaveLength(20);
+    expect(messages.filter((m) => m.includes('suppressing further warnings'))).toHaveLength(1);
+  });
+
+  it('is not confused by a colour that looks like its own bookkeeping', () => {
+    // The cap used to be recorded by adding a `'__capped__'` sentinel to the
+    // very set that holds consumer colour strings. Passing that string kept
+    // `size` pinned at the cap — `Set.add` of an existing member does not grow
+    // it — so the "suppressing" notice fired once per distinct colour after it.
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    h.adapter.addMesh(cube({ id: 'sentinel', material: { color: '__capped__' } }));
+    badColours(60).forEach((color, i) => {
+      h.adapter.addMesh(cube({ id: `m${i}`, material: { color } }));
+    });
+
+    const suppressions = warn.mock.calls
+      .map((c) => String(c[0]))
+      .filter((m) => m.includes('suppressing further warnings'));
+    expect(suppressions, 'the notice repeated').toHaveLength(1);
+  });
+});

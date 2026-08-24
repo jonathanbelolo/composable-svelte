@@ -139,6 +139,7 @@ The graphics package follows the Composable Architecture pattern:
 ```typescript
 // State
 interface GraphicsState {
+  sceneId: string;
   renderer: RendererState;
   camera: CameraConfig;
   lights: LightConfig[];

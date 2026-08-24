@@ -46,7 +46,7 @@ Nobody built that, so it is recorded as a gap rather than claimed.
 
 ## QUICK START
 
-```typescript
+```svelte
 import { createStore } from '@composable-svelte/core';
 import {
   Scene,
@@ -697,6 +697,12 @@ function rotateShapes() {
 
 ```typescript
 interface GraphicsState {
+  // Identity — required. Keys this scene's animation frame loop, so two scenes
+  // in one store do not cancel each other's. `createInitialGraphicsState`
+  // generates it; pass your own for a stable id across reloads, and make it
+  // unique.
+  sceneId: string;
+
   // Renderer
   renderer: {
     activeRenderer: 'webgl' | null;
@@ -728,6 +734,12 @@ interface GraphicsState {
   isLoading: boolean;
 }
 ```
+
+`sceneId` is a **required** field and a breaking change: state built by hand,
+or hydrated from a payload serialised before it existed, arrives without one.
+The reducer warns in that case rather than falling back silently, because the
+fallback is a shared constant — which is exactly the cross-feature cancellation
+the field prevents, and a single such scene runs perfectly.
 
 `scene: SceneNode` and `loadingProgress: number` used to be listed here. Both
 were removed: `scene` was built once and never read or written by anything, and
@@ -876,7 +888,7 @@ returns an unchanged value now costs nothing at all. Animations are the
 supported way to drive per-frame change; see `startAnimation`.
 
 **Good**:
-```typescript
+```svelte
 // Update rotation only when button clicked
 let rotation = $state(0);
 function rotate() { rotation += Math.PI / 4; }
@@ -885,7 +897,7 @@ function rotate() { rotation += Math.PI / 4; }
 ```
 
 **Bad**:
-```typescript
+```svelte
 // Updates every frame (60 FPS) - expensive!
 let time = $state(0);
 setInterval(() => { time += 0.01; }, 16);
@@ -905,7 +917,7 @@ places in this file say so.)
 
 ### Rotation Animation
 
-```typescript
+```svelte
 let rotation = $state(0);
 
 function rotateObject() {
@@ -918,7 +930,7 @@ function rotateObject() {
 
 ### Camera Controls
 
-```typescript
+```svelte
 let cameraDistance = $state(12);
 
 function zoomIn() {
@@ -936,7 +948,7 @@ function zoomOut() {
 
 ### Dynamic Lighting
 
-```typescript
+```svelte
 let lightIntensity = $state(1.0);
 
 function adjustBrightness(delta: number) {

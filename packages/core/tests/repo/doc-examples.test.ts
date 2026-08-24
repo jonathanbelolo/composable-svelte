@@ -388,17 +388,19 @@ const sweptSvelteBlocks = blocks.filter((b) => SWEPT_DOCS.includes(b.file) && b.
  *
  * The fence label is the contract this check runs on, so a mislabelled fence is
  * a hole in it — and `composable-svelte-graphics/SKILL.md` had 44 ```typescript
- * blocks against a single ```svelte, 28 of them component markup. 22 were
- * relabelled.
+ * blocks against a single ```svelte, 28 of them component markup, which is why
+ * a fence-only check found nothing in the very file whose examples were wrong.
  *
- * The 6 that remain are the ones that do not compile as they stand — mostly
- * because they elide with `...`, but not all, and an earlier version of this
- * comment claimed `...` was the rule. The real rule was "compiled → relabel,
- * failed → leave". Fixing one and relabelling it is an improvement, so this is
- * a ceiling rather than an equality: it stops the number growing without
- * punishing anyone who reduces it.
+ * **Zero now**, for the swept documents. It was 6 for one round, under a
+ * comment saying those six "do not compile as they stand" — which stopped being
+ * true the moment the detector learned to lift a block's leading JavaScript into
+ * a `<script>`, and nobody re-checked. All six compile and are relabelled.
+ *
+ * Kept as a constant rather than inlining `0`, because a document added to
+ * `SWEPT_DOCS` may arrive with a backlog and raising this deliberately is
+ * better than deleting the arm.
  */
-const ALLOWED_MISLABELLED = 6;
+const ALLOWED_MISLABELLED = 0;
 
 describe('documented Svelte examples', () => {
 	it('every swept document still exists, so the list cannot rot', () => {

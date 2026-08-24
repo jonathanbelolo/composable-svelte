@@ -101,6 +101,18 @@ export class BabylonAdapter {
     // bound to a canvas the engine was not drawing to.
     const alreadyRunning = this.scene !== null;
 
+    if (alreadyRunning) {
+      // Warned, not silent. `attachEngine` says so in the exactly analogous
+      // case, and saying nothing here traded a wrong binding for a quiet
+      // nothing: the second call returned `{ renderer: 'webgl' }` while leaving
+      // the engine drawing to the first canvas and never binding controls to
+      // the second.
+      console.warn(
+        '[graphics] initialize: this adapter is already initialized; ' +
+          'dispose() it before initializing with another canvas'
+      );
+    }
+
     this.attachEngine(this.engine);
 
     if (!alreadyRunning) {
@@ -554,6 +566,7 @@ export class BabylonAdapter {
     this.engine = null;
     this.lastCamera = null;
     this.warnedColors.clear();
+    this.warnedColorCapReached = false;
   }
 
   // ========================================================================
@@ -676,6 +689,17 @@ export class BabylonAdapter {
   private warnedColors: Set<string> = new Set();
 
   /**
+   * Whether the cap notice has been printed.
+   *
+   * A separate flag rather than a sentinel inside `warnedColors`. The sentinel
+   * was `'__capped__'`, which is a colour string a consumer can pass: doing so
+   * kept `size` pinned at the cap — `Set.add` of an existing member does not
+   * grow it — so the "suppressing further warnings" line fired once per
+   * distinct bad colour, which is the unbounded spam the cap exists to stop.
+   */
+  private warnedColorCapReached = false;
+
+  /**
    * Cap on the above, because the set is keyed by the bad value itself.
    *
    * The path this warning exists for is the animated one — and that is exactly
@@ -698,8 +722,8 @@ export class BabylonAdapter {
         if (this.warnedColors.size < BabylonAdapter.MAX_WARNED_COLORS) {
           this.warnedColors.add(hex);
           console.warn(`[graphics] "${hex}" is not a 6-digit hex colour; using white`);
-        } else if (this.warnedColors.size === BabylonAdapter.MAX_WARNED_COLORS) {
-          this.warnedColors.add('__capped__');
+        } else if (!this.warnedColorCapReached) {
+          this.warnedColorCapReached = true;
           console.warn(
             `[graphics] more than ${BabylonAdapter.MAX_WARNED_COLORS} unparseable colours; ` +
               'suppressing further warnings'

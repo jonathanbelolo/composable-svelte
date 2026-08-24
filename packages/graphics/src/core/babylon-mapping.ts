@@ -79,10 +79,11 @@ function clamp01(value: number): number {
  * | `specularFor(grey, undefined, 0.9)` | `[0.28,0.28,0.28]` | 14.4 |
  * | `specularFor(grey, 1, undefined)` | `[0.5,0.5,0.5]` | 64 |
  *
- * Omitting `roughness` restores the *power* channel; omitting `metallic`
- * restores the *colour* channel — and only on a surface where the tint would
- * have mattered. Each field governs one channel fully and the other partly, so
- * "omit one and you are back to Babylon" is false however it is phrased.
+ * No prose summary of that table. Four consecutive attempts to state the rule
+ * in a sentence have been wrong — including the one this replaces, which said
+ * "omitting `metallic` restores the colour channel" three lines below a table
+ * showing `specularFor(grey, undefined, 0.9)` returning a dimmed grey. The
+ * table is measured; read it.
  *
  * The skill file documented these two numbers as defaults while the code had
  * none; now they are real.
@@ -174,13 +175,16 @@ export function specularFor(
 
   const tint = (value: number): number => (1 - m) + m * value;
   const channel = (value: number): number => {
-    // `Number.isFinite` first: `Math.max(NaN, MIN_SPECULAR)` is NaN, so a
-    // non-finite diffuse channel escaped the floor entirely — and `(1 - m) + m
-    // * NaN` is NaN even at `m === 0`. Not reachable through `applyMaterial`,
-    // whose diffuse always comes from `hexToColor3`, but the floor is asserted
-    // as holding "at any input" and now does.
-    const lit = tint(Number.isFinite(value) ? value : 0) * intensity;
-    return Number.isFinite(lit) ? Math.max(lit, MIN_SPECULAR) : MIN_SPECULAR;
+    // The diffuse channel goes through `clamp01` like `metallic` and `roughness`
+    // do, rather than being special-cased. Two separate fixes used to sit here:
+    // a `Number.isFinite(value) ? value : 0` and a `Number.isFinite(lit)` guard
+    // on the result. The second was unreachable — `lit` is a finite tint times a
+    // clamped intensity — and each survived a mutation test on its own, so
+    // neither was pinned. And mapping a non-finite channel to 0 was arbitrary in
+    // one direction while leaving the *upper* end unclamped: `specularFor([5,5,5],
+    // 1, 0)` returned 5, out of range, under a test titled "clamps rather than
+    // inverting or producing NaN".
+    return Math.max(tint(clamp01(value)) * intensity, MIN_SPECULAR);
   };
 
   return {

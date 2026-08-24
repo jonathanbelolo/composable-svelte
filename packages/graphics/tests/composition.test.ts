@@ -125,4 +125,63 @@ describe('two graphics scenes in one store', () => {
 	it('lets a consumer name a scene, for a stable id across reloads', () => {
 		expect(createInitialGraphicsState({ sceneId: 'hero' }).sceneId).toBe('hero');
 	});
+
+	it('warns when two scenes are given the same explicit id', () => {
+		// The escape hatch reopened the hole it was added beside: the JSDoc invites
+		// supplying an id without ever saying two must differ from each other, and
+		// two scenes sharing one cancel each other's frame loop in silence.
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+		createInitialGraphicsState({ sceneId: 'hero' });
+		createInitialGraphicsState({ sceneId: 'hero' });
+
+		expect(warn).toHaveBeenCalledWith(expect.stringContaining('already in use'));
+		warn.mockRestore();
+	});
+
+	it('does not hand a generated id to a scene that claimed it by hand', () => {
+		// The counter and the explicit ids share one namespace, so an explicit
+		// `scene-2` must not collide with the second generated one.
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const claimed = createInitialGraphicsState().sceneId.replace(/\d+$/, (n) =>
+			String(Number(n) + 1)
+		);
+
+		createInitialGraphicsState({ sceneId: claimed });
+		const generated = createInitialGraphicsState().sceneId;
+
+		expect(generated, 'a generated id collided with an explicit one').not.toBe(claimed);
+		expect(warn).not.toHaveBeenCalled();
+		warn.mockRestore();
+	});
+
+	it('warns when state arrives with no scene id at all', () => {
+		// Hand-built state, or a payload serialised before `sceneId` existed.
+		// `frameEffectId` would fall back to a constant — exactly the
+		// cross-feature cancellation the field prevents — and one such scene runs
+		// perfectly, so nothing would ever surface it.
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const legacy = { ...createInitialGraphicsState(), sceneId: '' };
+		const store = createStore<GraphicsState, GraphicsAction>({
+			initialState: legacy,
+			reducer: graphicsReducer,
+			dependencies: {} as never
+		});
+
+		store.dispatch({ type: 'addMesh', mesh: cube() });
+		store.dispatch({
+			type: 'startAnimation',
+			animation: {
+				id: 'spin',
+				targetId: 'cube',
+				property: 'position',
+				from: [0, 0, 0],
+				to: [1, 0, 0],
+				duration: 1000
+			}
+		});
+
+		expect(warn).toHaveBeenCalledWith(expect.stringContaining('no sceneId'));
+		warn.mockRestore();
+	});
 });

@@ -1326,20 +1326,28 @@ has read in this campaign would be a large unreviewed change.
 A second hole found while building it: **the fence label cannot be trusted.**
 `composable-svelte-graphics/SKILL.md` carried **44** ```typescript blocks against
 a single ```svelte, **28** of them component markup — which is why a fence-only
-check found nothing in the very file whose examples were wrong. 22 were
-relabelled. (This entry first said 45 and "most of them", reporting a total block
-count as a markup count.) The 6 that remain are simply the ones that do not
-compile as they stand; the claim that they are "the blocks that deliberately
-elide with `...`" was also wrong — only 3 contain `...`, and 6 blocks that *do*
-contain it relabelled successfully. The real rule was "compiled → relabel,
-failed → leave". The other packages' skill files have not been checked for this.
+check found nothing in the very file whose examples were wrong. **21 were
+relabelled and 1 new `svelte` block was written**; the diff shows 21
+`-```typescript` against 22 `+```svelte`. (This entry first said 45 and "most of
+them", reporting a total block count as a markup count; then said 22 relabelled,
+which was the number that *compiled* under the harness of the day, not the number
+of fences rewritten. Two wrong numbers for one quantity, across two rounds.)
+
+There is now **no** backlog for the swept documents. The six left behind were
+described as "the ones that do not compile as they stand" — which stopped being
+true the moment the detector learned to lift a block's leading JavaScript into a
+`<script>`, and nobody re-checked. All six compile and are relabelled; the
+ceiling is 0. (The earlier claim that those six were "the blocks that
+deliberately elide with `...`" was wrong too: only 3 contained `...`, and 6
+blocks that *did* contain it relabelled successfully.) The other packages' skill
+files have not been checked for this.
 
 Two further holes in the detector, both found by the third review and both
 closed: `looksLikeSvelte` required `<[A-Z][A-Za-z0-9]*`, so **dotted component
 names — `<Card.Header>`, the convention used throughout this repo — were
 invisible to it**, as was all lowercase HTML and every `{:else}` / `{/if}`
-continuation. And **2** of the 23 `svelte` blocks put bare JavaScript above their markup with
-no `<script>` tag, which Svelte parses as a *text node* — so that JavaScript was
+continuation. And **2** of `SKILL.md`'s `svelte` blocks put bare JavaScript above their markup
+with no `<script>` tag, which Svelte parses as a *text node* — so that JavaScript was
 never checked at all, and corrupting it left the suite green. (I first wrote "8
 of the 23 relabelled blocks", which was wrong twice over: 22 were relabelled,
 not 23, and of the 8 blocks with leading non-markup lines, 6 lead with a `//`
