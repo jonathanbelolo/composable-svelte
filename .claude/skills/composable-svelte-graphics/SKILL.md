@@ -1,11 +1,11 @@
 ---
 name: composable-svelte-graphics
-description: 3D graphics and WebGPU/WebGL rendering with Composable Svelte. Use when building 3D scenes, working with cameras, lights, meshes, materials, or implementing WebGPU/WebGL graphics. Covers Scene, Camera, Light, Mesh components, geometry types (box, sphere, cylinder, torus, plane), material properties, and state-driven 3D rendering.
+description: 3D graphics and WebGL rendering with Composable Svelte. Use when building 3D scenes, working with cameras, lights, meshes, materials, or implementing WebGL graphics. Covers Scene, Camera, Light, Mesh components, geometry types (box, sphere, cylinder, torus, plane), material properties, and state-driven 3D rendering.
 ---
 
 # Composable Svelte Graphics
 
-State-driven 3D graphics for Composable Svelte using WebGPU/WebGL with Babylon.js.
+State-driven 3D graphics for Composable Svelte using WebGL with Babylon.js.
 
 ---
 
@@ -13,17 +13,23 @@ State-driven 3D graphics for Composable Svelte using WebGPU/WebGL with Babylon.j
 
 **Package**: `@composable-svelte/graphics`
 
-**Purpose**: Declarative 3D graphics with automatic WebGPU/WebGL renderer selection.
+**Purpose**: Declarative 3D graphics over Babylon.js, driven entirely by store state.
 
 **Technology Stack**:
 - **Babylon.js**: Industry-standard 3D engine
-- **WebGPU**: Modern high-performance graphics API (auto-detected)
-- **WebGL**: Fallback for broader browser support
+- **WebGL**: Babylon's `Engine`, which is what this package renders through
 
-**Renderer Selection**:
-1. Try WebGPU (if browser supports it)
-2. Fallback to WebGL (universal support)
-3. Transparent to the user
+**Renderer**:
+There is one renderer, and it is WebGL. This file used to describe automatic
+WebGPU detection with a transparent WebGL fallback; that never happened. Both
+branches of the "detection" constructed the same `new Engine(canvas, …)` — the
+WebGPU branch's own comment said Babylon would handle it — so finding a WebGPU
+adapter changed no rendering at all. It changed the *label*, which the store
+surfaced as `renderer.activeRenderer`: it reported `webgpu`, with
+`supportsWebGL: false`, while WebGL ran.
+
+Real WebGPU means Babylon's `WebGPUEngine` and its own async initialisation.
+Nobody built that, so it is recorded as a gap rather than claimed.
 
 **Core Components**:
 - `Scene` - Root container, manages renderer lifecycle
@@ -100,11 +106,10 @@ function rotateShapes() {
 
 **Behavior**:
 1. Creates canvas element
-2. Initializes Babylon.js engine
-3. Attempts WebGPU, falls back to WebGL
-4. Dispatches `rendererInitialized` action with capabilities
-5. Syncs store updates to Babylon.js scene
-6. Cleans up engine on unmount
+2. Initializes Babylon.js `Engine` (WebGL)
+3. Dispatches `rendererInitialized` action with capabilities
+4. Syncs store updates to Babylon.js scene
+5. Cleans up engine on unmount — including when unmounted mid-initialisation
 
 **Usage**:
 ```typescript
@@ -114,15 +119,22 @@ function rotateShapes() {
 ```
 
 **State Synchronization**:
-Scene uses manual subscription (like MapPrimitive) to avoid infinite loops:
-- Tracks previous state values
-- Only updates Babylon.js when state actually changes
-- Uses JSON.stringify for deep comparison
+Scene uses a manual subscription rather than an `$effect`, because the callback
+drives a renderer and an effect that both reads the store and mutates the scene
+loops. The diffing lives in `core/scene-sync.ts` so it can be tested against a
+spy adapter.
+
+It diffs by **object identity**, not `JSON.stringify`. The reducer is pure and
+the store holds `$state.raw`, so every arm returns new objects for what changed
+and the very same objects for what did not — which makes identity exact and
+O(1). That matters: a running animation dispatches a `tick` per frame, and
+stringifying every mesh at 60fps is a cost. Meshes and lights are diffed per
+item by `id`, so one changed light does not disturb the others.
 
 **Renderer Info**:
 Access renderer info from store:
 ```typescript
-$store.renderer.activeRenderer // 'webgpu' | 'webgl'
+$store.renderer.activeRenderer // 'webgl' | null
 $store.renderer.isInitialized  // boolean
 $store.renderer.capabilities   // { maxTextureSize, ... }
 $store.renderer.error          // string | null
@@ -181,6 +193,20 @@ $store.renderer.error          // string | null
 ## LIGHT COMPONENT
 
 **Purpose**: Add illumination to the scene. Supports multiple light types.
+
+**Every light has an `id`.** The `id` prop is optional — `<Light>` generates a
+stable one per component instance via `$props.id()` when you omit it, so the
+markup below works unchanged. Supply one when you need to address the light from
+outside the component, and make it unique: a second `<Light>` claiming an id
+that is already taken warns and renders nothing rather than fighting the first
+one for it.
+
+```typescript
+<Light {store} id="key" type="directional" position={[5, 10, 7]} intensity={1.2} />
+```
+
+Changing `id` moves the light rather than orphaning it, and unmounting removes
+exactly the light that component owns.
 
 **Light Types**:
 
@@ -435,8 +461,8 @@ Flat rectangular surface.
 ```typescript
 interface MaterialConfig {
   color: string;           // Hex or CSS color
-  metallic?: number;       // 0-1 (default: 0.5)
-  roughness?: number;      // 0-1 (default: 0.5)
+  metallic?: number;       // 0-1 (default: 0 — a white, untinted highlight)
+  roughness?: number;      // 0-1 (default: 0.5 — Babylon's own specularPower)
   emissive?: string;       // Emissive color (optional)
   alpha?: number;          // 0-1 transparency (optional)
   wireframe?: boolean;     // Wireframe mode (default: false)
@@ -448,25 +474,46 @@ interface MaterialConfig {
 Babylon `StandardMaterial`, which has no metallic or roughness channel.
 `roughness` was read by nothing at all until recently.
 
-Both are mapped onto the closest levers `StandardMaterial` offers, and the
-values below still read the way you expect — a high `roughness` looks rough —
-but they are approximations, not physically based shading:
+Both are mapped onto the closest levers `StandardMaterial` offers. They are
+approximations, not physically based shading, but the values below do read the
+way you expect — a high `roughness` looks rough:
 
-- `metallic` → `specularColor`, tinting the highlight.
-- `roughness` → `specularPower`, setting how tight it is. Inverted and linear,
-  with `0.5` landing on Babylon's own default, so a material that sets the
-  middle looks like one that sets nothing.
+- `metallic` **tints** the highlight, interpolating `specularColor` from white
+  toward the surface colour. Dielectrics reflect white; metals reflect their own
+  colour, which is the one real difference a specular/glossiness model can
+  express. It never extinguishes the highlight.
+- `roughness` sets how tight the highlight is (`specularPower`) and, past the
+  midpoint, how bright. Breadth alone is not enough — a fully rough surface at
+  full strength reads as wet rather than matte. Below the midpoint it is at full
+  strength and only sharpens, so `roughness: 0.5` lands on Babylon's untouched
+  defaults in both channels.
+
+Omitting both fields leaves the material looking exactly as `StandardMaterial`
+would on its own.
+
+An earlier version of this section said `roughness` now worked while `metallic`
+still mapped straight onto `specularColor` as a grey — which meant
+`metallic: 0.0` gave black, and Babylon's default shader is
+`finalSpecular = specularBase * specularColor`, a multiply. `specularPower` could
+not change a single pixel. Since `metallic: 0.0` is what this file teaches for
+plastic, rubber, wood, stone and glass, `roughness` was inert for 7 of the 13
+presets below, the mirror included.
 
 Real PBR is Babylon's `PBRMaterial`, which would change the lighting model for
 every existing mesh and needs an environment texture to look right. Recorded as
 a gap rather than claimed.
 
 ### Metallic (0-1)
-Controls how metal-like the surface appears.
+Controls how metal-like the surface appears — specifically, how much the
+highlight takes on the surface's own colour.
 
-- `0.0`: Non-metallic (plastic, rubber, wood, stone)
+- `0.0`: Non-metallic (plastic, rubber, wood, stone) — a white highlight
 - `0.5`: Semi-metallic (painted metal, worn surfaces)
-- `1.0`: Fully metallic (polished metal, chrome)
+- `1.0`: Fully metallic (polished metal, chrome) — the highlight is the
+  surface colour
+
+Note that `0.0` does **not** mean "no highlight": a non-metal still reflects
+light, and `roughness` is what controls how much.
 
 **Examples**:
 ```typescript
@@ -639,10 +686,9 @@ function rotateShapes() {
 interface GraphicsState {
   // Renderer
   renderer: {
-    activeRenderer: 'webgpu' | 'webgl' | null;
+    activeRenderer: 'webgl' | null;
     isInitialized: boolean;
     capabilities: {
-      supportsWebGPU: boolean;
       supportsWebGL: boolean;
       maxTextureSize: number;
       maxVertexAttributes: number;
@@ -651,7 +697,6 @@ interface GraphicsState {
   };
 
   // Scene
-  scene: SceneNode;
   backgroundColor: string;
 
   // Camera
@@ -663,21 +708,25 @@ interface GraphicsState {
   // Meshes
   meshes: MeshConfig[];
 
-  // Animations (future)
+  // Animations
   animations: AnimationState[];
 
   // Loading
   isLoading: boolean;
-  loadingProgress: number; // 0-1
 }
 ```
+
+`scene: SceneNode` and `loadingProgress: number` used to be listed here. Both
+were removed: `scene` was built once and never read or written by anything, and
+`loadingProgress` was set to `0` at creation and never touched again — so a
+consumer reading it saw `0` forever, including after loading finished.
 
 ### GraphicsAction Types
 
 ```typescript
 type GraphicsAction =
   // Renderer
-  | { type: 'rendererInitialized'; renderer: 'webgpu' | 'webgl'; capabilities: RendererCapabilities }
+  | { type: 'rendererInitialized'; renderer: 'webgl'; capabilities: RendererCapabilities }
   | { type: 'rendererError'; error: string }
 
   // Camera
@@ -696,13 +745,31 @@ type GraphicsAction =
 
   // Light
   | { type: 'addLight'; light: LightConfig }
-  | { type: 'removeLight'; index: number }
-  | { type: 'updateLight'; index: number; light: Partial<LightConfig> }
+  | { type: 'removeLight'; id: string }
+  | { type: 'updateLight'; id: string; light: LightConfig }
+
+  // Animation
+  | { type: 'startAnimation'; animation: AnimationConfig }
+  | { type: 'stopAnimation'; id: string }
+  | { type: 'tick'; time: number }
 
   // Scene
   | { type: 'setBackgroundColor'; color: string }
   | { type: 'clearScene' };
 ```
+
+**Lights are addressed by `id`, not by index.** `removeLight` and `updateLight
+took an `index` until recently, and `LightConfig` had no identity at all — so a
+light could only be named by its position in the array. That is what made
+removal wrong: `<Light>` captured `state.lights.length - 1` at mount and removed
+by that number, while the reducer filtered positionally, so with the default
+ambient light in slot 0, unmounting three `<Light>` children removed index 1,
+then index 2 of the already-shifted array. `LightConfig.id` is now required, and
+`<Light>` supplies one via `$props.id()` when you do not.
+
+`updateLight` takes a whole `LightConfig`, not a `Partial`: it is a
+discriminated union, and a partial cannot be spread across one without losing
+the discriminant.
 
 ### Reducer Pattern
 
@@ -952,7 +1019,7 @@ These features are planned but not yet implemented:
 - **composable-svelte-testing**: TestStore for testing graphics reducers
 
 **When to Use Each Package**:
-- **graphics**: 3D scenes, WebGPU/WebGL rendering
+- **graphics**: 3D scenes, WebGL rendering
 - **charts**: 2D data visualization (see composable-svelte-charts)
 - **maps**: Geospatial data (see composable-svelte-maps)
 - **code**: Code editors, syntax highlighting (see composable-svelte-code)
@@ -962,7 +1029,7 @@ These features are planned but not yet implemented:
 ## TROUBLESHOOTING
 
 **Scene not rendering**:
-- Check browser WebGPU/WebGL support
+- Check browser WebGL support
 - Verify store is created with `graphicsReducer`
 - Check console for renderer errors in `$store.renderer.error`
 
@@ -989,7 +1056,7 @@ These features are planned but not yet implemented:
 
 ### WebGLOverlay
 
-Embeds a WebGL/WebGPU canvas as an overlay within a web layout:
+Embeds a WebGL canvas as an overlay within a web layout:
 
 ```svelte
 import { WebGLOverlay } from '@composable-svelte/graphics';
@@ -1012,5 +1079,5 @@ Direct access to the Babylon.js engine for advanced use cases beyond the declara
 ```typescript
 import { BabylonAdapter } from '@composable-svelte/graphics';
 
-const adapter = new BabylonAdapter(canvas, { webgpu: true });
+const adapter = new BabylonAdapter();
 ```

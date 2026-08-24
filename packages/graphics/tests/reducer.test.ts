@@ -302,16 +302,15 @@ describe('Graphics Reducer', () => {
       await store.send(
         {
           type: 'rendererInitialized',
-          renderer: 'webgpu',
+          renderer: 'webgl',
           capabilities: {
-            supportsWebGPU: true,
             supportsWebGL: true,
             maxTextureSize: 16384,
             maxVertexAttributes: 16
           }
         },
         (state) => {
-          expect(state.renderer.activeRenderer).toBe('webgpu');
+          expect(state.renderer.activeRenderer).toBe('webgl');
           expect(state.renderer.isInitialized).toBe(true);
           expect(state.renderer.error).toBe(null);
           expect(state.isLoading).toBe(false);

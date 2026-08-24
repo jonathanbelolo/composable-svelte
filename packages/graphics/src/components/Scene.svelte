@@ -33,30 +33,40 @@ onMount(() => {
   if (!canvas) return;
 
   let unsubscribe: (() => void) | undefined;
+  /**
+   * Unmounting during `await adapter.initialize(...)` used to leave the engine
+   * running. The cleanup below ran first, against an adapter whose `engine` and
+   * `scene` were still null — so `dispose()` did nothing — and the awaited
+   * initialisation then went on to build an engine, a render loop and a resize
+   * listener that nothing owned and nothing could reach.
+   */
+  let cancelled = false;
 
   (async () => {
+    // Held locally as well as in `adapter`, because the cleanup sets that to
+    // null and this is the reference that must be disposed either way.
+    const pending = new BabylonAdapter();
+    adapter = pending;
+
     try {
-      // Create adapter
-      adapter = new BabylonAdapter();
+      const result = await pending.initialize(canvas);
 
-      // Initialize renderer (WebGPU/WebGL)
-      // The second argument used to be a WebGPU preference derived from
-      // `activeRenderer !== 'webgl'` — which is `null !== 'webgl'` at this
-      // point, i.e. always true, so there was no path to opt out. It selected
-      // between two branches that built the same engine, and is gone.
-      const result = await adapter.initialize(canvas);
+      if (cancelled) {
+        pending.dispose();
+        return;
+      }
 
-      // Dispatch initialization success
       store.dispatch({
         type: 'rendererInitialized',
         renderer: result.renderer,
         capabilities: result.capabilities
       });
 
-      // Setup manual subscription for state sync
       unsubscribe = setupSceneSync();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to initialize renderer';
+      pending.dispose();
+      if (cancelled) return;
       store.dispatch({
         type: 'rendererError',
         error: errorMessage
@@ -66,6 +76,7 @@ onMount(() => {
   })();
 
   return () => {
+    cancelled = true;
     unsubscribe?.();
     adapter?.dispose();
     adapter = null;

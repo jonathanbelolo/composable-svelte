@@ -33,7 +33,7 @@ function rotateShapes() {
     <div>
       <h2 class="text-2xl font-bold mb-2">Live Demo</h2>
       <p class="text-muted-foreground">
-        All primitive geometries: Box, Sphere, Cylinder, Torus, and Plane with state-driven WebGPU/WebGL rendering
+        All primitive geometries: Box, Sphere, Cylinder, Torus, and Plane with state-driven WebGL rendering
       </p>
     </div>
 
@@ -192,9 +192,9 @@ function rotateShapes() {
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div class="rounded-lg border p-4">
-        <h3 class="font-semibold mb-2">WebGPU First</h3>
+        <h3 class="font-semibold mb-2">Reducer-Driven Animation</h3>
         <p class="text-sm text-muted-foreground">
-          Automatically uses WebGPU on supported browsers with transparent WebGL fallback
+          Animations advance through the reducer, so they are inspectable, cancellable and testable
         </p>
       </div>
 

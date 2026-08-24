@@ -1,6 +1,6 @@
 /**
  * @composable-svelte/graphics
- * State-driven WebGL/WebGPU graphics package
+ * State-driven WebGL graphics package
  */
 
 // Core types and state

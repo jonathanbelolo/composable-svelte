@@ -46,11 +46,12 @@ pnpm add @composable-svelte/graphics @composable-svelte/core svelte
 </script>
 
 <Scene {store}>
-  <Camera position={[0, 0, 10]} lookAt={[0, 0, 0]} />
+  <Camera {store} position={[0, 0, 10]} lookAt={[0, 0, 0]} />
 
-  <Light type="directional" position={[1, 1, 1]} intensity={0.8} />
+  <Light {store} type="directional" position={[1, 1, 1]} intensity={0.8} />
 
   <Mesh
+    {store}
     id="cube-1"
     geometry={{ type: 'box', size: 2 }}
     material={{ color: '#ff6b6b', metallic: 0.5 }}
@@ -120,6 +121,9 @@ Adds lighting to the scene.
 
 **Props:**
 - `store`: Store<GraphicsState, GraphicsAction>
+- `id?`: string — stable identity. Generated per component instance when
+  omitted, so existing markup is unaffected; supply one to address the light
+  from outside the component. Must be unique.
 - `type`: 'directional' | 'point' | 'spot' | 'ambient'
 - `position?`: [x, y, z]
 - `direction?`: [x, y, z] (for spot lights)
@@ -136,7 +140,6 @@ The graphics package follows the Composable Architecture pattern:
 // State
 interface GraphicsState {
   renderer: RendererState;
-  scene: SceneNode;
   camera: CameraConfig;
   lights: LightConfig[];
   meshes: MeshConfig[];
@@ -191,6 +194,7 @@ type GraphicsAction =
   <Light {store} type="directional" position={[5, 10, 7.5]} intensity={1} />
 
   <Mesh
+   {store}
     {store}
     id="cube-1"
     geometry={{ type: 'box', size: 2 }}
@@ -206,12 +210,13 @@ type GraphicsAction =
 
 ```svelte
 <Scene {store}>
-  <Camera position={[0, 5, 10]} lookAt={[0, 0, 0]} />
-  <Light type="ambient" intensity={0.3} />
-  <Light type="directional" position={[5, 10, 7.5]} intensity={1.5} />
+  <Camera {store} position={[0, 5, 10]} lookAt={[0, 0, 0]} />
+  <Light {store} type="ambient" intensity={0.3} />
+  <Light {store} type="directional" position={[5, 10, 7.5]} intensity={1.5} />
 
   <!-- Cube -->
   <Mesh
+    {store}
     id="cube"
     geometry={{ type: 'box', size: 1 }}
     material={{ color: '#ff6b6b' }}
@@ -220,6 +225,7 @@ type GraphicsAction =
 
   <!-- Sphere -->
   <Mesh
+    {store}
     id="sphere"
     geometry={{ type: 'sphere', radius: 0.75 }}
     material={{ color: '#4ecdc4' }}
@@ -228,6 +234,7 @@ type GraphicsAction =
 
   <!-- Cylinder -->
   <Mesh
+    {store}
     id="cylinder"
     geometry={{ type: 'cylinder', height: 2, diameter: 0.5 }}
     material={{ color: '#95e1d3' }}

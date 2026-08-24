@@ -15,17 +15,24 @@ export type Color = string; // Hex color string like '#ff6b6b'
 // Renderer Configuration
 // ============================================================================
 
-export type RendererType = 'auto' | 'webgpu' | 'webgl';
-
+/**
+ * `RendererType = 'auto' | 'webgpu' | 'webgl'` used to sit here, referenced by
+ * nothing at all. `'webgpu'` was likewise unproducible in `activeRenderer`:
+ * both branches of the adapter's "detection" built the same WebGL `Engine`, so
+ * the label was the only thing that ever varied, and it is now always `'webgl'`.
+ */
 export interface RendererState {
-  activeRenderer: 'webgpu' | 'webgl' | null;
+  activeRenderer: 'webgl' | null;
   isInitialized: boolean;
   capabilities: RendererCapabilities;
   error: string | null;
 }
 
 export interface RendererCapabilities {
-  supportsWebGPU: boolean;
+  // `supportsWebGPU: boolean` used to sit here, hardcoded to `false` in both
+  // the initial state and the adapter. It is named for a *browser capability*
+  // and was given a fixed answer, so on a WebGPU-capable browser it simply lied
+  // — and nothing in the package consults it, because nothing here uses WebGPU.
   supportsWebGL: boolean;
   maxTextureSize: number;
   maxVertexAttributes: number;
@@ -200,7 +207,7 @@ export interface GraphicsState {
 
 export type GraphicsAction =
   // Renderer actions
-  | { type: 'rendererInitialized'; renderer: 'webgpu' | 'webgl'; capabilities: RendererCapabilities }
+  | { type: 'rendererInitialized'; renderer: 'webgl'; capabilities: RendererCapabilities }
   | { type: 'rendererError'; error: string }
 
   // Camera actions

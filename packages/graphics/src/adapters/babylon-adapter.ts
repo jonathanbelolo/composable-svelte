@@ -1,6 +1,6 @@
 /**
  * @file babylon-adapter.ts
- * @description Babylon.js adapter with WebGPU/WebGL fallback
+ * @description Babylon.js adapter over the WebGL engine
  */
 
 import {
@@ -37,7 +37,7 @@ import type {
 } from '../core/types.js';
 
 /**
- * Babylon.js adapter - handles WebGPU/WebGL rendering
+ * Babylon.js adapter - handles WebGL rendering
  */
 export class BabylonAdapter {
   private engine: Nullable<Engine> = null;
@@ -104,7 +104,6 @@ export class BabylonAdapter {
 
     // Get capabilities
     const capabilities: RendererCapabilities = {
-      supportsWebGPU: false,
       supportsWebGL: true,
       maxTextureSize: this.engine.getCaps().maxTextureSize,
       maxVertexAttributes: this.engine.getCaps().maxVertexAttribs

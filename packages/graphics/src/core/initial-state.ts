@@ -26,7 +26,6 @@ export function createInitialGraphicsState(
       activeRenderer: null,
       isInitialized: false,
       capabilities: {
-        supportsWebGPU: false,
         supportsWebGL: false,
         maxTextureSize: 0,
         maxVertexAttributes: 0
