@@ -1113,6 +1113,54 @@ reads and writes the same `$state`; and a `<Light>` effect that hit
 `effect_update_depth_exceeded` because `updateLight` was not idempotent by value
 while `updateCamera` and `updateMesh` were.
 
+**Then the hostile review of the `graphics` sweep found 20 more, and three of
+them were mine.** The premise the whole sweep rested on — that the Babylon
+adapter cannot be tested because jsdom has no WebGL — was false. `NullEngine` is
+Babylon's headless backend and runs here unchanged. I asserted the opposite in
+three commit messages and two test-file headers, and it cost:
+
+- **a material leaked on every mesh update** — `applyMaterial` built a
+  `new StandardMaterial` per call and never disposed the outgoing one, measured
+  at 61 materials after 60 animated frames. Dead until the commit that made
+  animations reach the renderer, at which point the README's own `loop: true`
+  example leaked 60 a second. `removeMesh` orphaned the material too, so the
+  geometry rebuild leaked once per rebuild.
+- **`roughness` was still inert for 7 of the 13 documented presets.** Mapping it
+  onto `specularPower` was not enough while `metallic` mapped onto
+  `specularColor` as a grey: Babylon's shader is
+  `finalSpecular = specularBase * specularColor`, so `metallic: 0` gave black and
+  the exponent could not change a pixel — and `metallic: 0.0` is what the docs
+  teach for plastic, rubber, wood, stone and glass, the mirror included. The
+  "roughness now works" doc rewrite was published against a fix that did not.
+- **making `<Light>` reactive turned every intensity tweak into a
+  dispose-and-reconstruct** of the Babylon light, one layer below the teardown
+  the same commit claimed to have removed.
+
+Plus, pre-existing: two `<Light>`s sharing an id crashed the app with
+`effect_update_depth_exceeded`; changing an `id` orphaned the light permanently;
+`tick` produced NaN on `duration: 0` and never stopped; an animation outlived
+the mesh it targeted; the resize listener was anonymous and unremovable;
+orthographic bounds never recomputed; `<Camera orthoSize>` was documented but
+was not a prop; and `SKILL.md` still documented the positional light API that
+had been replaced, alongside six WebGPU claims and two examples that did not
+compile.
+
+Two of my own tests were weak in the way the campaign keeps finding: one
+asserted `toBeTruthy()` on a generated id, which a hardcoded literal passes, and
+one restated another test under a name describing a property it never checked —
+and whose claim was false anyway.
+
+The mount lifecycle is now uniform across `<Camera>`, `<Mesh>` and `<Light>`:
+one `$effect`, no `onMount` dispatch, dispatches untracked so the effect follows
+its props rather than the store it writes to, and — for the two with ids —
+explicit ownership, so a rename moves the object and a collision stands aside
+instead of fighting. The `mounted` flag all three carried skipped nothing: it
+was `$state`, so writing it inside the effect that read it scheduled the second
+run it existed to prevent.
+
+graphics: 25 tests at the start of T6, 56 at the end of the sweep, **101** after
+the review.
+
 ### T7. `ed855dd` is unreviewed — VERIFIED
 
 The last commit of the chat pass. Every review round in this campaign found real

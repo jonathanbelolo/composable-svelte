@@ -1,13 +1,17 @@
 /**
  * The state → renderer path, against a spy adapter.
  *
- * This path had no test and could not have one: the package runs under jsdom,
- * Babylon needs WebGL, and `Scene.svelte` constructed its own adapter — so
- * every defect on it was invisible by construction. `syncScene` is that logic
- * extracted, and these drive it directly.
+ * This path had no test, and `Scene.svelte` constructed its own adapter so
+ * there was no seam to add one — every defect on it was invisible. `syncScene`
+ * is that logic extracted, and these drive it against a spy.
  *
- * The tests marked FAILING BEFORE THE FIX describe what the sync does today, so
- * the extraction can be proven behaviour-preserving before anything changes.
+ * The original version of this note also said such a test "could not" exist,
+ * "the package runs under jsdom and Babylon needs WebGL". That was wrong:
+ * `NullEngine` is headless and runs here fine, which is what
+ * `tests/babylon-adapter.test.ts` uses to cover the adapter itself. A spy is
+ * still the right tool for *this* file — it asserts on the calls the sync makes,
+ * not on what Babylon does with them — but it was a choice, not a constraint.
+ *
  */
 
 import { describe, it, expect } from 'vitest';
@@ -20,113 +24,113 @@ import type { GraphicsAction, GraphicsState, LightConfig, MeshConfig } from '../
 
 /** Records what the sync asked the renderer to do, in order. */
 function spyAdapter() {
-  const calls: string[] = [];
-  const adapter: SceneAdapter = {
-    updateCamera: (c) => calls.push(`updateCamera:${c.position.join(',')}`),
-    addMesh: (m) => calls.push(`addMesh:${m.id}@${m.position.join(',')}`),
-    updateMesh: (id, u) => calls.push(`updateMesh:${id}@${(u.position ?? []).join(',')}`),
-    removeMesh: (id) => calls.push(`removeMesh:${id}`),
-    addLight: (l) => calls.push(`addLight:${l.type}@${l.intensity}`),
-    updateLight: (id, l) => calls.push(`updateLight:${id}@${l.intensity}`),
-    removeLight: (id) => calls.push(`removeLight:${id}`),
-    setBackgroundColor: (c) => calls.push(`setBackgroundColor:${c}`)
-  };
-  return { adapter, calls };
+	const calls: string[] = [];
+	const adapter: SceneAdapter = {
+		updateCamera: (c) => calls.push(`updateCamera:${c.position.join(',')}`),
+		addMesh: (m) => calls.push(`addMesh:${m.id}@${m.position.join(',')}`),
+		updateMesh: (id, u) => calls.push(`updateMesh:${id}@${(u.position ?? []).join(',')}`),
+		removeMesh: (id) => calls.push(`removeMesh:${id}`),
+		addLight: (l) => calls.push(`addLight:${l.type}@${l.intensity}`),
+		updateLight: (id, l) => calls.push(`updateLight:${id}@${l.intensity}`),
+		removeLight: (id) => calls.push(`removeLight:${id}`),
+		setBackgroundColor: (c) => calls.push(`setBackgroundColor:${c}`)
+	};
+	return { adapter, calls };
 }
 
 const box = (id: string): MeshConfig => ({
-  id,
-  geometry: { type: 'box', size: 1 },
-  material: { color: '#ffffff' },
-  position: [0, 0, 0]
+	id,
+	geometry: { type: 'box', size: 1 },
+	material: { color: '#ffffff' },
+	position: [0, 0, 0]
 });
 
 function harness(initial?: Partial<Parameters<typeof createInitialGraphicsState>[0]>) {
-  const store = createStore<GraphicsState, GraphicsAction>({
-    initialState: createInitialGraphicsState(initial ?? {}),
-    reducer: graphicsReducer,
-    dependencies: {}
-  });
-  const { adapter, calls } = spyAdapter();
-  // Seeded on first sync, not at construction — which is the real ordering.
-  // `setupSceneSync` runs after `await adapter.initialize(...)`, so the children's
-  // synchronous `onMount` dispatches have already landed by the time the
-  // baseline exists. That is precisely why seeding it from live state made the
-  // first comparison a value against itself.
-  let baseline: SceneBaseline | null = null;
-  const sync = () => {
-    baseline = syncScene(store.state, baseline ?? initialBaseline(), adapter);
-  };
-  return { store, calls, sync };
+	const store = createStore<GraphicsState, GraphicsAction>({
+		initialState: createInitialGraphicsState(initial ?? {}),
+		reducer: graphicsReducer,
+		dependencies: {}
+	});
+	const { adapter, calls } = spyAdapter();
+	// Seeded on first sync, not at construction — which is the real ordering.
+	// `setupSceneSync` runs after `await adapter.initialize(...)`, so the children's
+	// synchronous `onMount` dispatches have already landed by the time the
+	// baseline exists. That is precisely why seeding it from live state made the
+	// first comparison a value against itself.
+	let baseline: SceneBaseline | null = null;
+	const sync = () => {
+		baseline = syncScene(store.state, baseline ?? initialBaseline(), adapter);
+	};
+	return { store, calls, sync };
 }
 
 describe('syncScene', () => {
-  it('adds a mesh that appears in state', () => {
-    const { store, calls, sync } = harness();
-    sync();
-    calls.length = 0;
+	it('adds a mesh that appears in state', () => {
+		const { store, calls, sync } = harness();
+		sync();
+		calls.length = 0;
 
-    store.dispatch({ type: 'addMesh', mesh: box('a') });
-    sync();
+		store.dispatch({ type: 'addMesh', mesh: box('a') });
+		sync();
 
-    expect(calls).toEqual(['addMesh:a@0,0,0']);
-  });
+		expect(calls).toEqual(['addMesh:a@0,0,0']);
+	});
 
-  it('removes a mesh that leaves state', () => {
-    const { store, calls, sync } = harness();
-    store.dispatch({ type: 'addMesh', mesh: box('a') });
-    sync();
-    calls.length = 0;
+	it('removes a mesh that leaves state', () => {
+		const { store, calls, sync } = harness();
+		store.dispatch({ type: 'addMesh', mesh: box('a') });
+		sync();
+		calls.length = 0;
 
-    store.dispatch({ type: 'removeMesh', id: 'a' });
-    sync();
+		store.dispatch({ type: 'removeMesh', id: 'a' });
+		sync();
 
-    expect(calls).toEqual(['removeMesh:a']);
-  });
+		expect(calls).toEqual(['removeMesh:a']);
+	});
 
-  it('updates a mesh whose position changes', () => {
-    const { store, calls, sync } = harness();
-    store.dispatch({ type: 'addMesh', mesh: box('a') });
-    sync();
-    calls.length = 0;
+	it('updates a mesh whose position changes', () => {
+		const { store, calls, sync } = harness();
+		store.dispatch({ type: 'addMesh', mesh: box('a') });
+		sync();
+		calls.length = 0;
 
-    store.dispatch({ type: 'setMeshPosition', id: 'a', position: [1, 2, 3] });
-    sync();
+		store.dispatch({ type: 'setMeshPosition', id: 'a', position: [1, 2, 3] });
+		sync();
 
-    expect(calls).toEqual(['updateMesh:a@1,2,3']);
-  });
+		expect(calls).toEqual(['updateMesh:a@1,2,3']);
+	});
 
-  it('does nothing when nothing changed', () => {
-    const { store, calls, sync } = harness();
-    store.dispatch({ type: 'addMesh', mesh: box('a') });
-    sync();
-    calls.length = 0;
+	it('does nothing when nothing changed', () => {
+		const { store, calls, sync } = harness();
+		store.dispatch({ type: 'addMesh', mesh: box('a') });
+		sync();
+		calls.length = 0;
 
-    // The paired half of every "it re-syncs" test: an idle sync must be silent,
-    // or a dirty-check that always fires would pass all of them.
-    sync();
-    sync();
+		// The paired half of every "it re-syncs" test: an idle sync must be silent,
+		// or a dirty-check that always fires would pass all of them.
+		sync();
+		sync();
 
-    expect(calls).toEqual([]);
-  });
+		expect(calls).toEqual([]);
+	});
 
-  it('adds a new light without disturbing the existing ones', () => {
-    // This used to assert the opposite — `removeLight:0`, `addLight:ambient`,
-    // `addLight:point` — because the sync cleared and re-added every light on
-    // any change. It pinned the thrash. Lights have ids now, so only the new
-    // one is touched.
-    const { store, calls, sync } = harness();
-    sync(); // the default state ships one ambient light
-    calls.length = 0;
+	it('adds a new light without disturbing the existing ones', () => {
+		// This used to assert the opposite — `removeLight:0`, `addLight:ambient`,
+		// `addLight:point` — because the sync cleared and re-added every light on
+		// any change. It pinned the thrash. Lights have ids now, so only the new
+		// one is touched.
+		const { store, calls, sync } = harness();
+		sync(); // the default state ships one ambient light
+		calls.length = 0;
 
-    store.dispatch({
-      type: 'addLight',
-      light: { id: 'key', type: 'point', intensity: 1, position: [0, 1, 0] }
-    });
-    sync();
+		store.dispatch({
+			type: 'addLight',
+			light: { id: 'key', type: 'point', intensity: 1, position: [0, 1, 0] }
+		});
+		sync();
 
-    expect(calls).toEqual(['addLight:point@1']);
-  });
+		expect(calls).toEqual(['addLight:point@1']);
+	});
 });
 
 describe('an animation reaches the renderer', () => {
@@ -367,63 +371,63 @@ describe('lights have identity', () => {
 });
 
 describe('a geometry change rebuilds the mesh', () => {
-  it('issues removeMesh + addMesh, not updateMesh', () => {
-    // `updateMesh` in the adapter handles position, rotation, scale, material
-    // and visibility — there is no geometry branch. So a consumer animating
-    // `geometry={{ type: 'box', size: slider }}` saw the state change, saw the
-    // diff fire, saw the adapter called, and the cube did not resize.
-    //
-    // The adapter cannot detect this itself: it holds `Map<string, Mesh>` —
-    // Babylon objects, no configs — so it has nothing to compare against. The
-    // sync has both, so the decision belongs here.
-    const { store, calls, sync } = harness();
-    store.dispatch({ type: 'addMesh', mesh: box('a') });
-    sync();
-    calls.length = 0;
+	it('issues removeMesh + addMesh, not updateMesh', () => {
+		// `updateMesh` in the adapter handles position, rotation, scale, material
+		// and visibility — there is no geometry branch. So a consumer animating
+		// `geometry={{ type: 'box', size: slider }}` saw the state change, saw the
+		// diff fire, saw the adapter called, and the cube did not resize.
+		//
+		// The adapter cannot detect this itself: it holds `Map<string, Mesh>` —
+		// Babylon objects, no configs — so it has nothing to compare against. The
+		// sync has both, so the decision belongs here.
+		const { store, calls, sync } = harness();
+		store.dispatch({ type: 'addMesh', mesh: box('a') });
+		sync();
+		calls.length = 0;
 
-    store.dispatch({
-      type: 'updateMesh',
-      id: 'a',
-      updates: { geometry: { type: 'sphere', radius: 2 } }
-    });
-    sync();
+		store.dispatch({
+			type: 'updateMesh',
+			id: 'a',
+			updates: { geometry: { type: 'sphere', radius: 2 } }
+		});
+		sync();
 
-    expect(calls).toEqual(['removeMesh:a', 'addMesh:a@0,0,0']);
-  });
+		expect(calls).toEqual(['removeMesh:a', 'addMesh:a@0,0,0']);
+	});
 
-  it('a position change still takes the cheap path', () => {
-    // The paired half: rebuilding on every update would be correct and wasteful.
-    const { store, calls, sync } = harness();
-    store.dispatch({ type: 'addMesh', mesh: box('a') });
-    sync();
-    calls.length = 0;
+	it('a position change still takes the cheap path', () => {
+		// The paired half: rebuilding on every update would be correct and wasteful.
+		const { store, calls, sync } = harness();
+		store.dispatch({ type: 'addMesh', mesh: box('a') });
+		sync();
+		calls.length = 0;
 
-    store.dispatch({ type: 'setMeshPosition', id: 'a', position: [5, 0, 0] });
-    sync();
+		store.dispatch({ type: 'setMeshPosition', id: 'a', position: [5, 0, 0] });
+		sync();
 
-    expect(calls).toEqual(['updateMesh:a@5,0,0']);
-  });
+		expect(calls).toEqual(['updateMesh:a@5,0,0']);
+	});
 });
 
 describe('startAnimation', () => {
-  it('rejects an animation whose target does not exist', () => {
-    // Harmless while ticks reached nothing; a per-frame loop against a mesh
-    // that is not there now that they reach the renderer.
-    const { store } = harness();
+	it('rejects an animation whose target does not exist', () => {
+		// Harmless while ticks reached nothing; a per-frame loop against a mesh
+		// that is not there now that they reach the renderer.
+		const { store } = harness();
 
-    store.dispatch({
-      type: 'startAnimation',
-      animation: {
-        id: 'orphan',
-        targetId: 'no-such-mesh',
-        property: 'position',
-        from: [0, 0, 0],
-        to: [1, 0, 0],
-        duration: 100
-      }
-    });
+		store.dispatch({
+			type: 'startAnimation',
+			animation: {
+				id: 'orphan',
+				targetId: 'no-such-mesh',
+				property: 'position',
+				from: [0, 0, 0],
+				to: [1, 0, 0],
+				duration: 100
+			}
+		});
 
-    expect(store.state.animations, 'an orphan animation was accepted').toEqual([]);
-  });
+		expect(store.state.animations, 'an orphan animation was accepted').toEqual([]);
+	});
 });
 
