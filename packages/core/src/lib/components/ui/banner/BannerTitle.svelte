@@ -2,9 +2,9 @@
 	import { cn } from '../../../utils.js';
 	import type { HTMLAttributes } from 'svelte/elements';
 
-	interface BannerTitleProps extends Omit<HTMLAttributes<HTMLHeadingElement>, 'class'> {
+	interface BannerTitleProps extends Omit<HTMLAttributes<HTMLHeadingElement>, 'class' | 'children'> {
 		class?: string | undefined;
-		children?: import('svelte').Snippet;
+		children?: import('svelte').Snippet | undefined;
 	}
 
 	let { class: className, children, ...restProps }: BannerTitleProps = $props();

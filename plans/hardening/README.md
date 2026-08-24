@@ -19,7 +19,7 @@ file and line, says whether it was **verified** (something was run) or
 | Workspaces covered by `pnpm -r check` | **19 of 19** — the gate is complete |
 | **Open — dead behaviour** | **5 items, S11** — T1–T8 done; every package swept |
 | Workspaces that typecheck their tests | **14 of 14 that have tests** (S11 T1) |
-| Optional props a wrapper can forward | **all but 25, registered** (S11 T8) |
+| Optional props a wrapper can forward | **619 of 632** — the 13 left are `$bindable`, registered (S11 T8) |
 | Animation-policy backlog | **none** — emptied and deleted (S11 T2–T4) |
 | `examples/` animation violations | **0** — gated and cleared; was 78 across 33, not the 24 recorded (S11 T5) |
 | Committed build artifacts under the gate | `ssr-server/static` — was serving 6 deleted transitions |
@@ -1459,7 +1459,7 @@ mount/update, or an in/out pair, **test the round trip and pin it against a
 control that already works** — F4 was only legible because the prop-opened
 palette animated and the initially-open one did not.
 
-### T8. 469 optional props could not be forwarded from a wrapper — DONE
+### T8. 476 optional props could not be forwarded from a wrapper — DONE
 
 Under `exactOptionalPropertyTypes` (set repo-wide), an optional prop read from
 `$props()` has type `T | undefined`, and that cannot be assigned to a bare `T?`.
@@ -1480,9 +1480,17 @@ codebase already writes `| undefined`; these were the holdouts" was wrong: the
 majority do not.
 
 **The scope above was wrong, and the "mechanical" framing with it.** 266 counts
-`packages/core/src/lib` only. Repo-wide it was **446 across 122 files in eight
-packages**, four of which had zero correct ones — plus 23 more that no
-line-oriented scan could see, for 469 in total.
+`packages/core/src/lib` only. Measured with a TypeScript AST pass over both
+trees — 152 components, 632 optional props — it was **476 bare across 143 files
+in eight packages**, four of which had zero correct ones. **13 remain**, all
+`$bindable` and all registered.
+
+Every earlier figure in this entry was a regex count and every one was low:
+"446 across 122 files", then "469 in total", then "39 function-typed" against a
+real 42. Three of the eight packages' totals were wrong too. A regex cannot see
+a member sharing a line, a member behind a JSDoc block, or a props type
+imported from another file — and the entry was written from regexes each time.
+The audit script is the method that should have been used from the start.
 
 Three things made it not mechanical:
 
@@ -1492,11 +1500,17 @@ Three things made it not mechanical:
   nothing, because the prop's top-level type still has no `| undefined`. It must
   be `(() => void) | undefined`. One regex over all 446 would have produced 39
   of these looking done.
-- **Twelve interfaces could not be widened at all.** `BoxProps`, `PanelProps`,
-  `TextProps` and nine others extend `Omit<HTMLAttributes<…>, 'class'>`, and
-  `svelte/elements` declares `children?: Snippet` bare. A derived interface may
-  not widen an inherited member, so adding `| undefined` made all twelve stop
-  compiling. Excused by rule.
+- **Twelve interfaces were recorded as impossible to widen. They were not.**
+  `BoxProps`, `PanelProps`, `TextProps` and nine others extend
+  `Omit<HTMLAttributes<…>, 'class'>`, and `svelte/elements` declares
+  `children?: Snippet` bare, so widening the derived member is an
+  "incorrectly extends" error. That much was right; the conclusion was not.
+  Adding `'children'` to the `Omit` those declarations **already apply to
+  `'class'`** removes the inheritance and the member widens normally. All twelve
+  are fixed. The by-rule exemption written for them covered nothing afterwards
+  and is deleted — an exemption covering nothing is a permanent invisible
+  licence, and this one had granted itself to 34 files, including any file
+  merely *mentioning* `extends HTMLAttributes` in a comment.
 - **13 `$bindable` props are exempt.** `bind:value={x}` requires the parent's
   variable to match the prop type, so `| undefined` makes binding *stricter* for
   every consumer. Registered with that reason rather than left unexplained —
@@ -1507,21 +1521,30 @@ Three things made it not mechanical:
 refuses an explicit `undefined`, which is exactly what a forwarding wrapper
 has, so neither branch of that union could be forwarded in either direction.
 
-**The sweep missed 23 props in three shapes, and the guard found every one.**
-Five carried a trailing comment (`enableLightbox?: boolean; // Default: true`),
-which defeats a pattern anchoring `;` at end of line — and three of those five
-sat in a package already swept and reported green, because its fixture happened
-not to forward them. Thirteen were multi-line `Snippet<` … `>;` declarations.
-The rest surfaced only after two bugs in the guard itself were fixed.
+**The sweep missed props in two shapes, and the guard found them.** Five
+carried a trailing comment (`enableLightbox?: boolean; // Default: true`), which
+defeats a pattern anchoring `;` at end of line — and three of those five sat in
+a package already swept and reported green, because its fixture happened not to
+forward them. The rest were multi-line `Snippet<` … `>;` declarations. (This
+entry previously said "23 in three shapes, 13 multi-line and 10 more". The
+split was invented; every one of them is multi-line.)
 
 **The guard had those two bugs, and a third that mattered more.** `memberEnd`
 counted the `>` of an arrow as a closing bracket, so any snippet payload with a
 callback corrupted the depth; `acceptsUndefined` tested for the substring
-`undefined`, which `Snippet<[{ date: Date | undefined }]>` satisfies while the
-prop refuses it. And **the guard did not catch the naive function append** — the
-one mistake this entire item is about — because that `|` sits at depth zero and
-reads as a top-level alternative. All three found by mutating the source, none
-by reading the code.
+`undefined`, which a payload carrying `store: … | null` or its own callbacks
+satisfies while the prop refuses it. And **the guard did not catch the naive
+function append** — the one mistake this entire item is about — because that `|`
+sits at depth zero and reads as a top-level alternative. All three found by
+mutating the source, none by reading the code.
+
+The example first cited for the substring bug — `Calendar.day` being
+`Snippet<[{ date: Date | undefined }]>` — was **circular**: that `| undefined`
+was introduced by the very commit citing it, and reverting it changed nothing
+the checker or the guard needed. It was an unnecessary widening of a public
+snippet payload for a value the render site proves is never undefined, and it
+has been reverted. The bug was real for eight *other* props; the evidence
+offered for it was manufactured by the same commit.
 
 `tests/repo/optional-props.test.ts` reads the **props type**, not every optional
 property in a `.svelte` file: seven under `src` are not props at all (three

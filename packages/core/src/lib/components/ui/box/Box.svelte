@@ -26,7 +26,7 @@
 	 * ```
 	 */
 
-	interface BoxProps extends Omit<HTMLAttributes<HTMLElement>, 'class'> {
+	interface BoxProps extends Omit<HTMLAttributes<HTMLElement>, 'class' | 'children'> {
 		/**
 		 * HTML element to render as (default: 'div').
 		 */
@@ -56,7 +56,7 @@
 		/**
 		 * Box content.
 		 */
-		children?: import('svelte').Snippet;
+		children?: import('svelte').Snippet | undefined;
 	}
 
 	let {

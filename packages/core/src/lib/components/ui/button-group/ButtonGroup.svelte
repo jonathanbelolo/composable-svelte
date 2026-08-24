@@ -24,7 +24,7 @@
 	 * ```
 	 */
 
-	interface ButtonGroupProps extends Omit<HTMLAttributes<HTMLDivElement>, 'class'> {
+	interface ButtonGroupProps extends Omit<HTMLAttributes<HTMLDivElement>, 'class' | 'children'> {
 		/**
 		 * Layout orientation.
 		 */
@@ -38,7 +38,7 @@
 		/**
 		 * Button elements.
 		 */
-		children?: import('svelte').Snippet;
+		children?: import('svelte').Snippet | undefined;
 	}
 
 	let {

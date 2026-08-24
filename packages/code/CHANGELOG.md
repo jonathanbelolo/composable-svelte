@@ -5,6 +5,16 @@ All notable changes to `@composable-svelte/code` will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **BREAKING (types): every optional prop now accepts `undefined`.** Under
+  `exactOptionalPropertyTypes` a prop read from `$props()` is `T | undefined`
+  and cannot land on a bare `T?`, so `NodeCanvas` and `CodeEditor` could not be
+  wrapped by a consumer forwarding its own props. See
+  `@composable-svelte/core`'s entry for the full account.
+
 ## [0.3.0] - 2026-08-23
 
 ### Added

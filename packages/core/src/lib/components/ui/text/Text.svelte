@@ -23,7 +23,7 @@
 	 * ```
 	 */
 
-	interface TextProps extends Omit<HTMLAttributes<HTMLElement>, 'class'> {
+	interface TextProps extends Omit<HTMLAttributes<HTMLElement>, 'class' | 'children'> {
 		/**
 		 * HTML element to render as (default: 'p').
 		 */
@@ -47,7 +47,7 @@
 		/**
 		 * Text content.
 		 */
-		children?: import('svelte').Snippet;
+		children?: import('svelte').Snippet | undefined;
 	}
 
 	let {

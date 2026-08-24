@@ -20,7 +20,8 @@
 		gap,
 		onImageClick,
 		enableLightbox,
-		class: className
+		class: className,
+		store
 	}: {
 		images: GalleryImage[];
 		columns?: number;
@@ -28,6 +29,17 @@
 		onImageClick?: (image: GalleryImage, index: number) => void;
 		enableLightbox?: boolean;
 		class?: string;
+		/**
+		 * The discriminant, forwarded explicitly.
+		 *
+		 * This is the whole point and the first version of this fixture omitted
+		 * it — so the ten `?: never` → `?: undefined` conversions it claimed to
+		 * pin were completely unpinned, and reverting all ten left the check
+		 * green. `?: never` on an *omitted* key is fine; only naming it asks the
+		 * question. With `never` this line fails: "Type 'undefined' is not
+		 * assignable to type 'never'".
+		 */
+		store?: undefined;
 	} = $props();
 </script>
 
@@ -38,4 +50,5 @@
 	{onImageClick}
 	{enableLightbox}
 	class={className}
+	{store}
 />

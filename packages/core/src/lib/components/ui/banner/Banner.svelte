@@ -32,7 +32,7 @@
 	 * ```
 	 */
 
-	interface BannerProps extends Omit<HTMLAttributes<HTMLDivElement>, 'class'> {
+	interface BannerProps extends Omit<HTMLAttributes<HTMLDivElement>, 'class' | 'children'> {
 		/**
 		 * Banner style variant.
 		 */
@@ -46,7 +46,7 @@
 		/**
 		 * Banner content.
 		 */
-		children?: import('svelte').Snippet;
+		children?: import('svelte').Snippet | undefined;
 	}
 
 	let { variant = 'default', class: className, children, ...restProps }: BannerProps = $props();

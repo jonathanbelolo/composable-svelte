@@ -26,7 +26,7 @@
 	 * ```
 	 */
 
-	interface PanelProps extends Omit<HTMLAttributes<HTMLDivElement>, 'class'> {
+	interface PanelProps extends Omit<HTMLAttributes<HTMLDivElement>, 'class' | 'children'> {
 		/**
 		 * Visual variant of the panel.
 		 * - default: Standard background with subtle border
@@ -44,7 +44,7 @@
 		/**
 		 * Panel content.
 		 */
-		children?: import('svelte').Snippet;
+		children?: import('svelte').Snippet | undefined;
 	}
 
 	let {

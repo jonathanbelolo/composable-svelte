@@ -32,7 +32,7 @@
 	 * ```
 	 */
 
-	interface EmptyProps extends Omit<HTMLAttributes<HTMLDivElement>, 'class'> {
+	interface EmptyProps extends Omit<HTMLAttributes<HTMLDivElement>, 'class' | 'children'> {
 		/**
 		 * Main title text.
 		 */
@@ -56,7 +56,7 @@
 		/**
 		 * Optional action buttons or content.
 		 */
-		children?: import('svelte').Snippet;
+		children?: import('svelte').Snippet | undefined;
 	}
 
 	let {

@@ -24,7 +24,7 @@
 	 * ```
 	 */
 
-	interface KbdProps extends Omit<HTMLAttributes<HTMLElement>, 'class'> {
+	interface KbdProps extends Omit<HTMLAttributes<HTMLElement>, 'class' | 'children'> {
 		/**
 		 * Size variant.
 		 */
@@ -38,7 +38,7 @@
 		/**
 		 * Key content.
 		 */
-		children?: import('svelte').Snippet;
+		children?: import('svelte').Snippet | undefined;
 	}
 
 	let { size = 'base', class: className, children, ...restProps }: KbdProps = $props();

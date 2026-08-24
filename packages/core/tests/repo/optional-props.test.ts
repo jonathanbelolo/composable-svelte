@@ -38,7 +38,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { join, relative } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 
 const repoRoot = fileURLToPath(new URL('../../../../', import.meta.url));
 
@@ -96,18 +96,23 @@ const REGISTER: Record<string, { props: string[]; why: string }> = {
 };
 
 /**
- * `children` on an interface extending an `HTMLAttributes` base cannot be
- * widened at all.
+ * There is no `children` exemption, and there was one.
  *
  * `svelte/elements` declares `children?: import('svelte').Snippet` — bare — and
- * a derived interface may not widen an inherited member. Adding `| undefined`
- * to these made twelve components stop compiling outright. The member's type is
- * svelte's to set, not this repo's, so it is excused by rule rather than by
- * twelve register entries that would all say the same thing.
+ * a derived interface may not widen an inherited member, so twelve components
+ * declaring `interface XProps extends Omit<HTMLAttributes<…>, 'class'>` could
+ * not have `| undefined` added to their local `children`. That was recorded as
+ * a by-rule exemption, on the claim they "could not be widened at all".
+ *
+ * They could: adding `'children'` to the `Omit` those declarations already
+ * apply to `'class'` removes the inheritance, and the member widens normally.
+ * All twelve are fixed, the rule now covers nothing, and an exemption covering
+ * nothing is a permanent invisible licence — so it is gone rather than kept
+ * "just in case", exactly as `animation-policy.test.ts` deleted its backlog on
+ * reaching empty.
+ *
+ * Restore it only alongside a case it actually excuses.
  */
-function inheritsChildren(source: string, member: string): boolean {
-	return member === 'children' && /interface\s+\w+\s+extends\s+[^{]*HTML\w*Attributes/.test(source);
-}
 
 const SKIP_DIRS = new Set(['node_modules', 'dist', '.svelte-kit', '__screenshots__', 'build']);
 
@@ -136,25 +141,24 @@ function componentFiles(): string[] {
 }
 
 /**
- * Index of the `;` that ends a member, ignoring any inside `{}`, `()`, `<>`, `[]`.
+ * Walk one character, returning the new bracket depth.
  *
  * The `>` of an arrow is not a closing bracket. Counting it as one sends the
- * depth negative inside any snippet payload carrying a callback —
- * `select: () => void;` — after which the real terminator is never found and
- * the member's type is read as the rest of the block. Found by this guard
- * misreporting `Calendar`'s `day` prop.
+ * depth negative inside any type carrying a callback — `select: () => void`,
+ * `Record<string, () => void>` — after which every depth-sensitive decision
+ * downstream is wrong.
+ *
+ * This lived in three hand-rolled copies. The first was fixed for the arrow;
+ * the second, written 140 lines later in the same commit, was not — and that
+ * copy is the one deciding whether a function type was parenthesised, so the
+ * guard stayed blind to the single mistake it exists for. One function now.
  */
-function memberEnd(source: string, from: number): number {
-	let depth = 0;
-	for (let i = from; i < source.length; i += 1) {
-		const ch = source[i]!;
-		if ('{(['.includes(ch)) depth += 1;
-		else if ('})]'.includes(ch)) depth -= 1;
-		else if (ch === '<') depth += 1;
-		else if (ch === '>' && source[i - 1] !== '=') depth -= 1;
-		else if (ch === ';' && depth === 0) return i;
-	}
-	return -1;
+function step(ch: string, prev: string, depth: number): number {
+	if ('{(['.includes(ch)) return depth + 1;
+	if ('})]'.includes(ch)) return depth - 1;
+	if (ch === '<') return depth + 1;
+	if (ch === '>' && prev !== '=') return depth - 1;
+	return depth;
 }
 
 /** The body of the brace-delimited block starting at `open`. */
@@ -171,118 +175,59 @@ function blockBody(source: string, open: number): string {
 }
 
 /**
- * The type bodies annotated on this file's `$props()` call.
+ * Split a type body into its members, at depth-zero `;` outside any string.
  *
- * Six declaration styles are in use across the repo and all of them appear
- * here: `}: XProps = $props()` with an `interface` or `type` above,
- * `const props: X = $props()`, a multi-line inline object literal, a
- * single-line one, a props type imported from a `.ts` file, and
- * `type Props = A | B` resolving to two interfaces.
+ * Replaces a line-anchored regex, which could not see a member sharing a line
+ * with another (`CodeEditor.svelte` declares its whole props type on one line)
+ * and truncated any type containing a `;` inside a string literal.
  */
-function propsTypeBodies(source: string): string[] {
-	const call = source.indexOf('$props()');
-	if (call === -1) return [];
-
-	const before = source.slice(0, call);
-	const eq = before.lastIndexOf('=');
-	if (eq === -1) return [];
-
-	// Walk back from the `=`, rather than looking for the last `:` before it.
-	// An inline annotation is full of colons — `}: { store: Store<…>; … } =` —
-	// so `lastIndexOf(':')` lands inside the literal and reads a member as the
-	// annotation. The character before the `=` says which form this is.
-	let i = eq - 1;
-	while (i >= 0 && /\s/.test(source[i]!)) i -= 1;
-
-	if (source[i] === '}') {
-		// An inline object literal type: find its opening brace and use it.
-		let depth = 0;
-		for (let j = i; j >= 0; j -= 1) {
-			if (source[j] === '}') depth += 1;
-			else if (source[j] === '{') {
-				depth -= 1;
-				if (depth === 0) return [source.slice(j + 1, i)];
-			}
-		}
-		return [];
-	}
-
-	// A named type: read the identifier back to its `:`.
-	const colon = source.lastIndexOf(':', i);
-	if (colon === -1) return [];
-	const annotation = source.slice(colon + 1, eq).trim();
-
-	// A named type: resolve it, and any union members it names. Generic
-	// parameters are dropped — `CarouselProps<T>` declares as `CarouselProps<T…>`.
-	const seen = new Set<string>();
-	const bodies: string[] = [];
-	const resolve = (name: string) => {
-		const bare = name.replace(/<.*/, '').trim();
-		if (!bare || seen.has(bare)) return;
-		seen.add(bare);
-
-		const iface = new RegExp(`interface\\s+${bare}\\b[^{]*\\{`).exec(source);
-		if (iface) {
-			bodies.push(blockBody(source, iface.index + iface[0].length - 1));
-			return;
-		}
-		const alias = new RegExp(`type\\s+${bare}\\b[^=]*=\\s*([^;]+);`).exec(source);
-		if (alias) {
-			// A union of named types, or an inline literal.
-			if (alias[1]!.trim().startsWith('{')) {
-				bodies.push(blockBody(source, source.indexOf('{', alias.index)));
-			} else {
-				alias[1]!.split('|').forEach((part) => resolve(part));
-			}
-		}
-		// Unresolvable here means the type is imported from a `.ts` file. Those
-		// are swept directly; this guard covers what a `.svelte` file declares.
-	};
-
-	resolve(annotation);
-	return bodies;
-}
-
-/**
- * Whether `undefined` is a **top-level** alternative of this type.
- *
- * Not `type.includes('undefined')`. `Calendar`'s `day` prop is
- * `Snippet<[{ date: Date | undefined; … }]>` — the word appears, nested, while
- * the prop itself refuses `undefined` and cannot be forwarded. Testing for the
- * substring passes it silently, which is the failure mode this whole guard
- * exists to prevent, one level down.
- */
-function acceptsUndefined(type: string): boolean {
+function splitMembers(body: string): string[] {
+	const members: string[] = [];
 	let depth = 0;
-	let alternative = '';
-	const alternatives: string[] = [];
+	let quote = '';
+	let current = '';
 
-	for (let i = 0; i < type.length; i += 1) {
-		const ch = type[i]!;
-		if ('{(['.includes(ch)) depth += 1;
-		else if ('})]'.includes(ch)) depth -= 1;
-		else if (ch === '<') depth += 1;
-		else if (ch === '>' && type[i - 1] !== '=') depth -= 1;
+	for (let i = 0; i < body.length; i += 1) {
+		const ch = body[i]!;
 
-		if (ch === '|' && depth === 0) {
-			alternatives.push(alternative);
-			alternative = '';
+		if (quote) {
+			current += ch;
+			if (ch === quote && body[i - 1] !== '\\') quote = '';
 			continue;
 		}
-		alternative += ch;
+
+		// Comments are dropped, not kept. Almost every member here carries a
+		// JSDoc block, and a pattern anchored at the start of the member matches
+		// none of them — the first version of this splitter detected zero props
+		// and the whole guard passed vacuously. The anti-rot arm caught it,
+		// which is the only reason it is not still passing.
+		if (ch === '/' && body[i + 1] === '*') {
+			const close = body.indexOf('*/', i + 2);
+			i = close === -1 ? body.length : close + 1;
+			continue;
+		}
+		if (ch === '/' && body[i + 1] === '/') {
+			const nl = body.indexOf('\n', i);
+			i = nl === -1 ? body.length : nl - 1;
+			continue;
+		}
+
+		if (ch === "'" || ch === '"' || ch === '`') {
+			quote = ch;
+			current += ch;
+			continue;
+		}
+
+		if (ch === ';' && depth === 0) {
+			members.push(current);
+			current = '';
+			continue;
+		}
+		depth = step(ch, body[i - 1] ?? '', depth);
+		current += ch;
 	}
-	alternatives.push(alternative);
-
-	// A top-level `=>` means this is a function type, and a trailing
-	// `| undefined` binds to its RETURN — `() => void | undefined` is a function
-	// returning `void | undefined`, which accepts no `undefined` itself. It
-	// splits into two depth-zero alternatives and would otherwise pass here,
-	// which is precisely the trap this guard exists to catch: the naive append
-	// typechecks, looks done, and forwards nothing. Only parenthesising first
-	// gives `(() => void) | undefined`, where the arrow is no longer top-level.
-	if (alternatives.length > 1 && hasTopLevelArrow(type)) return false;
-
-	return alternatives.some((a) => a.trim() === 'undefined');
+	members.push(current);
+	return members;
 }
 
 /** Whether an `=>` appears outside every bracket. */
@@ -290,13 +235,132 @@ function hasTopLevelArrow(type: string): boolean {
 	let depth = 0;
 	for (let i = 0; i < type.length; i += 1) {
 		const ch = type[i]!;
-		if ('{(['.includes(ch)) depth += 1;
-		else if ('})]'.includes(ch)) depth -= 1;
-		else if (ch === '<') depth += 1;
-		else if (ch === '>' && type[i - 1] === '=' && depth === 0) return true;
-		else if (ch === '>') depth -= 1;
+		if (ch === '>' && type[i - 1] === '=' && depth === 0) return true;
+		depth = step(ch, type[i - 1] ?? '', depth);
 	}
 	return false;
+}
+
+/**
+ * Whether `undefined` is a **top-level** alternative of this type.
+ *
+ * Not `type.includes('undefined')`. `Calendar`'s `day` payload carries
+ * `store: … | null` and callbacks of its own — the word can appear nested while
+ * the prop itself refuses `undefined` and cannot be forwarded.
+ */
+function acceptsUndefined(type: string): boolean {
+	// A top-level `=>` means this is a function type, and a trailing
+	// `| undefined` binds to its RETURN — `() => void | undefined` is a function
+	// returning `void | undefined`, which accepts no `undefined` itself. Only
+	// parenthesising first gives `(() => void) | undefined`.
+	if (hasTopLevelArrow(type)) return false;
+
+	let depth = 0;
+	let alternative = '';
+	const alternatives: string[] = [];
+
+	for (let i = 0; i < type.length; i += 1) {
+		const ch = type[i]!;
+		if (ch === '|' && depth === 0) {
+			alternatives.push(alternative);
+			alternative = '';
+			continue;
+		}
+		depth = step(ch, type[i - 1] ?? '', depth);
+		alternative += ch;
+	}
+	alternatives.push(alternative);
+
+	return alternatives.some((a) => a.trim() === 'undefined');
+}
+
+/**
+ * The props type block(s) annotated on this file's `$props()` call.
+ *
+ * Six declaration styles are in use: `}: XProps = $props()` with an `interface`
+ * or `type` above, `const props: X = $props()`, a multi-line inline object
+ * literal, a single-line one, `type Props = A | B` resolving to two interfaces,
+ * and **a props type imported from a `.ts` file**.
+ *
+ * That last one resolved to nothing in this guard's first version, so
+ * `Carousel`, `Form`, `FormField` and `DestinationRouter` went entirely
+ * unscanned — including the twelve props in `carousel.types.ts` that had just
+ * been swept. A one-time sweep is exactly what this guard replaces, and the
+ * per-package non-vacuity arm cannot catch it: `core` has a hundred other
+ * resolvable files. Imports are followed now.
+ */
+function propsTypeBlocks(path: string): string[] {
+	const source = readFileSync(path, 'utf8');
+	const call = source.indexOf('$props()');
+	if (call === -1) return [];
+
+	const before = source.slice(0, call);
+	const eq = before.lastIndexOf('=');
+	if (eq === -1) return [];
+
+	// Walk back from the `=` rather than looking for the last `:` before it: an
+	// inline annotation is full of colons, so `lastIndexOf(':')` lands inside
+	// the literal and reads one of its members as the annotation.
+	let i = eq - 1;
+	while (i >= 0 && /\s/.test(source[i]!)) i -= 1;
+
+	if (source[i] === '}') {
+		let depth = 0;
+		for (let j = i; j >= 0; j -= 1) {
+			if (source[j] === '}') depth += 1;
+			else if (source[j] === '{') {
+				depth -= 1;
+				if (depth === 0) {
+					return [source.slice(j + 1, i)];
+				}
+			}
+		}
+		return [];
+	}
+
+	const colon = source.lastIndexOf(':', i);
+	if (colon === -1) return [];
+
+	const seen = new Set<string>();
+	const blocks: string[] = [];
+
+	const resolveIn = (text: string, name: string, origin: string) => {
+		const bare = name.replace(/<.*/, '').trim();
+		if (!bare || seen.has(bare)) return;
+		seen.add(bare);
+
+		const iface = new RegExp(`interface\\s+${bare}\\b[^{]*\\{`).exec(text);
+		if (iface) {
+			blocks.push(blockBody(text, iface.index + iface[0].length - 1));
+			return;
+		}
+
+		const alias = new RegExp(`type\\s+${bare}\\b[^=]*=\\s*([^;]+);`).exec(text);
+		if (alias) {
+			if (alias[1]!.trim().startsWith('{')) {
+				blocks.push(blockBody(text, text.indexOf('{', alias.index)));
+			} else {
+				alias[1]!.split('|').forEach((part) => resolveIn(text, part, origin));
+			}
+			return;
+		}
+
+		// Not declared here — follow the import that brought it in.
+		const imported = new RegExp(
+			`import\\s+type\\s*\\{[^}]*\\b${bare}\\b[^}]*\\}\\s*from\\s*['"]([^'"]+)['"]`
+		).exec(text);
+		if (!imported) return;
+
+		// `./foo.js` in source refers to `./foo.ts` on disk.
+		const target = resolve(dirname(origin), imported[1]!.replace(/\.js$/, '.ts'));
+		if (!existsSync(target)) return;
+
+		seen.delete(bare);
+		resolveIn(readFileSync(target, 'utf8'), bare, target);
+	};
+
+	resolveIn(source, source.slice(colon + 1, eq).trim(), path);
+	return blocks;
 }
 
 interface Offender {
@@ -307,23 +371,34 @@ interface Offender {
 
 /** Optional members of this file's props type(s) that do not accept `undefined`. */
 function scan(path: string, applyRegister = true): Offender[] {
-	const source = readFileSync(path, 'utf8');
 	const file = relative(repoRoot, path);
 	const registered = applyRegister ? REGISTER[file]?.props ?? [] : [];
 	const out: Offender[] = [];
 
-	for (const body of propsTypeBodies(source)) {
-		const member = /(?:^|\n)\s*([a-zA-Z_$][\w$]*)\?\s*:/g;
-		let m: RegExpExecArray | null;
-		while ((m = member.exec(body)) !== null) {
+	for (const body of propsTypeBlocks(path)) {
+		for (const raw of splitMembers(body)) {
+			// `readonly` and the optional-method form `foo?(): void` are both
+			// legal here and neither can accept `undefined`. A name-then-`?:`
+			// pattern misses both.
+			const m = /^\s*(?:readonly\s+)?([a-zA-Z_$][\w$]*)\s*\?\s*(:|\()/.exec(raw);
+			if (!m) continue;
+
 			const name = m[1]!;
-			const start = m.index + m[0].length;
-			const end = memberEnd(body, start);
-			const type = body.slice(start, end === -1 ? undefined : end).trim();
+			const type = raw.slice(m.index + m[0].length).trim();
+
+			// An optional *method* has no way to say `| undefined` at all.
+			if (m[2] === '(') {
+				if (registered.includes(name)) continue;
+				out.push({ file, prop: name, type: 'method — declare it as a property' });
+				continue;
+			}
 
 			if (acceptsUndefined(type)) continue;
 			if (registered.includes(name)) continue;
-			if (inheritsChildren(source, name)) continue;
+			// Member-level, not file-level: only a member of an interface that
+			// actually extends an `HTMLAttributes` base inherits the bare
+			// declaration. A file-wide regex granted the excuse to every
+			// interface in 34 files, and matched the phrase in a comment.
 
 			out.push({ file, prop: name, type: type.replace(/\s+/g, ' ').slice(0, 60) });
 		}
@@ -352,10 +427,24 @@ describe('optional props accept undefined', () => {
 			// life while the suite stayed green.
 			const withProps = byPackage
 				.get(pkg)!
-				.filter((f) => propsTypeBodies(readFileSync(f, 'utf8')).length > 0);
+				.filter((f) => propsTypeBlocks(f).length > 0);
 			expect(withProps.length, `${pkg}: no props types resolved`).toBeGreaterThan(0);
 		}
 	);
+
+	it('resolves a realistic number of props, so a broken parser cannot pass', () => {
+		// File counts are not enough. A member pattern anchored at the start of
+		// the member matched none of them — every prop here carries a JSDoc
+		// block — so the guard resolved 152 files, found zero props, and every
+		// arm passed. Only the anti-rot arm noticed. Counting what is actually
+		// parsed is what makes that failure loud.
+		const total = files.reduce(
+			(n, f) => n + propsTypeBlocks(f).reduce((m, b) => m + splitMembers(b).length, 0),
+			0
+		);
+
+		expect(total, 'the member splitter is resolving almost nothing').toBeGreaterThan(500);
+	});
 
 	it('every optional prop accepts undefined', () => {
 		const offenders = files
@@ -379,6 +468,29 @@ describe('optional props accept undefined', () => {
 		const missing = Object.keys(REGISTER).filter((f) => !existsSync(join(repoRoot, f)));
 
 		expect(missing, 'registered a file that has been renamed or deleted').toEqual([]);
+	});
+
+	it('every registered prop is still $bindable, so the stated reason stays true', () => {
+		// The entries all say "$bindable". Nothing checked that. Remove the
+		// `$bindable(` from a registered prop and the exemption survives with a
+		// reason that is now false — an unexplained hole wearing a justification.
+		const stale: string[] = [];
+		for (const [file, entry] of Object.entries(REGISTER)) {
+			const full = join(repoRoot, file);
+			if (!existsSync(full)) continue;
+			const source = readFileSync(full, 'utf8');
+			for (const prop of entry.props) {
+				if (!new RegExp(`\\b${prop}\\s*=\\s*\\$bindable\\(`).test(source)) {
+					stale.push(`${file}  ${prop}`);
+				}
+			}
+		}
+
+		expect(
+			stale,
+			'REGISTER excuses these as $bindable, and they are no longer bindable. ' +
+				'Either restore the binding or append `| undefined` and delete the entry.'
+		).toEqual([]);
 	});
 
 	it('every registered prop would still offend without its exemption', () => {

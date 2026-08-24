@@ -86,7 +86,7 @@
 		day?: Snippet<
 			[
 				{
-					date: Date | undefined;
+					date: Date;
 					isCurrentMonth: boolean;
 					isSelected: boolean;
 					isInRange: boolean;

@@ -31,7 +31,7 @@
 	 * ```
 	 */
 
-	interface AspectRatioProps extends Omit<HTMLAttributes<HTMLDivElement>, 'class'> {
+	interface AspectRatioProps extends Omit<HTMLAttributes<HTMLDivElement>, 'class' | 'children'> {
 		/**
 		 * Aspect ratio as a number (width / height).
 		 * Common values:
@@ -50,7 +50,7 @@
 		/**
 		 * Content to maintain aspect ratio for.
 		 */
-		children?: import('svelte').Snippet;
+		children?: import('svelte').Snippet | undefined;
 	}
 
 	let { ratio = 16 / 9, class: className, children, ...restProps }: AspectRatioProps = $props();

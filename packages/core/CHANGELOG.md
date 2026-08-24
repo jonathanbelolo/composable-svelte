@@ -5,6 +5,42 @@ All notable changes to `@composable-svelte/core` will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **BREAKING (types): every optional prop now accepts `undefined`.** Under
+  `exactOptionalPropertyTypes`, an optional prop read from `$props()` has type
+  `T | undefined`, which cannot be assigned to a bare `T?` — so a component
+  forwarding its own props to one of ours did not typecheck, and our components
+  could not be wrapped. 0.11.2 fixed `Command` and said "`Command` is not
+  special: 266 optional props are still bare". Measured properly it was **476
+  across 143 files in eight packages**; all are fixed.
+
+  Only 13 remain bare, all `$bindable`: `bind:value={x}` requires the parent's
+  variable to match the prop type, so `| undefined` there makes binding
+  *stricter* for consumers rather than looser.
+
+- **BREAKING (types): `ImageGallery`'s mode discriminants are `?: undefined`,
+  not `?: never`.** `never` refuses an explicit `undefined` — which is exactly
+  what a forwarding wrapper holds — so neither branch of its props union could
+  be forwarded. The runtime mode detection is unchanged.
+
+- Twelve layout components (`Box`, `Panel`, `Text`, `Heading`, `Kbd`, `Empty`,
+  `Banner*`, `ButtonGroup`, `AspectRatio`, `BreadcrumbSeparator`) now
+  `Omit<…, 'class' | 'children'>` from their `HTMLAttributes` base. `svelte/elements`
+  declares `children?: Snippet` bare and a derived interface may not widen an
+  inherited member, so omitting it is what lets these accept a forwarded
+  `Snippet | undefined`. Passing children as markup is unaffected.
+
+### Added
+
+- `tests/repo/optional-props.test.ts` — a repo-wide guard requiring
+  `| undefined` on every optional prop, with a register for the `$bindable`
+  exemptions. Function types must be parenthesised first:
+  `(() => void) | undefined`, never `() => void | undefined`, which is a
+  function *returning* `void | undefined` and forwards nothing.
+
 ## [0.11.2] - 2026-08-23
 
 ### Fixed
