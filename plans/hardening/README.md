@@ -17,7 +17,7 @@ file and line, says whether it was **verified** (something was run) or
 | Open — `svelte-check` errors | **0** (was 142, recounted to 69 in R6) |
 | Open — `svelte-check` warnings | **0** (was 30) |
 | Workspaces covered by `pnpm -r check` | **19 of 19** — the gate is complete |
-| **Open — dead behaviour** | **3 items, S11** — T1–T6 done; six packages swept |
+| **Open — dead behaviour** | **4 items, S11** — T1–T6 done; six packages swept |
 | Workspaces that typecheck their tests | **14 of 14 that have tests** (S11 T1) |
 | Animation-policy backlog | **none** — emptied and deleted (S11 T2–T4) |
 | `examples/` animation violations | **0** — gated and cleared; was 78 across 33, not the 24 recorded (S11 T5) |
@@ -1158,8 +1158,82 @@ instead of fighting. The `mounted` flag all three carried skipped nothing: it
 was `$state`, so writing it inside the effect that read it scheduled the second
 run it existed to prevent.
 
-graphics: 25 tests at the start of T6, 56 at the end of the sweep, **101** after
-the review.
+**A second hostile review, of the repairs, found 20 more — two of them
+regressions from the repairs themselves.** The pattern is now well established
+and worth naming: each round's fixes are written with more confidence than the
+code they replace, and that confidence is where the next defect lives.
+
+- **The resize handler snapped the user's camera back.** Making resize
+  re-apply the whole camera config so orthographic bounds could track the aspect
+  ratio also re-applied `position` and `lookAt` — and `initialize` hands the
+  camera to the user via `attachControl`. A camera dragged to radius 25 returned
+  to 11.18 on one resize event, which fires continuously during a window drag.
+- **Two animations on one property made the mesh strobe at 30Hz.** The
+  idempotency guard compared against the mesh *before* the tick, so whichever
+  animation produced that value was skipped and the other wrote; the roles then
+  swapped every frame. The same commit message defends per-mesh accumulation
+  precisely so animations do not drop each other.
+- **`roughness` was still inert for dark metals.** Having `metallic` tint the
+  highlight toward the diffuse colour moved the black-specular case rather than
+  removing it: a near-black surface at `metallic: 1` gets a near-black
+  `specularColor`, and Babylon multiplies.
+
+**And a claim I asserted, had repeated back to me, and rewrote a comment around
+without ever checking: `SpotLight` does not extend `PointLight`.** Both extend
+`ShadowLight` in Babylon 8.36.1. The `!(light instanceof SpotLight)` exclusion
+guarding against that hierarchy could never be false, and it survived a mutation
+test *because* it was dead — which is the signal I should have read the first
+time rather than writing a better comment for it.
+
+Also closed: `addLight` and `updateLight` disagreed on `radius: 0`; every
+`startAnimation` began its own rAF chain, so five animations produced four times
+the ticks of one; `startAnimation` accepted duplicate ids where meshes and
+lights now reject them; `duration: 0` with `loop: true` completed for ever;
+`hexToColor3` silently returned white for anything but 6-digit hex while two
+documents advertised "hex or CSS color"; and `package.json`'s description and
+`webgpu` keyword — both npm-visible — still claimed WebGPU, as did six sibling
+skill files.
+
+Three of my own tests were vacuous: `<Camera>`'s untrack and `<Scene>`'s
+success-branch cancellation had no coverage at all, and the duplicate-`<Light>`
+test asserted only that nothing threw, never inspecting the state the defect
+lives in.
+
+graphics: 25 tests at the start of T6, 56 at the end of the sweep, 101 after the
+first review, **117** after the second.
+
+### T10. 41 documented Svelte examples do not compile — VERIFIED
+
+`tests/repo/doc-examples.test.ts` gained a compile arm this round, after my own
+fix for the graphics README's missing-`{store}` examples introduced a *duplicate*
+`{store}` that a verification grep could not see because it spanned two lines.
+The same class of miss, twice, on the same file.
+
+Pointed at every markdown file in the repo it finds **41 non-compiling blocks
+across 16 files**:
+
+| reason | count | reading |
+|---|---|---|
+| `global_reference_invalid` | 21 | an excerpt whose `<script>` shows only part of itself, so an auto-subscribed store is undeclared — mostly benign |
+| `js_parse_error` | 13 | likely real |
+| `script_duplicate` | 3 | likely real |
+| `expected_token` | 2 | likely real |
+| `state_invalid_placement` | 1 | likely real |
+| `block_unclosed` | 1 | likely real |
+
+So roughly 20 look like genuine syntax errors in documented examples, and each
+needs individual judgement about whether the excerpt or the code is wrong. The
+guard is therefore scoped to a list of *swept* documents — currently the two
+graphics ones — which grows as sweeps land. Gating the repo on documents nobody
+has read in this campaign would be a large unreviewed change.
+
+A second hole found while building it: **the fence label cannot be trusted.**
+`composable-svelte-graphics/SKILL.md` carried 45 ```typescript blocks against a
+single ```svelte, and most of the 45 were component markup — which is why a
+fence-only check found nothing in the very file whose examples were wrong. 22
+were relabelled; the 6 that deliberately elide with `...` cannot compile by
+design and are counted so the number cannot quietly grow. The other packages'
+skill files have not been checked for this.
 
 ### T7. `ed855dd` is unreviewed — VERIFIED
 
