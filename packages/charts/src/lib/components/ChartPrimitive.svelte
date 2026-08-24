@@ -33,6 +33,9 @@ let {
 
 // Container element
 let containerElement: HTMLDivElement | null = $state(null);
+// Gates the prop effect: the store subscription draws the initial state, and
+// this must not double-render alongside it at mount.
+let mounted = $state(false);
 let plotElement: HTMLElement | null = $state(null);
 let cleanupEventListeners: (() => void) | null = null;
 
@@ -41,40 +44,41 @@ let cleanupEventListeners: (() => void) | null = null;
 onMount(() => {
   if (!containerElement) return;
 
-  // Track previous values to detect actual changes
-  let prevDataLength = 0;
-  let prevFilteredLength = 0;
-  let prevSelectedCount = 0;
-  let prevTransformK = 1;
-  let prevTransformX = 0;
-  let prevTransformY = 0;
+  /**
+   * The state this component last drew. Identity, not a hand-picked set of
+   * lengths.
+   *
+   * This used to compare `data.length`, `filteredData.length`,
+   * `selection.selectedIndices.length` and the three transform scalars, and
+   * everything it missed was invisible:
+   *
+   * - `dimensions` was not in the set, and is the only thing the plot builders
+   *   read for width and height. Every resize was inert; the SVG kept whatever
+   *   size was in state at the last render, which for the responsive path is
+   *   the `createInitialChartState` default forever.
+   * - `setData` with an equal row count never redrew — a re-sort, a re-map, a
+   *   sliding window. `DataTransformsDemo`'s Sort button does exactly that.
+   * - Moving a selection from one point to another never redrew, because only
+   *   the count was compared.
+   *
+   * The store is `$state.raw` and this package's reducer is immutable, so a
+   * changed state is always a new object and an unchanged one is always the
+   * same object. Identity is the signal that was being thrown away, and it is
+   * O(1) — which matters, because a pan dispatches per frame.
+   */
+  let renderedState: ChartState<any> | null = null;
 
-  // Initial render
-  renderPlot();
+  const renderIfChanged = (state: ChartState<any>) => {
+    if (state === renderedState) return;
+    renderedState = state;
+    renderPlot();
+  };
 
-  // Manually subscribe to store updates
-  // Only rebuild when data/selection changes (not on zoom/transform changes!)
-  const unsubscribe = store.subscribe((state) => {
-    const dataChanged = state.data.length !== prevDataLength;
-    const filteredChanged = state.filteredData.length !== prevFilteredLength;
-    const selectionChanged = state.selection.selectedIndices.length !== prevSelectedCount;
-    const transformChanged = state.transform.k !== prevTransformK ||
-                            state.transform.x !== prevTransformX ||
-                            state.transform.y !== prevTransformY;
-
-    // Only re-render on data/selection changes OR transform changes
-    // Transform changes will trigger a rebuild to update the domain
-    if (dataChanged || filteredChanged || selectionChanged || transformChanged) {
-      prevDataLength = state.data.length;
-      prevFilteredLength = state.filteredData.length;
-      prevSelectedCount = state.selection.selectedIndices.length;
-      prevTransformK = state.transform.k;
-      prevTransformX = state.transform.x;
-      prevTransformY = state.transform.y;
-
-      renderPlot();
-    }
-  });
+  // `store.subscribe` invokes its listener immediately, so this draws the
+  // initial state — no separate `renderPlot()` call, which used to render the
+  // chart twice at mount.
+  const unsubscribe = store.subscribe(renderIfChanged);
+  mounted = true;
 
   return () => {
     unsubscribe();
@@ -82,6 +86,41 @@ onMount(() => {
       cleanupEventListeners();
     }
   };
+});
+
+/**
+ * Redraw when a *prop* changes.
+ *
+ * `renderPlot` reads `config`, `plotBuilder`, `enableZoom` and `enableBrush` at
+ * call time, and it was only ever called from the store subscription — so none
+ * of `type`, `x`, `y`, `color`, `size`, `xDomain`, `yDomain`, `enableZoom`,
+ * `enableBrush` or `plotBuilder` reached the canvas until an unrelated data
+ * change happened to rebuild. `ScatterChartDemo`'s Brush Mode button is the
+ * visible case: switching zoom → brush dispatches nothing, so brushing was
+ * never installed, while brush → zoom dispatches `clearSelection` and *may*
+ * redraw — which made the bug look intermittent.
+ *
+ * Deliberately reads only the props. Touching `$store` here would re-run this
+ * on every dispatch, duplicating the subscription above; and `renderPlot`
+ * mutates the DOM, which is why the store path is a manual subscription rather
+ * than an effect in the first place.
+ */
+$effect(() => {
+  // Named so the dependency is explicit rather than incidental.
+  void config;
+  void plotBuilder;
+  void enableZoom;
+  void enableBrush;
+
+  // `untrack` is load-bearing, not decoration. `renderPlot` reads *and* writes
+  // `plotElement`, which is `$state`, so calling it inside an effect makes its
+  // own writes into the effect's dependencies — the "effect → DOM manipulation
+  // → effect" loop the comment on the mount subscription above warns about. It
+  // hangs the test runner outright.
+  //
+  // (`untrack` was imported and unused before this. It is what the file needed
+  // all along.)
+  if (untrack(() => mounted)) untrack(() => renderPlot());
 });
 
 // Watch for animated zoom transitions
