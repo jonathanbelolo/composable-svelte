@@ -17,7 +17,7 @@ file and line, says whether it was **verified** (something was run) or
 | Open — `svelte-check` errors | **0** (was 142, recounted to 69 in R6) |
 | Open — `svelte-check` warnings | **0** (was 30) |
 | Workspaces covered by `pnpm -r check` | **19 of 19** — the gate is complete |
-| **Open — dead behaviour** | **4 items, S11** — T1–T5 done; `core`, `media` and `chat` swept |
+| **Open — dead behaviour** | **3 items, S11** — T1–T6 done; six packages swept |
 | Workspaces that typecheck their tests | **14 of 14 that have tests** (S11 T1) |
 | Animation-policy backlog | **none** — emptied and deleted (S11 T2–T4) |
 | `examples/` animation violations | **0** — gated and cleared; was 78 across 33, not the 24 recorded (S11 T5) |
@@ -969,9 +969,10 @@ have been through it; `chat` shipped 0.3.0 after four review rounds. Everything
 below is measured, not estimated — the commands that produced each count are
 named so the next person can re-run them rather than trust them.
 
-T1–T5 are done. T6, T7 and T8 remain, and are independent of each other — T8
-(266 optional props) is mechanical but wide, T6 is an open-ended sweep whose size
-is unknown until it runs, and T7 is a review rather than a fix.
+T1–T6 are done: every package has now been swept. T7 (review `ed855dd`), T8
+(266 optional props) and T9 (the graphics overlay subsystem) remain, and are
+independent of each other — T7 is a review rather than a fix, T8 is mechanical
+but wide, and T9 is a project in its own right.
 
 ### T1. No workspace typechecked its tests — DONE
 
@@ -1063,10 +1064,54 @@ header said `Carousel` and `Progress` "sit in the BACKLOG" (one is converted, th
 other is in the REGISTER twenty lines below the comment denying it); the guide
 repeated it; and the guide's Register table had four rows to the test's five.
 
-### T6. `auth`, `charts` and `graphics` have had no dead-behaviour pass — INFERRED
+### T6. `auth`, `charts` and `graphics` — DONE
 
-No sweep has been run against them. Listed so their absence is a decision rather
-than an oversight.
+The entry below said "no sweep has been run against them", marked INFERRED
+because nobody had looked. Looking found ~67 verified items across the three,
+and a prior sweep's numbers were wrong in both directions: it reported `auth`
+**clean** (it was not — ten findings, two substantive) and gave `charts` 6 and
+`graphics` 8 where the real figures were ~24 and ~33.
+
+**`auth`** — the only liveness defect in the campaign. From `status:
+'loggingOut'` every action was a no-op except a matching `loggedOut`, produced
+only by `fetchLogout`'s own effect — plain `Effect.run`, no timeout, no
+`AbortSignal`, no cancellation. A request that never settled bricked the store
+permanently: the authenticated UI stayed up with `isRevalidating: true` and
+clicking sign out again did nothing. Logout is `Effect.cancellable` now, and the
+dependencies take a signal. Also: `AuthGuard` blanked the UI for the whole of a
+re-login, contrary to both its own header comment and the README.
+
+**`charts`** — one root cause explained a whole class. `ChartPrimitive` decided
+whether to redraw by comparing array *lengths*, so `dimensions` was not in the
+set at all (every resize inert), `setData` with an equal row count never redrew,
+moving a selection never redrew, and no prop change reached the canvas until an
+unrelated data change happened to rebuild. Two buttons in the shipped styleguide
+did nothing. Identity comparison fixes all of it. Then `enableTooltip`,
+`enableAnimations`, `transitionDuration` and panning implemented; `spec` /
+`updateSpec` / `brushExtent` / `brushMove` / `brushEnd` removed; the Playwright
+suite deleted (no route, no server, no baselines, never run); and the README's
+"WCAG 2.1 AA compliant / Full keyboard navigation / Data table fallback"
+corrected against a package with no `tabindex` and no key handler.
+
+**`graphics`** — three separate mechanisms each broke the state → renderer path,
+and none could be seen because `Scene.svelte` was never mounted by a test and
+could not be: jsdom has no WebGL and the adapter was constructed internally. The
+sync is extracted behind a `SceneAdapter` interface now, which is what made the
+rest verifiable. `tick` mutated meshes in place so the diff compared an object
+with itself (five ticks moved a mesh 10 units in state and produced one adapter
+call); two diff baselines were seeded from live state *after* the children had
+dispatched, so every `<Camera>` prop and `backgroundColor` was inert at mount;
+and `<Light>` had no `$effect` at all. Lights gained the identity meshes already
+had — without it, removal took the wrong light and the sync had to clear and
+re-add every light on any change. Then `roughness`, the orthographic camera and
+geometry changes implemented; five dead fields and the WebGPU claim removed.
+
+Three fixes were caught by tests I had written badly and had to redo: a camera
+test that dispatched *after* seeding its baseline and so passed against the
+broken code; a charts prop-effect that hung the runner because `renderPlot`
+reads and writes the same `$state`; and a `<Light>` effect that hit
+`effect_update_depth_exceeded` because `updateLight` was not idempotent by value
+while `updateCamera` and `updateMesh` were.
 
 ### T7. `ed855dd` is unreviewed — VERIFIED
 
@@ -1195,3 +1240,33 @@ Nothing catches a new bare optional prop today. A guard belongs with it, in the
 shape of `tests/repo/animation-policy.test.ts`: parse the `interface *Props`
 blocks and require `| undefined` on every optional member, with a REGISTER for
 anything deliberately narrower.
+
+### T9. `graphics`'s overlay subsystem has never been swept — VERIFIED
+
+`packages/graphics/src/lib/overlay/` and `lib/shaders/` — ~4,100 lines, **zero
+tests**, and no documentation anywhere: neither the README nor the skill file
+mentions `WebGLOverlay`, `createOverlay`, `OverlayOptions`, `updateStrategy` or
+any of the 21 shader presets. Its own plan still reads `Status: Planning`
+(`plans/phase-16/README.md:3`) while the code ships and is exported.
+
+Deliberately left out of T6: sweeping it properly is its own project, and
+folding it in would have tripled that one. ~15 findings are already recorded
+from the T6 exploration, unverified beyond a read:
+
+- `OverlayOptions.memoryBudget` and `maxTextureSize` affect no validation — the
+  real limits live in `texture-validator.ts` and are never set from them.
+- `updateStrategy: 'reactive'` can never fire: the only path is
+  `triggerReactiveUpdate`, which nothing calls, and `inferUpdateStrategy`
+  assigns `'reactive'` to every `text` and `html` element.
+- `handleContextLoss: false` does not disable context-loss handling, and
+  silently drops the consumer's `onContextLost` / `onContextRestored` callbacks.
+- Context restoration rebuilds resources on the *dead* context — `this.gl` is
+  never re-read after the manager creates a new one.
+- `updateUniforms` mutates the shared preset constant, so per-element tuning
+  leaks into every element using that preset.
+- `ElementRegistration.needsUpdate` is written seven times and read never.
+- `WebGLOverlay.svelte`'s `onTextureLoaded` fires on a fixed 100ms timer
+  regardless of outcome, with its own TODO saying so.
+
+`createOverlay` is not exported from the barrel, and its one consumer
+(`examples/shader-gallery`) uses four methods off `bind:this`.
