@@ -17,8 +17,9 @@ file and line, says whether it was **verified** (something was run) or
 | Open — `svelte-check` errors | **0** (was 142, recounted to 69 in R6) |
 | Open — `svelte-check` warnings | **0** (was 30) |
 | Workspaces covered by `pnpm -r check` | **19 of 19** — the gate is complete |
-| **Open — dead behaviour** | **4 items, S11** — T1–T6 done; six packages swept |
+| **Open — dead behaviour** | **5 items, S11** — T1–T8 done; every package swept |
 | Workspaces that typecheck their tests | **14 of 14 that have tests** (S11 T1) |
+| Optional props a wrapper can forward | **all but 25, registered** (S11 T8) |
 | Animation-policy backlog | **none** — emptied and deleted (S11 T2–T4) |
 | `examples/` animation violations | **0** — gated and cleared; was 78 across 33, not the 24 recorded (S11 T5) |
 | Committed build artifacts under the gate | `ssr-server/static` — was serving 6 deleted transitions |
@@ -1458,7 +1459,7 @@ mount/update, or an in/out pair, **test the round trip and pin it against a
 control that already works** — F4 was only legible because the prop-opened
 palette animated and the initially-open one did not.
 
-### T8. 266 optional props cannot be forwarded from a wrapper — VERIFIED
+### T8. 469 optional props could not be forwarded from a wrapper — DONE
 
 Under `exactOptionalPropertyTypes` (set repo-wide), an optional prop read from
 `$props()` has type `T | undefined`, and that cannot be assigned to a bare `T?`.
@@ -1478,15 +1479,85 @@ be typechecked, not rendered. The claim in that commit that "the rest of the
 codebase already writes `| undefined`; these were the holdouts" was wrong: the
 majority do not.
 
-The remedy is mechanical — append `| undefined` — and safe: a prop destructured
-with a default already treats explicit `undefined` as absent, and the component
-body already saw `T | undefined` under this flag. The work is the blast radius,
-not the difficulty.
+**The scope above was wrong, and the "mechanical" framing with it.** 266 counts
+`packages/core/src/lib` only. Repo-wide it was **446 across 122 files in eight
+packages**, four of which had zero correct ones — plus 23 more that no
+line-oriented scan could see, for 469 in total.
 
-Nothing catches a new bare optional prop today. A guard belongs with it, in the
-shape of `tests/repo/animation-policy.test.ts`: parse the `interface *Props`
-blocks and require `| undefined` on every optional member, with a REGISTER for
-anything deliberately narrower.
+Three things made it not mechanical:
+
+- **39 props are function-typed, and a naive append is a silent no-op.**
+  `onClick?: () => void` becomes `() => void | undefined` — a function
+  *returning* `void | undefined`. Valid TypeScript, passes the gate, forwards
+  nothing, because the prop's top-level type still has no `| undefined`. It must
+  be `(() => void) | undefined`. One regex over all 446 would have produced 39
+  of these looking done.
+- **Twelve interfaces could not be widened at all.** `BoxProps`, `PanelProps`,
+  `TextProps` and nine others extend `Omit<HTMLAttributes<…>, 'class'>`, and
+  `svelte/elements` declares `children?: Snippet` bare. A derived interface may
+  not widen an inherited member, so adding `| undefined` made all twelve stop
+  compiling. Excused by rule.
+- **13 `$bindable` props are exempt.** `bind:value={x}` requires the parent's
+  variable to match the prop type, so `| undefined` makes binding *stricter* for
+  every consumer. Registered with that reason rather than left unexplained —
+  `Command`'s changelog had counted "all seven" while silently leaving its
+  bindable `open` out.
+
+`ImageGallery`'s ten `?: never` discriminants became `?: undefined`: `never`
+refuses an explicit `undefined`, which is exactly what a forwarding wrapper
+has, so neither branch of that union could be forwarded in either direction.
+
+**The sweep missed 23 props in three shapes, and the guard found every one.**
+Five carried a trailing comment (`enableLightbox?: boolean; // Default: true`),
+which defeats a pattern anchoring `;` at end of line — and three of those five
+sat in a package already swept and reported green, because its fixture happened
+not to forward them. Thirteen were multi-line `Snippet<` … `>;` declarations.
+The rest surfaced only after two bugs in the guard itself were fixed.
+
+**The guard had those two bugs, and a third that mattered more.** `memberEnd`
+counted the `>` of an arrow as a closing bracket, so any snippet payload with a
+callback corrupted the depth; `acceptsUndefined` tested for the substring
+`undefined`, which `Snippet<[{ date: Date | undefined }]>` satisfies while the
+prop refuses it. And **the guard did not catch the naive function append** — the
+one mistake this entire item is about — because that `|` sits at depth zero and
+reads as a top-level alternative. All three found by mutating the source, none
+by reading the code.
+
+`tests/repo/optional-props.test.ts` reads the **props type**, not every optional
+property in a `.svelte` file: seven under `src` are not props at all (three
+`chat` presence `interface User`s, `ColumnDef`, a function-parameter type in
+`WebGLOverlay`), and requiring `| undefined` on those would state a
+props-forwarding rule about a data row. Eight `*PropForwarding.svelte` fixtures
+back it, one per package — each confirmed red before its package was swept.
+
+**Those fixtures declare their own props bare, deliberately**, and that is what
+makes them work: they simulate the naïve consumer. Every `tests` directory is
+therefore out of the sweep's scope. Sweeping them would have neutralised the
+only proof any of this works, with nothing going red.
+
+### T11. `FileUploadProps` is exported and does not match its component — VERIFIED
+
+`packages/core/src/lib/components/ui/file-upload/file-upload.types.ts:112`
+declares `FileUploadProps` with 10 optional members, and it is re-exported
+publicly from `ui/index.ts:197`. `FileUpload.svelte` declares its **own** local
+`interface Props`. So a consumer importing `FileUploadProps` to type a wrapper
+gets a shape that does not match the component it names.
+
+Found during T8 and deliberately left: half-fixing it (appending `| undefined`
+to a type nothing consumes) would have made the drift harder to see, not easier.
+Either the component adopts the exported type or the export goes.
+
+### T12. 472 optional properties in `.ts` files carry the same hazard — VERIFIED
+
+`packages/*/src/**/*.ts` has 472 optional properties without `| undefined`
+against 74 with. Most are state, action and config shapes rather than props, so
+they are not the wrapping defect T8 fixed — but they are the same
+`exactOptionalPropertyTypes` hazard one layer down, and the codebase already
+applies `| undefined` selectively there (`form.types.ts:430`). Recorded so the
+number is known rather than discovered.
+
+`carousel.types.ts` was swept as part of T8 because `CarouselProps` really is
+`Carousel`'s props type; leaving it would have left that component unwrappable.
 
 ### T9. `graphics`'s overlay subsystem has never been swept — VERIFIED
 
