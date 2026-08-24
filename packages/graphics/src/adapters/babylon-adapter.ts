@@ -39,7 +39,8 @@ export class BabylonAdapter {
   private scene: Nullable<Scene> = null;
   private camera: Nullable<ArcRotateCamera> = null;
   private meshes: Map<string, Mesh> = new Map();
-  private lights: Array<HemisphericLight | DirectionalLight | PointLight | SpotLight> = [];
+  private lights: Map<string, HemisphericLight | DirectionalLight | PointLight | SpotLight> =
+    new Map();
 
   /**
    * Initialize Babylon.js engine with WebGPU/WebGL fallback
@@ -242,7 +243,7 @@ export class BabylonAdapter {
     switch (config.type) {
       case 'ambient': {
         light = new HemisphericLight(
-          `ambient-${this.lights.length}`,
+          `ambient-${config.id}`,
           new BabylonVector3(0, 1, 0),
           this.scene
         );
@@ -256,7 +257,7 @@ export class BabylonAdapter {
       case 'directional': {
         const [x, y, z] = config.position;
         light = new DirectionalLight(
-          `directional-${this.lights.length}`,
+          `directional-${config.id}`,
           new BabylonVector3(x, y, z),
           this.scene
         );
@@ -270,7 +271,7 @@ export class BabylonAdapter {
       case 'point': {
         const [x, y, z] = config.position;
         light = new PointLight(
-          `point-${this.lights.length}`,
+          `point-${config.id}`,
           new BabylonVector3(x, y, z),
           this.scene
         );
@@ -288,7 +289,7 @@ export class BabylonAdapter {
         const [x, y, z] = config.position;
         const [dx, dy, dz] = config.direction;
         light = new SpotLight(
-          `spot-${this.lights.length}`,
+          `spot-${config.id}`,
           new BabylonVector3(x, y, z),
           new BabylonVector3(dx, dy, dz),
           config.angle,
@@ -303,17 +304,29 @@ export class BabylonAdapter {
       }
     }
 
-    this.lights.push(light);
+    this.lights.set(config.id, light);
+  }
+
+  /**
+   * Replace a light in place.
+   *
+   * Disposes and rebuilds rather than mutating: `LightConfig` is a
+   * discriminated union, so a change of `type` is a different Babylon class
+   * entirely, and rebuilding is the one path that handles every case.
+   */
+  updateLight(id: string, config: LightConfig): void {
+    this.removeLight(id);
+    this.addLight(config);
   }
 
   /**
    * Remove light from scene
    */
-  removeLight(index: number): void {
-    const light = this.lights[index];
+  removeLight(id: string): void {
+    const light = this.lights.get(id);
     if (light) {
       light.dispose();
-      this.lights.splice(index, 1);
+      this.lights.delete(id);
     }
   }
 
@@ -343,7 +356,7 @@ export class BabylonAdapter {
 
     // Dispose lights
     this.lights.forEach((light) => light.dispose());
-    this.lights = [];
+    this.lights.clear();
 
     // Dispose scene and engine
     this.scene?.dispose();

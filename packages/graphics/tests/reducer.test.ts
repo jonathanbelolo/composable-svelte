@@ -212,6 +212,7 @@ describe('Graphics Reducer', () => {
         {
           type: 'addLight',
           light: {
+            id: 'key',
             type: 'directional',
             position: [1, 1, 1],
             intensity: 0.8,
@@ -234,7 +235,7 @@ describe('Graphics Reducer', () => {
         dependencies: {}
       });
 
-      await store.send({ type: 'removeLight', index: 0 }, (state) => {
+      await store.send({ type: 'removeLight', id: 'ambient-default' }, (state) => {
         expect(state.lights).toHaveLength(0);
       });
     });
@@ -273,7 +274,7 @@ describe('Graphics Reducer', () => {
         }
       ];
       initialState.lights = [
-        { type: 'directional', position: [1, 1, 1], intensity: 1, color: '#ffffff' }
+        { id: 'key', type: 'directional', position: [1, 1, 1], intensity: 1, color: '#ffffff' }
       ];
 
       const store = new TestStore({

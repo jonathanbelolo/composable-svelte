@@ -99,14 +99,29 @@ export interface CustomShaderMaterial {
 
 export type LightType = 'directional' | 'point' | 'spot' | 'ambient';
 
+/**
+ * Every light carries an `id`, as every mesh does.
+ *
+ * Without one a light could only be named by its position in the array, and
+ * that is what made removal wrong: `<Light>` captured its index at mount and
+ * the reducer filtered by index, so with the default ambient light in slot 0,
+ * unmounting three children removed index 1, then index 2 of the already
+ * shifted array. It also forced the scene sync to clear and re-add *every*
+ * light on any change, because it had no way to say which one moved.
+ *
+ * `<Light>` supplies one automatically via `$props.id()` when you do not, so
+ * existing markup is unaffected.
+ */
 export type LightConfig =
   | {
+      id: string;
       type: 'directional';
       position: Vector3;
       intensity: number;
       color?: Color;
     }
   | {
+      id: string;
       type: 'point';
       position: Vector3;
       intensity: number;
@@ -114,6 +129,7 @@ export type LightConfig =
       color?: Color;
     }
   | {
+      id: string;
       type: 'spot';
       position: Vector3;
       direction: Vector3;
@@ -122,6 +138,7 @@ export type LightConfig =
       color?: Color;
     }
   | {
+      id: string;
       type: 'ambient';
       intensity: number;
       color?: Color;
@@ -230,8 +247,8 @@ export type GraphicsAction =
 
   // Light actions
   | { type: 'addLight'; light: LightConfig }
-  | { type: 'removeLight'; index: number }
-  | { type: 'updateLight'; index: number; light: Partial<LightConfig> }
+  | { type: 'removeLight'; id: string }
+  | { type: 'updateLight'; id: string; light: LightConfig }
 
   // Animation actions
   | { type: 'startAnimation'; animation: AnimationConfig }

@@ -32,7 +32,8 @@ export interface SceneAdapter {
   updateMesh(id: string, updates: Partial<MeshConfig>): void;
   removeMesh(id: string): void;
   addLight(config: LightConfig): void;
-  removeLight(index: number): void;
+  updateLight(id: string, config: LightConfig): void;
+  removeLight(id: string): void;
   setBackgroundColor(color: string): void;
 }
 
@@ -110,12 +111,25 @@ export function syncScene(
   }
 
   if (previous.lights !== state.lights) {
-    // Clear and re-add all lights. Coarse, and the reason a per-frame light
-    // change would thrash.
-    for (let i = previous.lights.length - 1; i >= 0; i -= 1) {
-      adapter.removeLight(i);
+    // Per light, exactly as meshes above. This used to clear and re-add *every*
+    // light on any change — a full teardown for one changed intensity, which
+    // became a per-frame teardown the moment `<Light>` was made reactive. It
+    // could not do better: lights had no id to say which one had moved.
+    const prevLights = new Map(previous.lights.map((l) => [l.id, l]));
+    const currLights = new Map(state.lights.map((l) => [l.id, l]));
+
+    for (const [id] of prevLights) {
+      if (!currLights.has(id)) adapter.removeLight(id);
     }
-    state.lights.forEach((light) => adapter.addLight(light));
+
+    for (const [id, light] of currLights) {
+      const prev = prevLights.get(id);
+      if (!prev) {
+        adapter.addLight(light);
+      } else if (prev !== light) {
+        adapter.updateLight(id, light);
+      }
+    }
 
     next.lights = state.lights;
   }

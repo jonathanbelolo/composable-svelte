@@ -16,7 +16,7 @@ import { graphicsReducer } from '../src/core/reducer';
 import { createInitialGraphicsState } from '../src/core/initial-state';
 import { initialBaseline, syncScene } from '../src/core/scene-sync';
 import type { SceneAdapter, SceneBaseline } from '../src/core/scene-sync';
-import type { GraphicsAction, GraphicsState, MeshConfig } from '../src/core/types';
+import type { GraphicsAction, GraphicsState, LightConfig, MeshConfig } from '../src/core/types';
 
 /** Records what the sync asked the renderer to do, in order. */
 function spyAdapter() {
@@ -27,7 +27,8 @@ function spyAdapter() {
     updateMesh: (id, u) => calls.push(`updateMesh:${id}@${(u.position ?? []).join(',')}`),
     removeMesh: (id) => calls.push(`removeMesh:${id}`),
     addLight: (l) => calls.push(`addLight:${l.type}@${l.intensity}`),
-    removeLight: (i) => calls.push(`removeLight:${i}`),
+    updateLight: (id, l) => calls.push(`updateLight:${id}@${l.intensity}`),
+    removeLight: (id) => calls.push(`removeLight:${id}`),
     setBackgroundColor: (c) => calls.push(`setBackgroundColor:${c}`)
   };
   return { adapter, calls };
@@ -109,19 +110,22 @@ describe('syncScene', () => {
     expect(calls).toEqual([]);
   });
 
-  it('re-adds all lights when the light set changes', () => {
+  it('adds a new light without disturbing the existing ones', () => {
+    // This used to assert the opposite — `removeLight:0`, `addLight:ambient`,
+    // `addLight:point` — because the sync cleared and re-added every light on
+    // any change. It pinned the thrash. Lights have ids now, so only the new
+    // one is touched.
     const { store, calls, sync } = harness();
     sync(); // the default state ships one ambient light
     calls.length = 0;
 
     store.dispatch({
       type: 'addLight',
-      light: { type: 'point', intensity: 1, position: [0, 1, 0] }
+      light: { id: 'key', type: 'point', intensity: 1, position: [0, 1, 0] }
     });
     sync();
 
-    // Coarse by design today: clear and re-add everything.
-    expect(calls).toEqual(['removeLight:0', 'addLight:ambient@0.5', 'addLight:point@1']);
+    expect(calls).toEqual(['addLight:point@1']);
   });
 });
 
@@ -286,6 +290,74 @@ describe('the first sync', () => {
 		sync();
 
 		expect(calls.filter((c) => c.startsWith('updateCamera:'))).toEqual([]);
+	});
+});
+
+describe('lights have identity', () => {
+	const light = (id: string, intensity: number): LightConfig => ({
+		id,
+		type: 'point',
+		position: [0, 1, 0],
+		intensity
+	});
+
+	it('removing the first of three leaves the other two', () => {
+		// `removeLight` filtered by array index, and `<Light>` captured its index
+		// at mount. With the default state shipping one ambient light, three
+		// `<Light>` children take indices 1-3 — so unmounting them removed index
+		// 1, then index 2 of the already-shifted array, i.e. the wrong lights.
+		// Nothing gave a light an identity to remove it by.
+		const { store, sync } = harness();
+		store.dispatch({ type: 'addLight', light: light('a', 1) });
+		store.dispatch({ type: 'addLight', light: light('b', 2) });
+		store.dispatch({ type: 'addLight', light: light('c', 3) });
+		sync();
+
+		store.dispatch({ type: 'removeLight', id: 'a' });
+
+		expect(store.state.lights.map((l) => l.id)).toEqual(['ambient-default', 'b', 'c']);
+	});
+
+	it('updates one light without touching the others', () => {
+		// The sync cleared and re-added *every* light on any change, so making
+		// `<Light>` reactive without per-item diffing would turn a single prop
+		// tweak into a full teardown.
+		const { store, calls, sync } = harness();
+		store.dispatch({ type: 'addLight', light: light('a', 1) });
+		store.dispatch({ type: 'addLight', light: light('b', 2) });
+		sync();
+		calls.length = 0;
+
+		store.dispatch({ type: 'updateLight', id: 'b', light: light('b', 9) });
+		sync();
+
+		expect(calls).toEqual(['updateLight:b@9']);
+	});
+
+	it('adds and removes only what changed', () => {
+		const { store, calls, sync } = harness();
+		store.dispatch({ type: 'addLight', light: light('a', 1) });
+		sync();
+		calls.length = 0;
+
+		store.dispatch({ type: 'addLight', light: light('b', 2) });
+		sync();
+		expect(calls).toEqual(['addLight:point@2']);
+
+		calls.length = 0;
+		store.dispatch({ type: 'removeLight', id: 'a' });
+		sync();
+		expect(calls).toEqual(['removeLight:a']);
+	});
+
+	it('does nothing when no light changed', () => {
+		const { store, calls, sync } = harness();
+		store.dispatch({ type: 'addLight', light: light('a', 1) });
+		sync();
+		calls.length = 0;
+
+		sync();
+		expect(calls).toEqual([]);
 	});
 });
 

@@ -56,6 +56,9 @@ export function createInitialGraphicsState(
     // Lights (default ambient light)
     lights: [
       {
+        // Named, so a consumer can remove or update the default light rather
+        // than only being able to add alongside it.
+        id: 'ambient-default',
         type: 'ambient',
         intensity: 0.5,
         color: '#ffffff'

@@ -247,19 +247,33 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
       return [
         {
           ...state,
-          lights: state.lights.filter((_, i) => i !== action.index)
+          lights: state.lights.filter((light) => light.id !== action.id)
         },
         Effect.none()
       ];
     }
 
     case 'updateLight': {
-      // Replace the entire light config (can't spread partial updates across discriminated union)
+      const existing = state.lights.find((light) => light.id === action.id);
+      if (!existing) return [state, Effect.none()];
+
+      // Idempotent by value, for the same reason `updateCamera` and
+      // `updateMesh` are: `Light.svelte` dispatches this from an `$effect` that
+      // reads store state via `dispatch`, so returning a fresh object when
+      // nothing changed re-triggers that effect forever. Without this guard the
+      // component hits `effect_update_depth_exceeded` on mount — which is
+      // exactly what happened when the effect was added.
+      if (sameConfig(existing, action.light)) {
+        return [state, Effect.none()];
+      }
+
+      // Replace the entire config: a partial cannot be spread across a
+      // discriminated union without losing the discriminant.
       return [
         {
           ...state,
-          lights: state.lights.map((light, i) =>
-            i === action.index ? (action.light as LightConfig) : light
+          lights: state.lights.map((light) =>
+            light.id === action.id ? action.light : light
           )
         },
         Effect.none()
