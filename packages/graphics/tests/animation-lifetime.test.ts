@@ -146,3 +146,173 @@ describe('tick does not manufacture work', () => {
 		expect(store.state.animations[0]!.startTime).toBe(start + 100);
 	});
 });
+
+describe('two animations on one property', () => {
+	// Last-writer-wins is the documented behaviour here: `property` is one of
+	// three, `tick` accumulates per mesh, and two animations on the same one
+	// necessarily collide. What must not happen is the two alternating.
+
+	it('does not alternate when one of them holds the mesh where it is', () => {
+		// This is the shape that exposes it. The guard compares the interpolated
+		// value against the mesh as it stands *before* the tick — so the animation
+		// whose value equals that is skipped as a no-op, and the other one writes
+		// instead. Next frame the roles swap. The mesh strobes at half the frame
+		// rate: 1.9, 1, 3.7, 1, 5.5, 1.
+		const store = makeStore();
+		store.dispatch({ type: 'addMesh', mesh: cube({ position: [1, 1, 1] }) });
+
+		for (const [id, to] of [['sweep', 10], ['hold', 1]] as const) {
+			store.dispatch({
+				type: 'startAnimation',
+				animation: {
+					id,
+					targetId: 'cube',
+					property: 'position',
+					from: [1, 1, 1],
+					to: [to, 1, 1],
+					duration: 1000
+				}
+			});
+		}
+
+		const start = Math.max(...store.state.animations.map((a) => a.startTime));
+		const seen: number[] = [];
+		for (const offset of [100, 200, 300, 400, 500, 600]) {
+			store.dispatch({ type: 'tick', time: start + offset });
+			seen.push(store.state.meshes[0]!.position[0]);
+		}
+
+		// `hold` is dispatched last, so it wins every frame and the mesh does not
+		// move at all.
+		expect(new Set(seen), `position strobed: ${seen.join(' ')}`).toEqual(new Set([1]));
+	});
+
+	it('still lets the last one drive when both are moving', () => {
+		// The paired half: the guard must not become a no-op. `near` is last, so
+		// the mesh tracks it — 0.5, 1.0, 1.5 — rather than `far`'s curve.
+		const store = makeStore();
+		store.dispatch({ type: 'addMesh', mesh: cube({ position: [0, 0, 0] }) });
+
+		for (const [id, to] of [['far', 10], ['near', 5]] as const) {
+			store.dispatch({
+				type: 'startAnimation',
+				animation: {
+					id,
+					targetId: 'cube',
+					property: 'position',
+					from: [0, 0, 0],
+					to: [to, 0, 0],
+					duration: 1000
+				}
+			});
+		}
+
+		const start = Math.max(...store.state.animations.map((a) => a.startTime));
+		store.dispatch({ type: 'tick', time: start + 600 });
+
+		expect(store.state.meshes[0]!.position[0], 'the last writer did not win').toBeCloseTo(3);
+	});
+});
+
+describe('animations are keyed by id, like meshes and lights', () => {
+	it('refuses a second animation with an id already running', () => {
+		// `addMesh` and `addLight` both reject a duplicate id under "ids must be
+		// unique or they are not identity". Animations are the third keyed
+		// collection and had no such guard — and `stopAnimation` filters by id,
+		// so stopping one of a duplicate pair stopped both.
+		const { store } = animated();
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+		store.dispatch({
+			type: 'startAnimation',
+			animation: {
+				id: 'spin',
+				targetId: 'cube',
+				property: 'scale',
+				from: [1, 1, 1],
+				to: [2, 2, 2],
+				duration: 500
+			}
+		});
+
+		expect(store.state.animations).toHaveLength(1);
+		expect(store.state.animations[0]!.config.property, 'the original was replaced').toBe(
+			'position'
+		);
+		expect(warn).toHaveBeenCalled();
+	});
+
+	it('a zero-duration loop does not spin forever', () => {
+		// `duration <= 0` completes immediately, so looping it means completing
+		// on every frame for ever — a rAF chain that can never produce a
+		// different pixel. The non-looping case was fixed; this one still spun.
+		const store = makeStore();
+		store.dispatch({ type: 'addMesh', mesh: cube() });
+		store.dispatch({
+			type: 'startAnimation',
+			animation: {
+				id: 'instant',
+				targetId: 'cube',
+				property: 'position',
+				from: [0, 0, 0],
+				to: [10, 0, 0],
+				duration: 0,
+				loop: true
+			}
+		});
+		const start = store.state.animations[0]!.startTime;
+
+		store.dispatch({ type: 'tick', time: start });
+
+		expect(store.state.meshes[0]!.position).toEqual([10, 0, 0]);
+		expect(store.state.animations[0]!.isPlaying, 'it never stopped').toBe(false);
+	});
+});
+
+describe('one animation frame loop, not one per animation', () => {
+	/** Ticks dispatched in a fixed window with `count` animations running. */
+	async function ticksFor(count: number): Promise<number> {
+		const store = makeStore();
+		store.dispatch({ type: 'addMesh', mesh: cube() });
+
+		let ticks = 0;
+		const unsubscribe = store.subscribeToActions?.((action) => {
+			if (action.type === 'tick') ticks++;
+		});
+
+		for (let i = 0; i < count; i++) {
+			store.dispatch({
+				type: 'startAnimation',
+				animation: {
+					id: `anim-${i}`,
+					targetId: 'cube',
+					property: 'position',
+					from: [0, 0, 0],
+					to: [10, 0, 0],
+					duration: 5000,
+					loop: true
+				}
+			});
+		}
+
+		await new Promise((resolve) => setTimeout(resolve, 80));
+		store.dispatch({ type: 'clearScene' });
+		unsubscribe?.();
+		return ticks;
+	}
+
+	it('runs at the same rate with five animations as with one', async () => {
+		// `startAnimation` scheduled a rAF and every `tick` scheduled another
+		// whenever any animation was playing, so the chains never merged. The
+		// frame rate is the invariant, not the raw count — asserting a fixed
+		// number would pin whatever speed jsdom happens to run rAF at.
+		const one = await ticksFor(1);
+		const five = await ticksFor(5);
+
+		expect(one, 'no ticks at all — the loop never started').toBeGreaterThan(0);
+		expect(
+			five,
+			`five animations produced ${five} ticks where one produced ${one}`
+		).toBeLessThan(one * 2);
+	});
+});

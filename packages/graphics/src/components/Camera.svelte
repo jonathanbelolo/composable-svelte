@@ -43,7 +43,7 @@ let {
 // `fov: undefined` — and the reducer merges with `{ ...state.camera,
 // ...action.camera }`, where an explicit `undefined` overwrites. Mounting
 // `<Camera {store} {position} {lookAt} />` used to wipe the configured fov,
-// near and far, and babylon-adapter.ts:136,141,144 guard on `!== undefined`,
+// near and far, and `updateCamera` guards each of them on `!== undefined`,
 // so the adapter then silently never applied any of them.
 const cameraConfig = $derived({
   type,

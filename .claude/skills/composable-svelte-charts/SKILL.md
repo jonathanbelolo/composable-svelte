@@ -984,7 +984,7 @@ await store.send({ type: 'clearSelection' }, (state) => {
 
 **When to Use Each Package**:
 - **charts**: 2D data visualization, interactive charts
-- **graphics**: 3D scenes, WebGPU/WebGL (see composable-svelte-graphics)
+- **graphics**: 3D scenes, WebGL (see composable-svelte-graphics)
 - **maps**: Geospatial data (see composable-svelte-maps)
 - **code**: Code editors, media players (see composable-svelte-code)
 

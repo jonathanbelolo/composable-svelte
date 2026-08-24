@@ -133,10 +133,8 @@ describe('lights are updated, not reconstructed', () => {
     expect(h.scene.lights[0]!.getClassName()).toBe('DirectionalLight');
   });
 
-  it('does not mistake a spot light for the point light it extends', () => {
-    // `SpotLight extends PointLight`, so an `instanceof PointLight` test put
-    // first would update a spot light as a point light and silently drop its
-    // angle and direction.
+  it('updates a spot light in place when only its angle changed', () => {
+    // A type-preserving change must not rebuild.
     h.adapter.addLight({ id: 's', type: 'spot', position: [0, 5, 0], direction: [0, -1, 0], angle: 0.5, intensity: 1 });
     const before = h.scene.lights[0];
     h.adapter.updateLight('s', { id: 's', type: 'spot', position: [0, 5, 0], direction: [0, -1, 0], angle: 1.2, intensity: 1 });
@@ -184,4 +182,68 @@ describe('the material is a function of the config, not of history', () => {
     expect(m.wireframe).toBe(false);
     expect(m.alpha).toBe(1);
   });
+});
+
+describe('resize recomputes only what the viewport decides', () => {
+	let h: ReturnType<typeof headlessAdapter>;
+	beforeEach(() => { h = headlessAdapter(); });
+	afterEach(() => { h.adapter.dispose(); h.engine.dispose(); });
+
+	it('leaves a camera the user has moved where they put it', () => {
+		// The paired half of the orthographic-bounds test above, and the reason
+		// it is needed: `initialize` hands the `ArcRotateCamera` to the user via
+		// `attachControl`, so the store config is a starting point, not a leash.
+		// Re-applying the whole config on resize snapped the camera back — and
+		// `resize` fires continuously while a window is dragged, and on every
+		// mobile orientation change.
+		h.adapter.updateCamera({ type: 'perspective', position: [0, 5, 10], lookAt: [0, 0, 0] });
+		const camera = h.scene.activeCamera as import('@babylonjs/core').ArcRotateCamera;
+
+		camera.alpha = 2.77;
+		camera.beta = 0.9;
+		camera.radius = 25;
+		h.scene.render();
+		const moved = camera.position.clone();
+
+		window.dispatchEvent(new Event('resize'));
+		h.scene.render();
+
+		expect(camera.radius, 'the resize reset the camera the user moved').toBeCloseTo(25);
+		expect(camera.position.x).toBeCloseTo(moved.x);
+		expect(camera.position.z).toBeCloseTo(moved.z);
+	});
+});
+
+describe('a light is the same whether it was added or updated', () => {
+	let h: ReturnType<typeof headlessAdapter>;
+	beforeEach(() => { h = headlessAdapter(); });
+	afterEach(() => { h.adapter.dispose(); h.engine.dispose(); });
+
+	it('gives radius: 0 the same meaning on both paths', () => {
+		// `addLight` used `if (config.radius)`, which skips 0 and leaves Babylon's
+		// infinite default; `updateLight` used `?? Number.MAX_VALUE`, which
+		// honours it. The same config produced a light that lit everything or
+		// nothing, depending only on which path it arrived by.
+		h.adapter.addLight({ id: 'p', type: 'point', position: [0, 1, 0], intensity: 1, radius: 0 });
+		const added = (h.scene.lights[0] as import('@babylonjs/core').PointLight).range;
+
+		h.adapter.updateLight('p', {
+			id: 'p', type: 'point', position: [0, 1, 0], intensity: 1, radius: 0
+		});
+		const updated = (h.scene.lights[0] as import('@babylonjs/core').PointLight).range;
+
+		expect(updated).toBe(added);
+	});
+
+	it('rebuilds a spot light back into a point light', () => {
+		// The paired half: a change of `type` is a different Babylon class, and
+		// updating it in place would leave a cone where the config asked for an
+		// omnidirectional light.
+		h.adapter.addLight({
+			id: 'l', type: 'spot', position: [0, 5, 0], direction: [0, -1, 0], angle: 0.5, intensity: 1
+		});
+		h.adapter.updateLight('l', { id: 'l', type: 'point', position: [0, 5, 0], intensity: 1 });
+
+		expect(h.scene.lights[0]!.getClassName()).toBe('PointLight');
+	});
 });

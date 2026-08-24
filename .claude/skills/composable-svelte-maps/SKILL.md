@@ -1132,5 +1132,5 @@ await store.send({
 **When to Use Each Package**:
 - **maps**: Geospatial data, interactive maps, markers, GeoJSON
 - **charts**: 2D data visualization (see composable-svelte-charts)
-- **graphics**: 3D scenes, WebGPU/WebGL (see composable-svelte-graphics)
+- **graphics**: 3D scenes, WebGL (see composable-svelte-graphics)
 - **code**: Code editors, media players (see composable-svelte-code)

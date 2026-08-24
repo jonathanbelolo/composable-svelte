@@ -1,6 +1,6 @@
 # @composable-svelte/graphics
 
-State-driven WebGL/WebGPU graphics package for Composable Svelte.
+State-driven WebGL graphics package for Composable Svelte.
 
 ## Features
 
@@ -194,7 +194,6 @@ type GraphicsAction =
   <Light {store} type="directional" position={[5, 10, 7.5]} intensity={1} />
 
   <Mesh
-   {store}
     {store}
     id="cube-1"
     geometry={{ type: 'box', size: 2 }}

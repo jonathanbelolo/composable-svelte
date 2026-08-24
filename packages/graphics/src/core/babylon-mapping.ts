@@ -66,11 +66,15 @@ function clamp01(value: number): number {
 /**
  * What a material with no `metallic` / `roughness` behaves as.
  *
- * Both are exactly Babylon's own defaults for the fields they drive —
- * `specularColor` white and `specularPower` 64 — so omitting either field
- * leaves the material looking precisely as `StandardMaterial` would on its own.
- * The skill file documented these two numbers as the defaults while the code
- * had none; now they are real.
+ * Omitting **both** leaves the material looking precisely as
+ * `StandardMaterial` would on its own: `specularColor` white and
+ * `specularPower` 64, Babylon's own values.
+ *
+ * Not "either": `roughness` drives brightness as well as tightness, so omitting
+ * only `metallic` still gives Babylon's defaults, while omitting only
+ * `roughness` does not — `specularFor(grey, 0, 0.9)` is a dimmed grey, which is
+ * the point of the mapping. The skill file documented these two numbers as
+ * defaults while the code had none; now they are real.
  */
 export const DEFAULT_METALLIC = 0;
 export const DEFAULT_ROUGHNESS = 0.5;
@@ -81,6 +85,19 @@ export const DEFAULT_ROUGHNESS = 0.5;
  * reads as unlit rather than as matte.
  */
 const MATTE_FLOOR = 0.1;
+
+/**
+ * The dimmest a tinted highlight may get, roughly a dielectric's Fresnel
+ * reflectance at normal incidence.
+ *
+ * Without it, tinting toward the diffuse colour merely *moves* the
+ * black-specular problem rather than removing it: a near-black surface at
+ * `metallic: 1` gets a near-black highlight, and Babylon's shader multiplies,
+ * so `specularPower` again cannot change a pixel. Polished black metal is an
+ * ordinary request — gunmetal, black chrome, dark car paint — and it rendered
+ * as flat matte black, which is the very defect this mapping exists to fix.
+ */
+const MIN_SPECULAR = 0.05;
 
 /**
  * The `specularColor` and `specularPower` for a material config.
@@ -107,8 +124,15 @@ const MATTE_FLOOR = 0.1;
  *
  * `metallic` **tints** the highlight and never extinguishes it. Dielectrics
  * reflect white, metals reflect their own colour — so this interpolates from
- * white to the diffuse colour. That is the one real difference between a metal
- * and a non-metal that a specular/glossiness model can express.
+ * white to the diffuse colour, with a floor (`MIN_SPECULAR`) so that a very
+ * dark metal still has a highlight to sharpen. That is the one real difference
+ * between a metal and a non-metal that a specular/glossiness model can express.
+ *
+ * How visible `metallic` is therefore depends on the surface colour: on a white
+ * or near-white surface it is a no-op, because white tinted toward white is
+ * white. That is correct — a white metal and a white dielectric really do
+ * reflect the same colour — but it means `metallic` alone does not distinguish
+ * chrome from white plastic. `roughness` is what separates those.
  *
  * `roughness` sets how tight the highlight is (`specularPower`) and, past the
  * midpoint, how bright. Breadth alone is not enough: a fully rough surface at
@@ -131,7 +155,7 @@ export function specularFor(
   // Full strength up to the midpoint, falling to MATTE_FLOOR at fully rough.
   const intensity = r <= 0.5 ? 1 : 1 - ((r - 0.5) / 0.5) * (1 - MATTE_FLOOR);
 
-  const tint = (channel: number): number => (1 - m) * 1 + m * channel;
+  const tint = (channel: number): number => Math.max((1 - m) + m * channel, MIN_SPECULAR);
 
   return {
     color: [

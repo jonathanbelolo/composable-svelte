@@ -112,7 +112,7 @@ function rotateShapes() {
 5. Cleans up engine on unmount — including when unmounted mid-initialisation
 
 **Usage**:
-```typescript
+```svelte
 <Scene {store} height="500px">
   <!-- Children render here -->
 </Scene>
@@ -163,7 +163,7 @@ $store.renderer.error          // string | null
 - Does not render visual output (state-only component)
 
 **Usage**:
-```typescript
+```svelte
 <!-- Perspective camera (default) -->
 <Camera
   {store}
@@ -201,7 +201,7 @@ outside the component, and make it unique: a second `<Light>` claiming an id
 that is already taken warns and renders nothing rather than fighting the first
 one for it.
 
-```typescript
+```svelte
 <Light {store} id="key" type="directional" position={[5, 10, 7]} intensity={1.2} />
 ```
 
@@ -216,10 +216,10 @@ Uniform light from all directions (no position/direction).
 **Props**:
 - `type: 'ambient'`
 - `intensity: number` - Light intensity (0-1 typical, can exceed)
-- `color: string` - Light color (hex or CSS color, default: '#ffffff')
+- `color: string` - Light color, **6-digit hex only** (`'#ffffff'`, default)
 
 **Usage**:
-```typescript
+```svelte
 <Light {store} type="ambient" intensity={0.4} color="#ffffff" />
 ```
 
@@ -233,7 +233,7 @@ Parallel rays from a specific direction (like sunlight).
 - `color: string` - Light color (optional)
 
 **Usage**:
-```typescript
+```svelte
 <Light {store} type="directional" position={[5, 10, 7.5]} intensity={1.2} />
 ```
 
@@ -248,7 +248,7 @@ Emits light in all directions from a point (like a light bulb).
 - `color: string` - Light color (optional)
 
 **Usage**:
-```typescript
+```svelte
 <Light {store} type="point" position={[0, 3, 0]} intensity={1.5} radius={10} />
 ```
 
@@ -264,7 +264,7 @@ Cone-shaped light (like a flashlight).
 - `color: string` - Light color (optional)
 
 **Usage**:
-```typescript
+```svelte
 <Light
   {store}
   type="spot"
@@ -277,7 +277,7 @@ Cone-shaped light (like a flashlight).
 
 **Common Lighting Setups**:
 
-```typescript
+```svelte
 <!-- Three-point lighting (photography standard) -->
 <Light {store} type="ambient" intensity={0.3} />
 <Light {store} type="directional" position={[5, 5, 5]} intensity={1.0} />     <!-- Key -->
@@ -316,7 +316,7 @@ Cone-shaped light (like a flashlight).
 - `onDestroy`: Dispatches `removeMesh` action
 
 **Usage**:
-```typescript
+```svelte
 <Mesh
   {store}
   id="my-cube"
@@ -341,7 +341,7 @@ Rectangular prism.
 ```
 
 **Example**:
-```typescript
+```svelte
 <Mesh
   {store}
   id="cube"
@@ -364,7 +364,7 @@ Spherical geometry.
 ```
 
 **Example**:
-```typescript
+```svelte
 <Mesh
   {store}
   id="ball"
@@ -392,7 +392,7 @@ Cylindrical geometry.
 ```
 
 **Example**:
-```typescript
+```svelte
 <Mesh
   {store}
   id="pillar"
@@ -416,7 +416,7 @@ Donut-shaped geometry.
 ```
 
 **Example**:
-```typescript
+```svelte
 <Mesh
   {store}
   id="ring"
@@ -439,7 +439,7 @@ Flat rectangular surface.
 ```
 
 **Example**:
-```typescript
+```svelte
 <!-- Ground plane (rotated to horizontal) -->
 <Mesh
   {store}
@@ -460,7 +460,7 @@ Flat rectangular surface.
 **MaterialConfig Interface**:
 ```typescript
 interface MaterialConfig {
-  color: string;           // Hex or CSS color
+  color: string;           // 6-digit hex, e.g. '#ff6b6b' — see below
   metallic?: number;       // 0-1 (default: 0 — a white, untinted highlight)
   roughness?: number;      // 0-1 (default: 0.5 — Babylon's own specularPower)
   emissive?: string;       // Emissive color (optional)
@@ -468,6 +468,11 @@ interface MaterialConfig {
   wireframe?: boolean;     // Wireframe mode (default: false)
 }
 ```
+
+**Colours are 6-digit hex, and only that.** `'#ff6b6b'` and `'ff6b6b'` both
+parse; `'red'`, `'rgb(255,0,0)'` and the 3-digit `'#f00'` do not, and render as
+white with a warning. This file used to say "Hex or CSS color", which was never
+true of the parser.
 
 **Not PBR.** This section used to say "Materials use Physically Based Rendering
 (PBR) with metallic/roughness workflow". They do not: the adapter builds a
@@ -481,7 +486,14 @@ way you expect — a high `roughness` looks rough:
 - `metallic` **tints** the highlight, interpolating `specularColor` from white
   toward the surface colour. Dielectrics reflect white; metals reflect their own
   colour, which is the one real difference a specular/glossiness model can
-  express. It never extinguishes the highlight.
+  express. A floor keeps it from reaching black, so a very dark metal still has
+  a highlight for `roughness` to sharpen.
+
+  How visible `metallic` is depends on the surface colour: on a white or
+  near-white surface it does nothing, because white tinted toward white is
+  white. That is correct — a white metal and white plastic really do reflect the
+  same colour — but it means `metallic` alone does not separate the `chrome`
+  preset from white plastic. `roughness` is what separates those.
 - `roughness` sets how tight the highlight is (`specularPower`) and, past the
   midpoint, how bright. Breadth alone is not enough — a fully rough surface at
   full strength reads as wet rather than matte. Below the midpoint it is at full
@@ -505,7 +517,8 @@ a gap rather than claimed.
 
 ### Metallic (0-1)
 Controls how metal-like the surface appears — specifically, how much the
-highlight takes on the surface's own colour.
+highlight takes on the surface's own colour. It has the most effect on a
+saturated or dark surface and none at all on a white one.
 
 - `0.0`: Non-metallic (plastic, rubber, wood, stone) — a white highlight
 - `0.5`: Semi-metallic (painted metal, worn surfaces)
@@ -577,7 +590,7 @@ const rubber = { color: '#1a1a1a', metallic: 0.0, roughness: 1.0 };
 
 Full scene with all geometry types:
 
-```typescript
+```svelte
 <script lang="ts">
 import { createStore } from '@composable-svelte/core';
 import {
@@ -758,7 +771,7 @@ type GraphicsAction =
   | { type: 'clearScene' };
 ```
 
-**Lights are addressed by `id`, not by index.** `removeLight` and `updateLight
+**Lights are addressed by `id`, not by index.** `removeLight` and `updateLight`
 took an `index` until recently, and `LightConfig` had no identity at all — so a
 light could only be named by its position in the array. That is what made
 removal wrong: `<Light>` captured `state.lights.length - 1` at mount and removed
@@ -833,7 +846,7 @@ geometry={{ type: 'sphere', radius: 1, segments: 64 }}
 Each mesh = 1 draw call. Minimize meshes for better performance.
 
 **Good**:
-```typescript
+```svelte
 // 3 meshes = 3 draw calls
 <Mesh id="obj1" ... />
 <Mesh id="obj2" ... />
@@ -841,7 +854,7 @@ Each mesh = 1 draw call. Minimize meshes for better performance.
 ```
 
 **Bad**:
-```typescript
+```svelte
 // 1000 meshes = 1000 draw calls (very slow!)
 {#each items as item}
   <Mesh id={item.id} ... />
@@ -852,7 +865,15 @@ Each mesh = 1 draw call. Minimize meshes for better performance.
 
 ### Update Frequency
 
-Scene sync uses deep comparison (JSON.stringify). Avoid updating mesh props every frame.
+Scene sync diffs by **object identity**, per mesh and per light, keyed by `id`.
+It used to stringify, which is what made per-frame updates expensive; identity
+is O(1) and the reducer guarantees it (a pure reducer over `$state.raw` returns
+new objects for what changed and the same objects for what did not).
+
+Updating a mesh prop every frame is still work — it reaches the renderer, which
+is the point — but it is no longer *quadratic* work, and a reducer arm that
+returns an unchanged value now costs nothing at all. Animations are the
+supported way to drive per-frame change; see `startAnimation`.
 
 **Good**:
 ```typescript
@@ -904,7 +925,7 @@ function zoomOut() {
   cameraDistance = Math.min(20, cameraDistance + 2);
 }
 
-<Camera position={[0, 4, cameraDistance]} lookAt={[0, 0, 0]} />
+<Camera {store} position={[0, 4, cameraDistance]} lookAt={[0, 0, 0]} />
 <button onclick={zoomIn}>Zoom In</button>
 <button onclick={zoomOut}>Zoom Out</button>
 ```
@@ -918,14 +939,14 @@ function adjustBrightness(delta: number) {
   lightIntensity = Math.max(0, Math.min(2, lightIntensity + delta));
 }
 
-<Light type="directional" position={[5, 10, 7.5]} intensity={lightIntensity} />
+<Light {store} type="directional" position={[5, 10, 7.5]} intensity={lightIntensity} />
 <button onclick={() => adjustBrightness(0.2)}>Brighter</button>
 <button onclick={() => adjustBrightness(-0.2)}>Dimmer</button>
 ```
 
 ### Toggle Visibility
 
-```typescript
+```svelte
 let showObject = $state(true);
 
 // Option 1: Conditional rendering
@@ -948,7 +969,7 @@ let showObject = $state(true);
 These features are planned but not yet implemented:
 
 ### Custom Shaders
-```typescript
+```svelte
 // Future API
 <Mesh
   id="custom"
@@ -964,7 +985,7 @@ These features are planned but not yet implemented:
 ```
 
 ### Textures
-```typescript
+```svelte
 // Future API
 <Mesh
   id="textured"
@@ -978,10 +999,39 @@ These features are planned but not yet implemented:
 />
 ```
 
-### Animations
+### A declarative `animation` prop on `<Mesh>`
+
+Animations themselves are **implemented** — this section used to list them as a
+future feature. Drive them through the store:
+
 ```typescript
+store.dispatch({
+  type: 'startAnimation',
+  animation: {
+    id: 'spin',
+    targetId: 'my-cube',
+    property: 'rotation',   // 'position' | 'rotation' | 'scale'
+    from: [0, 0, 0],
+    to: [0, Math.PI * 2, 0],
+    duration: 2000,
+    loop: true,
+    easing: 'linear'        // 'linear' | 'easeIn' | 'easeOut' | 'easeInOut'
+  }
+});
+
+store.dispatch({ type: 'stopAnimation', id: 'spin' });
+```
+
+`targetId` must name a mesh that already exists; an animation naming no mesh is
+rejected with a warning rather than ticking forever against nothing. Removing a
+mesh stops the animations targeting it.
+
+What is still future is expressing that as a prop:
+
+```svelte
 // Future API
 <Mesh
+  {store}
   id="animated"
   geometry={{ type: 'box', size: 1 }}
   material={{ color: '#ff6b6b' }}
@@ -998,7 +1048,7 @@ These features are planned but not yet implemented:
 ```
 
 ### Post-Processing
-```typescript
+```svelte
 // Future API
 <Scene {store} postProcessing={{
   bloom: { enabled: true, intensity: 0.5 },

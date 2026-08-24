@@ -165,4 +165,24 @@ describe('specularFor', () => {
 			expect(power).toBeGreaterThan(0);
 		}
 	});
+
+	it('leaves a dark metal a highlight too', () => {
+		// The first fix moved the black-specular case rather than removing it:
+		// tinting toward the diffuse colour means a near-black surface at
+		// `metallic: 1` gets a near-black highlight, and Babylon's shader
+		// multiplies — so `specularPower` again cannot change a pixel. Polished
+		// black metal is an ordinary thing to ask for (gunmetal, black chrome,
+		// dark car paint), and it rendered as flat matte black.
+		const { color } = specularFor([0, 0, 0], 1, 0.1);
+
+		expect(Math.max(...color), 'a black metal has no highlight').toBeGreaterThan(0);
+	});
+
+	it('keeps roughness visible on a dark metal', () => {
+		const smooth = specularFor([0.02, 0.02, 0.02], 1, 0.0);
+		const rough = specularFor([0.02, 0.02, 0.02], 1, 1.0);
+
+		expect(smooth.power).not.toBe(rough.power);
+		expect(Math.max(...smooth.color)).toBeGreaterThan(Math.max(...rough.color));
+	});
 });

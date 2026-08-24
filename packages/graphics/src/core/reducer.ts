@@ -367,6 +367,16 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
         return [state, Effect.none()];
       }
 
+      // Ids must be unique here for the same reason they must be on meshes and
+      // lights: `stopAnimation` filters by id, so a duplicate pair could only
+      // ever be stopped together.
+      if (state.animations.some((a) => a.id === action.animation.id)) {
+        console.warn(
+          `[graphics] startAnimation: id "${action.animation.id}" is already running; ignoring`
+        );
+        return [state, Effect.none()];
+      }
+
       const animation = {
         id: action.animation.id,
         config: action.animation,
@@ -374,18 +384,25 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
         isPlaying: true
       };
 
+      // One frame loop for the whole store, not one per animation. `tick`
+      // schedules the next frame whenever anything is playing, so a second
+      // chain started here would never merge with the first: five animations
+      // measured four times the ticks of one, each walking every animation and
+      // mesh and re-running the whole scene sync.
+      const alreadyTicking = state.animations.some((a) => a.isPlaying);
+
       return [
         {
           ...state,
           animations: [...state.animations, animation]
         },
-        // Start animation frame loop
-        Effect.run(async (dispatch) => {
-          const animate = () => {
-            dispatch({ type: 'tick', time: Date.now() });
-          };
-          requestAnimationFrame(animate);
-        })
+        alreadyTicking
+          ? Effect.none()
+          : Effect.run(async (dispatch) => {
+              requestAnimationFrame(() => {
+                dispatch({ type: 'tick', time: Date.now() });
+              });
+            })
       ];
     }
 
@@ -446,17 +463,30 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
         // `from === to` animation — or any animation sitting at its final
         // value — produced a fresh mesh array every frame, which `syncScene`
         // reads as a change and pushes to the renderer.
+        //
+        // Compared against what this tick has accumulated so far, falling back
+        // to the mesh as it stands. Comparing against the mesh alone is wrong
+        // when two animations target the same property: whichever of them
+        // happened to produce the pre-tick value was skipped, so the other won
+        // on alternating frames and the mesh strobed. Last-writer-wins is the
+        // documented behaviour for that case; oscillating is not.
         const target = state.meshes.find((mesh) => mesh.id === anim.config.targetId);
-        if (target && !sameConfig(target[anim.config.property], current)) {
+        const pending = meshUpdates.get(anim.config.targetId);
+        const standing = pending?.[anim.config.property] ?? target?.[anim.config.property];
+
+        if (target && !sameConfig(standing, current)) {
           meshUpdates.set(anim.config.targetId, {
-            ...meshUpdates.get(anim.config.targetId),
+            ...pending,
             [anim.config.property]: current
           });
         }
 
         // Check if animation is complete
         if (progress >= 1) {
-          if (anim.config.loop) {
+          // A non-positive duration completes on the frame it starts, so
+          // looping it would complete on every frame for ever — a frame loop
+          // that can never produce a different pixel.
+          if (anim.config.loop && anim.config.duration > 0) {
             // Carry the overshoot into the next lap. Resetting to the tick's
             // own time discards however far past the boundary the frame landed,
             // which on a 100ms loop ticked at 60fps drifts a whole frame a lap.
@@ -504,6 +534,10 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
     // ========================================================================
 
     case 'setBackgroundColor': {
+      if (state.backgroundColor === action.color) {
+        return [state, Effect.none()];
+      }
+
       return [
         {
           ...state,
@@ -514,6 +548,17 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
     }
 
     case 'clearScene': {
+      // The last two arms to get an identity guard. Same reason as the rest:
+      // `syncScene` reads identity, so clearing an already-empty scene handed
+      // it three fresh arrays to walk for nothing.
+      if (
+        state.meshes.length === 0 &&
+        state.lights.length === 0 &&
+        state.animations.length === 0
+      ) {
+        return [state, Effect.none()];
+      }
+
       return [
         {
           ...state,

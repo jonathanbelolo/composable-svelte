@@ -129,6 +129,12 @@ export class BabylonAdapter {
    * control attachment, the render loop and the resize listener.
    */
   attachEngine(engine: Engine): Scene {
+    // Idempotence rather than a second scene: this is public, `initialize`'s
+    // `if (!this.engine)` implies a second call was anticipated, and building
+    // another `Scene` on the same engine would also register a second resize
+    // listener and orphan the first.
+    if (this.scene) return this.scene;
+
     this.engine = engine;
 
     this.scene = new Scene(engine);
@@ -151,7 +157,13 @@ export class BabylonAdapter {
     // are derived from the aspect ratio.
     this.onResize = () => {
       this.engine?.resize();
-      if (this.lastCamera) this.updateCamera(this.lastCamera);
+      // Only the orthographic bounds, which are the sole camera state derived
+      // from the aspect ratio. Re-applying the whole config here snapped the
+      // camera back to the store's `position` and `lookAt` — and `initialize`
+      // hands this camera to the user via `attachControl`, so the store config
+      // is a starting point, not a leash. `resize` fires continuously while a
+      // window is dragged.
+      if (this.lastCamera) this.applyOrthographicBounds(this.lastCamera);
     };
     window.addEventListener('resize', this.onResize);
 
@@ -196,17 +208,28 @@ export class BabylonAdapter {
     // `mode` is settable on a live camera, so no reconstruction is needed.
     if (config.type === 'orthographic') {
       this.camera.mode = BabylonCamera.ORTHOGRAPHIC_CAMERA;
-      const aspect = this.engine
-        ? this.engine.getRenderWidth() / this.engine.getRenderHeight()
-        : 1;
-      const bounds = orthographicBounds(config.orthoSize ?? DEFAULT_ORTHO_SIZE, aspect);
-      this.camera.orthoLeft = bounds.left;
-      this.camera.orthoRight = bounds.right;
-      this.camera.orthoTop = bounds.top;
-      this.camera.orthoBottom = bounds.bottom;
+      this.applyOrthographicBounds(config);
     } else {
       this.camera.mode = BabylonCamera.PERSPECTIVE_CAMERA;
     }
+  }
+
+  /**
+   * The four frustum edges, which are the only camera state the viewport
+   * decides. Separate from `updateCamera` so a resize can recompute them
+   * without also re-applying position and target.
+   */
+  private applyOrthographicBounds(config: CameraConfig): void {
+    if (!this.camera || config.type !== 'orthographic') return;
+
+    const aspect = this.engine
+      ? this.engine.getRenderWidth() / this.engine.getRenderHeight()
+      : 1;
+    const bounds = orthographicBounds(config.orthoSize ?? DEFAULT_ORTHO_SIZE, aspect);
+    this.camera.orthoLeft = bounds.left;
+    this.camera.orthoRight = bounds.right;
+    this.camera.orthoTop = bounds.top;
+    this.camera.orthoBottom = bounds.bottom;
   }
 
   /**
@@ -344,9 +367,11 @@ export class BabylonAdapter {
           this.scene
         );
         light.intensity = config.intensity;
-        if (config.radius) {
-          light.range = config.radius;
-        }
+        // `?? Number.MAX_VALUE`, matching `updateLight`. This was
+        // `if (config.radius)`, which skips 0 and leaves Babylon's infinite
+        // default — so `radius: 0` lit everything when the light arrived by
+        // `addLight` and nothing when the same config arrived by `updateLight`.
+        light.range = config.radius ?? Number.MAX_VALUE;
         if (config.color) {
           light.diffuse = this.hexToColor3(config.color);
         }
@@ -426,7 +451,20 @@ export class BabylonAdapter {
     }
   }
 
-  /** Whether a live Babylon light is the class a given config `type` builds. */
+  /**
+   * Whether a live Babylon light is the class a given config `type` builds.
+   *
+   * A plain `instanceof` per case, because the four classes are siblings:
+   * `SpotLight`, `DirectionalLight` and `PointLight` all extend `ShadowLight`
+   * and `HemisphericLight` extends `Light`. Verified against the installed
+   * 8.36.1 — `new SpotLight(...) instanceof PointLight` is `false`.
+   *
+   * This carried a `&& !(light instanceof SpotLight)` exclusion on the `point`
+   * case, under a comment claiming `SpotLight extends PointLight` "so the order
+   * matters". That hierarchy does not exist in this version, so the exclusion
+   * could never be false for a spot light and the ordering was irrelevant. It
+   * was dead, and it survived a mutation test precisely because it was.
+   */
   private matchesLightType(
     light: HemisphericLight | DirectionalLight | PointLight | SpotLight,
     type: LightConfig['type']
@@ -436,13 +474,10 @@ export class BabylonAdapter {
         return light instanceof HemisphericLight;
       case 'directional':
         return light instanceof DirectionalLight;
-      // `SpotLight extends PointLight`, so the order matters: a spot light is
-      // `instanceof PointLight` and would otherwise be updated as one, silently
-      // dropping its angle and direction.
       case 'spot':
         return light instanceof SpotLight;
       case 'point':
-        return light instanceof PointLight && !(light instanceof SpotLight);
+        return light instanceof PointLight;
     }
   }
 
@@ -613,7 +648,15 @@ export class BabylonAdapter {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     const [, r, g, b] = result ?? [];
     if (!r || !g || !b) {
-      return new Color3(1, 1, 1); // Default to white
+      // Warned rather than silent. Only 6-digit hex parses — `'red'`,
+      // `'rgb(255,0,0)'` and `'#f00'` all land here — and falling back to white
+      // without a word is indistinguishable from a colour that simply did not
+      // apply, which is exactly the kind of quiet nothing this package has been
+      // swept for. The docs said "hex or CSS color"; the parser never agreed.
+      console.warn(
+        `[graphics] "${hex}" is not a 6-digit hex colour; using white`
+      );
+      return new Color3(1, 1, 1);
     }
 
     return new Color3(parseInt(r, 16) / 255, parseInt(g, 16) / 255, parseInt(b, 16) / 255);

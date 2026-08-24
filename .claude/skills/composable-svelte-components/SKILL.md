@@ -756,7 +756,7 @@ For specialized components beyond standard UI, see dedicated skills:
 **Skill**: `composable-svelte-graphics`
 **Package**: `@composable-svelte/graphics`
 **Components**: Scene, Camera, Light, Mesh
-**Use cases**: 3D visualizations, WebGPU/WebGL rendering, geometry (box, sphere, cylinder, torus, plane)
+**Use cases**: 3D visualizations, WebGL rendering, geometry (box, sphere, cylinder, torus, plane)
 
 ### Code & Media
 **Skill**: `composable-svelte-code`

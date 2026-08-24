@@ -671,7 +671,7 @@ deleteAudioManager('my-player');
 - **media**: Audio players, video embeds, voice input
 - **chat**: Real-time chat, streaming responses
 - **code**: Code editors, syntax highlighting, visual programming
-- **graphics**: 3D scenes, WebGPU/WebGL rendering
+- **graphics**: 3D scenes, WebGL rendering
 - **charts**: 2D data visualization
 
 ---

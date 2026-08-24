@@ -89,6 +89,14 @@ describe('ids are unique', () => {
 			mountIn(Light, { store, id: 'same', type: 'point', position: [0, 1, 0], intensity: 5 });
 			flushSync();
 		}).not.toThrow();
+
+		// Not just "it did not throw": the defect lives in the state this used to
+		// leave behind. Three separate guards prevent it — the reducer's
+		// uniqueness check, the component standing aside, and the untracked
+		// dispatch — and each has its own test above; this asserts the outcome
+		// they exist for.
+		expect(store.state.lights.filter((l) => l.id === 'same')).toHaveLength(1);
+		expect(store.state.lights.find((l) => l.id === 'same')?.intensity).toBe(1);
 	});
 });
 

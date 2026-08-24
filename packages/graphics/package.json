@@ -1,7 +1,7 @@
 {
   "name": "@composable-svelte/graphics",
   "version": "0.1.2",
-  "description": "State-driven WebGL/WebGPU graphics package for Composable Svelte",
+  "description": "State-driven WebGL graphics package for Composable Svelte",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -78,7 +78,6 @@
     "svelte",
     "svelte5",
     "webgl",
-    "webgpu",
     "graphics",
     "3d",
     "babylonjs",

@@ -560,7 +560,7 @@ function handleEdgeClick(edge: Edge) {
 - **code**: Code editors, syntax highlighting, visual programming
 - **media**: Audio players, video embeds, voice input
 - **chat**: Real-time chat, streaming responses
-- **graphics**: 3D scenes, WebGPU/WebGL rendering
+- **graphics**: 3D scenes, WebGL rendering
 - **charts**: 2D data visualization
 - **maps**: Geospatial data
 

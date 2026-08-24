@@ -8,8 +8,8 @@
  * spreading an explicit `undefined` overwrites. `initial-state.ts` ships
  * `fov: 45, near: 0.1, far: 1000`; all three are lost.
  *
- * It goes unnoticed downstream because `babylon-adapter.ts:136,141,144` guard
- * with `!== undefined` before applying each one — so the adapter quietly never
+ * It goes unnoticed downstream because `updateCamera` guards each of those
+ * fields on `!== undefined` before applying it — so the adapter quietly never
  * sets a field of view rather than erroring.
  *
  * This is the same family as the four `$derived`-config-dispatched-from-`$effect`
@@ -201,5 +201,33 @@ describe('the Camera component', () => {
 		mountInto(store, { position, lookAt, type: 'orthographic' });
 
 		expect(store.state.camera.orthoSize, 'mounting <Camera> wiped orthoSize').toBe(12);
+	});
+
+	it('does not re-dispatch when unrelated state changes', () => {
+		// `store.dispatch` reads store state internally, so a dispatch inside the
+		// effect's tracking scope makes the effect depend on its own output — and
+		// then on every other action too. `<Mesh>` and `<Light>` each have a test
+		// pinning their untrack; `<Camera>` had none.
+		const store = makeStore();
+		mountInto(store, { position, lookAt });
+
+		const seen: string[] = [];
+		const unsubscribe = store.subscribeToActions?.((action) => seen.push(action.type));
+
+		store.dispatch({
+			type: 'addMesh',
+			mesh: {
+				id: 'unrelated',
+				geometry: { type: 'box', size: 1 },
+				position: [0, 0, 0],
+				material: { color: '#ffffff' }
+			}
+		});
+		flushSync();
+		unsubscribe?.();
+
+		expect(seen, 'the camera effect followed the store instead of its props').toEqual([
+			'addMesh'
+		]);
 	});
 });

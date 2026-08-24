@@ -23,9 +23,19 @@
  * Deliberately two specific traps rather than an attempt to execute the
  * snippets. Running arbitrary markdown is a much larger machine, and these are
  * the failures that actually happened.
+ *
+ * The `svelte` blocks are a third case, and they *are* checked wholesale —
+ * because compiling one is cheap and a compiler cannot be fooled the way a
+ * reader or a grep can. `graphics`'s README shipped `<Scene>` examples whose
+ * children all omitted the required `{store}` prop; the fix for that introduced
+ * a *duplicate* `{store}` on one element, which is a different compile error in
+ * the same block. Both survived review by grep — the first because a missing
+ * attribute spread over a multi-line element is awkward to match, the second
+ * because the duplicate spanned two lines.
  */
 
 import { describe, it, expect } from 'vitest';
+import { compile } from 'svelte/compiler';
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join, relative } from 'node:path';
@@ -54,25 +64,26 @@ function docs(): string[] {
 	return out;
 }
 
-/** Fenced code blocks, with the file and the line the fence opened on. */
-function codeBlocks(file: string): Array<{ line: number; body: string }> {
+/** Fenced code blocks, with the file, the language, and the line the fence opened on. */
+function codeBlocks(file: string): Array<{ line: number; body: string; lang: string }> {
 	const lines = readFileSync(file, 'utf8').split('\n');
-	const blocks: Array<{ line: number; body: string }> = [];
+	const blocks: Array<{ line: number; body: string; lang: string }> = [];
 
-	let open: { line: number; body: string[] } | null = null;
+	let open: { line: number; body: string[]; lang: string } | null = null;
 	for (let i = 0; i < lines.length; i += 1) {
 		const line = lines[i]!;
 		if (open) {
 			if (/^\s*```\s*$/.test(line)) {
-				blocks.push({ line: open.line, body: open.body.join('\n') });
+				blocks.push({ line: open.line, body: open.body.join('\n'), lang: open.lang });
 				open = null;
 			} else {
 				open.body.push(line);
 			}
 			continue;
 		}
-		if (/^\s*```(ts|typescript|js|javascript|svelte)\b/.test(line)) {
-			open = { line: i + 1, body: [] };
+		const fence = /^\s*```(ts|typescript|js|javascript|svelte)\b/.exec(line);
+		if (fence) {
+			open = { line: i + 1, body: [], lang: fence[1]! };
 		}
 	}
 	return blocks;
@@ -266,3 +277,124 @@ describe('documented dismiss dependency call shapes', () => {
 	});
 });
 
+/**
+ * Every ```svelte block in a swept document must at least parse.
+ *
+ * A *syntax* check and nothing more: the blocks are excerpts referencing stores
+ * and handlers they never define, so typechecking them would need a harness per
+ * block. In particular this does not catch a missing required prop —
+ * `<Camera position={…} />` with no `{store}` is valid Svelte, and only
+ * `svelte-check` against the real component would object. Syntax is what has
+ * actually broken.
+ *
+ * ## Why a list rather than the whole repo
+ *
+ * Running this across every markdown file finds **41 non-compiling blocks in 16
+ * files**: 21 `global_reference_invalid` (an excerpt whose `<script>` shows only
+ * part of itself, so an auto-subscribed store is undeclared — mostly benign) and
+ * 20 that look like real syntax errors (`js_parse_error`, `script_duplicate`,
+ * `expected_token`, `block_unclosed`). Turning that on wholesale would gate the
+ * repo on documents nobody has read in this campaign, and each needs individual
+ * judgement about whether the excerpt or the code is wrong.
+ *
+ * So the list holds the documents that have been swept and verified, and grows
+ * as sweeps land. The backlog is recorded in `plans/hardening/README.md`.
+ */
+const SWEPT_DOCS = [
+	'packages/graphics/README.md',
+	'.claude/skills/composable-svelte-graphics/SKILL.md'
+];
+
+/** The runes, which look like store references and must not be declared. */
+const RUNES = new Set(['state', 'derived', 'effect', 'props', 'bindable', 'inspect', 'host']);
+
+/** Give a script-less excerpt a `<script>` declaring every store it subscribes to. */
+function withDeclaredStores(body: string): string {
+	const referenced = new Set(
+		[...body.matchAll(/\$([a-zA-Z_][a-zA-Z0-9_]*)/g)]
+			.map((m) => m[1]!)
+			.filter((name) => !RUNES.has(name))
+	);
+
+	if (referenced.size === 0) return body;
+
+	return `<script lang="ts">\n  let { ${[...referenced].join(', ')} } = $props();\n</script>\n${body}`;
+}
+
+/**
+ * Whether a block is Svelte markup, whatever its fence says.
+ *
+ * The fence label cannot be trusted: `composable-svelte-graphics/SKILL.md`
+ * carries 45 ```typescript blocks and exactly one ```svelte, and most of those
+ * 45 are component markup — which is why a fence-only check found nothing in
+ * the very file whose examples were wrong. A line beginning with a capitalised
+ * component tag, or with Svelte block syntax, is the signal.
+ */
+function looksLikeSvelte(body: string): boolean {
+	return /^\s*(<[A-Z][A-Za-z0-9]*[\s/>]|\{#(if|each|await|key)\b|\{@(render|html)\b)/m.test(
+		body
+	);
+}
+
+const sweptSvelteBlocks = blocks.filter((b) => SWEPT_DOCS.includes(b.file) && b.lang === 'svelte');
+
+/**
+ * Blocks that are Svelte markup but are not fenced as such.
+ *
+ * The fence label is the contract this check runs on, so a mislabelled fence is
+ * a hole in it — and `composable-svelte-graphics/SKILL.md` had 45 ```typescript
+ * blocks against a single ```svelte, most of them component markup. Whole
+ * examples have been relabelled; what stays `typescript` is the blocks that
+ * deliberately elide with `...`, which cannot compile by design and are listed
+ * here so the number cannot quietly grow.
+ */
+const ALLOWED_MISLABELLED = 6;
+
+describe('documented Svelte examples', () => {
+	it('every swept document still exists, so the list cannot rot', () => {
+		const missing = SWEPT_DOCS.filter((doc) => !existsSync(join(repoRoot, doc)));
+
+		expect(missing, 'a swept document was moved or deleted').toEqual([]);
+	});
+
+	it('finds svelte blocks in them, so the arm below is not vacuous', () => {
+		expect(
+			sweptSvelteBlocks.length,
+			`no \`\`\`svelte blocks found in ${SWEPT_DOCS.join(', ')}`
+		).toBeGreaterThan(20);
+	});
+
+	it('every one of them compiles', () => {
+		const failures = sweptSvelteBlocks.flatMap(({ file, line, body }) => {
+			// A markup-only excerpt still auto-subscribes to a store it never
+			// declares — `$store` — which is a compile error out of context but is
+			// exactly what the surrounding prose describes.
+			const source = body.includes('<script') ? body : withDeclaredStores(body);
+
+			try {
+				compile(source, { generate: 'client' });
+				return [];
+			} catch (error) {
+				const { code, message } = error as { code?: string; message: string };
+				return [`${file}:${line} — ${code ?? 'error'}: ${message.split('\n')[0]}`];
+			}
+		});
+
+		expect(failures).toEqual([]);
+	});
+});
+
+describe('Svelte markup is fenced as svelte', () => {
+	it('no swept document hides markup behind another fence label', () => {
+		const mislabelled = blocks
+			.filter((b) => SWEPT_DOCS.includes(b.file) && b.lang !== 'svelte' && looksLikeSvelte(b.body))
+			.map((b) => `${b.file}:${b.line}`);
+
+		// An exact count rather than a ceiling: relabelling one of the remaining
+		// blocks should require updating this number, and a *new* mislabelled
+		// block should fail rather than fitting under a margin.
+		expect(mislabelled.length, `mislabelled blocks:\n${mislabelled.join('\n')}`).toBe(
+			ALLOWED_MISLABELLED
+		);
+	});
+});

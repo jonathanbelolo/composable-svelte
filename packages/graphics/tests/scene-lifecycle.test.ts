@@ -13,6 +13,7 @@ import { createStore } from '@composable-svelte/core';
 import { graphicsReducer } from '../src/core/reducer';
 import { createInitialGraphicsState } from '../src/core/initial-state';
 import Scene from '../src/components/Scene.svelte';
+import { BabylonAdapter } from '../src/adapters/babylon-adapter';
 import type { GraphicsAction, GraphicsState } from '../src/core/types';
 
 afterEach(() => vi.restoreAllMocks());
@@ -67,5 +68,34 @@ describe('Scene initialisation', () => {
 			store.state.renderer.error,
 			'an unmounted <Scene> reported into the store'
 		).toBeNull();
+	});
+
+	it('disposes an engine that finished building after it was unmounted', async () => {
+		// The branch the fix is actually about, and the one jsdom cannot reach on
+		// its own: `initialize` needs a canvas context, so it always rejects here
+		// and only the error guard ran. Stubbing a *successful* initialise is what
+		// exercises the success guard — without it the adapter went on to own an
+		// engine, a render loop and a resize listener that nothing could reach.
+		vi.spyOn(BabylonAdapter.prototype, 'initialize').mockImplementation(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 20));
+			return {
+				renderer: 'webgl' as const,
+				capabilities: { supportsWebGL: true, maxTextureSize: 4096, maxVertexAttributes: 16 }
+			};
+		});
+		const dispose = vi.spyOn(BabylonAdapter.prototype, 'dispose');
+
+		const store = makeStore();
+		const { instance, target } = mountScene(store);
+
+		unmount(instance);
+		target.remove();
+		await settle();
+
+		expect(dispose, 'the finished engine was never disposed').toHaveBeenCalled();
+		expect(
+			store.state.renderer.isInitialized,
+			'an unmounted <Scene> reported initialisation'
+		).toBe(false);
 	});
 });
