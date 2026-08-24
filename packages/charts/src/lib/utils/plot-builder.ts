@@ -14,7 +14,7 @@ export function buildScatterPlot<T>(
   config: ChartConfig
 ): any {
   const { filteredData, dimensions, transform, selection } = state;
-  const { x = 'x', y = 'y', color, size = 5 } = config;
+  const { x = 'x', y = 'y', color, size = 5, enableTooltip = true } = config;
 
   // Calculate domains
   let xDomain: [number, number] | undefined;
@@ -78,7 +78,7 @@ export function buildScatterPlot<T>(
           ? (d, i) => (selectedSet.has(i) ? '#000' : null)  // Stroke selected
           : null,
         strokeWidth: 2,
-        tip: true  // Use Observable Plot's built-in tooltips
+        tip: enableTooltip  // Observable Plot's built-in tooltips
       }),
 
       // Axes
@@ -99,7 +99,7 @@ export function buildLineChart<T>(
   config: ChartConfig
 ): any {
   const { filteredData, dimensions, transform } = state;
-  const { x = 'x', y = 'y', color = '#3b82f6' } = config;
+  const { x = 'x', y = 'y', color = '#3b82f6', enableTooltip = true } = config;
 
   // Calculate domains
   let xDomain: [number, number] | undefined;
@@ -153,7 +153,7 @@ export function buildLineChart<T>(
         y,
         stroke: color,
         strokeWidth: 2,
-        tip: true
+        tip: enableTooltip
       }),
 
       // Points on line
@@ -162,7 +162,7 @@ export function buildLineChart<T>(
         y,
         fill: color,
         r: 3,
-        tip: true
+        tip: enableTooltip
       }),
 
       // Axes
@@ -183,7 +183,7 @@ export function buildBarChart<T>(
   config: ChartConfig
 ): any {
   const { filteredData, dimensions } = state;
-  const { x = 'x', y = 'y', color = '#3b82f6' } = config;
+  const { x = 'x', y = 'y', color = '#3b82f6', enableTooltip = true } = config;
 
   return Plot.plot({
     width: dimensions.width,
@@ -203,7 +203,7 @@ export function buildBarChart<T>(
         y,
         fill: color,
         fillOpacity: 0.8,
-        tip: true
+        tip: enableTooltip
       }),
 
       // Axes
@@ -225,7 +225,7 @@ export function buildAreaChart<T>(
   config: ChartConfig
 ): any {
   const { filteredData, dimensions, transform } = state;
-  const { x = 'x', y = 'y', color = '#3b82f6' } = config;
+  const { x = 'x', y = 'y', color = '#3b82f6', enableTooltip = true } = config;
 
   // Calculate domains
   let xDomain: [number, number] | undefined;
@@ -279,7 +279,7 @@ export function buildAreaChart<T>(
         y,
         fill: color,
         fillOpacity: 0.3,
-        tip: true
+        tip: enableTooltip
       }),
 
       // Line on top
@@ -308,7 +308,7 @@ export function buildHistogram<T>(
   config: ChartConfig & { bins?: number; thresholds?: number[] }
 ): any {
   const { filteredData, dimensions } = state;
-  const { x = 'x', color = '#3b82f6', bins, thresholds } = config;
+  const { x = 'x', color = '#3b82f6', bins, thresholds, enableTooltip = true } = config;
 
   return Plot.plot({
     width: dimensions.width,
@@ -331,7 +331,7 @@ export function buildHistogram<T>(
             x,
             ...(color ? { fill: color as any } : {}),
             fillOpacity: 0.8,
-            tip: true,
+            tip: enableTooltip,
             ...(bins ? { thresholds: bins } : {}),
             ...(thresholds ? { thresholds } : {})
           } as any

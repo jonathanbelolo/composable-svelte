@@ -132,12 +132,24 @@ $effect(() => {
 
   // Only start animation if not already running
   if (state.isAnimating && state.targetTransform && !animationRunning) {
-    animationRunning = true;
-
     const from = state.transform;
     const to = state.targetTransform;
 
-    // Run spring animation
+    // `enableAnimations={false}` skips the animation, not the outcome. The
+    // reducer only records a *target*; the component is what applies it, so
+    // returning early here would leave the zoom unapplied and the store stuck
+    // in `isAnimating` forever. It was read by nothing before — including by
+    // the skill file's advice to pass `false` as a performance remedy.
+    if (config.enableAnimations === false) {
+      store.dispatch({ type: 'zoomProgress', transform: to });
+      store.dispatch({ type: 'zoomComplete' });
+      return;
+    }
+
+    animationRunning = true;
+
+    // Milliseconds, from state. `ChartState.transitionDuration` is documented
+    // and was consulted by nothing while the animator hardcoded 400.
     animateZoomTransition(
       from,
       to,
@@ -148,7 +160,8 @@ $effect(() => {
           type: 'zoomProgress',
           transform
         });
-      }
+      },
+      state.transitionDuration
     ).then(() => {
       // Animation completed
       animationRunning = false;

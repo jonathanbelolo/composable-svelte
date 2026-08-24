@@ -347,7 +347,7 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
  * - `selection`: No selection (type: 'none')
  * - `transform`: Identity transform {x: 0, y: 0, k: 1}
  * - `isAnimating`: false
- * - `transitionDuration`: 0.3s
+ * - `transitionDuration`: 400ms
  * - `spec`: Empty object (Observable Plot will use defaults)
  *
  * @example
@@ -410,6 +410,6 @@ export function createInitialChartState<T = unknown>(config: {
     },
     // Tooltips handled by Observable Plot (no state needed)
     isAnimating: false,
-    transitionDuration: 0.3
+    transitionDuration: 400
   };
 }
