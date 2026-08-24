@@ -49,7 +49,7 @@ packages/charts/
 - Data: `setData`, `filterData`, `clearFilters`
 - Selection: `selectPoint`, `selectRange`, `brushStart/Move/End`, `clearSelection`
 - Zoom: `zoom`, `resetZoom`
-- Tooltip: `showTooltip`, `hideTooltip`
+- Tooltip: none — Observable Plot draws tooltips itself, gated by the `enableTooltip` prop
 - Layout: `resize`, `updateSpec`
 
 **Test Coverage:**
@@ -158,12 +158,11 @@ All chart state lives in the reducer:
 interface ChartState<T> {
   data: T[];
   filteredData: T[];
-  spec: PlotSpec;
   dimensions: { width; height };
   selection: SelectionState<T>;
   transform: ZoomTransform;
   isAnimating: boolean;
-  transitionDuration: number;
+  transitionDuration: number; // milliseconds
 }
 ```
 

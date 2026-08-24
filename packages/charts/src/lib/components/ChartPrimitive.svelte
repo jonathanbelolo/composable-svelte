@@ -5,12 +5,10 @@
  */
 
 import { onMount, untrack } from 'svelte';
-import { animate } from 'motion';
 import { zoom as d3Zoom } from 'd3-zoom';
 import { brush as d3Brush } from 'd3-brush';
 import { select } from 'd3-selection';
 import type { ChartState, ChartConfig } from '../types/chart.types.js';
-import type { Dispatch } from '@composable-svelte/core';
 import type { ChartAction } from '../types/chart.types.js';
 import { animateZoomTransition } from '../utils/animate-zoom.js';
 
@@ -282,20 +280,10 @@ function attachBrushBehavior(svg: SVGSVGElement): () => void {
     .on('start', () => {
       store.dispatch({ type: 'brushStart' });
     })
-    .on('brush', (event) => {
-      if (event.selection) {
-        const [[x0, y0], [x1, y1]] = event.selection as [[number, number], [number, number]];
-        store.dispatch({
-          type: 'brushMove',
-          extent: [[x0, y0], [x1, y1]]
-        });
-      }
-    })
     .on('end', (event) => {
       if (!event.selection) {
         // Brush was cleared - clear selection
         store.dispatch({ type: 'clearSelection' });
-        store.dispatch({ type: 'brushEnd' });
         return;
       }
 
@@ -305,7 +293,6 @@ function attachBrushBehavior(svg: SVGSVGElement): () => void {
       // Find all circles (data points) within the brush extent
       const circles = svg.querySelectorAll('circle');
       const selectedIndices: number[] = [];
-      const selectedData: any[] = [];
       const currentState = store.state;
 
       circles.forEach((circle, index) => {
@@ -314,10 +301,9 @@ function attachBrushBehavior(svg: SVGSVGElement): () => void {
 
         // Check if circle center is within brush extent
         if (cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1) {
-          selectedIndices.push(index);
-          if (index < currentState.filteredData.length) {
-            selectedData.push(currentState.filteredData[index]);
-          }
+          // `index` is the index among all <circle> elements, which equals the
+          // data index only while the plot contains exactly one dot mark.
+          if (index < currentState.filteredData.length) selectedIndices.push(index);
         }
       });
 
@@ -328,8 +314,6 @@ function attachBrushBehavior(svg: SVGSVGElement): () => void {
           range: [Math.min(...selectedIndices), Math.max(...selectedIndices)]
         });
       }
-
-      store.dispatch({ type: 'brushEnd' });
     });
 
   // d3-brush installs into a <g>, not the <svg> root: @types/d3-brush types

@@ -30,7 +30,6 @@ import { Effect } from '@composable-svelte/core';
  * - `zoomComplete` - Complete animation
  * - `resetZoom` - Reset to identity transform
  * - `resize` - Update chart dimensions
- * - `updateSpec` - Update Observable Plot specification
  *
  * @example
  * ```typescript
@@ -184,26 +183,6 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
       ];
     }
 
-    case 'brushMove': {
-      // Will be implemented with actual data filtering logic
-      return [
-        {
-          ...state,
-          selection: {
-            ...state.selection,
-            type: 'brush',
-            brushExtent: action.extent
-          }
-        },
-        Effect.none()
-      ];
-    }
-
-    case 'brushEnd': {
-      // Finalize selection based on brush extent
-      return [state, Effect.none()];
-    }
-
     case 'clearSelection': {
       // Idempotent by value, same reasoning. Reachable with nothing selected —
       // `ChartPrimitive.svelte:245` dispatches it whenever a brush is cleared.
@@ -313,19 +292,6 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
     // Spec Updates
     // ========================================================================
 
-    case 'updateSpec': {
-      return [
-        {
-          ...state,
-          spec: {
-            ...state.spec,
-            ...action.spec
-          }
-        },
-        Effect.none()
-      ];
-    }
-
     default: {
       const _exhaustive: never = action;
       return [state, Effect.none()];
@@ -379,7 +345,6 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
  * @template T - Type of data items in the dataset
  * @param {Object} config - Configuration object
  * @param {T[]} [config.data=[]] - Initial dataset
- * @param {Partial<ChartState['spec']>} [config.spec={}] - Observable Plot specification overrides
  * @param {{width: number, height: number}} [config.dimensions] - Chart dimensions (default: 600x400)
  * @returns {ChartState<T>} Initial chart state
  *
@@ -388,15 +353,15 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
  */
 export function createInitialChartState<T = unknown>(config: {
   data?: T[];
-  spec?: Partial<ChartState['spec']>;
   dimensions?: { width: number; height: number };
+  /** Zoom animation length, in milliseconds. Default 400. */
+  transitionDuration?: number;
 }): ChartState<T> {
   const data = config.data ?? [];
 
   return {
     data,
     filteredData: data,
-    spec: config.spec ?? {},
     dimensions: config.dimensions ?? { width: 600, height: 400 },
     selection: {
       type: 'none',
@@ -410,6 +375,6 @@ export function createInitialChartState<T = unknown>(config: {
     },
     // Tooltips handled by Observable Plot (no state needed)
     isAnimating: false,
-    transitionDuration: 400
+    transitionDuration: config.transitionDuration ?? 400
   };
 }

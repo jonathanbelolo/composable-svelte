@@ -257,39 +257,15 @@ describe('Chart Integration Tests', () => {
       expect(store.state.selection.type).toBe('brush');
     });
 
-    it('moves brush extent', () => {
-      const store = createStore({
-        initialState: createInitialChartState({ data: sampleData }),
-        reducer: chartReducer,
-        dependencies: {}
-      });
-
-      store.dispatch({ type: 'brushStart' });
-      store.dispatch({
-        type: 'brushMove',
-        extent: [[10, 20], [100, 150]]
-      });
-
-      expect(store.state.selection.brushExtent).toEqual([[10, 20], [100, 150]]);
-    });
-
-    it('ends brush', () => {
-      const store = createStore({
-        initialState: createInitialChartState({ data: sampleData }),
-        reducer: chartReducer,
-        dependencies: {}
-      });
-
-      store.dispatch({ type: 'brushStart' });
-      store.dispatch({
-        type: 'brushMove',
-        extent: [[10, 20], [100, 150]]
-      });
-      store.dispatch({ type: 'brushEnd' });
-
-      // State should remain (handled by component)
-      expect(store.state.selection.type).toBe('brush');
-    });
+    // `brushMove` and `brushEnd` are gone, and the two tests that were here
+    // pinned them. `brushMove`'s only effect was writing `selection.brushExtent`,
+    // which nothing read — the brush rectangle you see is drawn by d3-brush into
+    // `g.cs-brush`, not from state — so it allocated a new state object on every
+    // mouse-move for no observable effect. `brushEnd` returned `[state,
+    // Effect.none()]` verbatim under a comment reading "Finalize selection based
+    // on brush extent". The selection itself comes from the `selectRange` the
+    // component dispatches, which is covered above and in
+    // `tests/selection-callback.test.ts`.
   });
 
   describe('Responsive Resize Workflow', () => {

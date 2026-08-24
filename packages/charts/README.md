@@ -15,7 +15,7 @@
 - 🖱️ **Interactive**: Zoom, pan, brush selection, and smooth animations
 - 🔄 **Data Transforms**: Composable transforms (filter, sort, group, bin, rollup, topN)
 - ⚡ **Performant**: GPU-accelerated animations with `requestAnimationFrame`
-- ♿ **Accessible**: ARIA labels, keyboard navigation, screen reader support
+- ♿ **Partly accessible**: the chart carries an ARIA label and a text summary. There is no keyboard navigation — see Accessibility.
 - 📱 **Responsive**: Automatic container-based sizing with ResizeObserver
 - 🧪 **Testable**: Comprehensive integration and visual regression tests (34 tests)
 
@@ -43,14 +43,7 @@ const data = [
 ];
 
 const store = createStore({
-  initialState: createInitialChartState({
-    data,
-    spec: {
-      marks: [
-        { type: 'dot', x: 'x', y: 'y', fill: 'category' }
-      ]
-    }
-  }),
+  initialState: createInitialChartState({ data }),
   reducer: chartReducer,
   dependencies: {}
 });
@@ -119,12 +112,11 @@ const transformed = pipeline(data);
 interface ChartState<T> {
   data: T[];
   filteredData: T[];
-  spec: PlotSpec;
   dimensions: { width: number; height: number };
   selection: SelectionState<T>;
   transform: ZoomTransform;
   isAnimating: boolean;
-  transitionDuration: number;
+  transitionDuration: number; // milliseconds
 }
 
 type ChartAction<T> =
@@ -132,7 +124,6 @@ type ChartAction<T> =
   | { type: 'filterData'; predicate: (d: T) => boolean }
   | { type: 'selectPoint'; data: T; index: number }
   | { type: 'zoom'; transform: ZoomTransform }
-  | { type: 'showTooltip'; data: T; position: { x: number; y: number } }
   // ... and more
 ```
 
@@ -142,7 +133,7 @@ type ChartAction<T> =
 // Create initial chart state
 function createInitialChartState<T>(config: {
   data?: T[];
-  spec?: Partial<PlotSpec>;
+  transitionDuration?: number; // milliseconds, default 400
   dimensions?: { width: number; height: number };
 }): ChartState<T>
 
@@ -198,17 +189,19 @@ const spec = {
 
 State-driven animations using Motion One:
 
+The component owns this; there is nothing to write. `zoomAnimated` records a
+target transform, `ChartPrimitive` animates towards it over
+`state.transitionDuration` milliseconds and dispatches `zoomProgress` per frame,
+then `zoomComplete`. Pass `enableAnimations={false}` to jump straight to the
+target instead.
+
 ```typescript
-// In component
-$effect(() => {
-  if ($store.isAnimating) {
-    animate(chartElement,
-      { opacity: [0, 1] },
-      { duration: $store.transitionDuration }
-    );
-  }
-});
+createInitialChartState({ data, transitionDuration: 250 });
 ```
+
+(The snippet that used to be here called `animate` from Motion One against
+`$store.transitionDuration`. No such code exists in this package, the duration
+was read by nothing, and Motion One is not a dependency.)
 
 ## Examples
 
@@ -247,10 +240,22 @@ await store.send(
 
 ## Accessibility
 
-- ♿ WCAG 2.1 AA compliant
-- ⌨️ Full keyboard navigation
-- 📢 Screen reader support with ARIA labels
-- 📊 Data table fallback
+What exists today:
+
+- `role="img"` with an `aria-label` on the chart, and an `aria-describedby`
+  text summary of the series.
+
+What does **not** exist, and was previously claimed here:
+
+- **Keyboard navigation.** There is no `tabindex` and no key handler anywhere
+  in this package — a chart cannot be focused or driven from the keyboard.
+- **A data table fallback.** No table is rendered.
+- **WCAG 2.1 AA conformance.** Not implemented and not audited; with no
+  keyboard path it cannot hold.
+
+Those are real gaps rather than deliberate omissions, and they are recorded in
+`plans/hardening/README.md`. Do not treat this package as accessible for
+interactive use.
 
 ## Development Status
 
@@ -260,13 +265,13 @@ await store.send(
 - ✅ Core types and interfaces
 - ✅ Chart reducer with full state management
 - ✅ Chart and ChartPrimitive components
-- ✅ Interactive behaviors (zoom, pan, brush selection)
+- ✅ Interactive behaviors (zoom, pan, brush selection on scatter/line)
 - ✅ Smooth animation system with requestAnimationFrame
 - ✅ Data transformation utilities (10 transforms)
 - ✅ Responsive sizing with ResizeObserver
-- ✅ Accessibility features (ARIA, keyboard, screen reader)
-- ✅ Comprehensive integration tests (34 tests)
-- ✅ Visual regression test framework
+- ⚠️ Accessibility: ARIA label and text summary only — no keyboard path
+- ✅ Reducer and component tests, including that a state change reaches the SVG
+
 - ✅ Complete JSDoc documentation
 
 ## Dependencies

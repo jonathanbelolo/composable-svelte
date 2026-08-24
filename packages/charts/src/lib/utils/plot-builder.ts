@@ -4,7 +4,7 @@
  */
 
 import * as Plot from '@observablehq/plot';
-import type { PlotSpec, ChartState, ChartConfig } from '../types/chart.types.js';
+import type { ChartState, ChartConfig } from '../types/chart.types.js';
 
 /**
  * Build a scatter plot specification
@@ -40,11 +40,12 @@ export function buildScatterPlot<T>(
 
   // Apply zoom transform (only to numeric domains)
   if (transform.k !== 1 || transform.x !== 0 || transform.y !== 0) {
+    const inner = innerExtent(dimensions);
     if (xDomain) {
-      xDomain = applyZoomToDomain(xDomain, transform, 'x');
+      xDomain = applyZoomToDomain(xDomain, transform, 'x', inner.width);
     }
     if (yDomain) {
-      yDomain = applyZoomToDomain(yDomain, transform, 'y');
+      yDomain = applyZoomToDomain(yDomain, transform, 'y', inner.height);
     }
   }
 
@@ -55,10 +56,10 @@ export function buildScatterPlot<T>(
   return Plot.plot({
     width: dimensions.width,
     height: dimensions.height,
-    marginLeft: 60,
-    marginBottom: 40,
-    marginTop: 20,
-    marginRight: 20,
+    marginLeft: PLOT_MARGIN.left,
+    marginBottom: PLOT_MARGIN.bottom,
+    marginTop: PLOT_MARGIN.top,
+    marginRight: PLOT_MARGIN.right,
 
     marks: [
       // Grid
@@ -126,21 +127,22 @@ export function buildLineChart<T>(
 
   // Apply zoom transform (only to numeric domains)
   if (transform.k !== 1 || transform.x !== 0 || transform.y !== 0) {
+    const inner = innerExtent(dimensions);
     if (xDomain) {
-      xDomain = applyZoomToDomain(xDomain, transform, 'x');
+      xDomain = applyZoomToDomain(xDomain, transform, 'x', inner.width);
     }
     if (yDomain) {
-      yDomain = applyZoomToDomain(yDomain, transform, 'y');
+      yDomain = applyZoomToDomain(yDomain, transform, 'y', inner.height);
     }
   }
 
   return Plot.plot({
     width: dimensions.width,
     height: dimensions.height,
-    marginLeft: 60,
-    marginBottom: 40,
-    marginTop: 20,
-    marginRight: 20,
+    marginLeft: PLOT_MARGIN.left,
+    marginBottom: PLOT_MARGIN.bottom,
+    marginTop: PLOT_MARGIN.top,
+    marginRight: PLOT_MARGIN.right,
 
     marks: [
       // Grid
@@ -188,10 +190,12 @@ export function buildBarChart<T>(
   return Plot.plot({
     width: dimensions.width,
     height: dimensions.height,
-    marginLeft: 60,
-    marginBottom: 60,  // More space for labels
-    marginTop: 20,
-    marginRight: 20,
+    marginLeft: PLOT_MARGIN.left,
+    // Deeper than the shared bottom margin: category labels need the room.
+    // Harmless for panning, which this chart type does not apply.
+    marginBottom: PLOT_MARGIN.bottom + 20,
+    marginTop: PLOT_MARGIN.top,
+    marginRight: PLOT_MARGIN.right,
 
     marks: [
       // Grid
@@ -252,21 +256,22 @@ export function buildAreaChart<T>(
 
   // Apply zoom transform (only to numeric domains)
   if (transform.k !== 1 || transform.x !== 0 || transform.y !== 0) {
+    const inner = innerExtent(dimensions);
     if (xDomain) {
-      xDomain = applyZoomToDomain(xDomain, transform, 'x');
+      xDomain = applyZoomToDomain(xDomain, transform, 'x', inner.width);
     }
     if (yDomain) {
-      yDomain = applyZoomToDomain(yDomain, transform, 'y');
+      yDomain = applyZoomToDomain(yDomain, transform, 'y', inner.height);
     }
   }
 
   return Plot.plot({
     width: dimensions.width,
     height: dimensions.height,
-    marginLeft: 60,
-    marginBottom: 40,
-    marginTop: 20,
-    marginRight: 20,
+    marginLeft: PLOT_MARGIN.left,
+    marginBottom: PLOT_MARGIN.bottom,
+    marginTop: PLOT_MARGIN.top,
+    marginRight: PLOT_MARGIN.right,
 
     marks: [
       // Grid
@@ -313,10 +318,10 @@ export function buildHistogram<T>(
   return Plot.plot({
     width: dimensions.width,
     height: dimensions.height,
-    marginLeft: 60,
-    marginBottom: 40,
-    marginTop: 20,
-    marginRight: 20,
+    marginLeft: PLOT_MARGIN.left,
+    marginBottom: PLOT_MARGIN.bottom,
+    marginTop: PLOT_MARGIN.top,
+    marginRight: PLOT_MARGIN.right,
 
     marks: [
       // Grid
@@ -371,13 +376,53 @@ export function buildPlot<T>(
 }
 
 /**
- * Apply zoom transform to domain
- * Converts screen-space transform to data-space domain
+ * The margins every zoomable builder passes to `Plot.plot`. Named because the
+ * *inner* extent — the size the domain actually maps onto — is what a pan has
+ * to be measured against, and three builders were repeating these numbers.
+ */
+const PLOT_MARGIN = { left: 60, right: 20, top: 20, bottom: 40 } as const;
+
+/** The plot area's width and height, excluding margins. */
+function innerExtent(dimensions: { width: number; height: number }): {
+  width: number;
+  height: number;
+} {
+  return {
+    width: Math.max(1, dimensions.width - PLOT_MARGIN.left - PLOT_MARGIN.right),
+    height: Math.max(1, dimensions.height - PLOT_MARGIN.top - PLOT_MARGIN.bottom)
+  };
+}
+
+/**
+ * Convert a d3-zoom screen transform into the data domain it makes visible.
+ *
+ * d3-zoom maps a screen position `s` to `k * s + t`. Inverting that gives the
+ * screen window the viewport now shows, `[-t/k, (extent - t)/k]`, which scales
+ * onto the original domain.
+ *
+ * This used to read `transform.x` and `transform.y` **only inside the
+ * early-return guard**. Past it, the window was `center ± range/2` computed
+ * from the domain's own midpoint — so a pure pan at `k === 1` fell through the
+ * guard and returned the original domain bit-for-bit, and any zoom was always
+ * centred on the middle of the data no matter where the user had dragged or
+ * pointed. Dragging did nothing while d3-zoom dispatched a `zoom` per frame,
+ * rebuilding the entire Plot each time to draw an identical image.
+ *
+ * `axis` was a required parameter the body never referenced. It selects which
+ * translate component applies, which is the only thing it could ever have
+ * meant.
+ *
+ * `extent` is the axis's length in pixels — the plot's *inner* size, since that
+ * is what the domain maps onto. The transform itself comes from d3-zoom
+ * attached to the whole SVG, so a pan is accurate to within the margins rather
+ * than exactly; that is a bounded approximation, where before there was no
+ * motion at all.
  */
 export function applyZoomToDomain(
   domain: [number, number],
   transform: { x: number; y: number; k: number },
-  axis: 'x' | 'y'
+  axis: 'x' | 'y',
+  extent: number
 ): [number, number] {
   if (transform.k === 1 && transform.x === 0 && transform.y === 0) {
     return domain;
@@ -385,17 +430,18 @@ export function applyZoomToDomain(
 
   const [min, max] = domain;
   const range = max - min;
-  const center = (min + max) / 2;
-  const scale = transform.k;
+  const translate = axis === 'x' ? transform.x : transform.y;
 
-  // Zooming: scale > 1 means zoom in (smaller range), scale < 1 means zoom out (larger range)
-  const newRange = range / scale;
+  // The screen window, as fractions of the extent.
+  const startFraction = -translate / transform.k / extent;
+  const endFraction = (extent - translate) / transform.k / extent;
 
-  // Center the zoom around the middle of the domain
-  const newMin = center - newRange / 2;
-  const newMax = center + newRange / 2;
-
-  return [newMin, newMax];
+  // Screen y grows downward while the y domain grows upward, so the y axis maps
+  // the window from `max` down rather than from `min` up.
+  if (axis === 'y') {
+    return [max - endFraction * range, max - startFraction * range];
+  }
+  return [min + startFraction * range, min + endFraction * range];
 }
 
 /**

@@ -15,7 +15,6 @@ export type {
   ChartConfig,
   SelectionState,
   ZoomTransform,
-  PlotSpec,
   DataTransform
 } from './types/chart.types.js';
 // NOTE: `DataTransforms` is intentionally not re-exported as a type here. The

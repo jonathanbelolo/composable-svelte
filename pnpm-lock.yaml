@@ -559,9 +559,6 @@ importers:
       d3-zoom:
         specifier: ^3.0.0
         version: 3.0.0
-      motion:
-        specifier: ^12.23.24
-        version: 12.23.24
     devDependencies:
       '@composable-svelte/core':
         specifier: workspace:*

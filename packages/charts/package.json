@@ -100,8 +100,7 @@
     "d3-array": "^3.2.0",
     "d3-brush": "^3.0.0",
     "d3-selection": "^3.0.0",
-    "d3-zoom": "^3.0.0",
-    "motion": "^12.23.24"
+    "d3-zoom": "^3.0.0"
   },
   "publishConfig": {
     "access": "public"

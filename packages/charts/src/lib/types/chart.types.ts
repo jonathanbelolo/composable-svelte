@@ -4,7 +4,6 @@
  * Based on Phase 11 plan: Interactive Charts & Visualizations
  */
 
-import type { Plot } from '@observablehq/plot';
 
 /**
  * Chart state manages data, visualization config, and interactivity
@@ -15,7 +14,6 @@ export interface ChartState<T = unknown> {
   filteredData: T[];
 
   // Visualization config
-  spec: PlotSpec;
   dimensions: { width: number; height: number };
 
   // Interactivity state
@@ -39,7 +37,6 @@ export interface SelectionState<T = unknown> {
   type: 'none' | 'point' | 'range' | 'brush';
   selectedData: T[];
   selectedIndices: number[];
-  brushExtent?: [[number, number], [number, number]]; // For 2D brush
   range?: [number, number]; // For 1D range selection
 }
 
@@ -55,24 +52,6 @@ export interface ZoomTransform {
 // Note: TooltipState removed - Observable Plot handles tooltips natively
 
 /**
- * Observable Plot specification
- * This will be passed to Plot.plot()
- */
-export interface PlotSpec {
-  marks?: any[]; // Plot marks (dot, line, bar, etc.)
-  width?: number;
-  height?: number;
-  marginLeft?: number;
-  marginRight?: number;
-  marginTop?: number;
-  marginBottom?: number;
-  x?: any; // Scale config
-  y?: any; // Scale config
-  color?: any; // Color scale config
-  [key: string]: any; // Allow other Plot options
-}
-
-/**
  * Chart actions
  */
 export type ChartAction<T = unknown> =
@@ -85,8 +64,6 @@ export type ChartAction<T = unknown> =
   | { type: 'selectPoint'; data: T; index: number }
   | { type: 'selectRange'; range: [number, number] }
   | { type: 'brushStart' }
-  | { type: 'brushMove'; extent: [[number, number], [number, number]] }
-  | { type: 'brushEnd' }
   | { type: 'clearSelection' }
 
   // Zoom/pan actions
@@ -101,8 +78,7 @@ export type ChartAction<T = unknown> =
   // Dimension actions
   | { type: 'resize'; dimensions: { width: number; height: number } }
 
-  // Spec updates
-  | { type: 'updateSpec'; spec: Partial<PlotSpec> };
+  // Spec updates;
 
 /**
  * Chart configuration
@@ -127,7 +103,6 @@ export interface ChartConfig {
 
   // Animation
   enableAnimations?: boolean | undefined;
-  transitionDuration?: number | undefined;
 }
 
 /**
