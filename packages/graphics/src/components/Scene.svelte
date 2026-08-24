@@ -9,6 +9,7 @@ import type { Snippet } from 'svelte';
 import type { Store } from '@composable-svelte/core';
 import type { GraphicsState, GraphicsAction } from '../core/types.js';
 import { BabylonAdapter } from '../adapters/babylon-adapter.js';
+import { initialBaseline, syncScene } from '../core/scene-sync.js';
 
 // Props
 let {
@@ -71,77 +72,24 @@ onMount(() => {
 });
 
 /**
- * Setup manual subscription for scene sync (same pattern as MapPrimitive)
- * Avoids infinite loops caused by effect → DOM manipulation → effect
+ * Setup manual subscription for scene sync.
+ *
+ * A manual subscription rather than an `$effect`: the callback drives a renderer,
+ * and an effect that both reads the store and mutates the scene loops.
+ *
+ * The diffing itself lives in `core/scene-sync.ts`, so it can be tested against
+ * a spy adapter — under jsdom Babylon cannot initialise, and nothing has ever
+ * mounted this component.
  */
 function setupSceneSync() {
   if (!adapter) return;
 
-  // Track previous values to detect actual changes
-  let previousCamera = { ...store.state.camera };
-  let previousMeshes: typeof $store.meshes = [];
-  let previousLights: typeof $store.lights = [];
-  let previousBackgroundColor = store.state.backgroundColor;
+  let baseline = initialBaseline();
+  const sceneAdapter = adapter;
 
-  // Manually subscribe to store updates
-  const unsubscribe = store.subscribe((state) => {
-    if (!adapter) return;
-
-    // Sync camera
-    if (JSON.stringify(previousCamera) !== JSON.stringify(state.camera)) {
-      adapter.updateCamera(state.camera);
-      previousCamera = { ...state.camera };
-    }
-
-    // Sync meshes
-    const currentMeshes = state.meshes;
-    if (JSON.stringify(previousMeshes) !== JSON.stringify(currentMeshes)) {
-      const prevMap = new Map(previousMeshes.map((m) => [m.id, m]));
-      const currMap = new Map(currentMeshes.map((m) => [m.id, m]));
-
-      // Remove deleted meshes
-      for (const [id] of prevMap) {
-        if (!currMap.has(id)) {
-          adapter.removeMesh(id);
-        }
-      }
-
-      // Add new or update changed meshes
-      for (const [id, mesh] of currMap) {
-        const prev = prevMap.get(id);
-        if (!prev) {
-          adapter.addMesh(mesh);
-        } else if (JSON.stringify(prev) !== JSON.stringify(mesh)) {
-          adapter.updateMesh(id, mesh);
-        }
-      }
-
-      previousMeshes = currentMeshes;
-    }
-
-    // Sync lights
-    const currentLights = state.lights;
-    if (JSON.stringify(previousLights) !== JSON.stringify(currentLights)) {
-      // For simplicity, just clear and re-add all lights
-      // TODO: More granular light updates
-      for (let i = previousLights.length - 1; i >= 0; i--) {
-        adapter.removeLight(i);
-      }
-      currentLights.forEach((light) => {
-        adapter!.addLight(light);
-      });
-
-      previousLights = currentLights;
-    }
-
-    // Sync background color
-    if (previousBackgroundColor !== state.backgroundColor) {
-      adapter.setBackgroundColor(state.backgroundColor);
-      previousBackgroundColor = state.backgroundColor;
-    }
+  return store.subscribe((state) => {
+    baseline = syncScene(state, baseline, sceneAdapter);
   });
-
-  return unsubscribe;
 }
 
 // Format width/height

@@ -7,6 +7,10 @@
 export type * from './core/types.js';
 export { graphicsReducer } from './core/reducer.js';
 export { createInitialGraphicsState } from './core/initial-state.js';
+// The scene sync, and the renderer surface it drives. Exported because it is
+// the seam a second backend would implement and the one a test can substitute.
+export { syncScene, initialBaseline } from './core/scene-sync.js';
+export type { SceneAdapter, SceneBaseline } from './core/scene-sync.js';
 
 // Components
 export { default as Scene } from './components/Scene.svelte';
