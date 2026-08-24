@@ -73,12 +73,23 @@ export function syncScene(
 ): SceneBaseline {
   const next: SceneBaseline = { ...previous };
 
-  if (JSON.stringify(previous.camera) !== JSON.stringify(state.camera)) {
+  // Identity throughout, not `JSON.stringify`. Every arm of `graphicsReducer`
+  // returns new objects for what it changes and the very same objects for what
+  // it does not, so identity is exact — and it is O(1), which matters because a
+  // running animation dispatches a `tick` per frame and stringifying every mesh
+  // at 60fps is a cost that only became live once animation started working.
+  //
+  // This is only correct because the reducer is pure. It was not: `tick` wrote
+  // through the mesh objects in place, which is what made the old comparison
+  // compare a value with itself.
+  if (previous.camera !== state.camera) {
     adapter.updateCamera(state.camera);
-    next.camera = { ...state.camera };
+    // The state object itself, not a copy — a copy would never be identical to
+    // the next one and the camera would re-sync on every dispatch.
+    next.camera = state.camera;
   }
 
-  if (JSON.stringify(previous.meshes) !== JSON.stringify(state.meshes)) {
+  if (previous.meshes !== state.meshes) {
     const prevMap = new Map(previous.meshes.map((m) => [m.id, m]));
     const currMap = new Map(state.meshes.map((m) => [m.id, m]));
 
@@ -90,7 +101,7 @@ export function syncScene(
       const prev = prevMap.get(id);
       if (!prev) {
         adapter.addMesh(mesh);
-      } else if (JSON.stringify(prev) !== JSON.stringify(mesh)) {
+      } else if (prev !== mesh) {
         adapter.updateMesh(id, mesh);
       }
     }
@@ -98,7 +109,7 @@ export function syncScene(
     next.meshes = state.meshes;
   }
 
-  if (JSON.stringify(previous.lights) !== JSON.stringify(state.lights)) {
+  if (previous.lights !== state.lights) {
     // Clear and re-add all lights. Coarse, and the reason a per-frame light
     // change would thrash.
     for (let i = previous.lights.length - 1; i >= 0; i -= 1) {

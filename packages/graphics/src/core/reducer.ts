@@ -304,6 +304,8 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
     }
 
     case 'tick': {
+      const meshUpdates = new Map<string, Partial<MeshConfig>>();
+
       // Update all active animations
       const updatedAnimations = state.animations.map((anim) => {
         if (!anim.isPlaying) return anim;
@@ -321,17 +323,19 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
           easedProgress
         );
 
-        // Update target mesh
-        const targetMesh = state.meshes.find((m) => m.id === anim.config.targetId);
-        if (targetMesh) {
-          if (anim.config.property === 'position') {
-            targetMesh.position = current;
-          } else if (anim.config.property === 'rotation') {
-            targetMesh.rotation = current;
-          } else if (anim.config.property === 'scale') {
-            targetMesh.scale = current;
-          }
-        }
+        // Record the update rather than writing it. Mutating the mesh in place
+        // was the whole defect: `state.meshes` kept both its array identity and
+        // its element identities, so `Scene.svelte`'s diff — which stored that
+        // same array as its baseline — compared an object with itself and could
+        // never fire. State moved and the renderer never heard about it.
+        //
+        // Accumulated per mesh because `property` is one of three: up to three
+        // animations can target one mesh at once, and applying them one at a
+        // time would drop all but the last.
+        meshUpdates.set(anim.config.targetId, {
+          ...meshUpdates.get(anim.config.targetId),
+          [anim.config.property]: current
+        });
 
         // Check if animation is complete
         if (progress >= 1) {
@@ -349,9 +353,20 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
 
       const hasActiveAnimations = updatedAnimations.some((a) => a.isPlaying);
 
+      // Identity is the signal the sync reads, so an idle tick has to return the
+      // very same array — otherwise every frame would look like a change.
+      const meshes =
+        meshUpdates.size === 0
+          ? state.meshes
+          : state.meshes.map((mesh) => {
+              const update = meshUpdates.get(mesh.id);
+              return update ? { ...mesh, ...update } : mesh;
+            });
+
       return [
         {
           ...state,
+          meshes,
           animations: updatedAnimations
         },
         hasActiveAnimations
