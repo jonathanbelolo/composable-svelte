@@ -17,7 +17,6 @@ import {
   DirectionalLight,
   PointLight,
   SpotLight,
-  Animation,
   type Nullable
 } from '@babylonjs/core';
 
@@ -49,35 +48,27 @@ export class BabylonAdapter {
     new Map();
 
   /**
-   * Initialize Babylon.js engine with WebGPU/WebGL fallback
+   * Initialize the Babylon WebGL engine.
+   *
+   * The `preferWebGPU` parameter is gone: it selected between two branches that
+   * built the same `Engine`, so it only ever changed the label this returned.
    */
   async initialize(
-    canvas: HTMLCanvasElement,
-    preferWebGPU: boolean = true
-  ): Promise<{ renderer: 'webgpu' | 'webgl'; capabilities: RendererCapabilities }> {
-    let useWebGPU = false;
-
-    // Try WebGPU first if preferred and available
-    if (preferWebGPU && 'gpu' in navigator) {
-      try {
-        // Check if WebGPU is supported
-        const adapter = await (navigator as any).gpu?.requestAdapter();
-        if (adapter) {
-          useWebGPU = true;
-          this.engine = new Engine(canvas, true, {
-            adaptToDeviceRatio: true,
-            antialias: true
-          });
-          // Enable WebGPU if available in Babylon.js v8
-          // Note: Babylon.js automatically uses WebGPU when available
-        }
-      } catch (error) {
-        console.warn('[BabylonAdapter] WebGPU not available, falling back to WebGL:', error);
-        useWebGPU = false;
-      }
-    }
-
-    // Fallback to WebGL
+    canvas: HTMLCanvasElement
+  ): Promise<{ renderer: 'webgl'; capabilities: RendererCapabilities }> {
+    // This package renders through Babylon's WebGL `Engine`, always.
+    //
+    // There used to be a "WebGPU first" branch here, and it constructed the
+    // same `new Engine(canvas, …)` as the fallback — its own comment said
+    // "Babylon.js automatically uses WebGPU when available". So detecting a
+    // WebGPU adapter changed nothing about rendering; it only changed the
+    // *label* this method returned, which the store surfaces as
+    // `renderer.activeRenderer` and `SceneDemo` prints to users. It reported
+    // `webgpu`, and `supportsWebGL: false`, while running WebGL.
+    //
+    // Real WebGPU is `WebGPUEngine` with its own async initialisation. That is
+    // a feature nobody built, so it is recorded as a gap rather than claimed —
+    // see the README and plans/hardening/README.md.
     if (!this.engine) {
       this.engine = new Engine(canvas, true, {
         adaptToDeviceRatio: true,
@@ -113,14 +104,14 @@ export class BabylonAdapter {
 
     // Get capabilities
     const capabilities: RendererCapabilities = {
-      supportsWebGPU: useWebGPU,
-      supportsWebGL: !useWebGPU,
+      supportsWebGPU: false,
+      supportsWebGL: true,
       maxTextureSize: this.engine.getCaps().maxTextureSize,
       maxVertexAttributes: this.engine.getCaps().maxVertexAttribs
     };
 
     return {
-      renderer: useWebGPU ? 'webgpu' : 'webgl',
+      renderer: 'webgl',
       capabilities
     };
   }

@@ -4,7 +4,7 @@ State-driven WebGL/WebGPU graphics package for Composable Svelte.
 
 ## Features
 
-- ✅ **WebGPU First**: Automatic WebGPU with WebGL fallback
+- ✅ **WebGL**: Babylon.js `Engine`. WebGPU is *not* implemented — see Renderer below.
 - ✅ **State-Driven**: All scene state managed through pure reducers
 - ✅ **Declarative API**: Svelte components for scene composition
 - ✅ **Type-Safe**: Full TypeScript support
@@ -186,11 +186,12 @@ type GraphicsAction =
 </script>
 
 <Scene {store}>
-  <Camera position={[0, 0, 10]} lookAt={[0, 0, 0]} />
-  <Light type="ambient" intensity={0.5} />
-  <Light type="directional" position={[5, 10, 7.5]} intensity={1} />
+  <Camera {store} position={[0, 0, 10]} lookAt={[0, 0, 0]} />
+  <Light {store} type="ambient" intensity={0.5} />
+  <Light {store} type="directional" position={[5, 10, 7.5]} intensity={1} />
 
   <Mesh
+    {store}
     id="cube-1"
     geometry={{ type: 'box', size: 2 }}
     material={{ color: '#4ecdc4', metallic: 0.7, roughness: 0.3 }}
@@ -268,20 +269,24 @@ describe('Graphics Reducer', () => {
 });
 ```
 
-## Renderer Support
+## Renderer
 
-The package automatically detects and uses the best available renderer:
+**WebGL, via Babylon's `Engine`. Always.**
 
-- **WebGPU**: Modern browsers (Chrome 113+, Edge 113+)
-- **WebGL**: Fallback for older browsers
+This used to claim automatic WebGPU with a WebGL fallback. It never did that:
+both branches of the "detection" constructed the same `new Engine(canvas, …)`,
+and the WebGPU branch's own comment said Babylon would handle it. Detecting a
+WebGPU adapter changed no rendering — only the label reported as
+`renderer.activeRenderer`, which said `webgpu` while WebGL ran, alongside
+`supportsWebGL: false`.
 
-You can check which renderer is active:
+Real WebGPU means Babylon's `WebGPUEngine` and its separate async
+initialisation. That is unbuilt, and recorded as a gap rather than claimed.
+`activeRenderer` now reports `'webgl'`, which is what is running.
 
 ```svelte
-{#if $store.renderer.activeRenderer === 'webgpu'}
-  <p>Using WebGPU (GPU-accelerated)</p>
-{:else if $store.renderer.activeRenderer === 'webgl'}
-  <p>Using WebGL (fallback)</p>
+{#if $store.renderer.isInitialized}
+  <p>Renderer: {$store.renderer.activeRenderer}</p>
 {/if}
 ```
 

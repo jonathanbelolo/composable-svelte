@@ -40,10 +40,11 @@ onMount(() => {
       adapter = new BabylonAdapter();
 
       // Initialize renderer (WebGPU/WebGL)
-      const result = await adapter.initialize(
-        canvas,
-        store.state.renderer.activeRenderer !== 'webgl'
-      );
+      // The second argument used to be a WebGPU preference derived from
+      // `activeRenderer !== 'webgl'` — which is `null !== 'webgl'` at this
+      // point, i.e. always true, so there was no path to opt out. It selected
+      // between two branches that built the same engine, and is gone.
+      const result = await adapter.initialize(canvas);
 
       // Dispatch initialization success
       store.dispatch({

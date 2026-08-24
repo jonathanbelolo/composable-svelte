@@ -3,10 +3,14 @@
  * @description Helper to create initial graphics state
  */
 
-import type { GraphicsState, RendererConfig } from './types.js';
+import type { GraphicsState } from './types.js';
 
 export interface InitialGraphicsConfig {
-  renderer?: Partial<RendererConfig>;
+  // `renderer?: Partial<RendererConfig>` used to sit here. It was accepted and
+  // never read — the body below returns a hardcoded renderer literal — so all
+  // four of its fields were unreachable. There is no way to force WebGL either:
+  // `Scene.svelte` derives the preference from `activeRenderer !== 'webgl'`, and
+  // `activeRenderer` is null until after init, so it is always true.
   backgroundColor?: string;
 }
 
@@ -30,17 +34,6 @@ export function createInitialGraphicsState(
       error: null
     },
 
-    // Scene
-    scene: {
-      id: 'root',
-      children: [],
-      transform: {
-        position: [0, 0, 0],
-        rotation: [0, 0, 0],
-        scale: [1, 1, 1]
-      },
-      visible: true
-    },
     backgroundColor: config.backgroundColor || '#1a1a1a',
 
     // Camera (default perspective camera)
@@ -72,7 +65,6 @@ export function createInitialGraphicsState(
     animations: [],
 
     // Loading state
-    isLoading: true,
-    loadingProgress: 0
+    isLoading: true
   };
 }

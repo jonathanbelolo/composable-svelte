@@ -4,31 +4,18 @@
  */
 
 // ============================================================================
-// Vector and Transform Types
+// Vector Types
 // ============================================================================
 
 export type Vector3 = [number, number, number];
 export type Vector2 = [number, number];
 export type Color = string; // Hex color string like '#ff6b6b'
 
-export interface Transform {
-  position: Vector3;
-  rotation: Vector3; // Euler angles in radians
-  scale: Vector3;
-}
-
 // ============================================================================
 // Renderer Configuration
 // ============================================================================
 
 export type RendererType = 'auto' | 'webgpu' | 'webgl';
-
-export interface RendererConfig {
-  type: RendererType;
-  preferWebGPU?: boolean;
-  antialiasing?: boolean;
-  adaptToDeviceRatio?: boolean;
-}
 
 export interface RendererState {
   activeRenderer: 'webgpu' | 'webgl' | null;
@@ -156,19 +143,6 @@ export interface MeshConfig {
   rotation?: Vector3;
   scale?: Vector3;
   visible?: boolean;
-  castShadows?: boolean;
-  receiveShadows?: boolean;
-}
-
-// ============================================================================
-// Scene Graph
-// ============================================================================
-
-export interface SceneNode {
-  id: string;
-  children: SceneNode[];
-  transform: Transform;
-  visible: boolean;
 }
 
 // ============================================================================
@@ -202,7 +176,6 @@ export interface GraphicsState {
   renderer: RendererState;
 
   // Scene
-  scene: SceneNode;
   backgroundColor: Color;
 
   // Camera
@@ -219,7 +192,6 @@ export interface GraphicsState {
 
   // Loading state
   isLoading: boolean;
-  loadingProgress: number; // 0-1
 }
 
 // ============================================================================

@@ -140,6 +140,8 @@ $store.renderer.error          // string | null
 - `position: [number, number, number]` - Camera position (required)
 - `lookAt: [number, number, number]` - Target point to look at (required)
 - `fov: number` - Field of view in degrees (default: 45, perspective only)
+- `orthoSize: number` - Half-height of the view in world units (default: 5,
+  orthographic only). The half-width follows from the viewport aspect.
 - `near: number` - Near clipping plane (optional)
 - `far: number` - Far clipping plane (optional)
 
@@ -162,6 +164,7 @@ $store.renderer.error          // string | null
 <Camera
   {store}
   type="orthographic"
+  orthoSize={8}
   position={[0, 10, 0]}
   lookAt={[0, 0, 0]}
 />
@@ -440,8 +443,23 @@ interface MaterialConfig {
 }
 ```
 
-**PBR Workflow**:
-Materials use Physically Based Rendering (PBR) with metallic/roughness workflow.
+**Not PBR.** This section used to say "Materials use Physically Based Rendering
+(PBR) with metallic/roughness workflow". They do not: the adapter builds a
+Babylon `StandardMaterial`, which has no metallic or roughness channel.
+`roughness` was read by nothing at all until recently.
+
+Both are mapped onto the closest levers `StandardMaterial` offers, and the
+values below still read the way you expect — a high `roughness` looks rough —
+but they are approximations, not physically based shading:
+
+- `metallic` → `specularColor`, tinting the highlight.
+- `roughness` → `specularPower`, setting how tight it is. Inverted and linear,
+  with `0.5` landing on Babylon's own default, so a material that sets the
+  middle looks like one that sets nothing.
+
+Real PBR is Babylon's `PBRMaterial`, which would change the lighting model for
+every existing mesh and needs an environment texture to look right. Recorded as
+a gap rather than claimed.
 
 ### Metallic (0-1)
 Controls how metal-like the surface appears.
