@@ -32,6 +32,14 @@
  * the same block. Both survived review by grep — the first because a missing
  * attribute spread over a multi-line element is awkward to match, the second
  * because the duplicate spanned two lines.
+ *
+ * Note which of those two this actually catches: **the second only.** A
+ * duplicate attribute is a parse error; a *missing required prop* is perfectly
+ * valid Svelte and needs `svelte-check` against the real component to see. So
+ * this closes the hole the fix opened, not the one the fix was for. Catching
+ * the original would mean generating a component per block and running
+ * `svelte-check` over it — a much larger machine, recorded in
+ * `plans/hardening/README.md` rather than built here.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -308,17 +316,48 @@ const SWEPT_DOCS = [
 /** The runes, which look like store references and must not be declared. */
 const RUNES = new Set(['state', 'derived', 'effect', 'props', 'bindable', 'inspect', 'host']);
 
-/** Give a script-less excerpt a `<script>` declaring every store it subscribes to. */
+/**
+ * Turn a script-less excerpt into something the compiler actually checks.
+ *
+ * Two problems, both of which made this weaker than it looked:
+ *
+ * 1. A markup-only excerpt auto-subscribes to a store it never declares
+ *    (`$store`) — a compile error out of context, but exactly what the
+ *    surrounding prose describes. So the stores get declared.
+ * 2. Several blocks put bare JavaScript *above* their markup with no `<script>`
+ *    tag. Svelte parses that as a **text node**, so the JS was never checked:
+ *    corrupting it left the suite green. Those leading lines are lifted into the
+ *    `<script>` where the prose plainly means them to be.
+ */
 function withDeclaredStores(body: string): string {
-	const referenced = new Set(
-		[...body.matchAll(/\$([a-zA-Z_][a-zA-Z0-9_]*)/g)]
+	const lines = body.split('\n');
+	// Markup starts at the first line opening a tag or a Svelte block.
+	const markupAt = lines.findIndex((line) => /^\s*[<{]/.test(line));
+	const leading = markupAt === -1 ? [] : lines.slice(0, markupAt);
+	const markup = markupAt === -1 ? body : lines.slice(markupAt).join('\n');
+
+	const declared = new Set(
+		leading
+			.flatMap((line) => [
+				...line.matchAll(/\b(?:let|const|var|function)\s+([a-zA-Z_$][\w$]*)/g)
+			])
 			.map((m) => m[1]!)
-			.filter((name) => !RUNES.has(name))
 	);
 
-	if (referenced.size === 0) return body;
+	const referenced = [
+		...new Set(
+			[...markup.matchAll(/\$([a-zA-Z_][a-zA-Z0-9_]*)/g)]
+				.map((m) => m[1]!)
+				.filter((name) => !RUNES.has(name) && !declared.has(name))
+		)
+	];
 
-	return `<script lang="ts">\n  let { ${[...referenced].join(', ')} } = $props();\n</script>\n${body}`;
+	const props = referenced.length > 0 ? `  let { ${referenced.join(', ')} } = $props();\n` : '';
+	const script = leading.join('\n');
+
+	if (!props && !script.trim()) return body;
+
+	return `<script lang="ts">\n${props}${script}\n</script>\n${markup}`;
 }
 
 /**
@@ -331,8 +370,14 @@ function withDeclaredStores(body: string): string {
  * component tag, or with Svelte block syntax, is the signal.
  */
 function looksLikeSvelte(body: string): boolean {
-	return /^\s*(<[A-Z][A-Za-z0-9]*[\s/>]|\{#(if|each|await|key)\b|\{@(render|html)\b)/m.test(
-		body
+	return (
+		// A component tag, including the dotted form this repo uses throughout
+		// (`<Card.Header>`) — which an `[A-Z][A-Za-z0-9]*` pattern alone misses.
+		/^\s*<[A-Z][A-Za-z0-9]*(\.[A-Za-z0-9]+)*[\s/>]/m.test(body) ||
+		// Plain HTML markup at the start of a line.
+		/^\s*<(div|span|button|p|section|main|form|input|ul|li|a|h[1-6])[\s/>]/m.test(body) ||
+		// Svelte block syntax — opening, continuing or closing.
+		/^\s*\{[#:/@](if|each|await|key|else|then|catch|render|html|const|snippet)\b/m.test(body)
 	);
 }
 
@@ -342,11 +387,16 @@ const sweptSvelteBlocks = blocks.filter((b) => SWEPT_DOCS.includes(b.file) && b.
  * Blocks that are Svelte markup but are not fenced as such.
  *
  * The fence label is the contract this check runs on, so a mislabelled fence is
- * a hole in it — and `composable-svelte-graphics/SKILL.md` had 45 ```typescript
- * blocks against a single ```svelte, most of them component markup. Whole
- * examples have been relabelled; what stays `typescript` is the blocks that
- * deliberately elide with `...`, which cannot compile by design and are listed
- * here so the number cannot quietly grow.
+ * a hole in it — and `composable-svelte-graphics/SKILL.md` had 44 ```typescript
+ * blocks against a single ```svelte, 28 of them component markup. 22 were
+ * relabelled.
+ *
+ * The 6 that remain are the ones that do not compile as they stand — mostly
+ * because they elide with `...`, but not all, and an earlier version of this
+ * comment claimed `...` was the rule. The real rule was "compiled → relabel,
+ * failed → leave". Fixing one and relabelling it is an improvement, so this is
+ * a ceiling rather than an equality: it stops the number growing without
+ * punishing anyone who reduces it.
  */
 const ALLOWED_MISLABELLED = 6;
 
@@ -390,11 +440,9 @@ describe('Svelte markup is fenced as svelte', () => {
 			.filter((b) => SWEPT_DOCS.includes(b.file) && b.lang !== 'svelte' && looksLikeSvelte(b.body))
 			.map((b) => `${b.file}:${b.line}`);
 
-		// An exact count rather than a ceiling: relabelling one of the remaining
-		// blocks should require updating this number, and a *new* mislabelled
-		// block should fail rather than fitting under a margin.
-		expect(mislabelled.length, `mislabelled blocks:\n${mislabelled.join('\n')}`).toBe(
-			ALLOWED_MISLABELLED
-		);
+		expect(
+			mislabelled.length,
+			`mislabelled blocks:\n${mislabelled.join('\n')}`
+		).toBeLessThanOrEqual(ALLOWED_MISLABELLED);
 	});
 });

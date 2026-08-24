@@ -155,3 +155,53 @@ describe('visibility toggles from its effective value', () => {
 		expect(store.state.meshes[0]!.visible).toBe(false);
 	});
 });
+
+describe('the last two arms keep identity too', () => {
+	it('setting the background to the colour it already is changes nothing', () => {
+		const store = makeStore();
+		// The whole state object, captured *before* the dispatch. Comparing
+		// `store.state` against `store.state` after the fact is trivially true —
+		// which is what the first draft of this test did, and it survived the
+		// mutation it exists to catch.
+		const before = store.state;
+
+		store.dispatch({ type: 'setBackgroundColor', color: before.backgroundColor });
+
+		expect(store.state, 'a no-op dispatch produced fresh state').toBe(before);
+	});
+
+	it('setting a different background still changes it', () => {
+		const store = makeStore();
+
+		store.dispatch({ type: 'setBackgroundColor', color: '#123456' });
+
+		expect(store.state.backgroundColor).toBe('#123456');
+	});
+
+	it('clearing an already-empty scene changes nothing', () => {
+		const store = makeStore();
+		store.dispatch({ type: 'clearScene' });
+		const meshes = store.state.meshes;
+		const lights = store.state.lights;
+		const animations = store.state.animations;
+
+		store.dispatch({ type: 'clearScene' });
+
+		// `syncScene` reads identity, so three fresh empty arrays are three
+		// diffs walked for nothing.
+		expect(store.state.meshes).toBe(meshes);
+		expect(store.state.lights).toBe(lights);
+		expect(store.state.animations).toBe(animations);
+	});
+
+	it('clearing a populated scene still empties it', () => {
+		// The paired half: the guard must not swallow a real clear.
+		const store = makeStore();
+		store.dispatch({ type: 'addMesh', mesh: cube() });
+
+		store.dispatch({ type: 'clearScene' });
+
+		expect(store.state.meshes).toEqual([]);
+		expect(store.state.lights).toEqual([]);
+	});
+});

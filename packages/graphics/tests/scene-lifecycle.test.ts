@@ -14,6 +14,8 @@ import { graphicsReducer } from '../src/core/reducer';
 import { createInitialGraphicsState } from '../src/core/initial-state';
 import Scene from '../src/components/Scene.svelte';
 import { BabylonAdapter } from '../src/adapters/babylon-adapter';
+// Aliased: this file already imports the `<Scene>` component under that name.
+import { NullEngine, Scene as BabylonScene } from '@babylonjs/core';
 import type { GraphicsAction, GraphicsState } from '../src/core/types';
 
 afterEach(() => vi.restoreAllMocks());
@@ -70,32 +72,51 @@ describe('Scene initialisation', () => {
 		).toBeNull();
 	});
 
-	it('disposes an engine that finished building after it was unmounted', async () => {
-		// The branch the fix is actually about, and the one jsdom cannot reach on
-		// its own: `initialize` needs a canvas context, so it always rejects here
-		// and only the error guard ran. Stubbing a *successful* initialise is what
-		// exercises the success guard — without it the adapter went on to own an
-		// engine, a render loop and a resize listener that nothing could reach.
-		vi.spyOn(BabylonAdapter.prototype, 'initialize').mockImplementation(async () => {
+	it('disposes an engine that finished building after it was unmounted', () => {
+		// The shape the guard defends, and it has to be built deliberately: today
+		// `initialize` has no internal `await`, so its engine exists *before* the
+		// microtask boundary and the `onMount` cleanup's own `adapter?.dispose()`
+		// already catches it. That is why simply asserting `dispose` was called
+		// passed with the guard deleted — the cleanup was calling it.
+		//
+		// So the stub builds its scene *after* awaiting, which is what any real
+		// async backend would do (`WebGPUEngine` among them). Now the cleanup runs
+		// against an adapter that owns nothing, and only the cancelled branch can
+		// dispose what appears afterwards.
+		let built: BabylonScene | null = null;
+
+		vi.spyOn(BabylonAdapter.prototype, 'initialize').mockImplementation(async function (
+			this: BabylonAdapter
+		) {
 			await new Promise((resolve) => setTimeout(resolve, 20));
+			built = this.attachEngine(
+				new NullEngine({
+					renderWidth: 8,
+					renderHeight: 8,
+					textureSize: 8,
+					deterministicLockstep: false,
+					lockstepMaxSteps: 1
+				})
+			);
 			return {
 				renderer: 'webgl' as const,
 				capabilities: { supportsWebGL: true, maxTextureSize: 4096, maxVertexAttributes: 16 }
 			};
 		});
-		const dispose = vi.spyOn(BabylonAdapter.prototype, 'dispose');
 
 		const store = makeStore();
 		const { instance, target } = mountScene(store);
 
 		unmount(instance);
 		target.remove();
-		await settle();
 
-		expect(dispose, 'the finished engine was never disposed').toHaveBeenCalled();
-		expect(
-			store.state.renderer.isInitialized,
-			'an unmounted <Scene> reported initialisation'
-		).toBe(false);
+		return settle().then(() => {
+			expect(built, 'the stub never built a scene — the test proves nothing').not.toBeNull();
+			expect(built!.isDisposed, 'the finished engine was left running').toBe(true);
+			expect(
+				store.state.renderer.isInitialized,
+				'an unmounted <Scene> reported initialisation'
+			).toBe(false);
+		});
 	});
 });

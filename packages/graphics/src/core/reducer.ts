@@ -3,7 +3,9 @@
  * @description Graphics reducer - pure state management for 3D scenes
  */
 
-import type { Reducer } from '@composable-svelte/core';
+// `EffectType` is the public name for the `Effect<A>` *type*; `Effect` itself
+// is the value namespace (`Effect.run`, `Effect.cancellable`).
+import type { EffectType, Reducer } from '@composable-svelte/core';
 import { Effect } from '@composable-svelte/core';
 import type {
   GraphicsState,
@@ -14,6 +16,56 @@ import type {
   AnimationConfig,
   Vector3
 } from './types.js';
+
+/**
+ * The single frame-loop effect id.
+ *
+ * `Effect.cancellable` cancels any in-flight effect sharing an id, so
+ * scheduling under this one always *supersedes* rather than adds — which is the
+ * property "one frame loop for the whole store" actually needs.
+ *
+ * The first attempt approximated it with `alreadyTicking`, derived from whether
+ * anything was playing. That is a proxy for "a frame is already pending", and
+ * the two come apart the moment an animation is removed while its frame is
+ * still in flight: stop-then-start, `clearScene`-then-start and
+ * `removeMesh`-then-start each forked a second chain that never merged and
+ * never died, and they compounded — five start/stop cycles settled at six
+ * permanent chains, each re-walking every animation and mesh for ever.
+ *
+ * It also could not recover. If the scheduling effect never ran — the store
+ * skips every effect under SSR — the animations stayed `isPlaying: true` with
+ * no chain, and `alreadyTicking` was then true for ever, so no later
+ * `startAnimation` could restart anything.
+ */
+const ANIMATION_FRAME_EFFECT = 'graphics.animationFrame';
+
+/**
+ * Schedule the next animation frame, superseding any frame already pending.
+ *
+ * The executor stays open *until* the frame fires rather than returning as soon
+ * as `requestAnimationFrame` is queued. That is what makes it cancellable at
+ * all: an effect that completes synchronously is never in flight, so a
+ * superseding registration would have nothing to cancel and both callbacks
+ * would dispatch. The queued callback still runs — rAF has no cancellation the
+ * store can reach — but the store gates a cancelled effect's dispatches, so a
+ * superseded chain's `tick` never lands and it stops there instead of
+ * scheduling its own successor.
+ *
+ * No `signal.aborted` check here, deliberately: `store.svelte.ts` wraps the
+ * dispatch handed to a cancellable effect and drops actions once the signal
+ * aborts, precisely "so cancellation means something even for an executor that
+ * ignores the signal entirely". A check here cannot change behaviour, and no
+ * test can distinguish it — which is the definition this campaign sweeps by.
+ */
+function scheduleFrame(): EffectType<GraphicsAction> {
+  return Effect.cancellable(ANIMATION_FRAME_EFFECT, async (dispatch) => {
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => resolve());
+    });
+
+    dispatch({ type: 'tick', time: Date.now() });
+  });
+}
 
 /** True for a plain data object (not an array, not null). */
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -367,16 +419,6 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
         return [state, Effect.none()];
       }
 
-      // Ids must be unique here for the same reason they must be on meshes and
-      // lights: `stopAnimation` filters by id, so a duplicate pair could only
-      // ever be stopped together.
-      if (state.animations.some((a) => a.id === action.animation.id)) {
-        console.warn(
-          `[graphics] startAnimation: id "${action.animation.id}" is already running; ignoring`
-        );
-        return [state, Effect.none()];
-      }
-
       const animation = {
         id: action.animation.id,
         config: action.animation,
@@ -384,26 +426,22 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
         isPlaying: true
       };
 
-      // One frame loop for the whole store, not one per animation. `tick`
-      // schedules the next frame whenever anything is playing, so a second
-      // chain started here would never merge with the first: five animations
-      // measured four times the ticks of one, each walking every animation and
-      // mesh and re-running the whole scene sync.
-      const alreadyTicking = state.animations.some((a) => a.isPlaying);
+      // An id already in state is *replaced*, not refused. One entry per id
+      // still holds — `stopAnimation` filters by id, so a duplicate pair could
+      // only ever be stopped together — but refusing was worse than the problem
+      // it solved: `tick` marks a finished animation `isPlaying: false` without
+      // removing it, so a completed id was burned for the life of the store and
+      // the warning claimed it was "already running". The README's own
+      // `<button onclick={startRotation}>` dispatches a fixed id, so without
+      // `loop: true` that button worked exactly once, silently. Restarting is
+      // what "start this animation" should mean.
+      const existing = state.animations.findIndex((a) => a.id === action.animation.id);
+      const animations =
+        existing === -1
+          ? [...state.animations, animation]
+          : state.animations.map((a, i) => (i === existing ? animation : a));
 
-      return [
-        {
-          ...state,
-          animations: [...state.animations, animation]
-        },
-        alreadyTicking
-          ? Effect.none()
-          : Effect.run(async (dispatch) => {
-              requestAnimationFrame(() => {
-                dispatch({ type: 'tick', time: Date.now() });
-              });
-            })
-      ];
+      return [{ ...state, animations }, scheduleFrame()];
     }
 
     case 'stopAnimation': {
@@ -519,13 +557,7 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
           meshes,
           animations: updatedAnimations
         },
-        hasActiveAnimations
-          ? Effect.run(async (dispatch) => {
-              requestAnimationFrame(() => {
-                dispatch({ type: 'tick', time: Date.now() });
-              });
-            })
-          : Effect.none()
+        hasActiveAnimations ? scheduleFrame() : Effect.none()
       ];
     }
 

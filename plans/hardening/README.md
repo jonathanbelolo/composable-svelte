@@ -1194,13 +1194,61 @@ documents advertised "hex or CSS color"; and `package.json`'s description and
 `webgpu` keyword — both npm-visible — still claimed WebGPU, as did six sibling
 skill files.
 
-Three of my own tests were vacuous: `<Camera>`'s untrack and `<Scene>`'s
-success-branch cancellation had no coverage at all, and the duplicate-`<Light>`
-test asserted only that nothing threw, never inspecting the state the defect
-lives in.
+One of my own tests was vacuous — the duplicate-`<Light>` test asserted only
+that nothing threw, never inspecting the state the defect lives in — and two
+things had no test at all: `<Camera>`'s untrack and `<Scene>`'s success-branch
+cancellation. (This paragraph first called all three "vacuous", which its own
+next clause contradicted. Absent and vacuous are different failures.)
 
 graphics: 25 tests at the start of T6, 56 at the end of the sweep, 101 after the
-first review, **117** after the second.
+first review, **113** after the second, **128** after the third. (The second
+round's commit and this entry both said 117; the real figure was 113. I reported
+a number I had not re-run after removing a test file.)
+
+**A third review, of the second round's repairs, found 20 more — and two were
+again regressions from the repairs themselves.** Both were liveness defects,
+which is the worst class and the one this campaign has already hit once in
+`auth`:
+
+- **A finished animation burned its id for the life of the store.** The
+  duplicate-id guard tested `animations.some(a => a.id === …)` while `tick`
+  marks a completed animation `isPlaying: false` without removing it — so
+  restarting was refused, with a warning that said "is already running" about
+  something that was not. The README's own `<button onclick={startRotation}>`
+  dispatches a fixed id, so without `loop: true` that button worked exactly
+  once, silently. `startAnimation` now *replaces* by id, which is what "start
+  this animation" should mean.
+- **The single-frame-loop fix forked instead.** `alreadyTicking`, derived from
+  whether anything was playing, is a proxy for "a frame is already pending", and
+  the two come apart the moment an animation is removed while its frame is in
+  flight. Stop-then-start, `clearScene`-then-start and `removeMesh`-then-start
+  each forked a chain that never merged and never died, and they compounded —
+  five start/stop cycles settled at six permanent chains. My test covered only
+  "five started at once", the one shape that worked. Replaced with
+  `Effect.cancellable` under a fixed id, which is the store's own
+  supersede-by-id primitive and the property actually needed. That also fixes
+  the third finding: a chain lost to a skipped effect (the store skips all
+  effects under SSR) left `alreadyTicking` true for ever, so no later
+  `startAnimation` could restart anything.
+
+And a third doc block stating the exact opposite of its own code: I wrote that
+omitting only `metallic` gives Babylon's defaults while omitting only
+`roughness` does not. It is the other way round, and the example I cited to
+illustrate the "fine" case was an instance of the broken one.
+
+Also: the `MIN_SPECULAR` floor was applied to the tint *before* the roughness
+multiply, so the two compounded and a black metal at `roughness: 1` came out at
+0.005 — one 8-bit level, still black, so "never extinguishes the highlight" was
+still false. `hexToColor3`'s new warning fired per frame on the animation path,
+60 lines a second. `attachEngine`'s new idempotence guard silently returned a
+scene bound to an engine the caller believed it had replaced.
+
+Three more of my tests were vacuous, including — again — the one covering the
+previous commit's headline fix: `<Scene>`'s cancellation test passed with the
+guard deleted, because `adapter` is assigned before the first `await` so the
+unmount cleanup was already disposing it. And a pre-existing test asserted only
+that a *difference* halved, which `null - null` satisfies, so the orthographic
+bounds had no coverage in either arm.
 
 ### T10. 41 documented Svelte examples do not compile — VERIFIED
 
@@ -1209,31 +1257,58 @@ fix for the graphics README's missing-`{store}` examples introduced a *duplicate
 `{store}` that a verification grep could not see because it spanned two lines.
 The same class of miss, twice, on the same file.
 
-Pointed at every markdown file in the repo it finds **41 non-compiling blocks
-across 16 files**:
+**Corrected numbers.** This entry first said "pointed at every markdown file in
+the repo it finds 41 non-compiling blocks across 16 files". Both halves were
+wrong. The walker covers `packages/`, `.claude/` and `guides/` only — **69 of
+175 tracked `.md` files** — so `examples/`, `plans/`, `specs/`, the root
+`README.md` and `CLAUDE.md` were never looked at. And the detector missed whole
+categories of block (below), so it undercounted even within those roots.
+
+Measured across all 175 tracked markdown files with the corrected detector:
+**139 non-compiling blocks across 63 files**, out of 674 Svelte-ish blocks.
 
 | reason | count | reading |
 |---|---|---|
-| `global_reference_invalid` | 21 | an excerpt whose `<script>` shows only part of itself, so an auto-subscribed store is undeclared — mostly benign |
-| `js_parse_error` | 13 | likely real |
-| `script_duplicate` | 3 | likely real |
-| `expected_token` | 2 | likely real |
-| `state_invalid_placement` | 1 | likely real |
-| `block_unclosed` | 1 | likely real |
+| `js_parse_error` | 62 | likely real |
+| `global_reference_invalid` | 24 | an excerpt whose `<script>` shows only part of itself, so an auto-subscribed store is undeclared — mostly benign |
+| `expected_token` | 13 | likely real |
+| `block_unclosed` | 9 | likely real |
+| `script_duplicate` | 8 | likely real |
+| `element_unclosed` | 6 | likely real |
+| `bind_invalid_value` | 5 | likely real |
+| everything else | 12 | 10 distinct reasons, 1–3 each |
 
-So roughly 20 look like genuine syntax errors in documented examples, and each
+So roughly 115 look like genuine syntax errors in documented examples, and each
 needs individual judgement about whether the excerpt or the code is wrong. The
 guard is therefore scoped to a list of *swept* documents — currently the two
 graphics ones — which grows as sweeps land. Gating the repo on documents nobody
 has read in this campaign would be a large unreviewed change.
 
 A second hole found while building it: **the fence label cannot be trusted.**
-`composable-svelte-graphics/SKILL.md` carried 45 ```typescript blocks against a
-single ```svelte, and most of the 45 were component markup — which is why a
-fence-only check found nothing in the very file whose examples were wrong. 22
-were relabelled; the 6 that deliberately elide with `...` cannot compile by
-design and are counted so the number cannot quietly grow. The other packages'
-skill files have not been checked for this.
+`composable-svelte-graphics/SKILL.md` carried **44** ```typescript blocks against
+a single ```svelte, **28** of them component markup — which is why a fence-only
+check found nothing in the very file whose examples were wrong. 22 were
+relabelled. (This entry first said 45 and "most of them", reporting a total block
+count as a markup count.) The 6 that remain are simply the ones that do not
+compile as they stand; the claim that they are "the blocks that deliberately
+elide with `...`" was also wrong — only 3 contain `...`, and 6 blocks that *do*
+contain it relabelled successfully. The real rule was "compiled → relabel,
+failed → leave". The other packages' skill files have not been checked for this.
+
+Two further holes in the detector, both found by the third review and both
+closed: `looksLikeSvelte` required `<[A-Z][A-Za-z0-9]*`, so **dotted component
+names — `<Card.Header>`, the convention used throughout this repo — were
+invisible to it**, as was all lowercase HTML and every `{:else}` / `{/if}`
+continuation. And 8 of the 23 relabelled blocks put bare JavaScript above their
+markup with no `<script>` tag, which Svelte parses as a *text node* — so the JS
+in a third of the checked blocks was never checked at all, and corrupting it
+left the suite green.
+
+**What this guard does not catch:** a missing required prop. `<Camera
+position={…} />` with no `{store}` is valid Svelte. That is the *original*
+defect — the one the fix was for — and only `svelte-check` against a real
+generated component would see it. The guard closes the hole the fix opened, not
+the one the fix was for.
 
 ### T7. `ed855dd` is unreviewed — VERIFIED
 

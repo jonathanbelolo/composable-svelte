@@ -10,7 +10,7 @@
  * looked.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { NullEngine, Scene, SpotLight, StandardMaterial } from '@babylonjs/core';
 import { BabylonAdapter } from '../src/adapters/babylon-adapter.js';
 import type { MeshConfig } from '../src/core/types.js';
@@ -149,10 +149,27 @@ describe('the camera tracks the viewport', () => {
   beforeEach(() => { h = headlessAdapter(); });
   afterEach(() => { h.adapter.dispose(); h.engine.dispose(); });
 
+  it('applies orthographic bounds at all', () => {
+    // The test below asserted only that a *difference* halved, and
+    // `null - null` is `0`, so `0 ≈ 0 / 2` passed against an
+    // `applyOrthographicBounds` that did nothing whatsoever. Babylon falls back
+    // to the engine viewport in pixels when any edge is left null, so "no
+    // bounds" is not a harmless default.
+    h.adapter.updateCamera({ type: 'orthographic', position: [0, 0, 10], lookAt: [0, 0, 0], orthoSize: 5 });
+    const camera = h.scene.activeCamera!;
+
+    expect(camera.orthoTop, 'orthoTop was never set').toBe(5);
+    expect(camera.orthoBottom).toBe(-5);
+    // 800×600 → aspect 4/3 → half-width 6.667.
+    expect(camera.orthoRight!).toBeCloseTo(20 / 3);
+    expect(camera.orthoLeft!).toBeCloseTo(-20 / 3);
+  });
+
   it('recomputes orthographic bounds when the viewport changes shape', () => {
     h.adapter.updateCamera({ type: 'orthographic', position: [0, 0, 10], lookAt: [0, 0, 0], orthoSize: 5 });
     const camera = h.scene.activeCamera!;
     const widthBefore = camera.orthoRight! - camera.orthoLeft!;
+    expect(widthBefore, 'there were no bounds to recompute').toBeGreaterThan(0);
 
     // 800×600 → 400×600: the aspect halves, so the framed width must halve too,
     // or the scene stretches. Bounds were computed once in `updateCamera` and
@@ -246,4 +263,57 @@ describe('a light is the same whether it was added or updated', () => {
 
 		expect(h.scene.lights[0]!.getClassName()).toBe('PointLight');
 	});
+});
+
+describe('the adapter says something when it cannot do what was asked', () => {
+  let h: ReturnType<typeof headlessAdapter>;
+  beforeEach(() => { h = headlessAdapter(); });
+  afterEach(() => { h.adapter.dispose(); h.engine.dispose(); vi.restoreAllMocks(); });
+
+  it('warns once, not per frame, for a colour it cannot parse', () => {
+    // `applyMaterial` runs on every `updateMesh`, and `syncScene` passes the
+    // whole `MeshConfig` — whose `material` is required — so an animated mesh
+    // reaches `hexToColor3` per frame. Warning unconditionally turned one bad
+    // colour into 60 console lines a second, burying the message.
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    h.adapter.addMesh(cube({ material: { color: 'red' } }));
+
+    for (let i = 0; i < 60; i++) {
+      h.adapter.updateMesh('cube', { ...cube({ material: { color: 'red' } }), position: [i, 0, 0] });
+    }
+
+    expect(warn.mock.calls.filter((c) => String(c[0]).includes('not a 6-digit hex'))).toHaveLength(1);
+  });
+
+  it('still warns for a different unparseable colour', () => {
+    // The paired half: warn-once must be per value, not once ever.
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    h.adapter.addMesh(cube({ material: { color: 'red' } }));
+    h.adapter.addMesh(cube({ id: 'other', material: { color: 'rgb(1,2,3)' } }));
+
+    expect(warn.mock.calls.filter((c) => String(c[0]).includes('not a 6-digit hex'))).toHaveLength(2);
+  });
+
+  it('refuses to silently rebind to a different engine', () => {
+    // `attachEngine` is a public export. Returning the existing scene without a
+    // word would hand back one bound to the *old* engine, so viewport-derived
+    // state — the orthographic bounds — would keep following an engine the
+    // caller believes it replaced.
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const other = new NullEngine({ renderWidth: 400, renderHeight: 400, textureSize: 512, deterministicLockstep: false, lockstepMaxSteps: 1 });
+
+    const returned = h.adapter.attachEngine(other);
+
+    expect(returned, 'a second scene was built on the same adapter').toBe(h.scene);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('already attached'));
+    other.dispose();
+  });
+
+  it('says nothing when re-attached to the engine it already has', () => {
+    // The paired half: idempotence is not an error.
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    expect(h.adapter.attachEngine(h.engine)).toBe(h.scene);
+    expect(warn).not.toHaveBeenCalled();
+  });
 });

@@ -70,11 +70,16 @@ function clamp01(value: number): number {
  * `StandardMaterial` would on its own: `specularColor` white and
  * `specularPower` 64, Babylon's own values.
  *
- * Not "either": `roughness` drives brightness as well as tightness, so omitting
- * only `metallic` still gives Babylon's defaults, while omitting only
- * `roughness` does not — `specularFor(grey, 0, 0.9)` is a dimmed grey, which is
- * the point of the mapping. The skill file documented these two numbers as
- * defaults while the code had none; now they are real.
+ * Not "either", and the halves are easy to get backwards — an earlier version
+ * of this comment stated them the wrong way round. Omitting only `roughness`
+ * leaves both channels at Babylon's values, because `metallic` alone only
+ * tints and the default is no tint at all. Omitting only `metallic` does not:
+ * `roughness` drives brightness as well as tightness, so
+ * `specularFor(grey, undefined, 0.9)` is a dimmed grey at power 14.4, which is
+ * the point of the mapping.
+ *
+ * The skill file documented these two numbers as defaults while the code had
+ * none; now they are real.
  */
 export const DEFAULT_METALLIC = 0;
 export const DEFAULT_ROUGHNESS = 0.5;
@@ -96,6 +101,12 @@ const MATTE_FLOOR = 0.1;
  * so `specularPower` again cannot change a pixel. Polished black metal is an
  * ordinary request — gunmetal, black chrome, dark car paint — and it rendered
  * as flat matte black, which is the very defect this mapping exists to fix.
+ *
+ * Applied to the **final** colour, not to the tint. Flooring the tint before
+ * the roughness multiply left the two compounding: a black metal at
+ * `roughness: 1` came out at 0.005, which quantises to one 8-bit level — still
+ * black on screen, and still nothing for `roughness` to act on. 0.05 is about
+ * 13/255, which is visible against black.
  */
 const MIN_SPECULAR = 0.05;
 
@@ -155,14 +166,11 @@ export function specularFor(
   // Full strength up to the midpoint, falling to MATTE_FLOOR at fully rough.
   const intensity = r <= 0.5 ? 1 : 1 - ((r - 0.5) / 0.5) * (1 - MATTE_FLOOR);
 
-  const tint = (channel: number): number => Math.max((1 - m) + m * channel, MIN_SPECULAR);
+  const tint = (channel: number): number => (1 - m) + m * channel;
+  const channel = (value: number): number => Math.max(tint(value) * intensity, MIN_SPECULAR);
 
   return {
-    color: [
-      tint(diffuse[0]) * intensity,
-      tint(diffuse[1]) * intensity,
-      tint(diffuse[2]) * intensity
-    ],
+    color: [channel(diffuse[0]), channel(diffuse[1]), channel(diffuse[2])],
     power: specularPowerFromRoughness(r)
   };
 }

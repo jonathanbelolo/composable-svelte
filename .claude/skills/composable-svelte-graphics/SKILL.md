@@ -893,7 +893,11 @@ setInterval(() => { time += 0.01; }, 16);
 <Mesh rotation={[0, time, 0]} ... />
 ```
 
-**Solution**: Use animation system (future feature) or throttle updates.
+**Solution**: drive it through `startAnimation` rather than dispatching a prop
+change per frame — the reducer advances one frame loop for the whole store and
+skips meshes whose value has not moved. (This line used to call the animation
+system a "future feature"; it has not been one for some time, and two other
+places in this file say so.)
 
 ---
 

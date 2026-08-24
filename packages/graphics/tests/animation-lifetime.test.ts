@@ -215,33 +215,6 @@ describe('two animations on one property', () => {
 });
 
 describe('animations are keyed by id, like meshes and lights', () => {
-	it('refuses a second animation with an id already running', () => {
-		// `addMesh` and `addLight` both reject a duplicate id under "ids must be
-		// unique or they are not identity". Animations are the third keyed
-		// collection and had no such guard — and `stopAnimation` filters by id,
-		// so stopping one of a duplicate pair stopped both.
-		const { store } = animated();
-		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-		store.dispatch({
-			type: 'startAnimation',
-			animation: {
-				id: 'spin',
-				targetId: 'cube',
-				property: 'scale',
-				from: [1, 1, 1],
-				to: [2, 2, 2],
-				duration: 500
-			}
-		});
-
-		expect(store.state.animations).toHaveLength(1);
-		expect(store.state.animations[0]!.config.property, 'the original was replaced').toBe(
-			'position'
-		);
-		expect(warn).toHaveBeenCalled();
-	});
-
 	it('a zero-duration loop does not spin forever', () => {
 		// `duration <= 0` completes immediately, so looping it means completing
 		// on every frame for ever — a rAF chain that can never produce a
@@ -314,5 +287,133 @@ describe('one animation frame loop, not one per animation', () => {
 			five,
 			`five animations produced ${five} ticks where one produced ${one}`
 		).toBeLessThan(one * 2);
+	});
+});
+
+describe('an animation id can be reused', () => {
+	it('restarts an animation that has finished', () => {
+		// The duplicate-id guard tested `animations.some(a => a.id === …)`, and
+		// `tick` marks a finished animation `isPlaying: false` without removing
+		// it — so a completed id was burned for the life of the store, and the
+		// warning said "is already running" about something that was not.
+		//
+		// Straight out of the README: its `<button onclick={startRotation}>`
+		// dispatches a fixed id, so without `loop: true` that button worked
+		// exactly once, silently.
+		const { store, start } = animated(100);
+		store.dispatch({ type: 'tick', time: start + 200 });
+		expect(store.state.animations[0]!.isPlaying).toBe(false);
+
+		store.dispatch({
+			type: 'startAnimation',
+			animation: {
+				id: 'spin',
+				targetId: 'cube',
+				property: 'position',
+				from: [0, 0, 0],
+				to: [10, 0, 0],
+				duration: 100
+			}
+		});
+
+		expect(store.state.animations, 'the id was duplicated rather than reused').toHaveLength(1);
+		expect(store.state.animations[0]!.isPlaying, 'the restart was refused').toBe(true);
+	});
+
+	it('replaces a running animation rather than doubling it', () => {
+		// The paired half: restarting must supersede, not accumulate. Two entries
+		// under one id could only ever be stopped together.
+		const { store } = animated();
+
+		store.dispatch({
+			type: 'startAnimation',
+			animation: {
+				id: 'spin',
+				targetId: 'cube',
+				property: 'scale',
+				from: [1, 1, 1],
+				to: [2, 2, 2],
+				duration: 500
+			}
+		});
+
+		expect(store.state.animations).toHaveLength(1);
+		expect(store.state.animations[0]!.config.property, 'the new config was dropped').toBe('scale');
+	});
+});
+
+describe('the frame loop stays single through any sequence', () => {
+	/**
+	 * Count rAF callbacks that are still pending — a forked chain shows up as
+	 * more than one, and a dead chain as zero.
+	 */
+	function pendingFrames(): { run: () => void; count: () => number } {
+		const queued: FrameRequestCallback[] = [];
+		vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+			queued.push(cb);
+			return queued.length;
+		});
+		return {
+			run: () => {
+				const batch = queued.splice(0, queued.length);
+				batch.forEach((cb) => cb(0));
+			},
+			count: () => queued.length
+		};
+	}
+
+	const spin = (id: string) => ({
+		id,
+		targetId: 'cube',
+		property: 'position' as const,
+		from: [0, 0, 0] as [number, number, number],
+		to: [10, 0, 0] as [number, number, number],
+		duration: 5000,
+		loop: true
+	});
+
+	it.each([
+		['five started at once', ['start:a', 'start:b', 'start:c', 'start:d', 'start:e']],
+		['stop then start again', ['start:a', 'stop:a', 'start:a']],
+		['clearScene then start again', ['start:a', 'clear', 'mesh', 'start:a']],
+		['removeMesh then start again', ['start:a', 'remove', 'mesh', 'start:a']]
+	])('%s leaves one chain', async (_name, steps) => {
+		// `alreadyTicking` was a proxy for "a frame is already pending", derived
+		// from whether anything was playing — and those come apart the moment an
+		// animation is removed while its frame is still in flight. Each of these
+		// sequences forked a second chain that never merged and never died, and
+		// they compounded: five start/stop cycles settled at six permanent
+		// chains, each re-walking every animation and mesh for ever.
+		const frames = pendingFrames();
+		const store = makeStore();
+		store.dispatch({ type: 'addMesh', mesh: cube() });
+
+		for (const step of steps) {
+			const [op, id] = step.split(':');
+			if (op === 'start') store.dispatch({ type: 'startAnimation', animation: spin(id!) });
+			else if (op === 'stop') store.dispatch({ type: 'stopAnimation', id: id! });
+			else if (op === 'clear') store.dispatch({ type: 'clearScene' });
+			else if (op === 'remove') store.dispatch({ type: 'removeMesh', id: 'cube' });
+			else if (op === 'mesh') store.dispatch({ type: 'addMesh', mesh: cube() });
+			await Promise.resolve();
+		}
+		await Promise.resolve();
+
+		// Counting *queued* callbacks would be the wrong measure: a superseded
+		// chain's callback is still queued — rAF has no cancellation the store can
+		// reach — it simply does not dispatch when it runs. What matters is how
+		// many survive a generation, so run the batch and count what it queues.
+		frames.run();
+		await Promise.resolve();
+		await Promise.resolve();
+		expect(frames.count(), 'the frame chain forked or died').toBe(1);
+
+		// And again, because a fork can take a generation to show.
+		frames.run();
+		await Promise.resolve();
+		await Promise.resolve();
+		expect(frames.count(), 'the frame chain forked or died on the second lap').toBe(1);
+
+		vi.unstubAllGlobals();
 	});
 });

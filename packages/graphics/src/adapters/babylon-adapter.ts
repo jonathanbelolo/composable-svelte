@@ -133,7 +133,20 @@ export class BabylonAdapter {
     // `if (!this.engine)` implies a second call was anticipated, and building
     // another `Scene` on the same engine would also register a second resize
     // listener and orphan the first.
-    if (this.scene) return this.scene;
+    //
+    // Warned when the engine differs, because returning silently would hand
+    // back a scene bound to the *old* engine — so viewport-derived state, such
+    // as the orthographic bounds, would keep following an engine the caller
+    // believes it replaced. Call `dispose()` first to re-attach.
+    if (this.scene) {
+      if (this.engine !== engine) {
+        console.warn(
+          '[graphics] attachEngine: this adapter is already attached; ' +
+            'dispose() it before attaching a different engine'
+        );
+      }
+      return this.scene;
+    }
 
     this.engine = engine;
 
@@ -153,8 +166,7 @@ export class BabylonAdapter {
     // retained so `dispose` can remove it — it used to be an anonymous arrow
     // passed straight to `addEventListener`, which made it unremovable, so
     // every mounted `<Scene>` left a listener holding its engine alive for the
-    // life of the page. It re-applies the camera because orthographic bounds
-    // are derived from the aspect ratio.
+    // life of the page.
     this.onResize = () => {
       this.engine?.resize();
       // Only the orthographic bounds, which are the sole camera state derived
@@ -533,6 +545,7 @@ export class BabylonAdapter {
     this.scene = null;
     this.engine = null;
     this.lastCamera = null;
+    this.warnedColors.clear();
   }
 
   // ========================================================================
@@ -644,6 +657,16 @@ export class BabylonAdapter {
   /**
    * Convert hex color string to Babylon.js Color3
    */
+  /**
+   * Colour strings already warned about.
+   *
+   * `applyMaterial` runs on every `updateMesh`, and `syncScene` passes the whole
+   * `MeshConfig` — whose `material` is required — so an animated mesh reaches
+   * this per frame. Warning unconditionally turned one bad colour into 60
+   * console lines a second, which buries the very message it exists to deliver.
+   */
+  private warnedColors: Set<string> = new Set();
+
   private hexToColor3(hex: string): Color3 {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     const [, r, g, b] = result ?? [];
@@ -653,9 +676,10 @@ export class BabylonAdapter {
       // without a word is indistinguishable from a colour that simply did not
       // apply, which is exactly the kind of quiet nothing this package has been
       // swept for. The docs said "hex or CSS color"; the parser never agreed.
-      console.warn(
-        `[graphics] "${hex}" is not a 6-digit hex colour; using white`
-      );
+      if (!this.warnedColors.has(hex)) {
+        this.warnedColors.add(hex);
+        console.warn(`[graphics] "${hex}" is not a 6-digit hex colour; using white`);
+      }
       return new Color3(1, 1, 1);
     }
 

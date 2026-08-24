@@ -178,11 +178,43 @@ describe('specularFor', () => {
 		expect(Math.max(...color), 'a black metal has no highlight').toBeGreaterThan(0);
 	});
 
-	it('keeps roughness visible on a dark metal', () => {
+	it('keeps roughness visible on a dark metal, as breadth', () => {
 		const smooth = specularFor([0.02, 0.02, 0.02], 1, 0.0);
 		const rough = specularFor([0.02, 0.02, 0.02], 1, 1.0);
 
-		expect(smooth.power).not.toBe(rough.power);
-		expect(Math.max(...smooth.color)).toBeGreaterThan(Math.max(...rough.color));
+		// On a dark metal the floor sets both brightnesses, so the difference is
+		// the exponent: a tight dot against a broad wash at the same intensity.
+		// This test used to also assert the brightnesses differ, which was true
+		// only while the floor was applied before the roughness multiply — and
+		// that arrangement let the two compound down to 0.005, one 8-bit level,
+		// i.e. black.
+		expect(smooth.power).toBeGreaterThan(rough.power * 10);
+		expect(Math.min(...smooth.color, ...rough.color), 'a dark metal went black').toBeGreaterThan(
+			0.01
+		);
+	});
+
+	it('never returns a colour below the floor, at any input', () => {
+		// The property "metallic tints the highlight and never extinguishes it"
+		// is asserted in two doc blocks; this is what makes it true rather than
+		// nearly true.
+		const surfaces: Array<[number, number, number]> = [
+			[0, 0, 0],
+			[0.02, 0.02, 0.02],
+			[1, 0, 0],
+			[1, 1, 1]
+		];
+
+		for (const surface of surfaces) {
+			for (const m of [0, 0.5, 1]) {
+				for (const r of [0, 0.5, 0.9, 1]) {
+					const { color } = specularFor(surface, m, r);
+					expect(
+						Math.min(...color),
+						`specularFor(${surface}, ${m}, ${r}) went to ${Math.min(...color)}`
+					).toBeGreaterThanOrEqual(0.05);
+				}
+			}
+		}
 	});
 });
