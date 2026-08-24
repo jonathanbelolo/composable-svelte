@@ -18,11 +18,11 @@
 		/** Whether the picker is open */
 		open: boolean;
 		/** Click handler when emoji is selected */
-		onselect?: (emoji: string) => void;
+		onselect?: ((emoji: string) => void) | undefined;
 		/** Close handler */
-		onclose?: () => void;
+		onclose?: (() => void) | undefined;
 		/** Optional class name */
-		class?: string;
+		class?: string | undefined;
 		/**
 		 * Animation lifecycle, when a store owns one. Left undefined the picker
 		 * appears and disappears instantly, as it did before it could animate.

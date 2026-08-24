@@ -39,60 +39,60 @@
 		/**
 		 * Placeholder text for input.
 		 */
-		placeholder?: string;
+		placeholder?: string | undefined;
 
 		/**
 		 * Show clear button.
 		 */
-		showClearButton?: boolean;
+		showClearButton?: boolean | undefined;
 
 		/**
 		 * Custom CSS class.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Maximum file size in MB (default: 10MB).
 		 */
-		maxFileSizeMB?: number;
+		maxFileSizeMB?: number | undefined;
 
 		/**
 		 * Accepted file types (e.g., ["image/*", ".pdf"]).
 		 * Empty array allows all types (default).
 		 */
-		acceptedFileTypes?: string[];
+		acceptedFileTypes?: string[] | undefined;
 
 		/**
 		 * Value to prefill the input with.
 		 * When changed, sets the input value. Parent should manage when to clear.
 		 */
-		prefillValue?: string;
+		prefillValue?: string | undefined;
 
 		/**
 		 * Callback when prefill has been applied and input is ready for user.
 		 * Call this to acknowledge the prefill was consumed.
 		 */
-		onPrefillApplied?: () => void;
+		onPrefillApplied?: (() => void) | undefined;
 
 		/**
 		 * Custom label for user messages (default: "You").
 		 */
-		userLabel?: string;
+		userLabel?: string | undefined;
 
 		/**
 		 * Custom label for assistant messages (default: "Assistant").
 		 */
-		assistantLabel?: string;
+		assistantLabel?: string | undefined;
 
 		/**
 		 * Avatar URL for user messages.
 		 */
-		userAvatarUrl?: string;
+		userAvatarUrl?: string | undefined;
 
 		/**
 		 * Avatar URL for assistant messages.
 		 */
-		assistantAvatarUrl?: string;
+		assistantAvatarUrl?: string | undefined;
 	}
 
 	const {

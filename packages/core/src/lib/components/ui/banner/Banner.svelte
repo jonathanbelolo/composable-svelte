@@ -36,12 +36,12 @@
 		/**
 		 * Banner style variant.
 		 */
-		variant?: 'default' | 'success' | 'warning' | 'destructive';
+		variant?: 'default' | 'success' | 'warning' | 'destructive' | undefined;
 
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Banner content.

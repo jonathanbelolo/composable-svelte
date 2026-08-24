@@ -40,37 +40,37 @@
 		/**
 		 * Enable multi-select mode (default: false).
 		 */
-		multiSelect?: boolean;
+		multiSelect?: boolean | undefined;
 
 		/**
 		 * Initially expanded node IDs.
 		 */
-		initialExpandedIds?: string[];
+		initialExpandedIds?: string[] | undefined;
 
 		/**
 		 * Callback when a node is selected.
 		 */
-		onSelect?: (nodeId: string, node: TreeNode<T>) => void;
+		onSelect?: ((nodeId: string, node: TreeNode<T>) => void) | undefined;
 
 		/**
 		 * Callback when a node is expanded.
 		 */
-		onExpand?: (nodeId: string, node: TreeNode<T>) => void;
+		onExpand?: ((nodeId: string, node: TreeNode<T>) => void) | undefined;
 
 		/**
 		 * Callback when a node is collapsed.
 		 */
-		onCollapse?: (nodeId: string, node: TreeNode<T>) => void;
+		onCollapse?: ((nodeId: string, node: TreeNode<T>) => void) | undefined;
 
 		/**
 		 * Async function to load children for lazy-loaded nodes.
 		 */
-		loadChildren?: (nodeId: string, node: TreeNode<T>) => Promise<TreeNode<T>[]>;
+		loadChildren?: ((nodeId: string, node: TreeNode<T>) => Promise<TreeNode<T>[]>) | undefined;
 
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Toolbar rendered above the tree, receiving the bulk operations.

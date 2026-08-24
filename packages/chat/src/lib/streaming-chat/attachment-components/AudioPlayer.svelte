@@ -13,7 +13,7 @@
 		/** Audio attachment to play */
 		attachment: MessageAttachment;
 		/** Optional class name */
-		class?: string;
+		class?: string | undefined;
 	}
 
 	let { attachment, class: className = '' }: Props = $props();

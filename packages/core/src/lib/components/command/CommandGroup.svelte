@@ -17,12 +17,12 @@
 		/**
 		 * Command items in this group.
 		 */
-		children?: Snippet;
+		children?: Snippet | undefined;
 
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 	}
 
 	let { label, children, class: className = '' }: CommandGroupProps = $props();

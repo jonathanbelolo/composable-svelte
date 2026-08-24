@@ -45,42 +45,42 @@
 		/**
 		 * Accordion items (optional - use this for declarative mode or omit to use composition with AccordionItem children).
 		 */
-		items?: AccordionItem[];
+		items?: AccordionItem[] | undefined;
 
 		/**
 		 * Initially expanded item IDs.
 		 */
-		initialExpandedIds?: string[];
+		initialExpandedIds?: string[] | undefined;
 
 		/**
 		 * Allow multiple items expanded simultaneously.
 		 */
-		allowMultiple?: boolean;
+		allowMultiple?: boolean | undefined;
 
 		/**
 		 * Allow all items to be collapsed (no minimum expanded).
 		 */
-		collapsible?: boolean;
+		collapsible?: boolean | undefined;
 
 		/**
 		 * Callback when an item is expanded.
 		 */
-		onExpand?: (id: string) => void;
+		onExpand?: ((id: string) => void) | undefined;
 
 		/**
 		 * Callback when an item is collapsed.
 		 */
-		onCollapse?: (id: string) => void;
+		onCollapse?: ((id: string) => void) | undefined;
 
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Content snippet.
 		 */
-		children?: Snippet;
+		children?: Snippet | undefined;
 	}
 
 	let {

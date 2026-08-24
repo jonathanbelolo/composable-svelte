@@ -5,8 +5,8 @@
 
 	interface BreadcrumbLinkProps extends HTMLAnchorAttributes {
 		children: Snippet;
-		class?: string;
-		href?: string;
+		class?: string | undefined;
+		href?: string | undefined;
 	}
 
 	let { children, class: className, href = '#', ...restProps }: BreadcrumbLinkProps = $props();

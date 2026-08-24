@@ -25,7 +25,7 @@
 		/**
 		 * Optional class name for the control wrapper
 		 */
-		class?: string;
+		class?: string | undefined;
 		/**
 		 * Children - input elements
 		 */

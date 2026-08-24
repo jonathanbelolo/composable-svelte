@@ -20,12 +20,12 @@
 		/**
 		 * Size of the spinner.
 		 */
-		size?: 'xs' | 'sm' | 'md' | 'lg';
+		size?: 'xs' | 'sm' | 'md' | 'lg' | undefined;
 
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 	}
 
 	let { size = 'md', class: className, ...restProps }: SpinnerProps = $props();

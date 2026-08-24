@@ -21,11 +21,11 @@
 		/** Position from top (pixels) */
 		top: number;
 		/** Whether this cursor has a selection */
-		hasSelection?: boolean;
+		hasSelection?: boolean | undefined;
 		/** Selection width (pixels) */
-		selectionWidth?: number;
+		selectionWidth?: number | undefined;
 		/** Custom class */
-		class?: string;
+		class?: string | undefined;
 	}
 
 	let {

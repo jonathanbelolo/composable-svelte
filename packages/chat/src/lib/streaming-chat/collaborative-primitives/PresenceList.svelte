@@ -13,7 +13,7 @@
 	interface User {
 		id: string;
 		name: string;
-		avatar?: string;
+		avatar?: string | undefined;
 		color: string;
 		presence: UserPresence;
 		/**
@@ -24,18 +24,18 @@
 		 * `userPresenceChanged` and `heartbeatReceived`. Nothing read it until
 		 * now, which is why it is being surfaced here rather than deleted.
 		 */
-		lastSeen?: number;
+		lastSeen?: number | undefined;
 	}
 
 	interface Props {
 		/** Array of users to display */
 		users: User[];
 		/** Group users by presence status */
-		groupByPresence?: boolean;
+		groupByPresence?: boolean | undefined;
 		/** Show empty state when no users */
-		showEmptyState?: boolean;
+		showEmptyState?: boolean | undefined;
 		/** Custom class */
-		class?: string;
+		class?: string | undefined;
 		/** Locale for the "last seen" text. Defaults to the browser's. */
 		locale?: string | undefined;
 	}

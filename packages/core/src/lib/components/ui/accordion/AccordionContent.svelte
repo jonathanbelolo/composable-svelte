@@ -22,12 +22,12 @@
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Content snippet.
 		 */
-		children?: Snippet;
+		children?: Snippet | undefined;
 	}
 
 	let {

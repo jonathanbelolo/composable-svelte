@@ -26,15 +26,15 @@
 		/**
 		 * Whether the checkbox is in indeterminate state (dash instead of check)
 		 */
-		indeterminate?: boolean;
+		indeterminate?: boolean | undefined;
 		/**
 		 * Whether the checkbox is disabled
 		 */
-		disabled?: boolean;
+		disabled?: boolean | undefined;
 		/**
 		 * Optional class name
 		 */
-		class?: string;
+		class?: string | undefined;
 		/**
 		 * All other input attributes
 		 */

@@ -15,13 +15,13 @@
 	interface Props {
 		message: Message;
 		store: Store<StreamingChatState, StreamingChatAction>;
-		isStreaming?: boolean;
+		isStreaming?: boolean | undefined;
 		/** Forwarded to `ChatMessage`; the list decides. */
-		animateIn?: boolean;
+		animateIn?: boolean | undefined;
 		/** Custom label for user messages (default: "You") */
-		userLabel?: string;
+		userLabel?: string | undefined;
 		/** Custom label for assistant messages (default: "Assistant") */
-		assistantLabel?: string;
+		assistantLabel?: string | undefined;
 		/** Avatar URL for user messages */
 		userAvatarUrl?: string | undefined;
 		/** Avatar URL for assistant messages */

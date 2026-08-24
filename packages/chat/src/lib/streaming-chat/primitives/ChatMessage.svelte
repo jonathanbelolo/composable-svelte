@@ -15,18 +15,18 @@
 	 */
 	interface Props {
 		message: Message;
-		isStreaming?: boolean;
+		isStreaming?: boolean | undefined;
 		/** Animate this message in. The list decides; see `lastAppendedId`. */
-		animateIn?: boolean;
-		headerActions?: Snippet;
+		animateIn?: boolean | undefined;
+		headerActions?: Snippet | undefined;
 		/** Optional reaction click handler */
-		onReactionClick?: (emoji: string) => void;
+		onReactionClick?: ((emoji: string) => void) | undefined;
 		/** Optional add reaction handler */
-		onAddReaction?: () => void;
+		onAddReaction?: (() => void) | undefined;
 		/** Custom label for user messages (default: "You") */
-		userLabel?: string;
+		userLabel?: string | undefined;
 		/** Custom label for assistant messages (default: "Assistant") */
-		assistantLabel?: string;
+		assistantLabel?: string | undefined;
 		/** Avatar URL for user messages */
 		userAvatarUrl?: string | undefined;
 		/** Avatar URL for assistant messages */

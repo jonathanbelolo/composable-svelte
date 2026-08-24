@@ -16,17 +16,17 @@
 		store: Store<ImageGalleryState, ImageGalleryAction>;
 
 		// Optional configuration
-		showCaptions?: boolean;
-		showCounter?: boolean;
-		enableKeyboard?: boolean;
-		enableSwipe?: boolean;
+		showCaptions?: boolean | undefined;
+		showCounter?: boolean | undefined;
+		enableKeyboard?: boolean | undefined;
+		enableSwipe?: boolean | undefined;
 
 		// Callbacks
-		onClose?: () => void;
-		onImageChange?: (index: number) => void;
+		onClose?: (() => void) | undefined;
+		onImageChange?: ((index: number) => void) | undefined;
 
 		// Styling
-		class?: string;
+		class?: string | undefined;
 	}
 
 	const {

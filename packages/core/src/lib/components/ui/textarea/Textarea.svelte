@@ -27,23 +27,23 @@
 		/**
 		 * Number of visible text rows
 		 */
-		rows?: number;
+		rows?: number | undefined;
 		/**
 		 * Placeholder text
 		 */
-		placeholder?: string;
+		placeholder?: string | undefined;
 		/**
 		 * Whether the textarea is disabled
 		 */
-		disabled?: boolean;
+		disabled?: boolean | undefined;
 		/**
 		 * Whether to allow resizing (vertical, horizontal, both, none)
 		 */
-		resize?: 'none' | 'vertical' | 'horizontal' | 'both';
+		resize?: 'none' | 'vertical' | 'horizontal' | 'both' | undefined;
 		/**
 		 * Optional class name
 		 */
-		class?: string;
+		class?: string | undefined;
 	}
 
 	let {

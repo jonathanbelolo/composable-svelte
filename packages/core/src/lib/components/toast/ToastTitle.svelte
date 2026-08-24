@@ -10,7 +10,7 @@
 	 */
 
 	interface ToastTitleProps extends Omit<HTMLAttributes<HTMLHeadingElement>, 'class'> {
-		class?: string;
+		class?: string | undefined;
 		children: Snippet;
 	}
 

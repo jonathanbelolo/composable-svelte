@@ -13,11 +13,11 @@
 		/** Attachment to preview */
 		attachment: MessageAttachment;
 		/** Optional class name */
-		class?: string;
+		class?: string | undefined;
 		/** Click handler to open full preview */
-		onclick?: () => void;
+		onclick?: (() => void) | undefined;
 		/** Remove handler */
-		onremove?: () => void;
+		onremove?: (() => void) | undefined;
 	}
 
 	let { attachment, class: className = '', onclick, onremove }: Props = $props();

@@ -30,7 +30,7 @@
 		/**
 		 * Number of items per page.
 		 */
-		itemsPerPage?: number;
+		itemsPerPage?: number | undefined;
 
 		/**
 		 * Current page (1-indexed). Use bind:currentPage for two-way binding.
@@ -40,32 +40,32 @@
 		/**
 		 * Maximum number of page buttons to show.
 		 */
-		maxPageButtons?: number;
+		maxPageButtons?: number | undefined;
 
 		/**
 		 * Show items per page selector.
 		 */
-		showItemsPerPage?: boolean;
+		showItemsPerPage?: boolean | undefined;
 
 		/**
 		 * Items per page options.
 		 */
-		itemsPerPageOptions?: number[];
+		itemsPerPageOptions?: number[] | undefined;
 
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Callback when page changes.
 		 */
-		onPageChange?: (page: number) => void;
+		onPageChange?: ((page: number) => void) | undefined;
 
 		/**
 		 * Callback when items per page changes.
 		 */
-		onItemsPerPageChange?: (itemsPerPage: number) => void;
+		onItemsPerPageChange?: ((itemsPerPage: number) => void) | undefined;
 	}
 
 	let {

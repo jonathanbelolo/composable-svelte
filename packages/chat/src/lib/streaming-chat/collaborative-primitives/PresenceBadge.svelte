@@ -12,11 +12,11 @@
 		/** User presence status */
 		presence: UserPresence;
 		/** Size of the badge */
-		size?: 'sm' | 'md' | 'lg';
+		size?: 'sm' | 'md' | 'lg' | undefined;
 		/** Show status text */
-		showText?: boolean;
+		showText?: boolean | undefined;
 		/** Custom class */
-		class?: string;
+		class?: string | undefined;
 	}
 
 	let { presence, size = 'md', showText = false, class: className = '' }: Props = $props();

@@ -24,22 +24,22 @@
 		 * context. Pass it explicitly only for standalone (non-modal) use
 		 * with a store you own.
 		 */
-		store?: Store<CommandState, CommandAction>;
+		store?: Store<CommandState, CommandAction> | undefined;
 
 		/**
 		 * Content to render (typically CommandItem or CommandGroup components).
 		 */
-		children?: Snippet;
+		children?: Snippet | undefined;
 
 		/**
 		 * Empty state message.
 		 */
-		emptyMessage?: string;
+		emptyMessage?: string | undefined;
 
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 	}
 
 	let {

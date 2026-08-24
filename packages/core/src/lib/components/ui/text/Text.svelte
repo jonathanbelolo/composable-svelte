@@ -27,22 +27,22 @@
 		/**
 		 * HTML element to render as (default: 'p').
 		 */
-		as?: 'p' | 'span' | 'div';
+		as?: 'p' | 'span' | 'div' | undefined;
 
 		/**
 		 * Text size variant.
 		 */
-		size?: 'xs' | 'sm' | 'base' | 'lg' | 'xl';
+		size?: 'xs' | 'sm' | 'base' | 'lg' | 'xl' | undefined;
 
 		/**
 		 * Text color/style variant.
 		 */
-		variant?: 'default' | 'muted' | 'accent' | 'destructive';
+		variant?: 'default' | 'muted' | 'accent' | 'destructive' | undefined;
 
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Text content.

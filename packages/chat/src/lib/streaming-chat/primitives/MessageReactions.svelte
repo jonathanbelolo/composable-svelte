@@ -13,7 +13,7 @@
 		/** Click handler for reactions */
 		onclick?: ((emoji: string) => void) | undefined;
 		/** Optional class name */
-		class?: string;
+		class?: string | undefined;
 	}
 
 	let { reactions, onclick, class: className = '' }: Props = $props();

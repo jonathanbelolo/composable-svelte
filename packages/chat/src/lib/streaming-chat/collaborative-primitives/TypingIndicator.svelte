@@ -12,7 +12,7 @@
 		/** Array of user names currently typing */
 		users: Array<{ name: string }>;
 		/** Custom class */
-		class?: string;
+		class?: string | undefined;
 	}
 
 	let { users, class: className = '' }: Props = $props();

@@ -29,24 +29,24 @@
 		 * Tooltip position relative to trigger element.
 		 * @default 'top'
 		 */
-		position?: 'top' | 'bottom' | 'left' | 'right';
+		position?: 'top' | 'bottom' | 'left' | 'right' | undefined;
 
 		/**
 		 * Delay before showing tooltip (ms).
 		 * @default 300
 		 */
-		delay?: number;
+		delay?: number | undefined;
 
 		/**
 		 * Additional CSS classes for the tooltip container.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Disable tooltip.
 		 * @default false
 		 */
-		disabled?: boolean;
+		disabled?: boolean | undefined;
 
 		/**
 		 * Trigger element (wrapped children).

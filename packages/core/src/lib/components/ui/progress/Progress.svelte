@@ -32,22 +32,22 @@
 		 * Current progress value (0 to max).
 		 * If undefined, shows indeterminate state.
 		 */
-		value?: number;
+		value?: number | undefined;
 
 		/**
 		 * Maximum value for progress (default: 100).
 		 */
-		max?: number;
+		max?: number | undefined;
 
 		/**
 		 * Additional CSS classes for the container.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Additional CSS classes for the indicator (filled portion).
 		 */
-		indicatorClass?: string;
+		indicatorClass?: string | undefined;
 	}
 
 	let {

@@ -28,11 +28,11 @@
 		/**
 		 * Whether the switch is disabled
 		 */
-		disabled?: boolean;
+		disabled?: boolean | undefined;
 		/**
 		 * Optional class name
 		 */
-		class?: string;
+		class?: string | undefined;
 		/**
 		 * All other input attributes
 		 */

@@ -12,7 +12,7 @@
 	interface User {
 		id: string;
 		name: string;
-		avatar?: string;
+		avatar?: string | undefined;
 		color: string;
 		presence: UserPresence;
 	}
@@ -21,11 +21,11 @@
 		/** Array of users to display */
 		users: User[];
 		/** Maximum number of avatars to show before "+X more" */
-		maxVisible?: number;
+		maxVisible?: number | undefined;
 		/** Avatar size */
-		size?: 'sm' | 'md' | 'lg';
+		size?: 'sm' | 'md' | 'lg' | undefined;
 		/** Custom class */
-		class?: string;
+		class?: string | undefined;
 	}
 
 	let { users, maxVisible = 5, size = 'md', class: className = '' }: Props = $props();

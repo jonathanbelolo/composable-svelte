@@ -54,32 +54,32 @@
 		/**
 		 * Placeholder text.
 		 */
-		placeholder?: string;
+		placeholder?: string | undefined;
 
 		/**
 		 * Enable search/filter.
 		 */
-		searchable?: boolean;
+		searchable?: boolean | undefined;
 
 		/**
 		 * Enable multi-select.
 		 */
-		multiple?: boolean;
+		multiple?: boolean | undefined;
 
 		/**
 		 * Disabled state.
 		 */
-		disabled?: boolean;
+		disabled?: boolean | undefined;
 
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Callback when value changes.
 		 */
-		onchange?: (value: T | T[] | null) => void;
+		onchange?: ((value: T | T[] | null) => void) | undefined;
 	}
 
 	let {

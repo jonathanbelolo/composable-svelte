@@ -7,7 +7,7 @@
 	 */
 	interface Props {
 		startTime: number;
-		maxDuration?: number; // Optional max (e.g., 60 seconds)
+		maxDuration?: number | undefined; // Optional max (e.g., 60 seconds)
 		onMaxDurationReached?: (() => void) | undefined;
 	}
 

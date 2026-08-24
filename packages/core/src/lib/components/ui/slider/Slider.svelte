@@ -24,23 +24,23 @@
 		/**
 		 * Minimum value.
 		 */
-		min?: number;
+		min?: number | undefined;
 		/**
 		 * Maximum value.
 		 */
-		max?: number;
+		max?: number | undefined;
 		/**
 		 * Step increment.
 		 */
-		step?: number;
+		step?: number | undefined;
 		/**
 		 * Whether the slider is disabled.
 		 */
-		disabled?: boolean;
+		disabled?: boolean | undefined;
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 	}
 
 	let {

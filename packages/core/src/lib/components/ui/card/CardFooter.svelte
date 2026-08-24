@@ -10,7 +10,7 @@
 	 */
 
 	interface CardFooterProps extends Omit<HTMLAttributes<HTMLDivElement>, 'class'> {
-		class?: string;
+		class?: string | undefined;
 		children: Snippet;
 	}
 

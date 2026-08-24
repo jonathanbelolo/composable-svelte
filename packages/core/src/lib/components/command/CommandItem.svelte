@@ -20,7 +20,7 @@
 		 * context. Pass it explicitly only for standalone (non-modal) use
 		 * with a store you own.
 		 */
-		store?: Store<CommandState, CommandAction>;
+		store?: Store<CommandState, CommandAction> | undefined;
 
 		/**
 		 * Command data.
@@ -35,7 +35,7 @@
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 	}
 
 	let { store: storeProp, command, index, class: className = '' }: CommandItemProps = $props();

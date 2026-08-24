@@ -29,25 +29,25 @@
 		images: GalleryImage[];
 
 		// Optional configuration
-		columns?: number;
-		gap?: number;
-		aspectRatio?: 'auto' | 'square' | '16:9' | '4:3';
+		columns?: number | undefined;
+		gap?: number | undefined;
+		aspectRatio?: 'auto' | 'square' | '16:9' | '4:3' | undefined;
 
 		// Callbacks
-		onImageClick?: (image: GalleryImage, index: number) => void;
-		onImageLoad?: (imageId: string) => void;
-		onImageError?: (imageId: string, error: string) => void;
+		onImageClick?: ((image: GalleryImage, index: number) => void) | undefined;
+		onImageLoad?: ((imageId: string) => void) | undefined;
+		onImageError?: ((imageId: string, error: string) => void) | undefined;
 
 		// Styling
-		class?: string;
-		thumbnailClass?: string;
+		class?: string | undefined;
+		thumbnailClass?: string | undefined;
 
 		// Features
-		enableLightbox?: boolean; // Default: true
-		enableLazyLoad?: boolean; // Default: true
+		enableLightbox?: boolean | undefined; // Default: true
+		enableLazyLoad?: boolean | undefined; // Default: true
 
 		// Advanced mode not used
-		store?: never;
+		store?: undefined;
 	}
 
 	interface AdvancedProps {
@@ -55,19 +55,19 @@
 		store: Store<ImageGalleryState, ImageGalleryAction>;
 
 		// Styling
-		class?: string;
-		thumbnailClass?: string;
+		class?: string | undefined;
+		thumbnailClass?: string | undefined;
 
 		// Simple mode props not used
-		images?: never;
-		columns?: never;
-		gap?: never;
-		aspectRatio?: never;
-		onImageClick?: never;
-		onImageLoad?: never;
-		onImageError?: never;
-		enableLightbox?: never;
-		enableLazyLoad?: never;
+		images?: undefined;
+		columns?: undefined;
+		gap?: undefined;
+		aspectRatio?: undefined;
+		onImageClick?: undefined;
+		onImageLoad?: undefined;
+		onImageError?: undefined;
+		enableLightbox?: undefined;
+		enableLazyLoad?: undefined;
 	}
 
 	type Props = SimpleProps | AdvancedProps;

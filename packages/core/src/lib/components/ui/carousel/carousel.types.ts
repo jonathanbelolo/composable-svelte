@@ -12,7 +12,7 @@ export interface CarouselSlide<T = unknown> {
   /** Unique identifier for the slide */
   id: string;
   /** Optional custom data associated with the slide */
-  data?: T;
+  data?: T | undefined;
 }
 
 /**
@@ -71,27 +71,27 @@ export interface CarouselProps<T = unknown> {
   /** Array of slides to display */
   slides: CarouselSlide<T>[];
   /** Initial slide index (default: 0) */
-  initialIndex?: number;
+  initialIndex?: number | undefined;
   /** Whether to loop from last to first (default: true) */
-  loop?: boolean;
+  loop?: boolean | undefined;
   /** Auto-play interval in milliseconds (0 = disabled, default: 0) */
-  autoPlayInterval?: number;
+  autoPlayInterval?: number | undefined;
   /** Whether to show navigation arrows (default: true) */
-  showArrows?: boolean;
+  showArrows?: boolean | undefined;
   /** Whether to show pagination dots (default: true) */
-  showDots?: boolean;
+  showDots?: boolean | undefined;
   /** Callback when slide changes */
-  onSlideChange?: (index: number, slide: CarouselSlide<T>) => void;
+  onSlideChange?: ((index: number, slide: CarouselSlide<T>) => void) | undefined;
   /** Callback when auto-play starts */
-  onAutoPlayStart?: () => void;
+  onAutoPlayStart?: (() => void) | undefined;
   /** Callback when auto-play stops */
-  onAutoPlayStop?: () => void;
+  onAutoPlayStop?: (() => void) | undefined;
   /** Custom class for the carousel container */
-  class?: string;
+  class?: string | undefined;
   /** Custom class for individual slides */
-  slideClass?: string;
+  slideClass?: string | undefined;
   /** Transition duration in milliseconds (default: 300) */
-  transitionDuration?: number;
+  transitionDuration?: number | undefined;
   /** Slide content snippet */
   children?: import('svelte').Snippet<[{ slide: CarouselSlide<T>; index: number }]> | undefined;
 }

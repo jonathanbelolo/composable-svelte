@@ -43,7 +43,7 @@
 		/**
 		 * Input type.
 		 */
-		type?: 'text' | 'email' | 'password' | 'number' | 'tel' | 'url' | 'search';
+		type?: 'text' | 'email' | 'password' | 'number' | 'tel' | 'url' | 'search' | undefined;
 
 		/**
 		 * Current value (supports two-way binding).
@@ -53,38 +53,38 @@
 		/**
 		 * Disabled state.
 		 */
-		disabled?: boolean;
+		disabled?: boolean | undefined;
 
 		/**
 		 * Error state (for styling).
 		 */
-		error?: boolean;
+		error?: boolean | undefined;
 
 		/**
 		 * ID of error message element (sets aria-describedby automatically).
 		 */
-		errorId?: string;
+		errorId?: string | undefined;
 
 		/**
 		 * Manual aria-describedby override (use if not using errorId).
 		 */
-		describedBy?: string;
+		describedBy?: string | undefined;
 
 		/**
 		 * Reducer action to dispatch on input (Composable Architecture pattern).
 		 * The action will be enriched with the current value.
 		 */
-		action?: Action;
+		action?: Action | undefined;
 
 		/**
 		 * Dispatch function from store (required if action is provided).
 		 */
-		dispatch?: Dispatch<Action>;
+		dispatch?: Dispatch<Action> | undefined;
 
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 	}
 
 	let {

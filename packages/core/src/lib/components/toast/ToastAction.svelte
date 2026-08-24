@@ -10,9 +10,9 @@
 	 */
 
 	interface ToastActionProps extends Omit<HTMLButtonAttributes, 'class'> {
-		class?: string;
+		class?: string | undefined;
 		children: Snippet;
-		onclick?: (e: MouseEvent) => void;
+		onclick?: ((e: MouseEvent) => void) | undefined;
 	}
 
 	let { class: className, children, onclick, ...restProps }: ToastActionProps = $props();

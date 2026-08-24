@@ -30,7 +30,7 @@
 		/** Current text content (to calculate positions) */
 		text: string;
 		/** Custom class */
-		class?: string;
+		class?: string | undefined;
 	}
 
 	let { inputElement, cursors, text, class: className = '' }: Props = $props();

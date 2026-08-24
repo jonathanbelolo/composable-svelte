@@ -12,7 +12,7 @@
 	 */
 	interface Props {
 		store: Store<VoiceInputState, VoiceInputAction>;
-		transcripts?: string[]; // History of transcripts in this conversation
+		transcripts?: string[] | undefined; // History of transcripts in this conversation
 	}
 
 	const { store, transcripts = [] }: Props = $props();

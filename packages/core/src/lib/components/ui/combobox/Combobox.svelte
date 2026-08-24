@@ -37,7 +37,7 @@
 		/**
 		 * Available options (for local/sync mode).
 		 */
-		options?: ComboboxOption<T>[];
+		options?: ComboboxOption<T>[] | undefined;
 
 		/**
 		 * Selected value.
@@ -48,33 +48,33 @@
 		/**
 		 * Placeholder text.
 		 */
-		placeholder?: string;
+		placeholder?: string | undefined;
 
 		/**
 		 * Disabled state.
 		 */
-		disabled?: boolean;
+		disabled?: boolean | undefined;
 
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Async function to load options based on query.
 		 * If provided, enables async mode.
 		 */
-		loadOptions?: (query: string) => Promise<ComboboxOption<T>[]>;
+		loadOptions?: ((query: string) => Promise<ComboboxOption<T>[]>) | undefined;
 
 		/**
 		 * Callback when value changes.
 		 */
-		onchange?: (value: T | null) => void;
+		onchange?: ((value: T | null) => void) | undefined;
 
 		/**
 		 * Debounce delay in milliseconds for async searches (default: 300).
 		 */
-		debounceDelay?: number;
+		debounceDelay?: number | undefined;
 	}
 
 	let {

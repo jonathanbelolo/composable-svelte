@@ -10,7 +10,7 @@
 	interface Props {
 		message: Message;
 		store: Store<StreamingChatState, StreamingChatAction>;
-		onAddReaction?: () => void;
+		onAddReaction?: (() => void) | undefined;
 	}
 
 	const { message, store, onAddReaction }: Props = $props();

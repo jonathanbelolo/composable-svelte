@@ -10,18 +10,18 @@
 		id: string;
 		name: string;
 		color: string;
-		avatar?: string;
+		avatar?: string | undefined;
 	}
 
 	interface Props {
 		/** Array of users currently typing */
 		users: User[];
 		/** Show avatars */
-		showAvatars?: boolean;
+		showAvatars?: boolean | undefined;
 		/** Compact mode (smaller) */
-		compact?: boolean;
+		compact?: boolean | undefined;
 		/** Custom class */
-		class?: string;
+		class?: string | undefined;
 	}
 
 	let { users, showAvatars = true, compact = false, class: className = '' }: Props = $props();

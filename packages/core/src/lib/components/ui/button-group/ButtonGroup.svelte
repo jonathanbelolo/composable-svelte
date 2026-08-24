@@ -28,12 +28,12 @@
 		/**
 		 * Layout orientation.
 		 */
-		orientation?: 'horizontal' | 'vertical';
+		orientation?: 'horizontal' | 'vertical' | undefined;
 
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Button elements.

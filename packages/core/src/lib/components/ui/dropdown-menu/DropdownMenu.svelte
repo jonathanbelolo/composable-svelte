@@ -38,18 +38,18 @@
 		/**
 		 * Callback when an item is selected.
 		 */
-		onSelect?: (item: MenuItem) => void;
+		onSelect?: ((item: MenuItem) => void) | undefined;
 
 		/**
 		 * Menu alignment relative to trigger.
 		 * @default 'start'
 		 */
-		align?: 'start' | 'end';
+		align?: 'start' | 'end' | undefined;
 
 		/**
 		 * Additional CSS classes for menu container.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Trigger element (button/link).

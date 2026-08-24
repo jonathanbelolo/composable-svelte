@@ -12,9 +12,9 @@
 		/** File attachment to display */
 		attachment: MessageAttachment;
 		/** Optional class name */
-		class?: string;
+		class?: string | undefined;
 		/** Whether to show download button (default: true) */
-		showDownload?: boolean;
+		showDownload?: boolean | undefined;
 	}
 
 	let { attachment, class: className = '', showDownload = true }: Props = $props();

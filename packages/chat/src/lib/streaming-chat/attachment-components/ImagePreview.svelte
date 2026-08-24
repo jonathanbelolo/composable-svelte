@@ -14,11 +14,11 @@
 		/** Image attachment to display */
 		attachment: MessageAttachment;
 		/** Optional class name */
-		class?: string;
+		class?: string | undefined;
 		/** Show image info header (default: true) */
-		showHeader?: boolean;
+		showHeader?: boolean | undefined;
 		/** Allow fullscreen view (default: true) */
-		allowFullscreen?: boolean;
+		allowFullscreen?: boolean | undefined;
 	}
 
 	let { attachment, class: className = '', showHeader = true, allowFullscreen = true }: Props = $props();

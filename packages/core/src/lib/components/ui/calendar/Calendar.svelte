@@ -51,27 +51,27 @@
 		/**
 		 * Minimum selectable date.
 		 */
-		minDate?: Date | null;
+		minDate?: Date | null | undefined;
 
 		/**
 		 * Maximum selectable date.
 		 */
-		maxDate?: Date | null;
+		maxDate?: Date | null | undefined;
 
 		/**
 		 * Callback when date is selected (single mode).
 		 */
-		onDateSelect?: (date: Date) => void;
+		onDateSelect?: ((date: Date) => void) | undefined;
 
 		/**
 		 * Callback when range is selected (range mode).
 		 */
-		onRangeSelect?: (range: DateRange) => void;
+		onRangeSelect?: ((range: DateRange) => void) | undefined;
 
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Custom header snippet (month/year display).

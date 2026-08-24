@@ -25,18 +25,18 @@
 		/**
 		 * Callback when presentation animation completes
 		 */
-		onPresentationComplete?: () => void;
+		onPresentationComplete?: (() => void) | undefined;
 
 		/**
 		 * Callback when dismissal animation completes
 		 */
-		onDismissalComplete?: () => void;
+		onDismissalComplete?: (() => void) | undefined;
 
 		/**
 		 * Tooltip position relative to trigger
 		 * @default 'top'
 		 */
-		position?: 'top' | 'bottom' | 'left' | 'right';
+		position?: 'top' | 'bottom' | 'left' | 'right' | undefined;
 
 		/**
 		 * Additional CSS classes

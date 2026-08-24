@@ -24,15 +24,15 @@
 		/**
 		 * The name attribute for the radio group
 		 */
-		name?: string;
+		name?: string | undefined;
 		/**
 		 * Optional class name
 		 */
-		class?: string;
+		class?: string | undefined;
 		/**
 		 * Radio options (children)
 		 */
-		children?: import('svelte').Snippet;
+		children?: import('svelte').Snippet | undefined;
 	}
 
 	let {

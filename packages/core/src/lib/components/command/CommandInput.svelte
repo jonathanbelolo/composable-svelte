@@ -20,22 +20,22 @@
 		 * context. Pass it explicitly only for standalone (non-modal) use
 		 * with a store you own.
 		 */
-		store?: Store<CommandState, CommandAction>;
+		store?: Store<CommandState, CommandAction> | undefined;
 
 		/**
 		 * Placeholder text.
 		 */
-		placeholder?: string;
+		placeholder?: string | undefined;
 
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Whether to autofocus on mount.
 		 */
-		autofocus?: boolean;
+		autofocus?: boolean | undefined;
 	}
 
 	let {

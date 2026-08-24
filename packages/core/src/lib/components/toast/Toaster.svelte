@@ -42,7 +42,7 @@
 		store: Store<ToastState, ToastAction>;
 
 		/** Additional CSS classes. */
-		class?: string;
+		class?: string | undefined;
 	}
 
 	let { store, class: className }: ToasterProps = $props();

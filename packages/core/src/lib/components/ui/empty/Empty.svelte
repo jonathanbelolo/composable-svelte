@@ -41,17 +41,17 @@
 		/**
 		 * Optional description text.
 		 */
-		description?: string;
+		description?: string | undefined;
 
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Optional icon/image snippet.
 		 */
-		icon?: import('svelte').Snippet;
+		icon?: import('svelte').Snippet | undefined;
 
 		/**
 		 * Optional action buttons or content.

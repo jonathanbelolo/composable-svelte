@@ -16,13 +16,13 @@
 		/** Array of attachments to display */
 		attachments: MessageAttachment[];
 		/** Optional class name */
-		class?: string;
+		class?: string | undefined;
 		/** Layout mode: 'grid' or 'list' (default: 'grid') */
-		layout?: 'grid' | 'list';
+		layout?: 'grid' | 'list' | undefined;
 		/** Max columns for grid layout (default: 2) */
-		maxColumns?: number;
+		maxColumns?: number | undefined;
 		/** Show attachment count header (default: true) */
-		showCount?: boolean;
+		showCount?: boolean | undefined;
 	}
 
 	let {

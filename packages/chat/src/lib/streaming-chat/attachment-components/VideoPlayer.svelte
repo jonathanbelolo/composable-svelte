@@ -14,9 +14,9 @@
 		/** Video attachment to play */
 		attachment: MessageAttachment;
 		/** Optional class name */
-		class?: string;
+		class?: string | undefined;
 		/** Auto-play (default: false) */
-		autoplay?: boolean;
+		autoplay?: boolean | undefined;
 	}
 
 	let { attachment, class: className = '', autoplay = false }: Props = $props();

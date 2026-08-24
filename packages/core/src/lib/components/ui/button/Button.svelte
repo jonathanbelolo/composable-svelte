@@ -31,37 +31,37 @@
 		/**
 		 * Visual variant of the button.
 		 */
-		variant?: 'default' | 'primary' | 'secondary' | 'destructive' | 'outline' | 'ghost' | 'link';
+		variant?: 'default' | 'primary' | 'secondary' | 'destructive' | 'outline' | 'ghost' | 'link' | undefined;
 
 		/**
 		 * Size of the button.
 		 */
-		size?: 'sm' | 'md' | 'lg' | 'icon';
+		size?: 'sm' | 'md' | 'lg' | 'icon' | undefined;
 
 		/**
 		 * Disabled state.
 		 */
-		disabled?: boolean;
+		disabled?: boolean | undefined;
 
 		/**
 		 * Loading state (shows spinner, disables interaction).
 		 */
-		loading?: boolean;
+		loading?: boolean | undefined;
 
 		/**
 		 * Reducer action to dispatch on click (Composable Architecture pattern).
 		 */
-		action?: Action;
+		action?: Action | undefined;
 
 		/**
 		 * Dispatch function from store (required if action is provided).
 		 */
-		dispatch?: Dispatch<Action>;
+		dispatch?: Dispatch<Action> | undefined;
 
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Button content.

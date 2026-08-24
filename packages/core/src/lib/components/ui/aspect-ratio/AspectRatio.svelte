@@ -40,12 +40,12 @@
 		 * - 1 (square)
 		 * - 21/9 ≈ 2.333 (ultrawide)
 		 */
-		ratio?: number;
+		ratio?: number | undefined;
 
 		/**
 		 * Additional CSS classes for the container.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Content to maintain aspect ratio for.

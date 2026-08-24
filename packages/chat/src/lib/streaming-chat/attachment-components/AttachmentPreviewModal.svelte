@@ -28,7 +28,7 @@
 		/** Close handler */
 		onclose: () => void;
 		/** Remove attachment handler */
-		onremove?: () => void;
+		onremove?: (() => void) | undefined;
 		/**
 		 * Animation lifecycle, when a store owns one.
 		 *

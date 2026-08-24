@@ -26,27 +26,27 @@
 		/**
 		 * Placeholder text for input.
 		 */
-		placeholder?: string;
+		placeholder?: string | undefined;
 
 		/**
 		 * Show clear button.
 		 */
-		showClearButton?: boolean;
+		showClearButton?: boolean | undefined;
 
 		/**
 		 * Custom CSS class.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Custom label for user messages (default: "You").
 		 */
-		userLabel?: string;
+		userLabel?: string | undefined;
 
 		/**
 		 * Custom label for assistant messages (default: "Assistant").
 		 */
-		assistantLabel?: string;
+		assistantLabel?: string | undefined;
 	}
 
 	const {

@@ -2,9 +2,9 @@
   import { cn } from '../../../utils.js';
 
   interface Props {
-    variant?: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning';
-    class?: string;
-    children?: import('svelte').Snippet;
+    variant?: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | undefined;
+    class?: string | undefined;
+    children?: import('svelte').Snippet | undefined;
   }
 
   let {

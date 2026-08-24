@@ -30,7 +30,7 @@
 		/**
 		 * HTML element to render as (default: 'div').
 		 */
-		as?: keyof HTMLElementTagNameMap;
+		as?: keyof HTMLElementTagNameMap | undefined;
 
 		/**
 		 * Padding size.
@@ -41,17 +41,17 @@
 		 * - lg: 1.5rem (24px)
 		 * - xl: 2rem (32px)
 		 */
-		p?: 'none' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+		p?: 'none' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | undefined;
 
 		/**
 		 * Margin size (same scale as padding).
 		 */
-		m?: 'none' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+		m?: 'none' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | undefined;
 
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Box content.

@@ -28,12 +28,12 @@
 		/**
 		 * Size variant.
 		 */
-		size?: 'sm' | 'base' | 'lg';
+		size?: 'sm' | 'base' | 'lg' | undefined;
 
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Key content.

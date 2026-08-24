@@ -16,9 +16,9 @@
 		/** PDF attachment to display */
 		attachment: MessageAttachment;
 		/** Optional class name */
-		class?: string;
+		class?: string | undefined;
 		/** Max width in pixels (default: 800) */
-		maxWidth?: number;
+		maxWidth?: number | undefined;
 	}
 
 	let { attachment, class: className = '', maxWidth = 800 }: Props = $props();

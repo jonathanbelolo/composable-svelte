@@ -3,7 +3,7 @@
 	import type { HTMLAttributes } from 'svelte/elements';
 
 	interface BannerTitleProps extends Omit<HTMLAttributes<HTMLHeadingElement>, 'class'> {
-		class?: string;
+		class?: string | undefined;
 		children?: import('svelte').Snippet;
 	}
 

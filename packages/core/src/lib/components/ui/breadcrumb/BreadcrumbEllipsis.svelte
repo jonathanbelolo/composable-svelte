@@ -3,7 +3,7 @@
 	import { cn } from '../../../utils.js';
 
 	interface BreadcrumbEllipsisProps extends HTMLAttributes<HTMLSpanElement> {
-		class?: string;
+		class?: string | undefined;
 	}
 
 	let { class: className, ...restProps }: BreadcrumbEllipsisProps = $props();

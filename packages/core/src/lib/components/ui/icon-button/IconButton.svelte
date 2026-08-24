@@ -36,37 +36,37 @@
 		/**
 		 * Visual variant.
 		 */
-		variant?: 'default' | 'primary' | 'secondary' | 'destructive' | 'outline' | 'ghost';
+		variant?: 'default' | 'primary' | 'secondary' | 'destructive' | 'outline' | 'ghost' | undefined;
 
 		/**
 		 * Size of the button.
 		 */
-		size?: 'sm' | 'md' | 'lg';
+		size?: 'sm' | 'md' | 'lg' | undefined;
 
 		/**
 		 * Disabled state.
 		 */
-		disabled?: boolean;
+		disabled?: boolean | undefined;
 
 		/**
 		 * Loading state.
 		 */
-		loading?: boolean;
+		loading?: boolean | undefined;
 
 		/**
 		 * Reducer action to dispatch on click.
 		 */
-		action?: Action;
+		action?: Action | undefined;
 
 		/**
 		 * Dispatch function from store.
 		 */
-		dispatch?: Dispatch<Action>;
+		dispatch?: Dispatch<Action> | undefined;
 
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Icon content (must provide aria-label for accessibility).
