@@ -24,7 +24,7 @@ import { Camera as BabylonCamera } from '@babylonjs/core';
 import {
   DEFAULT_ORTHO_SIZE,
   orthographicBounds,
-  specularPowerFromRoughness
+  specularFor
 } from '../core/babylon-mapping.js';
 import type {
   RendererCapabilities,
@@ -46,6 +46,23 @@ export class BabylonAdapter {
   private meshes: Map<string, Mesh> = new Map();
   private lights: Map<string, HemisphericLight | DirectionalLight | PointLight | SpotLight> =
     new Map();
+
+  /**
+   * The last camera config, kept so a resize can recompute what depends on the
+   * viewport. Orthographic bounds are derived from the aspect ratio, and were
+   * computed once in `updateCamera` and never again — so resizing the window
+   * with an orthographic camera stretched the view until the next camera
+   * dispatch, which for a static scene is never.
+   */
+  private lastCamera: Nullable<CameraConfig> = null;
+
+  /**
+   * Kept so `dispose` can remove it. This was an anonymous arrow passed
+   * straight to `addEventListener`, which made it unremovable: every mounted
+   * `<Scene>` left a listener holding its engine alive for the life of the
+   * page.
+   */
+  private onResize: Nullable<() => void> = null;
 
   /**
    * Initialize the Babylon WebGL engine.
@@ -77,29 +94,12 @@ export class BabylonAdapter {
       });
     }
 
-    // Create scene
-    this.scene = new Scene(this.engine);
-    this.scene.clearColor = new Color4(0.1, 0.1, 0.1, 1);
-
-    // Create default camera
-    this.camera = new ArcRotateCamera(
-      'camera',
-      Math.PI / 2,
-      Math.PI / 3,
-      10,
-      BabylonVector3.Zero(),
-      this.scene
-    );
-    this.camera.attachControl(canvas, true);
+    this.attachEngine(this.engine);
+    this.camera?.attachControl(canvas, true);
 
     // Start render loop
     this.engine.runRenderLoop(() => {
       this.scene?.render();
-    });
-
-    // Handle window resize
-    window.addEventListener('resize', () => {
-      this.engine?.resize();
     });
 
     // Get capabilities
@@ -117,10 +117,55 @@ export class BabylonAdapter {
   }
 
   /**
+   * Build the scene and default camera on an engine that already exists.
+   *
+   * Split out of `initialize` so a test can pass a `NullEngine` — Babylon's
+   * headless backend, which builds real `Scene`, `Mesh`, `Material` and `Light`
+   * objects and needs no GL context, so it runs under jsdom unchanged. Three
+   * commits in this package's hardening sweep asserted that this class could
+   * not be tested "because jsdom cannot give Babylon a WebGL context"; that was
+   * never true, and it is why a per-frame material leak shipped.
+   *
+   * `initialize` keeps everything that genuinely needs the DOM: the canvas, the
+   * control attachment, the render loop and the resize listener.
+   */
+  attachEngine(engine: Engine): Scene {
+    this.engine = engine;
+
+    this.scene = new Scene(engine);
+    this.scene.clearColor = new Color4(0.1, 0.1, 0.1, 1);
+
+    this.camera = new ArcRotateCamera(
+      'camera',
+      Math.PI / 2,
+      Math.PI / 3,
+      10,
+      BabylonVector3.Zero(),
+      this.scene
+    );
+
+    // Resize belongs to the engine, so it is set up alongside it. Named and
+    // retained so `dispose` can remove it — it used to be an anonymous arrow
+    // passed straight to `addEventListener`, which made it unremovable, so
+    // every mounted `<Scene>` left a listener holding its engine alive for the
+    // life of the page. It re-applies the camera because orthographic bounds
+    // are derived from the aspect ratio.
+    this.onResize = () => {
+      this.engine?.resize();
+      if (this.lastCamera) this.updateCamera(this.lastCamera);
+    };
+    window.addEventListener('resize', this.onResize);
+
+    return this.scene;
+  }
+
+  /**
    * Update camera configuration
    */
   updateCamera(config: CameraConfig): void {
     if (!this.camera || !this.scene) return;
+
+    this.lastCamera = config;
 
     // Update position
     const [x, y, z] = config.position;
@@ -209,7 +254,13 @@ export class BabylonAdapter {
   removeMesh(id: string): void {
     const mesh = this.meshes.get(id);
     if (mesh) {
-      mesh.dispose();
+      // `disposeMaterialAndTextures` defaults to false, so the plain
+      // `mesh.dispose()` this used to call left the material behind on
+      // `scene.materials`. Every mesh here owns its material exclusively
+      // (`${mesh.id}-material`, built in `applyMaterial`), so nothing else can
+      // be holding it — and the scene sync rebuilds a mesh via remove + add
+      // whenever its geometry changes, which made that a leak per rebuild.
+      mesh.dispose(false, true);
       this.meshes.delete(id);
     }
   }
@@ -326,15 +377,74 @@ export class BabylonAdapter {
   }
 
   /**
-   * Replace a light in place.
+   * Update a light in place, rebuilding only when its `type` changed.
    *
-   * Disposes and rebuilds rather than mutating: `LightConfig` is a
-   * discriminated union, so a change of `type` is a different Babylon class
-   * entirely, and rebuilding is the one path that handles every case.
+   * `LightConfig` is a discriminated union, so a change of `type` really is a
+   * different Babylon class and there is no way round rebuilding it. Every
+   * other change is a uniform write.
+   *
+   * This used to be an unconditional `removeLight` + `addLight`. That was
+   * inert while `<Light>` had no `$effect` at all; the moment its props became
+   * reactive it turned every intensity tweak into a dispose-and-reconstruct —
+   * churning `scene.lights` and marking every affected mesh's submeshes
+   * light-dirty, per frame, for a value that could have been assigned.
    */
   updateLight(id: string, config: LightConfig): void {
-    this.removeLight(id);
-    this.addLight(config);
+    const existing = this.lights.get(id);
+
+    if (!existing || !this.matchesLightType(existing, config.type)) {
+      this.removeLight(id);
+      this.addLight(config);
+      return;
+    }
+
+    existing.intensity = config.intensity;
+    existing.diffuse = config.color ? this.hexToColor3(config.color) : new Color3(1, 1, 1);
+
+    switch (config.type) {
+      case 'ambient':
+        break;
+      case 'directional': {
+        const [x, y, z] = config.position;
+        (existing as DirectionalLight).direction = new BabylonVector3(x, y, z);
+        break;
+      }
+      case 'point': {
+        const [x, y, z] = config.position;
+        (existing as PointLight).position = new BabylonVector3(x, y, z);
+        (existing as PointLight).range = config.radius ?? Number.MAX_VALUE;
+        break;
+      }
+      case 'spot': {
+        const spot = existing as SpotLight;
+        const [x, y, z] = config.position;
+        const [dx, dy, dz] = config.direction;
+        spot.position = new BabylonVector3(x, y, z);
+        spot.direction = new BabylonVector3(dx, dy, dz);
+        spot.angle = config.angle;
+        break;
+      }
+    }
+  }
+
+  /** Whether a live Babylon light is the class a given config `type` builds. */
+  private matchesLightType(
+    light: HemisphericLight | DirectionalLight | PointLight | SpotLight,
+    type: LightConfig['type']
+  ): boolean {
+    switch (type) {
+      case 'ambient':
+        return light instanceof HemisphericLight;
+      case 'directional':
+        return light instanceof DirectionalLight;
+      // `SpotLight extends PointLight`, so the order matters: a spot light is
+      // `instanceof PointLight` and would otherwise be updated as one, silently
+      // dropping its angle and direction.
+      case 'spot':
+        return light instanceof SpotLight;
+      case 'point':
+        return light instanceof PointLight && !(light instanceof SpotLight);
+    }
   }
 
   /**
@@ -368,8 +478,13 @@ export class BabylonAdapter {
    * Dispose of all resources
    */
   dispose(): void {
-    // Dispose meshes
-    this.meshes.forEach((mesh) => mesh.dispose());
+    if (this.onResize) {
+      window.removeEventListener('resize', this.onResize);
+      this.onResize = null;
+    }
+
+    // `disposeMaterialAndTextures`, for the reason `removeMesh` gives.
+    this.meshes.forEach((mesh) => mesh.dispose(false, true));
     this.meshes.clear();
 
     // Dispose lights
@@ -383,6 +498,7 @@ export class BabylonAdapter {
     this.camera = null;
     this.scene = null;
     this.engine = null;
+    this.lastCamera = null;
   }
 
   // ========================================================================
@@ -452,39 +568,43 @@ export class BabylonAdapter {
   private applyMaterial(mesh: Mesh, config: MaterialConfig): void {
     if (!this.scene) return;
 
-    const material = new StandardMaterial(`${mesh.id}-material`, this.scene);
+    // Reuse the mesh's own material rather than building a new one.
+    //
+    // This used to be `new StandardMaterial(...)` on every call, with the
+    // outgoing material never disposed — and Babylon keeps every material on
+    // `scene.materials` until the scene dies. `updateMesh` calls this whenever
+    // `updates.material` is present, and `MeshConfig.material` is *required*,
+    // so the whole config arriving each frame from an animation made it present
+    // every frame: 60 leaked materials a second, each with its own uniform
+    // buffer. Harmless while animations reached nothing; live the moment they
+    // worked.
+    const existing = mesh.material;
+    const material =
+      existing instanceof StandardMaterial
+        ? existing
+        : new StandardMaterial(`${mesh.id}-material`, this.scene);
 
-    // Set color
     material.diffuseColor = this.hexToColor3(config.color);
 
-    // Metallic tints the highlight; roughness sets how tight it is. Neither is
-    // physically based shading — `StandardMaterial` has no such channels — but
-    // both are the closest lever it offers, and they do not fight: one is the
-    // specular colour, the other the specular exponent.
-    if (config.metallic !== undefined) {
-      material.specularColor = new Color3(config.metallic, config.metallic, config.metallic);
-    }
+    // Every field is assigned unconditionally, including the absent ones. With
+    // a fresh material each time, omitting a field meant "Babylon's default";
+    // reusing one, it would mean "whatever it was last time" — so a mesh that
+    // stopped setting `wireframe` would stay wireframed forever. Assigning the
+    // default explicitly keeps the material a pure function of the config.
+    const specular = specularFor(material.diffuseColor.asArray() as [number, number, number], config.metallic, config.roughness);
+    material.specularColor = new Color3(...specular.color);
+    material.specularPower = specular.power;
 
-    if (config.roughness !== undefined) {
-      material.specularPower = specularPowerFromRoughness(config.roughness);
-    }
+    material.emissiveColor = config.emissive
+      ? this.hexToColor3(config.emissive)
+      : new Color3(0, 0, 0);
+    material.alpha = config.alpha ?? 1;
+    material.wireframe = config.wireframe ?? false;
 
-    // Set emissive
-    if (config.emissive) {
-      material.emissiveColor = this.hexToColor3(config.emissive);
+    if (material !== existing) {
+      existing?.dispose();
+      mesh.material = material;
     }
-
-    // Set alpha
-    if (config.alpha !== undefined) {
-      material.alpha = config.alpha;
-    }
-
-    // Set wireframe
-    if (config.wireframe) {
-      material.wireframe = true;
-    }
-
-    mesh.material = material;
   }
 
   /**

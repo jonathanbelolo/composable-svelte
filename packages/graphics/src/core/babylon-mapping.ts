@@ -1,10 +1,12 @@
 /**
  * How this package's config values map onto Babylon's own ranges and modes.
  *
- * Separated from the adapter because the adapter needs a WebGL context and this
- * package runs its tests under jsdom — so this is the part that can actually be
- * asserted. What Babylon then does with the number is not covered by anything
- * here.
+ * Separated from the adapter so the arithmetic can be asserted on its own. The
+ * adapter itself is covered too, against a real Babylon `Scene` — see
+ * `tests/babylon-adapter.test.ts`. (This header used to claim the adapter was
+ * untestable "because jsdom cannot give Babylon a WebGL context". `NullEngine`
+ * needs no context at all, and every material defect in this file's sibling was
+ * invisible only because of that assumption.)
  */
 
 /**
@@ -48,20 +50,113 @@ const SMOOTHEST_SPECULAR_POWER = 126;
  * way round.
  */
 export function specularPowerFromRoughness(roughness: number): number {
-  const clamped = Math.min(1, Math.max(0, roughness));
+  const clamped = clamp01(roughness);
   return (
     SMOOTHEST_SPECULAR_POWER -
     clamped * (SMOOTHEST_SPECULAR_POWER - ROUGHEST_SPECULAR_POWER)
   );
 }
 
+/** NaN included: `Math.min`/`Math.max` propagate it, an explicit test does not. */
+function clamp01(value: number): number {
+  if (!Number.isFinite(value)) return DEFAULT_ROUGHNESS;
+  return Math.min(1, Math.max(0, value));
+}
+
+/**
+ * What a material with no `metallic` / `roughness` behaves as.
+ *
+ * Both are exactly Babylon's own defaults for the fields they drive —
+ * `specularColor` white and `specularPower` 64 — so omitting either field
+ * leaves the material looking precisely as `StandardMaterial` would on its own.
+ * The skill file documented these two numbers as the defaults while the code
+ * had none; now they are real.
+ */
+export const DEFAULT_METALLIC = 0;
+export const DEFAULT_ROUGHNESS = 0.5;
+
+/**
+ * How dimming starts only past the midpoint. At `roughness` 1 the highlight is
+ * reduced to a tenth rather than to nothing: a surface with no specular at all
+ * reads as unlit rather than as matte.
+ */
+const MATTE_FLOOR = 0.1;
+
+/**
+ * The `specularColor` and `specularPower` for a material config.
+ *
+ * ## Why this is not just `specularPower`
+ *
+ * The first attempt at honouring `roughness` set `specularPower` and left
+ * `metallic` mapped straight onto `specularColor` as a grey. That fixed
+ * nothing for most materials, because Babylon's default fragment shader is
+ *
+ * ```glsl
+ * float glossiness = vSpecularColor.a;      // ← specularPower
+ * vec3  specularColor = vSpecularColor.rgb;
+ * vec3  finalSpecular = specularBase * specularColor;
+ * ```
+ *
+ * — a multiply. `metallic: 0` gave `specularColor` black, which zeroes
+ * `finalSpecular` no matter what `glossiness` is. And `metallic: 0.0` is
+ * exactly what the documentation teaches for plastic, rubber, wood, stone and
+ * glass: 7 of the 13 material presets, including the mirror, were guaranteed to
+ * have no highlight for `roughness` to sharpen.
+ *
+ * ## The mapping
+ *
+ * `metallic` **tints** the highlight and never extinguishes it. Dielectrics
+ * reflect white, metals reflect their own colour — so this interpolates from
+ * white to the diffuse colour. That is the one real difference between a metal
+ * and a non-metal that a specular/glossiness model can express.
+ *
+ * `roughness` sets how tight the highlight is (`specularPower`) and, past the
+ * midpoint, how bright. Breadth alone is not enough: a fully rough surface at
+ * full intensity reads as wet, not matte. Below the midpoint the highlight is
+ * at full strength and only sharpens, so `roughness: 0.5` lands on Babylon's
+ * untouched defaults in both channels.
+ *
+ * Still not physically based shading — `PBRMaterial` is where `metallic` and
+ * `roughness` are real channels, and switching to it would change the lighting
+ * model for every existing mesh.
+ */
+export function specularFor(
+  diffuse: readonly [number, number, number],
+  metallic: number | undefined,
+  roughness: number | undefined
+): { color: [number, number, number]; power: number } {
+  const m = clamp01(metallic ?? DEFAULT_METALLIC);
+  const r = clamp01(roughness ?? DEFAULT_ROUGHNESS);
+
+  // Full strength up to the midpoint, falling to MATTE_FLOOR at fully rough.
+  const intensity = r <= 0.5 ? 1 : 1 - ((r - 0.5) / 0.5) * (1 - MATTE_FLOOR);
+
+  const tint = (channel: number): number => (1 - m) * 1 + m * channel;
+
+  return {
+    color: [
+      tint(diffuse[0]) * intensity,
+      tint(diffuse[1]) * intensity,
+      tint(diffuse[2]) * intensity
+    ],
+    power: specularPowerFromRoughness(r)
+  };
+}
+
 /**
  * The default orthographic half-height, in world units.
  *
  * `orthoSize` had no default because nothing read it — the camera has been
- * "orthographic-capable" in name only. 5 puts a 10-unit-tall view in frame,
- * which matches the perspective camera's default radius of 10 closely enough
- * that switching `type` reframes rather than jumps.
+ * "orthographic-capable" in name only. 5 puts a 10-unit-tall view in frame.
+ *
+ * This used to claim it "matches the perspective camera's default radius of 10
+ * closely enough that switching `type` reframes rather than jumps". That
+ * conflated the camera's *radius* with the height it *frames*, which are not
+ * the same quantity: at the shipped defaults (position `[0, 5, 10]`, `fov` 45,
+ * so a distance of 11.18) the perspective camera frames
+ * `2 × 11.18 × tan(22.5°)` = 9.26 world units. There is no single right
+ * default, because the perspective framing moves with the camera; 5 is a round
+ * number, and `orthoSize` is there for when it is wrong.
  */
 export const DEFAULT_ORTHO_SIZE = 5;
 

@@ -20,6 +20,7 @@ import { graphicsReducer } from '../src/core/reducer';
 import { createInitialGraphicsState } from '../src/core/initial-state';
 import Light from '../src/components/Light.svelte';
 import LightPropsHarness from './test-components/LightPropsHarness.svelte';
+import GeneratedIdHarness from './test-components/GeneratedIdHarness.svelte';
 import type { GraphicsAction, GraphicsState } from '../src/core/types';
 
 let cleanup: Array<() => void> = [];
@@ -39,11 +40,17 @@ function mountIn(Component: unknown, props: Record<string, unknown>) {
 	const target = document.createElement('div');
 	document.body.appendChild(target);
 	const instance = mount(Component as never, { target, props });
-	cleanup.push(() => {
-		unmount(instance);
+	// Idempotent: one test unmounts its own instance to assert on removal, and
+	// letting `afterEach` unmount it a second time logs `lifecycle_double_unmount`
+	// on every run — noise that trains you to ignore Svelte's warnings.
+	let live = true;
+	const teardown = () => {
+		if (live) unmount(instance);
+		live = false;
 		target.remove();
-	});
-	return { target, instance };
+	};
+	cleanup.push(teardown);
+	return { target, instance, teardown };
 }
 
 describe('Light', () => {
@@ -74,7 +81,7 @@ describe('Light', () => {
 
 		expect(store.state.lights.map((l) => l.id)).toEqual(['ambient-default', 'a', 'b', 'c']);
 
-		unmount(a.instance);
+		a.teardown();
 		flushSync();
 
 		expect(
@@ -83,13 +90,39 @@ describe('Light', () => {
 		).toEqual(['ambient-default', 'b', 'c']);
 	});
 
-	it('generates a stable id when none is given', () => {
+	it('gives each light without an explicit id a distinct one', () => {
+		// This test used to assert only `toBeTruthy()` on a single light's id,
+		// which a hardcoded literal passes — so it pinned neither of the two
+		// properties the id-based rewrite rests on. Uniqueness is the first:
+		// two lights sharing an id overwrite each other in the store.
 		const store = makeStore();
 		mountIn(Light, { store, type: 'point', position: [0, 1, 0], intensity: 1 });
+		mountIn(Light, { store, type: 'point', position: [0, 2, 0], intensity: 2 });
 		flushSync();
 
 		const added = store.state.lights.filter((l) => l.id !== 'ambient-default');
-		expect(added).toHaveLength(1);
-		expect(added[0]!.id, 'no id was generated').toBeTruthy();
+		expect(added, 'two lights collapsed into one').toHaveLength(2);
+		expect(new Set(added.map((l) => l.id)).size, 'both lights share an id').toBe(2);
+	});
+
+	it('keeps a generated id stable across prop changes', () => {
+		// Stability is the second: an id that changed per render would make every
+		// update address a light that no longer exists, and `updateLight` drops
+		// an unknown id — so the light would freeze at its mount-time values
+		// while the store filled with orphans.
+		const store = makeStore();
+		const { target } = mountIn(GeneratedIdHarness, { store });
+		flushSync();
+
+		const before = store.state.lights.filter((l) => l.id !== 'ambient-default');
+		expect(before).toHaveLength(1);
+
+		target.querySelector<HTMLButtonElement>('[data-testid="brighten"]')!.click();
+		flushSync();
+
+		const after = store.state.lights.filter((l) => l.id !== 'ambient-default');
+		expect(after, 'the update orphaned the original light').toHaveLength(1);
+		expect(after[0]!.id, 'the generated id changed between renders').toBe(before[0]!.id);
+		expect(after[0]!.intensity, 'the update never landed').toBe(0.9);
 	});
 });
