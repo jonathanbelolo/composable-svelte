@@ -563,9 +563,6 @@ importers:
       '@composable-svelte/core':
         specifier: workspace:*
         version: link:../core
-      '@playwright/test':
-        specifier: ^1.56.1
-        version: 1.56.1
       '@sveltejs/package':
         specifier: ^2.5.4
         version: 2.5.4(svelte@5.43.3)(typescript@5.9.3)
@@ -593,9 +590,6 @@ importers:
       '@types/node':
         specifier: ^20.0.0
         version: 20.19.24
-      '@vitest/browser-playwright':
-        specifier: ^4.0.7
-        version: 4.0.7(playwright@1.56.1)(vite@6.4.1(@types/node@20.19.24)(jiti@1.21.7)(tsx@4.20.6))(vitest@4.0.7)
       '@vitest/coverage-v8':
         specifier: ^4.0.7
         version: 4.0.7(@vitest/browser@4.0.7(vite@6.4.1(@types/node@20.19.24)(jiti@1.21.7)(tsx@4.20.6))(vitest@4.0.7(@types/node@20.19.24)(@vitest/browser-playwright@4.0.7)(@vitest/ui@4.0.7)(jiti@1.21.7)(jsdom@25.0.1)(tsx@4.20.6)))(vitest@4.0.7(@types/node@20.19.24)(@vitest/browser-playwright@4.0.7)(@vitest/ui@4.0.7)(jiti@1.21.7)(jsdom@25.0.1)(tsx@4.20.6))
@@ -605,9 +599,6 @@ importers:
       jsdom:
         specifier: ^25.0.1
         version: 25.0.1
-      playwright:
-        specifier: ^1.56.1
-        version: 1.56.1
       svelte:
         specifier: ^5.0.0
         version: 5.43.3

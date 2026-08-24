@@ -9,5 +9,5 @@
     "types": ["svelte", "vitest/globals"]
   },
   "include": ["src/**/*", "tests/**/*"],
-  "exclude": ["dist", "node_modules", "tests/visual"]
+  "exclude": ["dist", "node_modules"]
 }

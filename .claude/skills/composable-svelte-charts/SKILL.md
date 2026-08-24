@@ -242,7 +242,6 @@ interface ChartState<T = unknown> {
   filteredData: T[];             // After filters applied
 
   // Visualization config
-  spec: PlotSpec;                // Observable Plot spec
   dimensions: {
     width: number;
     height: number;
@@ -253,7 +252,6 @@ interface ChartState<T = unknown> {
     type: 'none' | 'point' | 'range' | 'brush';
     selectedData: T[];
     selectedIndices: number[];
-    brushExtent?: [[number, number], [number, number]];
     range?: [number, number];
   };
 
@@ -267,7 +265,7 @@ interface ChartState<T = unknown> {
 
   // Animation
   isAnimating: boolean;
-  transitionDuration: number;
+  transitionDuration: number;      // milliseconds, default 400
 }
 ```
 
@@ -284,8 +282,6 @@ type ChartAction<T = unknown> =
   | { type: 'selectPoint'; data: T; index: number }
   | { type: 'selectRange'; range: [number, number] }
   | { type: 'brushStart' }
-  | { type: 'brushMove'; extent: [[number, number], [number, number]] }
-  | { type: 'brushEnd' }
   | { type: 'clearSelection' }
 
   // Zoom/pan
@@ -298,8 +294,7 @@ type ChartAction<T = unknown> =
   // Dimensions
   | { type: 'resize'; dimensions: { width: number; height: number } }
 
-  // Config
-  | { type: 'updateSpec'; spec: Partial<PlotSpec> };
+  // Config;
 ```
 
 ### Creating Initial State
@@ -325,7 +320,9 @@ const initialState = createInitialChartState({
 **Controls**:
 - Mouse wheel: Zoom in/out
 - Click + drag: Pan
-- Double-click: Reset zoom
+
+There is no double-click handler in this package. d3-zoom's own default
+double-click zooms *in*; it does not reset. Dispatch `resetZoom` for that.
 
 **Programmatic zoom**:
 ```typescript
@@ -398,7 +395,9 @@ const spec = {
 
 ### Point Selection
 
-**Enable**: Click on points when `enableBrush={false}`
+**Enable**: dispatch `selectPoint` yourself. There is no click handler anywhere
+in this package, so clicking a point does nothing — the only built-in gesture
+that produces a selection is the brush.
 
 ```typescript
 // Listen for point selection
@@ -971,7 +970,7 @@ await store.send({ type: 'clearSelection' }, (state) => {
 
 **Selection not updating**:
 - Check `onSelectionChange` callback
-- Verify `enableBrush={true}` or `enableSelection={true}`
+- Verify `enableBrush={true}`. (There is no `enableSelection` prop; it never existed.)
 - Ensure store is reactive (`$chartStore.selection`)
 
 ---
@@ -1002,7 +1001,6 @@ All exports from `@composable-svelte/charts`:
 - `ChartConfig` - Chart configuration options
 - `SelectionState` - Selection state (point, range, brush)
 - `ZoomTransform` - Zoom/pan transform `{ x, y, k }`
-- `PlotSpec` - Observable Plot specification
 - `DataTransform` - Data transform function type `(data: T[]) => T[]`
 - `DataTransforms` - Namespace object with all transform functions
 
@@ -1032,10 +1030,10 @@ All exports from `@composable-svelte/charts`:
 - `filter(predicate)` - Filter data by predicate
 - `sortBy(field, direction)` - Sort data by field
 - `groupBy(field)` - Group data by field
-- `aggregate(field, fn)` - Aggregate grouped data
+- `aggregate(operation, field?)` - Reduce data to one number. `operation` is 'sum' | 'mean' | 'median' | 'count' | 'min' | 'max'
 - `compose(...transforms)` - Compose multiple transforms into a pipeline
 - `binData(field, bins)` - Bin numerical data into histogram buckets
-- `rollup(field, fn)` - Roll up grouped data with aggregation
+- `rollup(window, field, operation?)` - Rolling window over `field`; `operation` defaults to the mean
 - `topN(n, field)` - Take top N items by field value
 - `unique(field)` - Deduplicate data by field
 - `sample(n)` - Randomly sample N items from data
@@ -1044,5 +1042,7 @@ All exports from `@composable-svelte/charts`:
 ### Utility Exports: Responsive (`responsive`)
 
 - `createResizeObserver(element, dispatch)` - Create ResizeObserver for auto-sizing
-- `calculateDimensions(container)` - Calculate dimensions from container element
-- `debounce(fn, delay)` - Debounce function for resize throttling
+- `calculateDimensions(container, aspectRatio?)` - Dimensions from a container element
+- `debounce(fn, delay)` - A debounce helper. Note that `createResizeObserver`
+  does **not** use it: it dedupes by value instead, dispatching only when the
+  measured dimensions actually change. Resizes are therefore not throttled.

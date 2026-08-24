@@ -42,13 +42,14 @@ const SKIP_DIRS = new Set(['node_modules', 'dist', '.svelte-kit', '__screenshots
 /**
  * Test files a config is allowed not to resolve, with the reason.
  *
- * `charts/tests/visual` is Playwright, not vitest — `pnpm test` does not run
- * it, and pulling it in would mean widening a browser package's type
- * environment with `@types/node` for one `process.env` read.
+ * Empty, and the "exemption still exists" arm below is what keeps it that way.
+ * It held one entry — `charts/tests/visual/charts.visual.test.ts`, a Playwright
+ * suite `pnpm test` never ran — and that suite has since been deleted, because
+ * it pointed at a route the styleguide does not have, had `webServer` commented
+ * out, and had never produced a baseline image. The arm caught the stale entry
+ * in the same change that deleted the file.
  */
-const EXEMPT = new Map<string, string>([
-	['packages/charts/tests/visual/charts.visual.test.ts', 'Playwright, not run by `pnpm test`']
-]);
+const EXEMPT = new Map<string, string>();
 
 function workspaceDirs(): string[] {
 	const yaml = readFileSync(join(repoRoot, 'pnpm-workspace.yaml'), 'utf8');

@@ -238,6 +238,29 @@ await store.send(
 - ✅ Bundle size < 100KB (gzipped)
 - ✅ Interaction response < 16ms
 
+## What each chart type supports
+
+Not uniform, and worth checking before choosing a type:
+
+| | scatter | line | bar | area | histogram |
+|---|---|---|---|---|---|
+| `enableTooltip` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `enableZoom` / pan | ✅ | ✅ | — | ✅ | — |
+| `enableBrush` | ✅ | ✅ | — | — | — |
+| selection highlight | ✅ | — | — | — | — |
+| `size` | ✅ | — | — | — | — |
+| `xDomain` | ✅ | ✅ | — | ✅ | — |
+| `yDomain` | ✅ | ✅ | ✅ | ✅ | — |
+
+`enableBrush` needs `<circle>` marks to hit-test against, which only scatter and
+line produce. On the other types the brush overlay draws and selects nothing.
+
+`onSelectionChange` fires for every type — the *callback* is not the gap; the
+visual highlight is. Only `buildScatterPlot` reads `state.selection`.
+
+These are gaps rather than decisions, and they are recorded in
+`plans/hardening/README.md`.
+
 ## Accessibility
 
 What exists today:

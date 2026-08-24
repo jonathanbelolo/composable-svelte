@@ -8,7 +8,6 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     include: ['tests/**/*.test.ts'],
-    exclude: ['tests/visual/**/*.visual.test.ts'], // Exclude Playwright visual tests
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
