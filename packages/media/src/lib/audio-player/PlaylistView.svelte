@@ -19,15 +19,15 @@
 		/** Store containing audio player state */
 		store: Store<AudioPlayerState, AudioPlayerAction>;
 		/** Optional CSS class */
-		class?: string;
+		class?: string | undefined;
 		/** Show track numbers (default: true) */
-		showTrackNumbers?: boolean;
+		showTrackNumbers?: boolean | undefined;
 		/** Show duration (default: true) */
-		showDuration?: boolean;
+		showDuration?: boolean | undefined;
 		/** Enable drag-to-reorder (default: true) */
-		enableReorder?: boolean;
+		enableReorder?: boolean | undefined;
 		/** Enable remove track (default: true) */
-		enableRemove?: boolean;
+		enableRemove?: boolean | undefined;
 	}
 
 	let {

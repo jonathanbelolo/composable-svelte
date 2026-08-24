@@ -31,9 +31,9 @@ let {
   geometry: GeometryConfig;
   material: MaterialConfig;
   position: Vector3;
-  rotation?: Vector3;
-  scale?: Vector3;
-  visible?: boolean;
+  rotation?: Vector3 | undefined;
+  scale?: Vector3 | undefined;
+  visible?: boolean | undefined;
 } = $props();
 
 // Build mesh config

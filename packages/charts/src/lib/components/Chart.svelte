@@ -30,20 +30,20 @@ let {
   onSelectionChange
 }: {
   store: Store<ChartState<any>, ChartAction<any>>;
-  width?: number;
-  height?: number;
-  type?: 'scatter' | 'line' | 'bar' | 'area' | 'histogram';
-  enableZoom?: boolean;
-  enableBrush?: boolean;
-  enableTooltip?: boolean;
-  enableAnimations?: boolean;
-  x?: string | ((d: any) => any);
-  y?: string | ((d: any) => any);
-  color?: string | ((d: any) => any);
-  size?: number;
-  xDomain?: [number, number] | 'auto';
-  yDomain?: [number, number] | 'auto';
-  onSelectionChange?: (selected: any[]) => void;
+  width?: number | undefined;
+  height?: number | undefined;
+  type?: 'scatter' | 'line' | 'bar' | 'area' | 'histogram' | undefined;
+  enableZoom?: boolean | undefined;
+  enableBrush?: boolean | undefined;
+  enableTooltip?: boolean | undefined;
+  enableAnimations?: boolean | undefined;
+  x?: string | ((d: any) => any) | undefined;
+  y?: string | ((d: any) => any) | undefined;
+  color?: string | ((d: any) => any) | undefined;
+  size?: number | undefined;
+  xDomain?: [number, number] | 'auto' | undefined;
+  yDomain?: [number, number] | 'auto' | undefined;
+  onSelectionChange?: ((selected: any[]) => void) | undefined;
 } = $props();
 
 // Container element

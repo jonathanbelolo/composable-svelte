@@ -35,11 +35,11 @@
 		/** Required roles — the subject must hold at least one. */
 		roles: readonly string[];
 		/** Rendered when the subject holds a required role. */
-		children?: Snippet;
+		children?: Snippet | undefined;
 		/** Rendered when the resolved subject does not hold one. */
-		fallback?: Snippet;
+		fallback?: Snippet | undefined;
 		/** Rendered while the session has not been resolved yet. */
-		pending?: Snippet;
+		pending?: Snippet | undefined;
 	} = $props();
 
 	// No answer yet: the subject is `anonymousSubject` in `unresolved` and in a

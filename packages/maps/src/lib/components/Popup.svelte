@@ -34,10 +34,10 @@ let {
   store: Store<MapState, MapAction>;
   id: string;
   position: LngLat;
-  isOpen?: boolean;
-  closeButton?: boolean;
-  closeOnClick?: boolean;
-  children?: Snippet;
+  isOpen?: boolean | undefined;
+  closeButton?: boolean | undefined;
+  closeOnClick?: boolean | undefined;
+  children?: Snippet | undefined;
 } = $props();
 
 // Container for popup content

@@ -9,17 +9,17 @@
 	 */
 	interface Props {
 		store: Store<VoiceInputState, VoiceInputAction>;
-		variant?: 'icon' | 'button' | 'fab';
+		variant?: 'icon' | 'button' | 'fab' | undefined;
 		label?: string | undefined;
-		disabled?: boolean;
-		isRecording?: boolean;
+		disabled?: boolean | undefined;
+		isRecording?: boolean | undefined;
 		/**
 		 * Force an interaction mode. Left unset — the normal case — the button
 		 * follows the store, so enabling conversation mode makes the button a
 		 * toggle.
 		 */
 		mode?: 'push-to-talk' | 'conversation' | undefined;
-		class?: string;
+		class?: string | undefined;
 	}
 
 	const {

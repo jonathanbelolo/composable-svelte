@@ -21,11 +21,11 @@
 		/** Store containing audio player state */
 		store: Store<AudioPlayerState, AudioPlayerAction>;
 		/** Optional CSS class */
-		class?: string;
+		class?: string | undefined;
 		/** Show volume control (default: true) */
-		showVolume?: boolean;
+		showVolume?: boolean | undefined;
 		/** Unique ID for this player instance */
-		id?: string;
+		id?: string | undefined;
 	}
 
 	let {

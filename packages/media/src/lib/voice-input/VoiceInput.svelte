@@ -29,19 +29,19 @@
 		onTranscript: (transcript: string) => void;
 
 		/** Default mode on mount */
-		defaultMode?: 'push-to-talk' | 'conversation';
+		defaultMode?: 'push-to-talk' | 'conversation' | undefined;
 
 		/** Optional: Custom button variant */
-		variant?: 'icon' | 'button' | 'fab';
+		variant?: 'icon' | 'button' | 'fab' | undefined;
 
 		/** Optional: Custom button text (for 'button' variant) */
-		label?: string;
+		label?: string | undefined;
 
 		/** Optional: Disable the input */
-		disabled?: boolean;
+		disabled?: boolean | undefined;
 
 		/** Optional: Custom CSS class */
-		class?: string;
+		class?: string | undefined;
 	}
 
 	const {

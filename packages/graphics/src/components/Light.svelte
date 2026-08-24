@@ -26,14 +26,14 @@ let {
    * supply it, so existing markup is unaffected. Supply it if you need to
    * address the light from outside this component.
    */
-  id?: string;
+  id?: string | undefined;
   type: 'directional' | 'point' | 'spot' | 'ambient';
-  position?: [number, number, number];
-  direction?: [number, number, number];
-  angle?: number;
+  position?: [number, number, number] | undefined;
+  direction?: [number, number, number] | undefined;
+  angle?: number | undefined;
   intensity: number;
-  radius?: number;
-  color?: string;
+  radius?: number | undefined;
+  color?: string | undefined;
 } = $props();
 
 /**

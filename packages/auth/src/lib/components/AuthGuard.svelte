@@ -45,7 +45,7 @@
 		 * concern). Typical use: dispatch a redirect action to the app's
 		 * navigation store.
 		 */
-		onAnonymous?: () => void;
+		onAnonymous?: (() => void) | undefined;
 		/**
 		 * Rendered when authenticated — and KEPT rendered while a background
 		 * resolve or logout is in flight with a retained authenticated
@@ -53,7 +53,7 @@
 		 * `{ isRevalidating }`: `true` during that window, so apps can show
 		 * a subtle refresh indicator instead of unmounting the UI.
 		 */
-		children?: Snippet<[{ isRevalidating: boolean }]>;
+		children?: Snippet<[{ isRevalidating: boolean }]> | undefined;
 		/** Rendered when anonymous or after a failed login. */
 		/**
 		 * Rendered when there is no session to show. Receives `error` — the
@@ -62,10 +62,10 @@
 		 * Without it `SessionState.error` was unreachable through the package's
 		 * own components.
 		 */
-		fallback?: Snippet<[{ error: string | null }]>;
+		fallback?: Snippet<[{ error: string | null }]> | undefined;
 		/** Rendered while unresolved / logging in, or while resolving /
 		 * logging out WITHOUT a retained authenticated subject. */
-		pending?: Snippet;
+		pending?: Snippet | undefined;
 	} = $props();
 
 	const state = $derived(store.state);

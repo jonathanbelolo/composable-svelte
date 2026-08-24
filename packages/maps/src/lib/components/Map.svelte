@@ -18,10 +18,10 @@ let {
   children
 }: {
   store: Store<MapState, MapAction>;
-  width?: string | number;
-  height?: string | number;
-  onMapClick?: (lngLat: [number, number]) => void;
-  children?: Snippet;
+  width?: string | number | undefined;
+  height?: string | number | undefined;
+  onMapClick?: ((lngLat: [number, number]) => void) | undefined;
+  children?: Snippet | undefined;
 } = $props();
 
 // Computed styles

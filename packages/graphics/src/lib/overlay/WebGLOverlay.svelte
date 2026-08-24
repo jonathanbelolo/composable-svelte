@@ -15,7 +15,7 @@ import type { OverlayContextAPI, OverlayOptions, ElementRegistration } from './o
 let {
   options = {}
 }: {
-  options?: OverlayOptions;
+  options?: OverlayOptions | undefined;
 } = $props();
 
 // Canvas element
@@ -92,7 +92,7 @@ export function registerElement(registration: {
   id: string;
   domElement: HTMLElement;
   shader: any;
-  onTextureLoaded?: () => void;
+  onTextureLoaded?: (() => void) | undefined;
 }): void {
   if (!overlay) {
     console.warn('[WebGLOverlay] Overlay not initialized yet');

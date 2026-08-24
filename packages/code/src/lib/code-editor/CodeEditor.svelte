@@ -24,7 +24,7 @@
 	 * Store containing all component state
 	 * NO component $state - all application state lives in the store
 	 */
-	const { store, showToolbar = true }: { store: Store<CodeEditorState, CodeEditorAction>; showToolbar?: boolean } = $props();
+	const { store, showToolbar = true }: { store: Store<CodeEditorState, CodeEditorAction>; showToolbar?: boolean | undefined } = $props();
 
 	// Editor DOM reference
 	let editorElement: HTMLElement;

@@ -26,13 +26,13 @@
 		/** Store containing audio player state */
 		store: Store<AudioPlayerState, AudioPlayerAction>;
 		/** Optional CSS class */
-		class?: string;
+		class?: string | undefined;
 		/** Show expand button (default: true) */
-		showExpandButton?: boolean;
+		showExpandButton?: boolean | undefined;
 		/** Show playlist info (default: true) */
-		showPlaylistInfo?: boolean;
+		showPlaylistInfo?: boolean | undefined;
 		/** Unique ID for this player instance */
-		id?: string;
+		id?: string | undefined;
 	}
 
 	let {

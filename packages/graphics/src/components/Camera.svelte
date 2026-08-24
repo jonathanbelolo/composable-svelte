@@ -20,12 +20,12 @@ let {
   orthoSize
 }: {
   store: Store<GraphicsState, GraphicsAction>;
-  type?: CameraType;
+  type?: CameraType | undefined;
   position: Vector3;
   lookAt: Vector3;
-  fov?: number;
-  near?: number;
-  far?: number;
+  fov?: number | undefined;
+  near?: number | undefined;
+  far?: number | undefined;
   /**
    * Half-height of the view in world units, orthographic only.
    *
@@ -33,7 +33,7 @@ let {
    * accepted here, so the example set nothing. `CameraConfig` has carried the
    * field all along and the adapter reads it.
    */
-  orthoSize?: number;
+  orthoSize?: number | undefined;
 } = $props();
 
 // Build camera config.

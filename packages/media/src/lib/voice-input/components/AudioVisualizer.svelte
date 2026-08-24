@@ -6,8 +6,8 @@
 	 */
 	interface Props {
 		audioLevel: number; // 0-100
-		variant?: 'bars' | 'waveform' | 'pulse';
-		color?: string;
+		variant?: 'bars' | 'waveform' | 'pulse' | undefined;
+		color?: string | undefined;
 	}
 
 	const { audioLevel, variant = 'bars', color = '#007AFF' }: Props = $props();

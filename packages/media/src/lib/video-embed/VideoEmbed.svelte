@@ -20,13 +20,13 @@
 		video: VideoEmbedType;
 
 		/** Custom CSS class */
-		class?: string;
+		class?: string | undefined;
 
 		/** Enable autoplay (default: false, usually blocked by browsers) */
-		autoplay?: boolean;
+		autoplay?: boolean | undefined;
 
 		/** Show video title above embed (default: false) */
-		showTitle?: boolean;
+		showTitle?: boolean | undefined;
 	}
 
 	let {

@@ -34,13 +34,13 @@ let {
   store: Store<MapState, MapAction>;
   id: string;
   data: GeoJSON | string;
-  visible?: boolean;
-  interactive?: boolean;
-  fillColor?: string;
-  fillOpacity?: number;
-  strokeColor?: string;
-  strokeWidth?: number;
-  strokeOpacity?: number;
+  visible?: boolean | undefined;
+  interactive?: boolean | undefined;
+  fillColor?: string | undefined;
+  fillOpacity?: number | undefined;
+  strokeColor?: string | undefined;
+  strokeWidth?: number | undefined;
+  strokeOpacity?: number | undefined;
 } = $props();
 
 // Build layer style from props

@@ -51,68 +51,68 @@
      * Custom node components by type.
      * Maps node.type to Svelte component.
      */
-    nodeTypes?: Record<string, any>;
+    nodeTypes?: Record<string, any> | undefined;
 
     /**
      * Custom edge components by type.
      * Maps edge.type to Svelte component.
      */
-    edgeTypes?: Record<string, any>;
+    edgeTypes?: Record<string, any> | undefined;
 
     /**
      * Connection line type (bezier, smoothstep, step, straight).
      * @default 'bezier'
      */
-    connectionLineType?: ConnectionLineType;
+    connectionLineType?: ConnectionLineType | undefined;
 
     /**
      * Enable/disable panning.
      * @default true
      */
-    panOnDrag?: boolean;
+    panOnDrag?: boolean | undefined;
 
     /**
      * Enable/disable zoom on scroll.
      * @default true
      */
-    zoomOnScroll?: boolean;
+    zoomOnScroll?: boolean | undefined;
 
     /**
      * Enable/disable selection.
      * @default true
      */
-    selectable?: boolean;
+    selectable?: boolean | undefined;
 
     /**
      * CSS class for the canvas container.
      */
-    class?: string;
+    class?: string | undefined;
 
     /**
      * Minimum zoom level.
      * @default 0.1
      */
-    minZoom?: number;
+    minZoom?: number | undefined;
 
     /**
      * Maximum zoom level.
      * @default 2
      */
-    maxZoom?: number;
+    maxZoom?: number | undefined;
 
     /**
      * Automatically fit view to show all nodes.
      * Set to false when restoring a saved viewport.
      * @default true
      */
-    fitView?: boolean;
+    fitView?: boolean | undefined;
 
     /**
      * Direct callback for viewport changes (zoom/pan).
      * Called with the new viewport values when user finishes moving.
      * This bypasses the store and provides direct access to SvelteFlow's viewport.
      */
-    onViewportChange?: (viewport: { zoom: number; x: number; y: number }) => void;
+    onViewportChange?: ((viewport: { zoom: number; x: number; y: number }) => void) | undefined;
 
   }
 

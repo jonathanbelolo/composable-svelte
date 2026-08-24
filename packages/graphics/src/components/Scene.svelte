@@ -19,9 +19,9 @@ let {
   children
 }: {
   store: Store<GraphicsState, GraphicsAction>;
-  width?: string | number;
-  height?: string | number;
-  children?: Snippet;
+  width?: string | number | undefined;
+  height?: string | number | undefined;
+  children?: Snippet | undefined;
 } = $props();
 
 // Canvas element

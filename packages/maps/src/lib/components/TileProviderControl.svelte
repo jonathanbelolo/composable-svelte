@@ -14,8 +14,8 @@ let {
   class: className = ''
 }: {
   store: Store<MapState, MapAction>;
-  position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
-  class?: string;
+  position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | undefined;
+  class?: string | undefined;
 } = $props();
 
 // Available providers

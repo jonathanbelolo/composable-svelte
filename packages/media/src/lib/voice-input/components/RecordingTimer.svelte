@@ -8,7 +8,7 @@
 	interface Props {
 		startTime: number;
 		maxDuration?: number; // Optional max (e.g., 60 seconds)
-		onMaxDurationReached?: () => void;
+		onMaxDurationReached?: (() => void) | undefined;
 	}
 
 	const { startTime, maxDuration, onMaxDurationReached }: Props = $props();

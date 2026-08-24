@@ -25,8 +25,8 @@ let {
   store: Store<ChartState<any>, ChartAction<any>>;
   config: ChartConfig & { type?: 'scatter' | 'line' | 'bar' | 'area' | 'histogram' };
   plotBuilder: (state: ChartState<any>, config: any) => any;
-  enableZoom?: boolean;
-  enableBrush?: boolean;
+  enableZoom?: boolean | undefined;
+  enableBrush?: boolean | undefined;
 } = $props();
 
 // Container element
