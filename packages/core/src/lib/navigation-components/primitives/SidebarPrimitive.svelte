@@ -68,7 +68,7 @@
           bindContent: (node: HTMLElement) => void;
         }
       ]
-    >;
+    > | undefined;
   }
 
   let {

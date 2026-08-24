@@ -90,7 +90,7 @@
           width: string;
         }
       ]
-    >;
+    > | undefined;
   }
 
   let {

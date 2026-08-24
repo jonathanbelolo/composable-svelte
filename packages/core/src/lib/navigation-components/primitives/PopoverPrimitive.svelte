@@ -75,7 +75,7 @@
           initialOpacity: string | undefined;
         }
       ]
-    >;
+    > | undefined;
   }
 
   let {

@@ -89,7 +89,7 @@
           height: string;
         }
       ]
-    >;
+    > | undefined;
   }
 
   let {

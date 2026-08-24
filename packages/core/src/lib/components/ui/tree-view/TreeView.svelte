@@ -94,7 +94,7 @@
 					selectedCount: number;
 				}
 			]
-		>;
+		> | undefined;
 	}
 
 	let {

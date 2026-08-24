@@ -51,6 +51,7 @@ export default defineConfig({
       'tests/repo/peer-ranges.test.ts',
       'tests/repo/published-files.test.ts',
       'tests/repo/doc-examples.test.ts',
+			'tests/repo/optional-props.test.ts',
       'tests/styles/**/*.test.ts',
       'tests/i18n/ssr.test.ts'
     ],

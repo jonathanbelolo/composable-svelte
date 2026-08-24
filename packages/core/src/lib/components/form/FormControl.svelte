@@ -31,7 +31,7 @@
 		 */
 		children?: import('svelte').Snippet<
 			[{ props: Record<string, any>; field: FieldRenderState }]
-		>;
+		> | undefined;
 	}
 
 	let { class: className, children }: Props = $props();

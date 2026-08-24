@@ -79,7 +79,7 @@
           width: string;
         }
       ]
-    >;
+    > | undefined;
   }
 
   let {

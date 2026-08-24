@@ -64,7 +64,7 @@
           onTabChange: (index: number) => void;
         }
       ]
-    >;
+    > | undefined;
   }
 
   let {

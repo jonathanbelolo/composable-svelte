@@ -78,7 +78,7 @@
 		 */
 		header?: Snippet<
 			[{ month: Date; prevMonth: () => void; nextMonth: () => void; setMonth: (date: Date) => void }]
-		>;
+		> | undefined;
 
 		/**
 		 * Custom day cell snippet.
@@ -86,7 +86,7 @@
 		day?: Snippet<
 			[
 				{
-					date: Date;
+					date: Date | undefined;
 					isCurrentMonth: boolean;
 					isSelected: boolean;
 					isInRange: boolean;
@@ -94,7 +94,7 @@
 					select: () => void;
 				}
 			]
-		>;
+		> | undefined;
 	}
 
 	let {

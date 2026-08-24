@@ -50,6 +50,8 @@ export default defineConfig({
       'tests/repo/peer-ranges.test.ts',
       'tests/repo/published-files.test.ts',
       'tests/repo/doc-examples.test.ts',
+      // Walks every package's src from disk; same reason.
+      'tests/repo/optional-props.test.ts',
       // Needs the Cookie request header, which the browser Request API refuses
       // to expose; runs under vitest.node.config.ts instead.
       'tests/i18n/ssr.test.ts'

@@ -65,7 +65,7 @@
           onBack: (() => void) | undefined;
         }
       ]
-    >;
+    > | undefined;
   }
 
   let {
