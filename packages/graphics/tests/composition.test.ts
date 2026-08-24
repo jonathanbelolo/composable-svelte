@@ -1,0 +1,117 @@
+/**
+ * Two graphics features under one store must not interfere.
+ *
+ * This is the promise the whole architecture rests on — reducers compose, and a
+ * feature does not know or care what else is in the store. A cancellable effect
+ * id is the one piece of a reducer's output that is *global by construction*:
+ * the store keeps a single `inFlightEffects` map, and `Effect.map` preserves a
+ * `Cancellable`'s id through every layer of scoping. So an id baked into the
+ * module is shared by every instance of the feature, and re-registering it in
+ * one slice aborts the other's in-flight effect for good.
+ */
+
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { createStore, Effect } from '@composable-svelte/core';
+import { graphicsReducer } from '../src/core/reducer';
+import { createInitialGraphicsState } from '../src/core/initial-state';
+import type { GraphicsAction, GraphicsState, MeshConfig } from '../src/core/types';
+
+afterEach(() => vi.unstubAllGlobals());
+
+interface TwoScenes {
+	left: GraphicsState;
+	right: GraphicsState;
+}
+
+type TwoScenesAction =
+	| { type: 'left'; action: GraphicsAction }
+	| { type: 'right'; action: GraphicsAction };
+
+/** The composition every navigation and list pattern in this library produces. */
+const twoScenesReducer = (state: TwoScenes, action: TwoScenesAction, deps: never) => {
+	const side = action.type;
+	const [next, effect] = graphicsReducer(state[side], action.action, deps);
+
+	return [
+		{ ...state, [side]: next },
+		Effect.map(effect, (child: GraphicsAction) => ({ type: side, action: child }))
+	] as const;
+};
+
+/**
+ * Drain the microtask queue.
+ *
+ * A single `await Promise.resolve()` is not enough: a dispatch travels through
+ * the reducer, `Effect.map`, the store's `Promise.resolve(effect.execute(...))`
+ * and the executor's own `await` before the next `requestAnimationFrame` is
+ * queued, and that is several turns deep. Awaiting twice passed most of the
+ * time, which is the worst kind of enough.
+ */
+const flush = async (): Promise<void> => {
+	for (let turn = 0; turn < 20; turn += 1) await Promise.resolve();
+};
+
+const cube = (): MeshConfig => ({
+	id: 'cube',
+	geometry: { type: 'box', size: 1 },
+	position: [0, 0, 0],
+	material: { color: '#ff0000' }
+});
+
+const spin = () => ({
+	id: 'spin',
+	targetId: 'cube',
+	property: 'position' as const,
+	from: [0, 0, 0] as [number, number, number],
+	to: [1000, 0, 0] as [number, number, number],
+	duration: 100000,
+	loop: true
+});
+
+describe('two graphics scenes in one store', () => {
+	it('both keep animating', async () => {
+		const queued: FrameRequestCallback[] = [];
+		vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+			queued.push(cb);
+			return queued.length;
+		});
+
+		const store = createStore<TwoScenes, TwoScenesAction>({
+			initialState: { left: createInitialGraphicsState(), right: createInitialGraphicsState() },
+			reducer: twoScenesReducer as never,
+			dependencies: {} as never
+		});
+
+		for (const side of ['left', 'right'] as const) {
+			store.dispatch({ type: side, action: { type: 'addMesh', mesh: cube() } });
+			store.dispatch({ type: side, action: { type: 'startAnimation', animation: spin() } });
+			await flush();
+		}
+
+		for (let generation = 0; generation < 10; generation++) {
+			queued.splice(0, queued.length).forEach((cb) => cb(0));
+			await flush();
+		}
+
+		// The one started first is the one that dies: the second slice's
+		// `scheduleFrame` aborts its controller, and nothing ever restarts it.
+		expect(
+			store.state.left.meshes[0]!.position[0],
+			'the first scene froze — its frame loop was cancelled by the second'
+		).toBeGreaterThan(0);
+		expect(store.state.right.meshes[0]!.position[0]).toBeGreaterThan(0);
+	});
+
+	it('gives each scene its own identity', () => {
+		// What makes the above possible. Two scenes created independently must
+		// not share the id their cancellable effects are keyed by.
+		const a = createInitialGraphicsState();
+		const b = createInitialGraphicsState();
+
+		expect(a.sceneId).not.toBe(b.sceneId);
+	});
+
+	it('lets a consumer name a scene, for a stable id across reloads', () => {
+		expect(createInitialGraphicsState({ sceneId: 'hero' }).sceneId).toBe('hero');
+	});
+});

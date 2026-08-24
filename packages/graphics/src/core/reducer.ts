@@ -40,6 +40,20 @@ import type {
 const ANIMATION_FRAME_EFFECT = 'graphics.animationFrame';
 
 /**
+ * The frame-loop effect id for one scene.
+ *
+ * Keyed by `sceneId`, not by the module constant alone. A cancellable id is the
+ * one part of a reducer's output that is global by construction — the store
+ * keeps a single `inFlightEffects` map and `Effect.map` carries the id through
+ * every layer of scoping — so a shared constant meant two composed graphics
+ * features aborted each other's loop. The first one started froze at its
+ * initial position, permanently, while still reporting `isPlaying: true`.
+ */
+function frameEffectId(sceneId: string): string {
+  return `${ANIMATION_FRAME_EFFECT}.${sceneId}`;
+}
+
+/**
  * Schedule the next animation frame, superseding any frame already pending.
  *
  * The executor stays open *until* the frame fires rather than returning as soon
@@ -57,8 +71,8 @@ const ANIMATION_FRAME_EFFECT = 'graphics.animationFrame';
  * ignores the signal entirely". A check here cannot change behaviour, and no
  * test can distinguish it — which is the definition this campaign sweeps by.
  */
-function scheduleFrame(): EffectType<GraphicsAction> {
-  return Effect.cancellable(ANIMATION_FRAME_EFFECT, async (dispatch) => {
+function scheduleFrame(sceneId: string): EffectType<GraphicsAction> {
+  return Effect.cancellable(frameEffectId(sceneId), async (dispatch) => {
     await new Promise<void>((resolve) => {
       requestAnimationFrame(() => resolve());
     });
@@ -431,17 +445,21 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
       // only ever be stopped together — but refusing was worse than the problem
       // it solved: `tick` marks a finished animation `isPlaying: false` without
       // removing it, so a completed id was burned for the life of the store and
-      // the warning claimed it was "already running". The README's own
-      // `<button onclick={startRotation}>` dispatches a fixed id, so without
-      // `loop: true` that button worked exactly once, silently. Restarting is
-      // what "start this animation" should mean.
+      // the warning claimed it was "already running". Any button that restarts
+      // a non-looping animation under a fixed id worked exactly once, silently.
+      // Restarting is what "start this animation" should mean.
+      //
+      // (An earlier version of this comment said the README's own
+      // `<button onclick={startRotation}>` demonstrated it. It does not — that
+      // example sets `loop: true`, as does the skill file's. The defect is
+      // real; that particular evidence for it was not.)
       const existing = state.animations.findIndex((a) => a.id === action.animation.id);
       const animations =
         existing === -1
           ? [...state.animations, animation]
           : state.animations.map((a, i) => (i === existing ? animation : a));
 
-      return [{ ...state, animations }, scheduleFrame()];
+      return [{ ...state, animations }, scheduleFrame(state.sceneId)];
     }
 
     case 'stopAnimation': {
@@ -557,7 +575,7 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
           meshes,
           animations: updatedAnimations
         },
-        hasActiveAnimations ? scheduleFrame() : Effect.none()
+        hasActiveAnimations ? scheduleFrame(state.sceneId) : Effect.none()
       ];
     }
 

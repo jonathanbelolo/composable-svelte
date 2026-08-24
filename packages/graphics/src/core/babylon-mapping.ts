@@ -70,13 +70,19 @@ function clamp01(value: number): number {
  * `StandardMaterial` would on its own: `specularColor` white and
  * `specularPower` 64, Babylon's own values.
  *
- * Not "either", and the halves are easy to get backwards — an earlier version
- * of this comment stated them the wrong way round. Omitting only `roughness`
- * leaves both channels at Babylon's values, because `metallic` alone only
- * tints and the default is no tint at all. Omitting only `metallic` does not:
- * `roughness` drives brightness as well as tightness, so
- * `specularFor(grey, undefined, 0.9)` is a dimmed grey at power 14.4, which is
- * the point of the mapping.
+ * Not "either", and no single omission gives both. This comment has now been
+ * wrong in both directions, so here are the measured values:
+ *
+ * | call | colour | power |
+ * |---|---|---|
+ * | `specularFor(grey, undefined, undefined)` | `[1,1,1]` | 64 |
+ * | `specularFor(grey, undefined, 0.9)` | `[0.28,0.28,0.28]` | 14.4 |
+ * | `specularFor(grey, 1, undefined)` | `[0.5,0.5,0.5]` | 64 |
+ *
+ * Omitting `roughness` restores the *power* channel; omitting `metallic`
+ * restores the *colour* channel — and only on a surface where the tint would
+ * have mattered. Each field governs one channel fully and the other partly, so
+ * "omit one and you are back to Babylon" is false however it is phrased.
  *
  * The skill file documented these two numbers as defaults while the code had
  * none; now they are real.
@@ -166,8 +172,16 @@ export function specularFor(
   // Full strength up to the midpoint, falling to MATTE_FLOOR at fully rough.
   const intensity = r <= 0.5 ? 1 : 1 - ((r - 0.5) / 0.5) * (1 - MATTE_FLOOR);
 
-  const tint = (channel: number): number => (1 - m) + m * channel;
-  const channel = (value: number): number => Math.max(tint(value) * intensity, MIN_SPECULAR);
+  const tint = (value: number): number => (1 - m) + m * value;
+  const channel = (value: number): number => {
+    // `Number.isFinite` first: `Math.max(NaN, MIN_SPECULAR)` is NaN, so a
+    // non-finite diffuse channel escaped the floor entirely — and `(1 - m) + m
+    // * NaN` is NaN even at `m === 0`. Not reachable through `applyMaterial`,
+    // whose diffuse always comes from `hexToColor3`, but the floor is asserted
+    // as holding "at any input" and now does.
+    const lit = tint(Number.isFinite(value) ? value : 0) * intensity;
+    return Number.isFinite(lit) ? Math.max(lit, MIN_SPECULAR) : MIN_SPECULAR;
+  };
 
   return {
     color: [channel(diffuse[0]), channel(diffuse[1]), channel(diffuse[2])],

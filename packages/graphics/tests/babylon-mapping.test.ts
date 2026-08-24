@@ -198,11 +198,16 @@ describe('specularFor', () => {
 		// The property "metallic tints the highlight and never extinguishes it"
 		// is asserted in two doc blocks; this is what makes it true rather than
 		// nearly true.
+		// Including the non-finite ones, which the first version of this test
+		// omitted while its title said "at any input". `Math.max(NaN, floor)` is
+		// NaN, so they escaped the floor.
 		const surfaces: Array<[number, number, number]> = [
 			[0, 0, 0],
 			[0.02, 0.02, 0.02],
 			[1, 0, 0],
-			[1, 1, 1]
+			[1, 1, 1],
+			[Number.NaN, Number.NaN, Number.NaN],
+			[Number.POSITIVE_INFINITY, 0, -1]
 		];
 
 		for (const surface of surfaces) {

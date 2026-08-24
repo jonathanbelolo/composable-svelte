@@ -179,6 +179,22 @@ export interface AnimationState {
 // ============================================================================
 
 export interface GraphicsState {
+  /**
+   * Identity for this scene, unique per store slice.
+   *
+   * Used to key the animation frame loop's cancellable effect. A cancellable
+   * id is the one part of a reducer's output that is global by construction:
+   * the store keeps a single in-flight map and `Effect.map` preserves the id
+   * through every layer of scoping. A module-level constant is therefore shared
+   * by every instance of this feature, so two composed scenes cancelled each
+   * other's frame loop — the first froze permanently while still reporting
+   * `isPlaying: true`.
+   *
+   * `createInitialGraphicsState` generates one; pass your own if you need it
+   * stable across reloads.
+   */
+  sceneId: string;
+
   // Renderer
   renderer: RendererState;
 

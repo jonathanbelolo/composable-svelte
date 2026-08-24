@@ -94,13 +94,21 @@ export class BabylonAdapter {
       });
     }
 
-    this.attachEngine(this.engine);
-    this.camera?.attachControl(canvas, true);
+    // `alreadyRunning` before `attachEngine`, which is what sets `this.scene`.
+    // Calling `initialize` twice used to register a second `runRenderLoop` — a
+    // fresh closure each time, so Babylon's identity-based dedupe did not catch
+    // it — and the scene then rendered twice per frame, while `attachControl`
+    // bound to a canvas the engine was not drawing to.
+    const alreadyRunning = this.scene !== null;
 
-    // Start render loop
-    this.engine.runRenderLoop(() => {
-      this.scene?.render();
-    });
+    this.attachEngine(this.engine);
+
+    if (!alreadyRunning) {
+      this.camera?.attachControl(canvas, true);
+      this.engine.runRenderLoop(() => {
+        this.scene?.render();
+      });
+    }
 
     // Get capabilities
     const capabilities: RendererCapabilities = {
@@ -667,6 +675,16 @@ export class BabylonAdapter {
    */
   private warnedColors: Set<string> = new Set();
 
+  /**
+   * Cap on the above, because the set is keyed by the bad value itself.
+   *
+   * The path this warning exists for is the animated one — and that is exactly
+   * where the colour *varies*: a per-frame `hsl(...)` string is a new key every
+   * frame, so neither the set nor the console output was bounded. A leak fix
+   * that leaked. Past the cap it stops recording and stops warning, once.
+   */
+  private static readonly MAX_WARNED_COLORS = 20;
+
   private hexToColor3(hex: string): Color3 {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     const [, r, g, b] = result ?? [];
@@ -677,8 +695,16 @@ export class BabylonAdapter {
       // apply, which is exactly the kind of quiet nothing this package has been
       // swept for. The docs said "hex or CSS color"; the parser never agreed.
       if (!this.warnedColors.has(hex)) {
-        this.warnedColors.add(hex);
-        console.warn(`[graphics] "${hex}" is not a 6-digit hex colour; using white`);
+        if (this.warnedColors.size < BabylonAdapter.MAX_WARNED_COLORS) {
+          this.warnedColors.add(hex);
+          console.warn(`[graphics] "${hex}" is not a 6-digit hex colour; using white`);
+        } else if (this.warnedColors.size === BabylonAdapter.MAX_WARNED_COLORS) {
+          this.warnedColors.add('__capped__');
+          console.warn(
+            `[graphics] more than ${BabylonAdapter.MAX_WARNED_COLORS} unparseable colours; ` +
+              'suppressing further warnings'
+          );
+        }
       }
       return new Color3(1, 1, 1);
     }

@@ -11,7 +11,13 @@ import { graphicsReducer } from '../src/core/reducer';
 import { createInitialGraphicsState } from '../src/core/initial-state';
 import type { GraphicsAction, GraphicsState, MeshConfig } from '../src/core/types';
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+	vi.restoreAllMocks();
+	// `restoreAllMocks` does not undo `stubGlobal`. Unstubbing at the end of the
+	// test body instead leaks a frozen `requestAnimationFrame` into every later
+	// test the moment an assertion throws first.
+	vi.unstubAllGlobals();
+});
 
 const makeStore = () =>
 	createStore<GraphicsState, GraphicsAction>({
@@ -320,6 +326,49 @@ describe('an animation id can be reused', () => {
 		expect(store.state.animations[0]!.isPlaying, 'the restart was refused').toBe(true);
 	});
 
+	it('leaves the previous target where it stood when an id is retargeted', () => {
+		// Replacing by id can point the same id at a different mesh. The first
+		// mesh then keeps whatever value it had reached, with no animation
+		// referencing it — you replaced the animation, you did not undo it.
+		// Pinned because it is a consequence of replace-by-id that nothing else
+		// states, not because it is obviously the only defensible choice.
+		const store = makeStore();
+		store.dispatch({ type: 'addMesh', mesh: cube() });
+		store.dispatch({ type: 'addMesh', mesh: cube({ id: 'other' }) });
+		store.dispatch({
+			type: 'startAnimation',
+			animation: {
+				id: 'move',
+				targetId: 'cube',
+				property: 'position',
+				from: [0, 0, 0],
+				to: [10, 0, 0],
+				duration: 1000
+			}
+		});
+		const start = store.state.animations[0]!.startTime;
+		store.dispatch({ type: 'tick', time: start + 500 });
+		expect(store.state.meshes[0]!.position[0]).toBeCloseTo(5);
+
+		store.dispatch({
+			type: 'startAnimation',
+			animation: {
+				id: 'move',
+				targetId: 'other',
+				property: 'position',
+				from: [0, 0, 0],
+				to: [10, 0, 0],
+				duration: 1000
+			}
+		});
+		const restart = store.state.animations[0]!.startTime;
+		store.dispatch({ type: 'tick', time: restart + 1000 });
+
+		expect(store.state.meshes[0]!.position[0], 'the stranded mesh moved').toBeCloseTo(5);
+		expect(store.state.meshes[1]!.position[0]).toBeCloseTo(10);
+		expect(store.state.animations, 'the id was duplicated').toHaveLength(1);
+	});
+
 	it('replaces a running animation rather than doubling it', () => {
 		// The paired half: restarting must supersede, not accumulate. Two entries
 		// under one id could only ever be stopped together.
@@ -362,6 +411,19 @@ describe('the frame loop stays single through any sequence', () => {
 		};
 	}
 
+/**
+ * Drain the microtask queue.
+ *
+ * A single `await Promise.resolve()` is not enough: a dispatch travels through
+ * the reducer, `Effect.map`, the store's `Promise.resolve(effect.execute(...))`
+ * and the executor's own `await` before the next `requestAnimationFrame` is
+ * queued, and that is several turns deep. Awaiting twice passed most of the
+ * time, which is the worst kind of enough.
+ */
+const flush = async (): Promise<void> => {
+	for (let turn = 0; turn < 20; turn += 1) await Promise.resolve();
+};
+
 	const spin = (id: string) => ({
 		id,
 		targetId: 'cube',
@@ -386,6 +448,16 @@ describe('the frame loop stays single through any sequence', () => {
 		// chains, each re-walking every animation and mesh for ever.
 		const frames = pendingFrames();
 		const store = makeStore();
+		// Ticks per generation, not just pending callbacks. An extra chain
+		// converges back to one *callback* — every tick re-registers the same
+		// cancellable id — but while it lives it dispatches a second tick per
+		// frame, which doubles the animation speed. Counting callbacks alone
+		// cannot see that, and a mutation that forked a chain survived because
+		// of it.
+		let ticks = 0;
+		const unsubscribe = store.subscribeToActions?.((action) => {
+			if (action.type === 'tick') ticks += 1;
+		});
 		store.dispatch({ type: 'addMesh', mesh: cube() });
 
 		for (const step of steps) {
@@ -395,25 +467,36 @@ describe('the frame loop stays single through any sequence', () => {
 			else if (op === 'clear') store.dispatch({ type: 'clearScene' });
 			else if (op === 'remove') store.dispatch({ type: 'removeMesh', id: 'cube' });
 			else if (op === 'mesh') store.dispatch({ type: 'addMesh', mesh: cube() });
-			await Promise.resolve();
+			await flush();
 		}
-		await Promise.resolve();
+		await flush();
 
 		// Counting *queued* callbacks would be the wrong measure: a superseded
 		// chain's callback is still queued — rAF has no cancellation the store can
 		// reach — it simply does not dispatch when it runs. What matters is how
 		// many survive a generation, so run the batch and count what it queues.
-		frames.run();
-		await Promise.resolve();
-		await Promise.resolve();
-		expect(frames.count(), 'the frame chain forked or died').toBe(1);
+		//
+		// Twelve generations, not two. Two was the first draft, under a comment
+		// claiming "a fork can take a generation to show" — which is an explicit
+		// sufficiency claim and was false: a chain that dies at the third frame,
+		// or forks at the third, passed the whole suite. A loop that silently
+		// stops after N frames is the exact class this test exists to close.
+		const seen: number[] = [];
+		const dispatched: number[] = [];
+		for (let generation = 0; generation < 12; generation++) {
+			const before = ticks;
+			frames.run();
+			await flush();
+			seen.push(frames.count());
+			dispatched.push(ticks - before);
+		}
+		unsubscribe?.();
 
-		// And again, because a fork can take a generation to show.
-		frames.run();
-		await Promise.resolve();
-		await Promise.resolve();
-		expect(frames.count(), 'the frame chain forked or died on the second lap').toBe(1);
-
-		vi.unstubAllGlobals();
+		expect(seen, `chain count per generation: ${seen.join(',')}`).toEqual(
+			Array.from({ length: 12 }, () => 1)
+		);
+		expect(dispatched, `ticks per generation: ${dispatched.join(',')}`).toEqual(
+			Array.from({ length: 12 }, () => 1)
+		);
 	});
 });

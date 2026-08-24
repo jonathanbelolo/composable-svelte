@@ -245,7 +245,7 @@ type GraphicsAction =
 ## Testing
 
 ```typescript
-import { TestStore } from '@composable-svelte/core';
+import { TestStore } from '@composable-svelte/core/test';
 import { graphicsReducer, createInitialGraphicsState } from '@composable-svelte/graphics';
 
 describe('Graphics Reducer', () => {

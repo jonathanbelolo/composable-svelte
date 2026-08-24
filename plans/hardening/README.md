@@ -1201,7 +1201,40 @@ cancellation. (This paragraph first called all three "vacuous", which its own
 next clause contradicted. Absent and vacuous are different failures.)
 
 graphics: 25 tests at the start of T6, 56 at the end of the sweep, 101 after the
-first review, **113** after the second, **128** after the third. (The second
+first review, 113 after the second, 128 after the third, **132** after the
+fourth.
+
+**A fourth review found another regression, and this one broke composition
+itself.** `Effect.cancellable`'s id was a module constant — and a cancellable id
+is the one part of a reducer's output that is *global by construction*: the
+store keeps a single in-flight map and `Effect.map` carries the id through every
+layer of scoping. So two graphics features under one store shared it, and the
+second slice's `scheduleFrame` aborted the first's controller for good. The
+first scene froze at its initial position, permanently, still reporting
+`isPlaying: true`. `Effect.run` had no id and could not supersede, so the fix
+for the forking chains created a cross-feature one.
+
+`GraphicsState` now carries a `sceneId`, generated per scene by
+`createInitialGraphicsState` and overridable, and the frame effect is keyed by
+it. This is the general lesson, not a graphics one: **any reducer using
+`Effect.cancellable` with a constant id is not composable with a second instance
+of itself.** Nothing in the repo guards that today.
+
+Also from that round: the warn-once set introduced to bound console spam was
+itself unbounded, because the path it exists for is the animated one — where the
+colour *varies*, so every frame is a new key (1800 distinct values, 1800 warnings
+and 1800 retained strings in one probe). And `initialize()` twice still
+registered a second `runRenderLoop`, so the scene rendered twice per frame.
+
+My chain tests verified two generations, under a comment claiming that was
+enough. It was not: a loop that dies at the seventh frame, or forks at the
+third, passed all of them. Twelve generations now, asserting both the pending
+count *and* ticks dispatched per generation — a fork converges back to one
+callback but doubles the tick rate while it lives, which counting callbacks
+alone cannot see. And my new composition test was flaky (2 in 5) because a
+single `await Promise.resolve()` does not drain a dispatch that travels through
+the reducer, `Effect.map`, the store's promise wrapper and the executor's own
+await. (The second
 round's commit and this entry both said 117; the real figure was 113. I reported
 a number I had not re-run after removing a test file.)
 
@@ -1214,10 +1247,12 @@ which is the worst class and the one this campaign has already hit once in
   duplicate-id guard tested `animations.some(a => a.id === …)` while `tick`
   marks a completed animation `isPlaying: false` without removing it — so
   restarting was refused, with a warning that said "is already running" about
-  something that was not. The README's own `<button onclick={startRotation}>`
-  dispatches a fixed id, so without `loop: true` that button worked exactly
-  once, silently. `startAnimation` now *replaces* by id, which is what "start
-  this animation" should mean.
+  something that was not. Any button restarting a non-looping animation under a
+  fixed id worked exactly once, silently. `startAnimation` now *replaces* by id,
+  which is what "start this animation" should mean. (I first cited the README's
+  own `<button onclick={startRotation}>` as the reachable case. It is not — that
+  example sets `loop: true`, as does the skill file's. The defect is real; that
+  evidence for it was not.)
 - **The single-frame-loop fix forked instead.** `alreadyTicking`, derived from
   whether anything was playing, is a proxy for "a frame is already pending", and
   the two come apart the moment an animation is removed while its frame is in
@@ -1269,12 +1304,12 @@ Measured across all 175 tracked markdown files with the corrected detector:
 
 | reason | count | reading |
 |---|---|---|
-| `js_parse_error` | 62 | likely real |
+| `js_parse_error` | 63 | likely real |
 | `global_reference_invalid` | 24 | an excerpt whose `<script>` shows only part of itself, so an auto-subscribed store is undeclared — mostly benign |
 | `expected_token` | 13 | likely real |
 | `block_unclosed` | 9 | likely real |
 | `script_duplicate` | 8 | likely real |
-| `element_unclosed` | 6 | likely real |
+| `element_unclosed` | 5 | likely real |
 | `bind_invalid_value` | 5 | likely real |
 | everything else | 12 | 10 distinct reasons, 1–3 each |
 
@@ -1299,10 +1334,13 @@ Two further holes in the detector, both found by the third review and both
 closed: `looksLikeSvelte` required `<[A-Z][A-Za-z0-9]*`, so **dotted component
 names — `<Card.Header>`, the convention used throughout this repo — were
 invisible to it**, as was all lowercase HTML and every `{:else}` / `{/if}`
-continuation. And 8 of the 23 relabelled blocks put bare JavaScript above their
-markup with no `<script>` tag, which Svelte parses as a *text node* — so the JS
-in a third of the checked blocks was never checked at all, and corrupting it
-left the suite green.
+continuation. And **2** of the 23 `svelte` blocks put bare JavaScript above their markup with
+no `<script>` tag, which Svelte parses as a *text node* — so that JavaScript was
+never checked at all, and corrupting it left the suite green. (I first wrote "8
+of the 23 relabelled blocks", which was wrong twice over: 22 were relabelled,
+not 23, and of the 8 blocks with leading non-markup lines, 6 lead with a `//`
+comment rather than code. The detector fix is real; the arithmetic describing it
+was not.)
 
 **What this guard does not catch:** a missing required prop. `<Camera
 position={…} />` with no `{store}` is valid Svelte. That is the *original*
