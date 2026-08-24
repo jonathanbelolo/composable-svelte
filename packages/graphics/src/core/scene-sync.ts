@@ -13,6 +13,7 @@
 
 import type {
   CameraConfig,
+  GeometryConfig,
   GraphicsState,
   LightConfig,
   MeshConfig
@@ -64,6 +65,16 @@ export function initialBaseline(): SceneBaseline {
   return { camera: null, meshes: [], lights: [], backgroundColor: null };
 }
 
+
+/**
+ * Geometry is plain config data — a discriminated union of primitives plus, for
+ * `custom`, arrays of numbers. Structural comparison covers all of it.
+ */
+function sameGeometry(a: GeometryConfig, b: GeometryConfig): boolean {
+  if (a === b) return true;
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
 /**
  * Apply everything that changed since `previous`, and return the new baseline.
  */
@@ -103,7 +114,20 @@ export function syncScene(
       if (!prev) {
         adapter.addMesh(mesh);
       } else if (prev !== mesh) {
-        adapter.updateMesh(id, mesh);
+        // A changed geometry is a different Babylon mesh, not an adjustment to
+        // the existing one — `updateMesh` in the adapter handles position,
+        // rotation, scale, material and visibility, and has no geometry branch,
+        // so the change was silently dropped. Rebuild instead: `addMesh`
+        // applies the whole config, so nothing needs preserving by hand.
+        //
+        // The decision belongs here rather than in the adapter, which holds
+        // Babylon objects and no configs and so has nothing to compare.
+        if (!sameGeometry(prev.geometry, mesh.geometry)) {
+          adapter.removeMesh(id);
+          adapter.addMesh(mesh);
+        } else {
+          adapter.updateMesh(id, mesh);
+        }
       }
     }
 

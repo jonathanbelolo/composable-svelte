@@ -285,6 +285,18 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
     // ========================================================================
 
     case 'startAnimation': {
+      // An animation naming no existing mesh used to be accepted and ticked
+      // forever against nothing. That was invisible while ticks reached nothing
+      // at all; now that they drive the renderer it is a live per-frame loop
+      // that can never produce a frame — and `hasActiveAnimations` keeps
+      // scheduling the next one.
+      if (!state.meshes.some((mesh) => mesh.id === action.animation.targetId)) {
+        console.warn(
+          `[graphics] startAnimation: no mesh with id "${action.animation.targetId}"`
+        );
+        return [state, Effect.none()];
+      }
+
       const animation = {
         id: action.animation.id,
         config: action.animation,

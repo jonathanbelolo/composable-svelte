@@ -21,6 +21,12 @@ import {
   type Nullable
 } from '@babylonjs/core';
 
+import { Camera as BabylonCamera } from '@babylonjs/core';
+import {
+  DEFAULT_ORTHO_SIZE,
+  orthographicBounds,
+  specularPowerFromRoughness
+} from '../core/babylon-mapping.js';
 import type {
   RendererCapabilities,
   CameraConfig,
@@ -144,6 +150,27 @@ export class BabylonAdapter {
     }
     if (config.far !== undefined) {
       this.camera.maxZ = config.far;
+    }
+
+    // Projection mode. `config.type` was accepted, stored by the reducer, and
+    // read by nothing: this method handled position, lookAt, fov, near and far,
+    // and the camera was always the `ArcRotateCamera` built at init. So
+    // `<Camera type="orthographic" />` — a copy-pasteable example in the skill
+    // file — did nothing at all.
+    //
+    // `mode` is settable on a live camera, so no reconstruction is needed.
+    if (config.type === 'orthographic') {
+      this.camera.mode = BabylonCamera.ORTHOGRAPHIC_CAMERA;
+      const aspect = this.engine
+        ? this.engine.getRenderWidth() / this.engine.getRenderHeight()
+        : 1;
+      const bounds = orthographicBounds(config.orthoSize ?? DEFAULT_ORTHO_SIZE, aspect);
+      this.camera.orthoLeft = bounds.left;
+      this.camera.orthoRight = bounds.right;
+      this.camera.orthoTop = bounds.top;
+      this.camera.orthoBottom = bounds.bottom;
+    } else {
+      this.camera.mode = BabylonCamera.PERSPECTIVE_CAMERA;
     }
   }
 
@@ -439,9 +466,16 @@ export class BabylonAdapter {
     // Set color
     material.diffuseColor = this.hexToColor3(config.color);
 
-    // Set metallic/roughness (PBR approximation with StandardMaterial)
+    // Metallic tints the highlight; roughness sets how tight it is. Neither is
+    // physically based shading — `StandardMaterial` has no such channels — but
+    // both are the closest lever it offers, and they do not fight: one is the
+    // specular colour, the other the specular exponent.
     if (config.metallic !== undefined) {
       material.specularColor = new Color3(config.metallic, config.metallic, config.metallic);
+    }
+
+    if (config.roughness !== undefined) {
+      material.specularPower = specularPowerFromRoughness(config.roughness);
     }
 
     // Set emissive

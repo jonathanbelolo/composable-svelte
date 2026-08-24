@@ -361,3 +361,64 @@ describe('lights have identity', () => {
 	});
 });
 
+describe('a geometry change rebuilds the mesh', () => {
+  it('issues removeMesh + addMesh, not updateMesh', () => {
+    // `updateMesh` in the adapter handles position, rotation, scale, material
+    // and visibility — there is no geometry branch. So a consumer animating
+    // `geometry={{ type: 'box', size: slider }}` saw the state change, saw the
+    // diff fire, saw the adapter called, and the cube did not resize.
+    //
+    // The adapter cannot detect this itself: it holds `Map<string, Mesh>` —
+    // Babylon objects, no configs — so it has nothing to compare against. The
+    // sync has both, so the decision belongs here.
+    const { store, calls, sync } = harness();
+    store.dispatch({ type: 'addMesh', mesh: box('a') });
+    sync();
+    calls.length = 0;
+
+    store.dispatch({
+      type: 'updateMesh',
+      id: 'a',
+      updates: { geometry: { type: 'sphere', radius: 2 } }
+    });
+    sync();
+
+    expect(calls).toEqual(['removeMesh:a', 'addMesh:a@0,0,0']);
+  });
+
+  it('a position change still takes the cheap path', () => {
+    // The paired half: rebuilding on every update would be correct and wasteful.
+    const { store, calls, sync } = harness();
+    store.dispatch({ type: 'addMesh', mesh: box('a') });
+    sync();
+    calls.length = 0;
+
+    store.dispatch({ type: 'setMeshPosition', id: 'a', position: [5, 0, 0] });
+    sync();
+
+    expect(calls).toEqual(['updateMesh:a@5,0,0']);
+  });
+});
+
+describe('startAnimation', () => {
+  it('rejects an animation whose target does not exist', () => {
+    // Harmless while ticks reached nothing; a per-frame loop against a mesh
+    // that is not there now that they reach the renderer.
+    const { store } = harness();
+
+    store.dispatch({
+      type: 'startAnimation',
+      animation: {
+        id: 'orphan',
+        targetId: 'no-such-mesh',
+        property: 'position',
+        from: [0, 0, 0],
+        to: [1, 0, 0],
+        duration: 100
+      }
+    });
+
+    expect(store.state.animations, 'an orphan animation was accepted').toEqual([]);
+  });
+});
+
