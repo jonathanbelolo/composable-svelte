@@ -1231,10 +1231,14 @@ enough. It was not: a loop that dies at the seventh frame, or forks at the
 third, passed all of them. Twelve generations now, asserting both the pending
 count *and* ticks dispatched per generation — a fork converges back to one
 callback but doubles the tick rate while it lives, which counting callbacks
-alone cannot see. And my new composition test was flaky (2 in 5) because a
-single `await Promise.resolve()` does not drain a dispatch that travels through
-the reducer, `Effect.map`, the store's promise wrapper and the executor's own
-await. (The second
+alone cannot see. And my new composition test was flaky twice over. First because a single
+`await Promise.resolve()` does not drain a dispatch travelling through the
+reducer, `Effect.map`, the store's promise wrapper and the executor's own await.
+Then — after I had committed it claiming eight clean runs — because it asserted
+on *mesh position*, which depends on wall-clock milliseconds having elapsed, and
+the whole test runs inside one. A slice whose loop was perfectly alive could
+report a position of exactly 0. It now counts ticks per slice, which is the
+property it was always about; 12 consecutive clean runs. (The second
 round's commit and this entry both said 117; the real figure was 113. I reported
 a number I had not re-run after removing a test file.)
 

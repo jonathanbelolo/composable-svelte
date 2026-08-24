@@ -82,6 +82,16 @@ describe('two graphics scenes in one store', () => {
 			dependencies: {} as never
 		});
 
+		// Ticks per slice, not mesh position. Position is a proxy that depends on
+		// wall-clock milliseconds having elapsed — and the whole test runs inside
+		// one, so a slice whose loop is perfectly alive can still report a position
+		// of exactly 0. That made the first version of this test fail about half
+		// the time, for a reason that had nothing to do with what it was checking.
+		const ticks = { left: 0, right: 0 };
+		const unsubscribe = store.subscribeToActions?.((action) => {
+			if (action.action.type === 'tick') ticks[action.type] += 1;
+		});
+
 		for (const side of ['left', 'right'] as const) {
 			store.dispatch({ type: side, action: { type: 'addMesh', mesh: cube() } });
 			store.dispatch({ type: side, action: { type: 'startAnimation', animation: spin() } });
@@ -92,14 +102,15 @@ describe('two graphics scenes in one store', () => {
 			queued.splice(0, queued.length).forEach((cb) => cb(0));
 			await flush();
 		}
+		unsubscribe?.();
 
 		// The one started first is the one that dies: the second slice's
 		// `scheduleFrame` aborts its controller, and nothing ever restarts it.
 		expect(
-			store.state.left.meshes[0]!.position[0],
-			'the first scene froze — its frame loop was cancelled by the second'
-		).toBeGreaterThan(0);
-		expect(store.state.right.meshes[0]!.position[0]).toBeGreaterThan(0);
+			ticks.left,
+			`the first scene's frame loop was cancelled by the second (left=${ticks.left}, right=${ticks.right})`
+		).toBe(10);
+		expect(ticks.right).toBe(10);
 	});
 
 	it('gives each scene its own identity', () => {
