@@ -22,6 +22,19 @@ export class UpdateScheduler {
 	private isRunning = false;
 
 	/**
+	 * Video listeners to remove when an element goes, keyed by element id.
+	 *
+	 * This used to be done by **rebinding `this.unregisterElement`** with a
+	 * wrapper closing over the video — once per registration, never unwound. So
+	 * after n videos every call walked n wrappers, and each one pinned a
+	 * `HTMLVideoElement` and its registration for the scheduler's lifetime.
+	 * `destroy()` did not unwind it either, and since only the wrapper removed
+	 * the listeners, tearing the scheduler down without unregistering first left
+	 * them on the video.
+	 */
+	private videoListeners = new Map<string, () => void>();
+
+	/**
 	 * Set the callback to trigger when an element needs updating
 	 *
 	 * @param callback - Function to call with element ID
@@ -40,16 +53,20 @@ export class UpdateScheduler {
 
 		// Add to frame update set if using frame strategy
 		if (registration.updateStrategy === 'frame') {
-			this.frameUpdateElements.add(registration.id);
+			// A video with `requestVideoFrameCallback` drives itself, and its own
+			// comment calls that "more efficient than requestAnimationFrame" —
+			// *instead of*, not *as well as*. Registering both meant every video
+			// frame called `notifyUpdate` twice and uploaded the texture twice.
+			const selfDriving =
+				registration.type === 'video' && this.setupVideoUpdates(registration);
 
-			// Start frame loop if not already running
-			if (!this.isRunning) {
-				this.start();
-			}
+			if (!selfDriving) {
+				this.frameUpdateElements.add(registration.id);
 
-			// Set up video-specific handling
-			if (registration.type === 'video') {
-				this.setupVideoUpdates(registration);
+				// Start frame loop if not already running
+				if (!this.isRunning) {
+					this.start();
+				}
 			}
 		}
 	}
@@ -69,6 +86,9 @@ export class UpdateScheduler {
 				(registration.element as any).cancelVideoFrameCallback(registration.animationFrameId);
 			}
 		}
+
+		// Release the video's play/pause listeners
+		this.releaseVideoListeners(id);
 
 		// Remove from frame updates
 		this.frameUpdateElements.delete(id);
@@ -245,13 +265,13 @@ export class UpdateScheduler {
 	 *
 	 * @param registration - Element registration
 	 */
-	private setupVideoUpdates(registration: ElementRegistration): void {
+	private setupVideoUpdates(registration: ElementRegistration): boolean {
 		const video = registration.element as HTMLVideoElement;
 
 		// Check if requestVideoFrameCallback is supported
 		if (!('requestVideoFrameCallback' in video)) {
 			// Fall back to frame-based updates
-			return;
+			return false;
 		}
 
 		const scheduleVideoUpdate = () => {
@@ -289,15 +309,20 @@ export class UpdateScheduler {
 		video.addEventListener('play', handlePlay);
 		video.addEventListener('pause', handlePause);
 
-		// Clean up listeners when element is unregistered
-		const originalUnregister = this.unregisterElement.bind(this);
-		this.unregisterElement = (id: string) => {
-			if (id === registration.id) {
-				video.removeEventListener('play', handlePlay);
-				video.removeEventListener('pause', handlePause);
-			}
-			originalUnregister(id);
-		};
+		// Recorded, not wrapped. `unregisterElement` and `destroy` both call
+		// this; the method itself is never reassigned.
+		this.videoListeners.set(registration.id, () => {
+			video.removeEventListener('play', handlePlay);
+			video.removeEventListener('pause', handlePause);
+		});
+
+		return true;
+	}
+
+	/** Remove the video listeners registered for an element, if any. */
+	private releaseVideoListeners(id: string): void {
+		this.videoListeners.get(id)?.();
+		this.videoListeners.delete(id);
 	}
 
 	/**
@@ -422,6 +447,13 @@ export class UpdateScheduler {
 					(video as any).cancelVideoFrameCallback(registration.animationFrameId);
 				}
 			}
+		}
+
+		// Release every video's listeners. These used to be removed only by the
+		// rebound `unregisterElement`, so destroying without unregistering left
+		// them on the video elements.
+		for (const id of Array.from(this.videoListeners.keys())) {
+			this.releaseVideoListeners(id);
 		}
 
 		this.elements.clear();

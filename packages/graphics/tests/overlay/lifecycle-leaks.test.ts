@@ -15,6 +15,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { RenderLoop } from '../../src/lib/utils/render-loop.js';
 import { WebGLContextManager } from '../../src/lib/utils/webgl-context-manager.js';
+import { createFakeGL, installFakeGL } from '../helpers/fake-gl.js';
 
 /** Net listeners added to a target: added minus removed, per event name. */
 function listenerLedger(target: EventTarget) {
@@ -66,6 +67,10 @@ describe('RenderLoop releases its visibility listener', () => {
 
 describe('WebGLContextManager releases its canvas listeners', () => {
 	it('leaves nothing behind after destroy', () => {
+		// The fake `gl` is installed only to keep `[WebGLOverlay] WebGL not
+		// supported` off the test output. Noise in a passing run trains you to
+		// ignore the output, which is how a real warning gets missed.
+		const uninstall = installFakeGL(createFakeGL());
 		const canvas = document.createElement('canvas');
 		const ledger = listenerLedger(canvas);
 		const manager = new WebGLContextManager();
@@ -79,5 +84,6 @@ describe('WebGLContextManager releases its canvas listeners', () => {
 		expect(ledger.net('webglcontextlost'), 'the context-lost listener outlived the manager').toBe(0);
 		expect(ledger.net('webglcontextrestored')).toBe(0);
 		ledger.restore();
+		uninstall();
 	});
 });
