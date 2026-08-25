@@ -77,6 +77,95 @@ describe('compiled programs are released', () => {
 		expect(fake.live('program')).toBe(0);
 		api.destroy();
 	});
+
+	it('releases the outgoing program when an element changes shader', async () => {
+		// `setShader` recompiles through the same refcounted cache that
+		// `registerElement` uses, so every switch takes a reference. Nothing
+		// gave the previous one back. Two consequences, and the second is the
+		// worse one: the old program is never freed, and the *new* refcount is
+		// one too high, so `unregisterElement` decrements to 1 rather than 0
+		// and frees nothing either.
+		const { fake, api } = overlay();
+
+		api.registerElement('a', loadedImage(), { type: 'image', shader: 'wave-gentle-horizontal' });
+		await Promise.resolve();
+
+		api.setShader('a', 'ripple-gentle');
+
+		expect(fake.created('program'), 'the new shader was not compiled').toBe(2);
+		expect(fake.live('program'), 'the shader it switched away from was abandoned').toBe(1);
+
+		api.unregisterElement('a');
+		expect(fake.live('program'), 'the element let go of nothing on the way out').toBe(0);
+		api.destroy();
+	});
+
+	it('keeps a program a second element is still using when the first switches away', async () => {
+		// The paired half. Releasing on switch is only correct if it decrements
+		// rather than deletes: two elements share one program, one of them
+		// changes shader, and the other must keep rendering.
+		const { fake, api } = overlay();
+
+		for (const id of ['a', 'b']) {
+			api.registerElement(id, loadedImage(), { type: 'image', shader: 'wave-gentle-horizontal' });
+		}
+		await Promise.resolve();
+		expect(fake.created('program')).toBe(1);
+
+		api.setShader('a', 'ripple-gentle');
+
+		expect(fake.live('program'), 'b lost the program it was sharing').toBe(2);
+		api.destroy();
+	});
+
+	it('does not double-release when an element is set to the shader it already has', async () => {
+		// Re-setting the same source is a cache hit, so the release and the
+		// acquire cancel out. A release that ran unconditionally *before* the
+		// new acquire would drop the refcount to zero, delete the program, and
+		// hand back a deleted handle.
+		const { fake, api } = overlay();
+
+		api.registerElement('a', loadedImage(), { type: 'image', shader: 'wave-gentle-horizontal' });
+		await Promise.resolve();
+
+		api.setShader('a', 'wave-gentle-horizontal');
+
+		expect(fake.created('program'), 'the identical shader was recompiled').toBe(1);
+		expect(fake.live('program'), 'the element deleted the program it still uses').toBe(1);
+
+		api.unregisterElement('a');
+		expect(fake.live('program')).toBe(0);
+		api.destroy();
+	});
+
+	it('keeps the working program, and the shader that names it, when a recompile fails', async () => {
+		// The release is conditional on the compile succeeding. Without that,
+		// a bad custom shader takes the element's working program down with it
+		// and leaves `shader` naming something that never linked — which
+		// `getElement()` then hands to the consumer.
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		const { fake, api } = overlay();
+
+		api.registerElement('a', loadedImage(), { type: 'image', shader: 'wave-gentle-horizontal' });
+		await Promise.resolve();
+		const before = api.getElement('a')?.shader;
+		expect(fake.live('program')).toBe(1);
+
+		// The harness compiles everything successfully; a test that needs a
+		// failure overrides the getter, which is what it is there for.
+		(fake.context as unknown as Record<string, unknown>).getShaderParameter = () => false;
+
+		api.setShader('a', { fragment: 'this is not glsl' });
+
+		expect(fake.live('program'), 'a working program was released for one that never linked').toBe(
+			1
+		);
+		expect(
+			api.getElement('a')?.shader,
+			'the registration names a shader that is not the one rendering'
+		).toBe(before);
+		api.destroy();
+	});
 });
 
 describe('textures are released', () => {

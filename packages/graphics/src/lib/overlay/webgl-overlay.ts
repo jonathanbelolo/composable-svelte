@@ -365,10 +365,33 @@ class WebGLOverlay implements OverlayContextAPI {
 			return;
 		}
 
+		// Acquire the new program before releasing the old one, and release it
+		// unconditionally afterwards.
+		//
+		// Both halves matter. `getProgram` is refcounted and takes a reference
+		// on every call, and nothing here ever gave one back: switching shader
+		// abandoned the outgoing program *and* left the incoming one a
+		// reference too high, so the later `unregisterElement` decremented to 1
+		// rather than 0 and freed nothing either. Releasing *first* is not the
+		// fix — recompiling to the same source is a cache hit, so it would drop
+		// the count to zero, delete the program, and then hand back the deleted
+		// handle.
+		const previousShader = registration.shader;
+		const previousProgram = this.elementPrograms.get(id);
+
 		registration.shader = shader;
 
-		// Recompile shader program with new shader
-		this.compileElementShader(registration);
+		if (this.compileElementShader(registration)) {
+			if (previousProgram) {
+				this.programManager?.releaseProgram(previousProgram);
+			}
+			return;
+		}
+
+		// A failed recompile keeps the element rendering what it was rendering,
+		// so `shader` must go back too. Otherwise the registration handed out
+		// by `getElement()` names a shader that is not the one on screen.
+		registration.shader = previousShader;
 	}
 
 	/**
@@ -715,8 +738,8 @@ class WebGLOverlay implements OverlayContextAPI {
 	/**
 	 * Compile shader program for an element
 	 */
-	private compileElementShader(registration: ElementRegistration): void {
-		if (!this.programManager) return;
+	private compileElementShader(registration: ElementRegistration): boolean {
+		if (!this.programManager) return false;
 
 		// Determine vertex and fragment shader source
 		let vertexSource = DEFAULT_VERTEX_SHADER;
@@ -773,10 +796,12 @@ class WebGLOverlay implements OverlayContextAPI {
 				this.options.onError(result);
 			}
 			console.error(`[WebGLOverlay] Failed to compile shader for '${registration.id}':`, result);
-		} else {
-			// Cache compiled program
-			this.elementPrograms.set(registration.id, result);
+			return false;
 		}
+
+		// Cache compiled program
+		this.elementPrograms.set(registration.id, result);
+		return true;
 	}
 
 	/**
