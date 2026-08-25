@@ -1,6 +1,16 @@
 # Phase 16: Generalized WebGLOverlay Implementation Plan
 
-**Status**: Planning
+**Status**: Superseded — see `README.md` in this directory
+
+> **This is the original plan, kept as written, and it is not a description of
+> the package.** Much of it was never built: the five wrapper components
+> (`OverlayImage`, `OverlayText`, `OverlayVideo`, `OverlayCanvas`,
+> `OverlayElement`), text and HTML elements, the `reactive` update strategy,
+> `needsUpdate`, and the html2canvas integration the security section below
+> concerns itself with — `html2canvas` was never a dependency, so that path
+> could not have run at any point. The "what actually shipped" section of
+> `plans/phase-16/README.md` is the accurate account.
+
 **Date**: November 10, 2025
 **Goal**: Extract and generalize WebGLOverlay from shader-gallery into @composable-svelte/graphics package
 

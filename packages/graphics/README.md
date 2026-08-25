@@ -300,7 +300,7 @@ in charge of it, call those methods from an effect.
 
 ```svelte
 <script lang="ts">
-  import { WebGLOverlay, getPreset } from '@composable-svelte/graphics';
+  import { WebGLOverlay } from '@composable-svelte/graphics';
 
   let overlay: WebGLOverlay | null = $state(null);
   let hero: HTMLImageElement | null = $state(null);
@@ -310,7 +310,7 @@ in charge of it, call those methods from an effect.
     overlay.registerElement({
       id: 'hero',
       domElement: hero,
-      shader: getPreset('ripple-gentle')
+      shader: 'ripple-gentle'
     });
   }
 </script>

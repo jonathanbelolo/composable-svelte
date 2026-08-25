@@ -3,6 +3,17 @@
 **Date**: November 10, 2025
 **Reviewer**: Claude (Comprehensive Analysis Mode)
 **Overall Rating**: 7/10 - Solid foundation, critical gaps identified
+**Status**: Historical — see `README.md` in this directory
+
+> **A review of a plan, not of the package.** It discusses `<OverlayImage>`, an
+> `updateStrategy` enum including `reactive`, and html2canvas XSS — none of
+> which exist: the wrapper components were never built, `reactive` was removed
+> with the text and HTML element types it served, and html2canvas was never a
+> dependency. Its testing recommendation ("Playwright for WebGL tests — jsdom
+> cannot test WebGL") is also wrong, and shaped the plan: jsdom cannot *run*
+> WebGL, but the overlay's logic tests fine against a fake `gl`, which is how
+> the T9 sweep found its resource leaks. The package has no Playwright suite.
+
 
 ---
 

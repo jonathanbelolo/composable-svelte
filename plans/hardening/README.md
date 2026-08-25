@@ -9,7 +9,7 @@ file and line, says whether it was **verified** (something was run) or
 
 | | count |
 |---|---|
-| Fixed and committed | 68 commits through R7, plus 99 in the dead-behaviour campaign since `2443ab4` |
+| Fixed and committed | 68 commits through R7, plus the dead-behaviour campaign since `2443ab4` (`git rev-list --count 2443ab4..HEAD`) |
 | **Open — components that crash** | **0** (was 6 — all fixed, see R1) |
 | Open — breaks a consumer at install/build | 6 (S2.6 closed in R6; S2.7 and S2.8 were already closed and the count was stale) |
 | Open — silently-wrong behaviour | 6 (S4.3 closed by R4; **S4.4, S4.6, S4.7 closed in R7**) |
@@ -17,7 +17,7 @@ file and line, says whether it was **verified** (something was run) or
 | Open — `svelte-check` errors | **0** (was 142, recounted to 69 in R6) |
 | Open — `svelte-check` warnings | **0** (was 30) |
 | Workspaces covered by `pnpm -r check` | **19 of 19** — the gate is complete |
-| **Open — dead behaviour** | **4 items, S11** — T1–T9 done; every package swept, overlay included |
+| **Open — dead behaviour** | **4 items, S11** — T1–T9 swept, then reviewed and remediated; see T9 |
 | Workspaces that typecheck their tests | **14 of 14 that have tests** (S11 T1) |
 | Optional props a wrapper can forward | **619 of 632** — the 13 left are `$bindable`, registered (S11 T8) |
 | Animation-policy backlog | **none** — emptied and deleted (S11 T2–T4) |
@@ -1582,7 +1582,79 @@ number is known rather than discovered.
 `carousel.types.ts` was swept as part of T8 because `CarouselProps` really is
 `Carousel`'s props type; leaving it would have left that component unwrappable.
 
-### T9. `graphics`'s overlay subsystem had never been swept — DONE
+### T9. `graphics`'s overlay subsystem — swept, then reviewed and remediated
+
+**The sweep's own entry claimed too much, and four hostile reviews said so.**
+It closed with "every package swept, overlay included". Against that: one of
+nine `OverlayOptions` fields was dead *and newly documented as working*; four of
+nine `OverlayErrorCode` members were unproducible and one was actively
+mislabelled; the `updateUniforms` the sweep had just promoted to public API
+could not introduce a uniform at all; and two members of the package's *other*
+half were accepted by the reducer and dropped in silence by the adapter.
+
+**The tests were the weakest part of it, and that is the finding worth keeping.**
+
+- **Two headline fixes had no test whatsoever.** Restoring `82412fa`'s pre-fix
+  line — `new TextureValidator(gl)`, discarding both consumer options — left
+  216/216 green. So did re-inserting `f125f9a`'s exact
+  `setTimeout(onTextureLoaded, 100)`. In both cases the test file's own header
+  named the object it did not touch: the tests exercised `TextureValidator` and
+  `createOverlay` while the fixes were in `TextureFactory` and the component.
+- **Nothing in the suite ever drew.** Making `RenderPipeline.render()` throw on
+  every call failed zero tests, as did making `setUniform` an immediate
+  `return`. That is how `describe('updateUniforms reaches the shader')` came to
+  assert only that a JS record had changed — and why the uniform defect two
+  other reviewers found independently was invisible.
+- **The harness was convenient rather than faithful.** `getUniformLocation`
+  returned a truthy handle for every name, so "the program has no location for
+  this uniform" — the actual failure mode — could not occur in a test.
+
+**Twelve remediation commits** (`c2d4e31`..`36f77c9`), graphics **216 → 294
+tests**. In order: uniforms reaching GL and a harness that can see it; the two
+unpinned fixes pinned; the element-blanking `setShader` defect; every texture
+upload bounded and accounted for; every error code producible; five lifetime
+holes including a constructor with no error path; `debug` made per-overlay;
+the dead surface the sweep's own rule had missed; custom geometry implemented;
+`CustomShaderMaterial` removed; `<Light>` discriminated; and the tests that
+passed for the wrong reason made to fail for the right one.
+
+**Corrections to the sweep's own record**, since it is the record that misleads:
+
+- `927d8ea` says "214 → 216 tests"; it was 212 → 216.
+- The entry below says "sixteen further unreachable methods"; the diff of
+  `7a92477` removes **17 symbols** — 15 methods and 2 free functions.
+- `ed5cb3c` says a "51-method stub"; the object literal carries **50**.
+- "four of the API's fourteen methods" is the right answer from wrong
+  arithmetic: three of those four were on `OverlayContextAPI` at the time.
+- The commits use "not in the root barrel" and "not reachable" interchangeably.
+  `package.json` exposes `"./*" → "./dist/*.js"`, so deep subpaths resolve.
+  Every deletion was verified against every package and example regardless, and
+  marked breaking — but the argument read tighter than it was.
+
+**Four counts wrong in one sweep, all written from memory rather than measured,
+is the pattern rather than the incident.** A number in a commit message or a
+register row is a claim like any other; this campaign has now caught its own
+counts wrong more often than it has caught anyone else's. The commit-count row
+in the table above no longer carries a number for the same reason — it went
+stale twice during a single session.
+
+**Process findings worth carrying:**
+
+- **A surviving mutation is a question, not a verdict.** Asking *which mechanism
+  actually does the work* turned three decorative tests into real ones and
+  found two genuine coverage gaps. It also, once, correctly identified two
+  redundant guards where neither was load-bearing alone.
+- **The gate caught eleven things vitest could not**, including a wrong
+  *description* of a defect rather than a wrong keystroke, and two type errors
+  in test files that `pnpm typecheck` never reads because tests compile under
+  `tsconfig.test.json`.
+- **Pinning a type that exists to reject things needs a negative test.** A
+  positive fixture proves an arm accepts what it should and can never prove it
+  refuses what it should not. `tests/light-props.types.ts` is compiled and never
+  run: six `@ts-expect-error` directives that fail the build when the error
+  stops happening.
+
+#### What the sweep itself recorded, kept as written
 
 Twelve commits, `ed5cb3c` through `927d8ea`. graphics went from **138 to 216
 tests**; the subsystem had **zero**.

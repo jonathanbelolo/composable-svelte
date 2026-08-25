@@ -1140,7 +1140,7 @@ It takes **exactly one prop**, `options`, and every field of it is optional:
 
 ```svelte
 <script lang="ts">
-  import { WebGLOverlay, getPreset } from '@composable-svelte/graphics';
+  import { WebGLOverlay } from '@composable-svelte/graphics';
 
   let overlay: WebGLOverlay | null = $state(null);
   let hero: HTMLImageElement | null = $state(null);
@@ -1150,7 +1150,7 @@ It takes **exactly one prop**, `options`, and every field of it is optional:
     overlay.registerElement({
       id: 'hero',
       domElement: hero,
-      shader: getPreset('ripple-gentle')
+      shader: 'ripple-gentle'
     });
   }
 </script>
@@ -1210,6 +1210,11 @@ import {
 
 const effect = getPreset('wave-flowing');
 ```
+
+`registerElement` takes the **name** — `shader: 'wave-flowing'` — and resolves
+it internally. `getPreset` returns `CustomShaderEffect | undefined`, so passing
+its result straight through is a type error under `strict`; reach for it when
+you want to read or clone an effect, not to register one.
 
 | family | names |
 |---|---|
