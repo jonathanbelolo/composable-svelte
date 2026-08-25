@@ -220,6 +220,14 @@ class WebGLOverlay implements OverlayContextAPI {
 			return OverlayError.invalidElementType(id, `Element with ID '${id}' already registered`);
 		}
 
+		// Nothing can be built while the context is gone: the texture and the
+		// program would both be created against a dead context and silently do
+		// nothing. `OverlayError.contextLost()` had no callers anywhere, so this
+		// is also the first thing that can produce the code.
+		if (this.contextIsLost()) {
+			return this.report(OverlayError.contextLost());
+		}
+
 		// Determine update strategy
 		const updateStrategy = options.updateStrategy ?? this.inferUpdateStrategy(options.type);
 
@@ -271,7 +279,7 @@ class WebGLOverlay implements OverlayContextAPI {
 	unregisterElement(id: string): void {
 		const registration = this.elements.get(id);
 		if (!registration) {
-			console.warn(`[WebGLOverlay] Element '${id}' not found`);
+			this.report(OverlayError.elementNotFound(id));
 			return;
 		}
 
@@ -321,7 +329,7 @@ class WebGLOverlay implements OverlayContextAPI {
 	updateElement(id: string): void {
 		const registration = this.elements.get(id);
 		if (!registration) {
-			console.warn(`[WebGLOverlay] Element '${id}' not found`);
+			this.report(OverlayError.elementNotFound(id));
 			return;
 		}
 
@@ -340,7 +348,7 @@ class WebGLOverlay implements OverlayContextAPI {
 	updateUniforms(id: string, uniforms: Record<string, number | number[]>): void {
 		const registration = this.elements.get(id);
 		if (!registration) {
-			console.warn(`[WebGLOverlay] Element '${id}' not found`);
+			this.report(OverlayError.elementNotFound(id));
 			return;
 		}
 
@@ -368,7 +376,7 @@ class WebGLOverlay implements OverlayContextAPI {
 	setShader(id: string, shader: ShaderEffect): void {
 		const registration = this.elements.get(id);
 		if (!registration) {
-			console.warn(`[WebGLOverlay] Element '${id}' not found`);
+			this.report(OverlayError.elementNotFound(id));
 			return;
 		}
 
@@ -688,6 +696,33 @@ class WebGLOverlay implements OverlayContextAPI {
 	}
 
 	/**
+	 * Report an error to the consumer and hand it back.
+	 *
+	 * Every failure path used to `console.warn` and return, so `onError` — the
+	 * one programmatic signal the overlay offers — saw texture and shader
+	 * failures only. Three `OverlayErrorCode` members had no constructor call
+	 * anywhere as a result, on an enum exported so consumers could switch on it.
+	 */
+	private report(error: OverlayError): OverlayError {
+		console.warn(`[WebGLOverlay] ${error.message}`);
+		if (this.options.onError) {
+			this.options.onError(error);
+		}
+		return error;
+	}
+
+	/**
+	 * Whether the context is currently lost.
+	 *
+	 * `WebGLContextManager` already tracks this and returns null from
+	 * `getContext()` while lost — the overlay simply never asked, and went on
+	 * drawing and uploading into a dead context every frame.
+	 */
+	private contextIsLost(): boolean {
+		return this.contextManager.getContext() === null;
+	}
+
+	/**
 	 * Render frame
 	 */
 	private render(deltaTime: number): void {
@@ -806,10 +841,17 @@ class WebGLOverlay implements OverlayContextAPI {
 					};
 				}
 			} else {
-				// Unknown preset name, log warning and use default
+				// Unknown preset name: fall back to the default shader, and
+				// record it as an *object*.
+				//
+				// It used to be left as the unrecognised string, and
+				// `updateUniforms` guards on `typeof … === 'object'` — so that
+				// element's uniforms were a silent no-op for the rest of its
+				// life, on top of the shader it asked for not existing.
 				console.warn(
 					`[WebGLOverlay] Unknown shader preset '${registration.shader}' for element '${registration.id}', using default shader`
 				);
+				registration.shader = { fragment: DEFAULT_FRAGMENT_SHADER };
 			}
 		}
 

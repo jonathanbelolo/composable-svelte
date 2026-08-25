@@ -14,6 +14,16 @@ import { debugLog } from './debug.js';
 
 export interface TextureValidationResult {
 	valid: boolean;
+	/**
+	 * Which limit refused it.
+	 *
+	 * Callers used to have only `reason`, a human string, so every failure here
+	 * became `OverlayError.textureTooLarge` — including the ones caused by
+	 * `memoryBudget`. A consumer who set a budget and hit it was told the
+	 * texture exceeded the *device* maximum and advised to reduce image size,
+	 * while `OverlayError.memoryBudgetExceeded` sat with no callers.
+	 */
+	failure?: 'size' | 'budget';
 	reason?: string;
 	scaled?: { width: number; height: number };
 }
@@ -73,6 +83,7 @@ export class TextureValidator {
 			const scaled = this.scaleToFit(width, height);
 			return {
 				valid: false,
+				failure: 'size',
 				reason: `Texture ${width}x${height} exceeds device max ${this.maxTextureSize}`,
 				scaled
 			};
@@ -83,6 +94,7 @@ export class TextureValidator {
 		if (this.currentMemoryUsage + estimatedBytes > this.maxMemoryBudget) {
 			return {
 				valid: false,
+				failure: 'budget',
 				reason: `Texture would exceed memory budget (${this.formatBytes(
 					this.currentMemoryUsage + estimatedBytes
 				)} > ${this.formatBytes(this.maxMemoryBudget)})`

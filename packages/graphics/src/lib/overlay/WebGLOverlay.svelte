@@ -64,9 +64,15 @@ onMount(() => {
   // Create overlay instance
   const result = createOverlay({ ...options, canvas });
 
-  // Check if overlay creation failed
+  // Check if overlay creation failed.
+  //
+  // `options.onError` belongs to an overlay that was never constructed, so it
+  // is called here by hand. Without this, `WEBGL_NOT_SUPPORTED` — the one
+  // failure a consumer most needs to branch on, and the whole basis of the
+  // "graceful degradation" story — had no programmatic signal at all.
   if (result instanceof OverlayError) {
     console.error('Failed to create overlay:', result.message);
+    options.onError?.(result);
     return;
   }
 
@@ -99,10 +105,15 @@ export function registerElement(registration: {
   shader: ElementRegistration['shader'];
   updateStrategy?: UpdateStrategy | undefined;
   onTextureLoaded?: (() => void) | undefined;
-}): void {
+}): ElementRegistration | OverlayError {
   if (!overlay) {
-    console.warn('[WebGLOverlay] Overlay not initialized yet');
-    return;
+    const error = OverlayError.invalidElementType(
+      registration.id,
+      'Overlay not initialized yet'
+    );
+    console.warn(`[WebGLOverlay] ${error.message}`);
+    options.onError?.(error);
+    return error;
   }
 
   // Infer element type from the DOM element.
@@ -120,11 +131,14 @@ export function registerElement(registration: {
     registration.domElement instanceof HTMLCanvasElement ? 'canvas' : null;
 
   if (elementType === null) {
-    console.error(
-      `[WebGLOverlay] Cannot render <${registration.domElement.tagName.toLowerCase()}> ` +
-        `for element '${registration.id}': only <img>, <video> and <canvas> are supported`
+    const error = OverlayError.invalidElementType(
+      registration.id,
+      `Cannot render <${registration.domElement.tagName.toLowerCase()}>: ` +
+        'only <img>, <video> and <canvas> are supported'
     );
-    return;
+    console.error(`[WebGLOverlay] ${error.message}`);
+    options.onError?.(error);
+    return error;
   }
 
   // Register with overlay - call with correct three-parameter signature.
@@ -145,10 +159,13 @@ export function registerElement(registration: {
     }
   );
 
-  // Check if registration failed
+  // The core already routed this through `onError`; the return value was
+  // dropped on the floor, so a caller had no way to know either.
   if (result instanceof OverlayError) {
     console.error('[WebGLOverlay] Failed to register element:', result.toString());
   }
+
+  return result;
 }
 
 /**

@@ -10,7 +10,7 @@
  */
 
 import { OverlayError, OverlayErrorCode } from '../utils/overlay-error.js';
-import { TextureValidator } from '../utils/texture-validator.js';
+import { TextureValidator, type TextureValidationResult } from '../utils/texture-validator.js';
 import type {
 	ElementType,
 	TextureCreationOptions,
@@ -117,13 +117,7 @@ export class TextureFactory {
 			}
 
 			return {
-				error: OverlayError.textureTooLarge(
-					img.id || 'image',
-					width,
-					height,
-					this.maxTextureSize,
-					validation.reason
-				)
+				error: this.validationError(validation, img.id || 'image', width, height)
 			};
 		}
 
@@ -227,13 +221,7 @@ export class TextureFactory {
 		const validation = this.textureValidator.validateSize(width, height);
 		if (!validation.valid) {
 			return {
-				error: OverlayError.textureTooLarge(
-					video.id || 'video',
-					width,
-					height,
-					this.maxTextureSize,
-					validation.reason
-				)
+				error: this.validationError(validation, video.id || 'video', width, height)
 			};
 		}
 
@@ -289,13 +277,7 @@ export class TextureFactory {
 		const validation = this.textureValidator.validateSize(width, height);
 		if (!validation.valid) {
 			return {
-				error: OverlayError.textureTooLarge(
-					canvas.id || 'canvas',
-					width,
-					height,
-					this.maxTextureSize,
-					validation.reason
-				)
+				error: this.validationError(validation, canvas.id || 'canvas', width, height)
 			};
 		}
 
@@ -375,10 +357,11 @@ export class TextureFactory {
 				this.textureValidator.trackAllocation(previous.width, previous.height);
 				return {
 					success: false,
-					error: OverlayError.memoryBudgetExceeded(
-						this.textureValidator.getMemoryUsage().used,
-						this.textureValidator.getMemoryUsage().budget,
-						size.width * size.height * 4
+					error: this.validationError(
+						validation,
+						element.id || 'unknown',
+						size.width,
+						size.height
 					)
 				};
 			}
@@ -471,6 +454,28 @@ export class TextureFactory {
 				)
 			};
 		}
+	}
+
+	/**
+	 * The error a failed validation actually describes.
+	 *
+	 * Every call site used to reach for `textureTooLarge`, so a `memoryBudget`
+	 * refusal arrived as `TEXTURE_TOO_LARGE` with a message about the device
+	 * maximum and advice to reduce the image size — and `memoryBudgetExceeded`,
+	 * whose recovery text `82412fa` deliberately rewrote to name the reachable
+	 * option, had no callers at all.
+	 */
+	private validationError(
+		validation: TextureValidationResult,
+		id: string,
+		width: number,
+		height: number
+	): OverlayError {
+		if (validation.failure === 'budget') {
+			const usage = this.textureValidator.getMemoryUsage();
+			return OverlayError.memoryBudgetExceeded(usage.used, usage.budget, width * height * 4);
+		}
+		return OverlayError.textureTooLarge(id, width, height, this.maxTextureSize, validation.reason);
 	}
 
 	/**
