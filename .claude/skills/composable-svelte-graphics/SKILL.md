@@ -1122,21 +1122,96 @@ What is still future is expressing that as a prop:
 
 ### WebGLOverlay
 
-Embeds a WebGL canvas as an overlay within a web layout:
+A full-viewport WebGL canvas that renders shader effects over ordinary DOM
+elements. It is an **imperative escape hatch, not a reducer-driven component**:
+it holds no store, dispatches no actions and imports nothing from
+`@composable-svelte/core`. It is driven entirely through methods on a
+`bind:this` reference. Call those from a reducer's effect if you want the
+architecture around it — nothing in the overlay itself will impose it.
+
+Its canvas is `position: fixed`, full-viewport, `pointer-events: none` and
+`z-index: 1000`, and it resizes with the window. There is no `width` or `height`
+prop and it does not sit inline in a layout.
+
+It takes **exactly one prop**, `options`, and every field of it is optional:
 
 ```svelte
-import { WebGLOverlay } from '@composable-svelte/graphics';
+<script lang="ts">
+  import { WebGLOverlay, getPreset } from '@composable-svelte/graphics';
 
-<WebGLOverlay {store} width={800} height={600} />
+  let overlay: WebGLOverlay | null = $state(null);
+  let hero: HTMLImageElement | null = $state(null);
+
+  function applyEffect(): void {
+    if (!overlay || !hero) return;
+    overlay.registerElement({
+      id: 'hero',
+      domElement: hero,
+      shader: getPreset('ripple-gentle')
+    });
+  }
+</script>
+
+<WebGLOverlay bind:this={overlay} options={{ targetFPS: 30 }} />
+<img bind:this={hero} src="/hero.jpg" alt="Hero" onload={applyEffect} />
 ```
+
+**`OverlayOptions`**:
+
+| option | meaning |
+|---|---|
+| `canvas` | render into an existing canvas instead of the component's own |
+| `targetFPS` | render-loop cap. Default 60 desktop, 30 mobile |
+| `maxTextureSize` | reject textures wider or taller than this, clamped down to the driver's `MAX_TEXTURE_SIZE` |
+| `memoryBudget` | total texture bytes before further textures are rejected. Default 200MB |
+| `debug` | console logging |
+| `handleContextLoss` | whether to rebuild resources after a context loss. Default `true`; the two callbacks below fire either way, so `false` means "tell me, but do not recover for me" |
+| `onContextLost`, `onContextRestored` | notification hooks |
+| `onError` | receives an `OverlayError`. Import it and `OverlayErrorCode` to narrow on `error.code` |
+
+**Four methods**, reached through `bind:this`:
+
+| method | |
+|---|---|
+| `registerElement({ id, domElement, shader, onTextureLoaded? })` | start rendering over the element. `onTextureLoaded` fires when the texture actually exists; failures go to `onError` instead |
+| `unregisterElement(id)` | stop, releasing the texture and the compiled program |
+| `updateElementShader(id, shader)` | recompile the element with a different effect |
+| `updateElementPosition(id)` | re-read the element's bounds after a CSS transform moves it |
+
+Only `<img>`, `<video>` and `<canvas>` can be registered. Anything else is
+refused by tag name with a console error rather than mislabelled an unloaded
+image.
 
 ### Shader Presets
 
-Pre-built shader configurations available via:
+21 built-in effects, addressed by name through the preset registry:
 
 ```typescript
-import { /* shader presets */ } from '@composable-svelte/graphics';
+import {
+  getPreset,
+  hasPreset,
+  getAllPresetNames,
+  getPresetsByCategory,
+  getPresetMetadata,
+  type PresetName
+} from '@composable-svelte/graphics';
+
+const effect = getPreset('wave-flowing');
 ```
+
+| family | names |
+|---|---|
+| ripple | `ripple-gentle`, `ripple-strong`, `ripple-pulse` |
+| wave | `wave-gentle-horizontal`, `wave-strong-horizontal`, `wave-gentle-vertical`, `wave-strong-vertical`, `wave-flowing`, `wave-heat` |
+| pixelate | `pixelate-small`, `pixelate-medium`, `pixelate-large` |
+| blur | `blur-slight`, `blur-medium`, `blur-strong` |
+| glitch | `glitch-subtle`, `glitch-medium`, `glitch-intense` |
+| zoom | `zoom-breathing`, `zoom-pulse`, `zoom-intense` |
+
+Every preset constant is also exported directly (`RIPPLE_GENTLE`, `WAVE_HEAT`,
+…), and each family has a factory — `createRippleEffect`, `createWaveEffect`,
+`createPixelateEffect`, `createBlurEffect`, `createGlitchEffect`,
+`createZoomEffect` — for parameters the fixed presets do not cover.
 
 ### BabylonAdapter
 

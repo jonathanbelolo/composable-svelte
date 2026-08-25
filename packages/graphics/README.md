@@ -276,6 +276,52 @@ describe('Graphics Reducer', () => {
 });
 ```
 
+## WebGL Overlay
+
+Separate from the declarative scene API above, the package exports
+`<WebGLOverlay>`: a full-viewport WebGL canvas that runs shader effects over
+ordinary DOM elements. An `<img>`, `<video>` or `<canvas>` already in your
+layout keeps its place in the document, and the overlay draws over it.
+
+**It is an imperative escape hatch, not part of the architecture.** It holds no
+store, dispatches no actions and imports nothing from `@composable-svelte/core`.
+It is driven through methods on a `bind:this` reference, so if you want a reducer
+in charge of it, call those methods from an effect.
+
+```svelte
+<script lang="ts">
+  import { WebGLOverlay, getPreset } from '@composable-svelte/graphics';
+
+  let overlay: WebGLOverlay | null = $state(null);
+  let hero: HTMLImageElement | null = $state(null);
+
+  function applyEffect(): void {
+    if (!overlay || !hero) return;
+    overlay.registerElement({
+      id: 'hero',
+      domElement: hero,
+      shader: getPreset('ripple-gentle')
+    });
+  }
+</script>
+
+<WebGLOverlay bind:this={overlay} />
+<img bind:this={hero} src="/hero.jpg" alt="Hero" onload={applyEffect} />
+```
+
+The single prop is `options` (`OverlayOptions`): `canvas`, `targetFPS`,
+`maxTextureSize`, `memoryBudget`, `debug`, `handleContextLoss`, `onContextLost`,
+`onContextRestored` and `onError`. The four methods are `registerElement`,
+`unregisterElement`, `updateElementShader` and `updateElementPosition`. Only
+`<img>`, `<video>` and `<canvas>` elements can be registered.
+
+21 shader presets ship with it — `ripple-*`, `wave-*`, `pixelate-*`, `blur-*`,
+`glitch-*` and `zoom-*`. `getAllPresetNames()` lists them, `getPresetMetadata()`
+describes one, and `createRippleEffect` and its five siblings build effects the
+fixed presets do not cover.
+
+`examples/shader-gallery` is the worked example.
+
 ## Renderer
 
 **WebGL, via Babylon's `Engine`. Always.**

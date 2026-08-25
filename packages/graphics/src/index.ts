@@ -21,6 +21,13 @@ export { default as Light } from './components/Light.svelte';
 // WebGL Overlay
 export { default as WebGLOverlay } from './lib/overlay/WebGLOverlay.svelte';
 export type * from './lib/overlay/overlay-types.js';
+// The overlay's error type. Exported because it is reachable, not because it is
+// used internally: `OverlayOptions.onError` is forwarded straight through the
+// component, and `ElementRegistration.error`, `TextureCreationResult.error` and
+// `registerElement`'s return all surface it. A consumer could receive one and
+// had no way to import it to narrow on `code`. Both are values (a class and an
+// enum), so this is a value export, not `export type`.
+export { OverlayError, OverlayErrorCode } from './lib/utils/overlay-error.js';
 
 // Shader presets
 export * from './lib/shaders/index.js';
