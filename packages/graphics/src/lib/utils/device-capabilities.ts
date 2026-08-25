@@ -86,54 +86,6 @@ export class DeviceCapabilities {
 	}
 
 	/**
-	 * Check if quality should be reduced for this device
-	 *
-	 * Returns true for mobile devices, indicating that shaders
-	 * should use simpler algorithms and fewer texture updates.
-	 *
-	 * @returns true if quality should be reduced
-	 */
-	shouldReduceQuality(): boolean {
-		return this.isMobile;
-	}
-
-	/**
-	 * Get texture scale factor for this device
-	 *
-	 * Returns a multiplier for texture dimensions.
-	 * Mobile devices get 0.75 to reduce memory usage.
-	 *
-	 * @returns Scale factor (0.75 for mobile, 1.0 for desktop)
-	 */
-	getTextureScaleFactor(): number {
-		return this.isMobile ? 0.75 : 1.0;
-	}
-
-	/**
-	 * Get recommended update frequency for this device
-	 *
-	 * Returns how often textures should be updated per second.
-	 * Lower on mobile to save battery.
-	 *
-	 * @returns Updates per second
-	 */
-	getRecommendedUpdateFrequency(): number {
-		return this.isMobile ? 15 : 30; // Half of target FPS
-	}
-
-	/**
-	 * Check if device is a high-DPI display
-	 *
-	 * Returns true if devicePixelRatio > 1.5
-	 * (Retina displays, high-DPI monitors)
-	 *
-	 * @returns true if high-DPI
-	 */
-	isHighDPI(): boolean {
-		return window.devicePixelRatio >= 1.5;
-	}
-
-	/**
 	 * Get device info as plain object
 	 *
 	 * Useful for logging or analytics

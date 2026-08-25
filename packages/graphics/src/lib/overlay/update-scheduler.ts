@@ -9,7 +9,7 @@
  * - manual: Explicit updateElement() calls
  */
 
-import type { ElementRegistration, UpdateStrategy } from './overlay-types.js';
+import type { ElementRegistration } from './overlay-types.js';
 
 export type UpdateCallback = (elementId: string) => void;
 
@@ -298,79 +298,6 @@ export class UpdateScheduler {
 			this.updateCallback(id);
 		}
 	}
-
-	/**
-	 * Change update strategy for an element
-	 *
-	 * @param id - Element identifier
-	 * @param strategy - New update strategy
-	 */
-	changeStrategy(id: string, strategy: UpdateStrategy): void {
-		const registration = this.elements.get(id);
-		if (!registration) {
-			console.warn(`[UpdateScheduler] Element ${id} not found`);
-			return;
-		}
-
-		const oldStrategy = registration.updateStrategy;
-		if (oldStrategy === strategy) return;
-
-		// Remove from frame updates if was 'frame'
-		if (oldStrategy === 'frame') {
-			this.frameUpdateElements.delete(id);
-
-			// Clean up video frame callback
-			if (registration.animationFrameId) {
-				const video = registration.element as HTMLVideoElement;
-				if ('cancelVideoFrameCallback' in video) {
-					(video as any).cancelVideoFrameCallback(registration.animationFrameId);
-					delete registration.animationFrameId;
-				}
-			}
-		}
-
-		// Update strategy
-		registration.updateStrategy = strategy;
-
-		// Add to frame updates if new strategy is 'frame'
-		if (strategy === 'frame') {
-			this.frameUpdateElements.add(id);
-
-			// Start frame loop if not running
-			if (!this.isRunning) {
-				this.start();
-			}
-
-			// Set up video updates if needed
-			if (registration.type === 'video') {
-				this.setupVideoUpdates(registration);
-			}
-		}
-
-		// Stop frame loop if no more frame updates
-		if (this.frameUpdateElements.size === 0 && this.isRunning) {
-			this.stop();
-		}
-	}
-
-	/**
-	 * Get elements by update strategy
-	 *
-	 * @param strategy - Update strategy
-	 * @returns Array of element IDs
-	 */
-	getElementsByStrategy(strategy: UpdateStrategy): string[] {
-		const result: string[] = [];
-
-		for (const [id, registration] of this.elements) {
-			if (registration.updateStrategy === strategy) {
-				result.push(id);
-			}
-		}
-
-		return result;
-	}
-
 
 	/**
 	 * Destroy scheduler and clean up

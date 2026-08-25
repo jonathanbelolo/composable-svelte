@@ -51,28 +51,6 @@ export function domToNDC(bounds: ElementBounds, canvasWidth: number, canvasHeigh
 }
 
 /**
- * Convert NDC coordinates back to DOM pixels
- *
- * Useful for debugging or UI positioning.
- *
- * @param ndc - NDC bounds
- * @param canvasWidth - Canvas width in pixels
- * @param canvasHeight - Canvas height in pixels
- * @returns DOM pixel bounds
- */
-export function ndcToDOM(ndc: NDCBounds, canvasWidth: number, canvasHeight: number): ElementBounds {
-	// Convert NDC back to pixel coordinates
-	const x = ((ndc.left + 1) / 2) * canvasWidth;
-	const width = (ndc.width / 2) * canvasWidth;
-
-	// Flip Y axis back
-	const y = ((1 - ndc.top) / 2) * canvasHeight;
-	const height = (ndc.height / 2) * canvasHeight;
-
-	return { x, y, width, height };
-}
-
-/**
  * Create quad vertices for an element at NDC position
  *
  * Returns 6 vertices (2 triangles) for a quad at the specified NDC bounds.
@@ -102,21 +80,4 @@ export function createQuadVertices(ndc: NDCBounds): Float32Array {
 		ndc.left,
 		ndc.bottom // Bottom-left
 	]);
-}
-
-/**
- * Check if element bounds intersect with viewport
- *
- * @param bounds - Element bounds in DOM pixels
- * @param viewportWidth - Viewport width
- * @param viewportHeight - Viewport height
- * @returns true if element is visible in viewport
- */
-export function isInViewport(bounds: ElementBounds, viewportWidth: number, viewportHeight: number): boolean {
-	return (
-		bounds.x + bounds.width > 0 &&
-		bounds.x < viewportWidth &&
-		bounds.y + bounds.height > 0 &&
-		bounds.y < viewportHeight
-	);
 }

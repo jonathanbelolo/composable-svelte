@@ -146,28 +146,6 @@ export class RenderLoop {
 	}
 
 	/**
-	 * Set target FPS
-	 *
-	 * Use lower FPS on mobile devices to save battery.
-	 *
-	 * @param fps - Target frames per second
-	 */
-	setTargetFPS(fps: number): void {
-		this.targetFPS = fps;
-		this.frameInterval = 1000 / fps;
-		debugLog(`[WebGLOverlay] Target FPS set to ${fps}`);
-	}
-
-	/**
-	 * Get target FPS
-	 *
-	 * @returns Target frames per second
-	 */
-	getTargetFPS(): number {
-		return this.targetFPS;
-	}
-
-	/**
 	 * Update FPS counter
 	 *
 	 * Calculates actual FPS over 1-second intervals.
@@ -202,23 +180,5 @@ export class RenderLoop {
 	 */
 	getCurrentFPS(): number {
 		return this.currentFPS;
-	}
-
-	/**
-	 * Check if tab is visible
-	 *
-	 * @returns true if tab is visible
-	 */
-	isTabVisible(): boolean {
-		return this.tabVisible;
-	}
-
-	/**
-	 * Get frame interval in milliseconds
-	 *
-	 * @returns Milliseconds between frames
-	 */
-	getFrameInterval(): number {
-		return this.frameInterval;
 	}
 }

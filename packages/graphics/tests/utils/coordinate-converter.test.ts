@@ -9,13 +9,30 @@
 import { describe, it, expect } from 'vitest';
 import {
 	domToNDC,
-	ndcToDOM,
 	createQuadVertices,
-	isInViewport
+	type NDCBounds
 } from '../../src/lib/utils/coordinate-converter.js';
 
 const CANVAS = { width: 800, height: 600 };
 const bounds = (x: number, y: number, width: number, height: number) => ({ x, y, width, height });
+
+/**
+ * The inverse of `domToNDC`, written here rather than imported.
+ *
+ * `coordinate-converter.ts` shipped an `ndcToDOM` with no caller anywhere; it
+ * went with the rest of the unreachable surface. Deriving the inverse
+ * independently makes the round-trip below a stronger oracle than importing the
+ * shipped one would have been — two implementations agreeing, rather than one
+ * checked against its own author.
+ */
+function ndcToDOM(ndc: NDCBounds, canvasWidth: number, canvasHeight: number) {
+	return {
+		x: ((ndc.left + 1) / 2) * canvasWidth,
+		y: ((1 - ndc.top) / 2) * canvasHeight,
+		width: (ndc.width / 2) * canvasWidth,
+		height: (ndc.height / 2) * canvasHeight
+	};
+}
 
 describe('domToNDC', () => {
 	it('maps the whole canvas onto the full NDC cube', () => {
@@ -55,8 +72,8 @@ describe('domToNDC', () => {
 	});
 });
 
-describe('ndcToDOM', () => {
-	it('round-trips domToNDC', () => {
+describe('domToNDC is invertible', () => {
+	it('round-trips through an independently derived inverse', () => {
 		const original = bounds(120, 340, 250, 90);
 
 		const back = ndcToDOM(domToNDC(original, CANVAS.width, CANVAS.height), CANVAS.width, CANVAS.height);
@@ -89,17 +106,5 @@ describe('createQuadVertices', () => {
 		expect(Math.max(...xs)).toBeCloseTo(ndc.right);
 		expect(Math.min(...ys)).toBeCloseTo(ndc.bottom);
 		expect(Math.max(...ys)).toBeCloseTo(ndc.top);
-	});
-});
-
-describe('isInViewport', () => {
-	it('accepts an element on screen and rejects one past the bottom', () => {
-		expect(isInViewport(bounds(10, 10, 100, 100), CANVAS.width, CANVAS.height)).toBe(true);
-		expect(isInViewport(bounds(10, 9000, 100, 100), CANVAS.width, CANVAS.height)).toBe(false);
-	});
-
-	it('accepts one that only partly overlaps', () => {
-		// Culling a partly-visible element would clip it at the viewport edge.
-		expect(isInViewport(bounds(-50, -50, 100, 100), CANVAS.width, CANVAS.height)).toBe(true);
 	});
 });
