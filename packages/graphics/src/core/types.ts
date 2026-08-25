@@ -78,12 +78,6 @@ export interface MaterialConfig {
   wireframe?: boolean;
 }
 
-export interface CustomShaderMaterial {
-  vertexShader: string;
-  fragmentShader: string;
-  uniforms?: Record<string, unknown>;
-}
-
 // ============================================================================
 // Light Types
 // ============================================================================
@@ -140,7 +134,17 @@ export type LightConfig =
 export interface MeshConfig {
   id: string;
   geometry: GeometryConfig;
-  material: MaterialConfig | CustomShaderMaterial;
+  /**
+   * Surface appearance.
+   *
+   * This was `MaterialConfig | CustomShaderMaterial`, and the second arm was
+   * dropped in silence: the adapter narrows with `if ('color' in ...)`, a
+   * shader material has no `color`, so it fell through and rendered Babylon's
+   * default. Implementing it means `ShaderMaterial` plus uniform and attribute
+   * plumbing and a compile-error path, and the package already has a shader
+   * story in the WebGL overlay.
+   */
+  material: MaterialConfig;
   position: Vector3;
   rotation?: Vector3;
   scale?: Vector3;

@@ -292,10 +292,10 @@ export class BabylonAdapter {
       mesh.scaling = new BabylonVector3(sx, sy, sz);
     }
 
-    // Apply material
-    if ('color' in config.material) {
-      this.applyMaterial(mesh, config.material);
-    }
+    // Apply material. The `'color' in config.material` narrow this used to
+    // carry existed only to exclude `CustomShaderMaterial`, which the union no
+    // longer has — and which that narrow dropped without a warning.
+    this.applyMaterial(mesh, config.material);
 
     // Set visibility
     mesh.isVisible = config.visible ?? true;
@@ -346,8 +346,9 @@ export class BabylonAdapter {
       mesh.scaling = new BabylonVector3(sx, sy, sz);
     }
 
-    // Update material
-    if (updates.material && 'color' in updates.material) {
+    // Update material. The truthiness check stays — `updates` is a Partial —
+    // but the `'color' in` half goes with `CustomShaderMaterial`.
+    if (updates.material) {
       this.applyMaterial(mesh, updates.material);
     }
 

@@ -985,20 +985,16 @@ let showObject = $state(true);
 These features are planned but not yet implemented:
 
 ### Custom Shaders
-```svelte
-// Future API
-<Mesh
-  id="custom"
-  geometry={{ type: 'sphere', radius: 1 }}
-  material={{
-    type: 'custom',
-    vertexShader: '...',
-    fragmentShader: '...',
-    uniforms: { time: 0.0 }
-  }}
-  position={[0, 0, 0]}
-/>
-```
+
+Not modelled in the types, and the sketch that used to sit here was never
+accurate: it showed a `type: 'custom'` discriminant that the
+`CustomShaderMaterial` interface did not have, and that interface has been
+removed — the adapter's `if ('color' in material)` narrow dropped it in silence
+and rendered Babylon's default material instead.
+
+`MeshConfig.material` is `MaterialConfig` alone. Per-pixel shader work today
+goes through `<WebGLOverlay>` and its 21 presets, which is a different subject:
+it shades DOM elements rather than scene meshes.
 
 ### Textures
 ```svelte
