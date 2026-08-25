@@ -17,7 +17,7 @@ file and line, says whether it was **verified** (something was run) or
 | Open — `svelte-check` errors | **0** (was 142, recounted to 69 in R6) |
 | Open — `svelte-check` warnings | **0** (was 30) |
 | Workspaces covered by `pnpm -r check` | **19 of 19** — the gate is complete |
-| **Open — dead behaviour** | **5 items, S11** — T1–T8 done; every package swept |
+| **Open — dead behaviour** | **4 items, S11** — T1–T9 done; every package swept, overlay included |
 | Workspaces that typecheck their tests | **14 of 14 that have tests** (S11 T1) |
 | Optional props a wrapper can forward | **619 of 632** — the 13 left are `$bindable`, registered (S11 T8) |
 | Animation-policy backlog | **none** — emptied and deleted (S11 T2–T4) |
@@ -970,10 +970,10 @@ have been through it; `chat` shipped 0.3.0 after four review rounds. Everything
 below is measured, not estimated — the commands that produced each count are
 named so the next person can re-run them rather than trust them.
 
-T1–T6 are done: every package has now been swept. T7 (review `ed855dd`), T8
-(266 optional props) and T9 (the graphics overlay subsystem) remain, and are
-independent of each other — T7 is a review rather than a fix, T8 is mechanical
-but wide, and T9 is a project in its own right.
+T1–T6, T8 and T9 are done: every package has been swept, and the graphics
+overlay subsystem with it. T7 (review `ed855dd`), T10 (139 non-compiling doc
+blocks), T11 (`FileUploadProps` drift) and T12 (436 optional props in `.ts`
+files) remain, and are independent of each other.
 
 ### T1. No workspace typechecked its tests — DONE
 
@@ -1582,32 +1582,139 @@ number is known rather than discovered.
 `carousel.types.ts` was swept as part of T8 because `CarouselProps` really is
 `Carousel`'s props type; leaving it would have left that component unwrappable.
 
-### T9. `graphics`'s overlay subsystem has never been swept — VERIFIED
+### T9. `graphics`'s overlay subsystem had never been swept — DONE
 
-`packages/graphics/src/lib/overlay/` and `lib/shaders/` — ~4,100 lines, **zero
-tests**, and no documentation anywhere: neither the README nor the skill file
-mentions `WebGLOverlay`, `createOverlay`, `OverlayOptions`, `updateStrategy` or
-any of the 21 shader presets. Its own plan still reads `Status: Planning`
-(`plans/phase-16/README.md:3`) while the code ships and is exported.
+Twelve commits, `ed5cb3c` through `927d8ea`. graphics went from **138 to 216
+tests**; the subsystem had **zero**.
 
-Deliberately left out of T6: sweeping it properly is its own project, and
-folding it in would have tripled that one. ~15 findings are already recorded
-from the T6 exploration, unverified beyond a read:
+**Three things in the original entry below were wrong**, and they are corrected
+here rather than left to mislead the next pass:
 
-- `OverlayOptions.memoryBudget` and `maxTextureSize` affect no validation — the
-  real limits live in `texture-validator.ts` and are never set from them.
-- `updateStrategy: 'reactive'` can never fire: the only path is
-  `triggerReactiveUpdate`, which nothing calls, and `inferUpdateStrategy`
-  assigns `'reactive'` to every `text` and `html` element.
-- `handleContextLoss: false` does not disable context-loss handling, and
-  silently drops the consumer's `onContextLost` / `onContextRestored` callbacks.
-- Context restoration rebuilds resources on the *dead* context — `this.gl` is
-  never re-read after the manager creates a new one.
-- `updateUniforms` mutates the shared preset constant, so per-element tuning
-  leaks into every element using that preset.
-- `ElementRegistration.needsUpdate` is written seven times and read never.
-- `WebGLOverlay.svelte`'s `onTextureLoaded` fires on a fixed 100ms timer
-  regardless of outcome, with its own TODO saying so.
+- **The scope was ~6,700 lines, not ~4,100.** `overlay/` is 2,581 and
+  `shaders/` 2,427, but `lib/utils/` (1,714 lines, 11 files) exists solely to
+  serve them — verified directly: `core/`, `adapters/` and `components/` import
+  nothing from it.
+- **"Context restoration rebuilds resources on the dead context" is refuted.**
+  `canvas.getContext()` returns the *same* object per the WebGL spec, so a lost
+  context is revived in place and `this.gl` is still the right handle. Recorded
+  as a finding on a read, and the read was wrong.
+- **"No documentation anywhere" was worse than that.** The skill file documented
+  `<WebGLOverlay {store} width={800} height={600} />` — a component that takes
+  exactly one prop, `options`. Every prop in that example was fabricated. Absent
+  documentation is a gap; wrong documentation is a defect.
 
-`createOverlay` is not exported from the barrel, and its one consumer
-(`examples/shader-gallery`) uses four methods off `bind:this`.
+**Confirmed and fixed**, in the order they were recorded: `memoryBudget` and
+`maxTextureSize` reaching no validation (wired into `TextureValidator` at
+construction, with the driver limit as a clamp); `updateStrategy: 'reactive'`
+being unreachable (deleted, along with the `text`/`html` element types it served
+and the html2canvas path that was never a dependency); `handleContextLoss:
+false` silently dropping the consumer's callbacks (it now means "tell me, but do
+not recover for me"); `needsUpdate` written seven times and read never (deleted);
+`onTextureLoaded` firing on a fixed 100ms timer regardless of outcome (fired when
+the texture settles, success only).
+
+**`updateUniforms` mutating the shared preset constant was confirmed too**, and
+it was the closest call in the campaign: exposing `updateUniforms` on the
+component made a recorded-but-unverified defect reachable in the same session.
+It had two aliases, not one — the registry's preset object *and* a custom effect
+object the consumer may hand to several elements — and a fix for the first
+passed every test written for the second.
+
+**`lastUpdate` was not a no-op**, contrary to this entry and the T9 plan. Both
+described `if (!registration.lastUpdate) return true` as a branch identical to
+falling through. It forced an update on an element's first frame, and that was
+the only reason a *paused* video ever got one. Removing it broke a test. The
+claim came from reading the branch instead of running it.
+
+**Eight findings beyond the register**, none of which the T6 exploration saw:
+
+- `RenderLoop` and `WebGLContextManager` each registered an anonymous `document`
+  listener with no stored reference and **no `destroy` method at all**, so every
+  overlay ever mounted left a handler behind holding it alive.
+- `releaseProgram` had **zero callers repo-wide**: only `destroy()` freed a
+  program, through a `clearCache` that ignores refcounts.
+- `setShader` took a refcount on every call and returned none — abandoning the
+  outgoing program *and* leaving the incoming one a reference too high, so the
+  later unregister freed nothing either. `updateElementShader` is one of the
+  four methods the component exposed, so this was the reachable path.
+- The scheduler rebound its own `unregisterElement` per video registration, a
+  chain never unwound, each wrapper pinning a video element.
+- A `frame`-strategy video registered with both the animation-frame loop and
+  `requestVideoFrameCallback`, uploading its texture twice per frame.
+- A texture created for an element unregistered before it resolved was orphaned.
+- **A `<canvas>` registered through the component never updated after
+  registration.** `inferUpdateStrategy` gives it the `manual` strategy and
+  `updateElement` is the only thing that services `manual` — and the component
+  exposed four of the API's fourteen methods, not including that one. The
+  strategy was reachable; its only trigger was not.
+- Sixteen further unreachable methods that `457c7e6` missed while claiming to
+  have removed "the surface no consumer can reach". Its rule was right and its
+  application was partial.
+
+**Interface/implementation drift bit three times** — `onTextureLoaded` and
+`updateElementPosition` on the class but not on `OverlayContextAPI`, the latter
+reached through a `@ts-expect-error` whose comment described the drift as though
+it were a reason. `pnpm -r check` caught two of them; vitest does not typecheck.
+
+**The recurring near-miss, named because it happened five times:** the
+convenient test setup hides the defect it was written to find. A
+`WEBGL_lose_context` stub returning `null` made a re-entrancy test pass while
+proving nothing; firing only the video frame made a double-upload test pass
+against the bug; an `onError` test asserted on a synchronous return for an
+asynchronous failure; a clamp test used a texture the *memory* budget rejects
+regardless of the size limit; and `90a55cc` wrote tests for `isInViewport`, a
+function with no callers that should have been deleted. **Working rule adopted
+mid-T9 and kept: a new test here is unproven until a mutation kills it.** Every
+fix in the last five commits carries its mutation table.
+
+**Also decided, and reversed once.** `OverlayError` was to be taken *out* of the
+surface, on the grounds that `registerElement` returns it and the one consumer
+discards the return. True of the return value, false of the other three
+exposures — and `onError` became reachable mid-sweep when the option path was
+wired. It and `OverlayErrorCode` are exported now. You cannot hand someone a
+value and withhold its type.
+
+**Left deliberately, with reasons in the tests:** `ensurePrecision` is fooled by
+the word appearing in a comment and `minifyShader` destroys line-based
+preprocessor directives. Both are exported with zero callers, so changing them
+is a behaviour change to public API with no evidence of what depends on the
+current behaviour. Pinned, not fixed.
+
+**The doc guard cannot catch what was wrong here**, and this is recorded as a
+gap rather than counted as coverage. `tests/repo/doc-examples.test.ts` compiles
+both graphics docs and did not catch `<WebGLOverlay {store} …>`: the block
+parses, because `withDeclaredStores` lifts its import into a `<script>`. Wrong
+props are a semantic error, and only `svelte-check` against the real component
+would see them.
+
+The original entry, for the record:
+
+> ### T9. `graphics`'s overlay subsystem has never been swept — VERIFIED
+>
+> `packages/graphics/src/lib/overlay/` and `lib/shaders/` — ~4,100 lines, **zero
+> tests**, and no documentation anywhere: neither the README nor the skill file
+> mentions `WebGLOverlay`, `createOverlay`, `OverlayOptions`, `updateStrategy` or
+> any of the 21 shader presets. Its own plan still reads `Status: Planning`
+> (`plans/phase-16/README.md:3`) while the code ships and is exported.
+>
+> Deliberately left out of T6: sweeping it properly is its own project, and
+> folding it in would have tripled that one. ~15 findings are already recorded
+> from the T6 exploration, unverified beyond a read:
+>
+> - `OverlayOptions.memoryBudget` and `maxTextureSize` affect no validation — the
+>   real limits live in `texture-validator.ts` and are never set from them.
+> - `updateStrategy: 'reactive'` can never fire: the only path is
+>   `triggerReactiveUpdate`, which nothing calls, and `inferUpdateStrategy`
+>   assigns `'reactive'` to every `text` and `html` element.
+> - `handleContextLoss: false` does not disable context-loss handling, and
+>   silently drops the consumer's `onContextLost` / `onContextRestored` callbacks.
+> - Context restoration rebuilds resources on the *dead* context — `this.gl` is
+>   never re-read after the manager creates a new one.
+> - `updateUniforms` mutates the shared preset constant, so per-element tuning
+>   leaks into every element using that preset.
+> - `ElementRegistration.needsUpdate` is written seven times and read never.
+> - `WebGLOverlay.svelte`'s `onTextureLoaded` fires on a fixed 100ms timer
+>   regardless of outcome, with its own TODO saying so.
+>
+> `createOverlay` is not exported from the barrel, and its one consumer
+> (`examples/shader-gallery`) uses four methods off `bind:this`.
