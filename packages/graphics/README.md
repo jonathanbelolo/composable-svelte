@@ -311,8 +311,14 @@ in charge of it, call those methods from an effect.
 
 The single prop is `options` (`OverlayOptions`): `canvas`, `targetFPS`,
 `maxTextureSize`, `memoryBudget`, `debug`, `handleContextLoss`, `onContextLost`,
-`onContextRestored` and `onError`. The four methods are `registerElement`,
-`unregisterElement`, `updateElementShader` and `updateElementPosition`. Only
+`onContextRestored` and `onError`.
+
+The methods are `registerElement` and `unregisterElement`; `updateElementShader`
+(recompile) and `updateUniforms` (feed the existing program new values);
+`updateElement` (re-read the pixels — the trigger for the `manual` update
+strategy a `<canvas>` gets by default) and `updateElementPosition` (re-read the
+bounds after a transform); `getElement`, `getElements`, `getCanvas`,
+`getContext` and `getCurrentFPS`; and `start`, `stop` and `isRunning`. Only
 `<img>`, `<video>` and `<canvas>` elements can be registered.
 
 21 shader presets ship with it — `ripple-*`, `wave-*`, `pixelate-*`, `blur-*`,

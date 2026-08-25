@@ -14,8 +14,10 @@ import type { OverlayError } from '../utils/overlay-error.js';
  * - image: Static or animated images
  * - video: Video elements (with frame extraction)
  * - canvas: Canvas elements (2D or WebGL)
- * - text: Text elements (via html2canvas)
- * - html: Complex HTML elements (via html2canvas)
+ *
+ * There were `text` and `html` members, backed by html2canvas — which was never
+ * a dependency, so that path could not have run. Both are gone; this comment
+ * outlived them by two commits.
  */
 export type ElementType = 'image' | 'video' | 'canvas';
 
@@ -23,9 +25,12 @@ export type ElementType = 'image' | 'video' | 'canvas';
  * Update strategies for texture updates
  *
  * - static: Never update after initial creation (default for images)
- * - frame: Update every animation frame (for videos)
+ * - frame: Update every animation frame (default for videos)
  * - manual: Update only when explicitly triggered via updateElement()
- * - reactive: Update when Svelte detects changes (via $effect)
+ *   (default for canvas elements)
+ *
+ * There was a `reactive` strategy, assigned only to the `text` and `html`
+ * element types, and it went with them.
  */
 export type UpdateStrategy = 'static' | 'frame' | 'manual';
 
@@ -245,6 +250,21 @@ export interface OverlayContextAPI {
 	 * @param shader - New shader effect
 	 */
 	setShader(id: string, shader: ShaderEffect): void;
+
+	/**
+	 * Re-read an element's bounds
+	 *
+	 * Position is tracked automatically; this is for the case tracking cannot
+	 * see — a CSS transform that moves the element without a scroll or resize.
+	 *
+	 * Declared here because it exists on the implementation and always has.
+	 * `WebGLOverlay.svelte` reached it through a `@ts-expect-error` whose
+	 * comment said "exists in implementation but not in interface", which is a
+	 * description of the drift rather than a reason for it.
+	 *
+	 * @param id - Element identifier
+	 */
+	updateElementPosition(id: string): void;
 
 	/**
 	 * Start the render loop

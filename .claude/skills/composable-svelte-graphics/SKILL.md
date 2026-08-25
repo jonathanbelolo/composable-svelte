@@ -1169,14 +1169,24 @@ It takes **exactly one prop**, `options`, and every field of it is optional:
 | `onContextLost`, `onContextRestored` | notification hooks |
 | `onError` | receives an `OverlayError`. Import it and `OverlayErrorCode` to narrow on `error.code` |
 
-**Four methods**, reached through `bind:this`:
+**The methods**, reached through `bind:this`:
 
 | method | |
 |---|---|
-| `registerElement({ id, domElement, shader, onTextureLoaded? })` | start rendering over the element. `onTextureLoaded` fires when the texture actually exists; failures go to `onError` instead |
+| `registerElement({ id, domElement, shader, updateStrategy?, onTextureLoaded? })` | start rendering over the element. `onTextureLoaded` fires when the texture actually exists; failures go to `onError` instead |
 | `unregisterElement(id)` | stop, releasing the texture and the compiled program |
 | `updateElementShader(id, shader)` | recompile the element with a different effect |
+| `updateUniforms(id, uniforms)` | change what the *existing* program is fed, without recompiling — this is how a shader parameter is driven over time |
+| `updateElement(id)` | re-read the element's pixels. The trigger for the `manual` strategy, which is what a `<canvas>` gets by default |
 | `updateElementPosition(id)` | re-read the element's bounds after a CSS transform moves it |
+| `getElement(id)`, `getElements()` | the registrations, carrying the resolved shader, current bounds, and any `OverlayError` |
+| `getCanvas()`, `getContext()` | the canvas and the live WebGL context, for drawing alongside |
+| `getCurrentFPS()` | measured, not target |
+| `start()`, `stop()`, `isRunning()` | mounting starts the loop; `stop()` pauses it with registrations intact |
+
+`updateStrategy` is `'static'` (images), `'frame'` (videos) or `'manual'`
+(canvases) — inferred from the element type when you do not pass it. A `manual`
+element only updates when `updateElement` says so.
 
 Only `<img>`, `<video>` and `<canvas>` can be registered. Anything else is
 refused by tag name with a console error rather than mislabelled an unloaded

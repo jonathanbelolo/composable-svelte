@@ -9,7 +9,12 @@
 import { onMount } from 'svelte';
 import { createOverlay } from './webgl-overlay.js';
 import { OverlayError } from '../utils/overlay-error.js';
-import type { OverlayContextAPI, OverlayOptions, ElementRegistration } from './overlay-types.js';
+import type {
+  OverlayContextAPI,
+  OverlayOptions,
+  ElementRegistration,
+  UpdateStrategy
+} from './overlay-types.js';
 
 // Props
 let {
@@ -91,7 +96,8 @@ onMount(() => {
 export function registerElement(registration: {
   id: string;
   domElement: HTMLElement;
-  shader: any;
+  shader: ElementRegistration['shader'];
+  updateStrategy?: UpdateStrategy | undefined;
   onTextureLoaded?: (() => void) | undefined;
 }): void {
   if (!overlay) {
@@ -134,6 +140,7 @@ export function registerElement(registration: {
     {
       type: elementType,
       shader: registration.shader,
+      updateStrategy: registration.updateStrategy,
       onTextureLoaded: registration.onTextureLoaded
     }
   );
@@ -166,11 +173,95 @@ export function updateElementShader(id: string, shader: ElementRegistration['sha
  * Useful when CSS transforms change element position
  */
 export function updateElementPosition(id: string): void {
-  if (!overlay) return;
+  overlay?.updateElementPosition(id);
+}
 
-  // Trigger position tracker to update this element's bounds
-  // @ts-expect-error - updateElementPosition exists in implementation but not in interface
-  overlay.updateElementPosition(id);
+/**
+ * Public API - Re-read an element's texture
+ *
+ * The trigger for the `manual` update strategy, which is what a `<canvas>`
+ * element gets by default. Without this exposed, a registered canvas took its
+ * texture once at registration and then never changed again — the strategy was
+ * reachable and the only thing that could service it was not.
+ */
+export function updateElement(id: string): void {
+  overlay?.updateElement(id);
+}
+
+/**
+ * Public API - Set shader uniforms without recompiling
+ *
+ * `updateElementShader` recompiles; this changes the values the existing
+ * program is fed on the next frame, which is how a shader parameter is driven
+ * over time.
+ */
+export function updateUniforms(id: string, uniforms: Record<string, number | number[]>): void {
+  overlay?.updateUniforms(id, uniforms);
+}
+
+/**
+ * Public API - Read back a single element's registration
+ *
+ * Carries the resolved shader, the current bounds and any `OverlayError` that
+ * texture creation produced.
+ */
+export function getElement(id: string): ElementRegistration | undefined {
+  return overlay?.getElement(id);
+}
+
+/**
+ * Public API - Read back every registration
+ */
+export function getElements(): ReadonlyArray<ElementRegistration> {
+  return overlay?.getElements() ?? [];
+}
+
+/**
+ * Public API - The canvas being rendered to
+ */
+export function getCanvas(): HTMLCanvasElement | null {
+  return overlay?.getCanvas() ?? null;
+}
+
+/**
+ * Public API - The WebGL context, for drawing alongside the overlay
+ */
+export function getContext(): WebGLRenderingContext | null {
+  return overlay?.getContext() ?? null;
+}
+
+/**
+ * Public API - Measured frames per second
+ */
+export function getCurrentFPS(): number {
+  return overlay?.getCurrentFPS() ?? 0;
+}
+
+/**
+ * Public API - Start the render loop
+ *
+ * Mounting starts it already. This is for restarting after `stop()`.
+ */
+export function start(): void {
+  overlay?.start();
+}
+
+/**
+ * Public API - Pause the render loop
+ *
+ * The registrations survive; nothing is drawn until `start()`. Unmounting
+ * stops and destroys, so this is for pausing a live overlay — off-screen, or
+ * on battery.
+ */
+export function stop(): void {
+  overlay?.stop();
+}
+
+/**
+ * Public API - Whether the render loop is running
+ */
+export function isRunning(): boolean {
+  return overlay?.isRunning() ?? false;
 }
 </script>
 
