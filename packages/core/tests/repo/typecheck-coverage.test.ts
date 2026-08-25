@@ -37,7 +37,16 @@ const repoRoot = fileURLToPath(new URL('../../../../', import.meta.url));
  * literally a *directory* called `something.test.ts`. A walk that does not skip
  * it counts phantom test files and reports a coverage gap that is not real.
  */
-const SKIP_DIRS = new Set(['node_modules', 'dist', '.svelte-kit', '__screenshots__', 'build']);
+// `worktrees` holds agents' throwaway repo copies; scanning them
+// double-counts every file and breaks on any left behind.
+const SKIP_DIRS = new Set([
+	'node_modules',
+	'dist',
+	'.svelte-kit',
+	'__screenshots__',
+	'build',
+	'worktrees'
+]);
 
 /**
  * Test files a config is allowed not to resolve, with the reason.

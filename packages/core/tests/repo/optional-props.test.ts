@@ -114,7 +114,16 @@ const REGISTER: Record<string, { props: string[]; why: string }> = {
  * Restore it only alongside a case it actually excuses.
  */
 
-const SKIP_DIRS = new Set(['node_modules', 'dist', '.svelte-kit', '__screenshots__', 'build']);
+// `worktrees` holds agents' throwaway repo copies; scanning them
+// double-counts every file and breaks on any left behind.
+const SKIP_DIRS = new Set([
+	'node_modules',
+	'dist',
+	'.svelte-kit',
+	'__screenshots__',
+	'build',
+	'worktrees'
+]);
 
 /** Every `.svelte` under a package's `src`. Tests are deliberately not here — see below. */
 function componentFiles(): string[] {
@@ -289,8 +298,29 @@ function acceptsUndefined(type: string): boolean {
  * per-package non-vacuity arm cannot catch it: `core` has a hundred other
  * resolvable files. Imports are followed now.
  */
+/**
+ * Blank out comments, preserving offsets and newlines.
+ *
+ * `propsTypeBlocks` finds the props declaration by searching for the *first*
+ * `$props()`, so a doc comment that merely mentions one hijacks the search —
+ * and then `lastIndexOf('=')` lands inside that same comment, and the whole
+ * file resolves to nothing. Silently: the per-package non-vacuity arm stays
+ * satisfied by the package's other components.
+ *
+ * `graphics/src/components/Light.svelte` did exactly this. Its doc block
+ * explains, at length, how to avoid blinding this guard — while blinding it,
+ * because the explanation quotes `$props()`. Replacing spans with spaces rather
+ * than deleting them keeps every offset the caller computes valid.
+ */
+function blankComments(source: string): string {
+	const blank = (match: string) => match.replace(/[^\n]/g, ' ');
+	return source
+		.replace(/\/\*[\s\S]*?\*\//g, blank)
+		.replace(/\/\/[^\n]*/g, blank);
+}
+
 function propsTypeBlocks(path: string): string[] {
-	const source = readFileSync(path, 'utf8');
+	const source = blankComments(readFileSync(path, 'utf8'));
 	const call = source.indexOf('$props()');
 	if (call === -1) return [];
 

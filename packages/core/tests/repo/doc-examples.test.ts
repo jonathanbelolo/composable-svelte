@@ -60,7 +60,13 @@ function docs(): string[] {
 		for (const entry of readdirSync(dir, { withFileTypes: true })) {
 			const full = join(dir, entry.name);
 			if (entry.isDirectory()) {
-				if (['node_modules', 'dist', '.svelte-kit'].includes(entry.name)) continue;
+				// `worktrees` holds throwaway checkouts that agents run in. They
+				// are full copies of the repo, so scanning them double-counts
+				// every doc and reports findings against paths that will not
+				// exist tomorrow — and a worktree left behind by a killed agent
+				// fails this suite for reasons that have nothing to do with the
+				// working tree.
+				if (['node_modules', 'dist', '.svelte-kit', 'worktrees'].includes(entry.name)) continue;
 				walk(full);
 				continue;
 			}

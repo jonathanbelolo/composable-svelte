@@ -9,6 +9,12 @@
  *
  * Before this, `<Light type="ambient" position={[0,5,0]} radius={10} />`
  * compiled clean and both props were silently dropped.
+ *
+ * There is one case per exclusion marker on the four arms — ten of them. Four
+ * were missing at first, and the gap was invisible to a crude mutation:
+ * *deleting* a marker breaks destructuring in `Light.svelte` and fails loudly,
+ * while *widening* it to the real type — the regression someone actually makes
+ * — left `svelte-check` at zero errors.
  */
 
 import type { ComponentProps } from 'svelte';
@@ -66,6 +72,18 @@ accept({ store, type: 'directional', direction: [1, 1, 1], intensity: 1, angle: 
 
 // @ts-expect-error only a spot light has a cone angle
 accept({ store, type: 'point', position: [0, 1, 0], intensity: 1, angle: Math.PI / 4 });
+
+// @ts-expect-error an ambient light has no direction
+accept({ store, type: 'ambient', intensity: 0.5, direction: [1, 1, 1] });
+
+// @ts-expect-error only a spot light has a cone angle
+accept({ store, type: 'ambient', intensity: 0.5, angle: Math.PI / 4 });
+
+// @ts-expect-error only a point light has a falloff radius
+accept({ store, type: 'directional', direction: [1, 1, 1], intensity: 1, radius: 10 });
+
+// @ts-expect-error a point light radiates in every direction
+accept({ store, type: 'point', position: [0, 1, 0], intensity: 1, direction: [0, -1, 0] });
 
 // @ts-expect-error a spot light's falloff is its cone, not a radius
 accept({

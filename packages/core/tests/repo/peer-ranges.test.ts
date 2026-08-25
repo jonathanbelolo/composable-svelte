@@ -55,7 +55,10 @@ function importsCore(pkgDir: string): boolean {
 	const walk = (dir: string): boolean =>
 		readdirSync(dir, { withFileTypes: true }).some((entry) => {
 			const full = join(dir, entry.name);
-			if (entry.isDirectory()) return entry.name === 'node_modules' ? false : walk(full);
+			// `worktrees`: see the note in doc-examples.test.ts.
+			if (entry.isDirectory()) {
+				return ['node_modules', 'worktrees'].includes(entry.name) ? false : walk(full);
+			}
 			if (!/\.(ts|js|svelte)$/.test(entry.name)) return false;
 			return readFileSync(full, 'utf8').includes('@composable-svelte/core');
 		});

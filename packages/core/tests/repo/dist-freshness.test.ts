@@ -34,7 +34,8 @@ function newest(dir: string): { at: number; file: string } | null {
 		for (const entry of readdirSync(current, { withFileTypes: true })) {
 			const full = join(current, entry.name);
 			if (entry.isDirectory()) {
-				if (entry.name === 'node_modules') continue;
+				// `worktrees`: see the note in doc-examples.test.ts.
+				if (['node_modules', 'worktrees'].includes(entry.name)) continue;
 				walk(full);
 				continue;
 			}

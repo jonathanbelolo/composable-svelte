@@ -30,6 +30,13 @@ import type { GraphicsState, GraphicsAction, LightConfig } from '../core/types.j
  * `optional-props.test.ts` only scans an interface's *own* body, so anything
  * inherited would go unchecked by the guard that exists to catch exactly the
  * `T?` versus `T | undefined` mistake.
+ *
+ * This comment used to blind that guard outright. It finds the props
+ * declaration by searching for the first `$props()`, and the mention of one two
+ * paragraphs up was the first — so the whole file resolved to nothing, silently,
+ * while the paragraph explaining how not to blind the guard sat inside the thing
+ * blinding it. The guard blanks comments before searching now; that is the fix,
+ * and this paragraph is left as the demonstration.
  */
 interface AmbientLightProps {
   store: Store<GraphicsState, GraphicsAction>;

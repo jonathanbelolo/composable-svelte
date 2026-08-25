@@ -121,7 +121,9 @@ function referencingFiles(): string[] {
 				// were considered and often not built, are not published (`files`
 				// excludes them), and are not instructions to anyone.
 				if (
-					['node_modules', 'dist', '.svelte-kit', '.git', 'plans'].includes(entry.name)
+					['node_modules', 'dist', '.svelte-kit', '.git', 'plans', 'worktrees'].includes(
+						entry.name
+					)
 				) {
 					continue;
 				}

@@ -110,7 +110,11 @@ function walk(dir: string): string[] {
 	if (!existsSync(dir)) return [];
 	return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
 		const full = join(dir, e.name);
-		if (e.isDirectory()) return e.name === 'node_modules' ? [] : walk(full);
+		// `worktrees` are agents' throwaway repo copies — full duplicates that
+		// double-count every violation and outlive the agent that made them.
+		if (e.isDirectory()) {
+			return ['node_modules', 'worktrees'].includes(e.name) ? [] : walk(full);
+		}
 		return e.name.endsWith('.svelte') || e.name.endsWith('.css') ? [full] : [];
 	});
 }
