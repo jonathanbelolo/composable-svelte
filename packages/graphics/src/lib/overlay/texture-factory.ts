@@ -346,17 +346,34 @@ export class TextureFactory {
 		// had reached — past the size cap, and without the tracked bytes ever
 		// moving, so the budget stayed wrong for the life of the overlay.
 		const size = this.elementSize(element, type);
-		if (size) {
-			const previous = tracked ?? size;
-			// Release the outgoing allocation first: this replaces a texture, it
-			// does not add one, and validating the new size on top of the old
-			// would refuse re-uploads that fit perfectly well.
-			this.textureValidator.trackDeallocation(previous.width, previous.height);
 
+		// The accounting is settled *after* the upload, not before it.
+		//
+		// This used to deallocate the old size and allocate the new one up
+		// front, and three of the failure returns below never put it back — so
+		// a `texImage2D` that threw left the difference charged, and charged it
+		// again on every retry. Measured: five failed updates of a 100×100
+		// element grown to 200×200 left 640000 bytes tracked against a texture
+		// of 40000, and one failure plus an unregister left 600000 charged with
+		// no live textures at all, after which every registration was refused.
+		// A cross-origin video source throws `SecurityError` here roughly sixty
+		// times a second.
+		const previous = size ? (tracked ?? size) : null;
+		const settle = (uploaded: { width: number; height: number }) => {
+			if (!previous) return;
+			this.textureValidator.trackDeallocation(previous.width, previous.height);
+			this.textureValidator.trackAllocation(uploaded.width, uploaded.height);
+		};
+
+		if (size && previous) {
+			// Validated against the budget *minus* the outgoing texture, since
+			// this replaces one rather than adding one — otherwise a re-upload
+			// that fits perfectly well is refused for the space it already has.
+			this.textureValidator.trackDeallocation(previous.width, previous.height);
 			const validation = this.textureValidator.validateSize(size.width, size.height);
+			this.textureValidator.trackAllocation(previous.width, previous.height);
+
 			if (!validation.valid && !validation.scaled) {
-				// Over budget: put the accounting back and refuse.
-				this.textureValidator.trackAllocation(previous.width, previous.height);
 				return {
 					success: false,
 					error: this.validationError(
@@ -368,12 +385,10 @@ export class TextureFactory {
 				};
 			}
 
-			const target = validation.scaled ?? size;
-			this.textureValidator.trackAllocation(target.width, target.height);
-
 			// Over the size cap: upload a scaled copy, as creation does, rather
 			// than handing the driver dimensions it will refuse.
 			if (validation.scaled) {
+				const target = validation.scaled;
 				const scaled = this.drawScaled(element, target.width, target.height);
 				if (!scaled) {
 					return {
@@ -387,6 +402,7 @@ export class TextureFactory {
 				gl.bindTexture(gl.TEXTURE_2D, texture);
 				try {
 					gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, scaled);
+					settle(target);
 					return { success: true, width: target.width, height: target.height };
 				} catch (error) {
 					return {
@@ -413,6 +429,7 @@ export class TextureFactory {
 						gl.UNSIGNED_BYTE,
 						element as HTMLImageElement
 					);
+					if (size) settle(size);
 					return { success: true, ...(size ?? {}) };
 
 				case 'video':
@@ -424,6 +441,7 @@ export class TextureFactory {
 						gl.UNSIGNED_BYTE,
 						element as HTMLVideoElement
 					);
+					if (size) settle(size);
 					return { success: true, ...(size ?? {}) };
 
 				case 'canvas':
@@ -435,6 +453,7 @@ export class TextureFactory {
 						gl.UNSIGNED_BYTE,
 						element as HTMLCanvasElement
 					);
+					if (size) settle(size);
 					return { success: true, ...(size ?? {}) };
 
 				default:

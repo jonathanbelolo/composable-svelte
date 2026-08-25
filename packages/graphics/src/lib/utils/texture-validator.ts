@@ -86,6 +86,22 @@ export class TextureValidator {
 		// Check individual dimensions
 		if (width > this.maxTextureSize || height > this.maxTextureSize) {
 			const scaled = this.scaleToFit(width, height);
+
+			// The budget applies to what would actually be uploaded. Returning
+			// here without checking it left the size cap and the budget in a
+			// race the size cap always won: an 8MB budget accepted a 512²
+			// canvas grown to 8192², scaled to 2048² — 16MB allocated, and
+			// `onError` never called. Offering no `scaled` says the caller
+			// cannot rescue this by shrinking, because shrinking is what it
+			// already tried.
+			if (!this.fitsBudget(scaled.width, scaled.height)) {
+				return {
+					valid: false,
+					failure: 'budget',
+					reason: this.budgetReason(scaled.width, scaled.height)
+				};
+			}
+
 			return {
 				valid: false,
 				failure: 'size',
@@ -95,18 +111,27 @@ export class TextureValidator {
 		}
 
 		// Check memory budget
-		const estimatedBytes = width * height * 4; // RGBA = 4 bytes per pixel
-		if (this.currentMemoryUsage + estimatedBytes > this.maxMemoryBudget) {
+		if (!this.fitsBudget(width, height)) {
 			return {
 				valid: false,
 				failure: 'budget',
-				reason: `Texture would exceed memory budget (${this.formatBytes(
-					this.currentMemoryUsage + estimatedBytes
-				)} > ${this.formatBytes(this.maxMemoryBudget)})`
+				reason: this.budgetReason(width, height)
 			};
 		}
 
 		return { valid: true };
+	}
+
+	/** Whether a texture of these dimensions fits in what is left of the budget. */
+	private fitsBudget(width: number, height: number): boolean {
+		return this.currentMemoryUsage + width * height * 4 <= this.maxMemoryBudget;
+	}
+
+	private budgetReason(width: number, height: number): string {
+		const total = this.currentMemoryUsage + width * height * 4;
+		return `Texture would exceed memory budget (${this.formatBytes(total)} > ${this.formatBytes(
+			this.maxMemoryBudget
+		)})`;
 	}
 
 	/**
