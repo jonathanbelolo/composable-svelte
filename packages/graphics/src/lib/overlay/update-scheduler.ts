@@ -7,7 +7,6 @@
  * - static: Never update (images)
  * - frame: Every animation frame (videos)
  * - manual: Explicit updateElement() calls
- * - reactive: Svelte $effect triggers
  */
 
 import type { ElementRegistration, UpdateStrategy } from './overlay-types.js';
@@ -126,26 +125,6 @@ export class UpdateScheduler {
 		this.notifyUpdate(id);
 	}
 
-	/**
-	 * Trigger reactive update for an element
-	 *
-	 * Called by Svelte's $effect when dependencies change.
-	 *
-	 * @param id - Element identifier
-	 */
-	triggerReactiveUpdate(id: string): void {
-		const registration = this.elements.get(id);
-		if (!registration) return;
-
-		if (registration.updateStrategy !== 'reactive') {
-			console.warn(
-				`[UpdateScheduler] Element ${id} has strategy '${registration.updateStrategy}', not 'reactive'`
-			);
-			return;
-		}
-
-		this.notifyUpdate(id);
-	}
 
 	/**
 	 * Start frame update loop
@@ -418,7 +397,6 @@ export class UpdateScheduler {
 			static: 0,
 			frame: 0,
 			manual: 0,
-			reactive: 0
 		};
 
 		for (const registration of this.elements.values()) {

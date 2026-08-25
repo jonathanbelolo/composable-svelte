@@ -527,9 +527,6 @@ class WebGLOverlay implements OverlayContextAPI {
 				return 'frame'; // Videos need per-frame updates
 			case 'canvas':
 				return 'manual'; // Canvas updates are manual
-			case 'text':
-			case 'html':
-				return 'reactive'; // HTML elements track changes reactively
 			default:
 				return 'static';
 		}
@@ -771,6 +768,17 @@ class WebGLOverlay implements OverlayContextAPI {
 		if (!this.gl) return;
 
 		debugLog('[WebGLOverlay] Recreating resources after context restore');
+
+		// Release the outgoing owners before replacing them. They were simply
+		// overwritten, so their caches, buffer handles and the objects
+		// themselves survived every restore.
+		//
+		// The GPU memory is already gone — this runs *after* a context loss, so
+		// every GL object it held is invalid and the `delete*` calls below are
+		// no-ops by specification. What this reclaims is the JS side. Worth
+		// doing, and worth not describing as a GPU leak.
+		this.programManager?.destroy();
+		this.renderPipeline?.destroy();
 
 		// Reinitialize device capabilities
 		this.deviceCapabilities = new DeviceCapabilities(this.gl);

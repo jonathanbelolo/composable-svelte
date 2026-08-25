@@ -29,8 +29,31 @@ export class TextureValidator {
 	private maxMemoryBudget = 200 * 1024 * 1024; // 200MB default
 	private currentMemoryUsage = 0;
 
-	constructor(gl: WebGLRenderingContext) {
-		this.maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+	/**
+	 * @param gl - the context, for the driver's own maximum
+	 * @param maxTextureSize - a lower cap from `OverlayOptions`; the driver limit
+	 *   still applies, so this can only narrow
+	 * @param memoryBudget - a cap from `OverlayOptions`, in bytes
+	 *
+	 * Both were consumer-facing options that reached nothing. `maxTextureSize`
+	 * was read only to interpolate into an error *message*, after this class had
+	 * already decided pass or fail from the driver value — so passing 512 did
+	 * not reject a 1024px texture, it only made the text lie. `memoryBudget` was
+	 * stored on `TextureFactory` and never read again, while the real budget was
+	 * the hard-coded default below, whose only setter had zero callers.
+	 */
+	constructor(gl: WebGLRenderingContext, maxTextureSize?: number, memoryBudget?: number) {
+		const driverMax = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+
+		// The consumer can only narrow: asking for more than the driver allows
+		// would produce textures it refuses to allocate.
+		this.maxTextureSize =
+			maxTextureSize !== undefined ? Math.min(maxTextureSize, driverMax) : driverMax;
+
+		if (memoryBudget !== undefined) {
+			this.maxMemoryBudget = memoryBudget;
+		}
+
 		debugLog(`[WebGLOverlay] Max texture size: ${this.maxTextureSize}x${this.maxTextureSize}`);
 	}
 

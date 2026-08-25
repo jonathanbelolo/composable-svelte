@@ -41,7 +41,6 @@ export {
 export { RenderLoop, type RenderCallback } from './render-loop.js';
 
 // Security & Sanitization
-export { HTMLSanitizer, type SafetyCheckResult } from './html-sanitizer.js';
 
 // Graceful Degradation
 export {

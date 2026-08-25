@@ -7,12 +7,10 @@
  * - CORS checking and handling
  * - Size validation and auto-scaling
  * - Memory tracking
- * - html2canvas integration for text/html
  */
 
 import { OverlayError, OverlayErrorCode } from '../utils/overlay-error.js';
 import { TextureValidator } from '../utils/texture-validator.js';
-import { HTMLSanitizer } from '../utils/html-sanitizer.js';
 import type {
 	ElementType,
 	TextureCreationOptions,
@@ -21,7 +19,6 @@ import type {
 
 export class TextureFactory {
 	private textureValidator: TextureValidator;
-	private htmlSanitizer: HTMLSanitizer;
 
 	constructor(
 		private gl: WebGLRenderingContext,
@@ -29,8 +26,7 @@ export class TextureFactory {
 		private memoryBudget: number,
 		private needsCORSWorkaround: boolean
 	) {
-		this.textureValidator = new TextureValidator(gl);
-		this.htmlSanitizer = new HTMLSanitizer();
+		this.textureValidator = new TextureValidator(gl, maxTextureSize, memoryBudget);
 	}
 
 	/**
@@ -52,9 +48,6 @@ export class TextureFactory {
 					return this.createVideoTexture(element as HTMLVideoElement);
 				case 'canvas':
 					return this.createCanvasTexture(element as HTMLCanvasElement);
-				case 'text':
-				case 'html':
-					return await this.createHtmlTexture(element as HTMLElement);
 				default:
 					const _exhaustive: never = type;
 					return {
@@ -335,56 +328,6 @@ export class TextureFactory {
 		return { texture, width, height };
 	}
 
-	/**
-	 * Create texture from HTML element using html2canvas
-	 *
-	 * Used for text and complex HTML elements.
-	 *
-	 * @param element - HTML element
-	 * @returns Texture creation result
-	 */
-	private async createHtmlTexture(element: HTMLElement): Promise<TextureCreationResult> {
-		// Security check
-		const safetyCheck = this.htmlSanitizer.isSafeToRender(element);
-		if (!safetyCheck.safe) {
-			console.warn('[TextureFactory] HTML element has security risks:', safetyCheck);
-			return {
-				error: OverlayError.invalidElementType(
-					element.id || 'html',
-					`HTML element has security risks: ${safetyCheck.reason}`
-				)
-			};
-		}
-
-		// Check if html2canvas is available
-		if (typeof window === 'undefined' || !(window as any).html2canvas) {
-			return {
-				error: OverlayError.textureCreationFailed(
-					element.id || 'html',
-					'html2canvas library not loaded (required for text/html elements)'
-				)
-			};
-		}
-
-		try {
-			// Render element to canvas using html2canvas
-			const canvas = await (window as any).html2canvas(element, {
-				backgroundColor: null, // Transparent background
-				logging: false,
-				useCORS: true
-			});
-
-			// Create texture from canvas
-			return this.createCanvasTexture(canvas);
-		} catch (error) {
-			return {
-				error: OverlayError.textureCreationFailed(
-					element.id || 'html',
-					`html2canvas failed: ${error instanceof Error ? error.message : String(error)}`
-				)
-			};
-		}
-	}
 
 	/**
 	 * Update existing texture from element
@@ -439,17 +382,6 @@ export class TextureFactory {
 						element as HTMLCanvasElement
 					);
 					return { success: true };
-
-				case 'text':
-				case 'html':
-					// HTML elements require full recreation via html2canvas
-					return {
-						success: false,
-						error: OverlayError.invalidElementType(
-							element.id || 'html',
-							'HTML/text elements require full texture recreation (not update)'
-						)
-					};
 
 				default:
 					const _exhaustive: never = type;

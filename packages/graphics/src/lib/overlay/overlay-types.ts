@@ -17,7 +17,7 @@ import type { OverlayError } from '../utils/overlay-error.js';
  * - text: Text elements (via html2canvas)
  * - html: Complex HTML elements (via html2canvas)
  */
-export type ElementType = 'image' | 'video' | 'canvas' | 'text' | 'html';
+export type ElementType = 'image' | 'video' | 'canvas';
 
 /**
  * Update strategies for texture updates
@@ -27,7 +27,7 @@ export type ElementType = 'image' | 'video' | 'canvas' | 'text' | 'html';
  * - manual: Update only when explicitly triggered via updateElement()
  * - reactive: Update when Svelte detects changes (via $effect)
  */
-export type UpdateStrategy = 'static' | 'frame' | 'manual' | 'reactive';
+export type UpdateStrategy = 'static' | 'frame' | 'manual';
 
 /**
  * Shader effect type

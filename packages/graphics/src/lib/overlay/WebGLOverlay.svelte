@@ -99,11 +99,27 @@ export function registerElement(registration: {
     return;
   }
 
-  // Infer element type from HTML element
+  // Infer element type from the DOM element.
+  //
+  // Anything that is not an image, video or canvas is refused here rather than
+  // falling back to 'image'. That fallback sent a <div> into
+  // `createImageTexture`, whose first guard is `!img.complete ||
+  // img.naturalWidth === 0` — trivially true for a div — so the consumer got
+  // `Image not loaded` about an element that is not an image and never could
+  // be. There were `'text'` and `'html'` types once; they were unreachable and
+  // have been removed, so there is nothing left to fall back *to*.
   const elementType =
     registration.domElement instanceof HTMLImageElement ? 'image' :
     registration.domElement instanceof HTMLVideoElement ? 'video' :
-    registration.domElement instanceof HTMLCanvasElement ? 'canvas' : 'image';
+    registration.domElement instanceof HTMLCanvasElement ? 'canvas' : null;
+
+  if (elementType === null) {
+    console.error(
+      `[WebGLOverlay] Cannot render <${registration.domElement.tagName.toLowerCase()}> ` +
+        `for element '${registration.id}': only <img>, <video> and <canvas> are supported`
+    );
+    return;
+  }
 
   // Register with overlay - call with correct three-parameter signature
   const result = overlay.registerElement(
