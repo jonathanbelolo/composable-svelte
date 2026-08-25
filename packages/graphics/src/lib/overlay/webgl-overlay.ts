@@ -85,7 +85,6 @@ class WebGLOverlay implements OverlayContextAPI {
 	private elements = new Map<string, ElementRegistration>();
 	private elementPrograms = new Map<string, CompiledProgram>();
 	private options: Required<OverlayOptions>;
-	private readonly ownsCanvas: boolean;
 	private readonly log: DebugLog;
 	private destroyed = false;
 
@@ -102,9 +101,6 @@ class WebGLOverlay implements OverlayContextAPI {
 		// Initialize browser compatibility first
 		this.browserCompatibility = new BrowserCompatibility(this.log);
 
-		// Set up canvas. Whether we made it decides whether `destroy()` may lose
-		// its context: doing that to a canvas the caller owns kills it for good.
-		this.ownsCanvas = !options.canvas;
 		this.canvas = options.canvas || this.createCanvas();
 
 		// Everything acquired from here on registers its own teardown.
@@ -587,17 +583,23 @@ class WebGLOverlay implements OverlayContextAPI {
 		// callbacks, which were never cleared.
 		this.contextManager.destroy();
 
-		// Free the GPU context — but only if it is ours to free.
+		// Free the GPU context.
 		//
-		// `contextManager.destroy()` above removed the handler that calls
-		// `preventDefault()` on `webglcontextlost`, and per the WebGL spec the
-		// UA restores a lost context only when the default was prevented. So
-		// losing a caller-supplied canvas's context killed it permanently: a
-		// second `createOverlay` on that canvas gets the same lost object back
-		// from `getContext('webgl')` and initialises "successfully" while every
-		// call no-ops. Textures and programs are already deleted by this point,
-		// so a canvas we do not own simply keeps its live context.
-		if (this.gl && this.ownsCanvas) {
+		// This was gated on an `ownsCanvas` flag, derived from whether
+		// `options.canvas` was supplied — and `createOverlay` is not exported,
+		// so the only public entry is the component, which always supplies its
+		// own bound canvas. The flag was therefore always `false` and this whole
+		// branch was dead: no overlay released its context, ever. That is the
+		// opposite of what the same series argued in `webgl-support.ts`, where
+		// the support probe was taught to release *its* context because browsers
+		// cap live contexts near sixteen and force-lose the oldest.
+		//
+		// The concern the flag came from was real — losing the context of a
+		// canvas the caller keeps using kills it, since a context lost this way
+		// returns only on `restoreContext()`. But no caller keeps one: the
+		// component unmounts its canvas in the same teardown. If `createOverlay`
+		// is ever exported for a foreign canvas, that entry point owes an opt-out.
+		if (this.gl) {
 			const loseContext = this.gl.getExtension('WEBGL_lose_context');
 			if (loseContext) {
 				loseContext.loseContext();

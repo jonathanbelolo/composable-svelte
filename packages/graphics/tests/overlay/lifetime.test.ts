@@ -92,12 +92,12 @@ describe('a construction that fails leaves nothing behind', () => {
 	});
 });
 
-describe('destroy() and the caller’s canvas', () => {
-	it('leaves a canvas it did not create with a working context', () => {
-		// `contextManager.destroy()` removes the handler that calls
-		// `preventDefault()` on `webglcontextlost`, and the UA restores a lost
-		// context only when the default was prevented — so losing the context of
-		// a canvas the caller owns kills it permanently.
+describe('destroy() releases the GPU context', () => {
+	it('loses the context it was drawing with', async () => {
+		// This asserted that `getExtension` had been *reached*, which is one
+		// step short of the mechanism: making `destroy()` fetch the extension
+		// and never call `loseContext()` passed. The fake now records the call
+		// itself, so the assertion can be about the thing that matters.
 		const fake = createFakeGL();
 		undo.push(installFakeGL(fake), installFakeObservers());
 
@@ -108,26 +108,26 @@ describe('destroy() and the caller’s canvas', () => {
 		api.destroy();
 
 		expect(
-			fake.calls.filter((name) => name === 'getExtension'),
-			"the caller's context was lost on the way out"
-		).toHaveLength(0);
+			fake.calls.filter((name) => name === 'loseContext'),
+			'the overlay kept a context nobody could reach'
+		).toHaveLength(1);
 	});
 
-	it('still frees the context of a canvas it created itself', () => {
-		// The paired half. The overlay owns that canvas, so releasing its GPU
-		// context immediately is the point.
+	it('does not lose it before the handlers are gone', async () => {
+		// The paired half, and the reason `ed5cb3c` exists: `loseContext()`
+		// dispatches `webglcontextlost` synchronously, so releasing before
+		// `contextManager.destroy()` re-enters the consumer's callback on an
+		// overlay they have just torn down.
 		const fake = createFakeGL();
 		undo.push(installFakeGL(fake), installFakeObservers());
 
-		const api = createOverlay({}) as OverlayContextAPI;
-		fake.clearCalls();
+		const canvas = document.createElement('canvas');
+		const onContextLost = vi.fn();
+		const api = createOverlay({ canvas, onContextLost }) as OverlayContextAPI;
 
 		api.destroy();
 
-		expect(
-			fake.calls.filter((name) => name === 'getExtension'),
-			'the overlay kept a context nobody else could reach'
-		).not.toHaveLength(0);
+		expect(onContextLost, 'destroy() called back into a destroyed overlay').not.toHaveBeenCalled();
 	});
 });
 
@@ -144,7 +144,7 @@ describe('the support probe releases its own context', () => {
 		const api = createOverlay({ canvas }) as OverlayContextAPI;
 
 		expect(
-			fake.calls.filter((name) => name === 'getExtension'),
+			fake.calls.filter((name) => name === 'loseContext'),
 			'the probe context was never released'
 		).not.toHaveLength(0);
 		api.destroy();

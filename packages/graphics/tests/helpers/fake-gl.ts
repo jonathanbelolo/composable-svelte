@@ -49,6 +49,20 @@ export interface FakeGL {
 	uniforms(): Map<string, unknown>;
 	/** Forget recorded calls, uniform writes and draws. Resource counters keep. */
 	clearCalls(): void;
+	/**
+	 * Every call, with its arguments, in order.
+	 *
+	 * `calls` records names alone, which made `bindBuffer` and
+	 * `vertexAttribPointer` indistinguishable from each other no matter what a
+	 * test asserted — so a swapped or duplicated vertex-attribute binding, or a
+	 * quad never positioned at all, could not be observed. Four such mutations
+	 * survived the whole suite.
+	 */
+	records: ReadonlyArray<{ name: string; args: unknown[] }>;
+	/** Calls to one method, with arguments. */
+	argsFor(name: string): unknown[][];
+	/** What a buffer handle currently holds, as uploaded. */
+	bufferContents(handle: unknown): Float32Array | null;
 }
 
 const CONSTANTS: Record<string, number> = {
@@ -78,8 +92,19 @@ const CONSTANTS: Record<string, number> = {
 	ACTIVE_ATTRIBUTES: 0x8b89,
 	ACTIVE_UNIFORMS: 0x8b86,
 	MAX_TEXTURE_SIZE: 0x0d33,
-	TEXTURE0: 0x84c0
+	TEXTURE0: 0x84c0,
+	// `RenderPipeline` passes both of these, and neither was here — so
+	// `bufferData`'s usage hint and `drawArrays`' mode were literally
+	// `undefined` on every call. Invisible while the harness recorded method
+	// names only; the moment it records arguments, it matters.
+	DYNAMIC_DRAW: 0x88e8,
+	TRIANGLES: 0x0004
 };
+
+/** GLSL comments, blanked so declarations inside them are not found. */
+function stripGlslComments(source: string): string {
+	return source.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/[^\n]*/g, ' ');
+}
 
 /** Values `getParameter` returns, keyed by the constant it is asked for. */
 const PARAMETERS: Record<number, unknown> = {
@@ -96,6 +121,7 @@ export function createFakeGL(): FakeGL {
 		buffer: { made: 0, freed: 0 }
 	};
 	const calls: string[] = [];
+	const records: Array<{ name: string; args: unknown[] }> = [];
 	const state: { canvas: HTMLCanvasElement | null } = { canvas: null };
 	let nextId = 1;
 
@@ -112,18 +138,37 @@ export function createFakeGL(): FakeGL {
 	/**
 	 * Names declared `uniform`/`attribute` across a program's attached sources.
 	 *
-	 * A regex, deliberately: this models declaration, not the linker. A real
-	 * driver also strips declared-but-unused uniforms, which this does not —
-	 * so the fake is more permissive than a driver, never less, and a test that
-	 * passes here can still fail on hardware for that one reason.
+	 * A regex, deliberately: this models declaration, not the linker. It handles
+	 * precision qualifiers, comma-separated lists and array suffixes, and it
+	 * ignores comments — an earlier version reported `"float"` for
+	 * `uniform highp float uTime`, lost `uB` from `uniform float uA, uB`, and
+	 * handed out a location for a uniform that was commented out.
+	 *
+	 * Two ways it still differs from a driver, neither worth modelling:
+	 *
+	 * - a driver strips declared-but-*unused* uniforms, so the fake is more
+	 *   permissive there and a passing test can still fail on hardware;
+	 * - a driver runs the preprocessor, so a uniform inside a false `#ifdef`
+	 *   gets a location here that it would not get in a browser.
+	 *
+	 * The earlier version of this comment claimed the fake was "more permissive
+	 * than a driver, never less", which was false in four ways at once.
 	 */
 	const declared = (program: unknown, keyword: 'uniform' | 'attribute'): string[] => {
 		const names: string[] = [];
-		const pattern = new RegExp(`\\b${keyword}\\s+\\w+\\s+(\\w+)`, 'g');
+		// Optional precision qualifier, then the type, then one or more names
+		// with optional array suffixes.
+		const pattern = new RegExp(
+			`\\b${keyword}\\s+(?:lowp|mediump|highp)?\\s*\\w+\\s+([^;]+);`,
+			'g'
+		);
 		for (const shader of programShaders.get(program) ?? []) {
-			const source = shaderSources.get(shader) ?? '';
+			const source = stripGlslComments(shaderSources.get(shader) ?? '');
 			for (const match of source.matchAll(pattern)) {
-				if (match[1] && !names.includes(match[1])) names.push(match[1]);
+				for (const part of (match[1] ?? '').split(',')) {
+					const name = part.trim().replace(/\[.*$/, '').trim();
+					if (name && /^\w+$/.test(name) && !names.includes(name)) names.push(name);
+				}
 			}
 		}
 		return names;
@@ -147,10 +192,16 @@ export function createFakeGL(): FakeGL {
 		}
 	};
 
+	// Contents per buffer handle, so a test can ask what actually went up
+	// rather than how many times something did.
+	const bufferStore = new Map<unknown, Float32Array>();
+	let boundArrayBuffer: unknown = null;
+
 	const record =
 		<T>(name: string, result: (...args: unknown[]) => T) =>
 		(...args: unknown[]): T => {
 			calls.push(name);
+			records.push({ name, args });
 			return result(...args);
 		};
 
@@ -166,7 +217,10 @@ export function createFakeGL(): FakeGL {
 		createShader: record('createShader', () => make('shader')),
 		deleteShader: record('deleteShader', (s) => free('shader', s)),
 		createBuffer: record('createBuffer', () => make('buffer')),
-		deleteBuffer: record('deleteBuffer', (b) => free('buffer', b)),
+		deleteBuffer: record('deleteBuffer', (b) => {
+			bufferStore.delete(b);
+			free('buffer', b);
+		}),
 
 		// Compilation and linking always succeed: these tests are about resource
 		// lifetime, not GLSL. A test that needs a failure overrides the getter.
@@ -188,10 +242,20 @@ export function createFakeGL(): FakeGL {
 		getExtension: record('getExtension', (name) =>
 			name === 'WEBGL_lose_context'
 				? {
+						// Recorded, not just enacted. These used to be closures that
+						// dispatched an event and touched nothing else, so no test
+						// in this package could assert the context was actually
+						// lost — both "frees the context" tests passed while
+						// asserting only that `getExtension` had been reached, and
+						// stayed green when `loseContext()` was never called.
 						loseContext: () => {
+							calls.push('loseContext');
+							records.push({ name: 'loseContext', args: [] });
 							state.canvas?.dispatchEvent(new Event('webglcontextlost'));
 						},
 						restoreContext: () => {
+							calls.push('restoreContext');
+							records.push({ name: 'restoreContext', args: [] });
 							state.canvas?.dispatchEvent(new Event('webglcontextrestored'));
 						}
 					}
@@ -240,9 +304,27 @@ export function createFakeGL(): FakeGL {
 		validateProgram: noop('validateProgram'),
 		useProgram: noop('useProgram'),
 		bindTexture: noop('bindTexture'),
-		bindBuffer: noop('bindBuffer'),
-		bufferData: noop('bufferData'),
-		bufferSubData: noop('bufferSubData'),
+		// Modelled rather than stubbed: the two buffers a `RenderPipeline` owns
+		// are both `ARRAY_BUFFER`, so which one is bound is the *only* thing
+		// that distinguishes the position attribute from the texture
+		// coordinates. Without contents, "the quad was positioned" is
+		// unobservable — deleting `updateQuadPosition` broke no test.
+		bindBuffer: record('bindBuffer', (_target, buffer) => {
+			boundArrayBuffer = buffer ?? null;
+		}),
+		bufferData: record('bufferData', (_target, data) => {
+			if (boundArrayBuffer && data instanceof Float32Array) {
+				bufferStore.set(boundArrayBuffer, new Float32Array(data));
+			}
+		}),
+		bufferSubData: record('bufferSubData', (_target, offset, data) => {
+			if (!boundArrayBuffer || !(data instanceof Float32Array)) return;
+			const existing = bufferStore.get(boundArrayBuffer);
+			const start = typeof offset === 'number' ? offset : 0;
+			const next = existing ? new Float32Array(existing) : new Float32Array(start + data.length);
+			next.set(data, start);
+			bufferStore.set(boundArrayBuffer, next);
+		}),
 		texImage2D: noop('texImage2D'),
 		texParameteri: noop('texParameteri'),
 		activeTexture: noop('activeTexture'),
@@ -276,10 +358,14 @@ export function createFakeGL(): FakeGL {
 		live: (kind) => counts[kind]!.made - counts[kind]!.freed,
 		created: (kind) => counts[kind]!.made,
 		calls,
+		records,
+		argsFor: (name) => records.filter((entry) => entry.name === name).map((entry) => entry.args),
+		bufferContents: (handle) => bufferStore.get(handle) ?? null,
 		drawCalls: () => drawCount,
 		uniforms: () => new Map(uniformWrites),
 		clearCalls: () => {
 			calls.length = 0;
+			records.length = 0;
 			uniformWrites.clear();
 			drawCount = 0;
 		},
@@ -300,8 +386,22 @@ export function createFakeGL(): FakeGL {
  * reaches the context by the same route it does in a browser — including
  * `WebGLContextManager.createContext`, which is private and takes no seam.
  */
+/**
+ * Nesting depth, so two installs and two undos land back on the real thing.
+ *
+ * Each installer used to capture whatever `getContext` happened to be there and
+ * restore it on undo. Install twice and undo in *push* order — which every
+ * suite does, via `undo.forEach` — and the prototype is left holding the first
+ * fake's patch forever. `component-api.test.ts` installs twice inside one `it`,
+ * so this fired already; it was harmless only because vitest isolates files.
+ */
+let glInstalls = 0;
+let pristineGetContext: HTMLCanvasElement['getContext'] | null = null;
+
 export function installFakeGL(fake: FakeGL): () => void {
-	const original = HTMLCanvasElement.prototype.getContext;
+	if (glInstalls === 0) pristineGetContext = HTMLCanvasElement.prototype.getContext;
+	glInstalls += 1;
+	let undone = false;
 
 	HTMLCanvasElement.prototype.getContext = function (
 		this: HTMLCanvasElement,
@@ -318,13 +418,31 @@ export function installFakeGL(fake: FakeGL): () => void {
 		// fail for want of a canvas, which looks from a test exactly like the
 		// size limit working.
 		if (type === '2d') {
-			return { drawImage: () => undefined } as unknown as CanvasRenderingContext2D;
+			// `drawImage` is recorded, so "uploaded the element" and "uploaded a
+			// scratch-canvas copy of it" stop being the same observation — with
+			// a silent stub, a `TextureFactory` that scaled *every* update
+			// passed the tests written to catch exactly that.
+			return {
+				drawImage: (...args: unknown[]) => {
+					fake.calls.push('drawImage');
+					(fake.records as Array<{ name: string; args: unknown[] }>).push({
+						name: 'drawImage',
+						args
+					});
+				}
+			} as unknown as CanvasRenderingContext2D;
 		}
 		return null;
-	} as typeof original;
+	} as HTMLCanvasElement['getContext'];
 
 	return () => {
-		HTMLCanvasElement.prototype.getContext = original;
+		if (undone) return;
+		undone = true;
+		glInstalls -= 1;
+		if (glInstalls === 0 && pristineGetContext) {
+			HTMLCanvasElement.prototype.getContext = pristineGetContext;
+			pristineGetContext = null;
+		}
 	};
 }
 
@@ -336,9 +454,17 @@ export function installFakeGL(fake: FakeGL): () => void {
  * `createOverlay` returns an `OverlayError` — which looks, from a test, exactly
  * like the code under test refusing to work.
  */
+let observerInstalls = 0;
+let pristineObservers: { io: unknown; ro: unknown } | null = null;
+
 export function installFakeObservers(): () => void {
 	const g = globalThis as Record<string, unknown>;
-	const had = { io: g.IntersectionObserver, ro: g.ResizeObserver };
+	// Captured once, at the outermost install. Capturing per-install and
+	// restoring from whichever undo happens to reach zero restores the *stub*,
+	// because by then that is what the inner install saw.
+	if (observerInstalls === 0) {
+		pristineObservers = { io: g.IntersectionObserver, ro: g.ResizeObserver };
+	}
 
 	class Stub {
 		observe(): void {}
@@ -352,8 +478,19 @@ export function installFakeObservers(): () => void {
 	g.IntersectionObserver = Stub;
 	g.ResizeObserver = Stub;
 
+	// Same nesting problem as `installFakeGL`: `had` captures whatever was
+	// there, so a second install captures the first stub and undoing in push
+	// order leaves it behind.
+	observerInstalls += 1;
+	let undone = false;
 	return () => {
-		g.IntersectionObserver = had.io;
-		g.ResizeObserver = had.ro;
+		if (undone) return;
+		undone = true;
+		observerInstalls -= 1;
+		if (observerInstalls === 0 && pristineObservers) {
+			g.IntersectionObserver = pristineObservers.io;
+			g.ResizeObserver = pristineObservers.ro;
+			pristineObservers = null;
+		}
 	};
 }

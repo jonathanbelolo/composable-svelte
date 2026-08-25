@@ -74,7 +74,15 @@ describe('a re-upload is bounded by maxTextureSize', () => {
 
 	it('leaves one that stayed within it alone', async () => {
 		// The paired half: the scaling must not fire for a size that fits.
-		const { api } = overlay({ maxTextureSize: 512 });
+		//
+		// The recorded dimensions are not enough on their own. Routing *every*
+		// update through the scratch canvas produces the same 400 here, because
+		// `scaleToFit` caps at 1 — and with a silent 2D stub and a no-op
+		// `texImage2D`, "uploaded the element" and "uploaded a copy of it" were
+		// the same observation. The harness records `drawImage` now, so the
+		// difference is visible: in a browser, always-scaling is a full canvas
+		// redraw per frame for a `frame`-strategy video.
+		const { fake, api } = overlay({ maxTextureSize: 512 });
 		const canvas = sizedCanvas(256);
 
 		api.registerElement('a', canvas, { type: 'canvas', shader: 'wave-gentle-horizontal' });
@@ -82,9 +90,35 @@ describe('a re-upload is bounded by maxTextureSize', () => {
 
 		canvas.width = 400;
 		canvas.height = 400;
+		fake.clearCalls();
 		api.updateElement('a');
 
 		expect(api.getElement('a')?.width, 'a re-upload within the limit was scaled anyway').toBe(400);
+		expect(
+			fake.calls.filter((name) => name === 'drawImage'),
+			'a re-upload within the limit went through the scratch canvas'
+		).toHaveLength(0);
+		api.destroy();
+	});
+
+	it('does go through the scratch canvas when it must scale', async () => {
+		// And the other half of that: the `drawImage` assertion above is only
+		// worth having if scaling actually produces one.
+		const { fake, api } = overlay({ maxTextureSize: 512 });
+		const canvas = sizedCanvas(256);
+
+		api.registerElement('a', canvas, { type: 'canvas', shader: 'wave-gentle-horizontal' });
+		await settle();
+
+		canvas.width = 2048;
+		canvas.height = 2048;
+		fake.clearCalls();
+		api.updateElement('a');
+
+		expect(
+			fake.calls.filter((name) => name === 'drawImage'),
+			'an oversize re-upload never reached the scratch canvas'
+		).toHaveLength(1);
 		api.destroy();
 	});
 });

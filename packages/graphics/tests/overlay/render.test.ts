@@ -281,3 +281,111 @@ describe('a lost context stops the work', () => {
 		expect(fake.drawCalls(), 'the overlay never resumed after the restore').toBeGreaterThan(0);
 	});
 });
+
+describe('the quad reaches GL', () => {
+	/**
+	 * `boundedImage()` sits at (10, 10) 100×100 on an 800×600 canvas with a
+	 * device pixel ratio of 1, so `domToNDC` gives left = 10/800*2-1, right =
+	 * 110/800*2-1, top = 1-10/600*2, bottom = 1-110/600*2. `createQuadVertices`
+	 * then lays out two triangles as six xy pairs.
+	 */
+	const EXPECTED_QUAD = [
+		-0.975, 0.9666667, -0.725, 0.9666667, -0.975, 0.6333333, -0.725, 0.9666667, -0.725,
+		0.6333333, -0.975, 0.6333333
+	];
+
+	it('uploads the element’s own coordinates, not the default fullscreen quad', async () => {
+		// Nothing observed positioning at all. Deleting the `updateQuadPosition`
+		// call, so every element renders as the default fullscreen quad, broke
+		// no test — nor did `const dpr = 0`, which collapses every bound to
+		// nothing.
+		const { fake, api } = overlay();
+
+		api.registerElement('a', boundedImage(), { type: 'image', shader: 'ripple-gentle' });
+		await frame(api);
+
+		const uploads = fake.argsFor('bufferSubData');
+		expect(uploads, 'no vertex data was ever uploaded per element').not.toHaveLength(0);
+
+		const vertices = uploads[uploads.length - 1]![2] as Float32Array;
+		expect(Array.from(vertices), 'the quad is not the element’s').toHaveLength(12);
+		Array.from(vertices).forEach((value, i) => {
+			expect(value, `vertex component ${i}`).toBeCloseTo(EXPECTED_QUAD[i]!, 4);
+		});
+	});
+
+	it('binds the position buffer to aPosition and the texcoords to aTexCoord', async () => {
+		// `setupAttributes` could be gutted entirely, its two buffers swapped,
+		// or one index used twice, and the recorded call *names* were identical
+		// in every case: bindBuffer, enableVertexAttribArray,
+		// vertexAttribPointer, twice over.
+		const { fake, api } = overlay();
+
+		api.registerElement('a', boundedImage(), { type: 'image', shader: 'ripple-gentle' });
+		await frame(api);
+
+		// `frame()` runs several frames, so these repeat. That is the stronger
+		// assertion anyway: every frame must make the same two bindings.
+		const pointers = fake.argsFor('vertexAttribPointer');
+		expect(pointers, 'no attributes were ever pointed at a buffer').not.toHaveLength(0);
+
+		const indices = pointers.map((args) => args[0] as number);
+		expect(new Set(indices).size, 'both attributes were bound to one index').toBe(2);
+		indices.forEach((index) => {
+			expect(index, 'an undeclared attribute (-1) was pointed at a buffer').toBeGreaterThanOrEqual(0);
+		});
+
+		// `aPosition` is declared first in DEFAULT_VERTEX_SHADER, so it is
+		// location 0; the buffer bound for it must be the one carrying the NDC
+		// quad, and the other must carry the static texture coordinates.
+		const bindsBeforePointer = fake.records
+			.filter((entry) => entry.name === 'bindBuffer' || entry.name === 'vertexAttribPointer')
+			.reduce<Array<{ buffer: unknown; index: number }>>((out, entry) => {
+				if (entry.name === 'bindBuffer') out.push({ buffer: entry.args[1], index: -1 });
+				else if (out.length) out[out.length - 1]!.index = entry.args[0] as number;
+				return out;
+			}, [])
+			.filter((pair) => pair.index >= 0);
+
+		const buffersFor = (index: number) =>
+			new Set(bindsBeforePointer.filter((pair) => pair.index === index).map((p) => p.buffer));
+		const positionBuffers = buffersFor(0);
+		const texCoordBuffers = buffersFor(1);
+
+		expect(positionBuffers.size, 'aPosition was not bound to exactly one buffer').toBe(1);
+		expect(texCoordBuffers.size, 'aTexCoord was not bound to exactly one buffer').toBe(1);
+
+		const forPosition = { buffer: [...positionBuffers][0] };
+		const forTexCoord = { buffer: [...texCoordBuffers][0] };
+		expect(
+			forPosition.buffer,
+			'aPosition and aTexCoord were handed the same buffer'
+		).not.toBe(forTexCoord.buffer);
+
+		const positions = fake.bufferContents(forPosition.buffer);
+		expect(positions, 'the buffer bound for aPosition holds nothing').not.toBeNull();
+		Array.from(positions!).forEach((value, i) => {
+			expect(value, `aPosition component ${i}`).toBeCloseTo(EXPECTED_QUAD[i]!, 4);
+		});
+
+		const texCoords = Array.from(fake.bufferContents(forTexCoord.buffer) ?? []);
+		expect(
+			texCoords,
+			'the buffer bound for aTexCoord holds the quad, not texture coordinates'
+		).toEqual([0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0, 1]);
+	});
+
+	it('disables every attribute it enabled', async () => {
+		const { fake, api } = overlay();
+
+		api.registerElement('a', boundedImage(), { type: 'image', shader: 'ripple-gentle' });
+		await frame(api);
+
+		const enabled = new Set(fake.argsFor('enableVertexAttribArray').map((args) => args[0]));
+		const disabled = new Set(fake.argsFor('disableVertexAttribArray').map((args) => args[0]));
+		expect(enabled.size, 'no attribute arrays were enabled').toBeGreaterThan(0);
+		expect([...enabled].sort(), 'the attributes enabled and disabled differ').toEqual(
+			[...disabled].sort()
+		);
+	});
+});
