@@ -589,13 +589,4 @@ export class TextureFactory {
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 	}
 
-	/**
-	 * Get memory usage statistics
-	 *
-	 * @returns Current and maximum memory usage
-	 */
-	getMemoryUsage() {
-		return this.textureValidator.getMemoryUsage();
-	}
-
 }

@@ -159,24 +159,24 @@ export class UpdateScheduler {
 	private scheduleFrameUpdate(): void {
 		if (!this.isRunning) return;
 
-		this.rafId = requestAnimationFrame((timestamp) => {
-			this.processFrameUpdates(timestamp);
+		this.rafId = requestAnimationFrame(() => {
+			this.processFrameUpdates();
 			this.scheduleFrameUpdate();
 		});
 	}
 
 	/**
 	 * Process all frame-strategy elements
-	 *
-	 * @param timestamp - Current timestamp
 	 */
-	private processFrameUpdates(timestamp: number): void {
+	private processFrameUpdates(): void {
 		for (const id of this.frameUpdateElements) {
 			const registration = this.elements.get(id);
 			if (!registration) continue;
 
-			// Check if element needs update (rate limiting)
-			if (this.shouldUpdateElement(registration, timestamp)) {
+			// Whether this element is worth sampling this frame. Not rate
+			// limiting — `RenderLoop` paces frames, and `targetFPS` is honoured
+			// there.
+			if (this.shouldUpdateElement(registration)) {
 				this.notifyUpdate(id);
 			}
 		}
@@ -201,10 +201,9 @@ export class UpdateScheduler {
 	 * redundant upload per element.
 	 *
 	 * @param registration - Element registration
-	 * @param timestamp - Current timestamp
 	 * @returns true if should update
 	 */
-	private shouldUpdateElement(registration: ElementRegistration, timestamp: number): boolean {
+	private shouldUpdateElement(registration: ElementRegistration): boolean {
 		// For videos, check if new frame is available
 		if (registration.type === 'video') {
 			const video = registration.element as HTMLVideoElement;

@@ -8,7 +8,6 @@
 // ============================================================================
 
 export type Vector3 = [number, number, number];
-export type Vector2 = [number, number];
 export type Color = string; // Hex color string like '#ff6b6b'
 
 // ============================================================================
@@ -58,8 +57,6 @@ export interface CameraConfig {
 // Geometry Types
 // ============================================================================
 
-export type GeometryType = 'box' | 'sphere' | 'cylinder' | 'plane' | 'torus' | 'custom';
-
 export type GeometryConfig =
   | { type: 'box'; size: number }
   | { type: 'sphere'; radius: number; segments?: number }
@@ -90,8 +87,6 @@ export interface CustomShaderMaterial {
 // ============================================================================
 // Light Types
 // ============================================================================
-
-export type LightType = 'directional' | 'point' | 'spot' | 'ambient';
 
 /**
  * Every light carries an `id`, as every mesh does.

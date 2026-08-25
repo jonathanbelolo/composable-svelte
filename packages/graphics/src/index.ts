@@ -20,7 +20,21 @@ export { default as Light } from './components/Light.svelte';
 
 // WebGL Overlay
 export { default as WebGLOverlay } from './lib/overlay/WebGLOverlay.svelte';
-export type * from './lib/overlay/overlay-types.js';
+// Named rather than `export type *`, because that also exported four types no
+// consumer could obtain: `OverlayContextAPI` and `OverlayInit` are produced only
+// by `createOverlay`, which is not exported, and `TextureCreationOptions` /
+// `TextureCreationResult` are the parameter and return of a method on
+// `TextureFactory`, which left the barrel with `overlay/index.ts`. That is the
+// same category as `ShaderProgramEntry`, deleted in `457c7e6` for exactly this.
+export type {
+	ElementType,
+	UpdateStrategy,
+	ShaderEffect,
+	CustomShaderEffect,
+	ElementBounds,
+	ElementRegistration,
+	OverlayOptions
+} from './lib/overlay/overlay-types.js';
 // The overlay's error type. Exported because it is reachable, not because it is
 // used internally: `OverlayOptions.onError` is forwarded straight through the
 // component, and `ElementRegistration.error`, `TextureCreationResult.error` and
