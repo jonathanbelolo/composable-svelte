@@ -112,16 +112,6 @@ export interface ElementRegistration {
 	texture?: WebGLTexture;
 
 	/**
-	 * Last update timestamp (for frame limiting)
-	 */
-	lastUpdate?: number;
-
-	/**
-	 * Whether this element's texture needs updating
-	 */
-	needsUpdate?: boolean;
-
-	/**
 	 * Animation frame ID (for video elements)
 	 */
 	animationFrameId?: number;
@@ -342,27 +332,3 @@ export interface TextureCreationResult {
 	error?: OverlayError;
 }
 
-/**
- * Shader program cache entry
- */
-export interface ShaderProgramEntry {
-	/**
-	 * Compiled WebGL program
-	 */
-	program: WebGLProgram;
-
-	/**
-	 * Uniform locations cache
-	 */
-	uniforms: Map<string, WebGLUniformLocation>;
-
-	/**
-	 * Attribute locations cache
-	 */
-	attributes: Map<string, number>;
-
-	/**
-	 * Reference count (for cleanup)
-	 */
-	refCount: number;
-}

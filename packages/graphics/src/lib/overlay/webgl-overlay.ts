@@ -239,8 +239,7 @@ class WebGLOverlay implements OverlayContextAPI {
 			type: options.type,
 			updateStrategy,
 			shader: options.shader,
-			bounds: initialBounds,
-			needsUpdate: true
+			bounds: initialBounds
 		};
 
 		// Create initial texture
@@ -354,7 +353,6 @@ class WebGLOverlay implements OverlayContextAPI {
 		}
 
 		// Mark as needing re-render
-		registration.needsUpdate = true;
 	}
 
 	/**
@@ -368,7 +366,6 @@ class WebGLOverlay implements OverlayContextAPI {
 		}
 
 		registration.shader = shader;
-		registration.needsUpdate = true;
 
 		// Recompile shader program with new shader
 		this.compileElementShader(registration);
@@ -597,7 +594,6 @@ class WebGLOverlay implements OverlayContextAPI {
 
 			// Only on the success branch, and only once the texture exists.
 			onTextureLoaded?.();
-			registration.needsUpdate = false;
 
 			// Store dimensions for memory tracking
 			(registration as any).textureWidth = result.width;
@@ -626,7 +622,6 @@ class WebGLOverlay implements OverlayContextAPI {
 			}
 		} else {
 			delete registration.error;
-			registration.needsUpdate = true; // Mark for re-render
 		}
 	}
 
@@ -641,7 +636,6 @@ class WebGLOverlay implements OverlayContextAPI {
 		registration.bounds = bounds;
 
 		// Element needs re-render with new position
-		registration.needsUpdate = true;
 	}
 
 	/**
@@ -716,7 +710,6 @@ class WebGLOverlay implements OverlayContextAPI {
 		});
 
 		// Mark as rendered
-		registration.needsUpdate = false;
 	}
 
 	/**

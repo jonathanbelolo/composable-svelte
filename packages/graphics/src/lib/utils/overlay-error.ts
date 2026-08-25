@@ -107,6 +107,12 @@ export class OverlayError extends Error {
 
 	/**
 	 * Texture memory budget exceeded
+	 *
+	 * The recovery line used to advise calling `setMemoryBudget()` — a method on
+	 * `TextureValidator`, which is a private field of `TextureFactory`, which no
+	 * consumer can reach. It told people to call something they could not call.
+	 * `memoryBudget` in `OverlayOptions` is the reachable lever, and it now
+	 * actually bounds anything.
 	 */
 	static memoryBudgetExceeded(
 		currentUsage: number,
@@ -117,7 +123,7 @@ export class OverlayError extends Error {
 			OverlayErrorCode.MEMORY_BUDGET_EXCEEDED,
 			`Texture memory budget exceeded: ${currentUsage}/${budget} bytes (requested: ${requestedSize} bytes)`,
 			{ currentUsage, budget, requestedSize },
-			'Reduce number of overlay elements, use smaller textures, or increase memory budget with setMemoryBudget(). Consider implementing texture pooling to reuse memory.'
+			'Reduce the number of overlay elements or use smaller textures. To raise the ceiling, pass a larger `memoryBudget` in OverlayOptions.'
 		);
 	}
 

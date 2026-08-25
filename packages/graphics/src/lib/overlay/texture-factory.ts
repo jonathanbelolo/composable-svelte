@@ -468,12 +468,4 @@ export class TextureFactory {
 		return this.textureValidator.getMemoryUsage();
 	}
 
-	/**
-	 * Get maximum texture size
-	 *
-	 * @returns Maximum texture dimension
-	 */
-	getMaxTextureSize(): number {
-		return this.maxTextureSize;
-	}
 }

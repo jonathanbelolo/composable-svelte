@@ -121,14 +121,6 @@ export class WebGLContextManager {
 		this.onContextRestoredCallbacks.forEach((cb) => cb());
 	}
 
-	/**
-	 * Check if context is currently lost
-	 *
-	 * @returns true if context is lost
-	 */
-	isContextLost(): boolean {
-		return this.contextLost;
-	}
 
 	/**
 	 * Get current WebGL context
@@ -139,33 +131,7 @@ export class WebGLContextManager {
 		return this.contextLost ? null : this.gl;
 	}
 
-	/**
-	 * Manually trigger context loss (for testing)
-	 *
-	 * Requires WEBGL_lose_context extension
-	 */
-	simulateContextLoss(): void {
-		const loseContext = this.gl?.getExtension('WEBGL_lose_context');
-		if (loseContext) {
-			loseContext.loseContext();
-		} else {
-			console.warn('[WebGLOverlay] WEBGL_lose_context extension not available');
-		}
-	}
 
-	/**
-	 * Manually trigger context restore (for testing)
-	 *
-	 * Requires WEBGL_lose_context extension
-	 */
-	simulateContextRestore(): void {
-		const loseContext = this.gl?.getExtension('WEBGL_lose_context');
-		if (loseContext) {
-			loseContext.restoreContext();
-		} else {
-			console.warn('[WebGLOverlay] WEBGL_lose_context extension not available');
-		}
-	}
 
 	/**
 	 * Release the canvas listeners and drop every registered callback.

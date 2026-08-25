@@ -161,26 +161,7 @@ export class TextureValidator {
 		};
 	}
 
-	/**
-	 * Set custom memory budget
-	 *
-	 * Default is 200MB. Adjust based on application needs.
-	 *
-	 * @param bytes - Memory budget in bytes
-	 */
-	setMemoryBudget(bytes: number): void {
-		this.maxMemoryBudget = bytes;
-		debugLog(`[WebGLOverlay] Memory budget set to ${this.formatBytes(bytes)}`);
-	}
 
-	/**
-	 * Get maximum supported texture size for this device
-	 *
-	 * @returns Max texture dimension (e.g., 8192 means 8192x8192)
-	 */
-	getMaxTextureSize(): number {
-		return this.maxTextureSize;
-	}
 
 	/**
 	 * Format bytes to human-readable string

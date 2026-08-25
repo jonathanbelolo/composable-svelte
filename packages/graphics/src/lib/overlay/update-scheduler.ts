@@ -150,33 +150,8 @@ export class UpdateScheduler {
 		}
 	}
 
-	/**
-	 * Check if scheduler is running
-	 *
-	 * @returns true if running
-	 */
-	running(): boolean {
-		return this.isRunning;
-	}
 
-	/**
-	 * Get all registered elements
-	 *
-	 * @returns Array of element registrations
-	 */
-	getElements(): ElementRegistration[] {
-		return Array.from(this.elements.values());
-	}
 
-	/**
-	 * Get a specific element registration
-	 *
-	 * @param id - Element identifier
-	 * @returns Element registration or undefined
-	 */
-	getElement(id: string): ElementRegistration | undefined {
-		return this.elements.get(id);
-	}
 
 	/**
 	 * Schedule next frame update
@@ -202,7 +177,6 @@ export class UpdateScheduler {
 
 			// Check if element needs update (rate limiting)
 			if (this.shouldUpdateElement(registration, timestamp)) {
-				registration.lastUpdate = timestamp;
 				this.notifyUpdate(id);
 			}
 		}
@@ -211,16 +185,26 @@ export class UpdateScheduler {
 	/**
 	 * Check if element should be updated
 	 *
-	 * Implements rate limiting to avoid unnecessary updates.
+	 * There is no rate limiting here, despite what this line used to claim. The
+	 * only thing it decides is whether a video is worth sampling; frame pacing
+	 * is `RenderLoop`'s job, and `targetFPS` is honoured there.
+	 *
+	 * It used to consult a `lastUpdate` field via `if (!registration.lastUpdate)
+	 * return true`. That was recorded as a no-op branch, and it was not: it
+	 * forced an update on an element's *first* frame, which was the only reason
+	 * a paused video ever got one. Removing it changed behaviour and a test
+	 * caught it.
+	 *
+	 * The behaviour is not restored, deliberately. A paused video has nothing
+	 * new to sample, and its texture is already created at registration — so
+	 * skipping it is what this method is for. What the field bought was one
+	 * redundant upload per element.
 	 *
 	 * @param registration - Element registration
 	 * @param timestamp - Current timestamp
 	 * @returns true if should update
 	 */
 	private shouldUpdateElement(registration: ElementRegistration, timestamp: number): boolean {
-		// Always update if no last update
-		if (!registration.lastUpdate) return true;
-
 		// For videos, check if new frame is available
 		if (registration.type === 'video') {
 			const video = registration.element as HTMLVideoElement;
@@ -387,29 +371,6 @@ export class UpdateScheduler {
 		return result;
 	}
 
-	/**
-	 * Get update statistics
-	 *
-	 * @returns Statistics object
-	 */
-	getStatistics() {
-		const strategies: Record<UpdateStrategy, number> = {
-			static: 0,
-			frame: 0,
-			manual: 0,
-		};
-
-		for (const registration of this.elements.values()) {
-			strategies[registration.updateStrategy]++;
-		}
-
-		return {
-			totalElements: this.elements.size,
-			frameUpdateElements: this.frameUpdateElements.size,
-			isRunning: this.isRunning,
-			strategies
-		};
-	}
 
 	/**
 	 * Destroy scheduler and clean up

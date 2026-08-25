@@ -73,7 +73,6 @@ const videoRegistration = (id: string, element: HTMLVideoElement): ElementRegist
 	updateStrategy: 'frame',
 	shader: 'wave-gentle-horizontal',
 	bounds: { x: 0, y: 0, width: 10, height: 10 },
-	needsUpdate: true
 });
 
 describe('the scheduler releases a video it stops watching', () => {
@@ -172,7 +171,11 @@ describe('a video frame uploads once', () => {
 		vi.stubGlobal('cancelAnimationFrame', () => {});
 
 		const scheduler = new UpdateScheduler();
+		// Playing, not jsdom's default of paused: a paused video is skipped by
+		// `shouldUpdateElement` and has nothing new to sample, so asserting on
+		// one would test the wrong thing.
 		const plain = document.createElement('video');
+		Object.defineProperty(plain, 'paused', { value: false, configurable: true });
 		const notified = vi.fn();
 		scheduler.setUpdateCallback(notified);
 
