@@ -138,3 +138,55 @@ describe('onError', () => {
 		api.destroy();
 	});
 });
+
+describe('handleContextLoss', () => {
+	it('still reports a loss to the consumer when recovery is disabled', async () => {
+		// The callbacks lived *inside* the block the flag disables, so setting it
+		// false — which is exactly what someone intending to handle loss
+		// themselves would do — silently removed the notification they need. The
+		// flag means "do not recover for me", not "do not tell me".
+		const onContextLost = vi.fn();
+		const onContextRestored = vi.fn();
+		const { fake, api } = overlay({
+			handleContextLoss: false,
+			onContextLost,
+			onContextRestored
+		});
+		const canvas = fake.canvas!;
+
+		canvas.dispatchEvent(new Event('webglcontextlost'));
+		canvas.dispatchEvent(new Event('webglcontextrestored'));
+
+		expect(onContextLost, 'the consumer was never told the context was lost').toHaveBeenCalled();
+		expect(onContextRestored, 'nor that it came back').toHaveBeenCalled();
+		api.destroy();
+	});
+
+	it('does not recover on its own when recovery is disabled', () => {
+		// The paired half, and the flag's actual job: no rebuild.
+		const { fake, api } = overlay({ handleContextLoss: false });
+		const canvas = fake.canvas!;
+		const builtBefore = fake.created('buffer');
+
+		canvas.dispatchEvent(new Event('webglcontextlost'));
+		canvas.dispatchEvent(new Event('webglcontextrestored'));
+
+		expect(
+			fake.created('buffer'),
+			'handleContextLoss: false rebuilt the resources anyway'
+		).toBe(builtBefore);
+		api.destroy();
+	});
+
+	it('does recover when left at its default', () => {
+		const { fake, api } = overlay({});
+		const canvas = fake.canvas!;
+		const builtBefore = fake.created('buffer');
+
+		canvas.dispatchEvent(new Event('webglcontextlost'));
+		canvas.dispatchEvent(new Event('webglcontextrestored'));
+
+		expect(fake.created('buffer'), 'the default stopped recovering').toBeGreaterThan(builtBefore);
+		api.destroy();
+	});
+});

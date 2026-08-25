@@ -121,31 +121,26 @@ export function registerElement(registration: {
     return;
   }
 
-  // Register with overlay - call with correct three-parameter signature
+  // Register with overlay - call with correct three-parameter signature.
+  //
+  // `onTextureLoaded` is forwarded rather than timed. It used to be fired here
+  // from `setTimeout(…, 100)` under a TODO admitting it, which reported success
+  // on CORS rejection, on an oversize texture and on an unloaded image — and
+  // early for anything slower than 100ms. Only the overlay knows when the async
+  // creation settled, so it owns the callback now.
   const result = overlay.registerElement(
     registration.id,
     registration.domElement,
     {
       type: elementType,
-      shader: registration.shader
+      shader: registration.shader,
+      onTextureLoaded: registration.onTextureLoaded
     }
   );
 
   // Check if registration failed
   if (result instanceof OverlayError) {
     console.error('[WebGLOverlay] Failed to register element:', result.toString());
-    return;
-  }
-
-  // TODO: Call texture loaded callback when texture actually loads
-  // For now, delay callback to allow texture loading to complete
-  if (registration.onTextureLoaded) {
-    // Give texture time to load asynchronously
-    setTimeout(() => {
-      if (registration.onTextureLoaded) {
-        registration.onTextureLoaded();
-      }
-    }, 100);
   }
 }
 

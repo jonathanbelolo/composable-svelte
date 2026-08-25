@@ -37,12 +37,6 @@ export interface RenderOptions {
 	canvasHeight?: number;
 
 	/**
-	 * Opacity (alpha blending)
-	 * Default: 1.0 (fully opaque)
-	 */
-	opacity?: number;
-
-	/**
 	 * Custom uniforms to pass to shader
 	 */
 	uniforms?: Record<string, number | number[]>;
@@ -252,10 +246,9 @@ export class RenderPipeline {
 	 * @param options - Render options
 	 */
 	private setUniforms(program: CompiledProgram, options: RenderOptions): void {
-		// Set opacity if program supports it
-		if (options.opacity !== undefined && program.uniforms.has('uOpacity')) {
-			this.programManager.setUniform(program, 'uOpacity', options.opacity);
-		}
+		// `opacity` used to be read here, gated on a `uOpacity` uniform that no
+		// shipped shader declares — and `renderElement` never passed it anyway.
+		// A consumer-facing option that could not affect a pixel.
 
 		// Set custom uniforms
 		if (options.uniforms) {

@@ -208,7 +208,17 @@ export interface OverlayContextAPI {
 		options: {
 			type: ElementType;
 			shader: ShaderEffect;
-			updateStrategy?: UpdateStrategy;
+			updateStrategy?: UpdateStrategy | undefined;
+			/**
+			 * Called once the element's texture actually exists.
+			 *
+			 * Only the overlay knows when the async creation settled, so the
+			 * callback lives here. `WebGLOverlay.svelte` used to fire its own copy
+			 * from a fixed 100ms timer, which reported success on CORS rejection,
+			 * on an oversize texture and on an unloaded image. Failures go to
+			 * `OverlayOptions.onError`.
+			 */
+			onTextureLoaded?: (() => void) | undefined;
 		}
 	): ElementRegistration | OverlayError;
 
@@ -300,30 +310,11 @@ export interface OverlayContextAPI {
  * Internal texture creation options
  */
 export interface TextureCreationOptions {
-	/**
-	 * Element to create texture from
-	 */
+	/** The DOM element to read pixels from. */
 	element: HTMLElement;
 
-	/**
-	 * Element type
-	 */
+	/** Which of the three supported element kinds it is. */
 	type: ElementType;
-
-	/**
-	 * WebGL context
-	 */
-	gl: WebGLRenderingContext;
-
-	/**
-	 * Maximum texture size
-	 */
-	maxTextureSize: number;
-
-	/**
-	 * Whether to apply CORS workaround (Safari)
-	 */
-	needsCORSWorkaround: boolean;
 }
 
 /**

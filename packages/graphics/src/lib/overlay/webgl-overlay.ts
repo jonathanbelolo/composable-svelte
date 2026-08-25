@@ -96,23 +96,32 @@ class WebGLOverlay implements OverlayContextAPI {
 		// Initialize context manager
 		this.contextManager = new WebGLContextManager();
 
-		// Set up context loss/restore callbacks
-		if (options.handleContextLoss !== false) {
-			this.contextManager.onContextLost(() => {
-				console.warn('[WebGLOverlay] WebGL context lost');
-				if (this.options.onContextLost) {
-					this.options.onContextLost();
-				}
-			});
+		// Set up context loss/restore callbacks.
+		//
+		// The consumer is always told; `handleContextLoss` gates only whether we
+		// *recover* for them. Both callbacks used to live inside the disabled
+		// block, so `handleContextLoss: false` — exactly what someone intending
+		// to handle loss themselves would pass — silently removed the
+		// notification they were relying on, while the low-level listeners in
+		// `WebGLContextManager` stayed registered regardless.
+		const recoverAutomatically = options.handleContextLoss !== false;
 
-			this.contextManager.onContextRestored(() => {
-				debugLog('[WebGLOverlay] WebGL context restored');
+		this.contextManager.onContextLost(() => {
+			console.warn('[WebGLOverlay] WebGL context lost');
+			if (this.options.onContextLost) {
+				this.options.onContextLost();
+			}
+		});
+
+		this.contextManager.onContextRestored(() => {
+			debugLog('[WebGLOverlay] WebGL context restored');
+			if (recoverAutomatically) {
 				this.recreateResources();
-				if (this.options.onContextRestored) {
-					this.options.onContextRestored();
-				}
-			});
-		}
+			}
+			if (this.options.onContextRestored) {
+				this.options.onContextRestored();
+			}
+		});
 
 		// Initialize WebGL context
 		this.gl = this.contextManager.initialize(this.canvas);
@@ -191,6 +200,16 @@ class WebGLOverlay implements OverlayContextAPI {
 			type: ElementType;
 			shader: ShaderEffect;
 			updateStrategy?: UpdateStrategy;
+			/**
+			 * Called once the element's texture actually exists.
+			 *
+			 * Lives here rather than in the component because only this class
+			 * knows when the async creation settled. The component used to fire
+			 * its own copy from `setTimeout(…, 100)` — so it reported success on
+			 * CORS rejection, on an oversize texture and on an unloaded image,
+			 * and fired early for anything slower. Failures go to `onError`.
+			 */
+			onTextureLoaded?: (() => void) | undefined;
 		}
 	): ElementRegistration | OverlayError {
 		if (this.destroyed) {
@@ -225,7 +244,7 @@ class WebGLOverlay implements OverlayContextAPI {
 		};
 
 		// Create initial texture
-		this.createElementTexture(registration);
+		this.createElementTexture(registration, options.onTextureLoaded);
 
 		// Compile shader program
 		this.compileElementShader(registration);
@@ -535,15 +554,18 @@ class WebGLOverlay implements OverlayContextAPI {
 	/**
 	 * Create texture for an element
 	 */
-	private async createElementTexture(registration: ElementRegistration): Promise<void> {
+	private async createElementTexture(
+		registration: ElementRegistration,
+		onTextureLoaded?: (() => void) | undefined
+	): Promise<void> {
 		if (!this.textureFactory || !this.gl) return;
 
+		// Only what the factory reads. It was handed `gl`, `maxTextureSize` and
+		// `needsCORSWorkaround` on every call and discarded all three — it uses
+		// the values it was constructed with.
 		const result = await this.textureFactory.createTexture({
 			element: registration.element,
-			type: registration.type,
-			gl: this.gl,
-			maxTextureSize: this.options.maxTextureSize,
-			needsCORSWorkaround: this.browserCompatibility.needsCORSWorkaround()
+			type: registration.type
 		});
 
 		// The element may have gone while this was resolving. `registerElement`
@@ -572,6 +594,9 @@ class WebGLOverlay implements OverlayContextAPI {
 				registration.texture = result.texture;
 			}
 			delete registration.error;
+
+			// Only on the success branch, and only once the texture exists.
+			onTextureLoaded?.();
 			registration.needsUpdate = false;
 
 			// Store dimensions for memory tracking
