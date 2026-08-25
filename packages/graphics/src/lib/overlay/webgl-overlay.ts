@@ -645,12 +645,24 @@ class WebGLOverlay implements OverlayContextAPI {
 		const registration = this.elements.get(elementId);
 		if (!registration || !registration.texture || !this.textureFactory) return;
 
-		// Update texture
+		// Update texture. The tracked dimensions go in so the factory can release
+		// the outgoing allocation rather than adding the new one on top of it.
 		const result = this.textureFactory.updateTexture(
 			registration.texture,
 			registration.element,
-			registration.type
+			registration.type,
+			registration.width !== undefined && registration.height !== undefined
+				? { width: registration.width, height: registration.height }
+				: undefined
 		);
+
+		if (result.success) {
+			// A re-upload can change the texture's dimensions — a video that
+			// switched resolution, a canvas the app resized — and the accounting
+			// deallocates against these on unregister.
+			if (result.width !== undefined) registration.width = result.width;
+			if (result.height !== undefined) registration.height = result.height;
+		}
 
 		if (!result.success && result.error) {
 			registration.error = result.error;

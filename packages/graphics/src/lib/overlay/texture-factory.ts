@@ -19,11 +19,17 @@ import type {
 
 export class TextureFactory {
 	private textureValidator: TextureValidator;
+	/** Retained scratch canvas for downscaling on the update path. */
+	private scratch: HTMLCanvasElement | null = null;
 
 	constructor(
 		private gl: WebGLRenderingContext,
 		private maxTextureSize: number,
-		private memoryBudget: number,
+		// Not a field: it is forwarded to the validator on the next line and
+		// never read again. It was `private memoryBudget`, which made it a
+		// write-only property of the class — the category `457c7e6` deleted ten
+		// members for, on this very class.
+		memoryBudget: number,
 		private needsCORSWorkaround: boolean
 	) {
 		this.textureValidator = new TextureValidator(gl, maxTextureSize, memoryBudget);
@@ -342,9 +348,72 @@ export class TextureFactory {
 	updateTexture(
 		texture: WebGLTexture,
 		element: HTMLElement,
-		type: ElementType
-	): { success: boolean; error?: OverlayError } {
+		type: ElementType,
+		tracked?: { width: number; height: number }
+	): { success: boolean; error?: OverlayError; width?: number; height?: number } {
 		const gl = this.gl;
+
+		// Validate and account for the re-upload before performing it.
+		//
+		// This did neither, which meant `maxTextureSize` and `memoryBudget`
+		// bounded only the first upload. A `<video>` that switches resolution
+		// mid-playback, or a `<canvas>` the app resizes before calling
+		// `updateElement()`, went straight to `texImage2D` at whatever size it
+		// had reached — past the size cap, and without the tracked bytes ever
+		// moving, so the budget stayed wrong for the life of the overlay.
+		const size = this.elementSize(element, type);
+		if (size) {
+			const previous = tracked ?? size;
+			// Release the outgoing allocation first: this replaces a texture, it
+			// does not add one, and validating the new size on top of the old
+			// would refuse re-uploads that fit perfectly well.
+			this.textureValidator.trackDeallocation(previous.width, previous.height);
+
+			const validation = this.textureValidator.validateSize(size.width, size.height);
+			if (!validation.valid && !validation.scaled) {
+				// Over budget: put the accounting back and refuse.
+				this.textureValidator.trackAllocation(previous.width, previous.height);
+				return {
+					success: false,
+					error: OverlayError.memoryBudgetExceeded(
+						this.textureValidator.getMemoryUsage().used,
+						this.textureValidator.getMemoryUsage().budget,
+						size.width * size.height * 4
+					)
+				};
+			}
+
+			const target = validation.scaled ?? size;
+			this.textureValidator.trackAllocation(target.width, target.height);
+
+			// Over the size cap: upload a scaled copy, as creation does, rather
+			// than handing the driver dimensions it will refuse.
+			if (validation.scaled) {
+				const scaled = this.drawScaled(element, target.width, target.height);
+				if (!scaled) {
+					return {
+						success: false,
+						error: OverlayError.textureCreationFailed(
+							element.id || 'unknown',
+							'Failed to create 2D context for scaling'
+						)
+					};
+				}
+				gl.bindTexture(gl.TEXTURE_2D, texture);
+				try {
+					gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, scaled);
+					return { success: true, width: target.width, height: target.height };
+				} catch (error) {
+					return {
+						success: false,
+						error: OverlayError.textureCreationFailed(
+							element.id || 'unknown',
+							error instanceof Error ? error.message : String(error)
+						)
+					};
+				}
+			}
+		}
 
 		gl.bindTexture(gl.TEXTURE_2D, texture);
 
@@ -359,7 +428,7 @@ export class TextureFactory {
 						gl.UNSIGNED_BYTE,
 						element as HTMLImageElement
 					);
-					return { success: true };
+					return { success: true, ...(size ?? {}) };
 
 				case 'video':
 					gl.texImage2D(
@@ -370,7 +439,7 @@ export class TextureFactory {
 						gl.UNSIGNED_BYTE,
 						element as HTMLVideoElement
 					);
-					return { success: true };
+					return { success: true, ...(size ?? {}) };
 
 				case 'canvas':
 					gl.texImage2D(
@@ -381,7 +450,7 @@ export class TextureFactory {
 						gl.UNSIGNED_BYTE,
 						element as HTMLCanvasElement
 					);
-					return { success: true };
+					return { success: true, ...(size ?? {}) };
 
 				default:
 					const _exhaustive: never = type;
@@ -402,6 +471,60 @@ export class TextureFactory {
 				)
 			};
 		}
+	}
+
+	/**
+	 * Pixel dimensions of an element's current content.
+	 *
+	 * Not its layout size: the texture is the source pixels, and for a video
+	 * those change when the stream switches resolution.
+	 */
+	private elementSize(
+		element: HTMLElement,
+		type: ElementType
+	): { width: number; height: number } | null {
+		switch (type) {
+			case 'image': {
+				const img = element as HTMLImageElement;
+				return img.naturalWidth > 0 ? { width: img.naturalWidth, height: img.naturalHeight } : null;
+			}
+			case 'video': {
+				const video = element as HTMLVideoElement;
+				return video.videoWidth > 0 ? { width: video.videoWidth, height: video.videoHeight } : null;
+			}
+			case 'canvas': {
+				const canvas = element as HTMLCanvasElement;
+				return canvas.width > 0 ? { width: canvas.width, height: canvas.height } : null;
+			}
+			default: {
+				const _exhaustive: never = type;
+				return _exhaustive;
+			}
+		}
+	}
+
+	/**
+	 * Draw an element into a scratch canvas at the given size.
+	 *
+	 * The canvas is retained rather than allocated per call: this runs on the
+	 * update path, which for a `frame`-strategy video is every frame.
+	 */
+	private drawScaled(
+		element: HTMLElement,
+		width: number,
+		height: number
+	): HTMLCanvasElement | null {
+		if (!this.scratch) {
+			this.scratch = document.createElement('canvas');
+		}
+		this.scratch.width = width;
+		this.scratch.height = height;
+
+		const ctx = this.scratch.getContext('2d');
+		if (!ctx) return null;
+
+		ctx.drawImage(element as CanvasImageSource, 0, 0, width, height);
+		return this.scratch;
 	}
 
 	/**
