@@ -22,6 +22,8 @@
 interface Handle {
 	readonly kind: string;
 	readonly id: number;
+	/** Uniform locations carry their name, so a write can be attributed to one. */
+	readonly name?: string;
 }
 
 export interface FakeGL {
@@ -35,6 +37,18 @@ export interface FakeGL {
 	context: WebGLRenderingContext;
 	/** The canvas this context was handed to, once `getContext` has been called. */
 	canvas: HTMLCanvasElement | null;
+	/** How many times `drawArrays` has been called. */
+	drawCalls(): number;
+	/**
+	 * The last value written to each uniform, by name.
+	 *
+	 * A uniform the linked program does not declare has no location, so a write
+	 * to it never arrives here — which is the point: it is the difference
+	 * between "the value is in the shader object" and "the value reached GL".
+	 */
+	uniforms(): Map<string, unknown>;
+	/** Forget recorded calls, uniform writes and draws. Resource counters keep. */
+	clearCalls(): void;
 }
 
 const CONSTANTS: Record<string, number> = {
@@ -85,6 +99,42 @@ export function createFakeGL(): FakeGL {
 	const state: { canvas: HTMLCanvasElement | null } = { canvas: null };
 	let nextId = 1;
 
+	// What the code under test actually compiled and linked. Modelled rather
+	// than waved through, because a real driver only gives you a location for a
+	// uniform the linked program declares — and a harness that hands back a
+	// location for every name makes "the uniform did not reach GL" unobservable.
+	const shaderSources = new Map<unknown, string>();
+	const programShaders = new Map<unknown, unknown[]>();
+	const locations = new Map<unknown, Map<string, Handle>>();
+	const uniformWrites = new Map<string, unknown>();
+	let drawCount = 0;
+
+	/**
+	 * Names declared `uniform`/`attribute` across a program's attached sources.
+	 *
+	 * A regex, deliberately: this models declaration, not the linker. A real
+	 * driver also strips declared-but-unused uniforms, which this does not —
+	 * so the fake is more permissive than a driver, never less, and a test that
+	 * passes here can still fail on hardware for that one reason.
+	 */
+	const declared = (program: unknown, keyword: 'uniform' | 'attribute'): string[] => {
+		const names: string[] = [];
+		const pattern = new RegExp(`\\b${keyword}\\s+\\w+\\s+(\\w+)`, 'g');
+		for (const shader of programShaders.get(program) ?? []) {
+			const source = shaderSources.get(shader) ?? '';
+			for (const match of source.matchAll(pattern)) {
+				if (match[1] && !names.includes(match[1])) names.push(match[1]);
+			}
+		}
+		return names;
+	};
+
+	/** Record a uniform write against the name its location carries. */
+	const writeUniform = (location: unknown, value: unknown) => {
+		const name = (location as Handle | null)?.name;
+		if (name) uniformWrites.set(name, value);
+	};
+
 	const make = (kind: keyof typeof counts): Handle => {
 		counts[kind]!.made += 1;
 		return { kind, id: nextId++ };
@@ -121,7 +171,13 @@ export function createFakeGL(): FakeGL {
 		// Compilation and linking always succeed: these tests are about resource
 		// lifetime, not GLSL. A test that needs a failure overrides the getter.
 		getShaderParameter: record('getShaderParameter', () => true),
-		getProgramParameter: record('getProgramParameter', () => true),
+		getProgramParameter: record('getProgramParameter', (program, pname) =>
+			pname === CONSTANTS.ACTIVE_UNIFORMS
+				? declared(program, 'uniform').length
+				: pname === CONSTANTS.ACTIVE_ATTRIBUTES
+					? declared(program, 'attribute').length
+					: true
+		),
 		getShaderInfoLog: record('getShaderInfoLog', () => ''),
 		getProgramInfoLog: record('getProgramInfoLog', () => ''),
 		getParameter: record('getParameter', (p) => PARAMETERS[p as number] ?? 0),
@@ -142,14 +198,44 @@ export function createFakeGL(): FakeGL {
 				: null
 		),
 		getSupportedExtensions: record('getSupportedExtensions', () => []),
-		getAttribLocation: record('getAttribLocation', () => 0),
-		getUniformLocation: record('getUniformLocation', () => ({ kind: 'uniform', id: nextId++ })),
-		getActiveAttrib: record('getActiveAttrib', () => null),
-		getActiveUniform: record('getActiveUniform', () => null),
+		// Distinct indices per attribute, and -1 for one the program does not
+		// declare — which is what a driver returns. A constant 0 for every name
+		// makes `aPosition` and `aTexCoord` indistinguishable, so a swapped or
+		// duplicated binding would render wrongly and test green.
+		getAttribLocation: record('getAttribLocation', (program, name) => {
+			const index = declared(program, 'attribute').indexOf(name as string);
+			return index;
+		}),
+		getUniformLocation: record('getUniformLocation', (program, name) => {
+			if (!declared(program, 'uniform').includes(name as string)) return null;
+			let perProgram = locations.get(program);
+			if (!perProgram) {
+				perProgram = new Map();
+				locations.set(program, perProgram);
+			}
+			let handle = perProgram.get(name as string);
+			if (!handle) {
+				handle = { kind: 'uniform', id: nextId++, name: name as string };
+				perProgram.set(name as string, handle);
+			}
+			return handle;
+		}),
+		getActiveAttrib: record('getActiveAttrib', (program, index) => {
+			const name = declared(program, 'attribute')[index as number];
+			return name ? { name, size: 1, type: CONSTANTS.FLOAT } : null;
+		}),
+		getActiveUniform: record('getActiveUniform', (program, index) => {
+			const name = declared(program, 'uniform')[index as number];
+			return name ? { name, size: 1, type: CONSTANTS.FLOAT } : null;
+		}),
 
-		shaderSource: noop('shaderSource'),
+		shaderSource: record('shaderSource', (shader, source) => {
+			shaderSources.set(shader, String(source));
+		}),
 		compileShader: noop('compileShader'),
-		attachShader: noop('attachShader'),
+		attachShader: record('attachShader', (program, shader) => {
+			programShaders.set(program, [...(programShaders.get(program) ?? []), shader]);
+		}),
 		linkProgram: noop('linkProgram'),
 		validateProgram: noop('validateProgram'),
 		useProgram: noop('useProgram'),
@@ -163,27 +249,40 @@ export function createFakeGL(): FakeGL {
 		enableVertexAttribArray: noop('enableVertexAttribArray'),
 		disableVertexAttribArray: noop('disableVertexAttribArray'),
 		vertexAttribPointer: noop('vertexAttribPointer'),
-		drawArrays: noop('drawArrays'),
+		drawArrays: record('drawArrays', () => {
+			drawCount += 1;
+		}),
 		viewport: noop('viewport'),
 		clear: noop('clear'),
 		clearColor: noop('clearColor'),
 		enable: noop('enable'),
 		disable: noop('disable'),
 		blendFunc: noop('blendFunc'),
-		uniform1f: noop('uniform1f'),
-		uniform1fv: noop('uniform1fv'),
-		uniform1i: noop('uniform1i'),
-		uniform2fv: noop('uniform2fv'),
-		uniform3fv: noop('uniform3fv'),
-		uniform4fv: noop('uniform4fv'),
-		uniformMatrix3fv: noop('uniformMatrix3fv'),
-		uniformMatrix4fv: noop('uniformMatrix4fv')
+		uniform1f: record('uniform1f', writeUniform),
+		uniform1fv: record('uniform1fv', writeUniform),
+		uniform1i: record('uniform1i', writeUniform),
+		uniform2fv: record('uniform2fv', writeUniform),
+		uniform3fv: record('uniform3fv', writeUniform),
+		uniform4fv: record('uniform4fv', writeUniform),
+		uniformMatrix3fv: record('uniformMatrix3fv', (location, _transpose, value) =>
+			writeUniform(location, value)
+		),
+		uniformMatrix4fv: record('uniformMatrix4fv', (location, _transpose, value) =>
+			writeUniform(location, value)
+		)
 	};
 
 	return {
 		live: (kind) => counts[kind]!.made - counts[kind]!.freed,
 		created: (kind) => counts[kind]!.made,
 		calls,
+		drawCalls: () => drawCount,
+		uniforms: () => new Map(uniformWrites),
+		clearCalls: () => {
+			calls.length = 0;
+			uniformWrites.clear();
+			drawCount = 0;
+		},
 		context: gl as unknown as WebGLRenderingContext,
 		get canvas() {
 			return state.canvas;

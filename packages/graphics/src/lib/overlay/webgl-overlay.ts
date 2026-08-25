@@ -751,7 +751,6 @@ class WebGLOverlay implements OverlayContextAPI {
 		// Determine vertex and fragment shader source
 		let vertexSource = DEFAULT_VERTEX_SHADER;
 		let fragmentSource = DEFAULT_FRAGMENT_SHADER;
-		let customShader: typeof registration.shader | null = null;
 
 		// Handle custom shader effect
 		if (typeof registration.shader === 'object') {
@@ -759,7 +758,6 @@ class WebGLOverlay implements OverlayContextAPI {
 				vertexSource = registration.shader.vertex;
 			}
 			fragmentSource = registration.shader.fragment;
-			customShader = registration.shader;
 		} else if (typeof registration.shader === 'string') {
 			// Try to load built-in preset
 			if (hasPreset(registration.shader)) {
@@ -777,7 +775,6 @@ class WebGLOverlay implements OverlayContextAPI {
 						...preset,
 						...(preset.uniforms ? { uniforms: { ...preset.uniforms } } : {})
 					};
-					customShader = registration.shader;
 				}
 			} else {
 				// Unknown preset name, log warning and use default
@@ -787,21 +784,13 @@ class WebGLOverlay implements OverlayContextAPI {
 			}
 		}
 
-		// Compile program with all possible uniforms
-		const uniformNames = ['uTexture', 'uTime', 'uDeltaTime'];
-
-		// Add custom uniforms if present
-		if (customShader && typeof customShader === 'object' && customShader.uniforms) {
-			uniformNames.push(...Object.keys(customShader.uniforms));
-		}
-
-		// Compile program
-		const result = this.programManager.getProgram(
-			vertexSource,
-			fragmentSource,
-			['aPosition', 'aTexCoord'],
-			uniformNames
-		);
+		// Compile program. The list of uniform names that used to be assembled
+		// here — the three built-ins plus whatever keys the shader object
+		// happened to carry — decided which uniforms were ever bindable, for the
+		// life of the element. Anything the shader declared but the list omitted
+		// was unreachable, which made `updateUniforms` unable to introduce one.
+		// The compiler reads the linked program's active uniforms instead.
+		const result = this.programManager.getProgram(vertexSource, fragmentSource);
 
 		if (result instanceof OverlayError) {
 			registration.error = result;
