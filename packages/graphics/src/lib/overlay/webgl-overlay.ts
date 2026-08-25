@@ -270,7 +270,25 @@ class WebGLOverlay implements OverlayContextAPI {
 			this.textureFactory.deleteTexture(registration.texture, width, height);
 		}
 
-		// Remove from elements map
+		// Release the compiled program. `ShaderProgramManager` refcounts by
+		// source and `releaseProgram` deletes at zero — but it had no callers
+		// anywhere, and this map was never touched here at all, so only
+		// `destroy()` freed anything, via a `clearCache` that ignores refcounts.
+		//
+		// The `releaseProgram` call is the pinned half: the fake `gl` counts
+		// `deleteProgram` against `createProgram`. The `delete` below is not
+		// observable from outside — `render()` iterates `this.elements`, which no
+		// longer holds this id, so a stale entry is unreachable rather than
+		// wrong. It is still a map that would grow for the life of the overlay,
+		// which is a leak of JS objects if not of GPU ones.
+		const program = this.elementPrograms.get(id);
+		if (program && this.programManager) {
+			this.programManager.releaseProgram(program);
+		}
+		this.elementPrograms.delete(id);
+
+		// Remove from elements map. Deleted *before* awaiting anything, so a
+		// texture still in flight can see that its element has gone.
 		this.elements.delete(id);
 
 		// Log unregistration
@@ -530,6 +548,18 @@ class WebGLOverlay implements OverlayContextAPI {
 			maxTextureSize: this.options.maxTextureSize,
 			needsCORSWorkaround: this.browserCompatibility.needsCORSWorkaround()
 		});
+
+		// The element may have gone while this was resolving. `registerElement`
+		// does not await this call, so an immediate `unregisterElement` runs
+		// first — and then the texture handle landed on a registration no longer
+		// in the map: never deleted, and the memory accounting never told. Free
+		// it here instead of assigning it to nothing.
+		if (this.destroyed || this.elements.get(registration.id) !== registration) {
+			if (result.texture && this.textureFactory) {
+				this.textureFactory.deleteTexture(result.texture, result.width ?? 0, result.height ?? 0);
+			}
+			return;
+		}
 
 		if (result.error) {
 			registration.error = result.error;
