@@ -24,6 +24,7 @@ export class RenderLoop {
 	private frameCount = 0;
 	private fpsStartTime = 0;
 	private currentFPS = 0;
+	private onVisibilityChange: (() => void) | null = null;
 
 	constructor(targetFPS = 60) {
 		this.targetFPS = targetFPS;
@@ -38,7 +39,12 @@ export class RenderLoop {
 	 * Resumes when tab becomes visible again.
 	 */
 	private setupVisibilityListener(): void {
-		document.addEventListener('visibilitychange', () => {
+		// Retained so `destroy` can remove it. This was an anonymous arrow
+		// passed straight to `addEventListener`, which made it unremovable —
+		// and the class had no `destroy` at all, so every overlay that was ever
+		// mounted left a handler on `document` holding its `RenderLoop` alive
+		// for the life of the page.
+		this.onVisibilityChange = () => {
 			this.tabVisible = !document.hidden;
 
 			if (this.tabVisible && this.running) {
@@ -49,7 +55,25 @@ export class RenderLoop {
 			} else if (!this.tabVisible) {
 				debugLog('[WebGLOverlay] Tab hidden - pausing rendering');
 			}
-		});
+		};
+
+		document.addEventListener('visibilitychange', this.onVisibilityChange);
+	}
+
+	/**
+	 * Stop the loop and release the visibility listener.
+	 *
+	 * Separate from `stop()`, which only cancels the pending frame: the listener
+	 * has to go too, or a mounted-and-unmounted overlay leaves one behind every
+	 * time.
+	 */
+	destroy(): void {
+		this.stop();
+
+		if (this.onVisibilityChange) {
+			document.removeEventListener('visibilitychange', this.onVisibilityChange);
+			this.onVisibilityChange = null;
+		}
 	}
 
 	/**

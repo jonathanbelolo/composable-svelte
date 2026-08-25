@@ -431,8 +431,19 @@ class WebGLOverlay implements OverlayContextAPI {
 	destroy(): void {
 		if (this.destroyed) return;
 
-		// Stop render loop
-		this.stop();
+		// Set first, not last. `loseContext()` below dispatches
+		// `webglcontextlost` synchronously, which runs the context manager's
+		// handler, which calls the consumer's `onContextLost` — on an overlay
+		// they have just torn down — and, because that handler calls
+		// `preventDefault()`, may then trigger `webglcontextrestored` and
+		// rebuild every resource on a destroyed overlay. This flag was set at
+		// the very end, so the guard the class already had could not help.
+		this.destroyed = true;
+
+		// `destroy()`, not `stop()`. `stop()` cancels the pending frame and
+		// leaves the `visibilitychange` listener on `document`, so every overlay
+		// ever mounted left one behind.
+		this.renderLoop.destroy();
 
 		// Unregister all elements
 		for (const id of Array.from(this.elements.keys())) {
@@ -457,6 +468,11 @@ class WebGLOverlay implements OverlayContextAPI {
 		// Clear program cache
 		this.elementPrograms.clear();
 
+		// Before losing the context, so the handlers cannot fire into a
+		// half-destroyed overlay. This also drops the consumer's registered
+		// callbacks, which were never cleared.
+		this.contextManager.destroy();
+
 		// Clean up WebGL resources
 		if (this.gl) {
 			// Delete all textures (already done in unregisterElement)
@@ -466,8 +482,6 @@ class WebGLOverlay implements OverlayContextAPI {
 				loseContext.loseContext();
 			}
 		}
-
-		this.destroyed = true;
 
 		if (this.options.debug) {
 			console.info('[WebGLOverlay] Destroyed');

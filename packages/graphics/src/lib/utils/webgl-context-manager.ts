@@ -27,24 +27,32 @@ export class WebGLContextManager {
 	 * @param canvas - Canvas element to create context from
 	 * @returns WebGL context or null if not supported
 	 */
+	private contextLostHandler: ((e: Event) => void) | null = null;
+	private contextRestoredHandler: (() => void) | null = null;
+
 	initialize(canvas: HTMLCanvasElement): WebGLRenderingContext | null {
 		this.canvas = canvas;
 
-		// Setup context loss handler
-		canvas.addEventListener('webglcontextlost', (e) => {
+		// Retained so `destroy` can remove them. These were anonymous arrows
+		// passed straight to `addEventListener`, and the class had no `destroy`
+		// of any kind, so the handlers — and the manager they close over —
+		// outlived every overlay that ever initialised one.
+		this.contextLostHandler = (e: Event) => {
 			e.preventDefault(); // Prevent default to allow restoration
 			this.contextLost = true;
 			console.warn('[WebGLOverlay] Context lost - will attempt to restore');
 			this.notifyContextLost();
-		});
+		};
 
-		// Setup context restore handler
-		canvas.addEventListener('webglcontextrestored', () => {
+		this.contextRestoredHandler = () => {
 			debugLog('[WebGLOverlay] Context restored - recreating resources');
 			this.contextLost = false;
 			this.gl = this.createContext();
 			this.notifyContextRestored();
-		});
+		};
+
+		canvas.addEventListener('webglcontextlost', this.contextLostHandler);
+		canvas.addEventListener('webglcontextrestored', this.contextRestoredHandler);
 
 		this.gl = this.createContext();
 		return this.gl;
@@ -157,5 +165,29 @@ export class WebGLContextManager {
 		} else {
 			console.warn('[WebGLOverlay] WEBGL_lose_context extension not available');
 		}
+	}
+
+	/**
+	 * Release the canvas listeners and drop every registered callback.
+	 *
+	 * The callback arrays were never cleared either, so a manager kept alive by
+	 * its own listeners also kept every consumer callback reachable.
+	 */
+	destroy(): void {
+		if (this.canvas) {
+			if (this.contextLostHandler) {
+				this.canvas.removeEventListener('webglcontextlost', this.contextLostHandler);
+			}
+			if (this.contextRestoredHandler) {
+				this.canvas.removeEventListener('webglcontextrestored', this.contextRestoredHandler);
+			}
+		}
+
+		this.contextLostHandler = null;
+		this.contextRestoredHandler = null;
+		this.onContextLostCallbacks.length = 0;
+		this.onContextRestoredCallbacks.length = 0;
+		this.canvas = null;
+		this.gl = null;
 	}
 }
