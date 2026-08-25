@@ -4,11 +4,20 @@
  * `OverlayOptions` is documented and reachable, and nothing in the repo passes
  * any of it — `examples/shader-gallery` renders `<WebGLOverlay />` bare — so
  * every field here was exercised by exactly zero code before these tests.
+ *
+ * And for two of them, by exactly zero code afterwards either. The
+ * `maxTextureSize` and `memoryBudget` describes below construct a
+ * `TextureValidator` directly, so they proved that class's arithmetic — which
+ * was never broken — while the one line the fix actually changed,
+ * `new TextureValidator(gl)` discarding both values in `TextureFactory`, could
+ * be restored with the whole suite still green. The unit tests are kept; the
+ * plumbing has its own describe now, and that is the one that bites.
  */
 
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { createOverlay } from '../../src/lib/overlay/webgl-overlay.js';
 import { TextureValidator } from '../../src/lib/utils/texture-validator.js';
+import { OverlayErrorCode } from '../../src/lib/utils/overlay-error.js';
 import type { OverlayContextAPI, OverlayOptions } from '../../src/lib/overlay/overlay-types.js';
 import {
 	createFakeGL,
@@ -84,6 +93,71 @@ describe('maxTextureSize', () => {
 
 		expect(validator.validateSize(2048, 2048).valid).toBe(true);
 		expect(validator.validateSize(8192, 8192).valid).toBe(false);
+	});
+});
+
+describe('the options reach the validator the overlay builds', () => {
+	// The describes above test `TextureValidator`. These test that a consumer's
+	// values arrive at one — through `createOverlay`, which is the only route
+	// that existed to break.
+	const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+	it('scales a registration down to the maxTextureSize the consumer set', async () => {
+		const { api } = overlay({ maxTextureSize: 512 });
+
+		api.registerElement('a', loadedImage(1024, 1024), {
+			type: 'image',
+			shader: 'wave-gentle-horizontal'
+		});
+		await settle();
+
+		expect(api.getElement('a')?.width, 'the 512px limit never reached the validator').toBe(512);
+		api.destroy();
+	});
+
+	it('leaves the same registration at full size when no limit is given', async () => {
+		// The paired half: the driver reports 4096, so 1024 passes untouched.
+		const { api } = overlay();
+
+		api.registerElement('a', loadedImage(1024, 1024), {
+			type: 'image',
+			shader: 'wave-gentle-horizontal'
+		});
+		await settle();
+
+		expect(api.getElement('a')?.width, 'something scaled a texture nobody limited').toBe(1024);
+		api.destroy();
+	});
+
+	it('refuses a registration over the memoryBudget the consumer set', async () => {
+		const onError = vi.fn();
+		const { api } = overlay({ memoryBudget: 1024 * 1024, onError });
+
+		// 1024×1024×4 = 4MB, over a 1MB budget.
+		api.registerElement('a', loadedImage(1024, 1024), {
+			type: 'image',
+			shader: 'wave-gentle-horizontal'
+		});
+		await settle();
+
+		expect(onError, 'the budget never reached the validator').toHaveBeenCalledTimes(1);
+		expect(api.getElement('a')?.texture, 'a texture was created over budget').toBeUndefined();
+		api.destroy();
+	});
+
+	it('admits the same registration under the default budget', async () => {
+		const onError = vi.fn();
+		const { api } = overlay({ onError });
+
+		api.registerElement('a', loadedImage(1024, 1024), {
+			type: 'image',
+			shader: 'wave-gentle-horizontal'
+		});
+		await settle();
+
+		expect(onError, 'a 4MB texture was refused by the 200MB default').not.toHaveBeenCalled();
+		expect(api.getElement('a')?.texture).toBeDefined();
+		api.destroy();
 	});
 });
 

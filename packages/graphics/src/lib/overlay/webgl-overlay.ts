@@ -283,8 +283,8 @@ class WebGLOverlay implements OverlayContextAPI {
 
 		// Delete texture
 		if (registration.texture && this.textureFactory) {
-			const width = (registration as any).textureWidth || 0;
-			const height = (registration as any).textureHeight || 0;
+			const width = registration.width ?? 0;
+			const height = registration.height ?? 0;
 			this.textureFactory.deleteTexture(registration.texture, width, height);
 		}
 
@@ -625,9 +625,16 @@ class WebGLOverlay implements OverlayContextAPI {
 			// Only on the success branch, and only once the texture exists.
 			onTextureLoaded?.();
 
-			// Store dimensions for memory tracking
-			(registration as any).textureWidth = result.width;
-			(registration as any).textureHeight = result.height;
+			// Store dimensions for memory tracking — in the fields
+			// `ElementRegistration` declares for them.
+			//
+			// These were written as `textureWidth`/`textureHeight` through an
+			// `any` cast, so the declared `width` and `height` were never
+			// assigned: two exported fields that `getElement()` handed to the
+			// consumer as permanently `undefined`, next to two ad-hoc properties
+			// the type did not mention.
+			registration.width = result.width;
+			registration.height = result.height;
 		}
 	}
 

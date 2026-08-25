@@ -117,6 +117,20 @@ export interface ElementRegistration {
 	texture?: WebGLTexture;
 
 	/**
+	 * Dimensions of the texture actually created, in pixels
+	 *
+	 * Not the element's dimensions: an oversize image is scaled down to
+	 * `maxTextureSize`, and these report what was uploaded. The memory
+	 * accounting deallocates against them on unregister.
+	 *
+	 * These were written as `textureWidth`/`textureHeight` through an `any`
+	 * cast, so an exported interface carried two properties it did not declare
+	 * and `getElement()` handed them out untyped.
+	 */
+	width?: number | undefined;
+	height?: number | undefined;
+
+	/**
 	 * Animation frame ID (for video elements)
 	 */
 	animationFrameId?: number;

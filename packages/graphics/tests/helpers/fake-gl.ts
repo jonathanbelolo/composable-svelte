@@ -312,6 +312,14 @@ export function installFakeGL(fake: FakeGL): () => void {
 			fake.canvas = this;
 			return fake.context;
 		}
+		// A minimal 2D context, because `TextureFactory.scaleImage` needs one.
+		// Returning null here made the auto-scaling path — the whole reason
+		// `maxTextureSize` produces a smaller texture rather than an error —
+		// fail for want of a canvas, which looks from a test exactly like the
+		// size limit working.
+		if (type === '2d') {
+			return { drawImage: () => undefined } as unknown as CanvasRenderingContext2D;
+		}
 		return null;
 	} as typeof original;
 

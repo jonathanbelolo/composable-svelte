@@ -5,9 +5,18 @@
  * own TODO saying so. Registration returns synchronously and the texture
  * resolves later, so the callback fired on CORS rejection, on an oversize
  * texture, on an unloaded image — and early for anything slower than 100ms.
+ *
+ * The defect was in the component, and for a while every test here drove
+ * `createOverlay` instead. Re-inserting the exact `setTimeout` left the whole
+ * suite green, as did deleting the line that forwards the callback at all. The
+ * core tests are still worth having — they are where the success and failure
+ * branches live — but the component has its own describe at the bottom now,
+ * and that is the one the defect could not survive.
  */
 
 import { describe, it, expect, afterEach, vi } from 'vitest';
+import { mount, unmount } from 'svelte';
+import WebGLOverlay from '../../src/lib/overlay/WebGLOverlay.svelte';
 import { createOverlay } from '../../src/lib/overlay/webgl-overlay.js';
 import type { OverlayContextAPI } from '../../src/lib/overlay/overlay-types.js';
 import {
@@ -18,9 +27,13 @@ import {
 } from '../helpers/fake-gl.js';
 
 let undo: Array<() => void> = [];
+let mounted: Array<Record<string, unknown>> = [];
 afterEach(() => {
+	mounted.forEach((instance) => unmount(instance));
+	mounted = [];
 	undo.forEach((fn) => fn());
 	undo = [];
+	document.body.innerHTML = '';
 	vi.restoreAllMocks();
 });
 
@@ -90,5 +103,63 @@ describe('onTextureLoaded', () => {
 
 		expect(onTextureLoaded, 'a discarded element reported a load').not.toHaveBeenCalled();
 		api.destroy();
+	});
+});
+
+describe('the component forwards it rather than timing it', () => {
+	type Component = {
+		registerElement(registration: {
+			id: string;
+			domElement: HTMLElement;
+			shader: unknown;
+			onTextureLoaded?: () => void;
+		}): void;
+	};
+
+	async function component(): Promise<{ fake: FakeGL; api: Component }> {
+		const fake = createFakeGL();
+		undo.push(installFakeGL(fake), installFakeObservers());
+		const target = document.createElement('div');
+		document.body.appendChild(target);
+		const api = mount(WebGLOverlay, { target }) as unknown as Component;
+		mounted.push(api as unknown as Record<string, unknown>);
+		await settle();
+		return { fake, api };
+	}
+
+	it('reports a load exactly once', async () => {
+		// Once, not twice: a component that both forwards the callback and
+		// keeps its own timer would fire it again 100ms later.
+		const onTextureLoaded = vi.fn();
+		const { api } = await component();
+
+		api.registerElement({
+			id: 'a',
+			domElement: loadedImage(),
+			shader: 'wave-gentle-horizontal',
+			onTextureLoaded
+		});
+		await new Promise((resolve) => setTimeout(resolve, 200));
+
+		expect(onTextureLoaded, 'the component did not forward the callback').toHaveBeenCalledTimes(1);
+	});
+
+	it('stays silent when the texture never loads, however long you wait', async () => {
+		// The timer's actual behaviour, and the reason it was wrong: an <img>
+		// that never loaded reported success 100ms later regardless. Waiting
+		// past that is the whole test.
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		const onTextureLoaded = vi.fn();
+		const { api } = await component();
+
+		api.registerElement({
+			id: 'a',
+			domElement: document.createElement('img'),
+			shader: 'wave-gentle-horizontal',
+			onTextureLoaded
+		});
+		await new Promise((resolve) => setTimeout(resolve, 200));
+
+		expect(onTextureLoaded, 'a failed load was reported as a success').not.toHaveBeenCalled();
 	});
 });
