@@ -11,6 +11,7 @@
 
 import { OverlayError, OverlayErrorCode } from '../utils/overlay-error.js';
 import { TextureValidator, type TextureValidationResult } from '../utils/texture-validator.js';
+import { noDebug, type DebugLog } from '../utils/debug.js';
 import type {
 	ElementType,
 	TextureCreationOptions,
@@ -30,9 +31,10 @@ export class TextureFactory {
 		// write-only property of the class — the category `457c7e6` deleted ten
 		// members for, on this very class.
 		memoryBudget: number,
-		private needsCORSWorkaround: boolean
+		private needsCORSWorkaround: boolean,
+		log: DebugLog = noDebug
 	) {
-		this.textureValidator = new TextureValidator(gl, maxTextureSize, memoryBudget);
+		this.textureValidator = new TextureValidator(gl, maxTextureSize, memoryBudget, log);
 	}
 
 	/**

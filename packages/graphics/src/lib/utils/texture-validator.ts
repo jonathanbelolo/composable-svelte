@@ -10,7 +10,7 @@
  * Exceeding limits causes silent failures - textures won't render.
  */
 
-import { debugLog } from './debug.js';
+import { noDebug, type DebugLog } from './debug.js';
 
 export interface TextureValidationResult {
 	valid: boolean;
@@ -52,7 +52,12 @@ export class TextureValidator {
 	 * stored on `TextureFactory` and never read again, while the real budget was
 	 * the hard-coded default below, whose only setter had zero callers.
 	 */
-	constructor(gl: WebGLRenderingContext, maxTextureSize?: number, memoryBudget?: number) {
+	constructor(
+		gl: WebGLRenderingContext,
+		maxTextureSize?: number,
+		memoryBudget?: number,
+		private log: DebugLog = noDebug
+	) {
 		const driverMax = gl.getParameter(gl.MAX_TEXTURE_SIZE);
 
 		// The consumer can only narrow: asking for more than the driver allows
@@ -64,7 +69,7 @@ export class TextureValidator {
 			this.maxMemoryBudget = memoryBudget;
 		}
 
-		debugLog(`[WebGLOverlay] Max texture size: ${this.maxTextureSize}x${this.maxTextureSize}`);
+		this.log(`[WebGLOverlay] Max texture size: ${this.maxTextureSize}x${this.maxTextureSize}`);
 	}
 
 	/**

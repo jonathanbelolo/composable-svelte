@@ -54,4 +54,4 @@ export {
 } from './webgl-support.js';
 
 // Debug logging
-export { setDebugLogging, isDebugLogging, debugLog } from './debug.js';
+export { createLogger, noDebug, type DebugLog } from './debug.js';

@@ -9,7 +9,7 @@
  * - Edge: Chromium-based but some differences
  */
 
-import { debugLog } from './debug.js';
+import { noDebug, type DebugLog } from './debug.js';
 
 export type BrowserType = 'chrome' | 'firefox' | 'safari' | 'edge' | 'unknown';
 
@@ -24,7 +24,7 @@ export class BrowserCompatibility {
 	readonly browser: BrowserType;
 	readonly version: number;
 
-	constructor() {
+	constructor(private log: DebugLog = noDebug) {
 		const ua = navigator.userAgent;
 
 		// Detect browser type and version
@@ -52,7 +52,7 @@ export class BrowserCompatibility {
 	 * Log browser information to console
 	 */
 	logBrowserInfo(): void {
-		debugLog('[WebGLOverlay] Browser:', {
+		this.log('[WebGLOverlay] Browser:', {
 			browser: this.browser,
 			version: this.version,
 			needsCORSWorkaround: this.needsCORSWorkaround(),

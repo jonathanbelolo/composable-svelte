@@ -1,42 +1,41 @@
 /**
- * Package-level debug logging.
+ * Per-overlay debug logging.
  *
- * `WebGLOverlay` accepts a `debug` option and honours it around most of its own
- * logging, but the utility classes it composes (render loop, texture validator,
- * device capabilities, browser compatibility, context manager) take no options
- * and logged unconditionally — so consumers saw `[WebGLOverlay]` lines on every
- * tab visibility change whether or not they asked for them.
+ * This used to be a module-level `let enabled = false` that `WebGLOverlay` set
+ * from its `debug` option, on the argument that "threading a flag through five
+ * constructors would be noise". The convenience cost three defects:
  *
- * Threading a flag through five constructors would be noise; the overlay sets
- * this once instead.
+ * - two overlays on one page fought over it, the second constructed winning for
+ *   both, so `<WebGLOverlay options={{debug:true}} />` beside a plain one
+ *   silently turned its own logging off;
+ * - `destroy()` never reset it, so one `debug: true` overlay left package-wide
+ *   logging on for the life of the page after it unmounted;
+ * - and the flag was set *after* `BrowserCompatibility` and `DeviceCapabilities`
+ *   had been constructed, both of which log from their constructors — so the
+ *   browser and device lines, which are precisely what `debug: true` is for,
+ *   never printed on the first overlay.
+ *
+ * A logger passed to the classes that need one has none of those properties,
+ * and leaves no mutable module state for tests to leak through.
  *
  * @packageDocumentation
  */
 
-let enabled = false;
+/** Logs a diagnostic message, or discards it. */
+export type DebugLog = (...args: unknown[]) => void;
+
+/** The default for every utility: log nothing. */
+export const noDebug: DebugLog = () => {};
 
 /**
- * Enable or disable package debug logging.
- *
- * Called by `WebGLOverlay` from its `debug` option.
- */
-export function setDebugLogging(value: boolean): void {
-	enabled = value;
-}
-
-/** Whether debug logging is currently on. */
-export function isDebugLogging(): boolean {
-	return enabled;
-}
-
-/**
- * Log a diagnostic message, but only when debug logging is enabled.
+ * A logger for one overlay.
  *
  * @example
  * ```typescript
- * debugLog('[WebGLOverlay] Tab hidden - pausing rendering');
+ * const log = createLogger(options.debug ?? false);
+ * const loop = new RenderLoop(targetFPS, log);
  * ```
  */
-export function debugLog(...args: unknown[]): void {
-	if (enabled) console.info(...args);
+export function createLogger(enabled: boolean): DebugLog {
+	return enabled ? (...args: unknown[]) => console.info(...args) : noDebug;
 }

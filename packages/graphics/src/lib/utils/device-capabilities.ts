@@ -10,7 +10,7 @@
  * - Slower GPUs and less memory
  */
 
-import { debugLog } from './debug.js';
+import { noDebug, type DebugLog } from './debug.js';
 
 export interface DeviceInfo {
 	isMobile: boolean;
@@ -33,7 +33,7 @@ export class DeviceCapabilities {
 	readonly recommendedMaxElements: number;
 	readonly supportsWebGL2: boolean;
 
-	constructor(gl: WebGLRenderingContext) {
+	constructor(gl: WebGLRenderingContext, private log: DebugLog = noDebug) {
 		const ua = navigator.userAgent;
 
 		// Detect platform
@@ -75,7 +75,7 @@ export class DeviceCapabilities {
 	 * Log device capabilities to console
 	 */
 	private logCapabilities(): void {
-		debugLog('[WebGLOverlay] Device capabilities:', {
+		this.log('[WebGLOverlay] Device capabilities:', {
 			isMobile: this.isMobile,
 			platform: this.platform,
 			maxTextureSize: this.maxTextureSize,

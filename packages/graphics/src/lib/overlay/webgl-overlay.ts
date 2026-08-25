@@ -22,7 +22,7 @@ import { DeviceCapabilities } from '../utils/device-capabilities.js';
 import { BrowserCompatibility } from '../utils/browser-compatibility.js';
 import { OverlayError, OverlayErrorCode } from '../utils/overlay-error.js';
 import { checkWebGLSupport } from '../utils/webgl-support.js';
-import { debugLog, setDebugLogging } from '../utils/debug.js';
+import { createLogger, type DebugLog } from '../utils/debug.js';
 import { ShaderProgramManager } from '../shaders/shader-program-manager.js';
 import { RenderPipeline } from '../shaders/render-pipeline.js';
 import { DEFAULT_VERTEX_SHADER, DEFAULT_FRAGMENT_SHADER } from '../shaders/default-shaders.js';
@@ -86,11 +86,21 @@ class WebGLOverlay implements OverlayContextAPI {
 	private elementPrograms = new Map<string, CompiledProgram>();
 	private options: Required<OverlayOptions>;
 	private readonly ownsCanvas: boolean;
+	private readonly log: DebugLog;
 	private destroyed = false;
 
 	constructor(options: OverlayInit = {}) {
+		// The logger comes first, before anything that might use it.
+		//
+		// This used to be a module-level flag set 59 lines below, after
+		// `BrowserCompatibility` and `DeviceCapabilities` had already been
+		// constructed — and both log from their constructors, so the browser and
+		// device lines never printed on the first overlay of a page. They are
+		// the two lines `debug: true` exists for.
+		this.log = createLogger(options.debug ?? false);
+
 		// Initialize browser compatibility first
-		this.browserCompatibility = new BrowserCompatibility();
+		this.browserCompatibility = new BrowserCompatibility(this.log);
 
 		// Set up canvas. Whether we made it decides whether `destroy()` may lose
 		// its context: doing that to a canvas the caller owns kills it for good.
@@ -115,7 +125,7 @@ class WebGLOverlay implements OverlayContextAPI {
 		const acquired: Array<() => void> = [];
 		try {
 				// Initialize context manager
-				this.contextManager = new WebGLContextManager();
+				this.contextManager = new WebGLContextManager(this.log);
 			acquired.push(() => this.contextManager.destroy());
 
 			// Set up context loss/restore callbacks.
@@ -136,7 +146,7 @@ class WebGLOverlay implements OverlayContextAPI {
 			});
 
 			this.contextManager.onContextRestored(() => {
-				debugLog('[WebGLOverlay] WebGL context restored');
+				this.log('[WebGLOverlay] WebGL context restored');
 				if (recoverAutomatically) {
 					this.recreateResources();
 				}
@@ -152,7 +162,7 @@ class WebGLOverlay implements OverlayContextAPI {
 			}
 
 			// Initialize device capabilities
-			this.deviceCapabilities = new DeviceCapabilities(this.gl);
+			this.deviceCapabilities = new DeviceCapabilities(this.gl, this.log);
 
 			// Merge options with defaults
 			this.options = {
@@ -165,10 +175,6 @@ class WebGLOverlay implements OverlayContextAPI {
 				onContextRestored: options.onContextRestored ?? (() => {}),
 				onError: options.onError ?? (() => {})
 			};
-
-			// The utility classes take no options of their own, so the flag is set
-			// once here and read by `debugLog`.
-			setDebugLogging(this.options.debug);
 
 			// Initialize texture factory
 			this.textureFactory = new TextureFactory(
@@ -194,7 +200,7 @@ class WebGLOverlay implements OverlayContextAPI {
 			});
 
 			// Initialize render loop
-			this.renderLoop = new RenderLoop(this.options.targetFPS);
+			this.renderLoop = new RenderLoop(this.options.targetFPS, this.log);
 			acquired.push(() => this.renderLoop.destroy());
 
 			// Initialize position tracker
@@ -939,7 +945,7 @@ class WebGLOverlay implements OverlayContextAPI {
 	private recreateResources(): void {
 		if (!this.gl) return;
 
-		debugLog('[WebGLOverlay] Recreating resources after context restore');
+		this.log('[WebGLOverlay] Recreating resources after context restore');
 
 		// Release the outgoing owners before replacing them. They were simply
 		// overwritten, so their caches, buffer handles and the objects
@@ -953,14 +959,15 @@ class WebGLOverlay implements OverlayContextAPI {
 		this.renderPipeline?.destroy();
 
 		// Reinitialize device capabilities
-		this.deviceCapabilities = new DeviceCapabilities(this.gl);
+		this.deviceCapabilities = new DeviceCapabilities(this.gl, this.log);
 
 		// Reinitialize texture factory
 		this.textureFactory = new TextureFactory(
 			this.gl,
 			this.options.maxTextureSize,
 			this.options.memoryBudget,
-			this.browserCompatibility.needsCORSWorkaround()
+			this.browserCompatibility.needsCORSWorkaround(),
+			this.log
 		);
 
 		// Reinitialize shader program manager
@@ -988,6 +995,6 @@ class WebGLOverlay implements OverlayContextAPI {
 			this.compileElementShader(registration);
 		}
 
-		debugLog('[WebGLOverlay] Resources recreated');
+		this.log('[WebGLOverlay] Resources recreated');
 	}
 }
