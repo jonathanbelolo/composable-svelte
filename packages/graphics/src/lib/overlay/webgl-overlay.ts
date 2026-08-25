@@ -687,9 +687,19 @@ class WebGLOverlay implements OverlayContextAPI {
 		gl.clearColor(0, 0, 0, 0); // Transparent
 		gl.clear(gl.COLOR_BUFFER_BIT);
 
-		// Render each element
+		// Render each element that has something to render with.
+		//
+		// This used to also skip any element with a truthy `error`, which was
+		// both redundant and destructive. Redundant because `renderElement`
+		// already returns without a program or a texture, and those are the two
+		// things a failure leaves missing. Destructive because `error` is set by
+		// a failed `setShader` on an element that still has a perfectly good
+		// program and texture — and nothing cleared it, so a single bad shader
+		// blanked the element permanently, with no public call that could bring
+		// it back. `compileElementShader` clears it on success now, so the field
+		// reports the last operation rather than latching forever.
 		for (const registration of this.elements.values()) {
-			if (registration.texture && !registration.error) {
+			if (registration.texture) {
 				this.renderElement(registration, deltaTime);
 			}
 		}
@@ -808,7 +818,12 @@ class WebGLOverlay implements OverlayContextAPI {
 			return false;
 		}
 
-		// Cache compiled program
+		// Cache compiled program. A success clears whatever error was standing:
+		// without this there is no way back from a failed recompile, because
+		// nothing else ever clears the field for an element whose texture is
+		// already made — and `static` is the default strategy, so the texture
+		// path that clears it will not run again either.
+		delete registration.error;
 		this.elementPrograms.set(registration.id, result);
 		return true;
 	}

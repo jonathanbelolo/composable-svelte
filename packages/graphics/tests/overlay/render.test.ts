@@ -183,3 +183,66 @@ describe('updateUniforms reaches GL', () => {
 		expect(fake.uniforms().get('uIntensity'), "b's declared uniform never reached GL").toBe(0.75);
 	});
 });
+
+describe('a failed recompile does not blank the element', () => {
+	const badShader = { fragment: 'precision mediump float; void main() { gl_FragColor = broken; }' };
+
+	it('keeps drawing what it was drawing', async () => {
+		// `compileElementShader` set `registration.error`, `render()` skipped any
+		// element with one, and nothing cleared it. So one bad shader stopped
+		// the element for good — and the fix's own comment claimed it "keeps the
+		// element rendering what it was rendering", which was the opposite of
+		// what happened.
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		const { fake, api } = overlay();
+
+		api.registerElement('a', boundedImage(), { type: 'image', shader: 'ripple-gentle' });
+		await frame(api);
+		expect(fake.drawCalls(), 'nothing drew before the failure').toBeGreaterThan(0);
+
+		(fake.context as unknown as Record<string, unknown>).getShaderParameter = () => false;
+		api.setShader('a', badShader);
+		(fake.context as unknown as Record<string, unknown>).getShaderParameter = () => true;
+
+		fake.clearCalls();
+		await frame(api);
+
+		expect(fake.drawCalls(), 'a failed recompile stopped the element drawing').toBeGreaterThan(0);
+	});
+
+	it('recovers when a valid shader is set afterwards', async () => {
+		// The other half of the same defect: even setting a *working* shader
+		// could not revive the element, because the error latched.
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		const { fake, api } = overlay();
+
+		api.registerElement('a', boundedImage(), { type: 'image', shader: 'ripple-gentle' });
+		await frame(api);
+
+		(fake.context as unknown as Record<string, unknown>).getShaderParameter = () => false;
+		api.setShader('a', badShader);
+		(fake.context as unknown as Record<string, unknown>).getShaderParameter = () => true;
+
+		api.setShader('a', 'wave-flowing');
+		fake.clearCalls();
+		await frame(api);
+
+		expect(api.getElement('a')?.error, 'the error latched past a successful recompile').toBeUndefined();
+		expect(fake.drawCalls(), 'the element never came back').toBeGreaterThan(0);
+	});
+
+	it('still refuses to draw an element whose texture never arrived', async () => {
+		// The paired half. Dropping the error gate must not start drawing
+		// elements that have nothing to draw.
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		const { fake, api } = overlay();
+
+		api.registerElement('a', document.createElement('img'), {
+			type: 'image',
+			shader: 'ripple-gentle'
+		});
+		await frame(api);
+
+		expect(fake.drawCalls(), 'an element with no texture was drawn').toBe(0);
+	});
+});
