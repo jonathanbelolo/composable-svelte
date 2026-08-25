@@ -72,4 +72,15 @@
 <Scene {store} {width} {height} {children} />
 <Camera {store} {type} {position} {lookAt} {fov} {orthoSize} />
 <Light {store} id={lightId} type="point" {position} {intensity} {color} />
+<!--
+	A second arm, forwarded with only the props ambient lights have.
+
+	`ImageGalleryPropForwarding` records why this matters: an *omitted* key
+	proves nothing, only a named one asks the question. This line goes red if the
+	ambient arm ever starts requiring `position`, which the union's exclusion
+	markers make easy to do by accident. The rejections — that ambient refuses
+	`position` at all — are pinned in `tests/light-props.types.ts`, because a
+	positive fixture can never prove a type refuses something.
+-->
+<Light {store} id={lightId} type="ambient" {intensity} {color} />
 <Mesh {store} id={meshId} {geometry} {material} position={meshPosition} {rotation} {visible} />

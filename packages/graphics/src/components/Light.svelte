@@ -8,7 +8,90 @@ import { onDestroy, untrack } from 'svelte';
 import type { Store } from '@composable-svelte/core';
 import type { GraphicsState, GraphicsAction, LightConfig } from '../core/types.js';
 
-// Props
+/**
+ * Props, discriminated by `type`.
+ *
+ * These used to be one flat object with every variant field optional, so
+ * `<Light type="ambient" position={[0,5,0]} radius={10} />` compiled clean and
+ * both props were silently dropped by the switch below. `LightConfig` is a
+ * proper discriminated union; the component threw that away at its boundary.
+ *
+ * Two details are load-bearing, both learned from `ImageGallery.svelte`, the
+ * repo's only other union-typed `$props()`:
+ *
+ * - the exclusion markers are `?: undefined`, **not** `?: never`. `never`
+ *   refuses an explicit `undefined`, which is exactly what a forwarding wrapper
+ *   holds under `exactOptionalPropertyTypes` — so neither arm could be
+ *   forwarded. `?: undefined` still refuses a real value, which is all that is
+ *   needed to reject `radius={10}` on an ambient light.
+ * - every arm declares every key, which is what makes the union destructurable.
+ *
+ * Each arm spells out `id` and `color` rather than extending a shared base:
+ * `optional-props.test.ts` only scans an interface's *own* body, so anything
+ * inherited would go unchecked by the guard that exists to catch exactly the
+ * `T?` versus `T | undefined` mistake.
+ */
+interface AmbientLightProps {
+  store: Store<GraphicsState, GraphicsAction>;
+  /**
+   * Stable identity for this light. Optional: one is generated when you do not
+   * supply it, so existing markup is unaffected. Supply it if you need to
+   * address the light from outside this component.
+   */
+  id?: string | undefined;
+  type: 'ambient';
+  intensity: number;
+  color?: string | undefined;
+  position?: undefined;
+  direction?: undefined;
+  angle?: undefined;
+  radius?: undefined;
+}
+
+interface DirectionalLightProps {
+  store: Store<GraphicsState, GraphicsAction>;
+  id?: string | undefined;
+  type: 'directional';
+  /** The direction the light travels in. A directional light has no position. */
+  direction?: [number, number, number] | undefined;
+  intensity: number;
+  color?: string | undefined;
+  position?: undefined;
+  angle?: undefined;
+  radius?: undefined;
+}
+
+interface PointLightProps {
+  store: Store<GraphicsState, GraphicsAction>;
+  id?: string | undefined;
+  type: 'point';
+  position?: [number, number, number] | undefined;
+  radius?: number | undefined;
+  intensity: number;
+  color?: string | undefined;
+  direction?: undefined;
+  angle?: undefined;
+}
+
+interface SpotLightProps {
+  store: Store<GraphicsState, GraphicsAction>;
+  id?: string | undefined;
+  type: 'spot';
+  position?: [number, number, number] | undefined;
+  direction?: [number, number, number] | undefined;
+  /** Cone half-angle in radians. */
+  angle?: number | undefined;
+  intensity: number;
+  color?: string | undefined;
+  radius?: undefined;
+}
+
+type LightProps =
+  | AmbientLightProps
+  | DirectionalLightProps
+  | PointLightProps
+  | SpotLightProps;
+
 let {
   store,
   id: providedId,
@@ -19,22 +102,7 @@ let {
   intensity,
   radius,
   color
-}: {
-  store: Store<GraphicsState, GraphicsAction>;
-  /**
-   * Stable identity for this light. Optional: one is generated when you do not
-   * supply it, so existing markup is unaffected. Supply it if you need to
-   * address the light from outside this component.
-   */
-  id?: string | undefined;
-  type: 'directional' | 'point' | 'spot' | 'ambient';
-  position?: [number, number, number] | undefined;
-  direction?: [number, number, number] | undefined;
-  angle?: number | undefined;
-  intensity: number;
-  radius?: number | undefined;
-  color?: string | undefined;
-} = $props();
+}: LightProps = $props();
 
 /**
  * `$props.id()` is stable for the lifetime of this component instance and
@@ -49,26 +117,45 @@ let {
 const uid = $props.id();
 const lightId = $derived(providedId ?? uid);
 
-// Build light config
+// Build light config.
+//
+// Conditional spreads rather than `as LightConfig` casts, which is the idiom
+// `Camera.svelte` already uses and for the reason recorded there: a bare
+// `{ radius }` sends `radius: undefined`, and the reducer's spread merge lets
+// that overwrite a configured value. The casts existed to paper over exactly
+// that mismatch.
 const lightConfig = $derived(
-  (() => {
+  ((): LightConfig => {
+    const base = {
+      id: lightId,
+      intensity,
+      ...(color !== undefined && { color })
+    };
+
     switch (type) {
       case 'ambient':
-        return { id: lightId, type, intensity, color } as LightConfig;
+        return { ...base, type };
       case 'directional':
-        return { id: lightId, type, position: position || [0, 1, 0], intensity, color } as LightConfig;
+        // The default is unchanged from when this prop was called `position`;
+        // renaming it should not also move it.
+        return { ...base, type, direction: direction ?? [0, 1, 0] };
       case 'point':
-        return { id: lightId, type, position: position || [0, 1, 0], intensity, radius, color } as LightConfig;
+        return {
+          ...base,
+          type,
+          position: position ?? [0, 1, 0],
+          ...(radius !== undefined && { radius })
+        };
       case 'spot':
         return {
-          id: lightId,
+          ...base,
           type,
-          position: position || [0, 1, 0],
-          direction: direction || [0, -1, 0],
-          angle: angle || Math.PI / 4,
-          intensity,
-          color
-        } as LightConfig;
+          position: position ?? [0, 1, 0],
+          direction: direction ?? [0, -1, 0],
+          // `??`, not `||`: `angle={0}` is a degenerate cone, but it is what
+          // the caller asked for, and `||` silently replaced it with 45°.
+          angle: angle ?? Math.PI / 4
+        };
     }
   })()
 );

@@ -77,7 +77,7 @@ function rotateShapes() {
 <Scene {store} height="500px">
   <Camera {store} position={[0, 4, 12]} lookAt={[0, 0, 0]} fov={45} />
   <Light {store} type="ambient" intensity={0.4} />
-  <Light {store} type="directional" position={[5, 10, 7.5]} intensity={1.2} />
+  <Light {store} type="directional" direction={[5, 10, 7.5]} intensity={1.2} />
 
   <Mesh
     {store}
@@ -202,7 +202,7 @@ that is already taken warns and renders nothing rather than fighting the first
 one for it.
 
 ```svelte
-<Light {store} id="key" type="directional" position={[5, 10, 7]} intensity={1.2} />
+<Light {store} id="key" type="directional" direction={[5, 10, 7]} intensity={1.2} />
 ```
 
 Changing `id` moves the light rather than orphaning it, and unmounting removes
@@ -223,18 +223,25 @@ Uniform light from all directions (no position/direction).
 <Light {store} type="ambient" intensity={0.4} color="#ffffff" />
 ```
 
+**The props below are discriminated by `type`.** Passing one that does not
+belong to the type you asked for — `radius` on an ambient light, `angle` on a
+point light — is a compile error, not a silent drop.
+
 ### Directional Light
 Parallel rays from a specific direction (like sunlight).
 
 **Props**:
 - `type: 'directional'`
-- `position: [number, number, number]` - Light position (defines direction)
+- `direction: [number, number, number]` - The direction the light travels in
+  (optional; defaults to `[0, 1, 0]`). A directional light has no position —
+  this prop was called `position` until recently, and never was one: the adapter
+  passed it straight into Babylon's direction argument.
 - `intensity: number` - Light intensity
 - `color: string` - Light color (optional)
 
 **Usage**:
 ```svelte
-<Light {store} type="directional" position={[5, 10, 7.5]} intensity={1.2} />
+<Light {store} type="directional" direction={[5, 10, 7.5]} intensity={1.2} />
 ```
 
 ### Point Light
@@ -280,13 +287,13 @@ Cone-shaped light (like a flashlight).
 ```svelte
 <!-- Three-point lighting (photography standard) -->
 <Light {store} type="ambient" intensity={0.3} />
-<Light {store} type="directional" position={[5, 5, 5]} intensity={1.0} />     <!-- Key -->
-<Light {store} type="directional" position={[-3, 3, -3]} intensity={0.5} />   <!-- Fill -->
-<Light {store} type="directional" position={[0, 2, -5]} intensity={0.3} />    <!-- Back -->
+<Light {store} type="directional" direction={[5, 5, 5]} intensity={1.0} />     <!-- Key -->
+<Light {store} type="directional" direction={[-3, 3, -3]} intensity={0.5} />   <!-- Fill -->
+<Light {store} type="directional" direction={[0, 2, -5]} intensity={0.3} />    <!-- Back -->
 
 <!-- Outdoor scene (sun + ambient) -->
 <Light {store} type="ambient" intensity={0.4} color="#87ceeb" />
-<Light {store} type="directional" position={[10, 20, 10]} intensity={1.5} color="#fff8dc" />
+<Light {store} type="directional" direction={[10, 20, 10]} intensity={1.5} color="#fff8dc" />
 
 <!-- Indoor scene (ambient + point lights) -->
 <Light {store} type="ambient" intensity={0.2} />
@@ -635,7 +642,7 @@ function rotateShapes() {
 <Scene {store} height="500px">
   <Camera {store} position={[0, 4, 12]} lookAt={[0, 0, 0]} fov={45} />
   <Light {store} type="ambient" intensity={0.4} color="#ffffff" />
-  <Light {store} type="directional" position={[5, 10, 7.5]} intensity={1.2} color="#ffffff" />
+  <Light {store} type="directional" direction={[5, 10, 7.5]} intensity={1.2} color="#ffffff" />
 
   <!-- Row 1: Box, Sphere, Cylinder -->
   <Mesh
@@ -955,7 +962,7 @@ function adjustBrightness(delta: number) {
   lightIntensity = Math.max(0, Math.min(2, lightIntensity + delta));
 }
 
-<Light {store} type="directional" position={[5, 10, 7.5]} intensity={lightIntensity} />
+<Light {store} type="directional" direction={[5, 10, 7.5]} intensity={lightIntensity} />
 <button onclick={() => adjustBrightness(0.2)}>Brighter</button>
 <button onclick={() => adjustBrightness(-0.2)}>Dimmer</button>
 ```

@@ -381,7 +381,7 @@ export class BabylonAdapter {
       }
 
       case 'directional': {
-        const [x, y, z] = config.position;
+        const [x, y, z] = config.direction;
         light = new DirectionalLight(
           `directional-${config.id}`,
           new BabylonVector3(x, y, z),
@@ -464,7 +464,7 @@ export class BabylonAdapter {
       case 'ambient':
         break;
       case 'directional': {
-        const [x, y, z] = config.position;
+        const [x, y, z] = config.direction;
         (existing as DirectionalLight).direction = new BabylonVector3(x, y, z);
         break;
       }

@@ -99,7 +99,16 @@ export type LightConfig =
   | {
       id: string;
       type: 'directional';
-      position: Vector3;
+      /**
+       * The direction the light travels in.
+       *
+       * This was called `position`, and a directional light has none: the
+       * adapter passed the value straight into Babylon's `DirectionalLight`
+       * direction argument and `updateLight` assigned it to `.direction`. The
+       * name described neither the type nor the behaviour. `spot` has always
+       * spelled its own the same way.
+       */
+      direction: Vector3;
       intensity: number;
       color?: Color;
     }

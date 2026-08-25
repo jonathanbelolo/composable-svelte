@@ -62,7 +62,7 @@ function rotateShapes() {
       <Scene {store} height="500px">
         <Camera {store} position={[0, 4, 12]} lookAt={[0, 0, 0]} fov={45} />
         <Light {store} type="ambient" intensity={0.4} color="#ffffff" />
-        <Light {store} type="directional" position={[5, 10, 7.5]} intensity={1.2} color="#ffffff" />
+        <Light {store} type="directional" direction={[5, 10, 7.5]} intensity={1.2} color="#ffffff" />
 
         <!-- Row 1: Box, Sphere, Cylinder -->
         <Mesh

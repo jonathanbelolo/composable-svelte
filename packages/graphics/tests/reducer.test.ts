@@ -214,7 +214,7 @@ describe('Graphics Reducer', () => {
           light: {
             id: 'key',
             type: 'directional',
-            position: [1, 1, 1],
+            direction: [1, 1, 1],
             intensity: 0.8,
             color: '#ffffff'
           }
@@ -274,7 +274,7 @@ describe('Graphics Reducer', () => {
         }
       ];
       initialState.lights = [
-        { id: 'key', type: 'directional', position: [1, 1, 1], intensity: 1, color: '#ffffff' }
+        { id: 'key', type: 'directional', direction: [1, 1, 1], intensity: 1, color: '#ffffff' }
       ];
 
       const store = new TestStore({

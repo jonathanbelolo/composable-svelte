@@ -127,7 +127,7 @@ describe('lights are updated, not reconstructed', () => {
 
   it('rebuilds when the type changes, because that is a different class', () => {
     h.adapter.addLight({ id: 'key', type: 'point', position: [0, 1, 0], intensity: 1 });
-    h.adapter.updateLight('key', { id: 'key', type: 'directional', position: [0, -1, 0], intensity: 1 });
+    h.adapter.updateLight('key', { id: 'key', type: 'directional', direction: [0, -1, 0], intensity: 1 });
 
     expect(h.scene.lights.length).toBe(1);
     expect(h.scene.lights[0]!.getClassName()).toBe('DirectionalLight');

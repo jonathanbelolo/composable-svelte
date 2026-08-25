@@ -54,6 +54,89 @@ function mountIn(Component: unknown, props: Record<string, unknown>) {
 	return { target, instance, teardown };
 }
 
+describe('the config each type builds', () => {
+	// `<Light>` used to declare one flat props object and drop, per type,
+	// whatever that arm's switch case did not name — so these were the arms
+	// nothing ever checked. The props type is discriminated now, and
+	// `tests/light-props.types.ts` pins the rejections; these pin what the
+	// accepted props actually become.
+
+	it('sends a directional light a direction, not a position', () => {
+		const store = makeStore();
+		mountIn(Light, { store, id: 'key', type: 'directional', direction: [1, 2, 3], intensity: 1 });
+		flushSync();
+
+		const light = store.state.lights.find((l) => l.id === 'key');
+		expect(light).toMatchObject({ type: 'directional', direction: [1, 2, 3] });
+		expect(light, 'a directional light was given a position').not.toHaveProperty('position');
+	});
+
+	it('honours angle={0} instead of replacing it with 45°', () => {
+		// `angle || Math.PI / 4`. A zero cone is degenerate, but it is what the
+		// caller asked for, and `||` silently substituted its own answer.
+		const store = makeStore();
+		mountIn(Light, {
+			store,
+			id: 'spot',
+			type: 'spot',
+			position: [0, 5, 0],
+			direction: [0, -1, 0],
+			angle: 0,
+			intensity: 1
+		});
+		flushSync();
+
+		expect(store.state.lights.find((l) => l.id === 'spot')).toMatchObject({ angle: 0 });
+	});
+
+	it('still defaults the angle when none is given', () => {
+		// The paired half — `??` must not stop defaulting.
+		const store = makeStore();
+		mountIn(Light, { store, id: 'spot', type: 'spot', position: [0, 5, 0], intensity: 1 });
+		flushSync();
+
+		expect(store.state.lights.find((l) => l.id === 'spot')).toMatchObject({
+			angle: Math.PI / 4
+		});
+	});
+
+	it('omits an absent radius rather than sending undefined', () => {
+		// The reducer merges with a spread, so `radius: undefined` would
+		// overwrite a configured value with nothing. `Camera.svelte` carries the
+		// same conditional-spread idiom and a comment recording that bug.
+		const store = makeStore();
+		mountIn(Light, { store, id: 'lamp', type: 'point', position: [0, 1, 0], intensity: 1 });
+		flushSync();
+
+		expect(store.state.lights.find((l) => l.id === 'lamp')).not.toHaveProperty('radius');
+	});
+
+	it('sends a radius of 0', () => {
+		// The paired half: conditional spreading must key on `undefined`, not on
+		// truthiness, or `radius={0}` disappears.
+		const store = makeStore();
+		mountIn(Light, {
+			store,
+			id: 'lamp',
+			type: 'point',
+			position: [0, 1, 0],
+			radius: 0,
+			intensity: 1
+		});
+		flushSync();
+
+		expect(store.state.lights.find((l) => l.id === 'lamp')).toMatchObject({ radius: 0 });
+	});
+
+	it('omits an absent color rather than sending undefined', () => {
+		const store = makeStore();
+		mountIn(Light, { store, id: 'lamp', type: 'ambient', intensity: 1 });
+		flushSync();
+
+		expect(store.state.lights.find((l) => l.id === 'lamp')).not.toHaveProperty('color');
+	});
+});
+
 describe('Light', () => {
 	it('a changed prop reaches the store', () => {
 		const store = makeStore();

@@ -48,7 +48,7 @@ pnpm add @composable-svelte/graphics @composable-svelte/core svelte
 <Scene {store}>
   <Camera {store} position={[0, 0, 10]} lookAt={[0, 0, 0]} />
 
-  <Light {store} type="directional" position={[1, 1, 1]} intensity={0.8} />
+  <Light {store} type="directional" direction={[1, 1, 1]} intensity={0.8} />
 
   <Mesh
     {store}
@@ -125,12 +125,22 @@ Adds lighting to the scene.
   omitted, so existing markup is unaffected; supply one to address the light
   from outside the component. Must be unique.
 - `type`: 'directional' | 'point' | 'spot' | 'ambient'
-- `position?`: [x, y, z]
-- `direction?`: [x, y, z] (for spot lights)
-- `angle?`: number (for spot lights)
 - `intensity`: number
-- `radius?`: number (for point lights)
 - `color?`: string (hex color)
+
+The rest of the props are **discriminated by `type`** — passing one that does
+not belong to the type you asked for is a compile error rather than a silent
+drop:
+
+| `type` | takes |
+|---|---|
+| `ambient` | nothing further |
+| `directional` | `direction?` — the direction the light travels in. A directional light has no position |
+| `point` | `position?`, `radius?` |
+| `spot` | `position?`, `direction?`, `angle?` (radians) |
+
+`direction` on `directional` was called `position` until recently. It never was
+one: the adapter passed it straight into Babylon's direction argument.
 
 ## State Management
 
@@ -192,7 +202,7 @@ type GraphicsAction =
 <Scene {store}>
   <Camera {store} position={[0, 0, 10]} lookAt={[0, 0, 0]} />
   <Light {store} type="ambient" intensity={0.5} />
-  <Light {store} type="directional" position={[5, 10, 7.5]} intensity={1} />
+  <Light {store} type="directional" direction={[5, 10, 7.5]} intensity={1} />
 
   <Mesh
     {store}
@@ -212,7 +222,7 @@ type GraphicsAction =
 <Scene {store}>
   <Camera {store} position={[0, 5, 10]} lookAt={[0, 0, 0]} />
   <Light {store} type="ambient" intensity={0.3} />
-  <Light {store} type="directional" position={[5, 10, 7.5]} intensity={1.5} />
+  <Light {store} type="directional" direction={[5, 10, 7.5]} intensity={1.5} />
 
   <!-- Cube -->
   <Mesh
