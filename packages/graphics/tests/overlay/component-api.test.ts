@@ -184,6 +184,79 @@ describe('updateUniforms reaches the shader', () => {
 		const shader = api.getElement('a')?.shader as { uniforms: Record<string, number> };
 		expect(shader.uniforms.uSpeed, 'a partial update wiped the rest').toBe(2);
 	});
+
+	it('does not leak into another element sharing the same preset', async () => {
+		// Registering by preset name resolves to the module-level constant, so
+		// two elements naming the same preset hold the *same object*. Mutating
+		// its `uniforms` in place retunes every element using it — and, since
+		// the constant lives in the registry, every element registered
+		// afterwards for the rest of the page's life.
+		const { api } = await overlayComponent();
+
+		api.registerElement({ id: 'a', domElement: loadedImage(), shader: 'ripple-gentle' });
+		api.registerElement({ id: 'b', domElement: loadedImage(), shader: 'ripple-gentle' });
+		await settle();
+
+		api.updateUniforms('a', { uAmplitude: 99 });
+
+		const b = api.getElement('b')?.shader as { uniforms: Record<string, number> };
+		expect(b.uniforms.uAmplitude, "b was retuned by a's call").not.toBe(99);
+	});
+
+	it('does not leak into elements registered afterwards', async () => {
+		// The half that shows the damage outlives the overlay: the mutated
+		// object is the registry's, so a fresh registration picks it up.
+		const { api } = await overlayComponent();
+
+		api.registerElement({ id: 'a', domElement: loadedImage(), shader: 'ripple-strong' });
+		await settle();
+		api.updateUniforms('a', { uAmplitude: 99 });
+
+		api.registerElement({ id: 'c', domElement: loadedImage(), shader: 'ripple-strong' });
+		await settle();
+
+		const c = api.getElement('c')?.shader as { uniforms: Record<string, number> };
+		expect(c.uniforms.uAmplitude, 'the preset constant itself was retuned').not.toBe(99);
+	});
+
+	it('does not hand the registry\'s own preset object to the consumer', async () => {
+		// `getElement()` is a read-back, and a consumer poking the object it
+		// returns is the obvious thing to try. If that object is the registry's,
+		// the poke lands on every element that ever names the preset.
+		const { api } = await overlayComponent();
+
+		api.registerElement({ id: 'a', domElement: loadedImage(), shader: 'blur-medium' });
+		await settle();
+
+		const shader = api.getElement('a')?.shader as { uniforms: Record<string, number> };
+		shader.uniforms.uProbe = 999;
+
+		api.registerElement({ id: 'b', domElement: loadedImage(), shader: 'blur-medium' });
+		await settle();
+
+		const b = api.getElement('b')?.shader as { uniforms: Record<string, number> };
+		expect(b.uniforms.uProbe, 'the preset in the registry was written through').toBeUndefined();
+	});
+
+	it('does not leak between elements handed the same shader object', async () => {
+		// The case the preset copy does not cover, and the reason
+		// `updateUniforms` replaces rather than mutates. A custom effect is not
+		// copied at registration — it is the consumer's object, and they may
+		// well hand the same one to several elements. Writing through it
+		// retunes all of them, and the consumer's own object with them.
+		const { api } = await overlayComponent();
+		const effect = { fragment: 'void main() {}', uniforms: { uIntensity: 1 } };
+
+		api.registerElement({ id: 'a', domElement: loadedImage(), shader: effect });
+		api.registerElement({ id: 'b', domElement: loadedImage(), shader: effect });
+		await settle();
+
+		api.updateUniforms('a', { uIntensity: 9 });
+
+		const b = api.getElement('b')?.shader as { uniforms: Record<string, number> };
+		expect(b.uniforms.uIntensity, "b was retuned through the object it shares").toBe(1);
+		expect(effect.uniforms.uIntensity, "the caller's own object was written through").toBe(1);
+	});
 });
 
 describe('the read-back accessors', () => {

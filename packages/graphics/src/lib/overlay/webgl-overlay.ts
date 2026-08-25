@@ -344,15 +344,22 @@ class WebGLOverlay implements OverlayContextAPI {
 			return;
 		}
 
-		// Update shader uniforms (implementation depends on shader system in Phase 2)
+		// Replace the shader object rather than mutating it in place.
+		//
+		// Registering by preset name resolves to the module-level constant, so
+		// two elements naming the same preset would otherwise share one object:
+		// retuning either retunes both, and — since that object lives in the
+		// preset registry — every element registered afterwards for the rest of
+		// the page's life.
 		if (typeof registration.shader === 'object') {
-			registration.shader.uniforms = {
-				...registration.shader.uniforms,
-				...uniforms
+			registration.shader = {
+				...registration.shader,
+				uniforms: {
+					...registration.shader.uniforms,
+					...uniforms
+				}
 			};
 		}
-
-		// Mark as needing re-render
 	}
 
 	/**
@@ -762,9 +769,15 @@ class WebGLOverlay implements OverlayContextAPI {
 						vertexSource = preset.vertex;
 					}
 					fragmentSource = preset.fragment;
-					customShader = preset;
-					// Update registration with resolved preset
-					registration.shader = preset;
+					// Copy rather than alias. `getElement()` hands the
+					// registration to the consumer, and `preset` is the
+					// registry's own object — one `shader.uniforms.x = …` from
+					// outside would retune every element that names it.
+					registration.shader = {
+						...preset,
+						...(preset.uniforms ? { uniforms: { ...preset.uniforms } } : {})
+					};
+					customShader = registration.shader;
 				}
 			} else {
 				// Unknown preset name, log warning and use default
