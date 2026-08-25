@@ -107,3 +107,21 @@ describe('debug belongs to one overlay', () => {
 		quiet.destroy();
 	});
 });
+
+describe('debug reaches the texture validator', () => {
+	it('prints the max texture size on construction, not only after a restore', () => {
+		// `TextureFactory` takes a logger and forwards it to `TextureValidator`,
+		// which logs from its constructor. Five of the six construction sites
+		// passed it; the one that runs on every overlay did not — so the line
+		// appeared only on the `recreateResources` path, which did.
+		const info = vi.spyOn(console, 'info').mockImplementation(() => {});
+
+		const api = overlay({ debug: true });
+
+		expect(
+			linesFrom(info).some((line) => line.includes('Max texture size')),
+			'the validator never logged on construction'
+		).toBe(true);
+		api.destroy();
+	});
+});

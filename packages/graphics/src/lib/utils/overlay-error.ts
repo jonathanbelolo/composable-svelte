@@ -14,7 +14,17 @@ export enum OverlayErrorCode {
 	MEMORY_BUDGET_EXCEEDED = 'MEMORY_BUDGET_EXCEEDED',
 	INVALID_ELEMENT_TYPE = 'INVALID_ELEMENT_TYPE',
 	ELEMENT_NOT_FOUND = 'ELEMENT_NOT_FOUND',
-	TEXTURE_CREATION_FAILED = 'TEXTURE_CREATION_FAILED'
+	TEXTURE_CREATION_FAILED = 'TEXTURE_CREATION_FAILED',
+	/**
+	 * The overlay could not be constructed for a reason that is not WebGL
+	 * support — a missing `ResizeObserver`, say.
+	 *
+	 * Every constructor failure used to arrive as `WEBGL_NOT_SUPPORTED`, with
+	 * recovery text telling the consumer to try a modern browser and visit
+	 * get.webgl.org. That is the "wrong code, misleading recovery" defect this
+	 * package spent a commit removing from `TEXTURE_TOO_LARGE`.
+	 */
+	INITIALIZATION_FAILED = 'INITIALIZATION_FAILED'
 }
 
 export class OverlayError extends Error {
@@ -73,11 +83,29 @@ export class OverlayError extends Error {
 		maxSize: number,
 		reason?: string
 	): OverlayError {
+		// "the limit in force", not "device maximum": `maxSize` is
+		// `min(maxTextureSize, driver max)`, so a consumer who set 2048 on an
+		// 8192-capable device was told the *device* refused them. And the old
+		// recovery advised "enable auto-scaling", which is not a field of
+		// `OverlayOptions` — the same "call something you cannot call" defect
+		// that `82412fa` fixed on `memoryBudgetExceeded`.
 		return new OverlayError(
 			OverlayErrorCode.TEXTURE_TOO_LARGE,
-			`Texture size ${width}x${height} exceeds device maximum ${maxSize}x${maxSize} (element: ${elementId})${reason ? ': ' + reason : ''}`,
+			`Texture size ${width}x${height} exceeds the ${maxSize}x${maxSize} limit in force (element: ${elementId})${reason ? ': ' + reason : ''}`,
 			{ elementId, width, height, maxSize, reason },
-			'Reduce image size or enable auto-scaling. Consider using lower resolution images on mobile devices.'
+			'Use a smaller source, or raise `maxTextureSize` in OverlayOptions — it can only narrow the limit, never exceed what the driver allows. Images are scaled down automatically; canvases and videos are not.'
+		);
+	}
+
+	/**
+	 * The overlay could not be built, for a reason other than WebGL support
+	 */
+	static initializationFailed(reason: string): OverlayError {
+		return new OverlayError(
+			OverlayErrorCode.INITIALIZATION_FAILED,
+			`Overlay initialization failed: ${reason}`,
+			{ reason },
+			'This is not a WebGL support problem — the context was available. Check that the environment provides IntersectionObserver and ResizeObserver, and that the canvas is attached.'
 		);
 	}
 
@@ -143,11 +171,15 @@ export class OverlayError extends Error {
 	 * Element not found in DOM
 	 */
 	static elementNotFound(elementId: string): OverlayError {
+		// About the overlay's registry, not the DOM. Every producer fires when
+		// a method is handed an id the overlay has no registration for — a
+		// queued update racing an unregister, most often — and the old text
+		// sent the reader to look at their markup.
 		return new OverlayError(
 			OverlayErrorCode.ELEMENT_NOT_FOUND,
-			`Element not found: ${elementId}`,
+			`No element is registered as '${elementId}'`,
 			{ elementId },
-			'Ensure the element exists in the DOM before registering it with the overlay. Check element ID and timing.'
+			'Register the element before addressing it, and check for an unregisterElement() that ran first — a queued update can outlive the element it names.'
 		);
 	}
 

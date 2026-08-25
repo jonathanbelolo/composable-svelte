@@ -97,7 +97,12 @@ describe('the budget and the size limit report themselves', () => {
 });
 
 describe('CONTEXT_LOST', () => {
-	it('refuses a registration made while the context is gone', async () => {
+	it('reports a registration made while the context is gone', async () => {
+		// It used to *refuse* it, which produced the code but dropped the
+		// element: `recreateResources` rebuilds everything in `this.elements`,
+		// and a refused registration never entered that map, so it was lost for
+		// good. The README's own pattern registers from `img.onload`, which can
+		// land inside a loss at any time.
 		const onError = vi.fn();
 		const { fake, api } = overlay({ onError });
 
@@ -108,8 +113,33 @@ describe('CONTEXT_LOST', () => {
 			shader: 'wave-gentle-horizontal'
 		});
 
-		expect(result).toBeInstanceOf(OverlayError);
+		expect(result, 'the registration was refused rather than deferred').not.toBeInstanceOf(
+			OverlayError
+		);
 		expect(codes(onError)).toEqual([OverlayErrorCode.CONTEXT_LOST]);
+		expect(api.getElement('a'), 'the element was dropped instead of queued').toBeDefined();
+		expect(api.getElement('a')?.texture, 'a texture was built on a dead context').toBeUndefined();
+		api.destroy();
+	});
+
+	it('builds it when the context comes back', async () => {
+		// The other half of the same defect, and the reason deferring beats
+		// refusing.
+		const onError = vi.fn();
+		const { fake, api } = overlay({ onError });
+
+		fake.canvas?.dispatchEvent(new Event('webglcontextlost'));
+		api.registerElement('a', loadedImage(64), {
+			type: 'image',
+			shader: 'wave-gentle-horizontal'
+		});
+		fake.canvas?.dispatchEvent(new Event('webglcontextrestored'));
+		await settle();
+
+		expect(
+			api.getElement('a')?.texture,
+			'the restore never built the element registered during the loss'
+		).toBeDefined();
 		api.destroy();
 	});
 
@@ -159,6 +189,70 @@ describe('ELEMENT_NOT_FOUND', () => {
 		api.updateUniforms('a', { uTime: 1 });
 
 		expect(onError, 'a registered element was reported missing').not.toHaveBeenCalled();
+		api.destroy();
+	});
+});
+
+describe('every refusal reports, not just some', () => {
+	it('reports a duplicate id', async () => {
+		// Two of `registerElement`'s three refusals returned the error and
+		// nothing else — no warning, no `onError` — against the method's own
+		// docstring. A consumer saw silence unless they checked the return.
+		vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const onError = vi.fn();
+		const { api } = overlay({ onError });
+
+		api.registerElement('a', loadedImage(64), { type: 'image', shader: 'wave-gentle-horizontal' });
+		await settle();
+		onError.mockClear();
+
+		api.registerElement('a', loadedImage(64), { type: 'image', shader: 'wave-gentle-horizontal' });
+
+		expect(codes(onError)).toEqual([OverlayErrorCode.INVALID_ELEMENT_TYPE]);
+		api.destroy();
+	});
+
+	it('reports a registration on a destroyed overlay', () => {
+		vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const onError = vi.fn();
+		const { api } = overlay({ onError });
+		api.destroy();
+		onError.mockClear();
+
+		api.registerElement('a', loadedImage(64), { type: 'image', shader: 'wave-gentle-horizontal' });
+
+		expect(codes(onError)).toEqual([OverlayErrorCode.INVALID_ELEMENT_TYPE]);
+	});
+
+	it('reports updateElement on an element that is not manual', async () => {
+		vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const onError = vi.fn();
+		const { api } = overlay({ onError });
+
+		// An image infers `static`, so `updateElement` does not service it.
+		api.registerElement('a', loadedImage(64), { type: 'image', shader: 'wave-gentle-horizontal' });
+		await settle();
+		onError.mockClear();
+
+		api.updateElement('a');
+
+		expect(codes(onError)).toEqual([OverlayErrorCode.INVALID_ELEMENT_TYPE]);
+		api.destroy();
+	});
+
+	it('stays quiet when the same calls are legitimate', async () => {
+		// The paired half: reporting every refusal must not become reporting
+		// every call.
+		const onError = vi.fn();
+		const { api } = overlay({ onError });
+
+		api.registerElement('a', sizedCanvas(64), { type: 'canvas', shader: 'wave-gentle-horizontal' });
+		await settle();
+		api.updateElement('a');
+		api.registerElement('b', loadedImage(64), { type: 'image', shader: 'wave-gentle-horizontal' });
+		await settle();
+
+		expect(onError, 'a legitimate registration or update was reported').not.toHaveBeenCalled();
 		api.destroy();
 	});
 });

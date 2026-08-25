@@ -58,8 +58,12 @@ export function createOverlay(options: OverlayInit = {}): OverlayContextAPI | Ov
 	try {
 		return new WebGLOverlay(options);
 	} catch (error) {
+		// Not `webGLNotSupported`: `checkWebGLSupport` already said it is, and
+		// the context was created. Reporting a missing `ResizeObserver` as
+		// "use a modern browser that supports WebGL" sends the reader somewhere
+		// there is nothing to find.
 		console.error('[WebGLOverlay] Initialization failed:', error);
-		return OverlayError.webGLNotSupported(
+		return OverlayError.initializationFailed(
 			error instanceof Error ? error.message : String(error)
 		);
 	}
@@ -132,8 +136,11 @@ class WebGLOverlay implements OverlayContextAPI {
 			// to handle loss themselves would pass — silently removed the
 			// notification they were relying on, while the low-level listeners in
 			// `WebGLContextManager` stayed registered regardless.
-			const recoverAutomatically = options.handleContextLoss !== false;
-
+			//
+			// Read from `this.options` rather than a local computed here: there
+			// were two of these, a local that decided the behaviour and a field
+			// nothing read, which is one more than the number of answers the
+			// question has. The callbacks run long after the merge below.
 			this.contextManager.onContextLost(() => {
 				console.warn('[WebGLOverlay] WebGL context lost');
 				if (this.options.onContextLost) {
@@ -143,7 +150,7 @@ class WebGLOverlay implements OverlayContextAPI {
 
 			this.contextManager.onContextRestored(() => {
 				this.log('[WebGLOverlay] WebGL context restored');
-				if (recoverAutomatically) {
+				if (this.options.handleContextLoss) {
 					this.recreateResources();
 				}
 				if (this.options.onContextRestored) {
@@ -177,7 +184,12 @@ class WebGLOverlay implements OverlayContextAPI {
 				this.gl,
 				this.options.maxTextureSize,
 				this.options.memoryBudget,
-				this.browserCompatibility.needsCORSWorkaround()
+				this.browserCompatibility.needsCORSWorkaround(),
+				// The fifth of the five classes `fbef369` threaded a logger
+				// through, and the one construction site that missed it — so
+				// `debug: true` printed the max-texture-size line only after a
+				// context restore, which is the path that did pass it.
+				this.log
 			);
 
 			// Initialize shader program manager
@@ -250,20 +262,18 @@ class WebGLOverlay implements OverlayContextAPI {
 			onTextureLoaded?: (() => void) | undefined;
 		}
 	): ElementRegistration | OverlayError {
+		// Every failure here goes through `report`. Two of these three returned
+		// the error and nothing else — no warning, no `onError` — against this
+		// method's own docstring, so a consumer registering a duplicate id saw
+		// silence unless they checked the return.
 		if (this.destroyed) {
-			return OverlayError.invalidElementType(id, 'Overlay has been destroyed');
+			return this.report(OverlayError.invalidElementType(id, 'Overlay has been destroyed'));
 		}
 
 		if (this.elements.has(id)) {
-			return OverlayError.invalidElementType(id, `Element with ID '${id}' already registered`);
-		}
-
-		// Nothing can be built while the context is gone: the texture and the
-		// program would both be created against a dead context and silently do
-		// nothing. `OverlayError.contextLost()` had no callers anywhere, so this
-		// is also the first thing that can produce the code.
-		if (this.contextIsLost()) {
-			return this.report(OverlayError.contextLost());
+			return this.report(
+				OverlayError.invalidElementType(id, `Element with ID '${id}' already registered`)
+			);
 		}
 
 		// Determine update strategy
@@ -288,11 +298,23 @@ class WebGLOverlay implements OverlayContextAPI {
 			bounds: initialBounds
 		};
 
-		// Create initial texture
-		this.createElementTexture(registration, options.onTextureLoaded);
+		// A registration made while the context is gone is accepted, not refused.
+		//
+		// Refusing it produced `CONTEXT_LOST` — the first thing in the package
+		// ever to — but it meant the element never entered `this.elements`, and
+		// `recreateResources` iterates exactly that map on restore. So the
+		// element was dropped for good, and the README's own pattern registers
+		// from `img.onload`, which can land in that window at any time. The
+		// consumer is told; the restore builds what could not be built now.
+		const lost = this.contextIsLost();
 
-		// Compile shader program
-		this.compileElementShader(registration);
+		if (!lost) {
+			// Create initial texture
+			this.createElementTexture(registration, options.onTextureLoaded);
+
+			// Compile shader program
+			this.compileElementShader(registration);
+		}
 
 		// Add to elements map
 		this.elements.set(id, registration);
@@ -306,6 +328,10 @@ class WebGLOverlay implements OverlayContextAPI {
 		// Log registration
 		if (this.options.debug) {
 			console.info(`[WebGLOverlay] Registered element '${id}' (${options.type}, ${updateStrategy})`);
+		}
+
+		if (lost) {
+			this.report(OverlayError.contextLost());
 		}
 
 		return registration;
@@ -374,8 +400,11 @@ class WebGLOverlay implements OverlayContextAPI {
 		if (registration.updateStrategy === 'manual') {
 			this.updateScheduler.triggerUpdate(id);
 		} else {
-			console.warn(
-				`[WebGLOverlay] Element '${id}' has strategy '${registration.updateStrategy}', use that strategy instead of updateElement()`
+			this.report(
+				OverlayError.invalidElementType(
+					id,
+					`has strategy '${registration.updateStrategy}'; updateElement() services 'manual' only`
+				)
 			);
 		}
 	}

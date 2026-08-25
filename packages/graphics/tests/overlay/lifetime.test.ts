@@ -10,7 +10,7 @@
 
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { createOverlay } from '../../src/lib/overlay/webgl-overlay.js';
-import { OverlayError } from '../../src/lib/utils/overlay-error.js';
+import { OverlayError, OverlayErrorCode } from '../../src/lib/utils/overlay-error.js';
 import type { OverlayContextAPI } from '../../src/lib/overlay/overlay-types.js';
 import { createFakeGL, installFakeGL, installFakeObservers } from '../helpers/fake-gl.js';
 
@@ -204,5 +204,65 @@ describe('a failed rebuild does not credit the budget', () => {
 
 		expect(api.getElement('c')?.texture, 'the budget was credited for a texture that failed').toBeUndefined();
 		api.destroy();
+	});
+});
+
+describe('a half-built position tracker cleans up after itself', () => {
+	it('disconnects the observer it made when the second one throws', () => {
+		// `PositionTracker` builds an `IntersectionObserver`, then a
+		// `ResizeObserver`. An environment with only the first left one live and
+		// observing when the second threw — and the overlay's `acquired` list
+		// cannot unwind that, because it has no instance until the constructor
+		// returns. The fix belongs in the tracker.
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		const g = globalThis as Record<string, unknown>;
+		const had = { io: g.IntersectionObserver, ro: g.ResizeObserver };
+
+		let live = 0;
+		class CountingObserver {
+			constructor() {
+				live += 1;
+			}
+			observe(): void {}
+			unobserve(): void {}
+			disconnect(): void {
+				live -= 1;
+			}
+			takeRecords(): unknown[] {
+				return [];
+			}
+		}
+		g.IntersectionObserver = CountingObserver;
+		g.ResizeObserver = class {
+			constructor() {
+				throw new Error('ResizeObserver is not available');
+			}
+		};
+		undo.push(() => {
+			g.IntersectionObserver = had.io;
+			g.ResizeObserver = had.ro;
+		});
+
+		const fake = createFakeGL();
+		undo.push(installFakeGL(fake));
+
+		const result = createOverlay({ canvas: document.createElement('canvas') });
+
+		expect(result, 'the overlay constructed without a ResizeObserver').toBeInstanceOf(OverlayError);
+		expect(live, 'the IntersectionObserver was left connected').toBe(0);
+	});
+
+	it('reports the failure as an initialization problem, not a WebGL one', () => {
+		// Every constructor failure used to arrive as `WEBGL_NOT_SUPPORTED`,
+		// advising a modern browser and get.webgl.org — for a missing
+		// `ResizeObserver`, on a machine whose WebGL had already been checked
+		// and found working.
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		const fake = createFakeGL();
+		undo.push(installFakeGL(fake));
+
+		const result = createOverlay({ canvas: document.createElement('canvas') });
+
+		expect((result as OverlayError).code).toBe(OverlayErrorCode.INITIALIZATION_FAILED);
 	});
 });
