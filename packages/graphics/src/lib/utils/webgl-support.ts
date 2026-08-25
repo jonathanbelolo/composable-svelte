@@ -66,6 +66,15 @@ export function checkWebGLSupport(): WebGLSupportInfo {
 		};
 	}
 
+	// Release the probe.
+	//
+	// This runs once per `createOverlay`, and the context it creates was never
+	// freed. Browsers cap live WebGL contexts — around 16 — and force-lose the
+	// oldest when the cap is reached, so an app that mounts and unmounts the
+	// overlay enough times eventually has its own live context killed by its own
+	// support check.
+	gl.getExtension('WEBGL_lose_context')?.loseContext();
+
 	// `reason` is omitted rather than set to undefined: it is optional, and the
 	// two failure paths above are the only ones that carry a reason.
 	return {

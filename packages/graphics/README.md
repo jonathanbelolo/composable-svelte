@@ -309,8 +309,8 @@ in charge of it, call those methods from an effect.
 <img bind:this={hero} src="/hero.jpg" alt="Hero" onload={applyEffect} />
 ```
 
-The single prop is `options` (`OverlayOptions`): `canvas`, `targetFPS`,
-`maxTextureSize`, `memoryBudget`, `debug`, `handleContextLoss`, `onContextLost`,
+The single prop is `options` (`OverlayOptions`): `targetFPS`, `maxTextureSize`,
+`memoryBudget`, `debug`, `handleContextLoss`, `onContextLost`,
 `onContextRestored` and `onError`.
 
 The methods are `registerElement` and `unregisterElement`; `updateElementShader`

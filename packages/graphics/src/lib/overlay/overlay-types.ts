@@ -146,12 +146,6 @@ export interface ElementRegistration {
  */
 export interface OverlayOptions {
 	/**
-	 * Canvas element to render to
-	 * If not provided, creates a new canvas
-	 */
-	canvas?: HTMLCanvasElement;
-
-	/**
 	 * Target FPS for render loop
 	 * Default: 60 (desktop), 30 (mobile)
 	 */
@@ -194,6 +188,22 @@ export interface OverlayOptions {
 	 * Callback when an error occurs
 	 */
 	onError?: (error: OverlayError) => void;
+}
+
+/**
+ * What `createOverlay` needs, as opposed to what a consumer can configure.
+ *
+ * `canvas` used to sit on `OverlayOptions`, documented as "render into an
+ * existing canvas instead of the component's own" — and it could never do that.
+ * `WebGLOverlay.svelte` calls `createOverlay({ ...options, canvas })` with its
+ * own `bind:this` canvas spread *last*, so a consumer's value was always
+ * overwritten; and `createOverlay` — the one path that honours it — is not
+ * exported. It was a field on a public type that no reachable call could act
+ * on, so it belongs on the internal init shape instead.
+ */
+export interface OverlayInit extends OverlayOptions {
+	/** Canvas element to render to. One is created if absent. */
+	canvas?: HTMLCanvasElement | undefined;
 }
 
 /**

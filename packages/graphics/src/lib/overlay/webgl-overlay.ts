@@ -30,6 +30,7 @@ import { getPreset, hasPreset, type PresetName } from '../shaders/presets/index.
 import { PositionTracker } from './position-tracker.js';
 import type {
 	OverlayOptions,
+	OverlayInit,
 	OverlayContextAPI,
 	ElementRegistration,
 	ElementType,
@@ -47,7 +48,7 @@ import type { CompiledProgram } from '../shaders/shader-compiler.js';
  * @param options - Overlay initialization options
  * @returns Overlay context API or error
  */
-export function createOverlay(options: OverlayOptions = {}): OverlayContextAPI | OverlayError {
+export function createOverlay(options: OverlayInit = {}): OverlayContextAPI | OverlayError {
 	// Check WebGL support
 	const webglSupport = checkWebGLSupport();
 	if (!webglSupport.supported) {
@@ -84,109 +85,144 @@ class WebGLOverlay implements OverlayContextAPI {
 	private elements = new Map<string, ElementRegistration>();
 	private elementPrograms = new Map<string, CompiledProgram>();
 	private options: Required<OverlayOptions>;
+	private readonly ownsCanvas: boolean;
 	private destroyed = false;
 
-	constructor(options: OverlayOptions = {}) {
+	constructor(options: OverlayInit = {}) {
 		// Initialize browser compatibility first
 		this.browserCompatibility = new BrowserCompatibility();
 
-		// Set up canvas
+		// Set up canvas. Whether we made it decides whether `destroy()` may lose
+		// its context: doing that to a canvas the caller owns kills it for good.
+		this.ownsCanvas = !options.canvas;
 		this.canvas = options.canvas || this.createCanvas();
 
-		// Initialize context manager
-		this.contextManager = new WebGLContextManager();
-
-		// Set up context loss/restore callbacks.
+		// Everything acquired from here on registers its own teardown.
 		//
-		// The consumer is always told; `handleContextLoss` gates only whether we
-		// *recover* for them. Both callbacks used to live inside the disabled
-		// block, so `handleContextLoss: false` — exactly what someone intending
-		// to handle loss themselves would pass — silently removed the
-		// notification they were relying on, while the low-level listeners in
-		// `WebGLContextManager` stayed registered regardless.
-		const recoverAutomatically = options.handleContextLoss !== false;
+		// The constructor had no error path at all. `WebGLContextManager`
+		// attaches canvas listeners, `RenderLoop` attaches one to `document`,
+		// and `PositionTracker` constructs observers that throw where they are
+		// absent — and `createOverlay` catches the throw, so the half-built
+		// instance and its `destroy()` were unreachable. Verified: a failed
+		// construction left one `visibilitychange` listener and two
+		// `webglcontext*` listeners behind, which is the leak class `ed5cb3c`
+		// fixed on the success path only.
+		//
+		// `acquired` collects a release for each resource as it is taken, and the
+		// catch runs them in reverse. Inline rather than extracted into a
+		// `build()` method: every field has to stay definitely assigned in the
+		// constructor, and `tsc` rejects the extracted form for exactly that.
+		const acquired: Array<() => void> = [];
+		try {
+				// Initialize context manager
+				this.contextManager = new WebGLContextManager();
+			acquired.push(() => this.contextManager.destroy());
 
-		this.contextManager.onContextLost(() => {
-			console.warn('[WebGLOverlay] WebGL context lost');
-			if (this.options.onContextLost) {
-				this.options.onContextLost();
-			}
-		});
+			// Set up context loss/restore callbacks.
+			//
+			// The consumer is always told; `handleContextLoss` gates only whether we
+			// *recover* for them. Both callbacks used to live inside the disabled
+			// block, so `handleContextLoss: false` — exactly what someone intending
+			// to handle loss themselves would pass — silently removed the
+			// notification they were relying on, while the low-level listeners in
+			// `WebGLContextManager` stayed registered regardless.
+			const recoverAutomatically = options.handleContextLoss !== false;
 
-		this.contextManager.onContextRestored(() => {
-			debugLog('[WebGLOverlay] WebGL context restored');
-			if (recoverAutomatically) {
-				this.recreateResources();
-			}
-			if (this.options.onContextRestored) {
-				this.options.onContextRestored();
-			}
-		});
-
-		// Initialize WebGL context
-		this.gl = this.contextManager.initialize(this.canvas);
-		if (!this.gl) {
-			throw new Error('Failed to initialize WebGL context');
-		}
-
-		// Initialize device capabilities
-		this.deviceCapabilities = new DeviceCapabilities(this.gl);
-
-		// Merge options with defaults
-		this.options = {
-			canvas: this.canvas,
-			targetFPS: options.targetFPS ?? this.deviceCapabilities.recommendedFPS,
-			maxTextureSize: options.maxTextureSize ?? this.deviceCapabilities.maxTextureSize,
-			memoryBudget: options.memoryBudget ?? 200 * 1024 * 1024, // 200MB default
-			debug: options.debug ?? false,
-			handleContextLoss: options.handleContextLoss ?? true,
-			onContextLost: options.onContextLost ?? (() => {}),
-			onContextRestored: options.onContextRestored ?? (() => {}),
-			onError: options.onError ?? (() => {})
-		};
-
-		// The utility classes take no options of their own, so the flag is set
-		// once here and read by `debugLog`.
-		setDebugLogging(this.options.debug);
-
-		// Initialize texture factory
-		this.textureFactory = new TextureFactory(
-			this.gl,
-			this.options.maxTextureSize,
-			this.options.memoryBudget,
-			this.browserCompatibility.needsCORSWorkaround()
-		);
-
-		// Initialize shader program manager
-		this.programManager = new ShaderProgramManager(this.gl);
-
-		// Initialize render pipeline
-		this.renderPipeline = new RenderPipeline(this.gl, this.programManager);
-
-		// Initialize update scheduler
-		this.updateScheduler = new UpdateScheduler();
-		this.updateScheduler.setUpdateCallback((elementId) => {
-			this.handleElementUpdate(elementId);
-		});
-
-		// Initialize render loop
-		this.renderLoop = new RenderLoop(this.options.targetFPS);
-
-		// Initialize position tracker
-		this.positionTracker = new PositionTracker(null); // null = track relative to viewport
-		this.positionTracker.onPositionUpdate((elementId, bounds) => {
-			this.handlePositionUpdate(elementId, bounds);
-		});
-
-		// Log initialization
-		if (this.options.debug) {
-			console.info('[WebGLOverlay] Initialized', {
-				device: this.deviceCapabilities.getDeviceInfo(),
-				browser: this.browserCompatibility.getBrowserInfo(),
-				targetFPS: this.options.targetFPS,
-				maxTextureSize: this.options.maxTextureSize,
-				memoryBudget: `${Math.round(this.options.memoryBudget / 1024 / 1024)}MB`
+			this.contextManager.onContextLost(() => {
+				console.warn('[WebGLOverlay] WebGL context lost');
+				if (this.options.onContextLost) {
+					this.options.onContextLost();
+				}
 			});
+
+			this.contextManager.onContextRestored(() => {
+				debugLog('[WebGLOverlay] WebGL context restored');
+				if (recoverAutomatically) {
+					this.recreateResources();
+				}
+				if (this.options.onContextRestored) {
+					this.options.onContextRestored();
+				}
+			});
+
+			// Initialize WebGL context
+			this.gl = this.contextManager.initialize(this.canvas);
+			if (!this.gl) {
+				throw new Error('Failed to initialize WebGL context');
+			}
+
+			// Initialize device capabilities
+			this.deviceCapabilities = new DeviceCapabilities(this.gl);
+
+			// Merge options with defaults
+			this.options = {
+				targetFPS: options.targetFPS ?? this.deviceCapabilities.recommendedFPS,
+				maxTextureSize: options.maxTextureSize ?? this.deviceCapabilities.maxTextureSize,
+				memoryBudget: options.memoryBudget ?? 200 * 1024 * 1024, // 200MB default
+				debug: options.debug ?? false,
+				handleContextLoss: options.handleContextLoss ?? true,
+				onContextLost: options.onContextLost ?? (() => {}),
+				onContextRestored: options.onContextRestored ?? (() => {}),
+				onError: options.onError ?? (() => {})
+			};
+
+			// The utility classes take no options of their own, so the flag is set
+			// once here and read by `debugLog`.
+			setDebugLogging(this.options.debug);
+
+			// Initialize texture factory
+			this.textureFactory = new TextureFactory(
+				this.gl,
+				this.options.maxTextureSize,
+				this.options.memoryBudget,
+				this.browserCompatibility.needsCORSWorkaround()
+			);
+
+			// Initialize shader program manager
+			this.programManager = new ShaderProgramManager(this.gl);
+			acquired.push(() => this.programManager?.destroy());
+
+			// Initialize render pipeline
+			this.renderPipeline = new RenderPipeline(this.gl, this.programManager);
+			acquired.push(() => this.renderPipeline?.destroy());
+
+			// Initialize update scheduler
+			this.updateScheduler = new UpdateScheduler();
+			acquired.push(() => this.updateScheduler.destroy());
+			this.updateScheduler.setUpdateCallback((elementId) => {
+				this.handleElementUpdate(elementId);
+			});
+
+			// Initialize render loop
+			this.renderLoop = new RenderLoop(this.options.targetFPS);
+			acquired.push(() => this.renderLoop.destroy());
+
+			// Initialize position tracker
+			this.positionTracker = new PositionTracker(null); // null = track relative to viewport
+			acquired.push(() => this.positionTracker.destroy());
+			this.positionTracker.onPositionUpdate((elementId, bounds) => {
+				this.handlePositionUpdate(elementId, bounds);
+			});
+
+			// Log initialization
+			if (this.options.debug) {
+				console.info('[WebGLOverlay] Initialized', {
+					device: this.deviceCapabilities.getDeviceInfo(),
+					browser: this.browserCompatibility.getBrowserInfo(),
+					targetFPS: this.options.targetFPS,
+					maxTextureSize: this.options.maxTextureSize,
+					memoryBudget: `${Math.round(this.options.memoryBudget / 1024 / 1024)}MB`
+				});
+			}
+		} catch (error) {
+			for (const release of acquired.reverse()) {
+				try {
+					release();
+				} catch {
+					// A teardown must not mask the failure that triggered it.
+				}
+			}
+			throw error;
 		}
 	}
 
@@ -545,10 +581,17 @@ class WebGLOverlay implements OverlayContextAPI {
 		// callbacks, which were never cleared.
 		this.contextManager.destroy();
 
-		// Clean up WebGL resources
-		if (this.gl) {
-			// Delete all textures (already done in unregisterElement)
-			// Lose context to free GPU memory
+		// Free the GPU context — but only if it is ours to free.
+		//
+		// `contextManager.destroy()` above removed the handler that calls
+		// `preventDefault()` on `webglcontextlost`, and per the WebGL spec the
+		// UA restores a lost context only when the default was prevented. So
+		// losing a caller-supplied canvas's context killed it permanently: a
+		// second `createOverlay` on that canvas gets the same lost object back
+		// from `getContext('webgl')` and initialises "successfully" while every
+		// call no-ops. Textures and programs are already deleted by this point,
+		// so a canvas we do not own simply keeps its live context.
+		if (this.gl && this.ownsCanvas) {
 			const loseContext = this.gl.getExtension('WEBGL_lose_context');
 			if (loseContext) {
 				loseContext.loseContext();
@@ -650,6 +693,11 @@ class WebGLOverlay implements OverlayContextAPI {
 	 * Handle element update from scheduler
 	 */
 	private handleElementUpdate(elementId: string): void {
+		// Same reason as `render()`, and it matters more here: a `frame`-strategy
+		// video went on calling `texImage2D` every frame for the whole duration
+		// of a context loss.
+		if (this.contextIsLost()) return;
+
 		const registration = this.elements.get(elementId);
 		if (!registration || !registration.texture || !this.textureFactory) return;
 
@@ -726,7 +774,10 @@ class WebGLOverlay implements OverlayContextAPI {
 	 * Render frame
 	 */
 	private render(deltaTime: number): void {
-		if (!this.gl || this.destroyed) return;
+		// A lost context accepts every call and performs none of them, so this
+		// used to spend a frame's work per frame producing nothing until the
+		// restore arrived — if it ever did.
+		if (!this.gl || this.destroyed || this.contextIsLost()) return;
 
 		const gl = this.gl;
 
@@ -921,8 +972,18 @@ class WebGLOverlay implements OverlayContextAPI {
 		// Clear program cache
 		this.elementPrograms.clear();
 
-		// Recreate all textures and shaders
+		// Recreate all textures and shaders.
+		//
+		// The stale handles and dimensions go first. Every GL object from the
+		// dead context is invalid, and the new `TextureFactory` starts its
+		// accounting at zero — so leaving `width`/`height` in place meant that
+		// if the rebuild's texture creation failed, a later `unregisterElement`
+		// deallocated bytes this factory never allocated, and the budget
+		// silently gained room for textures it could not afford.
 		for (const registration of this.elements.values()) {
+			delete registration.texture;
+			delete registration.width;
+			delete registration.height;
 			this.createElementTexture(registration);
 			this.compileElementShader(registration);
 		}

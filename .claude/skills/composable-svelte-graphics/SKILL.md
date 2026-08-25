@@ -1160,7 +1160,6 @@ It takes **exactly one prop**, `options`, and every field of it is optional:
 
 | option | meaning |
 |---|---|
-| `canvas` | render into an existing canvas instead of the component's own |
 | `targetFPS` | render-loop cap. Default 60 desktop, 30 mobile |
 | `maxTextureSize` | reject textures wider or taller than this, clamped down to the driver's `MAX_TEXTURE_SIZE` |
 | `memoryBudget` | total texture bytes before further textures are rejected. Default 200MB |

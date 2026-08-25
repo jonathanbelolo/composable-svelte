@@ -246,3 +246,38 @@ describe('a failed recompile does not blank the element', () => {
 		expect(fake.drawCalls(), 'an element with no texture was drawn').toBe(0);
 	});
 });
+
+describe('a lost context stops the work', () => {
+	it('draws nothing while the context is gone', async () => {
+		// `render()` guarded on `this.gl && !this.destroyed` only.
+		// `WebGLContextManager` has tracked the loss all along and returns null
+		// from `getContext()` while lost; the overlay never asked, and went on
+		// spending a frame's work per frame producing nothing.
+		const { fake, api } = overlay();
+
+		api.registerElement('a', boundedImage(), { type: 'image', shader: 'ripple-gentle' });
+		await frame(api);
+		expect(fake.drawCalls(), 'nothing drew before the loss').toBeGreaterThan(0);
+
+		fake.canvas?.dispatchEvent(new Event('webglcontextlost'));
+		fake.clearCalls();
+		await frame(api);
+
+		expect(fake.drawCalls(), 'the loop drew into a dead context').toBe(0);
+	});
+
+	it('draws again once the context comes back', async () => {
+		// The paired half: refusing to draw while lost must not be permanent.
+		const { fake, api } = overlay();
+
+		api.registerElement('a', boundedImage(), { type: 'image', shader: 'ripple-gentle' });
+		await frame(api);
+
+		fake.canvas?.dispatchEvent(new Event('webglcontextlost'));
+		fake.canvas?.dispatchEvent(new Event('webglcontextrestored'));
+		fake.clearCalls();
+		await frame(api);
+
+		expect(fake.drawCalls(), 'the overlay never resumed after the restore').toBeGreaterThan(0);
+	});
+});
