@@ -65,12 +65,22 @@ describe('ensurePrecision', () => {
 
 describe('minifyShader', () => {
 	it('collapses whitespace in a plain shader', () => {
-		const source = 'void main() {\n    gl_FragColor = vec4(1.0);\n}';
+		// `source.replace(/\n/g, '')` satisfied both of the original
+		// assertions, so this pinned nothing but newline removal.
+		const source = 'void main()  {\n    gl_FragColor  =  vec4(1.0);\n}';
 
 		const result = minifyShader(source);
 
 		expect(result).not.toContain('\n');
-		expect(result.length).toBeLessThan(source.length);
+		expect(result, 'runs of spaces survived').not.toMatch(/ {2}/);
+		expect(result, 'the shader stopped being the shader').toContain('gl_FragColor');
+		expect(result, 'spacing around operators survived').toContain('=vec4(1.0)');
+	});
+
+	it('strips comments as well as whitespace', () => {
+		const result = minifyShader('void main() {\n  // set it\n  gl_FragColor = c;\n}');
+
+		expect(result, 'a comment survived minification').not.toContain('set it');
 	});
 
 	it('destroys preprocessor directives', () => {
@@ -99,10 +109,17 @@ describe('validateShaderSource', () => {
 	it('names each thing that is missing', () => {
 		// It reports every problem rather than the first, which is the useful
 		// shape for a compile-time helper.
+		//
+		// Asserting `errors.length > 1` on an input that yields three let any
+		// one check be deleted for free — the precision check was, and this
+		// still passed. Name them.
 		const { valid, errors } = validateShaderSource('float x = 1.0;', 'fragment');
+		const joined = errors.join(' ');
 
 		expect(valid).toBe(false);
-		expect(errors.length, 'only one problem was reported').toBeGreaterThan(1);
+		expect(joined, 'the missing main() was not reported').toMatch(/main\(\)/);
+		expect(joined, 'the missing precision qualifier was not reported').toMatch(/precision/);
+		expect(joined, 'the missing gl_FragColor was not reported').toMatch(/gl_FragColor/);
 	});
 
 	it('applies the rule that belongs to the shader type', () => {
@@ -115,10 +132,43 @@ describe('validateShaderSource', () => {
 });
 
 describe('getShaderInfo', () => {
-	it('reports something about a real shader', () => {
-		const info = getShaderInfo('precision mediump float;\nuniform sampler2D uTexture;\nvoid main() {}');
+	const SOURCE = [
+		'precision mediump float;',
+		'attribute vec2 aPosition;',
+		'attribute vec2 aTexCoord;',
+		'uniform sampler2D uTexture;',
+		'uniform float uTime;',
+		'varying vec2 vTexCoord;',
+		'void main() { gl_FragColor = texture2D(uTexture, vTexCoord); }'
+	].join('\n');
 
-		expect(info).toBeTruthy();
-		expect(typeof info).toBe('object');
+	// `expect(info).toBeTruthy()` and `typeof info === 'object'` were the whole
+	// of this describe, and `return {}` satisfies both — on a function whose
+	// entire job is to name what it found.
+
+	it('names the attributes', () => {
+		expect(getShaderInfo(SOURCE).attributes).toEqual(['aPosition', 'aTexCoord']);
+	});
+
+	it('names the uniforms', () => {
+		expect(getShaderInfo(SOURCE).uniforms).toEqual(['uTexture', 'uTime']);
+	});
+
+	it('names the varyings', () => {
+		expect(getShaderInfo(SOURCE).varyings).toEqual(['vTexCoord']);
+	});
+
+	it('counts the lines', () => {
+		expect(getShaderInfo(SOURCE).lines).toBe(7);
+	});
+
+	it('finds nothing in a shader that declares nothing', () => {
+		// The paired half: a parser that reported the same names regardless
+		// would pass every assertion above.
+		const info = getShaderInfo('void main() {}');
+
+		expect(info.attributes).toEqual([]);
+		expect(info.uniforms).toEqual([]);
+		expect(info.varyings).toEqual([]);
 	});
 });

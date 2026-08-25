@@ -50,7 +50,9 @@ type OverlayComponent = {
 	updateElement(id: string): void;
 	updateElementPosition(id: string): void;
 	updateUniforms(id: string, uniforms: Record<string, number | number[]>): void;
-	getElement(id: string): { updateStrategy: string; shader: unknown; bounds: unknown } | undefined;
+	getElement(id: string):
+		| { updateStrategy: string; shader: unknown; bounds: unknown; element: HTMLElement }
+		| undefined;
 	getElements(): ReadonlyArray<{ id: string }>;
 	getCanvas(): HTMLCanvasElement | null;
 	getContext(): WebGLRenderingContext | null;
@@ -60,7 +62,11 @@ type OverlayComponent = {
 	isRunning(): boolean;
 };
 
-async function overlayComponent(): Promise<{ fake: FakeGL; api: OverlayComponent }> {
+async function overlayComponent(): Promise<{
+	fake: FakeGL;
+	api: OverlayComponent;
+	target: HTMLElement;
+}> {
 	const fake = createFakeGL();
 	undo.push(installFakeGL(fake), installFakeObservers());
 
@@ -71,7 +77,7 @@ async function overlayComponent(): Promise<{ fake: FakeGL; api: OverlayComponent
 	// `onMount` is what builds the overlay, and it has not run when `mount`
 	// returns. Every method below is a no-op until it has.
 	await settle();
-	return { fake, api };
+	return { fake, api, target };
 }
 
 /** An `<img>` that reports as loaded, so texture creation reaches the GL calls. */
@@ -275,9 +281,14 @@ describe('the read-back accessors', () => {
 	});
 
 	it('hands back the live canvas and context', async () => {
-		const { fake, api } = await overlayComponent();
+		// Identity, not existence. `.not.toBeNull()` was the whole assertion,
+		// so an overlay rendering to a detached canvas that is in no document —
+		// i.e. invisible — passed it.
+		const { fake, api, target } = await overlayComponent();
 
-		expect(api.getCanvas(), 'the component rendered no canvas').not.toBeNull();
+		const mountedCanvas = target.querySelector('canvas');
+		expect(mountedCanvas, 'the component rendered no canvas').not.toBeNull();
+		expect(api.getCanvas(), 'the overlay is drawing to some other canvas').toBe(mountedCanvas);
 		expect(api.getContext(), 'the context the overlay is drawing with').toBe(fake.context);
 	});
 
@@ -317,7 +328,10 @@ describe('the read-back accessors', () => {
 		await vi.advanceTimersByTimeAsync(0); // let onMount build the overlay
 		await vi.advanceTimersByTimeAsync(1100); // a second of frames
 
-		expect(api.getCurrentFPS(), 'no frames were measured in a full second').toBeGreaterThan(0);
+		// The measured rate, not merely a positive number: `return overlay ? 60
+		// : 0` satisfied `toBeGreaterThan(0)`. Under one fake clock at a 16ms
+		// step against a 60fps target the answer is exactly 60.
+		expect(api.getCurrentFPS(), 'the reported rate is not the measured one').toBe(60);
 		vi.useRealTimers();
 	});
 });
@@ -355,5 +369,107 @@ describe('updateElementPosition', () => {
 			x: 40,
 			y: 80
 		});
+	});
+});
+
+describe('the guards on registration', () => {
+	it('refuses an element that is not an image, video or canvas', async () => {
+		// The inference falls back to `null` rather than `'image'`. It used to
+		// route a `<div>` into `createImageTexture`, whose first guard is
+		// `!img.complete || img.naturalWidth === 0` — trivially true for a div —
+		// so the consumer got "Image not loaded" about an element that is not an
+		// image and never could be.
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		const { api } = await overlayComponent();
+
+		api.registerElement({
+			id: 'a',
+			domElement: document.createElement('div'),
+			shader: 'ripple-gentle'
+		});
+		await settle();
+
+		expect(api.getElement('a'), 'a <div> was registered').toBeUndefined();
+	});
+
+	it('still accepts the three that are', async () => {
+		// The paired half: refusing by tag name must not refuse the supported
+		// tags. A canvas is the one whose inference is easiest to get wrong,
+		// since it is neither the default nor the video case.
+		const { api } = await overlayComponent();
+		const canvas = document.createElement('canvas');
+		canvas.width = 32;
+		canvas.height = 32;
+		document.body.appendChild(canvas);
+
+		api.registerElement({ id: 'a', domElement: loadedImage(), shader: 'ripple-gentle' });
+		api.registerElement({ id: 'b', domElement: canvas, shader: 'ripple-gentle' });
+		await settle();
+
+		expect(api.getElement('a')?.updateStrategy).toBe('static');
+		expect(api.getElement('b')?.updateStrategy).toBe('manual');
+	});
+
+	it('refuses a second registration under an id already in use', async () => {
+		// Ids are identity here: `getElement`, `setShader` and
+		// `unregisterElement` all key by them, so a duplicate would make the
+		// second element unaddressable and leak the first one's texture.
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		const { api } = await overlayComponent();
+		const first = loadedImage();
+
+		api.registerElement({ id: 'a', domElement: first, shader: 'ripple-gentle' });
+		api.registerElement({ id: 'a', domElement: loadedImage(), shader: 'wave-flowing' });
+		await settle();
+
+		expect(api.getElements(), 'the duplicate was registered too').toHaveLength(1);
+		expect(api.getElement('a')?.element, 'the duplicate replaced the original').toBe(first);
+	});
+});
+
+describe('targetFPS reaches the render loop', () => {
+	/** Drive N ms of frames under one fake clock and count the draws. */
+	async function drawsIn(ms: number, options: Record<string, unknown>): Promise<number> {
+		vi.useFakeTimers({
+			toFake: [
+				'requestAnimationFrame',
+				'cancelAnimationFrame',
+				'performance',
+				'setTimeout',
+				'clearTimeout',
+				'Date'
+			]
+		});
+		const fake = createFakeGL();
+		undo.push(installFakeGL(fake), installFakeObservers());
+
+		const target = document.createElement('div');
+		document.body.appendChild(target);
+		const api = mount(WebGLOverlay, { target, props: { options } }) as unknown as OverlayComponent;
+		mounted.push(api as unknown as Record<string, unknown>);
+		await vi.advanceTimersByTimeAsync(0);
+
+		const img = loadedImage();
+		img.getBoundingClientRect = () =>
+			({ left: 0, top: 0, width: 40, height: 40, right: 40, bottom: 40 }) as DOMRect;
+		api.registerElement({ id: 'a', domElement: img, shader: 'ripple-gentle' });
+		await vi.advanceTimersByTimeAsync(0);
+
+		fake.clearCalls();
+		await vi.advanceTimersByTimeAsync(ms);
+		vi.useRealTimers();
+		return fake.drawCalls();
+	}
+
+	it('draws fewer frames at a lower target', async () => {
+		// The option is passed to `RenderLoop`'s constructor and gates the frame
+		// callback on `deltaTime >= frameInterval`. Nothing exercised it: the
+		// value could have been dropped on the floor and every test stayed green.
+		const fast = await drawsIn(1000, { targetFPS: 60 });
+		const slow = await drawsIn(1000, { targetFPS: 10 });
+
+		expect(fast, 'the 60fps overlay barely drew').toBeGreaterThan(30);
+		expect(slow, 'the 10fps overlay drew at 60fps').toBeLessThan(fast / 2);
+		expect(slow, 'the 10fps overlay drew nothing at all').toBeGreaterThan(0);
 	});
 });

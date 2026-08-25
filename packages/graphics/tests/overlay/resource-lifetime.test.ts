@@ -151,8 +151,15 @@ describe('compiled programs are released', () => {
 		const before = api.getElement('a')?.shader;
 		expect(fake.live('program')).toBe(1);
 
-		// The harness compiles everything successfully; a test that needs a
-		// failure overrides the getter, which is what it is there for.
+		// The harness compiles everything successfully, so a test that needs a
+		// failure overrides the getter.
+		//
+		// It is not what rejects this particular source, though — the comment
+		// used to imply it was. `validateShaderSource` refuses 'this is not
+		// glsl' for its missing `main()`, `precision` and `gl_FragColor` before
+		// `gl.createShader` is ever reached. The override is what makes the
+		// *vertex* shader fail too, since `DEFAULT_VERTEX_SHADER` validates
+		// fine; the test passes without it, for a different reason than stated.
 		(fake.context as unknown as Record<string, unknown>).getShaderParameter = () => false;
 
 		api.setShader('a', { fragment: 'this is not glsl' });

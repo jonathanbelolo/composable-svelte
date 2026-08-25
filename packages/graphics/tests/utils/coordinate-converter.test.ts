@@ -107,4 +107,46 @@ describe('createQuadVertices', () => {
 		expect(Math.min(...ys)).toBeCloseTo(ndc.bottom);
 		expect(Math.max(...ys)).toBeCloseTo(ndc.top);
 	});
+
+	it('emits two non-degenerate triangles that between them cover the quad', () => {
+		// The two assertions above cannot see half the quad disappear:
+		// collapsing triangle 1's second and third vertices onto the top-left
+		// corner leaves a zero-area triangle, and the survivor still supplies
+		// every extreme of `xs` and `ys`. A missing triangle is a quad rendered
+		// as a triangle — no error, just half the element.
+		const ndc = domToNDC(bounds(100, 100, 200, 200), CANVAS.width, CANVAS.height);
+
+		const v = Array.from(createQuadVertices(ndc));
+		const points = Array.from({ length: 6 }, (_, i) => [v[i * 2]!, v[i * 2 + 1]!] as const);
+		const area = ([ax, ay]: readonly [number, number], [bx, by]: readonly [number, number], [cx, cy]: readonly [number, number]) =>
+			((bx - ax) * (cy - ay) - (cx - ax) * (by - ay)) / 2;
+
+		const first = area(points[0]!, points[1]!, points[2]!);
+		const second = area(points[3]!, points[4]!, points[5]!);
+		const quad = (ndc.right - ndc.left) * (ndc.top - ndc.bottom);
+
+		expect(Math.abs(first), 'triangle 1 is degenerate').toBeGreaterThan(0);
+		expect(Math.abs(second), 'triangle 2 is degenerate').toBeGreaterThan(0);
+		expect(
+			Math.abs(first) + Math.abs(second),
+			'the two triangles do not add up to the quad'
+		).toBeCloseTo(quad);
+	});
+
+	it('winds both triangles the same way', () => {
+		// Opposite winding makes one of the two faces cull under
+		// `gl.cullFace`, which shows up as a triangular hole rather than an
+		// error. Sign, not magnitude, is the whole assertion.
+		const ndc = domToNDC(bounds(100, 100, 200, 200), CANVAS.width, CANVAS.height);
+
+		const v = Array.from(createQuadVertices(ndc));
+		const points = Array.from({ length: 6 }, (_, i) => [v[i * 2]!, v[i * 2 + 1]!] as const);
+		const cross = ([ax, ay]: readonly [number, number], [bx, by]: readonly [number, number], [cx, cy]: readonly [number, number]) =>
+			(bx - ax) * (cy - ay) - (cx - ax) * (by - ay);
+
+		expect(
+			Math.sign(cross(points[0]!, points[1]!, points[2]!)),
+			'the two triangles wind in opposite directions'
+		).toBe(Math.sign(cross(points[3]!, points[4]!, points[5]!)));
+	});
 });
