@@ -13,6 +13,7 @@ import {
   Color4,
   Mesh,
   MeshBuilder,
+  VertexData,
   StandardMaterial,
   DirectionalLight,
   PointLight,
@@ -35,6 +36,7 @@ import type {
   MaterialConfig,
   Vector3
 } from '../core/types.js';
+import { customGeometryProblem } from '../core/geometry.js';
 
 /**
  * Babylon.js adapter - handles WebGL rendering
@@ -617,9 +619,34 @@ export class BabylonAdapter {
       }
 
       case 'custom': {
-        // TODO: Implement custom geometry from vertices/indices
-        console.warn('[BabylonAdapter] Custom geometry not yet implemented');
-        return null;
+        // The reducer refuses geometry it cannot build, so this is belt and
+        // braces for anything constructed against the adapter directly.
+        const problem = customGeometryProblem(config);
+        if (problem) {
+          console.warn(`[BabylonAdapter] Custom geometry for '${id}' is invalid: ${problem}`);
+          return null;
+        }
+
+        const mesh = new Mesh(id, this.scene);
+        const data = new VertexData();
+        // Babylon calls them `positions`; the config calls them `vertices`.
+        data.positions = config.vertices;
+        data.indices = config.indices;
+
+        if (config.normals) {
+          data.normals = config.normals;
+        } else {
+          // Without normals every face is lit flat by whatever the shader
+          // defaults to, which reads as an untextured silhouette.
+          const normals: number[] = [];
+          VertexData.ComputeNormals(config.vertices, config.indices, normals);
+          data.normals = normals;
+        }
+
+        if (config.uvs) data.uvs = config.uvs;
+
+        data.applyToMesh(mesh);
+        return mesh;
       }
 
       default: {

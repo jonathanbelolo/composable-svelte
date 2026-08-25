@@ -16,6 +16,7 @@ import type {
   AnimationConfig,
   Vector3
 } from './types.js';
+import { customGeometryProblem } from './geometry.js';
 
 /**
  * The single frame-loop effect id.
@@ -239,6 +240,21 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
         return [state, Effect.none()];
       }
 
+      // Custom geometry the renderer cannot build must not enter state either.
+      //
+      // The adapter returns null for geometry it cannot make and `addMesh`
+      // bails cleanly — but the mesh stayed in `state.meshes`, so state and
+      // scene diverged permanently and every later `updateMesh` for that id was
+      // a silent no-op against a renderer that had never heard of it. Same
+      // treatment as a duplicate id, for the same reason.
+      const problem = customGeometryProblem(action.mesh.geometry);
+      if (problem) {
+        console.warn(
+          `[graphics] addMesh: id "${action.mesh.id}" has invalid custom geometry (${problem}); ignoring`
+        );
+        return [state, Effect.none()];
+      }
+
       return [
         {
           ...state,
@@ -279,6 +295,15 @@ export const graphicsReducer: Reducer<GraphicsState, GraphicsAction, GraphicsDep
       // Same value-idempotency requirement as `updateCamera` — Mesh.svelte
       // dispatches a `$derived` config object from an `$effect`.
       if (sameConfig(existing, merged)) {
+        return [state, Effect.none()];
+      }
+
+      // After the idempotency check, so unchanged geometry costs nothing.
+      const problem = customGeometryProblem(merged.geometry);
+      if (problem) {
+        console.warn(
+          `[graphics] updateMesh: id "${action.id}" has invalid custom geometry (${problem}); ignoring`
+        );
         return [state, Effect.none()];
       }
 
