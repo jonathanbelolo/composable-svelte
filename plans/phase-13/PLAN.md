@@ -1,5 +1,21 @@
 # Phase 13: WebGL/WebGPU Graphics Package
 
+**Status**: Historical — the plan as written, not a description of the package
+
+> **WebGPU was never built.** Both branches of the adapter's "detection"
+> constructed the same WebGL `Engine`; `activeRenderer` now reports `'webgl'`
+> always, and the `renderer: { type: 'webgpu', fallback: 'webgl' }` and
+> `preferWebGPU` config shapes below never existed.
+>
+> Two code shapes here are also compile errors today:
+> `<Light type="directional" position={…} />` — that prop is `direction` now,
+> and a directional light has no position — and
+> `new TestStore(initialState, reducer, {})`, which takes a single config
+> object. Its sibling `PHASE-13A-COMPLETION.md` recorded the `TestStore` lesson
+> correctly at the time and this document contradicted it.
+>
+> `packages/graphics/README.md` and the graphics skill are the accurate account.
+
 ## Overview
 
 Create `@composable-svelte/graphics` - A state-driven 3D/2D graphics package that integrates WebGL/WebGPU rendering with Composable Architecture principles.

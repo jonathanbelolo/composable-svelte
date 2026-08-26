@@ -17,7 +17,7 @@ file and line, says whether it was **verified** (something was run) or
 | Open — `svelte-check` errors | **0** (was 142, recounted to 69 in R6) |
 | Open — `svelte-check` warnings | **0** (was 30) |
 | Workspaces covered by `pnpm -r check` | **19 of 19** — the gate is complete |
-| **Open — dead behaviour** | **4 items, S11** — T1–T9 swept, then reviewed and remediated; see T9 |
+| **Open — dead behaviour** | **4 items, S11** — T1–T9 swept; three review rounds over the graphics work, ~85 defects found in it, see T9 |
 | Workspaces that typecheck their tests | **14 of 14 that have tests** (S11 T1) |
 | Optional props a wrapper can forward | **619 of 632** — the 13 left are `$bindable`, registered (S11 T8) |
 | Animation-policy backlog | **none** — emptied and deleted (S11 T2–T4) |
@@ -1582,7 +1582,7 @@ number is known rather than discovered.
 `carousel.types.ts` was swept as part of T8 because `CarouselProps` really is
 `Carousel`'s props type; leaving it would have left that component unwrappable.
 
-### T9. `graphics`'s overlay subsystem — swept, then reviewed and remediated
+### T9. `graphics`'s overlay subsystem — swept, reviewed, remediated, reviewed again
 
 **The sweep's own entry claimed too much, and four hostile reviews said so.**
 It closed with "every package swept, overlay included". Against that: one of
@@ -1609,8 +1609,12 @@ half were accepted by the reducer and dropped in silence by the adapter.
   returned a truthy handle for every name, so "the program has no location for
   this uniform" — the actual failure mode — could not occur in a test.
 
-**Twelve remediation commits** (`c2d4e31`..`36f77c9`), graphics **216 → 294
-tests**. In order: uniforms reaching GL and a harness that can see it; the two
+**Twelve remediation commits**, beginning at `c2d4e31`; graphics **216 → 294
+tests**. The range endpoint that used to be cited here, `36f77c9`, is **not an
+ancestor of `main`** — an orphaned pre-amend sha, in the entry that had just
+been rewritten to be trustworthy. Amending a commit to fix a wrong count moves
+its sha, and that has happened three times in this campaign, so a range is the
+wrong way to name a section of history here: a first commit and a count is not. In order: uniforms reaching GL and a harness that can see it; the two
 unpinned fixes pinned; the element-blanking `setShader` defect; every texture
 upload bounded and accounted for; every error code producible; five lifetime
 holes including a constructor with no error path; `debug` made per-overlay;
@@ -1644,15 +1648,93 @@ stale twice during a single session.
   actually does the work* turned three decorative tests into real ones and
   found two genuine coverage gaps. It also, once, correctly identified two
   redundant guards where neither was load-bearing alone.
-- **The gate caught eleven things vitest could not**, including a wrong
+- **The gate caught twelve things vitest could not**, including a wrong
   *description* of a defect rather than a wrong keystroke, and two type errors
   in test files that `pnpm typecheck` never reads because tests compile under
-  `tsconfig.test.json`.
+  `tsconfig.test.json`. (Eleven when written — and the same sentence named both
+  of the two catches it was undercounting, which is how the arithmetic was
+  caught.)
 - **Pinning a type that exists to reject things needs a negative test.** A
   positive fixture proves an arm accepts what it should and can never prove it
   refuses what it should not. `tests/light-props.types.ts` is compiled and never
   run: six `@ts-expect-error` directives that fail the build when the error
   stops happening.
+
+#### Round three: three more reviewers, ~45 more defects — in the remediation
+
+The twelve remediation commits above were themselves reviewed by three agents
+running 117+ mutations in isolated worktrees. They found roughly forty-five
+verified defects **in the fixes**, several severe, and the shape of them is the
+finding worth keeping.
+
+**The harness described a defence it did not provide.** Its comment explained
+that a constant attribute location "makes `aPosition` and `aTexCoord`
+indistinguishable, so a swapped or duplicated binding would render wrongly and
+test green" — and the distinct locations it returned bought nothing. Gutting
+`setupAttributes`, swapping the two buffers, pointing both attributes at one
+index, and caching no attributes at all **all survived the whole suite**,
+because `calls` recorded method names and never arguments. Positioning was
+equally unobserved: deleting `updateQuadPosition` broke no test, nor did
+`const dpr = 0`.
+
+**Three severe defects the remediation introduced or left:**
+
+- **No overlay had released its GPU context** since `ownsCanvas` was added. The
+  flag was `!options.canvas`, `createOverlay` is not exported, and the component
+  always supplies its own canvas — so it was permanently false and the release
+  was dead code. Directly contrary to the argument the same series made when
+  teaching the support probe to release *its* context.
+- **Failed texture uploads were charged to the memory budget, and compounded.**
+  Five failed updates left 640000 bytes tracked against a texture of 40000; one
+  failure plus an unregister left 600000 charged with no live textures at all,
+  after which every registration was refused. A cross-origin video throws here
+  roughly sixty times a second.
+- **A registration made during a context loss was dropped permanently**, because
+  `recreateResources` rebuilds from the element map and a refused registration
+  never entered it.
+
+**Corrections to the record.** These are in commit messages, which are not
+rewritten; they are recorded here instead:
+
+- `4b9c4a3` says `memoryBudgetExceeded` "sat with no callers at all". `38fc0bf`,
+  the commit immediately before it, added the call and says so in its own
+  message. Two commits contradicting each other an hour apart. "Four of the nine
+  codes could not arrive" was really two.
+- `4df3975` says five `webgl-support` functions had "no callers anywhere". One
+  had a caller — another member of the same dead set. The deletion was right;
+  the evidence was not.
+- **Three mutation rows were false**, which is worse than a missing test because
+  it claims coverage that does not exist: `327c43e`'s "fails four" fails three;
+  `38fc0bf`'s "always scaling" survives; `ee9cc38`'s "keeping the stale
+  dimensions" is inert on its own, only the pair bites.
+
+**Four of round three's own mutations survived, and three were malformed rather
+than revealing.** One hit the image path while the test drove a canvas; one was
+a syntax error nearly logged as a pass; one was built against a stale anchor.
+Only the fourth was a real gap. The rule that came out of it: **a survivor is
+rebuilt once before it is believed**, because a broken mutation and a weak test
+look identical from the outside.
+
+**Six wrong counts across the campaign**, every one written before being
+measured — including two amended in this round alone. It is why the "Fixed and
+committed" row above names a command instead of a number: that figure was 99
+when written, then 157, 169, 170, 174, and is higher again by the time you read
+this. A number in a commit message is a claim like any other, and this campaign
+has caught its own more often than anyone else's.
+
+**And the documentation guard let a defect through in each of three rounds** —
+fabricated component props, a return type that could not land where it was
+passed, a constructor called with three arguments instead of one. None is a
+syntax error, and the arm was syntax-only by a deliberate deferral its own
+header recorded. Closed now: documented examples are real files under
+`packages/graphics/tests/doc-examples/`, compiled by the `svelte-check` the gate
+already runs, with an arm asserting the documents quote them verbatim. All three
+historical defects were reintroduced to confirm each is caught.
+
+**What that guard still does not cover is prose.** `SKILL.md` described
+`maxTextureSize` as rejecting oversize textures; a commit three hours earlier in
+the same session had made every path scale instead. A sentence about behaviour
+rots the moment the behaviour changes, and nothing checks sentences.
 
 #### What the sweep itself recorded, kept as written
 

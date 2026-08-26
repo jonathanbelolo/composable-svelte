@@ -933,6 +933,10 @@ await generateStaticSite(App, {
 ### Added
 - **Phase 16**: WebGL Overlay System for shader-based image effects
 - **Graphics Package Integration**: Full WebGL/WebGPU rendering capabilities
+  <!-- Correction, added later: WebGPU was never implemented. Both branches of
+  the adapter's detection built the same WebGL `Engine`, so the label was the
+  only thing that varied. `activeRenderer` reports `'webgl'`. Left as published
+  rather than rewritten. -->
 
 ## [0.2.6] - 2025-11-04
 
