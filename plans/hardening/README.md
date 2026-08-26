@@ -17,7 +17,7 @@ file and line, says whether it was **verified** (something was run) or
 | Open — `svelte-check` errors | **0** (was 142, recounted to 69 in R6) |
 | Open — `svelte-check` warnings | **0** (was 30) |
 | Workspaces covered by `pnpm -r check` | **19 of 19** — the gate is complete |
-| **Open — dead behaviour** | **5 items, S11** (T7, T10–T13) — T1–T9 swept; **four** review rounds over the graphics work, findings declining ~40 → ~45 → ~45 → 19, see T9 |
+| **Open — dead behaviour** | **5 items, S11** (T7, T10–T13) — T1–T9 swept; **five** review rounds over the graphics work, see T9 (round three ~45, round four 19, round five ~29 — earlier rounds recorded no totals) |
 | Workspaces that typecheck their tests | **14 of 14 that have tests** (S11 T1) |
 | Optional props a wrapper can forward | **619 of 632** — the 13 left are `$bindable`, registered (S11 T8) |
 | Animation-policy backlog | **none** — emptied and deleted (S11 T2–T4) |
@@ -1413,14 +1413,31 @@ Recorded because they were wrong when first reported:
   the paragraph explaining why counts are wrong. Its "graphics 323" in the same
   message is right; a worktree measurement said 322 only because one suite
   failed to load against an unbuilt `core`.
+- **The progression `~40 → ~45 → ~45 → 19` was invented, and it is the eighth
+  wrong count.** The row it replaced — written one commit earlier — said "three
+  review rounds … **~85** defects found in it". That ~85 covered rounds one *and*
+  two; it was re-read as round one alone and a second ~45 conjured to fill the
+  gap, so the same three rounds silently went from ~85 to ~130. Nothing in this
+  register sources ~40 for round one or ~45 for round two: only round three
+  carries a total. The word "declining" was wrong on its own terms as well —
+  the sequence rises, plateaus, then drops, and one of three transitions is a
+  decline. The row says what can be sourced now. That this happened *in the
+  commit filing two other numeric corrections*, one of them captioned "a seventh
+  wrong count, in the paragraph about wrong counts", is the point: the failure
+  is not inattention, it is that a number reached for while writing prose is
+  never measured, however carefully the paragraph around it is written.
 - `fadd3c4`'s "Kept" note records `ShaderProgramManager.enableAttributes` as
   zero-caller-but-alive, which reads as though it were the only one. There are
-  **eight** in exactly that position, all public members of barrel-exported
+  **ten** in exactly that position, all public members of barrel-exported
   classes with no caller anywhere in the repo:
   `ShaderProgramManager.enableAttributes`, `.getStatistics`, `.getProgramInfo`;
   `RenderPipeline.setViewport`, `.setBlendMode`, `.setBlending`, `.renderBatch`,
-  `.getStatistics`. A ninth, `RenderPipeline.clear`, is called only from
-  `renderBatch` — reachable, but only through something that is not. They stay,
+  `.getStatistics`; and `ShaderCompiler.validateProgram`, `.getProgramInfo`.
+  An eleventh, `RenderPipeline.clear`, is called only from `renderBatch` —
+  reachable, but only through something that is not. (First written as
+  **eight**: `ShaderCompiler` was missed entirely, in the entry whose purpose is
+  to stop a later pass deleting these on a count. A list that is short is worse
+  than no list, because the two it omits are the ones it licenses.) They stay,
   on the same principle: unused is not dead. Recorded so a later pass does not
   delete any of them on a count, and so the note is not read as an exception.
   The `DEFAULT_SHADER_CONFIG` deletion in that same commit is *not* the
@@ -1585,7 +1602,10 @@ what made `createOverlay` importable from `graphics` and what turned "it is not
 exported, so deleting this is safe" into a wrong argument twice in one campaign.
 
 `graphics` was narrowed in `f0c89bc`; nothing in the repo deep-imported it, so
-it cost nothing. The other five are not free: narrowing is a breaking change
+it cost nothing here. That commit is typed `fix(repo)` and **should have carried
+`!`** — `c94a312` used `fix(graphics)!` for a comparable narrowing, and an
+external consumer of any subpath breaks on it. Recorded rather than rewritten,
+and the remaining five must each be marked breaking when their turn comes. The other five are not free: narrowing is a breaking change
 for anyone already deep-importing, and each needs its own pass to decide which
 subpaths become explicit entries. `core` and `auth` already declare theirs.
 
@@ -1834,10 +1854,101 @@ the deferred work delivers *everything* the immediate work delivered. Round
 three deferred texture creation during a context loss and the deferral quietly
 dropped the consumer's `onTextureLoaded`.
 
-**And this is where general review of `packages/graphics` stops.** Round four's
-reviewers said the returns are now sharply diminishing, and the numbers agree:
-~40, ~45, ~45, 19, with the verification half clean. Further rounds should be
-triggered by a change, not by a schedule.
+**"And this is where general review of `packages/graphics` stops" — retracted
+by round five, which found ~29 in these four commits.** The reasoning was:
+findings are declining, the verification half came back clean, so stop. Two of
+those three premises were wrong. The progression was invented (see the
+corrections above), and "the verification half is clean" measured whether the
+*previous* round's claims held — which says nothing about whether the current
+round's fixes are sound. It was a stopping rule built from the one signal that
+could not detect the thing it was used to rule out.
+
+Round five is recorded below. The honest version of the rule: **a round stops
+being worth running when a round finds nothing, and not before** — measured on
+that round's own output, not on the health of the round before it.
+
+#### Round five: ~29 defects, three of them created by round four's fixes
+
+Round four's four commits went to three reviewers. They found **~29** verified
+defects — *more* than the 19 round four found, which is what retracts the
+stopping conclusion above.
+
+**Three were introduced by round four's own fixes, and two of those interfered
+with each other inside one commit.** `0d7efef` added a rebuild generation
+counter to stop a superseded texture creation orphaning a GPU handle, and in
+doing so (a) deallocated against the *replacement* `TextureFactory`, whose
+accounting starts at zero, opening a memory-budget hole — 8MB accepted against a
+5MB ceiling — and (b) broke the deferred `onTextureLoaded` it was shipped
+alongside, by consuming the debt before the async rebuild that might never
+deliver it. Both are the shader-gallery symptom that commit existed to close,
+reopened by its own other half. The third: `<Mesh>`'s geometry pre-check sat
+below the ownership early-return, closing the add path only while its comment
+claimed both — six dispatches and six warnings across five prop changes, the
+same figure the commit quoted as fixed, on the branch its harness could not
+reach.
+
+**A fix with no coverage is indistinguishable from a no-op.** The
+refusal-before-accounting-restore ordering survived its mutation in round four
+*and* in round five's first attempt, because the test drove `registerElement`
+and the code path exists only on `updateTexture`. Two reviewers found it
+independently; both rebuilt the mutation as a direct probe before believing it.
+
+**Deleting dead behaviour created more of it.** Removing the `TEXTURE_TOO_LARGE`
+branch orphaned `TextureValidationResult.reason`, and removing `validationError`'s
+dead `id` parameter left `width`/`height` dead in the same signature — the exact
+category the commit was about, in the file it was about. Fixed structurally:
+the result is a discriminated union now, so "a failure without `scaled` is a
+budget refusal" is narrowed on rather than asserted in a comment. The looseness
+was what let three write-only fields survive three separate audits.
+
+**The one-sided fix is its own category.** `docExamples()` normalised line
+endings on the example side and not the document side, so under the CRLF
+checkout the fix was *for*, it turned a silent skip into a false accusation
+against three innocent documents. `8e88776` claimed "**neither** limit was
+validated… both now go through one helper" and guarded one of the two readers of
+`MAX_TEXTURE_SIZE` — so an unusable driver value came back through
+`DeviceCapabilities` as the default for `options.maxTextureSize`, and the new
+warning blamed the consumer for it.
+
+**And the tenth instance of the convenient setup, which is worth stating
+precisely because knowing the pattern has not reduced its rate.** A harness test
+was written to bite one shared `boundArrayBuffer` conflating GL's per-target
+bindings. It passed against that defect (bind and upload in lockstep gives the
+right answer by accident); it was caught by mutation, diagnosed, rebuilt to
+interleave the binds — and *still* only observed anything because it uploaded a
+`Float32Array` to `ELEMENT_ARRAY_BUFFER`, the one element type the store
+recorded. Realistic index data is `Uint16Array`, which the store silently
+discarded.
+
+The mechanism, since awareness demonstrably is not the fix:
+
+- **A mutation probes the axis you aim it at.** Aiming it requires already
+  knowing where the weakness is. A test that survives its code mutation is
+  certified on one dimension and nothing else.
+- **The fixture and the code share the author's blind spot.** The store recorded
+  only `Float32Array` because only vertex data was in mind; the test used
+  `Float32Array` for the same reason. The error predates both, so care applied
+  at either does not reach it.
+- **"Kill it with a mutation" is a *stopping* signal, and it fires early.** Once
+  the mutation bites there is a story, and confirmation of the story reads as
+  confirmation of the test.
+
+Two mechanical checks adopted, neither depending on the defect model being
+right:
+
+1. **Mutate the fixture, not just the code** — replace each input with the most
+   realistic value a consumer would supply. Three fixture mutations were run
+   this round; two failed on the *non-vacuity* assertion rather than the claim
+   under test, which is the guard working.
+2. **Assert the observable is non-vacuous before asserting its value.** One
+   line, applied to every test written this round. It is the suite-level vacuity
+   guard this campaign has already built twice, moved inside a single test.
+
+**Two mutations misfired on their anchors and reported clean passes without
+ever applying.** Both were caught by reading the output rather than trusting the
+exit code, and both bite once rebuilt. Round three had three of these; the rule
+that catches them — *a survivor is rebuilt once before it is believed* — is
+still the highest-yield thing in this document.
 
 #### What the sweep itself recorded, kept as written
 

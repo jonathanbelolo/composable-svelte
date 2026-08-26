@@ -11,8 +11,14 @@
 > defect `LightConfig.id` was introduced to fix, because removal by index took
 > out the wrong lights once the default ambient light occupied slot 0.
 > `@babylonjs/loaders` is not a dependency. There are two geometry lists and
-> they disagree: the one under "What Was Built" omits `torus`, and the one under
-> "Mesh creation" omits `torus` and `custom`. All six types exist.
+> they disagree: the one under "Core Features Implemented → Type System" omits
+> `torus`, and the "Mesh creation" bullet under "Babylon.js Adapter" omits
+> `torus` and `custom`. All six types exist — box, sphere, cylinder, plane,
+> torus, custom. (Both locators were wrong when this banner was first corrected:
+> they named "What Was Built", which holds only a directory tree, and treated
+> "Mesh creation" as a heading rather than the bullet it is. A banner is what a
+> reader checks the document against, so a banner that sends them to the wrong
+> section reads as stale.)
 >
 > The usage example fails to compile twice over: every child omits the required
 > `{store}` prop, and `position` on a directional light is now `direction`.

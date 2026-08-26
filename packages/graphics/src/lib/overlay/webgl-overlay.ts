@@ -91,6 +91,20 @@ class WebGLOverlay implements OverlayContextAPI {
 	private options: Required<OverlayOptions>;
 	private readonly log: DebugLog;
 	private rebuildGeneration = 0;
+
+	/**
+	 * Load callbacks owed to elements registered during a context loss, by id.
+	 *
+	 * Beside the registrations rather than on them: `ElementRegistration` is
+	 * handed to the consumer by `registerElement` and `getElement`, so a field
+	 * there is published API — and this one was a mutable implementation detail
+	 * of rebuild scheduling, writable from outside, describing nothing a
+	 * consumer can act on.
+	 *
+	 * The contract is "called once the texture actually exists" — once, not once
+	 * per restore, and not lost when a rebuild is superseded or fails.
+	 */
+	private readonly owedTextureLoaded = new Map<string, () => void>();
 	private destroyed = false;
 
 	constructor(options: OverlayInit = {}) {
@@ -337,7 +351,7 @@ class WebGLOverlay implements OverlayContextAPI {
 			// after it. In `examples/shader-gallery` that callback fades the DOM
 			// image out, so the effect stayed invisible for the life of the page.
 			if (options.onTextureLoaded) {
-				registration.pendingTextureLoaded = options.onTextureLoaded;
+				this.owedTextureLoaded.set(registration.id, options.onTextureLoaded);
 			}
 		} else {
 			// Create initial texture
@@ -411,6 +425,9 @@ class WebGLOverlay implements OverlayContextAPI {
 		// Remove from elements map. Deleted *before* awaiting anything, so a
 		// texture still in flight can see that its element has gone.
 		this.elements.delete(id);
+		// The debt goes with the element. Keyed by id rather than held on the
+		// registration, so unlike a field it does not disappear on its own.
+		this.owedTextureLoaded.delete(id);
 
 		// Log unregistration
 		if (this.options.debug) {
@@ -780,7 +797,7 @@ class WebGLOverlay implements OverlayContextAPI {
 			// never told, for the life of the page. That is the shader-gallery
 			// symptom this deferral was written to close, reopened by the
 			// generation guard added alongside it.
-			delete registration.pendingTextureLoaded;
+			this.owedTextureLoaded.delete(registration.id);
 			onTextureLoaded?.();
 
 			// Store dimensions for memory tracking — in the fields
@@ -1127,7 +1144,11 @@ class WebGLOverlay implements OverlayContextAPI {
 			// Read, not consumed: `createElementTexture` clears it when it
 			// actually fires, so a rebuild that is superseded or fails leaves the
 			// debt in place for the next one.
-			this.createElementTexture(registration, registration.pendingTextureLoaded, generation);
+			this.createElementTexture(
+				registration,
+				this.owedTextureLoaded.get(registration.id),
+				generation
+			);
 			this.compileElementShader(registration);
 		}
 

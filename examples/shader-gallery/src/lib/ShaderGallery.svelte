@@ -55,8 +55,11 @@ function registerImageElement(
     ...(onTextureLoaded !== undefined && { onTextureLoaded })
   });
 
-  // Dispatch to store for tracking
-  const bounds = element.getBoundingClientRect();
+  // Dispatch to store for tracking.
+  //
+  // The overlay tracks the element's position itself, so the
+  // `getBoundingClientRect()` that used to sit here was measured, assigned, and
+  // never read — a forced layout per registration, for nothing.
   store.dispatch({ type: 'registerImage', id, src, element });
 }
 

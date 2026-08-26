@@ -399,11 +399,19 @@ function withDeclaredStores(body: string): string {
 /**
  * Whether a block is Svelte markup, whatever its fence says.
  *
- * The fence label cannot be trusted: `composable-svelte-graphics/SKILL.md`
- * carries 45 ```typescript blocks and exactly one ```svelte, and most of those
- * 45 are component markup — which is why a fence-only check found nothing in
- * the very file whose examples were wrong. A line beginning with a capitalised
- * component tag, or with Svelte block syntax, is the signal.
+ * The fence label cannot be trusted. `composable-svelte-graphics/SKILL.md` was
+ * the case that proved it: at the time, 44 ```typescript blocks against a
+ * single ```svelte, 28 of them component markup — which is why a fence-only
+ * check found nothing in the very file whose examples were wrong. A line
+ * beginning with a capitalised component tag, or with Svelte block syntax, is
+ * the signal.
+ *
+ * Those figures are **historical and stated as such**, because they moved the
+ * moment the mislabelled blocks were relabelled. Two comments in this file used
+ * to give them in the present tense and disagree with each other — 45 here, 44
+ * below, "most of 45" against "28 of them" — and both were stale: the file
+ * carries 18 ```typescript and 29 ```svelte today. A number that describes a
+ * fixed defect belongs in the past tense, or it becomes a claim about now.
  */
 function looksLikeSvelte(body: string): boolean {
 	return (
@@ -423,9 +431,9 @@ const sweptSvelteBlocks = blocks.filter((b) => SWEPT_DOCS.includes(b.file) && b.
  * Blocks that are Svelte markup but are not fenced as such.
  *
  * The fence label is the contract this check runs on, so a mislabelled fence is
- * a hole in it — and `composable-svelte-graphics/SKILL.md` had 44 ```typescript
- * blocks against a single ```svelte, 28 of them component markup, which is why
- * a fence-only check found nothing in the very file whose examples were wrong.
+ * a hole in it. See `looksLikeSvelte` above for the case that established it;
+ * the figures live there once, in the past tense, rather than in two comments
+ * that drifted apart.
  *
  * **Zero now**, for the swept documents. It was 6 for one round, under a
  * comment saying those six "do not compile as they stand" — which stopped being

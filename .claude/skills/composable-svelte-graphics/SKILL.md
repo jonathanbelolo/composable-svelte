@@ -502,8 +502,8 @@ so nothing renders and no later `updateMesh` for that id does anything either.
 | `indices.length` a multiple of 3 | triangles |
 | every index a whole number in `0 .. vertices.length / 3 - 1` | Babylon truncates a float index through a `Uint16Array` and silently draws a different triangle |
 | every value in `vertices`, `normals` and `uvs` finite | one `NaN` makes computed normals `NaN` for all three vertices of any triangle touching it |
-| `normals.length === vertices.length` | one per vertex |
-| `uvs.length === vertices.length / 3 * 2` | two per vertex; wrong here mistextures every face without erroring |
+| `normals.length === vertices.length`, if given | one per vertex |
+| `uvs.length === vertices.length / 3 * 2`, if given | two per vertex; wrong here mistextures every face without erroring |
 
 Babylon validates none of this: bad indices produce garbage geometry or throw
 from inside the engine.

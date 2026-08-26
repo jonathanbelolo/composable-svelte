@@ -131,15 +131,6 @@ export interface ElementRegistration {
 	height?: number | undefined;
 
 	/**
-	 * A load callback owed to this element but not yet honoured.
-	 *
-	 * Set only when a registration is deferred through a context loss, and
-	 * cleared the moment it fires. The contract is "called once the texture
-	 * actually exists" — once, not once per restore.
-	 */
-	pendingTextureLoaded?: (() => void) | undefined;
-
-	/**
 	 * Animation frame ID (for video elements)
 	 */
 	animationFrameId?: number;
@@ -161,7 +152,16 @@ export interface OverlayOptions {
 	targetFPS?: number;
 
 	/**
-	 * Maximum texture size (auto-detected if not provided)
+	 * A ceiling on texture dimensions, in pixels. Defaults to the driver's own.
+	 *
+	 * It **downscales** rather than refuses, and it can only narrow: a value
+	 * above the driver maximum is clamped to it. Must be a whole number of at
+	 * least 1 — anything else is reported on the console and **ignored**, which
+	 * leaves the driver limit in force rather than failing the registration.
+	 *
+	 * If the driver reports nothing usable, the ceiling falls back to 2048
+	 * rather than becoming unlimited. That can be well below the real device
+	 * maximum, and is reported too.
 	 */
 	maxTextureSize?: number;
 

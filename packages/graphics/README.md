@@ -349,7 +349,17 @@ The single prop is `options` (`OverlayOptions`): `targetFPS`, `maxTextureSize`,
 `maxTextureSize` **downscales** a source larger than it, rather than refusing
 one — for `<img>`, `<video>` and `<canvas>` alike, at registration and on every
 re-upload. It can only narrow: a value above the driver's own maximum is clamped
-to it. `memoryBudget` is the option that refuses, with
+to it. It must be a whole number of at least 1; anything else is reported on the
+console and **ignored**, leaving the driver limit in force. If the driver
+reports nothing usable the ceiling falls back to **2048** rather than becoming
+unlimited — which can sit well below the real device maximum, and is reported
+too.
+
+A source with a zero dimension — a `<canvas>` that has not been measured yet —
+is refused with `TEXTURE_CREATION_FAILED` rather than uploaded as a texture with
+no pixels.
+
+`memoryBudget` is the option that refuses outright, with
 `OverlayErrorCode.MEMORY_BUDGET_EXCEEDED` through `onError`.
 
 `onError` receives an `OverlayError`; import it and `OverlayErrorCode` to narrow
@@ -358,6 +368,15 @@ on `error.code`. It reports failures to construct the overlay
 (`INVALID_ELEMENT_TYPE`, `ELEMENT_NOT_FOUND`, `CONTEXT_LOST`), and to build a
 texture or compile a shader (`CORS_TAINTED_CANVAS`, `MEMORY_BUDGET_EXCEEDED`,
 `TEXTURE_CREATION_FAILED`, `SHADER_COMPILATION_FAILED`).
+
+`registerElement(id, element, options)` takes `type` (`'image' | 'video' |
+'canvas'`), `shader` (a preset name or a `CustomShaderEffect`), an optional
+`updateStrategy` (`'static' | 'manual' | 'frame'` — inferred from the element
+type when omitted) and an optional `onTextureLoaded`, called **once**, when the
+texture actually exists. That last one is how `examples/shader-gallery` knows
+when to fade the DOM `<img>` out; it fires whether the texture was built
+immediately or deferred because the context was lost at registration time, and
+it does not fire again on a later restore.
 
 The methods are `registerElement` and `unregisterElement`; `updateElementShader`
 (recompile) and `updateUniforms` (feed the existing program new values);
@@ -371,6 +390,9 @@ bounds after a transform); `getElement`, `getElements`, `getCanvas`,
 `glitch-*` and `zoom-*`. `getAllPresetNames()` lists them, `getPresetMetadata()`
 describes one, and `createRippleEffect` and its five siblings build effects the
 fixed presets do not cover.
+
+`BabylonAdapter` is also exported, for driving a `<Scene>` directly rather than
+through the component.
 
 `examples/shader-gallery` is the worked example.
 
