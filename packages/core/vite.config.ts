@@ -49,6 +49,7 @@ export default defineConfig({
       'tests/repo/dist-freshness.test.ts',
       'tests/repo/peer-ranges.test.ts',
       'tests/repo/published-files.test.ts',
+      'tests/repo/export-surface.test.ts',
       'tests/repo/doc-examples.test.ts',
       // Walks every package's src from disk; same reason.
       'tests/repo/optional-props.test.ts',

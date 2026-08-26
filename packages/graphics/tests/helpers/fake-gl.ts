@@ -47,7 +47,15 @@ export interface FakeGL {
 	 * between "the value is in the shader object" and "the value reached GL".
 	 */
 	uniforms(): Map<string, unknown>;
-	/** Forget recorded calls, uniform writes and draws. Resource counters keep. */
+	/**
+	 * Forget recorded calls, uniform writes and draws.
+	 *
+	 * Observations only. Resource counters and buffer contents are *GL state*,
+	 * and GL state survives a frame — clearing it here would model a device that
+	 * forgets its own buffers. "The quad was positioned **this frame**" is
+	 * therefore `argsFor('bufferSubData')` after a `clearCalls()`, not a
+	 * `bufferContents` that went blank.
+	 */
 	clearCalls(): void;
 	/**
 	 * Every call, with its arguments, in order.
@@ -61,7 +69,10 @@ export interface FakeGL {
 	records: ReadonlyArray<{ name: string; args: unknown[] }>;
 	/** Calls to one method, with arguments. */
 	argsFor(name: string): unknown[][];
-	/** What a buffer handle currently holds, as uploaded. */
+	/**
+	 * What a buffer handle currently holds, as uploaded — cumulative, and
+	 * unaffected by `clearCalls`. See its note for how to scope to one frame.
+	 */
 	bufferContents(handle: unknown): Float32Array | null;
 }
 
@@ -76,6 +87,7 @@ const CONSTANTS: Record<string, number> = {
 	LINEAR: 0x2601,
 	CLAMP_TO_EDGE: 0x812f,
 	ARRAY_BUFFER: 0x8892,
+	ELEMENT_ARRAY_BUFFER: 0x8893,
 	STATIC_DRAW: 0x88e4,
 	FLOAT: 0x1406,
 	TRIANGLE_STRIP: 0x0005,
@@ -195,7 +207,10 @@ export function createFakeGL(): FakeGL {
 	// Contents per buffer handle, so a test can ask what actually went up
 	// rather than how many times something did.
 	const bufferStore = new Map<unknown, Float32Array>();
-	let boundArrayBuffer: unknown = null;
+	// Keyed by target, because GL is. One variable meant an
+	// `ELEMENT_ARRAY_BUFFER` bind silently displaced the array binding, and the
+	// next `bufferData` then wrote vertex data into the index buffer's slot.
+	const boundBuffers = new Map<number, unknown>();
 
 	const record =
 		<T>(name: string, result: (...args: unknown[]) => T) =>
@@ -219,6 +234,12 @@ export function createFakeGL(): FakeGL {
 		createBuffer: record('createBuffer', () => make('buffer')),
 		deleteBuffer: record('deleteBuffer', (b) => {
 			bufferStore.delete(b);
+			// GL unbinds a deleted buffer from every target it was bound to.
+			// Without this the handle stayed bound and stayed writable, so code
+			// that uploaded after `deleteBuffer` looked like it worked.
+			for (const [target, bound] of boundBuffers) {
+				if (bound === b) boundBuffers.delete(target);
+			}
 			free('buffer', b);
 		}),
 
@@ -309,21 +330,54 @@ export function createFakeGL(): FakeGL {
 		// that distinguishes the position attribute from the texture
 		// coordinates. Without contents, "the quad was positioned" is
 		// unobservable — deleting `updateQuadPosition` broke no test.
-		bindBuffer: record('bindBuffer', (_target, buffer) => {
-			boundArrayBuffer = buffer ?? null;
+		bindBuffer: record('bindBuffer', (target, buffer) => {
+			if (buffer == null) boundBuffers.delete(target as number);
+			else boundBuffers.set(target as number, buffer);
 		}),
-		bufferData: record('bufferData', (_target, data) => {
-			if (boundArrayBuffer && data instanceof Float32Array) {
-				bufferStore.set(boundArrayBuffer, new Float32Array(data));
+		bufferData: record('bufferData', (target, data) => {
+			const bound = boundBuffers.get(target as number);
+			if (!bound) return;
+			// `bufferData(target, size, usage)` is the allocate-only form: a byte
+			// count, and a buffer of zeroes. Ignoring it left the store empty, so
+			// a later `bufferSubData` looked like it was writing to nothing.
+			if (typeof data === 'number') {
+				bufferStore.set(bound, new Float32Array(Math.max(0, Math.floor(data / 4))));
+				return;
 			}
+			if (data instanceof Float32Array) bufferStore.set(bound, new Float32Array(data));
 		}),
-		bufferSubData: record('bufferSubData', (_target, offset, data) => {
-			if (!boundArrayBuffer || !(data instanceof Float32Array)) return;
-			const existing = bufferStore.get(boundArrayBuffer);
-			const start = typeof offset === 'number' ? offset : 0;
-			const next = existing ? new Float32Array(existing) : new Float32Array(start + data.length);
+		bufferSubData: record('bufferSubData', (target, offset, data) => {
+			const bound = boundBuffers.get(target as number);
+			if (!bound || !(data instanceof Float32Array)) return;
+
+			const existing = bufferStore.get(bound);
+			// Real GL raises `INVALID_OPERATION` here — there is no store to write
+			// into. Silently succeeding made a missing `bufferData` invisible, and
+			// the harness has no `getError`, so throwing is the only way to say it.
+			if (!existing) {
+				throw new Error(
+					'fake-gl: bufferSubData on a buffer that has had no bufferData — real GL raises INVALID_OPERATION'
+				);
+			}
+
+			// WebGL's offset is in **bytes**. Treating it as a Float32 index made
+			// every non-zero offset write four times too far along, and threw
+			// `RangeError` on calls real GL accepts.
+			const byteOffset = typeof offset === 'number' ? offset : 0;
+			if (byteOffset % Float32Array.BYTES_PER_ELEMENT !== 0) {
+				throw new Error(`fake-gl: bufferSubData byte offset ${byteOffset} is not float-aligned`);
+			}
+
+			const start = byteOffset / Float32Array.BYTES_PER_ELEMENT;
+			if (start + data.length > existing.length) {
+				throw new Error(
+					`fake-gl: bufferSubData writes past the end of the buffer (${start} + ${data.length} > ${existing.length}) — real GL raises INVALID_VALUE`
+				);
+			}
+
+			const next = new Float32Array(existing);
 			next.set(data, start);
-			bufferStore.set(boundArrayBuffer, next);
+			bufferStore.set(bound, next);
 		}),
 		texImage2D: noop('texImage2D'),
 		texParameteri: noop('texParameteri'),

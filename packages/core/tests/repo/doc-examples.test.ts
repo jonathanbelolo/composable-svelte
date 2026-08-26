@@ -52,11 +52,21 @@ const repoRoot = fileURLToPath(new URL('../../../../', import.meta.url));
 
 /** Every markdown file that documents this library, wherever it lives. */
 function docs(): string[] {
-	// `examples/` included: `examples/shader-gallery/README.md` described an
-	// architecture that had not existed for months, and nothing here could see
-	// it. `plans/` deliberately stays out — those documents are historical and
-	// their code is *supposed* to be stale; a banner is the instrument there,
-	// not a compiler.
+	// `examples/` is in scope so the code in an example's documentation is held
+	// to the same standard as the code in a package's. Be clear about what that
+	// buys today: it adds 63 blocks across eight READMEs, and exactly **one**
+	// reaches a rule — a single TestStore block. The seven ```svelte ones are
+	// not compiled, because that arm reads `SWEPT_DOCS`, an explicit list which
+	// names no example.
+	//
+	// `shader-gallery/README.md` contributes **zero** — its only fence is
+	// ```bash. It is the document that prompted this root, having described an
+	// architecture months gone, but that rot was prose, and prose is not what
+	// this compiles. The root is here for the next block written under it.
+	//
+	// `plans/` deliberately stays out — those documents are historical and their
+	// code is *supposed* to be stale; a banner is the instrument there, not a
+	// compiler.
 	const roots = [
 		join(repoRoot, 'packages'),
 		join(repoRoot, '.claude'),
@@ -434,46 +444,102 @@ const ALLOWED_MISLABELLED = 0;
  * verbatim. The **file is authoritative**: it is the thing that has to compile,
  * and drift in either direction fails here.
  */
-function docExamples(): Array<{ path: string; mirrors: string[]; body: string }> {
-	const out: Array<{ path: string; mirrors: string[]; body: string }> = [];
+interface DocExample {
+	path: string;
+	mirrors: string[];
+	body: string;
+}
+
+/**
+ * Every file under a `doc-examples/` directory, parsed — or named as a reason
+ * this returned fewer than it found.
+ *
+ * The `unparsed` half is the point. This used to `continue` past anything it
+ * could not read, so a file that was *compiled* by the gate but never *checked
+ * against its document* looked exactly like a file that did not exist. Five
+ * ordinary things triggered it, all reported green: a CRLF checkout (the Svelte
+ * header regex needs `-->\n`, and there is no `.gitattributes`, so on Windows
+ * with the default `core.autocrlf=true` both Svelte examples went unguarded
+ * while the `.ts` one held the vacuity arm up single-handed); a JSDoc block
+ * header, which is this repo's dominant comment style; a `-->` inside the
+ * header; `See:` where the parser wants `Mirrors:`; and a subdirectory, which
+ * still compiles, so it looks guarded from every angle except this one.
+ *
+ * A count-based vacuity arm cannot catch any of that — it is a *total* check,
+ * and one surviving file keeps it green. Silence is the failure, so silence is
+ * what gets reported.
+ */
+function docExamples(): { examples: DocExample[]; unparsed: string[] } {
+	const examples: DocExample[] = [];
+	const unparsed: string[] = [];
 	const packagesDir = join(repoRoot, 'packages');
-	if (!existsSync(packagesDir)) return out;
+	if (!existsSync(packagesDir)) return { examples, unparsed };
+
+	const files: string[] = [];
+	const walk = (dir: string): void => {
+		for (const entry of readdirSync(dir, { withFileTypes: true })) {
+			const full = join(dir, entry.name);
+			if (entry.isDirectory()) walk(full);
+			else if (entry.isFile()) files.push(full);
+		}
+	};
 
 	for (const pkg of readdirSync(packagesDir, { withFileTypes: true })) {
 		if (!pkg.isDirectory()) continue;
 		const dir = join(packagesDir, pkg.name, 'tests', 'doc-examples');
-		if (!existsSync(dir)) continue;
-
-		for (const entry of readdirSync(dir, { withFileTypes: true })) {
-			if (!entry.isFile()) continue;
-			const full = join(dir, entry.name);
-			const source = readFileSync(full, 'utf8');
-
-			// The header names the documents and is not part of the example.
-			// `<!-- … -->` for Svelte, a run of `//` lines for TypeScript.
-			const svelteHeader = /^<!--([\s\S]*?)-->\n/.exec(source);
-			const tsHeader = /^((?:\/\/[^\n]*\n)+)/.exec(source);
-			const header = svelteHeader ?? tsHeader;
-			if (!header) continue;
-
-			const mirrors = /Mirrors:\s*([^\n]+)/.exec(header[1]!);
-			if (!mirrors) continue;
-
-			out.push({
-				path: relative(repoRoot, full),
-				mirrors: mirrors[1]!.split(',').map((name) => name.trim()),
-				body: source.slice(header[0].length).replace(/\n$/, '')
-			});
-		}
+		if (existsSync(dir)) walk(dir);
 	}
-	return out;
+
+	for (const full of files) {
+		const path = relative(repoRoot, full);
+		// Normalised, because the header patterns anchor on a newline and a
+		// document quotes the body — so a CRLF checkout would otherwise fail to
+		// parse and then fail to match, for a reason invisible in the diff.
+		const source = readFileSync(full, 'utf8').replace(/\r\n/g, '\n');
+
+		// The header names the documents and is not part of the example.
+		// `<!-- … -->` for Svelte; for TypeScript either a `/** … */` block or a
+		// run of `//` lines.
+		const header =
+			/^<!--([\s\S]*?)-->\n/.exec(source) ??
+			/^\/\*\*?([\s\S]*?)\*\/\n/.exec(source) ??
+			/^((?:\/\/[^\n]*\n)+)/.exec(source);
+
+		if (!header) {
+			unparsed.push(`${path} — starts with no header comment, so it names no document`);
+			continue;
+		}
+
+		const mirrors = /Mirrors:\s*([^\n]+)/.exec(header[1]!);
+		if (!mirrors) {
+			unparsed.push(`${path} — header has no \`Mirrors:\` line, so nothing is checked against it`);
+			continue;
+		}
+
+		examples.push({
+			path,
+			mirrors: mirrors[1]!.split(',').map((name) => name.trim()),
+			body: source.slice(header[0].length).replace(/\n$/, '')
+		});
+	}
+
+	return { examples, unparsed };
 }
 
-const examples = docExamples();
+const { examples, unparsed: unparsedExamples } = docExamples();
 
 describe('documented examples that are compiled for real', () => {
-	it('finds them, so the arm below is not vacuous', () => {
+	it('finds them, so the arms below are not vacuous', () => {
 		expect(examples.length, 'no doc-examples directories found').toBeGreaterThan(0);
+	});
+
+	it('reads every file it finds, so none is silently unguarded', () => {
+		// Per-file, deliberately. The count arm above is *total* — it cannot tell
+		// three guarded examples from one guarded example and two dropped ones.
+		expect(
+			unparsedExamples,
+			'a file under doc-examples/ is compiled by the gate but checked against no document'
+		).toEqual([]);
 	});
 
 	it('names a document that exists', () => {

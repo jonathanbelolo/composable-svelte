@@ -50,6 +50,7 @@ export default defineConfig({
       'tests/repo/dist-freshness.test.ts',
       'tests/repo/peer-ranges.test.ts',
       'tests/repo/published-files.test.ts',
+      'tests/repo/export-surface.test.ts',
       'tests/repo/doc-examples.test.ts',
 			'tests/repo/optional-props.test.ts',
       'tests/styles/**/*.test.ts',

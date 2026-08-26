@@ -19,17 +19,7 @@
       "svelte": "./dist/index.js",
       "default": "./dist/index.js"
     },
-    "./package.json": "./package.json",
-    "./*.js": {
-      "types": "./dist/*.d.ts",
-      "svelte": "./dist/*.js",
-      "default": "./dist/*.js"
-    },
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "svelte": "./dist/*.js",
-      "default": "./dist/*.js"
-    }
+    "./package.json": "./package.json"
   },
   "svelte": "./dist/index.js",
   "files": [
