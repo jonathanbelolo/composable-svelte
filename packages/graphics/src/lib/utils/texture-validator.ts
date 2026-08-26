@@ -12,30 +12,79 @@
 
 import { noDebug, type DebugLog } from './debug.js';
 
-export interface TextureValidationResult {
-	valid: boolean;
-	reason?: string;
-	/**
-	 * The dimensions to retry at, when shrinking would help.
-	 *
-	 * Presence is the discriminant: a size failure always carries one and every
-	 * caller scales, so a failure *without* one is a budget refusal. There used
-	 * to be an explicit `failure: 'size' | 'budget'` beside this, and once
-	 * `c94a312` deleted `TEXTURE_TOO_LARGE` its `'size'` arm had no reader —
-	 * relabelling it survived the whole suite, as did deleting the branch that
-	 * consumed it.
-	 */
-	scaled?: { width: number; height: number };
-	/**
-	 * Bytes the refused texture would have cost, as judged.
-	 *
-	 * Carried because the caller cannot recompute it: when the refusal is about
-	 * a *scaled* size, the caller still holds the original dimensions, and the
-	 * error used to report those — a figure four times too large for a
-	 * half-scale fit.
-	 */
-	requestedBytes?: number;
+/**
+ * A refusal the caller can rescue by shrinking.
+ *
+ * `scaled` is the size to retry at. Every caller does retry, which is why
+ * nothing downstream turns this into an error.
+ */
+export interface TextureTooLarge {
+	valid: false;
+	scaled: { width: number; height: number };
+	requestedBytes?: undefined;
+	empty?: undefined;
 }
+
+/**
+ * A refusal shrinking cannot rescue: the budget is full.
+ *
+ * `requestedBytes` is what the refused texture would have cost **as judged** —
+ * required, not optional, because the caller cannot recompute it. When the
+ * refusal is about a *scaled* size the caller still holds the original
+ * dimensions, and the error used to report those: a figure four times too large
+ * for a half-scale fit. A `?? width * height * 4` fallback covered that, and
+ * was structurally unreachable — two dead parameters on `validationError`,
+ * created by the commit that removed a third from the same signature for being
+ * dead. Making the field required is what removes the fallback for good.
+ */
+export interface TextureBudgetExceeded {
+	valid: false;
+	scaled?: undefined;
+	requestedBytes: number;
+	empty?: undefined;
+}
+
+/**
+ * A refusal nothing can rescue: the source has no pixels.
+ *
+ * A `<canvas width=256 height=0>` — a collapsed layout, or a chart before it
+ * measures — used to pass as a valid source, because a zero-area texture costs
+ * no bytes and no budget refuses it. `onTextureLoaded` fired, `onError` never
+ * did, and the element rendered nothing. The one-pixel floor in `scaleToFit`
+ * cannot reach this: there is nothing to scale down from.
+ *
+ * The check lives here rather than at the three creation call sites because
+ * this is the one function all of them share, creation and update alike — the
+ * first attempt patched `elementSize`, which only the update path uses.
+ */
+export interface TextureSourceEmpty {
+	valid: false;
+	scaled?: undefined;
+	requestedBytes?: undefined;
+	empty: true;
+}
+
+/**
+ * Why a texture was refused, or that it was not.
+ *
+ * A union rather than one shape with four optional fields, because the
+ * invariant every caller depends on — "a failure without `scaled` is a budget
+ * refusal" — was previously a comment, and a comment cannot be narrowed on.
+ * That looseness is what let `reason` survive as a write-only field: a
+ * human-readable duplicate of the three numbers `memoryBudgetExceeded` already
+ * carries, whose only reader was the `TEXTURE_TOO_LARGE` branch `c94a312`
+ * deleted. It is the same defect as the `failure` discriminant removed one
+ * commit earlier, in the same file, missed because the shape did not force
+ * anyone to look.
+ */
+export type TextureValidationResult =
+	| { valid: true; scaled?: undefined; requestedBytes?: undefined; empty?: undefined }
+	| TextureTooLarge
+	| TextureBudgetExceeded
+	| TextureSourceEmpty;
+
+/** A refusal the caller must turn into an error — everything except "retry smaller". */
+export type TextureRefusal = TextureBudgetExceeded | TextureSourceEmpty;
 
 export interface MemoryUsage {
 	used: number;
@@ -44,10 +93,20 @@ export interface MemoryUsage {
 }
 
 /** What a driver falls back to when it cannot report its own limit. */
-const FALLBACK_MAX_TEXTURE_SIZE = 2048;
+export const FALLBACK_MAX_TEXTURE_SIZE = 2048;
 
-/** A texture dimension limit, or `undefined` if the value cannot be one. */
-function usableLimit(value: unknown): number | undefined {
+/**
+ * A texture dimension limit, or `undefined` if the value cannot be one.
+ *
+ * Exported because `MAX_TEXTURE_SIZE` has **two** readers and only this one was
+ * ever guarded. `DeviceCapabilities` took the driver's answer raw, and
+ * `WebGLOverlay` uses that as the default for `options.maxTextureSize` — so an
+ * unreadable driver value came back round as though the *consumer* had supplied
+ * it, and the warning added here blamed them for it. On mobile it was worse:
+ * `Math.min(undefined, 2048)` is `NaN`, stored in a field typed `number` and
+ * handed out by `getCapabilities()`.
+ */
+export function usableLimit(value: unknown): number | undefined {
 	return typeof value === 'number' && Number.isInteger(value) && value >= 1 ? value : undefined;
 }
 
@@ -126,6 +185,12 @@ export class TextureValidator {
 	 * @returns Validation result with optional scaled dimensions
 	 */
 	validateSize(width: number, height: number): TextureValidationResult {
+		// A source with no pixels, before anything about limits or budgets. It
+		// would otherwise pass every check below — zero area costs zero bytes.
+		if (!(width >= 1) || !(height >= 1)) {
+			return { valid: false, empty: true };
+		}
+
 		// Check individual dimensions
 		if (width > this.maxTextureSize || height > this.maxTextureSize) {
 			const scaled = this.scaleToFit(width, height);
@@ -140,25 +205,16 @@ export class TextureValidator {
 			if (!this.fitsBudget(scaled.width, scaled.height)) {
 				return {
 					valid: false,
-					reason: this.budgetReason(scaled.width, scaled.height),
 					requestedBytes: scaled.width * scaled.height * 4
 				};
 			}
 
-			return {
-				valid: false,
-				reason: `Texture ${width}x${height} exceeds the ${this.maxTextureSize} limit in force`,
-				scaled
-			};
+			return { valid: false, scaled };
 		}
 
 		// Check memory budget
 		if (!this.fitsBudget(width, height)) {
-			return {
-				valid: false,
-				reason: this.budgetReason(width, height),
-				requestedBytes: width * height * 4
-			};
+			return { valid: false, requestedBytes: width * height * 4 };
 		}
 
 		return { valid: true };
@@ -167,13 +223,6 @@ export class TextureValidator {
 	/** Whether a texture of these dimensions fits in what is left of the budget. */
 	private fitsBudget(width: number, height: number): boolean {
 		return this.currentMemoryUsage + width * height * 4 <= this.maxMemoryBudget;
-	}
-
-	private budgetReason(width: number, height: number): string {
-		const total = this.currentMemoryUsage + width * height * 4;
-		return `Texture would exceed memory budget (${this.formatBytes(total)} > ${this.formatBytes(
-			this.maxMemoryBudget
-		)})`;
 	}
 
 	/**

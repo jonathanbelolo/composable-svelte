@@ -447,6 +447,35 @@ describe('the texture size limits are validated', () => {
 		).toBe(true);
 		api.destroy();
 	});
+
+	it('does not blame the consumer for a limit the driver got wrong', async () => {
+		// `MAX_TEXTURE_SIZE` has two readers and only `TextureValidator` guarded
+		// it. `DeviceCapabilities` took the driver's answer raw, and
+		// `WebGLOverlay` uses that as the *default* for `options.maxTextureSize`
+		// — so an unusable driver value came back round as though the consumer
+		// had supplied it, and the warning said "maxTextureSize must be a whole
+		// number of pixels of at least 1; ignoring -1" to someone who called
+		// `createOverlay({})`.
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const fake = createFakeGL();
+		undo.push(installFakeGL(fake), installFakeObservers());
+		(fake.context as unknown as Record<string, unknown>).getParameter = () => -1;
+
+		const api = createOverlay({});
+		if (!('destroy' in api)) throw new Error('overlay failed to initialise');
+
+		api.registerElement('a', sizedCanvas(4096), { type: 'canvas', shader: 'wave-gentle-horizontal' });
+		await settle();
+
+		// Non-vacuity: something must actually have been capped, or "no
+		// complaint" is true because nothing happened.
+		expect(api.getElement('a')?.width, 'the driver value was acted on').toBe(2048);
+		expect(
+			warn.mock.calls.filter((call) => String(call[0]).includes('maxTextureSize must be')),
+			'the consumer was blamed for the driver'
+		).toEqual([]);
+		api.destroy();
+	});
 });
 
 describe('the budget error describes the decision that produced it', () => {
@@ -466,6 +495,108 @@ describe('the budget error describes the decision that produced it', () => {
 		expect(onError).toHaveBeenCalledTimes(1);
 		const details = (onError.mock.calls[0]![0] as { details?: Record<string, number> }).details;
 		expect(details?.requestedSize, 'the un-scaled size was reported').toBe(2048 * 2048 * 4);
+		api.destroy();
+	});
+
+	it('reports the usage it judged against, not the one after the outgoing texture is credited back', async () => {
+		// The other half of the same fix, and it had no test at all: its
+		// mutation survived the whole suite twice over. `updateTexture`
+		// deallocates the outgoing texture before validating — otherwise a
+		// re-upload that fits perfectly well is refused for the space it already
+		// occupies — and the error used to be built *after* the accounting was
+		// put back, so `currentUsage` included the very texture the validator
+		// had been told to ignore.
+		//
+		// The creation path cannot reach this: the deallocate/reallocate dance
+		// exists only on update. The previous test drove `registerElement`,
+		// which is why it pinned `requestedSize` and nothing else.
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const onError = vi.fn();
+		// Between 4MB and 5.76MB: the first upload fits, the re-upload does not
+		// even after the outgoing 4MB is credited back. A 6MB budget made the
+		// re-upload *fit* — deallocating first is exactly what gives it room — so
+		// the first version of this test asserted a refusal that never came.
+		const { api } = overlay({ memoryBudget: 5 * MB, onError });
+
+		const canvas = sizedCanvas(1000); // 4MB
+		api.registerElement('a', canvas, { type: 'canvas', shader: 'wave-gentle-horizontal' });
+		await settle();
+
+		// Non-vacuity: the element must actually hold its 4MB, or "usage is
+		// zero" below is true for the boring reason.
+		expect(api.getElement('a')?.width, 'the first upload never landed').toBe(1000);
+		expect(onError, 'the first upload was already refused').not.toHaveBeenCalled();
+
+		// Grow it to 1200² = 5.76MB, past the 5MB ceiling on its own merits.
+		// `currentUsage` at the moment of judgement is 0, because the outgoing 4MB
+		// has been credited back; the un-fixed code restored it first and reported
+		// 4MB — the very texture the validator was told to ignore.
+		canvas.width = 1200;
+		canvas.height = 1200;
+		api.updateElement('a');
+		await settle();
+
+		expect(onError, 'the re-upload was accepted').toHaveBeenCalledTimes(1);
+		const details = (onError.mock.calls[0]![0] as { details?: Record<string, number> }).details;
+		expect(details?.currentUsage, 'the message counted the texture being replaced').toBe(0);
+		api.destroy();
+	});
+});
+
+describe('a source with a zero dimension is refused, not silently drawn', () => {
+	it('refuses a canvas with no height', async () => {
+		// `elementSize` tested only `canvas.width > 0`, so a 256x0 canvas — a
+		// collapsed layout, or a chart before it measures — passed as a valid
+		// source and produced a zero-area texture. That re-validates as *valid*
+		// because it costs no bytes, so `onTextureLoaded` fired, `onError` never
+		// did, and the element rendered nothing. The one-pixel floor in
+		// `scaleToFit` cannot help: there is nothing to scale down from.
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const onTextureLoaded = vi.fn();
+		const { api } = overlay();
+
+		api.registerElement('a', sizedCanvas(256, 0), {
+			type: 'canvas',
+			shader: 'wave-gentle-horizontal',
+			onTextureLoaded
+		});
+		await settle();
+
+		expect(onTextureLoaded, 'a texture with no pixels was reported as loaded').not.toHaveBeenCalled();
+		expect(api.getElement('a')?.texture, 'a zero-area texture was created').toBeUndefined();
+		api.destroy();
+	});
+
+	it('still accepts an ordinary source, so the check is not refusing everything', async () => {
+		const onTextureLoaded = vi.fn();
+		const { api } = overlay();
+
+		api.registerElement('a', sizedCanvas(256, 128), {
+			type: 'canvas',
+			shader: 'wave-gentle-horizontal',
+			onTextureLoaded
+		});
+		await settle();
+
+		expect(api.getElement('a')?.width, 'an ordinary source was refused').toBe(256);
+		expect(onTextureLoaded).toHaveBeenCalledTimes(1);
+		api.destroy();
+	});
+
+	it('refuses an image with no height', async () => {
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const { api } = overlay();
+
+		api.registerElement('a', loadedImage(256, 0), {
+			type: 'image',
+			shader: 'wave-gentle-horizontal'
+		});
+		await settle();
+
+		expect(api.getElement('a')?.texture, 'a zero-area texture was created').toBeUndefined();
 		api.destroy();
 	});
 });

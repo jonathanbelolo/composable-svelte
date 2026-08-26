@@ -10,7 +10,7 @@
  */
 
 import { OverlayError, OverlayErrorCode } from '../utils/overlay-error.js';
-import { TextureValidator, type TextureValidationResult } from '../utils/texture-validator.js';
+import { TextureValidator, type TextureRefusal } from '../utils/texture-validator.js';
 import { noDebug, type DebugLog } from '../utils/debug.js';
 import type {
 	ElementType,
@@ -123,9 +123,7 @@ export class TextureFactory {
 				);
 			}
 
-			return {
-				error: this.validationError(validation, width, height)
-			};
+			return { error: this.validationError(validation, img.id || 'image') };
 		}
 
 		// Create texture
@@ -244,9 +242,7 @@ export class TextureFactory {
 				);
 			}
 
-			return {
-				error: this.validationError(validation, width, height)
-			};
+			return { error: this.validationError(validation, video.id || 'video') };
 		}
 
 		// Create texture
@@ -313,9 +309,7 @@ export class TextureFactory {
 				);
 			}
 
-			return {
-				error: this.validationError(validation, width, height)
-			};
+			return { error: this.validationError(validation, canvas.id || 'canvas') };
 		}
 
 		// Create texture
@@ -413,7 +407,7 @@ export class TextureFactory {
 			// the validator had been told to ignore.
 			const refusal =
 				!validation.valid && !validation.scaled
-					? this.validationError(validation, size.width, size.height)
+					? this.validationError(validation, element.id || 'element')
 					: null;
 
 			this.textureValidator.trackAllocation(previous.width, previous.height);
@@ -515,35 +509,39 @@ export class TextureFactory {
 	}
 
 	/**
-	 * The error a failed validation describes.
+	 * The error a budget refusal describes.
 	 *
-	 * Only one failure refuses. A size failure always carries the dimensions to
-	 * scale to and every path scales, so anything arriving here is a budget
-	 * refusal — which is why the `failure` discriminant that used to choose
-	 * between two errors went with the second one.
+	 * Takes the narrowed arm, so "anything arriving here is a budget refusal"
+	 * is checked rather than asserted in a comment. It used to take the whole
+	 * union plus `width`/`height` for a fallback that could not be reached.
 	 */
-	private validationError(
-		validation: TextureValidationResult,
-		width: number,
-		height: number
-	): OverlayError {
+	private validationError(refusal: TextureRefusal, id: string): OverlayError {
+		if (refusal.empty) {
+			return OverlayError.textureCreationFailed(
+				id,
+				'The source has no pixels — one of its dimensions is zero'
+			);
+		}
+
 		const usage = this.textureValidator.getMemoryUsage();
-		// `requestedBytes` rather than `width * height * 4`: when the refusal is
-		// about a *scaled* size the caller still holds the original dimensions,
-		// and reporting those gave a figure four times too large for a
-		// half-scale fit.
-		return OverlayError.memoryBudgetExceeded(
-			usage.used,
-			usage.budget,
-			validation.requestedBytes ?? width * height * 4
-		);
+		return OverlayError.memoryBudgetExceeded(usage.used, usage.budget, refusal.requestedBytes);
 	}
 
 	/**
-	 * Pixel dimensions of an element's current content.
+	 * Pixel dimensions of an element's current content, or `null` if it has
+	 * none *yet* — which is a wait, not a failure.
 	 *
 	 * Not its layout size: the texture is the source pixels, and for a video
 	 * those change when the stream switches resolution.
+	 *
+	 * Each arm tests **both** dimensions. Testing only the first let a
+	 * `<canvas width=256 height=0>` — a collapsed layout, or a chart before it
+	 * measures — through as a valid 256×0 source. A zero-area texture costs no
+	 * bytes, so no budget refuses it: `onTextureLoaded` fired, `onError` never
+	 * did, and the element rendered nothing. That is the same fault the
+	 * one-pixel floor in `scaleToFit` was added to fix, reached through the
+	 * source instead of the scale — the floor cannot help, because there is
+	 * nothing to scale down from.
 	 */
 	private elementSize(
 		element: HTMLElement,
@@ -552,15 +550,18 @@ export class TextureFactory {
 		switch (type) {
 			case 'image': {
 				const img = element as HTMLImageElement;
-				return img.naturalWidth > 0 ? { width: img.naturalWidth, height: img.naturalHeight } : null;
+				const { naturalWidth: w, naturalHeight: h } = img;
+				return w > 0 && h > 0 ? { width: w, height: h } : null;
 			}
 			case 'video': {
 				const video = element as HTMLVideoElement;
-				return video.videoWidth > 0 ? { width: video.videoWidth, height: video.videoHeight } : null;
+				const { videoWidth: w, videoHeight: h } = video;
+				return w > 0 && h > 0 ? { width: w, height: h } : null;
 			}
 			case 'canvas': {
 				const canvas = element as HTMLCanvasElement;
-				return canvas.width > 0 ? { width: canvas.width, height: canvas.height } : null;
+				const { width: w, height: h } = canvas;
+				return w > 0 && h > 0 ? { width: w, height: h } : null;
 			}
 			default: {
 				const _exhaustive: never = type;

@@ -11,6 +11,7 @@
  */
 
 import { noDebug, type DebugLog } from './debug.js';
+import { usableLimit, FALLBACK_MAX_TEXTURE_SIZE } from './texture-validator.js';
 
 export interface DeviceInfo {
 	isMobile: boolean;
@@ -49,8 +50,13 @@ export class DeviceCapabilities {
 			this.platform = 'Desktop';
 		}
 
-		// Get device max texture size
-		const deviceMaxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+		// Get device max texture size.
+		//
+		// Through the same guard `TextureValidator` uses, and for the same
+		// reason: a driver that answers `undefined` or a nonsense value must not
+		// silently become "no limit" — or, on the mobile branch below, `NaN`.
+		const deviceMaxTextureSize =
+			usableLimit(gl.getParameter(gl.MAX_TEXTURE_SIZE)) ?? FALLBACK_MAX_TEXTURE_SIZE;
 
 		// Check WebGL2 support
 		const testCanvas = document.createElement('canvas');
