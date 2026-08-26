@@ -10,8 +10,9 @@
 > `<Light>` no longer "tracks light index for removal" — that is the exact
 > defect `LightConfig.id` was introduced to fix, because removal by index took
 > out the wrong lights once the default ambient light occupied slot 0.
-> `@babylonjs/loaders` is not a dependency. The mesh list omits `torus` and
-> `custom`, both of which exist.
+> `@babylonjs/loaders` is not a dependency. There are two geometry lists and
+> they disagree: the one under "What Was Built" omits `torus`, and the one under
+> "Mesh creation" omits `torus` and `custom`. All six types exist.
 >
 > The usage example fails to compile twice over: every child omits the required
 > `{store}` prop, and `position` on a directional light is now `direction`.

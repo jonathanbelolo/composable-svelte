@@ -74,9 +74,15 @@ whole page, and it owns every texture, program and frame.
 ### `ShaderImage2.svelte`
 
 Renders a plain `<img>` and registers it with the overlay through Svelte
-context — `registerImageElement(id, element, src, shader)` — then unregisters on
-destroy. It creates no canvas and no texture of its own; the overlay draws over
-the element where it sits, and tracks its position as the page scrolls.
+context — `registerImageElement(id, element, src, shader, onTextureLoaded?)` —
+then unregisters on destroy. It creates no canvas and no texture of its own; the
+overlay draws over the element where it sits, and tracks its position as the
+page scrolls.
+
+That last parameter is what the fade above depends on: the `<img>` is faded out
+when the texture exists, and `onTextureLoaded` is how the overlay says so. It
+fires whether the texture was created immediately or deferred because the
+context was lost at registration time.
 
 The DOM image stays in the document, which is what keeps the gallery accessible
 and indexable, and what makes WebGL failure a graceful degradation rather than a

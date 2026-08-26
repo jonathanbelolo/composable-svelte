@@ -497,10 +497,11 @@ so nothing renders and no later `updateMesh` for that id does anything either.
 
 | rule | why |
 |---|---|
+| `vertices` and `indices` both non-empty | an empty array passes every other rule — 0 is a multiple of 3, and the range check is vacuous — so an empty mesh would be admitted and draw nothing |
 | `vertices.length` a multiple of 3 | xyz triples |
 | `indices.length` a multiple of 3 | triangles |
 | every index a whole number in `0 .. vertices.length / 3 - 1` | Babylon truncates a float index through a `Uint16Array` and silently draws a different triangle |
-| every value finite | one `NaN` makes computed normals `NaN` for all three vertices of any triangle touching it |
+| every value in `vertices`, `normals` and `uvs` finite | one `NaN` makes computed normals `NaN` for all three vertices of any triangle touching it |
 | `normals.length === vertices.length` | one per vertex |
 | `uvs.length === vertices.length / 3 * 2` | two per vertex; wrong here mistextures every face without erroring |
 

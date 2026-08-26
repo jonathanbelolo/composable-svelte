@@ -120,10 +120,11 @@ effect. The rules:
 
 | rule | why |
 |---|---|
+| `vertices` and `indices` are both non-empty | an empty array passes every other rule here — 0 is a multiple of 3, and "every index is in range" is vacuous — so without this an empty mesh would be admitted and draw nothing |
 | `vertices.length` is a multiple of 3 | they are xyz triples |
 | `indices.length` is a multiple of 3 | they are triangles |
 | every index is a whole number in `0 .. vertices.length / 3 - 1` | Babylon truncates a float index through a `Uint16Array` and silently draws a different triangle |
-| every value is finite | one `NaN` makes Babylon's computed normals `NaN` for all three vertices of any triangle touching it |
+| every value in `vertices`, `normals` and `uvs` is finite | one `NaN` makes Babylon's computed normals `NaN` for all three vertices of any triangle touching it |
 | `normals.length === vertices.length`, if given | one normal per vertex |
 | `uvs.length === vertices.length / 3 * 2`, if given | two per vertex; getting this wrong mistextures every face without erroring |
 

@@ -17,7 +17,7 @@ file and line, says whether it was **verified** (something was run) or
 | Open — `svelte-check` errors | **0** (was 142, recounted to 69 in R6) |
 | Open — `svelte-check` warnings | **0** (was 30) |
 | Workspaces covered by `pnpm -r check` | **19 of 19** — the gate is complete |
-| **Open — dead behaviour** | **4 items, S11** — T1–T9 swept; three review rounds over the graphics work, ~85 defects found in it, see T9 |
+| **Open — dead behaviour** | **5 items, S11** (T7, T10–T13) — T1–T9 swept; **four** review rounds over the graphics work, findings declining ~40 → ~45 → ~45 → 19, see T9 |
 | Workspaces that typecheck their tests | **14 of 14 that have tests** (S11 T1) |
 | Optional props a wrapper can forward | **619 of 632** — the 13 left are `$bindable`, registered (S11 T8) |
 | Animation-policy backlog | **none** — emptied and deleted (S11 T2–T4) |
@@ -1408,6 +1408,24 @@ Recorded because they were wrong when first reported:
 - "sanitizeHTML still active" was asserted from `<strong>` surviving in the
   output — which unsanitised content would also show. The example's post content
   is entirely allow-listed, so sanitisation is a no-op on it.
+- `fadd3c4` says the commit figure was "177 now". At that commit
+  `git rev-list --count 2443ab4..fadd3c4` is **178** — a seventh wrong count, in
+  the paragraph explaining why counts are wrong. Its "graphics 323" in the same
+  message is right; a worktree measurement said 322 only because one suite
+  failed to load against an unbuilt `core`.
+- `fadd3c4`'s "Kept" note records `ShaderProgramManager.enableAttributes` as
+  zero-caller-but-alive, which reads as though it were the only one. There are
+  **eight** in exactly that position, all public members of barrel-exported
+  classes with no caller anywhere in the repo:
+  `ShaderProgramManager.enableAttributes`, `.getStatistics`, `.getProgramInfo`;
+  `RenderPipeline.setViewport`, `.setBlendMode`, `.setBlending`, `.renderBatch`,
+  `.getStatistics`. A ninth, `RenderPipeline.clear`, is called only from
+  `renderBatch` — reachable, but only through something that is not. They stay,
+  on the same principle: unused is not dead. Recorded so a later pass does not
+  delete any of them on a count, and so the note is not read as an exception.
+  The `DEFAULT_SHADER_CONFIG` deletion in that same commit is *not* the
+  counter-example it looks like: it went because it described a mechanism that
+  no longer exists, not because it had no callers.
 
 ---
 
@@ -1557,6 +1575,26 @@ back it, one per package — each confirmed red before its package was swept.
 makes them work: they simulate the naïve consumer. Every `tests` directory is
 therefore out of the sweep's scope. Sweeping them would have neutralised the
 only proof any of this works, with nothing going red.
+
+### T13. Five packages publish their whole build tree — VERIFIED
+
+`chat`, `code`, `media`, `maps` and `charts` each carry
+`"./*": "./dist/*.js"` (and the `./*.js` twin) in `exports`. That makes **every
+internal module a supported entry point** — not a convenience, a surface. It is
+what made `createOverlay` importable from `graphics` and what turned "it is not
+exported, so deleting this is safe" into a wrong argument twice in one campaign.
+
+`graphics` was narrowed in `f0c89bc`; nothing in the repo deep-imported it, so
+it cost nothing. The other five are not free: narrowing is a breaking change
+for anyone already deep-importing, and each needs its own pass to decide which
+subpaths become explicit entries. `core` and `auth` already declare theirs.
+
+Held in code as well as here:
+`packages/core/tests/repo/export-surface.test.ts` names these five and fails if
+a sixth package acquires a wildcard, or if one of the five is narrowed and left
+on the list. `check-coverage.test.ts` holds a second arm over the same set — a
+wildcard map must also accept the `.js` form of its subpaths — so both come
+down together when the last one goes.
 
 ### T11. `FileUploadProps` is exported and does not match its component — VERIFIED
 
@@ -1735,6 +1773,71 @@ historical defects were reintroduced to confirm each is caught.
 `maxTextureSize` as rejecting oversize textures; a commit three hours earlier in
 the same session had made every path scale instead. A sentence about behaviour
 rots the moment the behaviour changes, and nothing checks sentences.
+
+#### Round four: 19 defects, and the point where this stops
+
+Round three's eight commits went to three more reviewers. They found **19**
+verified defects — down from ~45 — and for the first time in the campaign the
+*verification* half came back clean: all nine test-count transitions exact, all
+36 named mutation rows re-run and still biting, 15 more constructed and biting.
+What was left was in the code, the guard and the prose, not in the claims.
+
+Three remediation commits: `0d7efef` (the deferred-registration path),
+`8e88776` (texture and geometry edges, and `<Mesh>`), `f0c89bc` (the guard, the
+harness, the export map).
+
+**The sharpest was a success report for a texture with no pixels.** Round
+three's "scale everywhere rather than refuse" made `Math.floor(1 × 4096/8192)`
+= **0**, so an 8192×1 gradient strip became 4096×0 — and a zero-area texture
+*re-validates as valid*, because it costs no bytes and no budget refuses it.
+`onTextureLoaded` fired, `onError` never did, and the element rendered nothing.
+For `<canvas>` and `<video>` that was a regression from the same commit that
+introduced the scaling: they had previously returned an error to branch on.
+
+**A broken driver silently meant "no limit".** `Math.min(maxTextureSize, driverMax)`
+trusted both values. A driver answering `undefined` disabled the cap entirely,
+because `width > undefined` is false for every width; a consumer passing `-1`
+recursed ~2480 frames before the stack blew, surfacing as
+`TEXTURE_CREATION_FAILED: Cannot read properties of undefined`.
+
+**The documentation guard dropped what it could not parse, in silence** — two
+bare `continue`s, and the arm meant to prevent that was a *total* count, which
+one surviving file keeps green. Five ordinary things triggered it, all reported
+green: a CRLF checkout, a JSDoc header, a `-->` ending a line inside the header,
+`See:` for `Mirrors:`, and a subdirectory. Note the first: there is no
+`.gitattributes`, so on Windows with the default `core.autocrlf=true` both
+Svelte examples went unguarded while the single `.ts` file held the vacuity arm
+up on its own. **A guard whose failure mode is silence needs an arm about
+silence, not an arm about counts.**
+
+**`packages/graphics` no longer publishes its whole build tree.**
+`"./*": "./dist/*.js"` makes every internal module public API — the reason
+`createOverlay` was reachable, and the reason deleting `ownsCanvas` on
+"`createOverlay` is not exported" was wrong twice over: a reviewer said so in
+round two, it was acknowledged in a commit message, and the same reasoning was
+repeated in round three anyway. `chat`, `code`, `media`, `maps` and `charts`
+still carry it — registered in `packages/core/tests/repo/export-surface.test.ts`
+rather than tolerated, so a sixth package cannot acquire the hole silently and a
+narrowed one cannot stay on the list.
+
+**The convenient test setup hid the defect it was written to find for the ninth
+time**, and again it was one of mine. A new harness test named the exact defect
+— one shared `boundArrayBuffer` conflating GL's per-target bindings — and bound
+and uploaded in *lockstep*, which gives the right answer by accident because the
+shared variable happens to point at the buffer just bound. Only interleaving the
+binds exercises the sharing. It was caught by the standing rule and not by
+reading: the mutation survived, and survivors get rebuilt before they are
+believed.
+
+**Rule added:** every "defer instead of refuse" path needs a paired test that
+the deferred work delivers *everything* the immediate work delivered. Round
+three deferred texture creation during a context loss and the deferral quietly
+dropped the consumer's `onTextureLoaded`.
+
+**And this is where general review of `packages/graphics` stops.** Round four's
+reviewers said the returns are now sharply diminishing, and the numbers agree:
+~40, ~45, ~45, 19, with the verification half clean. Further rounds should be
+triggered by a change, not by a schedule.
 
 #### What the sweep itself recorded, kept as written
 
