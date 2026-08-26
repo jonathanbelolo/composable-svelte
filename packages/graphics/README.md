@@ -260,12 +260,12 @@ import { TestStore } from '@composable-svelte/core/test';
 import { graphicsReducer, createInitialGraphicsState } from '@composable-svelte/graphics';
 
 describe('Graphics Reducer', () => {
-  it('adds mesh to scene', async () => {
-    const store = new TestStore(
-      createInitialGraphicsState(),
-      graphicsReducer,
-      {}
-    );
+  it('adds a mesh to the scene', async () => {
+    const store = new TestStore({
+      initialState: createInitialGraphicsState(),
+      reducer: graphicsReducer,
+      dependencies: {}
+    });
 
     await store.send(
       {
@@ -279,7 +279,7 @@ describe('Graphics Reducer', () => {
       },
       (state) => {
         expect(state.meshes).toHaveLength(1);
-        expect(state.meshes[0].id).toBe('cube-1');
+        expect(state.meshes[0]?.id).toBe('cube-1');
       }
     );
   });

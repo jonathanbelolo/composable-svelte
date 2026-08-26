@@ -1155,7 +1155,7 @@ It takes **exactly one prop**, `options`, and every field of it is optional:
   }
 </script>
 
-<WebGLOverlay bind:this={overlay} options={{ targetFPS: 30 }} />
+<WebGLOverlay bind:this={overlay} />
 <img bind:this={hero} src="/hero.jpg" alt="Hero" onload={applyEffect} />
 ```
 

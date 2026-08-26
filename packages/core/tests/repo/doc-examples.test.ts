@@ -52,7 +52,17 @@ const repoRoot = fileURLToPath(new URL('../../../../', import.meta.url));
 
 /** Every markdown file that documents this library, wherever it lives. */
 function docs(): string[] {
-	const roots = [join(repoRoot, 'packages'), join(repoRoot, '.claude'), join(repoRoot, 'guides')];
+	// `examples/` included: `examples/shader-gallery/README.md` described an
+	// architecture that had not existed for months, and nothing here could see
+	// it. `plans/` deliberately stays out — those documents are historical and
+	// their code is *supposed* to be stale; a banner is the instrument there,
+	// not a compiler.
+	const roots = [
+		join(repoRoot, 'packages'),
+		join(repoRoot, '.claude'),
+		join(repoRoot, 'guides'),
+		join(repoRoot, 'examples')
+	];
 	const out: string[] = [];
 
 	const walk = (dir: string) => {
@@ -407,6 +417,86 @@ const sweptSvelteBlocks = blocks.filter((b) => SWEPT_DOCS.includes(b.file) && b.
  * better than deleting the arm.
  */
 const ALLOWED_MISLABELLED = 0;
+
+/**
+ * Examples that are compiled for real, and the documents that must match them.
+ *
+ * The compile arm above is syntax-only, by design — and that design let a
+ * documentation defect through in each of three review rounds: props that did
+ * not exist on the component, a function whose return type could not land where
+ * it was passed, and a constructor called with three arguments instead of one.
+ * None is a syntax error. All three are caught the moment the example is a
+ * *file*, because `svelte-check --tsconfig ./tsconfig.test.json` already
+ * compiles every file under a package's `tests/`.
+ *
+ * So the example lives in `packages/<pkg>/tests/doc-examples/`, the gate
+ * compiles it for free, and this arm asserts the document still quotes it
+ * verbatim. The **file is authoritative**: it is the thing that has to compile,
+ * and drift in either direction fails here.
+ */
+function docExamples(): Array<{ path: string; mirrors: string[]; body: string }> {
+	const out: Array<{ path: string; mirrors: string[]; body: string }> = [];
+	const packagesDir = join(repoRoot, 'packages');
+	if (!existsSync(packagesDir)) return out;
+
+	for (const pkg of readdirSync(packagesDir, { withFileTypes: true })) {
+		if (!pkg.isDirectory()) continue;
+		const dir = join(packagesDir, pkg.name, 'tests', 'doc-examples');
+		if (!existsSync(dir)) continue;
+
+		for (const entry of readdirSync(dir, { withFileTypes: true })) {
+			if (!entry.isFile()) continue;
+			const full = join(dir, entry.name);
+			const source = readFileSync(full, 'utf8');
+
+			// The header names the documents and is not part of the example.
+			// `<!-- … -->` for Svelte, a run of `//` lines for TypeScript.
+			const svelteHeader = /^<!--([\s\S]*?)-->\n/.exec(source);
+			const tsHeader = /^((?:\/\/[^\n]*\n)+)/.exec(source);
+			const header = svelteHeader ?? tsHeader;
+			if (!header) continue;
+
+			const mirrors = /Mirrors:\s*([^\n]+)/.exec(header[1]!);
+			if (!mirrors) continue;
+
+			out.push({
+				path: relative(repoRoot, full),
+				mirrors: mirrors[1]!.split(',').map((name) => name.trim()),
+				body: source.slice(header[0].length).replace(/\n$/, '')
+			});
+		}
+	}
+	return out;
+}
+
+const examples = docExamples();
+
+describe('documented examples that are compiled for real', () => {
+	it('finds them, so the arm below is not vacuous', () => {
+		expect(examples.length, 'no doc-examples directories found').toBeGreaterThan(0);
+	});
+
+	it('names a document that exists', () => {
+		const missing = examples.flatMap(({ path, mirrors }) =>
+			mirrors.filter((doc) => !existsSync(join(repoRoot, doc))).map((doc) => `${path} → ${doc}`)
+		);
+
+		expect(missing, 'an example mirrors a document that is not there').toEqual([]);
+	});
+
+	it('is quoted verbatim by every document it names', () => {
+		const drifted = examples.flatMap(({ path, mirrors, body }) =>
+			mirrors
+				.filter((doc) => !codeBlocks(join(repoRoot, doc)).some((block) => block.body === body))
+				.map(
+					(doc) =>
+						`${doc} no longer quotes ${path} verbatim — the file is what compiles, so the document is what is wrong`
+				)
+		);
+
+		expect(drifted).toEqual([]);
+	});
+});
 
 describe('documented Svelte examples', () => {
 	it('every swept document still exists, so the list cannot rot', () => {
