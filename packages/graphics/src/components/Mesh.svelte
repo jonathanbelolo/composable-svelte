@@ -92,7 +92,19 @@ function syncToStore(config: MeshConfig): void {
   }
 
   store.dispatch({ type: 'addMesh', mesh: config });
-  ownedId = config.id;
+
+  // Claim the id only if the store actually took it.
+  //
+  // This used to assign unconditionally, and the reducer has more than one
+  // reason to refuse: the duplicate-id check above, and — since custom geometry
+  // arrived — geometry it cannot build. A component that assumed success then
+  // treated every later prop change as an update to a mesh that was never
+  // added, and `updateMesh` drops those, so *repairing* the geometry left the
+  // mesh absent for good with no second warning.
+  //
+  // Asking the store costs one `.some()` and does not need the component to
+  // know why it was refused, which is the part that would drift.
+  ownedId = store.state.meshes.some((mesh) => mesh.id === config.id) ? config.id : null;
 }
 
 onDestroy(() => {

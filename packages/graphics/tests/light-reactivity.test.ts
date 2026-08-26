@@ -128,6 +128,29 @@ describe('the config each type builds', () => {
 		expect(store.state.lights.find((l) => l.id === 'lamp')).toMatchObject({ radius: 0 });
 	});
 
+	it('uses the documented default for each arm', () => {
+		// Every one of these four could be changed for free: nothing asserted a
+		// default value, so the commit that renamed `position` to `direction`
+		// could also have moved the defaults without a test noticing.
+		const store = makeStore();
+
+		mountIn(Light, { store, id: 'dir', type: 'directional', intensity: 1 });
+		mountIn(Light, { store, id: 'pt', type: 'point', intensity: 1 });
+		mountIn(Light, { store, id: 'sp', type: 'spot', intensity: 1 });
+		flushSync();
+
+		const byId = (id: string) => store.state.lights.find((l) => l.id === id);
+		expect(byId('dir'), 'the directional default moved').toMatchObject({
+			direction: [0, 1, 0]
+		});
+		expect(byId('pt'), 'the point default moved').toMatchObject({ position: [0, 1, 0] });
+		expect(byId('sp'), 'the spot defaults moved').toMatchObject({
+			position: [0, 1, 0],
+			direction: [0, -1, 0],
+			angle: Math.PI / 4
+		});
+	});
+
 	it('omits an absent color rather than sending undefined', () => {
 		const store = makeStore();
 		mountIn(Light, { store, id: 'lamp', type: 'ambient', intensity: 1 });

@@ -31,6 +31,14 @@ export function customGeometryProblem(config: GeometryConfig): string | null {
 		return `vertices has ${vertices.length} entries, which is not a whole number of xyz triples`;
 	}
 
+	const nonFinite = vertices.findIndex((value) => !Number.isFinite(value));
+	if (nonFinite !== -1) {
+		// One `NaN` is not one bad vertex. `VertexData.ComputeNormals` returns
+		// `NaN` for all nine components of any triangle that touches it, and
+		// Babylon reports nothing — verified against a real `NullEngine`.
+		return `vertices contains ${vertices[nonFinite]} at index ${nonFinite}`;
+	}
+
 	const vertexCount = vertices.length / 3;
 
 	if (indices.length === 0) return 'indices is empty';
@@ -42,6 +50,14 @@ export function customGeometryProblem(config: GeometryConfig): string | null {
 		if (!Number.isInteger(index) || index < 0 || index >= vertexCount) {
 			return `indices contains ${index}, which is not a vertex in 0..${vertexCount - 1}`;
 		}
+	}
+
+	if (normals && normals.some((value) => !Number.isFinite(value))) {
+		return 'normals contains a non-finite value';
+	}
+
+	if (uvs && uvs.some((value) => !Number.isFinite(value))) {
+		return 'uvs contains a non-finite value';
 	}
 
 	if (normals && normals.length !== vertices.length) {

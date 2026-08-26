@@ -11,7 +11,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { NullEngine, Scene, SpotLight, StandardMaterial } from '@babylonjs/core';
+import { NullEngine, Scene, SpotLight, StandardMaterial, DirectionalLight } from '@babylonjs/core';
 import { BabylonAdapter } from '../src/adapters/babylon-adapter.js';
 import type { MeshConfig } from '../src/core/types.js';
 
@@ -131,6 +131,39 @@ describe('lights are updated, not reconstructed', () => {
 
     expect(h.scene.lights.length).toBe(1);
     expect(h.scene.lights[0]!.getClassName()).toBe('DirectionalLight');
+  });
+
+  it('gives a directional light the direction it was configured with', () => {
+    // The Babylon half of the `position` → `direction` rename had no test at
+    // all: hardcoding the vector at either the create or the update site left
+    // the whole suite green, so the rename could have been reverted at this
+    // boundary without anything noticing. `light-reactivity.test.ts` asserts
+    // what reaches the *store*; this asserts what reaches the scene.
+    h.adapter.addLight({ id: 'key', type: 'directional', direction: [1, -2, 3], intensity: 1 });
+
+    const light = h.scene.getLightByName('directional-key') as DirectionalLight | null;
+    expect(light, 'no directional light was created').not.toBeNull();
+    expect(
+      [light!.direction.x, light!.direction.y, light!.direction.z],
+      'the configured direction never reached Babylon'
+    ).toEqual([1, -2, 3]);
+  });
+
+  it('moves an existing directional light rather than ignoring the change', () => {
+    h.adapter.addLight({ id: 'key', type: 'directional', direction: [1, 0, 0], intensity: 1 });
+
+    h.adapter.updateLight('key', {
+      id: 'key',
+      type: 'directional',
+      direction: [0, 0, -1],
+      intensity: 1
+    });
+
+    const light = h.scene.getLightByName('directional-key') as DirectionalLight;
+    expect(
+      [light.direction.x, light.direction.y, light.direction.z],
+      'updateLight ignored the new direction'
+    ).toEqual([0, 0, -1]);
   });
 
   it('updates a spot light in place when only its angle changed', () => {

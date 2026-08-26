@@ -10,6 +10,8 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { mount, unmount, flushSync } from 'svelte';
+import MeshGeometryHarness from './test-components/MeshGeometryHarness.svelte';
 import { NullEngine, Scene, Mesh, VertexBuffer } from '@babylonjs/core';
 import { createStore } from '@composable-svelte/core';
 import { BabylonAdapter } from '../src/adapters/babylon-adapter.js';
@@ -169,6 +171,56 @@ describe('the reducer refuses what the renderer cannot build', () => {
 	});
 });
 
+describe('<Mesh> claims only what the store accepted', () => {
+	function mountHarness() {
+		const target = document.createElement('div');
+		document.body.appendChild(target);
+		const store = makeStore();
+		const instance = mount(MeshGeometryHarness as never, { target, props: { store } });
+		flushSync();
+		return { store, target, instance };
+	}
+
+	it('adds the mesh once its geometry is repaired', () => {
+		// `Mesh.svelte` set `ownedId` unconditionally after dispatch, so a mesh
+		// the reducer refused was still treated as owned — every later prop
+		// change became an `updateMesh` for an id that was never added, and the
+		// reducer drops those. Repairing the geometry left it absent for good.
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const { store, target, instance } = mountHarness();
+		expect(store.state.meshes, 'invalid geometry entered state').toEqual([]);
+
+		target.querySelector<HTMLButtonElement>('[data-testid="repair"]')!.click();
+		flushSync();
+
+		expect(
+			store.state.meshes.map((m) => m.id),
+			'the repaired mesh was never added'
+		).toEqual(['custom']);
+
+		unmount(instance);
+		target.remove();
+		warn.mockRestore();
+	});
+
+	it('removes what it does own on unmount', () => {
+		// The paired half: post-checking must not stop it claiming a mesh the
+		// store did accept, or unmount would leave it behind.
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const { store, target, instance } = mountHarness();
+		target.querySelector<HTMLButtonElement>('[data-testid="repair"]')!.click();
+		flushSync();
+		expect(store.state.meshes.map((m) => m.id)).toEqual(['custom']);
+
+		unmount(instance);
+		flushSync();
+
+		expect(store.state.meshes, 'the mesh outlived the component').toEqual([]);
+		target.remove();
+		warn.mockRestore();
+	});
+});
+
 describe('customGeometryProblem', () => {
 	const problem = (over: Partial<Extract<GeometryConfig, { type: 'custom' }>>) =>
 		customGeometryProblem(triangle(over));
@@ -198,6 +250,31 @@ describe('customGeometryProblem', () => {
 		// Two per vertex, not three — the mistake that silently mistextures
 		// every face rather than erroring.
 		expect(problem({ uvs: [0, 0, 1, 0, 0, 1, 1, 1] })).toMatch(/uvs/);
+	});
+
+	it('rejects empty vertices and empty indices', () => {
+		// Both clauses could be deleted together and the suite stayed green.
+		expect(problem({ vertices: [] })).toMatch(/vertices is empty/);
+		expect(problem({ indices: [] })).toMatch(/indices is empty/);
+	});
+
+	it('rejects an index that is not a whole number', () => {
+		// Babylon truncates a float index through `Uint16Array` and silently
+		// draws a different triangle.
+		expect(problem({ indices: [0, 1, 1.5] })).toMatch(/not a vertex/);
+	});
+
+	it('rejects a non-finite coordinate', () => {
+		// One NaN is not one bad vertex: `ComputeNormals` returns NaN for all
+		// nine components of any triangle that touches it, and Babylon reports
+		// nothing at all.
+		expect(problem({ vertices: [0, 0, 0, 1, 0, 0, 0, NaN, 0] })).toMatch(/NaN/);
+		expect(problem({ vertices: [0, 0, 0, 1, 0, 0, 0, Infinity, 0] })).toMatch(/Infinity/);
+	});
+
+	it('rejects non-finite normals and uvs', () => {
+		expect(problem({ normals: [0, 1, 0, 0, 1, 0, 0, NaN, 0] })).toMatch(/normals/);
+		expect(problem({ uvs: [0, 0, 1, 0, NaN, 1] })).toMatch(/uvs/);
 	});
 
 	it('accepts omitted normals and uvs', () => {

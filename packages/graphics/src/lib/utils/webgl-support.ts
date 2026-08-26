@@ -82,27 +82,3 @@ export function checkWebGLSupport(): WebGLSupportInfo {
 		version
 	};
 }
-
-/**
- * Get WebGL context capabilities
- *
- * Returns useful info about what the browser supports.
- *
- * @param gl - WebGL context
- * @returns Capabilities object
- */
-/**
- * Log WebGL support info to console
- *
- * Useful for debugging
- */
-/**
- * Get user-friendly message for WebGL not supported
- *
- * @returns Message to show users
- */
-/**
- * Check if WebGL is likely disabled by user or policy
- *
- * @returns true if likely disabled intentionally
- */

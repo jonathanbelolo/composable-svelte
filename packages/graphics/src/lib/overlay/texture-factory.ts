@@ -112,10 +112,12 @@ export class TextureFactory {
 		if (!validation.valid) {
 			// Try auto-scaling
 			if (validation.scaled) {
-				console.warn(
-					`[TextureFactory] Image ${img.id} too large (${width}x${height}), scaling to ${validation.scaled.width}x${validation.scaled.height}`
+				return this.createScaledTexture(
+					img,
+					img.id || 'image',
+					validation.scaled.width,
+					validation.scaled.height
 				);
-				return this.createScaledImageTexture(img, validation.scaled.width, validation.scaled.height);
 			}
 
 			return {
@@ -166,12 +168,19 @@ export class TextureFactory {
 	 * @param targetHeight - Target height
 	 * @returns Texture creation result
 	 */
-	private createScaledImageTexture(
-		img: HTMLImageElement,
+	private createScaledTexture(
+		element: HTMLElement,
+		id: string,
 		targetWidth: number,
 		targetHeight: number
 	): TextureCreationResult {
-		const gl = this.gl;
+		// Told once, here, rather than on each path. Downscaling is not an
+		// error — nothing reaches `onError` — but a consumer who set
+		// `maxTextureSize` and is now looking at a softer image deserves to
+		// find out why without reading this file.
+		console.warn(
+			`[TextureFactory] ${id} exceeds the texture size limit; scaling to ${targetWidth}x${targetHeight}`
+		);
 
 		// Create canvas for scaling
 		const canvas = document.createElement('canvas');
@@ -181,15 +190,12 @@ export class TextureFactory {
 		const ctx = canvas.getContext('2d');
 		if (!ctx) {
 			return {
-				error: OverlayError.textureCreationFailed(
-					img.id || 'image',
-					'Failed to create 2D context for scaling'
-				)
+				error: OverlayError.textureCreationFailed(id, 'Failed to create 2D context for scaling')
 			};
 		}
 
-		// Draw scaled image
-		ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+		// Draw scaled source
+		ctx.drawImage(element as CanvasImageSource, 0, 0, targetWidth, targetHeight);
 
 		// Create texture from canvas
 		return this.createCanvasTexture(canvas);
@@ -222,6 +228,19 @@ export class TextureFactory {
 		// Validate size
 		const validation = this.textureValidator.validateSize(width, height);
 		if (!validation.valid) {
+			// Scale rather than refuse, as the image path and `updateTexture`
+			// both do. This used to refuse outright, so the same element with
+			// the same `maxTextureSize` was rejected at registration and scaled
+			// on update — the answer decided by which call came first.
+			if (validation.scaled) {
+				return this.createScaledTexture(
+					video,
+					video.id || 'video',
+					validation.scaled.width,
+					validation.scaled.height
+				);
+			}
+
 			return {
 				error: this.validationError(validation, video.id || 'video', width, height)
 			};
@@ -278,6 +297,19 @@ export class TextureFactory {
 		// Validate size
 		const validation = this.textureValidator.validateSize(width, height);
 		if (!validation.valid) {
+			// Same as the video and image paths. Note the recursion terminates:
+			// `createScaledTexture` re-enters here with dimensions `scaleToFit`
+			// has already brought under the cap, so this branch is not taken a
+			// second time.
+			if (validation.scaled) {
+				return this.createScaledTexture(
+					canvas,
+					canvas.id || 'canvas',
+					validation.scaled.width,
+					validation.scaled.height
+				);
+			}
+
 			return {
 				error: this.validationError(validation, canvas.id || 'canvas', width, height)
 			};
@@ -478,13 +510,11 @@ export class TextureFactory {
 	}
 
 	/**
-	 * The error a failed validation actually describes.
+	 * The error a failed validation describes.
 	 *
-	 * Every call site used to reach for `textureTooLarge`, so a `memoryBudget`
-	 * refusal arrived as `TEXTURE_TOO_LARGE` with a message about the device
-	 * maximum and advice to reduce the image size — and `memoryBudgetExceeded`,
-	 * whose recovery text `82412fa` deliberately rewrote to name the reachable
-	 * option, had no callers at all.
+	 * Only one failure refuses now. A size failure always carries the
+	 * dimensions to scale to, and every path scales, so reaching here with
+	 * anything but `'budget'` would mean `validateSize` had changed shape.
 	 */
 	private validationError(
 		validation: TextureValidationResult,
@@ -492,11 +522,14 @@ export class TextureFactory {
 		width: number,
 		height: number
 	): OverlayError {
-		if (validation.failure === 'budget') {
-			const usage = this.textureValidator.getMemoryUsage();
-			return OverlayError.memoryBudgetExceeded(usage.used, usage.budget, width * height * 4);
+		const usage = this.textureValidator.getMemoryUsage();
+		if (validation.failure !== 'budget') {
+			return OverlayError.textureCreationFailed(
+				id,
+				validation.reason ?? 'texture could not be validated'
+			);
 		}
-		return OverlayError.textureTooLarge(id, width, height, this.maxTextureSize, validation.reason);
+		return OverlayError.memoryBudgetExceeded(usage.used, usage.budget, width * height * 4);
 	}
 
 	/**

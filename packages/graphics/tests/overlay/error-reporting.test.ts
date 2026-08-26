@@ -80,18 +80,38 @@ describe('the budget and the size limit report themselves', () => {
 		api.destroy();
 	});
 
-	it('still reports TEXTURE_TOO_LARGE when the size limit is', async () => {
-		// The paired half, and it has to be a canvas: the image path auto-scales
-		// an oversize texture instead of refusing it, so the size error is only
-		// reachable for video and canvas.
-		vi.spyOn(console, 'error').mockImplementation(() => {});
+	it('scales rather than refusing when only the size limit is exceeded', async () => {
+		// This used to assert `TEXTURE_TOO_LARGE`, which was only reachable
+		// because the canvas path refused outright while the image path scaled.
+		// All four paths scale now, so a size failure always carries the
+		// dimensions to scale to and no error reaches the consumer at all —
+		// which is why that code no longer exists.
 		const onError = vi.fn();
 		const { api } = overlay({ maxTextureSize: 512, onError });
 
 		api.registerElement('a', sizedCanvas(2048), { type: 'canvas', shader: 'wave-gentle-horizontal' });
 		await settle();
 
-		expect(codes(onError)).toEqual([OverlayErrorCode.TEXTURE_TOO_LARGE]);
+		expect(onError, 'an oversize canvas was refused rather than scaled').not.toHaveBeenCalled();
+		expect(api.getElement('a')?.width, 'the canvas was not scaled to the cap').toBe(512);
+		expect(api.getElement('a')?.texture, 'no texture was created').toBeDefined();
+		api.destroy();
+	});
+
+	it('scales an oversize video the same way', async () => {
+		// The third path, and the one that was refusing alongside canvas.
+		const onError = vi.fn();
+		const { api } = overlay({ maxTextureSize: 512, onError });
+		const video = document.createElement('video');
+		Object.defineProperty(video, 'videoWidth', { value: 2048 });
+		Object.defineProperty(video, 'videoHeight', { value: 2048 });
+		Object.defineProperty(video, 'readyState', { value: 4 });
+
+		api.registerElement('a', video, { type: 'video', shader: 'wave-gentle-horizontal' });
+		await settle();
+
+		expect(onError, 'an oversize video was refused rather than scaled').not.toHaveBeenCalled();
+		expect(api.getElement('a')?.width).toBe(512);
 		api.destroy();
 	});
 });

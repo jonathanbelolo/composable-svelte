@@ -74,18 +74,6 @@ void main() {
 `.trim();
 
 /**
- * Default shader program configuration
- *
- * Standard configuration used for basic texture rendering.
- */
-export const DEFAULT_SHADER_CONFIG = {
-	vertex: DEFAULT_VERTEX_SHADER,
-	fragment: DEFAULT_FRAGMENT_SHADER,
-	attributes: ['aPosition', 'aTexCoord'],
-	uniforms: ['uTexture']
-} as const;
-
-/**
  * Get shader info for debugging
  *
  * @param shaderSource - Shader source code

@@ -8,7 +8,19 @@
 export enum OverlayErrorCode {
 	WEBGL_NOT_SUPPORTED = 'WEBGL_NOT_SUPPORTED',
 	CONTEXT_LOST = 'CONTEXT_LOST',
-	TEXTURE_TOO_LARGE = 'TEXTURE_TOO_LARGE',
+	/**
+	 * `TEXTURE_TOO_LARGE` used to live here.
+	 *
+	 * `maxTextureSize` does not reject any more — every creation path and the
+	 * update path scale an oversize source down to the cap, which is what the
+	 * image path always did and what the other three were changed to match. So
+	 * `validateSize` never reports a size failure without also supplying the
+	 * dimensions to scale to, and nothing could construct this code. An enum
+	 * member a consumer can switch on and never receive is the exact thing this
+	 * package has spent three rounds removing.
+	 *
+	 * `MEMORY_BUDGET_EXCEEDED` is the one that still refuses.
+	 */
 	SHADER_COMPILATION_FAILED = 'SHADER_COMPILATION_FAILED',
 	CORS_TAINTED_CANVAS = 'CORS_TAINTED_CANVAS',
 	MEMORY_BUDGET_EXCEEDED = 'MEMORY_BUDGET_EXCEEDED',
@@ -70,30 +82,6 @@ export class OverlayError extends Error {
 			'WebGL context was lost',
 			{},
 			'Wait for automatic context restoration. If the issue persists, reload the page. Context loss can occur due to GPU driver issues or memory pressure.'
-		);
-	}
-
-	/**
-	 * Texture dimensions exceed device maximum
-	 */
-	static textureTooLarge(
-		elementId: string,
-		width: number,
-		height: number,
-		maxSize: number,
-		reason?: string
-	): OverlayError {
-		// "the limit in force", not "device maximum": `maxSize` is
-		// `min(maxTextureSize, driver max)`, so a consumer who set 2048 on an
-		// 8192-capable device was told the *device* refused them. And the old
-		// recovery advised "enable auto-scaling", which is not a field of
-		// `OverlayOptions` — the same "call something you cannot call" defect
-		// that `82412fa` fixed on `memoryBudgetExceeded`.
-		return new OverlayError(
-			OverlayErrorCode.TEXTURE_TOO_LARGE,
-			`Texture size ${width}x${height} exceeds the ${maxSize}x${maxSize} limit in force (element: ${elementId})${reason ? ': ' + reason : ''}`,
-			{ elementId, width, height, maxSize, reason },
-			'Use a smaller source, or raise `maxTextureSize` in OverlayOptions — it can only narrow the limit, never exceed what the driver allows. Images are scaled down automatically; canvases and videos are not.'
 		);
 	}
 
