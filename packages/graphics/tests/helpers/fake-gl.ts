@@ -72,8 +72,37 @@ export interface FakeGL {
 	/**
 	 * What a buffer handle currently holds, as uploaded — cumulative, and
 	 * unaffected by `clearCalls`. See its note for how to scope to one frame.
+	 *
+	 * Typed as the element type of the last full `bufferData`, so index data
+	 * uploaded as `Uint16Array` reads back as `Uint16Array`. A buffer merely
+	 * *allocated* by the size-only form reads back as `Float32Array`, since a
+	 * byte count implies no type. Always a copy: this used to hand back the live
+	 * internal array, so inspecting the store could corrupt it.
 	 */
-	bufferContents(handle: unknown): Float32Array | null;
+	bufferContents(handle: unknown): TypedArray | null;
+}
+
+/**
+ * The typed-array types a GL buffer can be filled from.
+ *
+ * `DataView` is deliberately absent: it has no `BYTES_PER_ELEMENT`, and nothing
+ * in this package uploads through one.
+ */
+type TypedArray =
+	| Float32Array
+	| Float64Array
+	| Int8Array
+	| Int16Array
+	| Int32Array
+	| Uint8Array
+	| Uint8ClampedArray
+	| Uint16Array
+	| Uint32Array;
+
+type TypedArrayCtor = new (buffer: ArrayBufferLike) => TypedArray;
+
+function isTypedArray(value: unknown): value is TypedArray {
+	return ArrayBuffer.isView(value) && !(value instanceof DataView);
 }
 
 const CONSTANTS: Record<string, number> = {
@@ -196,17 +225,39 @@ export function createFakeGL(): FakeGL {
 		counts[kind]!.made += 1;
 		return { kind, id: nextId++ };
 	};
+	// Handles already deleted, so a redundant delete is not counted twice.
+	const freed = new WeakSet<object>();
+
 	const free = (kind: keyof typeof counts, handle: unknown) => {
 		// Only count a real handle. Deleting `null` is legal and frees nothing,
 		// and counting it would let a leak hide behind a no-op call.
-		if (handle && typeof handle === 'object' && (handle as Handle).kind === kind) {
-			counts[kind]!.freed += 1;
-		}
+		//
+		// Idempotent, as real GL is: deleting twice used to count twice and drive
+		// `live()` negative, and a −1 silently absorbs a +1 somewhere else. That
+		// matters because `live('texture') === 0` is the oracle for the overlay's
+		// orphaned-texture tests — the one thing `live()` exists for.
+		if (!handle || typeof handle !== 'object') return;
+		if ((handle as Handle).kind !== kind) return;
+		if (freed.has(handle)) return;
+		freed.add(handle);
+		counts[kind]!.freed += 1;
 	};
 
 	// Contents per buffer handle, so a test can ask what actually went up
 	// rather than how many times something did.
-	const bufferStore = new Map<unknown, Float32Array>();
+	//
+	// **Bytes**, because that is what a GL buffer holds. The first version
+	// stored a `Float32Array` and silently discarded anything else — so a
+	// `Uint16Array`, which is the normal `ELEMENT_ARRAY_BUFFER` index type and
+	// the very thing the per-target binding fix was motivated by, vanished
+	// without a word. Worse, it made the `INVALID_OPERATION` guard below
+	// unreachable for index data, and produced a *false* refusal with a false
+	// message when a buffer allocated with `Uint16Array` was then sub-uploaded
+	// with floats: "has had no bufferData", when it had.
+	//
+	// `view` is the element type of the last full upload, so `bufferContents`
+	// can hand back something a test can read directly rather than a byte soup.
+	const bufferStore = new Map<unknown, { bytes: Uint8Array; view: TypedArrayCtor }>();
 	// Keyed by target, because GL is. One variable meant an
 	// `ELEMENT_ARRAY_BUFFER` bind silently displaced the array binding, and the
 	// next `bufferData` then wrote vertex data into the index buffer's slot.
@@ -337,18 +388,36 @@ export function createFakeGL(): FakeGL {
 		bufferData: record('bufferData', (target, data) => {
 			const bound = boundBuffers.get(target as number);
 			if (!bound) return;
+
 			// `bufferData(target, size, usage)` is the allocate-only form: a byte
 			// count, and a buffer of zeroes. Ignoring it left the store empty, so
 			// a later `bufferSubData` looked like it was writing to nothing.
+			// A negative or fractional size is `INVALID_VALUE` in real GL; it
+			// used to produce a silent `Float32Array(0)` or a truncation.
 			if (typeof data === 'number') {
-				bufferStore.set(bound, new Float32Array(Math.max(0, Math.floor(data / 4))));
+				if (!Number.isInteger(data) || data < 0) {
+					throw new Error(
+						`fake-gl: bufferData size ${data} is not a whole number of bytes — real GL raises INVALID_VALUE`
+					);
+				}
+				// No element type is implied by a size alone; float is the
+				// overwhelmingly common follow-up and is documented as the default.
+				bufferStore.set(bound, { bytes: new Uint8Array(data), view: Float32Array });
 				return;
 			}
-			if (data instanceof Float32Array) bufferStore.set(bound, new Float32Array(data));
+
+			if (isTypedArray(data)) {
+				bufferStore.set(bound, {
+					bytes: new Uint8Array(
+						data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength)
+					),
+					view: data.constructor as TypedArrayCtor
+				});
+			}
 		}),
 		bufferSubData: record('bufferSubData', (target, offset, data) => {
 			const bound = boundBuffers.get(target as number);
-			if (!bound || !(data instanceof Float32Array)) return;
+			if (!bound || !isTypedArray(data)) return;
 
 			const existing = bufferStore.get(bound);
 			// Real GL raises `INVALID_OPERATION` here — there is no store to write
@@ -364,20 +433,25 @@ export function createFakeGL(): FakeGL {
 			// every non-zero offset write four times too far along, and threw
 			// `RangeError` on calls real GL accepts.
 			const byteOffset = typeof offset === 'number' ? offset : 0;
-			if (byteOffset % Float32Array.BYTES_PER_ELEMENT !== 0) {
-				throw new Error(`fake-gl: bufferSubData byte offset ${byteOffset} is not float-aligned`);
-			}
-
-			const start = byteOffset / Float32Array.BYTES_PER_ELEMENT;
-			if (start + data.length > existing.length) {
+			const unit = data.BYTES_PER_ELEMENT;
+			if (byteOffset % unit !== 0) {
 				throw new Error(
-					`fake-gl: bufferSubData writes past the end of the buffer (${start} + ${data.length} > ${existing.length}) — real GL raises INVALID_VALUE`
+					`fake-gl: bufferSubData byte offset ${byteOffset} is not aligned to ${unit}-byte elements`
 				);
 			}
 
-			const next = new Float32Array(existing);
-			next.set(data, start);
-			bufferStore.set(bound, next);
+			if (byteOffset + data.byteLength > existing.bytes.length) {
+				throw new Error(
+					`fake-gl: bufferSubData writes past the end of the buffer (${byteOffset} + ${data.byteLength} > ${existing.bytes.length}) — real GL raises INVALID_VALUE`
+				);
+			}
+
+			const next = new Uint8Array(existing.bytes);
+			next.set(
+				new Uint8Array(data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength)),
+				byteOffset
+			);
+			bufferStore.set(bound, { bytes: next, view: existing.view });
 		}),
 		texImage2D: noop('texImage2D'),
 		texParameteri: noop('texParameteri'),
@@ -414,7 +488,13 @@ export function createFakeGL(): FakeGL {
 		calls,
 		records,
 		argsFor: (name) => records.filter((entry) => entry.name === name).map((entry) => entry.args),
-		bufferContents: (handle) => bufferStore.get(handle) ?? null,
+		bufferContents: (handle) => {
+			const record = bufferStore.get(handle);
+			if (!record) return null;
+			// A copy. It used to hand back the live internal array, so a test
+			// that merely *inspected* the store could corrupt it.
+			return new record.view(record.bytes.slice().buffer);
+		},
 		drawCalls: () => drawCount,
 		uniforms: () => new Map(uniformWrites),
 		clearCalls: () => {

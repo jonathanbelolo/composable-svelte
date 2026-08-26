@@ -98,9 +98,19 @@ function docs(): string[] {
 	return out;
 }
 
-/** Fenced code blocks, with the file, the language, and the line the fence opened on. */
+/**
+ * Fenced code blocks, with the file, the language, and the line the fence opened on.
+ *
+ * Line endings normalised, and that is not symmetry for its own sake. The
+ * example side was normalised alone, so under `core.autocrlf=true` — the very
+ * checkout the normalisation was added for — the example was stripped, the
+ * document was not, and `block.body === body` could not hold for any pair. The
+ * one-sided fix turned a silent skip into a **false accusation**: three
+ * documents that quote their files exactly were reported as "no longer quotes
+ * … verbatim — the file is what compiles, so the document is what is wrong".
+ */
 function codeBlocks(file: string): Array<{ line: number; body: string; lang: string }> {
-	const lines = readFileSync(file, 'utf8').split('\n');
+	const lines = readFileSync(file, 'utf8').replace(/\r\n/g, '\n').split('\n');
 	const blocks: Array<{ line: number; body: string; lang: string }> = [];
 
 	let open: { line: number; body: string[]; lang: string } | null = null;
@@ -479,8 +489,16 @@ function docExamples(): { examples: DocExample[]; unparsed: string[] } {
 	const walk = (dir: string): void => {
 		for (const entry of readdirSync(dir, { withFileTypes: true })) {
 			const full = join(dir, entry.name);
-			if (entry.isDirectory()) walk(full);
-			else if (entry.isFile()) files.push(full);
+			// `statSync`, not `entry.isFile()`. `Dirent.isFile()` is **false**
+			// for a symlink, so a symlinked example — or a symlinked directory of
+			// them — was dropped with no entry in `unparsed`: a third bare
+			// `continue`, in the rewrite whose whole subject was the other two.
+			// The `docs()` walk above already uses `statSync`, so the two walks
+			// in this file disagreed about what a file is.
+			const stat = statSync(full, { throwIfNoEntry: false });
+			if (!stat) continue; // a dangling symlink names nothing
+			if (stat.isDirectory()) walk(full);
+			else if (stat.isFile()) files.push(full);
 		}
 	};
 
@@ -526,11 +544,36 @@ function docExamples(): { examples: DocExample[]; unparsed: string[] } {
 	return { examples, unparsed };
 }
 
+/**
+ * The compiled examples that must exist.
+ *
+ * Named rather than counted, because a count cannot say *which* one went.
+ */
+const EXPECTED_EXAMPLES = [
+	'packages/graphics/tests/doc-examples/overlay.svelte',
+	'packages/graphics/tests/doc-examples/scene.svelte',
+	'packages/graphics/tests/doc-examples/test-store.test.ts'
+];
+
 const { examples, unparsed: unparsedExamples } = docExamples();
 
 describe('documented examples that are compiled for real', () => {
 	it('finds them, so the arms below are not vacuous', () => {
 		expect(examples.length, 'no doc-examples directories found').toBeGreaterThan(0);
+	});
+
+	it('still has every example it is supposed to have', () => {
+		// The per-file arm below only reports files that *exist*, and the count
+		// arm is total — so deleting an example outright was completely silent,
+		// which is the exact state this guard exists to prevent. `overlay.svelte`
+		// is the file whose own header records that every prop in the README's
+		// `<WebGLOverlay>` block was once fabricated; remove it and that block
+		// goes unchecked with nothing to show for it.
+		//
+		// Exact match in both directions, on the `SWEPT_DOCS` principle: a new
+		// example must be listed, so the list cannot quietly stop describing the
+		// directory.
+		expect(examples.map((e) => e.path).sort()).toEqual([...EXPECTED_EXAMPLES].sort());
 	});
 
 	it('reads every file it finds, so none is silently unguarded', () => {

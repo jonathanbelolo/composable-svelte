@@ -50,9 +50,7 @@ describe('fake-gl buffer store', () => {
 		gl.bufferData(gl.ARRAY_BUFFER, quad(), gl.STATIC_DRAW);
 
 		expect(() => gl.bufferSubData(gl.ARRAY_BUFFER, 24, quad())).toThrow(/past the end/);
-		expect(() => gl.bufferSubData(gl.ARRAY_BUFFER, 2, new Float32Array([1]))).toThrow(
-			/not float-aligned/
-		);
+		expect(() => gl.bufferSubData(gl.ARRAY_BUFFER, 2, new Float32Array([1]))).toThrow(/not aligned to 4-byte elements/);
 	});
 
 	it('refuses bufferSubData before any bufferData', () => {
@@ -98,10 +96,88 @@ describe('fake-gl buffer store', () => {
 
 		// GL keeps one binding per target, so ARRAY_BUFFER is still `vertices`.
 		gl.bufferData(gl.ARRAY_BUFFER, quad(), gl.STATIC_DRAW);
-		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Float32Array([7, 7]), gl.STATIC_DRAW);
+		// `Uint16Array`, which is what index data actually is. The first version
+		// of this test uploaded a `Float32Array` here — the only element type
+		// the store recorded — so the assertion below was observable purely by
+		// accident of an unrealistic fixture. Interleaving the binds was not
+		// enough; the *type* was hiding a second defect underneath.
+		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array([7, 7]), gl.STATIC_DRAW);
+
+		// Non-vacuity before value: a discarded upload reads back as null, and
+		// `Array.from(null!)` would throw rather than fail informatively.
+		expect(fake.bufferContents(indices), 'the index upload was discarded').not.toBeNull();
 
 		expect(Array.from(fake.bufferContents(vertices)!)).toEqual([0, 0, 1, 0, 0, 1, 1, 1]);
 		expect(Array.from(fake.bufferContents(indices)!)).toEqual([7, 7]);
+		expect(fake.bufferContents(indices), 'index data came back as floats').toBeInstanceOf(
+			Uint16Array
+		);
+	});
+
+	it('keeps index data uploaded as Uint16Array, and lets it be sub-uploaded', () => {
+		// The store held `Float32Array` and dropped everything else in silence.
+		// That also made the INVALID_OPERATION guard unreachable for index data,
+		// and produced a *false* refusal — "has had no bufferData" — when a
+		// Uint16-allocated buffer was later sub-uploaded with floats.
+		const fake = createFakeGL();
+		const gl = fake.context;
+		const indices = gl.createBuffer();
+
+		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indices);
+		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array([0, 1, 2, 0, 2, 3]), gl.STATIC_DRAW);
+
+		expect(fake.bufferContents(indices), 'the upload was discarded').not.toBeNull();
+		expect(Array.from(fake.bufferContents(indices)!)).toEqual([0, 1, 2, 0, 2, 3]);
+
+		// Byte offset 6 is index element 3 for 2-byte elements.
+		gl.bufferSubData(gl.ELEMENT_ARRAY_BUFFER, 6, new Uint16Array([9, 9, 9]));
+		expect(Array.from(fake.bufferContents(indices)!)).toEqual([0, 1, 2, 9, 9, 9]);
+	});
+
+	it('refuses a bufferData size that is not a whole number of bytes', () => {
+		const fake = createFakeGL();
+		const gl = fake.context;
+		gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+
+		expect(() => gl.bufferData(gl.ARRAY_BUFFER, -16, gl.STATIC_DRAW)).toThrow(/INVALID_VALUE/);
+		expect(() => gl.bufferData(gl.ARRAY_BUFFER, 6.5, gl.STATIC_DRAW)).toThrow(/INVALID_VALUE/);
+		expect(() => gl.bufferData(gl.ARRAY_BUFFER, Number.NaN, gl.STATIC_DRAW)).toThrow(
+			/INVALID_VALUE/
+		);
+	});
+
+	it('hands back a copy, so inspecting the store cannot corrupt it', () => {
+		const fake = createFakeGL();
+		const gl = fake.context;
+		const buffer = gl.createBuffer();
+
+		gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+		gl.bufferData(gl.ARRAY_BUFFER, quad(), gl.STATIC_DRAW);
+
+		fake.bufferContents(buffer)![0] = 999;
+
+		expect(fake.bufferContents(buffer)![0], 'a reader mutated the harness').toBe(0);
+	});
+
+	it('counts a redundant delete once, so a double free cannot mask a leak', () => {
+		// `free()` checked only the handle kind, never whether it had already
+		// been freed, so `live()` could go negative — and a −1 silently absorbs
+		// a +1 elsewhere. Real GL ignores a redundant delete.
+		const fake = createFakeGL();
+		const gl = fake.context;
+		const buffer = gl.createBuffer();
+
+		gl.deleteBuffer(buffer);
+		gl.deleteBuffer(buffer);
+		expect(fake.live('buffer'), 'live() went negative').toBe(0);
+
+		// And the leak it would otherwise have hidden.
+		const leaked = gl.createTexture();
+		const freed = gl.createTexture();
+		gl.deleteTexture(freed);
+		gl.deleteTexture(freed);
+		void leaked;
+		expect(fake.live('texture'), 'a double free cancelled a real leak').toBe(1);
 	});
 
 	it('unbinds a deleted buffer, so it cannot be written again', () => {
