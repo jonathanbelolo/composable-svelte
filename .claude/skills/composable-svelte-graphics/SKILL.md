@@ -1,6 +1,6 @@
 ---
 name: composable-svelte-graphics
-description: 3D graphics and WebGL rendering with Composable Svelte. Use when building 3D scenes, working with cameras, lights, meshes, materials, or implementing WebGL graphics. Covers Scene, Camera, Light, Mesh components, geometry types (box, sphere, cylinder, torus, plane), material properties, and state-driven 3D rendering.
+description: 3D graphics and WebGL rendering with Composable Svelte. Use when building 3D scenes, working with cameras, lights, meshes, materials, or implementing WebGL graphics. Covers Scene, Camera, Light, Mesh components, geometry types (box, sphere, cylinder, torus, plane, custom), material properties, and state-driven 3D rendering.
 ---
 
 # Composable Svelte Graphics
@@ -249,7 +249,7 @@ Emits light in all directions from a point (like a light bulb).
 
 **Props**:
 - `type: 'point'`
-- `position: [number, number, number]` - Light position
+- `position: [number, number, number]` - Light position (optional; defaults to `[0, 1, 0]`)
 - `intensity: number` - Light intensity
 - `radius: number` - Light radius/range (optional)
 - `color: string` - Light color (optional)
@@ -264,9 +264,9 @@ Cone-shaped light (like a flashlight).
 
 **Props**:
 - `type: 'spot'`
-- `position: [number, number, number]` - Light position
-- `direction: [number, number, number]` - Light direction vector
-- `angle: number` - Cone angle in radians (default: Math.PI / 4)
+- `position: [number, number, number]` - Light position (optional; defaults to `[0, 1, 0]`)
+- `direction: [number, number, number]` - Light direction vector (optional; defaults to `[0, -1, 0]`)
+- `angle: number` - Cone half-angle in radians (optional; defaults to `Math.PI / 4`)
 - `intensity: number` - Light intensity
 - `color: string` - Light color (optional)
 
@@ -459,6 +459,53 @@ Flat rectangular surface.
 ```
 
 **Note**: Planes are initially vertical (facing Z-axis). Rotate by `[Math.PI / 2, 0, 0]` to make horizontal (ground).
+
+### Custom
+
+Arbitrary geometry from raw vertex data.
+
+```typescript
+{
+  type: 'custom';
+  vertices: number[];   // flat xyz triples
+  indices: number[];    // flat triangles, indexing into vertices
+  normals?: number[];   // one per vertex; computed for you when omitted
+  uvs?: number[];       // two per vertex
+}
+```
+
+**Example**:
+```svelte
+<!-- A single triangle in the XY plane -->
+<Mesh
+  {store}
+  id="tri"
+  geometry={{
+    type: 'custom',
+    vertices: [0, 0, 0, 1, 0, 0, 0, 1, 0],
+    indices: [0, 1, 2],
+    uvs: [0, 0, 1, 0, 0, 1]
+  }}
+  material={{ color: '#ff6b6b' }}
+  position={[0, 0, 0]}
+/>
+```
+
+**Validated before it reaches the store.** A mesh whose custom geometry fails
+any rule below is warned about and **ignored** — it never enters `state.meshes`,
+so nothing renders and no later `updateMesh` for that id does anything either.
+
+| rule | why |
+|---|---|
+| `vertices.length` a multiple of 3 | xyz triples |
+| `indices.length` a multiple of 3 | triangles |
+| every index a whole number in `0 .. vertices.length / 3 - 1` | Babylon truncates a float index through a `Uint16Array` and silently draws a different triangle |
+| every value finite | one `NaN` makes computed normals `NaN` for all three vertices of any triangle touching it |
+| `normals.length === vertices.length` | one per vertex |
+| `uvs.length === vertices.length / 3 * 2` | two per vertex; wrong here mistextures every face without erroring |
+
+Babylon validates none of this: bad indices produce garbage geometry or throw
+from inside the engine.
 
 ---
 
@@ -808,7 +855,7 @@ the discriminant.
 Graphics reducer is pure and testable:
 
 ```typescript
-import { graphicsReducer } from '@composable-svelte/graphics';
+import { graphicsReducer, createInitialGraphicsState } from '@composable-svelte/graphics';
 import { TestStore } from '@composable-svelte/core/test';
 
 const store = new TestStore({
@@ -1164,7 +1211,7 @@ It takes **exactly one prop**, `options`, and every field of it is optional:
 | option | meaning |
 |---|---|
 | `targetFPS` | render-loop cap. Default 60 desktop, 30 mobile |
-| `maxTextureSize` | reject textures wider or taller than this, clamped down to the driver's `MAX_TEXTURE_SIZE` |
+| `maxTextureSize` | **downscale** a source larger than this — `<img>`, `<video>` and `<canvas>` alike, at registration and on every re-upload. It only narrows: a value above the driver's `MAX_TEXTURE_SIZE` is clamped to it. It does not refuse; `memoryBudget` is the one that does |
 | `memoryBudget` | total texture bytes before further textures are rejected. Default 200MB |
 | `debug` | console logging |
 | `handleContextLoss` | whether to rebuild resources after a context loss. Default `true`; the two callbacks below fire either way, so `false` means "tell me, but do not recover for me" |

@@ -109,14 +109,14 @@ Code editing, syntax highlighting, and visual node programming.
 import { CodeEditor, CodeHighlight, NodeCanvas } from '@composable-svelte/code';
 ```
 
-### `@composable-svelte/graphics` (v0.1.0)
+### `@composable-svelte/graphics` (v0.1.2)
 
 State-driven 3D graphics with Babylon.js.
 
 - **Components**: `Scene`, `Camera`, `Mesh`, `Light`, `WebGLOverlay`
-- **State**: `graphicsReducer` — manages meshes, cameras, lights, renderer settings through actions
+- **State**: `graphicsReducer` — manages meshes, cameras, lights and animations through actions
 - **Adapter**: `BabylonAdapter` for advanced Babylon.js integration
-- **Built on**: @babylonjs/core, @babylonjs/loaders
+- **Built on**: @babylonjs/core
 
 ```typescript
 import { Scene, Camera, Mesh, Light } from '@composable-svelte/graphics';

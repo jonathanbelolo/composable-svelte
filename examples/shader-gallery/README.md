@@ -12,24 +12,31 @@ This example showcases a hybrid rendering approach:
    - Are indexed by search engines
    - Degrade gracefully without JavaScript
 
-2. **WebGL for Enhancement**: A WebGL canvas overlays each image to:
+2. **WebGL for Enhancement**: One full-viewport canvas — not one per image —
+   draws over them to:
    - Apply real-time shader effects
    - Render with GPU acceleration
    - Provide visual enhancements
    - Maintain smooth animations
 
-3. **Zero-Opacity Trick**: When WebGL loads successfully:
-   - DOM image gets `opacity: 0` (NOT `display: none`)
+3. **Fading the DOM image out**: once its texture exists, the `<img>` is faded
+   to transparent — never `display: none`:
    - Image still affects layout and page flow
    - No content reflow or layout shifts
-   - WebGL canvas renders the visible result
+   - The overlay renders the visible result in its place
+
+   The fade is `animateFadeOut` from `@composable-svelte/core/animation` rather
+   than a CSS transition, because it is a state-driven lifecycle and because
+   that helper honours `prefers-reduced-motion` by writing the end state — which
+   a `transition` on a class toggle cannot.
 
 ## Features
 
 - **Multiple Shader Effects**:
-  - Wave distortion (animated sine waves)
-  - Pixelation
-  - Chromatic aberration (RGB channel separation)
+  - Wave distortion and pixelation, from `@composable-svelte/graphics`'s preset
+    library (21 presets: `ripple-*`, `wave-*`, `pixelate-*`, `blur-*`,
+    `glitch-*`, `zoom-*`)
+  - Chromatic aberration, a custom effect defined in `src/lib/custom-shaders.ts`
 
 - **Graceful Degradation**:
   - Falls back to DOM images if WebGL fails
@@ -53,23 +60,34 @@ Visit `http://localhost:5175`
 
 ## Technical Details
 
-### ShaderImage Component
+This example was rewritten onto `<WebGLOverlay>` from
+`@composable-svelte/graphics`, and this section described the architecture it
+had before that — a `ShaderImage` component creating its own canvas and texture
+per image. None of that is here any more.
 
-The core component that implements the hybrid rendering:
+### One overlay, not one canvas per image
 
-- Renders a standard `<img>` tag
-- Creates a WebGL canvas positioned absolutely over it
-- Loads image as WebGL texture
-- Applies fragment shaders to the texture
-- Sets DOM image to `opacity: 0` when WebGL is ready
+`ShaderGallery.svelte` mounts a single `<WebGLOverlay bind:this={…} />`. That is
+one `position: fixed`, full-viewport, `pointer-events: none` canvas for the
+whole page, and it owns every texture, program and frame.
 
-### Shader Programs
+### `ShaderImage2.svelte`
 
-Three fragment shaders demonstrate different effects:
+Renders a plain `<img>` and registers it with the overlay through Svelte
+context — `registerImageElement(id, element, src, shader)` — then unregisters on
+destroy. It creates no canvas and no texture of its own; the overlay draws over
+the element where it sits, and tracks its position as the page scrolls.
 
-1. **Wave**: Sine wave distortion on X-axis
-2. **Pixelate**: Mosaic effect with configurable pixel size
-3. **Chromatic**: RGB channel offset for glitch effect
+The DOM image stays in the document, which is what keeps the gallery accessible
+and indexable, and what makes WebGL failure a graceful degradation rather than a
+blank page: if the overlay cannot initialise, the plain images are still there.
+
+### Where the shaders come from
+
+`wave-*` and `pixelate-*` are presets shipped by the package and addressed by
+name. The chromatic-aberration family is defined locally in
+`src/lib/custom-shaders.ts` as a `CustomShaderEffect` — fragment source plus
+uniforms — which is the escape hatch for anything the presets do not cover.
 
 ## Use Cases
 
@@ -83,7 +101,8 @@ This pattern is useful for:
 
 ## Limitations
 
-- Requires WebGL support (falls back gracefully)
+- Requires WebGL support (falls back gracefully — the DOM images remain)
 - CORS restrictions apply to cross-origin images
-- Additional memory overhead for WebGL textures
+- Additional memory overhead for WebGL textures. The overlay tracks this against
+  a `memoryBudget` and refuses registrations that would exceed it
 - Not suitable for very large numbers of images (texture limits)

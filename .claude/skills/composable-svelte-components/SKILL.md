@@ -756,7 +756,7 @@ For specialized components beyond standard UI, see dedicated skills:
 **Skill**: `composable-svelte-graphics`
 **Package**: `@composable-svelte/graphics`
 **Components**: Scene, Camera, Light, Mesh
-**Use cases**: 3D visualizations, WebGL rendering, geometry (box, sphere, cylinder, torus, plane)
+**Use cases**: 3D visualizations, WebGL rendering, geometry (box, sphere, cylinder, torus, plane, custom)
 
 ### Code & Media
 **Skill**: `composable-svelte-code`
@@ -950,7 +950,7 @@ This skill covers the component library for Composable Svelte:
 3. **Data Display**: DataTable, Card, Badge, Avatar
 4. **Feedback**: Toast, Progress, Skeleton, Spinner
 5. **Layout**: Accordion (Collapsible is not currently usable — see its section)
-6. **3D Graphics**: Scene, Camera, Light, Mesh (box, sphere, cylinder, torus, plane)
+6. **3D Graphics**: Scene, Camera, Light, Mesh (box, sphere, cylinder, torus, plane, custom)
 7. **Component Selection**: Decision trees for choosing components
 8. **Custom Components**: Guidelines for building custom components
 9. **Accessibility**: Keyboard, screen reader, focus management

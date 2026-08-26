@@ -128,7 +128,7 @@ function rotateShapes() {
   <section class="space-y-4">
     <div>
       <h2 class="text-2xl font-bold mb-2">Usage</h2>
-      <p class="text-muted-foreground">All supported geometry types</p>
+      <p class="text-muted-foreground">The five primitive geometry types (custom geometry takes raw vertex data)</p>
     </div>
 
     <div class="rounded-lg bg-muted p-4 overflow-x-auto">

@@ -83,9 +83,10 @@ Configures the scene camera.
 - `type?`: 'perspective' | 'orthographic' (default: 'perspective')
 - `position`: [x, y, z]
 - `lookAt`: [x, y, z]
-- `fov?`: number (field of view in degrees)
+- `fov?`: number (field of view in degrees, perspective only)
 - `near?`: number
 - `far?`: number
+- `orthoSize?`: number (orthographic only) — half-height of the view volume
 
 ### `<Mesh>`
 
@@ -101,11 +102,32 @@ Renders a 3D mesh in the scene.
 - `scale?`: [x, y, z]
 - `visible?`: boolean
 
-**Geometry Types:**
+**Geometry Types:** six, not the four this list carried until recently — `torus`
+was missing while the styleguide's own demo rendered one, and `custom` was
+missing because the commit that implemented it touched no documentation at all.
+
 - `{ type: 'box', size: number }`
 - `{ type: 'sphere', radius: number, segments?: number }`
 - `{ type: 'cylinder', height: number, diameter: number }`
 - `{ type: 'plane', width: number, height: number }`
+- `{ type: 'torus', diameter: number, thickness: number, segments?: number }`
+- `{ type: 'custom', vertices: number[], indices: number[], normals?: number[], uvs?: number[] }`
+
+**Custom geometry** is validated before it enters the store, and a mesh that
+fails validation is **warned about and ignored** — it does not reach
+`state.meshes`, so nothing renders and no later `updateMesh` for that id has any
+effect. The rules:
+
+| rule | why |
+|---|---|
+| `vertices.length` is a multiple of 3 | they are xyz triples |
+| `indices.length` is a multiple of 3 | they are triangles |
+| every index is a whole number in `0 .. vertices.length / 3 - 1` | Babylon truncates a float index through a `Uint16Array` and silently draws a different triangle |
+| every value is finite | one `NaN` makes Babylon's computed normals `NaN` for all three vertices of any triangle touching it |
+| `normals.length === vertices.length`, if given | one normal per vertex |
+| `uvs.length === vertices.length / 3 * 2`, if given | two per vertex; getting this wrong mistextures every face without erroring |
+
+Normals are computed for you when omitted.
 
 **Material:**
 - `color`: string (hex color)
@@ -323,6 +345,19 @@ The single prop is `options` (`OverlayOptions`): `targetFPS`, `maxTextureSize`,
 `memoryBudget`, `debug`, `handleContextLoss`, `onContextLost`,
 `onContextRestored` and `onError`.
 
+`maxTextureSize` **downscales** a source larger than it, rather than refusing
+one — for `<img>`, `<video>` and `<canvas>` alike, at registration and on every
+re-upload. It can only narrow: a value above the driver's own maximum is clamped
+to it. `memoryBudget` is the option that refuses, with
+`OverlayErrorCode.MEMORY_BUDGET_EXCEEDED` through `onError`.
+
+`onError` receives an `OverlayError`; import it and `OverlayErrorCode` to narrow
+on `error.code`. It reports failures to construct the overlay
+(`WEBGL_NOT_SUPPORTED`, `INITIALIZATION_FAILED`), to register an element
+(`INVALID_ELEMENT_TYPE`, `ELEMENT_NOT_FOUND`, `CONTEXT_LOST`), and to build a
+texture or compile a shader (`CORS_TAINTED_CANVAS`, `MEMORY_BUDGET_EXCEEDED`,
+`TEXTURE_CREATION_FAILED`, `SHADER_COMPILATION_FAILED`).
+
 The methods are `registerElement` and `unregisterElement`; `updateElementShader`
 (recompile) and `updateUniforms` (feed the existing program new values);
 `updateElement` (re-read the pixels — the trigger for the `manual` update
@@ -337,6 +372,13 @@ describes one, and `createRippleEffect` and its five siblings build effects the
 fixed presets do not cover.
 
 `examples/shader-gallery` is the worked example.
+
+### Also exported
+
+`syncScene` and `initialBaseline`, with the `SceneAdapter` and `SceneBaseline`
+types — the seam between store state and a renderer. They are what
+`<Scene>` drives internally, and what a second backend would implement or a test
+would substitute.
 
 ## Renderer
 
