@@ -90,6 +90,7 @@ class WebGLOverlay implements OverlayContextAPI {
 	private elementPrograms = new Map<string, CompiledProgram>();
 	private options: Required<OverlayOptions>;
 	private readonly log: DebugLog;
+	private rebuildGeneration = 0;
 	private destroyed = false;
 
 	constructor(options: OverlayInit = {}) {
@@ -298,6 +299,20 @@ class WebGLOverlay implements OverlayContextAPI {
 			bounds: initialBounds
 		};
 
+		// A registration made while the context is gone is accepted, not refused —
+		// unless the consumer turned automatic recovery off, in which case
+		// nothing will ever build it.
+		//
+		// `recreateResources` runs only under `handleContextLoss`, so on that
+		// branch a deferred element is dead permanently *and* its id cannot be
+		// reclaimed: the natural retry after the restore is refused as a
+		// duplicate. Refusing here keeps the id free and still produces
+		// `CONTEXT_LOST`, which is the signal a consumer who opted out is
+		// waiting for.
+		if (this.contextIsLost() && !this.options.handleContextLoss) {
+			return this.report(OverlayError.contextLost());
+		}
+
 		// A registration made while the context is gone is accepted, not refused.
 		//
 		// Refusing it produced `CONTEXT_LOST` — the first thing in the package
@@ -306,9 +321,25 @@ class WebGLOverlay implements OverlayContextAPI {
 		// element was dropped for good, and the README's own pattern registers
 		// from `img.onload`, which can land in that window at any time. The
 		// consumer is told; the restore builds what could not be built now.
+		// Resolving the shader needs no GL, so it happens either way — a preset
+		// name left as a string makes `updateUniforms` a silent no-op, and the
+		// restore would then resolve the preset afresh and discard whatever the
+		// consumer had set.
+		this.resolveElementShader(registration);
+
 		const lost = this.contextIsLost();
 
-		if (!lost) {
+		if (lost) {
+			// Carried so the rebuild can honour it. It used to be a parameter of
+			// `createElementTexture` and nothing else, and `recreateResources`
+			// calls that with no callback — so for a deferred element
+			// `onTextureLoaded` never fired at all, not during the loss and not
+			// after it. In `examples/shader-gallery` that callback fades the DOM
+			// image out, so the effect stayed invisible for the life of the page.
+			if (options.onTextureLoaded) {
+				registration.pendingTextureLoaded = options.onTextureLoaded;
+			}
+		} else {
 			// Create initial texture
 			this.createElementTexture(registration, options.onTextureLoaded);
 
@@ -485,6 +516,14 @@ class WebGLOverlay implements OverlayContextAPI {
 	 * @param id - Element ID
 	 */
 	updateElementPosition(id: string): void {
+		// The fifth id-taking method, and the one that reported nothing —
+		// which made "every refusal goes through `report()`" false, and the test
+		// named "reports every method called with an id that is not registered"
+		// exercise four of five.
+		if (!this.elements.has(id)) {
+			this.report(OverlayError.elementNotFound(id));
+			return;
+		}
 		this.positionTracker.updateElementPosition(id);
 	}
 
@@ -671,7 +710,8 @@ class WebGLOverlay implements OverlayContextAPI {
 	 */
 	private async createElementTexture(
 		registration: ElementRegistration,
-		onTextureLoaded?: (() => void) | undefined
+		onTextureLoaded?: (() => void) | undefined,
+		generation = this.rebuildGeneration
 	): Promise<void> {
 		if (!this.textureFactory || !this.gl) return;
 
@@ -688,7 +728,15 @@ class WebGLOverlay implements OverlayContextAPI {
 		// first — and then the texture handle landed on a registration no longer
 		// in the map: never deleted, and the memory accounting never told. Free
 		// it here instead of assigning it to nothing.
-		if (this.destroyed || this.elements.get(registration.id) !== registration) {
+		// Superseded by a later rebuild, as well as destroyed or unregistered.
+		// Identity alone is not enough here: `recreateResources` reuses the
+		// registration objects, so two restores in one task both assigned and
+		// the first texture was never freed.
+		if (
+			this.destroyed ||
+			this.elements.get(registration.id) !== registration ||
+			generation !== this.rebuildGeneration
+		) {
 			if (result.texture && this.textureFactory) {
 				this.textureFactory.deleteTexture(result.texture, result.width ?? 0, result.height ?? 0);
 			}
@@ -897,9 +945,22 @@ class WebGLOverlay implements OverlayContextAPI {
 	/**
 	 * Compile shader program for an element
 	 */
-	private compileElementShader(registration: ElementRegistration): boolean {
-		if (!this.programManager) return false;
-
+	/**
+	 * Resolve a shader to its sources, and normalise `registration.shader`.
+	 *
+	 * Split out of `compileElementShader` because it needs no GL, and the
+	 * compile does. That mattered the moment registrations began deferring
+	 * through a context loss: the whole method was skipped, so a preset *name*
+	 * stayed a string — and `updateUniforms` guards on
+	 * `typeof shader === 'object'`, so it was a silent no-op for the length of
+	 * the loss, with whatever the consumer set discarded when the restore
+	 * resolved the preset afresh. Verbatim the defect the unknown-preset branch
+	 * below was written to close, reopened through a different door.
+	 */
+	private resolveElementShader(registration: ElementRegistration): {
+		vertexSource: string;
+		fragmentSource: string;
+	} {
 		// Determine vertex and fragment shader source
 		let vertexSource = DEFAULT_VERTEX_SHADER;
 		let fragmentSource = DEFAULT_FRAGMENT_SHADER;
@@ -942,6 +1003,15 @@ class WebGLOverlay implements OverlayContextAPI {
 				registration.shader = { fragment: DEFAULT_FRAGMENT_SHADER };
 			}
 		}
+
+
+		return { vertexSource, fragmentSource };
+	}
+
+	private compileElementShader(registration: ElementRegistration): boolean {
+		if (!this.programManager) return false;
+
+		const { vertexSource, fragmentSource } = this.resolveElementShader(registration);
 
 		// Compile program. The list of uniform names that used to be assembled
 		// here — the three built-ins plus whatever keys the shader object
@@ -1018,11 +1088,25 @@ class WebGLOverlay implements OverlayContextAPI {
 		// if the rebuild's texture creation failed, a later `unregisterElement`
 		// deallocated bytes this factory never allocated, and the budget
 		// silently gained room for textures it could not afford.
+		// A generation per rebuild, so a second restore landing while the first
+		// one's async texture creation is still in flight cannot orphan its
+		// result. `createElementTexture` guards on the *registration* identity,
+		// and `recreateResources` reuses the same objects — so both creations
+		// used to assign, and the first handle was never deleted.
+		this.rebuildGeneration += 1;
+		const generation = this.rebuildGeneration;
+
 		for (const registration of this.elements.values()) {
 			delete registration.texture;
 			delete registration.width;
 			delete registration.height;
-			this.createElementTexture(registration);
+
+			// The callback owed to a registration deferred through the loss.
+			// Handed over rather than read later, so it fires once.
+			const owed = registration.pendingTextureLoaded;
+			delete registration.pendingTextureLoaded;
+
+			this.createElementTexture(registration, owed, generation);
 			this.compileElementShader(registration);
 		}
 

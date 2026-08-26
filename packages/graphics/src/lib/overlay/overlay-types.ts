@@ -131,6 +131,15 @@ export interface ElementRegistration {
 	height?: number | undefined;
 
 	/**
+	 * A load callback owed to this element but not yet honoured.
+	 *
+	 * Set only when a registration is deferred through a context loss, and
+	 * cleared the moment it fires. The contract is "called once the texture
+	 * actually exists" — once, not once per restore.
+	 */
+	pendingTextureLoaded?: (() => void) | undefined;
+
+	/**
 	 * Animation frame ID (for video elements)
 	 */
 	animationFrameId?: number;
