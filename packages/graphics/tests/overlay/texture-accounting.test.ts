@@ -360,3 +360,112 @@ describe('the budget survives register and unregister', () => {
 		api.destroy();
 	});
 });
+
+describe('a source no shrinking can help still gets pixels', () => {
+	it('scales an extreme aspect ratio to at least one pixel high', async () => {
+		// `Math.floor(1 * (4096 / 8192))` is 0, and a zero-area texture
+		// re-validates as *valid* — it costs no bytes, so no budget refuses it.
+		// The element rendered nothing while `onTextureLoaded` fired and
+		// `onError` never did. Wide gradient strips and sprite sheets are
+		// ordinary content.
+		vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const onError = vi.fn();
+		const { api } = overlay({ maxTextureSize: 512, onError });
+
+		api.registerElement('a', sizedCanvas(4096, 1), {
+			type: 'canvas',
+			shader: 'wave-gentle-horizontal'
+		});
+		await settle();
+
+		expect(api.getElement('a')?.width, 'the width was not capped').toBe(512);
+		expect(api.getElement('a')?.height, 'the height was floored to nothing').toBeGreaterThan(0);
+		expect(api.getElement('a')?.texture, 'no texture was created').toBeDefined();
+		expect(onError).not.toHaveBeenCalled();
+		api.destroy();
+	});
+
+	it('still scales an ordinary oversize source proportionally', async () => {
+		// The paired half: a floor of one must not become a floor for
+		// everything. A square 2048 at a 512 cap is 512, not 1.
+		vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const { api } = overlay({ maxTextureSize: 512 });
+
+		api.registerElement('a', sizedCanvas(2048, 1024), {
+			type: 'canvas',
+			shader: 'wave-gentle-horizontal'
+		});
+		await settle();
+
+		expect(api.getElement('a')?.width).toBe(512);
+		expect(api.getElement('a')?.height).toBe(256);
+		api.destroy();
+	});
+});
+
+describe('the texture size limits are validated', () => {
+	const unusable = [-1, 0, 1.5, Number.NaN, Number.POSITIVE_INFINITY];
+
+	it.each(unusable)('ignores a maxTextureSize of %s rather than acting on it', async (bad) => {
+		// `-1` sent `scaleToFit` into a recursion that ran ~2480 frames before
+		// the stack blew, surfacing as `TEXTURE_CREATION_FAILED: Cannot read
+		// properties of undefined`. `0` produced a silent 0×0.
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const onError = vi.fn();
+		const { api } = overlay({ maxTextureSize: bad as number, onError });
+
+		api.registerElement('a', sizedCanvas(256), { type: 'canvas', shader: 'wave-gentle-horizontal' });
+		await settle();
+
+		expect(api.getElement('a')?.width, 'a bad limit was acted on').toBe(256);
+		expect(onError).not.toHaveBeenCalled();
+		expect(
+			warn.mock.calls.some((call) => String(call[0]).includes('maxTextureSize')),
+			'the ignored value was not reported'
+		).toBe(true);
+		api.destroy();
+	});
+
+	it('falls back rather than uncapping when the driver reports nothing usable', async () => {
+		// `width > undefined` is false for every width, so an unreadable driver
+		// limit used to disable the cap entirely.
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const fake = createFakeGL();
+		undo.push(installFakeGL(fake), installFakeObservers());
+		(fake.context as unknown as Record<string, unknown>).getParameter = () => undefined;
+
+		const api = createOverlay({});
+		if (!('destroy' in api)) throw new Error('overlay failed to initialise');
+
+		api.registerElement('a', sizedCanvas(4096), { type: 'canvas', shader: 'wave-gentle-horizontal' });
+		await settle();
+
+		expect(api.getElement('a')?.width, 'the cap was disabled entirely').toBe(2048);
+		expect(
+			warn.mock.calls.some((call) => String(call[0]).includes('MAX_TEXTURE_SIZE')),
+			'the fallback was not reported'
+		).toBe(true);
+		api.destroy();
+	});
+});
+
+describe('the budget error describes the decision that produced it', () => {
+	it('reports the bytes it actually judged, not the un-scaled source', async () => {
+		// The refusal is about the *scaled* size; the caller still holds the
+		// original dimensions, so the error reported a figure four times too
+		// large for a half-scale fit.
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const onError = vi.fn();
+		const { api } = overlay({ maxTextureSize: 2048, memoryBudget: 8 * MB, onError });
+
+		// 8192² scales to 2048² = 16MB, over an 8MB budget.
+		api.registerElement('a', sizedCanvas(8192), { type: 'canvas', shader: 'wave-gentle-horizontal' });
+		await settle();
+
+		expect(onError).toHaveBeenCalledTimes(1);
+		const details = (onError.mock.calls[0]![0] as { details?: Record<string, number> }).details;
+		expect(details?.requestedSize, 'the un-scaled size was reported').toBe(2048 * 2048 * 4);
+		api.destroy();
+	});
+});

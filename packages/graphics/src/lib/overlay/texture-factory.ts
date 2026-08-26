@@ -25,7 +25,10 @@ export class TextureFactory {
 
 	constructor(
 		private gl: WebGLRenderingContext,
-		private maxTextureSize: number,
+		// Not a field: line 37 forwards the parameter, and the only reader of
+		// `this.maxTextureSize` was the `textureTooLarge` message `c94a312`
+		// deleted. Write-only is the category the note below polices.
+		maxTextureSize: number,
 		// Not a field: it is forwarded to the validator on the next line and
 		// never read again. It was `private memoryBudget`, which made it a
 		// write-only property of the class — the category `457c7e6` deleted ten
@@ -121,7 +124,7 @@ export class TextureFactory {
 			}
 
 			return {
-				error: this.validationError(validation, img.id || 'image', width, height)
+				error: this.validationError(validation, width, height)
 			};
 		}
 
@@ -242,7 +245,7 @@ export class TextureFactory {
 			}
 
 			return {
-				error: this.validationError(validation, video.id || 'video', width, height)
+				error: this.validationError(validation, width, height)
 			};
 		}
 
@@ -311,7 +314,7 @@ export class TextureFactory {
 			}
 
 			return {
-				error: this.validationError(validation, canvas.id || 'canvas', width, height)
+				error: this.validationError(validation, width, height)
 			};
 		}
 
@@ -403,18 +406,20 @@ export class TextureFactory {
 			// that fits perfectly well is refused for the space it already has.
 			this.textureValidator.trackDeallocation(previous.width, previous.height);
 			const validation = this.textureValidator.validateSize(size.width, size.height);
+
+			// Built before the accounting is put back, so the usage figure in
+			// the message is the one the refusal was judged against. Restoring
+			// first made the error report a total that included the very texture
+			// the validator had been told to ignore.
+			const refusal =
+				!validation.valid && !validation.scaled
+					? this.validationError(validation, size.width, size.height)
+					: null;
+
 			this.textureValidator.trackAllocation(previous.width, previous.height);
 
-			if (!validation.valid && !validation.scaled) {
-				return {
-					success: false,
-					error: this.validationError(
-						validation,
-						element.id || 'unknown',
-						size.width,
-						size.height
-					)
-				};
+			if (refusal) {
+				return { success: false, error: refusal };
 			}
 
 			// Over the size cap: upload a scaled copy, as creation does, rather
@@ -512,24 +517,26 @@ export class TextureFactory {
 	/**
 	 * The error a failed validation describes.
 	 *
-	 * Only one failure refuses now. A size failure always carries the
-	 * dimensions to scale to, and every path scales, so reaching here with
-	 * anything but `'budget'` would mean `validateSize` had changed shape.
+	 * Only one failure refuses. A size failure always carries the dimensions to
+	 * scale to and every path scales, so anything arriving here is a budget
+	 * refusal — which is why the `failure` discriminant that used to choose
+	 * between two errors went with the second one.
 	 */
 	private validationError(
 		validation: TextureValidationResult,
-		id: string,
 		width: number,
 		height: number
 	): OverlayError {
 		const usage = this.textureValidator.getMemoryUsage();
-		if (validation.failure !== 'budget') {
-			return OverlayError.textureCreationFailed(
-				id,
-				validation.reason ?? 'texture could not be validated'
-			);
-		}
-		return OverlayError.memoryBudgetExceeded(usage.used, usage.budget, width * height * 4);
+		// `requestedBytes` rather than `width * height * 4`: when the refusal is
+		// about a *scaled* size the caller still holds the original dimensions,
+		// and reporting those gave a figure four times too large for a
+		// half-scale fit.
+		return OverlayError.memoryBudgetExceeded(
+			usage.used,
+			usage.budget,
+			validation.requestedBytes ?? width * height * 4
+		);
 	}
 
 	/**

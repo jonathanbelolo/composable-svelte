@@ -287,3 +287,70 @@ describe('customGeometryProblem', () => {
 		).toBeNull();
 	});
 });
+
+describe('<Mesh> does not retry a refusal on every prop change', () => {
+	it('does not dispatch at all for geometry the reducer would refuse', () => {
+		// The post-check leaves `ownedId` null when the store refuses, so every
+		// prop change re-took the "not mine, not taken" branch and re-dispatched
+		// — an O(vertices) scan and a reducer warning each time. Measured before
+		// the pre-check: six dispatches and six warnings across five changes.
+		// With an animated position that is per frame.
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const store = makeStore();
+		const dispatched: string[] = [];
+		const wrapped = {
+			...store,
+			get state() {
+				return store.state;
+			},
+			dispatch: (action: { type: string }) => {
+				dispatched.push(action.type);
+				return store.dispatch(action as never);
+			}
+		};
+
+		const target = document.createElement('div');
+		document.body.appendChild(target);
+		const instance = mount(MeshGeometryHarness as never, {
+			target,
+			props: { store: wrapped as never }
+		});
+		flushSync();
+
+		// Five prop changes with the geometry still invalid.
+		for (let i = 0; i < 5; i++) {
+			target.querySelector<HTMLButtonElement>('[data-testid="nudge"]')!.click();
+			flushSync();
+		}
+
+		expect(
+			dispatched.filter((type) => type === 'addMesh'),
+			'a mesh the store would refuse was dispatched anyway'
+		).toHaveLength(0);
+		expect(warn.mock.calls.length, 'it complained more than once about one fault').toBe(1);
+
+		unmount(instance);
+		target.remove();
+		warn.mockRestore();
+	});
+
+	it('still adds the mesh when the geometry is repaired', () => {
+		// The paired half, and the whole reason `c94a312` chose a post-check:
+		// declining to retry must not become declining to ever succeed.
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const store = makeStore();
+		const target = document.createElement('div');
+		document.body.appendChild(target);
+		const instance = mount(MeshGeometryHarness as never, { target, props: { store } });
+		flushSync();
+		expect(store.state.meshes).toEqual([]);
+
+		target.querySelector<HTMLButtonElement>('[data-testid="repair"]')!.click();
+		flushSync();
+
+		expect(store.state.meshes.map((m) => m.id)).toEqual(['custom']);
+		unmount(instance);
+		target.remove();
+		warn.mockRestore();
+	});
+});

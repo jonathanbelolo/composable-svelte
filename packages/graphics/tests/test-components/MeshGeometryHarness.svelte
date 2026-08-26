@@ -21,8 +21,13 @@
 	const BROKEN: GeometryConfig = { ...VALID, indices: [0, 1, 9] };
 
 	let geometry = $state(BROKEN);
+
+	// A prop that changes without touching the geometry, so a test can count how
+	// often a *refused* mesh is re-dispatched.
+	let x = $state(0);
 </script>
 
 <button type="button" data-testid="repair" onclick={() => (geometry = VALID)}>repair</button>
+<button type="button" data-testid="nudge" onclick={() => (x += 1)}>nudge</button>
 
-<Mesh {store} id="custom" {geometry} material={{ color: '#ff0000' }} position={[0, 0, 0]} />
+<Mesh {store} id="custom" {geometry} material={{ color: '#ff0000' }} position={[x, 0, 0]} />

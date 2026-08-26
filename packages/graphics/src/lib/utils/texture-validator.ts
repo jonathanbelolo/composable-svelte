@@ -14,24 +14,41 @@ import { noDebug, type DebugLog } from './debug.js';
 
 export interface TextureValidationResult {
 	valid: boolean;
-	/**
-	 * Which limit refused it.
-	 *
-	 * Callers used to have only `reason`, a human string, so every failure here
-	 * became `OverlayError.textureTooLarge` — including the ones caused by
-	 * `memoryBudget`. A consumer who set a budget and hit it was told the
-	 * texture exceeded the *device* maximum and advised to reduce image size,
-	 * while `OverlayError.memoryBudgetExceeded` sat with no callers.
-	 */
-	failure?: 'size' | 'budget';
 	reason?: string;
+	/**
+	 * The dimensions to retry at, when shrinking would help.
+	 *
+	 * Presence is the discriminant: a size failure always carries one and every
+	 * caller scales, so a failure *without* one is a budget refusal. There used
+	 * to be an explicit `failure: 'size' | 'budget'` beside this, and once
+	 * `c94a312` deleted `TEXTURE_TOO_LARGE` its `'size'` arm had no reader —
+	 * relabelling it survived the whole suite, as did deleting the branch that
+	 * consumed it.
+	 */
 	scaled?: { width: number; height: number };
+	/**
+	 * Bytes the refused texture would have cost, as judged.
+	 *
+	 * Carried because the caller cannot recompute it: when the refusal is about
+	 * a *scaled* size, the caller still holds the original dimensions, and the
+	 * error used to report those — a figure four times too large for a
+	 * half-scale fit.
+	 */
+	requestedBytes?: number;
 }
 
 export interface MemoryUsage {
 	used: number;
 	budget: number;
 	percentage: number;
+}
+
+/** What a driver falls back to when it cannot report its own limit. */
+const FALLBACK_MAX_TEXTURE_SIZE = 2048;
+
+/** A texture dimension limit, or `undefined` if the value cannot be one. */
+function usableLimit(value: unknown): number | undefined {
+	return typeof value === 'number' && Number.isInteger(value) && value >= 1 ? value : undefined;
 }
 
 export class TextureValidator {
@@ -58,12 +75,38 @@ export class TextureValidator {
 		memoryBudget?: number,
 		private log: DebugLog = noDebug
 	) {
-		const driverMax = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+		// Both limits are taken on trust no longer.
+		//
+		// `Math.min(maxTextureSize, driverMax)` accepted whatever it was given.
+		// A consumer passing `-1` sent `scaleToFit` into a recursion that ran
+		// ~2480 frames before the stack blew, surfacing as
+		// `TEXTURE_CREATION_FAILED: Cannot read properties of undefined`. `0`
+		// produced silent 0×0 textures. And a driver answering `undefined`
+		// disabled the cap altogether, because `width > undefined` is false for
+		// every width.
+		const driverMax = usableLimit(gl.getParameter(gl.MAX_TEXTURE_SIZE));
+		const requested = maxTextureSize === undefined ? undefined : usableLimit(maxTextureSize);
+
+		if (maxTextureSize !== undefined && requested === undefined) {
+			console.warn(
+				`[WebGLOverlay] maxTextureSize must be a whole number of pixels of at least 1; ignoring ${maxTextureSize}`
+			);
+		}
+
+		if (driverMax === undefined) {
+			// A driver that cannot report its own limit must not mean "no
+			// limit". 2048 is small enough to be safe on anything that runs
+			// WebGL at all.
+			console.warn(
+				'[WebGLOverlay] The driver reported no usable MAX_TEXTURE_SIZE; falling back to 2048'
+			);
+		}
+
+		const ceiling = driverMax ?? FALLBACK_MAX_TEXTURE_SIZE;
 
 		// The consumer can only narrow: asking for more than the driver allows
 		// would produce textures it refuses to allocate.
-		this.maxTextureSize =
-			maxTextureSize !== undefined ? Math.min(maxTextureSize, driverMax) : driverMax;
+		this.maxTextureSize = requested === undefined ? ceiling : Math.min(requested, ceiling);
 
 		if (memoryBudget !== undefined) {
 			this.maxMemoryBudget = memoryBudget;
@@ -97,15 +140,14 @@ export class TextureValidator {
 			if (!this.fitsBudget(scaled.width, scaled.height)) {
 				return {
 					valid: false,
-					failure: 'budget',
-					reason: this.budgetReason(scaled.width, scaled.height)
+					reason: this.budgetReason(scaled.width, scaled.height),
+					requestedBytes: scaled.width * scaled.height * 4
 				};
 			}
 
 			return {
 				valid: false,
-				failure: 'size',
-				reason: `Texture ${width}x${height} exceeds device max ${this.maxTextureSize}`,
+				reason: `Texture ${width}x${height} exceeds the ${this.maxTextureSize} limit in force`,
 				scaled
 			};
 		}
@@ -114,8 +156,8 @@ export class TextureValidator {
 		if (!this.fitsBudget(width, height)) {
 			return {
 				valid: false,
-				failure: 'budget',
-				reason: this.budgetReason(width, height)
+				reason: this.budgetReason(width, height),
+				requestedBytes: width * height * 4
 			};
 		}
 
@@ -151,9 +193,14 @@ export class TextureValidator {
 			1 // Don't upscale
 		);
 
+		// At least one pixel in each direction. `Math.floor` alone turned an
+		// 8192×1 strip into 4096×**0** at a 4096 cap, and a zero-area texture
+		// re-validates as *valid* — it costs no bytes, so no budget refuses it.
+		// The element then rendered nothing while `onTextureLoaded` fired and
+		// `onError` never did.
 		return {
-			width: Math.floor(width * scale),
-			height: Math.floor(height * scale)
+			width: Math.max(1, Math.floor(width * scale)),
+			height: Math.max(1, Math.floor(height * scale))
 		};
 	}
 

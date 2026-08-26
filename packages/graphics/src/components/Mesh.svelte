@@ -5,6 +5,7 @@
  */
 
 import { onDestroy, untrack } from 'svelte';
+import { customGeometryProblem } from '../core/geometry.js';
 import type { Store } from '@composable-svelte/core';
 import type {
   GraphicsState,
@@ -61,6 +62,7 @@ const meshConfig = $derived({
  */
 let ownedId: string | null = null;
 let warnedId: string | null = null;
+let warnedGeometry: string | null = null;
 
 $effect(() => {
   const config = meshConfig;
@@ -91,6 +93,31 @@ function syncToStore(config: MeshConfig): void {
     return;
   }
 
+  // Refused geometry is caught here, not only by the reducer.
+  //
+  // The post-check below leaves `ownedId` null when the store refuses, so every
+  // later prop change re-took this branch and re-dispatched `addMesh` — an
+  // O(vertices) scan and a reducer warning each time, per frame if the position
+  // is animated. Measured before this: six dispatches and six warnings across
+  // five prop changes.
+  //
+  // This calls the same function the reducer calls, so it is one shared rule
+  // rather than the duplicated rules the post-check was chosen to avoid. The
+  // key includes the problem, so a *different* fault still speaks, and success
+  // clears it so a later one does too.
+  const problem = customGeometryProblem(config.geometry);
+  if (problem) {
+    const complaint = `${config.id}: ${problem}`;
+    if (warnedGeometry !== complaint) {
+      console.warn(
+        `[graphics] <Mesh> id "${config.id}" has invalid custom geometry (${problem}); this mesh is inert`
+      );
+      warnedGeometry = complaint;
+    }
+    return;
+  }
+  warnedGeometry = null;
+
   store.dispatch({ type: 'addMesh', mesh: config });
 
   // Claim the id only if the store actually took it.
@@ -102,8 +129,10 @@ function syncToStore(config: MeshConfig): void {
   // added, and `updateMesh` drops those, so *repairing* the geometry left the
   // mesh absent for good with no second warning.
   //
-  // Asking the store costs one `.some()` and does not need the component to
-  // know why it was refused, which is the part that would drift.
+  // Kept as defence in depth alongside the pre-check above: it costs one
+  // `.some()` and it does not need to know *why* the store refused, so a
+  // refusal this component has not learned about still cannot be mistaken for
+  // ownership.
   ownedId = store.state.meshes.some((mesh) => mesh.id === config.id) ? config.id : null;
 }
 
