@@ -70,6 +70,38 @@ $effect(() => {
 });
 
 function syncToStore(config: MeshConfig): void {
+  // Refused geometry is caught here, not only by the reducer — and *before* the
+  // ownership branch below, because both paths retry a refusal forever.
+  //
+  // The post-check at the end leaves `ownedId` null when the store refuses an
+  // add, so every later prop change re-dispatched `addMesh`. The update path
+  // has the same shape for a different reason: an owned mesh whose geometry
+  // later goes invalid keeps its `ownedId`, so it re-dispatched `updateMesh`,
+  // which `graphicsReducer` refuses with a warning of its own. Either way it is
+  // an O(vertices) scan and a console warning per prop change, per frame if the
+  // position is animated. Measured on each branch before this: six dispatches
+  // and six warnings across five prop changes.
+  //
+  // The first version of this guard sat below the ownership return and closed
+  // only the add path, while its comment claimed both.
+  //
+  // This calls the same function the reducer calls, so it is one shared rule
+  // rather than the duplicated rules the post-check was chosen to avoid. The
+  // key includes the problem, so a *different* fault still speaks, and success
+  // clears it so a later one does too.
+  const problem = customGeometryProblem(config.geometry);
+  if (problem) {
+    const complaint = `${config.id}: ${problem}`;
+    if (warnedGeometry !== complaint) {
+      console.warn(
+        `[graphics] <Mesh> id "${config.id}" has invalid custom geometry (${problem}); this mesh is inert`
+      );
+      warnedGeometry = complaint;
+    }
+    return;
+  }
+  warnedGeometry = null;
+
   if (ownedId === config.id) {
     store.dispatch({ type: 'updateMesh', id: config.id, updates: config });
     return;
@@ -92,31 +124,6 @@ function syncToStore(config: MeshConfig): void {
     }
     return;
   }
-
-  // Refused geometry is caught here, not only by the reducer.
-  //
-  // The post-check below leaves `ownedId` null when the store refuses, so every
-  // later prop change re-took this branch and re-dispatched `addMesh` — an
-  // O(vertices) scan and a reducer warning each time, per frame if the position
-  // is animated. Measured before this: six dispatches and six warnings across
-  // five prop changes.
-  //
-  // This calls the same function the reducer calls, so it is one shared rule
-  // rather than the duplicated rules the post-check was chosen to avoid. The
-  // key includes the problem, so a *different* fault still speaks, and success
-  // clears it so a later one does too.
-  const problem = customGeometryProblem(config.geometry);
-  if (problem) {
-    const complaint = `${config.id}: ${problem}`;
-    if (warnedGeometry !== complaint) {
-      console.warn(
-        `[graphics] <Mesh> id "${config.id}" has invalid custom geometry (${problem}); this mesh is inert`
-      );
-      warnedGeometry = complaint;
-    }
-    return;
-  }
-  warnedGeometry = null;
 
   store.dispatch({ type: 'addMesh', mesh: config });
 

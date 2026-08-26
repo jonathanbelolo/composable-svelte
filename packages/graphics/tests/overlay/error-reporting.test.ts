@@ -459,6 +459,114 @@ describe('a deferred registration delivers everything an immediate one does', ()
 		expect(fake.live('texture'), 'a rebuild orphaned a texture').toBe(0);
 	});
 
+	it('still owes the callback when a rebuild is superseded before it delivers', async () => {
+		// The generation guard and the deferred callback were added in one
+		// commit and interfered. `recreateResources` read `pendingTextureLoaded`
+		// and *deleted* it before starting the async creation, so when a second
+		// restore superseded the first, rebuild #1 returned at the generation
+		// check without firing and rebuild #2 had been handed `undefined`. The
+		// texture appeared; the consumer was never told, for the life of the
+		// page. That is the shader-gallery symptom the deferral exists to close.
+		//
+		// The two restores must land in the *same task* — an `await settle()`
+		// between them lets rebuild #1 finish and the defect cannot occur.
+		const onTextureLoaded = vi.fn();
+		const { fake, api } = overlay();
+
+		fake.canvas?.dispatchEvent(new Event('webglcontextlost'));
+		api.registerElement('a', loadedImage(64), {
+			type: 'image',
+			shader: 'ripple-gentle',
+			onTextureLoaded
+		});
+
+		fake.canvas?.dispatchEvent(new Event('webglcontextrestored'));
+		fake.canvas?.dispatchEvent(new Event('webglcontextrestored'));
+		await settle();
+
+		// Non-vacuity first: the texture really did arrive, so a silent
+		// callback is a dropped debt and not simply a rebuild that never ran.
+		expect(api.getElement('a')?.texture, 'no texture was built at all').toBeDefined();
+		expect(onTextureLoaded, 'a superseded rebuild swallowed the callback').toHaveBeenCalledTimes(
+			1
+		);
+		api.destroy();
+	});
+
+	it('still owes the callback when a rebuild fails to deliver', async () => {
+		// The other half: consuming the debt up front also lost it whenever the
+		// creation simply failed. The consumer is still owed — a later restore
+		// must honour it.
+		const onTextureLoaded = vi.fn();
+		const { fake, api } = overlay();
+
+		fake.canvas?.dispatchEvent(new Event('webglcontextlost'));
+		api.registerElement('a', loadedImage(64), {
+			type: 'image',
+			shader: 'ripple-gentle',
+			onTextureLoaded
+		});
+
+		// Fail the first rebuild's upload, and only that one.
+		const realCreateTexture = fake.context.createTexture.bind(fake.context);
+		let failNext = true;
+		// `null` is what real GL returns when it cannot allocate, and what
+		// `TextureFactory` branches on — but `WebGLRenderingContext` types the
+		// return as non-nullable, so the cast is the lie and the runtime is
+		// right.
+		fake.context.createTexture = (() => {
+			if (failNext) {
+				failNext = false;
+				return null;
+			}
+			return realCreateTexture();
+		}) as typeof fake.context.createTexture;
+
+		fake.canvas?.dispatchEvent(new Event('webglcontextrestored'));
+		await settle();
+		expect(onTextureLoaded, 'a failed rebuild reported success').not.toHaveBeenCalled();
+		expect(api.getElement('a')?.texture, 'the failure did not actually fail').toBeUndefined();
+
+		fake.canvas?.dispatchEvent(new Event('webglcontextrestored'));
+		await settle();
+
+		expect(api.getElement('a')?.texture, 'the retry built no texture').toBeDefined();
+		expect(onTextureLoaded, 'the debt was dropped by the failed rebuild').toHaveBeenCalledTimes(1);
+		api.destroy();
+	});
+
+	it('does not credit the memory budget when a rebuild is superseded', async () => {
+		// The generation guard deallocated against `this.textureFactory` — which
+		// `recreateResources` had already replaced with one whose accounting
+		// starts at zero. So the superseded texture's bytes were subtracted from
+		// a factory that never allocated them, and the budget gained room for
+		// textures it could not afford. Handing a GPU-handle leak back as a
+		// budget hole is not a fix.
+		const onError = vi.fn();
+		const { fake, api } = overlay({ memoryBudget: 5 * MB, onError });
+
+		fake.canvas?.dispatchEvent(new Event('webglcontextlost'));
+		// 1000x1000x4 = 4MB, so a second one cannot fit under a 5MB ceiling.
+		api.registerElement('a', sizedCanvas(1000), { type: 'canvas', shader: 'ripple-gentle' });
+
+		fake.canvas?.dispatchEvent(new Event('webglcontextrestored'));
+		fake.canvas?.dispatchEvent(new Event('webglcontextrestored'));
+		await settle();
+
+		// Non-vacuity: the first element must actually hold its 4MB, or the
+		// refusal below would be trivially satisfied by an empty budget.
+		expect(api.getElement('a')?.texture, 'the first element never got a texture').toBeDefined();
+		expect(api.getElement('a')?.width, 'no bytes are being tracked for it').toBe(1000);
+
+		api.registerElement('b', sizedCanvas(1000), { type: 'canvas', shader: 'ripple-gentle' });
+		await settle();
+
+		expect(codes(onError), '8MB was accepted against a 5MB ceiling').toContain(
+			OverlayErrorCode.MEMORY_BUDGET_EXCEEDED
+		);
+		api.destroy();
+	});
+
 	it('refuses instead of deferring when automatic recovery is off', async () => {
 		// `recreateResources` runs only under `handleContextLoss`, so deferring
 		// on that branch left the element dead forever *and* its id taken — the

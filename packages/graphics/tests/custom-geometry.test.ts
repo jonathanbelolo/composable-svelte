@@ -334,6 +334,105 @@ describe('<Mesh> does not retry a refusal on every prop change', () => {
 		warn.mockRestore();
 	});
 
+	it('does not retry on the update path either, once the mesh is owned', () => {
+		// The first version of this guard sat *below* the `ownedId === config.id`
+		// early return, so it closed the add path only. A mesh added while valid
+		// and then given bad geometry kept its `ownedId`, took the update branch,
+		// and re-dispatched `updateMesh` on every prop change — which
+		// `graphicsReducer` refuses with a warning of its own. Six dispatches and
+		// six warnings across five changes: the same figure as the add path, on
+		// the half the harness could not reach.
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const store = makeStore();
+		const dispatched: string[] = [];
+		const wrapped = {
+			...store,
+			get state() {
+				return store.state;
+			},
+			dispatch: (action: { type: string }) => {
+				dispatched.push(action.type);
+				return store.dispatch(action as never);
+			}
+		};
+
+		const target = document.createElement('div');
+		document.body.appendChild(target);
+		const instance = mount(MeshGeometryHarness as never, {
+			target,
+			props: { store: wrapped as never }
+		});
+		flushSync();
+
+		const click = (id: string) =>
+			target.querySelector<HTMLButtonElement>(`[data-testid="${id}"]`)!.click();
+
+		click('repair');
+		flushSync();
+
+		// Non-vacuity: the mesh must actually be owned, or the update branch
+		// below is never taken and this test would pass without testing it.
+		expect(store.state.meshes.map((m) => m.id), 'the mesh was never added').toEqual(['custom']);
+
+		dispatched.length = 0;
+		warn.mockClear();
+
+		click('break');
+		flushSync();
+		for (let i = 0; i < 5; i++) {
+			click('nudge');
+			flushSync();
+		}
+
+		expect(
+			dispatched.filter((type) => type === 'updateMesh'),
+			'a refused updateMesh was retried on every prop change'
+		).toHaveLength(0);
+		expect(warn.mock.calls.length, 'it complained more than once about one fault').toBe(1);
+
+		unmount(instance);
+		target.remove();
+		warn.mockRestore();
+	});
+
+	it('speaks again for a new fault, and for the same fault after a repair', () => {
+		// `warnedGeometry = null` on the success path had no test: deleting it
+		// left the whole suite green. Without it a mesh that breaks, is repaired
+		// and breaks the same way again fails silently the second time.
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const store = makeStore();
+		const target = document.createElement('div');
+		document.body.appendChild(target);
+		const instance = mount(MeshGeometryHarness as never, { target, props: { store } });
+		flushSync();
+
+		const click = (id: string) =>
+			target.querySelector<HTMLButtonElement>(`[data-testid="${id}"]`)!.click();
+
+		// Mounted broken: one complaint.
+		expect(warn.mock.calls.length, 'the first fault was silent').toBe(1);
+
+		// A different fault speaks even without a repair in between.
+		click('break-other');
+		flushSync();
+		expect(warn.mock.calls.length, 'a different fault was swallowed').toBe(2);
+
+		click('repair');
+		flushSync();
+		expect(store.state.meshes.map((m) => m.id), 'the repair did not take').toEqual(['custom']);
+
+		click('break-other');
+		flushSync();
+		expect(
+			warn.mock.calls.length,
+			'the same fault after a repair was swallowed'
+		).toBe(3);
+
+		unmount(instance);
+		target.remove();
+		warn.mockRestore();
+	});
+
 	it('still adds the mesh when the geometry is repaired', () => {
 		// The paired half, and the whole reason `c94a312` chose a post-check:
 		// declining to retry must not become declining to ever succeed.

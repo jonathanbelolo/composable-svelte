@@ -715,10 +715,22 @@ class WebGLOverlay implements OverlayContextAPI {
 	): Promise<void> {
 		if (!this.textureFactory || !this.gl) return;
 
+		// The factory that will do the allocating, captured before the await.
+		//
+		// `recreateResources` replaces `this.textureFactory` with one whose
+		// accounting starts at zero. Deallocating a superseded texture against
+		// `this.textureFactory` therefore subtracted bytes the *current* factory
+		// never allocated, and the budget silently gained room — the exact hole
+		// the comment in `recreateResources` says it is being careful about, and
+		// which the generation guard introduced while closing a handle leak.
+		// Deallocating against the factory that allocated is a no-op when that
+		// factory has been discarded, which is what it should be.
+		const factory = this.textureFactory;
+
 		// Only what the factory reads. It was handed `gl`, `maxTextureSize` and
 		// `needsCORSWorkaround` on every call and discarded all three — it uses
 		// the values it was constructed with.
-		const result = await this.textureFactory.createTexture({
+		const result = await factory.createTexture({
 			element: registration.element,
 			type: registration.type
 		});
@@ -737,8 +749,8 @@ class WebGLOverlay implements OverlayContextAPI {
 			this.elements.get(registration.id) !== registration ||
 			generation !== this.rebuildGeneration
 		) {
-			if (result.texture && this.textureFactory) {
-				this.textureFactory.deleteTexture(result.texture, result.width ?? 0, result.height ?? 0);
+			if (result.texture) {
+				factory.deleteTexture(result.texture, result.width ?? 0, result.height ?? 0);
 			}
 			return;
 		}
@@ -759,6 +771,16 @@ class WebGLOverlay implements OverlayContextAPI {
 			delete registration.error;
 
 			// Only on the success branch, and only once the texture exists.
+			//
+			// Clearing the deferred callback *here* is what makes it survive a
+			// rebuild that never delivers. `recreateResources` used to read and
+			// delete it before starting the creation, so a rebuild superseded by
+			// a second restore — or one whose creation failed — consumed the
+			// callback and dropped it: the texture appeared and the consumer was
+			// never told, for the life of the page. That is the shader-gallery
+			// symptom this deferral was written to close, reopened by the
+			// generation guard added alongside it.
+			delete registration.pendingTextureLoaded;
 			onTextureLoaded?.();
 
 			// Store dimensions for memory tracking — in the fields
@@ -1102,11 +1124,10 @@ class WebGLOverlay implements OverlayContextAPI {
 			delete registration.height;
 
 			// The callback owed to a registration deferred through the loss.
-			// Handed over rather than read later, so it fires once.
-			const owed = registration.pendingTextureLoaded;
-			delete registration.pendingTextureLoaded;
-
-			this.createElementTexture(registration, owed, generation);
+			// Read, not consumed: `createElementTexture` clears it when it
+			// actually fires, so a rebuild that is superseded or fails leaves the
+			// debt in place for the next one.
+			this.createElementTexture(registration, registration.pendingTextureLoaded, generation);
 			this.compileElementShader(registration);
 		}
 
