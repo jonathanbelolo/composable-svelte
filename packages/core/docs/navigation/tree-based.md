@@ -980,7 +980,7 @@ Use `TestStore` to test navigation flows.
 ### Testing Presentation
 
 ```typescript
-import { createTestStore } from '@composable-svelte/core';
+import { createTestStore } from '@composable-svelte/core/test';
 
 describe('Inventory Navigation', () => {
   it('should present add item modal', async () => {

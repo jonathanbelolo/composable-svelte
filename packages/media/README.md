@@ -196,7 +196,7 @@ interface VoiceInputState {
 ## Testing
 
 ```typescript
-import { createTestStore } from '@composable-svelte/core';
+import { createTestStore } from '@composable-svelte/core/test';
 import { audioPlayerReducer, createInitialAudioPlayerState } from '@composable-svelte/media';
 
 const store = createTestStore({

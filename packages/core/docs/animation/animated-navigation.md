@@ -1052,7 +1052,7 @@ const reducer: Reducer<AppState, AppAction> = (state, action) => {
 TestStore automatically handles animation timing:
 
 ```typescript
-import { createTestStore } from '@composable-svelte/core';
+import { createTestStore } from '@composable-svelte/core/test';
 
 const store = createTestStore({
   initialState,

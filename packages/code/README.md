@@ -110,19 +110,46 @@ Interactive code editor with full editing capabilities. Powered by CodeMirror 6.
 - One Dark theme (customizable)
 - Line numbers, folding, and indentation guides
 
-**State:**
+**State** — shown by building one, so this block fails to compile if the shape
+drifts. Restating the declaration is what let the previous version document
+`code`, `lineNumbers`, `wordWrap` and `extensions`, none of which exist:
 
 ```typescript
-interface CodeEditorState {
-  code: string;
-  language: string;
-  theme: string;
-  readOnly: boolean;
-  lineNumbers: boolean;
-  wordWrap: boolean;
-  tabSize: number;
-  extensions: any[];
-}
+import type { CodeEditorState } from '@composable-svelte/code';
+
+const state: CodeEditorState = {
+  // Content
+  value: 'const x = 42;',
+  language: 'typescript',
+
+  // Cursor & selection
+  cursorPosition: { line: 1, column: 1 },
+  selection: null,
+
+  // UI
+  theme: 'dark',
+  showLineNumbers: true,
+  readOnly: false,
+
+  // Features
+  enableAutocomplete: true,
+  enableFolding: true,
+  tabSize: 2,
+
+  // Save status
+  hasUnsavedChanges: false,
+  lastSavedValue: null,
+
+  // Focus and history
+  isFocused: false,
+  canUndo: false,
+  canRedo: false,
+
+  // Errors
+  error: null,
+  saveError: null,
+  formatError: null
+};
 ```
 
 ### NodeCanvas
@@ -183,7 +210,7 @@ const validator = composeValidators(strictValidator, customValidator);
 All components have dedicated reducers testable via `TestStore`:
 
 ```typescript
-import { createTestStore } from '@composable-svelte/core';
+import { createTestStore } from '@composable-svelte/core/test';
 import { codeHighlightReducer, createInitialCodeHighlightState } from '@composable-svelte/code';
 
 const store = createTestStore({

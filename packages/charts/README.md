@@ -215,7 +215,7 @@ See `examples/charts/` for full examples:
 All state transitions are testable via `TestStore`:
 
 ```typescript
-import { createTestStore } from '@composable-svelte/core';
+import { createTestStore } from '@composable-svelte/core/test';
 import { chartReducer, createInitialChartState } from '@composable-svelte/charts';
 
 const store = createTestStore({

@@ -576,7 +576,7 @@ await generateStaticSite(App, { routes, outDir: './static' }, { reducer: appRedu
 ### TestStore
 
 ```typescript
-import { createTestStore } from '@composable-svelte/core';
+import { createTestStore } from '@composable-svelte/core/test';
 
 const store = createTestStore({
   initialState: { count: 0, isLoading: false },

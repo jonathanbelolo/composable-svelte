@@ -49,7 +49,7 @@ This pattern ensures you test **the entire action flow**, not just endpoints.
 ### Creating a TestStore
 
 ```typescript
-import { createTestStore } from '@composable-svelte/core';
+import { createTestStore } from '@composable-svelte/core/test';
 
 const store = createTestStore({
   initialState: {
@@ -156,7 +156,7 @@ Test actions that immediately update state without effects.
 
 ```typescript
 import { describe, it, expect } from 'vitest';
-import { createTestStore } from '@composable-svelte/core';
+import { createTestStore } from '@composable-svelte/core/test';
 import { Effect } from '@composable-svelte/core';
 
 interface CounterState {

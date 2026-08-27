@@ -259,7 +259,7 @@ store.dispatch({ type: 'increment' });
 Use `TestStore` for exhaustive action testing:
 
 ```typescript
-import { createTestStore } from '@composable-svelte/core';
+import { createTestStore } from '@composable-svelte/core/test';
 import { describe, it, expect } from 'vitest';
 
 describe('Counter', () => {

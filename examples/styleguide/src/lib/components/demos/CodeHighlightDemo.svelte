@@ -5,7 +5,7 @@
 	import {
 		CodeHighlight,
 		codeHighlightReducer,
-		createInitialState,
+		createInitialCodeHighlightState,
 		highlightCode
 	} from '@composable-svelte/code';
 	import {
@@ -68,7 +68,7 @@ LIMIT 10;`;
 
 	// Create stores for different examples
 	const tsStore = createStore({
-		initialState: createInitialState({
+		initialState: createInitialCodeHighlightState({
 			code: typescriptExample,
 			language: 'typescript',
 			theme: 'dark',
@@ -79,7 +79,7 @@ LIMIT 10;`;
 	});
 
 	const pythonStore = createStore({
-		initialState: createInitialState({
+		initialState: createInitialCodeHighlightState({
 			code: pythonExample,
 			language: 'python',
 			theme: 'dark',
@@ -90,7 +90,7 @@ LIMIT 10;`;
 	});
 
 	const sqlStore = createStore({
-		initialState: createInitialState({
+		initialState: createInitialCodeHighlightState({
 			code: sqlExample,
 			language: 'sql',
 			theme: 'light',
@@ -101,7 +101,7 @@ LIMIT 10;`;
 	});
 
 	const rustStore = createStore({
-		initialState: createInitialState({
+		initialState: createInitialCodeHighlightState({
 			code: rustExample,
 			language: 'rust',
 			theme: 'dark',
@@ -113,7 +113,7 @@ LIMIT 10;`;
 
 	// Interactive demo store
 	const interactiveStore = createStore({
-		initialState: createInitialState({
+		initialState: createInitialCodeHighlightState({
 			code: 'const greeting = "Hello, World!";\nconsole.log(greeting);',
 			language: 'javascript',
 			theme: 'dark',
@@ -303,12 +303,12 @@ LIMIT 10;`;
 import {
   CodeHighlight,
   codeHighlightReducer,
-  createInitialState,
+  createInitialCodeHighlightState,
   highlightCode
 } from '@composable-svelte/code';
 
 const store = createStore({
-  initialState: createInitialState({
+  initialState: createInitialCodeHighlightState({
     code: 'const hello = "world";',
     language: 'typescript',
     theme: 'dark',

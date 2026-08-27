@@ -3,12 +3,12 @@
 	import {
 		CodeEditor,
 		codeEditorReducer,
-		createEditorInitialState
+		createInitialCodeEditorState
 	} from '@composable-svelte/code';
 
 	// Example 1: JavaScript Editor
 	const jsStore = createStore({
-		initialState: createEditorInitialState({
+		initialState: createInitialCodeEditorState({
 			value: `// JavaScript Example
 function fibonacci(n) {
   if (n <= 1) return n;
@@ -31,7 +31,7 @@ console.log(fibonacci(10));`,
 
 	// Example 2: TypeScript Editor with formatter
 	const tsStore = createStore({
-		initialState: createEditorInitialState({
+		initialState: createInitialCodeEditorState({
 			value: `// TypeScript Example
 interface User{name:string;age:number;}
 const user:User={name:"Alice",age:30};
@@ -61,7 +61,7 @@ console.log(greet(user));`,
 
 	// Example 3: HTML Editor (Light Theme)
 	const htmlStore = createStore({
-		initialState: createEditorInitialState({
+		initialState: createInitialCodeEditorState({
 			value: `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -81,7 +81,7 @@ console.log(greet(user));`,
 
 	// Example 4: Python Editor (Read-only)
 	const pythonStore = createStore({
-		initialState: createEditorInitialState({
+		initialState: createInitialCodeEditorState({
 			value: `# Python Example
 def quicksort(arr):
     if len(arr) <= 1:

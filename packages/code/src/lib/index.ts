@@ -14,7 +14,16 @@ export {
 	codeHighlightReducer,
 	highlightCode,
 	loadLanguage,
-	createInitialState,
+	// Named for what it builds, like `createInitialNodeCanvasState` below.
+	//
+	// This was exported as the bare `createInitialState` — a generic name in a
+	// shared package namespace, and one of three conventions for one concept in
+	// a 45-symbol package (`createInitialState`, `createEditorInitialState`,
+	// `createInitialNodeCanvasState`). The README used a fourth,
+	// `createInitialCodeHighlightState`, in its quickstart; that name did not
+	// exist, so the first example a consumer pastes could not resolve. The
+	// documentation was right about what the name should be.
+	createInitialState as createInitialCodeHighlightState,
 	type CodeHighlightState,
 	type CodeHighlightAction,
 	type CodeHighlightDependencies,
@@ -36,7 +45,7 @@ export {
 	updateFolding,
 	updateAutocomplete,
 	runEditorCommand,
-	createInitialState as createEditorInitialState,
+	createInitialState as createInitialCodeEditorState,
 	type CodeEditorState,
 	type CodeEditorAction,
 	type CodeEditorDependencies,
