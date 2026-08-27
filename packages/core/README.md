@@ -22,7 +22,7 @@ Inspired by [The Composable Architecture (TCA)](https://github.com/pointfreeco/s
 - ✅ **Svelte 5 Runes**: Full integration with Svelte's reactivity system (\`$state\`, \`$derived\`)
 - ✅ **TestStore**: Exhaustive action testing with send/receive pattern
 - ✅ **Complete Backend**: API client, WebSocket, Storage, Clock dependencies
-- ✅ **73+ Components**: shadcn-svelte integration with reducer-driven patterns
+- ✅ **Component library**: shadcn-svelte integration with reducer-driven patterns — browse the full set in [the styleguide](../../examples/styleguide)
 - ✅ **URL Routing**: Browser history sync with pattern matching
 - ✅ **500+ Tests**: Comprehensive test coverage across all modules
 
@@ -270,7 +270,7 @@ Comprehensive documentation is available in the \`docs/\` directory:
 
 See the \`examples/\` directory for working examples:
 
-- **[Styleguide](../../examples/styleguide)** - Component showcase with 73+ components
+- **[Styleguide](../../examples/styleguide)** - Component showcase
 - **[Product Gallery](../../examples/product-gallery)** - Full-featured product browsing app
 - **[URL Routing](../../examples/url-routing)** - Browser history integration examples
 

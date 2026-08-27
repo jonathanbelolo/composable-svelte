@@ -26,7 +26,7 @@ pnpm add @composable-svelte/charts
 ```
 
 **Peer dependencies**:
-- `@composable-svelte/core` ^0.3.0
+- `@composable-svelte/core` ^0.11.0
 - `svelte` ^5.0.0
 
 ## Quick Start
@@ -163,7 +163,7 @@ selection: {
 }
 
 // UI reactively updates
-$: isSelected = $store.selection.selectedIndices.includes(pointIndex);
+const isSelected = $derived($store.selection.selectedIndices.includes(pointIndex));
 ```
 
 ### Observable Plot Integration
@@ -205,7 +205,7 @@ was read by nothing, and Motion One is not a dependency.)
 
 ## Examples
 
-See `examples/charts/` for full examples:
+See `examples/styleguide/` for full examples:
 - 📊 Interactive Scatter Plot
 - 📈 Zoomable Time Series
 - 🔗 Linked Charts (coordinated views)
@@ -300,8 +300,12 @@ interactive use.
 ## Dependencies
 
 - `@observablehq/plot` ^0.6.0 - Declarative visualization
-- `d3-*` - D3 utilities (zoom, brush, selection, scales)
-- `motion` ^12.0.0 - Animation engine
+- `d3-array`, `d3-brush`, `d3-selection`, `d3-zoom` - D3 utilities
+
+Motion One is **not** a dependency of this package, as the animation section
+above says. It was listed here as "Animation engine", contradicting that section
+by a hundred lines, and appears in neither `dependencies` nor
+`peerDependencies`.
 
 ## License
 

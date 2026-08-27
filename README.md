@@ -13,7 +13,7 @@ A **Composable Architecture** library for Svelte 5, inspired by [The Composable 
 - ✅ **Svelte 5 Runes**: Full integration with Svelte's reactivity system (`$state`, `$derived`)
 - ✅ **TestStore**: Exhaustive action testing with send/receive pattern
 - ✅ **Complete Backend**: API client, WebSocket, Storage, Clock dependencies
-- ✅ **77 Components**: shadcn-svelte integration with reducer-driven patterns
+- ✅ **Component library**: shadcn-svelte integration with reducer-driven patterns — browse the full set in [the styleguide](examples/styleguide)
 - ✅ **URL Routing**: Browser history sync with pattern matching
 
 ## Quick Start
@@ -26,7 +26,15 @@ npm install @composable-svelte/core
 pnpm add @composable-svelte/core
 ```
 
-> **Note**: Package is not yet published to npm. Clone the repo to use it.
+> **Note on versions.** `@composable-svelte/core` **is** on npm, but the latest
+> published version is **0.5.2** while this repository is at **0.11.2** — so
+> `npm install` gets you an API six minor versions older than the one documented
+> here, and the sibling packages pin `@composable-svelte/core ^0.11.0`, which the
+> registry cannot satisfy. Until a release is cut, clone the repo.
+>
+> (This note previously said the package was "not yet published to npm", while
+> `packages/core/README.md` carried an npm version badge and an install command
+> one screen apart. Both cannot be true.)
 
 ### Styling (component library)
 

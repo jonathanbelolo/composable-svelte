@@ -28,7 +28,7 @@ pnpm add @composable-svelte/maps
 ```
 
 **Peer dependencies**:
-- `@composable-svelte/core` ^0.3.0
+- `@composable-svelte/core` ^0.11.0
 - `svelte` ^5.0.0
 
 ## Quick Start
