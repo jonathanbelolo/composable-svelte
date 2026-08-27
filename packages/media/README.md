@@ -40,19 +40,23 @@ Compact player with play/pause, seek, and volume:
   import {
     MinimalAudioPlayer,
     audioPlayerReducer,
-    createInitialAudioPlayerState
+    createInitialAudioPlayerState,
+    type AudioTrack
   } from '@composable-svelte/media';
 
+  const tracks: AudioTrack[] = [
+    { id: '1', title: 'Track One', url: '/audio/track1.mp3' },
+    { id: '2', title: 'Track Two', url: '/audio/track2.mp3' }
+  ];
+
   const store = createStore({
-    initialState: createInitialAudioPlayerState({
-      tracks: [
-        { id: '1', title: 'Track One', src: '/audio/track1.mp3' },
-        { id: '2', title: 'Track Two', src: '/audio/track2.mp3' }
-      ]
-    }),
+    initialState: createInitialAudioPlayerState({ volume: 0.8 }),
     reducer: audioPlayerReducer,
     dependencies: {}
   });
+
+  // The factory takes preferences; the playlist arrives as an action.
+  store.dispatch({ type: 'loadPlaylist', tracks });
 </script>
 
 <MinimalAudioPlayer {store} />
@@ -74,38 +78,84 @@ Standalone playlist component:
 <PlaylistView {store} />
 ```
 
-**State:**
+**State** — shown by building one, so this block fails to compile if the shape
+drifts. The previous version listed `tracks`, `shuffle` and `loop`; none exist:
 
 ```typescript
-interface AudioPlayerState {
-  tracks: AudioTrack[];
-  currentTrackIndex: number;
-  isPlaying: boolean;
-  currentTime: number;
-  duration: number;
-  volume: number;
-  isMuted: boolean;
-  shuffle: boolean;
-  loop: 'none' | 'one' | 'all';
-  error: string | null;
-}
+import type { AudioPlayerState } from '@composable-svelte/media';
+
+const state: AudioPlayerState = {
+  currentTrack: null,
+
+  isPlaying: false,
+  isLoading: false,
+  isBuffering: false,
+
+  currentTime: 0,
+  duration: 0,
+  buffered: 0,
+
+  volume: 1,
+  isMuted: false,
+  previousVolume: 1,
+
+  playbackSpeed: 1,
+  seekPosition: null,
+
+  loopMode: 'none',
+  isShuffled: false,
+  shuffleOrder: [],
+
+  playlist: [],
+  currentTrackIndex: 0,
+
+  isExpanded: false,
+  error: null
+};
 ```
 
-**Key Actions:** `play`, `pause`, `togglePlayPause`, `seekTo`, `setVolume`, `toggleMute`, `nextTrack`, `previousTrack`, `toggleShuffle`, `setLoop`, `selectTrack`
+**Key Actions:** `play`, `pause`, `togglePlayPause`, `stop`, `seekTo`,
+`volumeChanged`, `toggleMute`, `next`, `previous`, `shuffleToggled`,
+`loopModeChanged`, `trackSelected`, `loadPlaylist`, `speedChanged`.
+
+The previous list named `setVolume`, `nextTrack`, `previousTrack`,
+`toggleShuffle`, `setLoop` and `selectTrack` — **none of which exist**. A
+`TestStore` would have rejected every one.
 
 #### AudioManager
 
 Shared audio context manager for coordinating playback across components:
 
+This package has **two** audio managers and they are different classes, so
+neither owns the bare name. AudioPlayer's wraps an `AudioContext` for playback;
+VoiceInput's wraps a `MediaRecorder` for capture:
+
 ```typescript
-import { createAudioManager, getAudioManager } from '@composable-svelte/media';
+import {
+  createAudioPlayerManager,
+  getAudioPlayerManager,
+  createVoiceInputAudioManager,
+  getVoiceInputAudioManager,
+  type AudioPlayerAction
+} from '@composable-svelte/media';
 
-// Create a named audio manager
-createAudioManager('player-1');
+const onAction = (action: AudioPlayerAction) => console.log(action.type);
 
-// Retrieve it elsewhere
-const manager = getAudioManager('player-1');
+// AudioPlayer: the config carries the callback, not an id.
+const player = createAudioPlayerManager({ onAction });
+
+// Registered by id — get-or-create, so the config is required every time.
+const registered = getAudioPlayerManager('player-1', { onAction });
+
+// VoiceInput: addressed by id alone.
+createVoiceInputAudioManager('mic-1');
+const recorder = getVoiceInputAudioManager('mic-1');
 ```
+
+Until this was renamed, the un-suffixed `createAudioManager` resolved to the
+**VoiceInput** one while being documented here under AudioPlayer. Because both
+factories accept a string, the wrong call typechecked and returned an object of
+the wrong class — a worse failure than a name that does not resolve.
 
 ### VideoEmbed
 
@@ -158,17 +208,21 @@ Voice recording component with push-to-talk and continuous conversation modes. B
   import {
     VoiceInput,
     voiceInputReducer,
-    createInitialVoiceInputState
+    createInitialVoiceInputState,
+    getVoiceInputAudioManager
   } from '@composable-svelte/media';
 
   const store = createStore({
     initialState: createInitialVoiceInputState(),
     reducer: voiceInputReducer,
-    dependencies: {}
+    dependencies: {
+      transcribeAudio: async (audio: Blob) => sendToSpeechToText(audio),
+      getAudioManager: getVoiceInputAudioManager
+    }
   });
 </script>
 
-<VoiceInput {store} mode="push-to-talk" />
+<VoiceInput {store} defaultMode="push-to-talk" onTranscript={(text) => console.log(text)} />
 ```
 
 **Modes:**
@@ -181,17 +235,34 @@ Voice recording component with push-to-talk and continuous conversation modes. B
 **State:**
 
 ```typescript
-interface VoiceInputState {
-  isRecording: boolean;
-  duration: number;
-  audioBlob: Blob | null;
-  audioUrl: string | null;
-  error: string | null;
-  mode: 'push-to-talk' | 'conversation';
-}
+import type { VoiceInputState } from '@composable-svelte/media';
+
+const state: VoiceInputState = {
+  mode: 'push-to-talk',
+  status: 'idle',
+  permission: null,
+  audioLevel: 0,
+  recordingStartTime: null,
+  vadState: null,
+  errorMessage: null,
+  _audioManagerId: null
+};
 ```
 
-**Key Actions:** `startRecording`, `stopRecording`, `recordingCompleted`, `recordingFailed`, `clearRecording`
+Recording is a `status`, not a boolean, and duration is derived from
+`recordingStartTime`. The previous version documented `isRecording`, `duration`,
+`audioBlob` and `audioUrl` — none of which exist.
+
+**Key Actions:** `activatePushToTalk`, `startPushToTalkRecording`,
+`stopPushToTalkRecording`, `cancelPushToTalkRecording`,
+`activateConversationMode`, `conversationModeToggled`,
+`requestMicrophonePermission`, `microphonePermissionGranted`,
+`microphonePermissionDenied`, `speechDetected`, `silenceDetected`,
+`autoSendTriggered`, `manualSendRequested`, `transcriptionCompleted`,
+`audioProcessingComplete`, `audioProcessingFailed`, `deactivateVoiceInput`.
+
+The previous list named `startRecording`, `stopRecording`,
+`recordingCompleted`, `recordingFailed` and `clearRecording` — none exist.
 
 ## Testing
 
@@ -238,8 +309,10 @@ await store.send({ type: 'nextTrack' }, (state) => {
 | `voiceInputReducer` | Reducer for voice input |
 | `createInitialAudioPlayerState()` | Create initial audio state |
 | `createInitialVoiceInputState()` | Create initial voice state |
-| `createAudioManager(id)` | Create a named AudioManager |
-| `getAudioManager(id)` | Retrieve an AudioManager by ID |
+| `createAudioPlayerManager(config)` | Create a playback `AudioContext` manager |
+| `getAudioPlayerManager(id, config)` | Get-or-create a registered playback manager |
+| `createVoiceInputAudioManager(id)` | Create a `MediaRecorder` capture manager |
+| `getVoiceInputAudioManager(id)` | Retrieve a capture manager by id |
 | `deleteAudioManager(id)` | Destroy an AudioManager |
 | `detectVideo(url)` | Detect video platform from URL |
 | `extractVideosFromMarkdown(text)` | Find video URLs in markdown |

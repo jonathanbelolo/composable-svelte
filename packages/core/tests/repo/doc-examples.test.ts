@@ -559,6 +559,7 @@ function docExamples(): { examples: DocExample[]; unparsed: string[] } {
  */
 const EXPECTED_EXAMPLES = [
 	'packages/code/tests/doc-examples/code-highlight.svelte',
+	'packages/media/tests/doc-examples/audio-player.svelte',
 	'packages/graphics/tests/doc-examples/overlay.svelte',
 	'packages/graphics/tests/doc-examples/scene.svelte',
 	'packages/graphics/tests/doc-examples/test-store.test.ts'

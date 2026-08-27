@@ -50,10 +50,20 @@ export {
 	VoiceInput,
 	voiceInputReducer,
 	createInitialVoiceInputState,
-	AudioManager,
-	createAudioManager,
-	getAudioManager,
-	deleteAudioManager,
+	// Prefixed, so neither of this package's two `AudioManager`s owns the bare
+	// name. They are different classes: audio-player's wraps an `AudioContext`
+	// for playback, voice-input's wraps a `MediaRecorder` for capture.
+	//
+	// The un-suffixed names used to resolve here, to the *less* prominent of the
+	// two — and the README documented `createAudioManager(id)` under the
+	// **AudioPlayer** heading as "shared audio context manager for coordinating
+	// playback". That call typechecks, because voice-input's factory also takes
+	// a string id, so it compiled and returned an object of the wrong class.
+	// A name that does not resolve is a better failure than one that does.
+	AudioManager as VoiceInputAudioManager,
+	createAudioManager as createVoiceInputAudioManager,
+	getAudioManager as getVoiceInputAudioManager,
+	deleteAudioManager as deleteVoiceInputAudioManager,
 	type VoiceInputState,
 	type VoiceInputAction,
 	type VoiceInputDependencies

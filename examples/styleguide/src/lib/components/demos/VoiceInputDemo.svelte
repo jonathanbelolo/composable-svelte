@@ -4,7 +4,7 @@
 		VoiceInput,
 		voiceInputReducer,
 		createInitialVoiceInputState,
-		getAudioManager,
+		getVoiceInputAudioManager,
 		type VoiceInputState
 	} from '@composable-svelte/media';
 
@@ -26,7 +26,7 @@
 		reducer: voiceInputReducer,
 		dependencies: {
 			transcribeAudio: mockTranscribe,
-			getAudioManager
+			getAudioManager: getVoiceInputAudioManager
 		}
 	});
 
@@ -35,7 +35,7 @@
 		reducer: voiceInputReducer,
 		dependencies: {
 			transcribeAudio: mockTranscribe,
-			getAudioManager
+			getAudioManager: getVoiceInputAudioManager
 		}
 	});
 
@@ -223,7 +223,7 @@
       const { transcript } = await res.json();
       return transcript;
     },
-    getAudioManager
+    getAudioManager: getVoiceInputAudioManager
   }
 });`}</code></pre>
 
