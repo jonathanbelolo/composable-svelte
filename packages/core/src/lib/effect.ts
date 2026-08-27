@@ -400,3 +400,27 @@ const EffectImpl = {
  * does not yet have their members would not typecheck.
  */
 export const Effect = EffectImpl as typeof EffectImpl & EffectExtensions;
+
+/**
+ * The effect type, under the name every consumer reaches for.
+ *
+ * A value and a type may share a name when they are declared in the **same
+ * module** — and only then. `index.ts` carried a comment saying the type had to
+ * be aliased "to avoid name conflict with Effect namespace", which is true of
+ * the shape it tried: two `export … from` statements naming `Effect` from two
+ * different modules is `TS2300: Duplicate identifier`. Declaring both here and
+ * re-exporting once is not, and it carries both meanings through the barrel.
+ *
+ * That alias was not a cosmetic problem. `Effect<Action>` is what the
+ * documentation has always written — roughly fifty times across ten live
+ * documents including the repo README, the core README and the getting-started
+ * tutorial — and every one of them was `TS2749: 'Effect' refers to a value, but
+ * is being used as a type here`. The library's own first example did not
+ * compile. Renaming the export is the one-line fix for all of them; bending
+ * fifty documents to an awkward API would have been the other way round.
+ *
+ * `EffectType` remains exported and is not deprecated: it is what the reducers
+ * in this repo and in `examples/` already import, and it is still the clearer
+ * name inside a file that also uses the `Effect` constructors.
+ */
+export type Effect<Action> = EffectType<Action>;

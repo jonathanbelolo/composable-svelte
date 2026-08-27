@@ -30,7 +30,12 @@ export type {
   // MiddlewareAPI
 } from './types.js';
 
-// Export Effect type with alias to avoid name conflict with Effect namespace
+// `Effect` is exported from `./effect.js` below carrying **both** meanings —
+// the constructor namespace and the type — because they are declared in one
+// module there, which is the only arrangement TypeScript merges. This alias
+// stays because every reducer in this repo and in `examples/` imports it, and
+// because inside a file that also calls `Effect.run(...)` the longer name reads
+// better. It is not deprecated.
 export type { Effect as EffectType } from './types.js';
 
 // Note: Most users won't need to explicitly import EffectType.
