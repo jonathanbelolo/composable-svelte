@@ -1,6 +1,7 @@
 # Handoff — state of the library, and what to do next
 
-Written 28 August 2026, at `86b2da4`, working tree clean, full gate green.
+Written 28 August 2026. Measurements taken at `86b2da4` and re-verified at
+`e0dbb4c`; working tree clean, full gate green.
 
 Everything below was measured at that commit. Where a number appears, the
 command that produced it is named. Nothing here is estimated — that discipline
@@ -133,6 +134,7 @@ code findings has been fixed** — this session went to the front doors instead.
 > round six was never written into it, because the register reduction in §4.7 was
 > approved before it could be. If this file is lost, those findings are lost.
 > Everything in §4.2–§4.4 and §4.6 comes from that review.
+
 The severe ones, all in `graphics`, all introduced by round five's own fixes:
 
 - **The `empty` guard made the case it names permanently unrecoverable.**
@@ -174,8 +176,8 @@ referenced only by the union that defines it.
 
 - **`docs()` at line 93 uses the throwing `statSync(full)`** while
   `docExamples()` was given `throwIfNoEntry: false`. One dangling `.md` symlink
-  makes the file fail to **collect** — all 18 tests cease to exist, and no
-  vacuity arm can fire because none load. The commit message claiming "both use
+  makes the file fail to **collect** — every test in the file ceases to exist
+  (17 at the time of writing), and no vacuity arm can fire because none load. The commit message claiming "both use
   `statSync` now" is false.
 - **`docs()` at line 82 uses `entry.isDirectory()`**, which is false for a
   symlinked directory; it then fails the `.md` check and vanishes silently. Same
@@ -208,26 +210,38 @@ referenced only by the union that defines it.
 ### 4.5 Documentation beyond the front doors
 
 A prototype (not committed) extracted every ```ts/```typescript block in live
-docs that imports `@composable-svelte/*` — **314 blocks** — and typechecked them
+docs that imports `@composable-svelte/*` — **317 blocks** — and typechecked them
 against the built `.d.ts` files with the TypeScript compiler API.
 
-- 266 have semantic errors, but almost all are excerpt noise
+- Most have semantic errors, but almost all are excerpt noise
   (`Cannot find name 'store'`), so a blanket typecheck guard is **not**
   adoptable.
 - Narrowing to diagnostics that are *claims about the library's own surface*
   (`TS2305`, `TS2724`, `TS2749`, `TS2551`, `TS2339`, `TS2554`, `TS2345`,
-  `TS2739`/`2740`/`2741`) gives **94 errors across 64 blocks**, and those are
-  real: `AudioManager.load` / `.play`, `VoiceInputState.isRecording`,
-  `RateLimiter.isRateLimited`, `'@composable-svelte/core/navigation-components'`
-  has no exported member `Button`, and a long tail of wrong argument counts.
-- Distribution: `.claude/skills/*` ~40, `packages/core/docs/*` ~25, package
-  READMEs 6.
+  `TS2739`/`2740`/`2741`) gives **78 errors across 54 blocks** — measured at
+  `e0dbb4c`, after this session's fixes. They are real: `AudioManager.load` /
+  `.play`, `VoiceInputState.isRecording`, `RateLimiter.isRateLimited`,
+  `'@composable-svelte/core/navigation-components'` has no exported member
+  `Button`, and a long tail of wrong argument counts.
+- Concentrated in `.claude/skills/*` and `packages/core/docs/*`. The package
+  READMEs are now nearly clean.
+
+**Re-measuring this caught a regression this session introduced.** The figure was
+94 across 64 mid-session; re-running it at the end returned 85 across 58, and the
+new entries were mine — renaming `code`'s and `media`'s exports broke
+`.claude/skills/composable-svelte-code/SKILL.md` and
+`composable-svelte-media/SKILL.md`, which still named the old symbols. That is
+rule 5 (instance versus class) failing in the session that wrote rule 5 down: the
+READMEs were swept and the skill files were not. Both are fixed, along with a
+`deleteAudioManager(id)` row left behind in `packages/media/README.md`'s API
+table when its two neighbours were corrected. The figure is 78 across 54 now.
 
 **Important limitation discovered the hard way:** this guard would **not** have
 caught `code`'s broken quickstart, because that block is fenced ```svelte — and
 nothing typechecks Svelte blocks. The existing arm compiles them for *syntax*
 only, in the two documents named in `SWEPT_DOCS`. The working mechanism for
-consumer examples is the `tests/doc-examples/` pattern, now proven on three.
+consumer examples is the `tests/doc-examples/` pattern — five registered files,
+of which the two added this session are quickstarts.
 
 ### 4.6 The graphics README — untouched this session
 

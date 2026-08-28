@@ -605,29 +605,27 @@ if ($voiceStore.permissionDenied) {
 
 ```typescript
 import {
-  AudioManager,
-  createAudioManager,
-  getAudioManager,
-  deleteAudioManager
+  createAudioPlayerManager,
+  getAudioPlayerManager,
+  deleteAudioPlayerManager,
+  type AudioPlayerAction,
+  type AudioTrack
 } from '@composable-svelte/media';
 
-// Create manager
-const manager = createAudioManager({
-  id: 'my-player',
-  onTimeUpdate: (time) => console.log('Time:', time),
-  onEnded: () => console.log('Ended'),
-  onError: (error) => console.error('Error:', error)
-});
+// The manager reports back through one callback; it takes no id.
+const onAction = (action: AudioPlayerAction) => console.log(action.type);
+const manager = createAudioPlayerManager({ onAction });
 
-// Load and play
-await manager.load('/audio/track.mp3');
-manager.play();
+const track: AudioTrack = { id: '1', title: 'Track One', url: '/audio/track.mp3' };
+manager.loadTrack(track);
+manager.pause();
+manager.seek(30);
+manager.setVolume(0.5);
 
-// Get existing manager
-const existing = getAudioManager('my-player');
-
-// Cleanup
-deleteAudioManager('my-player');
+// Registered managers are addressed by id — get-or-create, so the config
+// is required on every call.
+const registered = getAudioPlayerManager('my-player', { onAction });
+deleteAudioPlayerManager('my-player');
 ```
 
 ---

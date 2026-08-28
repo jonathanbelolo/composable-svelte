@@ -313,7 +313,8 @@ await store.send({ type: 'nextTrack' }, (state) => {
 | `getAudioPlayerManager(id, config)` | Get-or-create a registered playback manager |
 | `createVoiceInputAudioManager(id)` | Create a `MediaRecorder` capture manager |
 | `getVoiceInputAudioManager(id)` | Retrieve a capture manager by id |
-| `deleteAudioManager(id)` | Destroy an AudioManager |
+| `deleteAudioPlayerManager(id)` | Destroy a registered playback manager |
+| `deleteVoiceInputAudioManager(id)` | Destroy a registered capture manager |
 | `detectVideo(url)` | Detect video platform from URL |
 | `extractVideosFromMarkdown(text)` | Find video URLs in markdown |
 | `getSupportedPlatforms()` | List supported video platforms |

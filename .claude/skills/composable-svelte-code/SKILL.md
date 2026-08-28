@@ -38,11 +38,11 @@ All components follow Composable Architecture patterns with dedicated reducers a
 
 ```typescript
 import { createStore } from '@composable-svelte/core';
-import { CodeEditor, codeEditorReducer, createInitialState } from '@composable-svelte/code';
+import { CodeEditor, codeEditorReducer, createInitialCodeEditorState } from '@composable-svelte/code';
 
 // Create editor store
 const store = createStore({
-  initialState: createInitialState({
+  initialState: createInitialCodeEditorState({
     value: '// Write code here',
     language: 'typescript',
     theme: 'dark',
@@ -151,12 +151,12 @@ interface CodeEditorDependencies {
 ```typescript
 <script lang="ts">
 import { createStore, Effect } from '@composable-svelte/core';
-import { CodeEditor, codeEditorReducer, createInitialState } from '@composable-svelte/code';
+import { CodeEditor, codeEditorReducer, createInitialCodeEditorState } from '@composable-svelte/code';
 import { formatCode } from './my-formatter'; // Your formatter
 
 // Create store with dependencies
 const editorStore = createStore({
-  initialState: createInitialState({
+  initialState: createInitialCodeEditorState({
     value: `function hello() {\n  console.log('Hello, World!');\n}`,
     language: 'typescript',
     theme: 'dark',
@@ -587,10 +587,10 @@ function handleEdgeClick(edge: Edge) {
 
 ```typescript
 import { TestStore } from '@composable-svelte/core/test';
-import { codeEditorReducer, createInitialState } from '@composable-svelte/code';
+import { codeEditorReducer, createInitialCodeEditorState } from '@composable-svelte/code';
 
 const store = new TestStore({
-  initialState: createInitialState({ value: '' }),
+  initialState: createInitialCodeEditorState({ value: '' }),
   reducer: codeEditorReducer,
   dependencies: {
     onSave: vi.fn(),
@@ -678,14 +678,14 @@ await store.send({
 
 ### CodeHighlight
 - `CodeHighlight` — Component
-- `codeHighlightReducer`, `createInitialState()` — State management
+- `codeHighlightReducer`, `createInitialCodeHighlightState()` — State management
 - `highlightCode(code, lang)` — Highlight code string with Prism.js
 - `loadLanguage(lang)` — Dynamically load a Prism.js language grammar
 - Types: `CodeHighlightState`, `CodeHighlightAction`, `CodeHighlightDependencies`, `SupportedLanguage`
 
 ### CodeEditor
 - `CodeEditor` — Component
-- `codeEditorReducer`, `createEditorInitialState()` — State management
+- `codeEditorReducer`, `createInitialCodeEditorState()` — State management
 - `createEditorView(config)` — Create a CodeMirror EditorView
 - `loadEditorLanguage(lang)` — Load a CodeMirror language extension
 - `updateEditorValue(view, value)`, `updateEditorLanguage(view, lang)`, `updateEditorTheme(view, theme)`, `updateEditorReadOnly(view, readOnly)`, `updateTabSize(view, size)` — Programmatic editor updates
