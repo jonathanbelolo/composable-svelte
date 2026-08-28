@@ -30,7 +30,8 @@ them as a completeness measure will get a number with no meaning.
 
 ### G1. `charts` cannot be operated without a pointer — **CLOSED**
 
-> Closed by `98663aa`, `f24d6bc`, `7e4a45d`, `f3ccdd9`, `8c1f9c4`, `f2c81fd`.
+> Closed by `98663aa`, `f24d6bc`, `7e4a45d`, `f3ccdd9`, `8c1f9c4`, `f2c81fd`,
+> `e607438` and `c1a720e`.
 > The finding as written is preserved below; what remains open is listed at the
 > end of this entry.
 
@@ -82,7 +83,24 @@ to dispatches and owns no navigation logic. A polite live region announces each
 point, a ring marks it on all five chart types, and a capped screen-reader data
 table renders outside the `role="application"` element so it stays browsable.
 `role="img"` is gone. All four markup defects and the brush defect are fixed.
-charts went from 65 to 154 tests.
+charts went from 65 to 158 tests.
+
+**A fifth defect turned up while verifying, and it was not in the audit.**
+Driving the styleguide in a real browser showed that selecting a point removed
+every *other* point from the chart. `buildScatterPlot` set `stroke` to a function
+returning `null` for unselected rows, and Observable Plot **drops** a datum whose
+channel value is null rather than drawing it without that property — so the
+`fillOpacity` dimming beside it was styling rows that no longer existed. It
+predates this campaign (`7654967`), and it reached users the moment `Enter`
+became a way to select. Fixed in `c1a720e` with a regression test that runs in
+jsdom; no browser was needed to catch it, only someone looking at a chart with
+something selected.
+
+The browser pass also produced a second reminder of an existing method rule: the
+first confirmation of that fix showed it still broken, because the styleguide
+resolves the package through its `exports` map to `dist/` and the build was
+stale. That is "rebuild before believing a survivor", arriving from the opposite
+direction — not a guard failing to fail, but a fix failing to land.
 
 **Still open, and not claimed:**
 

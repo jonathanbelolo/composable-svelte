@@ -20,7 +20,7 @@ covered and what has not been formally audited.
 - ♿ **Accessible**: keyboard navigation over the data points, a live region
   announcing each one, a visible focus ring and a screen-reader data table — see [Accessibility](#accessibility).
 - 📱 **Responsive**: Automatic container-based sizing with ResizeObserver
-- 🧪 **Testable**: Comprehensive integration and visual regression tests (154 tests)
+- 🧪 **Testable**: Comprehensive integration and visual regression tests (158 tests)
 
 ## Installation
 
