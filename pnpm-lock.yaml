@@ -915,10 +915,6 @@ importers:
       maplibre-gl:
         specifier: ^4.7.1
         version: 4.7.1
-    optionalDependencies:
-      mapbox-gl:
-        specifier: ^3.7.0
-        version: 3.16.0
     devDependencies:
       '@composable-svelte/core':
         specifier: workspace:*
@@ -941,6 +937,9 @@ importers:
       jsdom:
         specifier: ^25.0.1
         version: 25.0.1
+      mapbox-gl:
+        specifier: ^3.16.0
+        version: 3.16.0
       svelte:
         specifier: ^5.0.0
         version: 5.43.3
@@ -4305,13 +4304,11 @@ snapshots:
 
   '@mapbox/jsonlint-lines-primitives@2.0.2': {}
 
-  '@mapbox/mapbox-gl-supported@3.0.0':
-    optional: true
+  '@mapbox/mapbox-gl-supported@3.0.0': {}
 
   '@mapbox/point-geometry@0.1.0': {}
 
-  '@mapbox/point-geometry@1.1.0':
-    optional: true
+  '@mapbox/point-geometry@1.1.0': {}
 
   '@mapbox/tiny-sdf@2.0.7': {}
 
@@ -4326,7 +4323,6 @@ snapshots:
       '@mapbox/point-geometry': 1.1.0
       '@types/geojson': 7946.0.16
       pbf: 4.0.1
-    optional: true
 
   '@mapbox/whoots-js@3.1.0': {}
 
@@ -5154,8 +5150,7 @@ snapshots:
 
   chai@6.2.0: {}
 
-  cheap-ruler@4.0.0:
-    optional: true
+  cheap-ruler@4.0.0: {}
 
   chokidar@3.6.0:
     dependencies:
@@ -5226,8 +5221,7 @@ snapshots:
       mdn-data: 2.12.2
       source-map-js: 1.2.1
 
-  csscolorparser@1.0.3:
-    optional: true
+  csscolorparser@1.0.3: {}
 
   cssesc@3.0.0: {}
 
@@ -5697,8 +5691,7 @@ snapshots:
 
   graceful-fs@4.2.11: {}
 
-  grid-index@1.1.0:
-    optional: true
+  grid-index@1.1.0: {}
 
   has-flag@4.0.0: {}
 
@@ -6004,7 +5997,6 @@ snapshots:
       serialize-to-js: 3.1.2
       supercluster: 8.0.1
       tinyqueue: 3.0.0
-    optional: true
 
   maplibre-gl@4.7.1:
     dependencies:
@@ -6042,7 +6034,6 @@ snapshots:
       robust-predicates: 2.0.4
       splaytree: 0.1.4
       tinyqueue: 1.2.3
-    optional: true
 
   math-intrinsics@1.1.0: {}
 
@@ -6158,7 +6149,6 @@ snapshots:
   pbf@4.0.1:
     dependencies:
       resolve-protobuf-schema: 2.1.0
-    optional: true
 
   pdfjs-dist@5.4.394:
     optionalDependencies:
@@ -6327,8 +6317,7 @@ snapshots:
 
   rfdc@1.4.1: {}
 
-  robust-predicates@2.0.4:
-    optional: true
+  robust-predicates@2.0.4: {}
 
   robust-predicates@3.0.2: {}
 
@@ -6398,8 +6387,7 @@ snapshots:
 
   semver@7.7.3: {}
 
-  serialize-to-js@3.1.2:
-    optional: true
+  serialize-to-js@3.1.2: {}
 
   set-cookie-parser@2.7.2: {}
 
@@ -6433,8 +6421,7 @@ snapshots:
     dependencies:
       whatwg-url: 7.1.0
 
-  splaytree@0.1.4:
-    optional: true
+  splaytree@0.1.4: {}
 
   split2@4.2.0: {}
 
@@ -6589,8 +6576,7 @@ snapshots:
       fdir: 6.5.0(picomatch@4.0.3)
       picomatch: 4.0.3
 
-  tinyqueue@1.2.3:
-    optional: true
+  tinyqueue@1.2.3: {}
 
   tinyqueue@3.0.0: {}
 
