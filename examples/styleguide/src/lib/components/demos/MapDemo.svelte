@@ -36,7 +36,6 @@
   function createBasicStore() {
     return createStore({
       initialState: createInitialMapState({
-        provider: 'maplibre',
         center: [-74.006, 40.7128],
         zoom: 12,
         markers: [
@@ -65,7 +64,6 @@
   function createGeojsonStore() {
     return createStore({
       initialState: createInitialMapState({
-        provider: 'maplibre',
         center: [-100, 40],
         zoom: 3
       }),
@@ -77,7 +75,6 @@
   function createHeatmapStore() {
     return createStore({
       initialState: createInitialMapState({
-        provider: 'maplibre',
         center: [-118.2437, 34.0522],
         zoom: 10
       }),
@@ -89,7 +86,6 @@
   function createInteractiveStore() {
     return createStore({
       initialState: createInitialMapState({
-        provider: 'maplibre',
         center: [-122.431, 37.773],
         zoom: 12
       }),
@@ -101,7 +97,6 @@
   function createTileStore() {
     return createStore({
       initialState: createInitialMapState({
-        provider: 'maplibre',
         center: [-0.1278, 51.5074],
         zoom: 12
       }),
@@ -113,7 +108,6 @@
   function createPopupStore() {
     return createStore({
       initialState: createInitialMapState({
-        provider: 'maplibre',
         center: [-122.431, 37.773],
         zoom: 12
       }),

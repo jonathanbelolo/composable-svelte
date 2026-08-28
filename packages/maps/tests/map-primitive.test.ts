@@ -145,7 +145,7 @@ describe('it follows the store', () => {
 
 		const styles = adapter.callsTo('changeStyle');
 		expect(styles.length).toBe(before + 1);
-		expect(String(styles.at(-1)!.args[0])).toContain('dark-matter');
+		expect(String(styles[styles.length - 1]!.args[0])).toContain('dark-matter');
 	});
 
 	it('adds a marker the store gained', async () => {
@@ -154,7 +154,7 @@ describe('it follows the store', () => {
 
 		store.dispatch({
 			type: 'addMarker',
-			marker: { id: 'm1', lngLat: [0, 0] as [number, number] }
+			marker: { id: 'm1', position: [0, 0] as [number, number] }
 		});
 		flushSync();
 		await settle();
@@ -169,7 +169,7 @@ describe('it follows the store', () => {
 		await settle();
 		store.dispatch({
 			type: 'addMarker',
-			marker: { id: 'm1', lngLat: [0, 0] as [number, number] }
+			marker: { id: 'm1', position: [0, 0] as [number, number] }
 		});
 		flushSync();
 		await settle();

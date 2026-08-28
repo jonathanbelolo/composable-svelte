@@ -9,7 +9,6 @@ import type { MapState, MapAction } from '../src/lib/types/map.types';
 
 describe('mapReducer', () => {
   const initialState: MapState = createInitialMapState({
-    provider: 'maplibre',
     center: [0, 0],
     zoom: 2
   });
@@ -286,7 +285,6 @@ describe('createInitialMapState', () => {
   it('creates initial state with defaults', () => {
     const state = createInitialMapState({});
 
-    expect(state.provider).toBe('maplibre');
     expect(state.viewport.center).toEqual([0, 0]);
     expect(state.viewport.zoom).toBe(2);
     expect(state.viewport.bearing).toBe(0);
@@ -299,7 +297,6 @@ describe('createInitialMapState', () => {
 
   it('creates initial state with custom config', () => {
     const state = createInitialMapState({
-      provider: 'mapbox',
       accessToken: 'test-token',
       center: [-74.006, 40.7128],
       zoom: 12,
@@ -307,7 +304,6 @@ describe('createInitialMapState', () => {
       pitch: 30
     });
 
-    expect(state.provider).toBe('mapbox');
     expect(state.accessToken).toBe('test-token');
     expect(state.viewport.center).toEqual([-74.006, 40.7128]);
     expect(state.viewport.zoom).toBe(12);
@@ -316,14 +312,14 @@ describe('createInitialMapState', () => {
   });
 
   it('uses openstreetmap style by default', () => {
-    const state = createInitialMapState({ provider: 'maplibre' });
+    const state = createInitialMapState({});
 
     expect(state.style).toBe('https://demotiles.maplibre.org/style.json');
     expect(state.tileProvider).toBe('openstreetmap');
   });
 
   it('uses specified tile provider', () => {
-    const state = createInitialMapState({ provider: 'mapbox', tileProvider: 'carto-dark' });
+    const state = createInitialMapState({ tileProvider: 'carto-dark' });
 
     expect(state.tileProvider).toBe('carto-dark');
     expect(state.style).toBe('https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json');
@@ -332,7 +328,6 @@ describe('createInitialMapState', () => {
 
 describe('layer actions', () => {
   const initialState: MapState = createInitialMapState({
-    provider: 'maplibre',
     center: [0, 0],
     zoom: 2
   });
@@ -432,7 +427,6 @@ describe('layer actions', () => {
 
 describe('popup actions', () => {
   const initialState: MapState = createInitialMapState({
-    provider: 'maplibre',
     center: [0, 0],
     zoom: 2
   });

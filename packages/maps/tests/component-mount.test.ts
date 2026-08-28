@@ -27,7 +27,7 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 120));
 
 const makeStore = () =>
   createStore({
-    initialState: createInitialMapState({ provider: 'maplibre', center: [0, 0], zoom: 2 }),
+    initialState: createInitialMapState({ center: [0, 0], zoom: 2 }),
     reducer: mapReducer,
     dependencies: {}
   });

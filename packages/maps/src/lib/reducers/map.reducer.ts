@@ -511,7 +511,6 @@ export const mapReducer: Reducer<MapState, MapAction, {}> = (
  * Create initial map state
  */
 export function createInitialMapState(config: {
-  provider?: 'maplibre' | 'mapbox';
   accessToken?: string;
   tileProvider?: TileProvider;
   center?: LngLat;
@@ -521,11 +520,9 @@ export function createInitialMapState(config: {
   style?: string;
   markers?: any[];
 }): MapState {
-  const provider = config.provider ?? 'maplibre';
   const tileProvider = config.tileProvider ?? 'openstreetmap';
 
   return {
-    provider,
     ...(config.accessToken ? { accessToken: config.accessToken } : {}),
     tileProvider,
     viewport: {

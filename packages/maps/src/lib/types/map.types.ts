@@ -6,11 +6,6 @@
 import type { TileProvider } from '../utils/tile-providers.js';
 import type { GeoJSON as GeoJSONType } from 'geojson';
 
-/**
- * Map provider type
- */
-export type MapProvider = 'maplibre' | 'mapbox';
-
 // Re-export TileProvider for convenience
 export type { TileProvider };
 
@@ -107,7 +102,6 @@ export interface FeatureReference<TData = unknown> {
  */
 export interface MapState {
   // Provider
-  provider: MapProvider;
   accessToken?: string;
 
   // Tile provider
@@ -219,7 +213,12 @@ export interface FlyToOptions {
 
 /**
  * Map adapter interface
- * Abstract interface for map providers (Maplibre, Mapbox)
+ * Abstract interface for a map engine.
+ *
+ * Supply an implementation to `<Map>` or `<MapPrimitive>` through the `adapter`
+ * prop. `MaplibreAdapter` is the default; `MapboxAdapter` lives behind
+ * `@composable-svelte/maps/mapbox` so this package's root never imports an
+ * optional peer.
  */
 export interface MapAdapter {
   initialize(container: HTMLElement, options: MapInitOptions): void;

@@ -10,7 +10,6 @@
 // Types
 // ============================================================================
 export type {
-  MapProvider,
   TileProvider,
   LngLat,
   BBox,
@@ -48,7 +47,6 @@ export { default as TileProviderControl } from './components/TileProviderControl
 // ============================================================================
 // Utils
 // ============================================================================
-export { createMapAdapter } from './utils/map-adapter.js';
 export { MaplibreAdapter } from './utils/maplibre-adapter.js';
 export {
   TILE_PROVIDERS,
