@@ -5,6 +5,15 @@
 
 import * as Plot from '@observablehq/plot';
 import type { ChartState, ChartConfig } from '../types/chart.types.js';
+import {
+  DATA_COLOR,
+  DATA_OPACITY,
+  DIMMED_OPACITY,
+  AREA_FILL_OPACITY,
+  GRID_COLOR,
+  GRID_OPACITY,
+  MARKER_INK
+} from './palette.js';
 
 /**
  * Build a scatter plot specification
@@ -63,18 +72,18 @@ export function buildScatterPlot<T>(
 
     marks: [
       // Grid
-      Plot.gridY({ stroke: '#e5e7eb', strokeOpacity: 0.5 }),
-      Plot.gridX({ stroke: '#e5e7eb', strokeOpacity: 0.5 }),
+      Plot.gridY({ stroke: GRID_COLOR, strokeOpacity: GRID_OPACITY }),
+      Plot.gridX({ stroke: GRID_COLOR, strokeOpacity: GRID_OPACITY }),
 
       // Data points - with selection highlighting
       Plot.dot(filteredData, {
         x,
         y,
-        fill: color || '#3b82f6',
+        fill: color || DATA_COLOR,
         r: size,
         fillOpacity: hasSelection
-          ? (d, i) => (selectedSet.has(i) ? 1.0 : 0.2)  // Dim unselected
-          : 0.7,
+          ? (d, i) => (selectedSet.has(i) ? DATA_OPACITY : DIMMED_OPACITY)
+          : DATA_OPACITY,
         // A constant stroke varied by opacity, never a per-datum `null`.
         //
         // This channel used to return `null` for unselected points, and Plot
@@ -83,14 +92,15 @@ export function buildScatterPlot<T>(
         // point from the chart. The intent was to dim them; the effect was to
         // erase them, and the `fillOpacity` line above spent its effort on rows
         // that were no longer there.
-        stroke: '#000',
+        stroke: MARKER_INK,
         strokeOpacity: hasSelection ? (d, i) => (selectedSet.has(i) ? 1 : 0) : 0,
         strokeWidth: 2,
         tip: enableTooltip  // Observable Plot's built-in tooltips
       }),
 
-      // The keyboard cursor. `null` when there is none, and Plot ignores a
-      // null mark.
+      // Selected points, then the keyboard cursor on top of them. Both are
+      // `null` when there is nothing to draw, and Plot ignores a null mark.
+      selectionMark(state, config),
       focusMark(state, config),
 
       // Axes
@@ -111,7 +121,12 @@ export function buildLineChart<T>(
   config: ChartConfig
 ): any {
   const { filteredData, dimensions, transform } = state;
-  const { x = 'x', y = 'y', color = '#3b82f6', enableTooltip = true } = config;
+  const { x = 'x', y = 'y', color = DATA_COLOR, enableTooltip = true } = config;
+
+  // Same pair the scatter builder computes: which rows are selected, so the
+  // per-datum mark below can dim the rest.
+  const hasSelection = state.selection.selectedIndices.length > 0;
+  const selectedSet = new Set(state.selection.selectedIndices);
 
   // Calculate domains
   let xDomain: [number, number] | undefined;
@@ -157,8 +172,8 @@ export function buildLineChart<T>(
 
     marks: [
       // Grid
-      Plot.gridY({ stroke: '#e5e7eb', strokeOpacity: 0.5 }),
-      Plot.gridX({ stroke: '#e5e7eb', strokeOpacity: 0.5 }),
+      Plot.gridY({ stroke: GRID_COLOR, strokeOpacity: GRID_OPACITY }),
+      Plot.gridX({ stroke: GRID_COLOR, strokeOpacity: GRID_OPACITY }),
 
       // Line
       Plot.line(filteredData, {
@@ -175,11 +190,13 @@ export function buildLineChart<T>(
         y,
         fill: color,
         r: 3,
+        fillOpacity: hasSelection ? (d, i) => (selectedSet.has(i) ? DATA_OPACITY : DIMMED_OPACITY) : DATA_OPACITY,
         tip: enableTooltip
       }),
 
-      // The keyboard cursor. `null` when there is none, and Plot ignores a
-      // null mark.
+      // Selected points, then the keyboard cursor on top of them. Both are
+      // `null` when there is nothing to draw, and Plot ignores a null mark.
+      selectionMark(state, config),
       focusMark(state, config),
 
       // Axes
@@ -200,7 +217,12 @@ export function buildBarChart<T>(
   config: ChartConfig
 ): any {
   const { filteredData, dimensions } = state;
-  const { x = 'x', y = 'y', color = '#3b82f6', enableTooltip = true } = config;
+  const { x = 'x', y = 'y', color = DATA_COLOR, enableTooltip = true } = config;
+
+  // Same pair the scatter builder computes: which rows are selected, so the
+  // per-datum mark below can dim the rest.
+  const hasSelection = state.selection.selectedIndices.length > 0;
+  const selectedSet = new Set(state.selection.selectedIndices);
 
   return Plot.plot({
     width: dimensions.width,
@@ -214,19 +236,20 @@ export function buildBarChart<T>(
 
     marks: [
       // Grid
-      Plot.gridY({ stroke: '#e5e7eb', strokeOpacity: 0.5 }),
+      Plot.gridY({ stroke: GRID_COLOR, strokeOpacity: GRID_OPACITY }),
 
       // Bars
       Plot.barY(filteredData, {
         x,
         y,
         fill: color,
-        fillOpacity: 0.8,
+        fillOpacity: hasSelection ? (d, i) => (selectedSet.has(i) ? DATA_OPACITY : DIMMED_OPACITY) : DATA_OPACITY,
         tip: enableTooltip
       }),
 
-      // The keyboard cursor. `null` when there is none, and Plot ignores a
-      // null mark.
+      // Selected points, then the keyboard cursor on top of them. Both are
+      // `null` when there is nothing to draw, and Plot ignores a null mark.
+      selectionMark(state, config),
       focusMark(state, config),
 
       // Axes
@@ -248,7 +271,12 @@ export function buildAreaChart<T>(
   config: ChartConfig
 ): any {
   const { filteredData, dimensions, transform } = state;
-  const { x = 'x', y = 'y', color = '#3b82f6', enableTooltip = true } = config;
+  const { x = 'x', y = 'y', color = DATA_COLOR, enableTooltip = true } = config;
+
+  // Same pair the scatter builder computes: which rows are selected, so the
+  // per-datum mark below can dim the rest.
+  const hasSelection = state.selection.selectedIndices.length > 0;
+  const selectedSet = new Set(state.selection.selectedIndices);
 
   // Calculate domains
   let xDomain: [number, number] | undefined;
@@ -294,15 +322,15 @@ export function buildAreaChart<T>(
 
     marks: [
       // Grid
-      Plot.gridY({ stroke: '#e5e7eb', strokeOpacity: 0.5 }),
-      Plot.gridX({ stroke: '#e5e7eb', strokeOpacity: 0.5 }),
+      Plot.gridY({ stroke: GRID_COLOR, strokeOpacity: GRID_OPACITY }),
+      Plot.gridX({ stroke: GRID_COLOR, strokeOpacity: GRID_OPACITY }),
 
       // Area
       Plot.areaY(filteredData, {
         x,
         y,
         fill: color,
-        fillOpacity: 0.3,
+        fillOpacity: AREA_FILL_OPACITY,
         tip: enableTooltip
       }),
 
@@ -314,8 +342,9 @@ export function buildAreaChart<T>(
         strokeWidth: 2
       }),
 
-      // The keyboard cursor. `null` when there is none, and Plot ignores a
-      // null mark.
+      // Selected points, then the keyboard cursor on top of them. Both are
+      // `null` when there is nothing to draw, and Plot ignores a null mark.
+      selectionMark(state, config),
       focusMark(state, config),
 
       // Axes
@@ -336,7 +365,7 @@ export function buildHistogram<T>(
   config: ChartConfig & { bins?: number; thresholds?: number[] }
 ): any {
   const { filteredData, dimensions } = state;
-  const { x = 'x', color = '#3b82f6', bins, thresholds, enableTooltip = true } = config;
+  const { x = 'x', color = DATA_COLOR, bins, thresholds, enableTooltip = true } = config;
 
   return Plot.plot({
     width: dimensions.width,
@@ -348,7 +377,7 @@ export function buildHistogram<T>(
 
     marks: [
       // Grid
-      Plot.gridY({ stroke: '#e5e7eb', strokeOpacity: 0.5 }),
+      Plot.gridY({ stroke: GRID_COLOR, strokeOpacity: GRID_OPACITY }),
 
       // Histogram
       Plot.rectY(
@@ -358,7 +387,7 @@ export function buildHistogram<T>(
           {
             x,
             ...(color ? { fill: color as any } : {}),
-            fillOpacity: 0.8,
+            fillOpacity: DATA_OPACITY,
             tip: enableTooltip,
             ...(bins ? { thresholds: bins } : {}),
             ...(thresholds ? { thresholds } : {})
@@ -366,8 +395,8 @@ export function buildHistogram<T>(
         )
       ),
 
-      // The keyboard cursor, drawn as a rule: a binned chart has no per-datum
-      // y to ring.
+      // Rules rather than rings: a binned chart has no per-datum y to mark.
+      selectionMark(state, config, 'rule'),
       focusMark(state, config, 'rule'),
 
       // Axes
@@ -472,6 +501,60 @@ export function applyZoomToDomain(
 }
 
 /**
+ * The selected points, drawn on top of whatever mark the chart type uses.
+ *
+ * `state.selection` was read by `buildScatterPlot` alone, so on the other four
+ * types a selection was real in the store, reported through `onSelectionChange`,
+ * announced to a screen reader — and invisible. The README recorded that as a
+ * known gap for long enough that it outlived two rounds of review.
+ *
+ * An overlay rather than per-mark styling, because the five types have nothing
+ * in common to style: an area chart is a single path, and a histogram's rects
+ * are bins rather than rows. A point is the one thing every type can be asked
+ * where it put.
+ *
+ * **Selected is filled, focused is a ring**, and the two nest rather than
+ * compete: a point that is both shows a filled dot inside an outer ring. The
+ * radii are chosen so that stays legible — `size + 1` here against `size + 4`
+ * for focus.
+ */
+export function selectionMark<T>(
+  state: ChartState<T>,
+  config: ChartConfig,
+  kind: 'point' | 'rule' = 'point'
+): any | null {
+  const { selection, filteredData } = state;
+  if (selection.selectedIndices.length === 0) return null;
+
+  const selected = selection.selectedIndices
+    .map((index) => filteredData[index])
+    .filter((datum): datum is T => datum !== undefined);
+  if (selected.length === 0) return null;
+
+  if (kind === 'rule') {
+    if (!config.x) return null;
+    return Plot.ruleX(selected, {
+      x: config.x as any,
+      // Solid, where the focus rule is dashed — the two are told apart by line
+      // style rather than by colour, so the distinction survives a colour-blind
+      // reader and a greyscale print.
+      stroke: MARKER_INK,
+      strokeWidth: 2
+    });
+  }
+
+  return Plot.dot(selected, {
+    x: config.x as any,
+    y: config.y as any,
+    r: (config.size ?? 5) + 1,
+    fill: (config.color as any) || DATA_COLOR,
+    fillOpacity: DATA_OPACITY,
+    stroke: MARKER_INK,
+    strokeWidth: 1.5
+  });
+}
+
+/**
  * Turn the `string | (d) => value` accessor shape every chart prop uses into a
  * plain function.
  *
@@ -516,7 +599,7 @@ export function focusMark<T>(
     if (!config.x) return null;
     return Plot.ruleX([datum], {
       x: config.x as any,
-      stroke: '#000',
+      stroke: MARKER_INK,
       strokeWidth: 2,
       strokeDasharray: '4 2'
     });
@@ -529,7 +612,7 @@ export function focusMark<T>(
     // as an annotation and the point's own colour stays legible underneath.
     r: (config.size ?? 5) + 4,
     fill: 'none',
-    stroke: '#000',
+    stroke: MARKER_INK,
     strokeWidth: 2
   });
 }

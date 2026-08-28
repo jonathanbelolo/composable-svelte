@@ -626,10 +626,24 @@ The chart draws a `:focus-visible` outline, and the focused point is ringed on
 every chart type. A histogram gets a dashed rule at the point's x instead, since
 binning leaves no per-point `y` to ring.
 
-### Not covered
+### Contrast
 
-No formal WCAG 2.1 AA audit has been run, and the chart palette's colour contrast
-is Observable Plot's default and unreviewed.
+Measured from constants in `src/lib/utils/palette.ts` and re-checked by
+`tests/contrast.test.ts` against light and dark backgrounds. Data marks clear
+SC 1.4.11's 3:1 at full strength and stay at the floor when dimmed behind a
+selection. Do **not** lower `DIMMED_OPACITY` to make dimming more obvious — the
+selection is carried by an added mark, not by suppressing the rest, and the test
+fails if you do.
+
+State markers use `currentColor`, never a fixed ink: black is 21:1 on white and
+1.02:1 on near-black, so a hardcoded focus ring disappears in dark mode.
+
+### WCAG 2.1 AA
+
+Reviewed criterion by criterion in `tests/wcag-conformance.test.ts` — keyboard
+trap, character-key shortcut scoping, use of colour, on-focus behaviour, and
+name/role/value. It is a self-review, not a third-party audit, and the criteria
+belonging to the surrounding page are the application's.
 
 ---
 

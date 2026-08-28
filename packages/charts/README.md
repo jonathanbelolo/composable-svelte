@@ -2,9 +2,9 @@
 
 > Interactive data visualization components for Composable Svelte
 
-**Status**: ✅ **Feature Complete** (Phase 11C). Keyboard-operable and
-screen-reader-navigable; see [Accessibility](#accessibility) for what is
-covered and what has not been formally audited.
+**Status**: ✅ **Feature Complete** (Phase 11C). Keyboard-operable,
+screen-reader-navigable, contrast measured, and WCAG 2.1 AA self-reviewed
+criterion by criterion — see [Accessibility](#accessibility).
 
 ## Overview
 
@@ -20,7 +20,7 @@ covered and what has not been formally audited.
 - ♿ **Accessible**: keyboard navigation over the data points, a live region
   announcing each one, a visible focus ring and a screen-reader data table — see [Accessibility](#accessibility).
 - 📱 **Responsive**: Automatic container-based sizing with ResizeObserver
-- 🧪 **Testable**: Comprehensive integration and visual regression tests (158 tests)
+- 🧪 **Testable**: Comprehensive integration and visual regression tests (191 tests)
 
 ## Installation
 
@@ -266,7 +266,7 @@ Not uniform, and worth checking before choosing a type:
 | `enableTooltip` | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `enableZoom` / pan | ✅ | ✅ | — | ✅ | — |
 | `enableBrush` | ✅ | ✅ | — | — | — |
-| selection highlight | ✅ | — | — | — | — |
+| selection highlight | ✅ | ✅ | ✅ | ✅ | rule |
 | keyboard navigation | ✅ | ✅ | ✅ | ✅ | ✅ |
 | focus indicator | ✅ | ✅ | ✅ | ✅ | rule |
 | `size` | ✅ | — | — | — | — |
@@ -276,11 +276,11 @@ Not uniform, and worth checking before choosing a type:
 `enableBrush` needs `<circle>` marks to hit-test against, which only scatter and
 line produce. On the other types the brush overlay draws and selects nothing.
 
-`onSelectionChange` fires for every type — the *callback* is not the gap; the
-visual highlight is. Only `buildScatterPlot` reads `state.selection`.
-
-These are gaps rather than decisions, and they are recorded in
-`plans/hardening/README.md`.
+Selection is drawn on every type now: an added filled mark with an outline,
+under the focus ring, so a point that is both selected and focused reads as one
+inside the other. The histogram gets a rule rather than a ring, because binning
+leaves no per-row `y` to mark — solid for selection against dashed for focus, so
+the two are told apart by line style rather than colour.
 
 ## Accessibility
 
@@ -327,16 +327,48 @@ The focused chart draws a `:focus-visible` outline, and the focused point is
 ringed. On a histogram — which bins its rows and so has no per-point `y` — the
 cursor is a dashed rule at the point's x instead.
 
-### Not covered
+### Contrast
 
-- **A formal WCAG 2.1 AA audit.** The Level A keyboard failure this section used
-  to describe is closed, and the pieces above are the AA-relevant ones we know
-  of, but no audit has been run and none is claimed.
-- **Colour contrast of the chart palette**, which is Observable Plot's default
-  and unreviewed.
-- **The selection highlight on non-scatter types** — see the support matrix
-  below. That gap predates this work and is about *selection*, not focus; the
-  keyboard cursor is drawn on every chart type.
+Measured, not assumed. `tests/contrast.test.ts` recomputes WCAG ratios from the
+constants in `src/lib/utils/palette.ts` against a white and a near-black
+background, so these numbers cannot drift from the code:
+
+| | ratio | |
+|---|---|---|
+| data mark, full strength | 3.68:1 on white, 5.38:1 on near-black | passes SC 1.4.11 |
+| data mark, dimmed behind a selection | 3.00:1 | at the floor, deliberately |
+
+The review found the **default** state of every scatter chart at 2.41:1 — below
+the 3:1 that SC 1.4.11 asks — and dimmed points at 1.26:1, which is erasure
+rather than de-emphasis. Both are fixed. The blue is unchanged: darker blues
+score better on white and worse on dark, and `#3b82f6` is the one that clears
+3:1 on both.
+
+Dimming is taken exactly as far as it can go and no further, because the
+selection is carried by an *added* mark rather than by suppressing everything
+else. The focus ring and selection outline use `currentColor`, so they follow the
+app's text colour instead of vanishing in dark mode the way a fixed black would.
+
+Two things are held to no minimum, deliberately: the area chart's translucent
+fill, which sits under a full-strength line of the same colour that describes the
+series, and grid lines, which assist reading a position the axis labels state
+exactly. SC 1.4.11 covers graphics *required to understand the content*.
+
+### WCAG 2.1 AA
+
+Reviewed criterion by criterion in `tests/wcag-conformance.test.ts`, which is
+executable rather than a checklist: no keyboard trap (Tab and Shift+Tab pass
+through), single-character shortcuts scoped to the focused component per the
+SC 2.1.4 exemption, no reliance on colour alone, no context change on focus, and
+name/role/value exposed and updating. SC 1.4.11, 2.4.7, 4.1.3, 1.1.1 and 1.3.1
+are covered by the sibling test files that file names.
+
+**This is a self-review, not a third-party audit.** That distinction is the one
+thing here we cannot close ourselves: everything above is checked by tests you
+can run, but no independent auditor has looked at it, and the criteria that
+belong to the page around the chart — heading structure, text contrast inherited
+through `currentColor`, reflow at the app's breakpoints — are the consuming
+application's to meet.
 
 ## Development Status
 
@@ -351,7 +383,8 @@ cursor is a dashed rule at the point's x instead.
 - ✅ Data transformation utilities (10 transforms)
 - ✅ Responsive sizing with ResizeObserver
 - ✅ Accessibility: keyboard navigation, live region, focus indicator, data table
-- ⚠️ Accessibility: no formal WCAG 2.1 AA audit — see Accessibility
+- ✅ Accessibility: WCAG 2.1 AA reviewed criterion by criterion, contrast measured
+- ⚠️ Accessibility: self-reviewed; no third-party audit — see Accessibility
 - ✅ Reducer and component tests, including that a state change reaches the SVG
 
 - ✅ Complete JSDoc documentation

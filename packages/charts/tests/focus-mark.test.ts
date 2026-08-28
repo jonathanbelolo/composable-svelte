@@ -25,6 +25,7 @@ import {
 	buildHistogram
 } from '../src/lib/utils/plot-builder';
 import { createInitialChartState } from '../src/lib/reducers/chart.reducer';
+import { MARKER_INK } from '../src/lib/utils/palette';
 import type { ChartState } from '../src/lib/types/chart.types';
 
 const rows = [
@@ -36,8 +37,15 @@ const rows = [
 const unfocused = () => createInitialChartState({ data: rows });
 const focused = (index = 1) => ({ ...unfocused(), focusedIndex: index }) as ChartState<any>;
 
-/** The ring `focusMark` draws: an unfilled circle with a black stroke. */
-const rings = (svg: Element) => svg.querySelectorAll('g[fill="none"][stroke="#000"] circle').length;
+/**
+ * The ring `focusMark` draws: an unfilled circle stroked in the marker ink.
+ *
+ * Selected from the constant rather than a literal, so the day the ink changes
+ * this file fails to *find* the ring instead of quietly passing on a selector
+ * that matches nothing.
+ */
+const rings = (svg: Element) =>
+	svg.querySelectorAll(`g[fill="none"][stroke="${MARKER_INK}"] circle`).length;
 
 const pointBuilders = [
 	['scatter', buildScatterPlot],
@@ -92,7 +100,7 @@ describe('the ring scales with the dot it rings', () => {
 		// happens to look right at the default size and vanishes underneath a
 		// large dot.
 		const svg = buildScatterPlot(focused(), { x: 'x', y: 'y', size: 20 });
-		const ring = svg.querySelector('g[fill="none"][stroke="#000"] circle');
+		const ring = svg.querySelector(`g[fill="none"][stroke="${MARKER_INK}"] circle`);
 		expect(ring).not.toBeNull();
 		expect(Number(ring!.getAttribute('r'))).toBe(24);
 	});

@@ -31,7 +31,7 @@ them as a completeness measure will get a number with no meaning.
 ### G1. `charts` cannot be operated without a pointer — **CLOSED**
 
 > Closed by `98663aa`, `f24d6bc`, `7e4a45d`, `f3ccdd9`, `8c1f9c4`, `f2c81fd`,
-> `e607438` and `c1a720e`.
+> `e607438`, `c1a720e` and the palette/conformance commit that follows them.
 > The finding as written is preserved below; what remains open is listed at the
 > end of this entry.
 
@@ -83,7 +83,7 @@ to dispatches and owns no navigation logic. A polite live region announces each
 point, a ring marks it on all five chart types, and a capped screen-reader data
 table renders outside the `role="application"` element so it stays browsable.
 `role="img"` is gone. All four markup defects and the brush defect are fixed.
-charts went from 65 to 158 tests.
+charts went from 65 to 191 tests.
 
 **A fifth defect turned up while verifying, and it was not in the audit.**
 Driving the styleguide in a real browser showed that selecting a point removed
@@ -102,15 +102,36 @@ resolves the package through its `exports` map to `dist/` and the build was
 stale. That is "rebuild before believing a survivor", arriving from the opposite
 direction — not a guard failing to fail, but a fix failing to land.
 
-**Still open, and not claimed:**
+**The three items first left open have since been closed too.**
 
-- **No formal WCAG 2.1 AA audit.** The Level A keyboard failure is closed and the
-  AA-relevant pieces we know of are in place, but nothing has been audited. The
-  README says so in as many words.
-- **Colour contrast** of the chart palette — Observable Plot's default, unreviewed.
-- **The selection highlight is still scatter-only.** Pre-existing, recorded in the
-  README's support matrix, and untouched: it concerns *selection*, not focus. The
-  keyboard cursor is drawn on every type.
+- **Contrast is measured, not unreviewed.** The review found the *default* state
+  of every scatter chart at 2.41:1 against white — under SC 1.4.11's 3:1 — and
+  dimmed points at 1.26:1, which is erasure rather than de-emphasis. The palette
+  moved into `src/lib/utils/palette.ts` and `tests/contrast.test.ts` recomputes
+  the ratios from those constants against light and dark backgrounds, so the
+  published numbers cannot drift from the code. The hue did not change: darker
+  blues score better on white and worse on dark, and `#3b82f6` is the one that
+  clears 3:1 on both.
+- **State markers use `currentColor`.** Writing the constants down exposed a
+  defect the earlier work had shipped: a fixed `#000` focus ring is 21:1 on white
+  and **1.02:1** on near-black, so the keyboard cursor was invisible in dark mode
+  for exactly the users most likely to depend on it. Verified in the styleguide's
+  dark theme at 19.12:1 against the card it actually renders on.
+- **WCAG 2.1 AA is reviewed criterion by criterion** in
+  `tests/wcag-conformance.test.ts` — no keyboard trap, character-key shortcuts
+  scoped to focus per the SC 2.1.4 exemption, no reliance on colour alone, no
+  context change on focus, name/role/value. Executable, not a checklist.
+- **The selection highlight now draws on all five chart types**, closing a gap the
+  README had carried through three review rounds. An added mark rather than
+  per-type styling, since an area chart is one path and a histogram's rects are
+  bins; the histogram gets a solid rule against focus's dashed one, so the two
+  are distinguished by line style rather than colour.
+
+**What genuinely cannot be closed here:** an independent audit. Everything above
+is checked by tests anyone can run, but no third party has looked at it, and the
+criteria belonging to the page around the chart — heading structure, text colour
+inherited through `currentColor`, reflow at the app's breakpoints — are the
+consuming application's to meet. The README says exactly that.
 
 ### G2. `maps` ships a provider that does not exist — VERIFIED
 
