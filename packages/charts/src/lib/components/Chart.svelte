@@ -9,7 +9,7 @@ import ChartPrimitive from './ChartPrimitive.svelte';
 import type { Store } from '@composable-svelte/core';
 import type { ChartState, ChartAction, ChartConfig } from '../types/chart.types.js';
 import { createResizeObserver } from '../utils/responsive.js';
-import { buildPlot } from '../utils/plot-builder.js';
+import { buildPlot, resolveAccessor } from '../utils/plot-builder.js';
 
 // Props
 let {
@@ -193,29 +193,178 @@ const summaryText = $derived.by(() => {
 
   return parts.join(' ');
 });
+
+// ============================================================================
+// Keyboard navigation
+// ============================================================================
+//
+// The chart implements its own interactions — d3-zoom and d3-brush are bound to
+// the Plot SVG — and until now gave them no keyboard path at all: no tabindex
+// and no key handler anywhere in the package. That is WCAG 2.1.1, a Level A
+// failure, and the README named AA as the gap, which understated it.
+//
+// Every binding here is one dispatch. The reducer owns the cursor, the clamping
+// and the zoom bounds, so this file has no navigation logic to get wrong and the
+// behaviour is testable without synthesising key events. Same division as
+// `TreeView` in core.
+
+/** Pixels of pan per Shift+Arrow press, in the transform's own units. */
+const PAN_STEP = 40;
+
+function pan(dx: number, dy: number) {
+  const { x, y, k } = $store.transform;
+  store.dispatch({ type: 'zoom', transform: { x: x + dx, y: y + dy, k } });
+}
+
+function handleKeyDown(event: KeyboardEvent) {
+  // Arrows move the cursor; Shift+Arrows pan. The skill file documented the
+  // reverse — bare arrows panning — but point-to-point traversal is the thing
+  // that makes the data reachable at all, so it takes the unmodified key and
+  // the documentation was corrected to match.
+  switch (event.key) {
+    case 'ArrowRight':
+    case 'ArrowDown':
+      event.preventDefault();
+      if (event.shiftKey) pan(event.key === 'ArrowRight' ? -PAN_STEP : 0, event.key === 'ArrowDown' ? -PAN_STEP : 0);
+      else store.dispatch({ type: 'focusNext' });
+      break;
+
+    case 'ArrowLeft':
+    case 'ArrowUp':
+      event.preventDefault();
+      if (event.shiftKey) pan(event.key === 'ArrowLeft' ? PAN_STEP : 0, event.key === 'ArrowUp' ? PAN_STEP : 0);
+      else store.dispatch({ type: 'focusPrevious' });
+      break;
+
+    case 'Home':
+      event.preventDefault();
+      store.dispatch({ type: 'focusFirst' });
+      break;
+
+    case 'End':
+      event.preventDefault();
+      store.dispatch({ type: 'focusLast' });
+      break;
+
+    case 'Enter':
+    case ' ':
+      event.preventDefault();
+      store.dispatch({ type: 'selectFocused' });
+      break;
+
+    case 'Escape':
+      event.preventDefault();
+      store.dispatch({ type: 'clearSelection' });
+      break;
+
+    // `=` and `_` are the unshifted faces of `+` and `-` on most layouts, so a
+    // user pressing the key they see labelled `+` gets a zoom whether or not
+    // they held Shift.
+    case '+':
+    case '=':
+      event.preventDefault();
+      store.dispatch({ type: 'zoomIn' });
+      break;
+
+    case '-':
+    case '_':
+      event.preventDefault();
+      store.dispatch({ type: 'zoomOut' });
+      break;
+
+    case '0':
+      event.preventDefault();
+      store.dispatch({ type: 'resetZoom' });
+      break;
+  }
+}
+
+/**
+ * What the live region says when the cursor moves.
+ *
+ * Without this, arrow keys move an invisible cursor and a screen reader user
+ * learns nothing — the navigation would exist and still be useless. Empty while
+ * there is no cursor, so nothing is announced at mount.
+ */
+const focusAnnouncement = $derived.by(() => {
+  const index = $store.focusedIndex;
+  if (index === null) return '';
+  const datum = $store.filteredData[index];
+  if (datum === undefined) return '';
+
+  const parts = [`Point ${index + 1} of ${shownCount}.`];
+  if (x) parts.push(`${axisName(x)}: ${resolveAccessor<any>(x)(datum)}.`);
+  if (y) parts.push(`${axisName(y)}: ${resolveAccessor<any>(y)(datum)}.`);
+  if ($store.selection.selectedIndices.includes(index)) parts.push('Selected.');
+
+  return parts.join(' ');
+});
 </script>
 
+<!--
+  `role="application"` replaces the `role="img"` this container used to carry.
+  That was a false statement, not merely an incomplete one: it told assistive
+  technology the subtree was a static graphic while the chart supported brush
+  selection and zoom, so a user was told there was nothing here to operate and
+  had no reason to go looking. `application` is the honest role for a widget
+  that consumes its own arrow keys, and it avoids adding a landmark per chart
+  the way `role="region"` would. `aria-roledescription` keeps the announcement
+  meaningful rather than the bare word "application".
+
+  Svelte's a11y rules do not treat `application` as interactive, so a focusable
+  container with a key handler trips both of the rules below. Removing either
+  would delete the keyboard path rather than improve it — the same trade-off,
+  and the same two ignores, as `Carousel` in core.
+-->
+<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
   bind:this={containerElement}
   class="chart-container"
   style:width={width ? `${width}px` : '100%'}
   style:height={height ? `${height}px` : '400px'}
-  role="img"
+  role="application"
+  aria-roledescription="interactive chart"
   aria-label={`${type} chart showing ${countPhrase}${
     selectedCount > 0 ? `, ${selectedCount} selected` : ''
   }`}
   aria-describedby={summaryId}
+  tabindex="0"
+  onkeydown={handleKeyDown}
 >
   <ChartPrimitive {store} {config} {plotBuilder} {enableZoom} {enableBrush} />
 
   <!-- Screen reader summary -->
   <div id={summaryId} class="sr-only">{summaryText}</div>
+
+  <!--
+    Where the cursor is. `role="status"` carries an implicit `aria-live="polite"`;
+    both are written because the pair is what is actually supported across
+    screen readers, and a silent live region would make the arrow keys useless
+    rather than merely unannounced.
+  -->
+  <div class="sr-only" role="status" aria-live="polite">{focusAnnouncement}</div>
 </div>
 
 <style>
   .chart-container {
     position: relative;
     overflow: hidden;
+  }
+
+  /*
+    The chart is focusable, so its focus must be visible — otherwise a sighted
+    keyboard user cannot tell which chart on the page is receiving their arrow
+    keys. `:focus-visible` rather than `:focus` so a mouse click does not draw
+    a ring nobody asked for.
+
+    Deliberately a static end state with no transition. `guides/ANIMATION-GUIDELINES.md`
+    prohibits transitions driven by a pseudo-class, and
+    `tests/repo/animation-policy.test.ts` enforces it across `packages/`.
+  */
+  .chart-container:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
   }
 
   /* Screen reader only content */

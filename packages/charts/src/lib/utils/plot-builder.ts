@@ -445,6 +445,21 @@ export function applyZoomToDomain(
 }
 
 /**
+ * Turn the `string | (d) => value` accessor shape every chart prop uses into a
+ * plain function.
+ *
+ * Extracted from `calculateDomain`, which held the only copy, because
+ * `Chart.svelte` needs the same resolution to read a focused datum's values for
+ * its live region — and a second hand-rolled copy is how two readers of one
+ * convention drift apart.
+ */
+export function resolveAccessor<T, V = any>(
+  accessor: string | ((d: T) => V)
+): (d: T) => V {
+  return typeof accessor === 'string' ? (d: T) => (d as any)[accessor] : accessor;
+}
+
+/**
  * Calculate domain from data
  * Returns [min, max] for numeric data or temporal data
  */
@@ -454,11 +469,7 @@ export function calculateDomain<T>(
 ): [number, number] | [Date, Date] | undefined {
   if (data.length === 0) return [0, 1];
 
-  const getValue = typeof accessor === 'string'
-    ? (d: T) => (d as any)[accessor]
-    : accessor;
-
-  const values = data.map(getValue);
+  const values = data.map(resolveAccessor(accessor));
 
   // Check if values are Date objects
   const firstValue = values.find(v => v != null);
