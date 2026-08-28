@@ -4,6 +4,7 @@
  */
 
 import maplibregl from 'maplibre-gl';
+import { geojsonSource, layerSpecs, paintUpdates, strokeLayerId } from './layer-spec.js';
 import type {
   MapAdapter,
   MapInitOptions,
@@ -167,74 +168,14 @@ export class MaplibreAdapter implements MapAdapter {
       // Store layer reference
       this.layers.set(layer.id, layer);
 
-      // Add GeoJSON source
-      const sourceData = typeof layer.data === 'string' ? layer.data : layer.data;
+      this.map.addSource(layer.id, geojsonSource(layer) as any);
 
-      this.map.addSource(layer.id, {
-        type: 'geojson',
-        data: sourceData as any
-      });
-
-    // Add layer based on type
-    if (layer.type === 'geojson') {
-      // Determine geometry type for appropriate layer type
-      this.map.addLayer({
-        id: layer.id,
-        type: 'fill', // Default to fill, can be point/line based on geometry
-        source: layer.id,
-        paint: {
-          'fill-color': layer.style.fillColor ?? '#0080ff',
-          'fill-opacity': layer.style.fillOpacity ?? 0.5
-        },
-        layout: {
-          visibility: layer.visible ? 'visible' : 'none'
-        }
-      });
-
-      // Add stroke layer if stroke is defined
-      if (layer.style.strokeColor) {
-        this.map.addLayer({
-          id: `${layer.id}-stroke`,
-          type: 'line',
-          source: layer.id,
-          paint: {
-            'line-color': layer.style.strokeColor,
-            'line-width': layer.style.strokeWidth ?? 1,
-            'line-opacity': layer.style.strokeOpacity ?? 1
-          },
-          layout: {
-            visibility: layer.visible ? 'visible' : 'none'
-          }
-        });
+      // One `Layer` can be two GL layers — a polygon with a stroke is a fill
+      // plus a line — and the order matters, so the list comes from
+      // `layerSpecs` rather than being re-derived here.
+      for (const spec of layerSpecs(layer)) {
+        this.map.addLayer(spec as any);
       }
-    } else if (layer.type === 'heatmap') {
-      // Build color gradient for heatmap
-      const colorGradient = layer.style.colorGradient ?? [
-        [0, 'rgba(0, 0, 255, 0)'],
-        [0.5, 'rgba(0, 255, 0, 1)'],
-        [1, 'rgba(255, 0, 0, 1)']
-      ];
-
-      // Flatten gradient to Maplibre format: [stop1, color1, stop2, color2, ...]
-      const heatmapColor: any[] = ['interpolate', ['linear'], ['heatmap-density']];
-      colorGradient.forEach(([stop, color]) => {
-        heatmapColor.push(stop, color);
-      });
-
-      this.map.addLayer({
-        id: layer.id,
-        type: 'heatmap',
-        source: layer.id,
-        paint: {
-          'heatmap-intensity': layer.style.intensity ?? 1,
-          'heatmap-radius': layer.style.radius ?? 20,
-          'heatmap-color': heatmapColor as any // Maplibre expression type is complex
-        },
-        layout: {
-          visibility: layer.visible ? 'visible' : 'none'
-        }
-      });
-    }
     } catch (error) {
       console.error('[MaplibreAdapter] Error adding layer:', layer.id, error);
       // Remove from layers map if addition failed
@@ -252,8 +193,8 @@ export class MaplibreAdapter implements MapAdapter {
     }
 
     // Remove stroke layer if it exists
-    if (this.map.getLayer(`${id}-stroke`)) {
-      this.map.removeLayer(`${id}-stroke`);
+    if (this.map.getLayer(strokeLayerId(id))) {
+      this.map.removeLayer(strokeLayerId(id));
     }
 
     // Remove source
@@ -278,8 +219,8 @@ export class MaplibreAdapter implements MapAdapter {
     }
 
     // Toggle stroke layer if it exists
-    if (this.map.getLayer(`${id}-stroke`)) {
-      this.map.setLayoutProperty(`${id}-stroke`, 'visibility', visibility);
+    if (this.map.getLayer(strokeLayerId(id))) {
+      this.map.setLayoutProperty(strokeLayerId(id), 'visibility', visibility);
     }
   }
 
@@ -289,50 +230,13 @@ export class MaplibreAdapter implements MapAdapter {
     const layer = this.layers.get(id);
     if (!layer) return;
 
-    // Update layer style reference
-    this.layers.set(id, {
-      ...layer,
-      style: { ...layer.style, ...style }
-    });
+    const updated = { ...layer, style: { ...layer.style, ...style } };
+    this.layers.set(id, updated);
 
-    // Update Maplibre paint properties based on layer type
-    if (layer.type === 'geojson') {
-      // Update fill properties
-      if (style.fillColor !== undefined && this.map.getLayer(id)) {
-        this.map.setPaintProperty(id, 'fill-color', style.fillColor);
-      }
-      if (style.fillOpacity !== undefined && this.map.getLayer(id)) {
-        this.map.setPaintProperty(id, 'fill-opacity', style.fillOpacity);
-      }
-
-      // Update stroke properties if stroke layer exists
-      const strokeLayerId = `${id}-stroke`;
-      if (this.map.getLayer(strokeLayerId)) {
-        if (style.strokeColor !== undefined) {
-          this.map.setPaintProperty(strokeLayerId, 'line-color', style.strokeColor);
-        }
-        if (style.strokeWidth !== undefined) {
-          this.map.setPaintProperty(strokeLayerId, 'line-width', style.strokeWidth);
-        }
-        if (style.strokeOpacity !== undefined) {
-          this.map.setPaintProperty(strokeLayerId, 'line-opacity', style.strokeOpacity);
-        }
-      }
-    } else if (layer.type === 'heatmap') {
-      // Update heatmap properties
-      if (style.intensity !== undefined && this.map.getLayer(id)) {
-        this.map.setPaintProperty(id, 'heatmap-intensity', style.intensity);
-      }
-      if (style.radius !== undefined && this.map.getLayer(id)) {
-        this.map.setPaintProperty(id, 'heatmap-radius', style.radius);
-      }
-      if (style.colorGradient !== undefined && this.map.getLayer(id)) {
-        // Build color gradient expression
-        const heatmapColor: any[] = ['interpolate', ['linear'], ['heatmap-density']];
-        style.colorGradient.forEach(([stop, color]) => {
-          heatmapColor.push(stop, color);
-        });
-        this.map.setPaintProperty(id, 'heatmap-color', heatmapColor as any);
+    for (const { layerId, property, value } of paintUpdates(updated, style)) {
+      // A stroke layer only exists if the layer was created with one.
+      if (this.map.getLayer(layerId)) {
+        this.map.setPaintProperty(layerId, property, value as any);
       }
     }
   }
