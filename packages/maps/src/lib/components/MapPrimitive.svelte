@@ -7,7 +7,7 @@
 import { onMount } from 'svelte';
 import type { Store } from '@composable-svelte/core';
 import type { MapState, MapAction, MapAdapter } from '../types/map.types.js';
-import { createMapAdapter } from '../utils/map-adapter.js';
+import { MaplibreAdapter } from '../utils/maplibre-adapter.js';
 import { getStyleURL } from '../utils/tile-providers.js';
 
 // MapLibre's own stylesheet. Without it markers, popups and controls render
@@ -19,9 +19,26 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 
 // Props
 let {
-  store
+  store,
+  adapter
 }: {
   store: Store<MapState, MapAction>;
+  /**
+   * The map engine to drive. Defaults to MapLibre.
+   *
+   * `MapAdapter` was exported from this package's root from the beginning and
+   * was impossible to supply: this component constructed its own adapter from
+   * `state.provider`, so the interface described an extension point that did
+   * not exist. Two consequences followed. A consumer wanting a different engine
+   * had no route in — the `'mapbox'` provider was the stand-in for that, and it
+   * returned the MapLibre adapter. And this component could not be tested,
+   * because there was no way to keep a WebGL context out of it, which is why it
+   * had no test.
+   *
+   * Supply `MapboxAdapter` from `@composable-svelte/maps/mapbox`, an adapter of
+   * your own, or a fake.
+   */
+  adapter?: MapAdapter | undefined;
 } = $props();
 
 // Container element
@@ -42,8 +59,10 @@ onMount(() => {
   try {
     const state = store.state;
 
-    // Create map adapter
-    mapAdapter = createMapAdapter(state.provider);
+    // The supplied adapter, or MapLibre. Resolved here rather than as a prop
+    // default so exactly one is constructed, at mount, whatever the component
+    // re-renders afterwards.
+    mapAdapter = adapter ?? new MaplibreAdapter();
 
     // Initialize map
     mapAdapter.initialize(containerElement, {
