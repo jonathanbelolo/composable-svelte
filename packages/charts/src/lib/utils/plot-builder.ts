@@ -82,6 +82,10 @@ export function buildScatterPlot<T>(
         tip: enableTooltip  // Observable Plot's built-in tooltips
       }),
 
+      // The keyboard cursor. `null` when there is none, and Plot ignores a
+      // null mark.
+      focusMark(state, config),
+
       // Axes
       Plot.axisX({ label: null }),
       Plot.axisY({ label: null })
@@ -167,6 +171,10 @@ export function buildLineChart<T>(
         tip: enableTooltip
       }),
 
+      // The keyboard cursor. `null` when there is none, and Plot ignores a
+      // null mark.
+      focusMark(state, config),
+
       // Axes
       Plot.axisX({ label: null }),
       Plot.axisY({ label: null })
@@ -209,6 +217,10 @@ export function buildBarChart<T>(
         fillOpacity: 0.8,
         tip: enableTooltip
       }),
+
+      // The keyboard cursor. `null` when there is none, and Plot ignores a
+      // null mark.
+      focusMark(state, config),
 
       // Axes
       Plot.axisX({ label: null, tickRotate: -45 }),  // Rotate labels for readability
@@ -295,6 +307,10 @@ export function buildAreaChart<T>(
         strokeWidth: 2
       }),
 
+      // The keyboard cursor. `null` when there is none, and Plot ignores a
+      // null mark.
+      focusMark(state, config),
+
       // Axes
       Plot.axisX({ label: null }),
       Plot.axisY({ label: null })
@@ -342,6 +358,10 @@ export function buildHistogram<T>(
           } as any
         )
       ),
+
+      // The keyboard cursor, drawn as a rule: a binned chart has no per-datum
+      // y to ring.
+      focusMark(state, config, 'rule'),
 
       // Axes
       Plot.axisX({ label: null }),
@@ -457,6 +477,54 @@ export function resolveAccessor<T, V = any>(
   accessor: string | ((d: T) => V)
 ): (d: T) => V {
   return typeof accessor === 'string' ? (d: T) => (d as any)[accessor] : accessor;
+}
+
+/**
+ * A ring around the point the keyboard cursor is on, or `null` when there is no
+ * cursor.
+ *
+ * Appended by every builder, not only `buildScatterPlot`. The selection
+ * highlight is scatter-only and documented as such in the README — but focus is
+ * different in kind: a sighted keyboard user pressing an arrow has to see
+ * *something* move, and a chart where the cursor is invisible offers navigation
+ * that only a screen reader can follow.
+ *
+ * `kind: 'rule'` exists for the histogram, which bins its rows: there is no
+ * per-datum `y` to ring, so the cursor is drawn as a vertical rule at the
+ * datum's x — where in the distribution the point falls, which is the honest
+ * answer for a binned chart rather than a dot at a coordinate that means nothing.
+ */
+export function focusMark<T>(
+  state: ChartState<T>,
+  config: ChartConfig,
+  kind: 'point' | 'rule' = 'point'
+): any | null {
+  const { focusedIndex, filteredData } = state;
+  if (focusedIndex === null) return null;
+
+  const datum = filteredData[focusedIndex];
+  if (datum === undefined) return null;
+
+  if (kind === 'rule') {
+    if (!config.x) return null;
+    return Plot.ruleX([datum], {
+      x: config.x as any,
+      stroke: '#000',
+      strokeWidth: 2,
+      strokeDasharray: '4 2'
+    });
+  }
+
+  return Plot.dot([datum], {
+    x: config.x as any,
+    y: config.y as any,
+    // Sits outside the plotted dot rather than on top of it, so the ring reads
+    // as an annotation and the point's own colour stays legible underneath.
+    r: (config.size ?? 5) + 4,
+    fill: 'none',
+    stroke: '#000',
+    strokeWidth: 2
+  });
 }
 
 /**
