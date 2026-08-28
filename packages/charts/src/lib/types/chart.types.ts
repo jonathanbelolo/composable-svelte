@@ -77,6 +77,15 @@ export type ChartAction<T = unknown> =
   // Selection actions
   | { type: 'selectPoint'; data: T; index: number }
   | { type: 'selectRange'; range: [number, number] }
+  /**
+   * Select exactly these rows, in no particular arrangement.
+   *
+   * What a brush actually produces. `selectRange` describes a *contiguous*
+   * span, so reporting a brush through it meant a gesture that caught the first
+   * and last points of a scattered cloud selected every point between them as
+   * well. An empty list is a cleared selection.
+   */
+  | { type: 'selectPoints'; indices: number[] }
   | { type: 'brushStart' }
   | { type: 'clearSelection' }
 

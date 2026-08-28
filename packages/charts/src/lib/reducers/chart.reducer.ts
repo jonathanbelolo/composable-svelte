@@ -190,6 +190,48 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
       ];
     }
 
+    case 'selectPoints': {
+      // The rows a brush actually caught. `selectRange` could not express this:
+      // it describes a contiguous span, so a gesture that caught the first and
+      // last points of a scattered cloud reported a range covering everything
+      // between them, and the reducer duly selected all of it. The user saw
+      // points highlighted that their brush never touched.
+      const indices: number[] = [];
+      const selectedData: any[] = [];
+      const seen = new Set<number>();
+
+      for (const index of action.indices) {
+        if (seen.has(index)) continue;
+        const datum = state.filteredData[index];
+        if (datum === undefined) continue;
+        seen.add(index);
+        indices.push(index);
+        selectedData.push(datum);
+      }
+
+      // An empty brush is a cleared selection, not a `brush` selection of
+      // nothing — otherwise `selection.type` would report an active brush that
+      // holds no rows.
+      const type = indices.length > 0 ? ('brush' as const) : ('none' as const);
+
+      // Idempotent by value, as every other selection case is. A brush end
+      // fires on each gesture, and re-brushing the same points would otherwise
+      // re-notify `onSelectionChange` with equal contents.
+      const prev = state.selection;
+      if (
+        prev.type === type &&
+        prev.selectedIndices.length === indices.length &&
+        prev.selectedIndices.every((v, i) => v === indices[i])
+      ) {
+        return [state, Effect.none()];
+      }
+
+      return [
+        { ...state, selection: { type, selectedData, selectedIndices: indices } },
+        Effect.none()
+      ];
+    }
+
     case 'brushStart': {
       return [
         {

@@ -277,6 +277,27 @@ function attachZoomBehavior(svg: SVGSVGElement): () => void {
 }
 
 /**
+ * The circles belonging to the *data* mark, in data order.
+ *
+ * `svg.querySelectorAll('circle')` was close enough while a plot held exactly
+ * one dot mark, and the comment here said so. It no longer does: the keyboard
+ * cursor draws a ring, which is a second dot mark and a second circle. That ring
+ * happens to render last, so the old `index < filteredData.length` bound
+ * excluded it — correct by accident of ordering, which is not a property worth
+ * relying on.
+ *
+ * The data mark is the first group to contain circles, because every builder
+ * appends `focusMark` after the mark it annotates.
+ */
+function dataCircles(svg: SVGSVGElement): SVGCircleElement[] {
+  for (const group of Array.from(svg.querySelectorAll('g'))) {
+    const circles = group.querySelectorAll('circle');
+    if (circles.length > 0) return Array.from(circles) as SVGCircleElement[];
+  }
+  return [];
+}
+
+/**
  * Attach brush behavior to SVG for selection
  */
 function attachBrushBehavior(svg: SVGSVGElement): () => void {
@@ -294,30 +315,29 @@ function attachBrushBehavior(svg: SVGSVGElement): () => void {
       // Compute which data points are selected
       const [[x0, y0], [x1, y1]] = event.selection as [[number, number], [number, number]];
 
-      // Find all circles (data points) within the brush extent
-      const circles = svg.querySelectorAll('circle');
       const selectedIndices: number[] = [];
       const currentState = store.state;
 
-      circles.forEach((circle, index) => {
+      dataCircles(svg).forEach((circle, index) => {
         const cx = parseFloat(circle.getAttribute('cx') || '0');
         const cy = parseFloat(circle.getAttribute('cy') || '0');
 
-        // Check if circle center is within brush extent
         if (cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1) {
-          // `index` is the index among all <circle> elements, which equals the
-          // data index only while the plot contains exactly one dot mark.
           if (index < currentState.filteredData.length) selectedIndices.push(index);
         }
       });
 
-      // Dispatch selection with the selected data points
-      if (selectedIndices.length > 0) {
-        store.dispatch({
-          type: 'selectRange',
-          range: [Math.min(...selectedIndices), Math.max(...selectedIndices)]
-        });
-      }
+      // Report the points the brush actually caught.
+      //
+      // This used to dispatch `selectRange: [min, max]`, and `selectRange`
+      // describes a *contiguous* span — so brushing the first and last points
+      // of a scattered cloud selected every point between them too, and the
+      // user saw rows highlighted that the gesture never touched.
+      //
+      // Dispatched unconditionally, where the old code returned early on an
+      // empty result: a brush drawn over empty space left the previous
+      // selection standing, which read as the gesture having done nothing.
+      store.dispatch({ type: 'selectPoints', indices: selectedIndices });
     });
 
   // d3-brush installs into a <g>, not the <svg> root: @types/d3-brush types
