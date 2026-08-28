@@ -59,7 +59,10 @@ function mountChart(props: Record<string, unknown> = {}) {
 		unmount(component);
 		target.remove();
 	});
-	const container = target.querySelector('.chart-container') as HTMLElement;
+	// The `role="application"` element, which is what takes focus and handles
+	// keys. `.chart-container` is the wrapper that also holds the summary and the
+	// data table, deliberately outside the application region.
+	const container = target.querySelector('.chart-surface') as HTMLElement;
 	const press = (key: string, init: KeyboardEventInit = {}) => {
 		container.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, ...init }));
 		flushSync();

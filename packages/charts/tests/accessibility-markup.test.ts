@@ -62,8 +62,13 @@ function mountChart(props: Record<string, unknown> = {}) {
 		unmount(component);
 		target.remove();
 	});
+	// Two elements, and the split matters: `.chart-surface` is the
+	// `role="application"` element that carries the label and the description
+	// reference, while `.chart-container` wraps it *and* the summary and table
+	// that must stay outside the application region to remain browsable.
 	const container = target.querySelector('.chart-container');
-	return { store, target, container };
+	const surface = target.querySelector('.chart-surface');
+	return { store, target, container, surface };
 }
 
 describe('the summary a chart points at is its own', () => {
@@ -74,10 +79,10 @@ describe('the summary a chart points at is its own', () => {
 
 		// Non-vacuous first: if the containers or the references are missing, the
 		// inequality below would pass on two `null`s and prove nothing.
-		expect(first.container).not.toBeNull();
-		expect(second.container).not.toBeNull();
-		const a = first.container!.getAttribute('aria-describedby');
-		const b = second.container!.getAttribute('aria-describedby');
+		expect(first.surface).not.toBeNull();
+		expect(second.surface).not.toBeNull();
+		const a = first.surface!.getAttribute('aria-describedby');
+		const b = second.surface!.getAttribute('aria-describedby');
 		expect(a).toBeTruthy();
 		expect(b).toBeTruthy();
 
@@ -94,7 +99,7 @@ describe('the summary a chart points at is its own', () => {
 		await settle();
 
 		for (const chart of [first, second]) {
-			const ref = chart.container!.getAttribute('aria-describedby')!;
+			const ref = chart.surface!.getAttribute('aria-describedby')!;
 			const summary = document.getElementById(ref);
 			expect(summary).not.toBeNull();
 			expect(chart.container!.contains(summary)).toBe(true);
@@ -104,20 +109,20 @@ describe('the summary a chart points at is its own', () => {
 
 describe('the summary always says something', () => {
 	it('describes a chart given only an x accessor', async () => {
-		const { container } = mountChart({ y: undefined });
+		const { surface } = mountChart({ y: undefined });
 		await settle();
 
-		const ref = container!.getAttribute('aria-describedby')!;
+		const ref = surface!.getAttribute('aria-describedby')!;
 		const summary = document.getElementById(ref);
 		expect(summary).not.toBeNull();
 		expect(summary!.textContent!.trim().length).toBeGreaterThan(0);
 	});
 
 	it('describes a chart given neither accessor', async () => {
-		const { container } = mountChart({ x: undefined, y: undefined });
+		const { surface } = mountChart({ x: undefined, y: undefined });
 		await settle();
 
-		const ref = container!.getAttribute('aria-describedby')!;
+		const ref = surface!.getAttribute('aria-describedby')!;
 		const summary = document.getElementById(ref);
 		expect(summary).not.toBeNull();
 		expect(summary!.textContent!.trim().length).toBeGreaterThan(0);
@@ -126,7 +131,7 @@ describe('the summary always says something', () => {
 
 describe('the label and the summary agree', () => {
 	it('reports the filtered count in the label once a filter is applied', async () => {
-		const { store, container } = mountChart();
+		const { store, surface } = mountChart();
 		await settle();
 
 		// A filter that genuinely removes rows. With a predicate that keeps
@@ -139,7 +144,7 @@ describe('the label and the summary agree', () => {
 		expect(store.state.filteredData.length).toBe(2);
 		expect(store.state.data.length).toBe(4);
 
-		const label = container!.getAttribute('aria-label');
+		const label = surface!.getAttribute('aria-label');
 		expect(label).toBeTruthy();
 		// Names the shown count, and the total as context. The negative arm is
 		// written against "showing 4" rather than "4 data points" on purpose:

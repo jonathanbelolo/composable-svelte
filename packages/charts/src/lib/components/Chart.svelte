@@ -299,6 +299,60 @@ const focusAnnouncement = $derived.by(() => {
 
   return parts.join(' ');
 });
+
+// ============================================================================
+// Data table
+// ============================================================================
+//
+// The chart's data as a table, for anyone who cannot read a picture of it. The
+// README listed "a data table fallback" among the things that did not exist.
+//
+// Always rendered rather than behind a prop: an accessibility fallback that is
+// off by default helps nobody who needs it, and the people who would have to
+// know to switch it on are not the people it is for.
+
+/**
+ * How many rows the table carries.
+ *
+ * Bounded because the alternative is a chart of 50,000 points emitting 50,000
+ * hidden `<tr>`s into every consumer's DOM. The caption states the truncation
+ * rather than leaving the table to imply it has everything.
+ */
+const MAX_TABLE_ROWS = 100;
+
+/**
+ * The columns to show, in order of how much is known about the data.
+ *
+ * Named accessors give real column headers. Function accessors give a value but
+ * no name for it, so they are labelled by axis. With no accessors at all — a
+ * legitimate configuration, since Plot has its own defaults — the row's own keys
+ * are the best available answer, and a primitive row gets one Value column.
+ */
+type TableColumn = { label: string; read: (row: any) => unknown };
+
+const tableColumns = $derived.by((): TableColumn[] => {
+  const columns: TableColumn[] = [];
+  if (x) columns.push({ label: typeof x === 'string' ? x : 'x', read: resolveAccessor<any>(x) });
+  if (y) columns.push({ label: typeof y === 'string' ? y : 'y', read: resolveAccessor<any>(y) });
+  if (columns.length > 0) return columns;
+
+  const first = $store.filteredData[0];
+  if (first !== null && typeof first === 'object') {
+    return Object.keys(first as object).map((key) => ({
+      label: key,
+      read: (row: any) => row?.[key]
+    }));
+  }
+  return [{ label: 'Value', read: (row: any) => row }];
+});
+
+const tableRows = $derived($store.filteredData.slice(0, MAX_TABLE_ROWS));
+
+const tableCaption = $derived(
+  shownCount > MAX_TABLE_ROWS
+    ? `Chart data: first ${MAX_TABLE_ROWS} of ${shownCount} rows.`
+    : `Chart data: ${shownCount} rows.`
+);
 </script>
 
 <!--
@@ -316,34 +370,73 @@ const focusAnnouncement = $derived.by(() => {
   would delete the keyboard path rather than improve it — the same trade-off,
   and the same two ignores, as `Carousel` in core.
 -->
-<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
   bind:this={containerElement}
   class="chart-container"
   style:width={width ? `${width}px` : '100%'}
   style:height={height ? `${height}px` : '400px'}
-  role="application"
-  aria-roledescription="interactive chart"
-  aria-label={`${type} chart showing ${countPhrase}${
-    selectedCount > 0 ? `, ${selectedCount} selected` : ''
-  }`}
-  aria-describedby={summaryId}
-  tabindex="0"
-  onkeydown={handleKeyDown}
 >
-  <ChartPrimitive {store} {config} {plotBuilder} {enableZoom} {enableBrush} />
+  <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+  <div
+    class="chart-surface"
+    role="application"
+    aria-roledescription="interactive chart"
+    aria-label={`${type} chart showing ${countPhrase}${
+      selectedCount > 0 ? `, ${selectedCount} selected` : ''
+    }`}
+    aria-describedby={summaryId}
+    tabindex="0"
+    onkeydown={handleKeyDown}
+  >
+    <ChartPrimitive {store} {config} {plotBuilder} {enableZoom} {enableBrush} />
+
+    <!--
+      Where the cursor is. `role="status"` carries an implicit
+      `aria-live="polite"`; both are written because the pair is what is
+      actually supported across screen readers, and a silent live region would
+      make the arrow keys useless rather than merely unannounced.
+
+      Inside the application region on purpose — it describes what the arrow
+      keys just did, so it belongs with them.
+    -->
+    <div class="sr-only" role="status" aria-live="polite">{focusAnnouncement}</div>
+  </div>
+
+  <!--
+    Everything below is *outside* the `role="application"` element, and that is
+    the whole reason this component has two nested divs rather than one.
+    `application` tells a screen reader to stop browsing and pass keys through,
+    which is right for the plot and exactly wrong for a table someone needs to
+    read row by row. A data table inside the application region would be
+    technically present and practically unreachable.
+  -->
 
   <!-- Screen reader summary -->
   <div id={summaryId} class="sr-only">{summaryText}</div>
 
-  <!--
-    Where the cursor is. `role="status"` carries an implicit `aria-live="polite"`;
-    both are written because the pair is what is actually supported across
-    screen readers, and a silent live region would make the arrow keys useless
-    rather than merely unannounced.
-  -->
-  <div class="sr-only" role="status" aria-live="polite">{focusAnnouncement}</div>
+  <!-- The data, for anyone who cannot read a picture of it. -->
+  <table class="sr-only">
+    <caption>{tableCaption}</caption>
+    <thead>
+      <tr>
+        <th scope="col">#</th>
+        {#each tableColumns as column}
+          <th scope="col">{column.label}</th>
+        {/each}
+      </tr>
+    </thead>
+    <tbody>
+      {#each tableRows as row, index}
+        <tr>
+          <th scope="row">{index + 1}</th>
+          {#each tableColumns as column}
+            <td>{column.read(row)}</td>
+          {/each}
+        </tr>
+      {/each}
+    </tbody>
+  </table>
 </div>
 
 <style>
@@ -362,9 +455,20 @@ const focusAnnouncement = $derived.by(() => {
     prohibits transitions driven by a pseudo-class, and
     `tests/repo/animation-policy.test.ts` enforces it across `packages/`.
   */
-  .chart-container:focus-visible {
+  /*
+    The interactive surface fills the container, so the plot keeps the size the
+    ResizeObserver measured on the parent.
+  */
+  .chart-surface {
+    width: 100%;
+    height: 100%;
+  }
+
+  .chart-surface:focus-visible {
     outline: 2px solid currentColor;
-    outline-offset: 2px;
+    /* Inset rather than outside: `.chart-container` clips overflow, so an
+       outward offset would be cut off on all four sides. */
+    outline-offset: -2px;
   }
 
   /* Screen reader only content */
