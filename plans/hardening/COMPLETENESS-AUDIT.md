@@ -28,7 +28,11 @@ them as a completeness measure will get a number with no meaning.
 
 ## Part 1 — What is missing
 
-### G1. `charts` cannot be operated without a pointer — VERIFIED
+### G1. `charts` cannot be operated without a pointer — **CLOSED**
+
+> Closed by `98663aa`, `f24d6bc`, `7e4a45d`, `f3ccdd9`, `8c1f9c4`, `f2c81fd`.
+> The finding as written is preserved below; what remains open is listed at the
+> end of this entry.
 
 `packages/charts/src` contains **zero** `tabindex` and **zero** key handlers
 (`grep -rn "tabindex\|onkeydown\|onkeyup\|onkeypress" packages/charts/src` →
@@ -71,13 +75,24 @@ Four further defects in the accessibility markup, none previously recorded:
   one, and it is separate from the `index` ≠ data-index caveat already commented
   in that file.
 
-**Shape of the fix, if taken:** `focusedIndex` in `ChartState`; `focusNext`,
-`focusPrevious`, `selectFocused`, `zoomIn`, `zoomOut` in the reducer beside the
-`resetZoom` that already exists; the component binds keys to dispatches and owns
-nothing. That makes keyboard navigation `TestStore`-testable, which is the
-library's own argument for itself. Plus a data-table fallback — the cheapest large
-win, since it makes the *data* reachable even where the *gestures* are not — and
-dropping `role="img"` when interaction is enabled.
+**What was done.** `focusedIndex` on `ChartState` with `focusNext`,
+`focusPrevious`, `focusFirst`, `focusLast`, `focusPoint`, `clearFocus`,
+`selectFocused`, `zoomIn` and `zoomOut` in the reducer; the component binds keys
+to dispatches and owns no navigation logic. A polite live region announces each
+point, a ring marks it on all five chart types, and a capped screen-reader data
+table renders outside the `role="application"` element so it stays browsable.
+`role="img"` is gone. All four markup defects and the brush defect are fixed.
+charts went from 65 to 154 tests.
+
+**Still open, and not claimed:**
+
+- **No formal WCAG 2.1 AA audit.** The Level A keyboard failure is closed and the
+  AA-relevant pieces we know of are in place, but nothing has been audited. The
+  README says so in as many words.
+- **Colour contrast** of the chart palette — Observable Plot's default, unreviewed.
+- **The selection highlight is still scatter-only.** Pre-existing, recorded in the
+  README's support matrix, and untouched: it concerns *selection*, not focus. The
+  keyboard cursor is drawn on every type.
 
 ### G2. `maps` ships a provider that does not exist — VERIFIED
 
@@ -224,8 +239,8 @@ advertised in the README. Loud and unclaimed is the right end state.
 
 ## Ranking
 
-1. **G1 `charts`** — the only advertised capability that a whole class of users
-   cannot reach at all, plus four concrete defects and a self-contradicting README.
+1. ~~**G1 `charts`**~~ — **done**. Six commits; see the entry above for the three
+   things deliberately left open.
 2. **G2 `maps` mapbox** — a public type promising a provider that is not installed.
    Small fix, breaking, and false in two live documents.
 3. **G4 test gaps** — three advertised features with no test touching their component.

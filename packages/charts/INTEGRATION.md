@@ -241,8 +241,9 @@ onMount(() => {
 **Planned Features:**
 - [ ] Zoom/pan behavior implementation
 - [ ] Brush selection behavior
-- [ ] Keyboard navigation
-- [ ] ARIA labels and accessibility
+- [x] Keyboard navigation
+- [x] ARIA labels and accessibility (no formal WCAG 2.1 AA audit — see the
+      README's Accessibility section for what is and is not covered)
 - [ ] Advanced chart types (heatmap, network, hierarchy)
 - [ ] Animation system for data transitions
 - [ ] Export to PNG/SVG

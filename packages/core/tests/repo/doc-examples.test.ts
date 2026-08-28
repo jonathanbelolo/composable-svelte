@@ -558,6 +558,7 @@ function docExamples(): { examples: DocExample[]; unparsed: string[] } {
  * Named rather than counted, because a count cannot say *which* one went.
  */
 const EXPECTED_EXAMPLES = [
+	'packages/charts/tests/doc-examples/keyboard-chart.svelte',
 	'packages/code/tests/doc-examples/code-highlight.svelte',
 	'packages/media/tests/doc-examples/audio-player.svelte',
 	'packages/graphics/tests/doc-examples/overlay.svelte',

@@ -86,8 +86,9 @@ const chartStore = createStore({
 - `type: 'scatter' | 'line' | 'bar' | 'area' | 'histogram'` - Chart type (default: 'scatter')
 - `width: number` - Chart width (optional, responsive if omitted)
 - `height: number` - Chart height (optional, defaults to 400px)
-- `x: string | ((d) => any)` - X accessor (required)
-- `y: string | ((d) => any)` - Y accessor (required)
+- `x: string | ((d) => any)` - X accessor (optional; Observable Plot has its own
+  defaults, and the summary and data table degrade to the row's own keys without it)
+- `y: string | ((d) => any)` - Y accessor (optional, same)
 - `color: string | ((d) => any)` - Color accessor (optional)
 - `size: number` - Mark size (optional)
 - `xDomain: [number, number] | 'auto'` - X domain (optional)
@@ -255,6 +256,11 @@ interface ChartState<T = unknown> {
     range?: [number, number];
   };
 
+  // Keyboard cursor: an index into `filteredData`, or null for no cursor.
+  // Not the same thing as selection — moving it announces and rings a point
+  // and nothing else. Cleared whenever the data changes.
+  focusedIndex: number | null;
+
   // Zoom/pan
   transform: {
     x: number;
@@ -280,9 +286,19 @@ type ChartAction<T = unknown> =
 
   // Selection
   | { type: 'selectPoint'; data: T; index: number }
-  | { type: 'selectRange'; range: [number, number] }
+  | { type: 'selectRange'; range: [number, number] }   // a contiguous span
+  | { type: 'selectPoints'; indices: number[] }        // an arbitrary set — what a brush produces
   | { type: 'brushStart' }
   | { type: 'clearSelection' }
+
+  // Keyboard cursor
+  | { type: 'focusPoint'; index: number }
+  | { type: 'focusNext' }
+  | { type: 'focusPrevious' }
+  | { type: 'focusFirst' }
+  | { type: 'focusLast' }
+  | { type: 'clearFocus' }
+  | { type: 'selectFocused' }
 
   // Zoom/pan
   | { type: 'zoom'; transform: ZoomTransform }
@@ -290,6 +306,8 @@ type ChartAction<T = unknown> =
   | { type: 'zoomProgress'; transform: ZoomTransform }
   | { type: 'zoomComplete' }
   | { type: 'resetZoom' }
+  | { type: 'zoomIn' }
+  | { type: 'zoomOut' }
 
   // Dimensions
   | { type: 'resize'; dimensions: { width: number; height: number } }
@@ -548,43 +566,70 @@ $effect(() => {
 
 ## ACCESSIBILITY
 
-### ARIA Labels
+Every chart is keyboard-operable as soon as it renders. There is no prop to
+switch it on, and no prop to switch it off.
 
-Chart component includes:
-- `role="img"` - Marks as image
-- `aria-label` - Describes chart content
-- `aria-describedby` - Links to summary
+### ARIA
 
-```svelte
-<Chart
-  store={chartStore}
-  type="scatter"
-  x="x"
-  y="y"
-  aria-label="Scatter plot showing relationship between X and Y"
-/>
+The chart container carries:
+
+- `role="application"` with `aria-roledescription="interactive chart"`. It was
+  `role="img"`, which told assistive technology the subtree was a static graphic
+  while the chart supported zoom and brush selection.
+- `aria-label` naming the type, the **filtered** point count and the selection.
+- `aria-describedby` pointing at a per-instance summary — generated with
+  `$props.id()`, so two charts on one page are not described by each other.
+
+`<Chart>` takes no `aria-label` prop. It has no rest-spread, so one passed in is
+silently dropped; the label is generated from the store. (This file previously
+showed an example passing one.)
+
+### Keyboard
+
+| key | does |
+|---|---|
+| `Tab` | move focus to the chart |
+| `←` `→` `↑` `↓` | previous / next data point |
+| `Home` / `End` | first / last data point |
+| `Enter` / `Space` | select the focused point |
+| `Escape` | clear the selection |
+| `Shift` + arrows | pan |
+| `+` / `-` | zoom in / out |
+| `0` | reset the zoom |
+
+Arrows move the cursor and `Shift`+arrows pan, which is the reverse of what this
+file used to document — none of which was implemented. Reaching the data matters
+more than moving the viewport, so traversal takes the unmodified key.
+
+Each binding is one dispatch into the reducer, so the same navigation is
+available programmatically:
+
+```typescript
+chartStore.dispatch({ type: 'focusNext' });
+chartStore.dispatch({ type: 'selectFocused' });
 ```
 
-### Screen Reader Summary
+That is also how to test it — no synthetic key events needed.
 
-Auto-generated summary includes:
-- Chart type
-- Number of data points
-- Selection status
-- Filter status
+### What a screen reader gets
 
-**Example output**:
-```
-"Scatter plot showing 42 data points, 5 selected"
-```
+- A polite live region announcing each point as the cursor reaches it: its
+  position in the series, its values, and whether it is selected.
+- A visually hidden data table of the filtered rows, capped at 100 with the
+  caption stating the truncation. It is rendered **outside** the
+  `role="application"` element, because `application` makes a screen reader pass
+  keystrokes through instead of browsing — right for the plot, fatal for a table.
 
-### Keyboard Navigation
+### Focus indicator
 
-- `Tab`: Focus chart
-- `Arrow keys`: Pan (when zoomed)
-- `+/-`: Zoom in/out
-- `0`: Reset zoom
-- `Escape`: Clear selection
+The chart draws a `:focus-visible` outline, and the focused point is ringed on
+every chart type. A histogram gets a dashed rule at the point's x instead, since
+binning leaves no per-point `y` to ring.
+
+### Not covered
+
+No formal WCAG 2.1 AA audit has been run, and the chart palette's colour contrast
+is Observable Plot's default and unreviewed.
 
 ---
 

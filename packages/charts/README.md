@@ -2,7 +2,9 @@
 
 > Interactive data visualization components for Composable Svelte
 
-**Status**: ✅ **Feature Complete** (Phase 11C)
+**Status**: ✅ **Feature Complete** (Phase 11C). Keyboard-operable and
+screen-reader-navigable; see [Accessibility](#accessibility) for what is
+covered and what has not been formally audited.
 
 ## Overview
 
@@ -15,9 +17,10 @@
 - 🖱️ **Interactive**: Zoom, pan, brush selection, and smooth animations
 - 🔄 **Data Transforms**: Composable transforms (filter, sort, group, bin, rollup, topN)
 - ⚡ **Performant**: GPU-accelerated animations with `requestAnimationFrame`
-- ♿ **Partly accessible**: the chart carries an ARIA label and a text summary. There is no keyboard navigation — see Accessibility.
+- ♿ **Accessible**: keyboard navigation over the data points, a live region
+  announcing each one, a visible focus ring and a screen-reader data table — see [Accessibility](#accessibility).
 - 📱 **Responsive**: Automatic container-based sizing with ResizeObserver
-- 🧪 **Testable**: Comprehensive integration and visual regression tests (34 tests)
+- 🧪 **Testable**: Comprehensive integration and visual regression tests (154 tests)
 
 ## Installation
 
@@ -31,34 +34,50 @@ pnpm add @composable-svelte/charts
 
 ## Quick Start
 
-```typescript
-import { Chart } from '@composable-svelte/charts';
-import { createStore } from '@composable-svelte/core';
-import { chartReducer, createInitialChartState } from '@composable-svelte/charts';
-
-const data = [
-  { x: 1, y: 10, category: 'A' },
-  { x: 2, y: 20, category: 'B' },
-  { x: 3, y: 30, category: 'A' }
-];
-
-const store = createStore({
-  initialState: createInitialChartState({ data }),
-  reducer: chartReducer,
-  dependencies: {}
-});
-```
+Nothing below switches keyboard navigation on, because there is no switch —
+every chart is operable from the keyboard as soon as it renders.
 
 ```svelte
+<script lang="ts">
+  import { createStore } from '@composable-svelte/core';
+  import { Chart, chartReducer, createInitialChartState } from '@composable-svelte/charts';
+
+  type Reading = { month: string; rainfall: number };
+
+  const data: Reading[] = [
+    { month: 'Jan', rainfall: 82 },
+    { month: 'Feb', rainfall: 64 },
+    { month: 'Mar', rainfall: 71 },
+    { month: 'Apr', rainfall: 45 }
+  ];
+
+  const store = createStore({
+    initialState: createInitialChartState({ data }),
+    reducer: chartReducer,
+    dependencies: {}
+  });
+
+  // Fires when a point is selected — by a brush, or by pressing Enter on the
+  // point the keyboard cursor is on.
+  function handleSelectionChange(selected: Reading[]) {
+    console.log('selected', selected);
+  }
+</script>
+
 <Chart
   {store}
-  width={600}
-  height={400}
-  enableZoom={true}
-  enableBrush={true}
-  enableTooltip={true}
+  type="bar"
+  x="month"
+  y="rainfall"
+  height={320}
+  onSelectionChange={handleSelectionChange}
 />
 ```
+
+This block is [`tests/doc-examples/keyboard-chart.svelte`](tests/doc-examples/keyboard-chart.svelte),
+quoted verbatim. The file is typechecked by `svelte-check` in the repo gate and
+a test asserts this README still matches it, so the quickstart cannot go stale
+without something failing.
 
 ## Chart Types
 
@@ -248,6 +267,8 @@ Not uniform, and worth checking before choosing a type:
 | `enableZoom` / pan | ✅ | ✅ | — | ✅ | — |
 | `enableBrush` | ✅ | ✅ | — | — | — |
 | selection highlight | ✅ | — | — | — | — |
+| keyboard navigation | ✅ | ✅ | ✅ | ✅ | ✅ |
+| focus indicator | ✅ | ✅ | ✅ | ✅ | rule |
 | `size` | ✅ | — | — | — | — |
 | `xDomain` | ✅ | ✅ | — | ✅ | — |
 | `yDomain` | ✅ | ✅ | ✅ | ✅ | — |
@@ -263,22 +284,59 @@ These are gaps rather than decisions, and they are recorded in
 
 ## Accessibility
 
-What exists today:
+The chart is operable without a pointer. Every interaction it offers has a key,
+and the data is reachable whether or not the picture is.
 
-- `role="img"` with an `aria-label` on the chart, and an `aria-describedby`
-  text summary of the series.
+### Keyboard
 
-What does **not** exist, and was previously claimed here:
+| key | does |
+|---|---|
+| `Tab` | move focus to the chart |
+| `←` `→` `↑` `↓` | move the cursor to the previous / next data point |
+| `Home` / `End` | first / last data point |
+| `Enter` / `Space` | select the focused point |
+| `Escape` | clear the selection |
+| `Shift` + arrows | pan |
+| `+` / `-` | zoom in / out |
+| `0` | reset the zoom |
 
-- **Keyboard navigation.** There is no `tabindex` and no key handler anywhere
-  in this package — a chart cannot be focused or driven from the keyboard.
-- **A data table fallback.** No table is rendered.
-- **WCAG 2.1 AA conformance.** Not implemented and not audited; with no
-  keyboard path it cannot hold.
+Arrows move the cursor rather than panning, because reaching the data matters
+more than moving the viewport; panning takes the modifier. `+`/`-` respect the
+same `[0.5, 10]` scale bounds as the mouse wheel, so the two cannot disagree.
 
-Those are real gaps rather than deliberate omissions, and they are recorded in
-`plans/hardening/README.md`. Do not treat this package as accessible for
-interactive use.
+### What a screen reader gets
+
+- **A cursor that speaks.** A polite live region announces each point as the
+  cursor reaches it — its position in the series, its values, and whether it is
+  selected.
+- **A data table.** The filtered rows are rendered as a visually hidden
+  `<table>`, capped at 100 rows with the caption stating the truncation. It sits
+  outside the `role="application"` element on purpose: `application` tells a
+  screen reader to pass keystrokes through, which is right for the plot and
+  would make a table unreadable.
+- **A description that matches the chart.** `aria-label` and the summary both
+  report the *filtered* count, and the summary's id is unique per instance, so
+  two charts on one page are not described by each other's data.
+- `role="application"` with `aria-roledescription="interactive chart"`. This
+  container was `role="img"`, which told assistive technology there was nothing
+  to operate on a surface supporting zoom and brush selection.
+
+### For sighted keyboard users
+
+The focused chart draws a `:focus-visible` outline, and the focused point is
+ringed. On a histogram — which bins its rows and so has no per-point `y` — the
+cursor is a dashed rule at the point's x instead.
+
+### Not covered
+
+- **A formal WCAG 2.1 AA audit.** The Level A keyboard failure this section used
+  to describe is closed, and the pieces above are the AA-relevant ones we know
+  of, but no audit has been run and none is claimed.
+- **Colour contrast of the chart palette**, which is Observable Plot's default
+  and unreviewed.
+- **The selection highlight on non-scatter types** — see the support matrix
+  below. That gap predates this work and is about *selection*, not focus; the
+  keyboard cursor is drawn on every chart type.
 
 ## Development Status
 
@@ -292,7 +350,8 @@ interactive use.
 - ✅ Smooth animation system with requestAnimationFrame
 - ✅ Data transformation utilities (10 transforms)
 - ✅ Responsive sizing with ResizeObserver
-- ⚠️ Accessibility: ARIA label and text summary only — no keyboard path
+- ✅ Accessibility: keyboard navigation, live region, focus indicator, data table
+- ⚠️ Accessibility: no formal WCAG 2.1 AA audit — see Accessibility
 - ✅ Reducer and component tests, including that a state change reaches the SVG
 
 - ✅ Complete JSDoc documentation
