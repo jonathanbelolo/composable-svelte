@@ -1,7 +1,9 @@
 /**
  * @composable-svelte/maps
  * Interactive map components for Composable Svelte
- * Built with Maplibre GL and Mapbox GL
+ * Built with Maplibre GL. A Mapbox GL adapter is available from
+ * `@composable-svelte/maps/mapbox`, which requires the optional `mapbox-gl`
+ * peer — this module never imports it.
  *
  * @packageDocumentation
  */

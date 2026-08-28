@@ -133,7 +133,11 @@ criteria belonging to the page around the chart — heading structure, text colo
 inherited through `currentColor`, reflow at the app's breakpoints — are the
 consuming application's to meet. The README says exactly that.
 
-### G2. `maps` ships a provider that does not exist — VERIFIED
+### G2. `maps` ships a provider that does not exist — **CLOSED**
+
+> Closed by `3017942`, `e263c66`, `f0883fe`, `ece1d76`, `a02bc37` and the docs
+> commit that follows them. Mapbox is now real and opt-in rather than a string
+> that selected MapLibre; what remains open is at the end of this entry.
 
 > **This entry contained a false claim, corrected 28 August 2026.** It read
 > "**`mapbox-gl` is not a dependency of the package** — `packages/maps/package.json`
@@ -196,10 +200,30 @@ Live documents asserting Mapbox support: `src/lib/index.ts:4`;
 104-105, 589-592, plus 565, which documents a `'satellite'` style that does not
 exist in `src` at all.
 
-Separately, `maps` is the one package that says it is unfinished, and is:
-`README.md:5` marks Phase 12C in progress with **five** unimplemented features
-(3D buildings, marker clustering, geocoding, drawing tools, routing). That is
-honest, and it is the reason `maps` should not be in a 1.0 without a decision.
+**What was done.** `MapAdapter` is injectable — an `adapter` prop on `Map` and
+`MapPrimitive`, MapLibre by default — so the interface that was exported and
+unusable is now the extension point. `MapProvider`, `MapState.provider` and
+`createMapAdapter` are gone. The broken `mapbox` tile provider is gone. A real
+`MapboxAdapter` ships behind `@composable-svelte/maps/mapbox`, and `mapbox-gl`
+moved from `optionalDependencies` to an optional peer: **measured with packed
+tarballs, that takes a consumer install from 149 MB to 87 MB.** The layer
+translation both adapters need was lifted into pure functions, which is also
+where the only interesting logic was and none of it had a test.
+
+`MapPrimitive` — the core of the package — had no test because it built its own
+map and jsdom has no WebGL. It has eleven now, through an injected fake, which
+is a slice of G4 closed as a side effect. maps went from 36 to 94 tests.
+
+Also corrected along the way: the maps skill file listed seven tile providers of
+which **five did not exist** (`'osm'`, `'stamen-terrain'`, `'stamen-toner'`,
+`'satellite'`, `'mapbox'`), and documented a `changeStyle` example using a
+`mapbox://` URL that MapLibre cannot load.
+
+**Still open, and not claimed:** `maps` is the one package that says it is
+unfinished, and is. `README.md:5` marks Phase 12C in progress with **five**
+unimplemented features (3D buildings, marker clustering, geocoding, drawing
+tools, routing). That is honest, and it is the reason `maps` should not be in a
+1.0 without a decision — a decision this work does not make.
 
 ### G3. `media` overclaims its video platforms — VERIFIED
 
@@ -320,8 +344,8 @@ advertised in the README. Loud and unclaimed is the right end state.
 
 1. ~~**G1 `charts`**~~ — **done**. Six commits; see the entry above for the three
    things deliberately left open.
-2. **G2 `maps` mapbox** — a public type promising a provider that is not installed.
-   Small fix, breaking, and false in two live documents.
+2. ~~**G2 `maps` mapbox**~~ — **done**. Five commits; larger than recorded, because
+   the entry's central claim was wrong and the tile provider was a second defect.
 3. **G4 test gaps** — three advertised features with no test touching their component.
 4. **G6 root docs** — mechanical, 10 minutes.
 5. **G3 `media` "and more"** — one word.

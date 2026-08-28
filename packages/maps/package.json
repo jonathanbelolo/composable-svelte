@@ -50,12 +50,12 @@
     "svelte5",
     "maps",
     "maplibre",
-    "mapbox",
     "interactive-maps",
     "geospatial",
     "gis",
     "composable-architecture",
-    "typescript"
+    "typescript",
+    "mapbox-optional"
   ],
   "author": "Jonathan Belolo",
   "license": "MIT",
