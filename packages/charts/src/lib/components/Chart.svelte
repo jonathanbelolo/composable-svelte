@@ -50,6 +50,22 @@ let {
 let containerElement: HTMLDivElement | null = $state(null);
 let resizeObserver: ResizeObserver | null = $state(null);
 
+/**
+ * The id `aria-describedby` points at, unique per component instance.
+ *
+ * It was the hardcoded literal `"chart-summary"`. `aria-describedby` resolves
+ * through `getElementById`, which returns the **first** match, so on a page with
+ * two charts every chart after the first was described by another chart's data —
+ * a wrong description, not a missing one. `examples/styleguide` renders one demo
+ * at a time, which is why nothing here ever saw it; a dashboard is the ordinary
+ * case for a charts library.
+ *
+ * `$props.id()` rather than `Math.random()`: it is stable for the lifetime of the
+ * instance and identical between server and client, so it does not break
+ * hydration. Same reasoning as `graphics/Light.svelte`.
+ */
+const summaryId = $props.id();
+
 // Chart config
 const config: ChartConfig & { type: typeof type } = $derived({
   type,
@@ -124,6 +140,59 @@ $effect(() => {
 function plotBuilder(chartState: ChartState<any>, chartConfig: any) {
   return buildPlot(chartState, chartConfig);
 }
+
+/**
+ * How many points are on screen, and how many exist.
+ *
+ * The label used to count `data` while the summary counted `filteredData`, so
+ * after any `filterData` the two halves of the same description disagreed and
+ * the label was the one that lied — it named points a user could not reach.
+ * Both now read the filtered count, and both say the total when it differs.
+ */
+const shownCount = $derived($store.filteredData.length);
+const totalCount = $derived($store.data.length);
+const countPhrase = $derived(
+  shownCount === totalCount
+    ? `${shownCount} data points`
+    : `${shownCount} of ${totalCount} data points`
+);
+
+const selectedCount = $derived($store.selection.selectedIndices.length);
+
+/** Name an accessor for a human, without pretending to know a function's meaning. */
+const axisName = (accessor: string | ((d: any) => any) | undefined) =>
+  typeof accessor === 'string' ? accessor : accessor ? 'a custom accessor' : null;
+
+/**
+ * The description `aria-describedby` resolves to.
+ *
+ * Its body used to sit inside `{#if x && y}`. Both props are optional and
+ * Observable Plot renders without them, so passing `x` alone — or neither —
+ * left the referenced element empty, and an `aria-describedby` that resolves to
+ * nothing is worse than none at all: the reference promises a description that
+ * never arrives. Axes are now one optional clause inside a summary that always
+ * says something.
+ */
+const summaryText = $derived.by(() => {
+  const parts: string[] = [];
+
+  const xName = axisName(x);
+  const yName = axisName(y);
+  if (xName && yName) parts.push(`Chart with x-axis: ${xName}, y-axis: ${yName}.`);
+  else if (xName) parts.push(`Chart with x-axis: ${xName}.`);
+  else if (yName) parts.push(`Chart with y-axis: ${yName}.`);
+  else parts.push('Chart.');
+
+  parts.push(
+    shownCount === totalCount
+      ? `Showing ${shownCount} data points.`
+      : `Showing ${shownCount} of ${totalCount} filtered data points.`
+  );
+
+  if (selectedCount > 0) parts.push(`${selectedCount} selected.`);
+
+  return parts.join(' ');
+});
 </script>
 
 <div
@@ -132,27 +201,15 @@ function plotBuilder(chartState: ChartState<any>, chartConfig: any) {
   style:width={width ? `${width}px` : '100%'}
   style:height={height ? `${height}px` : '400px'}
   role="img"
-  aria-label={`${type} chart showing ${$store.data.length} data points${
-    $store.selection.selectedIndices.length > 0
-      ? `, ${$store.selection.selectedIndices.length} selected`
-      : ''
+  aria-label={`${type} chart showing ${countPhrase}${
+    selectedCount > 0 ? `, ${selectedCount} selected` : ''
   }`}
-  aria-describedby="chart-summary"
+  aria-describedby={summaryId}
 >
   <ChartPrimitive {store} {config} {plotBuilder} {enableZoom} {enableBrush} />
 
   <!-- Screen reader summary -->
-  <div id="chart-summary" class="sr-only">
-    {#if x && y}
-      Chart with x-axis: {typeof x === 'string' ? x : 'custom accessor'},
-      y-axis: {typeof y === 'string' ? y : 'custom accessor'}.
-      {#if $store.filteredData.length !== $store.data.length}
-        Showing {$store.filteredData.length} of {$store.data.length} filtered data points.
-      {:else}
-        Showing {$store.data.length} data points.
-      {/if}
-    {/if}
-  </div>
+  <div id={summaryId} class="sr-only">{summaryText}</div>
 </div>
 
 <style>
