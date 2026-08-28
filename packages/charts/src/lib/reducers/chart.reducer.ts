@@ -11,6 +11,18 @@ import type { ChartState, ChartAction } from '../types/chart.types.js';
 import { Effect } from '@composable-svelte/core';
 
 /**
+ * The scale bounds, and the step `zoomIn`/`zoomOut` move by.
+ *
+ * Exported because `ChartPrimitive` hands `ZOOM_MIN`/`ZOOM_MAX` to d3-zoom's
+ * `scaleExtent`. One definition, two readers: the keyboard and the wheel cannot
+ * disagree about how far a chart zooms, and a later change to one cannot leave
+ * the other behind.
+ */
+export const ZOOM_MIN = 0.5;
+export const ZOOM_MAX = 10;
+export const ZOOM_STEP = 1.5;
+
+/**
  * @function chartReducer
  * @description
  * Pure reducer function that manages all chart state transitions.
@@ -66,12 +78,18 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
     // Data Actions
     // ========================================================================
 
+    // Every case here clears `focusedIndex`. A keyboard cursor is an index into
+    // `filteredData`, so once those rows change the index either points past the
+    // end or — worse, because nothing looks wrong — points at a different datum
+    // than the one that was announced. Clearing is the only outcome that cannot
+    // silently mislead; the next arrow press re-enters at the first point.
     case 'setData': {
       return [
         {
           ...state,
           data: action.data,
-          filteredData: action.data
+          filteredData: action.data,
+          focusedIndex: null
         },
         Effect.none()
       ];
@@ -82,7 +100,8 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
       return [
         {
           ...state,
-          filteredData
+          filteredData,
+          focusedIndex: null
         },
         Effect.none()
       ];
@@ -92,7 +111,8 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
       return [
         {
           ...state,
-          filteredData: state.data
+          filteredData: state.data,
+          focusedIndex: null
         },
         Effect.none()
       ];
@@ -203,6 +223,108 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
     }
 
     // ========================================================================
+    // Keyboard Focus Actions
+    // ========================================================================
+    //
+    // A cursor over `filteredData`, moved by the arrow keys. Separate from
+    // `selection` on purpose: moving the cursor announces a point and rings it,
+    // and must not fire `onSelectionChange` — a consumer wiring that callback to
+    // a details panel would otherwise see the panel change on every keystroke.
+    // `selectFocused` is the deliberate act that crosses over.
+    //
+    // Every no-op returns the *identical* state object, matching `selectPoint`
+    // and `clearSelection` above. Holding an arrow key at the end of the data is
+    // ordinary use, and re-allocating an equal state on each repeat would churn
+    // `$store` for every one of them.
+
+    case 'focusPoint': {
+      // Out of range is ignored rather than clamped. This is the programmatic
+      // entry point, so a caller handing it a stale index should get nothing
+      // rather than a silently different point — the same reasoning that makes
+      // a data change clear the cursor.
+      if (
+        !Number.isInteger(action.index) ||
+        action.index < 0 ||
+        action.index >= state.filteredData.length
+      ) {
+        return [state, Effect.none()];
+      }
+      if (state.focusedIndex === action.index) return [state, Effect.none()];
+      return [{ ...state, focusedIndex: action.index }, Effect.none()];
+    }
+
+    case 'focusNext':
+    case 'focusPrevious':
+    case 'focusFirst':
+    case 'focusLast': {
+      const count = state.filteredData.length;
+      if (count === 0) {
+        // Nothing to put a cursor on. Not even `focusedIndex: null` is written,
+        // because it already is.
+        return [state, Effect.none()];
+      }
+
+      let next: number;
+      if (state.focusedIndex === null) {
+        // Entering the chart. Both arrows land on the first point rather than
+        // one of them wrapping to the last: the user is arriving, not
+        // continuing, and "the arrow moved me to the end" reads as a bug.
+        next = action.type === 'focusLast' ? count - 1 : 0;
+      } else if (action.type === 'focusNext') {
+        next = Math.min(state.focusedIndex + 1, count - 1);
+      } else if (action.type === 'focusPrevious') {
+        next = Math.max(state.focusedIndex - 1, 0);
+      } else {
+        next = action.type === 'focusFirst' ? 0 : count - 1;
+      }
+
+      // Clamped rather than wrapping. Wrapping means holding an arrow key
+      // silently cycles the whole series, and a screen reader user has no edge
+      // to feel; stopping at the end is how they know they reached it.
+      if (next === state.focusedIndex) return [state, Effect.none()];
+      return [{ ...state, focusedIndex: next }, Effect.none()];
+    }
+
+    case 'clearFocus': {
+      if (state.focusedIndex === null) return [state, Effect.none()];
+      return [{ ...state, focusedIndex: null }, Effect.none()];
+    }
+
+    case 'selectFocused': {
+      const index = state.focusedIndex;
+      if (index === null) return [state, Effect.none()];
+      const datum = state.filteredData[index];
+      // `noUncheckedIndexedAccess` makes this the length check as well, and it
+      // is a real case rather than a type-system formality: a cursor can outlive
+      // its row if a consumer mutates state outside the reducer.
+      if (datum === undefined) return [state, Effect.none()];
+
+      // Idempotent by value, exactly as `selectPoint` is, and for the same
+      // reason: Enter on an already-selected point is ordinary use.
+      const sel = state.selection;
+      if (
+        sel.type === 'point' &&
+        sel.selectedIndices.length === 1 &&
+        sel.selectedIndices[0] === index &&
+        sel.selectedData[0] === datum
+      ) {
+        return [state, Effect.none()];
+      }
+
+      return [
+        {
+          ...state,
+          selection: {
+            type: 'point',
+            selectedData: [datum],
+            selectedIndices: [index]
+          }
+        },
+        Effect.none()
+      ];
+    }
+
+    // ========================================================================
     // Zoom/Pan Actions
     // ========================================================================
 
@@ -263,6 +385,30 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
             y: 0,
             k: 1
           }
+        },
+        Effect.none()
+      ];
+    }
+
+    case 'zoomIn':
+    case 'zoomOut': {
+      // Same shape as `resetZoom`: record a target and let the component
+      // animate towards it. The bounds are `ChartPrimitive`'s d3-zoom
+      // `scaleExtent([0.5, 10])`, so a key press cannot reach a scale the wheel
+      // refuses — two paths to one behaviour disagreeing is how `enableTooltip`
+      // and `enableAnimations` became inert.
+      const factor = action.type === 'zoomIn' ? ZOOM_STEP : 1 / ZOOM_STEP;
+      const k = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, state.transform.k * factor));
+
+      // Already at the stop. Returning the identical state keeps a held `+` from
+      // re-entering the animation on every repeat.
+      if (k === state.transform.k) return [state, Effect.none()];
+
+      return [
+        {
+          ...state,
+          isAnimating: true,
+          targetTransform: { ...state.transform, k }
         },
         Effect.none()
       ];
@@ -368,6 +514,8 @@ export function createInitialChartState<T = unknown>(config: {
       selectedData: [],
       selectedIndices: []
     },
+    // No keyboard cursor until the user arrows into the chart.
+    focusedIndex: null,
     transform: {
       x: 0,
       y: 0,

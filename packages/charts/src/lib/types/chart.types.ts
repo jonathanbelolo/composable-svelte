@@ -19,6 +19,20 @@ export interface ChartState<T = unknown> {
   // Interactivity state
   selection: SelectionState<T>;
 
+  /**
+   * The data point a keyboard user is currently on, indexed into
+   * `filteredData` — the same basis as `selection.selectedIndices`.
+   *
+   * Focus is not selection. It is a cursor: moving it announces a point and
+   * draws a ring around it, and nothing else. `selectFocused` is what turns the
+   * focused point into a selection, which is what fires `onSelectionChange`.
+   *
+   * `null` means the chart has no cursor yet — the state a chart mounts in, and
+   * the state it returns to whenever the data underneath changes, since an index
+   * that outlives its row silently points at a different datum.
+   */
+  focusedIndex: number | null;
+
   // Zoom/pan state
   transform: ZoomTransform;
   targetTransform?: ZoomTransform; // Target for animated zoom
@@ -66,12 +80,29 @@ export type ChartAction<T = unknown> =
   | { type: 'brushStart' }
   | { type: 'clearSelection' }
 
+  // Keyboard focus actions — a cursor over `filteredData`, see `focusedIndex`.
+  // Every one of these is reachable from the keyboard via `Chart.svelte`, and
+  // every one is dispatchable directly, so the same navigation can be driven
+  // from a button or a test without synthesising key events.
+  | { type: 'focusPoint'; index: number }
+  | { type: 'focusNext' }
+  | { type: 'focusPrevious' }
+  | { type: 'focusFirst' }
+  | { type: 'focusLast' }
+  | { type: 'clearFocus' }
+  | { type: 'selectFocused' }
+
   // Zoom/pan actions
   | { type: 'zoom'; transform: ZoomTransform }
   | { type: 'zoomAnimated'; targetTransform: ZoomTransform }
   | { type: 'zoomProgress'; transform: ZoomTransform }
   | { type: 'zoomComplete' }
   | { type: 'resetZoom' }
+  // Step the scale by a fixed factor, clamped to the same [0.5, 10] extent
+  // `ChartPrimitive`'s d3-zoom behaviour enforces for the wheel. These exist so
+  // `+`/`-` have something to dispatch that is not a hand-computed transform.
+  | { type: 'zoomIn' }
+  | { type: 'zoomOut' }
 
   // Tooltip actions - Handled by Observable Plot (no actions needed)
 

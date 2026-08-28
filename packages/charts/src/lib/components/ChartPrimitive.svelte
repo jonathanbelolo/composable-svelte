@@ -11,6 +11,7 @@ import { select } from 'd3-selection';
 import type { ChartState, ChartConfig } from '../types/chart.types.js';
 import type { ChartAction } from '../types/chart.types.js';
 import { animateZoomTransition } from '../utils/animate-zoom.js';
+import { ZOOM_MIN, ZOOM_MAX } from '../reducers/chart.reducer.js';
 
 import type { Store } from '@composable-svelte/core';
 
@@ -250,7 +251,10 @@ function attachEventListeners(element: HTMLElement): (() => void) | void {
  */
 function attachZoomBehavior(svg: SVGSVGElement): () => void {
   const zoomBehavior = d3Zoom<SVGSVGElement, unknown>()
-    .scaleExtent([0.5, 10])  // Min and max zoom levels
+    // From the reducer, not repeated here. `zoomIn`/`zoomOut` clamp to the same
+    // pair, so the keyboard and the wheel stop at the same place — and a later
+    // change to one cannot leave the other behind.
+    .scaleExtent([ZOOM_MIN, ZOOM_MAX])
     .on('zoom', (event) => {
       // Dispatch zoom action with transform
       store.dispatch({
