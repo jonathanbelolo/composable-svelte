@@ -75,9 +75,16 @@ export function buildScatterPlot<T>(
         fillOpacity: hasSelection
           ? (d, i) => (selectedSet.has(i) ? 1.0 : 0.2)  // Dim unselected
           : 0.7,
-        stroke: hasSelection
-          ? (d, i) => (selectedSet.has(i) ? '#000' : null)  // Stroke selected
-          : null,
+        // A constant stroke varied by opacity, never a per-datum `null`.
+        //
+        // This channel used to return `null` for unselected points, and Plot
+        // *drops* a datum whose channel value is null rather than drawing it
+        // without that property — so selecting one point deleted every other
+        // point from the chart. The intent was to dim them; the effect was to
+        // erase them, and the `fillOpacity` line above spent its effort on rows
+        // that were no longer there.
+        stroke: '#000',
+        strokeOpacity: hasSelection ? (d, i) => (selectedSet.has(i) ? 1 : 0) : 0,
         strokeWidth: 2,
         tip: enableTooltip  // Observable Plot's built-in tooltips
       }),
