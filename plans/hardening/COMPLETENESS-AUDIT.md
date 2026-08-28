@@ -135,6 +135,17 @@ consuming application's to meet. The README says exactly that.
 
 ### G2. `maps` ships a provider that does not exist — VERIFIED
 
+> **This entry contained a false claim, corrected 28 August 2026.** It read
+> "**`mapbox-gl` is not a dependency of the package** — `packages/maps/package.json`
+> lists `maplibre-gl` and `@types/geojson` only." I had printed `dependencies`,
+> `peerDependencies` and `peerDependenciesMeta`, never read
+> `optionalDependencies`, and wrote the conclusion as a measured finding. In
+> conversation I put it more strongly still — "not a dependency at all, not even
+> optional" — an emphatic denial of the one field I had not looked at, and a
+> decision was taken on that premise.
+>
+> The truth is the opposite, and worse. See below.
+
 `MapProvider = 'maplibre' | 'mapbox'` (`map.types.ts:12`) is a public type
 offering a choice with no behavioural difference:
 
@@ -145,16 +156,45 @@ case 'mapbox':
   return new MaplibreAdapter();
 ```
 
-**`mapbox-gl` is not a dependency of the package** — `packages/maps/package.json`
-lists `maplibre-gl` and `@types/geojson` only. A consumer selecting `'mapbox'`
-silently gets MapLibre. Two live documents assert otherwise:
+`state.provider` is read in exactly one place — `MapPrimitive.svelte:46` — so the
+whole of the "choice" is which class that line constructs, and both answers are
+`MaplibreAdapter`.
 
-- `src/lib/index.ts:4` — "Built with Maplibre GL and Mapbox GL".
-- `README.md:192` — Phase 12A, `- [x] Mapbox adapter support`, under
-  `✅ **COMPLETE**`.
+**`mapbox-gl` is declared, installed, and imported by nothing.**
+`packages/maps/package.json` carries `optionalDependencies: { "mapbox-gl":
+"^3.7.0" }`. `mapbox-gl@3.16.0` is in the store and linked into
+`packages/maps`; `grep` finds no import of it in any package or example source.
+The registry reports its `unpackedSize` as **58.5 MB across 20 files** (the
+compressed download is smaller and was not measured).
 
-Either implement a real adapter, or remove `'mapbox'` from the union and both
-claims. Removing it is breaking.
+`optionalDependencies` are installed **by default** — the field means "install
+this, but tolerate a build failure", which is for platform-specific native
+modules, not for opt-in features. So every consumer of this package downloads a
+58 MB proprietary SDK that the package never loads. The mechanism for an opt-in
+peer is `peerDependencies` + `peerDependenciesMeta.<name>.optional`, which `chat`
+already uses for `prismjs` and `pdfjs-dist`.
+
+**A second, separate defect: the `mapbox` tile provider cannot load.**
+`TILE_PROVIDERS.mapbox.styleURL` is `mapbox://styles/mapbox/streets-v12`.
+MapLibre has no knowledge of that scheme — its dist contains zero occurrences of
+`mapbox://`, and its request path takes `http(s):`/`file:` or a handler
+registered through `addProtocol`, of which none is — so the style request is
+never made and the map breaks rather than degrades. `getAvailableTileProviders()`
+includes it, `TileProviderControl` renders it in a dropdown, and the styleguide's
+MapDemo renders that control: a broken map is one click away in the repo's own
+showcase. `requiresAPIKey: true` is hollow besides, because `getStyleURL` ignores
+the key for this provider — its `styleURL` is a string, not a function.
+
+**And `MapAdapter` is exported but not pluggable.** `MapPrimitive` constructs the
+adapter internally, so the interface is decorative — which is also why
+`MapPrimitive` has no test: there is no way to keep a GL context out of it.
+
+Live documents asserting Mapbox support: `src/lib/index.ts:4`;
+`README.md` lines 9, 15, 86-94 (an entire "Mapbox GL (Optional)" section with a
+`provider: 'mapbox'` example), 192 and 221; the `package.json` `description` and
+`keywords`; and `.claude/skills/composable-svelte-maps/SKILL.md` lines 8, 20, 89,
+104-105, 589-592, plus 565, which documents a `'satellite'` style that does not
+exist in `src` at all.
 
 Separately, `maps` is the one package that says it is unfinished, and is:
 `README.md:5` marks Phase 12C in progress with **five** unimplemented features
