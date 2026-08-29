@@ -134,6 +134,32 @@ export class RenderPipeline {
 			gl.bufferData(gl.ARRAY_BUFFER, texCoords, gl.STATIC_DRAW);
 		}
 
+		// A pipeline with no geometry cannot draw anything.
+		//
+		// `initialized = true` used to be unconditional, so a failed allocation
+		// produced a pipeline that reported itself ready and then ran the whole
+		// of `render()` — bind the program, set the uniforms, `drawArrays` with
+		// no vertex buffer bound — drawing nothing, every frame, in silence. The
+		// two `if (buffer)` guards above read as careful handling and were
+		// actually the mechanism: they skipped the upload and let the caller
+		// carry on regardless.
+		//
+		// `createBuffer` returns `null` when the context is lost or the driver is
+		// out of memory, so this is an ordinary failure, not a theoretical one.
+		if (!this.quadBuffer || !this.texCoordBuffer) {
+			// Whichever one succeeded is of no use alone, and holding it would
+			// leak a GL handle for the life of the pipeline.
+			if (this.quadBuffer) gl.deleteBuffer(this.quadBuffer);
+			if (this.texCoordBuffer) gl.deleteBuffer(this.texCoordBuffer);
+			this.quadBuffer = null;
+			this.texCoordBuffer = null;
+
+			console.error(
+				'[RenderPipeline] Could not allocate the quad buffers — the pipeline cannot draw'
+			);
+			return;
+		}
+
 		// Enable blending for transparency
 		gl.enable(gl.BLEND);
 		gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
