@@ -46,12 +46,81 @@ function walk(dir: string, out: string[] = []): string[] {
 	return out;
 }
 
-/** Every specifier a file imports, including dynamic ones. */
-function importsOf(file: string): string[] {
+/**
+ * Every import in a file, with the names it brought in.
+ *
+ * The names matter because of barrels. `import { Breadcrumb } from
+ * './breadcrumb/index.js'` must credit `Breadcrumb` and *not* its six siblings
+ * that the same index re-exports — otherwise one import marks a whole directory
+ * tested, and a component added to that directory later arrives pre-credited
+ * with no test at all. That hole was real: a probe component dropped into the
+ * breadcrumb barrel passed this guard cleanly.
+ *
+ * `names` is empty for a namespace or side-effect import, which is treated as
+ * "everything", because there is no name to narrow by.
+ */
+interface Import {
+	spec: string;
+	names: string[];
+}
+
+function importsOf(file: string): Import[] {
 	const source = readFileSync(file, 'utf8');
-	return [...source.matchAll(/from\s+['"]([^'"]+)['"]|import\s*\(\s*['"]([^'"]+)['"]/g)]
-		.map((m) => m[1] ?? m[2])
-		.filter((s): s is string => Boolean(s));
+	const out: Import[] = [];
+
+	// `import X, { A, B as C } from '...'` / `import { A } from '...'`
+	for (const m of source.matchAll(
+		/import\s+([^'"]*?)\s*from\s*['"]([^'"]+)['"]/g
+	)) {
+		const clause = m[1] ?? '';
+		const braces = /\{([^}]*)\}/.exec(clause);
+		const named = braces
+			? braces[1]!
+					.split(',')
+					.map((part) => part.trim().split(/\s+as\s+/)[0]!.trim())
+					.filter(Boolean)
+			: [];
+		const defaultImport = clause.replace(/\{[^}]*\}/, '').replace(/^type\s+/, '').trim().replace(/,$/, '');
+		if (defaultImport && !defaultImport.startsWith('*')) named.push(defaultImport);
+		out.push({ spec: m[2]!, names: /\*/.test(clause) ? [] : named });
+	}
+
+	// Re-exports. A barrel forwards with `export … from`, and this is how a
+	// barrel entered *without* names — a namespace or side-effect import — is
+	// traversed. The first version of this function matched only `import … from`
+	// and silently stopped following re-exports entirely; the narrowed path
+	// happened to cover it up for barrels entered by name, and the fallback path
+	// credited nothing at all. Caught by mutating name extraction and finding
+	// that the *permissive* mutation lost eight components, which is the
+	// opposite of what a permissive change should do.
+	for (const m of source.matchAll(/export\s+[^'"]*?\s*from\s*['"]([^'"]+)['"]/g)) {
+		out.push({ spec: m[1]!, names: [] });
+	}
+
+	// Bare and dynamic imports carry no names.
+	for (const m of source.matchAll(/import\s*\(\s*['"]([^'"]+)['"]/g)) {
+		out.push({ spec: m[1]!, names: [] });
+	}
+	for (const m of source.matchAll(/^\s*import\s+['"]([^'"]+)['"]/gm)) {
+		out.push({ spec: m[1]!, names: [] });
+	}
+
+	return out;
+}
+
+/** `export { default as Name } from './Name.svelte'` — a barrel's own map. */
+function barrelExports(file: string): Map<string, string> {
+	const source = readFileSync(file, 'utf8');
+	const map = new Map<string, string>();
+	for (const m of source.matchAll(
+		/export\s*\{([^}]*)\}\s*from\s*['"]([^'"]+)['"]/g
+	)) {
+		for (const part of m[1]!.split(',')) {
+			const alias = part.trim().split(/\s+as\s+/).pop()?.trim();
+			if (alias) map.set(alias, m[2]!);
+		}
+	}
+	return map;
 }
 
 /** Resolve a relative specifier the way the bundler will: `.js` means `.ts` on disk. */
@@ -80,15 +149,33 @@ function scan(pkg: string): Scan {
 	const testFiles = walk(testDir).filter((f) => /\.(ts|svelte)$/.test(f));
 
 	const reached = new Set<string>();
-	const visit = (file: string) => {
+
+	const visit = (file: string, viaNames: string[] | null = null) => {
 		if (reached.has(file)) return;
 		reached.add(file);
-		for (const spec of importsOf(file)) {
+
+		const isBarrel = file.endsWith('index.ts');
+		// A barrel entered by name forwards only those names. Entered with no
+		// names — a namespace or side-effect import — it forwards everything.
+		const forward = isBarrel && viaNames && viaNames.length > 0 ? barrelExports(file) : null;
+
+		if (forward) {
+			for (const name of viaNames!) {
+				const spec = forward.get(name);
+				if (!spec) continue;
+				const next = resolveLocal(file, spec);
+				if (next) visit(next);
+			}
+			return;
+		}
+
+		for (const { spec, names } of importsOf(file)) {
 			const next = resolveLocal(file, spec);
-			if (next) visit(next);
+			if (next) visit(next, names);
 		}
 	};
-	testFiles.forEach(visit);
+
+	testFiles.forEach((f) => visit(f));
 
 	return { components, testFiles, reached };
 }
@@ -96,6 +183,29 @@ function scan(pkg: string): Scan {
 const scans = new Map(PACKAGES.map((pkg) => [pkg, scan(pkg)]));
 
 const nameOf = (file: string) => file.slice(file.lastIndexOf('/') + 1, -'.svelte'.length);
+
+describe('the barrel narrowing actually narrows', () => {
+	// The failure mode of the narrowing is silent and permissive: if `importsOf`
+	// stops extracting names, `names` is empty, an empty list is treated as
+	// "everything", and the guard quietly returns to crediting a whole directory
+	// for one import. Nothing would fail — coverage would simply become
+	// meaningless again. So the extraction is asserted directly.
+	const sample = join(packagesDir, 'core/tests/breadcrumb.browser.test.ts');
+
+	it('extracts the names from a real barrel import', () => {
+		const barrelImport = importsOf(sample).find((i) => i.spec.includes('breadcrumb/index'));
+		expect(barrelImport, 'the sample no longer imports the breadcrumb barrel').toBeDefined();
+		expect(barrelImport!.names).toContain('Breadcrumb');
+		expect(barrelImport!.names).toContain('BreadcrumbList');
+	});
+
+	it('reads a barrel’s own export map', () => {
+		const barrel = join(packagesDir, 'core/src/lib/components/ui/breadcrumb/index.ts');
+		const exports = barrelExports(barrel);
+		expect(exports.size, 'the breadcrumb barrel parsed to nothing').toBeGreaterThan(3);
+		expect(exports.get('Breadcrumb')).toMatch(/Breadcrumb\.svelte$/);
+	});
+});
 
 describe('the scan sees a real repository', () => {
 	// Every arm below is an absence claim, and an absence claim from a walker

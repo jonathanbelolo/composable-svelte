@@ -126,13 +126,18 @@ describe.each(ATOMS.map((a) => [a.name, a] as const))('%s', (name, atom) => {
 		const root = rootOf(container)!;
 
 		expect(root.className, `${name} dropped the caller's class`).toContain('caller-supplied');
+
 		// And kept its own: a component that *replaced* its classes with the
 		// caller's would satisfy the line above and be broken.
+		//
+		// Unconditional on purpose. This was written as `if (plain.className)`,
+		// which is a branch that can stop running without anything saying so —
+		// the exact shape of a test that quietly stops testing. Every one of
+		// these twenty carries classes of its own, so the guard is real.
 		const plain = rootOf(await renderAtom(atom))!;
-		if (plain.className.trim().length > 0) {
-			const own = plain.className.split(/\s+/)[0]!;
-			expect(root.className, `${name} replaced its own classes`).toContain(own);
-		}
+		expect(plain.className.trim().length, `${name} has no classes of its own`).toBeGreaterThan(0);
+		const own = plain.className.split(/\s+/)[0]!;
+		expect(root.className, `${name} replaced its own classes`).toContain(own);
 	});
 
 	it('accepts undefined for every optional prop', async () => {
