@@ -8,12 +8,45 @@
 import type { VideoEmbed, VideoPlatform, PlatformConfig, EmbedOptions } from './types.js';
 
 /**
+ * A registry entry before `extractId` is filled in.
+ *
+ * Every platform used to declare its patterns twice — once as `urlPatterns` and
+ * once again inside its own `extractId`, which nothing in this module ever
+ * called. Two copies of a regex is one copy too many: a pattern fixed in one
+ * place leaves the other quietly stale, and `extractId` is public through
+ * `getPlatformConfig`, so the stale copy is the one a consumer would have got.
+ */
+type PlatformDefinition = Omit<PlatformConfig, 'extractId'>;
+
+/**
+ * Run a platform's patterns and return the first captured id.
+ *
+ * The single implementation of what each `extractId` spelled out by hand, and
+ * the same walk `detectVideo` does — so the public helper and the internal
+ * detection can no longer disagree about what a URL means.
+ */
+function extractIdWith(urlPatterns: RegExp[]): (url: string) => string | null {
+	return (url: string) => {
+		for (const pattern of urlPatterns) {
+			const match = url.match(pattern);
+			if (match && match[1]) return match[1];
+		}
+		return null;
+	};
+}
+
+const definePlatform = (definition: PlatformDefinition): PlatformConfig => ({
+	...definition,
+	extractId: extractIdWith(definition.urlPatterns)
+});
+
+/**
  * Platform registry with detection patterns and embed URL builders
  */
 const platforms = new Map<VideoPlatform, PlatformConfig>([
 	[
 		'youtube',
-		{
+		definePlatform({
 			name: 'YouTube',
 			urlPatterns: [
 				/(?:youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/,
@@ -21,23 +54,6 @@ const platforms = new Map<VideoPlatform, PlatformConfig>([
 				/(?:youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
 				/(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/
 			],
-			extractId: (url: string): string | null => {
-				const patterns = [
-					/(?:youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/,
-					/(?:youtu\.be\/)([a-zA-Z0-9_-]{11})/,
-					/(?:youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
-					/(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/
-				];
-
-				for (const pattern of patterns) {
-					const match = url.match(pattern);
-					if (match && match[1]) {
-						return match[1];
-					}
-				}
-
-				return null;
-			},
 			buildEmbedUrl: (videoId: string, options?: EmbedOptions): string => {
 				const params = new URLSearchParams();
 
@@ -62,25 +78,13 @@ const platforms = new Map<VideoPlatform, PlatformConfig>([
 				return `https://www.youtube.com/embed/${videoId}${queryString ? `?${queryString}` : ''}`;
 			},
 			defaultAspectRatio: '16:9'
-		}
+		})
 	],
 	[
 		'vimeo',
-		{
+		definePlatform({
 			name: 'Vimeo',
 			urlPatterns: [/(?:vimeo\.com\/)(\d+)/, /(?:player\.vimeo\.com\/video\/)(\d+)/],
-			extractId: (url: string): string | null => {
-				const patterns = [/(?:vimeo\.com\/)(\d+)/, /(?:player\.vimeo\.com\/video\/)(\d+)/];
-
-				for (const pattern of patterns) {
-					const match = url.match(pattern);
-					if (match && match[1]) {
-						return match[1];
-					}
-				}
-
-				return null;
-			},
 			buildEmbedUrl: (videoId: string, options?: EmbedOptions): string => {
 				const params = new URLSearchParams();
 
@@ -100,28 +104,13 @@ const platforms = new Map<VideoPlatform, PlatformConfig>([
 				return `https://player.vimeo.com/video/${videoId}${queryString ? `?${queryString}` : ''}`;
 			},
 			defaultAspectRatio: '16:9'
-		}
+		})
 	],
 	[
 		'twitch',
-		{
+		definePlatform({
 			name: 'Twitch',
 			urlPatterns: [/(?:twitch\.tv\/videos\/)(\d+)/, /(?:twitch\.tv\/\w+\/clip\/)([a-zA-Z0-9_-]+)/],
-			extractId: (url: string): string | null => {
-				const patterns = [
-					/(?:twitch\.tv\/videos\/)(\d+)/,
-					/(?:twitch\.tv\/\w+\/clip\/)([a-zA-Z0-9_-]+)/
-				];
-
-				for (const pattern of patterns) {
-					const match = url.match(pattern);
-					if (match && match[1]) {
-						return match[1];
-					}
-				}
-
-				return null;
-			},
 			buildEmbedUrl: (videoId: string, options?: EmbedOptions): string => {
 				// Twitch requires parent parameter for embed security
 				// Get current domain dynamically (SSR-safe)
@@ -148,7 +137,7 @@ const platforms = new Map<VideoPlatform, PlatformConfig>([
 				return `https://player.twitch.tv/?${params.toString()}`;
 			},
 			defaultAspectRatio: '16:9'
-		}
+		})
 	]
 ]);
 
