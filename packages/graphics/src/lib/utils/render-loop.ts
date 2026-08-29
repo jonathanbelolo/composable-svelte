@@ -152,6 +152,12 @@ export class RenderLoop {
 	 *
 	 * @param currentTime - Current timestamp
 	 */
+	/**
+	 * The lowest frame rate already reported, so a sustained slump is one line
+	 * rather than one a second. Reset when the rate recovers.
+	 */
+	private worstReportedFPS = Number.POSITIVE_INFINITY;
+
 	private updateFPS(currentTime: number): void {
 		this.frameCount++;
 
@@ -162,11 +168,25 @@ export class RenderLoop {
 			this.frameCount = 0;
 			this.fpsStartTime = currentTime;
 
-			// Warn if FPS is significantly below target
-			if (this.currentFPS < this.targetFPS * 0.7) {
+			// Warn when the frame rate is *worse* than anything already reported,
+			// not once a second for as long as it stays bad.
+			//
+			// The same rule the memory-pressure warning follows: a message about a
+			// standing condition is worth saying when the condition worsens, and
+			// worth saying once otherwise. A caller *action* that is wrong — an
+			// `updateElement` on a static element — is reported every time,
+			// because each call is a separate mistake; this is not that.
+			//
+			// The mark clears once the frame rate recovers, so a later slump is
+			// announced rather than swallowed by a reading from minutes ago.
+			const struggling = this.currentFPS < this.targetFPS * 0.7;
+			if (struggling && this.currentFPS < this.worstReportedFPS) {
+				this.worstReportedFPS = this.currentFPS;
 				console.warn(
 					`[WebGLOverlay] Low FPS: ${this.currentFPS}/${this.targetFPS}. Consider reducing overlay complexity or texture count.`
 				);
+			} else if (!struggling) {
+				this.worstReportedFPS = Number.POSITIVE_INFINITY;
 			}
 		}
 	}
