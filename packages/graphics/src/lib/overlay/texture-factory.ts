@@ -387,7 +387,30 @@ export class TextureFactory {
 		// no live textures at all, after which every registration was refused.
 		// A cross-origin video source throws `SecurityError` here roughly sixty
 		// times a second.
-		const previous = size ? (tracked ?? size) : null;
+		// A source with no pixels is refused here, not uploaded.
+		//
+		// `elementSize` returns `null` for a zero dimension, and everything that
+		// validates lives behind `if (size && previous)` — so a live canvas that
+		// collapsed fell straight through to `texImage2D` with the empty element
+		// and returned `{ success: true }` with no dimensions. `settle()` never
+		// ran either, so the tracked bytes went on describing the texture that
+		// used to be there.
+		//
+		// That also made the `empty` refusal in `validateSize` unreachable from
+		// this path: reaching it requires `size` to be non-null, which is the one
+		// thing an empty source is not. Refusing here is what gives that guard a
+		// second call site rather than dead handling.
+		//
+		// A collapse is a wait, not a death — the element keeps its texture and
+		// its tracked size, and recovers on the next update that has pixels.
+		if (!size) {
+			return {
+				success: false,
+				error: this.validationError({ valid: false, empty: true }, element.id || 'element')
+			};
+		}
+
+		const previous = tracked ?? size;
 		const settle = (uploaded: { width: number; height: number }) => {
 			if (!previous) return;
 			this.textureValidator.trackDeallocation(previous.width, previous.height);
