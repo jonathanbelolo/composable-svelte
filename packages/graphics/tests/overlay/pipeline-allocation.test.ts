@@ -119,6 +119,42 @@ describe('when neither buffer allocates', () => {
 			'an unusable pipeline shouted on every frame'
 		).toBeLessThanOrEqual(1);
 	});
+
+	it('and says it once from renderBatch too, not just render', () => {
+		// The sibling entry point, found by reviewing the commit that suppressed
+		// the first one: `renderBatch` carried the identical unguarded log and
+		// was left shouting — 61 errors for 60 batches. Guarding one of two
+		// per-frame entry points is a smaller version of the same defect, so both
+		// now route through one method rather than repeating three lines.
+		const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const { pipeline } = harness(2);
+		const afterConstruction = error.mock.calls.length;
+
+		for (let frame = 0; frame < 60; frame += 1) {
+			pipeline.renderBatch([{ program: dummyProgram, texture: {} as WebGLTexture }]);
+		}
+
+		expect(
+			error.mock.calls.length - afterConstruction,
+			'renderBatch shouted on every call'
+		).toBeLessThanOrEqual(1);
+	});
+
+	it('does not go silent about a second, different failure', () => {
+		// Non-vacuity for both arms above: suppression must be about repetition.
+		// A pipeline that allocated fine still reports nothing, and one that did
+		// not still reports once — so "quiet" cannot pass for "fixed".
+		const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+		harness();
+		expect(error.mock.calls.length, 'a healthy pipeline complained').toBe(0);
+
+		const { pipeline } = harness(2);
+		expect(error.mock.calls.length, 'the broken one said nothing').toBeGreaterThan(0);
+		const afterConstruction = error.mock.calls.length;
+
+		pipeline.render(dummyProgram, {} as WebGLTexture);
+		expect(error.mock.calls.length).toBe(afterConstruction + 1);
+	});
 });
 
 describe('when only one buffer allocates', () => {

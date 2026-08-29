@@ -66,6 +66,22 @@ export class RenderPipeline {
 	/** So an unusable pipeline says so once rather than on every frame. */
 	private reportedUninitialized = false;
 
+	/**
+	 * Report that this pipeline cannot draw — at most once, from wherever it is
+	 * noticed.
+	 *
+	 * A method rather than the same three lines at each entry point, because the
+	 * first attempt at this suppressed the message in `render()` and left
+	 * `renderBatch()` shouting on every call. Both are per-frame entry points;
+	 * one guarded and one not is not a fix, it is a smaller version of the same
+	 * defect. Measured before this: 61 console errors for 60 batches.
+	 */
+	private refuseUninitialized(): void {
+		if (this.reportedUninitialized) return;
+		this.reportedUninitialized = true;
+		console.error('[RenderPipeline] Pipeline not initialized');
+	}
+
 	constructor(
 		private gl: WebGLRenderingContext,
 		private programManager: ShaderProgramManager
@@ -180,18 +196,7 @@ export class RenderPipeline {
 	 */
 	render(program: CompiledProgram, texture: WebGLTexture, options: RenderOptions = {}): void {
 		if (!this.initialized) {
-			// Once, not per frame. This branch was unreachable until
-			// `initializeBuffers` stopped claiming success it had not had, and the
-			// render loop calls this for every element on every frame — so making
-			// the failure audible made it audible sixty times a second, which
-			// buries the one line that says what actually went wrong.
-			//
-			// The same trade the overlay's `reportRefusal` exists for, missed
-			// again in the commit that fixed the silence.
-			if (!this.reportedUninitialized) {
-				this.reportedUninitialized = true;
-				console.error('[RenderPipeline] Pipeline not initialized');
-			}
+			this.refuseUninitialized();
 			return;
 		}
 
@@ -365,7 +370,7 @@ export class RenderPipeline {
 		}>
 	): void {
 		if (!this.initialized) {
-			console.error('[RenderPipeline] Pipeline not initialized');
+			this.refuseUninitialized();
 			return;
 		}
 
