@@ -120,12 +120,10 @@ describe('fake-gl buffer store', () => {
 		const gl = fake.context;
 		const buffer = gl.createBuffer();
 
+		// Six bytes, then told they are floats. Four of the six are written and
+		// the type is learned from that write, so the buffer holds six bytes of a
+		// four-byte type — which is the contradiction.
 		gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-		gl.bufferData(gl.ARRAY_BUFFER, 6, gl.STATIC_DRAW);
-		gl.bufferSubData(gl.ARRAY_BUFFER, 0, new Uint8Array([1, 2, 3, 4]));
-		// Now the buffer is six bytes with a Uint8 type — fine. Re-declare it as
-		// floats over the same six bytes and the contradiction is real.
-		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([1]), gl.STATIC_DRAW);
 		gl.bufferData(gl.ARRAY_BUFFER, 6, gl.STATIC_DRAW);
 		gl.bufferSubData(gl.ARRAY_BUFFER, 0, new Float32Array([1]));
 

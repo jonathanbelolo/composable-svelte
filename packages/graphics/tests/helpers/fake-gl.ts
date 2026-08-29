@@ -138,8 +138,14 @@ type TypedArrayCtor = (new (buffer: ArrayBufferLike) => TypedArray) & {
 	readonly BYTES_PER_ELEMENT: number;
 };
 
-/** What something is, for a refusal message that names the actual argument. */
-function describe(value: unknown): string {
+/**
+ * What something is, for a refusal message that names the actual argument.
+ *
+ * Not `describe`: this module is imported by every test file in the package, and
+ * a top-level function of that name here is one `import { describe } from
+ * 'vitest'` away from a collision in a file whose whole job is to be trusted.
+ */
+function describeValue(value: unknown): string {
 	if (value === null) return 'null';
 	if (value === undefined) return 'undefined';
 	const name = (value as { constructor?: { name?: string } })?.constructor?.name;
@@ -532,7 +538,7 @@ export function createFakeGL(): FakeGL {
 				// having uploaded — the harness accusing the code under test of
 				// its own gap. A harness that cannot model something says so.
 				throw new Error(
-					`fake-gl: bufferData was given ${describe(data)}, which is neither a byte count nor a BufferSource`
+					`fake-gl: bufferData was given ${describeValue(data)}, which is neither a byte count nor a BufferSource`
 				);
 			}
 
@@ -549,7 +555,7 @@ export function createFakeGL(): FakeGL {
 				// write never happened and the buffer still read back its previous
 				// contents — a no-op reported as a success.
 				throw new Error(
-					`fake-gl: bufferSubData was given ${describe(data)}, which is not a BufferSource`
+					`fake-gl: bufferSubData was given ${describeValue(data)}, which is not a BufferSource`
 				);
 			}
 
