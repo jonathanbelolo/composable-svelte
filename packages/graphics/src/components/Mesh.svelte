@@ -91,6 +91,23 @@ function syncToStore(config: MeshConfig): void {
   // clears it so a later one does too.
   const problem = customGeometryProblem(config.geometry);
   if (problem) {
+    // Let go of the old mesh before going inert.
+    //
+    // Renaming to an id whose geometry is invalid used to return here with
+    // `ownedId` still set, so the mesh this component used to own stayed in the
+    // scene while the component that put it there had moved on and would never
+    // dispatch for it again. Inert has to mean inert, not "inert and still
+    // rendering the last thing that worked".
+    //
+    // This is the other side of moving the pre-check above the ownership
+    // branch. Below it, the check closed only the add path while its comment
+    // claimed both; above it, it closed both and opened this — the same shape
+    // the register keeps recording, one fix reaching past another.
+    if (ownedId !== null && ownedId !== config.id) {
+      store.dispatch({ type: 'removeMesh', id: ownedId });
+      ownedId = null;
+    }
+
     const complaint = `${config.id}: ${problem}`;
     if (warnedGeometry !== complaint) {
       console.warn(
