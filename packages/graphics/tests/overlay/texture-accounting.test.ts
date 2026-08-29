@@ -585,10 +585,21 @@ describe('a source with a zero dimension is refused, not silently drawn', () => 
 		api.destroy();
 	});
 
-	it('refuses an image with no height', async () => {
+	it('tells an image with one zero dimension that it decoded to nothing', async () => {
+		// This asserted only that no texture was created, which nothing could
+		// break: a 256×0 image is refused by the image path's own
+		// `naturalHeight === 0` check *and*, failing that, by `validateSize`'s
+		// empty guard. Each covers for the other, so deleting either left the
+		// test green — measured, both ways. It is mine, and it proved nothing.
+		//
+		// The branch is genuinely redundant for *refusing*. What it decides is
+		// the diagnosis: an image that came back with no pixels is a decode that
+		// failed, not a size that is wrong, and only the message distinguishes
+		// them. So the message is what this pins.
 		vi.spyOn(console, 'error').mockImplementation(() => {});
 		vi.spyOn(console, 'warn').mockImplementation(() => {});
-		const { api } = overlay();
+		const onError = vi.fn();
+		const { api } = overlay({ onError });
 
 		api.registerElement('a', loadedImage(256, 0), {
 			type: 'image',
@@ -597,6 +608,9 @@ describe('a source with a zero dimension is refused, not silently drawn', () => 
 		await settle();
 
 		expect(api.getElement('a')?.texture, 'a zero-area texture was created').toBeUndefined();
+		expect(onError.mock.calls[0]?.[0]?.message, 'refused as a bad size rather than a bad decode').toMatch(
+			/decoded to nothing/i
+		);
 		api.destroy();
 	});
 });
