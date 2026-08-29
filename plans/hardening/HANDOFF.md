@@ -124,10 +124,12 @@ than continuing the 0.x line — or, if 0.x is retained deliberately, that decis
 should be written down, because 39 breaking changes under a 0.x minor is a choice
 someone will have to defend.
 
-### 4.2 The round-six code defects (all still open)
+### 4.2 The round-six code defects — CLOSED
 
-A three-reviewer hostile review of round five found ~34 defects. **None of the
-code findings has been fixed** — this session went to the front doors instead.
+A three-reviewer hostile review of round five found ~34 defects. The severe ones
+are now fixed, in `6dc6111`, `8af6938`, `02bf3e4`, `6689aa9`, `7fbc5a4`,
+`f44bf81`, `f5fbcee` and `581844a`. What each turned out to be, against what the
+entry below claimed, is recorded after it.
 
 > **This document is the only record of round six.** `plans/hardening/README.md`
 > writes up rounds three, four and five (rounds one and two recorded no totals);
@@ -169,6 +171,40 @@ Plus: the "no pixels" condition reports two different error codes (canvas →
 states the first unconditionally; `overlay-error.ts:22` still says
 `MEMORY_BUDGET_EXCEEDED` is the only refusal; `TextureTooLarge` is exported and
 referenced only by the union that defines it.
+
+**Outcome, and where the entry was wrong.**
+
+Every severe item was real. Two were *under*-stated and one was wrong:
+
+- **The retry fix was itself incomplete, in the same way.** Making a refused
+  element recover on the next update reached `<canvas>` (infers `manual`) and a
+  playing `<video>` (infers `frame`) and missed `<img>` — which infers `static`,
+  so `updateElement()` refused it a second time for having the strategy every
+  image has. The commonest not-ready case there is, and what
+  `examples/shader-gallery` does, stayed permanently inert until `f5fbcee`.
+  Found only by checking a README sentence before publishing it.
+- **The retry introduced a leak the entry could not have known about.** An async
+  creation started per update stacked concurrent creations, each overwriting the
+  previous `registration.texture`: three updates in one tick made three textures
+  and two survived `destroy()`. Fixed with a `creating` guard in `6689aa9`.
+  Likewise the collapsed-source refusal reported 60×/second, because the
+  suppression went on the creation path and not its twin — instance-versus-class
+  failing inside the commit that cites the rule.
+- **`TextureTooLarge` is not a phantom.** `validateSize` returns it and callers
+  consume it by destructuring `validation.scaled` rather than narrowing on the
+  name, which is why a grep found nothing. Deliberately left alone; recorded so a
+  later count does not delete it. *Unused is not dead.*
+
+The `owedTextureLoaded` item deserves its own note, because the first attempt at
+it was worthless. A test file asserting the deletion passed the mutation 7/7: the
+two writes that hide the strand — registration *overwrites* the entry, a
+successful creation *deletes* it — mean the obvious test cannot fail. Only an id
+that returns without a callback and is refused at creation can observe the leak,
+by the retry path or the post-restore rebuild. `7fbc5a4` covers those two and
+relabels the rest as the properties they are, stating in the file which arms are
+not guards. A test that cannot fail is worse than no test, because it is counted.
+
+graphics: 391 → 426 tests.
 
 ### 4.3 The guard that deletes itself
 
@@ -371,8 +407,9 @@ These are the ones that actually caught things, and each has a scar behind it.
 ## 6. Suggested order for the next session
 
 1. **Cut a release.** Everything else is invisible until this happens.
-2. **Fix §4.2** — the graphics defects round five introduced, especially the
-   permanently-inert canvas, in narrow one-theme commits.
+2. ~~**Fix §4.2**~~ — done. Eight commits; see the outcome note under §4.2 for
+   what the entry got wrong, including a fix of mine that repeated the very
+   defect it was closing.
 3. **Fix §4.3** — the doc guard that deletes itself on a dangling symlink.
 4. **Execute §4.7** — reduce the register, correct the S2 row and the "ten".
 5. **Then** §4.4 (harness), §4.6 (graphics README), §4.5 (the 94 doc errors).
