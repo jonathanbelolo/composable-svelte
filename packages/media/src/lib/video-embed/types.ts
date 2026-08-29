@@ -25,6 +25,18 @@ export type VideoPlatform = 'youtube' | 'vimeo' | 'twitch';
 export type AspectRatio = '16:9' | '4:3' | '1:1' | '9:16';
 
 /**
+ * Which *kind* of thing a URL pointed at, where a platform embeds kinds
+ * differently.
+ *
+ * Only Twitch distinguishes them today, and it does so drastically: a VOD is
+ * `player.twitch.tv/?video=v123`, while a clip is a different host entirely —
+ * `clips.twitch.tv/embed?clip=<slug>`. Detection knows which pattern matched, so
+ * it records the answer rather than leaving `buildEmbedUrl` to guess from the
+ * shape of an id.
+ */
+export type VideoKind = 'video' | 'clip';
+
+/**
  * Video embed data extracted from URLs
  */
 export interface VideoEmbed {
@@ -36,6 +48,12 @@ export interface VideoEmbed {
 
 	/** Extracted video ID */
 	videoId: string;
+
+	/**
+	 * What the URL pointed at, when the platform embeds kinds differently.
+	 * Twitch clips and VODs need different hosts and different parameters.
+	 */
+	kind?: VideoKind;
 
 	/** Optional video title */
 	title?: string;
@@ -83,4 +101,18 @@ export interface EmbedOptions {
 
 	/** Loop playback */
 	loop?: boolean;
+
+	/**
+	 * The domain embedding the player, for platforms that require it.
+	 *
+	 * Twitch rejects an embed whose `parent` does not match the embedding page.
+	 * It used to be read from `window.location.hostname` inside `buildEmbedUrl`,
+	 * falling back to `'localhost'` — so a video detected on a server embedded
+	 * with `parent=localhost` and was refused in production. Detection cannot
+	 * know the host; only the thing doing the rendering can, so it passes it in.
+	 */
+	parent?: string;
+
+	/** Which kind of media the id refers to. See {@link VideoKind}. */
+	kind?: VideoKind;
 }
