@@ -37,7 +37,7 @@ User Action → Store.dispatch(action)
 
 All packages follow the Composable Architecture pattern (reducer + effects + store), depend on `@composable-svelte/core`, and are built for Svelte 5. Source lives in `packages/<name>/src/lib/`.
 
-### `@composable-svelte/core` (v0.4.3)
+### `@composable-svelte/core`
 
 The foundation library. Everything else builds on this.
 
@@ -46,7 +46,7 @@ The foundation library. Everything else builds on this.
 | Root (`core`) | `createStore`, `Effect`, `Reducer`, `scope`, `combineReducers`, `forEach` (**not** `TestStore` — see `core/test`) |
 | `core/navigation` | `ifLetPresentation`, `scopeToDestination`, `createDestinationReducer`, `push`, `pop`, dismiss dependency |
 | `core/navigation-components` | Modal, Sheet, Drawer, Alert, Popover, Sidebar, Tabs, NavigationStack |
-| `core/components/ui` | 77 shadcn-svelte components (Button, Input, Card, Select, Accordion, etc.) |
+| `core/components/ui` | shadcn-svelte components (Button, Input, Card, Select, Accordion, …) — browse the full set in the styleguide |
 | `core/components/form` | Form system with Zod validation, `createFormReducer`, `FormField` |
 | `core/routing` | URL routing with `path-to-regexp`, browser history sync, query params |
 | `core/api` | HTTP client with interceptors, retries, caching, deduplication |
@@ -67,7 +67,7 @@ import { hydrateStore } from '@composable-svelte/core/ssr';
 import { syncBrowserHistory } from '@composable-svelte/core/routing';
 ```
 
-### `@composable-svelte/chat` (v0.2.1)
+### `@composable-svelte/chat`
 
 Transport-agnostic streaming chat for LLM interactions and real-time collaboration.
 
@@ -82,7 +82,7 @@ Transport-agnostic streaming chat for LLM interactions and real-time collaborati
 import { FullStreamingChat, streamingChatReducer } from '@composable-svelte/chat';
 ```
 
-### `@composable-svelte/charts` (v0.1.0)
+### `@composable-svelte/charts`
 
 Interactive data visualization built on Observable Plot and D3.
 
@@ -95,7 +95,7 @@ Interactive data visualization built on Observable Plot and D3.
 import { Chart, chartReducer, createInitialChartState } from '@composable-svelte/charts';
 ```
 
-### `@composable-svelte/code` (v0.1.0)
+### `@composable-svelte/code`
 
 Code editing, syntax highlighting, and visual node programming.
 
@@ -109,7 +109,7 @@ Code editing, syntax highlighting, and visual node programming.
 import { CodeEditor, CodeHighlight, NodeCanvas } from '@composable-svelte/code';
 ```
 
-### `@composable-svelte/graphics` (v0.1.2)
+### `@composable-svelte/graphics`
 
 State-driven 3D graphics with Babylon.js.
 
@@ -122,7 +122,7 @@ State-driven 3D graphics with Babylon.js.
 import { Scene, Camera, Mesh, Light } from '@composable-svelte/graphics';
 ```
 
-### `@composable-svelte/maps` (v0.1.0)
+### `@composable-svelte/maps`
 
 Interactive geospatial maps with Maplibre GL / Mapbox GL.
 
@@ -135,7 +135,7 @@ Interactive geospatial maps with Maplibre GL / Mapbox GL.
 import { Map, GeoJSONLayer, mapReducer } from '@composable-svelte/maps';
 ```
 
-### `@composable-svelte/media` (v0.1.0)
+### `@composable-svelte/media`
 
 Audio playback, video embedding, and voice input using native Web APIs.
 
@@ -435,7 +435,7 @@ packages/core/src/lib/
 ├── ssr/                  # Server-side rendering, static site generation
 ├── dependencies/         # Clock, Storage, Cookies (injectable)
 ├── animation/            # Motion One helpers for lifecycle animations
-├── components/ui/        # 77 shadcn-svelte components
+├── components/ui/        # shadcn-svelte components
 ├── components/form/      # Form system with Zod validation
 ├── test/                 # TestStore for exhaustive testing
 └── styles/               # Tailwind base styles

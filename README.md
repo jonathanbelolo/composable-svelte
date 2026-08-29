@@ -2,7 +2,7 @@
 
 A **Composable Architecture** library for Svelte 5, inspired by [The Composable Architecture (TCA)](https://github.com/pointfreeco/swift-composable-architecture) from Swift/iOS.
 
-**Status**: ✅ Production-ready with 420+ tests
+**Status**: ✅ Production-ready, with 3,600+ tests across all packages
 
 ## Features
 
@@ -347,7 +347,7 @@ const timestamp = deps.clock.now();
 
 Explore working examples in the `examples/` directory:
 
-- **[Styleguide](./examples/styleguide)**: Component showcase with 77 components
+- **[Styleguide](./examples/styleguide)**: Component showcase — browse the full set there
 - **[Product Gallery](./examples/product-gallery)**: Full-featured product browsing app
 - **[URL Routing](./examples/url-routing)**: Browser history integration examples
 
@@ -409,11 +409,11 @@ pnpm dev
 - ✅ Phase 2: Navigation (Modal, Sheet, Drawer)
 - ✅ Phase 3: DSL & Matchers
 - ✅ Phase 4: Animation
-- ✅ Phase 6: Component Library (77 components)
+- ✅ Phase 6: Component Library (shadcn-svelte integration)
 - ✅ Phase 7: URL Routing
 - ✅ Phase 8: Backend Integration (API, WebSocket, Dependencies)
 
-**Test Coverage**: 420+ tests across all modules
+**Test Coverage**: 3,600+ tests across all packages, run by `pnpm -r test`
 
 ## Contributing
 

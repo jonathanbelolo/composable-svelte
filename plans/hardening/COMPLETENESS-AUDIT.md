@@ -344,16 +344,18 @@ feature:
 `maps` is the structural outlier overall: 6 components and 2 test files, where
 every other package is roughly proportional.
 
-### G5. `auth` is not what its name implies — NOT A DEFECT, a positioning gap
+### G5. `auth` is not what its name implies — **CLOSED**
 
 `README.md:3-5` scopes it precisely: "Client half of the identity substrate for
 Composable Svelte apps backed by generated Composable Rust backends", with
 seeded-user passwordless login. There is no password login, OAuth, signup or
 token refresh, and none is claimed. The gap is that a consumer installing
 `@composable-svelte/auth` from a registry listing will expect general-purpose
-auth. Worth a first-line disclaimer, not code.
+auth. Closed with a first-line disclaimer naming what is absent — password login,
+OAuth, signup, token refresh — and saying plainly that the package name is
+broader than the package.
 
-### G6. Root-level docs still carry counts the package READMEs dropped — VERIFIED
+### G6. Root-level docs still carry counts the package READMEs dropped — **CLOSED**
 
 The front-door sweep at `86b2da4` corrected the package READMEs and the skill
 files. Two documents above them were not swept:
@@ -366,6 +368,18 @@ files. Two documents above them were not swept:
 
 Same class as the skill-file regression recorded in `HANDOFF.md` §4.5: the
 sweep was scoped to package READMEs, and the class extends past them.
+
+**Closed.** The component count was removed rather than renumbered, matching
+the sweep of `packages/core/README.md` — the real answer depends on what you
+count, and a bare number invites the next disagreement. The seven version
+headings in `guides/README.md` went the same way: a guide is not where a
+version belongs, `package.json` is the source of truth, and that copy could
+only rot. The test count was raised from a nine-times-stale floor to a current
+one; note that "420+" was never *false*, only useless, which is its own kind of
+rot and harder to notice.
+
+**A fourth stale claim turned up that this entry never catalogued** —
+`README.md:416`, a second "420+ tests". The entry named three; there were four.
 
 ---
 
@@ -439,10 +453,10 @@ advertised in the README. Loud and unclaimed is the right end state.
 2. ~~**G2 `maps` mapbox**~~ — **done**. Five commits; larger than recorded, because
    the entry's central claim was wrong and the tile provider was a second defect.
 3. **G4 test gaps** — three advertised features with no test touching their component.
-4. **G6 root docs** — mechanical, 10 minutes.
+4. ~~**G6 root docs**~~ — **done**, and it was four claims rather than three.
 5. ~~**G3 `media` "and more"**~~ — **done**, and it was never one word: eight
    defects, including a component whose documented API did not exist.
-6. **G5 `auth` positioning** — one sentence.
+6. ~~**G5 `auth` positioning**~~ — **done**.
 
 `maps`' five unbuilt Phase 12C features are a scope decision, not a defect, and
 are the strongest argument for excluding `maps` from any 1.0.

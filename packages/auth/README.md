@@ -4,6 +4,14 @@ Client half of the identity substrate for Composable Svelte apps backed by
 generated Composable Rust backends: a session store, subject helpers, and
 thin guard components.
 
+> **This is not a general-purpose auth library.** It speaks to one backend
+> shape and offers seeded-user, passwordless login — there is no password
+> login, no OAuth, no signup and no token refresh, and none is planned here.
+> The package name is broader than the package. If you are looking for
+> general authentication for a Svelte app, this is not it.
+
+
+
 ## Design
 
 - **All auth I/O lives in store effects** over injected dependencies
