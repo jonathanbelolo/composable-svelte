@@ -53,9 +53,7 @@ const UNTESTED_PENDING: Record<string, string[]> = {
 		'RadioGroup',
 		'Slider',
 		'DestinationRouter'
-	],
-	chat: ['TypingIndicator', 'TypingUsersList', 'ActionButtons'],
-	maps: ['TileProviderControl']
+	]
 };
 
 function walk(dir: string, out: string[] = []): string[] {
@@ -198,6 +196,6 @@ describe('the pending list describes reality', () => {
 	it('is shrinking', () => {
 		// Pinned so the debt is a number someone has to change deliberately.
 		const total = Object.values(UNTESTED_PENDING).reduce((n, list) => n + list.length, 0);
-		expect(total).toBeLessThanOrEqual(15);
+		expect(total).toBeLessThanOrEqual(11);
 	});
 });

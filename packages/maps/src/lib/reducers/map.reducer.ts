@@ -494,7 +494,17 @@ export const mapReducer: Reducer<MapState, MapAction, {}> = (
           ...state,
           tileProvider: provider,
           ...(customURL ? { customTileURL: customURL } : {}),
-          ...(customAttribution ? { customAttribution } : {})
+          ...(customAttribution ? { customAttribution } : {}),
+          // `style` is derived from the provider — `createInitialMapState`
+          // computes it with exactly this call — and it was not being kept that
+          // way. Changing provider updated `tileProvider` and left `style`
+          // holding the *initial* style forever, so the field stopped describing
+          // the map after the first change. The map itself looked right, because
+          // `MapPrimitive` recomputes the URL independently and pushes it to the
+          // adapter; anything reading state — a serialised viewport, a second
+          // map bound to the same store, a "current style" display — got the
+          // stale one.
+          style: getStyleURL(provider, state.accessToken, customURL ?? state.customTileURL)
         },
         Effect.none()
       ];
