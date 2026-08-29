@@ -18,7 +18,7 @@ Audio playback, video embedding, and voice input components.
 **Technology Stack**:
 - **Web Audio API**: High-performance audio playback
 - **MediaRecorder API**: Voice recording and processing
-- **Platform Integration**: YouTube, Vimeo, Twitch, Dailymotion, Wistia, etc.
+- **Platform Integration**: YouTube, Vimeo and Twitch — exactly what `getSupportedPlatforms()` returns. Dailymotion, Wistia, TikTok, Twitter and a generic fallback have all been claimed here at some point; none has ever existed in the registry.
 
 **Core Components**:
 - `AudioPlayer` - Full-featured audio player with playlists
@@ -251,7 +251,7 @@ function addTrackToPlaylist(track: AudioTrack) {
 
 ## VIDEO EMBED
 
-**Purpose**: Platform-agnostic video embedding for YouTube, Vimeo, Twitch, Dailymotion, and more.
+**Purpose**: Video embedding for YouTube, Vimeo and Twitch. A URL from anywhere else returns `null` from `detectVideo` and renders nothing.
 
 ### Quick Start
 
@@ -278,21 +278,34 @@ import { VideoEmbed } from '@composable-svelte/media';
 
 - **YouTube** (youtube.com, youtu.be)
 - **Vimeo** (vimeo.com)
-- **Twitch** (twitch.tv - videos and clips)
-- **Dailymotion** (dailymotion.com)
-- **Wistia** (wistia.com)
-- **Generic video** (mp4, webm, ogg via HTML5 video element)
+- **Twitch** (twitch.tv — VODs and clips, which embed differently: a VOD is
+  `player.twitch.tv/?video=v<id>`, a clip is `clips.twitch.tv/embed?clip=<slug>`.
+  `VideoEmbed.kind` records which one was detected.)
+
+**Twitch needs a `parent`** matching the embedding page, and `detectVideo` does
+not set one — it cannot know where the result will be rendered, and guessing
+`localhost` is what used to break server-rendered pages. `<VideoEmbed>` supplies
+it; a caller building URLs directly passes `parent` in `EmbedOptions`.
 
 ### Props
 
-- `url: string` - Video URL (required)
-- `aspectRatio: '16:9' | '4:3' | '1:1' | '21:9'` - Aspect ratio (default: '16:9')
-- `autoplay: boolean` - Auto-play video (default: false)
-- `muted: boolean` - Start muted (default: false)
-- `controls: boolean` - Show controls (default: true)
-- `loop: boolean` - Loop video (default: false)
-- `startTime: number` - Start position in seconds (optional)
-- `class: string` - Custom CSS class (optional)
+Exactly one of `url` or `video` is required — a union, so passing both or
+neither is a compile error.
+
+- `url: string` - Video URL; the platform is detected. A URL from no known
+  platform renders nothing.
+- `video: VideoEmbed` - An already-detected video from `detectVideo()`, for when
+  you need the metadata before rendering.
+- `aspectRatio: '16:9' | '4:3' | '1:1' | '9:16'` - overrides the platform default
+- `autoplay: boolean` - browsers block this unless `muted` is also set
+- `muted: boolean` - start muted (default: false)
+- `showTitle: boolean` - show `video.title` above the embed (default: false)
+- `class: string` - custom CSS class
+
+`controls`, `loop` and `startTime` are **not** props, though this file listed
+them. `loop` and `startTime` exist in `EmbedOptions` and reach an embed only
+through `buildEmbedUrl`; `controls` exists nowhere. `'21:9'` was listed as an
+aspect ratio and is not in the union.
 
 ### Utility Functions
 
@@ -305,20 +318,21 @@ import {
 } from '@composable-svelte/media';
 
 // Detect platform from URL
-const platform = detectVideo('https://www.youtube.com/watch?v=abc123');
-// Returns: 'youtube'
+const video = detectVideo('https://www.youtube.com/watch?v=abc123');
+// Returns a VideoEmbed, or null:
+// { url, platform: 'youtube', videoId: 'abc123', aspectRatio: '16:9', embedUrl }
 
 // Extract all videos from markdown
 const videos = extractVideosFromMarkdown(markdownText);
-// Returns: [{ url: '...', platform: 'youtube', id: 'abc123' }, ...]
+// Returns: [{ url, platform: 'youtube', videoId: 'abc123', ... }, ...] in document order
 
 // Get platform configuration
 const config = getPlatformConfig('youtube');
-// Returns: { name: 'YouTube', embedTemplate: '...', ... }
+// Returns: { name, urlPatterns, extractId, buildEmbedUrl, defaultAspectRatio }
 
 // List all supported platforms
 const platforms = getSupportedPlatforms();
-// Returns: ['youtube', 'vimeo', 'twitch', ...]
+// Returns: ['youtube', 'vimeo', 'twitch'] — all of them, not a prefix
 ```
 
 ### Examples
@@ -333,25 +347,16 @@ const platforms = getSupportedPlatforms();
   aspectRatio="4:3"
 />
 
-<!-- Twitch clip with autoplay -->
+<!-- Twitch clip. The detected URL form is twitch.tv/<channel>/clip/<slug>;
+     a clips.twitch.tv/<slug> share link is not matched. -->
 <VideoEmbed
-  url="https://clips.twitch.tv/ClipSlugHere"
+  url="https://www.twitch.tv/somestreamer/clip/BraveHilariousOtterPeteZaroll"
   autoplay={true}
   muted={true}
 />
 
-<!-- YouTube starting at specific time -->
-<VideoEmbed
-  url="https://www.youtube.com/watch?v=abc123"
-  startTime={90}
-/>
-
-<!-- Generic video file -->
-<VideoEmbed
-  url="/videos/tutorial.mp4"
-  controls={true}
-  loop={false}
-/>
+<!-- Twitch VOD -->
+<VideoEmbed url="https://www.twitch.tv/videos/123456789" />
 ```
 
 ### Markdown Integration

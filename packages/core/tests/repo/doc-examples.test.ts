@@ -561,6 +561,7 @@ const EXPECTED_EXAMPLES = [
 	'packages/charts/tests/doc-examples/keyboard-chart.svelte',
 	'packages/code/tests/doc-examples/code-highlight.svelte',
 	'packages/media/tests/doc-examples/audio-player.svelte',
+	'packages/media/tests/doc-examples/video-embed.svelte',
 	'packages/graphics/tests/doc-examples/overlay.svelte',
 	'packages/graphics/tests/doc-examples/scene.svelte',
 	'packages/graphics/tests/doc-examples/test-store.test.ts'

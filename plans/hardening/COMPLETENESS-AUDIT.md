@@ -225,7 +225,12 @@ unimplemented features (3D buildings, marker clustering, geocoding, drawing
 tools, routing). That is honest, and it is the reason `maps` should not be in a
 1.0 without a decision — a decision this work does not make.
 
-### G3. `media` overclaims its video platforms — VERIFIED
+### G3. `media` overclaims its video platforms — **CLOSED**
+
+> Closed by `78bd608`, `a755f58`, `bd8b6aa`, `e2e6041` and the docs commit that
+> follows them. **The entry below describes the smallest of eight defects.**
+> Checking it found that the documented component did not exist and that Twitch
+> did not work; the overclaim was the least of it.
 
 `README.md` Features: "Auto-detects YouTube, Vimeo, **and more**". The type is a
 closed three-member union — `VideoPlatform = 'youtube' | 'vimeo' | 'twitch'`
@@ -348,7 +353,8 @@ advertised in the README. Loud and unclaimed is the right end state.
    the entry's central claim was wrong and the tile provider was a second defect.
 3. **G4 test gaps** — three advertised features with no test touching their component.
 4. **G6 root docs** — mechanical, 10 minutes.
-5. **G3 `media` "and more"** — one word.
+5. ~~**G3 `media` "and more"**~~ — **done**, and it was never one word: eight
+   defects, including a component whose documented API did not exist.
 6. **G5 `auth` positioning** — one sentence.
 
 `maps`' five unbuilt Phase 12C features are a scope decision, not a defect, and

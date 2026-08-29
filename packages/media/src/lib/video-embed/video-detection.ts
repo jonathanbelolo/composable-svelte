@@ -2,7 +2,10 @@
  * Video Platform Detection Utilities
  *
  * Detects video platforms from URLs and generates embed URLs.
- * Supports YouTube, Vimeo, Twitch, and other platforms.
+ *
+ * YouTube, Vimeo and Twitch — the three the registry below holds, and exactly
+ * what `getSupportedPlatforms()` returns. There is no generic fallback: a URL
+ * from anywhere else returns `null`.
  */
 
 import type {

@@ -5,7 +5,7 @@ Audio player, video embed, and voice input components for Composable Svelte. Bui
 ## Features
 
 - **Audio playback** - Full player with playlist support, shuffle, loop, and seek
-- **Video embedding** - Auto-detects YouTube, Vimeo, Twitch, and more
+- **Video embedding** - Auto-detects YouTube, Vimeo and Twitch
 - **Voice input** - Push-to-talk and conversation modes via MediaRecorder API
 - **State-driven** - Full Composable Architecture integration with testable reducers
 - **No external deps** - Built entirely on native Web APIs
@@ -159,31 +159,56 @@ the wrong class — a worse failure than a name that does not resolve.
 
 ### VideoEmbed
 
-Responsive video embedding with automatic platform detection. Supports YouTube, Vimeo and Twitch.
+Responsive video embedding for YouTube, Vimeo and Twitch — the three platforms
+`getSupportedPlatforms()` returns.
 
 ```svelte
 <script lang="ts">
-  import { VideoEmbed } from '@composable-svelte/media';
+  import { VideoEmbed, detectVideo } from '@composable-svelte/media';
+
+  // Pass a URL and let the component detect the platform…
+  const url = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+
+  // …or detect it yourself, when you need the metadata before rendering.
+  const detected = detectVideo('https://vimeo.com/76979871');
 </script>
 
-<!-- Auto-detects platform from URL -->
-<VideoEmbed url="https://www.youtube.com/watch?v=dQw4w9WgXcQ" />
+<VideoEmbed {url} />
 
-<!-- Vimeo -->
-<VideoEmbed url="https://vimeo.com/123456789" aspectRatio="16:9" />
+<VideoEmbed url="https://www.twitch.tv/videos/123456789" aspectRatio="4:3" />
 
-<!-- Twitch -->
-<VideoEmbed url="https://www.twitch.tv/videos/123456789" />
+<!-- Muted, because browsers block autoplay with sound. -->
+<VideoEmbed {url} autoplay muted />
+
+{#if detected}
+  <p>{detected.platform} video {detected.videoId}</p>
+  <VideoEmbed video={detected} showTitle />
+{/if}
 ```
+
+This block is [`tests/doc-examples/video-embed.svelte`](tests/doc-examples/video-embed.svelte),
+quoted verbatim. The file is typechecked by `svelte-check` in the repo gate and a
+test asserts this README still matches it — so a prop that does not exist is a
+build failure rather than something a reader discovers by pasting.
 
 **Props:**
 
 | Prop | Type | Description |
 |------|------|-------------|
-| `url` | `string` | Video URL (auto-detected platform) |
-| `aspectRatio` | `'16:9' \| '4:3' \| '1:1' \| '21:9'` | Aspect ratio (default: `'16:9'`) |
-| `autoplay` | `boolean` | Auto-play on load |
+| `url` | `string` | Video URL; the platform is detected. Mutually exclusive with `video` |
+| `video` | `VideoEmbed` | An already-detected video from `detectVideo()`. Mutually exclusive with `url` |
+| `aspectRatio` | `'16:9' \| '4:3' \| '1:1' \| '9:16'` | Overrides the platform default |
+| `autoplay` | `boolean` | Autoplay on load. Browsers block this unless `muted` is also set |
 | `muted` | `boolean` | Start muted |
+| `showTitle` | `boolean` | Show the video title above the embed |
+| `class` | `string` | Additional CSS class |
+
+Exactly one of `url` or `video` is required, enforced by the type rather than at
+runtime. A `url` that matches no known platform renders nothing.
+
+**Twitch** additionally needs a `parent` matching the page it is embedded in.
+The component supplies it from the current hostname; `detectVideo` deliberately
+does not, because detection cannot know where the result will be rendered.
 
 **Utilities:**
 
@@ -192,7 +217,7 @@ import { detectVideo, extractVideosFromMarkdown, getSupportedPlatforms } from '@
 
 // Detect platform from URL
 const info = detectVideo('https://youtube.com/watch?v=abc');
-// { platform: 'youtube', id: 'abc', embedUrl: '...' }
+// { url, platform: 'youtube', videoId: 'abc', aspectRatio: '16:9', embedUrl: '...' }
 
 // Extract all video URLs from markdown text
 const videos = extractVideosFromMarkdown(markdownText);
