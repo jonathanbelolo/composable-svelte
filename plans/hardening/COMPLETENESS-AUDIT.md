@@ -290,6 +290,21 @@ unconditionally — `UNTESTED_PENDING` reached empty and was deleted along with
 the arm that read it, the shape `NOT_YET_GATED` took in R7. A component added
 with no test fails the gate on the day it arrives.
 
+**That last sentence was false when first written, and a hostile review of this
+item is what found it.** The walker followed a barrel and credited everything it
+re-exported, so a component dropped into an existing `ui/*/index.ts` was marked
+reached as soon as any test imported any sibling — which is how components
+actually arrive here. Demonstrated with a probe component that had no test at
+all and passed cleanly. A barrel entered by name now forwards only those names,
+and each of the 43 was separately checked to be *named* in a test rather than
+swept up by a sibling's import.
+
+Fixing that introduced a second defect, found the same way: rewriting the import
+parser to read named bindings silently dropped `export … from` forwarding, which
+the original loose regex had matched by accident. The signal was that the
+*permissive* mutation lost eight components — an unexplained result rather than a
+failing one, which is the kind that gets waved through.
+
 Three defects fell out of rendering things for the first time, which is the
 return on this item:
 

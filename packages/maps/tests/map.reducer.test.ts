@@ -500,3 +500,37 @@ describe('popup actions', () => {
     expect(newState.popups.every(p => !p.isOpen)).toBe(true);
   });
 });
+
+describe('changeTileProvider keeps the style derived', () => {
+  // `style` used to hold the *initial* style forever, so it stopped describing
+  // the map after the first provider change. These pin the two cases a
+  // recomputation could get wrong.
+  it('replaces an explicitly supplied initial style', () => {
+    // A caller who passes their own style and then changes provider is asking
+    // for the new provider's style. Keeping the old one would be the map
+    // silently ignoring the change.
+    const state = mapReducer(
+      createInitialMapState({ style: 'https://example.test/my-own-style.json' }),
+      { type: 'changeTileProvider', provider: 'carto-dark' },
+      {}
+    )[0];
+
+    expect(state.style).not.toContain('my-own-style');
+    expect(state.style).toContain('dark-matter');
+  });
+
+  it('uses the custom URL when the provider is custom', () => {
+    const state = mapReducer(
+      createInitialMapState({}),
+      {
+        type: 'changeTileProvider',
+        provider: 'custom',
+        customURL: 'https://example.test/custom.json'
+      },
+      {}
+    )[0];
+
+    expect(state.style).toBe('https://example.test/custom.json');
+    expect(state.customTileURL).toBe('https://example.test/custom.json');
+  });
+});
