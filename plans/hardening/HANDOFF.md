@@ -206,7 +206,7 @@ not guards. A test that cannot fail is worse than no test, because it is counted
 
 graphics: 391 → 426 tests.
 
-### 4.3 The guard that deletes itself
+### 4.3 The guard that deletes itself — CLOSED
 
 `packages/core/tests/repo/doc-examples.test.ts`:
 
@@ -222,6 +222,36 @@ graphics: 391 → 426 tests.
   — worse than the wildcard it is registered for — is exempt from
   `exportProblems()` and caught only by the staleness arm, which reports the
   opposite.
+
+**Outcome, and where the entry was wrong.** Fixed in `70a2497`, `c9fab5e`,
+`13bb67a`, `68b0d32` and `193092b`.
+
+All three findings were real. Two corrections:
+
+- **It was never one file.** The throwing `statSync` was in five guards
+  (`doc-examples`, `optional-props`, `typecheck-coverage`, `animation-policy`,
+  `dist-freshness`), and *every* guard decided directory-ness from
+  `Dirent.isDirectory()`, including the one-level `packages/*` listings that
+  decide what gets walked at all. One shared `tests/repo/walk.ts` now does both,
+  and `guard-integrity.test.ts` stops a copy coming back.
+- **"The suite still reports green" is false**, in this entry and in my own
+  commit message for `70a2497`. Measured with a real dangling symlink: vitest
+  reports the collection failure and exits non-zero. What is true is that every
+  assertion in the file stops being made and is replaced by one ENOENT about a
+  symlink — seventeen checks traded for an error that says nothing about what
+  they guarded. Worth fixing; not silent.
+
+**Nothing here had ever fired**: the working tree contains no symlinks. This is
+hardening against a failure mode, not a repair of a live defect, and the tests
+build a fixture because the real tree cannot demonstrate either case.
+
+A fourth hazard turned up while doing it, of the same family and worse:
+`vitest.node.config.ts` lists its test files **explicitly rather than globbing**,
+so a guard added to `tests/repo/` simply does not run — no output, no failure,
+nothing to notice. It nearly happened to the first file this work added.
+`guard-integrity.test.ts` now checks that list in both directions.
+
+core node suite: 353 → 397 tests.
 
 ### 4.4 The harness
 
@@ -410,7 +440,8 @@ These are the ones that actually caught things, and each has a scar behind it.
 2. ~~**Fix §4.2**~~ — done. Eight commits; see the outcome note under §4.2 for
    what the entry got wrong, including a fix of mine that repeated the very
    defect it was closing.
-3. **Fix §4.3** — the doc guard that deletes itself on a dangling symlink.
+3. ~~**Fix §4.3**~~ — done. The defect was in eleven guards, not one, and the
+   config that decides which guards run was itself unguarded.
 4. **Execute §4.7** — reduce the register, correct the S2 row and the "ten".
 5. **Then** §4.4 (harness), §4.6 (graphics README), §4.5 (the 94 doc errors).
 
