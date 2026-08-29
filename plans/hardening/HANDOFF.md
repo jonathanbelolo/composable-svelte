@@ -295,6 +295,23 @@ have known:
   failure separately is what makes them reachable — otherwise the new file would
   have claimed coverage it did not have.
 
+**A hostile review of the above found three errors of mine, fixed in `c33b9f1`
+and `aba1945`.**
+
+- **"Six unreachable guards" was five, one of them not mine.** Mutating each
+  guard separately: the **video** one was covered by nothing before or after,
+  and the **image** one was already covered — by two older suites that reach it
+  by monkey-patching `createTexture`, having improvised what `failNextCreate`
+  now provides. The video path has an arm now. Reading the diff would never have
+  shown this; only a mutation per site did.
+- **The pipeline fix traded silence for a flood.** Making the failure audible
+  made it audible from `render()`, which runs per element per frame: 61 console
+  errors for 60 frames. The same trade `reportRefusal` exists for, missed one
+  commit after the message citing it.
+- `createOverlay` is not exported — the claim holds, but both `abd7fbe` and this
+  file cited `src/lib/index.ts:25`, and the barrel is **`src/index.ts`**. A path
+  I did not open, in two committed documents.
+
 On the weak fixtures: the `empty` guard turned out to be covered by twelve arms
 across four files, all from `f44bf81`, so no new test was needed for that half —
 verified by deleting the branch. The image fixture was worse than recorded: a
@@ -357,8 +374,11 @@ Reviewer findings still live at `packages/graphics/README.md`:
   `maxTextureSize` rules the README got — the two documents disagree again.
 
 **Outcome.** Fixed in `abd7fbe`. All four were real, and the first is worse than
-recorded: `createOverlay` is **not exported** (`src/lib/index.ts:25`), so the
-README documented a call no consumer can make. `SKILL.md` had the right
+recorded: `createOverlay` is **not exported** (`src/index.ts:25` — `src/lib/`
+was a path I cited without opening), so the README documented a call no consumer
+can make. Verified against the built package as well as the source: it is absent
+from `dist/index.js`, and the `exports` map has no wildcard, so no deep import
+reaches it either. `SKILL.md` had the right
 signature all along, which is how the two came to disagree — and it had acquired
 two false claims of its own since, both corrected here.
 
