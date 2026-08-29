@@ -47,7 +47,17 @@ function tick(loop: RenderLoop, fps: number, seconds: number, startAt = 0): numb
 	return now;
 }
 
-const lowFpsLines = (warn: ReturnType<typeof vi.spyOn>) =>
+/**
+ * A console spy, by the only shape these helpers use.
+ *
+ * Not `ReturnType<typeof vi.spyOn>`: that resolves to the constructor-shaped
+ * overload and fails `svelte-check` with thirteen errors, none of which `tsc
+ * --noEmit` reports — the package's `typecheck` script does not cover `tests/`,
+ * and `check` does.
+ */
+type ConsoleSpy = { mock: { calls: unknown[][] } };
+
+const lowFpsLines = (warn: ConsoleSpy) =>
 	warn.mock.calls.filter((call) => String(call[0]).includes('Low FPS')).length;
 
 describe('a frame rate below target', () => {

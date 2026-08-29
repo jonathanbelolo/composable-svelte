@@ -47,7 +47,17 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 const MANUAL = { type: 'canvas', shader: 'wave-gentle-horizontal', updateStrategy: 'manual' } as const;
 
 /** Memory lines only — the suite produces other warnings that are not the subject. */
-const memoryLines = (warn: ReturnType<typeof vi.spyOn>) =>
+/**
+ * A console spy, by the only shape these helpers use.
+ *
+ * Not `ReturnType<typeof vi.spyOn>`: that resolves to the constructor-shaped
+ * overload and fails `svelte-check` with thirteen errors, none of which `tsc
+ * --noEmit` reports — the package's `typecheck` script does not cover `tests/`,
+ * and `check` does.
+ */
+type ConsoleSpy = { mock: { calls: unknown[][] } };
+
+const memoryLines = (warn: ConsoleSpy) =>
 	warn.mock.calls.filter((call) => String(call[0]).includes('Memory usage')).length;
 
 describe('a texture near the budget', () => {
