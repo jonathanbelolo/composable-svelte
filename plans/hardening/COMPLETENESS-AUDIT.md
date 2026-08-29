@@ -239,7 +239,7 @@ records that "Twitter, TikTok, Dailymotion, generic" were **removed** because th
 extractor "has no registry entry for [them] and can never produce" them. So the
 code already knows the claim is false. Drop "and more", or open the union.
 
-### G4. Components no test has ever executed — **CORRECTED, then closed**
+### G4. Components no test has ever executed — **CORRECTED, then CLOSED**
 
 > **The original entry was wrong in both directions**, because the method behind
 > it was a name-grep: "does the component's basename appear anywhere in its
@@ -284,6 +284,30 @@ list — but 38 test files use `render()` from `vitest-browser-svelte`, and name
 imports come from barrels. `Breadcrumb` has a dedicated test file and appeared
 on it. Import-reachability is the measurement that holds, and is what the guard
 in `tests/repo/component-coverage.test.ts` is built on.
+
+**Closed.** All 43 now have tests, and the guard asserts coverage
+unconditionally — `UNTESTED_PENDING` reached empty and was deleted along with
+the arm that read it, the shape `NOT_YET_GATED` took in R7. A component added
+with no test fails the gate on the day it arrives.
+
+Three defects fell out of rendering things for the first time, which is the
+return on this item:
+
+- **`DestinationRouter` crashed whenever nothing was presented.** Its
+  no-destination path returned an empty object, so every route's scoped store
+  came out `undefined` — and `Modal`, `Sheet` and `Drawer` all declare
+  `store: ScopedDestinationStore | null`. At runtime it threw
+  `Cannot read properties of undefined (reading 'state')`. That is the resting
+  state of a router, and it is an exported navigation API.
+- **`Button` lost all sizing for a value outside its union** — the S4.6 defect,
+  fixed in the example at the time and left live in the component.
+- **`maps` kept a stale `style`** after a tile provider change; see G2's entry.
+
+Two things learned that are worth carrying: components render asynchronously in
+core's browser suite, so reading the container synchronously finds nothing and
+looks like a component fault; and `Modal`, `Sheet` and `Drawer` render into
+`document.body` rather than their own container, so a router test that queries
+the container sees only comment markers.
 
 ---
 

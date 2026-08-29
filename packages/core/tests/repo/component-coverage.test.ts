@@ -32,30 +32,6 @@ const packagesDir = join(repoRoot, 'packages');
 
 const PACKAGES = ['core', 'chat', 'media', 'maps', 'charts', 'code', 'graphics', 'auth'];
 
-/**
- * Components with no test that reaches them.
- *
- * Registered so the number is visible and cannot grow while it is worked
- * through. This list is meant to reach empty and be deleted along with the arm
- * that consults it — the shape `NOT_YET_GATED` took once `pnpm -r check` covered
- * every workspace.
- */
-const UNTESTED_PENDING: Record<string, string[]> = {
-	core: [
-		'DataTable',
-		'DataTableHeader',
-		'DataTablePagination',
-		'FormDescription',
-		'FormItem',
-		'FormLabel',
-		'FormMessage',
-		'Radio',
-		'RadioGroup',
-		'Slider',
-		'DestinationRouter'
-	]
-};
-
 function walk(dir: string, out: string[] = []): string[] {
 	if (!existsSync(dir)) return out;
 	for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -156,13 +132,14 @@ describe('the scan sees a real repository', () => {
 
 describe('every component is executed by some test', () => {
 	it.each(PACKAGES)('%s', (pkg) => {
+		// Unconditional. This began with 43 components registered as
+		// UNTESTED_PENDING so the debt was visible while it was worked through;
+		// the list reached empty and went, along with the arm that consulted it —
+		// the shape `NOT_YET_GATED` took once every workspace was gated. A new
+		// component with no test now fails here on the day it is added.
 		const { components, reached } = scans.get(pkg)!;
-		const pending = new Set(UNTESTED_PENDING[pkg] ?? []);
 
-		const offenders = components
-			.filter((c) => !reached.has(c))
-			.map(nameOf)
-			.filter((name) => !pending.has(name));
+		const offenders = components.filter((c) => !reached.has(c)).map(nameOf);
 
 		expect(
 			offenders.sort(),
@@ -171,31 +148,3 @@ describe('every component is executed by some test', () => {
 	});
 });
 
-describe('the pending list describes reality', () => {
-	it('names only components that exist', () => {
-		const stale = Object.entries(UNTESTED_PENDING).flatMap(([pkg, names]) => {
-			const present = new Set(scans.get(pkg)!.components.map(nameOf));
-			return names.filter((n) => !present.has(n)).map((n) => `${pkg}/${n}`);
-		});
-
-		expect(stale, 'a registered component no longer exists — drop it from the list').toEqual([]);
-	});
-
-	it('names only components that are still untested', () => {
-		// The half that makes the list shrink rather than rot: once something is
-		// tested, leaving it registered hides the next regression behind it.
-		const covered = Object.entries(UNTESTED_PENDING).flatMap(([pkg, names]) => {
-			const { components, reached } = scans.get(pkg)!;
-			const reachedNames = new Set(components.filter((c) => reached.has(c)).map(nameOf));
-			return names.filter((n) => reachedNames.has(n)).map((n) => `${pkg}/${n}`);
-		});
-
-		expect(covered, 'these are tested now — remove them from UNTESTED_PENDING').toEqual([]);
-	});
-
-	it('is shrinking', () => {
-		// Pinned so the debt is a number someone has to change deliberately.
-		const total = Object.values(UNTESTED_PENDING).reduce((n, list) => n + list.length, 0);
-		expect(total).toBeLessThanOrEqual(11);
-	});
-});
