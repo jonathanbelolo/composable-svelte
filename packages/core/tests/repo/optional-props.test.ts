@@ -355,8 +355,32 @@ function propsTypeBlocks(path: string): string[] {
 	const blocks: string[] = [];
 
 	const resolveIn = (text: string, name: string, origin: string) => {
-		const bare = name.replace(/<.*/, '').trim();
+		// Strip a leading `(` or trailing `)` left by splitting a parenthesised
+		// union, and any generic arguments.
+		const bare = name
+			.replace(/<.*/, '')
+			.replace(/^[\s(]+|[\s)]+$/g, '')
+			.trim();
 		if (!bare || seen.has(bare)) return;
+
+		// An inline member — `{ url: string; video?: undefined }` in a union arm —
+		// is a block already, not a name to look up.
+		if (bare.startsWith('{')) {
+			const close = bare.lastIndexOf('}');
+			if (close > 0) blocks.push(bare.slice(1, close));
+			return;
+		}
+
+		// Anything that is not a plain identifier cannot be resolved by name, and
+		// must not reach the regexes below.
+		//
+		// It used to. A component whose props were an intersection — `type Props =
+		// BaseProps & ( … )` — produced fragments like `BaseProps & (` here, and
+		// interpolating that into `new RegExp` threw `Unterminated group`, which
+		// took the whole scan down: not one component skipped, but every optional
+		// prop in the package left unchecked. The vacuity arm is what reported it.
+		if (!/^[A-Za-z_$][\w$]*$/.test(bare)) return;
+
 		seen.add(bare);
 
 		const iface = new RegExp(`interface\\s+${bare}\\b[^{]*\\{`).exec(text);
@@ -370,7 +394,10 @@ function propsTypeBlocks(path: string): string[] {
 			if (alias[1]!.trim().startsWith('{')) {
 				blocks.push(blockBody(text, text.indexOf('{', alias.index)));
 			} else {
-				alias[1]!.split('|').forEach((part) => resolveIn(text, part, origin));
+				// Both separators: an intersection contributes every one of its
+				// members, and a union every one of its arms. Splitting on `|`
+				// alone silently dropped everything an intersection carried.
+				alias[1]!.split(/[|&]/).forEach((part) => resolveIn(text, part, origin));
 			}
 			return;
 		}

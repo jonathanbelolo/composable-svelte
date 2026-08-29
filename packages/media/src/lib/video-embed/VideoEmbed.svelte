@@ -48,8 +48,8 @@
 	 */
 	type Props = BaseProps &
 		(
-			| { url: string; video?: never }
-			| { video: VideoEmbedType; url?: never }
+			| { url: string; video?: undefined }
+			| { video: VideoEmbedType; url?: undefined }
 		);
 
 	let {
