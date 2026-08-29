@@ -254,6 +254,12 @@ export class TextureValidator {
 	}
 
 	/**
+	 * The highest budget percentage already reported, so pressure is announced
+	 * when it worsens rather than on every allocation.
+	 */
+	private warnedMemoryLevel = 0;
+
+	/**
 	 * Track texture memory allocation
 	 *
 	 * Call this after successfully creating a texture.
@@ -266,11 +272,28 @@ export class TextureValidator {
 		this.currentMemoryUsage += bytes;
 
 		const usage = this.getMemoryUsage();
-		if (usage.percentage > 80) {
-			console.warn(
-				`[WebGLOverlay] Memory usage at ${usage.percentage.toFixed(1)}% (${this.formatBytes(usage.used)}/${this.formatBytes(usage.budget)})`
-			);
-		}
+		if (usage.percentage <= 80) return;
+
+		// Only when the pressure is *worse* than anything already reported.
+		//
+		// This used to warn on every call above the threshold, and a re-upload
+		// calls it twice — `updateTexture` releases the outgoing texture,
+		// re-tracks it to validate against the budget, then settles the incoming
+		// one. Measured on a 256² canvas at 87% of budget: **21 warnings for 10
+		// updates**, which for a `frame`-strategy element is 120 a second.
+		//
+		// An edge trigger on "crossed 80%" would not have helped: that same
+		// release-and-re-track dips the usage to 0% and back on every update, so
+		// every update is a fresh crossing. Watching the high-water mark is what
+		// survives the accounting, and it still reports growth — 87% then 92%
+		// is two lines, because the second says something the first did not.
+		const level = Math.round(usage.percentage);
+		if (level <= this.warnedMemoryLevel) return;
+		this.warnedMemoryLevel = level;
+
+		console.warn(
+			`[WebGLOverlay] Memory usage at ${usage.percentage.toFixed(1)}% (${this.formatBytes(usage.used)}/${this.formatBytes(usage.budget)})`
+		);
 	}
 
 	/**
