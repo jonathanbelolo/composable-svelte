@@ -65,7 +65,11 @@ describe('fake-gl buffer store', () => {
 		expect(() => gl.bufferSubData(gl.ARRAY_BUFFER, 0, quad())).toThrow(/INVALID_OPERATION/);
 	});
 
-	it('honours the allocate-only form of bufferData', () => {
+	it('reads an allocated buffer back as raw bytes until something names a type', () => {
+		// This used to assert `Float32Array(8)` from a 32-byte allocation — 32
+		// bytes and floats being the one combination where the hardcoded default
+		// was accidentally right, which is why the fixture never caught it. A
+		// byte count states a size and nothing else.
 		const fake = createFakeGL();
 		const gl = fake.context;
 		const buffer = gl.createBuffer();
@@ -73,11 +77,123 @@ describe('fake-gl buffer store', () => {
 		gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
 		gl.bufferData(gl.ARRAY_BUFFER, 32, gl.DYNAMIC_DRAW);
 
-		expect(fake.bufferContents(buffer)).toEqual(new Float32Array(8));
+		expect(fake.bufferContents(buffer)).toEqual(new Uint8Array(32));
+	});
 
-		// And the whole point of allocating: a later sub-upload now lands.
+	it('learns the element type from the first sub-upload', () => {
+		// The case the old default made impossible. Six bytes is not a whole
+		// number of floats, so `bufferContents` built a `Float32Array` over them
+		// and threw `RangeError` — on a sequence real GL performs without
+		// complaint, and the obvious one for an index buffer.
+		const fake = createFakeGL();
+		const gl = fake.context;
+		const buffer = gl.createBuffer();
+
+		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
+		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, 6, gl.STATIC_DRAW);
+		gl.bufferSubData(gl.ELEMENT_ARRAY_BUFFER, 0, new Uint16Array([0, 1, 2]));
+
+		const contents = fake.bufferContents(buffer);
+		expect(contents).toBeInstanceOf(Uint16Array);
+		expect(Array.from(contents!)).toEqual([0, 1, 2]);
+	});
+
+	it('still reads a float buffer back as floats', () => {
+		// The ordinary path, kept: the fix must not have made the common case
+		// worse, and this is the assertion the old fixture was really making.
+		const fake = createFakeGL();
+		const gl = fake.context;
+		const buffer = gl.createBuffer();
+
+		gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+		gl.bufferData(gl.ARRAY_BUFFER, 32, gl.DYNAMIC_DRAW);
 		gl.bufferSubData(gl.ARRAY_BUFFER, 0, quad());
+
+		expect(fake.bufferContents(buffer)).toBeInstanceOf(Float32Array);
 		expect(Array.from(fake.bufferContents(buffer)!)).toEqual([0, 0, 1, 0, 0, 1, 1, 1]);
+	});
+
+	it('says so when the bytes do not divide into whole elements', () => {
+		// If a type is named and the size contradicts it, that is worth a
+		// sentence rather than a bare `RangeError` from a constructor.
+		const fake = createFakeGL();
+		const gl = fake.context;
+		const buffer = gl.createBuffer();
+
+		gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+		gl.bufferData(gl.ARRAY_BUFFER, 6, gl.STATIC_DRAW);
+		gl.bufferSubData(gl.ARRAY_BUFFER, 0, new Uint8Array([1, 2, 3, 4]));
+		// Now the buffer is six bytes with a Uint8 type — fine. Re-declare it as
+		// floats over the same six bytes and the contradiction is real.
+		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([1]), gl.STATIC_DRAW);
+		gl.bufferData(gl.ARRAY_BUFFER, 6, gl.STATIC_DRAW);
+		gl.bufferSubData(gl.ARRAY_BUFFER, 0, new Float32Array([1]));
+
+		expect(() => fake.bufferContents(buffer)).toThrow(/whole number of/);
+	});
+
+	describe('the sources WebGL actually accepts', () => {
+		// `BufferSource` is a typed array, a `DataView` **or** a bare
+		// `ArrayBuffer`. The fake matched only the first, so the other two fell
+		// through every branch: `bufferData` stored nothing and the next call
+		// blamed the caller for never uploading, and a `DataView` handed to
+		// `bufferSubData` was skipped in silence — a write that did not happen,
+		// reported as a success.
+		const upload = (data: unknown) => {
+			const fake = createFakeGL();
+			const gl = fake.context;
+			const buffer = gl.createBuffer();
+			gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+			gl.bufferData(gl.ARRAY_BUFFER, data as never, gl.STATIC_DRAW);
+			return { fake, gl, buffer };
+		};
+
+		it('stores a bare ArrayBuffer', () => {
+			const { fake, buffer } = upload(new Uint8Array([1, 2, 3, 4]).buffer);
+
+			expect(fake.bufferContents(buffer)).toEqual(new Uint8Array([1, 2, 3, 4]));
+		});
+
+		it('does not then claim the buffer was never uploaded', () => {
+			// The false accusation, from the caller's side.
+			const { gl, fake, buffer } = upload(new Uint8Array([0, 0, 0, 0]).buffer);
+
+			expect(() => gl.bufferSubData(gl.ARRAY_BUFFER, 0, new Uint8Array([9, 9]))).not.toThrow();
+			expect(Array.from(fake.bufferContents(buffer)!)).toEqual([9, 9, 0, 0]);
+		});
+
+		it('writes through a DataView instead of ignoring it', () => {
+			const { gl, fake, buffer } = upload(new Uint8Array([0, 0, 0, 0]));
+			const view = new DataView(new Uint8Array([7, 7]).buffer);
+
+			gl.bufferSubData(gl.ARRAY_BUFFER, 0, view as never);
+
+			expect(
+				Array.from(fake.bufferContents(buffer)!),
+				'the DataView write was skipped and the old contents reported as current'
+			).toEqual([7, 7, 0, 0]);
+		});
+
+		it('refuses something that is not a BufferSource at all, by name', () => {
+			const fake = createFakeGL();
+			const gl = fake.context;
+			const buffer = gl.createBuffer();
+			gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+
+			expect(() => gl.bufferData(gl.ARRAY_BUFFER, 'nonsense' as never, gl.STATIC_DRAW)).toThrow(
+				/neither a byte count nor a BufferSource/
+			);
+		});
+
+		it('refuses it on the sub-upload path too, not just the first', () => {
+			// Both paths, because a fix that lands on one and not its twin is the
+			// mistake this campaign keeps making.
+			const { gl } = upload(new Float32Array([1, 2, 3, 4]));
+
+			expect(() => gl.bufferSubData(gl.ARRAY_BUFFER, 0, 42 as never)).toThrow(
+				/not a BufferSource/
+			);
+		});
 	});
 
 	it('keeps one binding per target', () => {

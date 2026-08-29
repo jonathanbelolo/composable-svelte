@@ -73,11 +73,16 @@ export interface FakeGL {
 	 * What a buffer handle currently holds, as uploaded — cumulative, and
 	 * unaffected by `clearCalls`. See its note for how to scope to one frame.
 	 *
-	 * Typed as the element type of the last full `bufferData`, so index data
+	 * Typed as the element type the buffer has been *told*, so index data
 	 * uploaded as `Uint16Array` reads back as `Uint16Array`. A buffer merely
-	 * *allocated* by the size-only form reads back as `Float32Array`, since a
-	 * byte count implies no type. Always a copy: this used to hand back the live
-	 * internal array, so inspecting the store could corrupt it.
+	 * *allocated* by the size-only form has been told a byte count and nothing
+	 * else, so it reads back as raw `Uint8Array` until an upload names a type.
+	 * This used to claim `Float32Array` on the reasoning that float is the common
+	 * follow-up, which is the harness inventing a fact and then throwing
+	 * `RangeError` when a six-byte index buffer did not fit it.
+	 *
+	 * Always a copy: this used to hand back the live internal array, so
+	 * inspecting the store could corrupt it.
 	 */
 	bufferContents(handle: unknown): TypedArray | null;
 }
@@ -99,7 +104,41 @@ type TypedArray =
 	| Uint16Array
 	| Uint32Array;
 
-type TypedArrayCtor = new (buffer: ArrayBufferLike) => TypedArray;
+type TypedArrayCtor = (new (buffer: ArrayBufferLike) => TypedArray) & {
+	readonly BYTES_PER_ELEMENT: number;
+};
+
+/** What something is, for a refusal message that names the actual argument. */
+function describe(value: unknown): string {
+	if (value === null) return 'null';
+	if (value === undefined) return 'undefined';
+	const name = (value as { constructor?: { name?: string } })?.constructor?.name;
+	return name ? `a ${name}` : `a ${typeof value}`;
+}
+
+/**
+ * The bytes behind any legal `BufferSource`, or `null` if this is not one.
+ *
+ * WebGL accepts a typed array, a `DataView` and a bare `ArrayBuffer`. The fake
+ * used to match only the first, so the other two fell through every branch:
+ * `bufferData` stored nothing and the next `bufferSubData` announced "has had no
+ * bufferData", and a `DataView` handed to `bufferSubData` was skipped in silence
+ * — a write that never happened, reported as success. Both are the false-message
+ * defect this harness already fixed once for `Uint16Array`; only the instance
+ * was fixed.
+ */
+function asBytes(data: unknown): Uint8Array | null {
+	if (data instanceof ArrayBuffer) return new Uint8Array(data.slice(0));
+	if (ArrayBuffer.isView(data)) {
+		return new Uint8Array(data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength));
+	}
+	return null;
+}
+
+/** The element type an upload implies, if it implies one. A `DataView` does not. */
+function elementTypeOf(data: unknown): TypedArrayCtor | null {
+	return isTypedArray(data) ? (data.constructor as TypedArrayCtor) : null;
+}
 
 function isTypedArray(value: unknown): value is TypedArray {
 	return ArrayBuffer.isView(value) && !(value instanceof DataView);
@@ -257,7 +296,7 @@ export function createFakeGL(): FakeGL {
 	//
 	// `view` is the element type of the last full upload, so `bufferContents`
 	// can hand back something a test can read directly rather than a byte soup.
-	const bufferStore = new Map<unknown, { bytes: Uint8Array; view: TypedArrayCtor }>();
+	const bufferStore = new Map<unknown, { bytes: Uint8Array; view: TypedArrayCtor | null }>();
 	// Keyed by target, because GL is. One variable meant an
 	// `ELEMENT_ARRAY_BUFFER` bind silently displaced the array binding, and the
 	// next `bufferData` then wrote vertex data into the index buffer's slot.
@@ -400,24 +439,44 @@ export function createFakeGL(): FakeGL {
 						`fake-gl: bufferData size ${data} is not a whole number of bytes — real GL raises INVALID_VALUE`
 					);
 				}
-				// No element type is implied by a size alone; float is the
-				// overwhelmingly common follow-up and is documented as the default.
-				bufferStore.set(bound, { bytes: new Uint8Array(data), view: Float32Array });
+				// A byte count implies **no** element type, and `null` says so.
+				// This used to store `Float32Array` on the grounds that float is
+				// the common follow-up, which made the harness assert a fact it
+				// had not been told: allocate six bytes for an index buffer,
+				// sub-upload a `Uint16Array`, and `bufferContents` built a
+				// `Float32Array` over six bytes and threw `RangeError` on a
+				// sequence real GL performs without complaint.
+				bufferStore.set(bound, { bytes: new Uint8Array(data), view: null });
 				return;
 			}
 
-			if (isTypedArray(data)) {
-				bufferStore.set(bound, {
-					bytes: new Uint8Array(
-						data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength)
-					),
-					view: data.constructor as TypedArrayCtor
-				});
+			const bytes = asBytes(data);
+			if (!bytes) {
+				// Neither a size nor a `BufferSource`. Silently doing nothing left
+				// the store empty and the *next* call blamed the caller for never
+				// having uploaded — the harness accusing the code under test of
+				// its own gap. A harness that cannot model something says so.
+				throw new Error(
+					`fake-gl: bufferData was given ${describe(data)}, which is neither a byte count nor a BufferSource`
+				);
 			}
+
+			bufferStore.set(bound, { bytes, view: elementTypeOf(data) });
 		}),
 		bufferSubData: record('bufferSubData', (target, offset, data) => {
 			const bound = boundBuffers.get(target as number);
-			if (!bound || !isTypedArray(data)) return;
+			if (!bound) return;
+
+			const bytes = asBytes(data);
+			if (!bytes) {
+				// The same refusal as `bufferData`, and the reason the fix had to
+				// cover both: a `DataView` here was skipped in silence, so the
+				// write never happened and the buffer still read back its previous
+				// contents — a no-op reported as a success.
+				throw new Error(
+					`fake-gl: bufferSubData was given ${describe(data)}, which is not a BufferSource`
+				);
+			}
 
 			const existing = bufferStore.get(bound);
 			// Real GL raises `INVALID_OPERATION` here — there is no store to write
@@ -433,25 +492,28 @@ export function createFakeGL(): FakeGL {
 			// every non-zero offset write four times too far along, and threw
 			// `RangeError` on calls real GL accepts.
 			const byteOffset = typeof offset === 'number' ? offset : 0;
-			const unit = data.BYTES_PER_ELEMENT;
+			// A `DataView` or `ArrayBuffer` carries no element size, so byte
+			// alignment is all there is to check for one.
+			const unit = elementTypeOf(data)?.BYTES_PER_ELEMENT ?? 1;
 			if (byteOffset % unit !== 0) {
 				throw new Error(
 					`fake-gl: bufferSubData byte offset ${byteOffset} is not aligned to ${unit}-byte elements`
 				);
 			}
 
-			if (byteOffset + data.byteLength > existing.bytes.length) {
+			if (byteOffset + bytes.length > existing.bytes.length) {
 				throw new Error(
-					`fake-gl: bufferSubData writes past the end of the buffer (${byteOffset} + ${data.byteLength} > ${existing.bytes.length}) — real GL raises INVALID_VALUE`
+					`fake-gl: bufferSubData writes past the end of the buffer (${byteOffset} + ${bytes.length} > ${existing.bytes.length}) — real GL raises INVALID_VALUE`
 				);
 			}
 
 			const next = new Uint8Array(existing.bytes);
-			next.set(
-				new Uint8Array(data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength)),
-				byteOffset
-			);
-			bufferStore.set(bound, { bytes: next, view: existing.view });
+			next.set(bytes, byteOffset);
+			// A buffer allocated by the size-only form has no element type yet;
+			// the first upload that carries one is what tells it. Keeping
+			// `existing.view` unconditionally meant it never learned, which is the
+			// other half of the index-buffer `RangeError`.
+			bufferStore.set(bound, { bytes: next, view: existing.view ?? elementTypeOf(data) });
 		}),
 		texImage2D: noop('texImage2D'),
 		texParameteri: noop('texParameteri'),
@@ -491,6 +553,19 @@ export function createFakeGL(): FakeGL {
 		bufferContents: (handle) => {
 			const record = bufferStore.get(handle);
 			if (!record) return null;
+
+			// Raw bytes while the element type is unknown — a buffer that was only
+			// *allocated* has been told a size and nothing else, so `Uint8Array`
+			// is the truthful answer rather than a guess.
+			if (!record.view) return new Uint8Array(record.bytes);
+
+			const unit = record.view.BYTES_PER_ELEMENT;
+			if (record.bytes.length % unit !== 0) {
+				throw new Error(
+					`fake-gl: buffer holds ${record.bytes.length} bytes, which is not a whole number of ${record.view.name} elements (${unit} bytes each)`
+				);
+			}
+
 			// A copy. It used to hand back the live internal array, so a test
 			// that merely *inspected* the store could corrupt it.
 			return new record.view(record.bytes.slice().buffer);
