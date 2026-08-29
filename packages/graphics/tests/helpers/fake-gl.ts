@@ -149,7 +149,9 @@ function describeValue(value: unknown): string {
 	if (value === null) return 'null';
 	if (value === undefined) return 'undefined';
 	const name = (value as { constructor?: { name?: string } })?.constructor?.name;
-	return name ? `a ${name}` : `a ${typeof value}`;
+	if (name) return `a ${name}`;
+	// A null-prototype object has no constructor to name.
+	return `an object with no constructor`;
 }
 
 /**
@@ -590,11 +592,17 @@ export function createFakeGL(): FakeGL {
 
 			const next = new Uint8Array(existing.bytes);
 			next.set(bytes, byteOffset);
-			// A buffer allocated by the size-only form has no element type yet;
-			// the first upload that carries one is what tells it. Keeping
-			// `existing.view` unconditionally meant it never learned, which is the
-			// other half of the index-buffer `RangeError`.
-			bufferStore.set(bound, { bytes: next, view: existing.view ?? elementTypeOf(data) });
+			// The **most recent** upload that carried a type is the one that
+			// describes the bytes now in the buffer. Keeping `existing.view`
+			// unconditionally meant a buffer allocated by the size-only form never
+			// learned a type at all — the other half of the index-buffer
+			// `RangeError` — and preferring the *first* type meant a buffer
+			// uploaded as floats and then sub-uploaded as `Uint16` read back as
+			// floats over the new bytes: measured, `[9, 9, 9, 9]` written and
+			// `[8.26e-40, 8.26e-40]` read. GL has no element type, so neither
+			// answer is more correct to the driver; this one is the less
+			// surprising to a test.
+			bufferStore.set(bound, { bytes: next, view: elementTypeOf(data) ?? existing.view });
 		}),
 		texImage2D: noop('texImage2D'),
 		texParameteri: noop('texParameteri'),

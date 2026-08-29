@@ -339,3 +339,62 @@ describe('fake-gl buffer store', () => {
 		expect(fake.argsFor('bufferSubData')).toHaveLength(1);
 	});
 });
+
+describe('a buffer told two different element types', () => {
+	// Found by a hostile review of the commit that introduced the type tracking,
+	// which never tested the case where two uploads disagree.
+	it('reads back as the type of the most recent upload', () => {
+		// A buffer is bytes to the driver; the element type is a convenience this
+		// harness offers, so the question is only which answer misleads least.
+		// Preferring the *first* type read the new bytes through the old lens:
+		// `[9, 9, 9, 9]` written as `Uint16` came back
+		// `[8.265320771080998e-40, 8.265320771080998e-40]`.
+		const fake = createFakeGL();
+		const gl = fake.context;
+		const buffer = gl.createBuffer();
+
+		gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([1, 2]), gl.STATIC_DRAW);
+		gl.bufferSubData(gl.ARRAY_BUFFER, 0, new Uint16Array([9, 9, 9, 9]));
+
+		const contents = fake.bufferContents(buffer);
+		expect(contents).toBeInstanceOf(Uint16Array);
+		expect(Array.from(contents!)).toEqual([9, 9, 9, 9]);
+	});
+
+	it('keeps the type it knows when an upload carries none', () => {
+		// A `DataView` states no element type, so it must not erase the one the
+		// buffer already had — the failure mode the other direction.
+		const fake = createFakeGL();
+		const gl = fake.context;
+		const buffer = gl.createBuffer();
+
+		gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+		gl.bufferData(gl.ARRAY_BUFFER, new Uint16Array([1, 2, 3, 4]), gl.STATIC_DRAW);
+		gl.bufferSubData(gl.ARRAY_BUFFER, 0, new DataView(new Uint8Array([5, 0]).buffer) as never);
+
+		expect(fake.bufferContents(buffer)).toBeInstanceOf(Uint16Array);
+	});
+});
+
+describe('the refusal names what it was given', () => {
+	// `describeValue` shapes every refusal message and nothing asserted its
+	// output — so a change that made every message read "a undefined" would have
+	// passed the arms above, which match only the fixed half of the sentence.
+	it.each([
+		['a string', 'nonsense', 'a String'],
+		['a function', () => {}, 'a Function'],
+		['null', null, 'null'],
+		['undefined', undefined, 'undefined'],
+		['a null-prototype object', Object.create(null), 'an object with no constructor']
+	])('names %s', (_label, value, expected) => {
+		const fake = createFakeGL();
+		const gl = fake.context;
+		const buffer = gl.createBuffer();
+		gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+
+		expect(() => gl.bufferData(gl.ARRAY_BUFFER, value as never, gl.STATIC_DRAW)).toThrow(
+			new RegExp(`given ${expected},`)
+		);
+	});
+});
