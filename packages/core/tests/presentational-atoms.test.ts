@@ -27,7 +27,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import type { Snippet, Component } from 'svelte';
+import type { Snippet } from 'svelte';
 import { createRawSnippet } from 'svelte';
 
 import AspectRatio from '../src/lib/components/ui/aspect-ratio/AspectRatio.svelte';
@@ -63,7 +63,7 @@ const emptyChildren = (() => {}) as unknown as Snippet;
 
 interface Atom {
 	name: string;
-	component: Component<never>;
+	component: unknown;
 	/** Whether `children` is required, and therefore whether it must be supplied. */
 	takesChildren: boolean;
 	/** Optional props to prove accept `undefined`, beyond `class` and `children`. */
@@ -95,7 +95,7 @@ const ATOMS: Atom[] = [
 
 async function renderAtom(atom: Atom, props: Record<string, unknown> = {}) {
 	const base = atom.takesChildren ? { children: emptyChildren } : {};
-	const { container } = render(atom.component, { ...base, ...props } as never);
+	const { container } = render(atom.component as never, { ...base, ...props } as never);
 	await settle();
 	return container;
 }
