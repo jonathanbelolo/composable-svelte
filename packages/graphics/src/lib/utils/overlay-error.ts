@@ -19,7 +19,13 @@ export enum OverlayErrorCode {
 	 * member a consumer can switch on and never receive is the exact thing this
 	 * package has spent three rounds removing.
 	 *
-	 * `MEMORY_BUDGET_EXCEEDED` is the one that still refuses.
+	 * Two things still refuse. `MEMORY_BUDGET_EXCEEDED`, and a source with no
+	 * pixels — which reports `TEXTURE_CREATION_FAILED`, on the update path as
+	 * well as at creation, and for all three element types since the image and
+	 * video paths stopped calling that case an `INVALID_ELEMENT_TYPE`.
+	 *
+	 * Neither is necessarily final: an element refused at creation retries on the
+	 * next update.
 	 */
 	SHADER_COMPILATION_FAILED = 'SHADER_COMPILATION_FAILED',
 	CORS_TAINTED_CANVAS = 'CORS_TAINTED_CANVAS',

@@ -257,3 +257,45 @@ describe('a video recovers on its own, while it is playing', () => {
 		api.destroy();
 	});
 });
+
+describe('a budget refusal recovers too', () => {
+	// The README says an element too big for the budget loads if the budget
+	// later has room. That is a claim about the retry reaching *every* refusal,
+	// not only the not-ready-yet ones, and it is here so the sentence is pinned
+	// by something rather than by my having tried it once.
+	it('loads once another element frees the room', async () => {
+		vi.spyOn(console, 'warn').mockImplementation(() => {});
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		const onError = vi.fn();
+		// 256×256×4 = 262,144 bytes each: room for one, not two.
+		const api = overlay({ onError, memoryBudget: 400_000 });
+		const canvas = (size: number) => {
+			const el = document.createElement('canvas');
+			el.width = size;
+			el.height = size;
+			return el;
+		};
+
+		api.registerElement('occupant', canvas(256), { type: 'canvas', shader: SHADER });
+		await settle();
+		expect(api.getElement('occupant')?.texture, 'the first element did not fit').toBeDefined();
+
+		api.registerElement('a', canvas(256), { type: 'canvas', shader: SHADER });
+		await settle();
+		expect(api.getElement('a')?.texture, 'the budget did not refuse the second').toBeUndefined();
+		expect((onError.mock.calls.at(-1)?.[0] as OverlayError).code).toBe(
+			OverlayErrorCode.MEMORY_BUDGET_EXCEEDED
+		);
+
+		api.unregisterElement('occupant');
+		await settle();
+		api.updateElement('a');
+		await settle();
+
+		expect(
+			api.getElement('a')?.texture,
+			'the budget refusal never recovered, so unregistering does not release its bytes'
+		).toBeDefined();
+		api.destroy();
+	});
+});

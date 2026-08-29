@@ -355,12 +355,37 @@ reports nothing usable the ceiling falls back to **2048** rather than becoming
 unlimited — which can sit well below the real device maximum, and is reported
 too.
 
-A source with a zero dimension — a `<canvas>` that has not been measured yet —
-is refused with `TEXTURE_CREATION_FAILED` rather than uploaded as a texture with
-no pixels.
+A source with **no pixels yet** is refused with `TEXTURE_CREATION_FAILED` rather
+than uploaded as an empty texture. That covers all three element types and both
+directions: a `<canvas>` that has not been measured, an `<img>` registered
+before it decodes, a `<video>` before its first frame — and equally a live
+element that *loses* its pixels, a canvas resized to height 0 by a panel
+closing, which is refused on update rather than uploaded as a zero-area texture.
+The message names the element's own situation; the code is the same for all of
+them. `INVALID_ELEMENT_TYPE` means something different — an element that is
+genuinely the wrong kind, such as a `<div>`.
 
-`memoryBudget` is the option that refuses outright, with
-`OverlayErrorCode.MEMORY_BUDGET_EXCEEDED` through `onError`.
+**A refusal is not permanent.** An element refused at registration retries and
+succeeds once its source has pixels, so registering on mount rather than on
+`load` is safe. How the retry is driven depends on the element:
+
+| element | inferred strategy | recovers |
+| --- | --- | --- |
+| `<canvas>` | `manual` | on the next `updateElement(id)` |
+| `<video>` | `frame` | by itself, per frame, **while it is playing** — the scheduler does not sample a paused or ended video, so call `updateElement(id)` for one that is not |
+| `<img>` | `static` | on the next `updateElement(id)` |
+
+`updateElement()` otherwise services `'manual'` elements only, and reports
+anything else through `onError`; an element with **no texture yet** is the
+exception, because that call asks for the first upload rather than a re-read.
+
+An `onTextureLoaded` given at registration survives the refusal and fires once,
+when the texture finally arrives. A refusal that repeats unchanged is reported
+once rather than on every frame, and reports again as soon as the reason changes.
+
+`memoryBudget` refuses with `OverlayErrorCode.MEMORY_BUDGET_EXCEEDED` through
+`onError`. It retries on the same schedule as any other refusal, so an element
+too big for the budget loads if the budget later has room for it.
 
 `onError` receives an `OverlayError`; import it and `OverlayErrorCode` to narrow
 on `error.code`. It reports failures to construct the overlay
