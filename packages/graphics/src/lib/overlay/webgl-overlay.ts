@@ -105,6 +105,46 @@ class WebGLOverlay implements OverlayContextAPI {
 	 * per restore, and not lost when a rebuild is superseded or fails.
 	 */
 	private readonly owedTextureLoaded = new Map<string, () => void>();
+
+	/**
+	 * Elements with a texture creation already in flight.
+	 *
+	 * `createElementTexture` is async, so a second update arriving before the
+	 * first resolves starts another. Both then pass the supersede guard — same
+	 * registration, same generation — and both assign `registration.texture`,
+	 * and the earlier handle is overwritten and never freed. A `frame`-strategy
+	 * element updates every frame, so that is a leaked GPU texture per frame for
+	 * as long as a creation is outstanding. Measured before this existed: three
+	 * updates in one tick made three textures and two survived `destroy()`.
+	 */
+	private readonly creating = new Set<string>();
+
+	/**
+	 * Record a refusal against an element, reporting it only when it is new.
+	 *
+	 * Both the creation path and the update path can refuse the same element
+	 * repeatedly — a `frame`-strategy element attempts once per frame — so
+	 * reporting on every attempt means sixty identical errors a second through
+	 * `onError` and the console.
+	 *
+	 * Shared rather than written twice. The creation path got this guard when
+	 * the retry landed and the update path did not, which is the same
+	 * instance-versus-class miss this campaign keeps finding: the sibling site
+	 * kept the defect. Comparing code and message because `OverlayError` is
+	 * constructed fresh each time.
+	 */
+	private reportRefusal(registration: ElementRegistration, error: OverlayError): void {
+		const repeat =
+			registration.error?.code === error.code && registration.error?.message === error.message;
+
+		registration.error = error;
+		if (repeat) return;
+
+		if (this.options.onError) {
+			this.options.onError(error);
+		}
+		console.error(`[WebGLOverlay] Failed to create texture for '${registration.id}':`, error);
+	}
 	private destroyed = false;
 
 	constructor(options: OverlayInit = {}) {
@@ -740,6 +780,25 @@ class WebGLOverlay implements OverlayContextAPI {
 	): Promise<void> {
 		if (!this.textureFactory || !this.gl) return;
 
+		// Released in `finally`, so a refusal, a throw and a supersede all free
+		// the slot — otherwise a single failed attempt would block every future
+		// retry and reinstate the permanent inertness this retry path exists to
+		// remove.
+		this.creating.add(registration.id);
+		try {
+			await this.createElementTextureInner(registration, onTextureLoaded, generation);
+		} finally {
+			this.creating.delete(registration.id);
+		}
+	}
+
+	private async createElementTextureInner(
+		registration: ElementRegistration,
+		onTextureLoaded?: (() => void) | undefined,
+		generation = this.rebuildGeneration
+	): Promise<void> {
+		if (!this.textureFactory || !this.gl) return;
+
 		// The factory that will do the allocating, captured before the await.
 		//
 		// `recreateResources` replaces `this.textureFactory` with one whose
@@ -781,28 +840,7 @@ class WebGLOverlay implements OverlayContextAPI {
 		}
 
 		if (result.error) {
-			// Report a refusal once, not once per attempt.
-			//
-			// Retrying on update is what makes a refused element recoverable, and
-			// a `frame`-strategy element updates every frame — so an element that
-			// stays refused would report the same error sixty times a second
-			// through `onError` and the console. Compared by code and message
-			// because `OverlayError` is constructed fresh each time.
-			const repeat =
-				registration.error?.code === result.error.code &&
-				registration.error?.message === result.error.message;
-
-			registration.error = result.error;
-
-			if (!repeat) {
-				if (this.options.onError) {
-					this.options.onError(result.error);
-				}
-				console.error(
-					`[WebGLOverlay] Failed to create texture for '${registration.id}':`,
-					result.error
-				);
-			}
+			this.reportRefusal(registration, result.error);
 		} else {
 			// `result.texture` is optional on the success branch too, so only assign
 			// when there is one. The caller already treats a vacant texture as a
@@ -864,6 +902,8 @@ class WebGLOverlay implements OverlayContextAPI {
 		// The owed callback goes with it, so a consumer told nothing at creation
 		// is told when the texture finally arrives.
 		if (!registration.texture) {
+			// One at a time. The next update retries once this attempt settles.
+			if (this.creating.has(elementId)) return;
 			void this.createElementTexture(registration, this.owedTextureLoaded.get(registration.id));
 			return;
 		}
@@ -888,10 +928,7 @@ class WebGLOverlay implements OverlayContextAPI {
 		}
 
 		if (!result.success && result.error) {
-			registration.error = result.error;
-			if (this.options.onError) {
-				this.options.onError(result.error);
-			}
+			this.reportRefusal(registration, result.error);
 		} else {
 			delete registration.error;
 		}

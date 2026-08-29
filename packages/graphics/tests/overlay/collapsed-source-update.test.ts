@@ -166,3 +166,52 @@ describe('a healthy update still works', () => {
 		expect(api.getElement('a')?.error).toBeUndefined();
 	});
 });
+
+describe('a collapse that persists is reported once', () => {
+	// Refusing the empty source is right; refusing it loudly on every update is
+	// not. A `frame`-strategy element updates every frame, so a panel that stays
+	// closed would report the same refusal sixty times a second.
+	//
+	// The creation path was given this guard when the retry landed. The update
+	// path was not — the same defect surviving in the sibling site, which is the
+	// instance-versus-class miss the register keeps recording.
+	it('does not re-report an unchanged refusal on every update', async () => {
+		const { api, onError } = await collapseAfterRegistering((canvas) => {
+			canvas.height = 0;
+		});
+		expect(onError, 'the first refusal was not reported').toHaveBeenCalledTimes(1);
+
+		for (let i = 0; i < 5; i += 1) {
+			api.updateElement('a');
+			await settle();
+		}
+
+		expect(onError, 'the same refusal was reported on every update').toHaveBeenCalledTimes(1);
+	});
+
+	it('reports again once the fault changes', async () => {
+		// Non-vacuity: suppression is about repetition, not about going quiet.
+		const { api, onError } = await collapseAfterRegistering(
+			(canvas) => {
+				canvas.height = 0;
+			},
+			// Big enough for the initial 256×256 (262,144 bytes) and too small for
+			// 512×512 (1,048,576). A budget below both refuses the element at
+			// registration, and the helper's own precondition catches that — which
+			// is how the first version of this test failed, for the right reason.
+			{ memoryBudget: 400_000 }
+		);
+		const firstCode = onError.mock.calls[0]?.[0]?.code;
+		expect(firstCode).toBeTruthy();
+
+		const element = api.getElement('a');
+		const canvas = element!.element as HTMLCanvasElement;
+		canvas.width = 512;
+		canvas.height = 512;
+		api.updateElement('a');
+		await settle();
+
+		expect(onError.mock.calls.length).toBeGreaterThan(1);
+		expect(onError.mock.calls.at(-1)?.[0]?.code).not.toBe(firstCode);
+	});
+})

@@ -303,3 +303,89 @@ describe('a refusal that keeps repeating is reported once', () => {
 		expect(onError.mock.calls.at(-1)?.[0]?.code).not.toBe(firstCode);
 	});
 })
+
+describe('retrying does not stack creations', () => {
+	// The hazard the retry introduces, and it is a real one: `handleElementUpdate`
+	// starts an *async* creation, so a second update arriving before the first
+	// resolves starts another. Both then pass the supersede guard — same
+	// registration, same generation — and both assign `registration.texture`.
+	// The earlier handle is overwritten and never freed.
+	//
+	// A `frame`-strategy element updates every frame, so this is not a
+	// contrived race: it leaks a GPU texture per frame for as long as a
+	// creation is in flight. Measured before the guard: three updates in one
+	// tick made three textures, and two survived `destroy()`.
+	it('creates one texture for several updates in the same tick', async () => {
+		const { api, fake } = overlay();
+		const canvas = unlaidOutCanvas();
+
+		api.registerElement('a', canvas, {
+			type: 'canvas',
+			shader: 'wave-gentle-horizontal',
+			updateStrategy: 'manual'
+		});
+		await settle();
+
+		canvas.width = 64;
+		canvas.height = 64;
+		api.updateElement('a');
+		api.updateElement('a');
+		api.updateElement('a');
+		await settle();
+		await settle();
+
+		expect(fake.live('texture'), 'a retry stacked concurrent creations').toBe(1);
+	});
+
+	it('leaves nothing behind on destroy', async () => {
+		// The oracle the overlay's other lifetime tests use. A leaked handle is
+		// invisible until something counts.
+		const { api, fake } = overlay();
+		const canvas = unlaidOutCanvas();
+
+		api.registerElement('a', canvas, {
+			type: 'canvas',
+			shader: 'wave-gentle-horizontal',
+			updateStrategy: 'manual'
+		});
+		await settle();
+
+		canvas.width = 64;
+		canvas.height = 64;
+		api.updateElement('a');
+		api.updateElement('a');
+		api.updateElement('a');
+		await settle();
+		await settle();
+
+		api.destroy();
+		await settle();
+
+		expect(fake.live('texture'), 'textures outlived the overlay').toBe(0);
+	});
+
+	it('still retries after an attempt finishes', async () => {
+		// Non-vacuity: a guard that simply never retried again would satisfy both
+		// arms above and undo the fix it is protecting.
+		const { api } = overlay();
+		const canvas = unlaidOutCanvas();
+
+		api.registerElement('a', canvas, {
+			type: 'canvas',
+			shader: 'wave-gentle-horizontal',
+			updateStrategy: 'manual'
+		});
+		await settle();
+
+		// One attempt while still empty — refused, and it must clear its slot.
+		api.updateElement('a');
+		await settle();
+
+		canvas.width = 64;
+		canvas.height = 64;
+		api.updateElement('a');
+		await settle();
+
+		expect(api.getElement('a')?.texture, 'the retry slot was never released').toBeDefined();
+	});
+})
