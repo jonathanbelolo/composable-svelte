@@ -12,16 +12,17 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
+import { listDirs } from './walk.js';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 
 const repoRoot = fileURLToPath(new URL('../../../../', import.meta.url));
 const packagesDir = join(repoRoot, 'packages');
 
-const packages = readdirSync(packagesDir, { withFileTypes: true })
-	.filter((e) => e.isDirectory() && existsSync(join(packagesDir, e.name, 'package.json')))
-	.map((e) => e.name);
+const packages = listDirs(packagesDir).filter((name) =>
+	existsSync(join(packagesDir, name, 'package.json'))
+);
 
 /**
  * Documents that are written for a consumer, so they have to reach one.

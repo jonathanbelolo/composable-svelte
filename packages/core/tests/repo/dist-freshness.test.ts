@@ -18,7 +18,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { readdirSync, existsSync, statSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { walkFiles, listDirs } from './walk.js';
 import { fileURLToPath } from 'node:url';
 import { join, relative } from 'node:path';
@@ -44,9 +44,9 @@ function newest(dir: string): { at: number; file: string } | null {
 	return best;
 }
 
-const packages = readdirSync(packagesDir, { withFileTypes: true })
-	.filter((e) => e.isDirectory() && existsSync(join(packagesDir, e.name, 'src')))
-	.map((e) => e.name);
+const packages = listDirs(packagesDir).filter((name) =>
+	existsSync(join(packagesDir, name, 'src'))
+);
 
 describe('built output is not stale', () => {
 	it.each(packages)('%s was built after its sources were last edited', (name) => {

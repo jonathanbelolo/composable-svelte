@@ -29,7 +29,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
+import { kindOf, walkFiles, listDirs } from './walk.js';
 import { fileURLToPath } from 'node:url';
 import { join, relative } from 'node:path';
 
@@ -40,12 +41,7 @@ const packagesDir = join(repoRoot, 'packages');
 const BARE_IMPORT = /^[ \t]*import[ \t]+['"]([^'"]+)['"][ \t]*;?[ \t]*$/gm;
 
 function walk(dir: string): string[] {
-	if (!existsSync(dir)) return [];
-	return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
-		const full = join(dir, e.name);
-		if (e.isDirectory()) return walk(full);
-		return /\.(js|svelte)$/.test(e.name) ? [full] : [];
-	});
+	return walkFiles(dir, { keep: (name) => /\.(js|svelte)$/.test(name) }).files;
 }
 
 /** Translate one `sideEffects` glob into a regex. Supports `*` and `**`. */
@@ -111,33 +107,19 @@ function entryFiles(pkgDir: string, pkg: { exports?: Record<string, unknown> }):
 
 /** Files that might name a subpath: sources, and the documents about them. */
 function referencingFiles(): string[] {
-	const out: string[] = [];
-	const walk = (dir: string) => {
-		if (!existsSync(dir)) return;
-		for (const entry of readdirSync(dir, { withFileTypes: true })) {
-			const full = join(dir, entry.name);
-			if (entry.isDirectory()) {
-				// `plans/` holds historical design records — they describe APIs that
-				// were considered and often not built, are not published (`files`
-				// excludes them), and are not instructions to anyone.
-				if (
-					['node_modules', 'dist', '.svelte-kit', '.git', 'plans', 'worktrees'].includes(
-						entry.name
-					)
-				) {
-					continue;
-				}
-				walk(full);
-				continue;
-			}
-			// A changelog quotes what used to be wrong — that is its job — so it is
-			// excluded for the same reason `plans/` is: both are records of the
-			// past, not instructions. Live documentation is still scanned.
-			if (entry.name === 'CHANGELOG.md') continue;
-			if (/\.(ts|js|svelte|md)$/.test(entry.name)) out.push(full);
-		}
-	};
-	for (const dir of ['packages', 'examples', 'guides', '.claude']) walk(join(repoRoot, dir));
+	// `plans/` holds historical design records — they describe APIs that were
+	// considered and often not built, are not published (`files` excludes them),
+	// and are not instructions to anyone.
+	const skip = ['node_modules', 'dist', '.svelte-kit', '.git', 'plans', 'worktrees'];
+
+	// A changelog quotes what used to be wrong — that is its job — so it is
+	// excluded for the same reason `plans/` is: both are records of the past, not
+	// instructions. Live documentation is still scanned.
+	const keep = (name: string) => name !== 'CHANGELOG.md' && /\.(ts|js|svelte|md)$/.test(name);
+
+	const out = ['packages', 'examples', 'guides', '.claude'].flatMap(
+		(dir) => walkFiles(join(repoRoot, dir), { skip, keep }).files
+	);
 	return out;
 }
 
@@ -187,14 +169,14 @@ function resolveSubpath(pkgDir: string, subpath: string): string | null {
 function resolveFrom(fromFile: string, spec: string): string | null {
 	const base = join(fromFile, '..', spec);
 	for (const c of [base, `${base}.js`, join(base, 'index.js'), base.replace(/\.js$/, '.svelte')]) {
-		if (existsSync(c) && statSync(c).isFile()) return c;
+		if (kindOf(c) === 'file') return c;
 	}
 	return null;
 }
 
-const packages = readdirSync(packagesDir, { withFileTypes: true })
-	.filter((e) => e.isDirectory() && existsSync(join(packagesDir, e.name, 'package.json')))
-	.map((e) => e.name);
+const packages = listDirs(packagesDir).filter((name) =>
+	existsSync(join(packagesDir, name, 'package.json'))
+);
 
 describe('side-effect imports survive tree-shaking', () => {
 	it('the glob translation is right', () => {

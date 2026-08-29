@@ -23,7 +23,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
+import { walkFiles, listDirs } from './walk.js';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 
@@ -47,39 +48,34 @@ function expectedRange(version: string): string {
 	return `^${major}.${minor}.0`;
 }
 
+/** Package directories that carry a manifest. */
+function workspacePackages(): string[] {
+	return listDirs(packagesDir).filter((name) => existsSync(join(packagesDir, name, 'package.json')));
+}
+
 /** Every relative-free import specifier appearing in a package's source. */
 function importsCore(pkgDir: string): boolean {
 	const src = join(pkgDir, 'src');
 	if (!existsSync(src)) return false;
 
-	const walk = (dir: string): boolean =>
-		readdirSync(dir, { withFileTypes: true }).some((entry) => {
-			const full = join(dir, entry.name);
-			// `worktrees`: see the note in doc-examples.test.ts.
-			if (entry.isDirectory()) {
-				return ['node_modules', 'worktrees'].includes(entry.name) ? false : walk(full);
-			}
-			if (!/\.(ts|js|svelte)$/.test(entry.name)) return false;
-			return readFileSync(full, 'utf8').includes('@composable-svelte/core');
-		});
+	// `worktrees`: see the note in doc-examples.test.ts.
+	const { files } = walkFiles(src, {
+		skip: ['node_modules', 'worktrees'],
+		keep: (name) => /\.(ts|js|svelte)$/.test(name)
+	});
 
-	return walk(src);
+	return files.some((file) => readFileSync(file, 'utf8').includes('@composable-svelte/core'));
 }
 
 // Scoped to packages that actually import core, rather than to "everything that
 // is not core". A future workspace package with no dependency on it should not
 // be forced to declare one, and nothing states that policy anywhere.
-const siblings = readdirSync(packagesDir, { withFileTypes: true })
-	.filter((e) => e.isDirectory() && existsSync(join(packagesDir, e.name, 'package.json')))
-	.map((e) => e.name)
+const siblings = workspacePackages()
 	.filter((name) => name !== 'core')
 	.filter((name) => importsCore(join(packagesDir, name)));
 
 /** Workspace siblings other than core that a package may declare as a peer. */
-const WORKSPACE_PEERS = readdirSync(packagesDir, { withFileTypes: true })
-	.filter((e) => e.isDirectory() && existsSync(join(packagesDir, e.name, 'package.json')))
-	.map((e) => e.name)
-	.filter((name) => name !== 'core');
+const WORKSPACE_PEERS = workspacePackages().filter((name) => name !== 'core');
 
 describe('sibling peer ranges', () => {
 	it('there are siblings to check', () => {

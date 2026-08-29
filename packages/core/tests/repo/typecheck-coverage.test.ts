@@ -25,7 +25,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { walkFiles, listDirs } from './walk.js';
 import { fileURLToPath } from 'node:url';
 import { join, relative, resolve } from 'node:path';
@@ -70,9 +70,9 @@ function workspaceDirs(): string[] {
 		const [parent, star] = glob.split('/');
 		expect(star, `unsupported workspace glob: ${glob}`).toBe('*');
 		const parentDir = join(repoRoot, parent!);
-		return readdirSync(parentDir, { withFileTypes: true })
-			.filter((e) => e.isDirectory() && existsSync(join(parentDir, e.name, 'package.json')))
-			.map((e) => `${parent}/${e.name}`);
+		return listDirs(parentDir)
+			.filter((name) => existsSync(join(parentDir, name, 'package.json')))
+			.map((name) => `${parent}/${name}`);
 	});
 }
 

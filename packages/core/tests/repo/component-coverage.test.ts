@@ -23,7 +23,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
+import { kindOf, walkFiles } from './walk.js';
 import { fileURLToPath } from 'node:url';
 import { join, dirname, resolve, relative } from 'node:path';
 
@@ -33,16 +34,12 @@ const packagesDir = join(repoRoot, 'packages');
 const PACKAGES = ['core', 'chat', 'media', 'maps', 'charts', 'code', 'graphics', 'auth'];
 
 function walk(dir: string, out: string[] = []): string[] {
-	if (!existsSync(dir)) return out;
-	for (const entry of readdirSync(dir, { withFileTypes: true })) {
-		const full = join(dir, entry.name);
-		if (entry.isDirectory()) {
-			if (['node_modules', 'dist', '.svelte-kit', '__screenshots__'].includes(entry.name)) continue;
-			walk(full, out);
-			continue;
-		}
-		out.push(full);
-	}
+	out.push(
+		...walkFiles(dir, {
+			skip: ['node_modules', 'dist', '.svelte-kit', '__screenshots__'],
+			keep: () => true
+		}).files
+	);
 	return out;
 }
 
@@ -128,7 +125,7 @@ function resolveLocal(from: string, spec: string): string | null {
 	if (!spec.startsWith('.')) return null;
 	const base = resolve(dirname(from), spec.replace(/\.js$/, ''));
 	for (const candidate of [base, `${base}.ts`, `${base}.svelte`, join(base, 'index.ts')]) {
-		if (existsSync(candidate) && statSync(candidate).isFile()) return candidate;
+		if (kindOf(candidate) === 'file') return candidate;
 	}
 	return null;
 }
