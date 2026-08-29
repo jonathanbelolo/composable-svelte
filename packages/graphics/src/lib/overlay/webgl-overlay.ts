@@ -343,16 +343,24 @@ class WebGLOverlay implements OverlayContextAPI {
 
 		const lost = this.contextIsLost();
 
+		// Recorded before either branch, and deliberately not only for the lost
+		// one. `createElementTexture` clears the debt on success, so recording it
+		// up front costs nothing when creation works — and when creation *fails*,
+		// this is the only thing that keeps the callback alive for the retry.
+		//
+		// It used to be set on the context-lost branch alone, so an element whose
+		// immediate creation was refused lost its callback for good, even though
+		// a later update would have been exactly the moment to fire it. Round
+		// five closed this for a failed *rebuild* and left the identical hole on
+		// the immediate path. In `examples/shader-gallery` that callback fades the
+		// DOM image out, so the effect stayed invisible for the life of the page.
+		if (options.onTextureLoaded) {
+			this.owedTextureLoaded.set(registration.id, options.onTextureLoaded);
+		}
+
 		if (lost) {
-			// Carried so the rebuild can honour it. It used to be a parameter of
-			// `createElementTexture` and nothing else, and `recreateResources`
-			// calls that with no callback — so for a deferred element
-			// `onTextureLoaded` never fired at all, not during the loss and not
-			// after it. In `examples/shader-gallery` that callback fades the DOM
-			// image out, so the effect stayed invisible for the life of the page.
-			if (options.onTextureLoaded) {
-				this.owedTextureLoaded.set(registration.id, options.onTextureLoaded);
-			}
+			// Nothing to do here now: the debt above is what `recreateResources`
+			// reads when the context comes back.
 		} else {
 			// Create initial texture
 			this.createElementTexture(registration, options.onTextureLoaded);
@@ -773,11 +781,28 @@ class WebGLOverlay implements OverlayContextAPI {
 		}
 
 		if (result.error) {
+			// Report a refusal once, not once per attempt.
+			//
+			// Retrying on update is what makes a refused element recoverable, and
+			// a `frame`-strategy element updates every frame — so an element that
+			// stays refused would report the same error sixty times a second
+			// through `onError` and the console. Compared by code and message
+			// because `OverlayError` is constructed fresh each time.
+			const repeat =
+				registration.error?.code === result.error.code &&
+				registration.error?.message === result.error.message;
+
 			registration.error = result.error;
-			if (this.options.onError) {
-				this.options.onError(result.error);
+
+			if (!repeat) {
+				if (this.options.onError) {
+					this.options.onError(result.error);
+				}
+				console.error(
+					`[WebGLOverlay] Failed to create texture for '${registration.id}':`,
+					result.error
+				);
 			}
-			console.error(`[WebGLOverlay] Failed to create texture for '${registration.id}':`, result.error);
 		} else {
 			// `result.texture` is optional on the success branch too, so only assign
 			// when there is one. The caller already treats a vacant texture as a
@@ -823,7 +848,25 @@ class WebGLOverlay implements OverlayContextAPI {
 		if (this.contextIsLost()) return;
 
 		const registration = this.elements.get(elementId);
-		if (!registration || !registration.texture || !this.textureFactory) return;
+		if (!registration || !this.textureFactory) return;
+
+		// No texture yet means creation was refused — a canvas measured before
+		// layout, an image registered before it decoded, a source over the memory
+		// budget. Retry rather than return.
+		//
+		// Returning here is what made a refusal permanent: `createElementTexture`
+		// is reachable only from registration and from the post-context-loss
+		// rebuild, so nothing an application could call would ever try again. The
+		// element was inert for the life of the page, and the guard that names
+		// the empty case is what made the case it names unrecoverable. Before it,
+		// the next `updateElement()` recovered.
+		//
+		// The owed callback goes with it, so a consumer told nothing at creation
+		// is told when the texture finally arrives.
+		if (!registration.texture) {
+			void this.createElementTexture(registration, this.owedTextureLoaded.get(registration.id));
+			return;
+		}
 
 		// Update texture. The tracked dimensions go in so the factory can release
 		// the outgoing allocation rather than adding the new one on top of it.
