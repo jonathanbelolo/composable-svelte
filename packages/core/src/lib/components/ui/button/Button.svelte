@@ -117,8 +117,34 @@
 		onclick?.(e);
 	}
 
+	/**
+	 * Look a variant or size up, falling back rather than resolving to nothing.
+	 *
+	 * `variantClasses[variant]` is `undefined` for anything outside the union,
+	 * and `cn()` drops undefined — so an unrecognised size produced a button
+	 * with no height and no padding, and an unrecognised variant one with no
+	 * background. Invisible, not wrong-looking.
+	 *
+	 * TypeScript catches a literal. It does not catch a value arriving from a
+	 * store, a JSON payload or an untyped call site, and that is where this
+	 * actually happened: `product-gallery` passed `size="default"` — a real
+	 * shadcn size name, absent from this union — and every share button lost its
+	 * sizing. That is recorded as S4.6, and it was fixed in the example while
+	 * the component kept the behaviour that allowed it.
+	 */
+	// A function declaration, not a generic arrow: `<T extends …>` in a `.svelte`
+	// file is ambiguous with markup and the parser takes it as a tag.
+	function lookup(table: Record<string, string>, key: string, fallback: string): string {
+		return table[key] ?? table[fallback]!;
+	}
+
 	const buttonClasses = $derived(
-		cn(baseClasses, variantClasses[variant], sizeClasses[size], className)
+		cn(
+			baseClasses,
+			lookup(variantClasses, variant, 'default'),
+			lookup(sizeClasses, size, 'md'),
+			className
+		)
 	);
 </script>
 

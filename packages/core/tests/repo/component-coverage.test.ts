@@ -56,7 +56,6 @@ const UNTESTED_PENDING: Record<string, string[]> = {
 		'BannerDescription',
 		'BannerTitle',
 		'Box',
-		'Button',
 		'ButtonGroup',
 		'Card',
 		'CardContent',
@@ -223,9 +222,9 @@ describe('the pending list describes reality', () => {
 		expect(covered, 'these are tested now — remove them from UNTESTED_PENDING').toEqual([]);
 	});
 
-	it('is 43 components, and shrinking', () => {
+	it('is shrinking', () => {
 		// Pinned so the debt is a number someone has to change deliberately.
 		const total = Object.values(UNTESTED_PENDING).reduce((n, list) => n + list.length, 0);
-		expect(total).toBeLessThanOrEqual(43);
+		expect(total).toBeLessThanOrEqual(42);
 	});
 });
