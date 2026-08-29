@@ -253,7 +253,7 @@ nothing to notice. It nearly happened to the first file this work added.
 
 core node suite: 353 → 397 tests.
 
-### 4.4 The harness
+### 4.4 The harness — CLOSED
 
 `packages/graphics/tests/helpers/fake-gl.ts`:
 
@@ -272,6 +272,37 @@ core node suite: 353 → 397 tests.
   and `refuses an image with no height` uses `loadedImage(256, 0)`, which no
   decoded image reports — with the realistic `0, 0` it passes **with the entire
   `empty` guard deleted**.
+
+**Outcome.** Fixed in `cec9ce4`, `60b2f83`, `7965f86`, `000f7ef`. All four items
+were real and reproduced before being touched. Three things the entry could not
+have known:
+
+- **Modelling the lost context found a real defect.** `RenderPipeline` set
+  `initialized = true` even when `createBuffer` returned `null` for both quad
+  buffers, so `render()` bound the program, set the uniforms and called
+  `drawArrays` with no geometry — drawing nothing, every frame, in silence. The
+  two `if (buffer)` guards read as careful handling and were the mechanism.
+  Fixed in `7965f86`; it had been unreachable from any test, which is how it
+  survived six review rounds.
+- **The fake aliases every canvas onto one context**, and that mattered the
+  moment lostness became state: `checkWebGLSupport` probes a throwaway canvas
+  and releases it with `WEBGL_lose_context` on every `createOverlay`, so one
+  shared flag killed the overlay's context and **112 tests failed, none of them
+  about context loss**. The src is correct; lostness is now tracked per canvas.
+- **`failNextCreate` was necessary, not decoration.** `registerElement` refuses
+  with `CONTEXT_LOST` before the texture factory is called, so losing the
+  context cannot reach its three null guards at all. Modelling allocation
+  failure separately is what makes them reachable — otherwise the new file would
+  have claimed coverage it did not have.
+
+On the weak fixtures: the `empty` guard turned out to be covered by twelve arms
+across four files, all from `f44bf81`, so no new test was needed for that half —
+verified by deleting the branch. The image fixture was worse than recorded: a
+256×0 image is refused by the image path's height check *and* by `validateSize`,
+each covering for the other, so **deleting either left it green**. It pins the
+refusal *message* now, which is the only thing that branch actually decides.
+
+graphics: 426 → 452 tests.
 
 ### 4.5 Documentation beyond the front doors
 
@@ -309,7 +340,7 @@ only, in the two documents named in `SWEPT_DOCS`. The working mechanism for
 consumer examples is the `tests/doc-examples/` pattern — five registered files,
 of which the two added this session are quickstarts.
 
-### 4.6 The graphics README — untouched this session
+### 4.6 The graphics README — CLOSED
 
 Reviewer findings still live at `packages/graphics/README.md`:
 
@@ -324,6 +355,12 @@ Reviewer findings still live at `packages/graphics/README.md`:
   sits inside the WebGL Overlay section.
 - `SKILL.md`'s `OverlayOptions` table never received the two new
   `maxTextureSize` rules the README got — the two documents disagree again.
+
+**Outcome.** Fixed in `abd7fbe`. All four were real, and the first is worse than
+recorded: `createOverlay` is **not exported** (`src/lib/index.ts:25`), so the
+README documented a call no consumer can make. `SKILL.md` had the right
+signature all along, which is how the two came to disagree — and it had acquired
+two false claims of its own since, both corrected here.
 
 ### 4.7 The register — decision made, not executed
 
@@ -443,7 +480,8 @@ These are the ones that actually caught things, and each has a scar behind it.
 3. ~~**Fix §4.3**~~ — done. The defect was in eleven guards, not one, and the
    config that decides which guards run was itself unguarded.
 4. **Execute §4.7** — reduce the register, correct the S2 row and the "ten".
-5. **Then** §4.4 (harness), §4.6 (graphics README), §4.5 (the 94 doc errors).
+5. ~~§4.4 (harness), §4.6 (graphics README)~~ — done; §4.4 turned up a live
+   rendering defect. **Then** §4.5 (the 78 doc errors across 54 blocks).
 
 Do **not** start another general review round of `graphics`. Rounds four
 through six found 19, ~29 and ~34; the count is not converging, and the majority
