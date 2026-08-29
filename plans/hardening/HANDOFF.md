@@ -319,7 +319,31 @@ verified by deleting the branch. The image fixture was worse than recorded: a
 each covering for the other, so **deleting either left it green**. It pins the
 refusal *message* now, which is the only thing that branch actually decides.
 
-graphics: 426 → 452 tests.
+graphics: 426 → 470 tests.
+
+**A second hostile review, of the first review's own fixes**, found three more —
+`c440ad6`, `617aaa5`, `4a517f0`:
+
+- **The pipeline fix missed its sibling six lines away.** `c33b9f1` suppressed
+  the per-frame log in `render()` and left `renderBatch` with the identical
+  unguarded `console.error`: 61 errors for 60 batches, the same number and the
+  same defect that commit was written to remove. Both route through one method
+  now. It escaped because I read the diff instead of grepping the file — the
+  fourth time in this campaign a fix has landed on one path and not its twin,
+  and the second time inside a commit whose message names the rule.
+- **The same class was already live one file away.** `ShaderProgramManager`
+  warns when a program does not declare a uniform being set, from two methods
+  both reached by `render()`: 60 warnings over 60 frames for a shader without
+  `uTexture`. Pre-existing, and found only by sweeping for the class after
+  fixing two instances of it — the sweep that should have followed the first.
+- **The buffer store's type precedence was untested and wrong.** Two uploads
+  disagreeing kept the *first* type, so `[9, 9, 9, 9]` written as `Uint16` read
+  back as `[8.26e-40, 8.26e-40]`. And `describeValue`, which shapes every refusal
+  message, had no arm at all: the existing ones match only the fixed half of the
+  sentence.
+
+Also corrected: this line said 452, which stopped being true three commits after
+it was written.
 
 ### 4.5 Documentation beyond the front doors
 
