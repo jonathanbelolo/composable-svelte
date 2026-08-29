@@ -495,14 +495,33 @@ class WebGLOverlay implements OverlayContextAPI {
 
 		if (registration.updateStrategy === 'manual') {
 			this.updateScheduler.triggerUpdate(id);
-		} else {
-			this.report(
-				OverlayError.invalidElementType(
-					id,
-					`has strategy '${registration.updateStrategy}'; updateElement() services 'manual' only`
-				)
-			);
+			return;
 		}
+
+		// An element with no texture is a different request. The strategy gate
+		// refuses a *re-read* — `static` exists so a consumer does not re-upload
+		// an unchanging image every frame — but there is nothing to re-read here,
+		// and the call is asking for the first upload.
+		//
+		// Without this, the retry added for refused elements reached two of the
+		// three types and missed the commonest case there is: an `<img>` infers
+		// `static`, so an image registered before it decoded was refused, then
+		// refused again by `updateElement` for having the strategy an image
+		// always has. It stayed inert for the life of the page and no public call
+		// could recover it — which is exactly the defect the retry was written to
+		// close, surviving in the sibling path. A canvas recovered, a playing
+		// video recovered per frame, an image could not.
+		if (!registration.texture) {
+			this.updateScheduler.triggerRetry(id);
+			return;
+		}
+
+		this.report(
+			OverlayError.invalidElementType(
+				id,
+				`has strategy '${registration.updateStrategy}'; updateElement() services 'manual' only`
+			)
+		);
 	}
 
 	/**

@@ -125,6 +125,26 @@ export class UpdateScheduler {
 		this.notifyUpdate(id);
 	}
 
+	/**
+	 * Service an element that has no texture yet, whatever its strategy.
+	 *
+	 * The strategy gate on `triggerUpdate` is about *re-reading* a source: a
+	 * `static` element is static precisely so a consumer does not re-upload an
+	 * unchanging image every frame. An element with no texture has nothing to
+	 * re-read — the call is asking for the first upload — so the gate does not
+	 * apply, and applying it made a refusal permanent for every element whose
+	 * inferred strategy is not `manual`.
+	 *
+	 * The caller decides that; the scheduler does not know about textures.
+	 */
+	triggerRetry(id: string): void {
+		if (!this.elements.has(id)) {
+			console.warn(`[UpdateScheduler] Element ${id} not found`);
+			return;
+		}
+
+		this.notifyUpdate(id);
+	}
 
 	/**
 	 * Start frame update loop
