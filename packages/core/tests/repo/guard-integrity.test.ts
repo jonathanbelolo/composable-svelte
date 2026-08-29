@@ -36,10 +36,9 @@ const guards = walkFiles(guardDir, { keep: (name) => name.endsWith('.test.ts') }
 	.map((file) => relative(guardDir, file))
 	.sort();
 
-const nodeConfig = readFileSync(
-	join(repoRoot, 'packages', 'core', 'vitest.node.config.ts'),
-	'utf8'
-);
+const coreDir = join(repoRoot, 'packages', 'core');
+const nodeConfig = readFileSync(join(coreDir, 'vitest.node.config.ts'), 'utf8');
+const browserConfig = readFileSync(join(coreDir, 'vite.config.ts'), 'utf8');
 
 /** Source with comments stripped, so a rule reads code and not commentary. */
 function code(file: string): string {
@@ -79,6 +78,30 @@ describe('every guard actually runs', () => {
 		const missing = listed.filter((file) => !guards.includes(file));
 
 		expect(missing, 'the node config lists a guard that no longer exists').toEqual([]);
+	});
+
+	it('is excluded from the browser project, which cannot read the disk', () => {
+		// Registration takes *two* edits, and the first version of this file
+		// checked one of them. `vite.config.ts` globs `tests/**` and excludes the
+		// node-only suites by name, so a new guard is collected by browser mode
+		// and fails there — which is how it went: two files failed to collect
+		// while every test passed, and the per-package summary showed only the
+		// passing count.
+		const unexcluded = guards.filter(
+			(file) => !browserConfig.includes(`tests/repo/${file}`)
+		);
+
+		expect(
+			unexcluded,
+			'these run under browser mode, which cannot read files — exclude them in vite.config.ts'
+		).toEqual([]);
+	});
+
+	it('the browser exclude names no guard that is gone', () => {
+		const excluded = [...browserConfig.matchAll(/'tests\/repo\/([^']+)'/g)].map((m) => m[1]!);
+		const missing = excluded.filter((file) => !guards.includes(file));
+
+		expect(missing, 'vite.config.ts excludes a guard that no longer exists').toEqual([]);
 	});
 });
 

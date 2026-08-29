@@ -54,6 +54,9 @@ export default defineConfig({
       'tests/repo/doc-examples.test.ts',
       // Walks every package's src from disk; same reason.
       'tests/repo/optional-props.test.ts',
+      // Walk the tree and read the configs from disk; same reason.
+      'tests/repo/walk.test.ts',
+      'tests/repo/guard-integrity.test.ts',
       // Needs the Cookie request header, which the browser Request API refuses
       // to expose; runs under vitest.node.config.ts instead.
       'tests/i18n/ssr.test.ts'
