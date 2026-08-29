@@ -1,12 +1,14 @@
 <script lang="ts">
-	import type { VideoEmbed as VideoEmbedType } from './types.js';
+	import type { VideoEmbed as VideoEmbedType, AspectRatio } from './types.js';
 	import type { VideoPlatform } from './types.js';
+	import { detectVideo } from './video-detection.js';
 
 	/**
 	 * VideoEmbed Component
 	 *
-	 * Pure presentational component for embedding videos from external platforms.
-	 * Supports YouTube, Vimeo, Twitch, and other platforms.
+	 * Component for embedding videos from YouTube, Vimeo and Twitch.
+	 *
+	 * Takes either a `url` to detect, or an already-detected `video`.
 	 *
 	 * Features:
 	 * - Responsive iframe with aspect ratio preservation
@@ -15,30 +17,65 @@
 	 * - Security: sandbox attributes, referrer policy
 	 */
 
-	interface Props {
-		/** Video embed data (required) */
-		video: VideoEmbedType;
-
+	interface BaseProps {
 		/** Custom CSS class */
 		class?: string | undefined;
 
 		/** Enable autoplay (default: false, usually blocked by browsers) */
 		autoplay?: boolean | undefined;
 
+		/** Start muted. Required by most browsers for autoplay to be permitted. */
+		muted?: boolean | undefined;
+
+		/** Override the platform's default aspect ratio. */
+		aspectRatio?: AspectRatio | undefined;
+
 		/** Show video title above embed (default: false) */
 		showTitle?: boolean | undefined;
 	}
 
+	/**
+	 * Either a URL to detect, or a video already detected.
+	 *
+	 * `url` is what the README and the skill file have always documented, and it
+	 * did not exist: the component's only required prop was `video`, and with no
+	 * rest-spread a `url` passed in was silently dropped — so the documented
+	 * example rendered nothing. `video` stays for callers who detect themselves,
+	 * which is everything already written against this component.
+	 *
+	 * Expressed as a union so passing both, or neither, is a compile error rather
+	 * than a runtime surprise.
+	 */
+	type Props = BaseProps &
+		(
+			| { url: string; video?: never }
+			| { video: VideoEmbedType; url?: never }
+		);
+
 	let {
-		video,
+		url,
+		video: providedVideo,
 		class: className = '',
 		autoplay = false,
+		muted = false,
+		aspectRatio,
 		showTitle = false
 	}: Props = $props();
 
+	/**
+	 * The video to render: detected from `url`, or the one supplied.
+	 *
+	 * `null` when a `url` matches no known platform, which is a legitimate state
+	 * — the component renders nothing rather than throwing, so a page with one
+	 * bad link is not a page that fails to render.
+	 */
+	const video = $derived(providedVideo ?? (url ? detectVideo(url) : null));
+
 	// Get aspect ratio padding-bottom percentage
 	const aspectRatioPadding = $derived(() => {
-		switch (video.aspectRatio) {
+		// The prop wins over the platform default. `aspectRatio` was in the
+		// README's props table and did not exist on the component.
+		switch (aspectRatio ?? video?.aspectRatio) {
 			case '16:9':
 				return '56.25%'; // 9/16 * 100
 			case '4:3':
@@ -67,11 +104,29 @@
 	// the server emitted `parent=localhost` and the client disagreed on
 	// hydration.
 	const embedUrl = $derived.by(() => {
-		if (!autoplay) return video.embedUrl;
-		const url = new URL(video.embedUrl);
-		// Twitch spells it `true`; YouTube and Vimeo spell it `1`.
-		url.searchParams.set('autoplay', video.platform === 'twitch' ? 'true' : '1');
-		return url.toString();
+		if (!video) return '';
+
+		const embed = new URL(video.embedUrl);
+		// Twitch spells booleans out; YouTube and Vimeo use 1/0.
+		const yes = video.platform === 'twitch' ? 'true' : '1';
+
+		if (autoplay) embed.searchParams.set('autoplay', yes);
+
+		// `muted` was in EmbedOptions and in every buildEmbedUrl, and the component
+		// never applied it — so the documented prop did nothing. It matters beyond
+		// preference: browsers refuse autoplay with sound.
+		if (muted) embed.searchParams.set(video.platform === 'youtube' ? 'mute' : 'muted', yes);
+
+		// Twitch requires `parent` and it must match the embedding page. Detection
+		// deliberately does not set it — it cannot know the host — so this is the
+		// point where it becomes knowable. Guarded on `window` so server rendering
+		// emits the URL without it rather than inventing `localhost`, which is the
+		// hydration mismatch the comment above warns about.
+		if (video.platform === 'twitch' && typeof window !== 'undefined') {
+			embed.searchParams.set('parent', window.location.hostname);
+		}
+
+		return embed.toString();
 	});
 
 	// Build iframe allow attribute
@@ -93,10 +148,16 @@
 		// No `?? 'Video'`: the map is total over the union, so the fallback had no
 		// reachable trigger. An unreachable recovery path is the same dead
 		// behaviour this campaign is removing everywhere else.
-		return names[video.platform];
+		return video ? names[video.platform] : '';
 	});
 </script>
 
+<!--
+	Nothing is rendered when a `url` matches no known platform. `detectVideo`
+	returns null for an unrecognised URL, and a page with one bad link should not
+	be a page that fails to render.
+-->
+{#if video}
 <div class="video-embed {className}" role="region" aria-label="Embedded video">
 	{#if showTitle && video.title}
 		<div class="video-embed__title">
@@ -119,6 +180,7 @@
 		></iframe>
 	</div>
 </div>
+{/if}
 
 <style>
 	.video-embed {

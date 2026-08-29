@@ -111,3 +111,88 @@ describe('the platform union describes reality', () => {
 		expect(video?.videoId).toBe('dQw4w9WgXcQ');
 	});
 });
+
+describe('the component takes a url, which is what the docs always said', () => {
+	// `<VideoEmbed url="…" />` is the call in the README, the props table and the
+	// skill file. It did not work: `video` was the only required prop, and with
+	// no rest-spread the `url` was silently dropped — so the documented example
+	// rendered an error, not a video.
+	it('detects the platform from a url', () => {
+		const target = renderEmbed({ url: YOUTUBE });
+
+		const iframe = target.querySelector('iframe');
+		expect(iframe, 'nothing rendered from a url').not.toBeNull();
+		expect(iframe!.getAttribute('src')).toContain('youtube.com/embed/dQw4w9WgXcQ');
+	});
+
+	it('still takes a pre-detected video', () => {
+		// The other half: everything already written against this component passes
+		// `video`, and must keep working.
+		const target = renderEmbed({ video: detectVideo(YOUTUBE)! });
+		expect(target.querySelector('iframe')!.getAttribute('src')).toContain('dQw4w9WgXcQ');
+	});
+
+	it('renders nothing for a url from no known platform', () => {
+		// A page with one bad link should not be a page that fails to render.
+		const target = renderEmbed({ url: 'https://example.com/not-a-video' });
+		expect(target.querySelector('iframe')).toBeNull();
+	});
+});
+
+describe('the documented props reach the iframe', () => {
+	const src = (props: Record<string, unknown>) =>
+		new URL(renderEmbed(props).querySelector('iframe')!.getAttribute('src')!);
+
+	it('muted is applied, having been documented and inert', () => {
+		// `muted` is in EmbedOptions and in every buildEmbedUrl, and the component
+		// never applied it. It matters beyond preference: browsers refuse autoplay
+		// with sound, so `autoplay` alone often does nothing.
+		expect(src({ url: YOUTUBE, muted: true }).searchParams.get('mute')).toBe('1');
+	});
+
+	it('muted is off by default', () => {
+		expect(src({ url: YOUTUBE }).searchParams.get('mute')).toBeNull();
+	});
+
+	it('spells muted the way each platform does', () => {
+		// YouTube uses `mute`; Vimeo and Twitch use `muted`. Getting this wrong is
+		// silent — an unknown parameter is ignored, not rejected.
+		expect(src({ url: 'https://vimeo.com/76979871', muted: true }).searchParams.get('muted')).toBe(
+			'1'
+		);
+	});
+
+	it('aspectRatio overrides the platform default', () => {
+		const target = renderEmbed({ url: YOUTUBE, aspectRatio: '1:1' });
+		const container = target.querySelector('.video-embed__container') as HTMLElement;
+		expect(container.style.paddingBottom).toBe('100%');
+	});
+
+	it('falls back to the platform default aspect ratio', () => {
+		// Non-vacuity for the arm above: 16:9 is 56.25%, so the override is doing
+		// something rather than both paths landing on one value.
+		const target = renderEmbed({ url: YOUTUBE });
+		const container = target.querySelector('.video-embed__container') as HTMLElement;
+		expect(container.style.paddingBottom).toBe('56.25%');
+	});
+});
+
+describe('the component supplies what only it can know', () => {
+	it('sets Twitch parent from the page it is rendered on', () => {
+		// Detection deliberately emits no `parent` — it cannot know the host. This
+		// is the point where it becomes knowable, and the reason the SSR
+		// `parent=localhost` defect is fixed rather than moved.
+		const target = renderEmbed({ url: 'https://www.twitch.tv/videos/123456789' });
+		const url = new URL(target.querySelector('iframe')!.getAttribute('src')!);
+
+		expect(window.location.hostname).toBeTruthy();
+		expect(url.searchParams.get('parent')).toBe(window.location.hostname);
+	});
+
+	it('leaves YouTube alone', () => {
+		const url = new URL(
+			renderEmbed({ url: YOUTUBE }).querySelector('iframe')!.getAttribute('src')!
+		);
+		expect(url.searchParams.get('parent')).toBeNull();
+	});
+});
