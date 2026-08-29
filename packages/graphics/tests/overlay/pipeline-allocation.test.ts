@@ -93,6 +93,32 @@ describe('when neither buffer allocates', () => {
 
 		expect(error.mock.calls.flat().join(' ')).toMatch(/could not allocate/i);
 	});
+
+	it('says it once, not on every frame', () => {
+		// Found by reviewing the fix that made this audible at all. `render()` is
+		// called for every element on every frame, and its "not initialized"
+		// branch was unreachable until `initializeBuffers` stopped claiming a
+		// success it had not had — so making the failure speak made it speak
+		// sixty times a second. Measured before this arm existed: 61 console
+		// errors for 60 frames.
+		//
+		// Trading silence for a flood is not a fix. It is the same trade
+		// `reportRefusal` exists for in the overlay, missed again one commit
+		// after citing it.
+		const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const { pipeline } = harness(2);
+		const afterConstruction = error.mock.calls.length;
+		expect(afterConstruction, 'construction said nothing').toBeGreaterThan(0);
+
+		for (let frame = 0; frame < 60; frame += 1) {
+			pipeline.render(dummyProgram, {} as WebGLTexture);
+		}
+
+		expect(
+			error.mock.calls.length - afterConstruction,
+			'an unusable pipeline shouted on every frame'
+		).toBeLessThanOrEqual(1);
+	});
 });
 
 describe('when only one buffer allocates', () => {

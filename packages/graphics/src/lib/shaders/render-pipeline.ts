@@ -63,6 +63,8 @@ export class RenderPipeline {
 	private quadBuffer: WebGLBuffer | null = null;
 	private texCoordBuffer: WebGLBuffer | null = null;
 	private initialized = false;
+	/** So an unusable pipeline says so once rather than on every frame. */
+	private reportedUninitialized = false;
 
 	constructor(
 		private gl: WebGLRenderingContext,
@@ -178,7 +180,18 @@ export class RenderPipeline {
 	 */
 	render(program: CompiledProgram, texture: WebGLTexture, options: RenderOptions = {}): void {
 		if (!this.initialized) {
-			console.error('[RenderPipeline] Pipeline not initialized');
+			// Once, not per frame. This branch was unreachable until
+			// `initializeBuffers` stopped claiming success it had not had, and the
+			// render loop calls this for every element on every frame — so making
+			// the failure audible made it audible sixty times a second, which
+			// buries the one line that says what actually went wrong.
+			//
+			// The same trade the overlay's `reportRefusal` exists for, missed
+			// again in the commit that fixed the silence.
+			if (!this.reportedUninitialized) {
+				this.reportedUninitialized = true;
+				console.error('[RenderPipeline] Pipeline not initialized');
+			}
 			return;
 		}
 
