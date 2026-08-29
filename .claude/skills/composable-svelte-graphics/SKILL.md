@@ -1212,7 +1212,7 @@ It takes **exactly one prop**, `options`, and every field of it is optional:
 | option | meaning |
 |---|---|
 | `targetFPS` | render-loop cap. Default 60 desktop, 30 mobile |
-| `maxTextureSize` | **downscale** a source larger than this — `<img>`, `<video>` and `<canvas>` alike, at registration and on every re-upload. It only narrows: a value above the driver's `MAX_TEXTURE_SIZE` is clamped to it. It does not refuse; `memoryBudget` is the one that does |
+| `maxTextureSize` | **downscale** a source larger than this — `<img>`, `<video>` and `<canvas>` alike, at registration and on every re-upload. It only narrows: a value above the driver's `MAX_TEXTURE_SIZE` is clamped to it, and a value that is not a whole number ≥ 1 is reported and ignored. The default is **not** simply the driver's answer: on a device detected as mobile it is `Math.min(driver, 2048)`, and it falls back to 2048 anywhere the driver reports nothing usable. It never refuses a source for being large — but `memoryBudget` refuses, and so does a source with **no pixels yet** |
 | `memoryBudget` | total texture bytes before further textures are rejected. Default 200MB |
 | `debug` | console logging |
 | `handleContextLoss` | whether to rebuild resources after a context loss. Default `true`; the two callbacks below fire either way, so `false` means "tell me, but do not recover for me" |
@@ -1227,7 +1227,7 @@ It takes **exactly one prop**, `options`, and every field of it is optional:
 | `unregisterElement(id)` | stop, releasing the texture and the compiled program |
 | `updateElementShader(id, shader)` | recompile the element with a different effect |
 | `updateUniforms(id, uniforms)` | change what the *existing* program is fed, without recompiling — this is how a shader parameter is driven over time |
-| `updateElement(id)` | re-read the element's pixels. The trigger for the `manual` strategy, which is what a `<canvas>` gets by default |
+| `updateElement(id)` | re-read the element's pixels. The trigger for the `manual` strategy, which is what a `<canvas>` gets by default — and, for an element that has **no texture yet**, the retry that recovers one refused at registration, whatever its strategy. An `<img>` infers `static` and needs this to recover after being registered before it decoded |
 | `updateElementPosition(id)` | re-read the element's bounds after a CSS transform moves it |
 | `getElement(id)`, `getElements()` | the registrations, carrying the resolved shader, current bounds, and any `OverlayError` |
 | `getCanvas()`, `getContext()` | the canvas and the live WebGL context, for drawing alongside |

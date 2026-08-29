@@ -74,6 +74,12 @@ Root component that manages the Babylon.js engine and renders the 3D scene.
 - `width?`: string | number (default: '100%')
 - `height?`: string | number (default: '600px')
 
+`BabylonAdapter` is exported alongside these. It is the imperative class
+`<Scene>` drives Babylon.js *through*, not a way of driving `<Scene>` — reach for
+it when you want the engine without the component, and note that it is then
+yours to create, resize and dispose. It has nothing to do with the WebGL Overlay
+below, which is a separate renderer.
+
 ### `<Camera>`
 
 Configures the scene camera.
@@ -350,10 +356,14 @@ The single prop is `options` (`OverlayOptions`): `targetFPS`, `maxTextureSize`,
 one — for `<img>`, `<video>` and `<canvas>` alike, at registration and on every
 re-upload. It can only narrow: a value above the driver's own maximum is clamped
 to it. It must be a whole number of at least 1; anything else is reported on the
-console and **ignored**, leaving the driver limit in force. If the driver
-reports nothing usable the ceiling falls back to **2048** rather than becoming
-unlimited — which can sit well below the real device maximum, and is reported
-too.
+console and **ignored**, leaving the default in force.
+
+That default is not simply the driver's answer. **On a device detected as mobile
+the ceiling is `Math.min(driver, 2048)`**, deliberately, for memory and fill-rate
+— so a phone reporting 4096 gets 2048 and sources are scaled accordingly. And if
+the driver reports nothing usable on any device, the ceiling falls back to
+**2048** rather than becoming unlimited, which can sit well below the real
+maximum; that case is reported on the console.
 
 A source with **no pixels yet** is refused with `TEXTURE_CREATION_FAILED` rather
 than uploaded as an empty texture. That covers all three element types and both
@@ -394,11 +404,18 @@ on `error.code`. It reports failures to construct the overlay
 texture or compile a shader (`CORS_TAINTED_CANVAS`, `MEMORY_BUDGET_EXCEEDED`,
 `TEXTURE_CREATION_FAILED`, `SHADER_COMPILATION_FAILED`).
 
-`registerElement(id, element, options)` takes `type` (`'image' | 'video' |
-'canvas'`), `shader` (a preset name or a `CustomShaderEffect`), an optional
-`updateStrategy` (`'static' | 'manual' | 'frame'` — inferred from the element
-type when omitted) and an optional `onTextureLoaded`, called **once**, when the
-texture actually exists. That last one is how `examples/shader-gallery` knows
+`registerElement(registration)` takes a **single object**: `id`, `domElement`,
+`shader` (a preset name or a `CustomShaderEffect`), an optional `updateStrategy`
+(`'static' | 'manual' | 'frame'`, inferred from the element type when omitted)
+and an optional `onTextureLoaded`, called **once**, when the texture actually
+exists.
+
+There is no `type` — the component infers it from the element, and refuses
+anything that is not an `<img>`, `<video>` or `<canvas>`. This paragraph used to
+document `registerElement(id, element, options)` with a `type` option, which is
+the signature of the internal `createOverlay`; that function is not exported, so
+it described a call a consumer cannot make, three dozen lines below a compiled
+example making the real one. That last one is how `examples/shader-gallery` knows
 when to fade the DOM `<img>` out; it fires whether the texture was built
 immediately or deferred because the context was lost at registration time, and
 it does not fire again on a later restore.
@@ -415,9 +432,6 @@ bounds after a transform); `getElement`, `getElements`, `getCanvas`,
 `glitch-*` and `zoom-*`. `getAllPresetNames()` lists them, `getPresetMetadata()`
 describes one, and `createRippleEffect` and its five siblings build effects the
 fixed presets do not cover.
-
-`BabylonAdapter` is also exported, for driving a `<Scene>` directly rather than
-through the component.
 
 `examples/shader-gallery` is the worked example.
 
