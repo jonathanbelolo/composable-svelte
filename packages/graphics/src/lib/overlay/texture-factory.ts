@@ -93,11 +93,17 @@ export class TextureFactory {
 	private createImageTexture(img: HTMLImageElement): TextureCreationResult {
 		const gl = this.gl;
 
-		// Check if image is loaded
-		if (!img.complete || img.naturalWidth === 0) {
-			return {
-				error: OverlayError.invalidElementType(img.id || 'image', 'Image not loaded')
-			};
+		// An image that has not arrived yet is not the wrong *kind* of element,
+		// which is what `invalidElementType` said about it. It reported the same
+		// code as a `<div>` handed to the overlay, so a consumer could not tell
+		// "wait for it" from "this will never work" — and since a refused element
+		// now retries on the next update, that distinction decides whether they
+		// should try again.
+		if (!img.complete) {
+			return { error: this.noPixels(img.id || 'image', 'the image has not finished loading') };
+		}
+		if (img.naturalWidth === 0 || img.naturalHeight === 0) {
+			return { error: this.noPixels(img.id || 'image', 'the image decoded to nothing') };
 		}
 
 		// Check CORS
@@ -213,14 +219,12 @@ export class TextureFactory {
 	private createVideoTexture(video: HTMLVideoElement): TextureCreationResult {
 		const gl = this.gl;
 
-		// Check if video has valid dimensions
+		// Same condition as the image and canvas paths, and now the same code:
+		// the element is a video, it simply has no frame yet. Its own parenthesis
+		// — "(not loaded or invalid)" — was the admission that one code was
+		// covering two different answers.
 		if (video.videoWidth === 0 || video.videoHeight === 0) {
-			return {
-				error: OverlayError.invalidElementType(
-					video.id || 'video',
-					'Video has no dimensions (not loaded or invalid)'
-				)
-			};
+			return { error: this.noPixels(video.id || 'video', 'the video has no frame yet') };
 		}
 
 		const width = video.videoWidth;
@@ -532,6 +536,23 @@ export class TextureFactory {
 	}
 
 	/**
+	 * The refusal for a source that has nothing to upload yet.
+	 *
+	 * One condition, one code, whatever the element is. A canvas measured before
+	 * layout, an image registered before it decodes and a video before its first
+	 * frame are the same situation — the source is not ready — and they used to
+	 * report two different codes, `TEXTURE_CREATION_FAILED` for the canvas and
+	 * `INVALID_ELEMENT_TYPE` for the other two. `INVALID_ELEMENT_TYPE` keeps its
+	 * real meaning: an element that is genuinely the wrong kind.
+	 *
+	 * The detail differs because the wait differs; the code and the leading
+	 * clause do not, so a consumer can match on either.
+	 */
+	private noPixels(id: string, detail: string): OverlayError {
+		return OverlayError.textureCreationFailed(id, `The source has no pixels — ${detail}`);
+	}
+
+	/**
 	 * The error a budget refusal describes.
 	 *
 	 * Takes the narrowed arm, so "anything arriving here is a budget refusal"
@@ -540,10 +561,7 @@ export class TextureFactory {
 	 */
 	private validationError(refusal: TextureRefusal, id: string): OverlayError {
 		if (refusal.empty) {
-			return OverlayError.textureCreationFailed(
-				id,
-				'The source has no pixels — one of its dimensions is zero'
-			);
+			return this.noPixels(id, 'one of its dimensions is zero');
 		}
 
 		const usage = this.textureValidator.getMemoryUsage();
