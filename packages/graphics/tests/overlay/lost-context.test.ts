@@ -3,11 +3,19 @@
  *
  * Real WebGL returns `null` from **every** `create*` while the context is lost,
  * and six places in this package check for that: three in `texture-factory.ts`,
- * two in `shader-compiler.ts`, one pair in `render-pipeline.ts`. Not one of them
- * had ever been executed by a test, because the fake had no lost state at all —
- * no `isContextLost`, and `createTexture` handed out a handle whatever was
- * happening. The existing `CONTEXT_LOST` tests dispatch the event and assert the
- * overlay's own bookkeeping flag, which is a different thing entirely.
+ * two in `shader-compiler.ts`, one pair in `render-pipeline.ts`.
+ *
+ * Five of the six had never been executed by a test, because the fake had no
+ * lost state at all — no `isContextLost`, and `createTexture` handed out a
+ * handle whatever was happening. The existing `CONTEXT_LOST` tests dispatch the
+ * event and assert the overlay's own bookkeeping flag, which is a different
+ * thing entirely.
+ *
+ * The sixth — the image path's — *was* covered, by two suites that reached it by
+ * monkey-patching `fake.context.createTexture` to return `null` once. They had
+ * improvised exactly what `failNextCreate` now provides. I first wrote "not one
+ * of them had ever been executed", which was wrong: a mutation over each of the
+ * six is what said so, and it is the only reason this paragraph is accurate.
  *
  * So the fake models it now, and these are the arms that walk into those
  * branches. The first describe is non-vacuity: every "it was refused" below is
@@ -256,6 +264,53 @@ describe('when GL simply will not allocate', () => {
 
 		expect(api.getElement('a')?.texture).toBeUndefined();
 		expect(api.getElement('b')?.texture, 'the failure was not limited to one call').toBeDefined();
+		api.destroy();
+	});
+});
+
+describe('the video path, which nothing reached either way', () => {
+	// Found by the hostile review of this file: disabling `texture-factory`'s
+	// three `if (!texture)` guards one at a time showed the image path covered by
+	// two older suites, the canvas path covered by the arm above — and the video
+	// path covered by nothing at all, before this work or after it. The commit
+	// that added this file claimed six guards reached; it was five.
+	it('reports a refused video texture rather than crashing', async () => {
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const onError = vi.fn();
+		const { api, fake } = overlay({ onError });
+
+		const video = document.createElement('video');
+		Object.defineProperty(video, 'videoWidth', { value: 64 });
+		Object.defineProperty(video, 'videoHeight', { value: 64 });
+		Object.defineProperty(video, 'paused', { value: true });
+
+		fake.failNextCreate('texture');
+		api.registerElement('a', video, { type: 'video', shader: SHADER });
+		await settle();
+
+		expect(api.getElement('a')?.texture).toBeUndefined();
+		expect((onError.mock.calls[0]?.[0] as OverlayError)?.code).toBe(
+			OverlayErrorCode.TEXTURE_CREATION_FAILED
+		);
+		api.destroy();
+	});
+
+	it('and accepts the same video when allocation works', async () => {
+		// Non-vacuity: a video the fake refuses for some *other* reason would
+		// satisfy the arm above without the guard being involved.
+		vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const { api } = overlay();
+
+		const video = document.createElement('video');
+		Object.defineProperty(video, 'videoWidth', { value: 64 });
+		Object.defineProperty(video, 'videoHeight', { value: 64 });
+		Object.defineProperty(video, 'paused', { value: true });
+
+		api.registerElement('a', video, { type: 'video', shader: SHADER });
+		await settle();
+
+		expect(api.getElement('a')?.texture, 'the video never uploaded at all').toBeDefined();
 		api.destroy();
 	});
 });
