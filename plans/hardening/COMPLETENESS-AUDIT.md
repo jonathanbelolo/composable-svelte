@@ -239,7 +239,55 @@ records that "Twitter, TikTok, Dailymotion, generic" were **removed** because th
 extractor "has no registry entry for [them] and can never produce" them. So the
 code already knows the claim is false. Drop "and more", or open the union.
 
-### G4. Advertised features with no test reaching their component — VERIFIED (list), INFERRED (severity)
+### G4. Components no test has ever executed — **CORRECTED, then closed**
+
+> **The original entry was wrong in both directions**, because the method behind
+> it was a name-grep: "does the component's basename appear anywhere in its
+> package's tests". That counts a mention in a comment and misses a component
+> rendered through a tested parent. It is preserved below the correction, since
+> the register's value is that a reader can tell which of its claims were
+> reached by measuring.
+
+Re-measured by following relative imports from every test file in the repo,
+through barrel `index.ts` files — which is what a test actually causes to
+execute:
+
+- **media was wrong.** `VoiceInputPanel`, `AudioVisualizer` and `RecordingTimer`
+  are all reached through `VoiceInput`, which has eleven test files. Voice input
+  is among the best-tested things in this repo.
+- **chat was partly right.** `MessageReactions`, `FileAttachment` and
+  `AttachmentGallery` are reached. `TypingIndicator`, `TypingUsersList` and
+  `ActionButtons` are not, and the last two the entry never named.
+- **maps' `TileProviderControl` is confirmed** — never executed, and a `[x]`
+  roadmap item. G2's work tested the tile registry, not the component.
+- **The entry missed the large one entirely: 39 components in `core` are never
+  executed by any test in the repo.** `Button`, `Input`, `Checkbox`, `Radio`,
+  `RadioGroup`, `Slider`, `Textarea`, `Label`, `Progress`, all of `Card`,
+  `Banner` and `DataTable`, the four `Form*` parts, and `DestinationRouter`.
+  None is *imported* by any test; the few files that "name" `Button` mention it
+  incidentally.
+
+**The original entry's own caveat was backwards.** It dismissed core's list as
+primitives covered through their parents. The eight navigation `*Primitive`s
+*are* covered, through their tested wrappers — and the **atoms**, which are the
+component library's headline surface, are the ones nothing touches.
+
+**43 components, never executed**, and a live hazard in the most-used of them:
+`Button`'s `sizeClasses[size]` is `undefined` for a value outside its union and
+`cn()` drops it, so the button renders with no height or padding. That is how
+the recorded S4.6 defect happened, and types do not reach a value arriving from
+a store or from JSON.
+
+**A second measurement of mine over-reported and was discarded.** Searching test
+text for `<Name`, `mount(Name` or `Name.svelte` put 51 core components on the
+list — but 38 test files use `render()` from `vitest-browser-svelte`, and named
+imports come from barrels. `Breadcrumb` has a dedicated test file and appeared
+on it. Import-reachability is the measurement that holds, and is what the guard
+in `tests/repo/component-coverage.test.ts` is built on.
+
+---
+
+*The entry as originally written:*
 
 44 of 152 components are not named in any test in their own package. That count
 is a **candidate list, not a defect count**: a primitive exercised through a
