@@ -31,6 +31,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
+import { walkFiles, listDirs } from './walk.js';
 import { fileURLToPath } from 'node:url';
 import { join, relative } from 'node:path';
 
@@ -107,23 +108,19 @@ const REGISTER: Record<string, { properties: string[]; why: string }> = {
  * have been invisible to a guard whose whole job is to see them.
  */
 function walk(dir: string): string[] {
-	if (!existsSync(dir)) return [];
-	return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
-		const full = join(dir, e.name);
-		// `worktrees` are agents' throwaway repo copies — full duplicates that
-		// double-count every violation and outlive the agent that made them.
-		if (e.isDirectory()) {
-			return ['node_modules', 'worktrees'].includes(e.name) ? [] : walk(full);
-		}
-		return e.name.endsWith('.svelte') || e.name.endsWith('.css') ? [full] : [];
-	});
+	// `worktrees` are agents' throwaway repo copies — full duplicates that
+	// double-count every violation and outlive the agent that made them.
+	return walkFiles(dir, {
+		skip: ['node_modules', 'worktrees'],
+		keep: (name) => name.endsWith('.svelte') || name.endsWith('.css')
+	}).files;
 }
 
+// The `.filter(statSync(...).isFile())` that used to follow this is gone: it is
+// what `walkFiles` decides by, and in the throwing form it would have taken
+// every test in this file with it on one dangling symlink.
 const sourceFiles = SOURCE_ROOTS.flatMap((root) =>
-	readdirSync(join(repoRoot, root), { withFileTypes: true })
-		.filter((e) => e.isDirectory())
-		.flatMap((e) => walk(join(repoRoot, root, e.name, 'src')))
-		.filter((f) => statSync(f).isFile())
+	listDirs(join(repoRoot, root)).flatMap((name) => walk(join(repoRoot, root, name, 'src')))
 );
 
 /**

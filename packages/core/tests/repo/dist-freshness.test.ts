@@ -19,6 +19,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { readdirSync, existsSync, statSync } from 'node:fs';
+import { walkFiles, listDirs } from './walk.js';
 import { fileURLToPath } from 'node:url';
 import { join, relative } from 'node:path';
 
@@ -27,23 +28,19 @@ const packagesDir = join(repoRoot, 'packages');
 
 /** Newest mtime under `dir`, and the file it belongs to. */
 function newest(dir: string): { at: number; file: string } | null {
-	if (!existsSync(dir)) return null;
+	// `worktrees`: see the note in doc-examples.test.ts.
+	const { files } = walkFiles(dir, { skip: ['node_modules', 'worktrees'], keep: () => true });
 
 	let best: { at: number; file: string } | null = null;
-	const walk = (current: string) => {
-		for (const entry of readdirSync(current, { withFileTypes: true })) {
-			const full = join(current, entry.name);
-			if (entry.isDirectory()) {
-				// `worktrees`: see the note in doc-examples.test.ts.
-				if (['node_modules', 'worktrees'].includes(entry.name)) continue;
-				walk(full);
-				continue;
-			}
-			const at = statSync(full).mtimeMs;
-			if (!best || at > best.at) best = { at, file: full };
-		}
-	};
-	walk(dir);
+	for (const file of files) {
+		// Still the throwing form's job, but on a path `walkFiles` has already
+		// stat-ed successfully — and guarded, because a file can be deleted
+		// between the walk and here, and a build artefact vanishing mid-run must
+		// not delete this suite.
+		const stat = statSync(file, { throwIfNoEntry: false });
+		if (!stat) continue;
+		if (!best || stat.mtimeMs > best.at) best = { at: stat.mtimeMs, file };
+	}
 	return best;
 }
 

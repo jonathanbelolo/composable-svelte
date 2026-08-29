@@ -45,6 +45,7 @@
 import { describe, it, expect } from 'vitest';
 import { compile } from 'svelte/compiler';
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
+import { walkFiles, listDirs } from './walk.js';
 import { fileURLToPath } from 'node:url';
 import { join, relative } from 'node:path';
 
@@ -73,29 +74,19 @@ function docs(): string[] {
 		join(repoRoot, 'guides'),
 		join(repoRoot, 'examples')
 	];
-	const out: string[] = [];
+	// `worktrees` holds throwaway checkouts that agents run in. They are full
+	// copies of the repo, so scanning them double-counts every doc and reports
+	// findings against paths that will not exist tomorrow — and a worktree left
+	// behind by a killed agent fails this suite for reasons that have nothing to
+	// do with the working tree.
+	const skip = ['node_modules', 'dist', '.svelte-kit', 'worktrees'];
 
-	const walk = (dir: string) => {
-		if (!existsSync(dir)) return;
-		for (const entry of readdirSync(dir, { withFileTypes: true })) {
-			const full = join(dir, entry.name);
-			if (entry.isDirectory()) {
-				// `worktrees` holds throwaway checkouts that agents run in. They
-				// are full copies of the repo, so scanning them double-counts
-				// every doc and reports findings against paths that will not
-				// exist tomorrow — and a worktree left behind by a killed agent
-				// fails this suite for reasons that have nothing to do with the
-				// working tree.
-				if (['node_modules', 'dist', '.svelte-kit', 'worktrees'].includes(entry.name)) continue;
-				walk(full);
-				continue;
-			}
-			if (entry.name.endsWith('.md') && statSync(full).isFile()) out.push(full);
-		}
-	};
-
-	roots.forEach(walk);
-	return out;
+	// `walkFiles`, not a local walk. This function ran a throwing `statSync` at
+	// module scope, so a single dangling `.md` symlink made the whole file fail
+	// to *collect* — every test in it gone, suite still green. `unreadable` is
+	// not inspected here because `walk.test.ts` asserts it repo-wide, in one
+	// place rather than eleven.
+	return roots.flatMap((root) => walkFiles(root, { skip, keep: (n) => n.endsWith('.md') }).files);
 }
 
 /**
@@ -493,27 +484,18 @@ function docExamples(): { examples: DocExample[]; unparsed: string[] } {
 	const packagesDir = join(repoRoot, 'packages');
 	if (!existsSync(packagesDir)) return { examples, unparsed };
 
+	// This walk was already symlink-aware — it was the *other* one in this file
+	// that threw — but it dropped a dangling link with a bare `continue`, which
+	// is the silence this function's own docstring calls the failure. `walkFiles`
+	// reports it instead, and it lands in `unparsed` below.
 	const files: string[] = [];
-	const walk = (dir: string): void => {
-		for (const entry of readdirSync(dir, { withFileTypes: true })) {
-			const full = join(dir, entry.name);
-			// `statSync`, not `entry.isFile()`. `Dirent.isFile()` is **false**
-			// for a symlink, so a symlinked example — or a symlinked directory of
-			// them — was dropped with no entry in `unparsed`: a third bare
-			// `continue`, in the rewrite whose whole subject was the other two.
-			// The `docs()` walk above already uses `statSync`, so the two walks
-			// in this file disagreed about what a file is.
-			const stat = statSync(full, { throwIfNoEntry: false });
-			if (!stat) continue; // a dangling symlink names nothing
-			if (stat.isDirectory()) walk(full);
-			else if (stat.isFile()) files.push(full);
-		}
-	};
-
-	for (const pkg of readdirSync(packagesDir, { withFileTypes: true })) {
-		if (!pkg.isDirectory()) continue;
-		const dir = join(packagesDir, pkg.name, 'tests', 'doc-examples');
-		if (existsSync(dir)) walk(dir);
+	for (const pkg of listDirs(packagesDir)) {
+		const dir = join(packagesDir, pkg, 'tests', 'doc-examples');
+		const found = walkFiles(dir, { keep: () => true });
+		files.push(...found.files);
+		unparsed.push(
+			...found.unreadable.map((f) => `${relative(repoRoot, f)} — the filesystem would not read it`)
+		);
 	}
 
 	for (const full of files) {

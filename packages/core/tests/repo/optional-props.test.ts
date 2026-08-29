@@ -37,6 +37,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
+import { walkFiles, listDirs } from './walk.js';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, relative, resolve } from 'node:path';
 
@@ -127,26 +128,20 @@ const SKIP_DIRS = new Set([
 
 /** Every `.svelte` under a package's `src`. Tests are deliberately not here — see below. */
 function componentFiles(): string[] {
-	const out: string[] = [];
 	const packages = join(repoRoot, 'packages');
 
-	const walk = (dir: string) => {
-		for (const entry of readdirSync(dir, { withFileTypes: true })) {
-			const full = join(dir, entry.name);
-			if (entry.isDirectory()) {
-				if (!SKIP_DIRS.has(entry.name)) walk(full);
-				continue;
-			}
-			if (entry.name.endsWith('.svelte') && statSync(full).isFile()) out.push(full);
-		}
-	};
-
-	for (const pkg of readdirSync(packages, { withFileTypes: true })) {
-		if (!pkg.isDirectory()) continue;
-		const src = join(packages, pkg.name, 'src');
-		if (existsSync(src)) walk(src);
-	}
-	return out.sort();
+	// `walkFiles`: this ran a throwing `statSync` at module scope, so one
+	// dangling `.svelte` symlink would have made the file fail to collect and
+	// taken every test in it with it.
+	return listDirs(packages)
+		.flatMap(
+			(pkg) =>
+				walkFiles(join(packages, pkg, 'src'), {
+					skip: SKIP_DIRS,
+					keep: (n) => n.endsWith('.svelte')
+				}).files
+		)
+		.sort();
 }
 
 /**

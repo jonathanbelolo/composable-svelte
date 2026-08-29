@@ -26,6 +26,7 @@
 import { describe, it, expect } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
+import { walkFiles, listDirs } from './walk.js';
 import { fileURLToPath } from 'node:url';
 import { join, relative, resolve } from 'node:path';
 
@@ -78,25 +79,13 @@ function workspaceDirs(): string[] {
 /** Every `*.test.ts` on disk under a workspace, as workspace-relative paths. */
 function testFilesOnDisk(dir: string): string[] {
 	const root = join(repoRoot, dir);
-	const out: string[] = [];
 
-	const walk = (current: string) => {
-		for (const entry of readdirSync(current, { withFileTypes: true })) {
-			const full = join(current, entry.name);
-			if (entry.isDirectory()) {
-				if (!SKIP_DIRS.has(entry.name)) walk(full);
-				continue;
-			}
-			// `isFile()` rather than the name alone, for the `__screenshots__`
-			// reason above — belt and braces, since that directory is also skipped.
-			if (entry.name.endsWith('.test.ts') && statSync(full).isFile()) {
-				out.push(relative(root, full));
-			}
-		}
-	};
-
-	walk(root);
-	return out.sort();
+	// `walkFiles` decides file-ness by stat, which is the `__screenshots__`
+	// belt-and-braces the local walk was doing — without the throwing form that
+	// would have deleted this suite on one dangling symlink.
+	return walkFiles(root, { skip: SKIP_DIRS, keep: (n) => n.endsWith('.test.ts') })
+		.files.map((f) => relative(root, f))
+		.sort();
 }
 
 /**
