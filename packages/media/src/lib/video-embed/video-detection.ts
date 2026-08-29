@@ -177,7 +177,13 @@ export function detectVideo(url: string): VideoEmbed | null {
  * @returns Array of detected video embeds
  */
 export function extractVideosFromMarkdown(markdown: string): VideoEmbed[] {
-	const videos: VideoEmbed[] = [];
+	// Every match is collected with where it was found, then sorted, because the
+	// loop below is necessarily platforms-outer — the patterns are per-platform —
+	// and returning in that order returns the registry's order, not the
+	// document's. A page with a Vimeo link above a YouTube link produced
+	// `[youtube, vimeo]`, so anything rendering these in sequence showed them in
+	// an order the author did not write.
+	const found: Array<{ at: number; video: VideoEmbed }> = [];
 
 	// Use platform-specific patterns directly to avoid matching image URLs
 	for (const [platform, config] of platforms) {
@@ -186,21 +192,24 @@ export function extractVideosFromMarkdown(markdown: string): VideoEmbed[] {
 			const matches = markdown.matchAll(new RegExp(pattern.source, 'g'));
 
 			for (const match of matches) {
-				if (match[1]) {
-					const videoId = match[1];
-					videos.push({
+				if (!match[1] || match.index === undefined) continue;
+
+				const videoId = match[1];
+				found.push({
+					at: match.index,
+					video: {
 						url: match[0],
 						platform,
 						videoId,
 						aspectRatio: config.defaultAspectRatio,
 						embedUrl: config.buildEmbedUrl(videoId)
-					});
-				}
+					}
+				});
 			}
 		}
 	}
 
-	return videos;
+	return found.sort((a, b) => a.at - b.at).map((entry) => entry.video);
 }
 
 /**

@@ -64,4 +64,35 @@ describe('markdown extraction', () => {
 	it('returns nothing for prose with no videos', () => {
 		expect(extractVideosFromMarkdown('Just some words, and https://example.com/page')).toEqual([]);
 	});
+
+	it('returns them in the order they appear, not registry order', () => {
+		// The defect: the loop is platforms-outer, so results came back grouped by
+		// platform. Vimeo written first came back second, because YouTube is the
+		// first entry in the registry. Anything rendering these in sequence showed
+		// an order the author did not write.
+		const markdown = `First ${VIMEO}, then ${YOUTUBE}.`;
+		expect(extractVideosFromMarkdown(markdown).map((v) => v.platform)).toEqual([
+			'vimeo',
+			'youtube'
+		]);
+	});
+
+	it('keeps order across three platforms', () => {
+		// Two entries can be ordered correctly by luck; three cannot as easily,
+		// and this puts the registry's first platform last.
+		const twitch = 'https://www.twitch.tv/videos/123456789';
+		const markdown = `${twitch} then ${VIMEO} then ${YOUTUBE}`;
+		expect(extractVideosFromMarkdown(markdown).map((v) => v.platform)).toEqual([
+			'twitch',
+			'vimeo',
+			'youtube'
+		]);
+	});
+
+	it('reports a repeated video once per occurrence', () => {
+		// Order-preservation must not turn into deduplication: the same video
+		// linked twice is two embeds, and the positions differ.
+		const markdown = `${YOUTUBE} and again ${YOUTUBE}`;
+		expect(extractVideosFromMarkdown(markdown).length).toBe(2);
+	});
 });
