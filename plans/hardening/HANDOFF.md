@@ -319,7 +319,30 @@ verified by deleting the branch. The image fixture was worse than recorded: a
 each covering for the other, so **deleting either left it green**. It pins the
 refusal *message* now, which is the only thing that branch actually decides.
 
-graphics: 426 → 470 tests.
+graphics: 426 → 482 tests.
+
+**A third review, run as a checklist rather than a read-through**, closed the
+class instead of another instance. All 46 `console.*` sites in `src` were
+enumerated and classified by whether a loop can reach them, which produced the
+rule the package now follows:
+
+- a message about a **standing condition** fires when the condition worsens —
+  fixed for the render pipeline, missing uniforms, memory pressure (`ff8d43e`)
+  and low frame rate (`7fdce85`)
+- a message about a **caller's action** fires every time, because each call is a
+  separate mistake — measured at 30 reports for 30 bad `updateElement` calls and
+  deliberately left, since suppressing it would undo §4.2's work
+
+Memory pressure was the worst: **21 warnings for 10 updates**, because a
+re-upload calls `trackAllocation` twice. An edge trigger on "crossed 80%" would
+not have helped — the same release-and-re-track dips usage to 0% and back every
+update, so every update is a fresh crossing.
+
+`tests/overlay/console-quiet.test.ts` now bounds the whole class end to end, so
+the next instance fails a test rather than waiting for a review. **Its first
+version did not work**: it drove `updateElement` only, and a log planted in
+`RenderPipeline.render` — where two of the three defects lived — passed every
+arm. Planting a defect is what showed it; reading it would not have.
 
 **A second hostile review, of the first review's own fixes**, found three more —
 `c440ad6`, `617aaa5`, `4a517f0`:
