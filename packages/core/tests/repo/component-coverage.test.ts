@@ -49,35 +49,15 @@ const UNTESTED_PENDING: Record<string, string[]> = {
 		'FormItem',
 		'FormLabel',
 		'FormMessage',
-		'AspectRatio',
-		'Avatar',
-		'Badge',
-		'Banner',
-		'BannerDescription',
-		'BannerTitle',
-		'Box',
 		'ButtonGroup',
-		'Card',
-		'CardContent',
-		'CardDescription',
-		'CardFooter',
-		'CardHeader',
-		'CardTitle',
 		'Checkbox',
-		'Empty',
-		'Heading',
 		'IconButton',
 		'Input',
-		'Kbd',
 		'Label',
-		'Panel',
 		'Progress',
 		'Radio',
 		'RadioGroup',
-		'Separator',
-		'Skeleton',
 		'Slider',
-		'Text',
 		'Textarea',
 		'DestinationRouter'
 	],
@@ -225,6 +205,6 @@ describe('the pending list describes reality', () => {
 	it('is shrinking', () => {
 		// Pinned so the debt is a number someone has to change deliberately.
 		const total = Object.values(UNTESTED_PENDING).reduce((n, list) => n + list.length, 0);
-		expect(total).toBeLessThanOrEqual(42);
+		expect(total).toBeLessThanOrEqual(22);
 	});
 });
