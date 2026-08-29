@@ -85,6 +85,36 @@ export interface FakeGL {
 	 * inspecting the store could corrupt it.
 	 */
 	bufferContents(handle: unknown): TypedArray | null;
+	/**
+	 * Put the context into the lost state, as `WEBGL_lose_context` does.
+	 *
+	 * While lost, **every `create*` returns `null`** — which is what a real
+	 * driver does, and what six call sites in this package guard for without any
+	 * test having been able to reach them: `texture-factory.ts` (three),
+	 * `shader-compiler.ts` (two) and `render-pipeline.ts`. The fake used to hand
+	 * out handles regardless, so the `CONTEXT_LOST` tests verified the overlay's
+	 * own bookkeeping flag and nothing about GL.
+	 *
+	 * The `webglcontextlost` event fires too, so the state and the event cannot
+	 * disagree — dispatching the event by hand, as the suites do, leaves the fake
+	 * still handing out handles.
+	 */
+	loseContext(): void;
+	/** Bring it back, as the extension's `restoreContext` does. */
+	restoreContext(): void;
+	/** Whether the context is currently lost. */
+	isContextLost(): boolean;
+	/**
+	 * Make the next `create*` of one kind return `null`, without losing the
+	 * context.
+	 *
+	 * A real driver does this when it is out of memory, and it is the only way
+	 * to reach the `if (!texture)` guards in `texture-factory.ts`: the overlay
+	 * refuses a registration with `CONTEXT_LOST` *before* calling the factory,
+	 * so losing the context cannot get there. Modelling allocation failure and
+	 * lostness as one thing would leave three guards permanently unreachable.
+	 */
+	failNextCreate(kind: 'texture' | 'program' | 'shader' | 'buffer', count?: number): void;
 }
 
 /**
@@ -260,7 +290,49 @@ export function createFakeGL(): FakeGL {
 		if (name) uniformWrites.set(name, value);
 	};
 
-	const make = (kind: keyof typeof counts): Handle => {
+	/**
+	 * Which canvases have had their context lost.
+	 *
+	 * Per canvas, not one flag, because this fake hands the *same* context object
+	 * to every canvas that asks — and `checkWebGLSupport` creates a throwaway
+	 * canvas, probes it, and releases it with `loseContext()` on every
+	 * `createOverlay`. In a browser that frees the probe's own context and
+	 * touches nothing else. With one shared flag it lost the overlay's, and every
+	 * element in the package failed to upload: 112 tests, none of them about
+	 * context loss.
+	 *
+	 * Lostness is the only property where the aliasing is observable, so it is
+	 * the only one modelled per canvas. Calls and resource counts stay shared,
+	 * which is what the assertions want.
+	 */
+	const lostCanvases = new WeakSet<HTMLCanvasElement>();
+	/** Before any canvas has claimed the context — the unit tests of this file. */
+	let detachedLost = false;
+
+	const isLost = (): boolean =>
+		state.canvas ? lostCanvases.has(state.canvas) : detachedLost;
+
+	const setLost = (lost: boolean): void => {
+		if (!state.canvas) {
+			detachedLost = lost;
+			return;
+		}
+		if (lost) lostCanvases.add(state.canvas);
+		else lostCanvases.delete(state.canvas);
+	};
+
+	/** Pending allocation failures, by kind — see `failNextCreate`. */
+	const failures: Record<string, number> = {};
+
+	const make = (kind: keyof typeof counts): Handle | null => {
+		// Real GL returns `null` from every `create*` while the context is lost.
+		// Returning a handle anyway made the null branches in `texture-factory`,
+		// `shader-compiler` and `render-pipeline` unreachable from any test.
+		if (isLost()) return null;
+		if ((failures[kind] ?? 0) > 0) {
+			failures[kind]! -= 1;
+			return null;
+		}
 		counts[kind]!.made += 1;
 		return { kind, id: nextId++ };
 	};
@@ -362,17 +434,20 @@ export function createFakeGL(): FakeGL {
 						loseContext: () => {
 							calls.push('loseContext');
 							records.push({ name: 'loseContext', args: [] });
+							setLost(true);
 							state.canvas?.dispatchEvent(new Event('webglcontextlost'));
 						},
 						restoreContext: () => {
 							calls.push('restoreContext');
 							records.push({ name: 'restoreContext', args: [] });
+							setLost(false);
 							state.canvas?.dispatchEvent(new Event('webglcontextrestored'));
 						}
 					}
 				: null
 		),
 		getSupportedExtensions: record('getSupportedExtensions', () => []),
+		isContextLost: record('isContextLost', () => isLost()),
 		// Distinct indices per attribute, and -1 for one the program does not
 		// declare — which is what a driver returns. A constant 0 for every name
 		// makes `aPosition` and `aTexCoord` indistinguishable, so a swapped or
@@ -569,6 +644,18 @@ export function createFakeGL(): FakeGL {
 			// A copy. It used to hand back the live internal array, so a test
 			// that merely *inspected* the store could corrupt it.
 			return new record.view(record.bytes.slice().buffer);
+		},
+		loseContext: () => {
+			setLost(true);
+			state.canvas?.dispatchEvent(new Event('webglcontextlost'));
+		},
+		restoreContext: () => {
+			setLost(false);
+			state.canvas?.dispatchEvent(new Event('webglcontextrestored'));
+		},
+		isContextLost: () => isLost(),
+		failNextCreate: (kind, count = 1) => {
+			failures[kind] = (failures[kind] ?? 0) + count;
 		},
 		drawCalls: () => drawCount,
 		uniforms: () => new Map(uniformWrites),
