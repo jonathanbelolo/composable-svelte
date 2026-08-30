@@ -108,9 +108,14 @@ which mirror README blocks but are not quickstarts.
 ### 4.1 Cut a release — blocking everything else
 
 Nothing else reaches a user until this happens, and it is **not** a routine
-bump. `git log --oneline 2443ab4..HEAD | grep -c '!'` returns **39 breaking
-commits** out of 190 — by scope: graphics 20, chat 10, core 4, charts 3, auth 3,
-media 2, code 2, maps 1.
+bump. Re-measured at `16c015f`: **46 breaking commits out of 263** — by scope,
+counting a multi-package commit once per package it names: graphics 21, chat 10,
+charts 5, maps 4, core 4, media 3, auth 3, code 2.
+
+(This paragraph read "39 out of 190" until the hardening sessions added to both
+figures. Re-measure it before drafting a changelog rather than quoting it; the
+repository also carries **no git tags at all**, so `2443ab4` is a commit someone
+remembered, not a marker anything points at.)
 
 So this is a **major-version release across most of the monorepo**, not a patch.
 `core` in particular has four breaking changes on top of a registry version that
