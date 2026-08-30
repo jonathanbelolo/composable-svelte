@@ -46,11 +46,13 @@ round. Until then the campaign is improving something nobody can install.
 
 ## 2. What is measured and solid
 
-- **3,743 tests passing** in the packages, gate green. Measured per workspace,
-  sequentially — `pnpm -r test` starves the real-Chromium suites and must not be
-  used for this: core 2,092 (browser, 3 skipped) + 407 (node), graphics 482,
-  chat 231 + 5, charts 191, maps 106, media 94, code 81, auth 54. Examples are
-  additional.
+- **3,849 tests passing**, gate green. Measured per workspace, sequentially —
+  `pnpm -r test` starves the real-Chromium suites and must not be used for this.
+  Packages total 3,743: core 2,092 (browser, 3 skipped) + 407 (node),
+  graphics 482, chat 231 + 5, charts 191, maps 106, media 94, code 81, auth 54.
+  Examples add 106 across six workspaces, unchanged.
+  *The previous figure here, 3,256, included the examples; compare against
+  3,849, not against 3,743.*
 - **The gate is `build → typecheck → svelte-check → test`** across all
   **19 of 19** workspaces. `svelte-check` genuinely covers all of them; it once
   covered two.

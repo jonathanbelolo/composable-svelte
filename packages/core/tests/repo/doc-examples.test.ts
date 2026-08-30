@@ -439,8 +439,19 @@ function looksLikeSvelte(body: string): boolean {
  *
  * Svelte markup is never written inside a template literal in this repository,
  * so nothing real is lost by not looking there.
+ *
+ * Line comments are removed *before* the backticks are paired, and that order
+ * matters. Prose in a comment routinely quotes an identifier — `store` — and a
+ * single backtick pairs with the next real one, blanking everything between the
+ * two. A mutation with two backticked words in comments either side of a
+ * `<Modal>` hid it completely and this arm passed. Comments cannot contain the
+ * markup being looked for, so dropping them first costs nothing and closes it.
  */
-const outsideTemplateLiterals = (body: string): string => body.replace(/`[\s\S]*?`/g, '``');
+const outsideTemplateLiterals = (body: string): string =>
+	body
+		// `(?<!:)` so a `https://` URL does not eat the rest of its line.
+		.replace(/(?<!:)\/\/[^\n]*/g, '')
+		.replace(/`[\s\S]*?`/g, '``');
 
 const sweptSvelteBlocks = blocks.filter((b) => SWEPT_DOCS.includes(b.file) && b.lang === 'svelte');
 
@@ -457,9 +468,13 @@ const sweptSvelteBlocks = blocks.filter((b) => SWEPT_DOCS.includes(b.file) && b.
  * true the moment the detector learned to lift a block's leading JavaScript into
  * a `<script>`, and nobody re-checked. All six compile and are relabelled.
  *
- * Kept as a constant rather than inlining `0`, because a document added to
- * `SWEPT_DOCS` may arrive with a backlog and raising this deliberately is
- * better than deleting the arm.
+ * Kept as a constant rather than inlining `0`, because a document may arrive
+ * with a backlog and raising this deliberately is better than deleting the arm.
+ *
+ * Note the scope: this arm reads *every* document, not `SWEPT_DOCS`. An earlier
+ * version of this comment said `SWEPT_DOCS`, left over from before the arm was
+ * widened, which understated it — any new markdown file anywhere in `packages`,
+ * `.claude`, `guides` or `examples` can move this number.
  */
 const ALLOWED_MISLABELLED = 0;
 
@@ -483,8 +498,15 @@ const ALLOWED_MISLABELLED = 0;
  * ```svelte one whose script is typed, so both halves are checked rather than
  * neither. Two of them contained a `<script>` already and an automated attempt
  * nested the tags, so every split was verified against both guards before the
- * next — and two of the 22 turned out not to be defects at all, which the
- * comments on `looksLikeSvelte` record.
+ * next.
+ *
+ * Exactly one of the 22 was not a defect: an HTML error page inside a template
+ * literal. The other correction went the other way — a *23rd* mixed listing the
+ * detector could not see, because its markup is `<svelte:head>` and no rule
+ * matched it. Both are recorded on `looksLikeSvelte` and
+ * `outsideTemplateLiterals`. Counting them together as "two false positives"
+ * would hide the more interesting of the two: the arm was passing a block it
+ * should have failed, which a green count can never reveal.
  */
 /**
  * Examples that are compiled for real, and the documents that must match them.

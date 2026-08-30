@@ -232,7 +232,21 @@ export interface CheckResult {
 
 /** Compile every block and report only what the surface codes catch. */
 export function checkDocs(): CheckResult {
-	const blocks = documents().flatMap((file) => blocksIn(file));
+	return checkBlocks(documents().flatMap((file) => blocksIn(file)));
+}
+
+/**
+ * Compile an explicit list of blocks.
+ *
+ * Exported for one reason: the guard's positive control. Every other arm in
+ * `doc-typecheck.test.ts` passes when `SURFACE_CODES` is empty, when the
+ * `paths` mapping resolves to nothing, or when the filter is inverted — a guard
+ * that reports zero looks exactly like a repository with zero defects. Now that
+ * `REGISTER` is empty there is no live finding to contradict any of that, so
+ * the test compiles a block it knows to be wrong and asserts the machinery
+ * still says so.
+ */
+export function checkBlocks(blocks: DocBlock[]): CheckResult {
 	blocks.forEach((block, index) => {
 		block.name = `/documented/${index}.ts`;
 	});

@@ -17,7 +17,7 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { checkDocs, keyOf, type Finding } from './doc-typecheck.js';
+import { checkBlocks, checkDocs, keyOf, type DocBlock, type Finding } from './doc-typecheck.js';
 
 /**
  * Errors present when this guard was written, with the count for each.
@@ -80,6 +80,32 @@ describe('the check itself', () => {
 			result.unbuilt,
 			`these packages have no dist — run \`pnpm -r build\` before this guard:\n  ${result.unbuilt.join('\n  ')}`
 		).toEqual([]);
+	});
+
+	it('still reports a surface error when one is put in front of it', () => {
+		// The arm the empty REGISTER made necessary. Every other check in this
+		// file is satisfied by a guard that finds nothing — an emptied
+		// `SURFACE_CODES`, a `paths` map that resolves to no declaration, an
+		// inverted filter — and all three look identical to a clean repository.
+		// So: compile a block that is definitely wrong, and require the machinery
+		// to say so through the same path the real ones take.
+		const probe: DocBlock = {
+			file: '<positive-control>',
+			line: 1,
+			kind: 'ts',
+			name: '',
+			counterExample: false,
+			source:
+				"import { scopeToOptionalXX } from '@composable-svelte/core';\n" +
+				'export const used = scopeToOptionalXX;\n'
+		};
+
+		const codes = checkBlocks([probe]).findings.map((finding) => finding.code);
+
+		expect(
+			codes,
+			'the checker no longer reports a name the library does not export — it is not measuring anything'
+		).toContain(2724);
 	});
 
 	it('reports far less than it sees, which is the point', () => {
