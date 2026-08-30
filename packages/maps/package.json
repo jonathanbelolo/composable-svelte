@@ -16,16 +16,6 @@
       "types": "./dist/mapbox/index.d.ts",
       "svelte": "./dist/mapbox/index.js",
       "default": "./dist/mapbox/index.js"
-    },
-    "./*.js": {
-      "types": "./dist/*.d.ts",
-      "svelte": "./dist/*.js",
-      "default": "./dist/*.js"
-    },
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "svelte": "./dist/*.js",
-      "default": "./dist/*.js"
     }
   },
   "svelte": "./dist/index.js",
