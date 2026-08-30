@@ -463,7 +463,7 @@ Returns a `Store` when:
 import { scopeToElement } from '@composable-svelte/core';
 import Counter from './Counter.svelte';
 
-const { store } = $props<{ store: Store<CountersState, CountersAction> }>();
+const { store }: { store: Store<CountersState, CountersAction> } = $props();
 </script>
 
 <div class="counters-grid">
@@ -495,7 +495,7 @@ const { store } = $props<{ store: Store<CountersState, CountersAction> }>();
 ```svelte
 <!-- Counter.svelte -->
 <script lang="ts">
-const { store } = $props<{ store: Store<CounterState, CounterAction> }>();
+const { store }: { store: Store<CounterState, CounterAction> } = $props();
 </script>
 
 <div class="counter">
@@ -623,7 +623,7 @@ scopedStore.dismiss();
 import { scopeToDestination } from '@composable-svelte/core';
 import AddItemModal from './AddItemModal.svelte';
 
-const { store } = $props<{ store: Store<ParentState, ParentAction> }>();
+const { store }: { store: Store<ParentState, ParentAction> } = $props();
 
 const addItemStore = $derived(
   scopeToDestination<AddItemState, AddItemAction>(
@@ -655,11 +655,11 @@ const {
   state,
   dispatch,
   dismiss
-} = $props<{
+}: {
   state: AddItemState;
   dispatch: (action: AddItemAction) => void;
   dismiss: () => void;
-}>();
+} = $props();
 </script>
 
 <dialog open>
@@ -807,9 +807,9 @@ const addItemStore = $derived(scopeToDestination(store, ['destination'], 'addIte
 ```svelte
 <!-- AddItemModal.svelte -->
 <script lang="ts">
-const { scopedStore } = $props<{
+const { scopedStore }: {
   scopedStore: ScopedDestinationStore<AddItemState, AddItemAction>;
-}>();
+} = $props();
 </script>
 
 <input
@@ -840,7 +840,7 @@ const {
   state,
   dispatch,
   dismiss
-} = $props<ScopedDestinationStore<AddItemState, AddItemAction>>();
+}: ScopedDestinationStore<AddItemState, AddItemAction> = $props();
 </script>
 
 <input
@@ -1015,7 +1015,7 @@ Destructure scoped store in child components:
 ```svelte
 <!-- ✓ Good: Destructured -->
 <script lang="ts">
-const { state, dispatch, dismiss } = $props<ScopedDestinationStore<AddItemState, AddItemAction>>();
+const { state, dispatch, dismiss }: ScopedDestinationStore<AddItemState, AddItemAction> = $props();
 </script>
 
 <input value={state.name} oninput={(e) => dispatch({ type: 'nameChanged', name: e.currentTarget.value })} />
@@ -1026,9 +1026,9 @@ const { state, dispatch, dismiss } = $props<ScopedDestinationStore<AddItemState,
 
 ```svelte
 <script lang="ts">
-const { scopedStore } = $props<{
+const { scopedStore }: {
   scopedStore: ScopedDestinationStore<AddItemState, AddItemAction>;
-}>();
+} = $props();
 </script>
 
 <input

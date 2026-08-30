@@ -855,3 +855,36 @@ describe('a svelte fence holds a component', () => {
 		).toBe(ALLOWED_MIXED_LISTINGS);
 	});
 });
+
+/**
+ * `$props()` takes no type argument, and neither guard could tell you.
+ *
+ * `svelte/types/index.d.ts` declares it `function $props(): any` — no type
+ * parameter — so `$props<Props>()` is "Expected 0 type arguments, but got 1".
+ * Eight documented examples wrote it anyway, and **none of the components in
+ * `src` did**, which is the whole story: `svelte-check` rejects it in a real
+ * `.svelte` file, and documentation is where an invalid form can survive.
+ *
+ * Neither existing arm sees it. The compile arm is syntax-only and Svelte's
+ * parser accepts the type argument; `doc-typecheck` reads the script body, where
+ * `$props` is an undeclared name and produces `TS2304` — not a surface code, so
+ * ignored. A rune is invisible to both by construction.
+ *
+ * Hence a rule about the one rune that has a wrong-but-plausible form. It is
+ * narrow on purpose: this is not a general "runes are unchecked" guard, it is
+ * the specific mistake that reached eight examples in one document.
+ */
+describe('runes are written the way Svelte declares them', () => {
+	it('no documented example passes a type argument to $props()', () => {
+		const offenders = blocks
+			.filter((block) => /\$props\s*</.test(block.body))
+			.map((block) => `${block.file}:${block.line}`);
+
+		expect(
+			offenders,
+			'`$props()` has no type parameter — annotate the destructuring instead:\n' +
+				'  let { store }: { store: Store<S, A> } = $props();\n' +
+				offenders.join('\n')
+		).toEqual([]);
+	});
+});
