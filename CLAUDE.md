@@ -20,7 +20,7 @@ This repository contains **Composable Svelte**, a Composable Architecture librar
   - **API Client**: HTTP/REST with effects, interceptors, retries, caching (162 tests)
   - **WebSocket**: Real-time communication, reconnection, channels, heartbeat (140 tests)
   - **Dependencies**: Clock (MockClock), Storage (localStorage/cookies) (118 tests)
-- ✅ **Phase 17**: Internationalization (i18n) & Server-Side Rendering (1900+ total tests)
+- ✅ **Phase 17**: Internationalization (i18n) & Server-Side Rendering
   - **i18n**: ICU MessageFormat, locale detection, framework formatters (dates, numbers, currency)
   - **SSR**: Server-side rendering with Fastify, state hydration, security hardening
   - **SSG**: Static site generation, multi-locale support, dynamic route enumeration (22 tests)
@@ -443,7 +443,11 @@ This library is heavily inspired by TCA for Swift but adapted for Svelte/TypeScr
 - ✅ **Vitest + jsdom**: Fast, Vite-native testing
 - ✅ **TestStore API**: Exhaustive action testing with send/receive
 - ✅ **Mock Implementations**: MockClock, MockCookieStorage, MockWebSocket, MockAPI
-- ✅ **1900+ Tests**: Across every package, run by `pnpm -r test`
+- ✅ **3,852 Tests**: 3,746 across the eight packages plus 106 in the examples.
+  Run them with `pnpm test`, which passes `--workspace-concurrency=1`: seven of
+  the eight packages use real browser mode, and running workspaces in parallel
+  makes suites fail on scheduling rather than on code. See
+  `guides/VERIFICATION-PROTOCOL.md`.
 
 ### Examples & Documentation
 - ✅ **Styleguide**: Component showcase with interactive examples

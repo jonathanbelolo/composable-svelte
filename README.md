@@ -421,7 +421,10 @@ pnpm dev
 - ✅ Phase 7: URL Routing
 - ✅ Phase 8: Backend Integration (API, WebSocket, Dependencies)
 
-**Test Coverage**: 3,600+ tests across all packages, run by `pnpm -r test`
+**Test Coverage**: 3,852 tests — 3,746 across the packages, 106 in the examples.
+Run with `pnpm test`; it serialises the workspaces, because most of them drive a
+real browser and running four at once produces failures about scheduling rather
+than about code.
 
 ## Contributing
 

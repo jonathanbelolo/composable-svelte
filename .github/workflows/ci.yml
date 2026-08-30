@@ -60,8 +60,14 @@ jobs:
       - name: Type check
         run: pnpm -r typecheck
 
+      # `--workspace-concurrency=1`: seven of eight packages run vitest in real
+      # browser mode, and pnpm's default is four workspaces at once. Chromium
+      # instances then contend for the machine and suites fail on scheduling
+      # rather than on code — which reads exactly like a flaky test and has been
+      # chased as one more than once. `guides/VERIFICATION-PROTOCOL.md` rule 5
+      # says run them sequentially; this is that rule, enforced where it counts.
       - name: Run tests
-        run: pnpm -r test
+        run: pnpm -r --workspace-concurrency=1 test
 
       # `tsc` never reads .svelte, which is how a broken `spring.js` import, 21
       # components with an undeclared `children` prop, and a <button> nested in a
