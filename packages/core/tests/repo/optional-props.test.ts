@@ -660,3 +660,93 @@ describe('an exported props type is anchored by a use', () => {
 		).toEqual([]);
 	});
 });
+
+/**
+ * The same hazard, one layer down: optional properties in plain `.ts`.
+ *
+ * `exactOptionalPropertyTypes` does not care whether a type is a component's
+ * props or a reducer's state — a bare `T?` cannot receive a computed value that
+ * may be absent. The arms above only ever see `.svelte` files, because
+ * `propsTypeBlocks` is anchored on `$props()`.
+ *
+ * **This exists because the number kept being wrong.** It has been recorded as
+ * 472, then 436, then 427, by three separate greps — and a grep cannot tell
+ * `() => void | undefined` (a function *returning* it) from
+ * `(() => void) | undefined` (a property accepting it). `acceptsUndefined`
+ * already knows the difference, so the honest count is the one it produces.
+ *
+ * Reported, not swept. Most of these are state and config shapes rather than
+ * props, so the wrapper defect T8 fixed does not apply to them; whether the whole
+ * set is worth changing is a decision that needs the real size first, and a bad
+ * `| undefined` sweep across 383 declarations would be worse than the hazard.
+ * What this arm does is stop the number growing while that is decided.
+ *
+ * **What the number does not cover**, stated because a count is only useful with
+ * its scope attached: this reads `export interface X { … }` and
+ * `export type X = { … }`. A discriminated union written as
+ * `export type Action =\n  | { type: 'send'; attachments?: Attachment[] }` opens
+ * with `|`, not `{`, so its members are not scanned — and in a library of
+ * reducers that is a large family of types. Extending to union members is the
+ * obvious next step if this backlog is ever acted on; it would raise the figure,
+ * not lower it.
+ */
+function typeDeclarationBodies(source: string): string[] {
+	const out: string[] = [];
+	const decl = /\bexport\s+(?:interface\s+\w+[^{]*|type\s+\w+\s*(?:<[^=]*>)?\s*=\s*)\{/g;
+
+	for (let m = decl.exec(source); m; m = decl.exec(source)) {
+		let depth = 1;
+		let i = m.index + m[0].length;
+		for (; i < source.length && depth > 0; i += 1) {
+			if (source[i] === '{') depth += 1;
+			else if (source[i] === '}') depth -= 1;
+		}
+		out.push(source.slice(m.index + m[0].length, i - 1));
+	}
+
+	return out;
+}
+
+function bareOptionalsInTypes(): string[] {
+	const packages = join(repoRoot, 'packages');
+	const out: string[] = [];
+
+	for (const pkg of listDirs(packages)) {
+		for (const file of walkFiles(join(packages, pkg, 'src'), {
+			skip: SKIP_DIRS,
+			keep: (n) => n.endsWith('.ts')
+		}).files) {
+			const source = blankComments(readFileSync(file, 'utf8'));
+
+			for (const body of typeDeclarationBodies(source)) {
+				for (const raw of splitMembers(body)) {
+					const m = /^\s*(?:readonly\s+)?([a-zA-Z_$][\w$]*)\s*\?\s*(:|\()/.exec(raw);
+					if (!m) continue;
+
+					const type = raw.slice(m.index + m[0].length).trim();
+					if (m[2] === ':' && acceptsUndefined(type)) continue;
+
+					out.push(`${relative(repoRoot, file)}  ${m[1]}?`);
+				}
+			}
+		}
+	}
+
+	return out.sort();
+}
+
+/** Measured, and meant to come down. See the docstring above for why it is not swept. */
+const ALLOWED_BARE_OPTIONALS = 311;
+
+describe('optional properties in .ts carry the same hazard', () => {
+	const bare = bareOptionalsInTypes();
+
+	it('is measured by the splitter, not by a grep', () => {
+		expect(
+			bare.length,
+			bare.length > ALLOWED_BARE_OPTIONALS
+				? `bare optional properties: ${bare.length}\n${bare.slice(0, 40).join('\n')}`
+				: `${ALLOWED_BARE_OPTIONALS - bare.length} have been fixed — lower ALLOWED_BARE_OPTIONALS to ${bare.length}`
+		).toBe(ALLOWED_BARE_OPTIONALS);
+	});
+});
