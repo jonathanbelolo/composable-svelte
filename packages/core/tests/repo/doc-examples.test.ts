@@ -420,6 +420,22 @@ function looksLikeSvelte(body: string): boolean {
 	);
 }
 
+/**
+ * Markup inside a template literal is string content, not the fence's language.
+ *
+ * `composable-svelte-ssr/SKILL.md` writes an error page into
+ * `document.body.innerHTML` as a backtick string. Its `<div>` starts a line, so
+ * the HTML rule above matched and called a correctly-labelled TypeScript block
+ * mislabelled. Relabelling it would have been wrong twice: the block is a `.ts`
+ * module from its first line, and a ```svelte fence with no `<script>` is
+ * skipped by the doc typechecker — so "fixing" it would have deleted the only
+ * checking that block gets.
+ *
+ * Svelte markup is never written inside a template literal in this repository,
+ * so nothing real is lost by not looking there.
+ */
+const outsideTemplateLiterals = (body: string): string => body.replace(/`[\s\S]*?`/g, '``');
+
 const sweptSvelteBlocks = blocks.filter((b) => SWEPT_DOCS.includes(b.file) && b.lang === 'svelte');
 
 /**
@@ -439,7 +455,7 @@ const sweptSvelteBlocks = blocks.filter((b) => SWEPT_DOCS.includes(b.file) && b.
  * `SWEPT_DOCS` may arrive with a backlog and raising this deliberately is
  * better than deleting the arm.
  */
-const ALLOWED_MISLABELLED = 18;
+const ALLOWED_MISLABELLED = 17;
 
 /*
  * Why 22 and not 0.
@@ -668,7 +684,7 @@ describe('Svelte markup is fenced as svelte', () => {
 		// reported `Property 'canvas' does not exist on type 'RegExp'`, which is
 		// a long way from "this fence has the wrong label".
 		const mislabelled = blocks
-			.filter((b) => b.lang !== 'svelte' && looksLikeSvelte(b.body))
+			.filter((b) => b.lang !== 'svelte' && looksLikeSvelte(outsideTemplateLiterals(b.body)))
 			.map((b) => `${b.file}:${b.line}`);
 
 		expect(
