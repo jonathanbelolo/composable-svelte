@@ -965,23 +965,31 @@ See the "Styling & Theming" section of the package README for the full setup.
 
 **Cause: Not using store.state reactively**
 
-```typescript
-// ❌ BAD: Accessing state non-reactively
+❌ Not reactive — `count` is read once, when the component is created, and never
+again:
+
+```svelte
 <script>
   let { store } = $props();
-  const count = store.state.count; // Not reactive!
+  const count = store.state.count;
 </script>
 
 <div>Count: {count}</div>
+```
 
-// ✅ GOOD: Access state in template or use $derived
+✅ Read it in the template, where the access is tracked:
+
+```svelte
 <script>
   let { store } = $props();
 </script>
 
 <div>Count: {store.state.count}</div>
+```
 
-// OR with $derived
+✅ Or with `$derived`, when the value is needed in the script too:
+
+```svelte
 <script>
   let { store } = $props();
   const count = $derived(store.state.count);

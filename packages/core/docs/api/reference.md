@@ -231,8 +231,14 @@ const store = createStore({
   dependencies: { apiClient }
 });
 
-// In Svelte component
-const count = $derived(store.state.count);
+```
+
+In a Svelte component:
+
+```svelte
+<script lang="ts">
+  const count = $derived(store.state.count);
+</script>
 
 <button onclick={() => store.dispatch({ type: 'incrementTapped' })}>
   Count: {count}

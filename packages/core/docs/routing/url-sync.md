@@ -1328,8 +1328,11 @@ case 'addButtonTapped': {
   };
   return [newState, urlSyncEffect(newState)];
 }
+```
 
-// Svelte component
+The component:
+
+```svelte
 <script lang="ts">
   import { Modal } from '@composable-svelte/core';
   import { scopeTo } from '@composable-svelte/core/navigation';

@@ -1303,8 +1303,11 @@ interface ChildState {
   data: Data;
   destination: GrandchildState | null;  // Nested!
 }
+```
 
-// Components nest naturally
+Components nest naturally:
+
+```svelte
 <Modal store={childStore}>
   {#snippet children({ store })}
     <ChildComponent {store} />
