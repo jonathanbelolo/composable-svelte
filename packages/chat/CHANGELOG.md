@@ -7,7 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **My own presence was dropped until the server said I existed.**
+  `state.users` is filled only by inbound frames, so between
+  `connectToConversation` and the first `user_joined` you are not in your own
+  user map — and `updatePresence` guarded its whole body on finding you there.
+  It did nothing for that entire window, and `usePresenceTracking` dispatches
+  only on *change*, so the transition was never retried and the room could see
+  you as `away` indefinitely. The state now carries `currentPresence`, written
+  whether or not the server has acknowledged you. The "announce presence when
+  the socket opens" behaviour, added in the same pass this fixes, read the same
+  empty map and so had never once fired.
+- **Stop did nothing while an attachment was uploading.** `stopGeneration`
+  returned early unless an abort controller existed, and that controller only
+  arrives after the upload resolves. So Stop was a no-op during the upload: it
+  continued, the stream started afterwards, and a reply arrived for a message the
+  user had cancelled — with the attachment left at `uploadStatus: 'uploading'`,
+  which renders a progress bar that can never move.
+- **Upload progress was discarded on the edit and regenerate paths.** Only
+  `sendMessage` marked attachments `'uploading'`, and the progress writer only
+  updates attachments already in that state, so every report from a retried
+  upload was dispatched and thrown away. All three paths now mark through one
+  helper that shares `streamFor`'s predicate.
+
 ### Changed
+
+- **`CollaborativeStreamingChatState` gains `currentPresence`.** Additive, and
+  `createInitialCollaborativeState()` supplies it; only code that builds the
+  state object by hand is affected.
+- **`Message.attachments` now says `| undefined`.** Under
+  `exactOptionalPropertyTypes` a bare `T?` cannot receive a computed value that
+  may be absent, which is what the upload marking ran into. Widening only — every
+  existing assignment still typechecks.
 
 - **BREAKING (types): every optional prop now accepts `undefined`.** Under
   `exactOptionalPropertyTypes` a prop read from `$props()` is `T | undefined`

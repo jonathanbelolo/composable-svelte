@@ -119,6 +119,31 @@ function streamFor(
 		: Effect.batch(Effect.cancel(uploadIdFor(messageId)), streamNow(message, attachments, deps));
 }
 
+/**
+ * Mark what `streamFor` is actually going to upload.
+ *
+ * `_internal_attachmentUploadProgress` writes only to an attachment already in
+ * `'uploading'`, so anything not marked here reports progress into a guard that
+ * drops it. `sendMessage` did this inline and the two retry paths did not, which
+ * meant the defect its comment describes as fixed was fixed in one arm of three:
+ * a retried upload showed a bar frozen at whatever it was before.
+ *
+ * The predicate is `streamFor`'s, deliberately — whatever decides to upload
+ * decides what to mark, or the two drift apart again.
+ */
+function markUploading(
+	attachments: MessageAttachment[] | undefined,
+	deps: StreamingChatDependencies
+): MessageAttachment[] | undefined {
+	if (!deps.uploadFile || !attachments) return attachments;
+
+	return attachments.map((attachment) =>
+		/^(blob:|data:)/.test(attachment.url)
+			? { ...attachment, uploadStatus: 'uploading' as const, uploadProgress: 0 }
+			: attachment
+	);
+}
+
 function uploadThenStream(
 	messageId: string,
 	message: string,
@@ -332,7 +357,45 @@ export function streamingChatReducer(
 
 		case 'stopGeneration': {
 			if (!state.currentStreaming?.abortController) {
-				return [state, Effect.none()];
+				// No controller yet means the send has not reached the transport —
+				// it is still uploading. `streamFor` only dispatches
+				// `_internal_setAbortController` once its executor runs, which is
+				// after the upload resolves, so this branch used to return
+				// `Effect.none()` and Stop did nothing at all: the upload continued,
+				// the stream started, and a reply arrived for a message the user had
+				// cancelled. The attachment also stayed at `'uploading'` forever,
+				// which renders a progress bar that can never move — the exact
+				// symptom `ed855dd` set out to remove, left in place on this path.
+				const uploading = state.messages.filter((message) =>
+					message.attachments?.some((a) => a.uploadStatus === 'uploading')
+				);
+
+				if (!state.currentStreaming && uploading.length === 0) {
+					return [state, Effect.none()];
+				}
+
+				const uploadingIds = new Set(uploading.map((message) => message.id));
+
+				return [
+					{
+						...state,
+						currentStreaming: null,
+						isWaitingForResponse: false,
+						messages: state.messages.map((message) =>
+							!uploadingIds.has(message.id) || !message.attachments
+								? message
+								: {
+										...message,
+										attachments: message.attachments.map((a) =>
+											a.uploadStatus === 'uploading'
+												? { ...a, uploadStatus: 'error' as const }
+												: a
+										)
+									}
+						)
+					},
+					cancelUploadsFor(uploading)
+				];
 			}
 
 			// Abort the stream
@@ -384,10 +447,18 @@ export function streamingChatReducer(
 				return [state, Effect.none()]; // No user message found
 			}
 
-			const userMessage = state.messages[userMessageIndex]!;
+			// Marked before the slice, for the same reason `sendMessage` marks before
+			// appending: whatever is about to be uploaded needs somewhere for its
+			// progress to land.
+			const userMessage = {
+				...state.messages[userMessageIndex]!,
+				attachments: markUploading(state.messages[userMessageIndex]!.attachments, deps)
+			};
 
 			// Remove all messages after (and including) the assistant message being regenerated
-			const newMessages = state.messages.slice(0, messageIndex);
+			const newMessages = state.messages
+				.slice(0, messageIndex)
+				.map((message) => (message.id === userMessage.id ? userMessage : message));
 
 			return [
 				{
@@ -539,7 +610,8 @@ export function streamingChatReducer(
 			// Update the message content
 			const updatedMessage = {
 				...state.messages[messageIndex]!,
-				content: state.editingMessage.content
+				content: state.editingMessage.content,
+				attachments: markUploading(state.messages[messageIndex]!.attachments, deps)
 			};
 
 			// Remove all messages after the edited one

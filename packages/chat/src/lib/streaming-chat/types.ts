@@ -145,7 +145,12 @@ export interface Message {
 	content: string;
 	timestamp: number;
 	/** Optional file attachments */
-	attachments?: MessageAttachment[];
+	/**
+	 * `| undefined` because `exactOptionalPropertyTypes` is on: without it a
+	 * computed value that may be absent cannot be assigned to this key at all,
+	 * which is what `markUploading` ran into on the edit and regenerate paths.
+	 */
+	attachments?: MessageAttachment[] | undefined;
 	/** Optional emoji reactions */
 	reactions?: MessageReaction[];
 	/** Optional custom sender name (overrides userLabel/assistantLabel in display) */

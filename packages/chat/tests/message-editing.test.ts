@@ -148,6 +148,64 @@ describe('editing a message with attachments', () => {
 		expect(store.state.messages[0]!.attachments![0]!.url).toBe('https://cdn.example.com/a.png');
 	});
 
+	it('reports progress for the retried upload', async () => {
+		// `sendMessage` marks its attachments `'uploading'` before appending, and
+		// `_internal_attachmentUploadProgress` writes only to an attachment already
+		// in that state. The edit and regenerate paths carry their attachments
+		// through unchanged, so every progress report on a retry was dispatched,
+		// clamped and discarded — the identical defect the comment in `sendMessage`
+		// describes as fixed, fixed in one arm of three.
+		let report!: (percent: number) => void;
+		const { store } = makeStore({
+			uploadFile: (_file, onProgress) =>
+				new Promise<string>((resolve) => {
+					// The public dependency reports bytes, not a percentage.
+					report = (percent) => onProgress?.(percent, 100);
+					setTimeout(() => resolve('https://cdn.example.com/a.png'), 50);
+				})
+		});
+		store.dispatch({ type: 'restoreMessages', messages: withAttachment('error') });
+
+		store.dispatch({ type: 'startEditingMessage', messageId: 'u1' });
+		store.dispatch({ type: 'updateEditingContent', content: 'better question' });
+		store.dispatch({ type: 'submitEditedMessage' });
+		await wait(10);
+
+		report(42);
+		await wait(10);
+
+		expect(
+			store.state.messages[0]!.attachments![0]!.uploadProgress,
+			'the retry reported progress and the reducer threw it away'
+		).toBe(42);
+	});
+
+	it('reports progress for an upload retried by regenerate', async () => {
+		// The third of the three paths through `streamFor`. Found by mutation:
+		// removing the marking from `regenerateMessage` left the whole suite green,
+		// so the fix on that path was riding on the edit path's test.
+		let report!: (percent: number) => void;
+		const { store } = makeStore({
+			uploadFile: (_file, onProgress) =>
+				new Promise<string>((resolve) => {
+					report = (percent) => onProgress?.(percent, 100);
+					setTimeout(() => resolve('https://cdn.example.com/a.png'), 50);
+				})
+		});
+		store.dispatch({ type: 'restoreMessages', messages: withAttachment('error') });
+
+		store.dispatch({ type: 'regenerateMessage', messageId: 'a1m' });
+		await wait(10);
+
+		report(63);
+		await wait(10);
+
+		expect(
+			store.state.messages[0]!.attachments![0]!.uploadProgress,
+			'regenerate reported progress and the reducer threw it away'
+		).toBe(63);
+	});
+
 	it('does not let a superseded upload start a second stream', async () => {
 		// Edit while the first upload is still in flight. The resolution used to
 		// land afterwards and stream again — carrying the *pre-edit* text.

@@ -210,6 +210,41 @@ describe('uploading on send', () => {
 	});
 });
 
+describe('stopping while an upload is in flight', () => {
+	it('cancels the upload and does not stream', async () => {
+		// `stopGeneration` returns early unless `currentStreaming.abortController`
+		// exists, and that controller only arrives once `streamFor`'s executor has
+		// run — i.e. after the upload resolves. During the upload window
+		// `currentStreaming` is `{ content: '' }` with no controller, so Stop was
+		// a complete no-op: the upload continued, the stream started afterwards,
+		// and a reply arrived for a message the user had cancelled.
+		let resolveUpload!: (url: string) => void;
+		const made = makeStore({
+			uploadFile: () => new Promise<string>((resolve) => { resolveUpload = resolve; })
+		});
+
+		made.store.dispatch({ type: 'addAttachment', attachment: attachment() });
+		made.store.dispatch({ type: 'sendMessage', message: 'look at this' });
+		await wait(20);
+
+		made.store.dispatch({ type: 'stopGeneration' });
+		await wait(20);
+
+		resolveUpload('https://cdn.example/a1.png');
+		await wait(60);
+
+		expect(made.streamed, 'the cancelled message still reached the transport').toEqual([]);
+		expect(
+			made.store.state.currentStreaming,
+			'the composer is still showing a stream that was stopped'
+		).toBeNull();
+		expect(
+			made.store.state.messages[0]?.attachments?.[0]?.uploadStatus,
+			'the attachment is stuck at `uploading`, which renders a progress bar that can never move'
+		).not.toBe('uploading');
+	});
+});
+
 describe('reaching the transport', () => {
 	it('hands the attachments to streamMessage', async () => {
 		const { streamed } = await sendWithAttachment({
