@@ -674,6 +674,6 @@ describe('Svelte markup is fenced as svelte', () => {
 		expect(
 			mislabelled.length,
 			`mislabelled blocks:\n${mislabelled.join('\n')}`
-		).toBeLessThanOrEqual(ALLOWED_MISLABELLED);
+		).toBe(ALLOWED_MISLABELLED);
 	});
 });

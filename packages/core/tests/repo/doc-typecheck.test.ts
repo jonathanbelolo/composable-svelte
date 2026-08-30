@@ -131,14 +131,24 @@ describe('documented examples match the library', () => {
 		).toEqual([]);
 	});
 
-	it('still demonstrate what they claim to', () => {
-		// The counter-examples must keep failing. One that quietly became correct
-		// teaches nothing, and leaves the reader comparing two working snippets
-		// wondering which is meant to be the wrong one.
+	it('still demonstrate what they claim to — every one of them', () => {
+		// Per block, not in aggregate. Marking is an *opt-out from checking*, so
+		// a marked block that produces no error is exempt for nothing: either it
+		// was fixed and the marker should go, or the marker is being used to
+		// silence a block that was never a counter-example. A total-count arm
+		// cannot tell the difference — one block still failing would carry the
+		// assertion for all of them.
+		const demonstrating = new Set(counterExamples.map((f) => `${f.file}:${f.line}`));
+		const idle = result.blocks
+			.filter((b) => b.counterExample)
+			.map((b) => `${b.file}:${b.line}`)
+			.filter((where) => !demonstrating.has(where));
+
 		expect(
-			counterExamples.length,
-			'no block marked **Problem** or ❌ produces an error any more — has one been "fixed"?'
-		).toBeGreaterThan(0);
+			[...new Set(idle)],
+			'these blocks are marked **Problem** or ❌ but compile cleanly — drop the marker, or they are exempt from checking for no reason:\n' +
+				idle.join('\n')
+		).toEqual([]);
 	});
 
 	it('name only documents that still exist', () => {
