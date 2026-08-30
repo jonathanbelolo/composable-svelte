@@ -192,18 +192,24 @@ type Destination =
 type ParentAction =
   | { type: 'addButtonTapped' }
   | { type: 'destination'; action: PresentationAction<DestinationAction> };
+```
 
-// In component
-const addItemStore = $derived(
-  scopeToDestination<AddItemState, AddItemAction>(
-    parentStore,
-    ['destination'],   // Path to destination field
-    'addItem',         // Case type to filter
-    'destination'      // Parent action field
-  )
-);
+In a component:
 
-// Use in template
+```svelte
+<script lang="ts">
+  import { scopeToDestination } from '@composable-svelte/core';
+
+  const addItemStore = $derived(
+    scopeToDestination<AddItemState, AddItemAction>(
+      parentStore,
+      ['destination'],   // Path to destination field
+      'addItem',         // Case type to filter
+      'destination'      // Parent action field
+    )
+  );
+</script>
+
 {#if addItemStore.state}
   <AddItemModal
     state={addItemStore.state}
@@ -239,17 +245,21 @@ const scopedStore = scopeToDestination(
 ```
 
 **Multiple Destinations:**
-```typescript
-// Create separate scoped stores for each case
-const addItemStore = $derived(
-  scopeToDestination(store, ['destination'], 'addItem', 'destination')
-);
+```svelte
+<script lang="ts">
+  import { scopeToDestination } from '@composable-svelte/core';
 
-const editItemStore = $derived(
-  scopeToDestination(store, ['destination'], 'editItem', 'destination')
-);
+  // Create separate scoped stores for each case
+  const addItemStore = $derived(
+    scopeToDestination(store, ['destination'], 'addItem', 'destination')
+  );
 
-// Only one will have non-null state at a time
+  const editItemStore = $derived(
+    scopeToDestination(store, ['destination'], 'editItem', 'destination')
+  );
+</script>
+
+<!-- Only one will have non-null state at a time -->
 {#if addItemStore.state}
   <AddItemModal {...addItemStore} />
 {:else if editItemStore.state}
@@ -291,15 +301,23 @@ interface ParentState {
 type ParentAction =
   | { type: 'showModal' }
   | { type: 'modal'; action: PresentationAction<AddItemAction> };
+```
 
-// In component
-const modalStore = $derived(
-  scopeToOptional<AddItemState, AddItemAction>(
-    parentStore,
-    ['modal'],    // Path to optional child
-    'modal'       // Parent action field
-  )
-);
+In a component. `$derived` is a rune, so the scoping lives in the component's
+script rather than in the module above:
+
+```svelte
+<script lang="ts">
+  import { scopeToOptional } from '@composable-svelte/core';
+
+  const modalStore = $derived(
+    scopeToOptional<AddItemState, AddItemAction>(
+      parentStore,
+      ['modal'],    // Path to optional child
+      'modal'       // Parent action field
+    )
+  );
+</script>
 
 {#if modalStore.state}
   <AddItemModal
@@ -368,8 +386,11 @@ interface ParentState {
 type ParentAction =
   | { type: 'addCounter' }
   | { type: 'counter'; id: string; action: CounterAction };
+```
 
-// In Svelte component
+In a Svelte component:
+
+```svelte
 {#each $store.counters as counter (counter.id)}
   {@const counterStore = scopeToElement(store, 'counter', s => s.counters, counter.id)}
   {#key counter.id}
