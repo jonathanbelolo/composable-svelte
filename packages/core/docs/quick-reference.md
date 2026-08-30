@@ -328,17 +328,24 @@ const ws = createLiveWebSocket({
   }
 });
 
-// In reducer
+// In reducer.
+//
+// Messages and lifecycle events are two subscriptions, not one `on(name, …)`:
+// `subscribe` takes a message listener, `subscribeToEvents` takes an event
+// listener. Both return an unsubscribe function.
 Effect.run(async (dispatch) => {
-  ws.on('message', (data) => {
+  ws.subscribe((data) => {
     dispatch({ type: 'messageReceived', data });
   });
 
-  ws.on('connected', () => {
-    dispatch({ type: 'wsConnected' });
+  ws.subscribeToEvents((event) => {
+    if (event.type === 'connected') {
+      dispatch({ type: 'wsConnected' });
+    }
   });
 
-  await ws.connect();
+  // `connect` needs the URL — there is no default.
+  await ws.connect('wss://api.example.com');
 })
 
 // Send messages
@@ -392,9 +399,9 @@ case 'navigate':
   ];
 
 // Pattern matching
-import { matchPattern } from '@composable-svelte/core/routing';
+import { matchPath } from '@composable-svelte/core/routing';
 
-const match = matchPattern('/users/:id/posts/:postId', '/users/123/posts/456');
+const match = matchPath('/users/:id/posts/:postId', '/users/123/posts/456');
 if (match) {
   console.log(match.params); // { id: '123', postId: '456' }
 }

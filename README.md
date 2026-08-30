@@ -321,10 +321,12 @@ const ws = createLiveWebSocket({
 
 // In reducer
 Effect.run(async (dispatch) => {
-  ws.on('message', (data) => {
+  // `subscribe` takes a message listener and returns an unsubscribe function;
+  // lifecycle events come from `subscribeToEvents`.
+  ws.subscribe((data) => {
     dispatch({ type: 'messageReceived', data });
   });
-  await ws.connect();
+  await ws.connect('wss://api.example.com');
 });
 ```
 
