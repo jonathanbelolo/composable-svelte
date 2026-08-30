@@ -281,8 +281,11 @@ const translationLoader = new BundledTranslationLoader({
 ```typescript
 import { createGlobLoader } from '@composable-svelte/core/i18n';
 
+// (modules, supportedLocales) — the loader cannot infer the locale list from
+// the glob, so it is passed.
 const translationLoader = createGlobLoader(
-  import.meta.glob('/src/locales/*/*.json')
+  import.meta.glob('/src/locales/*/*.json'),
+  ['en', 'fr', 'es']
 );
 ```
 

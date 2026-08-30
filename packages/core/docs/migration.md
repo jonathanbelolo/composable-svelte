@@ -273,8 +273,10 @@ const store = createStore({
   reducer: appReducer,
   dependencies: {
     apiClient: new ApiClient(),
-    clock: Clock.live,
-    storage: Storage.live
+    // `Clock` and `Storage` are types, not namespaces — the live
+    // implementations are factory functions.
+    clock: createSystemClock(),
+    storage: createLocalStorage()
   }
 });
 ```

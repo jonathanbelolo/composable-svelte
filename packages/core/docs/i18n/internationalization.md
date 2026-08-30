@@ -56,7 +56,12 @@ const store = createStore({
   dependencies: {
     // ... your dependencies
     translationLoader,
-    localeDetector: createBrowserLocaleDetector(['en', 'fr']),
+    // A config object, not a bare list — the detector needs to know which
+    // locale to fall back to, and optionally where to look for an override.
+    localeDetector: createBrowserLocaleDetector({
+      supportedLocales: ['en', 'fr'],
+      defaultLocale: 'en'
+    }),
     storage: localStorage,
     dom: browserDOM
   }
