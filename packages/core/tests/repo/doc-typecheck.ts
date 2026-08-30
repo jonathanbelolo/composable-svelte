@@ -81,7 +81,7 @@ const isRecordOfThePast = (name: string) => name === 'CHANGELOG.md';
  * repository keeps finding, and a counter-example that quietly became correct
  * teaches nothing.
  */
-const COUNTER_EXAMPLE_MARKERS = [/\*\*Problem\*\*/, /WRONG\s*❌/, /❌\s*(BEFORE|Pitfall|BAD)/i];
+export const COUNTER_EXAMPLE_MARKERS = [/\*\*Problem\*\*/, /WRONG\s*❌/, /❌\s*(BEFORE|Pitfall|BAD)/i];
 
 export interface DocBlock {
 	/** Repo-relative path of the document. */

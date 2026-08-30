@@ -46,6 +46,7 @@ import { describe, it, expect } from 'vitest';
 import { compile } from 'svelte/compiler';
 import { readFileSync, existsSync, statSync } from 'node:fs';
 import { walkFiles, listDirs } from './walk.js';
+import { COUNTER_EXAMPLE_MARKERS } from './doc-typecheck.js';
 import { fileURLToPath } from 'node:url';
 import { join, relative } from 'node:path';
 
@@ -90,7 +91,17 @@ function docs(): string[] {
 	// to *collect* — every test in it gone, suite still green. `unreadable` is
 	// not inspected here because `walk.test.ts` asserts it repo-wide, in one
 	// place rather than eleven.
-	return roots.flatMap((root) => walkFiles(root, { skip, keep: (n) => n.endsWith('.md') }).files);
+	// CHANGELOGs are excluded, as they are by `doc-typecheck.ts` and
+	// `side-effects.test.ts` for the reason those two state: a changelog quotes
+	// the API as it was at each version, and a record of the past is not an
+	// instruction. This file was the only one of the three still scanning them,
+	// which put a 2026-era `packages/core/CHANGELOG.md` block in the compile
+	// backlog and pointed the dismiss-dependency and TestStore arms at historical
+	// prose as though it were advice.
+	return roots.flatMap(
+		(root) =>
+			walkFiles(root, { skip, keep: (n) => n.endsWith('.md') && n !== 'CHANGELOG.md' }).files
+	);
 }
 
 /**
@@ -104,16 +115,42 @@ function docs(): string[] {
  * documents that quote their files exactly were reported as "no longer quotes
  * … verbatim — the file is what compiles, so the document is what is wrong".
  */
-function codeBlocks(file: string): Array<{ line: number; body: string; lang: string }> {
+/**
+ * Whether the prose just above a fence marks it as showing the *wrong* way.
+ *
+ * Shared with `doc-typecheck.ts` rather than restated, because a second copy of
+ * the marker list is a second thing to keep in step. `guides/forms-guide.md`'s
+ * Pitfall 6 is the case that needs it here: a `<script>` whose JSDoc contains a
+ * nested ```svelte example, under `**Problem**:`, with the document's own next
+ * line quoting the compile error as the lesson. The block failing to parse *is*
+ * the documentation, and making it compile would delete the point.
+ */
+function markedWrong(lines: string[], fenceLine: number): boolean {
+	const before = lines
+		.slice(0, fenceLine - 1)
+		.filter((line) => line.trim())
+		.slice(-2);
+
+	return before.some((line) => COUNTER_EXAMPLE_MARKERS.some((marker) => marker.test(line)));
+}
+
+function codeBlocks(
+	file: string
+): Array<{ line: number; body: string; lang: string; counterExample: boolean }> {
 	const lines = readFileSync(file, 'utf8').replace(/\r\n/g, '\n').split('\n');
-	const blocks: Array<{ line: number; body: string; lang: string }> = [];
+	const blocks: Array<{ line: number; body: string; lang: string; counterExample: boolean }> = [];
 
 	let open: { line: number; body: string[]; lang: string } | null = null;
 	for (let i = 0; i < lines.length; i += 1) {
 		const line = lines[i]!;
 		if (open) {
 			if (/^\s*```\s*$/.test(line)) {
-				blocks.push({ line: open.line, body: open.body.join('\n'), lang: open.lang });
+				blocks.push({
+					line: open.line,
+					body: open.body.join('\n'),
+					lang: open.lang,
+					counterExample: markedWrong(lines, open.line)
+				});
 				open = null;
 			} else {
 				open.body.push(line);
@@ -520,7 +557,9 @@ const outsideTemplateLiterals = (body: string): string =>
 		.replace(/(?<!:)\/\/[^\n]*/g, '')
 		.replace(/`[\s\S]*?`/g, '``');
 
-const sweptSvelteBlocks = blocks.filter((b) => SWEPT_DOCS.includes(b.file) && b.lang === 'svelte');
+const sweptSvelteBlocks = blocks.filter(
+	(b) => SWEPT_DOCS.includes(b.file) && b.lang === 'svelte' && !b.counterExample
+);
 
 /**
  * Blocks that are Svelte markup but are not fenced as such.
