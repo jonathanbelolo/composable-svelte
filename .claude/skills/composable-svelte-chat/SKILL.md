@@ -37,61 +37,63 @@ All components follow Composable Architecture patterns with dedicated reducers a
 
 ### Quick Start
 
-```typescript
-import { createStore } from '@composable-svelte/core';
-import {
-  StandardStreamingChat,
-  streamingChatReducer,
-  createInitialStreamingChatState
-} from '@composable-svelte/chat';
+```svelte
+<script lang="ts">
+  import { createStore } from '@composable-svelte/core';
+  import {
+    StandardStreamingChat,
+    streamingChatReducer,
+    createInitialStreamingChatState
+  } from '@composable-svelte/chat';
 
-// Create chat store
-const store = createStore({
-  initialState: createInitialStreamingChatState(),
-  reducer: streamingChatReducer,
-  dependencies: {
-    // Callback-based, not an async generator. Return an AbortController and
-    // `stopGeneration` will use it to cancel.
-    streamMessage: (message, onChunk, onComplete, onError, attachments) => {
-      const controller = new AbortController();
+  // Create chat store
+  const store = createStore({
+    initialState: createInitialStreamingChatState(),
+    reducer: streamingChatReducer,
+    dependencies: {
+      // Callback-based, not an async generator. Return an AbortController and
+      // `stopGeneration` will use it to cancel.
+      streamMessage: (message, onChunk, onComplete, onError, attachments) => {
+        const controller = new AbortController();
 
-      (async () => {
-        try {
-          const response = await fetch('/api/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message, attachments }),
-            signal: controller.signal
-          });
+        (async () => {
+          try {
+            const response = await fetch('/api/chat', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ message, attachments }),
+              signal: controller.signal
+            });
 
-          const reader = response.body!.getReader();
-          const decoder = new TextDecoder();
+            const reader = response.body!.getReader();
+            const decoder = new TextDecoder();
 
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
 
-            const chunk = decoder.decode(value, { stream: true });
-            for (const line of chunk.split('\n').filter(Boolean)) {
-              if (line.startsWith('data: ')) {
-                const data = JSON.parse(line.slice(6));
-                if (data.content) onChunk(data.content);
+              const chunk = decoder.decode(value, { stream: true });
+              for (const line of chunk.split('\n').filter(Boolean)) {
+                if (line.startsWith('data: ')) {
+                  const data = JSON.parse(line.slice(6));
+                  if (data.content) onChunk(data.content);
+                }
               }
             }
-          }
 
-          onComplete();
-        } catch (error) {
-          if (!controller.signal.aborted) {
-            onError(error instanceof Error ? error.message : 'Stream failed');
+            onComplete();
+          } catch (error) {
+            if (!controller.signal.aborted) {
+              onError(error instanceof Error ? error.message : 'Stream failed');
+            }
           }
-        }
-      })();
+        })();
 
-      return controller;
+        return controller;
+      }
     }
-  }
-});
+  });
+</script>
 
 <StandardStreamingChat {store} />
 ```

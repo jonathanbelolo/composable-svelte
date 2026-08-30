@@ -35,22 +35,23 @@ All map state managed via pure reducers following Composable Architecture patter
 
 ## QUICK START
 
-```typescript
-import { createStore } from '@composable-svelte/core';
-import { Map, mapReducer, createInitialMapState } from '@composable-svelte/maps';
+```svelte
+<script lang="ts">
+  import { createStore } from '@composable-svelte/core';
+  import { Map, mapReducer, createInitialMapState } from '@composable-svelte/maps';
 
-// Create map store
-const mapStore = createStore({
-  initialState: createInitialMapState({
-    center: [-74.006, 40.7128],  // NYC
-    zoom: 12,
-    tileProvider: 'osm'
-  }),
-  reducer: mapReducer,
-  dependencies: {}
-});
+  // Create map store
+  const mapStore = createStore({
+    initialState: createInitialMapState({
+      center: [-74.006, 40.7128],  // NYC
+      zoom: 12,
+      tileProvider: 'osm'
+    }),
+    reducer: mapReducer,
+    dependencies: {}
+  });
+</script>
 
-// Render map
 <Map
   store={mapStore}
   width="100%"

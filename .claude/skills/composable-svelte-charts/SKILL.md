@@ -41,26 +41,27 @@ All charts use pure reducers with type-safe actions following Composable Archite
 
 ## QUICK START
 
-```typescript
-import { createStore } from '@composable-svelte/core';
-import { Chart, chartReducer, createInitialChartState } from '@composable-svelte/charts';
+```svelte
+<script lang="ts">
+  import { createStore } from '@composable-svelte/core';
+  import { Chart, chartReducer, createInitialChartState } from '@composable-svelte/charts';
 
-// Sample data
-const data = [
-  { x: 1, y: 10, category: 'A' },
-  { x: 2, y: 25, category: 'B' },
-  { x: 3, y: 15, category: 'A' },
-  { x: 4, y: 30, category: 'B' }
-];
+  // Sample data
+  const data = [
+    { x: 1, y: 10, category: 'A' },
+    { x: 2, y: 25, category: 'B' },
+    { x: 3, y: 15, category: 'A' },
+    { x: 4, y: 30, category: 'B' }
+  ];
 
-// Create chart store
-const chartStore = createStore({
-  initialState: createInitialChartState({ data }),
-  reducer: chartReducer,
-  dependencies: {}
-});
+  // Create chart store
+  const chartStore = createStore({
+    initialState: createInitialChartState({ data }),
+    reducer: chartReducer,
+    dependencies: {}
+  });
+</script>
 
-// Render scatter plot
 <Chart
   store={chartStore}
   type="scatter"
