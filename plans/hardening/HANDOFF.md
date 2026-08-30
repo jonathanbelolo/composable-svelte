@@ -46,20 +46,23 @@ round. Until then the campaign is improving something nobody can install.
 
 ## 2. What is measured and solid
 
-- **3,849 tests passing**, gate green. Measured per workspace, sequentially —
+- **3,852 tests passing**, gate green. Measured per workspace, sequentially —
   `pnpm -r test` starves the real-Chromium suites and must not be used for this.
-  Packages total 3,743: core 2,092 (browser, 3 skipped) + 407 (node),
+  Packages total 3,746: core 2,092 (browser, 3 skipped) + 410 (node),
   graphics 482, chat 231 + 5, charts 191, maps 106, media 94, code 81, auth 54.
   Examples add 106 across six workspaces, unchanged.
+  *The figure before this campaign's last two sections, 3,256, included the
+  examples; compare against 3,852, not against 3,746.*
   *The previous figure here, 3,256, included the examples; compare against
   3,849, not against 3,743.*
 - **The gate is `build → typecheck → svelte-check → test`** across all
   **19 of 19** workspaces. `svelte-check` genuinely covers all of them; it once
   covered two.
-- **Fourteen repo-level guards** in `packages/core/tests/repo/`, 245 assertions:
+- **Fifteen repo-level guards** in `packages/core/tests/repo/`, 248 assertions:
   animation policy, check coverage, component coverage, dist freshness, doc
   examples, doc typecheck, export surface, guard integrity, optional props, peer
-  ranges, published files, side effects, typecheck coverage, walk.
+  ranges, published files, side effects, typecheck coverage, walk, and
+  intentionally-unused.
   `guard-integrity` is the one that checks the others *run* — a new guard has to
   be registered in two configs, and an unregistered one asserts nothing while
   looking exactly like coverage.
