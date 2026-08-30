@@ -416,7 +416,13 @@ function looksLikeSvelte(body: string): boolean {
 		// Plain HTML markup at the start of a line.
 		/^\s*<(div|span|button|p|section|main|form|input|ul|li|a|h[1-6])[\s/>]/m.test(body) ||
 		// Svelte block syntax — opening, continuing or closing.
-		/^\s*\{[#:/@](if|each|await|key|else|then|catch|render|html|const|snippet)\b/m.test(body)
+		/^\s*\{[#:/@](if|each|await|key|else|then|catch|render|html|const|snippet)\b/m.test(body) ||
+		// A `<svelte:*>` special element. Not covered by the two tag rules above —
+		// it is lowercase, so it is not a component tag, and it is not HTML. A
+		// second mixed listing in `composable-svelte-ssr/SKILL.md` sat behind this
+		// hole: the one beside it was caught only because it also contained a
+		// `{#if}`, and the pair differed by nothing else.
+		/^\s*<svelte:(head|window|document|body|element|boundary|options)\b/m.test(body)
 	);
 }
 
@@ -455,7 +461,7 @@ const sweptSvelteBlocks = blocks.filter((b) => SWEPT_DOCS.includes(b.file) && b.
  * `SWEPT_DOCS` may arrive with a backlog and raising this deliberately is
  * better than deleting the arm.
  */
-const ALLOWED_MISLABELLED = 6;
+const ALLOWED_MISLABELLED = 3;
 
 /*
  * Why 22 and not 0.

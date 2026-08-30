@@ -614,8 +614,12 @@ const todosForEachFull = forEach({
 // Helper to create properly-typed element actions:
 // elementAction(type, id, action) => { type, id, action }
 const action = elementAction('todo', 'todo-1', { type: 'toggle' });
+```
 
-// Component
+The component. `elementAction` builds the wrapper the collection reducer above
+matches on, so the two stay in step:
+
+```svelte
 {#each $store.todos as todo (todo.id)}
   <Todo
     todo={todo.state}

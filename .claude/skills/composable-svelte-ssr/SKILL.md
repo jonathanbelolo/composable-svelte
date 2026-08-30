@@ -259,7 +259,11 @@ case 'selectPost': {
   ];
 }
 
-// Component renders meta tags
+```
+
+The component renders them:
+
+```svelte
 <svelte:head>
   <title>{$store.meta.title}</title>
   <meta name="description" content={$store.meta.description} />
@@ -849,7 +853,11 @@ interface AppState {
   meta: { title: string; description: string; ogImage?: string };
 }
 
-// Component renders meta tags
+```
+
+The component renders them:
+
+```svelte
 <svelte:head>
   <title>{$store.meta.title}</title>
   <meta name="description" content={$store.meta.description} />

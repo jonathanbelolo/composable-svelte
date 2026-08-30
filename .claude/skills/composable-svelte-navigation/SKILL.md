@@ -269,13 +269,14 @@ case 'destination': {
 
 ### scopeToDestination Pattern
 
-```typescript
-import { scopeToDestination } from '@composable-svelte/core';
+```svelte
+<script lang="ts">
+  import { scopeToDestination } from '@composable-svelte/core';
 
-// In component
-const addItemStore = $derived(
-  scopeToDestination(store, ['destination'], 'addItem', 'destination')
-);
+  const addItemStore = $derived(
+    scopeToDestination(store, ['destination'], 'addItem', 'destination')
+  );
+</script>
 
 {#if addItemStore}
   <Modal store={addItemStore}>
