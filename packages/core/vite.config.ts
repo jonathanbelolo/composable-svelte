@@ -57,6 +57,7 @@ export default defineConfig({
       // Walk the tree and read the configs from disk; same reason.
       'tests/repo/walk.test.ts',
       'tests/repo/guard-integrity.test.ts',
+      'tests/repo/doc-typecheck.test.ts',
       // Needs the Cookie request header, which the browser Request API refuses
       // to expose; runs under vitest.node.config.ts instead.
       'tests/i18n/ssr.test.ts'
