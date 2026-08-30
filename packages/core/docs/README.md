@@ -225,7 +225,7 @@ testStore.receive(action, assertion)
 
 ### Navigation
 
-```typescript
+```svelte
 // Operators
 ifLet(/* lenses */)(state, action, deps)
 createDestinationReducer({ addItem, editItem })

@@ -140,7 +140,7 @@ The fundamental pattern for every feature.
 
 #### Complete Template
 
-```typescript
+```svelte
 // 1. Define State (ALL application state)
 interface FeatureState {
   items: Item[];
@@ -555,7 +555,7 @@ const appReducer = combineReducers<AppState, AppAction>({
 
 **When**: Independent items that don't know about each other (todo list, product grid)
 
-```typescript
+```svelte
 // State
 interface TodosState {
   todos: TodoState[];
@@ -626,7 +626,7 @@ const action = elementAction('todo', 'todo-1', { type: 'toggle' });
 
 **Why NOT forEach**: Trees have relationships between nodes, structure needs to be explicit. Per DESIGN-PRINCIPLES.md, use simple helpers over complex abstractions for trees.
 
-```typescript
+```svelte
 // 1. Define tree node types
 type FileNode = { type: 'file'; id: string; name: string };
 type FolderNode = { type: 'folder'; id: string; name: string; children: Node[]; isExpanded: boolean };
@@ -961,7 +961,7 @@ What kind of side effect?
 
 ### Basic Feature Template
 
-```typescript
+```svelte
 // types.ts
 export interface FeatureState {
   items: Item[];

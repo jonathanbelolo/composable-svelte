@@ -223,7 +223,7 @@ const state = parseState<AppState>(serialized);
 
 **Best Practice**: Meta tags should be computed from state in the reducer, then rendered via `<svelte:head>` in components.
 
-```typescript
+```svelte
 // State
 interface AppState {
   posts: Post[];
@@ -384,7 +384,7 @@ start();
 
 ### Client
 
-```typescript
+```svelte
 // client/index.ts
 import { hydrate as hydrateComponent } from 'svelte';
 import { hydrateStore } from '@composable-svelte/core/ssr';

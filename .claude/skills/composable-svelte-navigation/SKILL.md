@@ -269,7 +269,7 @@ case 'destination': {
 
 ### scopeToDestination Pattern
 
-```typescript
+```svelte
 import { scopeToDestination } from '@composable-svelte/core';
 
 // In component
@@ -317,7 +317,7 @@ type PresentationEvent =
 
 ### Complete Animated Modal Example
 
-```typescript
+```svelte
 // State
 interface ModalState {
   content: ModalContent | null;
@@ -814,7 +814,7 @@ These components are from the shadcn-svelte component library. See **composable-
 
 ### Example 1: Modal with Edit Form
 
-```typescript
+```svelte
 // State
 interface AppState {
   user: User | null;
@@ -927,7 +927,7 @@ case 'destination': {
 
 ### Example 2: Sheet with Animated Filters
 
-```typescript
+```svelte
 // State with PresentationState
 interface AppState {
   items: Item[];
@@ -1156,7 +1156,7 @@ Does component animate?
 
 ### Navigation with Modal Template
 
-```typescript
+```svelte
 // types.ts
 interface AppState {
   items: Item[];

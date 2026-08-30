@@ -455,7 +455,7 @@ interface DrawerProps<State, Action> {
 
 ### Modal vs Sheet vs Drawer
 
-```typescript
+```svelte
 // Modal: Blocks interaction, centered, critical
 <Modal store={deleteConfirmStore}>
   <h2>Delete permanently?</h2>

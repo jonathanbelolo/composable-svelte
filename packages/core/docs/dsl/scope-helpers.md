@@ -179,7 +179,7 @@ A scoped store with:
 - `dismiss()`: Dispatches dismiss action
 
 **Example:**
-```typescript
+```svelte
 interface ParentState {
   items: Item[];
   destination: Destination | null;
@@ -239,7 +239,7 @@ const scopedStore = scopeToDestination(
 ```
 
 **Multiple Destinations:**
-```typescript
+```svelte
 // Create separate scoped stores for each case
 const addItemStore = $derived(
   scopeToDestination(store, ['destination'], 'addItem', 'destination')
@@ -282,7 +282,7 @@ A scoped store with:
 - `dismiss()`: Dispatches dismiss action
 
 **Example:**
-```typescript
+```svelte
 interface ParentState {
   items: Item[];
   modal: AddItemState | null;  // Simple optional child (not an enum)
@@ -360,7 +360,7 @@ function scopeToElement<
 A full `Store<ChildState, ChildAction>` (not `ScopedDestinationStore`) for the element, or `null` if element not found.
 
 **Example:**
-```typescript
+```svelte
 interface ParentState {
   counters: Array<{ id: string; state: CounterState }>;
 }
@@ -499,7 +499,7 @@ const { store } = $props<{ store: Store<CounterState, CounterAction> }>();
 
 `scopeToElement()` is designed to work seamlessly with `forEach()` and `forEachElement()`:
 
-```typescript
+```svelte
 // In reducer - use forEach for logic
 const reducer = integrate<State, Action, Deps>()
   .forEach('counter', s => s.counters, (s, counters) => ({ ...s, counters }), counterReducer)

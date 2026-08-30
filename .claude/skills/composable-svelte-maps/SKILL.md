@@ -35,7 +35,7 @@ All map state managed via pure reducers following Composable Architecture patter
 
 ## QUICK START
 
-```typescript
+```svelte
 import { createStore } from '@composable-svelte/core';
 import { Map, mapReducer, createInitialMapState } from '@composable-svelte/maps';
 
@@ -74,7 +74,7 @@ const mapStore = createStore({
 
 ### Usage
 
-```typescript
+```svelte
 <Map
   store={mapStore}
   width="100%"
@@ -653,7 +653,7 @@ interface FeatureReference<TData = unknown> {
 
 ### Basic Map with Markers
 
-```typescript
+```svelte
 <script lang="ts">
 import { createStore } from '@composable-svelte/core';
 import { Map, mapReducer, createInitialMapState } from '@composable-svelte/maps';
@@ -696,7 +696,7 @@ cities.forEach(city => {
 
 ### GeoJSON Visualization
 
-```typescript
+```svelte
 <script lang="ts">
 import { createStore } from '@composable-svelte/core';
 import { Map, mapReducer, createInitialMapState } from '@composable-svelte/maps';
@@ -759,7 +759,7 @@ $effect(() => {
 
 ### Heatmap with Controls
 
-```typescript
+```svelte
 <script lang="ts">
 import { createStore } from '@composable-svelte/core';
 import { Map, mapReducer, createInitialMapState } from '@composable-svelte/maps';
@@ -898,7 +898,7 @@ $effect(() => {
 
 ### Layer Toggle
 
-```typescript
+```svelte
 let showLayer = $state(true);
 
 $effect(() => {

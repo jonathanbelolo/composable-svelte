@@ -79,7 +79,11 @@ function docs(): string[] {
 	// findings against paths that will not exist tomorrow — and a worktree left
 	// behind by a killed agent fails this suite for reasons that have nothing to
 	// do with the working tree.
-	const skip = ['node_modules', 'dist', '.svelte-kit', 'worktrees'];
+	// `plans` is skipped wherever it appears, not only at the repo root: a
+	// package's own plans are the same kind of historical record, and three
+	// mislabelled fences in `packages/chat/plans/` were the only thing that made
+	// the difference visible.
+	const skip = ['node_modules', 'dist', '.svelte-kit', 'worktrees', 'plans'];
 
 	// `walkFiles`, not a local walk. This function ran a throwing `statSync` at
 	// module scope, so a single dangling `.md` symlink made the whole file fail
@@ -636,9 +640,15 @@ describe('documented Svelte examples', () => {
 });
 
 describe('Svelte markup is fenced as svelte', () => {
-	it('no swept document hides markup behind another fence label', () => {
+	it('no document hides markup behind another fence label', () => {
+		// Every document, not only `SWEPT_DOCS`. Scoped to two files this arm
+		// could not see `composable-svelte-code/SKILL.md`, which fenced a whole
+		// component — `<script>`, markup and `<style>` — as ```typescript. The
+		// doc typechecker then parsed its CSS as a regular expression and
+		// reported `Property 'canvas' does not exist on type 'RegExp'`, which is
+		// a long way from "this fence has the wrong label".
 		const mislabelled = blocks
-			.filter((b) => SWEPT_DOCS.includes(b.file) && b.lang !== 'svelte' && looksLikeSvelte(b.body))
+			.filter((b) => b.lang !== 'svelte' && looksLikeSvelte(b.body))
 			.map((b) => `${b.file}:${b.line}`);
 
 		expect(

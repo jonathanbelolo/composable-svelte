@@ -377,7 +377,7 @@ if (
 
 **Problem**: Not disabling click-outside when child presents nested modals/sheets/alerts.
 
-```typescript
+```svelte
 // ❌ WRONG: Click-outside enabled on parent modal
 <Modal store={parentStore}>
   <!-- Child can present sheets/alerts -->
@@ -387,7 +387,7 @@ if (
 
 **Solution**: Disable click-outside on parent when children can present their own UI.
 
-```typescript
+```svelte
 // ✅ CORRECT: Disable click-outside on parent
 <Modal store={parentStore} disableClickOutside>
   <!-- Child can safely present sheets/alerts -->
@@ -401,7 +401,7 @@ if (
 
 ### Pattern 1: Simple Modal with No Nested Navigation
 
-```typescript
+```svelte
 // State
 interface AppState {
   addItem: AddItemState | null;
@@ -438,7 +438,7 @@ case 'addItem': {
 
 ### Pattern 2: Modal with Nested Sheets/Alerts
 
-```typescript
+```svelte
 // State
 interface ProductDetailState {
   destination: ProductDetailDestination | null;
@@ -696,7 +696,7 @@ const addToCartStore = scopeToDestination(
 
 **Solution**: Add `disableClickOutside` to parent modal:
 
-```typescript
+```svelte
 <Modal store={parentStore} disableClickOutside>
   <!-- Children are safe now -->
 </Modal>

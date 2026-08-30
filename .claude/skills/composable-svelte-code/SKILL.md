@@ -36,7 +36,7 @@ All components follow Composable Architecture patterns with dedicated reducers a
 
 ### Quick Start
 
-```typescript
+```svelte
 import { createStore } from '@composable-svelte/core';
 import { CodeEditor, codeEditorReducer, createInitialCodeEditorState } from '@composable-svelte/code';
 
@@ -148,7 +148,7 @@ interface CodeEditorDependencies {
 
 ### Complete Example
 
-```typescript
+```svelte
 <script lang="ts">
 import { createStore, Effect } from '@composable-svelte/core';
 import { CodeEditor, codeEditorReducer, createInitialCodeEditorState } from '@composable-svelte/code';
@@ -227,7 +227,7 @@ CodeMirror provides standard keyboard shortcuts:
 
 ### Quick Start
 
-```typescript
+```svelte
 import { CodeHighlight } from '@composable-svelte/code';
 
 <CodeHighlight
@@ -253,7 +253,7 @@ JavaScript, TypeScript, Python, Rust, Go, Java, C, C++, C#, PHP, Ruby, SQL, HTML
 
 ### Examples
 
-```typescript
+```svelte
 <!-- Basic highlighting -->
 <CodeHighlight
   code={`function add(a, b) {\n  return a + b;\n}`}
@@ -304,7 +304,7 @@ JavaScript, TypeScript, Python, Rust, Go, Java, C, C++, C#, PHP, Ruby, SQL, HTML
 
 ### Quick Start
 
-```typescript
+```svelte
 import { createStore } from '@composable-svelte/core';
 import { NodeCanvas, nodeCanvasReducer, createInitialNodeCanvasState } from '@composable-svelte/code';
 
@@ -432,7 +432,7 @@ type NodeCanvasAction =
 
 ### Complete Example
 
-```typescript
+```svelte
 <script lang="ts">
 import { createStore } from '@composable-svelte/core';
 import { NodeCanvas, nodeCanvasReducer, createInitialNodeCanvasState } from '@composable-svelte/code';

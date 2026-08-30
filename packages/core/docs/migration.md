@@ -281,7 +281,7 @@ const store = createStore({
 
 #### Step 7: Update Component Usage
 
-```typescript
+```svelte
 // ❌ Redux with react-redux
 import { useSelector, useDispatch } from 'react-redux';
 
@@ -907,7 +907,7 @@ describe('Counter (migration verification)', () => {
 
 #### Extract Reducer from Complex Component
 
-```typescript
+```svelte
 // Before: Logic in component
 <script>
   let count = $state(0);

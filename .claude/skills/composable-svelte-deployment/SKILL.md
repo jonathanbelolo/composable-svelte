@@ -441,7 +441,7 @@ app.register(compress, {
 ### Bundle Optimization
 
 **Code splitting** (automatic with Vite):
-```typescript
+```svelte
 // Lazy load heavy components
 const HeavyChart = lazy(() => import('./HeavyChart.svelte'));
 

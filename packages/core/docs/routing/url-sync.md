@@ -1303,7 +1303,7 @@ Integrate URL routing with Composable Svelte's navigation system.
 
 ### Modal/Sheet with URL Sync
 
-```typescript
+```svelte
 // State: Destination for modal
 interface AppState {
   destination: AppDestination | null;

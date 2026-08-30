@@ -36,7 +36,7 @@ All components follow Composable Architecture patterns with dedicated reducers a
 
 ### Quick Start
 
-```typescript
+```svelte
 import { createStore } from '@composable-svelte/core';
 import {
   MinimalAudioPlayer,
@@ -183,7 +183,7 @@ type AudioPlayerAction =
 
 ### Complete Example
 
-```typescript
+```svelte
 <script lang="ts">
 import { createStore } from '@composable-svelte/core';
 import {
@@ -255,7 +255,7 @@ function addTrackToPlaylist(track: AudioTrack) {
 
 ### Quick Start
 
-```typescript
+```svelte
 import { VideoEmbed } from '@composable-svelte/media';
 
 <!-- YouTube video -->
@@ -337,7 +337,7 @@ const platforms = getSupportedPlatforms();
 
 ### Examples
 
-```typescript
+```svelte
 <!-- Basic YouTube embed -->
 <VideoEmbed url="https://www.youtube.com/watch?v=dQw4w9WgXcQ" />
 
@@ -361,7 +361,7 @@ const platforms = getSupportedPlatforms();
 
 ### Markdown Integration
 
-```typescript
+```svelte
 <script lang="ts">
 import { VideoEmbed, extractVideosFromMarkdown } from '@composable-svelte/media';
 
@@ -392,7 +392,7 @@ const videos = extractVideosFromMarkdown(markdown);
 
 ### Quick Start
 
-```typescript
+```svelte
 import { createStore } from '@composable-svelte/core';
 import {
   VoiceInput,
@@ -402,9 +402,9 @@ import {
 
 // Create voice input store
 const voiceStore = createStore({
-  initialState: createInitialVoiceInputState({
-    mode: 'push-to-talk'
-  }),
+  // `createInitialVoiceInputState()` takes no arguments; the mode is chosen by
+  // dispatching, not by seeding the state.
+  initialState: createInitialVoiceInputState(),
   reducer: voiceInputReducer,
   dependencies: {
     onAudioData: async (audioBlob) => {
@@ -514,7 +514,7 @@ interface VoiceInputDependencies {
 
 ### Complete Example
 
-```typescript
+```svelte
 <script lang="ts">
 import { createStore, Effect } from '@composable-svelte/core';
 import {
@@ -525,9 +525,9 @@ import {
 
 // Create voice input store with transcription
 const voiceStore = createStore({
-  initialState: createInitialVoiceInputState({
-    mode: 'push-to-talk'
-  }),
+  // `createInitialVoiceInputState()` takes no arguments; the mode is chosen by
+  // dispatching, not by seeding the state.
+  initialState: createInitialVoiceInputState(),
   reducer: voiceInputReducer,
   dependencies: {
     // Send audio to Whisper API for transcription
@@ -725,7 +725,8 @@ const store = new TestStore({
 // Test recording start
 await store.send({ type: 'startRecording' });
 await store.receive({ type: 'recordingStarted' }, (state) => {
-  expect(state.isRecording).toBe(true);
+  // `VoiceInputState` has no `isRecording`; the status field carries it.
+  expect(state.status).toBe('recording');
 });
 ```
 

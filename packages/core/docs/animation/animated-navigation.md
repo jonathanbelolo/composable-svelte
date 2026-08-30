@@ -554,7 +554,7 @@ case 'openModal': {
 
 You might wonder why we use `Effect.afterDelay()` instead of waiting for component animation callbacks:
 
-```typescript
+```svelte
 // ❌ DON'T: Rely solely on component callbacks
 // Component calls onPresentationComplete when animation finishes
 <Modal
@@ -849,7 +849,7 @@ Navigation components expect:
 
 ### Modal Example
 
-```typescript
+```svelte
 import { Modal } from '@composable-svelte/core/navigation-components';
 
 <Modal
@@ -914,7 +914,7 @@ const interactionsEnabled = $derived(
 
 ### Complete Integration Example
 
-```typescript
+```svelte
 // State
 interface AppState {
   addItemDestination: AddItemState | null;
@@ -1317,7 +1317,7 @@ return [
 
 ### 4. Disable UI During Animation
 
-```typescript
+```svelte
 // ✅ GOOD
 <button
   disabled={state.presentation.status === 'presenting' ||
@@ -1475,7 +1475,7 @@ case 'dismissalCompleted': {
 
 ### 4. Enabling Interactions Too Early
 
-```typescript
+```svelte
 // ❌ Problem: User can click during animation
 {#if state.destination}
   <button onclick={...}>Submit</button>

@@ -688,7 +688,7 @@ interface State {
 
 **Cause: Not using $derived or memoization**
 
-```typescript
+```svelte
 // ❌ BAD: Compute on every render
 {#each store.state.items.filter(i => i.active).sort((a, b) => a.name.localeCompare(b.name)) as item}
   <ItemRow {item} />
@@ -965,7 +965,7 @@ See the "Styling & Theming" section of the package README for the full setup.
 
 **Cause: Not using store.state reactively**
 
-```typescript
+```svelte
 // ❌ BAD: Accessing state non-reactively
 <script>
   let { store } = $props();

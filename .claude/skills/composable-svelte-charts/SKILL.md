@@ -41,7 +41,7 @@ All charts use pure reducers with type-safe actions following Composable Archite
 
 ## QUICK START
 
-```typescript
+```svelte
 import { createStore } from '@composable-svelte/core';
 import { Chart, chartReducer, createInitialChartState } from '@composable-svelte/charts';
 
@@ -101,7 +101,7 @@ const chartStore = createStore({
 
 ### Usage
 
-```typescript
+```svelte
 <Chart
   store={chartStore}
   type="scatter"
@@ -127,7 +127,7 @@ const chartStore = createStore({
 
 **Best for**: Correlations, distributions, outliers.
 
-```typescript
+```svelte
 <Chart
   store={chartStore}
   type="scatter"
@@ -151,7 +151,7 @@ const chartStore = createStore({
 
 **Best for**: Time series, trends, comparisons.
 
-```typescript
+```svelte
 <Chart
   store={chartStore}
   type="line"
@@ -173,7 +173,7 @@ const chartStore = createStore({
 
 **Best for**: Category comparisons, rankings, distributions.
 
-```typescript
+```svelte
 <Chart
   store={chartStore}
   type="bar"
@@ -195,7 +195,7 @@ const chartStore = createStore({
 
 **Best for**: Cumulative data, part-to-whole relationships.
 
-```typescript
+```svelte
 <Chart
   store={chartStore}
   type="area"
@@ -216,7 +216,7 @@ const chartStore = createStore({
 
 **Best for**: Data distributions, frequency analysis.
 
-```typescript
+```svelte
 <Chart
   store={chartStore}
   type="histogram"
@@ -377,7 +377,7 @@ console.log('Selected points:', selected);
 ```
 
 **Callback**:
-```typescript
+```svelte
 <Chart
   store={chartStore}
   enableBrush={true}
@@ -501,7 +501,7 @@ Effect.run(async (dispatch) => {
 
 Omit `width` and `height` for responsive sizing:
 
-```typescript
+```svelte
 <Chart
   store={chartStore}
   type="scatter"
@@ -517,7 +517,7 @@ Chart will:
 
 ### Fixed Dimensions
 
-```typescript
+```svelte
 <Chart
   store={chartStore}
   type="scatter"
@@ -545,7 +545,7 @@ Chart will:
 
 ### Responsive Breakpoints
 
-```typescript
+```svelte
 let chartWidth = $state(800);
 
 $effect(() => {
@@ -651,7 +651,7 @@ belonging to the surrounding page are the application's.
 
 ### Basic Scatter Plot
 
-```typescript
+```svelte
 <script lang="ts">
 import { createStore } from '@composable-svelte/core';
 import { Chart, chartReducer, createInitialChartState } from '@composable-svelte/charts';
@@ -686,7 +686,7 @@ const chartStore = createStore({
 
 ### Time Series Line Chart
 
-```typescript
+```svelte
 <script lang="ts">
 import { createStore } from '@composable-svelte/core';
 import { Chart, chartReducer, createInitialChartState } from '@composable-svelte/charts';
@@ -728,7 +728,7 @@ const chartStore = createStore({
 
 ### Interactive Bar Chart
 
-```typescript
+```svelte
 <script lang="ts">
 import { createStore } from '@composable-svelte/core';
 import { Chart, chartReducer, createInitialChartState } from '@composable-svelte/charts';
@@ -772,7 +772,7 @@ function handleSelection(selected: any[]) {
 
 ### Real-time Data Visualization
 
-```typescript
+```svelte
 <script lang="ts">
 import { createStore, Effect } from '@composable-svelte/core';
 import { Chart, chartReducer, createInitialChartState } from '@composable-svelte/charts';
@@ -826,7 +826,7 @@ onMount(() => {
 
 ### Multiple Charts with Shared Selection
 
-```typescript
+```svelte
 <script lang="ts">
 const data = [...]; // Shared data
 
@@ -851,7 +851,7 @@ function syncSelection(selected: any[]) {
 
 ### Linked Zoom
 
-```typescript
+```svelte
 <script lang="ts">
 const masterStore = createStore({...});
 const detailStore = createStore({...});
@@ -868,7 +868,7 @@ $effect(() => {
 
 ### Dynamic Filtering
 
-```typescript
+```svelte
 <script lang="ts">
 let minValue = $state(0);
 let maxValue = $state(100);
@@ -942,7 +942,7 @@ function queueUpdate(newData: any[]) {
 
 Disable animations for large datasets or frequent updates:
 
-```typescript
+```svelte
 <Chart
   store={chartStore}
   enableAnimations={false}

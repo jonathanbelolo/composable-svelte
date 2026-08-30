@@ -326,7 +326,7 @@ plain `<input type="date">`.
 - `placeholder: string` - Placeholder text
 - `disabled: boolean` - Disabled state
 
-```typescript
+```svelte
 import { Input } from '@composable-svelte/core/components/ui';
 
 <Input
@@ -540,7 +540,7 @@ Container for related content with header/footer.
 
 **When to use**: Product cards, user profiles, content previews.
 
-```typescript
+```svelte
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@composable-svelte/core/components/ui';
 
 {#each $store.products as product (product.id)}
@@ -565,7 +565,7 @@ Small label/tag.
 
 **Variants** (`components/ui/badge/Badge.svelte:5`): `default`, `secondary`, `destructive`, `outline`, `success`, `warning`.
 
-```typescript
+```svelte
 import { Badge } from '@composable-svelte/core/components/ui';
 
 <Badge variant={$store.status === 'active' ? 'success' : 'secondary'}>
@@ -577,7 +577,7 @@ import { Badge } from '@composable-svelte/core/components/ui';
 
 User profile image with fallback.
 
-```typescript
+```svelte
 import { Avatar } from '@composable-svelte/core/components/ui';
 
 <Avatar
@@ -645,7 +645,7 @@ Linear progress indicator.
 
 **When to use**: Upload progress, loading progress.
 
-```typescript
+```svelte
 import { Progress } from '@composable-svelte/core/components/ui';
 
 {#if $store.uploadProgress !== null}
@@ -660,7 +660,7 @@ Loading placeholder with a pulse animation (`animate-pulse`).
 
 **When to use**: Content placeholders during loading.
 
-```typescript
+```svelte
 import { Skeleton } from '@composable-svelte/core/components/ui';
 
 {#if $store.isLoading}

@@ -452,7 +452,7 @@ interface FieldState {
 
 ### Accessing Field Errors
 
-```typescript
+```svelte
 // Via FormMessage component (automatic — reads from context)
 <FormMessage />
 
