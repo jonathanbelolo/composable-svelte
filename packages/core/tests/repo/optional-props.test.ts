@@ -563,3 +563,94 @@ describe('optional props accept undefined', () => {
 		);
 	});
 });
+
+/**
+ * Every exported `*Props` type must be used by a component.
+ *
+ * A props type nobody annotates is a second, unread copy of a contract, and it
+ * drifts silently from the one the component actually enforces. `FileUpload`
+ * is the case that motivated this: `1eeec5a` widened
+ * `FileUploadProps.onUpload` and the reducer to take a progress callback, but
+ * `FileUpload.svelte` carried its own hand-written `interface Props` and kept
+ * the one-parameter form. A consumer typing a handler against the component's
+ * prop had no `onProgress` to receive, while the exported type said they did —
+ * and every runtime test passed, because the reducer was always passing both
+ * arguments.
+ *
+ * The duplicate was also the camouflage: the local copy was correct about
+ * `| undefined`, so the arms above were satisfied by the copy while the real
+ * exported type went unread and unchecked.
+ *
+ * The predicate is **used in a type position**, not merely mentioned. A barrel
+ * re-export is not a use: it publishes the name without constraining it, which
+ * is exactly the state `FileUploadProps` was in. Nor does the use have to be a
+ * `$props()` annotation — `FieldRenderProps` is only ever the payload of
+ * `FormFieldProps.children` (`form.types.ts:430`), and that is enough, because
+ * it puts the type in the graph `FormField.svelte` typechecks against. Change
+ * it and the component's snippet callers break. That is the property being
+ * checked: something must fail if the type drifts.
+ */
+function exportedPropsTypes(): { name: string; file: string }[] {
+	const packages = join(repoRoot, 'packages');
+	const out: { name: string; file: string }[] = [];
+
+	for (const pkg of listDirs(packages)) {
+		for (const file of walkFiles(join(packages, pkg, 'src'), {
+			skip: SKIP_DIRS,
+			keep: (n) => n.endsWith('.ts')
+		}).files) {
+			const source = blankComments(readFileSync(file, 'utf8'));
+			for (const m of source.matchAll(/export\s+(?:interface|type)\s+(\w*Props)\b/g)) {
+				out.push({ name: m[1]!, file: relative(repoRoot, file) });
+			}
+		}
+	}
+
+	return out.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** Every source file that could use a type, with re-exports and declarations blanked. */
+function usageSites(): string[] {
+	const packages = join(repoRoot, 'packages');
+
+	return listDirs(packages)
+		.flatMap(
+			(pkg) =>
+				walkFiles(join(packages, pkg, 'src'), {
+					skip: SKIP_DIRS,
+					keep: (n) => n.endsWith('.ts') || n.endsWith('.svelte')
+				}).files
+		)
+		.map((file) =>
+			blankComments(readFileSync(file, 'utf8'))
+				// `export type { A, B }` and `export { A }` publish a name without
+				// constraining it. Counting those as uses is what would let a type
+				// like `FileUploadProps` look consumed while nothing checks it.
+				.replace(/export\s+(?:type\s+)?\{[^}]*\}/g, '')
+				// Its own declaration is not a use of it either.
+				.replace(/export\s+(?:interface|type)\s+\w*Props\b/g, '')
+		);
+}
+
+describe('an exported props type is used by a component', () => {
+	const exported = exportedPropsTypes();
+	const sources = usageSites();
+
+	it('finds some, so the arm below is about something', () => {
+		expect(exported.length, 'no exported *Props types found at all').toBeGreaterThan(3);
+	});
+
+	it('every one is used somewhere that would break if it drifted', () => {
+		const orphaned = exported
+			.filter(({ name }) => !sources.some((source) => new RegExp(`\\b${name}\\b`).test(source)))
+			.map(({ name, file }) => `${name}  (${file})`);
+
+		expect(
+			orphaned,
+			'these props types are exported and then used nowhere, so nothing keeps them in ' +
+				'step with the props their component really takes — annotate the component ' +
+				'with the type, or stop exporting it:\n' +
+				orphaned.join('\n')
+		).toEqual([]);
+	});
+});

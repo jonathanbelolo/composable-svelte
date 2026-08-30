@@ -111,25 +111,35 @@ export interface FileUploadDependencies {
  */
 export interface FileUploadProps {
   /** Accept attribute for file input (e.g., "image/*" or ".jpg,.png") */
-  accept?: string;
+  accept?: string | undefined;
   /** Whether to allow multiple files */
-  multiple?: boolean;
+  multiple?: boolean | undefined;
   /** Whether to show file previews for images */
-  showPreviews?: boolean;
+  showPreviews?: boolean | undefined;
   /** Maximum file size in bytes */
-  maxSize?: number;
+  maxSize?: number | undefined;
   /** Maximum number of files */
-  maxFiles?: number;
+  maxFiles?: number | undefined;
   /** Custom text for the drop zone */
-  dropzoneText?: string;
+  dropzoneText?: string | undefined;
   /** Callback when files are selected */
-  onFilesChange?: (files: UploadedFile[]) => void;
-  /** Callback to handle file upload */
-  onUpload?: (file: File, onProgress: (percent: number) => void) => Promise<void>;
+  onFilesChange?: ((files: UploadedFile[]) => void) | undefined;
+  /**
+   * Callback to handle file upload.
+   *
+   * `onProgress` is the channel the component reports through: the reducer
+   * passes it on every call, and each invocation dispatches `uploadProgress`.
+   * A handler that ignores it is fine — a one-parameter function is assignable
+   * here — but one that wants it must be able to declare it, which is what was
+   * broken while the component kept its own one-parameter copy of this type.
+   */
+  onUpload?:
+    | ((file: File, onProgress: (percent: number) => void) => Promise<void>)
+    | undefined;
   /** Custom class for container */
-  class?: string;
+  class?: string | undefined;
   /** Whether the component is disabled */
-  disabled?: boolean;
+  disabled?: boolean | undefined;
 }
 
 /**

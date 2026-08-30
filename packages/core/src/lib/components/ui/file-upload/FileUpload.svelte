@@ -2,20 +2,7 @@
   import { createStore } from '../../../store.svelte.js';
   import { fileUploadReducer } from './file-upload.reducer.js';
   import { createInitialFileUploadState, formatFileSize } from './file-upload.types.js';
-  import type { FileValidationConfig } from './file-upload.types.js';
-
-  interface Props {
-    accept?: string | undefined;
-    multiple?: boolean | undefined;
-    showPreviews?: boolean | undefined;
-    maxSize?: number | undefined;
-    maxFiles?: number | undefined;
-    dropzoneText?: string | undefined;
-    onFilesChange?: ((files: import('./file-upload.types.js').UploadedFile[]) => void) | undefined;
-    onUpload?: ((file: File) => Promise<void>) | undefined;
-    class?: string | undefined;
-    disabled?: boolean | undefined;
-  }
+  import type { FileUploadProps, FileValidationConfig } from './file-upload.types.js';
 
   let {
     accept = '',
@@ -28,7 +15,7 @@
     onUpload,
     class: className = '',
     disabled = false
-  }: Props = $props();
+  }: FileUploadProps = $props();
 
   // Build validation config from props
   const validation = $derived<FileValidationConfig>({
