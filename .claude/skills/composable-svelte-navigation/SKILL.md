@@ -579,6 +579,15 @@ URL routing is state synchronization, not a separate navigation system. Use the 
 
 ```typescript
 import { syncBrowserHistory } from '@composable-svelte/core/routing';
+import type { Store } from '@composable-svelte/core';
+
+// The destination type is inferred from `getDestination`'s return, which needs
+// a typed store to infer *from*. Without one, `dest` in `destinationToAction`
+// arrives as `{}` and `dest.state` does not compile.
+interface BlogState {
+  selectedPostId: string | null;
+}
+declare const store: Store<BlogState, AppAction>;
 
 // In client hydration
 syncBrowserHistory(store, {
@@ -1448,6 +1457,19 @@ Fluent APIs for reducer composition and store scoping.
 
 ```typescript
 import { integrate, scopeTo } from '@composable-svelte/core/navigation';
+import type { Reducer, Store } from '@composable-svelte/core';
+
+// `.with(field, ...)` and `.into(field)` are both checked against the state
+// type, so both need one: with an untyped reducer or store every field name
+// resolves to `never`.
+interface AppState {
+  counter: CounterState;
+  todos: TodosState;
+  destination: { type: 'addItem'; state: AddItemState } | null;
+}
+
+declare const baseReducer: Reducer<AppState, AppAction>;
+declare const store: Store<AppState, AppAction>;
 
 // Fluent reducer integration
 const appReducer = integrate(baseReducer)

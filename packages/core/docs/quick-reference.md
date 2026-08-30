@@ -211,9 +211,13 @@ const scopedStore = scopeToOptional(store, 'destination');
 // Scope to enum destination
 const scopedStore = scopeToDestination(store, ['destination'], 'addItem', 'destination');
 
-// Fluent API (alternative)
+// Fluent API (alternative). `.into(field)` is checked against the state type,
+// so the store must be typed — an untyped store makes every field `never`.
 import { scopeTo } from '@composable-svelte/core';
-const scopedStore = scopeTo(store).into('destination').case('addItem');
+import type { Store } from '@composable-svelte/core';
+
+declare const typedStore: Store<{ destination: AppDestination | null }, AppAction>;
+const fluentStore = scopeTo(typedStore).into('destination').case('addItem');
 ```
 
 ## Animation

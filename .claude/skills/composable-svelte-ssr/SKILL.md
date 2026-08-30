@@ -424,7 +424,10 @@ function hydrate() {
     );
 
     // 3. Sync browser history with state (URL routing!)
-    syncBrowserHistory(store, {
+    // `dest` in `destinationToAction` is inferred from what `getDestination`
+    // returns, which needs a typed store to infer from — otherwise it arrives
+    // as `{}` and `dest.state` does not compile.
+    syncBrowserHistory<BlogState, AppAction, { type: 'post'; state: { postId: string } }>(store, {
       serializers: serializerConfig.serializers,
       parsers: parserConfig.parsers,
       // Map state → destination for URL serialization

@@ -1090,10 +1090,23 @@ interface RouteConfig {
 ```svelte
 <!-- ❌ BEFORE: Manual scoping and routing (verbose) -->
 <script lang="ts">
+  import type { Store } from '@composable-svelte/core';
   import { Modal, Sheet, Drawer } from '@composable-svelte/core';
   import { scopeTo } from '@composable-svelte/core/navigation';
 
-  const { store } = $props();
+  // `.into('destination')` is checked against the state type, so the store has
+  // to be typed. A bare `$props()` is `any`, the state resolves to `unknown`,
+  // and every field name is then `never`.
+  interface AppState {
+    destination:
+      | { type: 'addItem'; state: AddItemState }
+      | { type: 'editItem'; state: EditItemState }
+      | { type: 'filter'; state: FilterState }
+      | { type: 'detail'; state: DetailState }
+      | null;
+  }
+
+  const { store }: { store: Store<AppState, AppAction> } = $props();
 
   const addItemStore = scopeTo(store).into('destination').case('addItem');
   const editItemStore = scopeTo(store).into('destination').case('editItem');

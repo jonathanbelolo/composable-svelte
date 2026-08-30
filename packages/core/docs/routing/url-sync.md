@@ -138,8 +138,12 @@ type AppAction =
   | { type: 'addTapped' }
   | { type: 'closeDestination' };
 
-// 2. Configure serialization
-const serializerConfig = {
+// 2. Configure serialization.
+//
+// The annotation is what gives each serializer its `state` type — as a bare
+// object literal, `state` is inferred as `{}` and `state.itemId` does not
+// compile.
+const serializerConfig: SerializerConfig<AppDestination> = {
   basePath: '/inventory',
   serializers: {
     detail: (state) => `/inventory/item-${state.itemId}`,

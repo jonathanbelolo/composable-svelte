@@ -28,11 +28,9 @@ import { checkDocs, keyOf, type Finding } from './doc-typecheck.js';
  * the 87th could have arrived while it was in progress.
  */
 const REGISTER = new Map<string, number>([
-	['packages/core/docs/navigation/components.md :: TS2345 :: Argument of type \'"destination"\' is not assignable to parameter of type \'never\'.', 4],
 	['packages/core/docs/navigation/tree-based.md :: TS2724 :: \'"@composable-svelte/core/routing"\' has no exported member named \'createParserConfig\'. Did you mean \'ParserConfig\'?', 1],
 	['packages/core/docs/navigation/tree-based.md :: TS2339 :: Property \'type\' does not exist on type \'never\'.', 1],
 	['packages/core/docs/quick-reference.md :: TS2554 :: Expected 3 arguments, but got 2.', 1],
-	['packages/core/docs/quick-reference.md :: TS2345 :: Argument of type \'"destination"\' is not assignable to parameter of type \'never\'.', 1],
 	['packages/core/docs/quick-reference.md :: TS2339 :: Property \'on\' does not exist on type \'WebSocketClient<unknown>\'.', 2],
 	['packages/core/docs/quick-reference.md :: TS2554 :: Expected 1-2 arguments, but got 0.', 1],
 	['packages/core/docs/quick-reference.md :: TS2305 :: Module \'"@composable-svelte/core/routing"\' has no exported member \'matchPattern\'.', 1],
@@ -52,11 +50,6 @@ const REGISTER = new Map<string, number>([
 	['.claude/skills/composable-svelte-navigation/SKILL.md :: TS2339 :: Property \'state\' does not exist on type \'{}\'.', 1],
 	['.claude/skills/composable-svelte-navigation/SKILL.md :: TS2554 :: Expected 1 arguments, but got 2.', 1],
 	['.claude/skills/composable-svelte-navigation/SKILL.md :: TS2554 :: Expected 6 arguments, but got 4.', 1],
-	['.claude/skills/composable-svelte-navigation/SKILL.md :: TS2345 :: Argument of type \'"counter"\' is not assignable to parameter of type \'never\'.', 1],
-	['.claude/skills/composable-svelte-navigation/SKILL.md :: TS2345 :: Argument of type \'"todos"\' is not assignable to parameter of type \'never\'.', 1],
-	['.claude/skills/composable-svelte-navigation/SKILL.md :: TS2345 :: Argument of type \'"destination"\' is not assignable to parameter of type \'never\'.', 1],
-	['.claude/skills/composable-svelte-ssr/SKILL.md :: TS2339 :: Property \'type\' does not exist on type \'{}\'.', 1],
-	['.claude/skills/composable-svelte-ssr/SKILL.md :: TS2339 :: Property \'state\' does not exist on type \'{}\'.', 1],
 	['.claude/skills/composable-svelte-testing/SKILL.md :: TS2339 :: Property \'simulateOpen\' does not exist on type \'MockWebSocketClient<unknown>\'.', 1],
 	['guides/NAVIGATION-GUIDE.md :: TS2554 :: Expected 6 arguments, but got 4.', 1],
 	['guides/README.md :: TS2554 :: Expected 1 arguments, but got 3.', 1],
