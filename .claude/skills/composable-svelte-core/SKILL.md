@@ -140,7 +140,7 @@ The fundamental pattern for every feature.
 
 #### Complete Template
 
-```svelte
+```typescript
 // 1. Define State (ALL application state)
 interface FeatureState {
   items: Item[];
@@ -213,9 +213,11 @@ const featureReducer: Reducer<FeatureState, FeatureAction, FeatureDependencies> 
       return [state, Effect.none()];
   }
 };
+```
 
-// 5. Component
-// Feature.svelte
+5. The component — `Feature.svelte`:
+
+```svelte
 <script lang="ts">
   import { createStore } from '@composable-svelte/core';
   import { featureReducer } from './reducer';
@@ -634,7 +636,7 @@ matches on, so the two stay in step:
 
 **Why NOT forEach**: Trees have relationships between nodes, structure needs to be explicit. Per DESIGN-PRINCIPLES.md, use simple helpers over complex abstractions for trees.
 
-```svelte
+```typescript
 // 1. Define tree node types
 type FileNode = { type: 'file'; id: string; name: string };
 type FolderNode = { type: 'folder'; id: string; name: string; children: Node[]; isExpanded: boolean };
@@ -687,9 +689,11 @@ const fileSystemReducer: Reducer<FileSystemState, FileSystemAction> = (state, ac
       return [state, Effect.none()];
   }
 };
+```
 
-// 4. Component passes ID, not scoped store
-// Folder.svelte
+4. The component passes an id, not a scoped store — `Folder.svelte`:
+
+```svelte
 <script lang="ts">
   // Runes mode: $props(), not `export let` — mixing the two is a compile error.
   let { store, folderId }: {
@@ -969,7 +973,7 @@ What kind of side effect?
 
 ### Basic Feature Template
 
-```svelte
+```typescript
 // types.ts
 export interface FeatureState {
   items: Item[];
@@ -1019,8 +1023,11 @@ export const featureReducer: Reducer<FeatureState, FeatureAction, FeatureDepende
       return [state, Effect.none()];
   }
 };
+```
 
-// Feature.svelte
+And `Feature.svelte`:
+
+```svelte
 <script lang="ts">
   import { createStore } from '@composable-svelte/core';
   import { featureReducer } from './reducer';

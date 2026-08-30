@@ -850,7 +850,7 @@ describe('Svelte markup is fenced as svelte', () => {
  * across the core and navigation skills and `migration.md`. Nothing looked,
  * because the only arm that could have was pointed the other way.
  */
-const ALLOWED_MIXED_LISTINGS = 8;
+const ALLOWED_MIXED_LISTINGS = 4;
 
 const mixedListings = blocks
 	.filter((block) => block.lang === 'svelte')

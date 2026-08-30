@@ -283,8 +283,9 @@ const store = createStore({
 
 #### Step 7: Update Component Usage
 
-```svelte
-// ❌ Redux with react-redux
+❌ Redux with react-redux:
+
+```tsx
 import { useSelector, useDispatch } from 'react-redux';
 
 function Counter() {
@@ -300,8 +301,11 @@ function Counter() {
     </div>
   );
 }
+```
 
-// ✅ Composable Svelte
+✅ Composable Svelte:
+
+```svelte
 <script lang="ts">
   import { getContext } from 'svelte';
   import type { Store } from '@composable-svelte/core';
