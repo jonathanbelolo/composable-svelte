@@ -246,9 +246,9 @@ case 'addButtonTapped':
 Use `TestStore` for exhaustive action testing:
 
 ```typescript
-import { TestStore } from '@composable-svelte/core/test';
+import { createTestStore } from '@composable-svelte/core/test';
 
-const store = new TestStore({
+const store = createTestStore({
   // The initial state has to carry every field the assertions below read —
   // `isLoading` included, or the example does not compile for a reader either.
   initialState: { count: 0, isLoading: false },
