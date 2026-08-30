@@ -589,8 +589,12 @@ interface BlogState {
 }
 declare const store: Store<BlogState, AppAction>;
 
-// In client hydration
-syncBrowserHistory(store, {
+type PostDestination = { type: 'post'; state: { postId: string } };
+
+// In client hydration. The destination type is given explicitly: TypeScript
+// cannot unify it from `getDestination`'s return and `destinationToAction`'s
+// parameter at the same time, and falls back to `{}`.
+syncBrowserHistory<BlogState, AppAction, PostDestination>(store, {
   serializers: serializerConfig.serializers,
   parsers: parserConfig.parsers,
   // Map state → destination for URL serialization

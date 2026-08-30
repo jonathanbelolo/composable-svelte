@@ -119,6 +119,7 @@ import {
   parseDestination,
   matchPath
 } from '@composable-svelte/core/routing';
+import type { SerializerConfig, ParserConfig } from '@composable-svelte/core/routing';
 
 // 1. Define your state
 interface AppState {
@@ -153,7 +154,7 @@ const serializerConfig: SerializerConfig<AppDestination> = {
 };
 
 // 3. Configure parsing
-const parserConfig = {
+const parserConfig: ParserConfig<AppDestination> = {
   basePath: '/inventory',
   parsers: [
     // Order matters! Most specific patterns first

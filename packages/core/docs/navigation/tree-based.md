@@ -992,7 +992,10 @@ import { createTestStore } from '@composable-svelte/core/test';
 
 describe('Inventory Navigation', () => {
   it('should present add item modal', async () => {
-    const store = createTestStore({
+    // `destination: null` on its own gives the field the type `null`, so
+    // `state.destination?.type` has nothing to read. Naming the state type is
+    // what makes the assertions below compile.
+    const store = createTestStore<InventoryState, InventoryAction>({
       initialState: { items: [], destination: null },
       reducer: inventoryReducer,
       dependencies: {}

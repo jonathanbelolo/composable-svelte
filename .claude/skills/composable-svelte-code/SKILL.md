@@ -471,8 +471,13 @@ const canvasStore = createStore({
   dependencies: {}
 });
 
-// Handle node clicks
-function handleNodeClick(node: Node) {
+// Handle node clicks.
+//
+// A bare `Node` is the DOM's. The canvas holds SvelteFlow's `Node<NodeData>`,
+// which `@composable-svelte/code` does not re-export — so a handler that only
+// needs the id says so structurally, and one that needs more imports the type
+// from `@xyflow/svelte`.
+function handleNodeClick(node: { id: string }) {
   console.log('Node clicked:', node);
   canvasStore.dispatch({ type: 'selectNode', nodeId: node.id });
 }

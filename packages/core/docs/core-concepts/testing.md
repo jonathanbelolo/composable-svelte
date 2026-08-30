@@ -703,7 +703,7 @@ Test parent-child reducer composition with `scope()` and `ifLet()`.
 ### Testing scope() Composition
 
 ```typescript
-import { scope } from '@composable-svelte/core';
+import { scope, type Reducer } from '@composable-svelte/core';
 
 interface ParentState {
   counter: CounterState;
@@ -722,7 +722,10 @@ type CounterAction =
   | { type: 'increment' }
   | { type: 'decrement' };
 
-const counterReducer = (state, action, deps) => {
+// Annotated: a bare arrow function's return widens to `any[]`, and `Reducer`
+// requires the tuple `readonly [State, Effect<Action>]`. The annotation also
+// gives `state` and `action` their types inside the switch.
+const counterReducer: Reducer<CounterState, CounterAction> = (state, action, deps) => {
   switch (action.type) {
     case 'increment':
       return [{ ...state, count: state.count + 1 }, Effect.none()];
@@ -784,7 +787,13 @@ Test navigation patterns with `ifLet()` and `PresentationAction`.
 ### Testing Optional Destinations
 
 ```typescript
-import { ifLet, type PresentationAction } from '@composable-svelte/core';
+import {
+  Effect,
+  ifLet,
+  type DismissDependency,
+  type PresentationAction,
+  type Reducer
+} from '@composable-svelte/core';
 
 interface ParentState {
   destination: ChildState | null;
@@ -804,7 +813,11 @@ type ChildAction =
   | { type: 'increment' }
   | { type: 'save' };
 
-const childReducer = (state, action, deps) => {
+const childReducer: Reducer<ChildState, ChildAction, { dismiss: DismissDependency }> = (
+  state,
+  action,
+  deps
+) => {
   switch (action.type) {
     case 'increment':
       return [{ ...state, count: state.count + 1 }, Effect.none()];
@@ -818,7 +831,7 @@ const childReducer = (state, action, deps) => {
   }
 };
 
-const parentReducer = (state, action, deps) => {
+const parentReducer: Reducer<ParentState, ParentAction> = (state, action, deps) => {
   switch (action.type) {
     case 'showDestination':
       return [
@@ -837,19 +850,21 @@ const parentReducer = (state, action, deps) => {
   }
 
   // ifLet handles destination actions
+  // `ifLet` takes five arguments and returns a reducer. Dependencies are not
+  // among them — they reach the child through the call at the end, so a
+  // `dismiss` the child can use is added to the deps passed there.
   const [newState, effect] = ifLet(
     (s) => s.destination,
     (s, d) => ({ ...s, destination: d }),
     (a) => a.type === 'destination' && a.action.type === 'presented' ? a.action.action : null,
     (ca) => ({ type: 'destination', action: { type: 'presented', action: ca } }),
-    childReducer,
-    {
-      dismiss: async () => {
-        // Dispatch dismiss action
-        deps.dispatch({ type: 'destination', action: { type: 'dismiss' } });
-      }
+    childReducer
+  )(state, action, {
+    ...deps,
+    dismiss: async () => {
+      deps.dispatch({ type: 'destination', action: { type: 'dismiss' } });
     }
-  )(state, action, deps);
+  });
 
   // Handle dismiss
   if (action.type === 'destination' && action.action.type === 'dismiss') {

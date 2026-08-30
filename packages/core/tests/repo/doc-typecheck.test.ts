@@ -28,13 +28,11 @@ import { checkDocs, keyOf, type Finding } from './doc-typecheck.js';
  * the 87th could have arrived while it was in progress.
  */
 const REGISTER = new Map<string, number>([
-	['packages/core/docs/navigation/tree-based.md :: TS2339 :: Property \'type\' does not exist on type \'never\'.', 1],
-	['packages/core/docs/routing/url-sync.md :: TS2339 :: Property \'itemId\' does not exist on type \'{}\'.', 2],
-	['.claude/skills/composable-svelte-code/SKILL.md :: TS2339 :: Property \'id\' does not exist on type \'Node\'.', 1],
-	['.claude/skills/composable-svelte-navigation/SKILL.md :: TS2339 :: Property \'type\' does not exist on type \'{}\'.', 1],
-	['.claude/skills/composable-svelte-navigation/SKILL.md :: TS2339 :: Property \'state\' does not exist on type \'{}\'.', 1],
-	['packages/core/docs/core-concepts/testing.md :: TS2345 :: Argument of type \'(state: any, action: any, deps: any) => any[]\' is not assignable to parameter of type \'Reducer<any, any, any>\'.   Type \'any[]\' is not assignable to type \'readonly [any, Effect<any>]\'.     Target requires 2 element(s) but source may have fewer.', 1],
-	['packages/core/docs/core-concepts/testing.md :: TS2554 :: Expected 5 arguments, but got 6.', 1],
+	// Empty, and meant to stay that way. It held 84 when this guard landed —
+	// every one a false claim the documentation made about this library's API.
+	// The `no unregistered error` arm is what keeps the next one from arriving
+	// unnoticed; this map exists so the burn-down could not be outpaced while it
+	// was in progress.
 ]);
 
 const result = checkDocs();
