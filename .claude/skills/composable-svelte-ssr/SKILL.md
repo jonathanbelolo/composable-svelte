@@ -50,6 +50,12 @@ import App from './App.svelte';
 // 1. Read state from script tag
 const stateJSON = document.getElementById('__COMPOSABLE_SVELTE_STATE__')?.textContent;
 
+// The element may be absent — `?.textContent` is `string | undefined`, and
+// hydrating without server state is a real failure, not a type nuisance.
+if (!stateJSON) {
+  throw new Error('No serialized state found — was the page server-rendered?');
+}
+
 // 2. Hydrate with client dependencies
 const store = hydrateStore(stateJSON, {
   reducer: appReducer,
@@ -197,21 +203,16 @@ For complex types (Date, Map, Set), provide custom serializers:
 ```typescript
 import { serializeState, parseState } from '@composable-svelte/core/ssr';
 
-// Server
-const serialized = serializeState(store.state, {
-  customSerializers: {
-    Date: (date) => ({ __type: 'Date', value: date.toISOString() }),
-    Map: (map) => ({ __type: 'Map', entries: Array.from(map.entries()) })
-  }
-});
+// Server. One argument: this is `JSON.stringify` with a clearer error.
+const serialized = serializeState(store.state);
 
 // Client
-const state = parseState(serialized, {
-  customParsers: {
-    Date: (obj) => new Date(obj.value),
-    Map: (obj) => new Map(obj.entries)
-  }
-});
+const state = parseState<AppState>(serialized);
+
+// There are **no** custom serializers. `serializeState` throws if the state is
+// not plain JSON — "State should only contain plain objects, arrays, and
+// primitives" — so a `Date` or a `Map` in state must be converted by your own
+// reducer before it is serialized, and converted back after hydration.
 ```
 
 ---
@@ -1134,8 +1135,9 @@ app.register(fastifyRateLimit, { max: 100, windowMs: 60_000 });
 
 // Standalone rate limiter
 const limiter = new RateLimiter({ max: 100, windowMs: 60000 });
-if (limiter.isRateLimited(clientIP)) {
-  return res.status(429).send('Too many requests');
+const { allowed, remaining, resetTime } = limiter.check(clientIP);
+if (!allowed) {
+  return res.status(429).send(`Too many requests — retry after ${resetTime}`);
 }
 ```
 
@@ -1156,7 +1158,7 @@ import {
 const componentHTML = renderComponent(MyComponent, { props });
 
 // buildHydrationScript - generate hydration <script> tag
-const script = buildHydrationScript(store, { id: '__APP_STATE__' });
+const script = buildHydrationScript(store); // the element id is fixed
 ```
 
 ### SSG Import Path
