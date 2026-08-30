@@ -647,6 +647,10 @@ async function send(message: ChatMessage) {
 
 console.log(queue.size, queue.maxSize); // 2 100
 
+// There is no `isFull`; it is the comparison, and reaching it is not an error —
+// the oldest message is dropped to make room.
+const full = queue.size >= queue.maxSize;
+
 // Flush when the connection returns — `flush()` empties the queue and hands
 // back what it held.
 for (const message of queue.flush()) {
