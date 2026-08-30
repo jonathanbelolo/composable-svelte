@@ -46,10 +46,12 @@ round. Until then the campaign is improving something nobody can install.
 
 ## 2. What is measured and solid
 
-- **3,852 tests passing**, gate green. Measured per workspace, sequentially —
-  `pnpm -r test` starves the real-Chromium suites and must not be used for this.
-  Packages total 3,746: core 2,092 (browser, 3 skipped) + 410 (node),
-  graphics 482, chat 231 + 5, charts 191, maps 106, media 94, code 81, auth 54.
+- **3,858 tests passing**, gate green. `pnpm test` now serialises the workspaces
+  (`--workspace-concurrency=1`), as does CI — seven of eight packages drive a real
+  browser, and running four at once produced failures about scheduling rather
+  than about code. Packages total 3,752: core 2,092 (browser, 3 skipped) + 411
+  (node), graphics 482, chat 235 + 5, charts 191, maps 106, media 94, code 81,
+  auth 54.
   Examples add 106 across six workspaces, unchanged.
   *The figure before this campaign's last two sections, 3,256, included the
   examples; compare against 3,852, not against 3,746.*
@@ -58,7 +60,7 @@ round. Until then the campaign is improving something nobody can install.
 - **The gate is `build → typecheck → svelte-check → test`** across all
   **19 of 19** workspaces. `svelte-check` genuinely covers all of them; it once
   covered two.
-- **Fifteen repo-level guards** in `packages/core/tests/repo/`, 248 assertions:
+- **Fifteen repo-level guards** in `packages/core/tests/repo/`, 249 assertions:
   animation policy, check coverage, component coverage, dist freshness, doc
   examples, doc typecheck, export surface, guard integrity, optional props, peer
   ranges, published files, side effects, typecheck coverage, walk, and
@@ -508,74 +510,48 @@ grep cannot separate a function *returning* `| undefined` from a property
 accepting it. Extending `optional-props.test.ts` to `.ts` files is the next step
 for that item.
 
-### 4.8 Longer-standing register items
+### 4.8 Longer-standing register items — CLOSED
 
-- ~~**T13**~~ — **CLOSED.** All five (`chat`, `code`, `media`, `maps`,
-  `charts`) now name their entry points; no package publishes more than it
-  names. Each narrowing is its own `!` commit, verified against Node's own
-  resolver from a workspace that links the package rather than by reading the
-  spec — declared specifiers resolve, deep paths return
-  ERR_PACKAGE_PATH_NOT_EXPORTED.
+All four remaining items are done. `T13` and `T11` closed earlier; `T7`, `T10`
+and `T12` closed here.
 
-  *The entry's own measurement was wrong in a way worth remembering.* It said
-  the cost was "42 subpaths carrying 14 symbols" and that "`code` and `charts`
-  need one each". In fact every subpath anything imports was **already
-  declared**, so narrowing cost zero new subpaths: the total in-repo deep-import
-  set is five specifiers, all of them existing keys. The unresolvable paths the
-  entry was probably counting live in `packages/chat/plans/` (16 references to
-  `@composable-svelte/code/collaborative`, an API that has never existed in
-  `dist`) and in CHANGELOGs — neither of which is a consumer.
+**T7 — `ed855dd` reviewed, and it was worth reviewing.** Three defects, all in
+arms that commit itself changed, all unpublished (chat 0.3.0 predates it by a
+day; npm has 0.2.3), so all free to fix:
 
-  *One real consequence, found by reading the CHANGELOG before editing the
-  manifest.* `clamp`'s removal from the `media` barrel was recorded as **not
-  breaking** on the explicit grounds that the wildcard still exposed
-  `audio-player/types.js`. Removing the wildcard removes that escape hatch, so
-  `clamp` is now genuinely unreachable and the earlier justification no longer
-  holds. The `media` commit carries the marker for both and the old entry is
-  annotated *Superseded* rather than rewritten.
+- The "announce presence on connect" arm it added **could never fire**. It read
+  presence out of `state.users`, which is filled only by inbound frames — you are
+  not in your own user map until the server echoes you. And the same assumption
+  disabled `updatePresence` for that entire window, which is the loss the arm
+  existed to prevent. Its test passed by dispatching a synthetic `userJoined`
+  before connecting, an ordering the library cannot produce.
+- **Stop did nothing while an attachment was uploading**, leaving the progress
+  bar frozen at `uploading` — the exact symptom that commit's message describes
+  as the defect it was fixing.
+- **Upload progress was discarded on the edit and regenerate paths**, because
+  only `sendMessage` marked attachments `uploading`. Also the defect its own
+  comment claims to have fixed, fixed in one arm of three.
 
-  Both guards stood down without being deleted: `WILDCARD_EXPORTS_PENDING` is
-  empty but kept with its staleness arm, and `check-coverage`'s `./*.js` rule is
-  dormant behind an arm that now asserts no wildcards exist.
-- ~~**T11**~~ — **CLOSED.** `FileUpload.svelte` now annotates `FileUploadProps`
-  instead of a hand-written near-copy. The copy was both the cause and the
-  camouflage: it was correct about `| undefined`, which is what the guard
-  checked, while the exported type nobody read was correct about the arity — so
-  each satisfied a different reader and neither was checked against the other.
-  Upload progress is typeable through the prop for the first time.
+It also changed six public action arms with no CHANGELOG entry — the omission it
+criticises `code` and `media` for. All three are now recorded there.
 
-  Not breaking: a one-parameter handler stays assignable to the two-parameter
-  signature. Held by a type-level pin
-  (`tests/test-components/FileUploadProgressTest.svelte`, the
-  `CommandPropForwarding` precedent) because **no runtime test can catch this** —
-  the reducer always passed both arguments, so the runtime was correct
-  throughout. Plus a new arm requiring every exported `*Props` type to be used
-  somewhere that would break if it drifted; it failed before the fix and passes
-  after.
+**T10 — every documented Svelte example compiles.** 53 → **0** across every
+document, and `SWEPT_DOCS` is gone: the compile arm is unconditional. Nineteen of
+the 53 went guard-side without touching a document (declaring the stores an
+excerpt elides, honouring the counter-example markers, excluding CHANGELOGs as
+the two sibling guards already did).
 
-- **T12** — **re-scoped.** The props-shaped slice is closed: all ten of its
-  findings that sat in a `*Props` type were `FileUploadProps`, fixed with T11.
-  The remaining count is deliberately not restated — it has been recorded as 472,
-  436 and 427 by three grep-shaped counts, and a grep cannot separate `() => void
-  | undefined` (a function returning it) from `(() => void) | undefined` (a
-  property accepting it). Extend `optional-props.test.ts` to `.ts` files and let
-  it produce the number.
+A hole in §4.5's close turned up on the way: **eight mixed listings were hiding
+inside ```svelte fences**, holding 501 lines of TypeScript that neither guard
+read. `ALLOWED_MISLABELLED` only inspects fences whose label is *not* `svelte`,
+so it structurally could not see them. A mirror arm now does, and it landed
+before the splits so the number was measured down rather than asserted.
 
-- **T10** — **half closed, and re-measured.** The mislabelled half is **0**
-  repo-wide, held by `ALLOWED_MISLABELLED`. Its named largest item — 19 of 33
-  ```typescript blocks in the charts skill being Svelte markup — is gone: that
-  file now carries 15 TypeScript and 20 Svelte fences with no markup hidden in
-  either.
-
-  What remains is the compile half: **53 non-compiling ```svelte blocks across
-  18 files**, of which 18 are the benign `global_reference_invalid` excerpt
-  artefact and **35 are real syntax errors**. That is up from a recorded 41 in
-  16, and the rise is the sweep working — relabelling and splitting moved a body
-  of markup into the arm's population for the first time. Verified none of the
-  53 is a block the splits created.
-- **T7** — `ed855dd` is unreviewed and **still worth reviewing**: 97.9% of its
-  added lines are verbatim at HEAD after 87 commits, and its two chat reducers
-  have had **zero** commits since.
+**T12 — the number is 311**, not 472 or 436 or 427. Those were greps, and a grep
+cannot tell `() => void | undefined` from `(() => void) | undefined`. The
+splitter that already knew the difference now runs over `.ts`. Reported rather
+than swept, with its scope written beside it: discriminated unions opening with
+`|` are not counted, and covering them would raise the figure.
 
 ### 4.9 Genuine product gaps (not defects)
 
@@ -657,14 +633,23 @@ These are the ones that actually caught things, and each has a scar behind it.
    defect it was closing.
 3. ~~**Fix §4.3**~~ — done. The defect was in eleven guards, not one, and the
    config that decides which guards run was itself unguarded.
-4. **Execute §4.7** — reduce the register, correct the S2 row and the "ten".
+4. ~~**Execute §4.7**~~ — done. 2,088 lines to 183; the protocol moved to
+   `guides/VERIFICATION-PROTOCOL.md`; two hand-maintained lists became guards.
 5. ~~§4.4 (harness), §4.6 (graphics README)~~ — done; §4.4 turned up a live
    rendering defect.
 6. ~~§4.5 (the documented examples)~~ — done. Two committed guards, both
    burned down to zero: 84 false claims about the API, and 22 fences that were
    neither TypeScript nor Svelte. Read the "what it does not cover" paragraph
    before assuming a documented example is checked — markup is not.
-7. **§4.8** — T7 and T10–T13, the longer-standing register items.
+7. ~~**§4.8**~~ — done. T7 found three live defects in unpublished chat code;
+   T10 reached zero and the compile arm is now unconditional; T11, T12 and T13
+   closed. **Nothing in §4 is open except the release.**
+
+Also fixed on the way, and worth knowing before trusting a green CI run: the
+workflow ran `pnpm -r test`, which defaults to four workspaces at once while
+seven of the eight drive a real browser. The gate was flaky by construction and
+`guides/VERIFICATION-PROTOCOL.md` said so while CI did the opposite. Both now
+pass `--workspace-concurrency=1`.
 
 Do **not** start another general review round of `graphics`. Rounds four
 through six found 19, ~29 and ~34; the count is not converging, and the majority
