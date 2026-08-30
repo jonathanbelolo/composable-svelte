@@ -402,6 +402,63 @@ function withDeclaredStores(body: string): string {
 }
 
 /**
+ * Declare the stores an excerpt *with* a `<script>` still never introduces.
+ *
+ * `withDeclaredStores` above only runs on blocks that have no `<script>` at all,
+ * so an excerpt whose script shows one half of a component and writes
+ * `$store.locale` in the other half got no help and failed with
+ * `global_reference_invalid`. That was 18 of the 53 non-compiling blocks — every
+ * one of them an excerpt eliding a declaration the surrounding prose has already
+ * made, which is what an excerpt is for. Editing 18 documents to add a line the
+ * author deliberately left out would make all 18 worse.
+ *
+ * Plain `let`, not `$props()`: the script may already destructure props, and a
+ * second `$props()` call is itself a compile error. A bare binding is all the
+ * auto-subscription needs to resolve.
+ */
+function withDeclaredStoresInScript(body: string): string {
+	const tag = /<script[^>]*>/.exec(body);
+	if (!tag) return body;
+
+	const declared = new Set(
+		[...body.matchAll(/\b(?:let|const|var|function|class)\s+([a-zA-Z_$][\w$]*)/g)].map(
+			(m) => m[1]!
+		)
+	);
+	// Destructured bindings are declarations too, and missing one redeclares a
+	// name already in scope. Anchored on the `let`/`const`/`import` keyword, not
+	// on the brace: `let { store }: { store: Store<S, A> } = $props()` has two
+	// brace groups and only the first binds anything. Matching braces followed by
+	// `=` found the *annotation*, recorded `Store<S, A>` as the binding, and then
+	// redeclared `store` — which broke three blocks that had been compiling.
+	for (const m of body.matchAll(/\b(?:let|const|var)\s*\{([^}]*)\}/g)) {
+		for (const part of m[1]!.split(',')) {
+			// `{ a: b }` binds `b`; `{ a }` binds `a`; `...rest` binds `rest`.
+			const name = part.split(':').pop()!.trim().replace(/^\.\.\./, '');
+			if (name) declared.add(name);
+		}
+	}
+	for (const m of body.matchAll(/import\s+(?:type\s+)?\{([^}]*)\}/g)) {
+		for (const part of m[1]!.split(',')) {
+			const name = part.split(/\s+as\s+/).pop()!.trim();
+			if (name) declared.add(name);
+		}
+	}
+
+	const referenced = [
+		...new Set(
+			[...body.matchAll(/\$([a-zA-Z_][a-zA-Z0-9_]*)/g)]
+				.map((m) => m[1]!)
+				.filter((name) => !RUNES.has(name) && !declared.has(name))
+		)
+	];
+
+	if (referenced.length === 0) return body;
+
+	return body.replace(tag[0], `${tag[0]}\n\tlet ${referenced.join(', ')};`);
+}
+
+/**
  * Whether a block is Svelte markup, whatever its fence says.
  *
  * The fence label cannot be trusted. `composable-svelte-graphics/SKILL.md` was
@@ -701,7 +758,9 @@ describe('documented Svelte examples', () => {
 			// A markup-only excerpt still auto-subscribes to a store it never
 			// declares — `$store` — which is a compile error out of context but is
 			// exactly what the surrounding prose describes.
-			const source = body.includes('<script') ? body : withDeclaredStores(body);
+			const source = body.includes('<script')
+				? withDeclaredStoresInScript(body)
+				: withDeclaredStores(body);
 
 			try {
 				compile(source, { generate: 'client' });
