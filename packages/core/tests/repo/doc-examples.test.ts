@@ -461,28 +461,31 @@ const sweptSvelteBlocks = blocks.filter((b) => SWEPT_DOCS.includes(b.file) && b.
  * `SWEPT_DOCS` may arrive with a backlog and raising this deliberately is
  * better than deleting the arm.
  */
-const ALLOWED_MISLABELLED = 3;
+const ALLOWED_MISLABELLED = 0;
 
 /*
- * Why 22 and not 0.
+ * Why this was 22, and why it is 0.
  *
  * Widening this arm from `SWEPT_DOCS` to every document found 82 blocks with the
  * wrong fence label. Sixty were pure markup or full components and were simply
- * relabelled. The remaining 22 are **mixed listings**: one fence carrying a state
- * interface, a reducer *and* the component markup that uses them, which is
+ * relabelled. The remaining 22 were **mixed listings**: one fence carrying a
+ * state interface, a reducer *and* the component markup that used them, which is
  * neither valid TypeScript nor valid Svelte.
  *
- * They are left as ```typescript deliberately. Relabelling them to ```svelte
- * makes the fence guard pass and stops `doc-typecheck` seeing their TypeScript
- * at all — it extracts only `<script lang="ts">` bodies — which silently hid two
- * real errors, including a `forEach` example whose item shape cannot work. A
- * guard that passes by not looking is worse than one that fails.
+ * They were held at ```typescript on purpose while they waited. Relabelling one
+ * to ```svelte makes this arm pass and stops `doc-typecheck` seeing its
+ * TypeScript at all — that checker extracts only `<script lang="ts">` bodies —
+ * which is how 22 wrong relabels silently hid two real errors, including a
+ * `forEach` example whose item shape cannot work. A guard that passes by not
+ * looking is worse than one that fails.
  *
- * The fix is to split each into a ```typescript fence and a ```svelte fence.
- * That is a per-block judgement about where the boundary is, and an automated
- * attempt produced nested `<script>` tags in blocks that already had one.
+ * All 22 are now split: types in a ```typescript fence, runes and markup in a
+ * ```svelte one whose script is typed, so both halves are checked rather than
+ * neither. Two of them contained a `<script>` already and an automated attempt
+ * nested the tags, so every split was verified against both guards before the
+ * next — and two of the 22 turned out not to be defects at all, which the
+ * comments on `looksLikeSvelte` record.
  */
-
 /**
  * Examples that are compiled for real, and the documents that must match them.
  *

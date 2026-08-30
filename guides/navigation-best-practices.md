@@ -428,7 +428,11 @@ case 'addItem': {
   return [newState, effect];
 }
 
-// Component
+```
+
+The component:
+
+```svelte
 <Modal store={scopeToDestination(store, ['addItem'], 'addItem', 'addItem')}>
   {#snippet children({ store: childStore })}
     <AddItem store={childStore} />
@@ -472,7 +476,13 @@ case 'destination': {
   return [newState, effect];
 }
 
-// Component - IMPORTANT: disableClickOutside on parent!
+```
+
+The component. The parent sets `disableClickOutside`, so a click outside
+reaches the child that is actually presented rather than dismissing the parent
+out from under it:
+
+```svelte
 <Modal store={parentStore} disableClickOutside>
   {#snippet children({ store })}
     <ProductDetail store={store} />

@@ -1026,7 +1026,13 @@ const reducer: Reducer<AppState, AppAction> = (state, action) => {
   }
 };
 
-// Component
+```
+
+The component. `presentation` drives the animation and the two completion
+callbacks feed it back into the reducer, which is what advances the lifecycle
+past `presenting` and `dismissing`:
+
+```svelte
 <Modal
   store={addItemStore}
   presentation={state.presentation}
