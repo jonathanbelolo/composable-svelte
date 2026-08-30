@@ -396,8 +396,16 @@ interface AppState {
 Components react to this state:
 
 ```svelte
-{#if $derived(store.state.destination?.type === 'addItem')}
-  <Modal store={scopedStore}>
+<script lang="ts">
+  import { scopeToDestination } from '@composable-svelte/core';
+
+  const addItemStore = $derived(
+    scopeToDestination(store, ['destination'], 'addItem', 'destination')
+  );
+</script>
+
+{#if addItemStore.state}
+  <Modal store={addItemStore}>
     <AddItemForm />
   </Modal>
 {/if}

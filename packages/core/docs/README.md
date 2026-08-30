@@ -225,18 +225,14 @@ testStore.receive(action, assertion)
 
 ### Navigation
 
-```svelte
+```typescript
 // Operators
 ifLet(/* lenses */)(state, action, deps)
 createDestinationReducer({ addItem, editItem })
-
-// Components
-<Modal store={scopedStore}>
-<Sheet store={scopedStore}>
-<Drawer store={scopedStore}>
-<Alert store={scopedStore}>
-<NavigationStack store={scopedStore}>
 ```
+
+Components, each taking a scoped `store` prop: `<Modal>`, `<Sheet>`, `<Drawer>`,
+`<Alert>`, `<NavigationStack>`.
 
 ### DSL
 

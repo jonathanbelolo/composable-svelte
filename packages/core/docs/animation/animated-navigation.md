@@ -554,18 +554,23 @@ case 'openModal': {
 
 You might wonder why we use `Effect.afterDelay()` instead of waiting for component animation callbacks:
 
+❌ Don't rely solely on the component callback — the component calls
+`onPresentationComplete` when the animation finishes, and nothing does so if it
+never runs:
+
 ```svelte
-// ❌ DON'T: Rely solely on component callbacks
-// Component calls onPresentationComplete when animation finishes
 <Modal
   onPresentationComplete={() => store.dispatch({ type: 'presentationCompleted' })}
 />
+```
 
-// ✅ DO: Use Effect.afterDelay() for state management
+✅ Do drive the timing from the reducer with `Effect.afterDelay()`:
+
+```typescript
 case 'openModal': {
   return [
     state,
-    Effect.afterDelay(300, (d) => d({...}))  // Guaranteed timing
+    Effect.afterDelay(300, (d) => d({ type: 'presentationCompleted' }))
   ];
 }
 ```
@@ -1490,7 +1495,7 @@ case 'dismissalCompleted': {
 // ✅ Solution: Check presentation status
 <button
   disabled={state.presentation.status !== 'presented'}
-  onclick={...}
+  onclick={() => store.dispatch({ type: 'submitTapped' })}
 >
   Submit
 </button>

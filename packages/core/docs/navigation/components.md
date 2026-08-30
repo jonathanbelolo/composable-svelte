@@ -1468,7 +1468,7 @@ All components include proper ARIA attributes:
 </Modal>
 
 <!-- Focus returns to trigger on dismiss -->
-<script>
+<script lang="ts">
   let buttonElement: HTMLElement;
 </script>
 

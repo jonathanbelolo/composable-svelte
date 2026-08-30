@@ -440,15 +440,21 @@ app.register(compress, {
 
 ### Bundle Optimization
 
-**Code splitting** (automatic with Vite):
+**Code splitting** (automatic with Vite). Svelte has no `lazy()` and no
+`<Suspense>` — those are React. A dynamic `import()` is what Vite splits on, and
+`{#await}` is what renders the pending state:
+
 ```svelte
-// Lazy load heavy components
-const HeavyChart = lazy(() => import('./HeavyChart.svelte'));
+<script lang="ts">
+  const heavyChart = import('./HeavyChart.svelte');
+</script>
 
 {#if showChart}
-  <Suspense fallback={<Spinner />}>
+  {#await heavyChart}
+    <Spinner />
+  {:then { default: HeavyChart }}
     <HeavyChart data={chartData} />
-  </Suspense>
+  {/await}
 {/if}
 ```
 

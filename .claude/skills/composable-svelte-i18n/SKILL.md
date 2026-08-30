@@ -654,8 +654,13 @@ locales/
 <script lang="ts">
   // ✅ CORRECT - Reactive to locale changes
   const formatters = $derived(createFormatters($store.i18n));
+</script>
+```
 
-  // ❌ WRONG - Won't update when locale changes
+❌ Wrong — read once at setup, so it never updates when the locale changes:
+
+```svelte
+<script lang="ts">
   const formatters = createFormatters($store.i18n);
 </script>
 ```

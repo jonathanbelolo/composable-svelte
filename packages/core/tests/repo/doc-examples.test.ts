@@ -57,9 +57,9 @@ function docs(): string[] {
 	// `examples/` is in scope so the code in an example's documentation is held
 	// to the same standard as the code in a package's. Be clear about what that
 	// buys today: it adds 63 blocks across eight READMEs, and exactly **one**
-	// reaches a rule — a single TestStore block. The seven ```svelte ones are
-	// not compiled, because that arm reads `SWEPT_DOCS`, an explicit list which
-	// names no example.
+	// reaches a TestStore rule. Its seven ```svelte blocks are compiled now that
+	// the compile arm is unconditional — when this was written they were not,
+	// because that arm read a two-file list.
 	//
 	// `shader-gallery/README.md` contributes **zero** — its only fence is
 	// ```bash. It is the document that prompted this root, having described an
@@ -354,43 +354,23 @@ describe('documented dismiss dependency call shapes', () => {
 });
 
 /**
- * Every ```svelte block in a swept document must at least parse.
+ * Every documented Svelte example compiles. All of them, everywhere.
  *
- * A *syntax* check and nothing more: the blocks are excerpts referencing stores
- * and handlers they never define, so typechecking them would need a harness per
- * block. In particular this does not catch a missing required prop —
- * `<Camera position={…} />` with no `{store}` is valid Svelte, and only
- * `svelte-check` against the real component would object. Syntax is what has
- * actually broken.
+ * This used to be `SWEPT_DOCS`, a list of two files, because running the arm
+ * across the repository found 139 non-compiling blocks and gating on that would
+ * have meant gating on documents nobody had read. The list was the throttle, and
+ * it grew as sweeps landed.
  *
- * ## Why a list rather than the whole repo
- *
- * Running this across every markdown file finds **53 non-compiling blocks in 18
- * files**: 18 `global_reference_invalid` (an excerpt whose `<script>` shows only
- * part of itself, so an auto-subscribed store is undeclared — mostly benign) and
- * **35 real syntax errors** — 20 `js_parse_error`, 8 `expected_token`, 4
- * `script_duplicate`, 2 `block_unclosed`, 1 `state_invalid_placement`. Turning
- * that on wholesale would gate the repo on documents nobody has read in this
- * campaign, and each needs individual judgement about whether the excerpt or the
- * code is wrong.
- *
- * Re-measured after the fence sweep, and it went **up** from 41 in 16 — which
- * is the sweep working rather than a regression. Relabelling 60 mislabelled
- * fences and splitting 22 mixed listings moved a large block of markup out of
- * ```typescript fences and into this arm's population for the first time. The
- * failures are old; they were simply not being looked at. Spot-checked against
- * the split blocks specifically: none of the 53 is one of them, and the two
- * `script_duplicate` blocks trace to `854d21e`, the original documentation
- * commit.
- *
- * So the list holds the documents that have been swept and verified, and grows
- * as sweeps land. The backlog is recorded in `plans/hardening/README.md`.
+ * The backlog is empty, so the throttle is gone and the arm is unconditional.
+ * What emptied it was mostly not editing documents: teaching the guard to
+ * declare the stores an excerpt elides removed 18, honouring the
+ * counter-example markers removed one that is *supposed* to fail, and dropping
+ * CHANGELOGs removed another — 19 of 53 before a single document changed. The
+ * rest were ellipsis written inside code (`createStore({...})` is a syntax
+ * error, however clearly it reads), Good/Bad pairs sharing one fence, and three
+ * blocks that were not Svelte at all: two React examples and a catalogue of tag
+ * names.
  */
-const SWEPT_DOCS = [
-	'packages/graphics/README.md',
-	'.claude/skills/composable-svelte-graphics/SKILL.md',
-	'packages/core/docs/dsl/scope-helpers.md'
-];
 
 /** The runes, which look like store references and must not be declared. */
 const RUNES = new Set(['state', 'derived', 'effect', 'props', 'bindable', 'inspect', 'host']);
@@ -558,8 +538,8 @@ const outsideTemplateLiterals = (body: string): string =>
 		.replace(/(?<!:)\/\/[^\n]*/g, '')
 		.replace(/`[\s\S]*?`/g, '``');
 
-const sweptSvelteBlocks = blocks.filter(
-	(b) => SWEPT_DOCS.includes(b.file) && b.lang === 'svelte' && !b.counterExample
+const documentedSvelteBlocks = blocks.filter(
+	(b) => b.lang === 'svelte' && !b.counterExample
 );
 
 /**
@@ -780,21 +760,19 @@ describe('documented examples that are compiled for real', () => {
 });
 
 describe('documented Svelte examples', () => {
-	it('every swept document still exists, so the list cannot rot', () => {
-		const missing = SWEPT_DOCS.filter((doc) => !existsSync(join(repoRoot, doc)));
-
-		expect(missing, 'a swept document was moved or deleted').toEqual([]);
-	});
-
-	it('finds svelte blocks in them, so the arm below is not vacuous', () => {
+	it('finds a lot of them, so the arm below is not vacuous', () => {
+		// The list-still-exists arm went with `SWEPT_DOCS`: there is no list to
+		// rot any more. What replaces it is a floor on the population, because an
+		// extractor that silently matched nothing would satisfy `every one of them
+		// compiles` perfectly.
 		expect(
-			sweptSvelteBlocks.length,
-			`no \`\`\`svelte blocks found in ${SWEPT_DOCS.join(', ')}`
-		).toBeGreaterThan(20);
+			documentedSvelteBlocks.length,
+			'no ```svelte blocks were extracted at all'
+		).toBeGreaterThan(250);
 	});
 
 	it('every one of them compiles', () => {
-		const failures = sweptSvelteBlocks.flatMap(({ file, line, body }) => {
+		const failures = documentedSvelteBlocks.flatMap(({ file, line, body }) => {
 			// A markup-only excerpt still auto-subscribes to a store it never
 			// declares — `$store` — which is a compile error out of context but is
 			// exactly what the surrounding prose describes.

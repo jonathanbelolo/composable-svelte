@@ -913,8 +913,9 @@ describe('Counter (migration verification)', () => {
 
 #### Extract Reducer from Complex Component
 
+Before — the logic is in the component:
+
 ```svelte
-// Before: Logic in component
 <script>
   let count = $state(0);
   let loading = $state(false);
@@ -926,8 +927,11 @@ describe('Counter (migration verification)', () => {
     loading = false;
   }
 </script>
+```
 
-// After: Logic in reducer
+After — the logic is in the reducer:
+
+```svelte
 <script>
   const store = createStore({
     initialState: { count: 0, loading: false },

@@ -616,7 +616,7 @@ the user typing — which rules out both hover and `title`.
 
 **CursorOverlay** — `inputElement`, `cursors` and `text` are all **required**, plus `class?`:
 ```svelte
-<script>
+<script lang="ts">
   import { CursorOverlay, getCursorPositions } from '@composable-svelte/chat';
 
   let inputElement = $state<HTMLInputElement | undefined>(undefined);
@@ -644,10 +644,12 @@ It dispatches `updateCursor` on click, keyup, focus and selection change
 (throttled), `clearCursor` on blur, and returns its own teardown:
 
 ```svelte
-$effect(() => {
-  if (!inputElement) return;
-  return useCursorTracking(collabStore, inputElement);
-});
+<script lang="ts">
+  $effect(() => {
+    if (!inputElement) return;
+    return useCursorTracking(collabStore, inputElement);
+  });
+</script>
 ```
 
 ### Collaborative Actions
