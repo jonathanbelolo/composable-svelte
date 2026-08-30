@@ -832,3 +832,47 @@ describe('Svelte markup is fenced as svelte', () => {
 		).toBe(ALLOWED_MISLABELLED);
 	});
 });
+
+/**
+ * A ```svelte fence is a component, not a listing with a component at the end.
+ *
+ * The mirror of the mislabelled-fence arm, and the reason that arm's backlog
+ * reaching zero was not the whole story. It only ever looks at fences whose
+ * label is *not* `svelte`, so a mixed listing — types, a reducer, then the
+ * markup that uses them — is invisible to it the moment somebody relabels the
+ * fence ```svelte. And `doc-typecheck.ts` extracts only the `<script lang="ts">`
+ * body from such a fence, discarding everything above it.
+ *
+ * So a mixed listing on this side of the label is checked by nothing at all,
+ * which is exactly the failure `2fde4b0` was written about. Twenty-two were
+ * split out of ```typescript fences and the backlog was declared zero; **eight
+ * more were sitting on this side**, holding 501 lines of unchecked TypeScript
+ * across the core and navigation skills and `migration.md`. Nothing looked,
+ * because the only arm that could have was pointed the other way.
+ */
+const ALLOWED_MIXED_LISTINGS = 8;
+
+const mixedListings = blocks
+	.filter((block) => block.lang === 'svelte')
+	.filter((block) => {
+		const script = block.body.indexOf('<script');
+		if (script < 0) return false;
+
+		// Declarations at the start of a line, above the script tag. Markup and
+		// comments above a script are ordinary; a `type` or a `const` is not.
+		return /^\s*(?:export\s+)?(?:interface|type|const|let|var|function|class|enum)\s/m.test(
+			block.body.slice(0, script)
+		);
+	})
+	.map((block) => `${block.file}:${block.line}`);
+
+describe('a svelte fence holds a component', () => {
+	it('carries no TypeScript above its script tag', () => {
+		expect(
+			mixedListings.length,
+			mixedListings.length > ALLOWED_MIXED_LISTINGS
+				? `new mixed listings — split the types into their own \`\`\`typescript fence:\n${mixedListings.join('\n')}`
+				: `${ALLOWED_MIXED_LISTINGS - mixedListings.length} have been split — lower ALLOWED_MIXED_LISTINGS to ${mixedListings.length}`
+		).toBe(ALLOWED_MIXED_LISTINGS);
+	});
+});
