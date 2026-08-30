@@ -21,16 +21,6 @@
       "types": "./dist/streaming-chat/markdown.d.ts",
       "svelte": "./dist/streaming-chat/markdown.js",
       "default": "./dist/streaming-chat/markdown.js"
-    },
-    "./*.js": {
-      "types": "./dist/*.d.ts",
-      "svelte": "./dist/*.js",
-      "default": "./dist/*.js"
-    },
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "svelte": "./dist/*.js",
-      "default": "./dist/*.js"
     }
   },
   "svelte": "./dist/index.js",

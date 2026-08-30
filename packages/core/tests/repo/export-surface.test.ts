@@ -30,13 +30,20 @@ const packages = listDirs(packagesDir).filter((name) =>
 );
 
 /**
- * Registered, with a reason: narrowing these is a breaking change not yet taken.
+ * Empty. Every package now names its entry points instead of ending in a star.
  *
- * `check-coverage.test.ts` holds a second arm over the same set — that a
- * wildcard map also accepts the `.js` form of its own subpaths. Narrowing the
- * last package here empties that one too, so both come down together.
+ * This held `charts`, `chat`, `code`, `maps` and `media` — five packages whose
+ * `exports` map made every file the build emitted into public API. Narrowing
+ * them is breaking, which is why they waited; doing it before the release
+ * rather than after is what made it cost nothing, since the versions on npm
+ * predate every one of these subpaths.
+ *
+ * Kept rather than deleted along with the arms: the next package added here
+ * may arrive with a wildcard, and registering it deliberately is better than
+ * discovering the arm was removed. The staleness arm below is what stops an
+ * entry outliving its wildcard.
  */
-const WILDCARD_EXPORTS_PENDING = ['chat'];
+const WILDCARD_EXPORTS_PENDING: string[] = [];
 
 function manifestOf(pkg: string): Manifest {
 	return JSON.parse(readFileSync(join(packagesDir, pkg, 'package.json'), 'utf8')) as Manifest;

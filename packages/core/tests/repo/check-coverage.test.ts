@@ -165,8 +165,21 @@ describe('wildcard exports accept the .js form', () => {
 		(w) => (w.pkg as { exports?: Record<string, unknown> }).exports?.['./*'] !== undefined
 	);
 
-	it('found the wildcard packages', () => {
-		expect(wildcardPackages.length).toBeGreaterThan(0);
+	it('there are none left, so the rule below is dormant', () => {
+		// This arm used to assert the opposite — that wildcards existed — as its
+		// vacuity check, and it failed the moment the last one was narrowed. That
+		// is the arm working: an `it.each` over an empty list produces no tests
+		// and would have gone quiet without saying so.
+		//
+		// The rule itself is kept rather than deleted. It is correct, it is
+		// cheap, and it applies to any package that reintroduces a wildcard —
+		// which `export-surface.test.ts` will also refuse, so a new one fails
+		// twice with two different explanations rather than none.
+		expect(
+			wildcardPackages.map((w) => w.dir),
+			'a package has a "./*" exports map again — narrow it, or register it in ' +
+				'WILDCARD_EXPORTS_PENDING and make sure "./*.js" is mapped alongside it'
+		).toEqual([]);
 	});
 
 	it.each(wildcardPackages.map((w) => [w.dir, w] as const))(
