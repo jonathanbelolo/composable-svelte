@@ -113,7 +113,7 @@ breaking changes fixed the code, not the docs.
 `packages/code/tests/doc-examples/code-highlight.svelte` and
 `packages/media/tests/doc-examples/audio-player.svelte` — typechecked by
 `svelte-check` in `pnpm -r check`, with `doc-examples.test.ts` asserting the
-README quotes them verbatim. `EXPECTED_EXAMPLES` in that test now names **five**
+README quotes them verbatim. `EXPECTED_EXAMPLES` in that test now names **seven**
 files: those two plus the three `graphics` examples added in earlier rounds,
 which mirror README blocks but are not quickstarts.
 
@@ -150,10 +150,13 @@ are now fixed, in `6dc6111`, `8af6938`, `02bf3e4`, `6689aa9`, `7fbc5a4`,
 `f44bf81`, `f5fbcee` and `581844a`. What each turned out to be, against what the
 entry below claimed, is recorded after it.
 
-> **This document is the only record of round six.** `plans/hardening/README.md`
-> writes up rounds three, four and five (rounds one and two recorded no totals);
-> round six was never written into it, because the register reduction in §4.7 was
-> approved before it could be. If this file is lost, those findings are lost.
+> **This document is the only record of round six**, and since §4.7 was executed
+> it is the only prose record of rounds three, four and five as well. The
+> register used to write those three up in 368 lines; that narrative duplicated
+> the commit messages, nothing linked to it, and it went when the register was
+> reduced. It is recoverable with `git show` — but nothing in the working tree
+> summarises those rounds any more, and round six was never written into the
+> register at all. If this file is lost, the summaries are lost.
 > Everything in §4.2–§4.4 and §4.6 comes from that review.
 
 The severe ones, all in `graphics`, all introduced by round five's own fixes:
@@ -458,46 +461,49 @@ reaches it either. `SKILL.md` had the right
 signature all along, which is how the two came to disagree — and it had acquired
 two false claims of its own since, both corrected here.
 
-### 4.7 The register — decision made, not executed
+### 4.7 The register — CLOSED
 
-**Approved:** reduce `plans/hardening/README.md` to a **backlog index plus the
-verification protocol**.
+`plans/hardening/README.md` is **183 lines**, down from 2,088. It is now an index
+of what is open, plus pointers to the entries that code cites by name.
 
-Evidence for the decision: 2,088 lines, 65% prose, ~570 numeric tokens, 26 edits,
-36 explicit self-corrections. In round six, **56% of findings were in text**
-(prose 24%, register 21%, commit messages 12%) against **12% in original code**.
+Deleted: the 368-line round-by-round narrative and the 58-line "Corrections made
+to earlier claims", both of which duplicated commit messages that nothing linked
+to, and the long DONE write-ups. Git keeps all of it.
 
-- **Keep**: the open items (T7, T10–T13), the charts accessibility gaps, the
-  doc-example backlog, and the 20-line verification protocol at line 1449.
-- **Move** the protocol to `guides/` and reference it from `CLAUDE.md`, so the
-  one valuable part is reachable rather than buried.
-- **Delete** the ~370-line round-by-round narrative (`#### Round three/four/five`
-  and `#### What the sweep itself recorded`) and the "Corrections made to earlier
-  claims" section. Both duplicate immutable commit messages, and nothing links to
-  them. Six pointers cite the file, all for backlogs — that role stays.
-- **Correct** the status table. Line 14 still reads
-  `Open — breaks a consumer at install/build | 6`. It should be **0**: all eight
-  S2 items were verified closed by a reviewer who did not gather the evidence.
-  It was never right either — 8 items minus the 3 its own parenthetical names
-  closed is 5, not 6.
+Corrected on the way out: the status row that read `Open — breaks a consumer at
+install/build | 6` now reads **0**, which it always was — its own parenthetical
+named three of the closures while leaving the count alone.
 
-Known errors inside the register, still uncorrected:
+**The verification protocol moved to `guides/VERIFICATION-PROTOCOL.md`** and is
+referenced from `CLAUDE.md`'s Resources list, which previously pointed at neither
+it nor `plans/hardening/` at all. It gained three rules this campaign learnt and
+had never written down: a zero-reporting guard needs a positive control; build
+before running the gate, because mutation testing updates mtimes; and write edits
+incrementally, never behind a late assertion.
 
-- **"ten zero-caller members" (line 1431) is eleven.** `BabylonAdapter.resize`
-  (`babylon-adapter.ts:542`) is barrel-exported with no external caller — the
-  only other `.resize(` in the package is `this.engine?.resize()` at line 193
-  and inside the method body itself. The list has now been 8, then 10, then
-  still short, in the entry whose stated purpose is to stop a later pass
-  deleting these on a count.
-- The paragraph correcting the invented `~40 → ~45 → ~45 → 19` progression
-  misstates its own arithmetic (it quotes "three rounds … ~85" and then asserts
-  the ~85 covered two).
-- The "one-sided fix" heading misquotes `8e88776`: that commit said the
-  *consumer value and the driver value* both go through one helper, and it did
-  exactly that. The genuine defect was a third, unmentioned reader
-  (`DeviceCapabilities`).
-- Two mutation counts in the round-five entry disagree with the commits they
-  summarise.
+**Two hand-maintained lists became guards instead of prose**, which is the part
+worth carrying forward. Both had drifted every time they were touched:
+
+- The intentionally-unused public members — recorded as eight, corrected to ten,
+  actually **eleven**. Now `intentionally-unused.test.ts`, which fails both when
+  a member is deleted and when one gains a caller.
+- The documented-example backlogs, already guards, with both registers empty.
+
+The seven citations of the register were checked individually rather than
+assumed. Six needed an anchor kept; the seventh —
+`babylon-adapter.ts:90`'s pointer to a WebGPU gap — turned out to be **already
+half-dangling**: the register's only WebGPU mentions were inside a DONE section
+recording the *removal* of false WebGPU claims, not a forward-looking gap. The
+reduced file now carries the gap properly.
+
+Numbers that were wrong and are not carried forward: T10's three
+(heading 41, body 139/63, guard comment 41/16 — different populations, all
+predating the fence sweep) and T12's three (472, 436, 427). T10 is re-measured at
+**53 blocks in 18 files**, 35 of them real syntax errors. T12's is deliberately
+left unmeasured, with the reason: every recorded figure was grep-shaped, and a
+grep cannot separate a function *returning* `| undefined` from a property
+accepting it. Extending `optional-props.test.ts` to `.ts` files is the next step
+for that item.
 
 ### 4.8 Longer-standing register items
 
@@ -528,30 +534,52 @@ Known errors inside the register, still uncorrected:
   Both guards stood down without being deleted: `WILDCARD_EXPORTS_PENDING` is
   empty but kept with its staleness arm, and `check-coverage`'s `./*.js` rule is
   dormant behind an arm that now asserts no wildcards exist.
-- **T11** — `FileUploadProps` is exported, unconsumed, and drifts from
-  `FileUpload.svelte`. Worse than recorded: the component's local `onUpload`
-  takes one parameter while the exported type, `FileUploadDependencies` and
-  `file-upload.reducer.ts:69` all take two, so **upload progress is untypeable
-  through the component's own prop type**. One fix, not a category — the other
-  five exported `*Props` are all consumed by their components.
-- **T12** — 427 optional properties without `| undefined` (not 472; the old
-  figure was grep-shaped and counted optional *parameters*). Only **10 of 427**
-  sit in a `*Props` type, and all ten are `FileUploadProps` — so fixing T11
-  closes the entire props-shaped slice.
-- **T10** — 126 blocks across 32 documents need work (85 mislabelled + 41
-  non-compiling). The compile arms currently govern 54 of 1,896 blocks in 2 of
-  71 documents. Largest single item is
-  `.claude/skills/composable-svelte-charts/SKILL.md`: 19 of its 33 ```typescript
-  blocks are Svelte markup — the same shape the graphics SKILL had.
+- ~~**T11**~~ — **CLOSED.** `FileUpload.svelte` now annotates `FileUploadProps`
+  instead of a hand-written near-copy. The copy was both the cause and the
+  camouflage: it was correct about `| undefined`, which is what the guard
+  checked, while the exported type nobody read was correct about the arity — so
+  each satisfied a different reader and neither was checked against the other.
+  Upload progress is typeable through the prop for the first time.
+
+  Not breaking: a one-parameter handler stays assignable to the two-parameter
+  signature. Held by a type-level pin
+  (`tests/test-components/FileUploadProgressTest.svelte`, the
+  `CommandPropForwarding` precedent) because **no runtime test can catch this** —
+  the reducer always passed both arguments, so the runtime was correct
+  throughout. Plus a new arm requiring every exported `*Props` type to be used
+  somewhere that would break if it drifted; it failed before the fix and passes
+  after.
+
+- **T12** — **re-scoped.** The props-shaped slice is closed: all ten of its
+  findings that sat in a `*Props` type were `FileUploadProps`, fixed with T11.
+  The remaining count is deliberately not restated — it has been recorded as 472,
+  436 and 427 by three grep-shaped counts, and a grep cannot separate `() => void
+  | undefined` (a function returning it) from `(() => void) | undefined` (a
+  property accepting it). Extend `optional-props.test.ts` to `.ts` files and let
+  it produce the number.
+
+- **T10** — **half closed, and re-measured.** The mislabelled half is **0**
+  repo-wide, held by `ALLOWED_MISLABELLED`. Its named largest item — 19 of 33
+  ```typescript blocks in the charts skill being Svelte markup — is gone: that
+  file now carries 15 TypeScript and 20 Svelte fences with no markup hidden in
+  either.
+
+  What remains is the compile half: **53 non-compiling ```svelte blocks across
+  18 files**, of which 18 are the benign `global_reference_invalid` excerpt
+  artefact and **35 are real syntax errors**. That is up from a recorded 41 in
+  16, and the rise is the sweep working — relabelling and splitting moved a body
+  of markup into the arm's population for the first time. Verified none of the
+  53 is a block the splits created.
 - **T7** — `ed855dd` is unreviewed and **still worth reviewing**: 97.9% of its
   added lines are verbatim at HEAD after 87 commits, and its two chat reducers
   have had **zero** commits since.
 
 ### 4.9 Genuine product gaps (not defects)
 
-- **`charts` is not accessible for interactive use**, by its own README: no
-  `tabindex` and no key handler anywhere in the package, no data-table fallback,
-  no WCAG 2.1 AA audit.
+- ~~**`charts` is not accessible for interactive use**~~ — closed. It has a
+  keyboard cursor in the reducer, a data-table fallback, and an AA review. One
+  a11y warning remains (`tabindex="0"` with `role="img"`, `Chart.svelte:102`),
+  recorded in the register.
 - **`maps` is mid-phase** — its README says Phase 12C in progress.
 
 **From the §4.5 burn-down.** Nine documented APIs turned out not to exist, or not
