@@ -25,9 +25,18 @@ export interface BrowserHistoryConfig<State, Action, Dest> {
 
 	/**
 	 * Serialize state to URL path.
-	 * Used to determine if URL needs updating.
+	 *
+	 * **Optional, and this function never calls it.** `syncBrowserHistory`
+	 * handles one direction — URL → state — as its own JSDoc says. The other
+	 * direction is `createURLSyncEffect`, which takes its own serializer and is
+	 * driven from the reducer.
+	 *
+	 * It was declared required, so every caller had to write a function that was
+	 * then never invoked: dead code the type system insisted on. Kept as optional
+	 * rather than deleted so existing callers still compile, and documented here
+	 * so the next reader does not go looking for the call site.
 	 */
-	serialize: (state: State) => string;
+	serialize?: ((state: State) => string) | undefined;
 
 	/**
 	 * Optional: Parse query parameters.

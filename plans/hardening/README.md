@@ -23,7 +23,7 @@ buried at line 1449 of this file.
 | Fixed and committed | 68 commits through R7, plus the dead-behaviour campaign since `2443ab4` (`git rev-list --count 2443ab4..HEAD`) |
 | **Open — components that crash** | **0** (was 6 — all fixed, see R1) |
 | **Open — breaks a consumer at install/build** | **0** — was recorded as 6, which was never right: S2.6 closed in R6, S2.7 and S2.8 were already closed, and the row's own parenthetical said the count was stale while leaving it stale |
-| Open — silently-wrong behaviour | 6 (S4.3 closed by R4; **S4.4, S4.6, S4.7 closed in R7**) |
+| **Open — silently-wrong behaviour** | **0**. All ten S4 items are closed; the last remainder — `syncBrowserHistory` requiring a `serialize` it never calls — is fixed. The row read 6 long after that stopped being true |
 | Open — security | 0 (was 1; **the R2 fix was incomplete — see R3**) |
 | Open — `svelte-check` errors | **0** (was 142, recounted to 69 in R6) |
 | Open — `svelte-check` warnings | **0** (was 30) |

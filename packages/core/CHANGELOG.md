@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`BrowserHistoryConfig.serialize` is no longer required.** `syncBrowserHistory`
+  handles one direction — URL → state — and never called it, so the type forced
+  every caller to write a function that was then never invoked. The other
+  direction is `createURLSyncEffect`, which takes its own serializer. Widening
+  only: callers still passing `serialize` compile unchanged.
+
 ### Changed
 
 - **BREAKING (types): every optional prop now accepts `undefined`.** Under
