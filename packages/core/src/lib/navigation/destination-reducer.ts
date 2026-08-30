@@ -121,14 +121,14 @@ export function createDestinationReducer<
  *
  * @example
  * ```typescript
- * const addItemDest = createDestination('addItem', initialAddItemState);
+ * const addItemDest = destinationState('addItem', initialAddItemState);
  * // → { type: 'addItem', state: initialAddItemState }
  *
- * const editItemDest = createDestination('editItem', initialEditItemState, { id: '123' });
+ * const editItemDest = destinationState('editItem', initialEditItemState, { id: '123' });
  * // → { type: 'editItem', state: initialEditItemState, id: '123' }
  * ```
  */
-export function createDestination<T extends string, S>(
+export function destinationState<T extends string, S>(
   type: T,
   state: S,
   metadata?: Record<string, unknown>

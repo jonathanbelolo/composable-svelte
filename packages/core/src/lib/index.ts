@@ -106,6 +106,7 @@ export {
   ifLetPresentation,
   createDestinationReducer,
   createDestination,
+  destinationState,
   isDestinationType,
   extractDestinationState,
   matchPresentationAction,

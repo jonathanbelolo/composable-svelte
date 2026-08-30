@@ -151,13 +151,14 @@ const destinationReducer = createDestinationReducer({
 ```typescript
 import { createDestination } from '@composable-svelte/core';
 
-const { reducer, Destination } = createDestination({
+// The returned object *is* the destination: `reducer` plus the matchers.
+const Destination = createDestination({
   addItem: addItemReducer,
   editItem: editItemReducer
 });
 
 // In parent reducer
-const [newState, effect] = reducer(state.destination, action, deps);
+const [newState, effect] = Destination.reducer(state.destination, action, deps);
 return [{ ...state, destination: newState }, effect];
 
 // Type-safe matching
@@ -165,8 +166,12 @@ if (Destination.is(action, 'addItem.saveButtonTapped')) {
   // action matched saveButtonTapped in addItem
 }
 
-const editState = Destination.extract(state, 'editItem');
+const editState = Destination.extract(state.destination, 'editItem');
 // editState is EditItemState | null
+
+// And typed initial state for one case — the case name is checked against the
+// reducer map, which a bare object literal is not.
+const initial = Destination.initial('addItem', { name: '', quantity: 0 });
 ```
 
 ### Case Path Matching

@@ -29,10 +29,8 @@ import { checkDocs, keyOf, type Finding } from './doc-typecheck.js';
  */
 const REGISTER = new Map<string, number>([
 	['packages/core/docs/navigation/components.md :: TS2345 :: Argument of type \'"destination"\' is not assignable to parameter of type \'never\'.', 4],
-	['packages/core/docs/navigation/tree-based.md :: TS2554 :: Expected 2-3 arguments, but got 1.', 1],
 	['packages/core/docs/navigation/tree-based.md :: TS2724 :: \'"@composable-svelte/core/routing"\' has no exported member named \'createParserConfig\'. Did you mean \'ParserConfig\'?', 1],
 	['packages/core/docs/navigation/tree-based.md :: TS2339 :: Property \'type\' does not exist on type \'never\'.', 1],
-	['packages/core/docs/quick-reference.md :: TS2554 :: Expected 2-3 arguments, but got 1.', 1],
 	['packages/core/docs/quick-reference.md :: TS2554 :: Expected 3 arguments, but got 2.', 1],
 	['packages/core/docs/quick-reference.md :: TS2554 :: Expected 4 arguments, but got 3.', 1],
 	['packages/core/docs/quick-reference.md :: TS2345 :: Argument of type \'"destination"\' is not assignable to parameter of type \'never\'.', 1],
@@ -59,7 +57,6 @@ const REGISTER = new Map<string, number>([
 	['.claude/skills/composable-svelte-navigation/SKILL.md :: TS2554 :: Expected 4 arguments, but got 2.', 3],
 	['.claude/skills/composable-svelte-navigation/SKILL.md :: TS2554 :: Expected 1 arguments, but got 2.', 1],
 	['.claude/skills/composable-svelte-navigation/SKILL.md :: TS2554 :: Expected 6 arguments, but got 4.', 1],
-	['.claude/skills/composable-svelte-navigation/SKILL.md :: TS2554 :: Expected 2-3 arguments, but got 1.', 1],
 	['.claude/skills/composable-svelte-navigation/SKILL.md :: TS2554 :: Expected 2 arguments, but got 3.', 2],
 	['.claude/skills/composable-svelte-navigation/SKILL.md :: TS2345 :: Argument of type \'"counter"\' is not assignable to parameter of type \'never\'.', 1],
 	['.claude/skills/composable-svelte-navigation/SKILL.md :: TS2345 :: Argument of type \'"todos"\' is not assignable to parameter of type \'never\'.', 1],

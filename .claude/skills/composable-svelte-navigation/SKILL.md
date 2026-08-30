@@ -1314,11 +1314,14 @@ const destinationReducer = createDestinationReducer({
   confirmDelete: confirmDeleteReducer
 });
 
-// Shorthand for creating destination + reducer + types together
-const { reducer, types } = createDestination({
+// The DSL: one object carrying the routing reducer and the matcher API.
+// Members are `reducer`, `initial`, `extract`, `is`, `matchCase` and `match`.
+const Destination = createDestination({
   addItem: addItemReducer,
   editItem: editItemReducer
 });
+
+const [next, effect] = Destination.reducer(state.destination, action, deps);
 
 // Type guards
 if (isDestinationType(state.destination, 'addItem')) {

@@ -8,7 +8,7 @@ import {
   ifLet,
   ifLetPresentation,
   createDestinationReducer,
-  createDestination,
+  destinationState,
   isDestinationType,
   extractDestinationState,
   matchPresentationAction,
@@ -553,16 +553,16 @@ describe('createDestinationReducer()', () => {
 // Destination Helper Tests
 // ============================================================================
 
-describe('createDestination()', () => {
+describe('destinationState()', () => {
   it('creates destination with type and state', () => {
-    const dest = createDestination('addItem', { item: 'apple', quantity: 1 });
+    const dest = destinationState('addItem', { item: 'apple', quantity: 1 });
 
     expect(dest.type).toBe('addItem');
     expect(dest.state).toEqual({ item: 'apple', quantity: 1 });
   });
 
   it('includes optional metadata', () => {
-    const dest = createDestination(
+    const dest = destinationState(
       'editItem',
       { id: '123', item: 'banana', quantity: 2 },
       { timestamp: 123456 }
