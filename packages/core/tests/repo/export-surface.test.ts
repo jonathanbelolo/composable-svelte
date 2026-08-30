@@ -36,7 +36,7 @@ const packages = listDirs(packagesDir).filter((name) =>
  * wildcard map also accepts the `.js` form of its own subpaths. Narrowing the
  * last package here empties that one too, so both come down together.
  */
-const WILDCARD_EXPORTS_PENDING = ['chat', 'media'];
+const WILDCARD_EXPORTS_PENDING = ['chat'];
 
 function manifestOf(pkg: string): Manifest {
 	return JSON.parse(readFileSync(join(packagesDir, pkg, 'package.json'), 'utf8')) as Manifest;

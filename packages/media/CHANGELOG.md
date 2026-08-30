@@ -170,6 +170,12 @@ though it breaks types.
   import of `@composable-svelte/media/audio-player/types.js` reaches it exactly
   as before. The barrel is the documented surface; the wildcard is not.
 
+  **Superseded.** The wildcard was removed when this package's export map was
+  narrowed to its four entry points, so that deep import no longer resolves and
+  `clamp` is genuinely unreachable. The reasoning above was sound when written
+  and the escape hatch it relied on is gone; the narrowing commit carries the
+  breaking marker for both.
+
 ### Added
 
 - `nextLoopMode` is now exported from both the root barrel and `audio-player`.
