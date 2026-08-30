@@ -14,7 +14,7 @@
  *   streamingChatReducer,
  *   createInitialStreamingChatState,
  *   createMockStreamingChat
- * } from '@composable-svelte/code';
+ * } from '@composable-svelte/chat';
  *
  * const store = createStore({
  *   initialState: createInitialStreamingChatState(),

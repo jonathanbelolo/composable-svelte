@@ -28,7 +28,7 @@ buried at line 1449 of this file.
 | Open — `svelte-check` errors | **0** (was 142, recounted to 69 in R6) |
 | Open — `svelte-check` warnings | **0** (was 30) |
 | Workspaces covered by `pnpm -r check` | **19 of 19** — the gate is complete |
-| **Open — dead behaviour** | **2 items** (T7, T10). T1–T6, T8, T9 done; T11 and T13 closed since; T12 re-scoped — see below |
+| **Open — dead behaviour** | **0**. T1–T13 all closed; T12 is measured and registered rather than swept — see below |
 | Workspaces that typecheck their tests | **14 of 14 that have tests** (S11 T1) |
 | Optional props a wrapper can forward | **619 of 632** — the 13 left are `$bindable`, registered (S11 T8) |
 | Animation-policy backlog | **none** — emptied and deleted (S11 T2–T4) |
@@ -43,66 +43,73 @@ have been through it; `chat` shipped 0.3.0 after four review rounds. Everything
 below is measured, not estimated — the commands that produced each count are
 named so the next person can re-run them rather than trust them.
 
-T1–T6, T8 and T9 are done. T11 and T13 have closed since. **T7 and T10 remain**,
-and T12 has been re-scoped by T11's fix.
+T1–T13 are done. What follows is what each turned out to be, kept because code
+and later sessions cite these by name.
 
-### T7. `ed855dd` is unreviewed — OPEN
+### T7. `ed855dd` reviewed — CLOSED
 
-The last commit of the chat pass: 25 files, 687 insertions. Every review round in
-this campaign found real defects in the previous round's repairs — including two
-fixes that were outright wrong, and three repo guards that could not fail. The
-prior is that this one is not the exception.
+Flagged as unreviewed on the prior that every round in this campaign found
+defects in the previous round's repairs. It held three, all in arms that commit
+changed, and two of them were *the same defect it claimed to have fixed*, left in
+place on other paths:
 
-Still worth reviewing on the evidence: 97.9% of its added lines are verbatim at
-HEAD, and its two chat reducers (`streaming-chat/reducer.ts`,
-`streaming-chat/collaborative-reducer.ts`) have had **zero** commits since.
+- The "announce presence on connect" arm it added could never fire: it read
+  presence out of `state.users`, which inbound frames alone populate, so you are
+  not in your own user map until the server echoes you. The same assumption made
+  `updatePresence` a no-op for that whole window — the loss the arm existed to
+  prevent. Its test passed by dispatching a synthetic `userJoined` before
+  connecting, an ordering the library cannot produce.
+- `stopGeneration` did nothing while an attachment was uploading, leaving the
+  bar frozen at `uploading`.
+- Upload progress was discarded on the edit and regenerate paths.
 
-### T10. Documented Svelte examples that do not compile — OPEN
+All unpublished when found — chat 0.3.0's changelog predates the commit by a day
+and npm was on 0.2.3 — so all free to fix. It also changed six public action arms
+with no changelog entry; they are recorded now.
 
-**53 non-compiling ```svelte blocks across 18 files**, measured by running
-`doc-examples.test.ts`'s compile arm across every document rather than the two in
-`SWEPT_DOCS`. Of those, 18 are `global_reference_invalid` — an excerpt whose
-`<script>` shows only part of itself, so an auto-subscribed store is undeclared,
-mostly benign — and **35 are real syntax errors**: 20 `js_parse_error`, 8
-`expected_token`, 4 `script_duplicate`, 2 `block_unclosed`, 1
-`state_invalid_placement`.
+### T10. Documented Svelte examples — CLOSED
 
-The compile arm is gated on `SWEPT_DOCS`, which holds two documents. It grows as
-sweeps land; each block needs individual judgement about whether the excerpt or
-the code is wrong, which is why it is a list rather than a switch.
+**53 → 0 across every document**, and the `SWEPT_DOCS` throttle is gone: the
+compile arm is unconditional.
 
-This number went **up** from a recorded 41 in 16, and that is the fence sweep
-working rather than a regression. Relabelling 60 mislabelled fences and splitting
-22 mixed listings moved a large body of markup out of ```typescript fences and
-into this arm's population for the first time. The failures are old; they were
-not being looked at. None of the 53 is a block created by those splits.
+Nineteen of the 53 went guard-side without touching a document. The guard was
+reporting excerpts for eliding a store declaration the prose supplies, a
+counter-example for failing on purpose, and a CHANGELOG for being a CHANGELOG —
+the two sibling guards already excluded those.
 
-**What this guard does not catch:** a missing required prop. `<Camera
-position={…} />` with no `{store}` is valid Svelte. That is the *original* defect
-— the one the fix was for — and only `svelte-check` against a real generated
-component would see it. The guard closes the hole the fix opened, not the one the
-fix was for.
+The rest were ellipsis written inside code (`createStore({...})` is a syntax
+error however clearly it reads), Good/Bad pairs sharing one fence, and three
+blocks that were not Svelte at all: two React examples, and a catalogue of tag
+names.
 
-The mislabelled-fence half of this item is **closed**: repo-wide mislabelled
-fences are 0, held by `ALLOWED_MISLABELLED` in `doc-examples.test.ts`.
+**A hole in the earlier fence sweep surfaced here.** Eight mixed listings were
+hiding *inside* ```svelte fences, holding 501 lines of TypeScript no guard read —
+`ALLOWED_MISLABELLED` only inspects fences labelled something other than svelte,
+so it structurally could not see them. A mirror arm now does.
 
-### T12. Optional properties in `.ts` files — RE-SCOPED
+**What the compile arm still does not catch:** a missing required prop. `<Camera
+position={…} />` with no `{store}` is valid Svelte, and only `svelte-check`
+against a real generated component would object.
 
-`exactOptionalPropertyTypes` is on repo-wide, so an optional property without
-`| undefined` cannot receive one — the same hazard T8 fixed for props, one layer
-down in state, action and config shapes.
+### T12. Optional properties in `.ts` — MEASURED, registered
 
-**The props-shaped slice is closed.** Every one of its findings that sat in a
-`*Props` type was `FileUploadProps`, and those ten gained `| undefined` when
-`FileUpload` adopted its own exported type (T11).
-
-What remains is unmeasured, deliberately. The figure has been recorded as 472,
-436 and 427 by three different counts, all grep-shaped — and a grep cannot tell
+**311**, produced by `optional-props.test.ts`'s own splitter. It had been
+recorded as 472, then 436, then 427, by three greps — and a grep cannot tell
 `() => void | undefined` (a function *returning* it) from `(() => void) |
-undefined` (a property accepting it). The only trustworthy counter is
-`optional-props.test.ts`'s own splitter, which scans `.svelte` files. **Extending
-it to `.ts` is the next step for this item**, and it should produce the number
-rather than another grep.
+undefined` (a property accepting it).
+
+The props-shaped slice is closed: every finding that sat in a `*Props` type was
+`FileUploadProps`, fixed with T11.
+
+Reported rather than swept. Most of the rest are state and config shapes, so T8's
+wrapper defect does not apply, and a careless `| undefined` sweep across 383
+declarations would be worse than the hazard. `ALLOWED_BARE_OPTIONALS` stops the
+number growing while that is decided.
+
+**Scope, because a count without one is how this item collected three:**
+discriminated unions written as `export type Action =` followed by `| { … }` open
+with a pipe rather than a brace and are not scanned. In a library of reducers
+that is a large family; covering them would raise 311, not lower it.
 
 ### Accessibility warnings — OPEN
 
@@ -124,12 +131,19 @@ review; the single warning above is what is left.
 
 Several of these were closed by the documentation sweep; the rest stand.
 
-- **`code`'s README** names `createInitialCodeHighlightState` and
-  `createInitialCodeEditorState`; the real exports are `createInitialState` and
-  `createEditorInitialState`.
-- **`media` JSDoc points at the wrong package** — `audio-player/index.ts:15`,
-  `video-embed/index.ts:10`, `voice-input/index.ts:15` all say
-  `@composable-svelte/code`. These compile into the published `.js` and `.d.ts`.
+- ~~**`code`'s README** names factories that do not exist~~ — **stale, and
+  dangerously so.** `2bfd769` renamed the exports to match the documentation
+  rather than the other way round, so `createInitialCodeHighlightState` and
+  `createInitialCodeEditorState` are the real names now. Acting on this entry
+  would have broken working docs.
+- ~~**JSDoc pointing at the wrong package**~~ — closed, and it was wider than
+  recorded. `video-embed` had already been fixed, `audio-player` and
+  `voice-input` had not, and **`chat`'s `streaming-chat` barrel had the same
+  defect and was never listed** — it told consumers to import
+  `FullStreamingChat` and `streamingChatReducer` from `@composable-svelte/code`.
+  Now guarded by an arm in `side-effects.test.ts`: a package may not source its
+  own exports from a sibling. This one ships, unlike a markdown error — the
+  comment is copied verbatim into `dist/*.js` and `dist/*.d.ts`.
 - `charts` skill tells users to `npm install @observablehq/plot`, which is already
   a hard dependency.
 - `maps` exports the component as `MapPopup`; `API.md` uses bare `Popup`, which is
@@ -137,8 +151,22 @@ Several of these were closed by the documentation sweep; the rest stand.
 
 The API-name errors this section used to list — `createTestStore`'s import path,
 `createLiveAPI`, `matchPattern`, `createParserConfig`, `createMockStorage` — are
-closed and now guarded: `doc-typecheck.test.ts` typechecks every documented
-example against the built `.d.ts` and its register is empty.
+closed and now guarded: `doc-typecheck.test.ts` typechecks documented examples
+against the built `.d.ts`, and its register is empty.
+
+**Know what that covers before trusting it.** It reads only blocks that *name*
+`@composable-svelte`, because a block without an import cannot be resolved
+against anything. Measured: **277 of 1,435** ```typescript fences and **97 of
+325** ```svelte fences. So a majority of documented TypeScript — excerpts that
+use a library API without an import line — is read by nothing, and an excerpt is
+exactly the shape that elides imports.
+
+Two things found after that limit was written show it is not theoretical. Svelte
+*markup* is outside the checker entirely, which is how `<FullAudioPlayer
+{playerStore} />` passed a prop the component does not have. And a rune is
+invisible to both guards — `$props<Props>()` appeared in eight examples and in
+none of `src`, because `svelte-check` rejects it in a real component and only
+documentation could keep it.
 
 ## Product gaps, not defects
 

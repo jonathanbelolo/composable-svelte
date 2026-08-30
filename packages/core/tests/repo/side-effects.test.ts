@@ -314,3 +314,67 @@ describe('side-effect imports survive tree-shaking', () => {
 		).toEqual([]);
 	});
 });
+
+/**
+ * A package's JSDoc must not tell you to import its own exports from elsewhere.
+ *
+ * `media`'s `audio-player` and `voice-input` barrels, and `chat`'s
+ * `streaming-chat` barrel, each carried an `@example` importing that package's
+ * own components from `@composable-svelte/code`. Wrong package entirely — and
+ * unlike a mistake in a markdown file, this one **ships**: the comment is copied
+ * verbatim into `dist/*.js` and `dist/*.d.ts`, so a consumer hovering the symbol
+ * in their editor is told to install the wrong dependency.
+ *
+ * Nothing read it. Both documentation guards walk markdown; a JSDoc example is
+ * invisible to them, which is how one survived long enough for the register to
+ * record it and then miscount which files it was in.
+ *
+ * Cross-package examples are fine and common — `media` importing `createStore`
+ * from `core` is correct. What is never right is naming a symbol the package
+ * itself exports and sourcing it from a sibling.
+ */
+describe('JSDoc examples name the right package', () => {
+	const packagesDir = join(repoRoot, 'packages');
+
+	const offenders = listDirs(packagesDir).flatMap((pkg) => {
+		const exported = existsSync(join(packagesDir, pkg, 'dist', 'index.d.ts'))
+			? readFileSync(join(packagesDir, pkg, 'dist', 'index.d.ts'), 'utf8')
+			: '';
+
+		return walkFiles(join(packagesDir, pkg, 'src'), {
+			skip: ['node_modules', 'dist', '.svelte-kit', '.git', 'plans', 'worktrees'],
+			keep: (n) => n.endsWith('.ts') || n.endsWith('.svelte')
+		}).files.flatMap((file) => {
+			const source = readFileSync(file, 'utf8');
+			const out: string[] = [];
+
+			// A JSDoc import block: ` *   Name,` lines closed by ` * } from '…';`
+			for (const m of source.matchAll(
+				/^\s*\*\s*import\s*\{([\s\S]*?)\}\s*from\s*'(@composable-svelte\/[\w-]+)[^']*';/gm
+			)) {
+				const from = m[2]!.split('/')[1]!;
+				if (from === pkg) continue;
+
+				const names = m[1]!
+					.split(/[,\n]/)
+					.map((n) => n.replace(/^\s*\*?\s*/, '').trim())
+					.filter(Boolean);
+
+				const own = names.filter((n) => new RegExp(`\\b${n}\\b`).test(exported));
+				if (own.length > 0) {
+					out.push(`${relative(repoRoot, file)} sources ${own.join(', ')} from @composable-svelte/${from}`);
+				}
+			}
+
+			return out;
+		});
+	});
+
+	it('no package sources its own exports from a sibling', () => {
+		expect(
+			offenders,
+			'this comment is copied into dist/*.js and dist/*.d.ts, so it ships:\n' +
+				offenders.join('\n')
+		).toEqual([]);
+	});
+});

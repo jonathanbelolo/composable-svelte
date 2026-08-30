@@ -12,7 +12,7 @@
  *   FullAudioPlayer,
  *   audioPlayerReducer,
  *   createInitialAudioPlayerState
- * } from '@composable-svelte/code';
+ * } from '@composable-svelte/media';
  *
  * const store = createStore({
  *   initialState: createInitialAudioPlayerState(),
