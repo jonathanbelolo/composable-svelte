@@ -16,6 +16,13 @@
  * — sailed through all three arms. A guard against a class has to enter every
  * path the class lives on, and the way to find out is to plant one and watch.
  *
+ * Frames are driven by a **controlled `requestAnimationFrame`**, not by waiting
+ * for real ones. The second version polled for `drawArrays` to reach ten within
+ * 800ms of wall clock — fine on an idle machine, and it failed all three arms
+ * during a sequential gate run, then passed the next three attempts. A test
+ * whose precondition depends on how fast the machine is will eventually be
+ * ignored, which is worse than not having it.
+ *
  * The rule it encodes: a message about a **standing condition** is worth saying
  * when the condition worsens, and once otherwise. A message about a **caller's
  * action** fires every time, because each call is a separate mistake — those are
@@ -71,6 +78,45 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 const FRAMES = 60;
 
 /**
+ * A `requestAnimationFrame` the test pumps by hand.
+ *
+ * `RenderLoop` renders a frame only when the timestamp rAF hands it has advanced
+ * past `frameInterval`, so supplying increasing timestamps drives an exact
+ * number of frames with no dependence on the wall clock.
+ *
+ * The clock starts from `performance.now()` because `RenderLoop.start()` seeds
+ * `lastFrameTime` the same way. Starting at zero makes every delta negative, the
+ * rate limiter skips every frame, and nothing renders — which is exactly what
+ * the first attempt at this did, and the arm asserting the loop ran is what said
+ * so.
+ */
+function controlFrames(): (frames: number) => void {
+	const original = globalThis.requestAnimationFrame;
+	let queued: FrameRequestCallback[] = [];
+	globalThis.requestAnimationFrame = ((cb: FrameRequestCallback) => {
+		queued.push(cb);
+		return queued.length;
+	}) as typeof globalThis.requestAnimationFrame;
+	undo.push(() => {
+		globalThis.requestAnimationFrame = original;
+	});
+
+	let now = performance.now();
+	return (frames: number) => {
+		for (let frame = 0; frame < frames; frame += 1) {
+			const due = queued;
+			queued = [];
+			// 20ms: past the 60fps interval so every tick renders, and a simulated
+			// 50fps — above the 70%-of-target threshold, so this does not trip the
+			// low-frame-rate warning and make the console arm fail on a frame rate
+			// the test itself invented.
+			now += 20;
+			for (const cb of due) cb(now);
+		}
+	};
+}
+
+/**
  * Drive both hot paths: the texture updates *and* the render loop.
  *
  * `drawArrays` is the oracle for the second one — it says how many frames were
@@ -78,16 +124,13 @@ const FRAMES = 60;
  * rather than trusting that the loop ran.
  */
 async function run(api: OverlayContextAPI, id: string, fake: FakeGL) {
+	const pump = controlFrames();
 	api.start();
 	for (let frame = 0; frame < FRAMES; frame += 1) {
 		api.updateElement(id);
 		await settle();
 	}
-	// Real frames, since the loop is driven by requestAnimationFrame.
-	const deadline = 40;
-	for (let wait = 0; wait < deadline && fake.drawCalls() < 10; wait += 1) {
-		await new Promise((resolve) => setTimeout(resolve, 20));
-	}
+	pump(FRAMES);
 	api.stop();
 	return fake.drawCalls();
 }
@@ -138,12 +181,13 @@ describe('sixty frames while something is wrong', () => {
 		first.api.registerElement('a', canvas(256), MANUAL);
 		await settle();
 		shortRun.length = 0;
+		const pumpFirst = controlFrames();
 		first.api.start();
 		for (let frame = 0; frame < 10; frame += 1) {
 			first.api.updateElement('a');
 			await settle();
 		}
-		await new Promise((resolve) => setTimeout(resolve, 60));
+		pumpFirst(10);
 		first.api.stop();
 		const short = shortRun.length;
 		const shortDraws = first.fake.drawCalls();
