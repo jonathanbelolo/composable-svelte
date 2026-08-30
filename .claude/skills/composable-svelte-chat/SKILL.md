@@ -37,7 +37,7 @@ All components follow Composable Architecture patterns with dedicated reducers a
 
 ### Quick Start
 
-```svelte
+```typescript
 import { createStore } from '@composable-svelte/core';
 import {
   StandardStreamingChat,

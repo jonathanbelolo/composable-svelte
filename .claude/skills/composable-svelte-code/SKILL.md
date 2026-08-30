@@ -36,7 +36,7 @@ All components follow Composable Architecture patterns with dedicated reducers a
 
 ### Quick Start
 
-```svelte
+```typescript
 import { createStore } from '@composable-svelte/core';
 import { CodeEditor, codeEditorReducer, createInitialCodeEditorState } from '@composable-svelte/code';
 
@@ -304,7 +304,7 @@ JavaScript, TypeScript, Python, Rust, Go, Java, C, C++, C#, PHP, Ruby, SQL, HTML
 
 ### Quick Start
 
-```svelte
+```typescript
 import { createStore } from '@composable-svelte/core';
 import { NodeCanvas, nodeCanvasReducer, createInitialNodeCanvasState } from '@composable-svelte/code';
 

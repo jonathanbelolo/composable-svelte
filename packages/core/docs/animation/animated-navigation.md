@@ -914,7 +914,7 @@ const interactionsEnabled = $derived(
 
 ### Complete Integration Example
 
-```svelte
+```typescript
 // State
 interface AppState {
   addItemDestination: AddItemState | null;

@@ -1282,7 +1282,7 @@ case 'editButtonTapped':
 
 ### Nested Presentation
 
-```svelte
+```typescript
 // Parent presents child, child presents grandchild
 interface ParentState {
   destination: ChildState | null;

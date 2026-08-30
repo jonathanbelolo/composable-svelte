@@ -216,7 +216,7 @@ function createStore<State, Action, Dependencies = any>(
 
 **Example:**
 
-```svelte
+```typescript
 interface CounterState {
   count: number;
 }

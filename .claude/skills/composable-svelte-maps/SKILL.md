@@ -35,7 +35,7 @@ All map state managed via pure reducers following Composable Architecture patter
 
 ## QUICK START
 
-```svelte
+```typescript
 import { createStore } from '@composable-svelte/core';
 import { Map, mapReducer, createInitialMapState } from '@composable-svelte/maps';
 

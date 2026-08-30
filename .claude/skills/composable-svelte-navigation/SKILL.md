@@ -269,7 +269,7 @@ case 'destination': {
 
 ### scopeToDestination Pattern
 
-```svelte
+```typescript
 import { scopeToDestination } from '@composable-svelte/core';
 
 // In component

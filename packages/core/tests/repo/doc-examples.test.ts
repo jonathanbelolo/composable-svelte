@@ -439,7 +439,27 @@ const sweptSvelteBlocks = blocks.filter((b) => SWEPT_DOCS.includes(b.file) && b.
  * `SWEPT_DOCS` may arrive with a backlog and raising this deliberately is
  * better than deleting the arm.
  */
-const ALLOWED_MISLABELLED = 0;
+const ALLOWED_MISLABELLED = 22;
+
+/*
+ * Why 22 and not 0.
+ *
+ * Widening this arm from `SWEPT_DOCS` to every document found 82 blocks with the
+ * wrong fence label. Sixty were pure markup or full components and were simply
+ * relabelled. The remaining 22 are **mixed listings**: one fence carrying a state
+ * interface, a reducer *and* the component markup that uses them, which is
+ * neither valid TypeScript nor valid Svelte.
+ *
+ * They are left as ```typescript deliberately. Relabelling them to ```svelte
+ * makes the fence guard pass and stops `doc-typecheck` seeing their TypeScript
+ * at all — it extracts only `<script lang="ts">` bodies — which silently hid two
+ * real errors, including a `forEach` example whose item shape cannot work. A
+ * guard that passes by not looking is worse than one that fails.
+ *
+ * The fix is to split each into a ```typescript fence and a ```svelte fence.
+ * That is a per-block judgement about where the boundary is, and an automated
+ * attempt produced nested `<script>` tags in blocks that already had one.
+ */
 
 /**
  * Examples that are compiled for real, and the documents that must match them.

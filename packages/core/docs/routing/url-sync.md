@@ -1303,7 +1303,7 @@ Integrate URL routing with Composable Svelte's navigation system.
 
 ### Modal/Sheet with URL Sync
 
-```svelte
+```typescript
 // State: Destination for modal
 interface AppState {
   destination: AppDestination | null;
@@ -1324,9 +1324,14 @@ case 'addButtonTapped': {
 }
 
 // Svelte component
-<script>
+<script lang="ts">
   import { Modal } from '@composable-svelte/core';
   import { scopeTo } from '@composable-svelte/core/navigation';
+  import type { Store } from '@composable-svelte/core';
+
+  // `.into('destination')` is checked against the state type, so the store has
+  // to carry one — an untyped store makes every field name `never`.
+  const { store }: { store: Store<AppState, AppAction> } = $props();
 
   // Scope to addItem destination
   const addItemStore = scopeTo(store)

@@ -401,7 +401,7 @@ if (
 
 ### Pattern 1: Simple Modal with No Nested Navigation
 
-```svelte
+```typescript
 // State
 interface AppState {
   addItem: AddItemState | null;
@@ -438,7 +438,7 @@ case 'addItem': {
 
 ### Pattern 2: Modal with Nested Sheets/Alerts
 
-```svelte
+```typescript
 // State
 interface ProductDetailState {
   destination: ProductDetailDestination | null;

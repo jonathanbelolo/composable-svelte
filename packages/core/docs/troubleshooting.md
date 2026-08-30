@@ -965,7 +965,7 @@ See the "Styling & Theming" section of the package README for the full setup.
 
 **Cause: Not using store.state reactively**
 
-```svelte
+```typescript
 // ❌ BAD: Accessing state non-reactively
 <script>
   let { store } = $props();

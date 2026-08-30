@@ -555,14 +555,18 @@ const appReducer = combineReducers<AppState, AppAction>({
 
 **When**: Independent items that don't know about each other (todo list, product grid)
 
-```svelte
+```typescript
 // State
+//
+// `forEach` and `forEachElement` address items by id, so the array holds
+// `IdentifiedItem<ID, State>` — `{ id, state }` — not flat objects that happen
+// to carry an `id`. The child reducer then sees only `state`, which is what
+// keeps it independent of where the item lives.
 interface TodosState {
-  todos: TodoState[];
+  todos: Array<{ id: string; state: TodoState }>;
 }
 
 interface TodoState {
-  id: string;
   text: string;
   completed: boolean;
 }
@@ -614,7 +618,7 @@ const action = elementAction('todo', 'todo-1', { type: 'toggle' });
 // Component
 {#each $store.todos as todo (todo.id)}
   <Todo
-    {todo}
+    todo={todo.state}
     onToggle={() => store.dispatch(elementAction('todo', todo.id, { type: 'toggle' }))}
   />
 {/each}

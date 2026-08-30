@@ -179,7 +179,7 @@ A scoped store with:
 - `dismiss()`: Dispatches dismiss action
 
 **Example:**
-```svelte
+```typescript
 interface ParentState {
   items: Item[];
   destination: Destination | null;
@@ -239,7 +239,7 @@ const scopedStore = scopeToDestination(
 ```
 
 **Multiple Destinations:**
-```svelte
+```typescript
 // Create separate scoped stores for each case
 const addItemStore = $derived(
   scopeToDestination(store, ['destination'], 'addItem', 'destination')
@@ -282,7 +282,7 @@ A scoped store with:
 - `dismiss()`: Dispatches dismiss action
 
 **Example:**
-```svelte
+```typescript
 interface ParentState {
   items: Item[];
   modal: AddItemState | null;  // Simple optional child (not an enum)
@@ -360,7 +360,7 @@ function scopeToElement<
 A full `Store<ChildState, ChildAction>` (not `ScopedDestinationStore`) for the element, or `null` if element not found.
 
 **Example:**
-```svelte
+```typescript
 interface ParentState {
   counters: Array<{ id: string; state: CounterState }>;
 }

@@ -41,7 +41,7 @@ All charts use pure reducers with type-safe actions following Composable Archite
 
 ## QUICK START
 
-```svelte
+```typescript
 import { createStore } from '@composable-svelte/core';
 import { Chart, chartReducer, createInitialChartState } from '@composable-svelte/charts';
 
