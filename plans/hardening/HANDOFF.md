@@ -46,12 +46,12 @@ round. Until then the campaign is improving something nobody can install.
 
 ## 2. What is measured and solid
 
-- **3,858 tests passing**, gate green. `pnpm test` now serialises the workspaces
+- **3,865 tests passing**, gate green. `pnpm test` now serialises the workspaces
   (`--workspace-concurrency=1`), as does CI — seven of eight packages drive a real
   browser, and running four at once produced failures about scheduling rather
-  than about code. Packages total 3,752: core 2,092 (browser, 3 skipped) + 411
+  than about code. Packages total 3,759: core 2,092 (browser, 3 skipped) + 413
   (node), graphics 482, chat 235 + 5, charts 191, maps 106, media 94, code 81,
-  auth 54.
+  auth 54. Examples add 106.
   Examples add 106 across six workspaces, unchanged.
   *The figure before this campaign's last two sections, 3,256, included the
   examples; compare against 3,852, not against 3,746.*
@@ -60,7 +60,7 @@ round. Until then the campaign is improving something nobody can install.
 - **The gate is `build → typecheck → svelte-check → test`** across all
   **19 of 19** workspaces. `svelte-check` genuinely covers all of them; it once
   covered two.
-- **Fifteen repo-level guards** in `packages/core/tests/repo/`, 249 assertions:
+- **Fifteen repo-level guards** in `packages/core/tests/repo/`, 251 assertions:
   animation policy, check coverage, component coverage, dist freshness, doc
   examples, doc typecheck, export surface, guard integrity, optional props, peer
   ranges, published files, side effects, typecheck coverage, walk, and
