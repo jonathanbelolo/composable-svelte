@@ -565,7 +565,7 @@ describe('optional props accept undefined', () => {
 });
 
 /**
- * Every exported `*Props` type must be used by a component.
+ * Every exported `*Props` type must be used where drift would break something.
  *
  * A props type nobody annotates is a second, unread copy of a contract, and it
  * drifts silently from the one the component actually enforces. `FileUpload`
@@ -627,12 +627,18 @@ function usageSites(): string[] {
 				// constraining it. Counting those as uses is what would let a type
 				// like `FileUploadProps` look consumed while nothing checks it.
 				.replace(/export\s+(?:type\s+)?\{[^}]*\}/g, '')
+				// An import is the same kind of mention, and this arm shipped
+				// without it. Reintroducing the exact defect — a local `interface
+				// Props` in `FileUpload.svelte` — while leaving the now-unused
+				// `import type { FileUploadProps }` behind passed this arm, which
+				// is the likeliest way the drift would actually come back.
+				.replace(/import\s+(?:type\s+)?[^;]*?from\s*['"][^'"]*['"]/g, '')
 				// Its own declaration is not a use of it either.
 				.replace(/export\s+(?:interface|type)\s+\w*Props\b/g, '')
 		);
 }
 
-describe('an exported props type is used by a component', () => {
+describe('an exported props type is anchored by a use', () => {
 	const exported = exportedPropsTypes();
 	const sources = usageSites();
 
