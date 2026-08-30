@@ -662,19 +662,24 @@ import {
   parseQueryParamsWithSchema,
   string,
   number,
+  object,
   optional,
   enumSchema,
   array
 } from '@composable-svelte/core/routing';
 
-// Define schema
-const querySchema = {
+// Define schema.
+//
+// `parseQueryParamsWithSchema` takes **one** `Schema<T>`, so the per-field
+// schemas are wrapped in `object(...)` — a bare map of schemas is not itself a
+// schema and has no `parse`.
+const querySchema = object({
   search: optional(string({ minLength: 1, maxLength: 100 })),
   page: optional(number({ min: 1, integer: true })),
   perPage: optional(number({ min: 10, max: 100, integer: true })),
   sortBy: optional(enumSchema(['name', 'date', 'price'] as const)),
   tags: optional(array(string()))
-};
+});
 
 // Parse with validation
 try {

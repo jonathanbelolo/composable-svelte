@@ -28,13 +28,8 @@ import { checkDocs, keyOf, type Finding } from './doc-typecheck.js';
  * the 87th could have arrived while it was in progress.
  */
 const REGISTER = new Map<string, number>([
-	['packages/core/docs/navigation/tree-based.md :: TS2724 :: \'"@composable-svelte/core/routing"\' has no exported member named \'createParserConfig\'. Did you mean \'ParserConfig\'?', 1],
 	['packages/core/docs/navigation/tree-based.md :: TS2339 :: Property \'type\' does not exist on type \'never\'.', 1],
-	['packages/core/docs/quick-reference.md :: TS2554 :: Expected 3 arguments, but got 2.', 1],
 	['packages/core/docs/routing/url-sync.md :: TS2339 :: Property \'itemId\' does not exist on type \'{}\'.', 2],
-	['packages/core/docs/routing/url-sync.md :: TS2345 :: Argument of type \'{ search: Schema<string | undefined>; page: Schema<number | undefined>; perPage: Schema<number | undefined>; sortBy: Schema<"price" | "name" | "date" | undefined>; tags: Schema<...>; }\' is not assignable to parameter of type \'Schema<unknown>\'.   Property \'parse\' is missing in type \'{ search: Schema<string | undefined>; page: Schema<number | undefined>; perPage: Schema<number | undefined>; sortBy: Schema<"price" | "name" | "date" | undefined>; tags: Schema<...>; }\' but required in type \'Schema<unknown>\'.', 1],
-	['packages/charts/README.md :: TS2345 :: Argument of type \'string\' is not assignable to parameter of type \'(d: unknown) => any\'.', 1],
-	['packages/charts/README.md :: TS2345 :: Argument of type \'string\' is not assignable to parameter of type \'(d: unknown) => number\'.', 1],
 	['.claude/skills/composable-svelte-code/SKILL.md :: TS2339 :: Property \'id\' does not exist on type \'Node\'.', 1],
 	['.claude/skills/composable-svelte-navigation/SKILL.md :: TS2339 :: Property \'type\' does not exist on type \'{}\'.', 1],
 	['.claude/skills/composable-svelte-navigation/SKILL.md :: TS2339 :: Property \'state\' does not exist on type \'{}\'.', 1],

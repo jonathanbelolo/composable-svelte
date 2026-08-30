@@ -100,11 +100,19 @@ Transform your data declaratively before visualization:
 ```typescript
 import { DataTransforms } from '@composable-svelte/charts';
 
+// The transforms are generic in the row type. Name it — `sortBy` and `topN`
+// accept a field name only when they know which fields exist, and fall back to
+// requiring an accessor function when the row type is unknown.
+interface Row {
+  active: boolean;
+  value: number;
+}
+
 // Compose multiple transforms
-const pipeline = DataTransforms.compose(
-  DataTransforms.filter(d => d.active),
-  DataTransforms.sortBy('value', 'desc'),
-  DataTransforms.topN(10, 'value')
+const pipeline = DataTransforms.compose<Row>(
+  DataTransforms.filter<Row>((d) => d.active),
+  DataTransforms.sortBy<Row>('value', 'desc'),
+  DataTransforms.topN<Row>(10, 'value')
 );
 
 const transformed = pipeline(data);

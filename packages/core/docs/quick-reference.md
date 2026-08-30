@@ -119,7 +119,7 @@ case 'destination':
   import { Modal, Sheet, Drawer, Alert } from '@composable-svelte/core/navigation-components';
   import { scopeToOptional } from '@composable-svelte/core';
 
-  const scopedStore = scopeToOptional(store, 'destination');
+  const scopedStore = scopeToOptional(store, ['destination'], 'destination');
 </script>
 
 {#if scopedStore}
@@ -205,8 +205,9 @@ if (result.matched) {
 ```typescript
 import { scopeToOptional, scopeToDestination } from '@composable-svelte/core';
 
-// Scope to optional field
-const scopedStore = scopeToOptional(store, 'destination');
+// Scope to optional field. Same array-path shape as `scopeToDestination`:
+// (parentStore, statePath, actionField).
+const optionalStore = scopeToOptional(store, ['destination'], 'destination');
 
 // Scope to enum destination
 const scopedStore = scopeToDestination(store, ['destination'], 'addItem', 'destination');

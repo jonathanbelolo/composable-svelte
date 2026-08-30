@@ -918,23 +918,31 @@ const store = createStore({
 ### URL Pattern Matching
 
 ```typescript
-import { parseDestination, createParserConfig } from '@composable-svelte/core/routing';
+import { parseDestination, matchPath } from '@composable-svelte/core/routing';
+import type { ParserConfig } from '@composable-svelte/core/routing';
 
-const parserConfig = createParserConfig<DestinationState>({
-  '/item/:id': (params) => ({
-    type: 'detailItem',
-    state: { itemId: params.id }
-  }),
-  '/item/:id/edit': (params) => ({
-    type: 'editItem',
-    state: { itemId: params.id, name: '', quantity: 0 },
-    itemId: params.id
-  }),
-  '/add': () => ({
-    type: 'addItem',
-    state: { name: '', quantity: 0 }
-  })
-});
+// A `ParserConfig` is a plain object holding a **list of parser functions**, not
+// a map of pattern to handler — there is no `createParserConfig`. Each parser is
+// given the path and decides for itself, which is what lets one route pull
+// several parameters out or fall through on a value it does not like.
+//
+// Order matters: the first parser to return non-null wins, so put the more
+// specific patterns first.
+const parserConfig: ParserConfig<DestinationState> = {
+  parsers: [
+    (path) => {
+      const params = matchPath('/item/:id/edit', path);
+      return params
+        ? { type: 'editItem', state: { itemId: params.id, name: '', quantity: 0 } }
+        : null;
+    },
+    (path) => {
+      const params = matchPath('/item/:id', path);
+      return params ? { type: 'detailItem', state: { itemId: params.id } } : null;
+    },
+    (path) => (path === '/add' ? { type: 'addItem', state: { name: '', quantity: 0 } } : null)
+  ]
+};
 
 const destination = parseDestination(window.location.pathname, parserConfig);
 ```
