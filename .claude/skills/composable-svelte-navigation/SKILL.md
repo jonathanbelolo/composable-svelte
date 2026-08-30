@@ -318,7 +318,7 @@ type PresentationEvent =
 
 ### Complete Animated Modal Example
 
-```svelte
+```typescript
 // State
 interface ModalState {
   content: ModalContent | null;
@@ -417,7 +417,11 @@ const modalReducer: Reducer<ModalState, ModalAction> = (state, action) => {
   }
 };
 
-// Component
+```
+
+The component:
+
+```svelte
 <script lang="ts">
   import { animate } from 'motion';
 
@@ -819,7 +823,7 @@ These components are from the shadcn-svelte component library. See **composable-
 
 ### Example 1: Modal with Edit Form
 
-```svelte
+```typescript
 // State
 interface AppState {
   user: User | null;
@@ -906,7 +910,11 @@ case 'destination': {
   return [newState, effect];
 }
 
-// Component
+```
+
+The component:
+
+```svelte
 <script lang="ts">
   import { Modal } from '@composable-svelte/core/navigation-components';
   import { Button } from '@composable-svelte/core/components/ui';
@@ -932,7 +940,7 @@ case 'destination': {
 
 ### Example 2: Sheet with Animated Filters
 
-```svelte
+```typescript
 // State with PresentationState
 interface AppState {
   items: Item[];
@@ -988,7 +996,11 @@ case 'presentation':
   }
   return [state, Effect.none()];
 
-// Component with animation
+```
+
+The component, with the animation:
+
+```svelte
 <script lang="ts">
   import { Sheet } from '@composable-svelte/core/navigation-components';
   import { animateSheetIn, animateSheetOut } from '@composable-svelte/core/animation';
@@ -1161,7 +1173,7 @@ Does component animate?
 
 ### Navigation with Modal Template
 
-```svelte
+```typescript
 // types.ts
 interface AppState {
   items: Item[];
@@ -1221,7 +1233,11 @@ case 'destination': {
   return [newState, effect];
 }
 
-// App.svelte
+```
+
+`App.svelte`:
+
+```svelte
 <script lang="ts">
   import { Modal } from '@composable-svelte/core/navigation-components';
   import { scopeToDestination } from '@composable-svelte/core';
