@@ -1258,11 +1258,21 @@ const [newStack, effect] = pop(state.stack);
 // Pop to root
 const [newStack, effect] = popToRoot(state.stack);
 
-// Replace entire path
-const [newStack, effect] = setPath(state.stack, [screen1, screen2]);
+// Replace entire path. `setPath` takes the *new* path — it replaces rather
+// than appends, so the current stack is not an argument.
+const [newStack, effect] = setPath([screen1, screen2]);
 
-// Handle actions dispatched from screens
-const [newState, effect] = handleStackAction(state, action, screenReducer, deps);
+// Handle actions dispatched from screens. Six arguments: the deps come before
+// the reducer, and the last two are how the stack is read from and written back
+// into the parent state.
+const [newState, effect] = handleStackAction(
+  state,
+  action,
+  deps,
+  screenReducer,
+  (s) => s.stack,
+  (s, stack) => ({ ...s, stack })
+);
 
 // Query helpers
 const current = topScreen(state.stack);     // Last screen

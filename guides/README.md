@@ -345,15 +345,22 @@ const appReducer = scope(
 
 ### `combineReducers()` — Multiple children at the same level
 
+Takes **one object**, keyed by the state field each child owns, and does the
+scoping itself — you do not pass pre-scoped reducers to it. Each child reducer
+sees only its own slice.
+
 ```typescript
 import { combineReducers } from '@composable-svelte/core';
 
-const rootReducer = combineReducers(
-  scopedCounterReducer,
-  scopedTodoReducer,
-  scopedSettingsReducer
-);
+const rootReducer = combineReducers({
+  counter: counterReducer,
+  todos: todosReducer,
+  settings: settingsReducer
+});
 ```
+
+Reach for `scope()` instead when a child's action needs wrapping or its state
+does not sit under a field of its own name.
 
 ### `ifLet()` — Optional child (navigation)
 
@@ -361,10 +368,14 @@ const rootReducer = combineReducers(
 import { ifLetPresentation } from '@composable-svelte/core/navigation';
 
 // Only runs child reducer when destination is non-null
+// (toChildState, fromChildState, actionType, fromChildAction, childReducer) —
+// the fourth argument wraps a child action back into a parent one, which is how
+// the child's effects find their way home.
 const [newState, effect] = ifLetPresentation(
   (s) => s.destination,
   (s, d) => ({ ...s, destination: d }),
   'destination',
+  (childAction) => ({ type: 'destination', action: childAction }),
   childReducer
 )(state, action, deps);
 ```

@@ -308,12 +308,16 @@ const wizardReducer: Reducer<WizardState, WizardAction, WizardDeps> = (state, ac
 
     case 'stack':
       // Handle stack actions (screen dispatched action)
-      return handleStackAction(
+      // (state, action, deps, screenReducer, getStack, setStack) — the deps come
+  // before the reducer, and the last two say how the stack is read from and
+  // written back into the parent state.
+  return handleStackAction(
         state,
         action,
-        (screenState, screenAction, screenDeps) =>
-          screenReducer(screenState, screenAction, screenDeps),
-        deps
+        deps,
+        screenReducer,
+        (s) => s.stack,
+        (s, stack) => ({ ...s, stack })
       );
 
     default:

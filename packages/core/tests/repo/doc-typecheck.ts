@@ -67,6 +67,22 @@ const SURFACE_CODES = new Set([
 const SKIP_DIRS = ['node_modules', 'dist', '.svelte-kit', 'worktrees', 'plans'];
 const isRecordOfThePast = (name: string) => name === 'CHANGELOG.md';
 
+/**
+ * Prose that marks the block after it as a deliberate counter-example.
+ *
+ * Troubleshooting documents show the broken form, then the fix, then why —
+ * `guides/forms-guide.md` does exactly that for `Button` imported from
+ * `components/form`. Reporting those as defects would push a writer to delete
+ * the wrong half of a Problem/Solution pair, which is the half that makes it
+ * useful.
+ *
+ * Marked blocks are *expected to fail*, and `doc-typecheck.test.ts` asserts they
+ * still do: an exemption that outlives its cause is the failure mode this
+ * repository keeps finding, and a counter-example that quietly became correct
+ * teaches nothing.
+ */
+const COUNTER_EXAMPLE_MARKERS = [/\*\*Problem\*\*/, /WRONG\s*❌/, /❌\s*(BEFORE|Pitfall|BAD)/i];
+
 export interface DocBlock {
 	/** Repo-relative path of the document. */
 	file: string;
@@ -77,6 +93,8 @@ export interface DocBlock {
 	source: string;
 	/** The virtual filename this block compiles under. */
 	name: string;
+	/** Marked in the prose above it as showing the *wrong* way. */
+	counterExample: boolean;
 }
 
 export interface Finding {
@@ -85,6 +103,8 @@ export interface Finding {
 	kind: DocBlock['kind'];
 	code: number;
 	message: string;
+	/** From a block the prose marks as showing the wrong way. */
+	counterExample: boolean;
 }
 
 /** Every markdown document in scope. */
@@ -113,10 +133,23 @@ export function blocksIn(file: string): DocBlock[] {
 	const out: DocBlock[] = [];
 	const lineOf = (index: number) => source.slice(0, index).split('\n').length;
 
+	/** Whether the prose just above this fence marks it as the wrong way. */
+	const markedWrong = (index: number): boolean => {
+		const before = source.slice(0, index).split('\n').filter((l) => l.trim()).slice(-2);
+		return before.some((line) => COUNTER_EXAMPLE_MARKERS.some((m) => m.test(line)));
+	};
+
 	const typescript = /^```(?:ts|typescript)\b[^\n]*\n([\s\S]*?)^```/gm;
 	for (let m = typescript.exec(source); m; m = typescript.exec(source)) {
 		if (!m[1]!.includes('@composable-svelte')) continue;
-		out.push({ file: path, line: lineOf(m.index), kind: 'ts', source: m[1]!, name: '' });
+		out.push({
+			file: path,
+			line: lineOf(m.index),
+			kind: 'ts',
+			source: m[1]!,
+			name: '',
+			counterExample: markedWrong(m.index)
+		});
 	}
 
 	const svelte = /^```svelte\b[^\n]*\n([\s\S]*?)^```/gm;
@@ -127,7 +160,14 @@ export function blocksIn(file: string): DocBlock[] {
 		// here, and said so in the file docstring rather than counted as covered.
 		const script = /<script[^>]*\blang=["']ts["'][^>]*>([\s\S]*?)<\/script>/.exec(m[1]!);
 		if (!script) continue;
-		out.push({ file: path, line: lineOf(m.index), kind: 'svelte', source: script[1]!, name: '' });
+		out.push({
+			file: path,
+			line: lineOf(m.index),
+			kind: 'svelte',
+			source: script[1]!,
+			name: '',
+			counterExample: markedWrong(m.index)
+		});
 	}
 
 	return out;
@@ -237,7 +277,8 @@ export function checkDocs(): CheckResult {
 				line: block.line,
 				kind: block.kind,
 				code: d.code,
-				message: ts.flattenDiagnosticMessageText(d.messageText, ' ')
+				message: ts.flattenDiagnosticMessageText(d.messageText, ' '),
+				counterExample: block.counterExample
 			};
 		});
 

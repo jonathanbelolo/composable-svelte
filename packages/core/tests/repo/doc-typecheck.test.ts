@@ -38,19 +38,21 @@ const REGISTER = new Map<string, number>([
 	['.claude/skills/composable-svelte-code/SKILL.md :: TS2339 :: Property \'id\' does not exist on type \'Node\'.', 1],
 	['.claude/skills/composable-svelte-navigation/SKILL.md :: TS2339 :: Property \'type\' does not exist on type \'{}\'.', 1],
 	['.claude/skills/composable-svelte-navigation/SKILL.md :: TS2339 :: Property \'state\' does not exist on type \'{}\'.', 1],
-	['.claude/skills/composable-svelte-navigation/SKILL.md :: TS2554 :: Expected 1 arguments, but got 2.', 1],
-	['.claude/skills/composable-svelte-navigation/SKILL.md :: TS2554 :: Expected 6 arguments, but got 4.', 1],
-	['guides/NAVIGATION-GUIDE.md :: TS2554 :: Expected 6 arguments, but got 4.', 1],
-	['guides/README.md :: TS2554 :: Expected 1 arguments, but got 3.', 1],
-	['guides/README.md :: TS2554 :: Expected 5 arguments, but got 4.', 1],
-	['guides/forms-guide.md :: TS2305 :: Module \'"@composable-svelte/core/components/form"\' has no exported member \'Button\'.', 1],
-	['guides/forms-guide.md :: TS2305 :: Module \'"@composable-svelte/core/components/form"\' has no exported member \'Input\'.', 1],
 	['packages/core/docs/core-concepts/testing.md :: TS2345 :: Argument of type \'(state: any, action: any, deps: any) => any[]\' is not assignable to parameter of type \'Reducer<any, any, any>\'.   Type \'any[]\' is not assignable to type \'readonly [any, Effect<any>]\'.     Target requires 2 element(s) but source may have fewer.', 1],
 	['packages/core/docs/core-concepts/testing.md :: TS2554 :: Expected 5 arguments, but got 6.', 1],
 ]);
 
 const result = checkDocs();
-const findings: Finding[] = result.findings;
+/**
+ * Findings from blocks the prose does *not* mark as counter-examples.
+ *
+ * A troubleshooting document shows the broken form, then the fix, then why.
+ * Reporting the broken half as a defect pushes a writer to delete the thing that
+ * makes the pair useful, so those are held separately — and asserted still to
+ * fail, below.
+ */
+const findings: Finding[] = result.findings.filter((f) => !f.counterExample);
+const counterExamples: Finding[] = result.findings.filter((f) => f.counterExample);
 
 const tally = (list: Finding[]): Map<string, number> => {
 	const counts = new Map<string, number>();
@@ -132,6 +134,16 @@ describe('documented examples match the library', () => {
 			stale,
 			'these are fixed — delete them from REGISTER, or lower the count:\n' + stale.join('\n')
 		).toEqual([]);
+	});
+
+	it('still demonstrate what they claim to', () => {
+		// The counter-examples must keep failing. One that quietly became correct
+		// teaches nothing, and leaves the reader comparing two working snippets
+		// wondering which is meant to be the wrong one.
+		expect(
+			counterExamples.length,
+			'no block marked **Problem** or ❌ produces an error any more — has one been "fixed"?'
+		).toBeGreaterThan(0);
 	});
 
 	it('name only documents that still exist', () => {
