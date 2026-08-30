@@ -36,31 +36,32 @@ All components follow Composable Architecture patterns with dedicated reducers a
 
 ### Quick Start
 
-```typescript
-import { createStore } from '@composable-svelte/core';
-import { CodeEditor, codeEditorReducer, createInitialCodeEditorState } from '@composable-svelte/code';
+```svelte
+<script lang="ts">
+  import { createStore } from '@composable-svelte/core';
+  import { CodeEditor, codeEditorReducer, createInitialCodeEditorState } from '@composable-svelte/code';
 
-// Create editor store
-const store = createStore({
-  initialState: createInitialCodeEditorState({
-    value: '// Write code here',
-    language: 'typescript',
-    theme: 'dark',
-    showLineNumbers: true
-  }),
-  reducer: codeEditorReducer,
-  dependencies: {
-    onSave: async (value) => {
-      await fetch('/api/save', { method: 'POST', body: value });
-    },
-    formatter: async (code, language) => {
-      // Use prettier or similar
-      return formatCode(code, language);
+  // Create editor store
+  const store = createStore({
+    initialState: createInitialCodeEditorState({
+      value: '// Write code here',
+      language: 'typescript',
+      theme: 'dark',
+      showLineNumbers: true
+    }),
+    reducer: codeEditorReducer,
+    dependencies: {
+      onSave: async (value) => {
+        await fetch('/api/save', { method: 'POST', body: value });
+      },
+      formatter: async (code, language) => {
+        // Use prettier or similar
+        return formatCode(code, language);
+      }
     }
-  }
-});
+  });
+</script>
 
-// Render editor
 <CodeEditor {store} showToolbar={true} />
 ```
 
@@ -304,34 +305,36 @@ JavaScript, TypeScript, Python, Rust, Go, Java, C, C++, C#, PHP, Ruby, SQL, HTML
 
 ### Quick Start
 
-```typescript
-import { createStore } from '@composable-svelte/core';
-import { NodeCanvas, nodeCanvasReducer, createInitialNodeCanvasState } from '@composable-svelte/code';
+```svelte
+<script lang="ts">
+  import { createStore } from '@composable-svelte/core';
+  import { NodeCanvas, nodeCanvasReducer, createInitialNodeCanvasState } from '@composable-svelte/code';
 
-// Create node canvas store
-const canvasStore = createStore({
-  initialState: createInitialNodeCanvasState({
-    nodes: [
-      {
-        id: '1',
-        type: 'input',
-        position: { x: 100, y: 100 },
-        data: { label: 'Input Node' }
-      },
-      {
-        id: '2',
-        type: 'default',
-        position: { x: 300, y: 100 },
-        data: { label: 'Process Node' }
-      }
-    ],
-    edges: [
-      { id: 'e1-2', source: '1', target: '2' }
-    ]
-  }),
-  reducer: nodeCanvasReducer,
-  dependencies: {}
-});
+  // Create node canvas store
+  const canvasStore = createStore({
+    initialState: createInitialNodeCanvasState({
+      nodes: [
+        {
+          id: '1',
+          type: 'input',
+          position: { x: 100, y: 100 },
+          data: { label: 'Input Node' }
+        },
+        {
+          id: '2',
+          type: 'default',
+          position: { x: 300, y: 100 },
+          data: { label: 'Process Node' }
+        }
+      ],
+      edges: [
+        { id: 'e1-2', source: '1', target: '2' }
+      ]
+    }),
+    reducer: nodeCanvasReducer,
+    dependencies: {}
+  });
+</script>
 
 <NodeCanvas
   store={canvasStore}

@@ -455,7 +455,7 @@ const sweptSvelteBlocks = blocks.filter((b) => SWEPT_DOCS.includes(b.file) && b.
  * `SWEPT_DOCS` may arrive with a backlog and raising this deliberately is
  * better than deleting the arm.
  */
-const ALLOWED_MISLABELLED = 10;
+const ALLOWED_MISLABELLED = 6;
 
 /*
  * Why 22 and not 0.

@@ -36,41 +36,42 @@ All components follow Composable Architecture patterns with dedicated reducers a
 
 ### Quick Start
 
-```typescript
-import { createStore } from '@composable-svelte/core';
-import {
-  MinimalAudioPlayer,
-  FullAudioPlayer,
-  audioPlayerReducer,
-  createInitialAudioPlayerState
-} from '@composable-svelte/media';
+```svelte
+<script lang="ts">
+  import { createStore } from '@composable-svelte/core';
+  import {
+    MinimalAudioPlayer,
+    FullAudioPlayer,
+    audioPlayerReducer,
+    createInitialAudioPlayerState
+  } from '@composable-svelte/media';
 
-// Create player store
-const playerStore = createStore({
-  initialState: createInitialAudioPlayerState({
-    tracks: [
-      {
-        id: '1',
-        title: 'Summer Breeze',
-        artist: 'Jazz Ensemble',
-        url: '/audio/track1.mp3',
-        duration: 245
-      },
-      {
-        id: '2',
-        title: 'Midnight Drive',
-        artist: 'Synthwave Collective',
-        url: '/audio/track2.mp3',
-        duration: 312
-      }
-    ]
-  }),
-  reducer: audioPlayerReducer,
-  dependencies: {}
-});
+  // Create player store
+  const playerStore = createStore({
+    initialState: createInitialAudioPlayerState({
+      tracks: [
+        {
+          id: '1',
+          title: 'Summer Breeze',
+          artist: 'Jazz Ensemble',
+          url: '/audio/track1.mp3',
+          duration: 245
+        },
+        {
+          id: '2',
+          title: 'Midnight Drive',
+          artist: 'Synthwave Collective',
+          url: '/audio/track2.mp3',
+          duration: 312
+        }
+      ]
+    }),
+    reducer: audioPlayerReducer,
+    dependencies: {}
+  });
+</script>
 
-// Render player
-<FullAudioPlayer {playerStore} />
+<FullAudioPlayer store={playerStore} />
 ```
 
 ### Component Variants
@@ -392,36 +393,38 @@ const videos = extractVideosFromMarkdown(markdown);
 
 ### Quick Start
 
-```typescript
-import { createStore } from '@composable-svelte/core';
-import {
-  VoiceInput,
-  voiceInputReducer,
-  createInitialVoiceInputState
-} from '@composable-svelte/media';
+```svelte
+<script lang="ts">
+  import { createStore } from '@composable-svelte/core';
+  import {
+    VoiceInput,
+    voiceInputReducer,
+    createInitialVoiceInputState
+  } from '@composable-svelte/media';
 
-// Create voice input store
-const voiceStore = createStore({
-  // `createInitialVoiceInputState()` takes no arguments; the mode is chosen by
-  // dispatching, not by seeding the state.
-  initialState: createInitialVoiceInputState(),
-  reducer: voiceInputReducer,
-  dependencies: {
-    onAudioData: async (audioBlob) => {
-      // Send to transcription service
-      const formData = new FormData();
-      formData.append('audio', audioBlob);
-      const response = await fetch('/api/transcribe', {
-        method: 'POST',
-        body: formData
-      });
-      const { text } = await response.json();
-      return text;
+  // Create voice input store
+  const voiceStore = createStore({
+    // `createInitialVoiceInputState()` takes no arguments; the mode is chosen by
+    // dispatching, not by seeding the state.
+    initialState: createInitialVoiceInputState(),
+    reducer: voiceInputReducer,
+    dependencies: {
+      onAudioData: async (audioBlob) => {
+        // Send to transcription service
+        const formData = new FormData();
+        formData.append('audio', audioBlob);
+        const response = await fetch('/api/transcribe', {
+          method: 'POST',
+          body: formData
+        });
+        const { text } = await response.json();
+        return text;
+      }
     }
-  }
-});
+  });
+</script>
 
-<VoiceInput {voiceStore} />
+<VoiceInput store={voiceStore} />
 ```
 
 ### Recording Modes
