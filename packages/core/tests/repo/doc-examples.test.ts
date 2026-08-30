@@ -388,7 +388,8 @@ describe('documented dismiss dependency call shapes', () => {
  */
 const SWEPT_DOCS = [
 	'packages/graphics/README.md',
-	'.claude/skills/composable-svelte-graphics/SKILL.md'
+	'.claude/skills/composable-svelte-graphics/SKILL.md',
+	'packages/core/docs/dsl/scope-helpers.md'
 ];
 
 /** The runes, which look like store references and must not be declared. */

@@ -557,7 +557,7 @@ interface ScopedDestinationStore<State, Action> {
 
 **Example:**
 ```typescript
-const scopedStore = $derived(scopeToDestination(...));
+const scopedStore = $derived(scopeToDestination(store, ['destination'], 'addItem', 'destination'));
 
 // Access state
 if (scopedStore.state) {
@@ -575,7 +575,7 @@ if (scopedStore.state) {
 
 **Example:**
 ```typescript
-const scopedStore = $derived(scopeToDestination(...));
+const scopedStore = $derived(scopeToDestination(store, ['destination'], 'addItem', 'destination'));
 
 // Component dispatches child action
 scopedStore.dispatch({ type: 'nameChanged', value: 'Apple' });
@@ -601,7 +601,7 @@ scopedStore.dispatch({ type: 'nameChanged', value: 'Apple' });
 
 **Example:**
 ```typescript
-const scopedStore = $derived(scopeToDestination(...));
+const scopedStore = $derived(scopeToDestination(store, ['destination'], 'addItem', 'destination'));
 
 // Component dismisses itself
 scopedStore.dismiss();
@@ -796,7 +796,7 @@ Pass scoped store as props to child components:
 ```svelte
 <!-- Parent.svelte -->
 <script lang="ts">
-const addItemStore = $derived(scopeToDestination(...));
+const addItemStore = $derived(scopeToDestination(store, ['destination'], 'addItem', 'destination'));
 </script>
 
 {#if addItemStore.state}
@@ -825,7 +825,7 @@ Destructure scoped store for cleaner syntax:
 ```svelte
 <!-- Parent.svelte -->
 <script lang="ts">
-const addItemStore = $derived(scopeToDestination(...));
+const addItemStore = $derived(scopeToDestination(store, ['destination'], 'addItem', 'destination'));
 </script>
 
 {#if addItemStore.state}
@@ -954,12 +954,15 @@ Create scoped stores with `$derived` for reactivity:
 ```svelte
 <!-- ✓ Good: Reactive -->
 <script lang="ts">
-const scopedStore = $derived(scopeToDestination(...));
+const scopedStore = $derived(scopeToDestination(store, ['destination'], 'addItem', 'destination'));
 </script>
+```
 
-<!-- ✗ Bad: Not reactive -->
+✗ Bad — not reactive, because the call is not wrapped in `$derived`:
+
+```svelte
 <script lang="ts">
-const scopedStore = scopeToDestination(...);
+const scopedStore = scopeToDestination(store, ['destination'], 'addItem', 'destination');
 </script>
 ```
 
@@ -979,8 +982,11 @@ const addItemStore = $derived(
   )
 );
 </script>
+```
 
-<!-- ✗ Bad: Implicit any -->
+✗ Bad — implicit `any`, because the type arguments are left off:
+
+```svelte
 <script lang="ts">
 const addItemStore = $derived(
   scopeToDestination(store, ['destination'], 'addItem', 'destination')
@@ -999,7 +1005,7 @@ Always check `scopedStore.state` before rendering:
 {/if}
 
 <!-- ✗ Bad: No null check (runtime error!) -->
-<Modal state={scopedStore.state!} {...scopedStore} />
+<Modal state={scopedStore.state} {...scopedStore} />
 ```
 
 ### 4. Use Destructuring for Cleaner Components
@@ -1009,19 +1015,25 @@ Destructure scoped store in child components:
 ```svelte
 <!-- ✓ Good: Destructured -->
 <script lang="ts">
-const { state, dispatch, dismiss } = $props<ScopedDestinationStore<...>>();
+const { state, dispatch, dismiss } = $props<ScopedDestinationStore<AddItemState, AddItemAction>>();
 </script>
 
-<input value={state!.name} oninput={(e) => dispatch(...)} />
+<input value={state.name} oninput={(e) => dispatch({ type: 'nameChanged', name: e.currentTarget.value })} />
 
-<!-- ✗ Verbose: Props drilling -->
+```
+
+✗ Verbose — the whole store drilled through as one prop:
+
+```svelte
 <script lang="ts">
-const { scopedStore } = $props<{ scopedStore: ScopedDestinationStore<...> }>();
+const { scopedStore } = $props<{
+  scopedStore: ScopedDestinationStore<AddItemState, AddItemAction>;
+}>();
 </script>
 
 <input
-  value={scopedStore.state!.name}
-  oninput={(e) => scopedStore.dispatch(...)}
+  value={scopedStore.state.name}
+  oninput={(e) => scopedStore.dispatch({ type: 'nameChanged', name: e.currentTarget.value })}
 />
 ```
 
@@ -1032,17 +1044,20 @@ Create scoped stores close to where they're used:
 ```svelte
 <!-- ✓ Good: Co-located -->
 <script lang="ts">
-const addItemStore = $derived(scopeToDestination(...));
+const addItemStore = $derived(scopeToDestination(store, ['destination'], 'addItem', 'destination'));
 </script>
 
 {#if addItemStore.state}
   <AddItemModal {...addItemStore} />
 {/if}
+```
 
-<!-- ✗ Bad: Distant declaration -->
+✗ Bad — the declaration is far from the use:
+
+```svelte
 <script lang="ts">
 // Many lines of code...
-const addItemStore = $derived(scopeToDestination(...));
+const addItemStore = $derived(scopeToDestination(store, ['destination'], 'addItem', 'destination'));
 // Many more lines...
 </script>
 
@@ -1065,8 +1080,11 @@ interface ParentState {
 
 const alertStore = $derived(scopeToOptional(store, ['alert'], 'alert'));
 </script>
+```
 
-<!-- ✗ Over-engineered: Using destination for simple optional -->
+✗ Over-engineered — a destination for what is only an optional:
+
+```svelte
 <script lang="ts">
 interface ParentState {
   alert: AlertState | null;
