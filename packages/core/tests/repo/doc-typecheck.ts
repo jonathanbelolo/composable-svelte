@@ -153,6 +153,34 @@ function builtTypePaths(): { paths: Record<string, string[]>; missing: string[] 
 	return { paths, missing };
 }
 
+/**
+ * Ambient declarations a documented example may legitimately rely on.
+ *
+ * `types: []` keeps `@types/node` out — a snippet reaching for `process` should
+ * not look correct when a consumer's browser build would fail — but it also
+ * removes Vite's `ImportMeta` augmentation, and `import.meta.env`,
+ * `import.meta.hot` and `import.meta.glob` are ordinary, correct things for a
+ * Vite application to write.
+ *
+ * Without this the guard reported four errors against documentation that was
+ * right, which is worse than reporting nothing: it would have had me "fix"
+ * working examples into broken ones.
+ */
+const VITE_AMBIENT = `
+interface ImportMetaEnv { readonly [key: string]: string | boolean | undefined }
+interface ImportMetaHot {
+	dispose(callback: () => void): void;
+	accept(callback?: (module: unknown) => void): void;
+	data: Record<string, unknown>;
+}
+interface ImportMeta {
+	readonly env: ImportMetaEnv;
+	readonly hot?: ImportMetaHot;
+	glob(pattern: string, options?: unknown): Record<string, () => Promise<unknown>>;
+}
+`;
+const AMBIENT_FILE = '/documented/ambient.d.ts';
+
 export interface CheckResult {
 	blocks: DocBlock[];
 	findings: Finding[];
@@ -171,6 +199,7 @@ export function checkDocs(): CheckResult {
 
 	const { paths, missing } = builtTypePaths();
 	const virtual = new Map(blocks.map((b) => [b.name, b.source]));
+	virtual.set(AMBIENT_FILE, VITE_AMBIENT);
 
 	const host = ts.createCompilerHost({});
 	const readReal = host.getSourceFile.bind(host);
