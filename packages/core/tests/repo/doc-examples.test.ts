@@ -328,13 +328,23 @@ describe('documented dismiss dependency call shapes', () => {
  *
  * ## Why a list rather than the whole repo
  *
- * Running this across every markdown file finds **41 non-compiling blocks in 16
- * files**: 21 `global_reference_invalid` (an excerpt whose `<script>` shows only
+ * Running this across every markdown file finds **53 non-compiling blocks in 18
+ * files**: 18 `global_reference_invalid` (an excerpt whose `<script>` shows only
  * part of itself, so an auto-subscribed store is undeclared — mostly benign) and
- * 20 that look like real syntax errors (`js_parse_error`, `script_duplicate`,
- * `expected_token`, `block_unclosed`). Turning that on wholesale would gate the
- * repo on documents nobody has read in this campaign, and each needs individual
- * judgement about whether the excerpt or the code is wrong.
+ * **35 real syntax errors** — 20 `js_parse_error`, 8 `expected_token`, 4
+ * `script_duplicate`, 2 `block_unclosed`, 1 `state_invalid_placement`. Turning
+ * that on wholesale would gate the repo on documents nobody has read in this
+ * campaign, and each needs individual judgement about whether the excerpt or the
+ * code is wrong.
+ *
+ * Re-measured after the fence sweep, and it went **up** from 41 in 16 — which
+ * is the sweep working rather than a regression. Relabelling 60 mislabelled
+ * fences and splitting 22 mixed listings moved a large block of markup out of
+ * ```typescript fences and into this arm's population for the first time. The
+ * failures are old; they were simply not being looked at. Spot-checked against
+ * the split blocks specifically: none of the 53 is one of them, and the two
+ * `script_duplicate` blocks trace to `854d21e`, the original documentation
+ * commit.
  *
  * So the list holds the documents that have been swept and verified, and grows
  * as sweeps land. The backlog is recorded in `plans/hardening/README.md`.

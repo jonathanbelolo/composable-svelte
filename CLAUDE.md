@@ -670,6 +670,10 @@ place, with one file saying `Switch` animates and the other saying it must not.
 
 - **Specs Location**: All specs in `specs/frontend/`
 - **Implementation Plan**: `plans/implementation-plan.md`
+- **Verification Protocol**: `guides/VERIFICATION-PROTOCOL.md` — how a change is
+  checked before it is believed. Mutation-verify every fix; a test that cannot
+  fail is not a guard. Read it before adding one.
+- **Open defect backlog**: `plans/hardening/README.md`
 - **TCA Documentation**: https://github.com/pointfreeco/swift-composable-architecture
 - **Svelte 5 Runes**: https://svelte.dev/docs/svelte/what-are-runes
 
