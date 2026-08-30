@@ -209,7 +209,7 @@ import { scopeToOptional, scopeToDestination } from '@composable-svelte/core';
 const scopedStore = scopeToOptional(store, 'destination');
 
 // Scope to enum destination
-const scopedStore = scopeToDestination(store, 'destination', 'addItem');
+const scopedStore = scopeToDestination(store, ['destination'], 'addItem', 'destination');
 
 // Fluent API (alternative)
 import { scopeTo } from '@composable-svelte/core';

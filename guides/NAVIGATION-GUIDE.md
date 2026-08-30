@@ -241,7 +241,7 @@ import { scopeToDestination } from '@composable-svelte/core/navigation';
 
 // In your Svelte component
 const addToCartStore = $derived(
-  scopeToDestination(store, 'destination', 'addToCart')
+  scopeToDestination(store, ['destination'], 'addToCart', 'destination')
 );
 ```
 
@@ -254,7 +254,7 @@ const addToCartStore = $derived(
   let { store } = $props();
 
   const addToCartStore = $derived(
-    scopeToDestination(store, 'destination', 'addToCart')
+    scopeToDestination(store, ['destination'], 'addToCart', 'destination')
   );
 </script>
 
@@ -587,7 +587,7 @@ Always check for null before rendering:
 
 ```svelte
 <script lang="ts">
-  const scopedStore = $derived(scopeToDestination(store, 'destination', 'addToCart'));
+  const scopedStore = $derived(scopeToDestination(store, ['destination'], 'addToCart', 'destination'));
 </script>
 
 {#if scopedStore}
@@ -673,7 +673,7 @@ const store: Store<AppState, AppAction> = createStore({
 });
 
 // Scoped store is also fully typed
-const childStore = scopeToDestination(store, 'destination', 'addItem');
+const childStore = scopeToDestination(store, ['destination'], 'addItem', 'destination');
 // Type: Store<AddItemState, AddItemAction> | null
 ```
 

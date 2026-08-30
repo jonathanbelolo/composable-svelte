@@ -274,7 +274,7 @@ import { scopeToDestination } from '@composable-svelte/core';
 
 // In component
 const addItemStore = $derived(
-  scopeToDestination(store, 'destination', 'addItem')
+  scopeToDestination(store, ['destination'], 'addItem', 'destination')
 );
 
 {#if addItemStore}
@@ -686,7 +686,7 @@ These components are from the shadcn-svelte component library. See **composable-
   import { Modal } from '@composable-svelte/core/navigation-components';
   import { scopeToDestination } from '@composable-svelte/core';
 
-  const modalStore = $derived(scopeToDestination(store, 'destination', 'addItem'));
+  const modalStore = $derived(scopeToDestination(store, ['destination'], 'addItem', 'destination'));
 </script>
 
 {#if modalStore}
@@ -706,7 +706,7 @@ These components are from the shadcn-svelte component library. See **composable-
 <script lang="ts">
   import { Sheet } from '@composable-svelte/core/navigation-components';
 
-  const sheetStore = $derived(scopeToDestination(store, 'destination', 'filters'));
+  const sheetStore = $derived(scopeToDestination(store, ['destination'], 'filters', 'destination'));
 </script>
 
 {#if sheetStore}
@@ -726,7 +726,7 @@ These components are from the shadcn-svelte component library. See **composable-
 <script lang="ts">
   import { Drawer } from '@composable-svelte/core/navigation-components';
 
-  const drawerStore = $derived(scopeToDestination(store, 'destination', 'menu'));
+  const drawerStore = $derived(scopeToDestination(store, ['destination'], 'menu', 'destination'));
 </script>
 
 {#if drawerStore}
@@ -751,7 +751,7 @@ These components are from the shadcn-svelte component library. See **composable-
   import { Alert } from '@composable-svelte/core/navigation-components';
   import { Button } from '@composable-svelte/core/components/ui';
 
-  const confirmStore = $derived(scopeToDestination(store, 'destination', 'confirmDelete'));
+  const confirmStore = $derived(scopeToDestination(store, ['destination'], 'confirmDelete', 'destination'));
 </script>
 
 {#if confirmStore}
@@ -782,7 +782,7 @@ These components are from the shadcn-svelte component library. See **composable-
   import { Popover } from '@composable-svelte/core/navigation-components';
   import { Button } from '@composable-svelte/core/components/ui';
 
-  const menuStore = $derived(scopeToDestination(store, 'destination', 'menu'));
+  const menuStore = $derived(scopeToDestination(store, ['destination'], 'menu', 'destination'));
 </script>
 
 <div class="relative">
@@ -894,11 +894,12 @@ case 'destination': {
 
 // Component
 <script lang="ts">
-  import { Modal, Button } from '@composable-svelte/core/navigation-components';
+  import { Modal } from '@composable-svelte/core/navigation-components';
+  import { Button } from '@composable-svelte/core/components/ui';
   import { scopeToDestination } from '@composable-svelte/core';
 
   const editProfileStore = $derived(
-    scopeToDestination(store, 'editProfile')
+    scopeToDestination(store, ['destination'], 'editProfile', 'destination')
   );
 </script>
 
@@ -1000,7 +1001,7 @@ case 'presentation':
     }
   });
 
-  const filterStore = $derived(scopeToDestination(store, 'filters'));
+  const filterStore = $derived(scopeToDestination(store, ['destination'], 'filters', 'destination'));
 </script>
 
 {#if filterStore}
@@ -1211,7 +1212,7 @@ case 'destination': {
   import { Modal } from '@composable-svelte/core/navigation-components';
   import { scopeToDestination } from '@composable-svelte/core';
 
-  const addItemStore = $derived(scopeToDestination(store, 'destination'));
+  const addItemStore = $derived(scopeToDestination(store, ['destination'], 'addItem', 'destination'));
 </script>
 
 <Button onclick={() => store.dispatch({ type: 'addButtonTapped' })}>
@@ -1346,20 +1347,27 @@ if (isActionAtPath(action, 'addItem.saveButtonTapped')) {
   // Action is addItem's saveButtonTapped
 }
 
-// Match and extract
-const result = matchPresentationAction(action, state, 'editItem.saveButtonTapped');
+// Match and extract. These take the action and the path — the *action* carries
+// the child payload, so no state argument is involved.
+const result = matchPresentationAction(action, 'editItem.saveButtonTapped');
 if (result) {
-  // result is the EditItemState
+  // result is the child action at that path
 }
 
-// Multi-case matching
-const matched = matchPaths(action, state, {
-  'addItem.saveButtonTapped': (addState) => ({ type: 'add', item: addState }),
-  'editItem.saveButtonTapped': (editState) => ({ type: 'edit', item: editState })
+// Multi-case matching: (action, handlers)
+const matched = matchPaths(action, {
+  'addItem.saveButtonTapped': (addAction) => ({ type: 'add', action: addAction }),
+  'editItem.saveButtonTapped': (editAction) => ({ type: 'edit', action: editAction })
 });
 
-// Extract destination state when a specific action fires
-const destState = extractDestinationOnAction(action, state, 'confirmDelete.confirmButtonTapped');
+// Extracting *state* does need the state, and a way to reach the destination
+// within it: (action, state, path, getDestination).
+const destState = extractDestinationOnAction(
+  action,
+  state,
+  'confirmDelete.confirmButtonTapped',
+  (s) => s.destination
+);
 ```
 
 ---
@@ -1422,11 +1430,14 @@ Scope a store to a specific element in a list (for forEach/forEachElement patter
 import { scopeToElement } from '@composable-svelte/core/navigation';
 
 // Create a scoped store for a specific list item
-const itemStore = scopeToElement(parentStore, {
-  getArray: (s) => s.items,
-  id: item.id,
-  actionWrapper: (id, action) => ({ type: 'item', id, action })
-});
+// Positional: (parentStore, actionType, getArray, id). The action type is the
+// wrapper's `type`; the store builds `{ type, id, action }` itself.
+const itemStore = scopeToElement(
+  parentStore,
+  'item',
+  (s) => s.items,
+  item.id
+);
 ```
 
 ---
