@@ -501,14 +501,33 @@ Known errors inside the register, still uncorrected:
 
 ### 4.8 Longer-standing register items
 
-- **T13** — five packages (`chat`, `code`, `media`, `maps`, `charts`) publish
-  their whole build tree via a wildcard `exports` map. Measured: narrowing is
-  **in-repo free for all five** — zero executable deep imports; the only two hits
-  are JSDoc for already-declared subpaths. Cost is 42 subpaths carrying 14
-  symbols; `maps` needs nothing at all, `code` and `charts` one each. Held by
-  `export-surface.test.ts`'s `WILDCARD_EXPORTS_PENDING`. Each narrowing must be
-  marked breaking — `f0c89bc` narrowed `graphics` as `fix(repo)` and should have
-  carried `!`.
+- ~~**T13**~~ — **CLOSED.** All five (`chat`, `code`, `media`, `maps`,
+  `charts`) now name their entry points; no package publishes more than it
+  names. Each narrowing is its own `!` commit, verified against Node's own
+  resolver from a workspace that links the package rather than by reading the
+  spec — declared specifiers resolve, deep paths return
+  ERR_PACKAGE_PATH_NOT_EXPORTED.
+
+  *The entry's own measurement was wrong in a way worth remembering.* It said
+  the cost was "42 subpaths carrying 14 symbols" and that "`code` and `charts`
+  need one each". In fact every subpath anything imports was **already
+  declared**, so narrowing cost zero new subpaths: the total in-repo deep-import
+  set is five specifiers, all of them existing keys. The unresolvable paths the
+  entry was probably counting live in `packages/chat/plans/` (16 references to
+  `@composable-svelte/code/collaborative`, an API that has never existed in
+  `dist`) and in CHANGELOGs — neither of which is a consumer.
+
+  *One real consequence, found by reading the CHANGELOG before editing the
+  manifest.* `clamp`'s removal from the `media` barrel was recorded as **not
+  breaking** on the explicit grounds that the wildcard still exposed
+  `audio-player/types.js`. Removing the wildcard removes that escape hatch, so
+  `clamp` is now genuinely unreachable and the earlier justification no longer
+  holds. The `media` commit carries the marker for both and the old entry is
+  annotated *Superseded* rather than rewritten.
+
+  Both guards stood down without being deleted: `WILDCARD_EXPORTS_PENDING` is
+  empty but kept with its staleness arm, and `check-coverage`'s `./*.js` rule is
+  dormant behind an arm that now asserts no wildcards exist.
 - **T11** — `FileUploadProps` is exported, unconsumed, and drifts from
   `FileUpload.svelte`. Worse than recorded: the component's local `onUpload`
   takes one parameter while the exported type, `FileUploadDependencies` and
