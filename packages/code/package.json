@@ -26,16 +26,6 @@
       "types": "./dist/node-canvas/index.d.ts",
       "svelte": "./dist/node-canvas/index.js",
       "default": "./dist/node-canvas/index.js"
-    },
-    "./*.js": {
-      "types": "./dist/*.d.ts",
-      "svelte": "./dist/*.js",
-      "default": "./dist/*.js"
-    },
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "svelte": "./dist/*.js",
-      "default": "./dist/*.js"
     }
   },
   "svelte": "./dist/index.js",
