@@ -103,7 +103,7 @@ type TodoAction =
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
 
-  const store = createStore({...});
+  const store = createStore({ initialState, reducer, dependencies: {} });
 
   // ❌ Unnecessary manual subscription
   let state = $state(store.state);

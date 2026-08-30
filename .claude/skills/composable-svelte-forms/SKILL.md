@@ -612,7 +612,7 @@ User clicks submit button (type="submit")
 
 ```svelte
 <!-- WRONG — old prop-based API that doesn't exist -->
-<FormField field="name" send={...} state={...}>
+<FormField field="name" {send} {state}>
   <input type="text" />
 </FormField>
 
@@ -621,7 +621,7 @@ User clicks submit button (type="submit")
   {#snippet children({ field, send })}
     <FormItem>
       <FormLabel>Name</FormLabel>
-      <Input value={field.value} oninput={...} onblur={...} />
+      <Input value={field.value} oninput={field.oninput} onblur={field.onblur} />
       <FormMessage />
     </FormItem>
   {/snippet}
@@ -632,7 +632,7 @@ User clicks submit button (type="submit")
 
 ```svelte
 <!-- WRONG — onValueChange doesn't exist, child components not supported -->
-<Select value={field.value} onValueChange={(v) => send(...)}>
+<Select value={field.value} onValueChange={(v) => send({ type: 'changed', value: v })}>
   <SelectTrigger><SelectValue /></SelectTrigger>
   <SelectContent>
     <SelectItem value="a">A</SelectItem>
@@ -651,7 +651,7 @@ User clicks submit button (type="submit")
 
 ```svelte
 <!-- WRONG -->
-<Switch checked={field.value} onCheckedChange={(v) => send(...)} />
+<Switch checked={field.value} onCheckedChange={(v) => send({ type: 'toggled', value: v })} />
 <Switch bind:checked={field.value} />
 
 <!-- CORRECT -->
@@ -663,9 +663,13 @@ User clicks submit button (type="submit")
 ```svelte
 <!-- WRONG — manual form, bypasses Form component's submit handling -->
 <form onsubmit={(e) => { e.preventDefault(); formStore.dispatch({ type: 'submit' }); }}>
+  <!-- fields -->
+</form>
 
 <!-- CORRECT — Form component handles submit internally -->
 <Form store={formStore}>
+  <!-- fields -->
+</Form>
 ```
 
 ### 5. Wrong state access

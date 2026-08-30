@@ -558,7 +558,7 @@ You might wonder why we use `Effect.afterDelay()` instead of waiting for compone
 // ❌ DON'T: Rely solely on component callbacks
 // Component calls onPresentationComplete when animation finishes
 <Modal
-  onPresentationComplete={() => store.dispatch({...})}
+  onPresentationComplete={() => store.dispatch({ type: 'presentationCompleted' })}
 />
 
 // ✅ DO: Use Effect.afterDelay() for state management
@@ -1333,7 +1333,7 @@ return [
 </button>
 
 // ❌ BAD (allows actions during animation)
-<button onclick={...}>Submit</button>
+<button onclick={() => store.dispatch({ type: 'submitTapped' })}>Submit</button>
 ```
 
 ### 5. Log State Transitions
@@ -1484,7 +1484,7 @@ case 'dismissalCompleted': {
 ```svelte
 // ❌ Problem: User can click during animation
 {#if state.destination}
-  <button onclick={...}>Submit</button>
+  <button onclick={() => store.dispatch({ type: 'submitTapped' })}>Submit</button>
 {/if}
 
 // ✅ Solution: Check presentation status

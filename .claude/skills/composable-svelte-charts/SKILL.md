@@ -829,10 +829,18 @@ onMount(() => {
 
 ```svelte
 <script lang="ts">
-const data = [...]; // Shared data
+const data = [{ x: 1, y: 10 }, { x: 2, y: 25 }]; // Shared data
 
-const chartStore1 = createStore({...});
-const chartStore2 = createStore({...});
+const chartStore1 = createStore({
+  initialState: createInitialChartState({ data }),
+  reducer: chartReducer,
+  dependencies: {}
+});
+const chartStore2 = createStore({
+  initialState: createInitialChartState({ data }),
+  reducer: chartReducer,
+  dependencies: {}
+});
 
 let selectedData = $state<any[]>([]);
 
@@ -854,8 +862,8 @@ function syncSelection(selected: any[]) {
 
 ```svelte
 <script lang="ts">
-const masterStore = createStore({...});
-const detailStore = createStore({...});
+const masterStore = createStore({ initialState: masterState, reducer: chartReducer, dependencies: {} });
+const detailStore = createStore({ initialState: detailState, reducer: chartReducer, dependencies: {} });
 
 $effect(() => {
   const transform = $masterStore.transform;
