@@ -173,18 +173,20 @@ export function collaborativeReducer(
 				state.connection.status !== 'connected' &&
 				state.currentUserId
 			) {
-				const me = state.users.get(state.currentUserId);
-				if (me) {
-					return [
-						{ ...state, connection: action.connection },
-						broadcast(
-							{ ...state, connection: action.connection },
-							deps,
-							{ type: 'presence_changed', userId: state.currentUserId, presence: me.presence },
-							'presence on connect'
-						)
-					];
-				}
+				const connected = { ...state, connection: action.connection };
+				return [
+					connected,
+					broadcast(
+						connected,
+						deps,
+						{
+							type: 'presence_changed',
+							userId: state.currentUserId,
+							presence: state.currentPresence
+						},
+						'presence on connect'
+					)
+				];
 			}
 
 			return [
@@ -301,6 +303,10 @@ export function collaborativeReducer(
 			const users = new Map(state.users);
 			const me = users.get(state.currentUserId);
 
+			// The `users` entry is updated when it exists, but my presence is
+			// recorded either way. Guarding the whole arm on `me` meant this did
+			// nothing at all until the server echoed me back — see
+			// `currentPresence` in collaborative-types.ts.
 			if (me) {
 				users.set(state.currentUserId, {
 					...me,
@@ -313,7 +319,7 @@ export function collaborativeReducer(
 			// never left the browser: a hook documented as tracking online/away
 			// status that nobody else could see.
 			return [
-				{ ...state, users },
+				{ ...state, users, currentPresence: action.presence },
 				broadcast(
 					state,
 					deps,

@@ -227,6 +227,12 @@ function connected(sent: unknown[]) {
 	});
 	cleanup.push(() => store.destroy?.());
 	store.dispatch({ type: 'connectToConversation', conversationId: 'c1', userId: ME });
+	// Opening the socket announces my presence, which is setup here rather than
+	// the subject — every test below asserts what *it* caused. The announcement
+	// itself is covered by its own test at the bottom of this file. Before
+	// `currentPresence` existed the announcement was dead code, so these
+	// assertions were written against a connect that emitted nothing.
+	sent.length = 0;
 	return store;
 }
 
@@ -354,18 +360,10 @@ describe('what actually leaves the browser', () => {
 		});
 		cleanup.push(() => store.destroy?.());
 
-		store.dispatch({
-			type: 'userJoined',
-			user: {
-				id: ME,
-				name: 'Me',
-				color: '#000',
-				presence: 'active',
-				typing: null,
-				cursor: null,
-				lastSeen: 0
-			}
-		});
+		// No synthetic `userJoined` for ME. This test used to dispatch one before
+		// connecting, which made it pass for a reason the library cannot produce:
+		// `userJoined` comes from an inbound `user_joined` frame, so it can only
+		// arrive *after* the socket is open. Connecting cold is the real ordering.
 		store.dispatch({ type: 'connectToConversation', conversationId: 'c1', userId: ME });
 		store.dispatch({ type: 'updatePresence', presence: 'away' });
 		await wait(10);
@@ -375,6 +373,26 @@ describe('what actually leaves the browser', () => {
 		await wait(10);
 
 		expect(sent).toEqual([{ type: 'presence_changed', userId: ME, presence: 'away' }]);
+	});
+
+	it('remembers a presence change made before the server echoed me back', async () => {
+		// The deeper half of the same defect. `users` is filled only by inbound
+		// frames, so between `connectToConversation` and the first `user_joined`
+		// I am not in my own user map — and `updatePresence` used to guard its
+		// whole body on finding me there. It did nothing, silently, for the entire
+		// window. `usePresenceTracking` dispatches only on *change*, so the
+		// transition was not retried and the room kept the stale value.
+		const sent: unknown[] = [];
+		const store = connected(sent);
+
+		store.dispatch({ type: 'updatePresence', presence: 'away' });
+		await wait(10);
+
+		expect(
+			store.state.currentPresence,
+			'my own presence was dropped because the server had not yet told me I exist'
+		).toBe('away');
+		expect(store.state.users.has(ME), 'nothing should have invented a user entry').toBe(false);
 	});
 
 	it('sends nothing once the socket is closed', async () => {

@@ -81,6 +81,18 @@ export interface CollaborativeStreamingChatState {
 
 	/** Current user's ID */
 	currentUserId: string | null;
+	/**
+	 * My own presence, held locally rather than read back out of `users`.
+	 *
+	 * `users` is populated only by inbound frames, and the server does not echo
+	 * you until after the socket is open — so there is a window, from
+	 * `connectToConversation` until the first `user_joined`, in which you are not
+	 * in your own user map. `updatePresence` used to write only into `users` and
+	 * silently did nothing during it, and `usePresenceTracking` dispatches only on
+	 * *change*, so a transition made in that window was lost until the next one
+	 * and the room could see you as `away` indefinitely.
+	 */
+	currentPresence: UserPresence;
 
 	/** WebSocket connection state */
 	connection: WebSocketConnectionState;
@@ -158,6 +170,7 @@ export function createInitialCollaborativeState(): CollaborativeStreamingChatSta
 	return {
 		users: new Map(),
 		currentUserId: null,
+		currentPresence: 'active',
 		connection: { status: 'disconnected' },
 		conversationId: null,
 	};
