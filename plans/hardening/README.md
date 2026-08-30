@@ -111,21 +111,25 @@ discriminated unions written as `export type Action =` followed by `| { … }` o
 with a pipe rather than a brace and are not scanned. In a library of reducers
 that is a large family; covering them would raise 311, not lower it.
 
-### Accessibility warnings — OPEN
+### Accessibility — CLOSED as a warning backlog, open as a question
 
-- **chat (13):** five ambiguous self-closing `<textarea />`; `<video />`
-  self-closing and missing `<track kind="captions">`
-  (`PendingAttachmentPreview.svelte:47`, `VideoPlayer.svelte:214`); `<div>` with
-  mouse handlers and no role (`VideoPlayer.svelte:192`); click handler on `<img>`
-  with no keyboard handler (`ImagePreview.svelte:133`); `role="dialog"` without
-  `tabindex` (`AttachmentPreviewModal.svelte:65`); `autofocus`.
-- **media (5):** progress-bar scrubbers and playlist rows are keyboard
-  inaccessible (`MinimalAudioPlayer.svelte:246`, `FullAudioPlayer.svelte:351`,
-  `PlaylistView.svelte:119`); self-closing `<iframe />`.
-- **charts (1):** `tabindex="0"` with `role="img"` (`Chart.svelte:102`).
+This section listed 19 warnings — chat 13, media 5, charts 1. **All of them are
+gone**: `svelte-check --fail-on-warnings` reports 0 warnings in every one of the
+19 workspaces, and that flag is what gates CI.
 
-`charts` has since gained a keyboard cursor, a data-table fallback and an AA
-review; the single warning above is what is left.
+Stated precisely, because "0 warnings" and "accessible" are not the same claim:
+**11 of them are `svelte-ignore` suppressions rather than fixes.** Seven carry a
+written justification beside them; the four that did not were in `Carousel` and
+`Chart`, and on reading, `Carousel`'s explanation was there all along — a
+detector I wrote to find unexplained ones produced a false negative on a
+multi-line comment. `Chart`'s two are now explained: the surface is focusable
+because it carries the keyboard cursor, and `role="application"` is not an
+interactive role by the linter's reckoning.
+
+So the honest position for a release: no reported warnings, every suppression
+justified in place, `charts` has a keyboard cursor and a data-table fallback and
+an AA review — and no independent WCAG 2.1 AA audit of the other packages has
+been done. That last part is a gap, not a defect.
 
 ## S8. Documentation — OPEN
 

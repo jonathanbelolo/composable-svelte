@@ -376,6 +376,13 @@ const tableCaption = $derived(
   style:width={width ? `${width}px` : '100%'}
   style:height={height ? `${height}px` : '400px'}
 >
+  <!-- The chart surface is focusable on purpose: it carries the keyboard cursor,
+       so a reader who cannot use a pointer can still move between points and
+       hear each one announced. `role="application"` is not an interactive role
+       by the linter's reckoning, so the tabindex and the keydown handler both
+       trip these rules — and removing either would delete the keyboard access
+       the rules exist to protect. The data-table fallback below is the
+       non-interactive path. -->
   <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
   <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
   <div
