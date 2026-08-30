@@ -46,20 +46,32 @@ round. Until then the campaign is improving something nobody can install.
 
 ## 2. What is measured and solid
 
-- **3,256 tests passing**, gate green. Breakdown from `pnpm -r test`:
-  core 1,932 (browser) + 339 (node), graphics 363, chat 212 + 5, code 81,
-  charts 65, auth 54, media 63, maps 36, examples 106.
+- **3,743 tests passing** in the packages, gate green. Measured per workspace,
+  sequentially — `pnpm -r test` starves the real-Chromium suites and must not be
+  used for this: core 2,092 (browser, 3 skipped) + 407 (node), graphics 482,
+  chat 231 + 5, charts 191, maps 106, media 94, code 81, auth 54. Examples are
+  additional.
 - **The gate is `build → typecheck → svelte-check → test`** across all
   **19 of 19** workspaces. `svelte-check` genuinely covers all of them; it once
   covered two.
-- **Repo-level guards** in `packages/core/tests/repo/`: animation policy, export
-  surface, optional props, doc examples, dist freshness, peer ranges, published
-  files, side effects, typecheck coverage, check coverage.
+- **Fourteen repo-level guards** in `packages/core/tests/repo/`, 245 assertions:
+  animation policy, check coverage, component coverage, dist freshness, doc
+  examples, doc typecheck, export surface, guard integrity, optional props, peer
+  ranges, published files, side effects, typecheck coverage, walk.
+  `guard-integrity` is the one that checks the others *run* — a new guard has to
+  be registered in two configs, and an unregistered one asserts nothing while
+  looking exactly like coverage.
 - **Export surfaces are good.** Six of eight barrels are explicitly curated;
   five packages have zero orphaned exported types; `auth` is exemplary.
 - **11 example apps**, all building, six with their own tests.
 
-## 3. What this session did (4 commits, `7742bb4..86b2da4`)
+## 3. What the front-doors session did (4 commits, `7742bb4..86b2da4`)
+
+*This section describes the session that wrote this handoff. Everything after
+`c036585` — the charts accessibility work, the maps adapters, the media video
+fixes, the graphics console and lifecycle round, the shared guard walk, and the
+two documentation registers of §4.5 — came later and is recorded in the §4
+entries themselves, each of which says CLOSED where it is closed.*
 
 The focus moved from `graphics` internals to the front doors, because an
 independent API assessment found that **four of nine package quickstarts did not
@@ -373,41 +385,51 @@ arm. Planting a defect is what showed it; reading it would not have.
 Also corrected: this line said 452, which stopped being true three commits after
 it was written.
 
-### 4.5 Documentation beyond the front doors
+### 4.5 Documentation beyond the front doors — CLOSED
 
-A prototype (not committed) extracted every ```ts/```typescript block in live
-docs that imports `@composable-svelte/*` — **317 blocks** — and typechecked them
-against the built `.d.ts` files with the TypeScript compiler API.
+Two committed guards, both burned down to zero.
 
-- Most have semantic errors, but almost all are excerpt noise
-  (`Cannot find name 'store'`), so a blanket typecheck guard is **not**
-  adoptable.
-- Narrowing to diagnostics that are *claims about the library's own surface*
-  (`TS2305`, `TS2724`, `TS2749`, `TS2551`, `TS2339`, `TS2554`, `TS2345`,
-  `TS2739`/`2740`/`2741`) gives **78 errors across 54 blocks** — measured at
-  `e0dbb4c`, after this session's fixes. They are real: `AudioManager.load` /
-  `.play`, `VoiceInputState.isRecording`, `RateLimiter.isRateLimited`,
-  `'@composable-svelte/core/navigation-components'` has no exported member
-  `Button`, and a long tail of wrong argument counts.
-- Concentrated in `.claude/skills/*` and `packages/core/docs/*`. The package
-  READMEs are now nearly clean.
+**`tests/repo/doc-typecheck.ts` + `.test.ts`** extracts every ```ts/```typescript
+fence and every `<script lang="ts">` body from a ```svelte fence that names
+`@composable-svelte`, and compiles them against the built `.d.ts` files with the
+TypeScript compiler API. It reports only the codes that can be produced *by
+getting this library's surface wrong* — `TS2305`, `2724`, `2749`, `2551`, `2339`,
+`2554`, `2345`, `2739`/`2740`/`2741` — which turns ~1,969 semantic diagnostics
+into 86. The rest is excerpt noise (`Cannot find name 'store'`), which is what an
+excerpt is; a blanket typecheck is still not adoptable and never will be.
 
-**Re-measuring this caught a regression this session introduced.** The figure was
-94 across 64 mid-session; re-running it at the end returned 85 across 58, and the
-new entries were mine — renaming `code`'s and `media`'s exports broke
-`.claude/skills/composable-svelte-code/SKILL.md` and
-`composable-svelte-media/SKILL.md`, which still named the old symbols. That is
-rule 5 (instance versus class) failing in the session that wrote rule 5 down: the
-READMEs were swept and the skill files were not. Both are fixed, along with a
-`deleteAudioManager(id)` row left behind in `packages/media/README.md`'s API
-table when its two neighbours were corrected. The figure is 78 across 54 now.
+86 measured → 84 registered (CHANGELOG excluded: a record of the past is not an
+instruction) → 80 after four of the guard's own findings turned out to be wrong
+→ **0**. `REGISTER` stays in place, empty, with both arms: an unregistered error
+fails, and a registered error that no longer fires fails too.
 
-**Important limitation discovered the hard way:** this guard would **not** have
-caught `code`'s broken quickstart, because that block is fenced ```svelte — and
-nothing typechecks Svelte blocks. The existing arm compiles them for *syntax*
-only, in the two documents named in `SWEPT_DOCS`. The working mechanism for
-consumer examples is the `tests/doc-examples/` pattern — five registered files,
-of which the two added this session are quickstarts.
+**`ALLOWED_MISLABELLED` in `doc-examples.test.ts`** went 22 → **0**. Widening the
+mislabelled-fence arm from `SWEPT_DOCS` to every document found 82 wrong labels;
+60 were relabelled outright and the 22 mixed listings — one fence carrying a
+state interface, a reducer *and* the markup using them — are now split into a
+```typescript fence and a ```svelte fence whose script is typed, so both halves
+are checked rather than neither.
+
+**What it covers, and what it does not.** Svelte **markup** is not typechecked —
+only the `<script>`. `doc-typecheck.ts` says so in its own docstring rather than
+implying coverage it does not have. That limit is not theoretical: splitting the
+media skill's quickstarts turned up `<FullAudioPlayer {playerStore} />` and
+`<VoiceInput {voiceStore} />`, both of which pass a prop that does not exist and
+omit the required `store`. Neither guard could see them; reading `dist/*.d.ts`
+while editing did. For markup, the working mechanism is still
+`tests/doc-examples/` — a real file compiled by `svelte-check`, quoted verbatim
+by the document.
+
+**Three things the guards got wrong, all caught before acting on them.** `types:
+[]` removed Vite's `ImportMeta`, so four correct uses of `import.meta.env`/`hot`/
+`glob` were reported as defects — uncorrected, that would have had me rewrite
+four working examples into broken ones. `looksLikeSvelte` matched an HTML error
+page inside a template literal, and separately missed `<svelte:head>` entirely,
+passing one SSR listing while failing its identical neighbour forty lines up.
+Both rules are narrowed and both directions are checked.
+
+**And two the documents got wrong in a way a rename would not have fixed** —
+recorded in 4.9 as product gaps rather than deleted quietly.
 
 ### 4.6 The graphics README — CLOSED
 
@@ -511,6 +533,38 @@ Known errors inside the register, still uncorrected:
   no WCAG 2.1 AA audit.
 - **`maps` is mid-phase** — its README says Phase 12C in progress.
 
+**From the §4.5 burn-down.** Nine documented APIs turned out not to exist, or not
+to exist in the documented shape. Each was corrected in the document, because a
+document must describe what ships — but the correction is a *narrowing*, and the
+gap is worth a decision rather than a quiet deletion.
+
+One was a real omission and was fixed in the library instead (`903a05b`): the
+navigation DSL builder was built, tested, and never exported. Renaming the
+3-argument state constructor to `destinationState` freed the name
+`createDestination` for the builder the documents had been describing all along.
+Breaking, deliberate, and the better API.
+
+*Documented but never built* — five:
+
+- `createMockStorage`
+- WebSocket **queue inspection** (`ws.queue.length` and friends). Judged not
+  worth building: the queue is an implementation detail of reconnection, and
+  exposing it invites reaching into it.
+- `serializeState` with custom serializers
+- `Clock.live` / `Storage.live`
+- `createParserConfig`
+
+*Built, but a different shape than documented* — three. None is a naming
+problem, so none would have been caught by an export-name check:
+
+- `combineReducers`
+- `ParserConfig`
+- `parseQueryParamsWithSchema`
+
+Two more that only the split turned up, in markup no guard reads:
+`FullAudioPlayer` and `VoiceInput` were documented with `{playerStore}` /
+`{voiceStore}` shorthand, and both components declare `store`.
+
 ## 5. Method rules that earned their place
 
 These are the ones that actually caught things, and each has a scar behind it.
@@ -553,7 +607,12 @@ These are the ones that actually caught things, and each has a scar behind it.
    config that decides which guards run was itself unguarded.
 4. **Execute §4.7** — reduce the register, correct the S2 row and the "ten".
 5. ~~§4.4 (harness), §4.6 (graphics README)~~ — done; §4.4 turned up a live
-   rendering defect. **Then** §4.5 (the 78 doc errors across 54 blocks).
+   rendering defect.
+6. ~~§4.5 (the documented examples)~~ — done. Two committed guards, both
+   burned down to zero: 84 false claims about the API, and 22 fences that were
+   neither TypeScript nor Svelte. Read the "what it does not cover" paragraph
+   before assuming a documented example is checked — markup is not.
+7. **§4.8** — T7 and T10–T13, the longer-standing register items.
 
 Do **not** start another general review round of `graphics`. Rounds four
 through six found 19, ~29 and ~34; the count is not converging, and the majority
