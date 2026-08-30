@@ -1095,7 +1095,7 @@ spy.reset();
 ### TestStore Pattern
 
 ```typescript
-import { TestStore } from '@composable-svelte/core';
+import { TestStore } from '@composable-svelte/core/test';
 
 describe('API Integration', () => {
   it('should handle success and failure', async () => {
@@ -1124,10 +1124,17 @@ describe('API Integration', () => {
       'GET /api/products': { error: new APIError('Failed', 500) }
     });
 
-    store.setDependencies({ api: errorAPI });
+    // `TestStore` has no `setDependencies`, and `createMockAPI` returns a
+    // plain `APIClient` with nothing to reconfigure — so the failure path gets
+    // its own store. That is also the clearer test: one store, one scenario.
+    const failing = new TestStore({
+      initialState: { products: [], loading: false, error: null },
+      reducer: productReducer,
+      dependencies: { api: errorAPI }
+    });
 
-    await store.send({ type: 'loadProducts' });
-    await store.receive({ type: 'productsLoadFailed' }, (state) => {
+    await failing.send({ type: 'loadProducts' });
+    await failing.receive({ type: 'productsLoadFailed' }, (state) => {
       expect(state.error).toBe('Failed');
     });
   });

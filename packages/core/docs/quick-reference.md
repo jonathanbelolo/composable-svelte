@@ -274,19 +274,21 @@ $effect(() => {
 ### API Client
 
 ```typescript
-import { createLiveAPI } from '@composable-svelte/core/api';
+import { createAPIClient } from '@composable-svelte/core/api';
 
-const api = createLiveAPI({
+const api = createAPIClient({
   baseURL: 'https://api.example.com',
-  interceptors: {
-    request: async (config) => {
-      config.headers.Authorization = `Bearer ${token}`;
-      return config;
+  // A list, not a map — and each interceptor is an object with `onRequest`,
+  // `onResponse` or `onError`. A request interceptor receives the URL too.
+  interceptors: [
+    {
+      onRequest: async (url, config) => ({
+        ...config,
+        headers: { ...config.headers, Authorization: `Bearer ${token}` }
+      })
     },
-    response: async (response) => {
-      return response;
-    }
-  }
+    { onResponse: async (response) => response }
+  ]
 });
 
 // In reducer

@@ -89,7 +89,10 @@ const myReducer = (state: State, action: Action, deps: typeof dependencies) => {
 // 4. Mock in tests
 const testDeps = {
   clock: createMockClock(0),
-  storage: createMockStorage(),
+  // No in-memory storage double ships with the library — `createNoopStorage()`
+  // reads back `null` for everything, which suits "storage unavailable" but not
+  // a round-trip assertion. For that, pass any object satisfying `Storage<T>`.
+  storage: createNoopStorage(),
   api: createMockAPI({ ... }),
   websocket: createMockWebSocket()
 };
@@ -102,8 +105,8 @@ Composable Svelte provides several built-in dependency types:
 | Dependency | Production | Testing | Purpose |
 |------------|-----------|---------|---------|
 | Clock | `createSystemClock()` | `createMockClock()` | Time operations |
-| LocalStorage | `createLocalStorage()` | `createMockStorage()` | Persistent storage |
-| SessionStorage | `createSessionStorage()` | `createMockStorage()` | Session storage |
+| LocalStorage | `createLocalStorage()` | `createNoopStorage()` | Persistent storage |
+| SessionStorage | `createSessionStorage()` | `createNoopStorage()` | Session storage |
 | CookieStorage | `createCookieStorage()` | `createMockCookieStorage()` | Cookie storage |
 | API Client | `createAPIClient()` | `createMockAPI()` | HTTP requests |
 | WebSocket | `createLiveWebSocket()` | `createMockWebSocket()` | Real-time communication |
@@ -469,10 +472,10 @@ Mock all dependencies for deterministic testing.
 ### Full Test Setup
 
 ```typescript
+import { TestStore } from '@composable-svelte/core/test';
 import {
-  TestStore,
   createMockClock,
-  createMockStorage,
+  createNoopStorage,
   createMockAPI,
   createMockWebSocket
 } from '@composable-svelte/core';
@@ -481,7 +484,7 @@ describe('App Reducer', () => {
   it('should handle user actions', async () => {
     // Setup mocks
     const clock = createMockClock(1000);
-    const storage = createMockStorage<User>();
+    const storage = createNoopStorage<User>();
     const api = createMockAPI({
       'GET /api/user': { id: 1, name: 'Alice' }
     });
@@ -655,7 +658,7 @@ export function createProductionDependencies(): AppDependencies {
 export function createTestDependencies(): AppDependencies {
   return {
     clock: createMockClock(0),
-    storage: createMockStorage(),
+    storage: createNoopStorage(),
     api: createMockAPI({}),
     websocket: createMockWebSocket()
   };

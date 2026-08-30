@@ -246,10 +246,12 @@ case 'addButtonTapped':
 Use `TestStore` for exhaustive action testing:
 
 ```typescript
-import { createTestStore } from '@composable-svelte/core';
+import { TestStore } from '@composable-svelte/core/test';
 
-const store = createTestStore({
-  initialState: { count: 0 },
+const store = new TestStore({
+  // The initial state has to carry every field the assertions below read —
+  // `isLoading` included, or the example does not compile for a reader either.
+  initialState: { count: 0, isLoading: false },
   reducer: counterReducer
 });
 
@@ -274,16 +276,20 @@ await store.receive({ type: 'incrementCompleted' }, (state) => {
 ### API Client
 
 ```typescript
-import { createLiveAPI } from '@composable-svelte/core/api';
+import { createAPIClient } from '@composable-svelte/core/api';
 
-const api = createLiveAPI({
+const api = createAPIClient({
   baseURL: 'https://api.example.com',
-  interceptors: {
-    request: async (config) => {
-      config.headers.Authorization = `Bearer ${token}`;
-      return config;
+  // `interceptors` is a list, and a request interceptor is an object with
+  // `onRequest(url, config)` — it receives the URL as well as the config.
+  interceptors: [
+    {
+      onRequest: async (url, config) => ({
+        ...config,
+        headers: { ...config.headers, Authorization: `Bearer ${token}` }
+      })
     }
-  }
+  ]
 });
 
 // In reducer

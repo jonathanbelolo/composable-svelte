@@ -962,14 +962,18 @@ mockWS.reset();
 ### Testing Reducers
 
 ```typescript
-import { TestStore } from '@composable-svelte/core';
+import { TestStore } from '@composable-svelte/core/test';
 
 describe('Chat Reducer', () => {
   it('should connect and receive messages', async () => {
     const mockWS = createMockWebSocket<ChatMessage>();
 
     const store = new TestStore({
-      initialState: { connected: false, messages: [] },
+      initialState: {
+        connected: false,
+        connecting: false,
+        messages: [] as ChatMessage[]
+      },
       reducer: chatReducer,
       dependencies: { websocket: mockWS }
     });
