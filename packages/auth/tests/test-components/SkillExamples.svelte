@@ -52,11 +52,11 @@
 />
 
 <AuthGuard store={session} onAnonymous={() => history.pushState({}, '', '/login')}>
-	{#snippet pending()}<p>Loading…</p>{/snippet}
-	{#snippet fallback({ error })}<p>Please sign in. {error?.message ?? ''}</p>{/snippet}
+  {#snippet pending()}<p>Loading…</p>{/snippet}
+  {#snippet fallback({ error })}<p>Please sign in. {error?.message ?? ''}</p>{/snippet}
 
-	<RoleGate store={session} roles={['admin']}>
-		<p>Admin panel</p>
-		{#snippet fallback()}<p>Not authorized.</p>{/snippet}
-	</RoleGate>
+  <RoleGate store={session} roles={['admin']}>
+    <p>Admin panel</p>
+    {#snippet fallback()}<p>Not authorized.</p>{/snippet}
+  </RoleGate>
 </AuthGuard>

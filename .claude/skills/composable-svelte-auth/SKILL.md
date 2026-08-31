@@ -146,7 +146,9 @@ discriminated union, not a string. This is the enabling design of the package:
 your second factor" are different outcomes, and the last is not a failure at all.
 
 Eight arms: `invalid_credentials`, `mfa_required`, `email_unverified`,
-`account_locked`, `rate_limited`, `token_expired`, `network`, `unknown`.
+`account_locked`, `rate_limited`, `token_expired`, `network`, `unknown`. Each is
+also exported by name (`MfaRequiredError`, `RateLimitedError`, …) for a signature
+that accepts only one, and `AuthErrorCode` is the union of the code strings.
 
 The example below is **exhaustive on purpose**, and this file is compiled by
 `doc-typecheck`. Add a ninth arm to the union and `unhandled(error)` stops
@@ -205,6 +207,81 @@ const error = toAuthError(new Error('the backend fell over')); // -> code: 'unkn
 const structural: boolean = isAuthError(error);
 const branch: boolean = isMfaRequired(error);
 ```
+
+---
+
+## SUBJECT AND ROLES
+
+`RoleGate` covers declarative gating. For anything else — a role badge in a
+menu, a branch inside a reducer — read the subject directly. **Do not reach into
+`attributes` by hand:** roles arrive at `attributes["roles"]` as a JSON string
+array, which is the backend's convention, and `subjectRoles` is what knows that.
+
+```typescript
+import { hasAnyRole, subjectRoles, subjectFromSession } from '@composable-svelte/auth';
+import type { SessionSnapshot, Subject } from '@composable-svelte/auth';
+
+function badge(subject: Subject): string {
+	if (subject.kind !== 'authenticated') return 'Signed out';
+	const roles = subjectRoles(subject);
+	return roles.length > 0 ? roles.join(', ') : 'Member';
+}
+
+function canPublish(subject: Subject): boolean {
+	return hasAnyRole(subject, ['admin', 'editor']);
+}
+
+// The same mapping the session reducer applies to a resolved session.
+function toSubject(session: SessionSnapshot): Subject {
+	return subjectFromSession(session);
+}
+```
+
+`hasRole` is the single-role form. `anonymousSubject` is the frozen constant the
+store starts from — compare against `subject.kind`, never against that object's
+identity.
+
+---
+
+## COMPOSING THE REDUCERS
+
+`createSessionStore` and `createLoginStore` exist for the common case where
+nothing but the component observes the flow. When a surrounding feature *does*
+need to observe it — a wizard, a modal that closes on success, an app store that
+records the attempt — compose the reducer instead. It is an ordinary TCA child.
+
+```typescript
+import { scope, type Reducer } from '@composable-svelte/core';
+import {
+	loginReducer,
+	createInitialLoginState,
+	type LoginAction,
+	type LoginDependencies,
+	type LoginState
+} from '@composable-svelte/auth';
+
+interface AppState {
+	login: LoginState;
+}
+
+type AppAction = { type: 'login'; action: LoginAction };
+
+const appReducer: Reducer<AppState, AppAction, LoginDependencies> = scope(
+	(state: AppState) => state.login,
+	(state: AppState, login: LoginState) => ({ ...state, login }),
+	(action: AppAction) => (action.type === 'login' ? action.action : null),
+	(action: LoginAction): AppAction => ({ type: 'login', action }),
+	loginReducer
+);
+
+const initial: AppState = { login: createInitialLoginState() };
+```
+
+`sessionReducer` / `createInitialSessionState` compose the same way, over
+`SessionState` / `SessionAction` / `SessionDependencies`. A parent that composes
+the login flow watches for `status === 'succeeded'` and does the
+`sessionEstablished` handoff itself — that is precisely what `LoginForm` does,
+and why it takes both stores.
 
 ---
 
@@ -348,16 +425,21 @@ nothing to file the credential against.
   import { session, nav } from './stores';
 </script>
 
-<AuthGuard store={session} onAnonymous={() => nav.dispatch({ type: 'navigate', to: '/login' })}>
+<AuthGuard store={session} onAnonymous={() => history.pushState({}, '', '/login')}>
   {#snippet pending()}<p>Loading…</p>{/snippet}
   {#snippet fallback({ error })}<p>Please sign in. {error?.message ?? ''}</p>{/snippet}
 
   <RoleGate store={session} roles={['admin']}>
-    <AdminPanel />
+    <p>Admin panel</p>
     {#snippet fallback()}<p>Not authorized.</p>{/snippet}
   </RoleGate>
 </AuthGuard>
 ```
+
+`onAnonymous` above uses `history.pushState` so the example is one a compiler
+can check. In an app with a navigation store, dispatch a redirect into it
+instead — that is the intended shape, and the reason the callback exists rather
+than the component routing on its own.
 
 `AuthGuard` is **stale-while-revalidate**: it keeps rendering children whenever
 there is an authenticated subject, including during `resolving`, `loggingIn` and
@@ -409,6 +491,18 @@ the union reachable rather than merely representable. Two layers: status codes
 map as a baseline (401 → `invalid_credentials`, 423 → `account_locked`, 429 →
 `rate_limited` with `Retry-After`, 410 → `token_expired`), and an optional
 `{ error: { code, … } }` body overrides and enriches that.
+
+`authErrorFromResponse` is exported too, so a **custom** adapter can reuse the
+mapping rather than reimplement it:
+
+```typescript
+import { authErrorFromResponse } from '@composable-svelte/auth';
+
+async function login(response: Response): Promise<never> {
+	// Reads status *and* body, and returns a plain `AuthError` to throw.
+	throw await authErrorFromResponse(response, 'Sign-in failed.');
+}
+```
 
 ⚠️ Same-site only. The backend issues its session cookie `SameSite=Lax`, so a
 `baseUrl` on a different site never carries it and every resolve comes back
@@ -580,6 +674,10 @@ passed, or a custom surface never dispatched `sessionEstablished`.
 
 **Everything renders unstyled in a consumer app.** Tailwind is not wired to
 core, or someone added utility classes to this package. See "Styling".
+
+**A 2xx response still fails, with `MalformedSessionError`.** The session
+endpoint returned success but a body that is not a `SessionSnapshot`. The
+adapter refuses to guess — a subject with no id is worse than no subject.
 
 **Cancellation does not work in production but tests pass.** The dependency is
 dropping the `AbortSignal` instead of forwarding it to `fetch`.
