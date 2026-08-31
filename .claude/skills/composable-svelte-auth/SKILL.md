@@ -25,7 +25,9 @@ the flow behind it ships.** Check `src/lib/flows/` before telling a user a flow
 exists.
 
 **Entry points.** `.`, `./subject`, `./errors`, `./session`, `./flows`,
-`./components`, `./http`, `./testing`. Everything on the root barrel too.
+`./components`, `./http`, `./testing` — and every one of them is also on the
+root barrel, so a subpath is a convenience, never the only way in. Adding a
+directory means adding both; the two are meant to stay in step.
 
 > ⚠️ **`AuthGuard` and `RoleGate` are UX gating only.** Hiding children
 > client-side is a courtesy, not a security boundary. Enforcement is the
@@ -39,11 +41,13 @@ exists.
 **The single most important thing in this package.** The session store owns
 "who am I". A flow store owns *one attempt* to become someone.
 
-They are separate on purpose. `SessionStatus` has seven values, and both
-`AuthGuard` and `RoleGate` switch on it exhaustively — so folding
-`mfaRequired` / `pendingVerification` / `passwordResetSent` into it would change
-every guard branch in every consumer app each time a flow was added. Instead each
-flow is its own reducer that ends by handing a `SessionSnapshot` across.
+They are separate on purpose. `SessionStatus` has seven values, and both guards
+branch on the set — `AuthGuard` on `subject.kind` plus three status tests,
+`RoleGate` on `unresolved`/`resolving` plus `subject.kind`. Folding
+`mfaRequired` / `pendingVerification` / `passwordResetSent` into that set would
+mean revisiting every one of those branches, and every consumer's render, each
+time a flow was added. Instead each flow is its own reducer that ends by handing
+a `SessionSnapshot` across.
 
 ```typescript
 import { createSessionStore, createLoginStore } from '@composable-svelte/auth';
@@ -77,18 +81,21 @@ if (snapshot) {
 
 ### Status
 
+A `Record`, not an array, so that adding an eighth status fails to compile here
+rather than leaving this list silently short:
+
 ```typescript
 import type { SessionStatus } from '@composable-svelte/auth';
 
-const all: SessionStatus[] = [
-	'unresolved', // nothing asked yet
-	'resolving', // a resolve is in flight
-	'authenticated',
-	'anonymous',
-	'loggingIn',
-	'loginFailed',
-	'loggingOut'
-];
+const meaning: Record<SessionStatus, string> = {
+	unresolved: 'nothing has been asked yet',
+	resolving: 'a resolve is in flight',
+	authenticated: 'there is a subject',
+	anonymous: 'resolved, and nobody is signed in',
+	loggingIn: 'a sign-in is in flight',
+	loginFailed: 'the last sign-in failed; `error` says why',
+	loggingOut: 'a sign-out is in flight'
+};
 ```
 
 ### The lifecycle
@@ -141,8 +148,17 @@ your second factor" are different outcomes, and the last is not a failure at all
 Eight arms: `invalid_credentials`, `mfa_required`, `email_unverified`,
 `account_locked`, `rate_limited`, `token_expired`, `network`, `unknown`.
 
+The example below is **exhaustive on purpose**, and this file is compiled by
+`doc-typecheck`. Add a ninth arm to the union and `unhandled(error)` stops
+typechecking, so the sentence above cannot quietly go stale — which is the
+failure mode of every skill that lists a union in prose.
+
 ```typescript
 import { retryDelaySeconds, type AuthError } from '@composable-svelte/auth';
+
+function unhandled(value: never): never {
+	throw new Error(`unhandled auth error: ${String(value)}`);
+}
 
 function whatToOffer(error: AuthError): string {
 	switch (error.code) {
@@ -157,8 +173,13 @@ function whatToOffer(error: AuthError): string {
 		case 'rate_limited':
 			// `null` when the backend stated no delay — never invent one.
 			return `wait ${retryDelaySeconds(error) ?? 'a while'}s`;
-		default:
+		case 'invalid_credentials':
+		case 'token_expired':
+		case 'network':
+		case 'unknown':
 			return error.message;
+		default:
+			return unhandled(error);
 	}
 }
 ```
@@ -505,8 +526,10 @@ The shape to copy, in order. `flows/login/` is the worked example.
    and the `fieldChanged` clause that clears `error`. Export a
    `create…Store` mirroring `createLoginStore`.
 4. **`index.ts`**, and add it to `flows/index.ts` **and** the package barrel.
-   Nothing catches "built a feature, forgot to export it" — the login flow
-   shipped unexported once and only the tests' relative paths hid it.
+   The login flow shipped unexported once — its tests reached it through a
+   relative path, so nothing went red. `flat-barrel.test.ts` now catches that:
+   every subpath export of this package must also be on the root barrel, and it
+   fails naming the symbols that are not.
 5. **The dependency** on `AuthDependencies`, the wire mapping in `http/`, and
    the arms in `http/errors.ts` if it introduces a new status code.
 6. **Tests at both layers** on the day it lands. Every new `.svelte` must be

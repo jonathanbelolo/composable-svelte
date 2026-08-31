@@ -112,6 +112,13 @@
 
 - **`createLoginStore`**, mirroring `createSessionStore`.
 
+- **`createHttpAuthDeps` and `authErrorFromResponse` on the root barrel**, beside
+  `createHttpSessionDeps`, which was already there. They were reachable only
+  through `./http`, which made the package's own documentation wrong about its
+  API — every other subpath was already re-exported. `flat-barrel.test.ts` holds
+  the rule now: for this package a subpath is a convenience, never the only way
+  in.
+
 ### Fixed in review
 
 - **`LoginForm` detached silently when `flowStore` was replaced.** `Form`

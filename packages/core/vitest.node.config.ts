@@ -58,6 +58,7 @@ export default defineConfig({
       'tests/repo/intentionally-unused.test.ts',
       'tests/repo/doc-typecheck.test.ts',
       'tests/repo/demo-headings.test.ts',
+      'tests/repo/flat-barrel.test.ts',
 			'tests/repo/optional-props.test.ts',
       'tests/styles/**/*.test.ts',
       'tests/i18n/ssr.test.ts'
