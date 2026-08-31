@@ -2,7 +2,26 @@
 
 A **Composable Architecture** library for Svelte 5, inspired by [The Composable Architecture (TCA)](https://github.com/pointfreeco/swift-composable-architecture) from Swift/iOS.
 
-**Status**: ✅ Production-ready, with 3,600+ tests across all packages
+**Status**: `@composable-svelte/core` is production-ready, with 3,865 tests across
+all packages. **The satellite packages vary, and two of them substantially** —
+see the table below before you depend on one.
+
+## Packages, and how finished each is
+
+| package | state | what is not there |
+|---|---|---|
+| **core** | production-ready | no store middleware, no devtools integration, no persistence or time-travel (there *is* an action `history` and `subscribeToActions`, so you can build a logger yourself) |
+| **chat** | usable | "collaborative" means presence, typing and cursors — **there is no CRDT layer**, so concurrent document editing is not supported |
+| **media** | usable | audio player, `VideoEmbed` (YouTube/Vimeo/Twitch), voice input — no video *player*, no streaming formats |
+| **code** | usable, thin | three wrappers: CodeMirror, Prism, SvelteFlow |
+| **charts** | feature-complete for 5 chart types | scatter, line, bar, area, histogram. Heatmap, network graph and hierarchy layouts are deferred |
+| **graphics** | usable | WebGL overlay and a Babylon adapter. `engine: 'webgpu'` is accepted and **runs WebGL** — real WebGPU is not implemented |
+| **maps** | **in development** | 3D buildings, marker clustering, geocoding/search, drawing tools and routing are all unbuilt |
+| **auth** | **narrow by design** | no password login, no OAuth, no signup, no token refresh. It speaks to one backend shape. The package name is broader than the package |
+
+Accessibility: `svelte-check --fail-on-warnings` is clean across all 19
+workspaces, and `charts` has a keyboard cursor, a data-table fallback and an AA
+review. No independent WCAG 2.1 AA audit has been done on the other packages.
 
 ## Features
 
