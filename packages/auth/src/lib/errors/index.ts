@@ -6,6 +6,7 @@ export type {
 	InvalidCredentialsError,
 	MfaRequiredError,
 	EmailUnverifiedError,
+	EmailTakenError,
 	AccountLockedError,
 	RateLimitedError,
 	TokenExpiredError,

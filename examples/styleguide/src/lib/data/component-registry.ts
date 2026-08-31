@@ -66,6 +66,7 @@ export const COMPONENT_REGISTRY: ComponentInfo[] = [
   { id: 'calendar', name: 'Calendar', category: 'Form Components - Advanced', description: 'Date and range picker calendar' },
   { id: 'file-upload', name: 'File Upload', category: 'Form Components - Advanced', description: 'Drag & drop file upload with progress tracking' },
   { id: 'login-form', name: 'Login Form', category: 'Form Components - Advanced', description: 'Password sign-in with a structured failure the surface can branch on - from @composable-svelte/auth' },
+  { id: 'signup-form', name: 'Signup Form', category: 'Form Components - Advanced', description: 'Account creation with two terminal states, a derived password checklist, and a branchable email-taken failure - from @composable-svelte/auth' },
 
   // Visual Feedback
   { id: 'toast', name: 'Toast', category: 'Visual Feedback', description: 'Temporary notifications' },

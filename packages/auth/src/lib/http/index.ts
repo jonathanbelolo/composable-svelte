@@ -14,7 +14,12 @@
 import { createHttpSessionDeps, decodeSessionSnapshot } from '../session/http.js';
 import { authErrorFromResponse } from './errors.js';
 
-import type { AuthDependencies, LoginCredentials } from '../deps.js';
+import type {
+	AuthDependencies,
+	LoginCredentials,
+	SignupCredentials,
+	SignupOutcome
+} from '../deps.js';
 import type { SessionSnapshot } from '../subject/types.js';
 
 /**
@@ -61,6 +66,34 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			}
 
 			return decodeSessionSnapshot(response);
+		},
+
+		async signup(credentials: SignupCredentials, signal?: AbortSignal): Promise<SignupOutcome> {
+			const response = await fetch(url('/auth/signup'), {
+				method: 'POST',
+				credentials: 'include',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ email: credentials.email, password: credentials.password }),
+				...(signal !== undefined && { signal })
+			});
+
+			if (!response.ok) {
+				throw await authErrorFromResponse(response, 'Could not create the account.');
+			}
+
+			// `202 Accepted` is the conventional "we have taken it, but it is not
+			// finished" — here, an account that exists but cannot be used until the
+			// address is confirmed. Read the status rather than sniffing the body:
+			// a backend that answers 202 with an explanatory JSON object should not
+			// have that mistaken for a malformed session.
+			if (response.status === 202) {
+				return { kind: 'verificationRequired', email: credentials.email };
+			}
+
+			// Anything else must be a session, and `decodeSessionSnapshot` refuses
+			// to guess — a 200 carrying "check your email" throws
+			// `MalformedSessionError` rather than fabricating a signed-in user.
+			return { kind: 'session', session: await decodeSessionSnapshot(response) };
 		}
 	};
 }

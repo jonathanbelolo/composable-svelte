@@ -33,6 +33,24 @@ export interface LoginCredentials {
 	rememberMe?: boolean | undefined;
 }
 
+/** What a signup submits. */
+export interface SignupCredentials {
+	email: string;
+	password: string;
+}
+
+/**
+ * What a completed signup produced — and there are two answers, not one.
+ *
+ * A backend that requires email confirmation cannot return a session, and one
+ * that does not should not force a second round trip. Modelling that as a union
+ * rather than `SessionSnapshot | null` means a caller cannot read the happy
+ * path and forget the other: there is no field to leave unchecked.
+ */
+export type SignupOutcome =
+	| { kind: 'session'; session: SessionSnapshot }
+	| { kind: 'verificationRequired'; email: string };
+
 export interface AuthDependencies extends SessionDependencies {
 	/**
 	 * Sign in with an email and password.
@@ -45,6 +63,14 @@ export interface AuthDependencies extends SessionDependencies {
 	 * terms; it carries the `challengeId` the MFA step submits against.
 	 */
 	login: (credentials: LoginCredentials, signal?: AbortSignal) => Promise<SessionSnapshot>;
+	/**
+	 * Create an account.
+	 *
+	 * Rejects with an {@link AuthError} like every other member. `email_taken` is
+	 * the one this call adds — the address already has an account, and the useful
+	 * response is an offer to sign in rather than a red banner.
+	 */
+	signup: (credentials: SignupCredentials, signal?: AbortSignal) => Promise<SignupOutcome>;
 }
 
 /**

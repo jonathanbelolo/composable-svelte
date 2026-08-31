@@ -18,7 +18,9 @@ import { render } from 'svelte/server';
 import { createStore } from '@composable-svelte/core';
 
 import LoginForm from '../../src/lib/components/LoginForm.svelte';
+import SignupForm from '../../src/lib/components/SignupForm.svelte';
 import { createInitialLoginState, loginReducer } from '../../src/lib/flows/login/reducer.js';
+import { createInitialSignupState, signupReducer } from '../../src/lib/flows/signup/reducer.js';
 import { createInitialSessionState, sessionReducer } from '../../src/lib/session/reducer.js';
 import type { LoginState } from '../../src/lib/flows/login/types.js';
 import type { SessionSnapshot } from '../../src/lib/subject/types.js';
@@ -116,5 +118,61 @@ describe('the server build', () => {
 
 		expect(body).toContain('role="status"');
 		expect(body).not.toContain('Signing in');
+	});
+});
+
+describe('the server build of SignupForm', () => {
+	function signupHtml(initial: Partial<ReturnType<typeof createInitialSignupState>> = {}) {
+		const flowStore = createStore({
+			initialState: { ...createInitialSignupState(), ...initial },
+			reducer: signupReducer,
+			dependencies: {
+				signup: async () => ({ kind: 'verificationRequired' as const, email: 'g@example.com' })
+			}
+		});
+		const sessionStore = createStore({
+			initialState: createInitialSessionState(),
+			reducer: sessionReducer,
+			dependencies: {
+				fetchLogin: async () => session,
+				fetchLogout: async () => undefined,
+				fetchSession: async () => null
+			}
+		});
+		return render(SignupForm, { props: { flowStore, sessionStore } }).body;
+	}
+
+	it('emits three fields, all of them hidden', () => {
+		// Two password fields now, and neither may arrive legible. `visible` is
+		// `$state(false)`; a server build that got it wrong would expose both for
+		// the length of the hydration gap, in markup that could also be cached.
+		const body = signupHtml();
+
+		expect(body).toContain('type="email"');
+		expect((body.match(/type="password"/g) ?? []).length).toBe(2);
+		expect(body).not.toMatch(/type="text"/);
+	});
+
+	it('renders the criteria list, unmet and not announced', () => {
+		// `PasswordCriteria` is `$derived`, not an effect, so it must be complete
+		// in the server markup — a checklist that appears only after hydration is
+		// a flash on the most security-sensitive field on the page.
+		const body = signupHtml();
+
+		expect(body).toContain('Password requirements');
+		expect(body).toContain('Not met');
+		// Deliberately not a live region: announcing per keystroke is unusable.
+		expect(body).not.toMatch(/aria-live="polite"[^>]*>\s*<li/);
+	});
+
+	it('renders the terminal panel from state alone', () => {
+		// `awaitingVerification` is reachable on the server after a POST-then-
+		// render signup, and effects do not run there — so the panel has to come
+		// out of state, not out of an effect.
+		const body = signupHtml({ status: 'awaitingVerification', pendingEmail: 'grace@example.com' });
+
+		expect(body).toContain('Check your email');
+		expect(body).toContain('grace@example.com');
+		expect(body, 'the form rendered behind the terminal panel').not.toContain('type="email"');
 	});
 });

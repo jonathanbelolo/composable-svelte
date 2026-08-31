@@ -49,6 +49,28 @@ export interface EmailUnverifiedError {
 	email?: string | undefined;
 }
 
+/**
+ * Signing up with an address that already has an account.
+ *
+ * Signup's characteristic failure, and the reason this arm exists rather than
+ * letting a 409 land on `unknown`: the useful response is not a red banner but
+ * an offer — sign in instead, or reset the password. A surface cannot make that
+ * offer by reading prose.
+ *
+ * **It leaks that the address is registered, and that is the caller's call to
+ * make.** A backend that treats account existence as private should answer a
+ * signup for a known address the same way it answers an unknown one, and send
+ * mail explaining which happened; then this arm never arrives. A backend that
+ * does not — most consumer products, where the address is already discoverable
+ * by trying to sign in — gets a better flow by saying so.
+ */
+export interface EmailTakenError {
+	code: 'email_taken';
+	message: string;
+	/** The address that is taken, when the backend names it. */
+	email?: string | undefined;
+}
+
 /** Locked by the backend — too many attempts, or an administrator. */
 export interface AccountLockedError {
 	code: 'account_locked';
@@ -102,6 +124,7 @@ export type AuthError =
 	| InvalidCredentialsError
 	| MfaRequiredError
 	| EmailUnverifiedError
+	| EmailTakenError
 	| AccountLockedError
 	| RateLimitedError
 	| TokenExpiredError

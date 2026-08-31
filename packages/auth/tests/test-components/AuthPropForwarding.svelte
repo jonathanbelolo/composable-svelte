@@ -3,6 +3,9 @@
 	import RoleGate from '../../src/lib/components/RoleGate.svelte';
 	import LoginForm from '../../src/lib/components/LoginForm.svelte';
 	import PasswordInput from '../../src/lib/components/PasswordInput.svelte';
+	import PasswordCriteria from '../../src/lib/components/PasswordCriteria.svelte';
+	import SignupForm from '../../src/lib/components/SignupForm.svelte';
+	import type { SignupAction, SignupState } from '../../src/lib/flows/signup/types.js';
 	import type { AuthError } from '../../src/lib/errors/types.js';
 	import type { LoginAction, LoginState } from '../../src/lib/flows/login/types.js';
 	import type { SessionAction, SessionState } from '../../src/lib/session/types.js';
@@ -55,7 +58,19 @@
 		disabled,
 		showLabel,
 		hideLabel,
-		inputClass
+		inputClass,
+		signupFlowStore,
+		onVerificationRequired,
+		onSignIn,
+		verification,
+		signupClass,
+		confirmLabel,
+		password,
+		criteriaId,
+		criteriaLabel,
+		metLabel,
+		unmetLabel,
+		criteriaClass
 	}: {
 		store: { readonly state: SessionState };
 		onAnonymous?: () => void;
@@ -104,6 +119,27 @@
 		showLabel?: string;
 		hideLabel?: string;
 		inputClass?: string;
+
+		// SignupForm — shares LoginForm's optional props by name where they mean
+		// the same thing, so only the ones unique to it are listed.
+		signupFlowStore: {
+			readonly state: SignupState;
+			dispatch(action: SignupAction): void;
+			subscribe(listener: (state: SignupState) => void): () => void;
+		};
+		onVerificationRequired?: (email: string) => void;
+		onSignIn?: () => void;
+		verification?: Snippet<[{ email: string }]>;
+		signupClass?: string;
+		confirmLabel?: string;
+
+		// PasswordCriteria.
+		password: string;
+		criteriaId?: string;
+		criteriaLabel?: string;
+		metLabel?: string;
+		unmetLabel?: string;
+		criteriaClass?: string;
 	} = $props();
 </script>
 
@@ -136,4 +172,28 @@
 	{showLabel}
 	{hideLabel}
 	class={inputClass}
+/>
+<SignupForm
+	flowStore={signupFlowStore}
+	{sessionStore}
+	{onSuccess}
+	{onVerificationRequired}
+	{onSignIn}
+	{header}
+	{footer}
+	{verification}
+	{submitLabel}
+	{headingLevel}
+	{emailLabel}
+	{passwordLabel}
+	{confirmLabel}
+	class={signupClass}
+/>
+<PasswordCriteria
+	{password}
+	id={criteriaId}
+	label={criteriaLabel}
+	{metLabel}
+	{unmetLabel}
+	class={criteriaClass}
 />

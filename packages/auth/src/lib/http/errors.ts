@@ -24,16 +24,28 @@ import type { AuthError, AuthErrorCode } from '../errors/types.js';
 import type { AuthErrorBody } from '../deps.js';
 
 /** Codes an adapter may name in a body. Anything else is ignored, not trusted. */
-const KNOWN_CODES = new Set<string>([
-	'invalid_credentials',
-	'mfa_required',
-	'email_unverified',
-	'account_locked',
-	'rate_limited',
-	'token_expired',
-	'network',
-	'unknown'
-] satisfies AuthErrorCode[]);
+/**
+ * Every code a body is allowed to name.
+ *
+ * Keyed off a `Record<AuthErrorCode, true>` rather than an array with
+ * `satisfies AuthErrorCode[]`. That form checks the values are assignable but
+ * not that they are exhaustive, so a ninth arm could join the union and simply
+ * never be accepted from a backend — a silent hole. A missing key here is a
+ * compile error.
+ */
+const KNOWN_CODES = new Set<string>(
+	Object.keys({
+		invalid_credentials: true,
+		mfa_required: true,
+		email_unverified: true,
+		email_taken: true,
+		account_locked: true,
+		rate_limited: true,
+		token_expired: true,
+		network: true,
+		unknown: true
+	} satisfies Record<AuthErrorCode, true>)
+);
 
 const KNOWN_METHODS = new Set(['totp', 'recovery_code']);
 
@@ -52,6 +64,9 @@ function fromStatus(status: number): AuthErrorCode {
 			// Ambiguous on purpose: could be an unverified email or a lockout, and
 			// only a body can say which. `unknown` claims nothing.
 			return 'unknown';
+		case 409:
+			// The signup case: an account already exists for this address.
+			return 'email_taken';
 		case 410:
 			return 'token_expired';
 		case 423:
@@ -156,6 +171,13 @@ export async function authErrorFromResponse(
 		case 'email_unverified':
 			return {
 				code: 'email_unverified',
+				message,
+				...(body?.email !== undefined && { email: body.email })
+			};
+
+		case 'email_taken':
+			return {
+				code: 'email_taken',
 				message,
 				...(body?.email !== undefined && { email: body.email })
 			};

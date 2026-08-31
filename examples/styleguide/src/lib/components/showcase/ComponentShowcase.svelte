@@ -28,6 +28,7 @@
   import CalendarDemo from '../demos/CalendarDemo.svelte';
   import FileUploadDemo from '../demos/FileUploadDemo.svelte';
   import LoginFormDemo from '../demos/LoginFormDemo.svelte';
+  import SignupFormDemo from '../demos/SignupFormDemo.svelte';
   // Foundational Components
   import CardDemo from '../demos/CardDemo.svelte';
   import SeparatorDemo from '../demos/SeparatorDemo.svelte';
@@ -109,6 +110,7 @@
     'calendar': CalendarDemo,
     'file-upload': FileUploadDemo,
     'login-form': LoginFormDemo,
+    'signup-form': SignupFormDemo,
     // Foundational Components
     'card': CardDemo,
     'separator': SeparatorDemo,

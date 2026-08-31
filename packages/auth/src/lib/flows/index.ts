@@ -23,3 +23,26 @@ export type {
 	LoginStatus,
 	LoginDependencies
 } from './login/index.js';
+
+export {
+	signupReducer,
+	createInitialSignupState,
+	createSignupStore,
+	signupFormConfig,
+	signupSchema,
+	emptySignupFields,
+	passwordCriteria,
+	evaluatePasswordCriteria,
+	meetsPasswordCriteria,
+	PASSWORD_MIN_LENGTH,
+	PASSWORD_MAX_LENGTH
+} from './signup/index.js';
+
+export type {
+	SignupFields,
+	PasswordCriterion,
+	SignupState,
+	SignupAction,
+	SignupStatus,
+	SignupDependencies
+} from './signup/index.js';

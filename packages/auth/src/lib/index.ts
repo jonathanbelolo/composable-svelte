@@ -36,6 +36,7 @@ export {
 	type InvalidCredentialsError,
 	type MfaRequiredError,
 	type EmailUnverifiedError,
+	type EmailTakenError,
 	type AccountLockedError,
 	type RateLimitedError,
 	type TokenExpiredError,
@@ -71,14 +72,47 @@ export {
 	type LoginDependencies
 } from './flows/index.js';
 
+export {
+	signupReducer,
+	createInitialSignupState,
+	createSignupStore,
+	signupFormConfig,
+	signupSchema,
+	emptySignupFields,
+	passwordCriteria,
+	evaluatePasswordCriteria,
+	meetsPasswordCriteria,
+	PASSWORD_MIN_LENGTH,
+	PASSWORD_MAX_LENGTH,
+	type SignupFields,
+	type PasswordCriterion,
+	type SignupState,
+	type SignupAction,
+	type SignupStatus,
+	type SignupDependencies
+} from './flows/index.js';
+
 // Dependencies — the injected auth I/O every flow runs over
-export type { AuthDependencies, LoginCredentials, AuthErrorBody } from './deps.js';
+export type {
+	AuthDependencies,
+	LoginCredentials,
+	SignupCredentials,
+	SignupOutcome,
+	AuthErrorBody
+} from './deps.js';
 
 // HTTP — the Composable Rust adapter, beside `createHttpSessionDeps` above
 export { createHttpAuthDeps, authErrorFromResponse } from './http/index.js';
 
 // Components — thin store consumers (zero async)
-export { AuthGuard, RoleGate, LoginForm, PasswordInput } from './components/index.js';
+export {
+	AuthGuard,
+	RoleGate,
+	LoginForm,
+	SignupForm,
+	PasswordInput,
+	PasswordCriteria
+} from './components/index.js';
 
 // Testing — a backend-shaped fake, so a demo or a test needs no server
 export { createMockAuthDeps, type MockAuthOptions } from './testing/index.js';

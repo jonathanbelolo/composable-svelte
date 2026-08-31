@@ -12,7 +12,12 @@
  * with real {@link AuthError} shapes.
  */
 
-import type { AuthDependencies, LoginCredentials } from '../deps.js';
+import type {
+	AuthDependencies,
+	LoginCredentials,
+	SignupCredentials,
+	SignupOutcome
+} from '../deps.js';
 import type { AuthError } from '../errors/types.js';
 import type { SessionSnapshot } from '../subject/types.js';
 
@@ -42,6 +47,22 @@ export interface MockAuthOptions {
 	 * what lets a demo show both outcomes without a toggle.
 	 */
 	accepts?: { email: string; password: string } | undefined;
+	/**
+	 * What a successful signup produces.
+	 *
+	 * `'session'` for a backend that signs the new account straight in,
+	 * `'verificationRequired'` for one that sends a confirmation mail first.
+	 * The latter is the default because it is the commoner and the more
+	 * demanding branch — a demo that only ever shows the auto-login path never
+	 * exercises the terminal panel.
+	 */
+	signupOutcome?: 'session' | 'verificationRequired' | undefined;
+	/**
+	 * Addresses that already have an account, rejected as `email_taken`.
+	 *
+	 * Signup's characteristic failure, and the one a demo most needs to reach.
+	 */
+	takenEmails?: readonly string[] | undefined;
 }
 
 const defaultSession: SessionSnapshot = {
@@ -71,7 +92,14 @@ const defaultSession: SessionSnapshot = {
  * ```
  */
 export function createMockAuthDeps(options: MockAuthOptions = {}): AuthDependencies {
-	const { session = defaultSession, failWith, latencyMs = 0, accepts } = options;
+	const {
+		session = defaultSession,
+		failWith,
+		latencyMs = 0,
+		accepts,
+		signupOutcome = 'verificationRequired',
+		takenEmails = []
+	} = options;
 
 	const aborted = () => new DOMException('Aborted', 'AbortError');
 
@@ -120,6 +148,24 @@ export function createMockAuthDeps(options: MockAuthOptions = {}): AuthDependenc
 			}
 
 			return session;
+		},
+
+		async signup(credentials: SignupCredentials, signal?: AbortSignal): Promise<SignupOutcome> {
+			await wait(signal);
+
+			if (failWith) throw failWith;
+
+			if (takenEmails.includes(credentials.email)) {
+				throw {
+					code: 'email_taken',
+					message: 'An account already exists for that address.',
+					email: credentials.email
+				} satisfies AuthError;
+			}
+
+			return signupOutcome === 'session'
+				? { kind: 'session', session }
+				: { kind: 'verificationRequired', email: credentials.email };
 		},
 
 		async fetchLogin(_seededUserId: string, signal?: AbortSignal): Promise<SessionSnapshot> {

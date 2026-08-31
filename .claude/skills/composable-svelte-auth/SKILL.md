@@ -13,12 +13,14 @@ sign-in attempt, a structured failure union, and thin components over both.
 ## PACKAGE OVERVIEW
 
 **What exists today.** Session resolution, seeded-user passwordless login,
-password sign-in end to end (headless flow, HTTP adapter, styled form), the
-`AuthError` union, `AuthGuard` / `RoleGate` / `LoginForm` / `PasswordInput`, a
-mock dependency set, SSR coverage.
+password sign-in and **signup** end to end (headless flows, HTTP adapter, styled
+forms), the `AuthError` union, `AuthGuard` / `RoleGate` / `LoginForm` /
+`SignupForm` / `PasswordInput` / `PasswordCriteria`, a mock dependency set, SSR
+coverage.
 
-**What does not exist yet.** Signup, password reset, email verification, MFA,
-OAuth, token refresh. The `AuthError` union already *names* the failures those
+**What does not exist yet.** Password reset, email verification (the *flow* —
+signup's `awaitingVerification` terminal is here, but nothing consumes the link
+yet), MFA, OAuth, token refresh. The `AuthError` union already *names* the failures those
 flows produce (`mfa_required`, `email_unverified`, `token_expired`) because the
 wire contract needs them — **a code appearing in the union is not a promise that
 the flow behind it ships.** Check `src/lib/flows/` before telling a user a flow
@@ -145,10 +147,11 @@ discriminated union, not a string. This is the enabling design of the package:
 "wrong password", "confirm your email", "this account is locked" and "now enter
 your second factor" are different outcomes, and the last is not a failure at all.
 
-Eight arms: `invalid_credentials`, `mfa_required`, `email_unverified`,
-`account_locked`, `rate_limited`, `token_expired`, `network`, `unknown`. Each is
-also exported by name (`MfaRequiredError`, `RateLimitedError`, …) for a signature
-that accepts only one, and `AuthErrorCode` is the union of the code strings.
+Nine arms: `invalid_credentials`, `mfa_required`, `email_unverified`,
+`email_taken`, `account_locked`, `rate_limited`, `token_expired`, `network`,
+`unknown`. Each is also exported by name (`MfaRequiredError`,
+`RateLimitedError`, …) for a signature that accepts only one, and
+`AuthErrorCode` is the union of the code strings.
 
 The example below is **exhaustive on purpose**, and this file is compiled by
 `doc-typecheck`. Add a ninth arm to the union and `unhandled(error)` stops
@@ -170,6 +173,9 @@ function whatToOffer(error: AuthError): string {
 		case 'email_unverified':
 			// Resend to the address in the error, not the one in the field.
 			return error.email ? `resend to ${error.email}` : 'resend verification';
+		case 'email_taken':
+			// Signup's characteristic failure, and an offer rather than a scolding.
+			return 'offer to sign in, or to reset the password';
 		case 'account_locked':
 			return error.until ? `locked until ${error.until}` : 'locked';
 		case 'rate_limited':
@@ -343,6 +349,77 @@ const actions: LoginAction[] = [
 
 ---
 
+## THE SIGNUP FLOW
+
+Same shape as sign-in — the form validates, the reducer submits — with one
+structural difference: **two terminal states, both successes.**
+
+```typescript
+import type { SignupStatus } from '@composable-svelte/auth';
+
+const meaning: Record<SignupStatus, string> = {
+	idle: 'editing, or a failure to correct',
+	submitting: 'the request is in flight',
+	succeeded: 'the backend issued a session; hand it to the session store',
+	awaitingVerification: 'the account exists and needs its address confirmed'
+};
+```
+
+A backend requiring email confirmation cannot return a session, and one that
+does not should not be forced into a second round trip, so `deps.signup`
+answers with a union rather than a nullable session — there is no field to
+forget to check:
+
+```typescript
+import type { SignupOutcome } from '@composable-svelte/auth';
+
+function describe(outcome: SignupOutcome): string {
+	return outcome.kind === 'session'
+		? `signed in as ${outcome.session.subject_id}`
+		: `confirmation sent to ${outcome.email}`;
+}
+```
+
+`awaitingVerification` is **not** a failure: `error` stays null, and
+`SignupForm` replaces itself with a terminal panel rather than showing a banner.
+Treating it as an error — or dispatching `sessionEstablished` anyway — signs in
+an account that cannot be used.
+
+### The password policy is length, and nothing else
+
+`passwordCriteria` is derived from the same constants the schema validates
+against, so a checklist cannot tell a user they are done while the form
+disagrees — a test asserts the two agree on every sample.
+
+```typescript
+import {
+	meetsPasswordCriteria,
+	evaluatePasswordCriteria,
+	PASSWORD_MIN_LENGTH
+} from '@composable-svelte/auth';
+
+const ok: boolean = meetsPasswordCriteria('correct-horse-battery');
+const shown = evaluatePasswordCriteria('short'); // [{ criterion, met }, …]
+void PASSWORD_MIN_LENGTH;
+```
+
+No character-class rules, following NIST 800-63B: composition rules push people
+toward `Passw0rd!` — predictable substitutions on a short base — while a longer
+passphrase is stronger and easier to remember. **If you add one, the "asks for
+length and nothing else" test fails**, so the decision gets made deliberately
+rather than by drift.
+
+`signupFormConfig` uses `mode: 'onBlur'`, not `onSubmit` as sign-in does. The
+confirm field is why: a mismatch discovered only at submit means retyping a
+password the user believed they had entered twice. Not `onChange`, which would
+red-flag a password mid-word — `PasswordCriteria` carries the live feedback, and
+it is phrased as a requirement rather than a failure.
+
+> ⚠️ Cross-field rules ran **only at submit** in core until `870c0ca`. If you
+> are looking at an older core, `mode: 'onBlur'` will not surface a `.refine()`.
+
+---
+
 ## COMPONENTS
 
 ### LoginForm
@@ -470,6 +547,13 @@ const custom: AuthDependencies = {
 		void credentials;
 		void signal;
 		return { subject_id: 'u1', display_name: 'Ada', roles: ['member'] } satisfies SessionSnapshot;
+	},
+	async signup(credentials, signal) {
+		void credentials;
+		void signal;
+		// Two outcomes, deliberately: a backend requiring confirmation cannot
+		// return a session, and one that does not should not force a second trip.
+		return { kind: 'verificationRequired', email: 'ada@example.com' };
 	},
 	async fetchLogin(seededUserId: string) {
 		void seededUserId;

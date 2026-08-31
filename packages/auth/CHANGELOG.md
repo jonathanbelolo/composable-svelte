@@ -154,6 +154,47 @@
   heuristics fall back to; the form's own styles no longer reach out of the
   component through a bare `:global` class.
 
+- **`@composable-svelte/auth/flows` gains signup** — `signupReducer`,
+  `createSignupStore`, `signupSchema`, `passwordCriteria`, and `SignupForm` /
+  `PasswordCriteria` beside them.
+
+  **Two terminal states, and both are successes.** A backend that requires email
+  confirmation cannot return a session, and one that does not should not be
+  forced into a second round trip — so `deps.signup` answers with a union,
+  `{ kind: 'session' }` or `{ kind: 'verificationRequired' }`, rather than a
+  nullable session. There is no field to forget to check. `awaitingVerification`
+  leaves `error` null and replaces the form with a terminal panel; dispatching
+  `sessionEstablished` there would sign in an account that cannot be used yet.
+
+  **The password policy is length and nothing else**, following NIST 800-63B.
+  Composition rules push people toward `Passw0rd!` — predictable substitutions
+  on a short base — while a longer passphrase is stronger and easier to
+  remember. `PasswordCriteria` is derived from the same constants the schema
+  validates against, so the checklist cannot say "done" while the form
+  disagrees; a test asserts they agree on every sample, and another fails if a
+  character-class rule is ever added.
+
+  `signupFormConfig` uses `mode: 'onBlur'` where sign-in uses `onSubmit`,
+  because the confirm field is the one place a submit-only rule means retyping a
+  password the user believed they had already entered twice. That is only
+  possible since cross-field validation was fixed in core.
+
+### Changed
+
+- **`AuthError` gained `email_taken`** (8 arms → 9), and `409` maps to it.
+  Signup's characteristic failure previously arrived as `unknown`, and the
+  useful response to it is not a red banner but an offer — sign in instead, or
+  reset the password. A surface cannot make that offer by reading prose.
+
+  It leaks that an address is registered, which is the caller's call: a backend
+  treating account existence as private should answer signup for a known address
+  exactly as for an unknown one, and then this arm never arrives.
+
+  `KNOWN_CODES` in the HTTP adapter is now keyed off `Record<AuthErrorCode, true>`
+  rather than an array with `satisfies AuthErrorCode[]` — that form checks the
+  values are assignable but not that they are exhaustive, so a new arm could
+  have joined the union and simply never been accepted from a backend.
+
 ### Still missing
 
 Signup, password reset, email verification, MFA, OAuth and token refresh. The
