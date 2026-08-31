@@ -2,6 +2,9 @@
 // API Module - Public Exports
 // ============================================================================
 
+// Retry helpers
+export { parseRetryAfter } from './retry.js';
+
 // Error classes
 export {
   APIError,

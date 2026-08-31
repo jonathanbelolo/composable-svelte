@@ -22,6 +22,11 @@
 			"svelte": "./dist/errors/index.js",
 			"default": "./dist/errors/index.js"
 		},
+		"./http": {
+			"types": "./dist/http/index.d.ts",
+			"svelte": "./dist/http/index.js",
+			"default": "./dist/http/index.js"
+		},
 		"./session": {
 			"types": "./dist/session/index.d.ts",
 			"svelte": "./dist/session/index.js",
@@ -96,5 +101,8 @@
 	},
 	"publishConfig": {
 		"access": "public"
+	},
+	"dependencies": {
+		"zod": "^4.1.12"
 	}
 }

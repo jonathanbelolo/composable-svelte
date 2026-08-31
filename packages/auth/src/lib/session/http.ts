@@ -38,7 +38,7 @@ export class MalformedSessionError extends Error {
  * `subject_id` MUST be a string; `roles`, when present, MUST be an array
  * (`subjectFromSession` defaults an absent `roles` to `[]`).
  */
-async function decodeSessionSnapshot(response: Response): Promise<SessionSnapshot> {
+export async function decodeSessionSnapshot(response: Response): Promise<SessionSnapshot> {
 	// The decode belongs inside the guarantee, not before it. `await
 	// response.json()` used to sit at the call sites, so a 200 carrying a
 	// non-JSON body — an HTML proxy error page, an SPA index.html fallback:

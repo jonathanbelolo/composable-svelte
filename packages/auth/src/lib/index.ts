@@ -56,5 +56,8 @@ export {
 	type SessionDependencies
 } from './session/index.js';
 
+// Dependencies — the injected auth I/O every flow runs over
+export type { AuthDependencies, LoginCredentials, AuthErrorBody } from './deps.js';
+
 // Components — thin store consumers (zero async)
 export { AuthGuard, RoleGate } from './components/index.js';
