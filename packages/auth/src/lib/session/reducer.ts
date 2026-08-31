@@ -20,7 +20,7 @@
 
 import type { Reducer } from '@composable-svelte/core';
 import { Effect } from '@composable-svelte/core';
-import { toAuthError } from '../errors/helpers.js';
+import { isAuthError, toAuthError } from '../errors/helpers.js';
 import { anonymousSubject, subjectFromSession } from '../subject/helpers.js';
 import type { AuthError } from '../errors/types.js';
 import type { SessionAction, SessionDependencies, SessionState } from './types.js';
@@ -46,9 +46,26 @@ export function createInitialSessionState(): SessionState {
  */
 function asAuthError(thrown: unknown, fallback: string): AuthError {
 	const error = toAuthError(thrown);
-	return error.message === '' || error.message === 'undefined'
-		? { ...error, message: fallback }
-		: error;
+	return hasWordingOfItsOwn(thrown) ? error : { ...error, message: fallback };
+}
+
+/**
+ * Whether the thrown value said anything a user could read.
+ *
+ * The first version of this asked whether the *wrapped* message was `''` or the
+ * literal string `'undefined'`, which is matching on a magic string and got it
+ * wrong in both directions: a thrown `null` became the word "null" and a thrown
+ * `{}` became "[object Object]", both shown to the user, while an `Error` that
+ * legitimately said "undefined" would have had its message replaced.
+ *
+ * Asking about the input instead is exact. An `Error` with something to say
+ * keeps it, an `AuthError` keeps its own wording, a non-empty string is wording,
+ * and everything else — `null`, `undefined`, `{}`, `''` — gets the fallback.
+ */
+function hasWordingOfItsOwn(thrown: unknown): boolean {
+	if (isAuthError(thrown)) return true;
+	if (thrown instanceof Error) return thrown.message !== '';
+	return typeof thrown === 'string' && thrown !== '';
 }
 
 /**

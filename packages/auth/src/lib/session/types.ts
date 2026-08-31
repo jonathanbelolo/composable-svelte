@@ -113,6 +113,18 @@ export type SessionAction =
 	 * Optional, and only about presentation: it moves the status to `loggingIn`
 	 * so `AuthGuard` renders its pending branch while the flow works. A flow
 	 * that owns its own busy state does not need to send it.
+	 *
+	 * **A flow that sends it owns getting back out.** Success is
+	 * `sessionEstablished`; failure is `loginFailed` carrying the epoch the store
+	 * is currently holding:
+	 *
+	 * ```ts
+	 * store.dispatch({ type: 'loginFailed', error, epoch: store.state.epoch });
+	 * ```
+	 *
+	 * Reading the epoch at dispatch is not racy — dispatch is synchronous, so
+	 * nothing can bump it in between. Without one of the two, the session sits in
+	 * `loggingIn` and `AuthGuard` shows a pending state forever.
 	 */
 	| { type: 'loginStarted' };
 

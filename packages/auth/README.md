@@ -56,7 +56,7 @@ session.dispatch({ type: 'logout' });
 
 <AuthGuard store={session} onAnonymous={() => nav.dispatch({ type: 'navigate', to: '/login' })}>
   {#snippet pending()}<p>Loading…</p>{/snippet}
-  {#snippet fallback({ error })}<p>Please sign in. {error ?? ''}</p>{/snippet}
+  {#snippet fallback({ error })}<p>Please sign in. {error?.message ?? ''}</p>{/snippet}
 
   <RoleGate store={session} roles={['admin']}>
     <AdminPanel />
@@ -84,7 +84,8 @@ falls to anonymous":
   account switch, a logout — children stay rendered (the snippet receives
   `isRevalidating: true`); the pending snippet shows only when there is no
   authenticated subject to keep showing. `AuthGuard`'s `fallback` receives
-  `{ error }`, which is where a failed login surfaces.
+  `{ error }` — an {@link AuthError} or `null`, so a sign-in surface can branch
+  on `error.code` rather than read a sentence.
 - **`RoleGate` distinguishes "denied" from "not yet known".** Until the
   session resolves it renders `pending` (or nothing), never `fallback` — "not
   authorized" is a claim about a resolved session.

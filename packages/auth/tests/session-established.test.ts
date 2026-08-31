@@ -160,3 +160,61 @@ describe('a flow announcing that it has started', () => {
 		});
 	});
 });
+
+describe('a flow whose sign-in fails', () => {
+	it('can hand the failure back with the epoch it is holding', async () => {
+		// The counterpart to `sessionEstablished`, and the reason `loginStarted`
+		// is documented with it: a flow that moved the session into `loggingIn`
+		// must be able to move it out again. `loginFailed` is that path, and it
+		// needs the current epoch — which is not racy, because dispatch is
+		// synchronous and nothing can bump the epoch in between.
+		const store = makeStore(mockDeps());
+
+		await store.send({ type: 'loginStarted' }, (state) => {
+			expect(state.status).toBe('loggingIn');
+		});
+
+		await store.send(
+			{
+				type: 'loginFailed',
+				error: { code: 'invalid_credentials', message: 'Wrong password.' },
+				epoch: store.state.epoch
+			},
+			(state) => {
+				expect(state.status).toBe('loginFailed');
+				expect(state.error?.code).toBe('invalid_credentials');
+			}
+		);
+
+		store.assertNoPendingActions();
+	});
+
+	it('leaves an already-authenticated user signed in when a re-auth fails', async () => {
+		// Same rule the seeded `login` path follows: a failed re-authentication
+		// must not sign out the session the user already had.
+		const store = makeStore(mockDeps(), {
+			status: 'authenticated',
+			subject: { kind: 'authenticated', id: 'u1', attributes: { roles: [] } },
+			error: null,
+			epoch: 4
+		});
+
+		await store.send({ type: 'loginStarted' }, (state) => {
+			expect(state.subject.kind, 'the subject must survive the transition').toBe(
+				'authenticated'
+			);
+		});
+
+		await store.send(
+			{
+				type: 'loginFailed',
+				error: { code: 'network', message: 'offline' },
+				epoch: store.state.epoch
+			},
+			(state) => {
+				expect(state.status).toBe('authenticated');
+				expect(state.error?.code).toBe('network');
+			}
+		);
+	});
+});

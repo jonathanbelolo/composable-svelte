@@ -50,8 +50,18 @@ const deps = (): SessionDependencies => ({
 	fetchSession: vi.fn(async () => session)
 });
 
-/** Every member of the `SessionAction` union, so the sweep below is total. */
-const ALL_ACTIONS: SessionAction[] = [
+/**
+ * Every member of the `SessionAction` union, so the sweep below is total.
+ *
+ * The comment above used to be the only thing making that true, and it stopped
+ * being true the moment `sessionEstablished` and `loginStarted` were added — a
+ * union can grow without any array literal noticing, so this list silently
+ * covered seven of nine arms while still claiming to be exhaustive.
+ *
+ * `satisfies` keeps the literal `type`s, and `Uncovered` below turns the claim
+ * into a compile error naming whatever is missing.
+ */
+const ALL_ACTIONS = [
 	{ type: 'resolveSession' },
 	{ type: 'sessionResolved', session: null, epoch: 0 },
 	{ type: 'sessionResolved', session, epoch: 0 },
@@ -60,8 +70,21 @@ const ALL_ACTIONS: SessionAction[] = [
 	{ type: 'loginSucceeded', session, epoch: 0 },
 	{ type: 'loginFailed', error: { code: 'invalid_credentials', message: 'nope' }, epoch: 0 },
 	{ type: 'logout' },
-	{ type: 'loggedOut', epoch: 0 }
-];
+	{ type: 'loggedOut', epoch: 0 },
+	{ type: 'loginStarted' },
+	{ type: 'sessionEstablished', session }
+] satisfies SessionAction[];
+
+type Uncovered = Exclude<SessionAction['type'], (typeof ALL_ACTIONS)[number]['type']>;
+
+/**
+ * Fails to compile when a `SessionAction` arm is missing from `ALL_ACTIONS`,
+ * and the error names it. `true` is assignable only when nothing is uncovered.
+ */
+const _everyActionIsSwept: [Uncovered] extends [never]
+	? true
+	: ['SessionAction arms missing from ALL_ACTIONS:', Uncovered] = true;
+void _everyActionIsSwept;
 
 /** Drive the reducer into a genuine resolved-anonymous state. */
 function anonymousState(): SessionState {

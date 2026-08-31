@@ -44,9 +44,25 @@ describe('wrapping what a dependency throws', () => {
 	});
 
 	it('reads the TypeError fetch throws as network', () => {
-		// `fetch` rejects with TypeError for offline, DNS, TLS and CORS. There is
-		// no status because there was no response.
+		// What Chrome, Firefox, Safari and undici each say when the request never
+		// reached a server.
 		expect(toAuthError(new TypeError('Failed to fetch')).code).toBe('network');
+		expect(toAuthError(new TypeError('Load failed')).code).toBe('network');
+		expect(toAuthError(new TypeError('fetch failed')).code).toBe('network');
+		expect(
+			toAuthError(new TypeError('NetworkError when attempting to fetch resource.')).code
+		).toBe('network');
+	});
+
+	it('does not read a bug in our own code as a network failure', () => {
+		// A null-dereference inside an injected dependency is a TypeError too.
+		// Calling it `network` tells the developer their crash is a connectivity
+		// problem and tells the user to retry something that will fail
+		// identically forever — `retryDelaySeconds` returns 0 for `network`.
+		const bug = new TypeError("Cannot read properties of undefined (reading 'token')");
+
+		expect(toAuthError(bug).code).toBe('unknown');
+		expect(retryDelaySeconds(toAuthError(bug)), 'an unknown failure must not invite a retry loop').toBeNull();
 	});
 
 	it('keeps the message of an ordinary Error', () => {
@@ -73,6 +89,36 @@ describe('recognising our own errors', () => {
 		const roundTripped = JSON.parse(JSON.stringify(error));
 
 		expect(isAuthError(roundTripped)).toBe(true);
+	});
+
+	it('every arm comes back from JSON unchanged, fields and all', () => {
+		// Identity surviving is not enough — the *fields* have to survive too.
+		// `until` was a `Date`, which `structuredClone` preserves and
+		// `JSON.stringify` turns into a string. Core hydrates SSR state with
+		// JSON (`ssr/serialize.ts`), so a consumer calling `until.toISOString()`
+		// after hydration got a TypeError from code that typechecked.
+		//
+		// One sample per arm, so a new arm carrying a `Date`, a `Map`, a `Set` or
+		// an `undefined`-valued key fails here rather than in someone's browser.
+		const everyArm: AuthError[] = [
+			{ code: 'invalid_credentials', message: 'no' },
+			{ code: 'mfa_required', message: 'no', challengeId: 'c1', methods: ['totp'] },
+			{ code: 'email_unverified', message: 'no', email: 'a@b.c' },
+			{ code: 'account_locked', message: 'no', until: '2026-01-01T00:00:00.000Z' },
+			{ code: 'rate_limited', message: 'no', retryAfterSeconds: 30 },
+			{ code: 'token_expired', message: 'no' },
+			{ code: 'network', message: 'no' },
+			{ code: 'unknown', message: 'no', status: 500 }
+		];
+
+		for (const arm of everyArm) {
+			expect(JSON.parse(JSON.stringify(arm)), `${arm.code} did not survive JSON`).toEqual(arm);
+		}
+
+		// Non-vacuity: the comparison above must be capable of failing.
+		expect(JSON.parse(JSON.stringify({ until: new Date(0) }))).not.toEqual({
+			until: new Date(0)
+		});
 	});
 
 	it('rejects things that merely look adjacent', () => {

@@ -27,8 +27,20 @@ export function toAuthError(thrown: unknown): AuthError {
 	}
 
 	// `fetch` rejects with a TypeError for every transport failure — offline,
-	// DNS, TLS, CORS. There is no status because there was no response.
-	if (thrown instanceof TypeError) {
+	// DNS, TLS, CORS — but so does every null-dereference in the dependency
+	// itself. Classifying all of them as `network` told a developer their
+	// `Cannot read properties of undefined` was a connectivity problem, and told
+	// the user to retry something that will fail identically forever.
+	//
+	// So the message has to earn it. The four strings below are what Chrome,
+	// Firefox, Safari and undici produce for a transport failure; anything else
+	// is `unknown`, which is the safe way to be wrong — it claims nothing about
+	// the cause and offers no retry.
+	//
+	// This is a heuristic and it is temporary. A dependency that knows it was
+	// doing I/O should report `{ code: 'network' }` itself, which
+	// `toAuthError` passes straight through; the HTTP adapter will.
+	if (thrown instanceof TypeError && looksLikeTransportFailure(thrown.message)) {
 		return { code: 'network', message: thrown.message };
 	}
 
@@ -39,12 +51,22 @@ export function toAuthError(thrown: unknown): AuthError {
 	return { code: 'unknown', message: String(thrown) };
 }
 
+/** What the engines say when `fetch` never reached a server. */
+function looksLikeTransportFailure(message: string): boolean {
+	return /failed to fetch|networkerror|load failed|fetch failed/i.test(message);
+}
+
 /**
  * Whether a value is one of ours.
  *
  * Structural, not `instanceof`: these are plain objects so they survive
- * `structuredClone`, SSR serialisation and a `postMessage` boundary. A class
- * would not.
+ * `structuredClone`, `JSON` round-tripping and a `postMessage` boundary. A class
+ * would survive none of the three.
+ *
+ * JSON is the one that constrains the union's *fields*, not just its identity —
+ * core hydrates SSR state with `JSON.stringify`/`parse`, which silently turns a
+ * `Date` into a string while the type still claims `Date`. So every field here
+ * is a JSON primitive, and `auth-error.test.ts` round-trips all eight arms.
  */
 export function isAuthError(value: unknown): value is AuthError {
 	if (typeof value !== 'object' || value === null) return false;

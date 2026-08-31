@@ -53,8 +53,17 @@ export interface EmailUnverifiedError {
 export interface AccountLockedError {
 	code: 'account_locked';
 	message: string;
-	/** When the lock lifts, if the backend says. Absent means indefinite. */
-	until?: Date | undefined;
+	/**
+	 * When the lock lifts, as an ISO 8601 string. Absent means indefinite.
+	 *
+	 * A string rather than a `Date`, because this crosses SSR hydration and core
+	 * serialises state with `JSON.stringify` (`ssr/serialize.ts`). A `Date`
+	 * survives `structuredClone` and does *not* survive JSON — it arrives on the
+	 * client as a string while the type still says `Date`, so
+	 * `error.until.toISOString()` typechecks and throws. Every field in this
+	 * union is a JSON primitive for that reason.
+	 */
+	until?: string | undefined;
 }
 
 /** Too many requests. `retryAfterSeconds` comes from `Retry-After` when sent. */
