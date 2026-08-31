@@ -9,6 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Cross-field validation now runs outside `onSubmit`.** Per-field validation
+  did `schema.shape[field].safeParse(value)` — one sub-schema, one value. A
+  `.refine()` lives in the parent object's checks, so it was never in scope:
+  `shape.confirmPassword.safeParse('does-not-match')` returns success, and a
+  "passwords must match" rule was invisible in `onBlur`, `onChange` and `all`.
+  It fired only when the whole schema was parsed, at submit.
+
+  Three consequences, all of them visible to a user. The mismatch appeared only
+  after a submit. Typing one character into the confirm field cleared it, and
+  nothing could put it back before the next submit. And fixing the *other*
+  field left the message on screen saying two values did not match when they
+  now did.
+
+  Per-field validation parses the whole schema and takes the issues for the
+  field being validated. One asymmetry is deliberate: a pass may **clear** an
+  error on any field the parse exonerates, but only **sets** one on the field
+  being validated — so fixing `password` clears a stale message from
+  `confirmPassword` without flagging fields the user has not reached.
+
+  This also deletes the `(schema as any).shape` cast, and with it a silent
+  failure mode: when `.shape` was absent the lookup yielded `undefined`, the
+  branch was skipped, and every field validated as clean with no error and no
+  warning.
+
+  **How it survived:** not a missing review — `form.reducer.ts` carries one — but
+  a combinatorial gap. The suite has two axes, schema kind and validation mode,
+  and covered three of the four cells. The single cross-field test avoided the
+  defect on every axis at once: `path: []` rather than a field path, `onSubmit`
+  so per-field validation never ran, pre-populated data so `fieldChanged` never
+  fired, and one assertion so nothing checked that a fixed error cleared. Four
+  tests now occupy the empty cell, each mutation-verified.
+
+- **`formErrors` is cleared by a successful validation.** It was written only on
+  failure and cleared only by `formReset`, so a form-level message outlived the
+  validation that disproved it and stayed for the life of the form.
+
 - **`TestStore` now models cancellation.** Its `Cancellable` case ran
   `effect.execute(dispatch)` with no `AbortController`, no in-flight registry
   and no dispatch gating, so re-registering an id did not cancel the effect

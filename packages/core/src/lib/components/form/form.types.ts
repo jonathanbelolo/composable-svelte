@@ -264,7 +264,24 @@ export interface FormConfig<T extends Record<string, any>> {
 }
 
 /**
- * Validation mode options.
+ * When fields are validated.
+ *
+ * - `onSubmit` — only when the form is submitted. The whole schema is parsed at
+ *   once, so every rule applies, cross-field ones included.
+ * - `onBlur` — additionally when a field loses focus.
+ * - `onChange` — additionally as it is edited, debounced by `debounceMs`.
+ * - `all` — both `onBlur` and `onChange`.
+ *
+ * The three per-field modes parse the **whole schema** and take the issues for
+ * the field being validated, so a `.refine()` spanning two fields is live in
+ * all of them. They were once documented by nothing at all, and validated one
+ * sub-schema in isolation, which made every cross-field rule invisible outside
+ * `onSubmit`.
+ *
+ * One asymmetry is deliberate: a per-field pass may **clear** an error on any
+ * field the parse now exonerates, but only ever **sets** one on the field being
+ * validated. Editing `password` therefore clears a stale "passwords must match"
+ * from `confirmPassword` without flagging fields the user has not reached yet.
  */
 export type ValidationMode = 'onBlur' | 'onChange' | 'onSubmit' | 'all';
 

@@ -629,6 +629,181 @@ describe('Cross-Field Validation', () => {
 		// Check form-level error
 		expect(store.state.formErrors).toEqual(['Passwords do not match']);
 	});
+
+	// ============================================================
+	// The empty cell in the matrix.
+	//
+	// The test above avoids this defect on every axis at once: `path: []`, so
+	// field routing is never exercised; `mode: 'onSubmit'`, so per-field
+	// validation never runs; pre-populated data, so `fieldChanged` never fires;
+	// and one submit with one assertion, so nothing checks that a fixed error
+	// clears. Cross-field rules were therefore live only at submit, and nothing
+	// said so.
+	//
+	// These use `path: ['confirmPassword']` and a per-field mode, which is what
+	// `examples/registration-form` ships.
+	// ============================================================
+
+	const matchSchema = z
+		.object({
+			password: z.string().min(8, 'Password must be at least 8 characters'),
+			confirmPassword: z.string()
+		})
+		.refine((data) => data.password === data.confirmPassword, {
+			message: 'Passwords do not match',
+			path: ['confirmPassword']
+		});
+
+	type MatchData = z.infer<typeof matchSchema>;
+
+	const matchConfig = (mode: 'all' | 'onBlur'): FormConfig<MatchData> => ({
+		schema: matchSchema,
+		initialData: { password: '', confirmPassword: '' },
+		mode,
+		debounceMs: 0,
+		onSubmit: vi.fn(async () => {})
+	});
+
+	function matchStore(data: MatchData, mode: 'all' | 'onBlur' = 'all') {
+		const config = matchConfig(mode);
+		return createTestStore({
+			initialState: createInitialFormState(config, data),
+			reducer: createFormReducer(config),
+			dependencies: {}
+		});
+	}
+
+	it('runs a cross-field rule on blur, not only on submit', async () => {
+		// Per-field validation used to parse `schema.shape[field]` against that
+		// one value. A `.refine()` lives in the parent object's checks, so
+		// `shape.confirmPassword.safeParse('mismatch')` returns success and the
+		// rule was invisible outside `onSubmit`.
+		const store = matchStore({ password: 'longenough', confirmPassword: 'nope' });
+
+		await store.send({ type: 'fieldBlurred', field: 'confirmPassword' });
+		await store.receive({ type: 'fieldValidationStarted', field: 'confirmPassword' });
+		await store.receive(
+			{ type: 'fieldValidationCompleted', field: 'confirmPassword', error: 'Passwords do not match' },
+			(state) => {
+				expect(state.fields.confirmPassword.error).toBe('Passwords do not match');
+			}
+		);
+
+		store.assertNoPendingActions();
+	});
+
+	it('re-checks on edit rather than clearing blindly', async () => {
+		// `fieldChanged` clears the error for immediate feedback, which is right.
+		// What was wrong is that nothing could put it back: with the rule
+		// invisible per-field, a mismatch could only reappear at the next submit.
+		const store = matchStore({ password: 'longenough', confirmPassword: 'nope' });
+
+		// No assertion on the intermediate cleared state: `debounceMs: 0` means the
+		// whole validation completes before `send`'s callback runs. What matters is
+		// that the verdict comes back at all.
+		await store.send({ type: 'fieldChanged', field: 'confirmPassword', value: 'nopr' });
+		await store.receive({ type: 'fieldValidationStarted', field: 'confirmPassword' });
+		await store.receive(
+			{ type: 'fieldValidationCompleted', field: 'confirmPassword', error: 'Passwords do not match' },
+			(state) => {
+				expect(state.fields.confirmPassword.error, 'the rule never came back').toBe(
+					'Passwords do not match'
+				);
+			}
+		);
+
+		store.assertNoPendingActions();
+	});
+
+	it('clears a now-false error from the field the user is not editing', async () => {
+		// The worst of the four, because the message was actively lying. Fix
+		// `password` so the two match and `confirmPassword` went on saying
+		// "Passwords do not match" until it was touched or the form resubmitted.
+		// Both values are long enough on their own, so the only rule in play is the
+		// cross-field one — otherwise this would also be asserting `min(8)`.
+		const store = matchStore({ password: 'longenough', confirmPassword: 'different' });
+
+		await store.send({ type: 'fieldBlurred', field: 'confirmPassword' });
+		await store.receive({ type: 'fieldValidationStarted', field: 'confirmPassword' });
+		await store.receive({
+			type: 'fieldValidationCompleted',
+			field: 'confirmPassword',
+			error: 'Passwords do not match'
+		});
+
+		// Now make them match by editing the OTHER field.
+		await store.send({ type: 'fieldChanged', field: 'password', value: 'different' });
+		await store.receive({ type: 'fieldValidationStarted', field: 'password' });
+		await store.receive({ type: 'fieldValidationCompleted', field: 'password', error: null });
+		await store.receive(
+			{ type: 'fieldValidationCompleted', field: 'confirmPassword', error: null },
+			(state) => {
+				expect(state.fields.confirmPassword.error, 'a stale, false error survived').toBe(null);
+			}
+		);
+
+		store.assertNoPendingActions();
+	});
+
+	it('never flags a field the user has not reached', async () => {
+		// The arm that makes the clause above safe. A per-field pass parses the
+		// whole schema, so it *knows* `password` is too short — and must not say
+		// so while the user is somewhere else entirely.
+		// They match, so the cross-field rule passes and `password` fails on its
+		// own `min(8)` — which the parse sees and must decline to report here.
+		const store = matchStore({ password: 'short', confirmPassword: 'short' });
+
+		await store.send({ type: 'fieldBlurred', field: 'confirmPassword' });
+		await store.receive({ type: 'fieldValidationStarted', field: 'confirmPassword' });
+		await store.receive(
+			{ type: 'fieldValidationCompleted', field: 'confirmPassword', error: null },
+			(state) => {
+				expect(state.fields.password.error, 'flagged an untouched field').toBe(null);
+			}
+		);
+
+		store.assertNoPendingActions();
+	});
+
+	it('clears form-level errors once validation succeeds', async () => {
+		// `formErrors` was written only on failure and cleared only by
+		// `formReset`, so a form-level message outlived the validation that
+		// disproved it and stayed for the life of the form.
+		const config: FormConfig<MatchData> = {
+			schema: z
+				.object({ password: z.string(), confirmPassword: z.string() })
+				.refine((data) => data.password === data.confirmPassword, {
+					message: 'Passwords do not match',
+					path: []
+				}) as unknown as FormConfig<MatchData>['schema'],
+			initialData: { password: '', confirmPassword: '' },
+			mode: 'onSubmit',
+			onSubmit: vi.fn(async () => {})
+		};
+		const store = createTestStore({
+			initialState: createInitialFormState(config, { password: 'a', confirmPassword: 'b' }),
+			reducer: createFormReducer(config),
+			dependencies: {}
+		});
+
+		await store.send({ type: 'submitTriggered' });
+		await store.receive({ type: 'formValidationStarted' });
+		await store.receive({ type: 'formValidationCompleted' }, (state) => {
+			expect(state.formErrors).toEqual(['Passwords do not match']);
+		});
+
+		// Correct it and submit again.
+		await store.send({ type: 'fieldChanged', field: 'confirmPassword', value: 'a' });
+		await store.send({ type: 'submitTriggered' });
+		await store.receive({ type: 'formValidationStarted' });
+		await store.receive({ type: 'formValidationCompleted' }, (state) => {
+			expect(state.formErrors, 'a disproved form error survived').toEqual([]);
+		});
+
+		await store.receive({ type: 'submissionStarted' });
+		await store.receive({ type: 'submissionSucceeded' });
+		store.assertNoPendingActions();
+	});
 });
 
 // ================================================================

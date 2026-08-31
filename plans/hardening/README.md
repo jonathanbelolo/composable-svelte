@@ -234,6 +234,22 @@ Worth remembering how the sweep went wrong, twice:
   runtime audit caught that. The guard reads the markup with `<script>` and
   `<style>` stripped for exactly this reason.
 
+### A field error keyed by `path[0]` — OPEN, and a design limit rather than a bug
+
+`form.reducer.ts` routes a Zod issue to a field with `issue.path[0]`, so a
+nested object's error collapses onto its top-level key: an issue at
+`['address','zip']` lands on `address`. Both the submit path and the per-field
+path do this.
+
+It is not obviously wrong — `FormState.fields` is keyed by top-level name, so
+there is nowhere else for it to go — but it means a form over a nested schema
+cannot show the error beside the input that caused it, and the message it does
+show may name a field the user cannot see. Fixing it properly means keying
+`fields` by path, which changes the state shape and every consumer's reads.
+
+Found while fixing the cross-field defects above; deliberately left, because it
+is a different change with a different blast radius.
+
 ## S8. Documentation — OPEN
 
 Several of these were closed by the documentation sweep; the rest stand.

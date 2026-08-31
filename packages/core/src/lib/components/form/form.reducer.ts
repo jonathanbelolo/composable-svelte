@@ -6,7 +6,7 @@
  * @packageDocumentation
  */
 
-import { ZodError } from 'zod';
+import { ZodError, type ZodIssue } from 'zod';
 import { Effect } from '../../effect.js';
 import type {
 	FormState,
@@ -200,24 +200,36 @@ export function createFormReducer<T extends Record<string, any>>(
 							let error: string | null = null;
 							const warnings: string[] = [];
 
-							// 1. Zod schema validation for this field
-							// Validate just this specific field using schema.shape
+							// 1. Zod validation.
+							//
+							// The WHOLE schema against the WHOLE data, then the issues for
+							// this field. It used to be `schema.shape[field].safeParse(value)`
+							// — one sub-schema, one value — which cannot see a rule that
+							// spans two fields. A `.refine()` lives in the parent object's
+							// checks, so `schema.shape.confirmPassword.safeParse('mismatch')`
+							// returns success and "passwords must match" was invisible to
+							// every mode except `onSubmit`.
+							//
+							// Parsing the whole object is also what deletes the `as any`
+							// cast this used to need: `.shape` exists only on a ZodObject,
+							// and when it was absent — a non-object schema, or Zod 3, where
+							// `.refine()` returned a `ZodEffects` with no `.shape` — the
+							// lookup yielded `undefined`, the `if` was skipped, and every
+							// field silently validated as clean. A guard that cannot fail is
+							// worse than none.
+							let issues: readonly ZodIssue[] = [];
 							try {
-								// Access shape safely - it only exists on ZodObject
-								const fieldSchema = (schema as any).shape?.[field];
-								if (fieldSchema) {
-									const result = fieldSchema.safeParse(fieldValue);
-
-									if (!result.success) {
-										// Extract first error message from Zod (use issues, not errors)
-										const firstIssue = result.error?.issues?.[0];
-										error = firstIssue?.message || 'Validation failed';
-									}
-								}
+								const result = schema.safeParse(state.data);
+								if (!result.success) issues = result.error.issues;
 							} catch (e) {
 								// Fallback for unexpected errors
 								error = e instanceof Error ? e.message : 'Validation error';
 							}
+
+							const issueFor = (name: keyof T): string | null =>
+								issues.find((issue) => issue.path[0] === name)?.message ?? null;
+
+							if (error === null) error = issueFor(field);
 
 							// 2. Async validator (if provided and Zod validation passed)
 							// CRITICAL FIX: Wrap in try/catch to handle network errors
@@ -237,6 +249,30 @@ export function createFormReducer<T extends Record<string, any>>(
 								error,
 								warnings
 							});
+
+							// 3. Refresh siblings that the full parse has just exonerated.
+							//
+							// Cross-field rules make one field's edit change another field's
+							// verdict. Fix `password` to match and `confirmPassword` was
+							// still showing "Passwords do not match" — true when it was
+							// written, false by the time it was read, and it stayed until
+							// the user touched that field or submitted again.
+							//
+							// The rule, and why this is safe: an error may DISAPPEAR from
+							// any field, but may only APPEAR on the field being validated.
+							// Nothing here flags a field the user has not touched.
+							for (const name of Object.keys(state.fields) as (keyof T)[]) {
+								if (name === field) continue;
+								if (state.fields[name]?.error == null) continue;
+								if (issueFor(name) !== null) continue;
+
+								dispatch({
+									type: 'fieldValidationCompleted',
+									field: name,
+									error: null,
+									warnings: []
+								});
+							}
 						}
 					)
 				];
@@ -361,9 +397,14 @@ export function createFormReducer<T extends Record<string, any>>(
 					];
 				}
 
-				// No errors - proceed to submission
+				// No errors - proceed to submission.
+				//
+				// `formErrors: []` is not cosmetic. Nothing else clears it but
+				// `formReset`, so a form-level error survived the validation that
+				// disproved it: fix the thing it complained about, submit again
+				// successfully, and the message was still on screen.
 				return [
-					{ ...state, isValidating: false },
+					{ ...state, isValidating: false, formErrors: [] },
 					Effect.run(async (dispatch) => {
 						dispatch({ type: 'submissionStarted' });
 					})
