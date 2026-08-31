@@ -83,8 +83,8 @@ function mountForm(deps: SignupDependencies, props: Record<string, unknown> = {}
 		flowStore,
 		sessionActions,
 		email: () => target.querySelector('input[type="email"]') as HTMLInputElement,
-		password: () => inputs().find((i) => i.name === 'new-password')!,
-		confirm: () => inputs().find((i) => i.name === 'confirm-password')!,
+		password: () => inputs().find((i) => i.name === 'password')!,
+		confirm: () => inputs().find((i) => i.name === 'confirmPassword')!,
 		submit: () => target.querySelector('button[type="submit"]') as HTMLButtonElement,
 		banner: () => target.querySelector('[data-error-code]'),
 		described: (field: HTMLInputElement) => {
@@ -169,6 +169,33 @@ describe('the two endings', () => {
 		}
 	});
 
+	it('moves focus to the panel instead of stranding it on a removed button', async () => {
+		// The submit button the user just activated is gone. Without this, focus
+		// falls back to `<body>` and a keyboard user has to tab from the top of
+		// the document to find out what happened.
+		const h = mountForm({
+			signup: vi.fn(async () => ({
+				kind: 'verificationRequired' as const,
+				email: 'grace@example.com'
+			}))
+		});
+
+		try {
+			await fill(h);
+			await userEvent.click(h.submit());
+			await vi.waitFor(() => {
+				flushSync();
+				expect(h.target.textContent).toContain('Check your email');
+			});
+
+			const panel = h.target.querySelector('[role="status"]') as HTMLElement;
+			expect(document.activeElement, 'focus was stranded on <body>').toBe(panel);
+			expect(panel.getAttribute('tabindex'), 'not focusable to begin with').toBe('-1');
+		} finally {
+			h.cleanup();
+		}
+	});
+
 	it('lets a consumer replace the panel entirely', async () => {
 		// The `verification` snippet receives the address, so a consumer can put
 		// a resend button or a route change there instead of prose.
@@ -197,6 +224,51 @@ describe('the two endings', () => {
 			expect(h.target.textContent, 'the default panel rendered as well').not.toContain(
 				'Check your email'
 			);
+		} finally {
+			h.cleanup();
+		}
+	});
+});
+
+describe('the requirements are announced, not just drawn', () => {
+	it('links the criteria list to the password field even while it is valid', async () => {
+		// The defect this replaced: `PasswordInput` applies `aria-describedby`
+		// only when invalid, so routing the list through `errorId` looked wired
+		// and could not be — the field is valid for the whole time the
+		// requirements matter, and the list was announced to nobody.
+		const h = mountForm({ signup: vi.fn() as unknown as SignupDependencies['signup'] });
+
+		try {
+			const described = h.password().getAttribute('aria-describedby');
+			expect(described, 'the field describes nothing while valid').toBeTruthy();
+
+			const list = h.target.querySelector(`#${CSS.escape(described!.split(' ')[0]!)}`);
+			expect(list, '`aria-describedby` points at no element').not.toBeNull();
+			expect(list!.tagName).toBe('UL');
+			expect(list!.textContent).toContain('At least');
+		} finally {
+			h.cleanup();
+		}
+	});
+
+	it('describes the field by both the requirements and the error once invalid', async () => {
+		// Both ids, which is what the attribute is for — the requirements do not
+		// stop being relevant because the value is currently wrong.
+		const h = mountForm({ signup: vi.fn() as unknown as SignupDependencies['signup'] });
+
+		try {
+			await type(h.password(), 'short');
+			h.password().blur();
+			await vi.waitFor(() => {
+				flushSync();
+				expect(h.password().getAttribute('aria-invalid')).toBe('true');
+			});
+
+			const ids = h.password().getAttribute('aria-describedby')!.split(' ');
+			expect(ids.length, 'the requirements were dropped when an error appeared').toBe(2);
+			for (const id of ids) {
+				expect(h.target.querySelector(`#${CSS.escape(id)}`), `no element for ${id}`).not.toBeNull();
+			}
 		} finally {
 			h.cleanup();
 		}

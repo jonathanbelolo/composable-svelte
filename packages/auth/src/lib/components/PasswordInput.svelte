@@ -32,9 +32,21 @@
 		/** Wired to `oninput`, not `onchange`, so a strength meter can react per keystroke. */
 		oninput: (event: Event & { currentTarget: HTMLInputElement }) => void;
 		onblur?: (() => void) | undefined;
-		/** Marks the field invalid and points `aria-describedby` at `errorId`. */
+		/** Marks the field invalid and adds `errorId` to `aria-describedby`. */
 		invalid?: boolean | undefined;
 		errorId?: string | undefined;
+		/**
+		 * Something that describes the field whether or not it is valid — a
+		 * requirements list, a hint.
+		 *
+		 * Separate from `errorId`, which applies only while invalid. Routing a
+		 * requirements list through `errorId` looks like it works and cannot: the
+		 * field is valid for the whole time the requirements matter, so
+		 * `aria-describedby` is never set and the list is announced to nobody.
+		 * When both are present both ids are used, which is what the attribute is
+		 * for.
+		 */
+		describedBy?: string | undefined;
 		/** `current-password` when signing in, `new-password` when choosing one. */
 		autocomplete?: 'current-password' | 'new-password' | undefined;
 		placeholder?: string | undefined;
@@ -54,6 +66,7 @@
 		onblur,
 		invalid = false,
 		errorId,
+		describedBy,
 		autocomplete = 'current-password',
 		placeholder,
 		disabled = false,
@@ -85,7 +98,9 @@
 		class="password-input__field"
 		class:password-input__field--invalid={invalid}
 		aria-invalid={invalid ? 'true' : undefined}
-		aria-describedby={invalid && errorId ? errorId : undefined}
+		aria-describedby={[describedBy, invalid && errorId ? errorId : null]
+			.filter(Boolean)
+			.join(' ') || undefined}
 	/>
 
 	<!--

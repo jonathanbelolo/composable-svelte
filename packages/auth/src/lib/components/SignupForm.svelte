@@ -110,6 +110,24 @@
 	/** Whether this component has already reported the outcome it is looking at. */
 	let handedOver = false;
 
+	/**
+	 * The terminal panel, focused when it replaces the form.
+	 *
+	 * The submit button the user just activated is removed from the document,
+	 * which leaves focus on `<body>` — a keyboard user then has to tab from the
+	 * top of the page to discover what happened. Moving focus to the panel is the
+	 * usual answer when a view is replaced wholesale.
+	 *
+	 * It does mean some screen readers announce the panel twice: once as the live
+	 * region, once on focus. That is the lesser of the two, and the alternative —
+	 * dropping `aria-live` — leaves a user who is not moved by focus with nothing.
+	 */
+	let verifyPanel = $state<HTMLElement | null>(null);
+
+	$effect(() => {
+		if (status === 'awaitingVerification') verifyPanel?.focus();
+	});
+
 	$effect(() => {
 		const state = flowStore.state;
 
@@ -147,7 +165,13 @@
 				account was created, nothing is wrong, and the form it replaces is
 				gone — so this needs announcing without the urgency of a failure.
 			-->
-			<div class="signup-form__verify" role="status" aria-live="polite">
+			<div
+				bind:this={verifyPanel}
+				class="signup-form__verify"
+				role="status"
+				aria-live="polite"
+				tabindex="-1"
+			>
 				<svelte:element this={`h${headingLevel}`} class="signup-form__title">
 					Check your email
 				</svelte:element>
@@ -215,10 +239,11 @@
 						<label class="signup-form__label" for={passwordId}>{passwordLabel}</label>
 						<PasswordInput
 							id={passwordId}
-							name="new-password"
+							name="password"
 							value={field.value}
 							invalid={!!field.error}
-							errorId={field.error ? passwordErrorId : criteriaId}
+							errorId={passwordErrorId}
+							describedBy={criteriaId}
 							autocomplete="new-password"
 							oninput={(event) =>
 								send({ type: 'fieldChanged', field: 'password', value: event.currentTarget.value })}
@@ -245,7 +270,7 @@
 						<label class="signup-form__label" for={confirmId}>{confirmLabel}</label>
 						<PasswordInput
 							id={confirmId}
-							name="confirm-password"
+							name="confirmPassword"
 							value={field.value}
 							invalid={!!field.error}
 							errorId={confirmErrorId}
@@ -379,6 +404,11 @@
 	.signup-form__error-action:focus-visible {
 		outline: 2px solid hsl(var(--ring, 222.2 84% 4.9%));
 		outline-offset: 2px;
+	}
+
+	.signup-form__verify:focus-visible {
+		outline: 2px solid hsl(var(--ring, 222.2 84% 4.9%));
+		outline-offset: 4px;
 	}
 
 	.signup-form__verify {

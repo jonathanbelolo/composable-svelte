@@ -15,7 +15,9 @@
 	 * unusable with a screen reader — one interruption per character. Each item
 	 * instead carries a visually hidden "Met" / "Not met" that is read when the
 	 * user navigates to the list, which the field points at through
-	 * `aria-describedby`.
+	 * `PasswordInput`'s `describedBy` — *not* its `errorId`, which applies only
+	 * while the field is invalid and would leave the list announced to nobody
+	 * for the whole time the requirements matter.
 	 *
 	 * Pattern A: it animates nothing.
 	 */

@@ -276,6 +276,63 @@ describe('when signup fails', () => {
 	});
 });
 
+describe('state integrity across attempts', () => {
+	it('does not carry a previous outcome into a new attempt', async () => {
+		// Mid-flight, state used to still claim `pendingEmail` from an earlier
+		// signup. A surface rendering the terminal panel on `pendingEmail !== null`
+		// rather than on `status` would show "check your email" during a live
+		// submit.
+		// Held open, so the in-flight state can be observed rather than raced —
+		// a mock that resolves immediately reaches `succeeded` before the
+		// assertion runs.
+		const gate = deferred<{ kind: 'session'; session: SessionSnapshot }>();
+		const store = makeStore({ signup: vi.fn(async () => gate.promise) });
+
+		await store.send({ type: 'verificationRequired', email: 'first@example.com' }, (state) => {
+			expect(state.pendingEmail).toBe('first@example.com');
+		});
+
+		await submit(store, 'second@example.com');
+		await store.receive({ type: 'form' }); // submissionStarted
+		await store.receive({ type: 'form' }, (state) => {
+			expect(state.status).toBe('submitting');
+			expect(state.pendingEmail, 'a stale pending address survived into a new attempt').toBeNull();
+		});
+
+		gate.resolve({ kind: 'session', session });
+		await store.receive({ type: 'signupSucceeded' });
+		store.assertNoPendingActions();
+	});
+
+	it('does not leave a session behind when a later attempt fails', async () => {
+		// `state.session !== null` has to keep meaning "signed in". It stopped
+		// meaning that after a success followed by a failure.
+		const store = makeStore({
+			signup: vi
+				.fn()
+				.mockResolvedValueOnce({ kind: 'session', session })
+				.mockRejectedValueOnce({ code: 'email_taken', message: 'Taken.' })
+		});
+
+		await submit(store);
+		await store.receive({ type: 'form' });
+		await store.receive({ type: 'form' });
+		await store.receive({ type: 'signupSucceeded' }, (state) => {
+			expect(state.session).toEqual(session);
+		});
+
+		await submit(store, 'other@example.com');
+		await store.receive({ type: 'form' });
+		await store.receive({ type: 'form' });
+		await store.receive({ type: 'signupFailed' }, (state) => {
+			expect(state.error?.code).toBe('email_taken');
+			expect(state.session, 'a stale session survived beside a failure').toBeNull();
+		});
+
+		store.assertNoPendingActions();
+	});
+});
+
 describe('a second submit while the first is in flight', () => {
 	it('supersedes rather than races', async () => {
 		const first = deferred<{ kind: 'session'; session: SessionSnapshot }>();

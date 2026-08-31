@@ -102,7 +102,11 @@ export const loginReducer: Reducer<LoginState, LoginAction, LoginDependencies> =
 			};
 
 			return [
-				{ ...cleared, status: 'submitting', error: null },
+				// `session` cleared for the same reason as in the signup flow: a
+				// failure after an earlier success otherwise leaves a stale snapshot
+				// beside the error, and `state.session !== null` stops meaning
+				// "signed in".
+				{ ...cleared, status: 'submitting', error: null, session: null },
 				Effect.batch(
 					formEffect,
 					Effect.cancellable<LoginAction>(LOGIN_EFFECT_ID, async (dispatch, signal) => {

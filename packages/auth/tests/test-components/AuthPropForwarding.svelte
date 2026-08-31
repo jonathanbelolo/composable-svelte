@@ -53,6 +53,7 @@
 		onblur,
 		invalid,
 		errorId,
+		describedBy,
 		autocomplete,
 		placeholder,
 		disabled,
@@ -113,6 +114,7 @@
 		onblur?: () => void;
 		invalid?: boolean;
 		errorId?: string;
+		describedBy?: string;
 		autocomplete?: 'current-password' | 'new-password';
 		placeholder?: string;
 		disabled?: boolean;
@@ -166,6 +168,7 @@
 	{onblur}
 	{invalid}
 	{errorId}
+	{describedBy}
 	{autocomplete}
 	{placeholder}
 	{disabled}

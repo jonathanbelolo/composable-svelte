@@ -103,7 +103,13 @@ export const signupReducer: Reducer<SignupState, SignupAction, SignupDependencie
 			};
 
 			return [
-				{ ...cleared, status: 'submitting', error: null },
+				// `session` and `pendingEmail` are cleared, not carried: a new attempt
+				// invalidates whatever the last one produced. Without this, state
+				// mid-flight still claimed `pendingEmail` from an earlier signup, and
+				// a failure after a success left `session` set — so a headless caller
+				// reading `state.session !== null` would believe it was signed in
+				// while looking at an error.
+				{ ...cleared, status: 'submitting', error: null, session: null, pendingEmail: null },
 				Effect.batch(
 					formEffect,
 					Effect.cancellable<SignupAction>(SIGNUP_EFFECT_ID, async (dispatch, signal) => {
