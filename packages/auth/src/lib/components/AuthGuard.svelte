@@ -24,6 +24,7 @@
 <script lang="ts">
 	import type { Store } from '@composable-svelte/core';
 	import type { Snippet } from 'svelte';
+	import type { AuthError } from '../errors/types.js';
 	import type { SessionAction, SessionState } from '../session/types.js';
 
 	let {
@@ -62,7 +63,7 @@
 		 * Without it `SessionState.error` was unreachable through the package's
 		 * own components.
 		 */
-		fallback?: Snippet<[{ error: string | null }]> | undefined;
+		fallback?: Snippet<[{ error: AuthError | null }]> | undefined;
 		/** Rendered while unresolved / logging in, or while resolving /
 		 * logging out WITHOUT a retained authenticated subject. */
 		pending?: Snippet | undefined;

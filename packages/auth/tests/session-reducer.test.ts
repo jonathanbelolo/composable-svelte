@@ -103,7 +103,10 @@ describe('resolveSession', () => {
 		await store.receive({ type: 'sessionResolveFailed' }, (state) => {
 			expect(state.status).toBe('anonymous');
 			expect(state.subject.kind).toBe('anonymous');
-			expect(state.error).toBe('network down');
+			// A structured failure now, not a string: `toAuthError` reads the
+			// TypeError `fetch` throws as `network`, which is what a caller checks
+			// before offering a retry.
+			expect(state.error?.message).toBe('network down');
 		});
 
 		store.assertNoPendingActions();
@@ -165,7 +168,7 @@ describe('login', () => {
 		await store.receive({ type: 'loginFailed' }, (state) => {
 			expect(state.status).toBe('loginFailed');
 			expect(state.subject.kind).toBe('anonymous');
-			expect(state.error).toBe('Unknown account');
+			expect(state.error?.message).toBe('Unknown account');
 		});
 
 		store.assertNoPendingActions();
@@ -197,7 +200,7 @@ describe('login', () => {
 				expect(state.subject.id).toBe(session.subject_id);
 			}
 			// The failure is still surfaced for the login UI.
-			expect(state.error).toBe('Unknown account');
+			expect(state.error?.message).toBe('Unknown account');
 		});
 
 		store.assertNoPendingActions();
@@ -257,7 +260,7 @@ describe('logout', () => {
 		await store.receive({ type: 'loggedOut' }, (state) => {
 			expect(state.status).toBe('anonymous');
 			expect(state.subject.kind).toBe('anonymous');
-			expect(state.error).toBe('server unreachable');
+			expect(state.error?.message).toBe('server unreachable');
 		});
 
 		store.assertNoPendingActions();

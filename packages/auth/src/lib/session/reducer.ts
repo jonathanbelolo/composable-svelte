@@ -20,7 +20,9 @@
 
 import type { Reducer } from '@composable-svelte/core';
 import { Effect } from '@composable-svelte/core';
+import { toAuthError } from '../errors/helpers.js';
 import { anonymousSubject, subjectFromSession } from '../subject/helpers.js';
+import type { AuthError } from '../errors/types.js';
 import type { SessionAction, SessionDependencies, SessionState } from './types.js';
 
 /** Initial state: nothing known, anonymous subject, epoch 0. */
@@ -33,8 +35,20 @@ export function createInitialSessionState(): SessionState {
 	};
 }
 
-function errorMessage(error: unknown, fallback: string): string {
-	return error instanceof Error ? error.message : fallback;
+/**
+ * Wrap what a dependency threw, keeping a fallback message for the shapeless
+ * case.
+ *
+ * `toAuthError` handles the classification — an abort and a `fetch` TypeError
+ * both become `network`, an `AuthError` a dependency reported deliberately
+ * passes straight through. This only supplies wording when the thrown value had
+ * none of its own, which happens when something non-`Error` is thrown.
+ */
+function asAuthError(thrown: unknown, fallback: string): AuthError {
+	const error = toAuthError(thrown);
+	return error.message === '' || error.message === 'undefined'
+		? { ...error, message: fallback }
+		: error;
 }
 
 /**
@@ -68,7 +82,7 @@ export const sessionReducer: Reducer<SessionState, SessionAction, SessionDepende
 					} catch (error) {
 						dispatch({
 							type: 'sessionResolveFailed',
-							error: errorMessage(error, 'Session resolution failed'),
+							error: asAuthError(error, 'Session resolution failed'),
 							epoch
 						});
 					}
@@ -133,7 +147,7 @@ export const sessionReducer: Reducer<SessionState, SessionAction, SessionDepende
 					} catch (error) {
 						dispatch({
 							type: 'loginFailed',
-							error: errorMessage(error, 'Login failed'),
+							error: asAuthError(error, 'Login failed'),
 							epoch
 						});
 					}
@@ -218,7 +232,7 @@ export const sessionReducer: Reducer<SessionState, SessionAction, SessionDepende
 						// can surface "sign-out may not have reached the server".
 						dispatch({
 							type: 'loggedOut',
-							error: errorMessage(error, 'Logout request failed'),
+							error: asAuthError(error, 'Logout request failed'),
 							epoch
 						});
 					}
@@ -237,6 +251,48 @@ export const sessionReducer: Reducer<SessionState, SessionAction, SessionDepende
 					status: 'anonymous',
 					subject: anonymousSubject,
 					error: action.error ?? null,
+					epoch: state.epoch
+				},
+				Effect.none()
+			];
+		}
+
+		case 'loginStarted': {
+			// Presentation only: a flow outside this store is signing in, and
+			// `AuthGuard` should show its pending branch. Epoch bumps for the same
+			// reason every initiator bumps it — a resolve already in flight must
+			// not land on top of the session this flow is about to establish.
+			//
+			// Refused while `loggingOut` so it cannot resurrect a sign-out that is
+			// already under way; `loggingIn` is idempotent.
+			if (state.status === 'loggingOut' || state.status === 'loggingIn') {
+				return [state, Effect.none()];
+			}
+			return [
+				{ ...state, status: 'loggingIn', error: null, epoch: state.epoch + 1 },
+				Effect.none()
+			];
+		}
+
+		case 'sessionEstablished': {
+			// The handover from a flow that owns its own async: credentials login,
+			// an MFA challenge, an OAuth callback, a magic link. No epoch guard,
+			// because this is not effect feedback from *this* store — the flow is
+			// asserting a result it already has.
+			//
+			// One status is refused. A sign-in resolving after the user has hit
+			// sign-out would otherwise re-authenticate them, and `loggingOut` is
+			// the only window where that is possible. Everything else yields, on
+			// the principle the `login` arm already states: explicit user intent
+			// supersedes a background resolve.
+			if (state.status === 'loggingOut') {
+				return [state, Effect.none()];
+			}
+			return [
+				{
+					status: 'authenticated',
+					subject: subjectFromSession(action.session),
+					error: null,
 					epoch: state.epoch
 				},
 				Effect.none()

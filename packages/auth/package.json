@@ -1,94 +1,99 @@
 {
-  "name": "@composable-svelte/auth",
-  "version": "0.1.1",
-  "description": "Session store, subject helpers, and auth guard components for Composable Svelte - Client half of the DDD identity substrate",
-  "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "sideEffects": false,
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "svelte": "./dist/index.js",
-      "default": "./dist/index.js"
-    },
-    "./subject": {
-      "types": "./dist/subject/index.d.ts",
-      "svelte": "./dist/subject/index.js",
-      "default": "./dist/subject/index.js"
-    },
-    "./session": {
-      "types": "./dist/session/index.d.ts",
-      "svelte": "./dist/session/index.js",
-      "default": "./dist/session/index.js"
-    },
-    "./components": {
-      "types": "./dist/components/index.d.ts",
-      "svelte": "./dist/components/index.js",
-      "default": "./dist/components/index.js"
-    },
-    "./package.json": "./package.json"
-  },
-  "svelte": "./dist/index.js",
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
-  ],
-  "scripts": {
-    "build": "svelte-package -o dist",
-    "typecheck": "tsc --noEmit",
-    "check": "svelte-check --tsconfig ./tsconfig.test.json --fail-on-warnings",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:ui": "vitest --ui",
-    "test:coverage": "vitest run --coverage",
-    "prepublishOnly": "pnpm run build && pnpm run typecheck && pnpm run check",
-    "prepack": "pnpm run build"
-  },
-  "keywords": [
-    "svelte",
-    "svelte5",
-    "auth",
-    "authentication",
-    "session",
-    "authorization",
-    "roles",
-    "auth-guard",
-    "composable-architecture",
-    "typescript"
-  ],
-  "author": "Jonathan Belolo",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/jbelolo/composable-svelte.git",
-    "directory": "packages/auth"
-  },
-  "homepage": "https://github.com/jbelolo/composable-svelte#readme",
-  "bugs": {
-    "url": "https://github.com/jbelolo/composable-svelte/issues"
-  },
-  "peerDependencies": {
-    "@composable-svelte/core": "^0.11.0",
-    "svelte": "^5.0.0"
-  },
-  "devDependencies": {
-    "@composable-svelte/core": "workspace:*",
-    "@sveltejs/package": "^2.5.4",
-    "@sveltejs/vite-plugin-svelte": "^6.2.1",
-    "@types/node": "^20.0.0",
-    "@vitest/browser-playwright": "^4.0.7",
-    "@vitest/coverage-v8": "^4.0.7",
-    "@vitest/ui": "^4.0.7",
-    "playwright": "^1.56.1",
-    "svelte": "^5.0.0",
-    "svelte-check": "^4.3.3",
-    "typescript": "^5.5.4",
-    "vite": "^6.4.1",
-    "vitest": "^4.0.7"
-  },
-  "publishConfig": {
-    "access": "public"
-  }
+	"name": "@composable-svelte/auth",
+	"version": "0.1.1",
+	"description": "Session store, subject helpers, and auth guard components for Composable Svelte - Client half of the DDD identity substrate",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"sideEffects": false,
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"svelte": "./dist/index.js",
+			"default": "./dist/index.js"
+		},
+		"./subject": {
+			"types": "./dist/subject/index.d.ts",
+			"svelte": "./dist/subject/index.js",
+			"default": "./dist/subject/index.js"
+		},
+		"./errors": {
+			"types": "./dist/errors/index.d.ts",
+			"svelte": "./dist/errors/index.js",
+			"default": "./dist/errors/index.js"
+		},
+		"./session": {
+			"types": "./dist/session/index.d.ts",
+			"svelte": "./dist/session/index.js",
+			"default": "./dist/session/index.js"
+		},
+		"./components": {
+			"types": "./dist/components/index.d.ts",
+			"svelte": "./dist/components/index.js",
+			"default": "./dist/components/index.js"
+		},
+		"./package.json": "./package.json"
+	},
+	"svelte": "./dist/index.js",
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
+	"scripts": {
+		"build": "svelte-package -o dist",
+		"typecheck": "tsc --noEmit",
+		"check": "svelte-check --tsconfig ./tsconfig.test.json --fail-on-warnings",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"test:ui": "vitest --ui",
+		"test:coverage": "vitest run --coverage",
+		"prepublishOnly": "pnpm run build && pnpm run typecheck && pnpm run check",
+		"prepack": "pnpm run build"
+	},
+	"keywords": [
+		"svelte",
+		"svelte5",
+		"auth",
+		"authentication",
+		"session",
+		"authorization",
+		"roles",
+		"auth-guard",
+		"composable-architecture",
+		"typescript"
+	],
+	"author": "Jonathan Belolo",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/jbelolo/composable-svelte.git",
+		"directory": "packages/auth"
+	},
+	"homepage": "https://github.com/jbelolo/composable-svelte#readme",
+	"bugs": {
+		"url": "https://github.com/jbelolo/composable-svelte/issues"
+	},
+	"peerDependencies": {
+		"@composable-svelte/core": "^0.11.0",
+		"svelte": "^5.0.0"
+	},
+	"devDependencies": {
+		"@composable-svelte/core": "workspace:*",
+		"@sveltejs/package": "^2.5.4",
+		"@sveltejs/vite-plugin-svelte": "^6.2.1",
+		"@types/node": "^20.0.0",
+		"@vitest/browser-playwright": "^4.0.7",
+		"@vitest/coverage-v8": "^4.0.7",
+		"@vitest/ui": "^4.0.7",
+		"playwright": "^1.56.1",
+		"svelte": "^5.0.0",
+		"svelte-check": "^4.3.3",
+		"typescript": "^5.5.4",
+		"vite": "^6.4.1",
+		"vitest": "^4.0.7"
+	},
+	"publishConfig": {
+		"access": "public"
+	}
 }

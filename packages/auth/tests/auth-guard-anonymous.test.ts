@@ -55,10 +55,10 @@ const ALL_ACTIONS: SessionAction[] = [
 	{ type: 'resolveSession' },
 	{ type: 'sessionResolved', session: null, epoch: 0 },
 	{ type: 'sessionResolved', session, epoch: 0 },
-	{ type: 'sessionResolveFailed', error: 'boom', epoch: 0 },
+	{ type: 'sessionResolveFailed', error: { code: 'network', message: 'boom' }, epoch: 0 },
 	{ type: 'login', seededUserId: 'u1' },
 	{ type: 'loginSucceeded', session, epoch: 0 },
-	{ type: 'loginFailed', error: 'nope', epoch: 0 },
+	{ type: 'loginFailed', error: { code: 'invalid_credentials', message: 'nope' }, epoch: 0 },
 	{ type: 'logout' },
 	{ type: 'loggedOut', epoch: 0 }
 ];
@@ -205,7 +205,11 @@ describe('AuthGuard onAnonymous', () => {
 		await settle();
 
 		for (let i = 0; i < 3; i += 1) {
-			store.dispatch({ type: 'sessionResolveFailed', error: `boom ${i}`, epoch: store.state.epoch });
+			store.dispatch({
+				type: 'sessionResolveFailed',
+				error: { code: 'network', message: `boom ${i}` },
+				epoch: store.state.epoch
+			});
 			flushSync();
 			await settle();
 		}

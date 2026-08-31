@@ -25,6 +25,24 @@ export {
 	type SessionSnapshot
 } from './subject/index.js';
 
+// Errors — the structured failure union every flow branches on
+export {
+	toAuthError,
+	isAuthError,
+	isMfaRequired,
+	retryDelaySeconds,
+	type AuthError,
+	type AuthErrorCode,
+	type InvalidCredentialsError,
+	type MfaRequiredError,
+	type EmailUnverifiedError,
+	type AccountLockedError,
+	type RateLimitedError,
+	type TokenExpiredError,
+	type NetworkError,
+	type UnknownAuthError
+} from './errors/index.js';
+
 // Session — reducer, store factory, HTTP deps
 export {
 	sessionReducer,

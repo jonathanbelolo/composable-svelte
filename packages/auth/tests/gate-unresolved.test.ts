@@ -19,6 +19,7 @@ import { describe, it, expect } from 'vitest';
 import { createRawSnippet, mount, unmount } from 'svelte';
 import { createStore } from '@composable-svelte/core';
 import AuthGuard from '../src/lib/components/AuthGuard.svelte';
+import type { AuthError } from '../src/lib/errors/types.js';
 import RoleGate from '../src/lib/components/RoleGate.svelte';
 import { sessionReducer, createInitialSessionState } from '../src/lib/session/reducer.js';
 import type { SessionDependencies, SessionState } from '../src/lib/session/types.js';
@@ -88,15 +89,22 @@ describe('AuthGuard fallback', () => {
 		const store = makeStore({
 			status: 'loginFailed',
 			subject: { kind: 'anonymous' },
-			error: 'Login failed (503)',
+			error: { code: 'unknown', message: 'Login failed (503)', status: 503 },
 			epoch: 1
 		});
 
 		const { target, dispose } = mountIn(AuthGuard, {
 			store,
 			children: snippet('<span data-testid="secret">secret</span>'),
-			fallback: createRawSnippet<[{ error: string | null }]>((arg) => ({
-				render: () => `<span data-testid="signin">${arg().error ?? 'no error'}</span>`
+			// The snippet now receives the structured failure, so a real sign-in
+			// surface can branch on `code` — offer "resend confirmation" for
+			// `email_unverified`, hide the retry button for `account_locked` —
+			// rather than pattern-matching a sentence.
+			fallback: createRawSnippet<[{ error: AuthError | null }]>((arg) => ({
+				render: () =>
+					`<span data-testid="signin" data-code="${arg().error?.code ?? 'none'}">${
+						arg().error?.message ?? 'no error'
+					}</span>`
 			}))
 		});
 
@@ -104,6 +112,9 @@ describe('AuthGuard fallback', () => {
 			const el = target.querySelector('[data-testid="signin"]');
 			expect(el, 'fallback did not render').not.toBeNull();
 			expect(el!.textContent, 'the error never reached the fallback').toBe('Login failed (503)');
+			expect(el!.getAttribute('data-code'), 'the code is what a surface branches on').toBe(
+				'unknown'
+			);
 		} finally {
 			dispose();
 		}

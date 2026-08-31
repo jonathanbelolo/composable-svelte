@@ -1,6 +1,7 @@
 <script lang="ts">
 	import AuthGuard from '../../src/lib/components/AuthGuard.svelte';
 	import RoleGate from '../../src/lib/components/RoleGate.svelte';
+	import type { AuthError } from '../../src/lib/errors/types.js';
 	import type { SessionState } from '../../src/lib/session/types.js';
 	import type { Snippet } from 'svelte';
 
@@ -32,7 +33,7 @@
 		store: { readonly state: SessionState };
 		onAnonymous?: () => void;
 		children?: Snippet<[{ isRevalidating: boolean }]>;
-		fallback?: Snippet<[{ error: string | null }]>;
+		fallback?: Snippet<[{ error: AuthError | null }]>;
 		pending?: Snippet;
 		roles: readonly string[];
 		// `RoleGate`'s snippets take no parameters, so they get their own props
