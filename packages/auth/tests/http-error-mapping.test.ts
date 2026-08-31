@@ -45,6 +45,15 @@ describe('what the status code alone says', () => {
 		expect((await authErrorFromResponse(failure(410), 'x')).code).toBe('token_expired');
 	});
 
+	it('reads 409 as an address that already has an account', async () => {
+		// Signup's characteristic failure. Before this arm it landed on `unknown`,
+		// and a surface cannot offer "sign in instead" by reading prose.
+		const error = await authErrorFromResponse(failure(409), 'Could not create the account.');
+
+		expect(error.code).toBe('email_taken');
+		expect(error.message).toBe('Could not create the account.');
+	});
+
 	it('refuses to guess at 403, which could be either of two things', async () => {
 		// Unverified email or a lockout — a status code cannot say which, and
 		// claiming one would put the wrong recovery action in front of the user.
@@ -139,6 +148,40 @@ describe('what a body may add', () => {
 		);
 
 		expect(error.message).toBe('That password is not right.');
+	});
+});
+
+describe('an address that is taken', () => {
+	it('carries the address when the backend names it', async () => {
+		// So a resend or a sign-in offer targets what the backend matched, not
+		// what is currently in the field — they can differ by the time it lands.
+		const error = await authErrorFromResponse(
+			failure(409, { error: { code: 'email_taken', email: 'ada@example.com' } }),
+			'x'
+		);
+
+		expect(error.code).toBe('email_taken');
+		expect(error.code === 'email_taken' && error.email).toBe('ada@example.com');
+	});
+
+	it('is usable without one', async () => {
+		// Non-vacuity: the field is optional, and its absence must not produce a
+		// half-built error or a literal "undefined" in the UI.
+		const error = await authErrorFromResponse(failure(409), 'x');
+
+		expect(error.code === 'email_taken' && error.email).toBeUndefined();
+	});
+
+	it('can be named by a body over a status that says otherwise', async () => {
+		// The two-layer contract: a backend answering 400 for everything can still
+		// be precise, which is what makes this adapter work against more than one.
+		const error = await authErrorFromResponse(
+			failure(400, { error: { code: 'email_taken', message: 'Already registered.' } }),
+			'x'
+		);
+
+		expect(error.code).toBe('email_taken');
+		expect(error.message).toBe('Already registered.');
 	});
 });
 

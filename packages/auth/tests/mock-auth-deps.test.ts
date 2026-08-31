@@ -68,6 +68,58 @@ describe('signing in', () => {
 	});
 });
 
+describe('signing up', () => {
+	it('defaults to the branch that demands more of a surface', async () => {
+		// `verificationRequired` by default, deliberately: a demo that only ever
+		// shows the auto-login path never exercises the terminal panel, which is
+		// the half of signup that is easy to get wrong.
+		await expect(createMockAuthDeps().signup(credentials)).resolves.toEqual({
+			kind: 'verificationRequired',
+			email: credentials.email
+		});
+	});
+
+	it('issues a session when asked to', async () => {
+		const deps = createMockAuthDeps({ signupOutcome: 'session' });
+
+		await expect(deps.signup(credentials)).resolves.toMatchObject({
+			kind: 'session',
+			session: { display_name: 'Ada Lovelace' }
+		});
+	});
+
+	it('rejects a taken address with the real arm', async () => {
+		// A fake that rejects with a bare `Error` produces `code: 'unknown'` and
+		// makes the "sign in instead" branch unreachable everywhere it is used.
+		const deps = createMockAuthDeps({ takenEmails: ['taken@example.com'] });
+
+		await expect(deps.signup({ ...credentials, email: 'taken@example.com' })).rejects.toMatchObject(
+			{ code: 'email_taken', email: 'taken@example.com' }
+		);
+		await expect(deps.signup({ ...credentials, email: 'free@example.com' })).resolves.toBeDefined();
+	});
+
+	it('lets `failWith` win over a free address', async () => {
+		const deps = createMockAuthDeps({
+			failWith: { code: 'rate_limited', message: 'slow down' },
+			takenEmails: ['taken@example.com']
+		});
+
+		await expect(deps.signup({ ...credentials, email: 'free@example.com' })).rejects.toMatchObject({
+			code: 'rate_limited'
+		});
+	});
+
+	it('honours the abort signal, as every member must', async () => {
+		const controller = new AbortController();
+		controller.abort();
+
+		await expect(
+			createMockAuthDeps().signup(credentials, controller.signal)
+		).rejects.toMatchObject({ name: 'AbortError' });
+	});
+});
+
 describe('cancellation', () => {
 	it('refuses an already-aborted signal, latency or not', async () => {
 		// The arm that found a defect. `wait` checked the signal only inside the
