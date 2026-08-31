@@ -1,5 +1,5 @@
 /**
- * `createHttpAuthDeps().signup` — the wire contract.
+ * `createHttpAuthDeps()` — the wire contract for signup and email verification.
  *
  * This shipped with no tests at all, which is the wrong place to have none:
  * everything above it runs against `createMockAuthDeps`, so the adapter is the
@@ -155,6 +155,63 @@ describe('when it fails', () => {
 		await expect(createHttpAuthDeps().signup(credentials)).rejects.toMatchObject({
 			code: 'unknown',
 			status: 502
+		});
+	});
+});
+
+describe('verifyEmail', () => {
+	it('posts the token and reads a session', async () => {
+		const calls = stubFetch(json({ subject_id: 'u1' }, 200));
+
+		await expect(createHttpAuthDeps().verifyEmail('tok_1')).resolves.toEqual({ subject_id: 'u1' });
+		expect(calls[0]!.url).toBe('/auth/verify-email');
+		expect(JSON.parse(String(calls[0]!.init.body))).toEqual({ token: 'tok_1' });
+	});
+
+	it('reads 204 as verified-but-not-signed-in', async () => {
+		// A success. The address is confirmed and the user still has to sign in;
+		// `null` is the answer, not a failure.
+		stubFetch(new Response(null, { status: 204 }));
+
+		await expect(createHttpAuthDeps().verifyEmail('tok_1')).resolves.toBeNull();
+	});
+
+	it('reads a dead link as `token_expired`', async () => {
+		stubFetch(new Response(null, { status: 410 }));
+
+		await expect(createHttpAuthDeps().verifyEmail('stale')).rejects.toMatchObject({
+			code: 'token_expired',
+			message: 'That link is no longer valid.'
+		});
+	});
+
+	it('forwards the abort signal', async () => {
+		const calls = stubFetch(new Response(null, { status: 204 }));
+		const controller = new AbortController();
+
+		await createHttpAuthDeps().verifyEmail('tok_1', controller.signal);
+
+		expect(calls[0]!.init.signal).toBe(controller.signal);
+	});
+});
+
+describe('resendVerification', () => {
+	it('posts the address and resolves on 204', async () => {
+		const calls = stubFetch(new Response(null, { status: 204 }));
+
+		await expect(createHttpAuthDeps().resendVerification('ada@example.com')).resolves.toBeUndefined();
+		expect(calls[0]!.url).toBe('/auth/resend-verification');
+		expect(JSON.parse(String(calls[0]!.init.body))).toEqual({ email: 'ada@example.com' });
+	});
+
+	it('surfaces a rate limit rather than swallowing it', async () => {
+		// The one failure a resend button reliably produces, and the user needs to
+		// be told to wait rather than to keep clicking.
+		stubFetch(new Response(null, { status: 429, headers: { 'retry-after': '30' } }));
+
+		await expect(createHttpAuthDeps().resendVerification('ada@example.com')).rejects.toMatchObject({
+			code: 'rate_limited',
+			retryAfterSeconds: 30
 		});
 	});
 });

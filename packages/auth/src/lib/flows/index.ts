@@ -46,3 +46,18 @@ export type {
 	SignupStatus,
 	SignupDependencies
 } from './signup/index.js';
+
+export {
+	emailVerificationReducer,
+	createInitialEmailVerificationState,
+	createEmailVerificationStore,
+	tokenFromUrl
+} from './email-verification/index.js';
+
+export type {
+	EmailVerificationState,
+	EmailVerificationAction,
+	EmailVerificationStatus,
+	EmailVerificationDependencies,
+	ResendStatus
+} from './email-verification/index.js';

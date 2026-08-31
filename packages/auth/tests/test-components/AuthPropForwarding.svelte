@@ -5,6 +5,11 @@
 	import PasswordInput from '../../src/lib/components/PasswordInput.svelte';
 	import PasswordCriteria from '../../src/lib/components/PasswordCriteria.svelte';
 	import SignupForm from '../../src/lib/components/SignupForm.svelte';
+	import EmailVerification from '../../src/lib/components/EmailVerification.svelte';
+	import type {
+		EmailVerificationAction,
+		EmailVerificationState
+	} from '../../src/lib/flows/email-verification/types.js';
 	import type { SignupAction, SignupState } from '../../src/lib/flows/signup/types.js';
 	import type { AuthError } from '../../src/lib/errors/types.js';
 	import type { LoginAction, LoginState } from '../../src/lib/flows/login/types.js';
@@ -71,7 +76,11 @@
 		criteriaLabel,
 		metLabel,
 		unmetLabel,
-		criteriaClass
+		criteriaClass,
+		verifyFlowStore,
+		token,
+		verified,
+		verifyClass
 	}: {
 		store: { readonly state: SessionState };
 		onAnonymous?: () => void;
@@ -142,6 +151,15 @@
 		metLabel?: string;
 		unmetLabel?: string;
 		criteriaClass?: string;
+
+		// EmailVerification.
+		verifyFlowStore: {
+			readonly state: EmailVerificationState;
+			dispatch(action: EmailVerificationAction): void;
+		};
+		token?: string | null;
+		verified?: Snippet<[{ signedIn: boolean }]>;
+		verifyClass?: string;
 	} = $props();
 </script>
 
@@ -199,4 +217,14 @@
 	{metLabel}
 	{unmetLabel}
 	class={criteriaClass}
+/>
+<EmailVerification
+	flowStore={verifyFlowStore}
+	{sessionStore}
+	{token}
+	{onSuccess}
+	{onSignIn}
+	{headingLevel}
+	{verified}
+	class={verifyClass}
 />

@@ -71,6 +71,30 @@ export interface AuthDependencies extends SessionDependencies {
 	 * response is an offer to sign in rather than a red banner.
 	 */
 	signup: (credentials: SignupCredentials, signal?: AbortSignal) => Promise<SignupOutcome>;
+	/**
+	 * Exchange a confirmation token for a verified address.
+	 *
+	 * Resolves with a session when the backend signs the account in as part of
+	 * confirming it, and with `null` when it does not — the address is verified
+	 * either way. A plain nullable rather than the union `signup` uses, because
+	 * "no session" carries nothing here: there is no second thing to tell the
+	 * caller, and a union would be ceremony around a null check the compiler
+	 * already forces.
+	 *
+	 * Rejects with `token_expired` for a link that is stale *or* malformed. The
+	 * two are not distinguished on purpose: the recovery is identical — send
+	 * another — and naming which it was tells an attacker whether a token ever
+	 * existed.
+	 */
+	verifyEmail: (token: string, signal?: AbortSignal) => Promise<SessionSnapshot | null>;
+	/**
+	 * Send another confirmation mail.
+	 *
+	 * Resolves whether or not the address has an unverified account, for the same
+	 * reason a password reset does: answering differently is an account-existence
+	 * oracle.
+	 */
+	resendVerification: (email: string, signal?: AbortSignal) => Promise<void>;
 }
 
 /**

@@ -63,6 +63,22 @@ export interface MockAuthOptions {
 	 * Signup's characteristic failure, and the one a demo most needs to reach.
 	 */
 	takenEmails?: readonly string[] | undefined;
+	/**
+	 * What confirming a link produces.
+	 *
+	 * `'none'` for a backend that verifies the address and still makes the user
+	 * sign in, `'session'` for one that signs them in as part of confirming.
+	 * `'none'` by default, because it is the branch a surface has more to do
+	 * about.
+	 */
+	verifyOutcome?: 'none' | 'session' | undefined;
+	/**
+	 * Tokens that are stale or malformed, rejected as `token_expired`.
+	 *
+	 * The failure an email-verification surface exists to handle — a link opened
+	 * a week late is the ordinary case, not the exceptional one.
+	 */
+	expiredTokens?: readonly string[] | undefined;
 }
 
 const defaultSession: SessionSnapshot = {
@@ -98,7 +114,9 @@ export function createMockAuthDeps(options: MockAuthOptions = {}): AuthDependenc
 		latencyMs = 0,
 		accepts,
 		signupOutcome = 'verificationRequired',
-		takenEmails = []
+		takenEmails = [],
+		verifyOutcome = 'none',
+		expiredTokens = []
 	} = options;
 
 	const aborted = () => new DOMException('Aborted', 'AbortError');
@@ -166,6 +184,28 @@ export function createMockAuthDeps(options: MockAuthOptions = {}): AuthDependenc
 			return signupOutcome === 'session'
 				? { kind: 'session', session }
 				: { kind: 'verificationRequired', email: credentials.email };
+		},
+
+		async verifyEmail(token: string, signal?: AbortSignal): Promise<SessionSnapshot | null> {
+			await wait(signal);
+
+			if (failWith) throw failWith;
+
+			if (expiredTokens.includes(token)) {
+				throw {
+					code: 'token_expired',
+					message: 'That link is no longer valid.'
+				} satisfies AuthError;
+			}
+
+			return verifyOutcome === 'session' ? session : null;
+		},
+
+		async resendVerification(_email: string, signal?: AbortSignal): Promise<void> {
+			await wait(signal);
+			if (failWith) throw failWith;
+			// Resolves regardless of whether the address has an account: answering
+			// differently would be an account-existence oracle.
 		},
 
 		async fetchLogin(_seededUserId: string, signal?: AbortSignal): Promise<SessionSnapshot> {

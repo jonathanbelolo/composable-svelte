@@ -195,9 +195,37 @@
   values are assignable but not that they are exhaustive, so a new arm could
   have joined the union and simply never been accepted from a backend.
 
+- **Email verification** — `emailVerificationReducer`,
+  `createEmailVerificationStore`, `tokenFromUrl`, and `EmailVerification`.
+  Signup's `awaitingVerification` terminal now has something that consumes the
+  link it points at.
+
+  **No form.** The input arrived in a URL, so the work starts on mount and the
+  only thing a user can type is nothing. That removes the form slice and the
+  schema — a token is opaque, and validating its shape here would reject links a
+  future backend issues.
+
+  **The token is single-use, so the request is guarded twice.**
+  `verificationRequested` is refused unless the status is `idle`, and the
+  component separately tracks which token it has already asked about. Both are
+  wanted: one stops the dispatch, the other stops whatever gets past it. A
+  Svelte effect re-runs for reasons unrelated to its subject, and a second
+  exchange spends a working link and then reports the failure as the user's
+  fault. Removing the component guard does not merely double-exchange — it
+  hangs.
+
+  **Confirming and resending are tracked separately**, because a failed
+  confirmation with a resend in flight is the ordinary state of this page. A
+  successful resend deliberately leaves the confirmation error alone: that link
+  is still dead, and clearing it would be a lie the user acts on.
+
+  `verifyEmail` resolving with `null` is a success — the address is confirmed
+  and the user still has to sign in. Only a non-null session reaches the session
+  store.
+
 ### Still missing
 
-Signup, password reset, email verification, MFA, OAuth and token refresh. The
+Password reset, MFA, OAuth and token refresh. The
 `AuthError` union names the failures those flows produce because the wire
 contract needs them — a code appearing there is not a promise that the flow
 behind it ships today.

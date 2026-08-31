@@ -23,3 +23,4 @@ export { default as LoginForm } from './LoginForm.svelte';
 export { default as PasswordInput } from './PasswordInput.svelte';
 export { default as PasswordCriteria } from './PasswordCriteria.svelte';
 export { default as SignupForm } from './SignupForm.svelte';
+export { default as EmailVerification } from './EmailVerification.svelte';

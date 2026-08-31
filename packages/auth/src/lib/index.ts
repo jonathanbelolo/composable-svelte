@@ -92,6 +92,18 @@ export {
 	type SignupDependencies
 } from './flows/index.js';
 
+export {
+	emailVerificationReducer,
+	createInitialEmailVerificationState,
+	createEmailVerificationStore,
+	tokenFromUrl,
+	type EmailVerificationState,
+	type EmailVerificationAction,
+	type EmailVerificationStatus,
+	type EmailVerificationDependencies,
+	type ResendStatus
+} from './flows/index.js';
+
 // Dependencies — the injected auth I/O every flow runs over
 export type {
 	AuthDependencies,
@@ -110,6 +122,7 @@ export {
 	RoleGate,
 	LoginForm,
 	SignupForm,
+	EmailVerification,
 	PasswordInput,
 	PasswordCriteria
 } from './components/index.js';

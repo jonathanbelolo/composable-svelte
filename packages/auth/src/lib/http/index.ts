@@ -94,6 +94,41 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			// to guess — a 200 carrying "check your email" throws
 			// `MalformedSessionError` rather than fabricating a signed-in user.
 			return { kind: 'session', session: await decodeSessionSnapshot(response) };
+		},
+
+		async verifyEmail(token: string, signal?: AbortSignal): Promise<SessionSnapshot | null> {
+			const response = await fetch(url('/auth/verify-email'), {
+				method: 'POST',
+				credentials: 'include',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ token }),
+				...(signal !== undefined && { signal })
+			});
+
+			if (!response.ok) {
+				throw await authErrorFromResponse(response, 'That link is no longer valid.');
+			}
+
+			// `204 No Content` is "verified, but not signed in" — the address is
+			// confirmed and the user still has to sign in. Read the status rather
+			// than the body, for the reason `signup` documents.
+			if (response.status === 204) return null;
+
+			return decodeSessionSnapshot(response);
+		},
+
+		async resendVerification(email: string, signal?: AbortSignal): Promise<void> {
+			const response = await fetch(url('/auth/resend-verification'), {
+				method: 'POST',
+				credentials: 'include',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ email }),
+				...(signal !== undefined && { signal })
+			});
+
+			if (!response.ok) {
+				throw await authErrorFromResponse(response, 'Could not send another email.');
+			}
 		}
 	};
 }

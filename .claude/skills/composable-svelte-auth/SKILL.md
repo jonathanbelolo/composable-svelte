@@ -15,12 +15,10 @@ sign-in attempt, a structured failure union, and thin components over both.
 **What exists today.** Session resolution, seeded-user passwordless login,
 password sign-in and **signup** end to end (headless flows, HTTP adapter, styled
 forms), the `AuthError` union, `AuthGuard` / `RoleGate` / `LoginForm` /
-`SignupForm` / `PasswordInput` / `PasswordCriteria`, a mock dependency set, SSR
-coverage.
+`SignupForm` / `EmailVerification` / `PasswordInput` / `PasswordCriteria`, a
+mock dependency set, SSR coverage.
 
-**What does not exist yet.** Password reset, email verification (the *flow* —
-signup's `awaitingVerification` terminal is here, but nothing consumes the link
-yet), MFA, OAuth, token refresh. The `AuthError` union already *names* the failures those
+**What does not exist yet.** Password reset, MFA, OAuth, token refresh. The `AuthError` union already *names* the failures those
 flows produce (`mfa_required`, `email_unverified`, `token_expired`) because the
 wire contract needs them — **a code appearing in the union is not a promise that
 the flow behind it ships.** Check `src/lib/flows/` before telling a user a flow
@@ -420,6 +418,59 @@ it is phrased as a requirement rather than a failure.
 
 ---
 
+## THE EMAIL-VERIFICATION FLOW
+
+Structurally unlike the other two: **no form**. The input arrived in a link, so
+the work starts on mount and the only thing a user can type is nothing.
+
+```typescript
+import type { EmailVerificationStatus, ResendStatus } from '@composable-svelte/auth';
+
+const confirming: Record<EmailVerificationStatus, string> = {
+	idle: 'nothing attempted, or an attempt that failed — `error` says which',
+	verifying: 'the exchange is in flight',
+	verified: 'the address is confirmed; `session` may or may not be set'
+};
+
+// Tracked apart from `status`, because both can be true at once.
+const resending: Record<ResendStatus, string> = {
+	idle: 'not asked, or a failed ask that can be retried',
+	sending: 'in flight',
+	sent: 'another mail is on its way'
+};
+```
+
+A failed confirmation with a resend in flight is the **ordinary** state of this
+page, not an edge case — which is why the two are separate fields rather than
+one status. A successful resend also does not clear the confirmation error: that
+link is still dead, and saying otherwise would be a lie the user acts on.
+
+### The token is single-use, so the request is guarded twice
+
+```typescript
+import { tokenFromUrl } from '@composable-svelte/auth';
+
+const token: string | null = tokenFromUrl('https://app.example.com/verify?token=abc');
+```
+
+`verificationRequested` is refused unless `status === 'idle'`, and
+`EmailVerification` separately tracks which token it has already asked about.
+Both are wanted: the component guard stops the dispatch, the reducer guard stops
+anything that gets past it. A Svelte effect re-runs for reasons unrelated to its
+subject, and a second exchange spends a working link — then reports the failure
+as the user's problem.
+
+> ⚠️ **Never call `verifyEmail` during SSR.** Effects do not run on the server,
+> which is what makes the component safe there; a render that exchanged the
+> token would spend it before the page reached the browser, and a *cached*
+> render would spend one per request. There is an SSR test asserting the server
+> markup does not show a confirmed state.
+
+`null` from `verifyEmail` is a success — the address is confirmed and the user
+still has to sign in. Only a non-null session is handed to the session store.
+
+---
+
 ## COMPONENTS
 
 ### LoginForm
@@ -554,6 +605,18 @@ const custom: AuthDependencies = {
 		// Two outcomes, deliberately: a backend requiring confirmation cannot
 		// return a session, and one that does not should not force a second trip.
 		return { kind: 'verificationRequired', email: 'ada@example.com' };
+	},
+	async verifyEmail(token, signal) {
+		void token;
+		void signal;
+		// `null` means verified-but-not-signed-in, which is a success.
+		return null;
+	},
+	async resendVerification(email, signal) {
+		void email;
+		void signal;
+		// Resolves whether or not the address has an account: answering
+		// differently is an account-existence oracle.
 	},
 	async fetchLogin(seededUserId: string) {
 		void seededUserId;

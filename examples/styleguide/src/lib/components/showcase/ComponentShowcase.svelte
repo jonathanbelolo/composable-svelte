@@ -29,6 +29,7 @@
   import FileUploadDemo from '../demos/FileUploadDemo.svelte';
   import LoginFormDemo from '../demos/LoginFormDemo.svelte';
   import SignupFormDemo from '../demos/SignupFormDemo.svelte';
+  import EmailVerificationDemo from '../demos/EmailVerificationDemo.svelte';
   // Foundational Components
   import CardDemo from '../demos/CardDemo.svelte';
   import SeparatorDemo from '../demos/SeparatorDemo.svelte';
@@ -111,6 +112,7 @@
     'file-upload': FileUploadDemo,
     'login-form': LoginFormDemo,
     'signup-form': SignupFormDemo,
+    'email-verification': EmailVerificationDemo,
     // Foundational Components
     'card': CardDemo,
     'separator': SeparatorDemo,

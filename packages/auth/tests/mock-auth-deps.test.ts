@@ -120,6 +120,48 @@ describe('signing up', () => {
 	});
 });
 
+describe('confirming an address', () => {
+	it('defaults to verified-without-a-session', async () => {
+		await expect(createMockAuthDeps().verifyEmail('tok_1')).resolves.toBeNull();
+	});
+
+	it('issues a session when asked to', async () => {
+		const deps = createMockAuthDeps({ verifyOutcome: 'session' });
+		await expect(deps.verifyEmail('tok_1')).resolves.toMatchObject({ display_name: 'Ada Lovelace' });
+	});
+
+	it('rejects a listed token as expired', async () => {
+		// The failure the whole surface exists to handle — a link opened a week
+		// late is the ordinary case here, not the exceptional one.
+		const deps = createMockAuthDeps({ expiredTokens: ['stale'] });
+
+		await expect(deps.verifyEmail('stale')).rejects.toMatchObject({ code: 'token_expired' });
+		await expect(deps.verifyEmail('fresh')).resolves.toBeNull();
+	});
+
+	it('resends without saying whether the address exists', async () => {
+		// Answering differently for a known and an unknown address is an
+		// account-existence oracle, so the fake resolves for both.
+		const deps = createMockAuthDeps();
+
+		await expect(deps.resendVerification('ada@example.com')).resolves.toBeUndefined();
+		await expect(deps.resendVerification('nobody@example.com')).resolves.toBeUndefined();
+	});
+
+	it('honours the abort signal on both calls', async () => {
+		const controller = new AbortController();
+		controller.abort();
+		const deps = createMockAuthDeps();
+
+		await expect(deps.verifyEmail('t', controller.signal)).rejects.toMatchObject({
+			name: 'AbortError'
+		});
+		await expect(deps.resendVerification('a@b.com', controller.signal)).rejects.toMatchObject({
+			name: 'AbortError'
+		});
+	});
+});
+
 describe('cancellation', () => {
 	it('refuses an already-aborted signal, latency or not', async () => {
 		// The arm that found a defect. `wait` checked the signal only inside the

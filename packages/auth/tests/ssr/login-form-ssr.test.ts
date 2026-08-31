@@ -19,8 +19,13 @@ import { createStore } from '@composable-svelte/core';
 
 import LoginForm from '../../src/lib/components/LoginForm.svelte';
 import SignupForm from '../../src/lib/components/SignupForm.svelte';
+import EmailVerification from '../../src/lib/components/EmailVerification.svelte';
 import { createInitialLoginState, loginReducer } from '../../src/lib/flows/login/reducer.js';
 import { createInitialSignupState, signupReducer } from '../../src/lib/flows/signup/reducer.js';
+import {
+	createInitialEmailVerificationState,
+	emailVerificationReducer
+} from '../../src/lib/flows/email-verification/reducer.js';
 import { createInitialSessionState, sessionReducer } from '../../src/lib/session/reducer.js';
 import type { LoginState } from '../../src/lib/flows/login/types.js';
 import type { SessionSnapshot } from '../../src/lib/subject/types.js';
@@ -174,5 +179,60 @@ describe('the server build of SignupForm', () => {
 		expect(body).toContain('Check your email');
 		expect(body).toContain('grace@example.com');
 		expect(body, 'the form rendered behind the terminal panel').not.toContain('type="email"');
+	});
+});
+
+describe('the server build of EmailVerification', () => {
+	function verifyHtml(
+		initial: Partial<ReturnType<typeof createInitialEmailVerificationState>> = {},
+		token: string | null = null
+	) {
+		const flowStore = createStore({
+			initialState: { ...createInitialEmailVerificationState('ada@example.com'), ...initial },
+			reducer: emailVerificationReducer,
+			dependencies: {
+				verifyEmail: async () => null,
+				resendVerification: async () => undefined
+			}
+		});
+		const sessionStore = createStore({
+			initialState: createInitialSessionState(),
+			reducer: sessionReducer,
+			dependencies: {
+				fetchLogin: async () => session,
+				fetchLogout: async () => undefined,
+				fetchSession: async () => null
+			}
+		});
+		return render(EmailVerification, { props: { flowStore, sessionStore, token } }).body;
+	}
+
+	it('does not exchange the token while rendering', () => {
+		// Effects do not run on the server, which is the behaviour this component
+		// depends on: exchanging a single-use token during SSR would spend it
+		// before the page ever reached the browser, and a cached render would
+		// spend one per request.
+		const body = verifyHtml({}, 'tok_1');
+
+		expect(body).not.toContain('Email confirmed');
+		expect(body).toContain('Send another link');
+	});
+
+	it('renders the confirmed panel from state alone', () => {
+		const body = verifyHtml({ status: 'verified' });
+
+		expect(body).toContain('Email confirmed');
+		expect(body).toContain('You can sign in now');
+	});
+
+	it('renders a dead link and its way out', () => {
+		const body = verifyHtml(
+			{ error: { code: 'token_expired', message: 'That link is no longer valid.' } },
+			'stale'
+		);
+
+		expect(body).toContain('data-error-code="token_expired"');
+		expect(body).toContain('That link did not work');
+		expect(body).toContain('ada@example.com');
 	});
 });
