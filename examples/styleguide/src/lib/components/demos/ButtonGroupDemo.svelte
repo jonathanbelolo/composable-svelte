@@ -12,7 +12,7 @@
   <!-- Basic Button Group -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Basic Button Group</h3>
+      <h2 class="text-xl font-semibold mb-2">Basic Button Group</h2>
       <p class="text-muted-foreground text-sm">
         Group related buttons together with connected styling
       </p>
@@ -37,7 +37,7 @@
   <!-- View Switcher -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">View Switcher</h3>
+      <h2 class="text-xl font-semibold mb-2">View Switcher</h2>
       <p class="text-muted-foreground text-sm">
         Toggle between different view modes
       </p>
@@ -74,7 +74,7 @@
   <!-- Text Alignment -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Text Alignment Toolbar</h3>
+      <h2 class="text-xl font-semibold mb-2">Text Alignment Toolbar</h2>
       <p class="text-muted-foreground text-sm">
         Common toolbar pattern for text editors
       </p>
@@ -126,7 +126,7 @@
   <!-- Vertical Orientation -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Vertical Button Group</h3>
+      <h2 class="text-xl font-semibold mb-2">Vertical Button Group</h2>
       <p class="text-muted-foreground text-sm">
         Stack buttons vertically
       </p>
@@ -151,7 +151,7 @@
   <!-- Different Variants -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Different Variants</h3>
+      <h2 class="text-xl font-semibold mb-2">Different Variants</h2>
       <p class="text-muted-foreground text-sm">
         Button groups work with any button variant
       </p>
@@ -193,7 +193,7 @@
   <!-- Different Sizes -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Different Sizes</h3>
+      <h2 class="text-xl font-semibold mb-2">Different Sizes</h2>
       <p class="text-muted-foreground text-sm">
         Button groups adapt to button sizes
       </p>
@@ -235,7 +235,7 @@
   <!-- With Icons -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">With Icons</h3>
+      <h2 class="text-xl font-semibold mb-2">With Icons</h2>
       <p class="text-muted-foreground text-sm">
         Icon-only or icon + text combinations
       </p>
@@ -299,7 +299,7 @@
   <!-- Pagination Style -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Pagination Style</h3>
+      <h2 class="text-xl font-semibold mb-2">Pagination Style</h2>
       <p class="text-muted-foreground text-sm">
         Alternative pagination controls
       </p>
@@ -329,7 +329,7 @@
   <!-- With Badges -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">With Badges</h3>
+      <h2 class="text-xl font-semibold mb-2">With Badges</h2>
       <p class="text-muted-foreground text-sm">
         Combine with badges for notification counts
       </p>
@@ -359,7 +359,7 @@
   <!-- Disabled State -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Disabled Buttons</h3>
+      <h2 class="text-xl font-semibold mb-2">Disabled Buttons</h2>
       <p class="text-muted-foreground text-sm">
         Individual buttons can be disabled within a group
       </p>

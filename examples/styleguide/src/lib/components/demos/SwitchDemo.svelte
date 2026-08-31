@@ -11,7 +11,7 @@
 <div class="space-y-12">
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Interactive Demo</h3>
+      <h2 class="text-xl font-semibold mb-2">Interactive Demo</h2>
       <p class="text-muted-foreground text-sm">Toggle between on/off states</p>
     </div>
 
@@ -28,12 +28,12 @@
 
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Switch States</h3>
+      <h2 class="text-xl font-semibold mb-2">Switch States</h2>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">On (checked)</h4>
+        <h3 class="font-semibold">On (checked)</h3>
         <div class="flex items-center space-x-2">
           <Switch id="on-switch" checked />
           <Label for="on-switch">Enabled switch</Label>
@@ -41,7 +41,7 @@
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">Off (unchecked)</h4>
+        <h3 class="font-semibold">Off (unchecked)</h3>
         <div class="flex items-center space-x-2">
           <Switch id="off-switch" />
           <Label for="off-switch">Disabled switch</Label>
@@ -49,7 +49,7 @@
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">Disabled on</h4>
+        <h3 class="font-semibold">Disabled on</h3>
         <div class="flex items-center space-x-2">
           <Switch id="disabled-on" checked disabled />
           <Label for="disabled-on">Cannot be changed</Label>
@@ -57,7 +57,7 @@
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">Disabled off</h4>
+        <h3 class="font-semibold">Disabled off</h3>
         <div class="flex items-center space-x-2">
           <Switch id="disabled-off" disabled />
           <Label for="disabled-off">Cannot be changed</Label>
@@ -68,7 +68,7 @@
 
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Settings Example</h3>
+      <h2 class="text-xl font-semibold mb-2">Settings Example</h2>
       <p class="text-muted-foreground text-sm">Common use case in settings panels</p>
     </div>
 

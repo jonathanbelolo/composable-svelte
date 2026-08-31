@@ -59,6 +59,7 @@ export default defineConfig({
       'tests/repo/guard-integrity.test.ts',
       'tests/repo/intentionally-unused.test.ts',
       'tests/repo/doc-typecheck.test.ts',
+      'tests/repo/demo-headings.test.ts',
       // Needs the Cookie request header, which the browser Request API refuses
       // to expose; runs under vitest.node.config.ts instead.
       'tests/i18n/ssr.test.ts'

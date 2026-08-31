@@ -169,6 +169,71 @@ The sweep across the other five is agreed, sized above, and wants its own
 before/after in the styleguide plus a guard — no hardcoded colours in
 `packages/*/src` — on the model of `animation-policy.test.ts`.
 
+### Library components hardcode a heading level — OPEN
+
+`core`'s `BannerTitle` renders `<h5>`. Put a `Banner` under an `<h2>`, which the
+styleguide does, and the page outline jumps `2 -> 5`. That is not the demo's
+doing and no demo can fix it: the level belongs to the page, and the component
+picks it without being told.
+
+Nine components across three packages do this:
+
+| package | component | tag |
+|---|---|---|
+| core | `BannerTitle` | `h5` |
+| core | `CardTitle` | `h3` |
+| core | `ToastTitle` | `h3` |
+| core | `Empty` | `h3` |
+| core | `FileUpload` | `h3` |
+| chat | `AttachmentPreviewModal` | `h2` |
+| chat | `FileAttachment` | `h3` |
+| chat | `PresenceList` | `h3` |
+| media | `ConversationModePanel` | `h3` |
+
+`@composable-svelte/auth`'s `LoginForm` is the pattern for the fix — a
+`headingLevel` prop, defaulting to the level that suits an embedded component,
+with the caller free to say otherwise.
+
+**It is not free.** Changing a rendered tag is breaking for anyone whose CSS
+selects by element rather than by class. That is not hypothetical: the sweep
+recorded below broke exactly that way in two demos, and only
+`svelte-check --fail-on-warnings` caught it.
+
+### Controls with no accessible name in the styleguide — OPEN, unclassified
+
+A browser pass over all 60 demo routes found 24 controls with no accessible
+name, on 7 routes. They are **not one defect** and the number should not be
+quoted as if they were:
+
+- **Icon-only buttons** (`button-group` 6, `scatter-chart` 2, `line-chart` 2,
+  `node-canvas` 1, `streaming-chat` 1) — genuinely nameless. A demo fix.
+- **`combobox` (8)** — `core`'s `Combobox` renders `<input role="combobox">` and
+  the demo passes no label. Whether the component should require one or the demo
+  should supply one is the actual question, and it is unanswered.
+- **`separator` (4)** — inputs labelled only by `placeholder`. That *is* an
+  accessible name by the spec's last resort, so this is a weak finding: poor
+  practice, not a missing name. Counted here because the detector cannot tell
+  the difference, and pretending it can is how 24 becomes a headline.
+
+### Styleguide heading outlines — CLOSED
+
+Every one of the 60 demo routes had a broken heading outline; none were clean.
+Two causes, not sixty: `layout/Header.svelte` marked the site name `<h1>` inside
+a `<button>`, competing with the page title on every page; and the contract
+between the chrome and a demo was never written down, so 51 demos opened one
+level too deep. 59 demos and the chrome were corrected and
+`packages/core/tests/repo/demo-headings.test.ts` now holds the contract.
+
+Worth remembering how the sweep went wrong, twice:
+
+- Two demos style headings with scoped **element** selectors rather than
+  Tailwind classes, so retagging silently unstyled them. `--fail-on-warnings`
+  caught it as an unused-selector warning.
+- `CodeEditorDemo` holds a sample HTML document in a template literal, and the
+  sweep rewrote the `<h1>` *inside the sample* — content, not markup. Only the
+  runtime audit caught that. The guard reads the markup with `<script>` and
+  `<style>` stripped for exactly this reason.
+
 ## S8. Documentation — OPEN
 
 Several of these were closed by the documentation sweep; the rest stand.

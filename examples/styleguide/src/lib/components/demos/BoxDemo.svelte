@@ -9,7 +9,7 @@
 <div class="space-y-12">
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Padding Sizes</h3>
+      <h2 class="text-xl font-semibold mb-2">Padding Sizes</h2>
       <p class="text-muted-foreground text-sm">
         Different padding options for spacing control
       </p>
@@ -31,7 +31,7 @@
 
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Margin Sizes</h3>
+      <h2 class="text-xl font-semibold mb-2">Margin Sizes</h2>
       <p class="text-muted-foreground text-sm">
         Different margin options for spacing
       </p>
@@ -48,7 +48,7 @@
 
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Combined Padding and Margin</h3>
+      <h2 class="text-xl font-semibold mb-2">Combined Padding and Margin</h2>
       <p class="text-muted-foreground text-sm">
         Use both padding and margin together
       </p>
@@ -63,7 +63,7 @@
 
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Different Elements</h3>
+      <h2 class="text-xl font-semibold mb-2">Different Elements</h2>
       <p class="text-muted-foreground text-sm">
         Render as different HTML elements
       </p>
@@ -71,12 +71,12 @@
 
     <div class="space-y-4">
       <Box as="article" p="md" class="border bg-card">
-        <h4 class="font-semibold mb-2">Article Element</h4>
+        <h3 class="font-semibold mb-2">Article Element</h3>
         <p class="text-sm text-muted-foreground">Box rendered as an article tag</p>
       </Box>
 
       <Box as="section" p="md" class="border bg-card">
-        <h4 class="font-semibold mb-2">Section Element</h4>
+        <h3 class="font-semibold mb-2">Section Element</h3>
         <p class="text-sm text-muted-foreground">Box rendered as a section tag</p>
       </Box>
     </div>

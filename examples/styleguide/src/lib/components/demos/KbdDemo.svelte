@@ -7,7 +7,7 @@
   <!-- Basic Keyboard Keys -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Basic Keyboard Keys</h3>
+      <h2 class="text-xl font-semibold mb-2">Basic Keyboard Keys</h2>
       <p class="text-muted-foreground text-sm">
         Display individual keyboard keys
       </p>
@@ -28,7 +28,7 @@
   <!-- Key Combinations -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Key Combinations</h3>
+      <h2 class="text-xl font-semibold mb-2">Key Combinations</h2>
       <p class="text-muted-foreground text-sm">
         Show keyboard shortcuts with multiple keys
       </p>
@@ -78,7 +78,7 @@
   <!-- Sizes -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Sizes</h3>
+      <h2 class="text-xl font-semibold mb-2">Sizes</h2>
       <p class="text-muted-foreground text-sm">
         Small, base, and large keyboard keys
       </p>
@@ -105,7 +105,7 @@
   <!-- Arrow Keys -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Arrow Keys</h3>
+      <h2 class="text-xl font-semibold mb-2">Arrow Keys</h2>
       <p class="text-muted-foreground text-sm">
         Directional navigation keys
       </p>
@@ -126,7 +126,7 @@
   <!-- Function Keys -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Function Keys</h3>
+      <h2 class="text-xl font-semibold mb-2">Function Keys</h2>
       <p class="text-muted-foreground text-sm">
         F1-F12 and special function keys
       </p>
@@ -142,7 +142,7 @@
   <!-- Shortcut Documentation -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Shortcut Documentation</h3>
+      <h2 class="text-xl font-semibold mb-2">Shortcut Documentation</h2>
       <p class="text-muted-foreground text-sm">
         Document keyboard shortcuts for your application
       </p>
@@ -150,7 +150,7 @@
 
     <Card>
       <CardContent class="p-6">
-        <h4 class="font-semibold mb-4">Editor Shortcuts</h4>
+        <h3 class="font-semibold mb-4">Editor Shortcuts</h3>
         <div class="space-y-3">
           <div class="flex items-center justify-between">
             <span class="text-sm">Save</span>
@@ -204,7 +204,7 @@
   <!-- Platform Specific -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Platform Specific</h3>
+      <h2 class="text-xl font-semibold mb-2">Platform Specific</h2>
       <p class="text-muted-foreground text-sm">
         Show different shortcuts for different platforms
       </p>
@@ -213,9 +213,9 @@
     <div class="grid md:grid-cols-2 gap-4">
       <Card>
         <CardContent class="p-6">
-          <h4 class="font-semibold mb-4 flex items-center gap-2">
+          <h3 class="font-semibold mb-4 flex items-center gap-2">
             <span>macOS</span>
-          </h4>
+          </h3>
           <div class="space-y-3">
             <div class="flex items-center justify-between">
               <span class="text-sm">Copy</span>
@@ -249,7 +249,7 @@
 
       <Card>
         <CardContent class="p-6">
-          <h4 class="font-semibold mb-4">Windows/Linux</h4>
+          <h3 class="font-semibold mb-4">Windows/Linux</h3>
           <div class="space-y-3">
             <div class="flex items-center justify-between">
               <span class="text-sm">Copy</span>
@@ -286,7 +286,7 @@
   <!-- Numbers and Special Characters -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Numbers and Special Characters</h3>
+      <h2 class="text-xl font-semibold mb-2">Numbers and Special Characters</h2>
       <p class="text-muted-foreground text-sm">
         Number keys and special character keys
       </p>
@@ -327,7 +327,7 @@
   <!-- In Help Text -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">In Help Text</h3>
+      <h2 class="text-xl font-semibold mb-2">In Help Text</h2>
       <p class="text-muted-foreground text-sm">
         Use inline within explanatory text
       </p>

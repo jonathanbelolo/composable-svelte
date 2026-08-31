@@ -10,7 +10,7 @@
   <!-- Basic Usage -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Basic Tooltips</h3>
+      <h2 class="text-xl font-semibold mb-2">Basic Tooltips</h2>
       <p class="text-muted-foreground text-sm">
         Hover over elements to see tooltips
       </p>
@@ -42,7 +42,7 @@
   <!-- Positions -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Tooltip Positions</h3>
+      <h2 class="text-xl font-semibold mb-2">Tooltip Positions</h2>
       <p class="text-muted-foreground text-sm">
         Tooltips can appear on all four sides
       </p>
@@ -83,7 +83,7 @@
   <!-- With Icons -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Icon Tooltips</h3>
+      <h2 class="text-xl font-semibold mb-2">Icon Tooltips</h2>
       <p class="text-muted-foreground text-sm">
         Tooltips are perfect for icon buttons
       </p>
@@ -136,7 +136,7 @@
   <!-- Disabled State -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Disabled Tooltips</h3>
+      <h2 class="text-xl font-semibold mb-2">Disabled Tooltips</h2>
       <p class="text-muted-foreground text-sm">
         Tooltips can be disabled when needed
       </p>
@@ -160,7 +160,7 @@
   <!-- Custom Delay -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Custom Delays</h3>
+      <h2 class="text-xl font-semibold mb-2">Custom Delays</h2>
       <p class="text-muted-foreground text-sm">
         Control how quickly tooltips appear
       </p>
@@ -192,7 +192,7 @@
   <!-- Practical Examples -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Practical Examples</h3>
+      <h2 class="text-xl font-semibold mb-2">Practical Examples</h2>
       <p class="text-muted-foreground text-sm">
         Common tooltip use cases
       </p>
@@ -289,7 +289,7 @@
   <!-- Help Text -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Help Text & Hints</h3>
+      <h2 class="text-xl font-semibold mb-2">Help Text & Hints</h2>
       <p class="text-muted-foreground text-sm">
         Provide additional context without cluttering the UI
       </p>
@@ -351,7 +351,7 @@
   <!-- Interactive Elements -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Complex Interactions</h3>
+      <h2 class="text-xl font-semibold mb-2">Complex Interactions</h2>
       <p class="text-muted-foreground text-sm">
         Tooltips on various interactive elements
       </p>

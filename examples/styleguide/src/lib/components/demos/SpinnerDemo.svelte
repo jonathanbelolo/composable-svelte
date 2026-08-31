@@ -8,7 +8,7 @@
   <!-- Basic Spinners -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Basic Spinners</h3>
+      <h2 class="text-xl font-semibold mb-2">Basic Spinners</h2>
       <p class="text-muted-foreground text-sm">
         Loading indicators in different sizes
       </p>
@@ -39,7 +39,7 @@
   <!-- In Buttons -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Loading Buttons</h3>
+      <h2 class="text-xl font-semibold mb-2">Loading Buttons</h2>
       <p class="text-muted-foreground text-sm">
         Spinners integrated with button components
       </p>
@@ -75,7 +75,7 @@
   <!-- Loading States -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Loading States</h3>
+      <h2 class="text-xl font-semibold mb-2">Loading States</h2>
       <p class="text-muted-foreground text-sm">
         Common loading state patterns
       </p>
@@ -123,7 +123,7 @@
   <!-- Full Page Loading -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Full Page Loading</h3>
+      <h2 class="text-xl font-semibold mb-2">Full Page Loading</h2>
       <p class="text-muted-foreground text-sm">
         Center spinners for full-page loading states
       </p>
@@ -147,7 +147,7 @@
   <!-- With Text -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">With Status Messages</h3>
+      <h2 class="text-xl font-semibold mb-2">With Status Messages</h2>
       <p class="text-muted-foreground text-sm">
         Combine spinners with descriptive text
       </p>
@@ -195,7 +195,7 @@
   <!-- Empty States with Spinner -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Empty State Loading</h3>
+      <h2 class="text-xl font-semibold mb-2">Empty State Loading</h2>
       <p class="text-muted-foreground text-sm">
         Loading indicators for initially empty content
       </p>
@@ -237,7 +237,7 @@
   <!-- Modal/Dialog Loading -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Modal Loading</h3>
+      <h2 class="text-xl font-semibold mb-2">Modal Loading</h2>
       <p class="text-muted-foreground text-sm">
         Loading states within modals and dialogs
       </p>
@@ -281,7 +281,7 @@
   <!-- Table Loading -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Table Loading</h3>
+      <h2 class="text-xl font-semibold mb-2">Table Loading</h2>
       <p class="text-muted-foreground text-sm">
         Loading states for data tables
       </p>

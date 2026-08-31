@@ -247,7 +247,7 @@
   <!-- Basic Tree View -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">File System Tree</h3>
+      <h2 class="text-xl font-semibold mb-2">File System Tree</h2>
       <p class="text-muted-foreground text-sm">
         Hierarchical file browser with expand/collapse
       </p>
@@ -288,7 +288,7 @@
   <!-- Organization Chart -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Organization Chart</h3>
+      <h2 class="text-xl font-semibold mb-2">Organization Chart</h2>
       <p class="text-muted-foreground text-sm">
         Company hierarchy with expandable teams
       </p>
@@ -311,7 +311,7 @@
   <!-- Product Categories -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Product Categories</h3>
+      <h2 class="text-xl font-semibold mb-2">Product Categories</h2>
       <p class="text-muted-foreground text-sm">
         E-commerce navigation with product counts
       </p>
@@ -349,7 +349,7 @@
   <!-- Multi-select Tree -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Multi-Select Mode</h3>
+      <h2 class="text-xl font-semibold mb-2">Multi-Select Mode</h2>
       <p class="text-muted-foreground text-sm">
         Select multiple items at once
       </p>
@@ -375,7 +375,7 @@
   <!-- Lazy Loading -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Lazy Loading</h3>
+      <h2 class="text-xl font-semibold mb-2">Lazy Loading</h2>
       <p class="text-muted-foreground text-sm">
         Load children on demand with loading states
       </p>
@@ -408,7 +408,7 @@
   <!-- Keyboard Navigation -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Keyboard Navigation</h3>
+      <h2 class="text-xl font-semibold mb-2">Keyboard Navigation</h2>
       <p class="text-muted-foreground text-sm">
         Full keyboard accessibility support
       </p>
@@ -460,7 +460,7 @@
   <!-- Disabled Nodes -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Disabled Nodes</h3>
+      <h2 class="text-xl font-semibold mb-2">Disabled Nodes</h2>
       <p class="text-muted-foreground text-sm">
         Some nodes can be disabled
       </p>

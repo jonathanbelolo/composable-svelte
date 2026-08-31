@@ -6,7 +6,7 @@
 <div class="space-y-12">
   <!-- Basic Accordion Demo --><section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Basic Accordion</h3>
+      <h2 class="text-xl font-semibold mb-2">Basic Accordion</h2>
       <p class="text-muted-foreground text-sm">
         Simple accordion with collapsible sections
       </p>
@@ -58,7 +58,7 @@
   <!-- Single Item Mode -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Single Item Accordion</h3>
+      <h2 class="text-xl font-semibold mb-2">Single Item Accordion</h2>
       <p class="text-muted-foreground text-sm">
         Only one item can be expanded at a time
       </p>
@@ -115,7 +115,7 @@
   <!-- Disabled Items -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Disabled Items</h3>
+      <h2 class="text-xl font-semibold mb-2">Disabled Items</h2>
       <p class="text-muted-foreground text-sm">
         Individual items can be disabled
       </p>
@@ -154,7 +154,7 @@
   <!-- FAQ Example -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">FAQ Example</h3>
+      <h2 class="text-xl font-semibold mb-2">FAQ Example</h2>
       <p class="text-muted-foreground text-sm">
         Common use case for accordion components
       </p>
@@ -227,7 +227,7 @@ pnpm add @composable-svelte/core</code></pre>
   <!-- Settings Panel Example -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Settings Panel Example</h3>
+      <h2 class="text-xl font-semibold mb-2">Settings Panel Example</h2>
       <p class="text-muted-foreground text-sm">
         Organize configuration options
       </p>

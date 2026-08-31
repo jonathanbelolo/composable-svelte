@@ -8,7 +8,7 @@
   <!-- Interactive Demo -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Interactive Card Examples</h3>
+      <h2 class="text-xl font-semibold mb-2">Interactive Card Examples</h2>
       <p class="text-muted-foreground text-sm">
         Cards are flexible content containers
       </p>
@@ -75,7 +75,7 @@
   <!-- Variants -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Card Layouts</h3>
+      <h2 class="text-xl font-semibold mb-2">Card Layouts</h2>
       <p class="text-muted-foreground text-sm">
         Different card configurations
       </p>
@@ -130,7 +130,7 @@
   <!-- Interactive States -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Interactive Cards</h3>
+      <h2 class="text-xl font-semibold mb-2">Interactive Cards</h2>
       <p class="text-muted-foreground text-sm">
         Clickable and hoverable cards
       </p>
@@ -156,7 +156,7 @@
   <!-- Complex Example -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Complex Card Example</h3>
+      <h2 class="text-xl font-semibold mb-2">Complex Card Example</h2>
       <p class="text-muted-foreground text-sm">
         Card with multiple sections and interactions
       </p>
@@ -175,7 +175,7 @@
       <CardContent class="space-y-6">
         <!-- Team Members -->
         <div>
-          <h4 class="text-sm font-medium mb-3">Team Members (4)</h4>
+          <h3 class="text-sm font-medium mb-3">Team Members (4)</h3>
           <div class="space-y-2">
             {#each [
               { name: 'Alice Johnson', role: 'Admin', status: 'online' },

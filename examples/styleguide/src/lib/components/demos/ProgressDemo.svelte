@@ -23,7 +23,7 @@
   <!-- Basic Progress -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Basic Progress Bars</h3>
+      <h2 class="text-xl font-semibold mb-2">Basic Progress Bars</h2>
       <p class="text-muted-foreground text-sm">
         Show progress with different values
       </p>
@@ -77,7 +77,7 @@
   <!-- Interactive Progress -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Interactive Progress</h3>
+      <h2 class="text-xl font-semibold mb-2">Interactive Progress</h2>
       <p class="text-muted-foreground text-sm">
         Animated progress demonstration
       </p>
@@ -117,7 +117,7 @@
   <!-- Custom Sizes -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Custom Sizes</h3>
+      <h2 class="text-xl font-semibold mb-2">Custom Sizes</h2>
       <p class="text-muted-foreground text-sm">
         Progress bars in different heights
       </p>
@@ -156,7 +156,7 @@
   <!-- Custom Colors -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Custom Colors</h3>
+      <h2 class="text-xl font-semibold mb-2">Custom Colors</h2>
       <p class="text-muted-foreground text-sm">
         Different color variants for different states
       </p>
@@ -210,7 +210,7 @@
   <!-- Practical Examples -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Practical Examples</h3>
+      <h2 class="text-xl font-semibold mb-2">Practical Examples</h2>
       <p class="text-muted-foreground text-sm">
         Real-world usage scenarios
       </p>
@@ -287,7 +287,7 @@
   <!-- Steps/Wizard Progress -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Multi-Step Progress</h3>
+      <h2 class="text-xl font-semibold mb-2">Multi-Step Progress</h2>
       <p class="text-muted-foreground text-sm">
         Track progress through multi-step processes
       </p>
@@ -357,7 +357,7 @@
   <!-- Storage/Quota Progress -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Storage & Quota</h3>
+      <h2 class="text-xl font-semibold mb-2">Storage & Quota</h2>
       <p class="text-muted-foreground text-sm">
         Visualize storage usage and limits
       </p>

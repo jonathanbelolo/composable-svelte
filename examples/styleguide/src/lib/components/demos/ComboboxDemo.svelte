@@ -153,7 +153,7 @@
   <!-- Basic Combobox -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Basic Combobox</h3>
+      <h2 class="text-xl font-semibold mb-2">Basic Combobox</h2>
       <p class="text-muted-foreground text-sm">
         Searchable select with local filtering
       </p>
@@ -182,7 +182,7 @@
   <!-- Multiple Comboboxes -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Multiple Comboboxes</h3>
+      <h2 class="text-xl font-semibold mb-2">Multiple Comboboxes</h2>
       <p class="text-muted-foreground text-sm">
         Different select dropdowns in a form
       </p>
@@ -243,7 +243,7 @@
   <!-- Async Search - Users -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Async Search</h3>
+      <h2 class="text-xl font-semibold mb-2">Async Search</h2>
       <p class="text-muted-foreground text-sm">
         Load options dynamically from async source
       </p>
@@ -277,7 +277,7 @@
   <!-- Async Search - Cities -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Async with Fast Debounce</h3>
+      <h2 class="text-xl font-semibold mb-2">Async with Fast Debounce</h2>
       <p class="text-muted-foreground text-sm">
         Faster response time with reduced debounce delay
       </p>
@@ -311,7 +311,7 @@
   <!-- Disabled State -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Disabled State</h3>
+      <h2 class="text-xl font-semibold mb-2">Disabled State</h2>
       <p class="text-muted-foreground text-sm">
         Combobox in disabled state
       </p>
@@ -334,7 +334,7 @@
   <!-- Keyboard Navigation -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Keyboard Navigation</h3>
+      <h2 class="text-xl font-semibold mb-2">Keyboard Navigation</h2>
       <p class="text-muted-foreground text-sm">
         Full keyboard accessibility support
       </p>

@@ -48,7 +48,7 @@
 		<div
 			class="bg-purple-50 dark:bg-purple-950 border border-purple-200 dark:border-purple-800 rounded-lg p-4"
 		>
-			<h4 class="font-semibold text-purple-900 dark:text-purple-100 mb-2">Key Features</h4>
+			<h3 class="font-semibold text-purple-900 dark:text-purple-100 mb-2">Key Features</h3>
 			<ul class="text-sm text-purple-800 dark:text-purple-200 space-y-1">
 				<li>✓ Three specialized variants (Minimal, Standard, Full)</li>
 				<li>✓ Transport-agnostic (SSE, WebSocket, or custom)</li>

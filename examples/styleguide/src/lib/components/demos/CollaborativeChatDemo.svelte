@@ -201,7 +201,7 @@
 
 <div class="page">
 	<header class="page-header">
-		<h1>Collaborative Chat Demo</h1>
+		<h2>Collaborative Chat Demo</h2>
 		<p class="subtitle">
 			Real-time presence tracking, typing indicators, and live cursors for multi-user chat.
 		</p>
@@ -210,12 +210,12 @@
 	<div class="demo-container">
 		<!-- Presence Tracking -->
 		<section class="demo-section">
-			<h2>Presence Tracking</h2>
+			<h3>Presence Tracking</h3>
 			<p>Shows who's online with real-time status updates.</p>
 
 			<div class="demo-variants">
 				<div class="variant">
-					<h3>Presence Badge</h3>
+					<h4>Presence Badge</h4>
 					<div class="badge-examples">
 						<PresenceBadge presence="active" showText />
 						<PresenceBadge presence="idle" showText />
@@ -225,25 +225,25 @@
 				</div>
 
 				<div class="variant">
-					<h3>Avatar Stack</h3>
+					<h4>Avatar Stack</h4>
 					<PresenceAvatarStack users={activeUsers} maxVisible={5} />
 				</div>
 			</div>
 
 			<div class="variant full-width">
-				<h3>User List</h3>
+				<h4>User List</h4>
 				<PresenceList users={activeUsers} groupByPresence={true} />
 			</div>
 		</section>
 
 		<!-- Typing Indicators -->
 		<section class="demo-section">
-			<h2>Typing Indicators</h2>
+			<h3>Typing Indicators</h3>
 			<p>Shows who's typing with animated dots.</p>
 
 			<div class="demo-variants">
 				<div class="variant">
-					<h3>Simple Indicator</h3>
+					<h4>Simple Indicator</h4>
 					<TypingIndicator users={typingUsers} />
 					{#if typingUsers.length === 0}
 						<p class="empty-state">No one is typing</p>
@@ -251,7 +251,7 @@
 				</div>
 
 				<div class="variant">
-					<h3>Detailed List</h3>
+					<h4>Detailed List</h4>
 					<TypingUsersList users={typingUsers} />
 					{#if typingUsers.length === 0}
 						<p class="empty-state">No one is typing</p>
@@ -262,7 +262,7 @@
 
 		<!-- Live Cursors -->
 		<section class="demo-section">
-			<h2>Live Cursors</h2>
+			<h3>Live Cursors</h3>
 			<p>
 				Type below: <code>useCursorTracking</code> dispatches your caret to the store on every
 				move. To see someone else's, pick a user in Demo Controls and press
@@ -299,7 +299,7 @@
 
 		<!-- Demo Controls -->
 		<section class="demo-section">
-			<h2>Demo Controls</h2>
+			<h3>Demo Controls</h3>
 			<p>Simulate user actions to see real-time updates.</p>
 
 			<div class="controls">
@@ -331,9 +331,9 @@
 
 		<!-- Implementation Notes -->
 		<section class="demo-section">
-			<h2>Implementation Notes</h2>
+			<h3>Implementation Notes</h3>
 			<div class="info-card">
-				<h3>Features</h3>
+				<h4>Features</h4>
 				<ul>
 					<li>✅ Real-time presence tracking (active, idle, away, offline)</li>
 					<li>✅ Typing indicators with smart aggregation</li>
@@ -345,7 +345,7 @@
 					<li>❌ CRDT — removed, along with the yjs dependency it never used</li>
 				</ul>
 
-				<h3>Usage Example</h3>
+				<h4>Usage Example</h4>
 				<pre class="code-block"><code>{`import { createStore } from '@composable-svelte/core';
 import {
   collaborativeReducer,
@@ -392,7 +392,7 @@ const typingUsers = getTypingUsers($store.users, currentUserId);
 		margin-bottom: 48px;
 	}
 
-	.page-header h1 {
+	.page-header h2 {
 		font-size: 32px;
 		font-weight: 700;
 		margin: 0 0 8px 0;
@@ -417,13 +417,13 @@ const typingUsers = getTypingUsers($store.users, currentUserId);
 		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 	}
 
-	.demo-section h2 {
+	.demo-section h3 {
 		font-size: 24px;
 		font-weight: 600;
 		margin: 0 0 8px 0;
 	}
 
-	.demo-section h3 {
+	.demo-section h4 {
 		font-size: 16px;
 		font-weight: 600;
 		margin: 0 0 12px 0;
@@ -579,8 +579,8 @@ const typingUsers = getTypingUsers($store.users, currentUserId);
 			background: #2a2a2a;
 		}
 
-		.demo-section h2,
-		.demo-section h3 {
+		.demo-section h3,
+		.demo-section h4 {
 			color: #e0e0e0;
 		}
 

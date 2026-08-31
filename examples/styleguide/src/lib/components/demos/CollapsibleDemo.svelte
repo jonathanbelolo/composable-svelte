@@ -71,7 +71,7 @@
   <!-- Basic Collapsible Demo -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Basic Collapsible</h3>
+      <h2 class="text-xl font-semibold mb-2">Basic Collapsible</h2>
       <p class="text-muted-foreground text-sm">
         Single expandable section with smooth animations
       </p>
@@ -96,7 +96,7 @@
   <!-- Expanded by Default -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Expanded by Default</h3>
+      <h2 class="text-xl font-semibold mb-2">Expanded by Default</h2>
       <p class="text-muted-foreground text-sm">
         Collapsible can start in an expanded state
       </p>
@@ -137,7 +137,7 @@
   <!-- Code Example -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Code Example Pattern</h3>
+      <h2 class="text-xl font-semibold mb-2">Code Example Pattern</h2>
       <p class="text-muted-foreground text-sm">
         Common use case for showing/hiding code snippets
       </p>
@@ -173,7 +173,7 @@ const store = createStore({
   <!-- Disabled State -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Disabled State</h3>
+      <h2 class="text-xl font-semibold mb-2">Disabled State</h2>
       <p class="text-muted-foreground text-sm">
         Collapsible can be disabled to prevent interaction
       </p>
@@ -215,7 +215,7 @@ const store = createStore({
   <!-- Nested Collapsibles -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Nested Collapsibles</h3>
+      <h2 class="text-xl font-semibold mb-2">Nested Collapsibles</h2>
       <p class="text-muted-foreground text-sm">
         Collapsibles can be nested for hierarchical content
       </p>
@@ -289,7 +289,7 @@ const store = createStore({
   <!-- Show More/Less Pattern -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Show More/Less Pattern</h3>
+      <h2 class="text-xl font-semibold mb-2">Show More/Less Pattern</h2>
       <p class="text-muted-foreground text-sm">
         Common pattern for long content
       </p>
@@ -302,7 +302,7 @@ const store = createStore({
         { id: 3, title: 'Testing Best Practices', preview: 'Use TestStore for exhaustive action testing...', store: multiStore3 }
       ] as item}
         <div class="border-b last:border-b-0 py-4">
-          <h4 class="font-semibold mb-2">{item.title}</h4>
+          <h3 class="font-semibold mb-2">{item.title}</h3>
           <p class="text-sm text-muted-foreground mb-2">
             {item.preview}
           </p>

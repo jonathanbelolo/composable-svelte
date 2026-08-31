@@ -101,7 +101,7 @@
   <!-- Live Demo Section -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Interactive Demo</h3>
+      <h2 class="text-xl font-semibold mb-2">Interactive Demo</h2>
       <p class="text-muted-foreground text-sm">
         Click the button to open a bottom sheet
       </p>
@@ -119,7 +119,7 @@
 
   <!-- Description -->
   <section class="space-y-4">
-    <h3 class="text-xl font-semibold">Usage</h3>
+    <h2 class="text-xl font-semibold">Usage</h2>
     <div class="prose prose-sm dark:prose-invert">
       <p>
         The Sheet component provides a sliding panel that appears from the bottom (or sides) of the screen.
@@ -139,13 +139,13 @@
   <!-- Features Section -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Key Features</h3>
+      <h2 class="text-xl font-semibold mb-2">Key Features</h2>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div class="rounded-lg border bg-card p-6 space-y-3">
         <div class="text-2xl">📱</div>
-        <h4 class="font-semibold">Mobile-First</h4>
+        <h3 class="font-semibold">Mobile-First</h3>
         <p class="text-sm text-muted-foreground">
           Optimized for touch interactions and mobile screens
         </p>
@@ -153,7 +153,7 @@
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
         <div class="text-2xl">⬆️</div>
-        <h4 class="font-semibold">Slide Direction</h4>
+        <h3 class="font-semibold">Slide Direction</h3>
         <p class="text-sm text-muted-foreground">
           Configure to slide from bottom, left, or right
         </p>
@@ -161,7 +161,7 @@
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
         <div class="text-2xl">📏</div>
-        <h4 class="font-semibold">Flexible Height</h4>
+        <h3 class="font-semibold">Flexible Height</h3>
         <p class="text-sm text-muted-foreground">
           Customize sheet height with CSS values
         </p>
@@ -169,7 +169,7 @@
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
         <div class="text-2xl">✨</div>
-        <h4 class="font-semibold">Smooth Animations</h4>
+        <h3 class="font-semibold">Smooth Animations</h3>
         <p class="text-sm text-muted-foreground">
           Slide-in and slide-out with smooth transitions
         </p>
@@ -180,26 +180,26 @@
   <!-- Use Cases Section -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Common Use Cases</h3>
+      <h2 class="text-xl font-semibold mb-2">Common Use Cases</h2>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       <div class="rounded-lg border bg-card p-6 space-y-3">
-        <h4 class="font-semibold">Filters & Sorting</h4>
+        <h3 class="font-semibold">Filters & Sorting</h3>
         <p class="text-sm text-muted-foreground">
           Show filtering options without leaving the current page
         </p>
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
-        <h4 class="font-semibold">Quick Settings</h4>
+        <h3 class="font-semibold">Quick Settings</h3>
         <p class="text-sm text-muted-foreground">
           Access settings panel without full navigation
         </p>
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
-        <h4 class="font-semibold">Action Menus</h4>
+        <h3 class="font-semibold">Action Menus</h3>
         <p class="text-sm text-muted-foreground">
           Display contextual actions in a bottom sheet
         </p>
@@ -240,7 +240,7 @@
           </p>
 
           <div class="space-y-3">
-            <h3 class="font-semibold">Example Content</h3>
+            <h2 class="font-semibold">Example Content</h2>
             <p class="text-sm">
               Sheets are perfect for:
             </p>
@@ -253,7 +253,7 @@
           </div>
 
           <div class="space-y-3">
-            <h3 class="font-semibold">Dismissal Options</h3>
+            <h2 class="font-semibold">Dismissal Options</h2>
             <p class="text-sm text-muted-foreground">
               The sheet will close when you:
             </p>

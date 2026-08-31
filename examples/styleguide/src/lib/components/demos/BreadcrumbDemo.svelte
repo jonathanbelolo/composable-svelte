@@ -30,7 +30,7 @@
   <!-- Live Demo Section -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Interactive Demo</h3>
+      <h2 class="text-xl font-semibold mb-2">Interactive Demo</h2>
       <p class="text-muted-foreground text-sm">
         Click on breadcrumb items to navigate. The path will update dynamically.
       </p>
@@ -87,7 +87,7 @@
   <!-- Basic Example -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Basic Breadcrumb</h3>
+      <h2 class="text-xl font-semibold mb-2">Basic Breadcrumb</h2>
       <p class="text-muted-foreground text-sm">
         Simple breadcrumb navigation with links
       </p>
@@ -115,7 +115,7 @@
   <!-- With Ellipsis -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">With Collapsed Items</h3>
+      <h2 class="text-xl font-semibold mb-2">With Collapsed Items</h2>
       <p class="text-muted-foreground text-sm">
         Use ellipsis to collapse middle items in long paths
       </p>
@@ -151,7 +151,7 @@
   <!-- Custom Separator -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Custom Separators</h3>
+      <h2 class="text-xl font-semibold mb-2">Custom Separators</h2>
       <p class="text-muted-foreground text-sm">
         Use custom content as separators
       </p>
@@ -235,7 +235,7 @@
   <!-- Different Lengths -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Different Path Lengths</h3>
+      <h2 class="text-xl font-semibold mb-2">Different Path Lengths</h2>
       <p class="text-muted-foreground text-sm">
         Breadcrumbs adapt to different navigation depths
       </p>
@@ -319,7 +319,7 @@
   <!-- Accessibility Features -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Accessibility Features</h3>
+      <h2 class="text-xl font-semibold mb-2">Accessibility Features</h2>
       <p class="text-muted-foreground text-sm">
         Built with semantic HTML and ARIA attributes
       </p>

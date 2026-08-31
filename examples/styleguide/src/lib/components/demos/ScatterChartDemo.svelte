@@ -102,7 +102,7 @@
 
 <div class="space-y-6">
   <div class="space-y-2">
-    <h3 class="text-lg font-semibold">Scatter Chart - Interactive</h3>
+    <h2 class="text-lg font-semibold">Scatter Chart - Interactive</h2>
     <p class="text-sm text-muted-foreground">
       Interactive scatter plot with zoom/pan and brush selection. Toggle between modes to explore the Iris dataset.
     </p>
@@ -164,7 +164,7 @@
   </div>
 
   <div class="space-y-2">
-    <h4 class="text-sm font-semibold">Features:</h4>
+    <h3 class="text-sm font-semibold">Features:</h3>
     <ul class="text-sm text-muted-foreground space-y-1 list-disc list-inside">
       <li>Interactive tooltips on hover</li>
       <li><strong>Zoom Mode:</strong> Mouse wheel to zoom, drag to pan, +/- buttons</li>

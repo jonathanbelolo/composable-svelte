@@ -20,7 +20,7 @@
         <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
           <span class="text-primary-foreground font-bold text-lg">CS</span>
         </div>
-        <h1 class="text-xl font-bold">Component Showcase</h1>
+        <span class="text-xl font-bold">Component Showcase</span>
       </button>
     </div>
 

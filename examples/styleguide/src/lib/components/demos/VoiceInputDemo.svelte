@@ -54,7 +54,7 @@
 
 <div class="page">
 	<header class="page-header">
-		<h1>Voice Input Component</h1>
+		<h2>Voice Input Component</h2>
 		<p class="subtitle">
 			Standalone voice input with push-to-talk mode and backend transcription.
 		</p>
@@ -62,12 +62,12 @@
 
 	<div class="demo-container">
 		<section class="demo-section">
-			<h2>Push-to-Talk Demo</h2>
+			<h3>Push-to-Talk Demo</h3>
 			<p>Press and hold the microphone button to record. Release to send for transcription.</p>
 
 			<div class="demo-variants">
 				<div class="variant">
-					<h3>Icon Variant</h3>
+					<h4>Icon Variant</h4>
 					<VoiceInput
 						store={pushToTalkStore}
 						onTranscript={handleTranscript}
@@ -77,7 +77,7 @@
 				</div>
 
 				<div class="variant">
-					<h3>Button Variant</h3>
+					<h4>Button Variant</h4>
 					<VoiceInput
 						store={pushToTalkStore}
 						onTranscript={handleTranscript}
@@ -88,7 +88,7 @@
 				</div>
 
 				<div class="variant">
-					<h3>FAB Variant</h3>
+					<h4>FAB Variant</h4>
 					<VoiceInput
 						store={pushToTalkStore}
 						onTranscript={handleTranscript}
@@ -106,12 +106,12 @@
 		</section>
 
 		<section class="demo-section">
-			<h2>Conversation Mode Demo</h2>
+			<h3>Conversation Mode Demo</h3>
 			<p>Click to toggle conversation mode on/off. Speak naturally, and audio segments are sent after 1.5 seconds of silence.</p>
 
 			<div class="demo-variants">
 				<div class="variant">
-					<h3>Icon Variant</h3>
+					<h4>Icon Variant</h4>
 					<VoiceInput
 						store={conversationStore}
 						onTranscript={handleTranscript}
@@ -129,7 +129,7 @@
 				</div>
 
 				<div class="variant">
-					<h3>Button Variant</h3>
+					<h4>Button Variant</h4>
 					<VoiceInput
 						store={conversationStore}
 						onTranscript={handleTranscript}
@@ -148,7 +148,7 @@
 				</div>
 
 				<div class="variant">
-					<h3>FAB Variant</h3>
+					<h4>FAB Variant</h4>
 					<VoiceInput
 						store={conversationStore}
 						onTranscript={handleTranscript}
@@ -175,7 +175,7 @@
 		</section>
 
 		<section class="demo-section">
-			<h2>Transcripts</h2>
+			<h3>Transcripts</h3>
 			{#if transcripts.length === 0}
 				<p class="empty-state">No transcripts yet. Record a message to see transcription results.</p>
 			{:else}
@@ -191,21 +191,21 @@
 		</section>
 
 		<section class="demo-section debug-section">
-			<h2>State Debug</h2>
+			<h3>State Debug</h3>
 			<pre class="debug-output"><code>{stateDisplay}</code></pre>
 		</section>
 
 		<section class="demo-section">
-			<h2>Implementation Notes</h2>
+			<h3>Implementation Notes</h3>
 			<div class="info-card">
-				<h3>Mock Transcription</h3>
+				<h4>Mock Transcription</h4>
 				<p>
 					This demo uses a mock transcription service that simulates a backend API call. In
 					production, you would replace this with a real backend endpoint that calls Whisper, OpenAI,
 					or another speech-to-text service.
 				</p>
 
-				<h3>Backend Integration Example</h3>
+				<h4>Backend Integration Example</h4>
 				<pre class="code-block"><code>{`const voiceStore = createStore({
   initialState: createInitialVoiceInputState(),
   reducer: voiceInputReducer,
@@ -227,7 +227,7 @@
   }
 });`}</code></pre>
 
-				<h3>Features</h3>
+				<h4>Features</h4>
 				<ul>
 					<li>✅ Push-to-talk recording (press & hold)</li>
 					<li>✅ Real-time audio level visualization</li>
@@ -252,7 +252,7 @@
 		margin-bottom: 48px;
 	}
 
-	.page-header h1 {
+	.page-header h2 {
 		font-size: 32px;
 		font-weight: 700;
 		margin: 0 0 8px 0;
@@ -277,13 +277,13 @@
 		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 	}
 
-	.demo-section h2 {
+	.demo-section h3 {
 		font-size: 24px;
 		font-weight: 600;
 		margin: 0 0 16px 0;
 	}
 
-	.demo-section h3 {
+	.demo-section h4 {
 		font-size: 16px;
 		font-weight: 600;
 		margin: 0 0 12px 0;
@@ -365,7 +365,7 @@
 		color: #d4d4d4;
 	}
 
-	.debug-section h2 {
+	.debug-section h3 {
 		color: #d4d4d4;
 	}
 
@@ -419,8 +419,8 @@
 			background: #2a2a2a;
 		}
 
-		.demo-section h2,
-		.demo-section h3 {
+		.demo-section h3,
+		.demo-section h4 {
 			color: #e0e0e0;
 		}
 

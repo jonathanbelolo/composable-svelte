@@ -42,17 +42,17 @@
           {
             id: 'marker-1',
             position: [-74.006, 40.7128],
-            popup: { content: '<h3>Times Square</h3><p>The heart of NYC</p>', isOpen: true }
+            popup: { content: '<h2>Times Square</h2><p>The heart of NYC</p>', isOpen: true }
           },
           {
             id: 'marker-2',
             position: [-73.935, 40.73],
-            popup: { content: '<h3>Queens</h3><p>The largest borough</p>', isOpen: false }
+            popup: { content: '<h2>Queens</h2><p>The largest borough</p>', isOpen: false }
           },
           {
             id: 'marker-3',
             position: [-73.968, 40.785],
-            popup: { content: '<h3>Central Park</h3><p>Urban oasis</p>', isOpen: false }
+            popup: { content: '<h2>Central Park</h2><p>Urban oasis</p>', isOpen: false }
           }
         ]
       }),
@@ -215,7 +215,7 @@
     {@const store = getStore('basic')}
     <section class="space-y-4">
       <div>
-        <h3 class="text-xl font-semibold mb-2">Basic Map with Markers</h3>
+        <h2 class="text-xl font-semibold mb-2">Basic Map with Markers</h2>
         <p class="text-muted-foreground text-sm">Interactive map powered by Maplibre GL with custom markers and popups</p>
       </div>
       <Card>
@@ -237,7 +237,7 @@
     {@const store = getStore('geojson')}
     <section class="space-y-4">
       <div>
-        <h3 class="text-xl font-semibold mb-2">GeoJSON Layer</h3>
+        <h2 class="text-xl font-semibold mb-2">GeoJSON Layer</h2>
         <p class="text-muted-foreground text-sm">Render GeoJSON data with custom styling for polygons and features</p>
       </div>
       <Card>
@@ -269,7 +269,7 @@
     {@const store = getStore('heatmap')}
     <section class="space-y-4">
       <div>
-        <h3 class="text-xl font-semibold mb-2">Heatmap Layer</h3>
+        <h2 class="text-xl font-semibold mb-2">Heatmap Layer</h2>
         <p class="text-muted-foreground text-sm">Visualize point density with color gradients - 200 data points in Los Angeles</p>
       </div>
       <Card>
@@ -306,7 +306,7 @@
     {@const store = getStore('interactive')}
     <section class="space-y-4">
       <div>
-        <h3 class="text-xl font-semibold mb-2">Interactive Controls</h3>
+        <h2 class="text-xl font-semibold mb-2">Interactive Controls</h2>
         <p class="text-muted-foreground text-sm">Programmatically control the map via reducer actions</p>
       </div>
       <Card>
@@ -336,7 +336,7 @@
     {@const store = getStore('tiles')}
     <section class="space-y-4">
       <div>
-        <h3 class="text-xl font-semibold mb-2">Tile Providers</h3>
+        <h2 class="text-xl font-semibold mb-2">Tile Providers</h2>
         <p class="text-muted-foreground text-sm">Switch between different map styles and tile providers</p>
       </div>
       <Card>
@@ -358,7 +358,7 @@
     {@const store = getStore('popup')}
     <section class="space-y-4">
       <div>
-        <h3 class="text-xl font-semibold mb-2">Standalone Popup</h3>
+        <h2 class="text-xl font-semibold mb-2">Standalone Popup</h2>
         <p class="text-muted-foreground text-sm">Add popups independent of markers with custom HTML content</p>
       </div>
       <Card>
@@ -374,7 +374,7 @@
                 closeOnClick={false}
               >
                 <div class="p-2">
-                  <h4 class="font-semibold text-sm">San Francisco</h4>
+                  <h3 class="font-semibold text-sm">San Francisco</h3>
                   <p class="text-xs text-muted-foreground mt-1">The City by the Bay</p>
                 </div>
               </MapPopup>
@@ -387,7 +387,7 @@
 
   <!-- Features Overview (always visible) -->
   <section class="space-y-4">
-    <h3 class="text-xl font-semibold mb-2">Features Overview</h3>
+    <h2 class="text-xl font-semibold mb-2">Features Overview</h2>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {#each [
         ['Maplibre GL', 'Open-source map library with no API key required'],

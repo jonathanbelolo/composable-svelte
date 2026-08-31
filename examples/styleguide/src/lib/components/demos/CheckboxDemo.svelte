@@ -26,7 +26,7 @@
 <div class="space-y-12">
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Interactive Demo</h3>
+      <h2 class="text-xl font-semibold mb-2">Interactive Demo</h2>
       <p class="text-muted-foreground text-sm">Binary selection with visual feedback</p>
     </div>
 
@@ -43,12 +43,12 @@
 
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Checkbox States</h3>
+      <h2 class="text-xl font-semibold mb-2">Checkbox States</h2>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">Unchecked</h4>
+        <h3 class="font-semibold">Unchecked</h3>
         <div class="flex items-center space-x-2">
           <Checkbox id="unchecked" />
           <Label for="unchecked">Unchecked checkbox</Label>
@@ -56,7 +56,7 @@
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">Checked</h4>
+        <h3 class="font-semibold">Checked</h3>
         <div class="flex items-center space-x-2">
           <Checkbox id="checked" checked />
           <Label for="checked">Checked checkbox</Label>
@@ -64,7 +64,7 @@
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">Disabled unchecked</h4>
+        <h3 class="font-semibold">Disabled unchecked</h3>
         <div class="flex items-center space-x-2">
           <Checkbox id="disabled-unchecked" disabled />
           <Label for="disabled-unchecked">Disabled unchecked</Label>
@@ -72,7 +72,7 @@
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">Disabled checked</h4>
+        <h3 class="font-semibold">Disabled checked</h3>
         <div class="flex items-center space-x-2">
           <Checkbox id="disabled-checked" checked disabled />
           <Label for="disabled-checked">Disabled checked</Label>
@@ -83,7 +83,7 @@
 
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Select All Pattern</h3>
+      <h2 class="text-xl font-semibold mb-2">Select All Pattern</h2>
       <p class="text-muted-foreground text-sm">
         Parent checkbox with indeterminate state
       </p>

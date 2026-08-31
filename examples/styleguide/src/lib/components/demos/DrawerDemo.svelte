@@ -101,7 +101,7 @@
   <!-- Live Demo Section -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Interactive Demo</h3>
+      <h2 class="text-xl font-semibold mb-2">Interactive Demo</h2>
       <p class="text-muted-foreground text-sm">
         Click the button to open a side drawer
       </p>
@@ -119,7 +119,7 @@
 
   <!-- Description -->
   <section class="space-y-4">
-    <h3 class="text-xl font-semibold">Usage</h3>
+    <h2 class="text-xl font-semibold">Usage</h2>
     <div class="prose prose-sm dark:prose-invert">
       <p>
         The Drawer component provides a sliding panel that appears from the side of the screen.
@@ -139,13 +139,13 @@
   <!-- Features Section -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Key Features</h3>
+      <h2 class="text-xl font-semibold mb-2">Key Features</h2>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div class="rounded-lg border bg-card p-6 space-y-3">
         <div class="text-2xl">🧭</div>
-        <h4 class="font-semibold">Navigation</h4>
+        <h3 class="font-semibold">Navigation</h3>
         <p class="text-sm text-muted-foreground">
           Perfect for application navigation and menu systems
         </p>
@@ -153,7 +153,7 @@
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
         <div class="text-2xl">⬅️</div>
-        <h4 class="font-semibold">Slide Direction</h4>
+        <h3 class="font-semibold">Slide Direction</h3>
         <p class="text-sm text-muted-foreground">
           Configure to slide from left or right side
         </p>
@@ -161,7 +161,7 @@
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
         <div class="text-2xl">📏</div>
-        <h4 class="font-semibold">Flexible Width</h4>
+        <h3 class="font-semibold">Flexible Width</h3>
         <p class="text-sm text-muted-foreground">
           Customize drawer width with CSS values
         </p>
@@ -169,7 +169,7 @@
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
         <div class="text-2xl">✨</div>
-        <h4 class="font-semibold">Smooth Animations</h4>
+        <h3 class="font-semibold">Smooth Animations</h3>
         <p class="text-sm text-muted-foreground">
           Slide-in and slide-out with smooth transitions
         </p>
@@ -180,26 +180,26 @@
   <!-- Use Cases Section -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Common Use Cases</h3>
+      <h2 class="text-xl font-semibold mb-2">Common Use Cases</h2>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       <div class="rounded-lg border bg-card p-6 space-y-3">
-        <h4 class="font-semibold">Navigation Menu</h4>
+        <h3 class="font-semibold">Navigation Menu</h3>
         <p class="text-sm text-muted-foreground">
           Primary navigation with links and nested menus
         </p>
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
-        <h4 class="font-semibold">Admin Sidebar</h4>
+        <h3 class="font-semibold">Admin Sidebar</h3>
         <p class="text-sm text-muted-foreground">
           Dashboard controls and settings access
         </p>
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
-        <h4 class="font-semibold">Content Browser</h4>
+        <h3 class="font-semibold">Content Browser</h3>
         <p class="text-sm text-muted-foreground">
           Browse files, folders, or document structure
         </p>
@@ -257,7 +257,7 @@
           </nav>
 
           <div class="space-y-3 pt-4">
-            <h3 class="font-semibold text-sm">Perfect For</h3>
+            <h2 class="font-semibold text-sm">Perfect For</h2>
             <ul class="list-disc list-inside text-sm space-y-1 text-muted-foreground">
               <li>App navigation</li>
               <li>Persistent sidebars</li>
@@ -267,7 +267,7 @@
           </div>
 
           <div class="space-y-3 pt-4">
-            <h3 class="font-semibold text-sm">Dismissal Options</h3>
+            <h2 class="font-semibold text-sm">Dismissal Options</h2>
             <p class="text-sm text-muted-foreground">
               The drawer will close when you:
             </p>

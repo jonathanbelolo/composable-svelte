@@ -152,7 +152,7 @@
   <!-- Live Demo Section -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Interactive Demo</h3>
+      <h2 class="text-xl font-semibold mb-2">Interactive Demo</h2>
       <p class="text-muted-foreground text-sm">
         Click the buttons to trigger different types of alert dialogs
       </p>
@@ -187,7 +187,7 @@
 
   <!-- Description -->
   <section class="space-y-4">
-    <h3 class="text-xl font-semibold">Usage</h3>
+    <h2 class="text-xl font-semibold">Usage</h2>
     <div class="prose prose-sm dark:prose-invert">
       <p>
         The Alert component provides confirmation dialogs for critical user actions.
@@ -207,13 +207,13 @@
   <!-- Features Section -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Key Features</h3>
+      <h2 class="text-xl font-semibold mb-2">Key Features</h2>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div class="rounded-lg border bg-card p-6 space-y-3">
         <div class="text-2xl">⚠️</div>
-        <h4 class="font-semibold">Critical Actions</h4>
+        <h3 class="font-semibold">Critical Actions</h3>
         <p class="text-sm text-muted-foreground">
           Require explicit confirmation for destructive or important actions
         </p>
@@ -221,7 +221,7 @@
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
         <div class="text-2xl">🎯</div>
-        <h4 class="font-semibold">Focused Attention</h4>
+        <h3 class="font-semibold">Focused Attention</h3>
         <p class="text-sm text-muted-foreground">
           Center-positioned with backdrop to capture user focus
         </p>
@@ -229,7 +229,7 @@
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
         <div class="text-2xl">⌨️</div>
-        <h4 class="font-semibold">Keyboard Accessible</h4>
+        <h3 class="font-semibold">Keyboard Accessible</h3>
         <p class="text-sm text-muted-foreground">
           Focus trap and ESC key support for full keyboard control
         </p>
@@ -237,7 +237,7 @@
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
         <div class="text-2xl">✨</div>
-        <h4 class="font-semibold">State-Driven Animations</h4>
+        <h3 class="font-semibold">State-Driven Animations</h3>
         <p class="text-sm text-muted-foreground">
           Smooth animations via presentation system with Motion One
         </p>
@@ -248,26 +248,26 @@
   <!-- Use Cases Section -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Common Use Cases</h3>
+      <h2 class="text-xl font-semibold mb-2">Common Use Cases</h2>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       <div class="rounded-lg border bg-card p-6 space-y-3">
-        <h4 class="font-semibold">Delete Confirmation</h4>
+        <h3 class="font-semibold">Delete Confirmation</h3>
         <p class="text-sm text-muted-foreground">
           Confirm before permanently deleting user data
         </p>
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
-        <h4 class="font-semibold">Action Warning</h4>
+        <h3 class="font-semibold">Action Warning</h3>
         <p class="text-sm text-muted-foreground">
           Warn users about potentially dangerous actions
         </p>
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
-        <h4 class="font-semibold">Form Submission</h4>
+        <h3 class="font-semibold">Form Submission</h3>
         <p class="text-sm text-muted-foreground">
           Confirm before submitting critical forms or changes
         </p>
@@ -278,12 +278,12 @@
   <!-- Best Practices -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Best Practices</h3>
+      <h2 class="text-xl font-semibold mb-2">Best Practices</h2>
     </div>
 
     <div class="space-y-4">
       <div class="rounded-lg border bg-card p-6">
-        <h4 class="font-semibold mb-3">When to Use Alerts</h4>
+        <h3 class="font-semibold mb-3">When to Use Alerts</h3>
         <ul class="list-disc list-inside text-sm space-y-2 text-muted-foreground">
           <li>Destructive actions that cannot be undone (delete, remove, clear)</li>
           <li>Actions with significant consequences (publish, submit, send)</li>
@@ -293,7 +293,7 @@
       </div>
 
       <div class="rounded-lg border bg-card p-6">
-        <h4 class="font-semibold mb-3">When NOT to Use Alerts</h4>
+        <h3 class="font-semibold mb-3">When NOT to Use Alerts</h3>
         <ul class="list-disc list-inside text-sm space-y-2 text-muted-foreground">
           <li>Simple informational messages (use toast or notification instead)</li>
           <li>Non-critical confirmations (use inline confirmation)</li>

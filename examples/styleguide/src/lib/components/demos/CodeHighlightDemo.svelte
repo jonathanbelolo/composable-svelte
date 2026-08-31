@@ -134,7 +134,7 @@ LIMIT 10;`;
 			</p>
 		</div>
 		<div class="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-			<h4 class="font-semibold text-blue-900 dark:text-blue-100 mb-2">Key Features</h4>
+			<h3 class="font-semibold text-blue-900 dark:text-blue-100 mb-2">Key Features</h3>
 			<ul class="text-sm text-blue-800 dark:text-blue-200 space-y-1">
 				<li>✓ 10+ Programming languages supported</li>
 				<li>✓ Light/dark themes with VS Code-inspired colors</li>

@@ -43,7 +43,7 @@
   <!-- Basic Single Date Selection -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Basic Date Picker</h3>
+      <h2 class="text-xl font-semibold mb-2">Basic Date Picker</h2>
       <p class="text-muted-foreground text-sm">
         Simple single date selection
       </p>
@@ -76,7 +76,7 @@
   <!-- Date Range Selection -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Date Range Picker</h3>
+      <h2 class="text-xl font-semibold mb-2">Date Range Picker</h2>
       <p class="text-muted-foreground text-sm">
         Select a start and end date
       </p>
@@ -112,7 +112,7 @@
   <!-- Pre-selected Date -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Pre-selected Date</h3>
+      <h2 class="text-xl font-semibold mb-2">Pre-selected Date</h2>
       <p class="text-muted-foreground text-sm">
         Calendar with initial value
       </p>
@@ -141,7 +141,7 @@
   <!-- Pre-selected Range -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Vacation Planner</h3>
+      <h2 class="text-xl font-semibold mb-2">Vacation Planner</h2>
       <p class="text-muted-foreground text-sm">
         Range picker with initial selection
       </p>
@@ -178,7 +178,7 @@
   <!-- Date Constraints -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Date Constraints</h3>
+      <h2 class="text-xl font-semibold mb-2">Date Constraints</h2>
       <p class="text-muted-foreground text-sm">
         Min/max date restrictions (next 12 months only)
       </p>
@@ -213,7 +213,7 @@
   <!-- Event Callbacks -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Event Callbacks</h3>
+      <h2 class="text-xl font-semibold mb-2">Event Callbacks</h2>
       <p class="text-muted-foreground text-sm">
         Calendar with selection event logging
       </p>
@@ -247,7 +247,7 @@
   <!-- Styled Calendar -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Custom Styling</h3>
+      <h2 class="text-xl font-semibold mb-2">Custom Styling</h2>
       <p class="text-muted-foreground text-sm">
         Calendar with custom CSS classes
       </p>
@@ -262,7 +262,7 @@
   <!-- Custom Header -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Custom Header</h3>
+      <h2 class="text-xl font-semibold mb-2">Custom Header</h2>
       <p class="text-muted-foreground text-sm">
         The <code>header</code> snippet receives <code>setMonth</code>, so a custom header can jump
         to any month rather than stepping one at a time.
@@ -288,7 +288,7 @@
   <!-- Use Cases -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Common Use Cases</h3>
+      <h2 class="text-xl font-semibold mb-2">Common Use Cases</h2>
       <p class="text-muted-foreground text-sm">
         Calendar component applications
       </p>

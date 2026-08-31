@@ -151,7 +151,7 @@
   <!-- Live Demo Section -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Interactive Demo</h3>
+      <h2 class="text-xl font-semibold mb-2">Interactive Demo</h2>
       <p class="text-muted-foreground text-sm">
         Toggle the sidebar to see it integrate with page layout
       </p>
@@ -175,7 +175,7 @@
             <div class="p-4 space-y-4 h-full flex flex-col">
               <!-- Sidebar Header -->
               <div class="flex items-center justify-between pb-3 border-b">
-                <h3 class="font-semibold">Navigation</h3>
+                <h2 class="font-semibold">Navigation</h2>
                 <button
                   onclick={() => demoStore.dispatch({ type: 'closeSidebar' })}
                   class="w-6 h-6 rounded hover:bg-accent flex items-center justify-center text-xs"
@@ -252,7 +252,7 @@
 
   <!-- Description -->
   <section class="space-y-4">
-    <h3 class="text-xl font-semibold">Usage</h3>
+    <h2 class="text-xl font-semibold">Usage</h2>
     <div class="prose prose-sm dark:prose-invert">
       <p>
         The Sidebar component provides an inline navigation panel that integrates
@@ -274,13 +274,13 @@
   <!-- Features Section -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Key Features</h3>
+      <h2 class="text-xl font-semibold mb-2">Key Features</h2>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div class="rounded-lg border bg-card p-6 space-y-3">
         <div class="text-2xl">📐</div>
-        <h4 class="font-semibold">Layout Integration</h4>
+        <h3 class="font-semibold">Layout Integration</h3>
         <p class="text-sm text-muted-foreground">
           Inline component that pushes content, not an overlay
         </p>
@@ -288,7 +288,7 @@
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
         <div class="text-2xl">⚡</div>
-        <h4 class="font-semibold">Smooth Animations</h4>
+        <h3 class="font-semibold">Smooth Animations</h3>
         <p class="text-sm text-muted-foreground">
           State-driven width animations for polished layout changes (300ms)
         </p>
@@ -296,7 +296,7 @@
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
         <div class="text-2xl">↔️</div>
-        <h4 class="font-semibold">Side Positioning</h4>
+        <h3 class="font-semibold">Side Positioning</h3>
         <p class="text-sm text-muted-foreground">
           Configure to appear on left or right side
         </p>
@@ -304,7 +304,7 @@
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
         <div class="text-2xl">🎯</div>
-        <h4 class="font-semibold">Persistent Navigation</h4>
+        <h3 class="font-semibold">Persistent Navigation</h3>
         <p class="text-sm text-muted-foreground">
           Perfect for always-visible navigation menus
         </p>
@@ -315,26 +315,26 @@
   <!-- Use Cases Section -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Common Use Cases</h3>
+      <h2 class="text-xl font-semibold mb-2">Common Use Cases</h2>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       <div class="rounded-lg border bg-card p-6 space-y-3">
-        <h4 class="font-semibold">App Navigation</h4>
+        <h3 class="font-semibold">App Navigation</h3>
         <p class="text-sm text-muted-foreground">
           Main navigation for web applications
         </p>
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
-        <h4 class="font-semibold">Dashboard Layouts</h4>
+        <h3 class="font-semibold">Dashboard Layouts</h3>
         <p class="text-sm text-muted-foreground">
           Persistent sidebar for admin dashboards
         </p>
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
-        <h4 class="font-semibold">Document Browser</h4>
+        <h3 class="font-semibold">Document Browser</h3>
         <p class="text-sm text-muted-foreground">
           File tree or table of contents navigation
         </p>
@@ -345,13 +345,13 @@
   <!-- Comparison Section -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Sidebar vs Drawer</h3>
+      <h2 class="text-xl font-semibold mb-2">Sidebar vs Drawer</h2>
     </div>
 
     <div class="rounded-lg border bg-card p-8">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div class="space-y-3">
-          <h4 class="font-semibold">Sidebar (This Component)</h4>
+          <h3 class="font-semibold">Sidebar (This Component)</h3>
           <ul class="text-sm text-muted-foreground space-y-2">
             <li>✓ Inline in document flow</li>
             <li>✓ State-driven width animations</li>
@@ -362,7 +362,7 @@
         </div>
 
         <div class="space-y-3">
-          <h4 class="font-semibold">Drawer (Overlay)</h4>
+          <h3 class="font-semibold">Drawer (Overlay)</h3>
           <ul class="text-sm text-muted-foreground space-y-2">
             <li>✓ Fixed/absolute positioning</li>
             <li>✓ Animated slide-in</li>

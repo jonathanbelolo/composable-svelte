@@ -10,7 +10,7 @@
 <div class="space-y-12">
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Interactive Demo</h3>
+      <h2 class="text-xl font-semibold mb-2">Interactive Demo</h2>
       <p class="text-muted-foreground text-sm">Single selection from multiple options</p>
     </div>
 
@@ -31,12 +31,12 @@
 
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Radio Group Examples</h3>
+      <h2 class="text-xl font-semibold mb-2">Radio Group Examples</h2>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">Notification preferences</h4>
+        <h3 class="font-semibold">Notification preferences</h3>
         <RadioGroup bind:value={notificationPreference}>
           <Radio value="all">All notifications</Radio>
           <Radio value="important">Important only</Radio>
@@ -45,7 +45,7 @@
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">Theme selection</h4>
+        <h3 class="font-semibold">Theme selection</h3>
         <RadioGroup bind:value={theme}>
           <Radio value="light">Light mode</Radio>
           <Radio value="dark">Dark mode</Radio>
@@ -54,7 +54,7 @@
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">With disabled option</h4>
+        <h3 class="font-semibold">With disabled option</h3>
         <RadioGroup value="option1">
           <Radio value="option1">Available option</Radio>
           <Radio value="option2" disabled>Disabled option</Radio>
@@ -63,7 +63,7 @@
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">Horizontal layout</h4>
+        <h3 class="font-semibold">Horizontal layout</h3>
         <RadioGroup value="small" class="flex gap-4">
           <Radio value="small">Small</Radio>
           <Radio value="medium">Medium</Radio>

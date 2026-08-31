@@ -7,7 +7,7 @@
   <!-- Basic Demo -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Basic Separator</h3>
+      <h2 class="text-xl font-semibold mb-2">Basic Separator</h2>
       <p class="text-muted-foreground text-sm">
         Visual divider to separate content sections
       </p>
@@ -16,21 +16,21 @@
     <Card>
       <CardContent class="pt-6 space-y-4">
         <div>
-          <h4 class="text-sm font-medium">Section One</h4>
+          <h3 class="text-sm font-medium">Section One</h3>
           <p class="text-sm text-muted-foreground">This is the first section content.</p>
         </div>
 
         <Separator />
 
         <div>
-          <h4 class="text-sm font-medium">Section Two</h4>
+          <h3 class="text-sm font-medium">Section Two</h3>
           <p class="text-sm text-muted-foreground">This is the second section content.</p>
         </div>
 
         <Separator />
 
         <div>
-          <h4 class="text-sm font-medium">Section Three</h4>
+          <h3 class="text-sm font-medium">Section Three</h3>
           <p class="text-sm text-muted-foreground">This is the third section content.</p>
         </div>
       </CardContent>
@@ -40,7 +40,7 @@
   <!-- Vertical Separator -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Vertical Separator</h3>
+      <h2 class="text-xl font-semibold mb-2">Vertical Separator</h2>
       <p class="text-muted-foreground text-sm">
         Separators can be oriented vertically
       </p>
@@ -75,7 +75,7 @@
   <!-- In Lists -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">In Menu Lists</h3>
+      <h2 class="text-xl font-semibold mb-2">In Menu Lists</h2>
       <p class="text-muted-foreground text-sm">
         Common usage in navigation and menu components
       </p>
@@ -141,7 +141,7 @@
   <!-- With Text Labels -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">With Text Labels</h3>
+      <h2 class="text-xl font-semibold mb-2">With Text Labels</h2>
       <p class="text-muted-foreground text-sm">
         Separators with centered text labels
       </p>
@@ -185,7 +185,7 @@
   <!-- Different Styles -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Usage Examples</h3>
+      <h2 class="text-xl font-semibold mb-2">Usage Examples</h2>
       <p class="text-muted-foreground text-sm">
         Different contexts where separators are useful
       </p>
@@ -200,7 +200,7 @@
         </CardHeader>
         <CardContent class="space-y-4">
           <div class="space-y-2">
-            <h4 class="text-sm font-medium">Personal Information</h4>
+            <h3 class="text-sm font-medium">Personal Information</h3>
             <input
               type="text"
               placeholder="Full Name"
@@ -216,7 +216,7 @@
           <Separator />
 
           <div class="space-y-2">
-            <h4 class="text-sm font-medium">Contact Details</h4>
+            <h3 class="text-sm font-medium">Contact Details</h3>
             <input
               type="tel"
               placeholder="Phone"
@@ -238,7 +238,7 @@
         </CardHeader>
         <CardContent class="space-y-4">
           <div>
-            <h4 class="font-medium mb-2">Introduction</h4>
+            <h3 class="font-medium mb-2">Introduction</h3>
             <p class="text-sm text-muted-foreground">
               Lorem ipsum dolor sit amet, consectetur adipiscing elit.
             </p>
@@ -247,7 +247,7 @@
           <Separator />
 
           <div>
-            <h4 class="font-medium mb-2">Main Content</h4>
+            <h3 class="font-medium mb-2">Main Content</h3>
             <p class="text-sm text-muted-foreground">
               Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
             </p>
@@ -256,7 +256,7 @@
           <Separator />
 
           <div>
-            <h4 class="font-medium mb-2">Conclusion</h4>
+            <h3 class="font-medium mb-2">Conclusion</h3>
             <p class="text-sm text-muted-foreground">
               Ut enim ad minim veniam, quis nostrud exercitation.
             </p>

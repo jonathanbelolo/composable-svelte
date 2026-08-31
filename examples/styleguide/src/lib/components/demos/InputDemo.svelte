@@ -16,7 +16,7 @@
   <!-- Interactive Demo Section -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Interactive Demo</h3>
+      <h2 class="text-xl font-semibold mb-2">Interactive Demo</h2>
       <p class="text-muted-foreground text-sm">
         Type in the input field to see live updates
       </p>
@@ -41,7 +41,7 @@
   <!-- Input Types -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Input Types</h3>
+      <h2 class="text-xl font-semibold mb-2">Input Types</h2>
       <p class="text-muted-foreground text-sm">
         Different input types for various data formats
       </p>
@@ -50,7 +50,7 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <!-- Text -->
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">Text</h4>
+        <h3 class="font-semibold">Text</h3>
         <div class="space-y-2">
           <Label for="text-input">Username</Label>
           <Input
@@ -63,7 +63,7 @@
 
       <!-- Email -->
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">Email</h4>
+        <h3 class="font-semibold">Email</h3>
         <div class="space-y-2">
           <Label for="email-input">Email address</Label>
           <Input
@@ -77,7 +77,7 @@
 
       <!-- Password -->
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">Password</h4>
+        <h3 class="font-semibold">Password</h3>
         <div class="space-y-2">
           <Label for="password-input">Password</Label>
           <Input
@@ -91,7 +91,7 @@
 
       <!-- Number -->
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">Number</h4>
+        <h3 class="font-semibold">Number</h3>
         <div class="space-y-2">
           <Label for="number-input">Age</Label>
           <Input
@@ -105,7 +105,7 @@
 
       <!-- Search -->
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">Search</h4>
+        <h3 class="font-semibold">Search</h3>
         <div class="space-y-2">
           <Label for="search-input">Search</Label>
           <Input
@@ -119,7 +119,7 @@
 
       <!-- URL -->
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">URL</h4>
+        <h3 class="font-semibold">URL</h3>
         <div class="space-y-2">
           <Label for="url-input">Website</Label>
           <Input
@@ -135,7 +135,7 @@
   <!-- States -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">States</h3>
+      <h2 class="text-xl font-semibold mb-2">States</h2>
       <p class="text-muted-foreground text-sm">
         Different states like disabled, error, etc.
       </p>
@@ -206,7 +206,7 @@
   <!-- Accessibility Features -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Accessibility Features</h3>
+      <h2 class="text-xl font-semibold mb-2">Accessibility Features</h2>
       <p class="text-muted-foreground text-sm">
         Built with accessibility in mind
       </p>

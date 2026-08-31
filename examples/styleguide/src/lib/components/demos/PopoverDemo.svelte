@@ -138,7 +138,7 @@
   <!-- Live Demo Section -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Interactive Demo</h3>
+      <h2 class="text-xl font-semibold mb-2">Interactive Demo</h2>
       <p class="text-muted-foreground text-sm">
         Click the buttons to trigger popovers in different directions
       </p>
@@ -187,7 +187,7 @@
 
   <!-- Description -->
   <section class="space-y-4">
-    <h3 class="text-xl font-semibold">Usage</h3>
+    <h2 class="text-xl font-semibold">Usage</h2>
     <div class="prose prose-sm dark:prose-invert">
       <p>
         The Popover component provides contextual overlays positioned relative to trigger elements.
@@ -206,13 +206,13 @@
   <!-- Features Section -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Key Features</h3>
+      <h2 class="text-xl font-semibold mb-2">Key Features</h2>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div class="rounded-lg border bg-card p-6 space-y-3">
         <div class="text-2xl">📍</div>
-        <h4 class="font-semibold">Smart Positioning</h4>
+        <h3 class="font-semibold">Smart Positioning</h3>
         <p class="text-sm text-muted-foreground">
           Position popovers relative to trigger elements in any direction
         </p>
@@ -220,7 +220,7 @@
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
         <div class="text-2xl">💬</div>
-        <h4 class="font-semibold">Contextual Content</h4>
+        <h3 class="font-semibold">Contextual Content</h3>
         <p class="text-sm text-muted-foreground">
           Show additional information or actions without cluttering the interface
         </p>
@@ -228,7 +228,7 @@
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
         <div class="text-2xl">⌨️</div>
-        <h4 class="font-semibold">Keyboard Accessible</h4>
+        <h3 class="font-semibold">Keyboard Accessible</h3>
         <p class="text-sm text-muted-foreground">
           Focus trap and ESC key support for full keyboard control
         </p>
@@ -236,7 +236,7 @@
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
         <div class="text-2xl">✨</div>
-        <h4 class="font-semibold">State-Driven Animations</h4>
+        <h3 class="font-semibold">State-Driven Animations</h3>
         <p class="text-sm text-muted-foreground">
           Smooth animations via presentation system with Motion One
         </p>
@@ -247,26 +247,26 @@
   <!-- Use Cases Section -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Common Use Cases</h3>
+      <h2 class="text-xl font-semibold mb-2">Common Use Cases</h2>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       <div class="rounded-lg border bg-card p-6 space-y-3">
-        <h4 class="font-semibold">Quick Actions</h4>
+        <h3 class="font-semibold">Quick Actions</h3>
         <p class="text-sm text-muted-foreground">
           Show contextual actions for items in a list or table
         </p>
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
-        <h4 class="font-semibold">Tooltips</h4>
+        <h3 class="font-semibold">Tooltips</h3>
         <p class="text-sm text-muted-foreground">
           Display helpful information about UI elements
         </p>
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
-        <h4 class="font-semibold">Dropdown Menus</h4>
+        <h3 class="font-semibold">Dropdown Menus</h3>
         <p class="text-sm text-muted-foreground">
           Show menus or option lists relative to buttons
         </p>
@@ -277,12 +277,12 @@
   <!-- Best Practices -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Best Practices</h3>
+      <h2 class="text-xl font-semibold mb-2">Best Practices</h2>
     </div>
 
     <div class="space-y-4">
       <div class="rounded-lg border bg-card p-6">
-        <h4 class="font-semibold mb-3">When to Use Popovers</h4>
+        <h3 class="font-semibold mb-3">When to Use Popovers</h3>
         <ul class="list-disc list-inside text-sm space-y-2 text-muted-foreground">
           <li>Contextual information that doesn't warrant a modal</li>
           <li>Quick actions or menus triggered by user interaction</li>
@@ -292,7 +292,7 @@
       </div>
 
       <div class="rounded-lg border bg-card p-6">
-        <h4 class="font-semibold mb-3">When NOT to Use Popovers</h4>
+        <h3 class="font-semibold mb-3">When NOT to Use Popovers</h3>
         <ul class="list-disc list-inside text-sm space-y-2 text-muted-foreground">
           <li>Critical information that must be acknowledged (use modal or alert)</li>
           <li>Complex forms or multi-step workflows (use sheet or modal)</li>
@@ -319,7 +319,7 @@
       <div class="space-y-4">
         <!-- Popover Header -->
         <div class="space-y-2">
-          <h3 class="text-lg font-semibold">Popover Content</h3>
+          <h2 class="text-lg font-semibold">Popover Content</h2>
           <p class="text-sm text-muted-foreground">
             This is a {state.popoverType} positioned popover. Click outside or press ESC to dismiss.
           </p>

@@ -15,7 +15,7 @@
   <!-- Basic Icon Buttons -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Basic Icon Buttons</h3>
+      <h2 class="text-xl font-semibold mb-2">Basic Icon Buttons</h2>
       <p class="text-muted-foreground text-sm">
         Icon-only buttons for compact interfaces
       </p>
@@ -61,7 +61,7 @@
   <!-- Variants -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Variants</h3>
+      <h2 class="text-xl font-semibold mb-2">Variants</h2>
       <p class="text-muted-foreground text-sm">
         Different visual styles
       </p>
@@ -124,7 +124,7 @@
   <!-- Sizes -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Sizes</h3>
+      <h2 class="text-xl font-semibold mb-2">Sizes</h2>
       <p class="text-muted-foreground text-sm">
         Small, medium, and large sizes
       </p>
@@ -157,7 +157,7 @@
   <!-- Loading State -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Loading State</h3>
+      <h2 class="text-xl font-semibold mb-2">Loading State</h2>
       <p class="text-muted-foreground text-sm">
         Show loading spinner during async operations
       </p>
@@ -194,7 +194,7 @@
   <!-- Disabled State -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Disabled State</h3>
+      <h2 class="text-xl font-semibold mb-2">Disabled State</h2>
       <p class="text-muted-foreground text-sm">
         Disabled buttons are not interactive
       </p>
@@ -227,7 +227,7 @@
   <!-- Common Use Cases -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Common Use Cases</h3>
+      <h2 class="text-xl font-semibold mb-2">Common Use Cases</h2>
       <p class="text-muted-foreground text-sm">
         Icon buttons in real-world scenarios
       </p>
@@ -237,7 +237,7 @@
       <!-- Header toolbar -->
       <div class="border rounded-lg p-4">
         <div class="flex items-center justify-between mb-4">
-          <h4 class="font-semibold">Header Toolbar</h4>
+          <h3 class="font-semibold">Header Toolbar</h3>
           <div class="flex gap-2">
             <IconButton variant="ghost" size="sm" aria-label="Search">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -266,7 +266,7 @@
       <div class="border rounded-lg p-4">
         <div class="flex items-start justify-between mb-2">
           <div class="flex-1">
-            <h4 class="font-semibold">Card with Actions</h4>
+            <h3 class="font-semibold">Card with Actions</h3>
             <p class="text-sm text-muted-foreground mt-1">Icon buttons for card-level actions</p>
           </div>
           <div class="flex gap-1">

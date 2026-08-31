@@ -154,7 +154,7 @@
   <!-- Basic Carousel -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Basic Carousel</h3>
+      <h2 class="text-xl font-semibold mb-2">Basic Carousel</h2>
       <p class="text-muted-foreground text-sm">
         Simple image carousel with navigation and pagination
       </p>
@@ -166,7 +166,7 @@
           <div class="h-full w-full bg-gradient-to-br {slide.data?.color} flex items-center justify-center">
             <div class="text-center text-white">
               <div class="text-6xl mb-4">📸</div>
-              <h4 class="text-3xl font-bold mb-2">{slide.data?.caption}</h4>
+              <h3 class="text-3xl font-bold mb-2">{slide.data?.caption}</h3>
               <p class="text-lg opacity-90">Slide {index + 1}</p>
             </div>
           </div>
@@ -178,7 +178,7 @@
   <!-- Auto-play Carousel -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Auto-play Carousel</h3>
+      <h2 class="text-xl font-semibold mb-2">Auto-play Carousel</h2>
       <p class="text-muted-foreground text-sm">
         Automatically advances every 3 seconds
       </p>
@@ -200,7 +200,7 @@
         {#snippet children({ slide })}
           <div class="h-full flex flex-col items-center justify-center p-12 text-center">
             <div class="text-6xl mb-6">{slide.data?.icon}</div>
-            <h4 class="text-2xl font-bold mb-4">{slide.data?.title}</h4>
+            <h3 class="text-2xl font-bold mb-4">{slide.data?.title}</h3>
             <p class="text-muted-foreground text-lg max-w-md">
               {slide.data?.description}
             </p>
@@ -213,7 +213,7 @@
   <!-- Product Carousel -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Product Showcase</h3>
+      <h2 class="text-xl font-semibold mb-2">Product Showcase</h2>
       <p class="text-muted-foreground text-sm">
         E-commerce product carousel with custom styling
       </p>
@@ -239,7 +239,7 @@
                   {/if}
                 </div>
                 <div class="p-6 text-center">
-                  <h4 class="text-xl font-semibold mb-2">{slide.data?.name}</h4>
+                  <h3 class="text-xl font-semibold mb-2">{slide.data?.name}</h3>
                   <p class="text-2xl font-bold text-primary mb-4">{slide.data?.price}</p>
                   <button class="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">
                     Add to Cart
@@ -256,7 +256,7 @@
   <!-- Testimonials Carousel -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Testimonials</h3>
+      <h2 class="text-xl font-semibold mb-2">Testimonials</h2>
       <p class="text-muted-foreground text-sm">
         Customer reviews carousel without arrows
       </p>
@@ -297,7 +297,7 @@
   <!-- No Loop Carousel -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Non-Looping Carousel</h3>
+      <h2 class="text-xl font-semibold mb-2">Non-Looping Carousel</h2>
       <p class="text-muted-foreground text-sm">
         Navigation stops at first and last slides
       </p>
@@ -313,7 +313,7 @@
         {#snippet children({ slide, index })}
           <div class="h-full w-full bg-gradient-to-br {slide.data?.color} flex items-center justify-center">
             <div class="text-center text-white">
-              <h4 class="text-4xl font-bold mb-2">{slide.data?.caption}</h4>
+              <h3 class="text-4xl font-bold mb-2">{slide.data?.caption}</h3>
               <p class="text-lg opacity-90">
                 Slide {index + 1} of {imageSlides.length}
                 {#if index === 0}
@@ -332,7 +332,7 @@
   <!-- Minimal Carousel -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Minimal Carousel</h3>
+      <h2 class="text-xl font-semibold mb-2">Minimal Carousel</h2>
       <p class="text-muted-foreground text-sm">
         No navigation controls, keyboard only
       </p>
@@ -349,7 +349,7 @@
           <div class="h-full flex items-center justify-center p-8">
             <div class="text-center">
               <div class="text-5xl mb-3">{slide.data?.icon}</div>
-              <h4 class="text-xl font-semibold">{slide.data?.title}</h4>
+              <h3 class="text-xl font-semibold">{slide.data?.title}</h3>
             </div>
           </div>
         {/snippet}

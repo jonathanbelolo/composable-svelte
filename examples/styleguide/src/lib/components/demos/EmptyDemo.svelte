@@ -8,7 +8,7 @@
   <!-- Basic Empty State -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Basic Empty State</h3>
+      <h2 class="text-xl font-semibold mb-2">Basic Empty State</h2>
       <p class="text-muted-foreground text-sm">
         Simple empty state with title and description
       </p>
@@ -27,7 +27,7 @@
   <!-- With Action Button -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">With Action Button</h3>
+      <h2 class="text-xl font-semibold mb-2">With Action Button</h2>
       <p class="text-muted-foreground text-sm">
         Provide a clear call-to-action
       </p>
@@ -48,7 +48,7 @@
   <!-- Search Results Empty -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Search Results Empty</h3>
+      <h2 class="text-xl font-semibold mb-2">Search Results Empty</h2>
       <p class="text-muted-foreground text-sm">
         When search returns no results
       </p>
@@ -80,7 +80,7 @@
   <!-- Inbox Empty -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Inbox Empty</h3>
+      <h2 class="text-xl font-semibold mb-2">Inbox Empty</h2>
       <p class="text-muted-foreground text-sm">
         All caught up message
       </p>
@@ -107,7 +107,7 @@
   <!-- Projects Empty -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Projects Empty</h3>
+      <h2 class="text-xl font-semibold mb-2">Projects Empty</h2>
       <p class="text-muted-foreground text-sm">
         Onboarding for new users
       </p>
@@ -140,7 +140,7 @@
   <!-- Error State -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Error State</h3>
+      <h2 class="text-xl font-semibold mb-2">Error State</h2>
       <p class="text-muted-foreground text-sm">
         When something goes wrong
       </p>
@@ -168,7 +168,7 @@
   <!-- Notifications Empty -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Notifications Empty</h3>
+      <h2 class="text-xl font-semibold mb-2">Notifications Empty</h2>
       <p class="text-muted-foreground text-sm">
         No notifications to display
       </p>
@@ -194,7 +194,7 @@
   <!-- Multiple Empty States -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Gallery View</h3>
+      <h2 class="text-xl font-semibold mb-2">Gallery View</h2>
       <p class="text-muted-foreground text-sm">
         Empty states in different contexts
       </p>

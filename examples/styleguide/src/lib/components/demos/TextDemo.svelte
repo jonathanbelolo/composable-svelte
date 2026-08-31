@@ -5,7 +5,7 @@
 <div class="space-y-12">
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Text Sizes</h3>
+      <h2 class="text-xl font-semibold mb-2">Text Sizes</h2>
       <p class="text-muted-foreground text-sm">
         Extra small to extra large text sizes
       </p>
@@ -41,7 +41,7 @@
 
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Text Variants</h3>
+      <h2 class="text-xl font-semibold mb-2">Text Variants</h2>
       <p class="text-muted-foreground text-sm">
         Different color and style variants
       </p>
@@ -57,7 +57,7 @@
 
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Different Elements</h3>
+      <h2 class="text-xl font-semibold mb-2">Different Elements</h2>
       <p class="text-muted-foreground text-sm">
         Render as different HTML elements
       </p>
@@ -72,7 +72,7 @@
 
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Inline Usage</h3>
+      <h2 class="text-xl font-semibold mb-2">Inline Usage</h2>
       <p class="text-muted-foreground text-sm">
         Mix text variants inline
       </p>
@@ -95,7 +95,7 @@
 
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Custom Styling</h3>
+      <h2 class="text-xl font-semibold mb-2">Custom Styling</h2>
       <p class="text-muted-foreground text-sm">
         Apply additional Tailwind classes
       </p>

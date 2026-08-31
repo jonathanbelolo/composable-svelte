@@ -29,7 +29,7 @@
   <!-- Basic Pagination -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Basic Pagination</h3>
+      <h2 class="text-xl font-semibold mb-2">Basic Pagination</h2>
       <p class="text-muted-foreground text-sm">
         Simple page navigation with smart ellipsis handling
       </p>
@@ -43,7 +43,7 @@
             <CardContent class="p-4">
               <div class="flex items-center justify-between">
                 <div>
-                  <h4 class="font-semibold text-sm">{item.title}</h4>
+                  <h3 class="font-semibold text-sm">{item.title}</h3>
                   <p class="text-xs text-muted-foreground mt-1">{item.description}</p>
                 </div>
                 <Badge variant="secondary">#{item.id}</Badge>
@@ -67,7 +67,7 @@
   <!-- Compact Pagination -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Compact Pagination</h3>
+      <h2 class="text-xl font-semibold mb-2">Compact Pagination</h2>
       <p class="text-muted-foreground text-sm">
         Fewer items - shows all pages without ellipsis
       </p>
@@ -92,7 +92,7 @@
   <!-- With Items Per Page Selector -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">With Items Per Page Selector</h3>
+      <h2 class="text-xl font-semibold mb-2">With Items Per Page Selector</h2>
       <p class="text-muted-foreground text-sm">
         Allow users to control page size
       </p>
@@ -135,7 +135,7 @@
   <!-- Large Dataset -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Large Dataset</h3>
+      <h2 class="text-xl font-semibold mb-2">Large Dataset</h2>
       <p class="text-muted-foreground text-sm">
         Smart ellipsis for many pages (1000 items total)
       </p>
@@ -173,7 +173,7 @@
   <!-- Different Configurations -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Different Configurations</h3>
+      <h2 class="text-xl font-semibold mb-2">Different Configurations</h2>
       <p class="text-muted-foreground text-sm">
         Various page button limits
       </p>
@@ -215,7 +215,7 @@
   <!-- Table Example -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Table Pagination Example</h3>
+      <h2 class="text-xl font-semibold mb-2">Table Pagination Example</h2>
       <p class="text-muted-foreground text-sm">
         Common use case with data tables
       </p>
@@ -276,7 +276,7 @@
   <!-- Edge Cases -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Edge Cases</h3>
+      <h2 class="text-xl font-semibold mb-2">Edge Cases</h2>
       <p class="text-muted-foreground text-sm">
         Single page and empty states
       </p>
