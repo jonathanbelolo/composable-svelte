@@ -14,6 +14,7 @@
 		"check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings"
 	},
 	"dependencies": {
+		"@composable-svelte/auth": "workspace:*",
 		"@composable-svelte/charts": "workspace:*",
 		"@composable-svelte/chat": "workspace:*",
 		"@composable-svelte/code": "workspace:*",

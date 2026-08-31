@@ -10,6 +10,7 @@
 export {
 	loginReducer,
 	createInitialLoginState,
+	createLoginStore,
 	loginFormConfig,
 	loginSchema,
 	emptyLoginFields

@@ -4,11 +4,17 @@ Client half of the identity substrate for Composable Svelte apps backed by
 generated Composable Rust backends: a session store, subject helpers, and
 thin guard components.
 
-> **This is not a general-purpose auth library.** It speaks to one backend
-> shape and offers seeded-user, passwordless login — there is no password
-> login, no OAuth, no signup and no token refresh, and none is planned here.
-> The package name is broader than the package. If you are looking for
-> general authentication for a Svelte app, this is not it.
+> **Still narrower than its name.** What exists: session resolution,
+> seeded-user passwordless login, and **password sign-in** — headless flow,
+> HTTP adapter and styled form. What does not exist yet: signup, password
+> reset, email verification, MFA, OAuth and token refresh. The `AuthError`
+> union already names the failures those flows produce (`mfa_required`,
+> `email_unverified`, …) because the backend contract needs them; a code
+> appearing there is not a promise that the flow behind it ships today.
+>
+> The HTTP adapter speaks to one backend shape (Composable Rust). Every
+> dependency is injected, so another backend supplies its own object — but only
+> the one adapter is written.
 
 
 
@@ -47,6 +53,87 @@ session.dispatch({ type: 'login', seededUserId: 'seeded-agent' });
 // Server-side session invalidation.
 session.dispatch({ type: 'logout' });
 ```
+
+### Password sign-in
+
+Two stores, not one. The session store owns "who am I"; the flow store owns one
+sign-in attempt — its fields, its request, and the structured failure that comes
+back. They are separate because `SessionStatus` already has seven values that
+`AuthGuard` and `RoleGate` switch on exhaustively, and folding
+`mfaRequired`/`pendingVerification`/`passwordResetSent` into it would mean every
+consumer's guard branches change each time a flow is added.
+
+```typescript
+import { createSessionStore, createLoginStore } from '@composable-svelte/auth';
+import { createHttpAuthDeps } from '@composable-svelte/auth/http';
+
+// One dependency object drives both: the session calls and the flow calls.
+const deps = createHttpAuthDeps();
+
+const session = createSessionStore(deps);
+const login = createLoginStore(deps);
+```
+
+```svelte
+<script lang="ts">
+  import { LoginForm } from '@composable-svelte/auth';
+  import { login, session } from './stores';
+</script>
+
+<LoginForm
+  flowStore={login}
+  sessionStore={session}
+  onSuccess={() => history.pushState({}, '', '/')}
+>
+  {#snippet footer()}
+    <a href="/forgot">Forgot your password?</a>
+  {/snippet}
+</LoginForm>
+```
+
+`LoginForm` takes both stores rather than one, and that is deliberate: a
+completed sign-in has to cross from the flow to the session, and making that
+crossing a required prop turns a forgotten wiring into a compile error. The
+alternatives — composing the flow into a parent reducer, or an
+`onSessionEstablished` callback — both fail silently instead: the sign-in
+succeeds, the session never updates, and nothing typechecks against it.
+
+The failure is structured, so a surface can branch on it:
+
+```typescript
+import { retryDelaySeconds, type AuthError } from '@composable-svelte/auth';
+
+function whatToOffer(error: AuthError): string {
+  switch (error.code) {
+    case 'mfa_required':
+      return `second factor: ${error.methods.join(', ')} (challenge ${error.challengeId})`;
+    case 'email_unverified':
+      return 'offer to resend the verification email';
+    case 'rate_limited':
+      // `null` when the backend stated no delay — the client does not invent one.
+      return `wait ${retryDelaySeconds(error) ?? 'a while'}s`;
+    case 'account_locked':
+      // Offer no retry button at all.
+      return error.until ? `locked until ${error.until}` : 'locked';
+    default:
+      return error.message;
+  }
+}
+```
+
+**Headless is the supported path too.** `LoginForm` is the reference rendering,
+not the only one. `@composable-svelte/auth/flows` exports `loginReducer`,
+`loginSchema` and the state and action types, so a consumer with their own
+design system builds their own markup over the same machine — and the reducer
+tests still apply to it.
+
+**Styling.** These components ship scoped CSS, not Tailwind classes, because the
+Tailwind preset's content glob covers `@composable-svelte/core`'s `dist` only —
+a utility class in this package's `dist` would be purged in your app and the
+form would render unstyled. Colours are written as
+`hsl(var(--card, 0 0% 100%))`, so they follow core's theme tokens and its dark
+mode when core's stylesheet is loaded, and fall back to sane defaults when it is
+not.
 
 ```svelte
 <script lang="ts">

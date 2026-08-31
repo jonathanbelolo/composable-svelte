@@ -131,6 +131,30 @@ justified in place, `charts` has a keyboard cursor and a data-table fallback and
 an AA review — and no independent WCAG 2.1 AA audit of the other packages has
 been done. That last part is a gap, not a defect.
 
+### Satellite components ignore the theme — OPEN, and agreed to fix
+
+**438 hardcoded colour declarations across 37 component files** in `chat`,
+`media`, `code`, `maps` and `charts`, against **zero** references to any of
+core's 39 theme tokens. So a consumer who overrides `--primary` restyles every
+`core` component and not one satellite component.
+
+It is worse than absence in `chat`, which hooks `:global(.dark)` — core's own
+dark-mode class — and then hardcodes its own palette (`#1a1a1a`, `#333`). It
+looks theme-aware and is not: change `--background` and it stays `#1a1a1a`.
+
+**The constraint was real; the response was not the only option.** Satellites
+cannot use Tailwind utilities, because the preset's `contentGlob` covers core's
+dist only, so their classes are purged in every consumer app. But scoped CSS can
+read tokens: `hsl(var(--background, 0 0% 100%))` costs the same keystrokes as
+`#1a1a1a`, themes when core's stylesheet is present, and falls back when it is
+not. Verified to work under Tailwind — the styleguide has preflight on and
+renders satellite scoped CSS correctly today.
+
+`@composable-svelte/auth` is being built this way and is the reference. The
+sweep across the other five is agreed, sized above, and wants its own before/after
+in the styleguide plus a guard — no hardcoded colours in `packages/*/src` —
+on the model of `animation-policy.test.ts`.
+
 ## S8. Documentation — OPEN
 
 Several of these were closed by the documentation sweep; the rest stand.

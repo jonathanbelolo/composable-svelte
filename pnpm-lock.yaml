@@ -392,6 +392,9 @@ importers:
 
   examples/styleguide:
     dependencies:
+      '@composable-svelte/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@composable-svelte/charts':
         specifier: workspace:*
         version: link:../../packages/charts

@@ -6,7 +6,7 @@
  * chosen.
  */
 
-import { Effect, scope } from '@composable-svelte/core';
+import { createStore, Effect, scope } from '@composable-svelte/core';
 import {
 	createFormReducer,
 	createInitialFormState,
@@ -14,7 +14,7 @@ import {
 	type FormConfig,
 	type FormState
 } from '@composable-svelte/core/components/form';
-import type { Reducer } from '@composable-svelte/core';
+import type { Reducer, Store } from '@composable-svelte/core';
 
 import { toAuthError } from '../../errors/helpers.js';
 import { emptyLoginFields, loginSchema, type LoginFields } from './schema.js';
@@ -146,3 +146,33 @@ export const loginReducer: Reducer<LoginState, LoginAction, LoginDependencies> =
 		}
 	}
 };
+
+/**
+ * A store for one sign-in attempt.
+ *
+ * The parallel of `createSessionStore`, and there for the same reason: the
+ * three-argument `createStore` call is boilerplate a caller gets no say in.
+ * Compose `loginReducer` into a parent instead when the surrounding feature
+ * needs to observe the sign-in — this is for the common case where nothing does
+ * but the component.
+ *
+ * @example
+ * ```ts
+ * import { createLoginStore, createSessionStore } from '@composable-svelte/auth';
+ * import { createHttpAuthDeps } from '@composable-svelte/auth/http';
+ *
+ * const deps = createHttpAuthDeps();
+ * const session = createSessionStore(deps);
+ * const login = createLoginStore(deps);
+ * ```
+ */
+export function createLoginStore(
+	deps: LoginDependencies,
+	fields?: Partial<LoginFields>
+): Store<LoginState, LoginAction> {
+	return createStore({
+		initialState: createInitialLoginState(fields),
+		reducer: loginReducer,
+		dependencies: deps
+	});
+}

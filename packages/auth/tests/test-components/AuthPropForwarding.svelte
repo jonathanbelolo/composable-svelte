@@ -1,8 +1,11 @@
 <script lang="ts">
 	import AuthGuard from '../../src/lib/components/AuthGuard.svelte';
 	import RoleGate from '../../src/lib/components/RoleGate.svelte';
+	import LoginForm from '../../src/lib/components/LoginForm.svelte';
+	import PasswordInput from '../../src/lib/components/PasswordInput.svelte';
 	import type { AuthError } from '../../src/lib/errors/types.js';
-	import type { SessionState } from '../../src/lib/session/types.js';
+	import type { LoginAction, LoginState } from '../../src/lib/flows/login/types.js';
+	import type { SessionAction, SessionState } from '../../src/lib/session/types.js';
 	import type { Snippet } from 'svelte';
 
 	/**
@@ -28,7 +31,29 @@
 		pending,
 		roles,
 		gateChildren,
-		gateFallback
+		gateFallback,
+		flowStore,
+		sessionStore,
+		onSuccess,
+		header,
+		footer,
+		submitLabel,
+		emailLabel,
+		passwordLabel,
+		rememberLabel,
+		formClass,
+		fieldId,
+		value,
+		oninput,
+		onblur,
+		invalid,
+		errorId,
+		autocomplete,
+		placeholder,
+		disabled,
+		showLabel,
+		hideLabel,
+		inputClass
 	}: {
 		store: { readonly state: SessionState };
 		onAnonymous?: () => void;
@@ -41,8 +66,68 @@
 		// what fails and the `| undefined` question never gets asked.
 		gateChildren?: Snippet;
 		gateFallback?: Snippet;
+
+		// LoginForm. `flowStore` and `sessionStore` are required, so they are the
+		// one pair here that is not deliberately bare — a required prop cannot be
+		// `undefined` and there is nothing to prove about it.
+		flowStore: {
+			readonly state: LoginState;
+			dispatch(action: LoginAction): void;
+			subscribe(listener: (state: LoginState) => void): () => void;
+		};
+		sessionStore: { dispatch(action: SessionAction): void };
+		onSuccess?: () => void;
+		header?: Snippet;
+		footer?: Snippet;
+		submitLabel?: string;
+		emailLabel?: string;
+		passwordLabel?: string;
+		rememberLabel?: string;
+		// `class` cannot be a binding name, so both components' class props are
+		// renamed here and passed through explicitly below.
+		formClass?: string;
+
+		// PasswordInput.
+		fieldId: string;
+		value: string;
+		oninput: (event: Event & { currentTarget: HTMLInputElement }) => void;
+		onblur?: () => void;
+		invalid?: boolean;
+		errorId?: string;
+		autocomplete?: 'current-password' | 'new-password';
+		placeholder?: string;
+		disabled?: boolean;
+		showLabel?: string;
+		hideLabel?: string;
+		inputClass?: string;
 	} = $props();
 </script>
 
 <AuthGuard {store} {onAnonymous} {children} {fallback} {pending} />
 <RoleGate {store} {roles} children={gateChildren} fallback={gateFallback} {pending} />
+<LoginForm
+	{flowStore}
+	{sessionStore}
+	{onSuccess}
+	{header}
+	{footer}
+	{submitLabel}
+	{emailLabel}
+	{passwordLabel}
+	{rememberLabel}
+	class={formClass}
+/>
+<PasswordInput
+	id={fieldId}
+	{value}
+	{oninput}
+	{onblur}
+	{invalid}
+	{errorId}
+	{autocomplete}
+	{placeholder}
+	{disabled}
+	{showLabel}
+	{hideLabel}
+	class={inputClass}
+/>

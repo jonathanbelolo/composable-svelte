@@ -56,8 +56,26 @@ export {
 	type SessionDependencies
 } from './session/index.js';
 
+// Flows — headless sign-in, signup and the rest: reducer, types, schema
+export {
+	loginReducer,
+	createInitialLoginState,
+	createLoginStore,
+	loginFormConfig,
+	loginSchema,
+	emptyLoginFields,
+	type LoginFields,
+	type LoginState,
+	type LoginAction,
+	type LoginStatus,
+	type LoginDependencies
+} from './flows/index.js';
+
 // Dependencies — the injected auth I/O every flow runs over
 export type { AuthDependencies, LoginCredentials, AuthErrorBody } from './deps.js';
 
 // Components — thin store consumers (zero async)
-export { AuthGuard, RoleGate } from './components/index.js';
+export { AuthGuard, RoleGate, LoginForm, PasswordInput } from './components/index.js';
+
+// Testing — a backend-shaped fake, so a demo or a test needs no server
+export { createMockAuthDeps, type MockAuthOptions } from './testing/index.js';

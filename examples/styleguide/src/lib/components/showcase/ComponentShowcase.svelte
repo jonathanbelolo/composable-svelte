@@ -27,6 +27,7 @@
   import CommandDemo from '../demos/CommandDemo.svelte';
   import CalendarDemo from '../demos/CalendarDemo.svelte';
   import FileUploadDemo from '../demos/FileUploadDemo.svelte';
+  import LoginFormDemo from '../demos/LoginFormDemo.svelte';
   // Foundational Components
   import CardDemo from '../demos/CardDemo.svelte';
   import SeparatorDemo from '../demos/SeparatorDemo.svelte';
@@ -107,6 +108,7 @@
     'command': CommandDemo,
     'calendar': CalendarDemo,
     'file-upload': FileUploadDemo,
+    'login-form': LoginFormDemo,
     // Foundational Components
     'card': CardDemo,
     'separator': SeparatorDemo,

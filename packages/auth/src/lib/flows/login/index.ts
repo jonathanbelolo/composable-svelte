@@ -1,4 +1,9 @@
-export { loginReducer, createInitialLoginState, loginFormConfig } from './reducer.js';
+export {
+	loginReducer,
+	createInitialLoginState,
+	createLoginStore,
+	loginFormConfig
+} from './reducer.js';
 export { loginSchema, emptyLoginFields } from './schema.js';
 
 export type { LoginFields } from './schema.js';
