@@ -65,7 +65,10 @@ async function submitCredentials(
 
 describe('signing in', () => {
 	it('calls the dependency with what was typed', async () => {
-		const login = vi.fn(async () => session);
+		// Typed as the dependency, not as a bare `vi.fn`: an untyped mock has
+		// `calls: []`, so reading `calls[0][0]` is a tuple-index error rather than
+		// the credentials assertion it looks like.
+		const login: LoginDependencies['login'] = vi.fn(async () => session);
 		const store = makeStore({ login });
 
 		await submitCredentials(store);
@@ -76,11 +79,10 @@ describe('signing in', () => {
 		});
 
 		expect(login).toHaveBeenCalledTimes(1);
-		expect(login.mock.calls[0]![0]).toEqual({
-			email: 'ada@example.com',
-			password: 'hunter2',
-			rememberMe: false
-		});
+		expect(login).toHaveBeenCalledWith(
+			{ email: 'ada@example.com', password: 'hunter2', rememberMe: false },
+			expect.anything()
+		);
 		store.assertNoPendingActions();
 	});
 
