@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`TestStore` now models cancellation.** Its `Cancellable` case ran
+  `effect.execute(dispatch)` with no `AbortController`, no in-flight registry
+  and no dispatch gating, so re-registering an id did not cancel the effect
+  already running under it — both dispatched — and the executor received no
+  `signal`. That is the one effect type whose entire purpose is cancellation,
+  and any reducer using a fixed id to make a second request supersede the first
+  behaved one way in production and another under test. `Effect.cancel(id)` now
+  also aborts an in-flight cancellable rather than only tearing down a
+  subscription.
+
+### Added
+
+- **`parseRetryAfter` is exported from `@composable-svelte/core/api`.** It
+  handles both the delay-seconds and HTTP-date forms of `Retry-After` and was
+  private to `api/retry.ts`; `@composable-svelte/auth` needs it and a second
+  implementation would drift. Returns milliseconds.
+
+### Fixed
+
 - **`BrowserHistoryConfig.serialize` is no longer required.** `syncBrowserHistory`
   handles one direction — URL → state — and never called it, so the type forced
   every caller to write a function that was then never invoked. The other

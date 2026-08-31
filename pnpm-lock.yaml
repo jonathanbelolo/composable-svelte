@@ -501,6 +501,10 @@ importers:
         version: 4.0.7(@types/node@20.19.24)(@vitest/browser-playwright@4.0.7)(@vitest/ui@4.0.7)(jiti@1.21.7)(jsdom@25.0.1)(tsx@4.20.6)
 
   packages/auth:
+    dependencies:
+      zod:
+        specifier: ^4.1.12
+        version: 4.1.12
     devDependencies:
       '@composable-svelte/core':
         specifier: workspace:*

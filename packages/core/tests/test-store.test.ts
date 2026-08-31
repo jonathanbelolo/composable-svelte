@@ -307,3 +307,127 @@ describe('TestStore', () => {
     });
   });
 });
+
+describe('TestStore models cancellation the way the store does', () => {
+  /**
+   * TestStore used to run a cancellable as `effect.execute(dispatch)` — no
+   * controller, no registry, no gating. So re-registering an id did not cancel
+   * the effect already running under it, both dispatched, and the executor
+   * received no signal.
+   *
+   * That is the one effect type whose entire purpose is cancellation, and it
+   * meant any reducer using a fixed id to make a second request supersede the
+   * first behaved one way in production and another under test. The session
+   * logout does exactly that; so does the auth login flow.
+   */
+  interface RaceState {
+    landed: string[];
+  }
+  type RaceAction = { type: 'start'; label: string } | { type: 'landed'; label: string };
+
+  function deferred<T>() {
+    let resolve!: (value: T) => void;
+    const promise = new Promise<T>((res) => {
+      resolve = res;
+    });
+    return { promise, resolve };
+  }
+
+  it('aborts the effect already running under the same id', async () => {
+    const first = deferred<void>();
+    const second = deferred<void>();
+
+    const reducer: Reducer<RaceState, RaceAction, Record<string, never>> = (state, action) => {
+      if (action.type === 'landed') {
+        return [{ landed: [...state.landed, action.label] }, Effect.none()];
+      }
+      const gate = action.label === 'first' ? first.promise : second.promise;
+      return [
+        state,
+        Effect.cancellable<RaceAction>('race', async (dispatch) => {
+          await gate;
+          dispatch({ type: 'landed', label: action.label });
+        })
+      ];
+    };
+
+    const store = createTestStore({
+      initialState: { landed: [] } as RaceState,
+      reducer,
+      dependencies: {}
+    });
+
+    await store.send({ type: 'start', label: 'first' });
+    await store.send({ type: 'start', label: 'second' });
+
+    first.resolve();
+    second.resolve();
+
+    await store.receive({ type: 'landed' });
+
+    expect(store.state.landed, 'the superseded effect still dispatched').toEqual(['second']);
+    store.assertNoPendingActions();
+  });
+
+  it('hands the executor a signal, so it can cooperate', async () => {
+    // The real store passes one; TestStore called `execute(dispatch)` with a
+    // single argument, so `signal` was `undefined` and any executor forwarding
+    // it to `fetch` was silently passing nothing under test.
+    let received: AbortSignal | undefined;
+
+    const reducer: Reducer<RaceState, RaceAction, Record<string, never>> = (state) => [
+      state,
+      Effect.cancellable<RaceAction>('sig', async (_dispatch, signal) => {
+        received = signal;
+      })
+    ];
+
+    const store = createTestStore({
+      initialState: { landed: [] } as RaceState,
+      reducer,
+      dependencies: {}
+    });
+
+    await store.send({ type: 'start', label: 'x' });
+
+    expect(received, 'no signal reached the executor').toBeInstanceOf(AbortSignal);
+    expect(received?.aborted).toBe(false);
+  });
+
+  it('Effect.cancel aborts an in-flight cancellable, not only a subscription', async () => {
+    const held = deferred<void>();
+    let aborted = false;
+
+    const reducer: Reducer<RaceState, RaceAction, Record<string, never>> = (state, action) => {
+      if (action.type === 'landed') {
+        return [{ landed: [...state.landed, action.label] }, Effect.none()];
+      }
+      if (action.label === 'stop') {
+        return [state, Effect.cancel<RaceAction>('work')];
+      }
+      return [
+        state,
+        Effect.cancellable<RaceAction>('work', async (dispatch, signal) => {
+          await held.promise;
+          aborted = signal?.aborted ?? false;
+          dispatch({ type: 'landed', label: 'work' });
+        })
+      ];
+    };
+
+    const store = createTestStore({
+      initialState: { landed: [] } as RaceState,
+      reducer,
+      dependencies: {}
+    });
+
+    await store.send({ type: 'start', label: 'work' });
+    await store.send({ type: 'start', label: 'stop' });
+
+    held.resolve();
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(aborted, 'the signal was not aborted by Effect.cancel').toBe(true);
+    expect(store.state.landed, 'a cancelled effect still dispatched').toEqual([]);
+  });
+});

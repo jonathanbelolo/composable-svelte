@@ -241,6 +241,8 @@ export class TestStore<State, Action, Dependencies = any> {
   private pendingEffects: Promise<void>[] = [];
   private pendingTimers: number = 0; // Track number of scheduled timers
   private _subscriptionCleanups = new Map<string, () => void | Promise<void>>();
+  /** In-flight cancellables by id, so re-registering one aborts its predecessor. */
+  private _inFlightEffects = new Map<string, AbortController>();
 
   /**
    * Control exhaustiveness checking for received actions.
@@ -503,8 +505,42 @@ export class TestStore<State, Action, Dependencies = any> {
           this._subscriptionCleanups.delete(effect.id);
           await cleanup();
         }
-        if (effect.cancelOnly) break;
-        await effect.execute(dispatch);
+        if (effect.cancelOnly) {
+          // A bare `Effect.cancel(id)` must also abort an in-flight cancellable
+          // registered under that id, not only tear down a subscription.
+          this._inFlightEffects.get(effect.id)?.abort();
+          this._inFlightEffects.delete(effect.id);
+          break;
+        }
+
+        // Supersession, which TestStore used to not model at all. It ran
+        // `effect.execute(dispatch)` with no controller, no registry and no
+        // gating — so re-registering an id did not cancel the effect already
+        // running under it, and both dispatched. A reducer using a fixed
+        // cancellation id to make a second request supersede the first (the
+        // session logout does; so does the login flow) behaved one way in
+        // production and another under test, and the obvious supersession test
+        // passed for the wrong reason or failed for a confusing one.
+        this._inFlightEffects.get(effect.id)?.abort();
+
+        const controller = new AbortController();
+        this._inFlightEffects.set(effect.id, controller);
+
+        // Gated exactly as the real store gates it: a cancelled effect's
+        // actions are unwanted whether or not its author honoured the signal.
+        const guardedDispatch: Dispatch<Action> = action => {
+          if (controller.signal.aborted) return;
+          dispatch(action);
+        };
+
+        try {
+          await effect.execute(guardedDispatch, controller.signal);
+        } finally {
+          // Only if still ours — a superseding effect owns the slot now.
+          if (this._inFlightEffects.get(effect.id) === controller) {
+            this._inFlightEffects.delete(effect.id);
+          }
+        }
         break;
       }
 
