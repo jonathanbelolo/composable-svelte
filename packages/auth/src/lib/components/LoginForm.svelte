@@ -59,6 +59,14 @@
 		/** Rendered below the form — "forgot password?", a link to signup. */
 		footer?: Snippet | undefined;
 		submitLabel?: string | undefined;
+		/**
+		 * Rank of the default heading. Two, not one, because this is embeddable:
+		 * an `<h1>` inside a page that already has one — the styleguide demo, a
+		 * modal, a two-panel sign-in/sign-up screen — is a document-structure
+		 * defect that renders identically. A dedicated `/login` page should pass
+		 * `1`, or its own `header`.
+		 */
+		headingLevel?: 1 | 2 | 3 | 4 | undefined;
 		emailLabel?: string | undefined;
 		passwordLabel?: string | undefined;
 		rememberLabel?: string | undefined;
@@ -72,6 +80,7 @@
 		header,
 		footer,
 		submitLabel = 'Sign in',
+		headingLevel = 2,
 		emailLabel = 'Email',
 		passwordLabel = 'Password',
 		rememberLabel = 'Keep me signed in',
@@ -96,14 +105,40 @@
 	const rememberId = `${uid}-remember`;
 
 	/**
+	 * Everything subscribed through {@link formStore}.
+	 *
+	 * A stable fan-out, because the thing being subscribed *to* is not stable.
+	 * `Form.svelte` captures its store into context once, at init, and
+	 * `FormField` reads `$store.data[name]` — so both hold whatever object this
+	 * component handed them on its first render, for its whole life. Delegating
+	 * `subscribe` straight to `flowStore` therefore pins the subscription to
+	 * whichever store was passed *first*.
+	 *
+	 * That is not hypothetical. Swap `flowStore` for another store and the field
+	 * keeps displaying the old one's data while dispatches go to the new one;
+	 * type into it and the input silently stops being controlled — the DOM holds
+	 * one value, the store another, and neither ever reconciles. Nothing throws.
+	 * Recreating the store to reset the form is the obvious way to hit it.
+	 */
+	const listeners = new Set<(state: FormState<LoginFields>) => void>();
+
+	// Re-subscribes when `flowStore` changes, which is what keeps the fan-out
+	// pointed at the live store. `FormField` subscribes during the first render,
+	// before effects flush; `subscribe` below covers that window by calling the
+	// listener immediately, as the Svelte store contract requires anyway.
+	$effect(() => {
+		return flowStore.subscribe((state) => {
+			for (const listener of listeners) listener(state.form);
+		});
+	});
+
+	/**
 	 * The form slice, as core's form components expect it.
 	 *
-	 * Built once and never replaced: `Form.svelte` captures the store into
-	 * context at init, so a new object each render would leave every `FormField`
-	 * reading a dead one. `state` is a getter over `flowStore.state` rather than
-	 * a `$state` mirror — the mirror the examples use lags by an effect flush,
-	 * and `store.state` is already `$state.raw`-backed, so reads track without
-	 * one.
+	 * Built once and never replaced, for the reason above. `state` is a getter
+	 * over `flowStore.state` rather than a `$state` mirror — the mirror the
+	 * examples use lags by an effect flush, and `store.state` is already
+	 * `$state.raw`-backed, so reads track without one.
 	 */
 	const formStore = {
 		get state(): FormState<LoginFields> {
@@ -115,7 +150,9 @@
 		subscribe(listener: (state: FormState<LoginFields>) => void) {
 			// The form slice, not the flow state: `FormField` reads
 			// `$store.data[name]` and `LoginState` has no `data`.
-			return flowStore.subscribe((state) => listener(state.form));
+			listeners.add(listener);
+			listener(flowStore.state.form);
+			return () => listeners.delete(listener);
 		}
 	};
 
@@ -140,6 +177,21 @@
 	 */
 	let handedOver = false;
 
+	/*
+	 * `loginStarted` is deliberately not dispatched.
+	 *
+	 * The session store has it so a flow can ask for the pending UI, and this is
+	 * the flow — but the usual layout puts this component inside `AuthGuard`'s
+	 * `fallback`, and `loginStarted` moves the session to `loggingIn`, which
+	 * `AuthGuard` renders as `pending`. The form would unmount itself mid-submit
+	 * and reappear on failure. So the pending state stays local: the button is
+	 * disabled and the status region below announces it.
+	 *
+	 * An app whose sign-in surface sits *outside* the guard may want the other
+	 * behaviour, and can have it without a prop here:
+	 * `$effect(() => { if (login.state.status === 'submitting')
+	 * session.dispatch({ type: 'loginStarted' }); })`.
+	 */
 	$effect(() => {
 		const { status, session } = flowStore.state;
 		if (status !== 'succeeded') {
@@ -157,7 +209,7 @@
 	{#if header}
 		{@render header()}
 	{:else}
-		<h1 class="login-form__title">Sign in</h1>
+		<svelte:element this={`h${headingLevel}`} class="login-form__title">Sign in</svelte:element>
 	{/if}
 
 	{#if error}
@@ -180,6 +232,7 @@
 					<label class="login-form__label" for={emailId}>{emailLabel}</label>
 					<input
 						id={emailId}
+						name="email"
 						type="email"
 						autocomplete="username"
 						class="login-form__input"
@@ -206,6 +259,7 @@
 					<label class="login-form__label" for={passwordId}>{passwordLabel}</label>
 					<PasswordInput
 						id={passwordId}
+						name="password"
 						value={field.value}
 						invalid={!!field.error}
 						errorId={passwordErrorId}
@@ -228,6 +282,7 @@
 				<div class="login-form__remember">
 					<input
 						id={rememberId}
+						name="rememberMe"
 						type="checkbox"
 						class="login-form__checkbox"
 						checked={field.value === true}
@@ -256,6 +311,16 @@
 			something real: submitting with Enter leaves focus in the password field,
 			and disabling the focused element drops focus to `<body>`.
 		-->
+		<!--
+			The in-flight state, for anyone not looking at the button. A *disabled*
+			button's label change is not announced — assistive technology skips it —
+			so submitting would otherwise produce silence until the result arrives.
+			The failure has `role="alert"` already; this covers the wait.
+		-->
+		<p class="login-form__status" role="status" aria-live="polite">
+			{isSubmitting ? 'Signing in…' : ''}
+		</p>
+
 		<button type="submit" class="login-form__submit" disabled={isSubmitting}>
 			{isSubmitting ? 'Signing in…' : submitLabel}
 		</button>
@@ -300,11 +365,13 @@
 	}
 
 	/*
-	 * `:global`, because this class lands on the `<form>` that `Form.svelte`
-	 * renders — a different component, so Svelte's scoping hash is not applied
-	 * to it. Prefixed, so it is not a name a consumer could collide with.
+	 * Scoped to this component's own subtree. The `<form>` is rendered by
+	 * `Form.svelte`, so Svelte's hash never lands on it and it has to be reached
+	 * through `:global` — but `:global(.login-form__form)` on its own is a rule
+	 * on the whole document, matching that class anywhere in a consumer's app.
+	 * The descendant form keeps the class as a hook without the global reach.
 	 */
-	:global(.login-form__form) {
+	.login-form :global(form) {
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
@@ -401,6 +468,19 @@
 	.login-form__submit:disabled {
 		cursor: not-allowed;
 		opacity: 0.5;
+	}
+
+	/* Visually hidden, still announced. */
+	.login-form__status {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		margin: -1px;
+		padding: 0;
+		overflow: hidden;
+		white-space: nowrap;
+		border: 0;
+		clip-path: inset(50%);
 	}
 
 	.login-form__footer {

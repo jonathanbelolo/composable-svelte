@@ -19,6 +19,15 @@
 	interface Props {
 		/** The field's `id`, which a `<label for>` must match. */
 		id: string;
+		/**
+		 * The form control name.
+		 *
+		 * Not redundant with `id`. Password managers key on `autocomplete` first
+		 * but fall back to `name` heuristics, and `id` here is per-instance
+		 * (`$props.id()` output in `LoginForm`), so it carries no meaning for
+		 * them.
+		 */
+		name?: string | undefined;
 		value: string;
 		/** Wired to `oninput`, not `onchange`, so a strength meter can react per keystroke. */
 		oninput: (event: Event & { currentTarget: HTMLInputElement }) => void;
@@ -39,6 +48,7 @@
 
 	let {
 		id,
+		name,
 		value,
 		oninput,
 		onblur,
@@ -64,6 +74,7 @@
 <div class="password-input {className}">
 	<input
 		{id}
+		{name}
 		type={visible ? 'text' : 'password'}
 		{value}
 		{placeholder}

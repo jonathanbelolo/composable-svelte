@@ -73,19 +73,34 @@ const defaultSession: SessionSnapshot = {
 export function createMockAuthDeps(options: MockAuthOptions = {}): AuthDependencies {
 	const { session = defaultSession, failWith, latencyMs = 0, accepts } = options;
 
+	const aborted = () => new DOMException('Aborted', 'AbortError');
+
 	const wait = (signal?: AbortSignal) =>
 		new Promise<void>((resolve, reject) => {
+			// Checked before the latency branch, not inside it. Honouring the signal
+			// only when `latencyMs > 0` left cancellation untestable at the default
+			// setting: a fake that ignores an already-aborted signal reports a
+			// cancelled request as a successful one, which is the inverse of the bug
+			// it exists to catch.
+			if (signal?.aborted) {
+				reject(aborted());
+				return;
+			}
 			if (latencyMs === 0) {
 				resolve();
 				return;
 			}
-			const timer = setTimeout(resolve, latencyMs);
-			// Honouring the signal is what makes a superseded sign-in stop
-			// pretending to work — the flow cancels by re-registering its effect id.
-			signal?.addEventListener('abort', () => {
+			const onAbort = () => {
 				clearTimeout(timer);
-				reject(new DOMException('Aborted', 'AbortError'));
-			});
+				reject(aborted());
+			};
+			const timer = setTimeout(() => {
+				signal?.removeEventListener('abort', onAbort);
+				resolve();
+			}, latencyMs);
+			// The flow cancels by re-registering its effect id; without this a
+			// superseded sign-in goes on pretending to work.
+			signal?.addEventListener('abort', onAbort, { once: true });
 		});
 
 	return {

@@ -38,11 +38,13 @@
 		header,
 		footer,
 		submitLabel,
+		headingLevel,
 		emailLabel,
 		passwordLabel,
 		rememberLabel,
 		formClass,
 		fieldId,
+		fieldName,
 		value,
 		oninput,
 		onblur,
@@ -80,6 +82,7 @@
 		header?: Snippet;
 		footer?: Snippet;
 		submitLabel?: string;
+		headingLevel?: 1 | 2 | 3 | 4;
 		emailLabel?: string;
 		passwordLabel?: string;
 		rememberLabel?: string;
@@ -89,6 +92,7 @@
 
 		// PasswordInput.
 		fieldId: string;
+		fieldName?: string;
 		value: string;
 		oninput: (event: Event & { currentTarget: HTMLInputElement }) => void;
 		onblur?: () => void;
@@ -112,6 +116,7 @@
 	{header}
 	{footer}
 	{submitLabel}
+	{headingLevel}
 	{emailLabel}
 	{passwordLabel}
 	{rememberLabel}
@@ -119,6 +124,7 @@
 />
 <PasswordInput
 	id={fieldId}
+	name={fieldName}
 	{value}
 	{oninput}
 	{onblur}

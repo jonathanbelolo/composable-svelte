@@ -91,6 +91,10 @@ const login = createLoginStore(deps);
 </LoginForm>
 ```
 
+The heading defaults to `<h2>`, because the component is meant to be embedded;
+pass `headingLevel={1}` on a dedicated `/login` page, or your own `header`
+snippet.
+
 `LoginForm` takes both stores rather than one, and that is deliberate: a
 completed sign-in has to cross from the flow to the session, and making that
 crossing a required prop turns a forgotten wiring into a compile error. The

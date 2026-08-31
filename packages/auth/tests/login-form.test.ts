@@ -21,6 +21,7 @@ import { userEvent } from 'vitest/browser';
 import { createStore } from '@composable-svelte/core';
 
 import LoginForm from '../src/lib/components/LoginForm.svelte';
+import LoginFormStoreSwap from './test-components/LoginFormStoreSwap.svelte';
 import { createInitialLoginState, loginReducer } from '../src/lib/flows/login/reducer.js';
 import type { LoginDependencies, LoginState } from '../src/lib/flows/login/types.js';
 import { createInitialSessionState, sessionReducer } from '../src/lib/session/reducer.js';
@@ -212,6 +213,56 @@ describe('the fields', () => {
 			expect(h.flowStore.state.form.data.rememberMe, 'the checkbox did not land').toBe(true);
 		} finally {
 			h.cleanup();
+		}
+	});
+});
+
+describe('when the flow store is replaced', () => {
+	it('follows the new store instead of quietly detaching from it', () => {
+		// `Form` captures its store into context at init and `FormField` reads
+		// `$store.data[name]`, so both hold whatever object this component handed
+		// them on its first render. Delegating `subscribe` straight through pinned
+		// the subscription to the *first* store: the field went on showing the old
+		// data while dispatches went to the new one, and typing left the input
+		// uncontrolled — DOM holding one value, store another, nothing thrown.
+		// Recreating the store to reset a form is how a consumer meets that.
+		const target = mountTarget();
+		const flow = (email: string) =>
+			createStore({
+				initialState: createInitialLoginState({ email }),
+				reducer: loginReducer,
+				dependencies: { login: vi.fn(async () => session) }
+			});
+		const a = flow('first@example.com');
+		const b = flow('second@example.com');
+		const sessionStore = createStore({
+			initialState: createInitialSessionState(),
+			reducer: sessionReducer,
+			dependencies: inertSessionDeps
+		});
+		const probe = mount(LoginFormStoreSwap, {
+			target,
+			props: { a, b, sessionStore }
+		}) as unknown as { swap: () => void };
+
+		try {
+			const field = () => target.querySelector('input[type="email"]') as HTMLInputElement;
+			expect(field().value).toBe('first@example.com');
+
+			probe.swap();
+			flushSync();
+			expect(field().value, 'the field stayed on the old store').toBe('second@example.com');
+
+			// …and the two halves still agree: what is displayed is what receives.
+			field().value = 'typed@example.com';
+			field().dispatchEvent(new Event('input', { bubbles: true }));
+			flushSync();
+			expect(b.state.form.data.email).toBe('typed@example.com');
+			expect(a.state.form.data.email, 'the old store was written to').toBe('first@example.com');
+			expect(field().value, 'the input stopped being controlled').toBe('typed@example.com');
+		} finally {
+			unmount(probe as never);
+			target.remove();
 		}
 	});
 });
@@ -432,6 +483,65 @@ describe('when the sign-in fails', () => {
 			await type(h.password, 'hunter3');
 			flushSync();
 			expect(h.banner(), 'a stale failure survived the correction').toBeNull();
+		} finally {
+			h.cleanup();
+		}
+	});
+});
+
+describe('what it announces', () => {
+	it('defaults to a heading that can be embedded', () => {
+		// `<h1>` inside a page that already has one — the styleguide demo, a modal,
+		// a sign-in panel beside a sign-up panel — is a document-structure defect
+		// that renders identically to a correct one. A dedicated /login page opts
+		// back in with `headingLevel={1}`.
+		const h = mountForm({ login: vi.fn(async () => session) });
+		try {
+			expect(h.target.querySelector('h1')).toBeNull();
+			expect(h.target.querySelector('h2')?.textContent?.trim()).toBe('Sign in');
+		} finally {
+			h.cleanup();
+		}
+	});
+
+	it('says it is working, since a disabled button cannot', async () => {
+		// Assistive technology skips a disabled control, so the button's label
+		// change from "Sign in" to "Signing in…" is announced to nobody. Without a
+		// live region, submitting produces silence until the result lands.
+		const gate = deferred<SessionSnapshot>();
+		const h = mountForm({ login: vi.fn(async () => gate.promise) });
+		const status = () => h.target.querySelector('[role="status"]');
+
+		try {
+			expect(status(), 'no live region at all').not.toBeNull();
+			expect(status()!.getAttribute('aria-live')).toBe('polite');
+			expect(status()!.textContent?.trim(), 'announcing before anything happened').toBe('');
+
+			await signIn(h);
+			await vi.waitFor(() => {
+				flushSync();
+				expect(status()!.textContent?.trim()).toBe('Signing in…');
+			});
+
+			gate.resolve(session);
+			await vi.waitFor(() => {
+				flushSync();
+				expect(status()!.textContent?.trim(), 'still announcing after it finished').toBe('');
+			});
+		} finally {
+			h.cleanup();
+		}
+	});
+
+	it('gives the controls names a password manager can key on', () => {
+		// `autocomplete` is the primary signal, but manager heuristics fall back to
+		// `name` — and `id` here is per-instance `$props.id()` output, which means
+		// nothing to them.
+		const h = mountForm({ login: vi.fn(async () => session) });
+		try {
+			expect(h.email.name).toBe('email');
+			expect(h.password.name).toBe('password');
+			expect(h.remember.name).toBe('rememberMe');
 		} finally {
 			h.cleanup();
 		}

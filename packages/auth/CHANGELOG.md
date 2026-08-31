@@ -110,6 +110,43 @@
   shapes, including `mfa_required`, and honours the `AbortSignal` so a
   superseded sign-in stops pretending to work.
 
+- **`createLoginStore`**, mirroring `createSessionStore`.
+
+### Fixed in review
+
+- **`LoginForm` detached silently when `flowStore` was replaced.** `Form`
+  captures its store into context at init and `FormField` reads
+  `$store.data[name]`, so both hold whatever object the component handed them on
+  its first render. Delegating `subscribe` straight through pinned the
+  subscription to the *first* store: the field went on showing the old data
+  while dispatches went to the new one, and typing left the input uncontrolled —
+  DOM holding one value, store another, nothing thrown. Recreating the store to
+  reset a form is how a consumer meets that.
+
+- **`createMockAuthDeps` ignored an already-aborted signal** unless `latencyMs`
+  was above zero — and zero is the default. At the setting every test uses, a
+  cancelled request resolved *successfully*, so a flow that had stopped
+  cancelling would still have looked correct.
+
+- **The default heading was `<h1>`.** This component is embeddable; an `<h1>`
+  inside a page that already has one is a document-structure defect that renders
+  identically to a correct one. It is `<h2>` now, with `headingLevel` for a
+  dedicated `/login` page.
+
+- **The in-flight state was announced to nobody.** Assistive technology skips a
+  disabled control, so the button's label changing to "Signing in…" was silent.
+  A `role="status"` region carries it.
+
+- **The fields were disabled during the request** along with the button. That
+  buys nothing — the credentials were captured at dispatch — and costs focus:
+  submitting with Enter leaves focus in the password field, and disabling the
+  focused element drops focus to `<body>`. Only the submit button is disabled,
+  which the HTML spec says also suppresses implicit submission.
+
+- Inputs carry `name` as well as `autocomplete`, which password-manager
+  heuristics fall back to; the form's own styles no longer reach out of the
+  component through a bare `:global` class.
+
 ### Still missing
 
 Signup, password reset, email verification, MFA, OAuth and token refresh. The
