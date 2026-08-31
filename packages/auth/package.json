@@ -60,7 +60,7 @@
 		"build": "svelte-package -o dist",
 		"typecheck": "tsc --noEmit",
 		"check": "svelte-check --tsconfig ./tsconfig.test.json --fail-on-warnings",
-		"test": "vitest run",
+		"test": "vitest run && vitest run --config vitest.ssr.config.ts",
 		"test:watch": "vitest",
 		"test:ui": "vitest --ui",
 		"test:coverage": "vitest run --coverage",

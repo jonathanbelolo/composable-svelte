@@ -150,10 +150,24 @@ read tokens: `hsl(var(--background, 0 0% 100%))` costs the same keystrokes as
 not. Verified to work under Tailwind — the styleguide has preflight on and
 renders satellite scoped CSS correctly today.
 
-`@composable-svelte/auth` is being built this way and is the reference. The
-sweep across the other five is agreed, sized above, and wants its own before/after
-in the styleguide plus a guard — no hardcoded colours in `packages/*/src` —
-on the model of `animation-policy.test.ts`.
+`@composable-svelte/auth` is built this way and is the reference — and it is now
+measured rather than argued. `LoginForm` and `PasswordInput` write every colour
+as `hsl(var(--token, fallback))` and contain no dark-mode CSS at all; adding
+`.dark` to `<html>` in the built styleguide inverts all of them:
+
+| | light | dark |
+|---|---|---|
+| card background | `rgb(255,255,255)` | `rgb(2,8,23)` |
+| input text | `rgb(2,8,23)` | `rgb(248,250,252)` |
+| submit background | `rgb(15,23,42)` | `rgb(248,250,252)` |
+
+That is the whole difference from the five below, which would each need a
+`:global(.dark)` block of their own — and `chat` has one, hardcoded, which is
+how it manages to look theme-aware without being it.
+
+The sweep across the other five is agreed, sized above, and wants its own
+before/after in the styleguide plus a guard — no hardcoded colours in
+`packages/*/src` — on the model of `animation-policy.test.ts`.
 
 ## S8. Documentation — OPEN
 

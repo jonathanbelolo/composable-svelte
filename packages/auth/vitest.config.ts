@@ -17,6 +17,9 @@ export default defineConfig({
 
 		// Test file patterns
 		include: ['tests/**/*.{test,spec}.{js,ts}'],
+		// The server build has its own config; `svelte/server`'s `render` has no
+		// meaning in a browser.
+		exclude: ['tests/ssr/**'],
 
 		// Suppress console output during tests (for CI/prepublish)
 		silent: process.env.CI === 'true' || process.env.SILENT_TESTS === 'true',

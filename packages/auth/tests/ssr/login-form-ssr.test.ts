@@ -1,0 +1,120 @@
+/**
+ * `LoginForm` rendered by the server.
+ *
+ * Browser mode never compiles this path. `packages/chat` learned that the hard
+ * way — a regression emptied its server HTML of video embeds, shipped, and was
+ * cleared as harmless — which is why it grew a config exactly like this one. A
+ * sign-in page is the single most likely thing in this package to be server
+ * rendered, and it had no coverage here at all.
+ *
+ * The assertions are the things that can differ between the two builds:
+ * anything a `$effect` would have produced (effects do not run on the server),
+ * a dynamic `<svelte:element>` tag, and the attributes that come from
+ * `$props.id()`.
+ */
+
+import { describe, it, expect } from 'vitest';
+import { render } from 'svelte/server';
+import { createStore } from '@composable-svelte/core';
+
+import LoginForm from '../../src/lib/components/LoginForm.svelte';
+import { createInitialLoginState, loginReducer } from '../../src/lib/flows/login/reducer.js';
+import { createInitialSessionState, sessionReducer } from '../../src/lib/session/reducer.js';
+import type { LoginState } from '../../src/lib/flows/login/types.js';
+import type { SessionSnapshot } from '../../src/lib/subject/types.js';
+
+const session: SessionSnapshot = { subject_id: 'a', display_name: 'Ada', roles: ['member'] };
+
+function serverHtml(initial?: Partial<LoginState>, props: Record<string, unknown> = {}) {
+	const flowStore = createStore({
+		initialState: { ...createInitialLoginState(), ...initial },
+		reducer: loginReducer,
+		dependencies: { login: async () => session }
+	});
+	const sessionStore = createStore({
+		initialState: createInitialSessionState(),
+		reducer: sessionReducer,
+		dependencies: {
+			fetchLogin: async () => session,
+			fetchLogout: async () => undefined,
+			fetchSession: async () => null
+		}
+	});
+	return render(LoginForm, { props: { flowStore, sessionStore, ...props } }).body;
+}
+
+describe('the server build', () => {
+	it('emits a usable form, not an empty shell', () => {
+		// The `chat` failure mode: markup present, contents gone. Each control is
+		// named rather than counting bytes, because a shell is also long.
+		const body = serverHtml();
+
+		expect(body).toContain('type="email"');
+		expect(body).toContain('type="password"');
+		expect(body).toContain('type="checkbox"');
+		expect(body).toContain('type="submit"');
+		expect(body).toContain('Sign in');
+	});
+
+	it('renders the dynamic heading tag', () => {
+		// `<svelte:element this={`h${headingLevel}`}>` is computed markup, the kind
+		// of thing that can resolve to nothing on one build and not the other.
+		expect(serverHtml()).toMatch(/<h2[^>]*class="[^"]*login-form__title/);
+		expect(serverHtml(undefined, { headingLevel: 1 })).toMatch(
+			/<h1[^>]*class="[^"]*login-form__title/
+		);
+	});
+
+	it('carries seeded values into the markup', () => {
+		// A server-rendered form that arrives blank and fills in on hydration is a
+		// visible flash, and for a remembered address it is the whole point of
+		// rendering it on the server.
+		expect(serverHtml({ form: createInitialLoginState({ email: 'ada@example.com' }).form })).toContain(
+			'ada@example.com'
+		);
+	});
+
+	it('keeps the password hidden before hydration', () => {
+		// `visible` is `$state` initialised to `false`; if the server ever emitted
+		// `type="text"` the password would be legible for the length of the
+		// hydration gap, in markup that could also be cached.
+		const body = serverHtml({ form: createInitialLoginState({ password: 'hunter2' }).form });
+
+		expect(body).toContain('type="password"');
+		expect(body).not.toMatch(/type="text"/);
+		expect(body).toContain('aria-pressed="false"');
+	});
+
+	it('wires labels to controls without an effect having run', () => {
+		// Effects do not run on the server. The ids come from `$props.id()`, which
+		// does — so every `for` must already resolve in this markup.
+		const body = serverHtml();
+		const ids = [...body.matchAll(/<input[^>]*\sid="([^"]+)"/g)].map((m) => m[1]);
+		const fors = [...body.matchAll(/<label[^>]*\sfor="([^"]+)"/g)].map((m) => m[1]);
+
+		expect(ids.length, 'no inputs carried an id').toBe(3);
+		expect(fors.length).toBe(3);
+		for (const target of fors) expect(ids, `label points at missing ${target}`).toContain(target);
+	});
+
+	it('renders a failure the server already knows about', () => {
+		// SSR of a POST-then-render sign-in: the error is in the state before the
+		// first paint, and `role="alert"` has to be in the markup for it.
+		const body = serverHtml({
+			error: { code: 'invalid_credentials', message: 'That did not match an account.' }
+		});
+
+		expect(body).toContain('data-error-code="invalid_credentials"');
+		expect(body).toContain('role="alert"');
+		expect(body).toContain('That did not match an account.');
+	});
+
+	it('announces nothing at rest', () => {
+		// The live region must arrive empty. Server markup that already said
+		// "Signing in…" would announce a request that is not happening.
+		const body = serverHtml();
+
+		expect(body).toContain('role="status"');
+		expect(body).not.toContain('Signing in');
+	});
+});

@@ -112,7 +112,7 @@
 		<div
 			class="bg-purple-50 dark:bg-purple-950 border border-purple-200 dark:border-purple-800 rounded-lg p-4"
 		>
-			<h4 class="font-semibold text-purple-900 dark:text-purple-100 mb-2">What it demonstrates</h4>
+			<h3 class="font-semibold text-purple-900 dark:text-purple-100 mb-2">What it demonstrates</h3>
 			<ul class="text-sm text-purple-800 dark:text-purple-200 space-y-1">
 				<li>✓ Two stores — the flow owns the attempt, the session owns "who am I"</li>
 				<li>✓ Structured failures: eight <code>AuthError</code> arms, branchable by code</li>
@@ -146,7 +146,7 @@
 			</CardHeader>
 			<CardContent>
 				<div class="grid gap-6 md:grid-cols-2">
-					<LoginForm flowStore={signInFlow} sessionStore={signInSession}>
+					<LoginForm flowStore={signInFlow} sessionStore={signInSession} headingLevel={4}>
 						{#snippet footer()}
 							<span>Forgot your password? — a link would go here.</span>
 						{/snippet}
@@ -217,7 +217,11 @@
 						under a live component would leave every field reading a dead one.
 					-->
 					{#key selected}
-						<LoginForm flowStore={failureFlows[selected]!} sessionStore={failureSession} />
+						<LoginForm
+							flowStore={failureFlows[selected]!}
+							sessionStore={failureSession}
+							headingLevel={4}
+						/>
 					{/key}
 
 					<div class="rounded-lg border p-4 text-sm space-y-3">
@@ -253,7 +257,23 @@
 				<CardDescription>Tab to the toggle and press Space.</CardDescription>
 			</CardHeader>
 			<CardContent>
-				<div class="max-w-sm space-y-4">
+				<form class="max-w-sm space-y-4" onsubmit={(event) => event.preventDefault()}>
+					<!--
+						A password form with no username field gives a password manager
+						nothing to file the credential against, and Chrome says so in the
+						console. `LoginForm` has a real one; a standalone change-password
+						screen needs this hidden stand-in, which is the pattern worth
+						showing here.
+					-->
+					<input
+						type="text"
+						autocomplete="username"
+						value="ada@example.com"
+						readonly
+						hidden
+						aria-hidden="true"
+						tabindex="-1"
+					/>
 					<div class="space-y-2">
 						<label class="text-sm font-medium" for="demo-password">New password</label>
 						<PasswordInput
@@ -286,7 +306,7 @@
 							oninput={() => {}}
 						/>
 					</div>
-				</div>
+				</form>
 			</CardContent>
 		</Card>
 	</section>
