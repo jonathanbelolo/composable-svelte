@@ -23,6 +23,7 @@ import type {
 	LoginCredentials,
 	MfaEnrolmentResult,
 	MfaEnrolmentStart,
+	AccountSnapshot,
 	MfaMethod,
 	OAuthStart,
 	SignupCredentials,
@@ -238,6 +239,46 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			return decodeSessionSnapshot(response);
 		},
 
+		async fetchAccount(signal?: AbortSignal): Promise<AccountSnapshot> {
+			// The second read in this adapter, and the second non-POST. `GET`
+			// because it is a read: the settings surface asks this on entry and
+			// again after anything changes.
+			const response = await fetch(url('/auth/account'), {
+				method: 'GET',
+				credentials: 'include',
+				...(signal !== undefined && { signal })
+			});
+
+			if (!response.ok) {
+				throw await authErrorFromResponse(response, 'Could not load your account.');
+			}
+
+			return decodeAccountSnapshot(response);
+		},
+
+		async changePassword(
+			newPassword: string,
+			signal?: AbortSignal
+		): Promise<SessionSnapshot | null> {
+			const response = await fetch(url('/auth/account/password'), {
+				method: 'POST',
+				credentials: 'include',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ password: newPassword }),
+				...(signal !== undefined && { signal })
+			});
+
+			if (!response.ok) {
+				throw await authErrorFromResponse(response, 'Could not change your password.');
+			}
+
+			// `204 No Content` is "changed, session untouched" — the same contract
+			// `resetPassword` uses. Read the status rather than sniffing the body.
+			if (response.status === 204) return null;
+
+			return decodeSessionSnapshot(response);
+		},
+
 		async beginOAuth(provider: string, signal?: AbortSignal): Promise<OAuthStart> {
 			const response = await fetch(url('/auth/oauth/begin'), {
 				method: 'POST',
@@ -342,6 +383,51 @@ export { authErrorFromResponse } from './errors.js';
  * `createBrowserRedirect` checks again, because a hand-written adapter is not
  * obliged to come through here.
  */
+/**
+ * The account read model, validated.
+ *
+ * Refuses rather than guesses, like every decoder here. A settings surface that
+ * defaulted `hasPassword` would offer to change a password that does not exist,
+ * and one that defaulted `mfaEnabled` would tell someone their account is less
+ * protected than it is — both are worse than an error.
+ */
+async function decodeAccountSnapshot(response: Response): Promise<AccountSnapshot> {
+	const payload = await readJson(response);
+
+	const email = payload['email'];
+	const emailVerified = payload['email_verified'];
+	const hasPassword = payload['has_password'];
+	const mfaEnabled = payload['mfa_enabled'];
+	const providers = payload['providers'];
+
+	if (
+		typeof email !== 'string' ||
+		typeof emailVerified !== 'boolean' ||
+		typeof hasPassword !== 'boolean' ||
+		typeof mfaEnabled !== 'boolean'
+	) {
+		throw new MalformedSessionError(
+			'account must carry email, email_verified, has_password and mfa_enabled'
+		);
+	}
+
+	// Absent is an empty list — a backend with no OAuth configured has no reason
+	// to send the key. A present-but-wrong value is refused.
+	if (providers !== undefined && !Array.isArray(providers)) {
+		throw new MalformedSessionError('account providers must be an array when present');
+	}
+
+	return {
+		email,
+		emailVerified,
+		hasPassword,
+		mfaEnabled,
+		providers: ((providers ?? []) as unknown[]).filter(
+			(entry): entry is string => typeof entry === 'string'
+		)
+	};
+}
+
 async function decodeOAuthStart(response: Response): Promise<OAuthStart> {
 	const payload = await readJson(response);
 

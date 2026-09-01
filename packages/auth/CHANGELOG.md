@@ -4,9 +4,9 @@
 
 ### Changed
 
-- **BREAKING: `AuthDependencies` gains four members** — `beginOAuth`,
-  `completeOAuth`, `requestMagicLink` and `signInWithMagicLink`. A
-  hand-written adapter must add all four. They are required rather than optional,
+- **BREAKING: `AuthDependencies` gains six members** — `beginOAuth`,
+  `completeOAuth`, `requestMagicLink`, `signInWithMagicLink`, `fetchAccount` and
+  `changePassword`. A hand-written adapter must add all six. They are required rather than optional,
   because every existing member is, and making them optional would push a null
   check into the flows. Consumers on `@composable-svelte/auth/flows` are
   unaffected: each flow's dependency interface names only the calls it makes, so
@@ -267,6 +267,59 @@
   `PasswordCriteria`, a component about passwords in general, was reaching into
   `flows/signup/schema.ts`.
 
+- **The account surface begins** — `accountReducer`, `changePasswordReducer` /
+  `ChangePasswordForm`, and `SignOutButton`.
+
+  **The first components for someone who is already signed in.** Seven flows got
+  a user from anonymous to authenticated and nothing let them act afterwards.
+  Measured before starting: no component in this package read the session store
+  and dispatched to it — `AuthGuard` and `RoleGate` both type their prop as
+  `{ readonly state: SessionState }` with the comment "for a `dispatch` this
+  component never calls" — and `{ type: 'logout' }` had **zero call sites** in
+  the whole repository.
+
+  **`fetchAccount()` is a separate read, deliberately.** `SessionSnapshot`
+  carries identity and nothing else, and it should stay that way: it crosses SSR
+  hydration and rides along with every authenticated render, so widening it to
+  hold an email and a provider list would make every page pay for what one page
+  needs. `AccountSnapshot` answers the questions a panel must ask before it can
+  render honestly — `hasPassword` decides whether the password panel says "set"
+  or "change", and getting that wrong offers to change something an OAuth-only
+  account never had.
+
+  **Re-authentication is the backend's call, and that is forced by a fact.** The
+  client cannot ask for a current password: `SessionSnapshot` has no
+  credential-kind field, so nothing here knows whether an account *has* one, and
+  accounts created through OAuth or a magic link never set one. So
+  `changePassword` takes only the new value, and a backend that wants proof
+  rejects with a twelfth `AuthError` arm, `reauthentication_required`, carrying
+  which methods it accepts. That is the shape `mfa_required` established — the
+  backend says the flow branches and says what it needs — and like it, the arm
+  is a **branch, not a failure**: a surface handling it shows no red banner.
+
+  `methods` is required on the arm rather than optional, which the compiler
+  enforced usefully: the adapter's `default` case could not build one, because a
+  demand for proof carrying no way to satisfy it would strand the user on a
+  prompt with nothing to answer.
+
+  **The package ships panels, not a settings shell.** Chrome is the app's, and
+  this is the third time that line has been drawn — after the QR encoder and the
+  provider logos. The repo's own primitives make the case: `Tabs` holds no state
+  at all, `Accordion` cannot accept an external store, and there is no
+  confirmation component anywhere.
+
+  Smaller, and overdue: `subjectDisplayName()` beside `subjectRoles()`.
+  `display_name` has been written into `attributes` since the package began and
+  **nothing ever read it back**; a settings panel is the first surface that wants
+  it, and digging it out of `Record<string, unknown>` at the call site is what a
+  helper exists to prevent.
+
+  `SignOutButton` surfaces something that previously had nowhere to go. Sign-out
+  is fail-closed — the client goes anonymous even when the request never reached
+  the server, because the cookie is HttpOnly and it cannot verify either way —
+  and the resulting `SessionState.error` could only appear in `AuthGuard`'s
+  `fallback`, after the UI had already switched to the signed-out view.
+
 - **Magic links** — `magicLinkRequestReducer` / `MagicLinkRequestForm`,
   `magicLinkSignInReducer` / `MagicLinkSignIn`.
 
@@ -454,8 +507,8 @@
 
 ### Still missing
 
-Token refresh, account linking, and MFA *management* — disabling it or
-regenerating recovery codes, which belong on an account-settings surface this package does
+Changing an email, deleting an account, token refresh, account linking, and MFA
+*management* — disabling it or regenerating recovery codes, which belong on an account-settings surface this package does
 not have. The
 `AuthError` union names the failures those flows produce because the wire
 contract needs them — a code appearing there is not a promise that the flow

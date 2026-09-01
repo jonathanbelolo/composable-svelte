@@ -156,6 +156,31 @@ export interface OAuthStateMismatchError {
 	message: string;
 }
 
+/**
+ * The session is valid, but this action needs the user to prove it is still
+ * them.
+ *
+ * Not a failure — the flow branching, the way `mfa_required` is. A borrowed
+ * laptop with a live session is exactly what this exists to stop, and a red
+ * "something went wrong" on the way to a confirmation prompt is both wrong and
+ * alarming.
+ *
+ * **The client cannot decide this and must not try.** `SessionSnapshot` carries
+ * no credential-kind field, so nothing here knows whether an account even *has*
+ * a password — one created through OAuth or a magic link never set one. Only
+ * the backend knows, which is why `methods` comes from the backend rather than
+ * being inferred.
+ */
+export interface ReauthenticationRequiredError {
+	code: 'reauthentication_required';
+	message: string;
+	/**
+	 * How the backend will accept proof. Unknown values are dropped rather than
+	 * trusted, as `mfa_required.methods` does.
+	 */
+	methods: readonly ('password' | 'totp' | 'recovery_code')[];
+}
+
 export type AuthError =
 	| InvalidCredentialsError
 	| MfaRequiredError
@@ -166,6 +191,7 @@ export type AuthError =
 	| TokenExpiredError
 	| OAuthDeniedError
 	| OAuthStateMismatchError
+	| ReauthenticationRequiredError
 	| NetworkError
 	| UnknownAuthError;
 

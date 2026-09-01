@@ -52,6 +52,23 @@ export function subjectRoles(subject: Subject): string[] {
 	return roles.filter((role): role is string => typeof role === 'string');
 }
 
+/**
+ * The subject's display name, or `null`.
+ *
+ * `subjectFromSession` has written this into `attributes` since the beginning
+ * and nothing has ever read it back — a settings panel is the first surface
+ * that wants it. Fail-safe like `subjectRoles`: an anonymous subject, an absent
+ * key, or a value that is not a string all answer `null`, so a caller never has
+ * to reach into `Record<string, unknown>` and guess.
+ */
+export function subjectDisplayName(subject: Subject): string | null {
+	if (subject.kind !== 'authenticated') {
+		return null;
+	}
+	const name = subject.attributes['display_name'];
+	return typeof name === 'string' && name !== '' ? name : null;
+}
+
 /** True when the subject holds `role`. Anonymous subjects hold no roles. */
 export function hasRole(subject: Subject, role: string): boolean {
 	return subjectRoles(subject).includes(role);

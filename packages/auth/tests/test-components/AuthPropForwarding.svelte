@@ -11,6 +11,8 @@
 	import MfaChallengeForm from '../../src/lib/components/MfaChallengeForm.svelte';
 	import MfaEnrolment from '../../src/lib/components/MfaEnrolment.svelte';
 	import OneTimeCodeInput from '../../src/lib/components/OneTimeCodeInput.svelte';
+	import ChangePasswordForm from '../../src/lib/components/ChangePasswordForm.svelte';
+	import SignOutButton from '../../src/lib/components/SignOutButton.svelte';
 	import MagicLinkRequestForm from '../../src/lib/components/MagicLinkRequestForm.svelte';
 	import MagicLinkSignIn from '../../src/lib/components/MagicLinkSignIn.svelte';
 	import OAuthSignIn from '../../src/lib/components/OAuthSignIn.svelte';
@@ -38,6 +40,10 @@
 	} from '../../src/lib/flows/email-verification/types.js';
 	import type { SignupAction, SignupState } from '../../src/lib/flows/signup/types.js';
 	import type { AuthError } from '../../src/lib/errors/types.js';
+	import type {
+		ChangePasswordAction,
+		ChangePasswordState
+	} from '../../src/lib/flows/change-password/types.js';
 	import type {
 		MagicLinkRequestAction,
 		MagicLinkRequestState
@@ -140,6 +146,16 @@
 		qr,
 		onDone,
 		enrolmentClass,
+		changePasswordFlowStore,
+		hasPassword,
+		onChanged,
+		onReauthenticationRequired,
+		changePasswordClass,
+		signOutStore,
+		onSignedOut,
+		signOutLabel,
+		showFailure,
+		signOutClass,
 		magicRequestFlowStore,
 		magicRequestClass,
 		magicSignInFlowStore,
@@ -284,6 +300,30 @@
 		qr?: Snippet<[{ otpauthUri: string; secret: string }]>;
 		onDone?: () => void;
 		enrolmentClass?: string;
+
+		// ChangePasswordForm.
+		changePasswordFlowStore: {
+			readonly state: ChangePasswordState;
+			dispatch(action: ChangePasswordAction): void;
+			subscribe(listener: (state: ChangePasswordState) => void): () => void;
+		};
+		hasPassword?: boolean;
+		onChanged?: () => void;
+		onReauthenticationRequired?: (demand: {
+			methods: readonly ('password' | 'totp' | 'recovery_code')[];
+		}) => void;
+		changePasswordClass?: string;
+
+		// SignOutButton. `store` is required and reads *and* dispatches, unlike
+		// the guards above — so it cannot reuse their narrower `store` prop.
+		signOutStore: {
+			readonly state: SessionState;
+			dispatch(action: SessionAction): void;
+		};
+		onSignedOut?: () => void;
+		signOutLabel?: string;
+		showFailure?: boolean;
+		signOutClass?: string;
 
 		// MagicLinkRequestForm.
 		magicRequestFlowStore: {
@@ -505,4 +545,22 @@
 	{signedIn}
 	{footer}
 	class={magicSignInClass}
+/>
+<ChangePasswordForm
+	flowStore={changePasswordFlowStore}
+	{sessionStore}
+	{hasPassword}
+	{onChanged}
+	{onReauthenticationRequired}
+	{headingLevel}
+	{submitLabel}
+	{footer}
+	class={changePasswordClass}
+/>
+<SignOutButton
+	store={signOutStore}
+	{onSignedOut}
+	label={signOutLabel}
+	{showFailure}
+	class={signOutClass}
 />

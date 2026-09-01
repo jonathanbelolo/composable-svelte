@@ -24,6 +24,8 @@ import ForgotPasswordForm from '../../src/lib/components/ForgotPasswordForm.svel
 import ResetPasswordForm from '../../src/lib/components/ResetPasswordForm.svelte';
 import MfaChallengeForm from '../../src/lib/components/MfaChallengeForm.svelte';
 import MfaEnrolment from '../../src/lib/components/MfaEnrolment.svelte';
+import ChangePasswordForm from '../../src/lib/components/ChangePasswordForm.svelte';
+import SignOutButton from '../../src/lib/components/SignOutButton.svelte';
 import MagicLinkRequestForm from '../../src/lib/components/MagicLinkRequestForm.svelte';
 import MagicLinkSignIn from '../../src/lib/components/MagicLinkSignIn.svelte';
 import OAuthSignIn from '../../src/lib/components/OAuthSignIn.svelte';
@@ -46,6 +48,10 @@ import {
 	createInitialMfaChallengeState,
 	mfaChallengeReducer
 } from '../../src/lib/flows/mfa-challenge/reducer.js';
+import {
+	createInitialChangePasswordState,
+	changePasswordReducer
+} from '../../src/lib/flows/index.js';
 import {
 	createInitialMagicLinkRequestState,
 	magicLinkRequestReducer,
@@ -582,5 +588,62 @@ describe('magic link on the server', () => {
 
 		expect(body).toContain('type="email"');
 		expect(body).toContain('Email me a link');
+	});
+});
+
+describe('the account panels on the server', () => {
+	const refuse = (what: string) => () => {
+		throw new Error(`the server must not ${what}`);
+	};
+	const noSession = { dispatch: () => {} };
+
+	it('renders the password panel without changing anything', () => {
+		const flowStore = createStore({
+			initialState: createInitialChangePasswordState(),
+			reducer: changePasswordReducer,
+			dependencies: { changePassword: refuse('change a password') }
+		});
+		const body = render(ChangePasswordForm, {
+			props: { flowStore, sessionStore: noSession, hasPassword: true, headingLevel: 1 }
+		}).body;
+
+		expect(body).toContain('<h1');
+		expect(body).toContain('Change your password');
+		// Never `type="text"`, on either build — the arm `PasswordInput` has had
+		// since it shipped.
+		expect(body).not.toContain('type="text"');
+	});
+
+	it('says "set" when the account has no password', () => {
+		const flowStore = createStore({
+			initialState: createInitialChangePasswordState(),
+			reducer: changePasswordReducer,
+			dependencies: { changePassword: refuse('change a password') }
+		});
+		const body = render(ChangePasswordForm, {
+			props: { flowStore, sessionStore: noSession, hasPassword: false }
+		}).body;
+
+		expect(body).toContain('Set a password');
+		expect(body).toContain('signs in another way today');
+	});
+
+	it('renders the sign-out control without signing anyone out', () => {
+		const store = createStore({
+			initialState: {
+				...createInitialSessionState(),
+				status: 'authenticated' as const
+			},
+			reducer: sessionReducer,
+			dependencies: {
+				fetchLogin: refuse('sign anyone in'),
+				fetchLogout: refuse('sign anyone out'),
+				fetchSession: refuse('resolve a session')
+			}
+		});
+		const body = render(SignOutButton, { props: { store } }).body;
+
+		expect(body).toContain('Sign out');
+		expect(body).toContain('type="button"');
 	});
 });

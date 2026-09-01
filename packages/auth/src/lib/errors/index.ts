@@ -1,4 +1,10 @@
-export { toAuthError, isAuthError, isMfaRequired, retryDelaySeconds } from './helpers.js';
+export {
+	toAuthError,
+	isAuthError,
+	isMfaRequired,
+	isReauthenticationRequired,
+	retryDelaySeconds
+} from './helpers.js';
 
 export type {
 	AuthError,
@@ -12,6 +18,7 @@ export type {
 	TokenExpiredError,
 	OAuthDeniedError,
 	OAuthStateMismatchError,
+	ReauthenticationRequiredError,
 	NetworkError,
 	UnknownAuthError
 } from './types.js';

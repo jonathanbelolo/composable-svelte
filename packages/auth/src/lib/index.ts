@@ -17,6 +17,7 @@ export {
 	anonymousSubject,
 	subjectFromSession,
 	subjectRoles,
+	subjectDisplayName,
 	hasRole,
 	hasAnyRole,
 	type Subject,
@@ -30,6 +31,7 @@ export {
 	toAuthError,
 	isAuthError,
 	isMfaRequired,
+	isReauthenticationRequired,
 	retryDelaySeconds,
 	type AuthError,
 	type AuthErrorCode,
@@ -42,6 +44,7 @@ export {
 	type TokenExpiredError,
 	type OAuthDeniedError,
 	type OAuthStateMismatchError,
+	type ReauthenticationRequiredError,
 	type NetworkError,
 	type UnknownAuthError
 } from './errors/index.js';
@@ -155,6 +158,30 @@ export {
 } from './flows/index.js';
 
 export {
+	accountReducer,
+	createInitialAccountState,
+	createAccountStore,
+	changePasswordReducer,
+	createInitialChangePasswordState,
+	createChangePasswordStore,
+	changePasswordFormConfig,
+	changePasswordSchema,
+	emptyChangePasswordFields
+} from './flows/index.js';
+
+export type {
+	AccountState,
+	AccountAction,
+	AccountStatus,
+	AccountDependencies,
+	ChangePasswordFields,
+	ChangePasswordState,
+	ChangePasswordAction,
+	ChangePasswordStatus,
+	ChangePasswordDependencies
+} from './flows/index.js';
+
+export {
 	magicLinkRequestReducer,
 	createInitialMagicLinkRequestState,
 	createMagicLinkRequestStore,
@@ -216,6 +243,7 @@ export type {
 	SignupOutcome,
 	MfaMethod,
 	MfaEnrolmentStart,
+	AccountSnapshot,
 	MfaEnrolmentResult,
 	OAuthStart,
 	AuthErrorBody
@@ -236,6 +264,8 @@ export {
 	MfaChallengeForm,
 	MfaEnrolment,
 	OneTimeCodeInput,
+	ChangePasswordForm,
+	SignOutButton,
 	MagicLinkRequestForm,
 	MagicLinkSignIn,
 	OAuthSignIn,

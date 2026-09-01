@@ -20,7 +20,11 @@
 
 import { parseRetryAfter } from '@composable-svelte/core/api';
 
-import type { AuthError, AuthErrorCode } from '../errors/types.js';
+import type {
+	AuthError,
+	AuthErrorCode,
+	ReauthenticationRequiredError
+} from '../errors/types.js';
 import type { AuthErrorBody } from '../deps.js';
 
 /** Codes an adapter may name in a body. Anything else is ignored, not trusted. */
@@ -33,6 +37,9 @@ import type { AuthErrorBody } from '../deps.js';
  * never be accepted from a backend — a silent hole. A missing key here is a
  * compile error.
  */
+/** What a backend may ask for. Anything else is dropped, not trusted. */
+const REAUTH_METHODS = new Set<string>(['password', 'totp', 'recovery_code']);
+
 const KNOWN_CODES = new Set<string>(
 	Object.keys({
 		invalid_credentials: true,
@@ -44,6 +51,7 @@ const KNOWN_CODES = new Set<string>(
 		token_expired: true,
 		oauth_denied: true,
 		oauth_state_mismatch: true,
+		reauthentication_required: true,
 		network: true,
 		unknown: true
 	} satisfies Record<AuthErrorCode, true>)
@@ -183,6 +191,23 @@ export async function authErrorFromResponse(
 				message,
 				...(body?.email !== undefined && { email: body.email })
 			};
+
+		case 'reauthentication_required': {
+			// `methods` is required on the arm, so the `default` below cannot build
+			// one — which is the compiler pointing out that a re-auth demand
+			// carrying no way to satisfy it would strand the user on a prompt with
+			// nothing to answer. Falls back to a password challenge, the only
+			// method every backend can offer.
+			const methods = (body?.methods ?? ['password']).filter((m) =>
+				REAUTH_METHODS.has(m)
+			) as ReauthenticationRequiredError['methods'];
+
+			return {
+				code: 'reauthentication_required',
+				message,
+				methods: methods.length > 0 ? methods : ['password']
+			};
+		}
 
 		case 'oauth_denied':
 			return {

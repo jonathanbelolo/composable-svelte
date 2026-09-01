@@ -126,6 +126,14 @@ const CAPABILITIES: Capability[] = [
 		qualifiers: ['account linking', 'linking', 'unlinking']
 	},
 	{
+		name: 'account settings',
+		dirs: ['account', 'change-password'],
+		denials: [/\bno account settings\b/gi],
+		// The read model and changing a password ship; the panels built on them
+		// do not yet.
+		qualifiers: ['for email', 'for deletion', 'for MFA', 'for connected accounts']
+	},
+	{
 		name: 'email verification',
 		dirs: ['email-verification'],
 		denials: [/\bno email verification\b/gi],

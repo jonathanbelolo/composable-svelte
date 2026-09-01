@@ -71,8 +71,8 @@ import { syncBrowserHistory } from '@composable-svelte/core/routing';
 
 Sessions and the flows that establish them, over a dependency surface any backend can satisfy.
 
-- **Flows**: password sign-in, signup, email verification, password recovery, MFA (challenge and enrolment), OAuth (redirect and callback), magic links (request and sign-in) — each a headless reducer usable without the components
-- **Components**: `LoginForm`, `SignupForm`, `EmailVerification`, `ForgotPasswordForm`, `ResetPasswordForm`, `MfaChallengeForm`, `MfaEnrolment`, `OAuthSignIn`, `OAuthCallback`, `MagicLinkRequestForm`, `MagicLinkSignIn`, plus `AuthGuard` / `RoleGate` for UX gating
+- **Flows**: password sign-in, signup, email verification, password recovery, MFA (challenge and enrolment), OAuth (redirect and callback), magic links (request and sign-in), and the account read model plus change-password — each a headless reducer usable without the components
+- **Components**: `LoginForm`, `SignupForm`, `EmailVerification`, `ForgotPasswordForm`, `ResetPasswordForm`, `MfaChallengeForm`, `MfaEnrolment`, `OAuthSignIn`, `OAuthCallback`, `MagicLinkRequestForm`, `MagicLinkSignIn`, `ChangePasswordForm`, `SignOutButton`, plus `AuthGuard` / `RoleGate` for UX gating
 - **State**: `sessionReducer` owns "who am I"; every flow hands its result over with one action, `sessionEstablished`
 - **Errors**: `AuthError`, a discriminated union a surface branches on — `mfa_required` is the login flow branching, not a failure
 - **Built on**: zod, and `@composable-svelte/core`'s form system. No other runtime dependency

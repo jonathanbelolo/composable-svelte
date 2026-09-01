@@ -65,6 +65,37 @@ export interface MfaEnrolmentStart {
  * never holds OAuth secrets would become false. PKCE belongs entirely to the
  * backend, which builds the authorize URL.
  */
+/**
+ * What a settings surface needs to know, which the session deliberately does
+ * not carry.
+ *
+ * `SessionSnapshot` is identity and nothing else — `subject_id`, a display name
+ * and roles — and that is worth keeping. It crosses SSR hydration, it rides
+ * along with every authenticated render, and widening it to carry an email and
+ * a list of linked providers would make every page pay for what one page needs.
+ *
+ * So settings reads separately. Every field here answers a question a panel has
+ * to ask before it can render honestly: `hasPassword` decides whether the
+ * password panel says "set" or "change", `mfaEnabled` decides whether the MFA
+ * panel offers to turn it on or off, and `providers` is the connected-accounts
+ * list.
+ */
+export interface AccountSnapshot {
+	email: string;
+	emailVerified: boolean;
+	/**
+	 * Whether the account has a password at all.
+	 *
+	 * **False is ordinary, not broken.** An account created through OAuth or a
+	 * magic link never set one, and a surface that assumes otherwise offers to
+	 * "change" something that does not exist.
+	 */
+	hasPassword: boolean;
+	mfaEnabled: boolean;
+	/** Providers linked today. Empty is normal. */
+	providers: readonly string[];
+}
+
 export interface OAuthStart {
 	/** Where to send the browser. The adapter refuses anything not `http(s):`. */
 	authorizeUrl: string;
@@ -189,6 +220,34 @@ export interface AuthDependencies extends SessionDependencies {
 		code: string,
 		signal?: AbortSignal
 	) => Promise<MfaEnrolmentResult>;
+	/**
+	 * Read the account behind the current session.
+	 *
+	 * The only other read in this surface besides `fetchSession`, and the two are
+	 * deliberately separate: the session answers "who am I", this answers "what
+	 * is my account like". Acts on the cookie alone, like `beginMfaEnrolment`.
+	 *
+	 * Rejects with an {@link AuthError} — a caller with no session gets whatever
+	 * the backend says, and the surface should not be rendering settings anyway.
+	 */
+	fetchAccount: (signal?: AbortSignal) => Promise<AccountSnapshot>;
+	/**
+	 * Set or change the password on the current account.
+	 *
+	 * Resolves with a session when the backend rotates it as part of the change —
+	 * which many do, to invalidate other devices — and `null` when it does not.
+	 * The password changed either way. The same nullable as `resetPassword`.
+	 *
+	 * **Takes no current password**, deliberately. The client cannot know whether
+	 * the account has one: `SessionSnapshot` carries no credential-kind field,
+	 * and an account created through OAuth or a magic link never set a password.
+	 * A backend that wants proof rejects with `reauthentication_required` saying
+	 * which methods it accepts, and the surface prompts.
+	 */
+	changePassword: (
+		newPassword: string,
+		signal?: AbortSignal
+	) => Promise<SessionSnapshot | null>;
 	/**
 	 * Send a sign-in link to an address.
 	 *

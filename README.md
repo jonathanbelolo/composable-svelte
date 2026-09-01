@@ -35,7 +35,7 @@ review. No independent WCAG 2.1 AA audit has been done on the other packages.
 - ✅ **Complete Backend**: API client, WebSocket, Storage, Clock dependencies
 - ✅ **Component library**: shadcn-svelte integration with reducer-driven patterns — browse the full set in [the styleguide](examples/styleguide)
 - ✅ **URL Routing**: Browser history sync with pattern matching
-- ✅ **Auth**: Sessions plus password sign-in, signup, email verification, password recovery, MFA, OAuth and magic links — headless flows and styled components, over injected dependencies. See [`@composable-svelte/auth`](./packages/auth/README.md)
+- ✅ **Auth**: Sessions plus password sign-in, signup, email verification, password recovery, MFA, OAuth, magic links and account settings — headless flows and styled components, over injected dependencies. See [`@composable-svelte/auth`](./packages/auth/README.md)
 
 ## Quick Start
 

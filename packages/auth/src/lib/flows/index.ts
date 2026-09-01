@@ -203,3 +203,33 @@ export type {
 } from './magic-link-signin/index.js';
 
 export { emailField } from './email-field.js';
+
+export {
+	accountReducer,
+	createInitialAccountState,
+	createAccountStore
+} from './account/index.js';
+
+export type {
+	AccountState,
+	AccountAction,
+	AccountStatus,
+	AccountDependencies
+} from './account/index.js';
+
+export {
+	changePasswordReducer,
+	createInitialChangePasswordState,
+	createChangePasswordStore,
+	changePasswordFormConfig,
+	changePasswordSchema,
+	emptyChangePasswordFields
+} from './change-password/index.js';
+
+export type {
+	ChangePasswordFields,
+	ChangePasswordState,
+	ChangePasswordAction,
+	ChangePasswordStatus,
+	ChangePasswordDependencies
+} from './change-password/index.js';

@@ -18,11 +18,13 @@ forms), the `AuthError` union, `AuthGuard` / `RoleGate` / `LoginForm` /
 `SignupForm` / `EmailVerification` / `ForgotPasswordForm` /
 `ResetPasswordForm` / `MfaChallengeForm` / `MfaEnrolment` / `PasswordInput` /
 `PasswordCriteria` / `OneTimeCodeInput` / `OAuthSignIn` / `OAuthCallback` /
-`MagicLinkRequestForm` / `MagicLinkSignIn`, a mock dependency set, SSR coverage.
+`MagicLinkRequestForm` / `MagicLinkSignIn` / `ChangePasswordForm` /
+`SignOutButton`, a mock dependency set, SSR coverage.
 
-**What does not exist yet.** Token refresh, account linking, and MFA
-*management* — disabling it, or regenerating recovery codes, which belong on an
-account-settings surface this package does not have. The `AuthError` union already *names* the failures those
+**What does not exist yet.** Change email, delete account, token refresh,
+account linking, and MFA *management* — disabling it or regenerating recovery
+codes. The account **read model** (`fetchAccount`) and the re-authentication arm
+they all need now exist; each remaining panel is a flow on top of them. The `AuthError` union already *names* the failures those
 flows produce (`mfa_required`, `email_unverified`, `token_expired`) because the
 wire contract needs them — **a code appearing in the union is not a promise that
 the flow behind it ships.** Check `src/lib/flows/` before telling a user a flow
@@ -149,9 +151,10 @@ discriminated union, not a string. This is the enabling design of the package:
 "wrong password", "confirm your email", "this account is locked" and "now enter
 your second factor" are different outcomes, and the last is not a failure at all.
 
-Eleven arms: `invalid_credentials`, `mfa_required`, `email_unverified`,
+Twelve arms: `invalid_credentials`, `mfa_required`, `email_unverified`,
 `email_taken`, `account_locked`, `rate_limited`, `token_expired`,
-`oauth_denied`, `oauth_state_mismatch`, `network`, `unknown`. Each is also
+`oauth_denied`, `oauth_state_mismatch`, `reauthentication_required`, `network`,
+`unknown`. Each is also
 exported by name (`MfaRequiredError`, `RateLimitedError`, …) for a signature
 that accepts only one, and `AuthErrorCode` is the union of the code strings.
 
@@ -159,8 +162,8 @@ The example below is **exhaustive on purpose**, and this file is compiled by
 `doc-typecheck`. Add an arm to the union and `unhandled(error)` stops
 typechecking, so the sentence above cannot quietly go stale — which is the
 failure mode of every skill that lists a union in prose. It has already earned
-its keep twice: `email_taken` and the two `oauth_*` arms each broke this block
-on the day they landed.
+its keep three times: `email_taken`, the two `oauth_*` arms and
+`reauthentication_required` each broke this block on the day they landed.
 
 ```typescript
 import { retryDelaySeconds, type AuthError } from '@composable-svelte/auth';
@@ -185,6 +188,12 @@ function whatToOffer(error: AuthError): string {
 		case 'rate_limited':
 			// `null` when the backend stated no delay — never invent one.
 			return `wait ${retryDelaySeconds(error) ?? 'a while'}s`;
+		case 'reauthentication_required':
+			// The session is valid; this action wants proof it is still them. A
+			// branch, like `mfa_required` — never a red banner. `methods` says
+			// what the backend will accept, because the client cannot know: an
+			// account made through OAuth or a magic link has no password.
+			return `confirm with: ${error.methods.join(', ')}`;
 		case 'oauth_denied':
 			// Not a failure: the user pressed Cancel at the provider. Offer the
 			// way back, never a red banner.
@@ -960,6 +969,25 @@ const custom: AuthDependencies = {
 		// Two outcomes, deliberately: a backend requiring confirmation cannot
 		// return a session, and one that does not should not force a second trip.
 		return { kind: 'verificationRequired', email: 'ada@example.com' };
+	},
+	async fetchAccount(signal) {
+		void signal;
+		// The settings read model. Separate from `fetchSession` on purpose: the
+		// session answers "who am I", this answers "what is my account like".
+		return {
+			email: 'ada@example.com',
+			emailVerified: true,
+			hasPassword: true,
+			mfaEnabled: false,
+			providers: []
+		};
+	},
+	async changePassword(newPassword, signal) {
+		void newPassword;
+		void signal;
+		// No current password: the client cannot know whether the account has
+		// one. Reject with `reauthentication_required` if you want proof.
+		return null;
 	},
 	async requestMagicLink(email, signal) {
 		void email;

@@ -17,6 +17,7 @@ import type {
 	LoginCredentials,
 	MfaEnrolmentResult,
 	MfaEnrolmentStart,
+	AccountSnapshot,
 	MfaMethod,
 	OAuthStart,
 	SignupCredentials,
@@ -109,6 +110,15 @@ export interface MockAuthOptions {
 	expiredChallengeIds?: readonly string[] | undefined;
 	/** What `confirmMfaEnrolment` hands back. Shown once, so a demo needs some. */
 	recoveryCodes?: readonly string[] | undefined;
+	/** The account `fetchAccount` reports. Merged over a sensible default. */
+	account?: Partial<AccountSnapshot> | undefined;
+	/**
+	 * Actions that demand re-authentication before they will run.
+	 *
+	 * Named so a demo and a test can reach that branch, which is otherwise only
+	 * producible by a real backend.
+	 */
+	reauthenticateFor?: readonly ('changePassword' | 'fetchAccount')[] | undefined;
 	/** Sign-in link tokens the fake accepts. Anything else is `token_expired`. */
 	magicLinkTokens?: readonly string[] | undefined;
 	/** Providers the fake offers. Anything else is rejected as `unknown`. */
@@ -174,12 +184,20 @@ export function createMockAuthDeps(options: MockAuthOptions = {}): AuthDependenc
 			'z1k8-3ldp-77ac',
 			'mn5b-6yth-0092'
 		],
+		account,
+		reauthenticateFor = [],
 		magicLinkTokens = ['magic_demo'],
 		oauthProviders = ['google', 'github'],
 		oauthAuthorizeUrl = 'https://provider.example/authorize?client_id=demo&response_type=code',
 		oauthState = 'st_demo',
 		oauthCodes = ['code_demo']
 	} = options;
+
+	const needsReauthentication = (): AuthError => ({
+		code: 'reauthentication_required',
+		message: 'Confirm it is you before changing this.',
+		methods: ['password']
+	});
 
 	const rejectWrongCode = (): never => {
 		throw {
@@ -324,6 +342,34 @@ export function createMockAuthDeps(options: MockAuthOptions = {}): AuthDependenc
 			}
 
 			return session;
+		},
+
+		async fetchAccount(signal?: AbortSignal): Promise<AccountSnapshot> {
+			await wait(signal);
+			if (failWith) throw failWith;
+			if (reauthenticateFor.includes('fetchAccount')) throw needsReauthentication();
+
+			return {
+				email: 'ada@example.com',
+				emailVerified: true,
+				hasPassword: true,
+				mfaEnabled: false,
+				providers: [],
+				...account
+			};
+		},
+
+		async changePassword(
+			_newPassword: string,
+			signal?: AbortSignal
+		): Promise<SessionSnapshot | null> {
+			await wait(signal);
+			if (failWith) throw failWith;
+			if (reauthenticateFor.includes('changePassword')) throw needsReauthentication();
+
+			// `null`, not a session: the common backend behaviour is to keep the
+			// current device signed in and invalidate the others.
+			return null;
 		},
 
 		async beginOAuth(provider: string, signal?: AbortSignal): Promise<OAuthStart> {

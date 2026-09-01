@@ -6,7 +6,7 @@
  * what to do about it.
  */
 
-import type { AuthError, MfaRequiredError } from './types.js';
+import type { AuthError, MfaRequiredError, ReauthenticationRequiredError } from './types.js';
 
 /**
  * Wrap something thrown into an `AuthError`.
@@ -83,6 +83,20 @@ export function isAuthError(value: unknown): value is AuthError {
  */
 export function isMfaRequired(error: AuthError | null): error is MfaRequiredError {
 	return error !== null && error.code === 'mfa_required';
+}
+
+/**
+ * Whether the backend wants the user to confirm it is still them.
+ *
+ * The sibling of {@link isMfaRequired}, and for the same reason: a surface has
+ * to narrow before it can read `methods`, and the arm is a branch rather than a
+ * failure — so a surface that renders every error as a red banner would be
+ * wrong about this one.
+ */
+export function isReauthenticationRequired(
+	error: AuthError | null
+): error is ReauthenticationRequiredError {
+	return error !== null && error.code === 'reauthentication_required';
 }
 
 /**

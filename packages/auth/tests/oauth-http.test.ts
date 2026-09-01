@@ -209,6 +209,120 @@ describe('the magic-link wire', () => {
 	});
 });
 
+describe('the account wire', () => {
+	it('reads the account with a GET, the second in this adapter', async () => {
+		const calls = stubFetch(
+			json({
+				email: 'ada@example.com',
+				email_verified: true,
+				has_password: true,
+				mfa_enabled: false,
+				providers: ['github']
+			})
+		);
+
+		await expect(createHttpAuthDeps('/api').fetchAccount()).resolves.toEqual({
+			email: 'ada@example.com',
+			emailVerified: true,
+			hasPassword: true,
+			mfaEnabled: false,
+			providers: ['github']
+		});
+		expect(calls[0]!.url).toBe('/api/auth/account');
+		expect(calls[0]!.init.method).toBe('GET');
+		expect(calls[0]!.init.credentials).toBe('include');
+	});
+
+	it('treats absent providers as none, and a wrong shape as malformed', async () => {
+		stubFetch(json({ email: 'a@b.com', email_verified: true, has_password: false, mfa_enabled: true }));
+		await expect(createHttpAuthDeps().fetchAccount()).resolves.toMatchObject({ providers: [] });
+
+		stubFetch(
+			json({ email: 'a@b.com', email_verified: true, has_password: false, mfa_enabled: true, providers: 'github' })
+		);
+		await expect(createHttpAuthDeps().fetchAccount()).rejects.toThrow(MalformedSessionError);
+	});
+
+	it('refuses an account missing a field a panel branches on', async () => {
+		// Defaulting `has_password` would offer to change a password that does
+		// not exist; defaulting `mfa_enabled` would tell someone their account is
+		// less protected than it is. Both are worse than an error.
+		for (const body of [
+			{ email_verified: true, has_password: true, mfa_enabled: false },
+			{ email: 'a@b.com', has_password: true, mfa_enabled: false },
+			{ email: 'a@b.com', email_verified: true, mfa_enabled: false },
+			{ email: 'a@b.com', email_verified: true, has_password: true }
+		]) {
+			stubFetch(json(body));
+			await expect(
+				createHttpAuthDeps().fetchAccount(),
+				`${JSON.stringify(body)} was accepted`
+			).rejects.toThrow(MalformedSessionError);
+		}
+	});
+
+	it('sends only the new password, and reads 204 as "session untouched"', async () => {
+		const calls = stubFetch(new Response(null, { status: 204 }));
+
+		await expect(createHttpAuthDeps('/api').changePassword('hunter2-hunter2')).resolves.toBeNull();
+		expect(calls[0]!.url).toBe('/api/auth/account/password');
+		expect(JSON.parse(String(calls[0]!.init.body)), 'a current password was sent').toEqual({
+			password: 'hunter2-hunter2'
+		});
+	});
+
+	it('classifies a demand for proof, keeping the methods', async () => {
+		stubFetch(
+			json(
+				{
+					error: {
+						code: 'reauthentication_required',
+						message: 'Confirm it is you.',
+						methods: ['password', 'totp', 'wallet-dance']
+					}
+				},
+				403
+			)
+		);
+
+		await expect(createHttpAuthDeps().changePassword('x')).rejects.toEqual({
+			code: 'reauthentication_required',
+			message: 'Confirm it is you.',
+			// An unknown method is dropped rather than trusted, as `mfa_required`
+			// does — a surface cannot prompt for something it has no idea about.
+			methods: ['password', 'totp']
+		});
+	});
+
+	it('falls back to a password challenge when the backend names no method', async () => {
+		// `methods` is required on the arm, so there is no "demand with no way to
+		// satisfy it" — which would strand the user on a prompt with nothing to
+		// answer.
+		stubFetch(json({ error: { code: 'reauthentication_required', message: 'Confirm.' } }, 403));
+
+		await expect(createHttpAuthDeps().changePassword('x')).rejects.toMatchObject({
+			methods: ['password']
+		});
+	});
+
+	it('the fake can demand re-authentication, so that branch is reachable', async () => {
+		const api = createMockAuthDeps({ reauthenticateFor: ['changePassword'] });
+		await expect(api.changePassword('x')).rejects.toMatchObject({
+			code: 'reauthentication_required'
+		});
+		await expect(api.fetchAccount()).resolves.toMatchObject({ email: expect.any(String) });
+	});
+
+	it('the fake reports the account it was configured with', async () => {
+		const api = createMockAuthDeps({ account: { hasPassword: false, providers: ['google'] } });
+		await expect(api.fetchAccount()).resolves.toMatchObject({
+			hasPassword: false,
+			providers: ['google'],
+			email: 'ada@example.com'
+		});
+	});
+});
+
 describe('the pending storage that ships', () => {
 	it('round-trips through sessionStorage, once', () => {
 		const storage = createPendingOAuthStorage();
