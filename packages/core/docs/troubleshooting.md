@@ -1145,7 +1145,7 @@ case 'presentationTimeout':
 If you encounter issues not covered in this guide:
 
 1. Check the [API documentation](/packages/core/docs/api)
-2. Review [examples](/packages/core/examples)
+2. Review [examples](/examples)
 3. Search existing GitHub issues
 4. Create a new issue with:
    - Minimal reproduction

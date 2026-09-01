@@ -1686,7 +1686,7 @@ describe('Modal Accessibility', () => {
 
 - **[Tree-Based Navigation](./tree-based.md)** - State-driven navigation patterns
 - **[Dismiss Dependency](./dismiss.md)** - Child self-dismissal patterns
-- **[Animation Integration](./animation.md)** - Advanced animation techniques
+- **[Animation Integration](../animation/animated-navigation.md)** - Advanced animation techniques
 - **[Store and Reducers](../core-concepts/store-and-reducers.md)** - Core state management
 
 ## Related Documentation

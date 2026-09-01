@@ -868,3 +868,97 @@ describe('Validation Modes', () => {
 		});
 	});
 });
+
+// ============================================================
+// The schema's output is what the form holds
+// ============================================================
+
+describe('a schema transform reaches the data', () => {
+	const trimmed = z.object({
+		email: z.string().trim().min(1, 'Email is required').email('Enter a valid email address'),
+		// Also trimmed, and that matters: the scoping test below types into this
+		// field, and a field with no transform could not detect a write-back.
+		note: z.string().trim()
+	});
+
+	type Trimmed = z.infer<typeof trimmed>;
+
+	function trimStore(mode: 'onSubmit' | 'onChange', onSubmit = vi.fn(async () => {})) {
+		const config: FormConfig<Trimmed> = {
+			schema: trimmed,
+			initialData: { email: '', note: '' },
+			mode,
+			onSubmit
+		};
+		return {
+			onSubmit,
+			store: createTestStore({
+				initialState: createInitialFormState(config),
+				reducer: createFormReducer(config)
+			})
+		};
+	}
+
+	it('submits a pasted value and hands on the trimmed one', async () => {
+		// Until this, `state.data` held raw input while `FormState<T>` declared
+		// `T` — the schema's *output* type. A `.trim()` decided only whether
+		// all-whitespace was rejected; what got sent had to be trimmed again by
+		// whoever built the request, and forgetting that failed silently.
+		const { store, onSubmit } = trimStore('onSubmit');
+
+		await store.send({
+			type: 'fieldChanged',
+			field: 'email',
+			value: '  ada@example.com  '
+		});
+		expect(store.state.data.email, 'typing must not be rewritten').toBe('  ada@example.com  ');
+
+		await store.send({ type: 'submitTriggered' });
+		await store.receive({ type: 'formValidationStarted' });
+		await store.receive({ type: 'formValidationCompleted' }, (state) => {
+			expect(state.data.email, 'the parsed result was thrown away').toBe('ada@example.com');
+		});
+		await store.receive({ type: 'submissionStarted' });
+		await store.receive({ type: 'submissionSucceeded' });
+
+		expect(onSubmit).toHaveBeenCalledWith({ email: 'ada@example.com', note: '' });
+	});
+
+	it('does not rewrite a field while it is being typed', async () => {
+		// The scoping arm, and the reason the write-back is not in per-field
+		// validation: that path runs on every keystroke in `onChange` mode, so
+		// writing back would eat the space the moment it was typed and the field
+		// would fight the user mid-word.
+		const { store } = trimStore('onChange');
+
+		// The rest of the form has to be *valid* first, or a parse that fails
+		// writes nothing back and the test passes for the wrong reason — which is
+		// exactly how the first version of this test passed against a reducer that
+		// did rewrite every keystroke.
+		await store.send({ type: 'fieldChanged', field: 'email', value: 'ada@example.com' });
+		await store.receive({ type: 'fieldValidationStarted' });
+		await store.receive({ type: 'fieldValidationCompleted' });
+
+		await store.send({ type: 'fieldChanged', field: 'note', value: 'John ' });
+		await store.receive({ type: 'fieldValidationStarted' });
+		await store.receive({ type: 'fieldValidationCompleted' });
+
+		expect(store.state.data.note, 'a keystroke was rewritten mid-word').toBe('John ');
+	});
+
+	it('keeps exactly what was typed when validation fails', async () => {
+		// A form that did not validate has nothing to write back, and rewriting
+		// on failure would move the cursor under someone correcting a typo.
+		const { store, onSubmit } = trimStore('onSubmit');
+
+		await store.send({ type: 'fieldChanged', field: 'email', value: '  not-an-email  ' });
+		await store.send({ type: 'submitTriggered' });
+		await store.receive({ type: 'formValidationStarted' });
+		await store.receive({ type: 'formValidationCompleted' }, (state) => {
+			expect(state.data.email).toBe('  not-an-email  ');
+			expect(state.fields.email.error).toBe('Enter a valid email address');
+		});
+
+		expect(onSubmit).not.toHaveBeenCalled();
+	});
+});

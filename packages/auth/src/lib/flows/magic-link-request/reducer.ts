@@ -86,11 +86,10 @@ export function magicLinkRequestReducer(
 				return [cleared, formEffect];
 			}
 
-			// Not trimmed, unlike the MFA code fields. There the schema was
-			// deliberately lax so the reducer had to do it; here `z.string().email()`
-			// rejects an address with surrounding whitespace outright, so
-			// `submissionSucceeded` never fires for one and a trim would be dead
-			// code. `forgot-password` reads the field the same way.
+			// Already trimmed by `emailField()`, because core writes the schema's
+			// output back at submit-time validation. This used to read the raw
+			// value, and a pasted address with a trailing space was refused by
+			// validation rather than cleaned.
 			const email = cleared.form.data.email;
 
 			return [

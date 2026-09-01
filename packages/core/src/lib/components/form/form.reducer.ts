@@ -322,14 +322,19 @@ export function createFormReducer<T extends Record<string, any>>(
 					state,
 					Effect.run(async (dispatch) => {
 						try {
-							// Validate entire form with Zod
-							schema.parse(state.data);
+							// The parsed result, not just the verdict. Zod applies a
+							// schema's transforms while validating, and until this
+							// carried `data` the output was computed and thrown away —
+							// so `state.data` held raw input while `FormState<T>`
+							// declared `T`, the schema's *output* type.
+							const parsed = schema.parse(state.data);
 
 							// No errors - proceed to submission
 							dispatch({
 								type: 'formValidationCompleted',
 								fieldErrors: {},
-								formErrors: []
+								formErrors: [],
+								data: parsed
 							});
 						} catch (e) {
 							if (e instanceof ZodError) {
@@ -403,8 +408,25 @@ export function createFormReducer<T extends Record<string, any>>(
 				// `formReset`, so a form-level error survived the validation that
 				// disproved it: fix the thing it complained about, submit again
 				// successfully, and the message was still on screen.
+				//
+				// `data` is the schema's output, and writing it back here is what
+				// makes a schema the single declaration of what a field is. A
+				// `.trim()` used to decide only whether all-whitespace was rejected;
+				// what got *sent* had to be trimmed again by whoever built the
+				// request, and forgetting that second step failed silently — the
+				// form accepted the value and the backend received the dirty one.
+				//
+				// **Here and not in per-field validation.** That path runs on every
+				// keystroke in `onChange` mode, where writing back would trim the
+				// space the user just typed and fight them mid-word. Whole-form
+				// validation runs at submit, when typing has finished.
 				return [
-					{ ...state, isValidating: false, formErrors: [] },
+					{
+						...state,
+						...(action.data !== undefined && { data: action.data }),
+						isValidating: false,
+						formErrors: []
+					},
 					Effect.run(async (dispatch) => {
 						dispatch({ type: 'submissionStarted' });
 					})

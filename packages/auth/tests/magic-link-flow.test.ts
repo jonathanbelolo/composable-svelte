@@ -122,16 +122,43 @@ describe('asking for a link', () => {
 		});
 	});
 
-	it('never reaches the backend with an untrimmed address', async () => {
-		// Not because the reducer trims — it does not, and a trim there would be
-		// dead code. `z.string().email()` rejects surrounding whitespace, so the
-		// form never submits and `requestMagicLink` is never called.
+	it('cleans a pasted address rather than refusing it', async () => {
+		// This used to assert the opposite, and the opposite was the defect: a
+		// mail client or password manager adds whitespace constantly, and the form
+		// answered "Enter a valid email address" about an address that is valid.
 		//
-		// Worth pinning because the obvious "fix" is a `.trim()` in the reducer,
-		// which would look like it was doing something. The real gap is that a
-		// pasted address with a trailing space is refused rather than cleaned, and
-		// that is true of every email field in this package — recorded in the
-		// hardening backlog rather than fixed in one of five places.
+		// Fixed one layer down. `emailField()` trims, and core's form reducer
+		// writes the schema's output back into `state.data` at submit-time
+		// validation — so the reducer reads a clean address without knowing it had
+		// to. The two-step version of this rule, where the schema trimmed and
+		// every reducer had to trim again, failed silently whenever the second
+		// step was forgotten.
+		const requestMagicLink = vi.fn<MagicLinkRequestDependencies['requestMagicLink']>(
+			async () => undefined
+		);
+		const store = requestStore({ requestMagicLink });
+
+		await submitEmail(store, '  ada@example.com  ');
+		await store.receive({ type: 'requestSent' }, (s) => {
+			expect(s.status).toBe('sent');
+			expect(s.requestedFor, 'the confirmation named an untrimmed inbox').toBe(
+				'ada@example.com'
+			);
+		});
+
+		expect(requestMagicLink).toHaveBeenCalledWith('ada@example.com', expect.anything());
+		store.assertNoPendingActions();
+	});
+
+	it('still refuses an address that is only whitespace', async () => {
+		// The trim must not turn "required" into "accepted".
+		//
+		// The message asserted here is the *whole-form* one. All-whitespace
+		// produces two Zod issues — required, and not an address — and core's two
+		// validation paths disagree about which to show: per-field uses `find`
+		// (first issue), whole-form assigns in a loop (last issue wins). That is
+		// core's inconsistency, older than this change, and backlogged. Pinned as
+		// it is so a future fix to that has to come past this test deliberately.
 		const requestMagicLink = vi.fn<MagicLinkRequestDependencies['requestMagicLink']>(
 			async () => undefined
 		);
@@ -139,13 +166,13 @@ describe('asking for a link', () => {
 
 		await store.send({
 			type: 'form',
-			action: { type: 'fieldChanged', field: 'email', value: '  ada@example.com  ' }
+			action: { type: 'fieldChanged', field: 'email', value: '   ' }
 		});
 		await store.send({ type: 'form', action: { type: 'submitTriggered' } });
-		await store.receive({ type: 'form' }); // formValidationStarted
+		await store.receive({ type: 'form' });
 		await store.receive({ type: 'form' }, (s) => {
-			// formValidationCompleted — with an error, so nothing is submitted.
 			expect(s.status).toBe('idle');
+			expect(s.form.fields.email.error).toBe('Enter a valid email address');
 		});
 
 		expect(requestMagicLink).not.toHaveBeenCalled();

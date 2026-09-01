@@ -7,11 +7,13 @@
 
 import { z } from 'zod';
 
+import { emailField } from '../email-field.js';
+
 import { passwordField } from '../password-policy.js';
 
 export const signupSchema = z
 	.object({
-		email: z.string().min(1, 'Email is required').email('Enter a valid email address'),
+		email: emailField(),
 		password: passwordField(),
 		confirmPassword: z.string().min(1, 'Confirm your password')
 	})

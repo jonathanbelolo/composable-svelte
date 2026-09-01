@@ -1384,10 +1384,10 @@ function parseDestination(path: string): DestinationState | null {
 
 ## Next Steps
 
-- **[Animation Integration](./animation.md)** - Animated presentations with lifecycle
+- **[Animation Integration](../animation/animated-navigation.md)** - Animated presentations with lifecycle
 - **[Store and Reducers](../core-concepts/store-and-reducers.md)** - Core state management
 - **[Testing](../core-concepts/testing.md)** - Comprehensive testing guide
-- **[API Reference](../api/navigation.md)** - Complete navigation API
+- **[API Reference](../api/reference.md#navigation)** - Complete navigation API
 
 ## Related Documentation
 

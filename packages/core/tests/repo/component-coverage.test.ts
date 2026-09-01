@@ -23,15 +23,27 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { kindOf, walkFiles } from './walk.js';
+import { readFileSync, existsSync } from 'node:fs';
+import { kindOf, listDirs, walkFiles } from './walk.js';
 import { fileURLToPath } from 'node:url';
 import { join, dirname, resolve, relative } from 'node:path';
 
 const repoRoot = fileURLToPath(new URL('../../../../', import.meta.url));
 const packagesDir = join(repoRoot, 'packages');
 
-const PACKAGES = ['core', 'chat', 'media', 'maps', 'charts', 'code', 'graphics', 'auth'];
+/**
+ * Derived, not listed.
+ *
+ * This was a hardcoded array of eight while `export-surface.test.ts` and
+ * `doc-typecheck.ts` both derived theirs with `listDirs`. All eight happened to
+ * be present, so the list was correct and useless: a ninth package's components
+ * would have gone unscanned with the suite still green. The same
+ * register-rots-in-the-disk-to-register-direction shape `front-door.test.ts`
+ * was written to close.
+ */
+const PACKAGES = listDirs(join(repoRoot, 'packages')).filter((name) =>
+	existsSync(join(repoRoot, 'packages', name, 'package.json'))
+);
 
 function walk(dir: string, out: string[] = []): string[] {
 	out.push(

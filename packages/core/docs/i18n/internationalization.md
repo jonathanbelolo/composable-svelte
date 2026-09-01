@@ -631,7 +631,7 @@ interface BoundFormatters {
 
 - **[SSR/SSG Guide](../ssr/server-rendering.md)** - Full server rendering setup
 - **[Testing i18n](../core-concepts/testing.md#testing-i18n)** - Test translations
-- **[Examples](../../../examples/ssr-server/)** - Multi-locale blog example
+- **[Examples](../../../../examples/ssr-server/)** - Multi-locale blog example
 
 ## Resources
 

@@ -1279,4 +1279,4 @@ For more information, see:
 - [API Client](./api-client.md)
 - [Dependencies Overview](./dependencies.md)
 - [Effect System](../core-concepts/effects.md)
-- [Testing Guide](../testing/unit-testing.md)
+- [Testing Guide](../core-concepts/testing.md)

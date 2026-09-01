@@ -492,13 +492,10 @@ if (quota && quota.usage > quota.quota * 0.9) {
 
 ## Examples
 
-See the [examples directory](../../../examples) for complete working examples:
-
-- Basic storage usage
-- Authentication with cookies
-- Cross-tab synchronization
-- SSR-safe patterns
-- Error handling
+The [examples directory](../../../../../examples) holds complete working apps.
+None is a dedicated storage demo — the closest is
+[`ssr-server`](../../../../../examples/ssr-server), which uses `createNoopStorage()`
+for its SSR-safe fallback. The patterns above are the reference until one exists.
 
 ## Troubleshooting
 

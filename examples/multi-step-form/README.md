@@ -362,7 +362,7 @@ After studying this example, you'll understand:
 
 ## Related Documentation
 
-- [Form System Guide](../../docs/forms-guide.md) - Complete form patterns
+- [Form System Guide](../../guides/forms-guide.md) - Complete form patterns
 - [Registration Form Example](../registration-form/README.md) - Simpler integrated form
 - [Contact Form Example](../contact-form/README.md) - Basic integrated form
 - [Composable Svelte Docs](../../README.md) - Core architecture

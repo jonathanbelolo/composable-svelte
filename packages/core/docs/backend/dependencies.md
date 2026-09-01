@@ -105,8 +105,8 @@ Composable Svelte provides several built-in dependency types:
 | Dependency | Production | Testing | Purpose |
 |------------|-----------|---------|---------|
 | Clock | `createSystemClock()` | `createMockClock()` | Time operations |
-| LocalStorage | `createLocalStorage()` | `createNoopStorage()` | Persistent storage |
-| SessionStorage | `createSessionStorage()` | `createNoopStorage()` | Session storage |
+| LocalStorage | `createLocalStorage()` | any `Storage<T>` — see above | Persistent storage |
+| SessionStorage | `createSessionStorage()` | any `Storage<T>` — see above | Session storage |
 | CookieStorage | `createCookieStorage()` | `createMockCookieStorage()` | Cookie storage |
 | API Client | `createAPIClient()` | `createMockAPI()` | HTTP requests |
 | WebSocket | `createLiveWebSocket()` | `createMockWebSocket()` | Real-time communication |
@@ -887,4 +887,4 @@ For more information, see:
 - [WebSocket Documentation](./websocket.md)
 - [Storage README](../../src/lib/dependencies/README.md)
 - [Security guidelines](../../src/lib/dependencies/SECURITY.md)
-- [Testing Guide](../testing/unit-testing.md)
+- [Testing Guide](../core-concepts/testing.md)

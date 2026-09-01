@@ -50,11 +50,12 @@ const store = createStore({
 
 ## Documentation
 
-See [EXAMPLE.md](./EXAMPLE.md) for a complete working example with:
-- Custom node components
+See the [NodeCanvas section of the package README](../../../README.md#nodecanvas)
+for a worked example with:
 - Type-safe connection validation
-- Toolbar actions
-- Testing examples
+- Testing patterns
+
+Custom node components and toolbar actions are supported but not yet documented.
 
 ## API Reference
 

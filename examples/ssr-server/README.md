@@ -332,7 +332,7 @@ The E2E test suite (`tests/e2e/ssr.spec.ts`) verifies:
 ## 📚 Learn More
 
 - [Composable Svelte Docs](../../packages/core/README.md)
-- [SSR Module Docs](../../packages/core/src/lib/ssr/README.md)
+- [SSR Module Docs](../../packages/core/docs/ssr/server-rendering.md)
 - [Fastify Documentation](https://fastify.dev)
 - [Svelte 5 Documentation](https://svelte.dev/docs/svelte/overview)
 

@@ -11,13 +11,11 @@
  * Length belongs in the input as a hint — `inputmode`, `maxlength`,
  * `autocomplete="one-time-code"` — not in a rule that refuses to send.
  *
- * The `.trim()` here decides only that all-whitespace is rejected. It does
- * **not** clean what gets sent: Zod transforms run during parsing, and core's
- * form reducer stores the raw value from `fieldChanged` without writing the
- * parsed result back. The reducers trim what they send, and a test pins it —
- * a code pasted from a mail client arrives with whitespace more often than not,
- * and "that code is not right" for a trailing space is a miserable thing to
- * debug.
+ * The `.trim()` here both rejects all-whitespace and cleans what gets sent:
+ * core's form reducer writes the schema's output back into `state.data` at
+ * submit-time validation, so the reducers read an already-trimmed code. A code
+ * pasted from a mail client arrives with whitespace more often than not, and
+ * "that code is not right" for a trailing space is a miserable thing to debug.
  */
 
 import { z } from 'zod';

@@ -73,27 +73,7 @@ const UNDOCUMENTED: string[] = [];
  * The arm below deletes an entry the moment its link resolves again, so this
  * cannot quietly become a list of links that are fine.
  */
-const DEAD_LINKS: string[] = [
-	'examples/file-browser/README.md -> ../../packages/core/src/components/ui/tree-view/README.md',
-	'examples/multi-step-form/README.md -> ../../docs/forms-guide.md',
-	'examples/ssr-server/README.md -> ../../packages/core/src/lib/ssr/README.md',
-	'packages/code/src/lib/node-canvas/README.md -> ./EXAMPLE.md',
-	'packages/core/docs/README.md -> ../../../CONTRIBUTING.md',
-	'packages/core/docs/README.md -> ../../../LICENSE',
-	'packages/core/docs/backend/api-client.md -> ../testing/unit-testing.md',
-	'packages/core/docs/backend/dependencies.md -> ../testing/unit-testing.md',
-	'packages/core/docs/backend/websocket.md -> ../testing/unit-testing.md',
-	'packages/core/docs/i18n/internationalization.md -> ../../../examples/ssr-server/',
-	'packages/core/docs/migration.md -> /packages/core/examples',
-	'packages/core/docs/navigation/components.md -> ./animation.md',
-	'packages/core/docs/navigation/tree-based.md -> ../api/navigation.md',
-	'packages/core/docs/navigation/tree-based.md -> ./animation.md',
-	'packages/core/docs/routing/url-sync.md -> /packages/core/docs/backend/testing.md',
-	'packages/core/docs/ssr/server-rendering.md -> ../../../examples/ssr-server/',
-	'packages/core/docs/ssr/server-rendering.md -> ../../../examples/ssr-server/src/build/ssg.ts',
-	'packages/core/docs/troubleshooting.md -> /packages/core/examples',
-	'packages/core/src/lib/dependencies/README.md -> ../../../examples',
-];
+const DEAD_LINKS: string[] = [];
 
 /**
  * A capability, the directory that proves it ships, and the phrasing that would

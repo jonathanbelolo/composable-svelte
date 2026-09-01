@@ -2092,4 +2092,4 @@ const config = {
 
 - [Navigation System](/packages/core/docs/navigation/) - State-driven navigation components
 - [DSL Guide](/packages/core/docs/dsl/) - Fluent API for reducer composition
-- [Testing Guide](/packages/core/docs/backend/testing.md) - Testing strategies for routing
+- [Testing Guide](/packages/core/docs/core-concepts/testing.md) - TestStore patterns

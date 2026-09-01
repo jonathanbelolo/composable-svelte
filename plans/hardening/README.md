@@ -298,6 +298,15 @@ documentation could keep it.
   initialisation — a feature nobody built. Recorded here because
   `adapters/babylon-adapter.ts:90` points at this file for it.
 - **`maps` is mid-phase** — its README says Phase 12C in progress.
+- **Core's two validation paths disagree about which error to show.** For a
+  field with more than one failing rule, per-field validation reports the
+  *first* Zod issue (`form.reducer.ts:230`, `issues.find(...)`) while whole-form
+  validation reports the *last* (`form.reducer.ts:349`, an assignment inside a
+  loop). So `"   "` in an email field says "Email is required" while typing and
+  "Enter a valid email address" on submit. Neither is wrong, but a field should
+  not change its mind. Found while adding `emailField()`;
+  `packages/auth/tests/magic-link-flow.test.ts` pins the current whole-form
+  message so a fix has to come past it deliberately.
 - **`component-coverage.test.ts:33` hardcodes its package list** where its
   siblings derive one. `export-surface.test.ts` and `doc-typecheck.ts` both use
   `listDirs`; that guard carries
@@ -315,31 +324,33 @@ documentation could keep it.
   root README's own further-reading section, and three markdown links in
   `packages/core/docs/backend/dependencies.md` that were hardcoded absolute
   paths into one developer's home directory, shipped in a published package.
-- **A pasted email address with surrounding whitespace is refused, not
-  cleaned.** `z.string().email()` rejects `"  ada@example.com  "`, so the form
-  never submits and the user sees "Enter a valid email address" for an address
-  that is valid. True of every email field in `auth` — login, signup,
-  forgot-password, email-verification's resend, and magic-link-request — so it
-  is one decision about the shared rule rather than five patches. Found while
-  building magic links, where a `.trim()` in the reducer turned out to be
-  unreachable for exactly this reason;
-  `packages/auth/tests/magic-link-flow.test.ts` pins the current behaviour so
-  the dead trim is not reintroduced.
-- **Core has no in-memory `Storage` for tests.** `createMockClock` and
-  `createMockCookieStorage` exist; the localStorage/sessionStorage pair has no
-  counterpart, and `createNoopStorage` discards writes, so nothing can assert
-  that a value round-tripped. Found while building OAuth, which needed one and
-  wrote its own narrow `createMemoryPendingOAuthStorage` in
-  `packages/auth/src/lib/flows/oauth-pending.ts` rather than widen core's
-  surface mid-feature. Not the same thing as the `createMockStorage`
-  *documentation* error listed under S8, which was a doc naming an API that
-  never existed and is closed.
-
-## Closed, kept because code points here
-
-Short entries, retained as anchors for comments and tests that cite them by name.
-The full write-ups are in the commits.
-
+- **A pasted email address was refused rather than cleaned — CLOSED, in core,
+  and the entry overstated the user impact.** Four fields, not the five recorded
+  here first: email-verification's resend has no form and no schema. And
+  **through the shipped components it was not reachable at all** — every one
+  renders `<input type="email">`, whose HTML value-sanitization algorithm strips
+  surrounding whitespace before any handler runs. Measured in a browser. The
+  reachable cases are a `type="text"` input, a prefilled or URL-sourced value,
+  and the headless reducers, which have no input element in front of them. Fixed one layer below where it was reported. Core's
+  form reducer discarded the validated result, so a schema's `.trim()` decided
+  only whether all-whitespace was rejected and every reducer had to trim again
+  before sending — a two-step rule whose second step failed *silently*, and
+  which the existing flows already disagreed about. The reducer now writes the
+  schema's output back into `state.data` at **submit-time** validation only;
+  doing it per-field would rewrite a keystroke mid-word. The two MFA reducers
+  dropped their duplicated trims as a result.
+- **Core ships no in-memory `Storage` double, and that is a position rather than
+  a gap.** I recorded it as a gap without checking, and
+  `packages/core/docs/backend/dependencies.md` had already ruled on it: "No
+  in-memory storage double ships with the library — `createNoopStorage()` reads
+  back `null` for everything, which suits 'storage unavailable' but not a
+  round-trip assertion. For that, pass any object satisfying `Storage<T>`."
+  Defensible: the interface is seven small methods, core's own tests run in a
+  real browser where `localStorage` exists, and `auth` — the one package that
+  needed a round-trip double in node — wrote a narrow `{ put, take }`, which
+  fits better than a general mock because the nonce it holds is single-use. Not
+  doing it. The table below that comment used to list `createNoopStorage()` in a
+  **Testing** column, contradicting the prose above it; that is corrected.
 - **R1 — six components crashed on mount.** All fixed, mutation-verified. Cited
   by `packages/graphics/tests/camera-config.test.ts:16`.
 - **S2 — breaks a consumer at install or build.** All eight closed. **S2.4** was

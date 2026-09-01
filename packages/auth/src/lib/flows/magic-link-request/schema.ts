@@ -11,8 +11,10 @@
 
 import { z } from 'zod';
 
+import { emailField } from '../email-field.js';
+
 export const magicLinkSchema = z.object({
-	email: z.string().min(1, 'Email is required').email('Enter a valid email address')
+	email: emailField()
 });
 
 export type MagicLinkFields = z.infer<typeof magicLinkSchema>;

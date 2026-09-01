@@ -1018,7 +1018,7 @@ case 'save':
 
 For migration assistance:
 
-1. Review [examples](/packages/core/examples) showing common patterns
+1. Review [examples](/examples) showing common patterns
 2. Check [troubleshooting guide](/packages/core/docs/troubleshooting.md)
 3. Join community discussions
 4. File issues with "migration" label
@@ -1028,4 +1028,4 @@ For migration assistance:
 - [Core Concepts](/packages/core/docs/core-concepts)
 - [API Reference](/packages/core/docs/api)
 - [Testing Guide](/packages/core/docs/core-concepts/testing.md)
-- [Examples](/packages/core/examples)
+- [Examples](/examples)

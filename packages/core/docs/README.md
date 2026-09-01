@@ -328,11 +328,11 @@ Ready to deploy? See:
 
 ## 📝 Contributing
 
-Want to improve the docs? See [Contributing Guidelines](../../../CONTRIBUTING.md).
+Want to improve the docs? See [Contributing Guidelines](../../../CLAUDE.md).
 
 ## 📜 License
 
-MIT - see [LICENSE](../../../LICENSE).
+MIT - see [LICENSE](../LICENSE).
 
 ## 🙏 Acknowledgments
 

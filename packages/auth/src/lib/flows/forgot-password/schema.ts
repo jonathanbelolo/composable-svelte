@@ -8,8 +8,10 @@
 
 import { z } from 'zod';
 
+import { emailField } from '../email-field.js';
+
 export const forgotPasswordSchema = z.object({
-	email: z.string().min(1, 'Email is required').email('Enter a valid email address')
+	email: emailField()
 });
 
 export type ForgotPasswordFields = z.infer<typeof forgotPasswordSchema>;

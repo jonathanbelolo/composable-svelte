@@ -1393,4 +1393,4 @@ For more information, see:
 - [Dependencies Overview](./dependencies.md)
 - [WebSocket Client](./websocket.md)
 - [Effect System](../core-concepts/effects.md)
-- [Testing Guide](../testing/unit-testing.md)
+- [Testing Guide](../core-concepts/testing.md)

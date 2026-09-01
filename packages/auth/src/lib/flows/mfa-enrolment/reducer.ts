@@ -141,13 +141,11 @@ export const mfaEnrolmentReducer: Reducer<
 			}
 
 			const { enrolmentId } = cleared;
-			// Trimmed *here*, not by the schema. `.trim()` in Zod runs during
-			// parsing, and core's form reducer stores the raw value it was handed by
-			// `fieldChanged` — it validates against the schema but never writes the
-			// transformed result back. So the schema's trim only decides whether
-			// all-whitespace is rejected; what actually gets sent is trimmed by
-			// whoever builds the request, which is this.
-			const code = cleared.form.data.code.trim();
+			// Not trimmed here any more. Core's form reducer now writes the
+			// schema's output back into `state.data` at submit-time validation, so
+			// `mfaCodeSchema`'s `.trim()` is what this reads — one declaration
+			// instead of a rule every reducer had to remember separately.
+			const code = cleared.form.data.code;
 
 			return [
 				{ ...cleared, status: 'submitting', error: null },

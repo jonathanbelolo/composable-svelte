@@ -332,6 +332,18 @@ export type FormAction<T extends Record<string, any>> =
 			type: 'formValidationCompleted';
 			fieldErrors: Partial<Record<keyof T, string>>;
 			formErrors: string[];
+			/**
+			 * The schema's *output*, when validation passed.
+			 *
+			 * Present only on the success path, and written straight into
+			 * `state.data` — so a schema transform such as `.trim()` is what the
+			 * form actually holds by the time anything reads it.
+			 *
+			 * Optional so the action stays backwards compatible, and absent on
+			 * failure because there is nothing to write: a form that did not
+			 * validate must keep exactly what the user typed.
+			 */
+			data?: T;
 	  }
 
 	// ================================================================
