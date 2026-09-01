@@ -18,7 +18,7 @@ see the table below before you depend on one.
 | **charts** | feature-complete for 5 chart types | scatter, line, bar, area, histogram. Heatmap, network graph and hierarchy layouts are deferred |
 | **graphics** | usable | WebGL overlay and a Babylon adapter. `engine: 'webgpu'` is accepted and **runs WebGL** — real WebGPU is not implemented |
 | **maps** | **in development** | 3D buildings, marker clustering, geocoding/search, drawing tools and routing are all unbuilt |
-| **auth** | usable, broad | seven sign-in flows, sessions and guards. No token refresh, no account linking, and no MFA management (disabling it, regenerating recovery codes) — those need an account-settings surface that does not exist. It speaks to one backend shape |
+| **auth** | usable, broad | sign-in flows, sessions and guards. No token refresh, no account linking, and no MFA management (disabling it, regenerating recovery codes) — those need an account-settings surface that does not exist. It speaks to one backend shape |
 
 Accessibility: `svelte-check --fail-on-warnings` is clean across all 19
 workspaces, and `charts` has a keyboard cursor, a data-table fallback and an AA
@@ -376,7 +376,7 @@ const timestamp = deps.clock.now();
 
 Explore working examples in the `examples/` directory:
 
-- **[Styleguide](./examples/styleguide)**: Component showcase — browse the full set there, including seven working auth flows (sign-in, signup, email verification, password recovery, MFA, OAuth, magic link)
+- **[Styleguide](./examples/styleguide)**: Component showcase — browse the full set there, including a working demo of every auth flow
 - **[Product Gallery](./examples/product-gallery)**: Full-featured product browsing app
 - **[URL Routing](./examples/url-routing)**: Browser history integration examples
 
@@ -391,7 +391,7 @@ pnpm dev
 
 - **[API Documentation](./packages/core/src/lib/dependencies/README.md)**: Dependencies module
 - **[Security Guide](./packages/core/src/lib/dependencies/SECURITY.md)**: Storage security best practices
-- **[Auth](./packages/auth/README.md)**: Sessions, the seven sign-in flows, and the backend contract
+- **[Auth](./packages/auth/README.md)**: Sessions, the sign-in flows, and the backend contract
 - **[Architecture & tutorial guide](./guides/README.md)**: Every package, and a feature built from scratch
 - **[CLAUDE.md](./CLAUDE.md)**: Full project documentation for contributors
 

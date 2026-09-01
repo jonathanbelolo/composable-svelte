@@ -298,6 +298,13 @@ documentation could keep it.
   initialisation — a feature nobody built. Recorded here because
   `adapters/babylon-adapter.ts:90` points at this file for it.
 - **`maps` is mid-phase** — its README says Phase 12C in progress.
+- **`component-coverage.test.ts:33` hardcodes its package list** where its
+  siblings derive one. `export-surface.test.ts` and `doc-typecheck.ts` both use
+  `listDirs`; that guard carries
+  `const PACKAGES = ['core','chat','media','maps','charts','code','graphics','auth']`,
+  so a ninth package's components would be silently unscanned. Same family as
+  the gap `front-door.test.ts` was written to close — a register that rots in
+  the disk-to-register direction — found while reviewing that guard.
 - **19 dead links in `packages/core/docs/` and the example READMEs.** Measured
   and registered in `packages/core/tests/repo/front-door.test.ts`'s `DEAD_LINKS`,
   which fails on any *new* one and deletes an entry the moment its link resolves

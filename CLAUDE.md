@@ -72,7 +72,7 @@ The store uses `$state.raw()` internally (in `store.svelte.ts`), making `store.s
 ```
 composable-svelte/
 ├── packages/
-│   ├── auth/                        # Sessions + seven sign-in flows, guards
+│   ├── auth/                        # Sessions, sign-in flows, guards
 │   ├── charts/                      # Observable Plot / D3 charts
 │   ├── chat/                        # Streaming + collaborative chat
 │   ├── code/                        # CodeMirror, Prism, SvelteFlow wrappers

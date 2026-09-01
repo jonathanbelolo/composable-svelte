@@ -104,7 +104,15 @@ const DEAD_LINKS: string[] = [
  */
 interface Capability {
 	name: string;
-	proof: string;
+	/**
+	 * The flow directories that make this true.
+	 *
+	 * A list rather than one path, because the register is checked in **both**
+	 * directions. Register-to-disk alone would let flow twelve ship, go
+	 * unregistered, and leave the guard green — which is the direction the rot
+	 * actually travels, and the same shape `flat-barrel` exists to catch.
+	 */
+	dirs: string[];
 	denials: RegExp[];
 	qualifiers: string[];
 }
@@ -112,34 +120,46 @@ interface Capability {
 const CAPABILITIES: Capability[] = [
 	{
 		name: 'password login',
-		proof: 'packages/auth/src/lib/flows/login',
+		dirs: ['login'],
 		denials: [/\bno password (login|sign-?in)\b/gi],
 		qualifiers: []
 	},
 	{
 		name: 'signup',
-		proof: 'packages/auth/src/lib/flows/signup',
+		dirs: ['signup'],
 		denials: [/\bno signup\b/gi],
 		qualifiers: []
 	},
 	{
 		name: 'MFA',
-		proof: 'packages/auth/src/lib/flows/mfa-challenge',
+		dirs: ['mfa-challenge', 'mfa-enrolment'],
 		denials: [/\bno MFA\b/gi],
 		// MFA ships; disabling it and regenerating recovery codes do not.
 		qualifiers: ['management', 'enrolment management']
 	},
 	{
 		name: 'OAuth',
-		proof: 'packages/auth/src/lib/flows/oauth-start',
+		dirs: ['oauth-start', 'oauth-callback'],
 		denials: [/\bno OAuth\b/gi],
 		// The provider flow ships; linking an identity to an existing account
 		// does not.
 		qualifiers: ['account linking', 'linking', 'unlinking']
 	},
 	{
+		name: 'email verification',
+		dirs: ['email-verification'],
+		denials: [/\bno email verification\b/gi],
+		qualifiers: []
+	},
+	{
+		name: 'password recovery',
+		dirs: ['forgot-password', 'reset-password'],
+		denials: [/\bno password recovery\b/gi],
+		qualifiers: []
+	},
+	{
 		name: 'magic links',
-		proof: 'packages/auth/src/lib/flows/magic-link-signin',
+		dirs: ['magic-link-request', 'magic-link-signin'],
 		denials: [/\bno magic links?\b/gi],
 		qualifiers: []
 	}
@@ -184,6 +204,8 @@ export function relativeLinks(source: string): string[] {
 const packages = listDirs(join(repoRoot, 'packages')).filter((name) =>
 	existsSync(join(repoRoot, 'packages', name, 'package.json'))
 );
+
+const flowsDir = join(repoRoot, 'packages/auth/src/lib/flows');
 
 const rootReadme = readFileSync(join(repoRoot, 'README.md'), 'utf8');
 const guidesReadme = readFileSync(join(repoRoot, 'guides/README.md'), 'utf8');
@@ -272,7 +294,9 @@ describe('the front door', () => {
 
 	it('denies no capability that ships', () => {
 		const denials = documents().flatMap((file) => {
-			const shipped = CAPABILITIES.filter((c) => existsSync(join(repoRoot, c.proof)));
+				const shipped = CAPABILITIES.filter((c) =>
+				c.dirs.some((dir) => existsSync(join(flowsDir, dir)))
+			);
 			return deniedCapabilities(readFileSync(file, 'utf8'), shipped).map(
 				(name) => `${file.slice(repoRoot.length)}: says this repository has no ${name}`
 			);
@@ -304,14 +328,39 @@ describe('the front door', () => {
 	});
 
 	it('proves every registered capability still ships', () => {
-		const vanished = CAPABILITIES.filter((c) => !existsSync(join(repoRoot, c.proof))).map(
-			(c) => `${c.name} (${c.proof})`
+		const vanished = CAPABILITIES.flatMap((c) =>
+			c.dirs.filter((dir) => !existsSync(join(flowsDir, dir))).map((dir) => `${c.name}: ${dir}`)
 		);
 
 		expect(
 			vanished,
-			'these proof paths are gone, so the entries above guard nothing. Either the ' +
-				'flow moved — update the path — or it was removed, and the denial is now true'
+			'these flow directories are gone, so the entries above guard nothing. Either ' +
+				'the flow moved — update the path — or it was removed, and the denial is now true'
 		).toEqual([]);
+	});
+
+	it('registers every flow that ships', () => {
+		// Disk to register, the direction the rot travels. Without this, flow
+		// twelve ships, nobody adds an entry, and the arm above keeps passing
+		// because it only ever asks whether the *registered* flows still exist.
+		const registered = new Set(CAPABILITIES.flatMap((c) => c.dirs));
+		const unregistered = listDirs(flowsDir).filter((dir) => !registered.has(dir));
+
+		expect(
+			unregistered,
+			'these flow directories are in no CAPABILITIES entry, so no document is ' +
+				'checked for denying them. Add them to a capability'
+		).toEqual([]);
+	});
+
+	it('reads the first table cell, not the whole row', () => {
+		// A positive control for the package arms, pinning the hazard a
+		// "simplification" would reintroduce: "regenerating recovery codes" sits
+		// inside the auth row, so a substring test over the row would report the
+		// `code` package as documented with its row deleted.
+		const authRow = '| **auth** | usable | ... regenerating recovery codes ... |';
+		const rowFor = (name: string) => new RegExp(`^\\|\\s*\\*\\*${name}\\*\\*\\s*\\|`, 'm');
+		expect(rowFor('code').test(authRow), 'a row-wide match would pass here').toBe(false);
+		expect(rowFor('auth').test(authRow)).toBe(true);
 	});
 });
