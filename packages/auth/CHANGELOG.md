@@ -259,9 +259,56 @@
   `PasswordCriteria`, a component about passwords in general, was reaching into
   `flows/signup/schema.ts`.
 
+- **MFA** — `mfaChallengeReducer` / `MfaChallengeForm`, `mfaEnrolmentReducer` /
+  `MfaEnrolment`, and `OneTimeCodeInput`.
+
+  **`challengeId` is finally read by something.** It has been on
+  `mfa_required` since the union was created — its doc comment calls it "the
+  reason this union exists at all" — and until now it was validated on arrival,
+  carried through the login reducer, and rendered as a sentence in a red banner
+  offering nowhere to type a code. `isMfaRequired` was exported with zero
+  production callers.
+
+  `LoginForm` gains `onMfaRequired`, which is that first caller. Supplying it
+  also **suppresses the error banner**: being asked for a second factor is this
+  flow branching, not a failure, and a red alert on the way to a code prompt is
+  alarming and wrong. Optional, unlike `ResetPasswordForm`'s `onRequestNewLink`
+  — MFA is off for most backends, so requiring it would break every consumer for
+  a branch they never reach.
+
+  **No new `AuthError` arm.** A wrong code is `invalid_credentials` and the form
+  stays up; an expired challenge is `token_expired`, the form is withdrawn, and
+  `onStartOver` is the way back. Those are the two recoveries that differ, and
+  both codes already existed.
+
+  **A recovery code is a different method, not a different field.** Switching
+  clears the code and sends `method: 'recovery_code'` — and the switch is only
+  offered when `methods` says the account has them.
+
+  **Enrolment needs the guards reset-password deliberately does not.** It
+  fetches on entry, so a re-firing effect starts a second enrolment and silently
+  invalidates the secret the user is at that moment typing into their phone;
+  both the reducer and the component refuse a repeat. Recovery codes are shown
+  once, and `onDone` fires when the *user* acknowledges them rather than when
+  enrolment completes.
+
+  **`OneTimeCodeInput` is one field, not six** — reversing what the previous
+  round said MFA would need. A single input with `inputmode="numeric"` and
+  `autocomplete="one-time-code"` autofills from the OS, pastes with no handler,
+  and has one label and one error; split boxes must re-implement paste and
+  backspace and announce as six unlabelled inputs.
+
+  **No QR encoder was added.** Nothing in the repository can produce one and
+  there is no precedent for a satellite package computing SVG, so an encoder
+  would be this package's second runtime dependency for something that is not
+  its concern. `MfaEnrolment` renders the secret for manual entry and takes a
+  `qr` snippet receiving `{ otpauthUri, secret }`.
+
 ### Still missing
 
-MFA, OAuth and token refresh. The
+OAuth, token refresh, and MFA *management* — disabling it or regenerating
+recovery codes, which belong on an account-settings surface this package does
+not have. The
 `AuthError` union names the failures those flows produce because the wire
 contract needs them — a code appearing there is not a promise that the flow
 behind it ships today.

@@ -11,12 +11,19 @@
  * function call.
  */
 
-import { createHttpSessionDeps, decodeSessionSnapshot } from '../session/http.js';
+import {
+	createHttpSessionDeps,
+	decodeSessionSnapshot,
+	MalformedSessionError
+} from '../session/http.js';
 import { authErrorFromResponse } from './errors.js';
 
 import type {
 	AuthDependencies,
 	LoginCredentials,
+	MfaEnrolmentResult,
+	MfaEnrolmentStart,
+	MfaMethod,
 	SignupCredentials,
 	SignupOutcome
 } from '../deps.js';
@@ -159,6 +166,64 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			return decodeSessionSnapshot(response);
 		},
 
+		async verifyMfaChallenge(
+			challengeId: string,
+			code: string,
+			method: MfaMethod,
+			signal?: AbortSignal
+		): Promise<SessionSnapshot> {
+			const response = await fetch(url('/auth/mfa/verify'), {
+				method: 'POST',
+				credentials: 'include',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ challenge_id: challengeId, code, method }),
+				...(signal !== undefined && { signal })
+			});
+
+			if (!response.ok) {
+				throw await authErrorFromResponse(response, 'That code was not accepted.');
+			}
+
+			// A session, always. There is no 204 branch here: a second factor that
+			// verified without producing a session would leave the user having
+			// proved who they are and still signed out.
+			return decodeSessionSnapshot(response);
+		},
+
+		async beginMfaEnrolment(signal?: AbortSignal): Promise<MfaEnrolmentStart> {
+			const response = await fetch(url('/auth/mfa/enrol'), {
+				method: 'POST',
+				credentials: 'include',
+				...(signal !== undefined && { signal })
+			});
+
+			if (!response.ok) {
+				throw await authErrorFromResponse(response, 'Could not start setting up authentication.');
+			}
+
+			return decodeEnrolmentStart(response);
+		},
+
+		async confirmMfaEnrolment(
+			enrolmentId: string,
+			code: string,
+			signal?: AbortSignal
+		): Promise<MfaEnrolmentResult> {
+			const response = await fetch(url('/auth/mfa/enrol/confirm'), {
+				method: 'POST',
+				credentials: 'include',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ enrolment_id: enrolmentId, code }),
+				...(signal !== undefined && { signal })
+			});
+
+			if (!response.ok) {
+				throw await authErrorFromResponse(response, 'That code was not accepted.');
+			}
+
+			return decodeEnrolmentResult(response);
+		},
+
 		async resendVerification(email: string, signal?: AbortSignal): Promise<void> {
 			const response = await fetch(url('/auth/resend-verification'), {
 				method: 'POST',
@@ -176,3 +241,65 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 }
 
 export { authErrorFromResponse } from './errors.js';
+
+/**
+ * Read an enrolment start, refusing to guess.
+ *
+ * Hand-written rather than Zod: this mirrors `decodeSessionSnapshot`, which is
+ * hand-written for the same reason — the wire shape is the backend's contract,
+ * not a form's, and a validation failure here is a misconfiguration to report
+ * rather than a message to show a user.
+ *
+ * Both fields are required. A secret with no URI leaves an authenticator app
+ * unusable; a URI with no secret leaves manual entry impossible. Half of this
+ * is not a usable enrolment.
+ */
+async function decodeEnrolmentStart(response: Response): Promise<MfaEnrolmentStart> {
+	const payload = await readJson(response);
+
+	const enrolmentId = payload['enrolment_id'];
+	const secret = payload['secret'];
+	const otpauthUri = payload['otpauth_uri'];
+
+	if (typeof enrolmentId !== 'string' || typeof secret !== 'string' || typeof otpauthUri !== 'string') {
+		throw new MalformedSessionError(
+			'enrolment must carry enrolment_id, secret and otpauth_uri as strings'
+		);
+	}
+
+	return { enrolmentId, secret, otpauthUri };
+}
+
+/**
+ * Read the recovery codes.
+ *
+ * An empty array is refused rather than passed through. Recovery codes are the
+ * only way back in after a lost device, and a surface that showed none would
+ * tell the user they were finished when they were not.
+ */
+async function decodeEnrolmentResult(response: Response): Promise<MfaEnrolmentResult> {
+	const payload = await readJson(response);
+	const codes = payload['recovery_codes'];
+
+	if (!Array.isArray(codes) || codes.some((code) => typeof code !== 'string')) {
+		throw new MalformedSessionError('recovery_codes must be an array of strings');
+	}
+	if (codes.length === 0) {
+		throw new MalformedSessionError('recovery_codes was empty');
+	}
+
+	return { recoveryCodes: codes as readonly string[] };
+}
+
+async function readJson(response: Response): Promise<Record<string, unknown>> {
+	let payload: unknown;
+	try {
+		payload = await response.json();
+	} catch {
+		throw new MalformedSessionError('body is not JSON');
+	}
+	if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
+		throw new MalformedSessionError('body is not a JSON object');
+	}
+	return payload as Record<string, unknown>;
+}

@@ -15,6 +15,9 @@
 import type {
 	AuthDependencies,
 	LoginCredentials,
+	MfaEnrolmentResult,
+	MfaEnrolmentStart,
+	MfaMethod,
 	SignupCredentials,
 	SignupOutcome
 } from '../deps.js';
@@ -93,6 +96,18 @@ export interface MockAuthOptions {
 	 * live verification link and a dead reset link at once.
 	 */
 	expiredResetTokens?: readonly string[] | undefined;
+	/**
+	 * Codes the fake accepts for a challenge or an enrolment.
+	 *
+	 * `['123456']` by default, so a demo has something to type. Anything else is
+	 * rejected as `invalid_credentials` — which is what lets a demo show the
+	 * wrong-code branch without a toggle.
+	 */
+	validCodes?: readonly string[] | undefined;
+	/** Challenge ids the fake treats as expired or already spent. */
+	expiredChallengeIds?: readonly string[] | undefined;
+	/** What `confirmMfaEnrolment` hands back. Shown once, so a demo needs some. */
+	recoveryCodes?: readonly string[] | undefined;
 }
 
 const defaultSession: SessionSnapshot = {
@@ -132,8 +147,24 @@ export function createMockAuthDeps(options: MockAuthOptions = {}): AuthDependenc
 		verifyOutcome = 'none',
 		expiredTokens = [],
 		resetOutcome = 'none',
-		expiredResetTokens = []
+		expiredResetTokens = [],
+		validCodes = ['123456'],
+		expiredChallengeIds = [],
+		recoveryCodes = [
+			'8fj2-kd91-0aab',
+			'ptr4-99xz-1mn2',
+			'qq07-4wse-vv31',
+			'z1k8-3ldp-77ac',
+			'mn5b-6yth-0092'
+		]
 	} = options;
+
+	const rejectWrongCode = (): never => {
+		throw {
+			code: 'invalid_credentials',
+			message: 'That code is not right. Check your authenticator app and try again.'
+		} satisfies AuthError;
+	};
 
 	const aborted = () => new DOMException('Aborted', 'AbortError');
 
@@ -215,6 +246,53 @@ export function createMockAuthDeps(options: MockAuthOptions = {}): AuthDependenc
 			}
 
 			return verifyOutcome === 'session' ? session : null;
+		},
+
+		async verifyMfaChallenge(
+			challengeId: string,
+			code: string,
+			_method: MfaMethod,
+			signal?: AbortSignal
+		): Promise<SessionSnapshot> {
+			await wait(signal);
+
+			if (failWith) throw failWith;
+
+			if (expiredChallengeIds.includes(challengeId)) {
+				throw {
+					code: 'token_expired',
+					message: 'That sign-in attempt has expired. Start again.'
+				} satisfies AuthError;
+			}
+			if (!validCodes.includes(code)) rejectWrongCode();
+
+			return session;
+		},
+
+		async beginMfaEnrolment(signal?: AbortSignal): Promise<MfaEnrolmentStart> {
+			await wait(signal);
+			if (failWith) throw failWith;
+
+			return {
+				enrolmentId: 'enr_demo',
+				secret: 'JBSWY3DPEHPK3PXP',
+				// A real `otpauth://` URI, so a scanned QR in a demo actually works.
+				otpauthUri:
+					'otpauth://totp/Example:ada@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example&algorithm=SHA1&digits=6&period=30'
+			};
+		},
+
+		async confirmMfaEnrolment(
+			_enrolmentId: string,
+			code: string,
+			signal?: AbortSignal
+		): Promise<MfaEnrolmentResult> {
+			await wait(signal);
+
+			if (failWith) throw failWith;
+			if (!validCodes.includes(code)) rejectWrongCode();
+
+			return { recoveryCodes };
 		},
 
 		async requestPasswordReset(_email: string, signal?: AbortSignal): Promise<void> {

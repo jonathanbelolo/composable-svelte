@@ -47,6 +47,29 @@ export interface SignupCredentials {
  * rather than `SessionSnapshot | null` means a caller cannot read the happy
  * path and forget the other: there is no field to leave unchecked.
  */
+/** Which factor a challenge is being satisfied with. */
+export type MfaMethod = 'totp' | 'recovery_code';
+
+/** What starting an enrolment produces. */
+export interface MfaEnrolmentStart {
+	enrolmentId: string;
+	/** Base32, for someone typing it into an app by hand. */
+	secret: string;
+	/** `otpauth://totp/...`, for an authenticator to scan or open. */
+	otpauthUri: string;
+}
+
+/** What finishing an enrolment produces. */
+export interface MfaEnrolmentResult {
+	/**
+	 * Shown once, and never retrievable again.
+	 *
+	 * `readonly` because a surface has no business editing them, and the array
+	 * is the whole of what the user must save before leaving the page.
+	 */
+	recoveryCodes: readonly string[];
+}
+
 export type SignupOutcome =
 	| { kind: 'session'; session: SessionSnapshot }
 	| { kind: 'verificationRequired'; email: string };
@@ -116,6 +139,46 @@ export interface AuthDependencies extends SessionDependencies {
 	 * Rejects with `token_expired` for a link that is stale, already used, or
 	 * malformed. Not distinguished, for the reason `verifyEmail` documents.
 	 */
+	/**
+	 * Satisfy a second-factor challenge.
+	 *
+	 * Returns a session, not a nullable one: completing the second factor *is*
+	 * completing the sign-in, so there is no "verified but not signed in" case to
+	 * model — unlike `verifyEmail`, where there genuinely is.
+	 *
+	 * Rejects with `invalid_credentials` for a wrong code and `token_expired` for
+	 * a challenge that has expired or already been spent. Those are the two that
+	 * differ in what a surface should do: retry, or start the sign-in again.
+	 */
+	verifyMfaChallenge: (
+		challengeId: string,
+		code: string,
+		method: MfaMethod,
+		signal?: AbortSignal
+	) => Promise<SessionSnapshot>;
+	/**
+	 * Start enrolling an authenticator.
+	 *
+	 * `secret` is the shared secret in base32, for manual entry; `otpauthUri` is
+	 * the `otpauth://totp/...` URI an authenticator app scans. This package
+	 * renders neither as a QR code — see `MfaEnrolment`'s `qr` snippet.
+	 *
+	 * `enrolmentId` is explicit rather than session-bound so a backend that does
+	 * not want to hold half-finished enrolment state on the session does not have
+	 * to invent it. One that does can ignore the value it gets back.
+	 */
+	beginMfaEnrolment: (signal?: AbortSignal) => Promise<MfaEnrolmentStart>;
+	/**
+	 * Finish enrolling, by proving the authenticator works.
+	 *
+	 * The recovery codes come back here and **only** here: they are shown once,
+	 * and a surface that loses them cannot ask for them again.
+	 */
+	confirmMfaEnrolment: (
+		enrolmentId: string,
+		code: string,
+		signal?: AbortSignal
+	) => Promise<MfaEnrolmentResult>;
 	resetPassword: (
 		token: string,
 		password: string,

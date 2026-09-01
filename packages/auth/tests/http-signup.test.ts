@@ -284,3 +284,108 @@ describe('resetPassword', () => {
 		expect(calls[0]!.init.signal).toBe(controller.signal);
 	});
 });
+
+describe('verifyMfaChallenge', () => {
+	it('posts the challenge, the code and the method', async () => {
+		const calls = stubFetch(json({ subject_id: 'u1' }, 200));
+
+		await expect(
+			createHttpAuthDeps().verifyMfaChallenge('chal_1', '123456', 'totp')
+		).resolves.toEqual({ subject_id: 'u1' });
+		expect(calls[0]!.url).toBe('/auth/mfa/verify');
+		expect(JSON.parse(String(calls[0]!.init.body))).toEqual({
+			challenge_id: 'chal_1',
+			code: '123456',
+			method: 'totp'
+		});
+	});
+
+	it('refuses to succeed without a session', async () => {
+		// There is no 204 branch on purpose: a second factor that verified and
+		// produced no session would leave the user having proved who they are and
+		// still signed out.
+		stubFetch(new Response(null, { status: 204 }));
+
+		await expect(
+			createHttpAuthDeps().verifyMfaChallenge('chal_1', '123456', 'totp')
+		).rejects.toBeInstanceOf(MalformedSessionError);
+	});
+
+	it('keeps a wrong code and an expired challenge apart', async () => {
+		stubFetch(new Response(null, { status: 401 }));
+		await expect(
+			createHttpAuthDeps().verifyMfaChallenge('c', '000000', 'totp')
+		).rejects.toMatchObject({ code: 'invalid_credentials' });
+
+		stubFetch(new Response(null, { status: 410 }));
+		await expect(
+			createHttpAuthDeps().verifyMfaChallenge('c', '123456', 'totp')
+		).rejects.toMatchObject({ code: 'token_expired' });
+	});
+});
+
+describe('MFA enrolment over the wire', () => {
+	it('reads a start', async () => {
+		const calls = stubFetch(
+			json({ enrolment_id: 'enr_1', secret: 'JBSW', otpauth_uri: 'otpauth://totp/x' }, 200)
+		);
+
+		await expect(createHttpAuthDeps().beginMfaEnrolment()).resolves.toEqual({
+			enrolmentId: 'enr_1',
+			secret: 'JBSW',
+			otpauthUri: 'otpauth://totp/x'
+		});
+		expect(calls[0]!.url).toBe('/auth/mfa/enrol');
+	});
+
+	it('refuses half a start', async () => {
+		// A secret with no URI leaves an authenticator app unusable; a URI with no
+		// secret leaves manual entry impossible. Half of this is not an enrolment.
+		stubFetch(json({ enrolment_id: 'enr_1', secret: 'JBSW' }, 200));
+
+		await expect(createHttpAuthDeps().beginMfaEnrolment()).rejects.toBeInstanceOf(
+			MalformedSessionError
+		);
+	});
+
+	it('reads the recovery codes', async () => {
+		const calls = stubFetch(json({ recovery_codes: ['aaa', 'bbb'] }, 200));
+
+		await expect(createHttpAuthDeps().confirmMfaEnrolment('enr_1', '123456')).resolves.toEqual({
+			recoveryCodes: ['aaa', 'bbb']
+		});
+		expect(calls[0]!.url).toBe('/auth/mfa/enrol/confirm');
+		expect(JSON.parse(String(calls[0]!.init.body))).toEqual({
+			enrolment_id: 'enr_1',
+			code: '123456'
+		});
+	});
+
+	it('refuses an empty set of recovery codes', async () => {
+		// They are the only way back in after a lost device. Zero of them would
+		// tell the user they were finished when they were not.
+		stubFetch(json({ recovery_codes: [] }, 200));
+
+		await expect(createHttpAuthDeps().confirmMfaEnrolment('enr_1', '123456')).rejects.toBeInstanceOf(
+			MalformedSessionError
+		);
+	});
+
+	it('forwards the abort signal on all three', async () => {
+		const controller = new AbortController();
+
+		for (const call of [
+			(d: ReturnType<typeof createHttpAuthDeps>) =>
+				d.verifyMfaChallenge('c', '1', 'totp', controller.signal),
+			(d: ReturnType<typeof createHttpAuthDeps>) => d.beginMfaEnrolment(controller.signal),
+			(d: ReturnType<typeof createHttpAuthDeps>) =>
+				d.confirmMfaEnrolment('e', '1', controller.signal)
+		]) {
+			const calls = stubFetch(
+				json({ subject_id: 'u', enrolment_id: 'e', secret: 's', otpauth_uri: 'o', recovery_codes: ['a'] }, 200)
+			);
+			await call(createHttpAuthDeps());
+			expect(calls[0]!.init.signal).toBe(controller.signal);
+		}
+	});
+});

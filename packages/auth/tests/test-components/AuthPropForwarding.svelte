@@ -8,6 +8,18 @@
 	import EmailVerification from '../../src/lib/components/EmailVerification.svelte';
 	import ForgotPasswordForm from '../../src/lib/components/ForgotPasswordForm.svelte';
 	import ResetPasswordForm from '../../src/lib/components/ResetPasswordForm.svelte';
+	import MfaChallengeForm from '../../src/lib/components/MfaChallengeForm.svelte';
+	import MfaEnrolment from '../../src/lib/components/MfaEnrolment.svelte';
+	import OneTimeCodeInput from '../../src/lib/components/OneTimeCodeInput.svelte';
+	import type {
+		MfaChallengeAction,
+		MfaChallengeState
+	} from '../../src/lib/flows/mfa-challenge/types.js';
+	import type {
+		MfaEnrolmentAction,
+		MfaEnrolmentState
+	} from '../../src/lib/flows/mfa-enrolment/types.js';
+	import type { MfaMethod } from '../../src/lib/deps.js';
 	import type {
 		ForgotPasswordAction,
 		ForgotPasswordState
@@ -97,7 +109,21 @@
 		resetFlowStore,
 		onRequestNewLink,
 		done,
-		resetClass
+		resetClass,
+		onMfaRequired,
+		challengeFlowStore,
+		challenge,
+		onStartOver,
+		challengeClass,
+		enrolmentFlowStore,
+		qr,
+		onDone,
+		enrolmentClass,
+		codeId,
+		codeValue,
+		codeOninput,
+		oneTimeCode,
+		maxlength
 	}: {
 		store: { readonly state: SessionState };
 		onAnonymous?: () => void;
@@ -197,6 +223,36 @@
 		onRequestNewLink: () => void;
 		done?: Snippet<[{ signedIn: boolean }]>;
 		resetClass?: string;
+
+		// LoginForm's MFA branch.
+		onMfaRequired?: (challenge: { challengeId: string; methods: readonly MfaMethod[] }) => void;
+
+		// MfaChallengeForm.
+		challengeFlowStore: {
+			readonly state: MfaChallengeState;
+			dispatch(action: MfaChallengeAction): void;
+			subscribe(listener: (state: MfaChallengeState) => void): () => void;
+		};
+		challenge?: { challengeId: string; methods: readonly MfaMethod[] };
+		onStartOver: () => void;
+		challengeClass?: string;
+
+		// MfaEnrolment.
+		enrolmentFlowStore: {
+			readonly state: MfaEnrolmentState;
+			dispatch(action: MfaEnrolmentAction): void;
+			subscribe(listener: (state: MfaEnrolmentState) => void): () => void;
+		};
+		qr?: Snippet<[{ otpauthUri: string; secret: string }]>;
+		onDone?: () => void;
+		enrolmentClass?: string;
+
+		// OneTimeCodeInput.
+		codeId: string;
+		codeValue: string;
+		codeOninput: (event: Event & { currentTarget: HTMLInputElement }) => void;
+		oneTimeCode?: boolean;
+		maxlength?: number;
 	} = $props();
 </script>
 
@@ -206,6 +262,7 @@
 	{flowStore}
 	{sessionStore}
 	{onSuccess}
+	{onMfaRequired}
 	{header}
 	{footer}
 	{submitLabel}
@@ -288,4 +345,37 @@
 	{confirmLabel}
 	{done}
 	class={resetClass}
+/>
+<MfaChallengeForm
+	flowStore={challengeFlowStore}
+	{sessionStore}
+	{challenge}
+	{onSuccess}
+	{onStartOver}
+	{headingLevel}
+	{submitLabel}
+	{footer}
+	class={challengeClass}
+/>
+<MfaEnrolment
+	flowStore={enrolmentFlowStore}
+	{qr}
+	{onDone}
+	{headingLevel}
+	{submitLabel}
+	class={enrolmentClass}
+/>
+<OneTimeCodeInput
+	id={codeId}
+	value={codeValue}
+	oninput={codeOninput}
+	{onblur}
+	{invalid}
+	{errorId}
+	{describedBy}
+	{oneTimeCode}
+	{maxlength}
+	{placeholder}
+	{disabled}
+	class={inputClass}
 />

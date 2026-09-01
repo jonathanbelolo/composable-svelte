@@ -102,3 +102,34 @@ export type {
 	ResetPasswordStatus,
 	ResetPasswordDependencies
 } from './reset-password/index.js';
+
+export {
+	mfaChallengeReducer,
+	createInitialMfaChallengeState,
+	createMfaChallengeStore,
+	mfaChallengeFormConfig,
+	mfaCodeSchema,
+	emptyMfaCodeFields
+} from './mfa-challenge/index.js';
+
+export type {
+	MfaCodeFields,
+	MfaChallengeState,
+	MfaChallengeAction,
+	MfaChallengeStatus,
+	MfaChallengeDependencies
+} from './mfa-challenge/index.js';
+
+export {
+	mfaEnrolmentReducer,
+	createInitialMfaEnrolmentState,
+	createMfaEnrolmentStore,
+	mfaEnrolmentFormConfig
+} from './mfa-enrolment/index.js';
+
+export type {
+	MfaEnrolmentState,
+	MfaEnrolmentAction,
+	MfaEnrolmentStatus,
+	MfaEnrolmentDependencies
+} from './mfa-enrolment/index.js';

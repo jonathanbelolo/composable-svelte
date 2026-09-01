@@ -94,6 +94,28 @@ export {
 } from './flows/index.js';
 
 export {
+	mfaChallengeReducer,
+	createInitialMfaChallengeState,
+	createMfaChallengeStore,
+	mfaChallengeFormConfig,
+	mfaCodeSchema,
+	emptyMfaCodeFields,
+	type MfaCodeFields,
+	type MfaChallengeState,
+	type MfaChallengeAction,
+	type MfaChallengeStatus,
+	type MfaChallengeDependencies,
+	mfaEnrolmentReducer,
+	createInitialMfaEnrolmentState,
+	createMfaEnrolmentStore,
+	mfaEnrolmentFormConfig,
+	type MfaEnrolmentState,
+	type MfaEnrolmentAction,
+	type MfaEnrolmentStatus,
+	type MfaEnrolmentDependencies
+} from './flows/index.js';
+
+export {
 	forgotPasswordReducer,
 	createInitialForgotPasswordState,
 	createForgotPasswordStore,
@@ -136,6 +158,9 @@ export type {
 	LoginCredentials,
 	SignupCredentials,
 	SignupOutcome,
+	MfaMethod,
+	MfaEnrolmentStart,
+	MfaEnrolmentResult,
 	AuthErrorBody
 } from './deps.js';
 
@@ -151,6 +176,9 @@ export {
 	EmailVerification,
 	ForgotPasswordForm,
 	ResetPasswordForm,
+	MfaChallengeForm,
+	MfaEnrolment,
+	OneTimeCodeInput,
 	PasswordInput,
 	PasswordCriteria
 } from './components/index.js';

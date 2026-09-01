@@ -16,10 +16,12 @@ sign-in attempt, a structured failure union, and thin components over both.
 password sign-in and **signup** end to end (headless flows, HTTP adapter, styled
 forms), the `AuthError` union, `AuthGuard` / `RoleGate` / `LoginForm` /
 `SignupForm` / `EmailVerification` / `ForgotPasswordForm` /
-`ResetPasswordForm` / `PasswordInput` / `PasswordCriteria`, a mock dependency
-set, SSR coverage.
+`ResetPasswordForm` / `MfaChallengeForm` / `MfaEnrolment` / `PasswordInput` /
+`PasswordCriteria` / `OneTimeCodeInput`, a mock dependency set, SSR coverage.
 
-**What does not exist yet.** MFA, OAuth, token refresh. The `AuthError` union already *names* the failures those
+**What does not exist yet.** OAuth, token refresh, and MFA *management* —
+disabling it, or regenerating recovery codes, which belong on an
+account-settings surface this package does not have. The `AuthError` union already *names* the failures those
 flows produce (`mfa_required`, `email_unverified`, `token_expired`) because the
 wire contract needs them — **a code appearing in the union is not a promise that
 the flow behind it ships.** Check `src/lib/flows/` before telling a user a flow
@@ -537,6 +539,102 @@ cannot be told one thing creating an account and another recovering it, and the
 
 ---
 
+## MFA
+
+Two flows. `mfa-challenge` is the step reached from sign-in; `mfa-enrolment`
+turns an authenticator on.
+
+### The challenge is what `mfa_required` was always for
+
+`AuthError`'s `mfa_required` arm has carried a `challengeId` since the union was
+created, and until these flows landed **nothing read it** — it was validated on
+arrival, carried through the login reducer, and rendered as a sentence.
+
+`LoginForm` now takes `onMfaRequired`, which is the first production caller of
+`isMfaRequired`:
+
+```svelte
+<script lang="ts">
+  import { LoginForm } from '@composable-svelte/auth';
+  import { login, session, challenge } from './stores';
+</script>
+
+<LoginForm
+  flowStore={login}
+  sessionStore={session}
+  onMfaRequired={(c) => challenge.dispatch({ type: 'challengeProvided', ...c })}
+/>
+```
+
+**Supplying it suppresses the error banner**, because `mfa_required` is the flow
+branching rather than a failure and a red alert on the way to a code prompt is
+alarming and wrong. It is optional — MFA is off for most backends — so without
+it the banner still renders, which is the older behaviour and no worse.
+
+### Two failures, two different recoveries
+
+No new union arm was added. A wrong code is `invalid_credentials` and the form
+stays up; an expired or spent challenge is `token_expired`, the form is
+withdrawn, and `onStartOver` is the way back. Those two branches are the entire
+reason the distinction matters, and both codes already existed.
+
+```typescript
+import type { MfaChallengeStatus, MfaEnrolmentStatus } from '@composable-svelte/auth';
+
+const challenging: Record<MfaChallengeStatus, string> = {
+	idle: 'entering a code, or a failure to correct',
+	submitting: 'the code is being checked',
+	succeeded: 'signed in; `session` is set'
+};
+
+const enrolling: Record<MfaEnrolmentStatus, string> = {
+	idle: 'nothing started, or a start that failed',
+	starting: 'fetching the secret',
+	confirming: 'the secret is on screen, waiting for a code',
+	submitting: 'checking that code',
+	enrolled: 'done; `recoveryCodes` is set and will never be again'
+};
+```
+
+### Recovery codes are a different method, not a different field
+
+Switching clears the code and sends `method: 'recovery_code'` — it is a
+different request. The switch is offered only when `methods` says the account
+has them.
+
+### Enrolment *does* need the guards reset-password does not
+
+It fetches on entry, so an effect that re-fires starts a second enrolment and
+silently invalidates the secret the user is at that moment typing into their
+phone. Both the reducer and `MfaEnrolment` refuse a repeat, exactly as
+`EmailVerification` does. `ResetPasswordForm` deliberately has neither, because
+it exchanges on submit — read those two comments together before copying either.
+
+### No QR code is drawn, deliberately
+
+Nothing in this repository can produce one, and adding an encoder would make it
+the package's second runtime dependency for something that is not its defining
+concern. `MfaEnrolment` renders the secret for manual entry — which every
+authenticator supports, and the only route available when setting up on the same
+device — and takes a `qr` snippet receiving `{ otpauthUri, secret }` so a
+consumer plugs in their own renderer or a backend-rendered image.
+
+> ⚠️ **Recovery codes are shown once.** `confirmMfaEnrolment` is the only place
+> they ever appear, and `onDone` fires when the *user* acknowledges them, not
+> when enrolment completes. Do not add a transition that leaves that panel on
+> the user's behalf.
+
+### One field, not six
+
+`OneTimeCodeInput` is a single input with `inputmode="numeric"` and
+`autocomplete="one-time-code"`. That is a deliberate choice against the
+six-boxes look: one field autofills from the OS, pastes with no handler, and has
+one label and one error, where split boxes must re-implement paste and
+backspace and announce as six unlabelled inputs. `maxlength` is a hint and unset
+by default — a recovery code is not six digits.
+
+---
+
 ## COMPONENTS
 
 ### LoginForm
@@ -696,6 +794,25 @@ const custom: AuthDependencies = {
 		void signal;
 		// `null` means "changed, now sign in", which is a success.
 		return null;
+	},
+	async verifyMfaChallenge(challengeId, code, method, signal) {
+		void challengeId;
+		void code;
+		void method;
+		void signal;
+		// A session, always — satisfying the second factor completes the sign-in.
+		return { subject_id: 'u1', display_name: 'Ada', roles: ['member'] };
+	},
+	async beginMfaEnrolment(signal) {
+		void signal;
+		return { enrolmentId: 'e1', secret: 'JBSWY3DPEHPK3PXP', otpauthUri: 'otpauth://totp/x' };
+	},
+	async confirmMfaEnrolment(enrolmentId, code, signal) {
+		void enrolmentId;
+		void code;
+		void signal;
+		// Shown once, and never retrievable again.
+		return { recoveryCodes: ['aaa-111', 'bbb-222'] };
 	},
 	async fetchLogin(seededUserId: string) {
 		void seededUserId;

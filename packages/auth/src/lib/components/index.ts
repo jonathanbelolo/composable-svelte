@@ -26,3 +26,6 @@ export { default as SignupForm } from './SignupForm.svelte';
 export { default as EmailVerification } from './EmailVerification.svelte';
 export { default as ForgotPasswordForm } from './ForgotPasswordForm.svelte';
 export { default as ResetPasswordForm } from './ResetPasswordForm.svelte';
+export { default as MfaChallengeForm } from './MfaChallengeForm.svelte';
+export { default as MfaEnrolment } from './MfaEnrolment.svelte';
+export { default as OneTimeCodeInput } from './OneTimeCodeInput.svelte';

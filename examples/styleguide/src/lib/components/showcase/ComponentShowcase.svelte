@@ -31,6 +31,7 @@
   import SignupFormDemo from '../demos/SignupFormDemo.svelte';
   import EmailVerificationDemo from '../demos/EmailVerificationDemo.svelte';
   import PasswordRecoveryDemo from '../demos/PasswordRecoveryDemo.svelte';
+  import MfaDemo from '../demos/MfaDemo.svelte';
   // Foundational Components
   import CardDemo from '../demos/CardDemo.svelte';
   import SeparatorDemo from '../demos/SeparatorDemo.svelte';
@@ -115,6 +116,7 @@
     'signup-form': SignupFormDemo,
     'email-verification': EmailVerificationDemo,
     'password-recovery': PasswordRecoveryDemo,
+    'mfa': MfaDemo,
     // Foundational Components
     'card': CardDemo,
     'separator': SeparatorDemo,

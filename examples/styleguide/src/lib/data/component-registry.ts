@@ -69,6 +69,7 @@ export const COMPONENT_REGISTRY: ComponentInfo[] = [
   { id: 'signup-form', name: 'Signup Form', category: 'Form Components - Advanced', description: 'Account creation with two terminal states, a derived password checklist, and a branchable email-taken failure - from @composable-svelte/auth' },
   { id: 'email-verification', name: 'Email Verification', category: 'Form Components - Advanced', description: 'The page a confirmation link lands on - no form, work starts on mount, and a single-use token exchanged exactly once - from @composable-svelte/auth' },
   { id: 'password-recovery', name: 'Password Recovery', category: 'Form Components - Advanced', description: 'Asking for a reset link and using one - the first half deliberately tells you nothing about whether the account exists - from @composable-svelte/auth' },
+  { id: 'mfa', name: 'Multi-Factor Auth', category: 'Form Components - Advanced', description: 'The second-factor challenge reached from sign-in, and the enrolment that makes it reachable - one code field, no QR dependency - from @composable-svelte/auth' },
 
   // Visual Feedback
   { id: 'toast', name: 'Toast', category: 'Visual Feedback', description: 'Temporary notifications' },

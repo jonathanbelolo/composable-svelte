@@ -56,7 +56,7 @@
 				challengeId: 'chal_9f2b',
 				methods: ['totp', 'recovery_code']
 			},
-			note: 'Not a failure at all — the flow branching. The challenge id is what a string error could not carry, and the reason AuthError is a union.'
+			note: 'Not a failure at all — the flow branching. The challenge id is what a string error could not carry, and the reason AuthError is a union. Wire `onMfaRequired` and it is handed to `MfaChallengeForm` instead of shown as an error — see the Multi-Factor Auth demo, where this scenario is played out end to end.'
 		},
 		{
 			label: 'Unverified email',

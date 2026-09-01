@@ -22,6 +22,8 @@ import SignupForm from '../../src/lib/components/SignupForm.svelte';
 import EmailVerification from '../../src/lib/components/EmailVerification.svelte';
 import ForgotPasswordForm from '../../src/lib/components/ForgotPasswordForm.svelte';
 import ResetPasswordForm from '../../src/lib/components/ResetPasswordForm.svelte';
+import MfaChallengeForm from '../../src/lib/components/MfaChallengeForm.svelte';
+import MfaEnrolment from '../../src/lib/components/MfaEnrolment.svelte';
 import { createInitialLoginState, loginReducer } from '../../src/lib/flows/login/reducer.js';
 import { createInitialSignupState, signupReducer } from '../../src/lib/flows/signup/reducer.js';
 import {
@@ -36,6 +38,14 @@ import {
 	createInitialResetPasswordState,
 	resetPasswordReducer
 } from '../../src/lib/flows/reset-password/reducer.js';
+import {
+	createInitialMfaChallengeState,
+	mfaChallengeReducer
+} from '../../src/lib/flows/mfa-challenge/reducer.js';
+import {
+	createInitialMfaEnrolmentState,
+	mfaEnrolmentReducer
+} from '../../src/lib/flows/mfa-enrolment/reducer.js';
 import { createInitialSessionState, sessionReducer } from '../../src/lib/session/reducer.js';
 import type { LoginState } from '../../src/lib/flows/login/types.js';
 import type { SessionSnapshot } from '../../src/lib/subject/types.js';
@@ -319,5 +329,74 @@ describe('the server build of the recovery pair', () => {
 		expect(body, 'a form was rendered with no token to submit against').not.toContain(
 			'type="password"'
 		);
+	});
+});
+
+describe('the server build of the MFA pair', () => {
+	const inertSession = () =>
+		createStore({
+			initialState: createInitialSessionState(),
+			reducer: sessionReducer,
+			dependencies: {
+				fetchLogin: async () => session,
+				fetchLogout: async () => undefined,
+				fetchSession: async () => null
+			}
+		});
+
+	it('renders one code field, ready for the OS to autofill', () => {
+		const flowStore = createStore({
+			initialState: createInitialMfaChallengeState('chal_1', ['totp', 'recovery_code']),
+			reducer: mfaChallengeReducer,
+			dependencies: { verifyMfaChallenge: async () => session }
+		});
+		const body = render(MfaChallengeForm, {
+			props: { flowStore, sessionStore: inertSession(), onStartOver: () => {} }
+		}).body;
+
+		expect((body.match(/<input/g) ?? []).length, 'split boxes crept back in').toBe(1);
+		expect(body).toContain('autocomplete="one-time-code"');
+		expect(body).toContain('inputmode="numeric"');
+		expect(body).toContain('Use a recovery code instead');
+	});
+
+	it('does not begin an enrolment while rendering', () => {
+		// Effects do not run on the server, which is what this depends on: a render
+		// that started an enrolment would issue a secret nobody asked for, and a
+		// cached render would issue one per request.
+		const flowStore = createStore({
+			initialState: createInitialMfaEnrolmentState(),
+			reducer: mfaEnrolmentReducer,
+			dependencies: {
+				beginMfaEnrolment: async () => {
+					throw new Error('the server must not begin an enrolment');
+				},
+				confirmMfaEnrolment: async () => ({ recoveryCodes: ['a'] })
+			}
+		});
+		const body = render(MfaEnrolment, { props: { flowStore } }).body;
+
+		expect(body).toContain('Preparing your setup key');
+		expect(body).not.toContain('<input');
+	});
+
+	it('renders the recovery codes from state alone', () => {
+		const flowStore = createStore({
+			initialState: {
+				...createInitialMfaEnrolmentState(),
+				status: 'enrolled' as const,
+				recoveryCodes: ['aaa-111', 'bbb-222']
+			},
+			reducer: mfaEnrolmentReducer,
+			dependencies: {
+				beginMfaEnrolment: async () => ({ enrolmentId: 'e', secret: 's', otpauthUri: 'o' }),
+				confirmMfaEnrolment: async () => ({ recoveryCodes: ['a'] })
+			}
+		});
+		const body = render(MfaEnrolment, { props: { flowStore } }).body;
+
+		expect(body).toContain('Save your recovery codes');
+		expect(body).toContain('aaa-111');
+		expect(body).toContain('shown <strong>once</strong>');
 	});
 });

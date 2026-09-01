@@ -27,6 +27,8 @@
 	import type { Snippet } from 'svelte';
 
 	import PasswordInput from './PasswordInput.svelte';
+	import { isMfaRequired } from '../errors/helpers.js';
+	import type { MfaMethod } from '../deps.js';
 	import type { LoginAction, LoginState } from '../flows/login/types.js';
 	import type { LoginFields } from '../flows/login/schema.js';
 	import type { SessionAction } from '../session/types.js';
@@ -54,6 +56,24 @@
 		sessionStore: { dispatch(action: SessionAction): void };
 		/** Called once, after the session has been established. For navigation. */
 		onSuccess?: (() => void) | undefined;
+		/**
+		 * Called once when the credentials were right and a second factor is
+		 * needed. Receives what `MfaChallengeForm` needs to continue.
+		 *
+		 * `mfa_required` is not a failure — it is this flow branching — and until
+		 * this prop existed the `challengeId` it carries was validated on arrival
+		 * and then only ever rendered inside a red banner offering nowhere to type
+		 * a code. Supplying this suppresses that banner, because the surface is
+		 * routing onward rather than reporting a problem.
+		 *
+		 * Optional, unlike `ResetPasswordForm`'s `onRequestNewLink`: MFA is off for
+		 * most backends, so requiring it would break every consumer for a branch
+		 * they will never reach. Without it the banner renders as before, which is
+		 * the pre-existing behaviour and no worse.
+		 */
+		onMfaRequired?:
+			| ((challenge: { challengeId: string; methods: readonly MfaMethod[] }) => void)
+			| undefined;
 		/** Replaces the heading. */
 		header?: Snippet | undefined;
 		/** Rendered below the form — "forgot password?", a link to signup. */
@@ -77,6 +97,7 @@
 		flowStore,
 		sessionStore,
 		onSuccess,
+		onMfaRequired,
 		header,
 		footer,
 		submitLabel = 'Sign in',
@@ -177,6 +198,34 @@
 	 */
 	let handedOver = false;
 
+	/**
+	 * The challenge already handed to `onMfaRequired`.
+	 *
+	 * Keyed on the id rather than a boolean: a second sign-in attempt produces a
+	 * *different* challenge, and reporting only the first would strand the user on
+	 * a code prompt for an attempt that no longer exists.
+	 */
+	let reportedChallenge: string | null = null;
+
+	$effect(() => {
+		const error = flowStore.state.error;
+		if (onMfaRequired === undefined || !isMfaRequired(error)) return;
+		if (error.challengeId === reportedChallenge) return;
+		reportedChallenge = error.challengeId;
+		onMfaRequired({ challengeId: error.challengeId, methods: error.methods });
+	});
+
+	/**
+	 * Whether the error should be shown as a failure.
+	 *
+	 * `mfa_required` handled by a consumer is not one: they are navigating to the
+	 * challenge, and a red "something went wrong" alert on the way out is both
+	 * wrong and alarming.
+	 */
+	const showsError = $derived(
+		error !== null && !(onMfaRequired !== undefined && isMfaRequired(error))
+	);
+
 	/*
 	 * `loginStarted` is deliberately not dispatched.
 	 *
@@ -212,7 +261,7 @@
 		<svelte:element this={`h${headingLevel}`} class="login-form__title">Sign in</svelte:element>
 	{/if}
 
-	{#if error}
+	{#if showsError && error}
 		<!--
 			The form-level failure. `role="alert"` plus `aria-live="polite"` is the
 			pairing `FormMessage` uses for field errors; core has no component for a

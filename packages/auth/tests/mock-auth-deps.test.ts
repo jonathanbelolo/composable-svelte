@@ -217,6 +217,61 @@ describe('password recovery', () => {
 	});
 });
 
+describe('second factors', () => {
+	it('accepts the code it advertises and rejects the rest', async () => {
+		const deps = createMockAuthDeps();
+
+		await expect(deps.verifyMfaChallenge('c', '123456', 'totp')).resolves.toMatchObject({
+			display_name: 'Ada Lovelace'
+		});
+		await expect(deps.verifyMfaChallenge('c', '000000', 'totp')).rejects.toMatchObject({
+			code: 'invalid_credentials'
+		});
+	});
+
+	it('treats a listed challenge as expired, whatever the code', async () => {
+		// The branch a surface must handle differently: start over, not retry.
+		const deps = createMockAuthDeps({ expiredChallengeIds: ['stale'] });
+
+		await expect(deps.verifyMfaChallenge('stale', '123456', 'totp')).rejects.toMatchObject({
+			code: 'token_expired'
+		});
+	});
+
+	it('hands back a real otpauth uri, so a scanned demo actually works', async () => {
+		const start = await createMockAuthDeps().beginMfaEnrolment();
+
+		expect(start.otpauthUri).toMatch(/^otpauth:\/\/totp\//);
+		expect(start.otpauthUri, 'the uri does not carry the secret it claims').toContain(start.secret);
+	});
+
+	it('issues recovery codes on confirmation, and refuses a wrong code', async () => {
+		const deps = createMockAuthDeps();
+
+		await expect(deps.confirmMfaEnrolment('enr', '000000')).rejects.toMatchObject({
+			code: 'invalid_credentials'
+		});
+		const result = await deps.confirmMfaEnrolment('enr', '123456');
+		expect(result.recoveryCodes.length, 'a demo with no recovery codes shows nothing').toBeGreaterThan(0);
+	});
+
+	it('honours the abort signal on all three', async () => {
+		const controller = new AbortController();
+		controller.abort();
+		const deps = createMockAuthDeps();
+
+		await expect(deps.verifyMfaChallenge('c', '1', 'totp', controller.signal)).rejects.toMatchObject(
+			{ name: 'AbortError' }
+		);
+		await expect(deps.beginMfaEnrolment(controller.signal)).rejects.toMatchObject({
+			name: 'AbortError'
+		});
+		await expect(deps.confirmMfaEnrolment('e', '1', controller.signal)).rejects.toMatchObject({
+			name: 'AbortError'
+		});
+	});
+});
+
 describe('cancellation', () => {
 	it('refuses an already-aborted signal, latency or not', async () => {
 		// The arm that found a defect. `wait` checked the signal only inside the
