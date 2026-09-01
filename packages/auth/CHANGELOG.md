@@ -223,9 +223,45 @@
   and the user still has to sign in. Only a non-null session reaches the session
   store.
 
+- **Password recovery** — `forgotPasswordReducer` / `ForgotPasswordForm` and
+  `resetPasswordReducer` / `ResetPasswordForm`, completing the credentials
+  family. The `<a href="/forgot">` this package has shown in its own README
+  example since sign-in landed now points at something.
+
+  **Asking for a link tells you nothing, on purpose.** `requestPasswordReset`
+  resolves whether or not the address has an account, and the surface says "if
+  there is an account for…" rather than confirming one. Distinguishing the two
+  would make the form an account checker; a test asserts the two outcomes render
+  *identical text*, because that is where the leak would actually appear.
+
+  **Success is not terminal here**, unlike signup's. The message is conditional,
+  so a user who mistyped their address needs the form still in front of them —
+  it sits beside the form rather than replacing it, and each acceptance is
+  reported so a second attempt is not swallowed.
+
+  **Reset deliberately does not copy verification's token guards.** That flow
+  exchanges on mount, so an effect that re-fires spends a single-use link;
+  this one exchanges on submit, where there is no mount effect to re-fire. The
+  fixed cancellation id every form flow has is the whole of it, and a comment
+  says so, because copying the guards is the obvious mistake.
+
+  A dead or missing link does not leave a form up that cannot succeed: both end
+  in the same offer of a new link. `resetPassword` resolving with `null` is a
+  success — the password changed, and the user signs in with it.
+
+### Changed
+
+- **The password policy moved to `flows/password-policy.ts`**, shared by signup
+  and reset so a user cannot be told one thing creating an account and another
+  recovering it. Every schema builds its password field from `passwordField()`
+  rather than restating the rules. **No exported name moved** — the barrels
+  re-export exactly as before. The coupling this fixes was already visible:
+  `PasswordCriteria`, a component about passwords in general, was reaching into
+  `flows/signup/schema.ts`.
+
 ### Still missing
 
-Password reset, MFA, OAuth and token refresh. The
+MFA, OAuth and token refresh. The
 `AuthError` union names the failures those flows produce because the wire
 contract needs them — a code appearing there is not a promise that the flow
 behind it ships today.

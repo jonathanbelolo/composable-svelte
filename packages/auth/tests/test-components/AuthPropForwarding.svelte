@@ -6,6 +6,16 @@
 	import PasswordCriteria from '../../src/lib/components/PasswordCriteria.svelte';
 	import SignupForm from '../../src/lib/components/SignupForm.svelte';
 	import EmailVerification from '../../src/lib/components/EmailVerification.svelte';
+	import ForgotPasswordForm from '../../src/lib/components/ForgotPasswordForm.svelte';
+	import ResetPasswordForm from '../../src/lib/components/ResetPasswordForm.svelte';
+	import type {
+		ForgotPasswordAction,
+		ForgotPasswordState
+	} from '../../src/lib/flows/forgot-password/types.js';
+	import type {
+		ResetPasswordAction,
+		ResetPasswordState
+	} from '../../src/lib/flows/reset-password/types.js';
 	import type {
 		EmailVerificationAction,
 		EmailVerificationState
@@ -80,7 +90,14 @@
 		verifyFlowStore,
 		token,
 		verified,
-		verifyClass
+		verifyClass,
+		forgotFlowStore,
+		onSent,
+		forgotClass,
+		resetFlowStore,
+		onRequestNewLink,
+		done,
+		resetClass
 	}: {
 		store: { readonly state: SessionState };
 		onAnonymous?: () => void;
@@ -160,6 +177,26 @@
 		token?: string | null;
 		verified?: Snippet<[{ signedIn: boolean }]>;
 		verifyClass?: string;
+
+		// ForgotPasswordForm — one store, because asking for a link establishes
+		// no session and a `sessionStore` prop would misrepresent that.
+		forgotFlowStore: {
+			readonly state: ForgotPasswordState;
+			dispatch(action: ForgotPasswordAction): void;
+			subscribe(listener: (state: ForgotPasswordState) => void): () => void;
+		};
+		onSent?: (email: string) => void;
+		forgotClass?: string;
+
+		// ResetPasswordForm.
+		resetFlowStore: {
+			readonly state: ResetPasswordState;
+			dispatch(action: ResetPasswordAction): void;
+			subscribe(listener: (state: ResetPasswordState) => void): () => void;
+		};
+		onRequestNewLink?: () => void;
+		done?: Snippet<[{ signedIn: boolean }]>;
+		resetClass?: string;
 	} = $props();
 </script>
 
@@ -227,4 +264,28 @@
 	{headingLevel}
 	{verified}
 	class={verifyClass}
+/>
+<ForgotPasswordForm
+	flowStore={forgotFlowStore}
+	{onSent}
+	{header}
+	{footer}
+	{submitLabel}
+	{headingLevel}
+	{emailLabel}
+	class={forgotClass}
+/>
+<ResetPasswordForm
+	flowStore={resetFlowStore}
+	{sessionStore}
+	{token}
+	{onSuccess}
+	{onSignIn}
+	{onRequestNewLink}
+	{headingLevel}
+	{submitLabel}
+	{passwordLabel}
+	{confirmLabel}
+	{done}
+	class={resetClass}
 />

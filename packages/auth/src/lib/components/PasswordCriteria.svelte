@@ -21,7 +21,7 @@
 	 *
 	 * Pattern A: it animates nothing.
 	 */
-	import { evaluatePasswordCriteria } from '../flows/signup/schema.js';
+	import { evaluatePasswordCriteria } from '../flows/password-policy.js';
 
 	interface Props {
 		/** The password as typed. Evaluated on every keystroke. */

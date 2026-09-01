@@ -95,6 +95,32 @@ export interface AuthDependencies extends SessionDependencies {
 	 * oracle.
 	 */
 	resendVerification: (email: string, signal?: AbortSignal) => Promise<void>;
+	/**
+	 * Send a password-reset link.
+	 *
+	 * Resolves whether or not the address has an account — the same rule
+	 * `resendVerification` follows, and the reason a surface says "if that
+	 * address has an account, we sent a link" rather than confirming anything.
+	 * A version that rejected for unknown addresses would be an account checker
+	 * with a friendly face.
+	 */
+	requestPasswordReset: (email: string, signal?: AbortSignal) => Promise<void>;
+	/**
+	 * Set a new password using a reset token.
+	 *
+	 * Resolves with a session when the backend signs the account in as part of
+	 * the reset, and `null` when it does not — the password is changed either
+	 * way. The same nullable as `verifyEmail`, and not `signup`'s union, because
+	 * "no session" carries nothing extra here.
+	 *
+	 * Rejects with `token_expired` for a link that is stale, already used, or
+	 * malformed. Not distinguished, for the reason `verifyEmail` documents.
+	 */
+	resetPassword: (
+		token: string,
+		password: string,
+		signal?: AbortSignal
+	) => Promise<SessionSnapshot | null>;
 }
 
 /**

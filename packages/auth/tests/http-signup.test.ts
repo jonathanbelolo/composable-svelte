@@ -1,5 +1,5 @@
 /**
- * `createHttpAuthDeps()` — the wire contract for signup and email verification.
+ * `createHttpAuthDeps()` — the wire contract for every call beyond the session.
  *
  * This shipped with no tests at all, which is the wrong place to have none:
  * everything above it runs against `createMockAuthDeps`, so the adapter is the
@@ -213,5 +213,74 @@ describe('resendVerification', () => {
 			code: 'rate_limited',
 			retryAfterSeconds: 30
 		});
+	});
+});
+
+describe('requestPasswordReset', () => {
+	it('posts the address and resolves on 204', async () => {
+		const calls = stubFetch(new Response(null, { status: 204 }));
+
+		await expect(
+			createHttpAuthDeps().requestPasswordReset('ada@example.com')
+		).resolves.toBeUndefined();
+		expect(calls[0]!.url).toBe('/auth/request-password-reset');
+		expect(JSON.parse(String(calls[0]!.init.body))).toEqual({ email: 'ada@example.com' });
+	});
+
+	it('does not quietly turn a 404 into a success', async () => {
+		// A backend answering 404 for an unknown address IS the account-existence
+		// oracle this flow is shaped to avoid. Swallowing it would hide a
+		// misconfiguration behind a UI that looks correct — the failure has to be
+		// loud enough that someone fixes the backend.
+		stubFetch(new Response(null, { status: 404 }));
+
+		await expect(createHttpAuthDeps().requestPasswordReset('nobody@example.com')).rejects.toBeDefined();
+	});
+
+	it('surfaces a rate limit with its delay', async () => {
+		stubFetch(new Response(null, { status: 429, headers: { 'retry-after': '60' } }));
+
+		await expect(
+			createHttpAuthDeps().requestPasswordReset('ada@example.com')
+		).rejects.toMatchObject({ code: 'rate_limited', retryAfterSeconds: 60 });
+	});
+});
+
+describe('resetPassword', () => {
+	it('posts the token and the new password', async () => {
+		const calls = stubFetch(new Response(null, { status: 204 }));
+
+		await expect(createHttpAuthDeps().resetPassword('tok_1', 'hunter22222222')).resolves.toBeNull();
+		expect(calls[0]!.url).toBe('/auth/reset-password');
+		expect(JSON.parse(String(calls[0]!.init.body))).toEqual({
+			token: 'tok_1',
+			password: 'hunter22222222'
+		});
+	});
+
+	it('reads a session body as a session', async () => {
+		stubFetch(json({ subject_id: 'u1' }, 200));
+
+		await expect(createHttpAuthDeps().resetPassword('tok_1', 'pw')).resolves.toEqual({
+			subject_id: 'u1'
+		});
+	});
+
+	it('reads a dead link as `token_expired`', async () => {
+		stubFetch(new Response(null, { status: 410 }));
+
+		await expect(createHttpAuthDeps().resetPassword('stale', 'pw')).rejects.toMatchObject({
+			code: 'token_expired',
+			message: 'That reset link is no longer valid.'
+		});
+	});
+
+	it('forwards the abort signal', async () => {
+		const calls = stubFetch(new Response(null, { status: 204 }));
+		const controller = new AbortController();
+
+		await createHttpAuthDeps().resetPassword('tok_1', 'pw', controller.signal);
+
+		expect(calls[0]!.init.signal).toBe(controller.signal);
 	});
 });

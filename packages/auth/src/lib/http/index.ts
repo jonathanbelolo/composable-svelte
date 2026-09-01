@@ -117,6 +117,48 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			return decodeSessionSnapshot(response);
 		},
 
+		async requestPasswordReset(email: string, signal?: AbortSignal): Promise<void> {
+			const response = await fetch(url('/auth/request-password-reset'), {
+				method: 'POST',
+				credentials: 'include',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ email }),
+				...(signal !== undefined && { signal })
+			});
+
+			// A 404 here would be the account-existence oracle the whole flow is
+			// shaped to avoid, so it is not special-cased into a success: a backend
+			// that answers 404 is misconfigured and should be told so loudly rather
+			// than have the client paper over it.
+			if (!response.ok) {
+				throw await authErrorFromResponse(response, 'Could not send a reset link.');
+			}
+		},
+
+		async resetPassword(
+			token: string,
+			password: string,
+			signal?: AbortSignal
+		): Promise<SessionSnapshot | null> {
+			const response = await fetch(url('/auth/reset-password'), {
+				method: 'POST',
+				credentials: 'include',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ token, password }),
+				...(signal !== undefined && { signal })
+			});
+
+			if (!response.ok) {
+				throw await authErrorFromResponse(response, 'That reset link is no longer valid.');
+			}
+
+			// `204` is "changed, now sign in" — read the status, not the body, for
+			// the reason `verifyEmail` documents.
+			if (response.status === 204) return null;
+
+			return decodeSessionSnapshot(response);
+		},
+
 		async resendVerification(email: string, signal?: AbortSignal): Promise<void> {
 			const response = await fetch(url('/auth/resend-verification'), {
 				method: 'POST',

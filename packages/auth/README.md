@@ -5,9 +5,9 @@ generated Composable Rust backends: a session store, subject helpers, and
 thin guard components.
 
 > **Still narrower than its name.** What exists: session resolution,
-> seeded-user passwordless login, **password sign-in**, **signup** and **email
-> verification** — headless flows, HTTP adapter and styled components. What does
-> not exist yet: password reset, MFA, OAuth and token refresh. The `AuthError`
+> seeded-user passwordless login, **password sign-in**, **signup**, **email
+> verification** and **password recovery** — headless flows, HTTP adapter and
+> styled components. What does not exist yet: MFA, OAuth and token refresh. The `AuthError`
 > union already names the failures those flows produce (`mfa_required`,
 > `email_unverified`, …) because the backend contract needs them; a code
 > appearing there is not a promise that the flow behind it ships today.

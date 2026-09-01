@@ -162,6 +162,61 @@ describe('confirming an address', () => {
 	});
 });
 
+describe('password recovery', () => {
+	it('accepts a reset request for any address at all', async () => {
+		// A fake that rejected for unknown addresses would let a surface be built
+		// on an account-existence oracle and pass its own tests.
+		const deps = createMockAuthDeps();
+
+		await expect(deps.requestPasswordReset('ada@example.com')).resolves.toBeUndefined();
+		await expect(deps.requestPasswordReset('nobody@example.com')).resolves.toBeUndefined();
+	});
+
+	it('defaults to a reset that does not sign you in', async () => {
+		await expect(createMockAuthDeps().resetPassword('tok', 'pw')).resolves.toBeNull();
+	});
+
+	it('issues a session when asked to', async () => {
+		const deps = createMockAuthDeps({ resetOutcome: 'session' });
+		await expect(deps.resetPassword('tok', 'pw')).resolves.toMatchObject({
+			display_name: 'Ada Lovelace'
+		});
+	});
+
+	it('rejects a listed reset token as expired', async () => {
+		const deps = createMockAuthDeps({ expiredResetTokens: ['stale'] });
+
+		await expect(deps.resetPassword('stale', 'pw')).rejects.toMatchObject({
+			code: 'token_expired'
+		});
+		await expect(deps.resetPassword('fresh', 'pw')).resolves.toBeNull();
+	});
+
+	it('keeps its expired lists apart', async () => {
+		// So a demo can have a live verification link and a dead reset link at
+		// once, which is the state a user who ignored one mail is actually in.
+		const deps = createMockAuthDeps({ expiredTokens: ['verify-stale'] });
+
+		await expect(deps.verifyEmail('verify-stale')).rejects.toMatchObject({
+			code: 'token_expired'
+		});
+		await expect(deps.resetPassword('verify-stale', 'pw')).resolves.toBeNull();
+	});
+
+	it('honours the abort signal on both calls', async () => {
+		const controller = new AbortController();
+		controller.abort();
+		const deps = createMockAuthDeps();
+
+		await expect(deps.requestPasswordReset('a@b.com', controller.signal)).rejects.toMatchObject({
+			name: 'AbortError'
+		});
+		await expect(deps.resetPassword('t', 'pw', controller.signal)).rejects.toMatchObject({
+			name: 'AbortError'
+		});
+	});
+});
+
 describe('cancellation', () => {
 	it('refuses an already-aborted signal, latency or not', async () => {
 		// The arm that found a defect. `wait` checked the signal only inside the

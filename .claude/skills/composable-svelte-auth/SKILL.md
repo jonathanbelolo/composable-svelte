@@ -1,6 +1,6 @@
 ---
 name: composable-svelte-auth
-description: Sessions, sign-in flows and auth guards for Composable Svelte. Use when implementing login, signup, password reset, email verification, MFA, OAuth, role gating, or any session-aware UI. Covers the session store, the AuthError union, headless flow reducers, LoginForm/PasswordInput/AuthGuard/RoleGate, the backend-agnostic dependency surface and its HTTP adapter, from the @composable-svelte/auth package.
+description: Sessions, credentials flows and auth guards for Composable Svelte. Use when implementing login, signup, password reset, email verification, MFA, OAuth, role gating, or any session-aware UI. Covers the session store, the AuthError union, headless flow reducers, the shared password policy, LoginForm/SignupForm/EmailVerification/ForgotPasswordForm/ResetPasswordForm/PasswordInput/PasswordCriteria/AuthGuard/RoleGate, and the backend-agnostic dependency surface with its HTTP adapter, from the @composable-svelte/auth package.
 ---
 
 # Composable Svelte Auth
@@ -15,10 +15,11 @@ sign-in attempt, a structured failure union, and thin components over both.
 **What exists today.** Session resolution, seeded-user passwordless login,
 password sign-in and **signup** end to end (headless flows, HTTP adapter, styled
 forms), the `AuthError` union, `AuthGuard` / `RoleGate` / `LoginForm` /
-`SignupForm` / `EmailVerification` / `PasswordInput` / `PasswordCriteria`, a
-mock dependency set, SSR coverage.
+`SignupForm` / `EmailVerification` / `ForgotPasswordForm` /
+`ResetPasswordForm` / `PasswordInput` / `PasswordCriteria`, a mock dependency
+set, SSR coverage.
 
-**What does not exist yet.** Password reset, MFA, OAuth, token refresh. The `AuthError` union already *names* the failures those
+**What does not exist yet.** MFA, OAuth, token refresh. The `AuthError` union already *names* the failures those
 flows produce (`mfa_required`, `email_unverified`, `token_expired`) because the
 wire contract needs them — **a code appearing in the union is not a promise that
 the flow behind it ships.** Check `src/lib/flows/` before telling a user a flow
@@ -471,6 +472,71 @@ still has to sign in. Only a non-null session is handed to the session store.
 
 ---
 
+## PASSWORD RECOVERY
+
+Two flows, because two surfaces: `forgot-password` asks for a link,
+`reset-password` consumes one.
+
+### Asking tells the user nothing, deliberately
+
+`requestPasswordReset` resolves whether or not the address has an account, and
+the surface must say the same thing either way — "if there is an account for
+…", never "we sent you a link". Distinguishing them turns the form into an
+account checker, and it is a one-line change to make by accident. There is a
+test asserting the two outcomes render **identical text**, because that is where
+the leak appears rather than in the state.
+
+For the same reason a `404` from the backend is **not** quietly treated as
+success by the adapter: a backend answering 404 for an unknown address *is* the
+oracle, and hiding it behind a working-looking UI means nobody fixes it.
+
+```typescript
+import type { ForgotPasswordStatus } from '@composable-svelte/auth';
+
+const meaning: Record<ForgotPasswordStatus, string> = {
+	idle: 'editing, or a failure to correct',
+	submitting: 'the request is in flight',
+	sent: 'the backend accepted it — which says nothing about whether an account exists'
+};
+```
+
+**`sent` does not replace the form**, unlike signup's terminal panel. The
+message is conditional, so a user who mistyped needs the form still there;
+`onSent` fires per acceptance rather than once, so a second attempt is not
+swallowed.
+
+### Reset does *not* copy verification's token guards
+
+This is the mistake to avoid. `EmailVerification` exchanges its token **on
+mount**, so an effect that re-fires spends a single-use link — hence a guard in
+its reducer and another in the component. `ResetPasswordForm` exchanges **on
+submit**, because the user has to type a password first. There is no mount
+effect to re-fire, so the equivalent guards would be answering a question nobody
+asked. The fixed cancellation id every form flow has is the whole of it.
+
+```typescript
+import type { ResetPasswordStatus } from '@composable-svelte/auth';
+
+const outcome: Record<ResetPasswordStatus, string> = {
+	idle: 'editing, or a failure to correct',
+	submitting: 'the reset is in flight',
+	reset: 'the password is changed; `session` may or may not be set'
+};
+```
+
+A dead or missing link does not leave a form up that cannot succeed — both end
+in the same offer of a new one. `resetPassword` resolving with `null` is a
+success: the password changed, and the user signs in with it.
+
+### The password policy is shared, not copied
+
+`flows/password-policy.ts` owns the rules, and **both** `signupSchema` and
+`resetPasswordSchema` build their password field from `passwordField()`. A user
+cannot be told one thing creating an account and another recovering it, and the
+"agrees with the schema on every sample" test runs against both.
+
+---
+
 ## COMPONENTS
 
 ### LoginForm
@@ -617,6 +683,19 @@ const custom: AuthDependencies = {
 		void signal;
 		// Resolves whether or not the address has an account: answering
 		// differently is an account-existence oracle.
+	},
+	async requestPasswordReset(email, signal) {
+		void email;
+		void signal;
+		// Resolves for every address. Rejecting for unknown ones would make the
+		// form an account-existence oracle.
+	},
+	async resetPassword(token, password, signal) {
+		void token;
+		void password;
+		void signal;
+		// `null` means "changed, now sign in", which is a success.
+		return null;
 	},
 	async fetchLogin(seededUserId: string) {
 		void seededUserId;

@@ -82,6 +82,7 @@ export {
 	passwordCriteria,
 	evaluatePasswordCriteria,
 	meetsPasswordCriteria,
+	passwordField,
 	PASSWORD_MIN_LENGTH,
 	PASSWORD_MAX_LENGTH,
 	type SignupFields,
@@ -90,6 +91,31 @@ export {
 	type SignupAction,
 	type SignupStatus,
 	type SignupDependencies
+} from './flows/index.js';
+
+export {
+	forgotPasswordReducer,
+	createInitialForgotPasswordState,
+	createForgotPasswordStore,
+	forgotPasswordFormConfig,
+	forgotPasswordSchema,
+	emptyForgotPasswordFields,
+	type ForgotPasswordFields,
+	type ForgotPasswordState,
+	type ForgotPasswordAction,
+	type ForgotPasswordStatus,
+	type ForgotPasswordDependencies,
+	resetPasswordReducer,
+	createInitialResetPasswordState,
+	createResetPasswordStore,
+	resetPasswordFormConfig,
+	resetPasswordSchema,
+	emptyResetPasswordFields,
+	type ResetPasswordFields,
+	type ResetPasswordState,
+	type ResetPasswordAction,
+	type ResetPasswordStatus,
+	type ResetPasswordDependencies
 } from './flows/index.js';
 
 export {
@@ -123,6 +149,8 @@ export {
 	LoginForm,
 	SignupForm,
 	EmailVerification,
+	ForgotPasswordForm,
+	ResetPasswordForm,
 	PasswordInput,
 	PasswordCriteria
 } from './components/index.js';

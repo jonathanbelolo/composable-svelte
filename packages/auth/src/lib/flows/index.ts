@@ -24,23 +24,30 @@ export type {
 	LoginDependencies
 } from './login/index.js';
 
+// The password policy — shared by every flow that takes a password, which is
+// why it is not inside any one of them.
+export {
+	passwordCriteria,
+	evaluatePasswordCriteria,
+	meetsPasswordCriteria,
+	passwordField,
+	PASSWORD_MIN_LENGTH,
+	PASSWORD_MAX_LENGTH
+} from './password-policy.js';
+
+export type { PasswordCriterion } from './password-policy.js';
+
 export {
 	signupReducer,
 	createInitialSignupState,
 	createSignupStore,
 	signupFormConfig,
 	signupSchema,
-	emptySignupFields,
-	passwordCriteria,
-	evaluatePasswordCriteria,
-	meetsPasswordCriteria,
-	PASSWORD_MIN_LENGTH,
-	PASSWORD_MAX_LENGTH
+	emptySignupFields
 } from './signup/index.js';
 
 export type {
 	SignupFields,
-	PasswordCriterion,
 	SignupState,
 	SignupAction,
 	SignupStatus,
@@ -61,3 +68,37 @@ export type {
 	EmailVerificationDependencies,
 	ResendStatus
 } from './email-verification/index.js';
+
+export {
+	forgotPasswordReducer,
+	createInitialForgotPasswordState,
+	createForgotPasswordStore,
+	forgotPasswordFormConfig,
+	forgotPasswordSchema,
+	emptyForgotPasswordFields
+} from './forgot-password/index.js';
+
+export type {
+	ForgotPasswordFields,
+	ForgotPasswordState,
+	ForgotPasswordAction,
+	ForgotPasswordStatus,
+	ForgotPasswordDependencies
+} from './forgot-password/index.js';
+
+export {
+	resetPasswordReducer,
+	createInitialResetPasswordState,
+	createResetPasswordStore,
+	resetPasswordFormConfig,
+	resetPasswordSchema,
+	emptyResetPasswordFields
+} from './reset-password/index.js';
+
+export type {
+	ResetPasswordFields,
+	ResetPasswordState,
+	ResetPasswordAction,
+	ResetPasswordStatus,
+	ResetPasswordDependencies
+} from './reset-password/index.js';

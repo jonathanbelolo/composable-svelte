@@ -79,6 +79,20 @@ export interface MockAuthOptions {
 	 * a week late is the ordinary case, not the exceptional one.
 	 */
 	expiredTokens?: readonly string[] | undefined;
+	/**
+	 * What completing a password reset produces.
+	 *
+	 * `'none'` by default: most backends make the user sign in with the new
+	 * password, and it is the branch a surface has more to do about.
+	 */
+	resetOutcome?: 'none' | 'session' | undefined;
+	/**
+	 * Reset tokens that are stale or already used, rejected as `token_expired`.
+	 *
+	 * Separate from {@link MockAuthOptions.expiredTokens} so a demo can have a
+	 * live verification link and a dead reset link at once.
+	 */
+	expiredResetTokens?: readonly string[] | undefined;
 }
 
 const defaultSession: SessionSnapshot = {
@@ -116,7 +130,9 @@ export function createMockAuthDeps(options: MockAuthOptions = {}): AuthDependenc
 		signupOutcome = 'verificationRequired',
 		takenEmails = [],
 		verifyOutcome = 'none',
-		expiredTokens = []
+		expiredTokens = [],
+		resetOutcome = 'none',
+		expiredResetTokens = []
 	} = options;
 
 	const aborted = () => new DOMException('Aborted', 'AbortError');
@@ -199,6 +215,33 @@ export function createMockAuthDeps(options: MockAuthOptions = {}): AuthDependenc
 			}
 
 			return verifyOutcome === 'session' ? session : null;
+		},
+
+		async requestPasswordReset(_email: string, signal?: AbortSignal): Promise<void> {
+			await wait(signal);
+			if (failWith) throw failWith;
+			// Resolves for every address, known or not. A fake that rejected for
+			// unknown ones would let a surface be built on an oracle and pass its
+			// tests.
+		},
+
+		async resetPassword(
+			token: string,
+			_password: string,
+			signal?: AbortSignal
+		): Promise<SessionSnapshot | null> {
+			await wait(signal);
+
+			if (failWith) throw failWith;
+
+			if (expiredResetTokens.includes(token)) {
+				throw {
+					code: 'token_expired',
+					message: 'That reset link is no longer valid.'
+				} satisfies AuthError;
+			}
+
+			return resetOutcome === 'session' ? session : null;
 		},
 
 		async resendVerification(_email: string, signal?: AbortSignal): Promise<void> {

@@ -24,7 +24,7 @@ import { createStore } from '@composable-svelte/core';
 import SignupForm from '../src/lib/components/SignupForm.svelte';
 import PasswordCriteria from '../src/lib/components/PasswordCriteria.svelte';
 import { createInitialSignupState, signupReducer } from '../src/lib/flows/signup/reducer.js';
-import { PASSWORD_MIN_LENGTH } from '../src/lib/flows/signup/schema.js';
+import { PASSWORD_MIN_LENGTH } from '../src/lib/flows/password-policy.js';
 import type { SignupDependencies } from '../src/lib/flows/signup/types.js';
 import { createInitialSessionState, sessionReducer } from '../src/lib/session/reducer.js';
 import type { SessionDependencies } from '../src/lib/session/types.js';

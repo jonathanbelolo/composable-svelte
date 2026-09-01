@@ -20,12 +20,22 @@ import { createStore } from '@composable-svelte/core';
 import LoginForm from '../../src/lib/components/LoginForm.svelte';
 import SignupForm from '../../src/lib/components/SignupForm.svelte';
 import EmailVerification from '../../src/lib/components/EmailVerification.svelte';
+import ForgotPasswordForm from '../../src/lib/components/ForgotPasswordForm.svelte';
+import ResetPasswordForm from '../../src/lib/components/ResetPasswordForm.svelte';
 import { createInitialLoginState, loginReducer } from '../../src/lib/flows/login/reducer.js';
 import { createInitialSignupState, signupReducer } from '../../src/lib/flows/signup/reducer.js';
 import {
 	createInitialEmailVerificationState,
 	emailVerificationReducer
 } from '../../src/lib/flows/email-verification/reducer.js';
+import {
+	createInitialForgotPasswordState,
+	forgotPasswordReducer
+} from '../../src/lib/flows/forgot-password/reducer.js';
+import {
+	createInitialResetPasswordState,
+	resetPasswordReducer
+} from '../../src/lib/flows/reset-password/reducer.js';
 import { createInitialSessionState, sessionReducer } from '../../src/lib/session/reducer.js';
 import type { LoginState } from '../../src/lib/flows/login/types.js';
 import type { SessionSnapshot } from '../../src/lib/subject/types.js';
@@ -234,5 +244,80 @@ describe('the server build of EmailVerification', () => {
 		expect(body).toContain('data-error-code="token_expired"');
 		expect(body).toContain('That link did not work');
 		expect(body).toContain('ada@example.com');
+	});
+});
+
+describe('the server build of the recovery pair', () => {
+	const inertSession = () =>
+		createStore({
+			initialState: createInitialSessionState(),
+			reducer: sessionReducer,
+			dependencies: {
+				fetchLogin: async () => session,
+				fetchLogout: async () => undefined,
+				fetchSession: async () => null
+			}
+		});
+
+	it('renders the request form, with nothing claimed yet', () => {
+		const flowStore = createStore({
+			initialState: createInitialForgotPasswordState(),
+			reducer: forgotPasswordReducer,
+			dependencies: { requestPasswordReset: async () => undefined }
+		});
+		const body = render(ForgotPasswordForm, { props: { flowStore } }).body;
+
+		expect(body).toContain('type="email"');
+		expect(body, 'a confirmation rendered before anything was asked').not.toContain('is on its way');
+	});
+
+	it('renders the conditional confirmation from state alone', () => {
+		// Reachable on the server after a POST-then-render, and effects do not run
+		// there — so the wording has to come out of state.
+		const flowStore = createStore({
+			initialState: {
+				...createInitialForgotPasswordState(),
+				status: 'sent' as const,
+				requestedFor: 'ada@example.com'
+			},
+			reducer: forgotPasswordReducer,
+			dependencies: { requestPasswordReset: async () => undefined }
+		});
+		const body = render(ForgotPasswordForm, { props: { flowStore } }).body;
+
+		expect(body).toContain('If there is an account');
+		expect(body).toContain('ada@example.com');
+		expect(body, 'the form was replaced rather than kept').toContain('type="email"');
+	});
+
+	it('renders the reset form with both passwords hidden', () => {
+		const flowStore = createStore({
+			initialState: createInitialResetPasswordState('tok_1'),
+			reducer: resetPasswordReducer,
+			dependencies: { resetPassword: async () => null }
+		});
+		const body = render(ResetPasswordForm, {
+			props: { flowStore, sessionStore: inertSession() }
+		}).body;
+
+		expect((body.match(/type="password"/g) ?? []).length).toBe(2);
+		expect(body).not.toMatch(/type="text"/);
+		expect(body).toContain('Password requirements');
+	});
+
+	it('offers no form for a link it already knows is missing', () => {
+		const flowStore = createStore({
+			initialState: createInitialResetPasswordState(null),
+			reducer: resetPasswordReducer,
+			dependencies: { resetPassword: async () => null }
+		});
+		const body = render(ResetPasswordForm, {
+			props: { flowStore, sessionStore: inertSession() }
+		}).body;
+
+		expect(body).toContain('This link is incomplete');
+		expect(body, 'a form was rendered with no token to submit against').not.toContain(
+			'type="password"'
+		);
 	});
 });
