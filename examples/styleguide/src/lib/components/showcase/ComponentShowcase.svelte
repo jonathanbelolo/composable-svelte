@@ -32,6 +32,7 @@
   import EmailVerificationDemo from '../demos/EmailVerificationDemo.svelte';
   import PasswordRecoveryDemo from '../demos/PasswordRecoveryDemo.svelte';
   import MfaDemo from '../demos/MfaDemo.svelte';
+  import OAuthDemo from '../demos/OAuthDemo.svelte';
   // Foundational Components
   import CardDemo from '../demos/CardDemo.svelte';
   import SeparatorDemo from '../demos/SeparatorDemo.svelte';
@@ -117,6 +118,7 @@
     'email-verification': EmailVerificationDemo,
     'password-recovery': PasswordRecoveryDemo,
     'mfa': MfaDemo,
+    'oauth': OAuthDemo,
     // Foundational Components
     'card': CardDemo,
     'separator': SeparatorDemo,

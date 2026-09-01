@@ -24,6 +24,8 @@ import ForgotPasswordForm from '../../src/lib/components/ForgotPasswordForm.svel
 import ResetPasswordForm from '../../src/lib/components/ResetPasswordForm.svelte';
 import MfaChallengeForm from '../../src/lib/components/MfaChallengeForm.svelte';
 import MfaEnrolment from '../../src/lib/components/MfaEnrolment.svelte';
+import OAuthSignIn from '../../src/lib/components/OAuthSignIn.svelte';
+import OAuthCallback from '../../src/lib/components/OAuthCallback.svelte';
 import { createInitialLoginState, loginReducer } from '../../src/lib/flows/login/reducer.js';
 import { createInitialSignupState, signupReducer } from '../../src/lib/flows/signup/reducer.js';
 import {
@@ -42,6 +44,14 @@ import {
 	createInitialMfaChallengeState,
 	mfaChallengeReducer
 } from '../../src/lib/flows/mfa-challenge/reducer.js';
+import {
+	createInitialOAuthStartState,
+	oauthStartReducer,
+	createInitialOAuthCallbackState,
+	oauthCallbackReducer,
+	createPendingOAuthStorage,
+	createBrowserRedirect
+} from '../../src/lib/flows/index.js';
 import {
 	createInitialMfaEnrolmentState,
 	mfaEnrolmentReducer
@@ -398,5 +408,116 @@ describe('the server build of the MFA pair', () => {
 		expect(body).toContain('Save your recovery codes');
 		expect(body).toContain('aaa-111');
 		expect(body).toContain('shown <strong>once</strong>');
+	});
+});
+
+// ============================================================
+// OAuth
+// ============================================================
+
+describe('OAuth on the server', () => {
+	const refuse = (what: string) => () => {
+		throw new Error(`the server must not ${what}`);
+	};
+
+	// Only `dispatch` is read, and nothing on the server dispatches — the prop is
+	// narrow on purpose, so this is the whole of what it needs.
+	const noSession = { dispatch: () => {} };
+
+	it('renders the providers without starting anything', () => {
+		const flowStore = createStore({
+			initialState: createInitialOAuthStartState(),
+			reducer: oauthStartReducer,
+			dependencies: {
+				beginOAuth: refuse('begin an OAuth sign-in'),
+				pendingOAuth: { put: refuse('store a pending record'), take: () => null },
+				redirect: refuse('navigate')
+			}
+		});
+		const body = render(OAuthSignIn, {
+			props: {
+				flowStore,
+				providers: [
+					{ id: 'google', label: 'Google' },
+					{ id: 'github', label: 'GitHub' }
+				]
+			}
+		}).body;
+
+		expect(body).toContain('Continue with Google');
+		expect(body).toContain('Continue with GitHub');
+		// Controls, never links — a ctrl-click would open the authorize page in a
+		// tab whose sessionStorage is a copy, and the record would land in the
+		// wrong one.
+		expect(body).toContain('type="button"');
+		expect(body).not.toContain('<a ');
+	});
+
+	it('does not exchange a code while rendering', () => {
+		// The redirect and the exchange are both effects, and effects do not run on
+		// the server. If either did, a server render would spend a single-use code
+		// and a cached render would spend one per request.
+		const flowStore = createStore({
+			initialState: createInitialOAuthCallbackState(),
+			reducer: oauthCallbackReducer,
+			dependencies: {
+				completeOAuth: refuse('exchange an authorization code'),
+				pendingOAuth: { put: refuse('store a pending record'), take: () => null }
+			}
+		});
+		const body = render(OAuthCallback, {
+			props: {
+				flowStore,
+				sessionStore: noSession,
+				params: { code: 'c_1', state: 'st_1', error: null, errorDescription: null },
+				onSuccess: () => {},
+				onStartOver: () => {}
+			}
+		}).body;
+
+		expect(body).toContain('Finishing your sign-in');
+	});
+
+	it('renders an unverifiable callback, and its way out, from state alone', () => {
+		const flowStore = createStore({
+			initialState: {
+				...createInitialOAuthCallbackState(),
+				status: 'failed' as const,
+				error: {
+					code: 'oauth_state_mismatch' as const,
+					message: 'That sign-in link has already been used, or is no longer valid.'
+				}
+			},
+			reducer: oauthCallbackReducer,
+			dependencies: {
+				completeOAuth: refuse('exchange an authorization code'),
+				pendingOAuth: { put: refuse('store a pending record'), take: () => null }
+			}
+		});
+		const body = render(OAuthCallback, {
+			props: {
+				flowStore,
+				sessionStore: noSession,
+				params: { code: 'c_1', state: 'st_1', error: null, errorDescription: null },
+				onSuccess: () => {},
+				onStartOver: () => {},
+				headingLevel: 1
+			}
+		}).body;
+
+		expect(body).toContain('<h1');
+		expect(body).toContain('Start again');
+		expect(body).toContain('data-error-code="oauth_state_mismatch"');
+	});
+
+	it('constructs its browser dependencies without a browser', () => {
+		// `createSessionStorage` throws on a server, and this package's own README
+		// calls dependency factories at module scope. Both of these must therefore
+		// be constructible here — the failure has to wait until they are used.
+		const storage = createPendingOAuthStorage();
+		expect(storage.take()).toBeNull();
+		expect(() => storage.put({ provider: 'github', state: 'st_1', returnTo: null })).toThrow();
+
+		expect(() => createBrowserRedirect()).not.toThrow();
 	});
 });

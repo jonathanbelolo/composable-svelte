@@ -10,6 +10,8 @@ export type {
 	AccountLockedError,
 	RateLimitedError,
 	TokenExpiredError,
+	OAuthDeniedError,
+	OAuthStateMismatchError,
 	NetworkError,
 	UnknownAuthError
 } from './types.js';

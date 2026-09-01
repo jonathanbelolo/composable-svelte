@@ -17,10 +17,11 @@ password sign-in and **signup** end to end (headless flows, HTTP adapter, styled
 forms), the `AuthError` union, `AuthGuard` / `RoleGate` / `LoginForm` /
 `SignupForm` / `EmailVerification` / `ForgotPasswordForm` /
 `ResetPasswordForm` / `MfaChallengeForm` / `MfaEnrolment` / `PasswordInput` /
-`PasswordCriteria` / `OneTimeCodeInput`, a mock dependency set, SSR coverage.
+`PasswordCriteria` / `OneTimeCodeInput` / `OAuthSignIn` / `OAuthCallback`, a
+mock dependency set, SSR coverage.
 
-**What does not exist yet.** OAuth, token refresh, and MFA *management* —
-disabling it, or regenerating recovery codes, which belong on an
+**What does not exist yet.** Token refresh, account linking, and MFA
+*management* — disabling it, or regenerating recovery codes, which belong on an
 account-settings surface this package does not have. The `AuthError` union already *names* the failures those
 flows produce (`mfa_required`, `email_unverified`, `token_expired`) because the
 wire contract needs them — **a code appearing in the union is not a promise that
@@ -148,16 +149,18 @@ discriminated union, not a string. This is the enabling design of the package:
 "wrong password", "confirm your email", "this account is locked" and "now enter
 your second factor" are different outcomes, and the last is not a failure at all.
 
-Nine arms: `invalid_credentials`, `mfa_required`, `email_unverified`,
-`email_taken`, `account_locked`, `rate_limited`, `token_expired`, `network`,
-`unknown`. Each is also exported by name (`MfaRequiredError`,
-`RateLimitedError`, …) for a signature that accepts only one, and
-`AuthErrorCode` is the union of the code strings.
+Eleven arms: `invalid_credentials`, `mfa_required`, `email_unverified`,
+`email_taken`, `account_locked`, `rate_limited`, `token_expired`,
+`oauth_denied`, `oauth_state_mismatch`, `network`, `unknown`. Each is also
+exported by name (`MfaRequiredError`, `RateLimitedError`, …) for a signature
+that accepts only one, and `AuthErrorCode` is the union of the code strings.
 
 The example below is **exhaustive on purpose**, and this file is compiled by
-`doc-typecheck`. Add a ninth arm to the union and `unhandled(error)` stops
+`doc-typecheck`. Add an arm to the union and `unhandled(error)` stops
 typechecking, so the sentence above cannot quietly go stale — which is the
-failure mode of every skill that lists a union in prose.
+failure mode of every skill that lists a union in prose. It has already earned
+its keep twice: `email_taken` and the two `oauth_*` arms each broke this block
+on the day they landed.
 
 ```typescript
 import { retryDelaySeconds, type AuthError } from '@composable-svelte/auth';
@@ -182,6 +185,14 @@ function whatToOffer(error: AuthError): string {
 		case 'rate_limited':
 			// `null` when the backend stated no delay — never invent one.
 			return `wait ${retryDelaySeconds(error) ?? 'a while'}s`;
+		case 'oauth_denied':
+			// Not a failure: the user pressed Cancel at the provider. Offer the
+			// way back, never a red banner.
+			return error.provider ? `cancelled at ${error.provider}` : 'cancelled';
+		case 'oauth_state_mismatch':
+			// Carries nothing but a message, deliberately — see the OAuth section.
+			// The only recovery is starting the sign-in again.
+			return 'start the sign-in again';
 		case 'invalid_credentials':
 		case 'token_expired':
 		case 'network':
@@ -747,6 +758,121 @@ showing.
 
 ---
 
+## OAUTH
+
+Two flows, because the two halves run in **different page loads**: a full-page
+redirect destroys the store, so they can never share one. `oauth-start` runs on
+the page with the buttons; `oauth-callback` runs on the page the provider
+returns to.
+
+```
+click "Continue with GitHub"
+  -> beginOAuth('github')  ->  { authorizeUrl, state }
+  -> pendingOAuth.put({ provider, state, returnTo })
+  -> redirect(authorizeUrl)              <- the only navigation in the repo
+
+     ...provider...
+
+/auth/callback?code=..&state=..
+  -> OAuthCallback, on mount
+     pendingOAuth.take(), compare state  <- the CSRF gate
+     completeOAuth(provider, code, state) -> SessionSnapshot
+     -> sessionEstablished
+```
+
+**The backend mints `state` and builds the authorize URL.** Every id in this
+package is server-minted, and the party holding the client secret is the party
+that has to verify the nonce anyway. So there is **no PKCE crypto in the
+browser** — no `getRandomValues`, no `crypto.subtle`, no base64url. Do not add
+a `codeVerifier` to `OAuthStart`: it would be a secret in `sessionStorage`, and
+the package's claim that the browser never holds OAuth secrets would become
+false.
+
+**The client-side `state` check is defence in depth, never the defence.** The
+backend must bind `state` to the exchange in `completeOAuth`. Whoever controls
+the callback URL controls the client's copy of both values.
+
+Two dependencies are **not** on `AuthDependencies` — `pendingOAuth` and
+`redirect`. That interface is the auth I/O whose every member rejects with an
+`AuthError`; storage and navigation are neither. They live on
+`OAuthStartDependencies`.
+
+```svelte
+<script lang="ts">
+	import {
+		OAuthSignIn,
+		OAuthCallback,
+		createOAuthStartStore,
+		createOAuthCallbackStore,
+		createPendingOAuthStorage,
+		createBrowserRedirect,
+		createHttpAuthDeps,
+		oauthParamsFromUrl,
+		createSessionStore,
+		createHttpSessionDeps
+	} from '@composable-svelte/auth';
+
+	const api = createHttpAuthDeps('/api');
+	const pendingOAuth = createPendingOAuthStorage();
+	const sessionStore = createSessionStore(createHttpSessionDeps('/api'));
+
+	const startStore = createOAuthStartStore({
+		beginOAuth: api.beginOAuth,
+		pendingOAuth,
+		redirect: createBrowserRedirect()
+	});
+	const callbackStore = createOAuthCallbackStore({
+		completeOAuth: api.completeOAuth,
+		pendingOAuth
+	});
+</script>
+
+<OAuthSignIn
+	flowStore={startStore}
+	providers={[{ id: 'github', label: 'GitHub' }]}
+	returnTo="/dashboard"
+/>
+
+<OAuthCallback
+	flowStore={callbackStore}
+	{sessionStore}
+	params={oauthParamsFromUrl(window.location.href)}
+	onSuccess={({ returnTo }) => history.pushState({}, '', returnTo ?? '/')}
+	onStartOver={() => history.pushState({}, '', '/sign-in')}
+/>
+```
+
+### Rules
+
+- **No provider logos ship.** Pass an `icon` snippet. Google, GitHub, Apple and
+  Microsoft each publish brand guidelines governing the mark, its clear space
+  and the button wording; vendoring them would make every consumer's trademark
+  compliance this library's problem. Label-only is a supported configuration.
+- **`returnTo` is normalised to a same-origin path** and never crosses the wire.
+  A consumer reading it from their own `?returnTo=` is the ordinary case, and
+  that is exactly the route an open redirect takes. `https://evil.example` and
+  `//evil.example` both become `null`.
+- **`?error=` and `error_description` are attacker-supplied.** Anyone can link
+  someone to `/auth/callback?error=…`. The code is echoed only if it matches
+  `/^[a-z_]{1,64}$/`; the description is never rendered at all.
+- **`take()` is destructive, and the only recovery is starting over.** Nothing
+  is lost by that: if the exchange fails the authorization code is spent too, so
+  a second attempt could not have succeeded with a perfect store either. Do not
+  "fix" it into a `peek()` plus a `clear()`.
+- **`sessionStorage`, not `localStorage`** — per-tab, so two tabs signing in
+  concurrently cannot clobber each other's nonce.
+- **Popups and `target="_blank"` are unsupported.** A new tab's `sessionStorage`
+  is a copy taken at open time, so the record lands in the wrong tab. That is
+  why `OAuthSignIn` renders `<button>` and never `<a href>`.
+- **`OAuthCallback.onSuccess` and `onStartOver` are both required.** A callback
+  URL is a page with no content of its own; either omission strands the user.
+
+`oauth_denied` is a **branch, not a failure** — the user pressed Cancel, so it
+renders as `role="status"` with a way back, never a red alert. Same lesson as
+`mfa_required`.
+
+---
+
 ## DEPENDENCIES AND THE HTTP ADAPTER
 
 Every call is injected. The package is backend-agnostic; the Composable Rust
@@ -769,6 +895,22 @@ const custom: AuthDependencies = {
 		// Two outcomes, deliberately: a backend requiring confirmation cannot
 		// return a session, and one that does not should not force a second trip.
 		return { kind: 'verificationRequired', email: 'ada@example.com' };
+	},
+	async beginOAuth(provider, signal) {
+		void signal;
+		// The backend mints `state` and builds the authorize URL, because it is
+		// the party holding the client secret. Nothing is generated in the browser.
+		return {
+			authorizeUrl: `https://provider.example/authorize?provider=${provider}`,
+			state: 'st_1'
+		};
+	},
+	async completeOAuth(provider, code, state, signal) {
+		void provider;
+		void code;
+		void state;
+		void signal;
+		return { subject_id: 'u1', display_name: 'Ada', roles: ['member'] } satisfies SessionSnapshot;
 	},
 	async verifyEmail(token, signal) {
 		void token;

@@ -17,7 +17,7 @@ see the table below before you depend on one.
 | **charts** | feature-complete for 5 chart types | scatter, line, bar, area, histogram. Heatmap, network graph and hierarchy layouts are deferred |
 | **graphics** | usable | WebGL overlay and a Babylon adapter. `engine: 'webgpu'` is accepted and **runs WebGL** — real WebGPU is not implemented |
 | **maps** | **in development** | 3D buildings, marker clustering, geocoding/search, drawing tools and routing are all unbuilt |
-| **auth** | **narrow by design** | no password login, no OAuth, no signup, no token refresh. It speaks to one backend shape. The package name is broader than the package |
+| **auth** | **narrow by design** | password sign-in, signup, email verification, password recovery, MFA and OAuth all exist. No token refresh, no account linking, no MFA management (disabling it, regenerating recovery codes) — those need an account-settings surface that does not exist. It speaks to one backend shape |
 
 Accessibility: `svelte-check --fail-on-warnings` is clean across all 19
 workspaces, and `charts` has a keyboard cursor, a data-table fallback and an AA

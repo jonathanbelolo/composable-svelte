@@ -120,6 +120,42 @@ export interface UnknownAuthError {
 	status?: number | undefined;
 }
 
+/**
+ * The user declined at the provider.
+ *
+ * Not a failure in the user's terms — it is the flow branching, the way
+ * `mfa_required` is. Someone who pressed Cancel at Google has not broken
+ * anything, and a red `role="alert"` telling them otherwise is both wrong and
+ * alarming. `OAuthCallback` renders this as a `role="status"`.
+ */
+export interface OAuthDeniedError {
+	code: 'oauth_denied';
+	message: string;
+	/** Which provider, when the pending record was still there to say. */
+	provider?: string | undefined;
+}
+
+/**
+ * The `state` returned by the provider could not be verified.
+ *
+ * Three routes reach it — no pending record, a missing `state`, or one that does
+ * not match — and it **carries nothing to tell them apart**, deliberately.
+ * Naming which it was tells an attacker whether a sign-in was in progress, the
+ * same reasoning `verifyEmail` documents for not distinguishing a stale token
+ * from a malformed one.
+ *
+ * It carries no nonce either. This crosses SSR hydration as JSON and lands in
+ * whatever logs an app keeps; a CSRF nonce has no business in either.
+ *
+ * The wording a surface shows is deliberately calm. The identical branch is
+ * reached by pressing Back onto a spent callback URL, which is nobody's attack,
+ * and a security alarm that fires mostly on benign navigation stops being read.
+ */
+export interface OAuthStateMismatchError {
+	code: 'oauth_state_mismatch';
+	message: string;
+}
+
 export type AuthError =
 	| InvalidCredentialsError
 	| MfaRequiredError
@@ -128,6 +164,8 @@ export type AuthError =
 	| AccountLockedError
 	| RateLimitedError
 	| TokenExpiredError
+	| OAuthDeniedError
+	| OAuthStateMismatchError
 	| NetworkError
 	| UnknownAuthError;
 

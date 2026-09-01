@@ -18,6 +18,7 @@ import type {
 	MfaEnrolmentResult,
 	MfaEnrolmentStart,
 	MfaMethod,
+	OAuthStart,
 	SignupCredentials,
 	SignupOutcome
 } from '../deps.js';
@@ -108,6 +109,20 @@ export interface MockAuthOptions {
 	expiredChallengeIds?: readonly string[] | undefined;
 	/** What `confirmMfaEnrolment` hands back. Shown once, so a demo needs some. */
 	recoveryCodes?: readonly string[] | undefined;
+	/** Providers the fake offers. Anything else is rejected as `unknown`. */
+	oauthProviders?: readonly string[] | undefined;
+	/**
+	 * Where `beginOAuth` says to send the browser.
+	 *
+	 * A real `https:` URL by default, because the adapter refuses anything that
+	 * is not `http(s):` and a fake that returns something the real decoder would
+	 * reject teaches a demo nothing.
+	 */
+	oauthAuthorizeUrl?: string | undefined;
+	/** The nonce `beginOAuth` mints. Fixed, so a test can assert the round trip. */
+	oauthState?: string | undefined;
+	/** Codes `completeOAuth` accepts. Anything else is `token_expired`. */
+	oauthCodes?: readonly string[] | undefined;
 }
 
 const defaultSession: SessionSnapshot = {
@@ -156,7 +171,11 @@ export function createMockAuthDeps(options: MockAuthOptions = {}): AuthDependenc
 			'qq07-4wse-vv31',
 			'z1k8-3ldp-77ac',
 			'mn5b-6yth-0092'
-		]
+		],
+		oauthProviders = ['google', 'github'],
+		oauthAuthorizeUrl = 'https://provider.example/authorize?client_id=demo&response_type=code',
+		oauthState = 'st_demo',
+		oauthCodes = ['code_demo']
 	} = options;
 
 	const rejectWrongCode = (): never => {
@@ -280,6 +299,62 @@ export function createMockAuthDeps(options: MockAuthOptions = {}): AuthDependenc
 				otpauthUri:
 					'otpauth://totp/Example:ada@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example&algorithm=SHA1&digits=6&period=30'
 			};
+		},
+
+		async beginOAuth(provider: string, signal?: AbortSignal): Promise<OAuthStart> {
+			await wait(signal);
+
+			if (failWith) throw failWith;
+
+			if (!oauthProviders.includes(provider)) {
+				throw {
+					code: 'unknown',
+					message: `No sign-in is configured for ${provider}.`
+				} satisfies AuthError;
+			}
+
+			// The provider is carried in the URL so a demo can see which button it
+			// pressed, and so a test asserting the round trip has something to
+			// distinguish two starts by.
+			return {
+				authorizeUrl: `${oauthAuthorizeUrl}&provider=${encodeURIComponent(provider)}&state=${encodeURIComponent(oauthState)}`,
+				state: oauthState
+			};
+		},
+
+		async completeOAuth(
+			provider: string,
+			code: string,
+			state: string,
+			signal?: AbortSignal
+		): Promise<SessionSnapshot> {
+			await wait(signal);
+
+			if (failWith) throw failWith;
+
+			if (!oauthProviders.includes(provider)) {
+				throw {
+					code: 'unknown',
+					message: `No sign-in is configured for ${provider}.`
+				} satisfies AuthError;
+			}
+			// The backend's own check, which is the one that counts. The client
+			// compares too, but a fake that skipped this would let a test that
+			// broke the client-side gate still pass.
+			if (state !== oauthState) {
+				throw {
+					code: 'oauth_state_mismatch',
+					message: 'That sign-in could not be verified. Start again.'
+				} satisfies AuthError;
+			}
+			if (!oauthCodes.includes(code)) {
+				throw {
+					code: 'token_expired',
+					message: 'That sign-in has expired or been used already.'
+				} satisfies AuthError;
+			}
+
+			return session;
 		},
 
 		async confirmMfaEnrolment(

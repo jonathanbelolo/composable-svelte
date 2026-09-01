@@ -42,6 +42,8 @@ const KNOWN_CODES = new Set<string>(
 		account_locked: true,
 		rate_limited: true,
 		token_expired: true,
+		oauth_denied: true,
+		oauth_state_mismatch: true,
 		network: true,
 		unknown: true
 	} satisfies Record<AuthErrorCode, true>)
@@ -181,6 +183,16 @@ export async function authErrorFromResponse(
 				message,
 				...(body?.email !== undefined && { email: body.email })
 			};
+
+		case 'oauth_denied':
+			return {
+				code: 'oauth_denied',
+				message,
+				...(body?.provider !== undefined && { provider: body.provider })
+			};
+
+		// `oauth_state_mismatch` needs no arm: it carries nothing beyond
+		// `message`, deliberately, so the `default` below is already correct.
 
 		case 'unknown':
 			return { code: 'unknown', message, status: response.status };

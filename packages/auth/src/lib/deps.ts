@@ -39,14 +39,6 @@ export interface SignupCredentials {
 	password: string;
 }
 
-/**
- * What a completed signup produced — and there are two answers, not one.
- *
- * A backend that requires email confirmation cannot return a session, and one
- * that does not should not force a second round trip. Modelling that as a union
- * rather than `SessionSnapshot | null` means a caller cannot read the happy
- * path and forget the other: there is no field to leave unchecked.
- */
 /** Which factor a challenge is being satisfied with. */
 export type MfaMethod = 'totp' | 'recovery_code';
 
@@ -57,6 +49,27 @@ export interface MfaEnrolmentStart {
 	secret: string;
 	/** `otpauth://totp/...`, for an authenticator to scan or open. */
 	otpauthUri: string;
+}
+
+/**
+ * What starting an OAuth sign-in produces.
+ *
+ * **`state` is minted by the backend, not here.** Every id in this package is —
+ * `challengeId`, `enrolmentId`, both link tokens — and the party that holds the
+ * client secret is the party that has to verify the nonce anyway. Minting it in
+ * the browser would duplicate a mandatory server-side check and make this the
+ * codebase's first use of Web Crypto for nothing.
+ *
+ * **Nothing secret may be added to this type.** A `codeVerifier` here would be a
+ * secret living in `sessionStorage`, and the package's claim that the browser
+ * never holds OAuth secrets would become false. PKCE belongs entirely to the
+ * backend, which builds the authorize URL.
+ */
+export interface OAuthStart {
+	/** Where to send the browser. The adapter refuses anything not `http(s):`. */
+	authorizeUrl: string;
+	/** The nonce to store now and compare against `?state=` on return. */
+	state: string;
 }
 
 /** What finishing an enrolment produces. */
@@ -70,6 +83,14 @@ export interface MfaEnrolmentResult {
 	recoveryCodes: readonly string[];
 }
 
+/**
+ * What a completed signup produced — and there are two answers, not one.
+ *
+ * A backend that requires email confirmation cannot return a session, and one
+ * that does not should not force a second round trip. Modelling that as a union
+ * rather than `SessionSnapshot | null` means a caller cannot read the happy
+ * path and forget the other: there is no field to leave unchecked.
+ */
 export type SignupOutcome =
 	| { kind: 'session'; session: SessionSnapshot }
 	| { kind: 'verificationRequired'; email: string };
@@ -129,17 +150,6 @@ export interface AuthDependencies extends SessionDependencies {
 	 */
 	requestPasswordReset: (email: string, signal?: AbortSignal) => Promise<void>;
 	/**
-	 * Set a new password using a reset token.
-	 *
-	 * Resolves with a session when the backend signs the account in as part of
-	 * the reset, and `null` when it does not — the password is changed either
-	 * way. The same nullable as `verifyEmail`, and not `signup`'s union, because
-	 * "no session" carries nothing extra here.
-	 *
-	 * Rejects with `token_expired` for a link that is stale, already used, or
-	 * malformed. Not distinguished, for the reason `verifyEmail` documents.
-	 */
-	/**
 	 * Satisfy a second-factor challenge.
 	 *
 	 * Returns a session, not a nullable one: completing the second factor *is*
@@ -179,6 +189,53 @@ export interface AuthDependencies extends SessionDependencies {
 		code: string,
 		signal?: AbortSignal
 	) => Promise<MfaEnrolmentResult>;
+	/**
+	 * Start an OAuth sign-in, getting back somewhere to send the browser.
+	 *
+	 * Mirrors `beginMfaEnrolment`: the backend does the part that needs the
+	 * secret, and hands back only what the browser must carry.
+	 *
+	 * **Takes no `returnTo`.** Where the app wants to land afterwards is
+	 * client-side routing data; the `redirect_uri` is registered with the
+	 * provider and the backend mints `state` without reference to it. Sending it
+	 * would either do nothing or invite the backend to grow an open redirect.
+	 *
+	 * Rejects with an {@link AuthError} — `rate_limited` for a hammered start
+	 * endpoint, `unknown` for a provider the backend does not offer.
+	 */
+	beginOAuth: (provider: string, signal?: AbortSignal) => Promise<OAuthStart>;
+	/**
+	 * Exchange an authorization code for a session.
+	 *
+	 * Returns a session rather than a nullable one, for `verifyMfaChallenge`'s
+	 * reason: completing the callback *is* completing the sign-in.
+	 *
+	 * **`state` is passed so the backend can bind it to the exchange.** The
+	 * client compares it too, but a client-side check is defence in depth and
+	 * never the defence — an attacker who controls the callback URL controls the
+	 * client's copy of both values.
+	 *
+	 * Rejects with `oauth_state_mismatch` when the backend's own check fails,
+	 * `token_expired` for a spent or stale code, and `mfa_required` when the
+	 * account needs a second factor even after the provider vouched for it.
+	 */
+	completeOAuth: (
+		provider: string,
+		code: string,
+		state: string,
+		signal?: AbortSignal
+	) => Promise<SessionSnapshot>;
+	/**
+	 * Set a new password using a reset token.
+	 *
+	 * Resolves with a session when the backend signs the account in as part of
+	 * the reset, and `null` when it does not — the password is changed either
+	 * way. The same nullable as `verifyEmail`, and not `signup`'s union, because
+	 * "no session" carries nothing extra here.
+	 *
+	 * Rejects with `token_expired` for a link that is stale, already used, or
+	 * malformed. Not distinguished, for the reason `verifyEmail` documents.
+	 */
 	resetPassword: (
 		token: string,
 		password: string,
@@ -210,6 +267,8 @@ export interface AuthErrorBody {
 				email?: string | undefined;
 				/** For `account_locked`, ISO 8601. */
 				locked_until?: string | undefined;
+				/** For `oauth_denied`, when the backend saw which provider refused. */
+				provider?: string | undefined;
 				/** For `rate_limited`. The `Retry-After` header wins when both exist. */
 				retry_after_seconds?: number | undefined;
 		  }

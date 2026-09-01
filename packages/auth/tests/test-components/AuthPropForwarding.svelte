@@ -11,6 +11,8 @@
 	import MfaChallengeForm from '../../src/lib/components/MfaChallengeForm.svelte';
 	import MfaEnrolment from '../../src/lib/components/MfaEnrolment.svelte';
 	import OneTimeCodeInput from '../../src/lib/components/OneTimeCodeInput.svelte';
+	import OAuthSignIn from '../../src/lib/components/OAuthSignIn.svelte';
+	import OAuthCallback from '../../src/lib/components/OAuthCallback.svelte';
 	import type {
 		MfaChallengeAction,
 		MfaChallengeState
@@ -34,6 +36,15 @@
 	} from '../../src/lib/flows/email-verification/types.js';
 	import type { SignupAction, SignupState } from '../../src/lib/flows/signup/types.js';
 	import type { AuthError } from '../../src/lib/errors/types.js';
+	import type {
+		OAuthStartAction,
+		OAuthStartState
+	} from '../../src/lib/flows/oauth-start/types.js';
+	import type {
+		OAuthCallbackAction,
+		OAuthCallbackParams,
+		OAuthCallbackState
+	} from '../../src/lib/flows/oauth-callback/types.js';
 	import type { LoginAction, LoginState } from '../../src/lib/flows/login/types.js';
 	import type { SessionAction, SessionState } from '../../src/lib/session/types.js';
 	import type { Snippet } from 'svelte';
@@ -119,6 +130,16 @@
 		qr,
 		onDone,
 		enrolmentClass,
+		startFlowStore,
+		providers,
+		returnTo,
+		icon,
+		signInClass,
+		callbackFlowStore,
+		params,
+		onCallbackSuccess,
+		completed,
+		callbackClass,
 		codeId,
 		codeValue,
 		codeOninput,
@@ -246,6 +267,29 @@
 		qr?: Snippet<[{ otpauthUri: string; secret: string }]>;
 		onDone?: () => void;
 		enrolmentClass?: string;
+
+		// OAuthSignIn.
+		startFlowStore: {
+			readonly state: OAuthStartState;
+			dispatch(action: OAuthStartAction): void;
+		};
+		providers: readonly { id: string; label: string }[];
+		returnTo?: string | null;
+		icon?: Snippet<[{ provider: { id: string; label: string } }]>;
+		signInClass?: string;
+
+		// OAuthCallback. `onCallbackSuccess` is required, so it is typed
+		// non-optional: there is nothing to prove about a value that cannot be
+		// `undefined`. `onStartOver` is shared with `MfaChallengeForm` above —
+		// same type, same requiredness.
+		callbackFlowStore: {
+			readonly state: OAuthCallbackState;
+			dispatch(action: OAuthCallbackAction): void;
+		};
+		params?: OAuthCallbackParams | null;
+		onCallbackSuccess: (result: { returnTo: string | null }) => void;
+		completed?: Snippet<[{ returnTo: string | null }]>;
+		callbackClass?: string;
 
 		// OneTimeCodeInput.
 		codeId: string;
@@ -379,4 +423,25 @@
 	{placeholder}
 	{disabled}
 	class={inputClass}
+/>
+<OAuthSignIn
+	flowStore={startFlowStore}
+	{providers}
+	{returnTo}
+	{icon}
+	{header}
+	{headingLevel}
+	class={signInClass}
+/>
+<OAuthCallback
+	flowStore={callbackFlowStore}
+	{sessionStore}
+	{params}
+	onSuccess={onCallbackSuccess}
+	{onStartOver}
+	{onMfaRequired}
+	{headingLevel}
+	{completed}
+	{footer}
+	class={callbackClass}
 />

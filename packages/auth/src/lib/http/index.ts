@@ -24,6 +24,7 @@ import type {
 	MfaEnrolmentResult,
 	MfaEnrolmentStart,
 	MfaMethod,
+	OAuthStart,
 	SignupCredentials,
 	SignupOutcome
 } from '../deps.js';
@@ -204,6 +205,49 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			return decodeEnrolmentStart(response);
 		},
 
+		async beginOAuth(provider: string, signal?: AbortSignal): Promise<OAuthStart> {
+			const response = await fetch(url('/auth/oauth/begin'), {
+				method: 'POST',
+				credentials: 'include',
+				headers: { 'content-type': 'application/json' },
+				// In the body, like every other endpoint here. Never interpolated
+				// into the path: a provider name is caller-supplied, and a path is
+				// the one place this adapter would have to escape it.
+				body: JSON.stringify({ provider }),
+				...(signal !== undefined && { signal })
+			});
+
+			if (!response.ok) {
+				throw await authErrorFromResponse(response, 'Could not start that sign-in.');
+			}
+
+			return decodeOAuthStart(response);
+		},
+
+		async completeOAuth(
+			provider: string,
+			code: string,
+			state: string,
+			signal?: AbortSignal
+		): Promise<SessionSnapshot> {
+			const response = await fetch(url('/auth/oauth/complete'), {
+				method: 'POST',
+				credentials: 'include',
+				headers: { 'content-type': 'application/json' },
+				// `state` is sent so the backend can bind it to the exchange. The
+				// client checked it too, but only the backend's check counts —
+				// whoever controls the callback URL controls the client's copy.
+				body: JSON.stringify({ provider, code, state }),
+				...(signal !== undefined && { signal })
+			});
+
+			if (!response.ok) {
+				throw await authErrorFromResponse(response, 'Could not finish that sign-in.');
+			}
+
+			return decodeSessionSnapshot(response);
+		},
+
 		async confirmMfaEnrolment(
 			enrolmentId: string,
 			code: string,
@@ -254,6 +298,44 @@ export { authErrorFromResponse } from './errors.js';
  * unusable; a URI with no secret leaves manual entry impossible. Half of this
  * is not a usable enrolment.
  */
+/**
+ * The authorize URL and nonce, validated.
+ *
+ * The protocol check is the one that matters and it does not belong further
+ * down. This is the only value in the package that gets handed to
+ * `location.assign`, so a compromised or merely misconfigured backend returning
+ * `javascript:…` would be executing script in the app's origin by way of a
+ * navigation. `decodeEnrolmentStart` refuses to guess for the same reason;
+ * `createBrowserRedirect` checks again, because a hand-written adapter is not
+ * obliged to come through here.
+ */
+async function decodeOAuthStart(response: Response): Promise<OAuthStart> {
+	const payload = await readJson(response);
+
+	const authorizeUrl = payload['authorize_url'];
+	const state = payload['state'];
+
+	if (typeof authorizeUrl !== 'string' || typeof state !== 'string' || state === '') {
+		throw new MalformedSessionError(
+			'oauth start must carry authorize_url and a non-empty state as strings'
+		);
+	}
+
+	let parsed: URL;
+	try {
+		parsed = new URL(authorizeUrl);
+	} catch {
+		throw new MalformedSessionError('oauth start authorize_url is not a URL');
+	}
+	if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+		throw new MalformedSessionError(
+			`oauth start authorize_url must be http(s), not ${parsed.protocol}`
+		);
+	}
+
+	return { authorizeUrl, state };
+}
+
 async function decodeEnrolmentStart(response: Response): Promise<MfaEnrolmentStart> {
 	const payload = await readJson(response);
 

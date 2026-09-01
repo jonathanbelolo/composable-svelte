@@ -133,3 +133,41 @@ export type {
 	MfaEnrolmentStatus,
 	MfaEnrolmentDependencies
 } from './mfa-enrolment/index.js';
+
+export {
+	createPendingOAuthStorage,
+	createMemoryPendingOAuthStorage,
+	normaliseReturnTo
+} from './oauth-pending.js';
+
+export type { OAuthProvider, PendingOAuth, PendingOAuthStorage } from './oauth-pending.js';
+
+export {
+	oauthStartReducer,
+	createInitialOAuthStartState,
+	createOAuthStartStore,
+	createBrowserRedirect
+} from './oauth-start/index.js';
+
+export type {
+	Redirect,
+	OAuthStartState,
+	OAuthStartAction,
+	OAuthStartStatus,
+	OAuthStartDependencies
+} from './oauth-start/index.js';
+
+export {
+	oauthCallbackReducer,
+	createInitialOAuthCallbackState,
+	createOAuthCallbackStore,
+	oauthParamsFromUrl
+} from './oauth-callback/index.js';
+
+export type {
+	OAuthCallbackState,
+	OAuthCallbackAction,
+	OAuthCallbackStatus,
+	OAuthCallbackParams,
+	OAuthCallbackDependencies
+} from './oauth-callback/index.js';

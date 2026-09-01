@@ -347,13 +347,19 @@ every other package is roughly proportional.
 ### G5. `auth` is not what its name implies — **CLOSED**
 
 `README.md:3-5` scopes it precisely: "Client half of the identity substrate for
-Composable Svelte apps backed by generated Composable Rust backends", with
-seeded-user passwordless login. There is no password login, OAuth, signup or
-token refresh, and none is claimed. The gap is that a consumer installing
-`@composable-svelte/auth` from a registry listing will expect general-purpose
-auth. Closed with a first-line disclaimer naming what is absent — password login,
-OAuth, signup, token refresh — and saying plainly that the package name is
-broader than the package.
+Composable Svelte apps backed by generated Composable Rust backends". The gap is
+that a consumer installing `@composable-svelte/auth` from a registry listing will
+expect general-purpose auth. Closed with a first-line disclaimer naming what is
+absent, and saying plainly that the package name is broader than the package.
+
+**The closure text above was itself stale and has been corrected.** It read
+"There is no password login, OAuth, signup or token refresh, and none is
+claimed", which was true when written and false by the time anyone read it:
+password sign-in, signup, email verification, password recovery, MFA and OAuth
+have all since shipped. Only token refresh, account linking and MFA management
+remain absent. A resolution that names a moving list dates faster than the entry
+it closes — the same failure class as G6 below, where a sweep scoped to package
+READMEs left the documents above them behind.
 
 ### G6. Root-level docs still carry counts the package READMEs dropped — **CLOSED**
 

@@ -40,6 +40,8 @@ export {
 	type AccountLockedError,
 	type RateLimitedError,
 	type TokenExpiredError,
+	type OAuthDeniedError,
+	type OAuthStateMismatchError,
 	type NetworkError,
 	type UnknownAuthError
 } from './errors/index.js';
@@ -152,6 +154,36 @@ export {
 	type ResendStatus
 } from './flows/index.js';
 
+export {
+	createPendingOAuthStorage,
+	createMemoryPendingOAuthStorage,
+	normaliseReturnTo,
+	createBrowserRedirect,
+	oauthStartReducer,
+	createInitialOAuthStartState,
+	createOAuthStartStore,
+	oauthCallbackReducer,
+	createInitialOAuthCallbackState,
+	createOAuthCallbackStore,
+	oauthParamsFromUrl
+} from './flows/index.js';
+
+export type {
+	OAuthProvider,
+	PendingOAuth,
+	PendingOAuthStorage,
+	Redirect,
+	OAuthStartState,
+	OAuthStartAction,
+	OAuthStartStatus,
+	OAuthStartDependencies,
+	OAuthCallbackState,
+	OAuthCallbackAction,
+	OAuthCallbackStatus,
+	OAuthCallbackParams,
+	OAuthCallbackDependencies
+} from './flows/index.js';
+
 // Dependencies — the injected auth I/O every flow runs over
 export type {
 	AuthDependencies,
@@ -161,6 +193,7 @@ export type {
 	MfaMethod,
 	MfaEnrolmentStart,
 	MfaEnrolmentResult,
+	OAuthStart,
 	AuthErrorBody
 } from './deps.js';
 
@@ -179,6 +212,8 @@ export {
 	MfaChallengeForm,
 	MfaEnrolment,
 	OneTimeCodeInput,
+	OAuthSignIn,
+	OAuthCallback,
 	PasswordInput,
 	PasswordCriteria
 } from './components/index.js';

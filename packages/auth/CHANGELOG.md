@@ -4,6 +4,13 @@
 
 ### Changed
 
+- **BREAKING: `AuthDependencies` gains `beginOAuth` and `completeOAuth`.** A
+  hand-written adapter must add both. They are required rather than optional,
+  because all eleven existing members are, and making them optional would push a
+  null check into the flows. Consumers on `@composable-svelte/auth/flows` are
+  unaffected: each flow's dependency interface names only the calls it makes, so
+  an app that does not use OAuth never constructs the members.
+
 - **BREAKING: `SessionState.error` is `AuthError | null`, not `string | null`.**
   `sessionResolveFailed`, `loginFailed` and `loggedOut` carry the same, and
   `AuthGuard`'s `fallback` snippet now receives the structured error.
@@ -259,6 +266,81 @@
   `PasswordCriteria`, a component about passwords in general, was reaching into
   `flows/signup/schema.ts`.
 
+- **OAuth** — `oauthStartReducer` / `OAuthSignIn`, `oauthCallbackReducer` /
+  `OAuthCallback`, and the pending-record storage they share.
+
+  **`sessionEstablished` finally has its fourth caller.** Its doc comment has
+  named "an OAuth callback" since the action was created, its reducer case
+  repeats the list, and `tests/session-established.test.ts` has an arm labelled
+  *"The OAuth-callback shape"* — a handover designed for, commented, and tested
+  against, with nothing on the other end of it. The same dangling-promise
+  species as `challengeId`, which the MFA round closed.
+
+  **Two flows, not one, because the two halves run in different page loads.** A
+  full-page redirect destroys the store, so `oauth-start` and `oauth-callback`
+  can never share one. A merged reducer would have been two state machines with
+  no action connecting them.
+
+  **The backend mints `state` and builds the authorize URL**, mirroring
+  `beginMfaEnrolment`. Every id in this package is server-minted, and the party
+  holding the client secret has to verify the nonce anyway — so there is **no
+  PKCE crypto in the browser**. No `getRandomValues`, no `crypto.subtle`, no
+  base64url encoder; writing them would have been the codebase's first Web
+  Crypto use, to duplicate a mandatory server-side check. `OAuthStart` carries
+  `authorizeUrl` and `state` and must never carry a `codeVerifier`: that would
+  be a secret in `sessionStorage`, and this package's claim that the browser
+  never holds OAuth secrets would stop being true.
+
+  **The client-side `state` check is defence in depth, never the defence.** The
+  backend binds `state` to the exchange. But the client gate does gate — a
+  mismatch never reaches `completeOAuth` — rather than reporting after the fact.
+
+  **`pendingOAuth` and `redirect` are deliberately not on `AuthDependencies`.**
+  That interface is documented as the auth I/O whose every member reports
+  failure by rejecting with an `AuthError`; storage and browser navigation are
+  neither, and widening it to fit them would weaken a promise eleven other
+  members keep. They live on `OAuthStartDependencies`.
+
+  **The redirect is the only full-page navigation in the repository.** Nothing
+  else anywhere calls `location.assign`, `location.href =` or `window.open`, and
+  core's routing is `history.pushState`, which cannot cross an origin at all.
+  It is injected so a `TestStore` can assert where the user was sent and a demo
+  can show the URL instead of following it.
+
+  **Two new `AuthError` arms**, `oauth_denied` and `oauth_state_mismatch`. The
+  MFA round argued against widening the union because the recoveries were
+  identical; here they differ. `oauth_denied` is the user pressing Cancel — a
+  branch rendered as `role="status"`, never a red alert, the `mfa_required`
+  lesson applied. `oauth_state_mismatch` carries **nothing but a message**: no
+  nonce, and no hint of which of its three routes produced it, because naming
+  that tells an attacker whether a sign-in was in progress. Reusing
+  `token_expired` was considered and rejected — it is a backend verdict about a
+  link, and surfaces branch on it to offer "send another".
+
+  Security decisions worth naming, because each is invisible once it works:
+  `returnTo` never crosses the wire and is normalised to a same-origin path, so
+  a consumer reading it from their own query string cannot carry an open
+  redirect through the flow; `?error=` is echoed only if it matches
+  `/^[a-z_]{1,64}$/` and `error_description` is never rendered, because a banner
+  in the app's own chrome showing attacker prose is a phishing surface;
+  `authorize_url` is refused unless it is `http(s):`, in both the adapter and
+  the redirect, because that value is handed to `location.assign`; and the
+  provider used in the exchange comes from the stored record, never from the
+  URL.
+
+  `sessionStorage` rather than `localStorage`, and the strongest argument is
+  correctness rather than secrecy: `localStorage` is shared between tabs, so a
+  second tab starting a sign-in would clobber the first tab's nonce and the
+  first tab's *legitimate* callback would then fail. Popups and `target=_blank`
+  are unsupported for the mirror-image reason, which is why `OAuthSignIn`
+  renders `<button>` and never `<a href>`.
+
+  **No provider logos ship.** The `qr` precedent, plus a second reason specific
+  to this: Google, GitHub, Apple and Microsoft each publish brand guidelines
+  governing the mark, its clear space and the button wording, and vendoring them
+  into an MIT package would make every consumer's trademark compliance this
+  library's problem. An `icon` snippet takes whatever they already have.
+
 - **MFA** — `mfaChallengeReducer` / `MfaChallengeForm`, `mfaEnrolmentReducer` /
   `MfaEnrolment`, and `OneTimeCodeInput`.
 
@@ -313,8 +395,8 @@
 
 ### Still missing
 
-OAuth, token refresh, and MFA *management* — disabling it or regenerating
-recovery codes, which belong on an account-settings surface this package does
+Token refresh, account linking, and MFA *management* — disabling it or
+regenerating recovery codes, which belong on an account-settings surface this package does
 not have. The
 `AuthError` union names the failures those flows produce because the wire
 contract needs them — a code appearing there is not a promise that the flow
