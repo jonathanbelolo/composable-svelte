@@ -37,6 +37,21 @@ thin guard components.
   is a courtesy, not a security boundary — enforcement is the backend's
   authorization gates, which re-check every request against the session.
 
+## Installation
+
+```bash
+npm install @composable-svelte/auth
+# or
+pnpm add @composable-svelte/auth
+```
+
+`@composable-svelte/core` and `svelte` are peer dependencies. The components are
+styled with scoped CSS over core's theme tokens, so they follow a consumer's
+theme when core's stylesheet is loaded and fall back to sane defaults when it is
+not — no Tailwind wiring needed for this package specifically. See the
+["Styling & Theming"](../core/README.md#styling--theming) section of core's
+README for the wider setup.
+
 ## Usage
 
 ```typescript
@@ -220,3 +235,29 @@ what an HTML proxy error page or an SPA index fallback looks like.
   server-side TTL; the client receives no expiry event, so an
   `authenticated` store can be stale. The consumer's hook is a 401 from any
   domain API call — dispatch `resolveSession` to re-sync.
+
+## Examples
+
+Every flow in this package has a working demo in the styleguide, each driving a
+real reducer over `createMockAuthDeps` so no backend is needed:
+
+```bash
+cd examples/styleguide
+pnpm install
+pnpm dev
+```
+
+Then open **Login Form**, **Signup Form**, **Email Verification**, **Password
+Recovery**, **Multi-Factor Auth**, **OAuth Sign-In** or **Magic Link** — all
+under *Form Components - Advanced*.
+
+## Related Packages
+
+- [`@composable-svelte/core`](../core) - Core Composable Architecture, and the
+  form system these flows are built on
+
+## Resources
+
+- [Architecture & tutorial guide](../../guides/README.md)
+- [CHANGELOG](./CHANGELOG.md)
+- [Contributing](../../CLAUDE.md)

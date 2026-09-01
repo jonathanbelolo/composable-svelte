@@ -283,8 +283,8 @@ const unsubscribe = storage.subscribe((event) => {
 ### More Information
 
 For comprehensive documentation on Storage dependencies, see:
-- [packages/core/src/dependencies/README.md](/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/dependencies/README.md) - Complete API reference, examples, and patterns
-- [SECURITY.md](/Users/jonathanbelolo/dev/claude/code/composable-svelte/SECURITY.md) - Security guidelines for storage
+- [Storage README](../../src/lib/dependencies/README.md) - Complete API reference, examples, and patterns
+- [Security guidelines](../../src/lib/dependencies/SECURITY.md) - Security guidelines for storage
 
 ## API Client
 
@@ -621,7 +621,7 @@ function logout() {
 ### More Information
 
 For comprehensive security guidelines, see:
-- [SECURITY.md](/Users/jonathanbelolo/dev/claude/code/composable-svelte/SECURITY.md) - Complete security guide
+- [Security guidelines](../../src/lib/dependencies/SECURITY.md) - Complete security guide
 
 ## Best Practices
 
@@ -885,6 +885,6 @@ case 'init':
 For more information, see:
 - [API Client Documentation](./api-client.md)
 - [WebSocket Documentation](./websocket.md)
-- [Storage README](../../../src/dependencies/README.md)
-- [Security Guidelines](../../../SECURITY.md)
+- [Storage README](../../src/lib/dependencies/README.md)
+- [Security guidelines](../../src/lib/dependencies/SECURITY.md)
 - [Testing Guide](../testing/unit-testing.md)

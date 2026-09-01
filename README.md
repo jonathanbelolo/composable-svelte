@@ -2,8 +2,9 @@
 
 A **Composable Architecture** library for Svelte 5, inspired by [The Composable Architecture (TCA)](https://github.com/pointfreeco/swift-composable-architecture) from Swift/iOS.
 
-**Status**: `@composable-svelte/core` is production-ready, with 3,865 tests across
-all packages. **The satellite packages vary, and two of them substantially** —
+**Status**: `@composable-svelte/core` is production-ready, and every package is
+covered by tests — the current count is in Project Status below, measured rather
+than carried forward. **The satellite packages vary, and two of them substantially** —
 see the table below before you depend on one.
 
 ## Packages, and how finished each is
@@ -17,7 +18,7 @@ see the table below before you depend on one.
 | **charts** | feature-complete for 5 chart types | scatter, line, bar, area, histogram. Heatmap, network graph and hierarchy layouts are deferred |
 | **graphics** | usable | WebGL overlay and a Babylon adapter. `engine: 'webgpu'` is accepted and **runs WebGL** — real WebGPU is not implemented |
 | **maps** | **in development** | 3D buildings, marker clustering, geocoding/search, drawing tools and routing are all unbuilt |
-| **auth** | **narrow by design** | password sign-in, signup, email verification, password recovery, MFA, OAuth and magic links all exist. No token refresh, no account linking, no MFA management (disabling it, regenerating recovery codes) — those need an account-settings surface that does not exist. It speaks to one backend shape |
+| **auth** | usable, broad | seven sign-in flows, sessions and guards. No token refresh, no account linking, and no MFA management (disabling it, regenerating recovery codes) — those need an account-settings surface that does not exist. It speaks to one backend shape |
 
 Accessibility: `svelte-check --fail-on-warnings` is clean across all 19
 workspaces, and `charts` has a keyboard cursor, a data-table fallback and an AA
@@ -34,6 +35,7 @@ review. No independent WCAG 2.1 AA audit has been done on the other packages.
 - ✅ **Complete Backend**: API client, WebSocket, Storage, Clock dependencies
 - ✅ **Component library**: shadcn-svelte integration with reducer-driven patterns — browse the full set in [the styleguide](examples/styleguide)
 - ✅ **URL Routing**: Browser history sync with pattern matching
+- ✅ **Auth**: Sessions plus password sign-in, signup, email verification, password recovery, MFA, OAuth and magic links — headless flows and styled components, over injected dependencies. See [`@composable-svelte/auth`](./packages/auth/README.md)
 
 ## Quick Start
 
@@ -374,7 +376,7 @@ const timestamp = deps.clock.now();
 
 Explore working examples in the `examples/` directory:
 
-- **[Styleguide](./examples/styleguide)**: Component showcase — browse the full set there
+- **[Styleguide](./examples/styleguide)**: Component showcase — browse the full set there, including seven working auth flows (sign-in, signup, email verification, password recovery, MFA, OAuth, magic link)
 - **[Product Gallery](./examples/product-gallery)**: Full-featured product browsing app
 - **[URL Routing](./examples/url-routing)**: Browser history integration examples
 
@@ -387,8 +389,10 @@ pnpm dev
 
 ## Documentation
 
-- **[API Documentation](./packages/core/src/dependencies/README.md)**: Dependencies module
-- **[Security Guide](./packages/core/src/dependencies/SECURITY.md)**: Storage security best practices
+- **[API Documentation](./packages/core/src/lib/dependencies/README.md)**: Dependencies module
+- **[Security Guide](./packages/core/src/lib/dependencies/SECURITY.md)**: Storage security best practices
+- **[Auth](./packages/auth/README.md)**: Sessions, the seven sign-in flows, and the backend contract
+- **[Architecture & tutorial guide](./guides/README.md)**: Every package, and a feature built from scratch
 - **[CLAUDE.md](./CLAUDE.md)**: Full project documentation for contributors
 
 ## Architecture
@@ -440,7 +444,10 @@ pnpm dev
 - ✅ Phase 7: URL Routing
 - ✅ Phase 8: Backend Integration (API, WebSocket, Dependencies)
 
-**Test Coverage**: 3,852 tests — 3,746 across the packages, 106 in the examples.
+**Test Coverage**: 4,271 tests, all passing — measured by running `pnpm test`
+on 2026-09-01, not carried over from a previous edit. Two figures used to live
+in this file and they disagreed with each other; a count is the one claim here
+that changes on every commit, so it is stated once and dated.
 Run with `pnpm test`; it serialises the workspaces, because most of them drive a
 real browser and running four at once produces failures about scheduling rather
 than about code.

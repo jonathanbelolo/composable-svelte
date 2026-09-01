@@ -67,6 +67,20 @@ import { hydrateStore } from '@composable-svelte/core/ssr';
 import { syncBrowserHistory } from '@composable-svelte/core/routing';
 ```
 
+### `@composable-svelte/auth`
+
+Sessions and the flows that establish them, over a dependency surface any backend can satisfy.
+
+- **Flows**: password sign-in, signup, email verification, password recovery, MFA (challenge and enrolment), OAuth (redirect and callback), magic links (request and sign-in) — each a headless reducer usable without the components
+- **Components**: `LoginForm`, `SignupForm`, `EmailVerification`, `ForgotPasswordForm`, `ResetPasswordForm`, `MfaChallengeForm`, `MfaEnrolment`, `OAuthSignIn`, `OAuthCallback`, `MagicLinkRequestForm`, `MagicLinkSignIn`, plus `AuthGuard` / `RoleGate` for UX gating
+- **State**: `sessionReducer` owns "who am I"; every flow hands its result over with one action, `sessionEstablished`
+- **Errors**: `AuthError`, a discriminated union a surface branches on — `mfa_required` is the login flow branching, not a failure
+- **Built on**: zod, and `@composable-svelte/core`'s form system. No other runtime dependency
+
+```typescript
+import { LoginForm, createLoginStore, createHttpAuthDeps } from '@composable-svelte/auth';
+```
+
 ### `@composable-svelte/chat`
 
 Transport-agnostic streaming chat for LLM interactions and real-time collaboration.
@@ -521,7 +535,7 @@ type PresentationStatus = 'idle' | 'presenting' | 'presented' | 'dismissing';
 | `examples/ssr-server` | SSR + SSG with multi-locale i18n |
 | `examples/file-browser` | Tree view, keyboard navigation |
 | `examples/shader-gallery` | WebGL + graphics package integration |
-| `examples/styleguide` | All 70+ UI components showcased |
+| `examples/styleguide` | Every UI component, and the auth flows, showcased |
 | `examples/registration-form` | Form validation patterns |
 
 ---
@@ -532,10 +546,10 @@ type PresentationStatus = 'idle' | 'presenting' | 'presented' | 'dismissing';
 # Install dependencies
 pnpm install
 
-# Run tests (root — jsdom, 1670+ tests)
+# Run tests (every workspace, serially — the suites drive real browsers)
 pnpm test
 
-# Run tests (core package — Playwright browser, 1670+ tests)
+# Run tests (core package only — Playwright browser)
 cd packages/core && pnpm test
 
 # Build core package
@@ -558,6 +572,7 @@ cd examples/counter && pnpm dev
 | [NAVIGATION-GUIDE.md](./NAVIGATION-GUIDE.md) | Tree/stack navigation, all 8 components, store scoping |
 | [forms-guide.md](./forms-guide.md) | Form system, Zod validation, standalone vs integrated mode |
 | [navigation-best-practices.md](./navigation-best-practices.md) | Patterns, pitfalls, dismiss vs observation, testing |
+| [VERIFICATION-PROTOCOL.md](./VERIFICATION-PROTOCOL.md) | How a change is checked before it is believed — mutation-verify every fix |
 
 Specs (original design documents): `specs/frontend/`
 Phase plans and completion summaries: `plans/`

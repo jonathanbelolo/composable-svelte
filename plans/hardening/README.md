@@ -298,6 +298,16 @@ documentation could keep it.
   initialisation — a feature nobody built. Recorded here because
   `adapters/babylon-adapter.ts:90` points at this file for it.
 - **`maps` is mid-phase** — its README says Phase 12C in progress.
+- **19 dead links in `packages/core/docs/` and the example READMEs.** Measured
+  and registered in `packages/core/tests/repo/front-door.test.ts`'s `DEAD_LINKS`,
+  which fails on any *new* one and deletes an entry the moment its link resolves
+  again. Most point at files that were never written — there is no root
+  `LICENSE` or `CONTRIBUTING.md`, and no `docs/testing/unit-testing.md` — so
+  closing them means authoring content in core's documentation tree, not editing
+  links. Three worse ones *were* fixed in the same change: two dead links in the
+  root README's own further-reading section, and three markdown links in
+  `packages/core/docs/backend/dependencies.md` that were hardcoded absolute
+  paths into one developer's home directory, shipped in a published package.
 - **A pasted email address with surrounding whitespace is refused, not
   cleaned.** `z.string().email()` rejects `"  ada@example.com  "`, so the form
   never submits and the user sees "Enter a valid email address" for an address

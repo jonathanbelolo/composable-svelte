@@ -346,20 +346,23 @@ every other package is roughly proportional.
 
 ### G5. `auth` is not what its name implies — **CLOSED**
 
-`README.md:3-5` scopes it precisely: "Client half of the identity substrate for
-Composable Svelte apps backed by generated Composable Rust backends". The gap is
-that a consumer installing `@composable-svelte/auth` from a registry listing will
-expect general-purpose auth. Closed with a first-line disclaimer naming what is
-absent, and saying plainly that the package name is broader than the package.
+A consumer installing `@composable-svelte/auth` from a registry listing expects
+general-purpose auth. Closed with a first-line disclaimer in
+`packages/auth/README.md` naming what is absent and saying plainly that the
+package name is broader than the package.
 
-**The closure text above was itself stale and has been corrected.** It read
-"There is no password login, OAuth, signup or token refresh, and none is
-claimed", which was true when written and false by the time anyone read it:
-password sign-in, signup, email verification, password recovery, MFA and OAuth
-have all since shipped. Only token refresh, account linking and MFA management
-remain absent. A resolution that names a moving list dates faster than the entry
-it closes — the same failure class as G6 below, where a sweep scoped to package
-READMEs left the documents above them behind.
+**This entry deliberately does not repeat that list, and the reason is its own
+history.** It was closed on an enumeration, which went stale; the enumeration was
+corrected during the OAuth work, and the correction was stale again one feature
+later — it omitted magic links within days of being written. Twice is a pattern,
+and the entry had already diagnosed it in its own text: *a resolution that names
+a moving list dates faster than the entry it closes.* Continuing to restate the
+list here would be the third go at the same mistake.
+
+So the list lives in exactly one place a reader is sent to,
+`packages/auth/README.md`, and `packages/core/tests/repo/front-door.test.ts` now
+fails when any live document denies a capability whose flow directory exists.
+That guard is what makes this closable rather than merely closed.
 
 ### G6. Root-level docs still carry counts the package READMEs dropped — **CLOSED**
 

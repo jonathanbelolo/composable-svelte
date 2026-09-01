@@ -59,7 +59,8 @@ export default defineConfig({
       'tests/repo/guard-integrity.test.ts',
       'tests/repo/intentionally-unused.test.ts',
       'tests/repo/doc-typecheck.test.ts',
-      'tests/repo/demo-headings.test.ts',
+      'tests/repo/front-door.test.ts',
+			'tests/repo/demo-headings.test.ts',
       'tests/repo/flat-barrel.test.ts',
       'tests/repo/skill-examples.test.ts',
       // Needs the Cookie request header, which the browser Request API refuses
