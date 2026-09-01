@@ -298,6 +298,15 @@ documentation could keep it.
   initialisation — a feature nobody built. Recorded here because
   `adapters/babylon-adapter.ts:90` points at this file for it.
 - **`maps` is mid-phase** — its README says Phase 12C in progress.
+- **Core has no in-memory `Storage` for tests.** `createMockClock` and
+  `createMockCookieStorage` exist; the localStorage/sessionStorage pair has no
+  counterpart, and `createNoopStorage` discards writes, so nothing can assert
+  that a value round-tripped. Found while building OAuth, which needed one and
+  wrote its own narrow `createMemoryPendingOAuthStorage` in
+  `packages/auth/src/lib/flows/oauth-pending.ts` rather than widen core's
+  surface mid-feature. Not the same thing as the `createMockStorage`
+  *documentation* error listed under S8, which was a doc naming an API that
+  never existed and is closed.
 
 ## Closed, kept because code points here
 
