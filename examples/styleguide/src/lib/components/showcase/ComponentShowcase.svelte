@@ -33,6 +33,7 @@
   import PasswordRecoveryDemo from '../demos/PasswordRecoveryDemo.svelte';
   import MfaDemo from '../demos/MfaDemo.svelte';
   import OAuthDemo from '../demos/OAuthDemo.svelte';
+  import MagicLinkDemo from '../demos/MagicLinkDemo.svelte';
   // Foundational Components
   import CardDemo from '../demos/CardDemo.svelte';
   import SeparatorDemo from '../demos/SeparatorDemo.svelte';
@@ -119,6 +120,7 @@
     'password-recovery': PasswordRecoveryDemo,
     'mfa': MfaDemo,
     'oauth': OAuthDemo,
+    'magic-link': MagicLinkDemo,
     // Foundational Components
     'card': CardDemo,
     'separator': SeparatorDemo,

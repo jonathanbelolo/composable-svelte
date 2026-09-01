@@ -155,6 +155,30 @@ export {
 } from './flows/index.js';
 
 export {
+	magicLinkRequestReducer,
+	createInitialMagicLinkRequestState,
+	createMagicLinkRequestStore,
+	magicLinkRequestFormConfig,
+	magicLinkSchema,
+	emptyMagicLinkFields,
+	magicLinkSignInReducer,
+	createInitialMagicLinkSignInState,
+	createMagicLinkSignInStore
+} from './flows/index.js';
+
+export type {
+	MagicLinkFields,
+	MagicLinkRequestState,
+	MagicLinkRequestAction,
+	MagicLinkRequestStatus,
+	MagicLinkRequestDependencies,
+	MagicLinkSignInState,
+	MagicLinkSignInAction,
+	MagicLinkSignInStatus,
+	MagicLinkSignInDependencies
+} from './flows/index.js';
+
+export {
 	createPendingOAuthStorage,
 	createMemoryPendingOAuthStorage,
 	normaliseReturnTo,
@@ -212,6 +236,8 @@ export {
 	MfaChallengeForm,
 	MfaEnrolment,
 	OneTimeCodeInput,
+	MagicLinkRequestForm,
+	MagicLinkSignIn,
 	OAuthSignIn,
 	OAuthCallback,
 	PasswordInput,

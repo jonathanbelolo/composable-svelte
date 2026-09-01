@@ -71,6 +71,7 @@ export const COMPONENT_REGISTRY: ComponentInfo[] = [
   { id: 'password-recovery', name: 'Password Recovery', category: 'Form Components - Advanced', description: 'Asking for a reset link and using one - the first half deliberately tells you nothing about whether the account exists - from @composable-svelte/auth' },
   { id: 'mfa', name: 'Multi-Factor Auth', category: 'Form Components - Advanced', description: 'The second-factor challenge reached from sign-in, and the enrolment that makes it reachable - one code field, no QR dependency - from @composable-svelte/auth' },
   { id: 'oauth', name: 'OAuth Sign-In', category: 'Form Components - Advanced', description: 'The redirect out and the callback back - the nonce stored before leaving, and a mismatch that never reaches the backend - from @composable-svelte/auth' },
+  { id: 'magic-link', name: 'Magic Link', category: 'Form Components - Advanced', description: 'Passwordless email sign-in where the token is spent on a press, not on mount - so a mail scanner following the link cannot kill it - from @composable-svelte/auth' },
 
   // Visual Feedback
   { id: 'toast', name: 'Toast', category: 'Visual Feedback', description: 'Temporary notifications' },

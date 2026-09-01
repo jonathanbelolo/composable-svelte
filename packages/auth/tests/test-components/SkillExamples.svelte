@@ -13,6 +13,7 @@
 	import {
 		AuthGuard,
 		LoginForm,
+		MagicLinkSignIn,
 		OAuthCallback,
 		OAuthSignIn,
 		PasswordInput,
@@ -24,6 +25,10 @@
 		MfaChallengeState
 	} from '../../src/lib/flows/mfa-challenge/types.js';
 	import type { LoginAction, LoginState } from '../../src/lib/flows/login/types.js';
+	import type {
+		MagicLinkSignInAction,
+		MagicLinkSignInState
+	} from '../../src/lib/flows/magic-link-signin/types.js';
 	import type {
 		OAuthStartAction,
 		OAuthStartState
@@ -39,7 +44,8 @@
 		session,
 		challenge,
 		startStore,
-		callbackStore
+		callbackStore,
+		signInStore
 	}: {
 		login: {
 			readonly state: LoginState;
@@ -58,6 +64,10 @@
 		callbackStore: {
 			readonly state: OAuthCallbackState;
 			dispatch(action: OAuthCallbackAction): void;
+		};
+		signInStore: {
+			readonly state: MagicLinkSignInState;
+			dispatch(action: MagicLinkSignInAction): void;
 		};
 	} = $props();
 
@@ -116,4 +126,12 @@
 	params={oauthParamsFromUrl(window.location.href)}
 	onSuccess={({ returnTo }) => history.pushState({}, '', returnTo ?? '/')}
 	onStartOver={() => history.pushState({}, '', '/sign-in')}
+/>
+
+<MagicLinkSignIn
+	flowStore={signInStore}
+	{sessionStore}
+	email="ada@example.com"
+	onSuccess={() => history.pushState({}, '', '/')}
+	onRequestNewLink={() => history.pushState({}, '', '/signin')}
 />

@@ -4,12 +4,13 @@
 
 ### Changed
 
-- **BREAKING: `AuthDependencies` gains `beginOAuth` and `completeOAuth`.** A
-  hand-written adapter must add both. They are required rather than optional,
-  because all eleven existing members are, and making them optional would push a
-  null check into the flows. Consumers on `@composable-svelte/auth/flows` are
+- **BREAKING: `AuthDependencies` gains four members** — `beginOAuth`,
+  `completeOAuth`, `requestMagicLink` and `signInWithMagicLink`. A
+  hand-written adapter must add all four. They are required rather than optional,
+  because every existing member is, and making them optional would push a null
+  check into the flows. Consumers on `@composable-svelte/auth/flows` are
   unaffected: each flow's dependency interface names only the calls it makes, so
-  an app that does not use OAuth never constructs the members.
+  an app that uses neither OAuth nor magic links never constructs them.
 
 - **BREAKING: `SessionState.error` is `AuthError | null`, not `string | null`.**
   `sessionResolveFailed`, `loginFailed` and `loggedOut` carry the same, and
@@ -265,6 +266,52 @@
   re-export exactly as before. The coupling this fixes was already visible:
   `PasswordCriteria`, a component about passwords in general, was reaching into
   `flows/signup/schema.ts`.
+
+- **Magic links** — `magicLinkRequestReducer` / `MagicLinkRequestForm`,
+  `magicLinkSignInReducer` / `MagicLinkSignIn`.
+
+  **The last of the four routes `sessionEstablished` names.** Its doc comment
+  has listed "a credentials login, an MFA challenge, an OAuth callback and a
+  magic link" since the action was written. Three shipped; this is the fourth,
+  and the list is now a description rather than a promise.
+
+  **The token is spent on a press, never on mount**, and that is the whole
+  design rather than a detail. Mail scanners and link prefetchers follow links
+  before a person does. `EmailVerification` auto-consumes and is right to: a
+  scanned verification link still verifies the address, which is what it was
+  for. A scanned *sign-in* link is spent before its owner sees the page, so
+  their link is dead on arrival and the replacement they request is eaten the
+  same way. A scanner issues a GET; it does not press buttons.
+
+  The consequence is a component with less machinery, not more: nothing
+  dispatches from an effect, so there is no mount guard, no "has this token been
+  handed over" flag, and none of the short-circuit-ordering subtleties those
+  have cost this package. The only guard left is against a double press, which
+  would spend a single-use token twice and tell someone a link that just worked
+  is no longer valid.
+
+  **Failure returns to `idle`, unlike the OAuth callback**, which is terminal —
+  and the difference is real rather than stylistic. An OAuth code is spent at
+  the provider before the app hears about it, so nothing can succeed from
+  `idle` there. A `network` failure here may mean the request never arrived and
+  the token is untouched, so pressing again is a genuine recovery.
+  `token_expired` is the one that is not, and the surface branches on it to
+  withdraw the button and offer a new link.
+
+  **No new `AuthError` arms.** A spent or malformed link is `token_expired`,
+  not distinguished for the reason `verifyEmail` documents; a hammered request
+  endpoint is `rate_limited`; and `mfa_required` reaches here too, because
+  proving control of a mailbox is not proving possession of a device.
+
+  The request half is `forgot-password` with a different verb, including its
+  refusal to say whether the address has an account, and its `onSent` is keyed
+  on the attempt rather than the address — the defect `ForgotPasswordForm`
+  shipped, where asking twice for the same inbox produced one callback.
+
+  `MagicLinkSignIn.email` is display-only, and the doc comment says plainly that
+  the consumer owns its provenance: the token is opaque, so the component cannot
+  learn the address from it, and a value read straight out of the URL would be
+  attacker-controlled text rendered in the app's own chrome.
 
 - **OAuth** — `oauthStartReducer` / `OAuthSignIn`, `oauthCallbackReducer` /
   `OAuthCallback`, and the pending-record storage they share.

@@ -6,10 +6,11 @@ thin guard components.
 
 > **Still narrower than its name.** What exists: session resolution,
 > seeded-user passwordless login, **password sign-in**, **signup**, **email
-> verification**, **password recovery**, **MFA** (challenge and enrolment) and
-> **OAuth** (redirect and callback) — headless flows, HTTP adapter and styled
-> components. What does not exist yet: token refresh, account linking, and MFA
-> management — disabling it or regenerating recovery codes, which need an
+> verification**, **password recovery**, **MFA** (challenge and enrolment),
+> **OAuth** (redirect and callback) and **magic links** (request and sign-in) —
+> headless flows, HTTP adapter and styled components. What does not exist yet:
+> token refresh, account linking, and MFA management — disabling it or
+> regenerating recovery codes, which need an
 > account-settings surface this package does not have. The `AuthError`
 > union already names the failures those flows produce (`mfa_required`,
 > `email_unverified`, …) because the backend contract needs them; a code

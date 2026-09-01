@@ -171,3 +171,33 @@ export type {
 	OAuthCallbackParams,
 	OAuthCallbackDependencies
 } from './oauth-callback/index.js';
+
+export {
+	magicLinkRequestReducer,
+	createInitialMagicLinkRequestState,
+	createMagicLinkRequestStore,
+	magicLinkRequestFormConfig,
+	magicLinkSchema,
+	emptyMagicLinkFields
+} from './magic-link-request/index.js';
+
+export type {
+	MagicLinkFields,
+	MagicLinkRequestState,
+	MagicLinkRequestAction,
+	MagicLinkRequestStatus,
+	MagicLinkRequestDependencies
+} from './magic-link-request/index.js';
+
+export {
+	magicLinkSignInReducer,
+	createInitialMagicLinkSignInState,
+	createMagicLinkSignInStore
+} from './magic-link-signin/index.js';
+
+export type {
+	MagicLinkSignInState,
+	MagicLinkSignInAction,
+	MagicLinkSignInStatus,
+	MagicLinkSignInDependencies
+} from './magic-link-signin/index.js';

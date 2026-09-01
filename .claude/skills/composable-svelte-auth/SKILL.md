@@ -17,8 +17,8 @@ password sign-in and **signup** end to end (headless flows, HTTP adapter, styled
 forms), the `AuthError` union, `AuthGuard` / `RoleGate` / `LoginForm` /
 `SignupForm` / `EmailVerification` / `ForgotPasswordForm` /
 `ResetPasswordForm` / `MfaChallengeForm` / `MfaEnrolment` / `PasswordInput` /
-`PasswordCriteria` / `OneTimeCodeInput` / `OAuthSignIn` / `OAuthCallback`, a
-mock dependency set, SSR coverage.
+`PasswordCriteria` / `OneTimeCodeInput` / `OAuthSignIn` / `OAuthCallback` /
+`MagicLinkRequestForm` / `MagicLinkSignIn`, a mock dependency set, SSR coverage.
 
 **What does not exist yet.** Token refresh, account linking, and MFA
 *management* — disabling it, or regenerating recovery codes, which belong on an
@@ -873,6 +873,61 @@ renders as `role="status"` with a way back, never a red alert. Same lesson as
 
 ---
 
+## MAGIC LINKS
+
+Two flows in two page loads, like OAuth. `magic-link-request` is
+`forgot-password` with a different verb; `magic-link-signin` is where the
+interesting decision lives.
+
+**The token is spent on a press, never on mount.** This is the one place the
+package deliberately does *not* copy `EmailVerification`, and the reason is mail
+scanners: corporate security products and link prefetchers follow links before a
+person does. For a verification link that costs little — the address gets
+verified, which is what the link was for. For a *sign-in* link it means the token
+is spent before its owner sees the page, their link is dead on arrival, and the
+replacement they request is eaten the same way. A scanner issues a GET; it does
+not press buttons.
+
+```svelte
+<MagicLinkSignIn
+	flowStore={signInStore}
+	{sessionStore}
+	email="ada@example.com"
+	onSuccess={() => history.pushState({}, '', '/')}
+	onRequestNewLink={() => history.pushState({}, '', '/signin')}
+/>
+```
+
+The pleasant consequence: nothing dispatches from an effect here, so there is no
+mount guard, no "has this token been handed over" flag, and none of the
+short-circuit-ordering subtleties those have cost this package. The guard that
+remains is against a *double press*, which would spend a single-use token twice
+and tell someone a link that just worked is no longer valid.
+
+### Rules
+
+- **`onRequestNewLink` is required**, like `ResetPasswordForm`'s. An expired or
+  spent link cannot be retried from that page, and a branch with nothing to click
+  is a dead end.
+- **Failure returns to `idle`, unlike the OAuth callback**, which is terminal. An
+  OAuth code is spent at the provider before the app hears about it; a `network`
+  failure here may mean the request never arrived, so the token is untouched and
+  pressing again is a real recovery. Only `token_expired` withdraws the button.
+- **`email` is display-only and the consumer owns its provenance.** The token is
+  opaque, so the component cannot learn the address from it. Do not pass a value
+  read straight out of the URL — that is attacker-controlled text rendered in the
+  app's own chrome.
+- **The request half says "if that address has an account"** and must keep saying
+  it. `requestMagicLink` resolves for any address, the same rule
+  `requestPasswordReset` follows, and a surface that confirmed an account exists
+  would turn the flow into an account checker.
+- **No new `AuthError` arms.** A spent or malformed link is `token_expired`, not
+  distinguished for the reason `verifyEmail` documents; a hammered request
+  endpoint is `rate_limited`; and `mfa_required` reaches here too, because
+  proving control of a mailbox is not proving possession of a device.
+
+---
+
 ## DEPENDENCIES AND THE HTTP ADAPTER
 
 Every call is injected. The package is backend-agnostic; the Composable Rust
@@ -895,6 +950,17 @@ const custom: AuthDependencies = {
 		// Two outcomes, deliberately: a backend requiring confirmation cannot
 		// return a session, and one that does not should not force a second trip.
 		return { kind: 'verificationRequired', email: 'ada@example.com' };
+	},
+	async requestMagicLink(email, signal) {
+		void email;
+		void signal;
+		// Resolves for any address — answering differently would be an
+		// account-existence oracle.
+	},
+	async signInWithMagicLink(token, signal) {
+		void token;
+		void signal;
+		return { subject_id: 'u1', display_name: 'Ada', roles: ['member'] } satisfies SessionSnapshot;
 	},
 	async beginOAuth(provider, signal) {
 		void signal;

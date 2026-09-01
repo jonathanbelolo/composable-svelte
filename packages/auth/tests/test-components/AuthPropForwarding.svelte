@@ -11,6 +11,8 @@
 	import MfaChallengeForm from '../../src/lib/components/MfaChallengeForm.svelte';
 	import MfaEnrolment from '../../src/lib/components/MfaEnrolment.svelte';
 	import OneTimeCodeInput from '../../src/lib/components/OneTimeCodeInput.svelte';
+	import MagicLinkRequestForm from '../../src/lib/components/MagicLinkRequestForm.svelte';
+	import MagicLinkSignIn from '../../src/lib/components/MagicLinkSignIn.svelte';
 	import OAuthSignIn from '../../src/lib/components/OAuthSignIn.svelte';
 	import OAuthCallback from '../../src/lib/components/OAuthCallback.svelte';
 	import type {
@@ -36,6 +38,14 @@
 	} from '../../src/lib/flows/email-verification/types.js';
 	import type { SignupAction, SignupState } from '../../src/lib/flows/signup/types.js';
 	import type { AuthError } from '../../src/lib/errors/types.js';
+	import type {
+		MagicLinkRequestAction,
+		MagicLinkRequestState
+	} from '../../src/lib/flows/magic-link-request/types.js';
+	import type {
+		MagicLinkSignInAction,
+		MagicLinkSignInState
+	} from '../../src/lib/flows/magic-link-signin/types.js';
 	import type {
 		OAuthStartAction,
 		OAuthStartState
@@ -130,6 +140,12 @@
 		qr,
 		onDone,
 		enrolmentClass,
+		magicRequestFlowStore,
+		magicRequestClass,
+		magicSignInFlowStore,
+		magicEmail,
+		signedIn,
+		magicSignInClass,
 		startFlowStore,
 		providers,
 		returnTo,
@@ -267,6 +283,25 @@
 		qr?: Snippet<[{ otpauthUri: string; secret: string }]>;
 		onDone?: () => void;
 		enrolmentClass?: string;
+
+		// MagicLinkRequestForm.
+		magicRequestFlowStore: {
+			readonly state: MagicLinkRequestState;
+			dispatch(action: MagicLinkRequestAction): void;
+			subscribe(listener: (state: MagicLinkRequestState) => void): () => void;
+		};
+		magicRequestClass?: string;
+
+		// MagicLinkSignIn. `onRequestNewLink` is shared with `ResetPasswordForm`
+		// above — same type, same requiredness, same reason for being required.
+		// `onSent` is shared with `ForgotPasswordForm`.
+		magicSignInFlowStore: {
+			readonly state: MagicLinkSignInState;
+			dispatch(action: MagicLinkSignInAction): void;
+		};
+		magicEmail?: string | null;
+		signedIn?: Snippet;
+		magicSignInClass?: string;
 
 		// OAuthSignIn.
 		startFlowStore: {
@@ -444,4 +479,27 @@
 	{completed}
 	{footer}
 	class={callbackClass}
+/>
+<MagicLinkRequestForm
+	flowStore={magicRequestFlowStore}
+	{onSent}
+	{header}
+	{footer}
+	{submitLabel}
+	{headingLevel}
+	{emailLabel}
+	class={magicRequestClass}
+/>
+<MagicLinkSignIn
+	flowStore={magicSignInFlowStore}
+	{sessionStore}
+	email={magicEmail}
+	{onSuccess}
+	{onRequestNewLink}
+	{onMfaRequired}
+	{headingLevel}
+	{submitLabel}
+	{signedIn}
+	{footer}
+	class={magicSignInClass}
 />

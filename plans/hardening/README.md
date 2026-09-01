@@ -298,6 +298,16 @@ documentation could keep it.
   initialisation — a feature nobody built. Recorded here because
   `adapters/babylon-adapter.ts:90` points at this file for it.
 - **`maps` is mid-phase** — its README says Phase 12C in progress.
+- **A pasted email address with surrounding whitespace is refused, not
+  cleaned.** `z.string().email()` rejects `"  ada@example.com  "`, so the form
+  never submits and the user sees "Enter a valid email address" for an address
+  that is valid. True of every email field in `auth` — login, signup,
+  forgot-password, email-verification's resend, and magic-link-request — so it
+  is one decision about the shared rule rather than five patches. Found while
+  building magic links, where a `.trim()` in the reducer turned out to be
+  unreachable for exactly this reason;
+  `packages/auth/tests/magic-link-flow.test.ts` pins the current behaviour so
+  the dead trim is not reintroduced.
 - **Core has no in-memory `Storage` for tests.** `createMockClock` and
   `createMockCookieStorage` exist; the localStorage/sessionStorage pair has no
   counterpart, and `createNoopStorage` discards writes, so nothing can assert

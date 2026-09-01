@@ -109,6 +109,8 @@ export interface MockAuthOptions {
 	expiredChallengeIds?: readonly string[] | undefined;
 	/** What `confirmMfaEnrolment` hands back. Shown once, so a demo needs some. */
 	recoveryCodes?: readonly string[] | undefined;
+	/** Sign-in link tokens the fake accepts. Anything else is `token_expired`. */
+	magicLinkTokens?: readonly string[] | undefined;
 	/** Providers the fake offers. Anything else is rejected as `unknown`. */
 	oauthProviders?: readonly string[] | undefined;
 	/**
@@ -172,6 +174,7 @@ export function createMockAuthDeps(options: MockAuthOptions = {}): AuthDependenc
 			'z1k8-3ldp-77ac',
 			'mn5b-6yth-0092'
 		],
+		magicLinkTokens = ['magic_demo'],
 		oauthProviders = ['google', 'github'],
 		oauthAuthorizeUrl = 'https://provider.example/authorize?client_id=demo&response_type=code',
 		oauthState = 'st_demo',
@@ -299,6 +302,28 @@ export function createMockAuthDeps(options: MockAuthOptions = {}): AuthDependenc
 				otpauthUri:
 					'otpauth://totp/Example:ada@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example&algorithm=SHA1&digits=6&period=30'
 			};
+		},
+
+		async requestMagicLink(_email: string, signal?: AbortSignal): Promise<void> {
+			await wait(signal);
+			if (failWith) throw failWith;
+			// Resolves for any address, like the real contract: answering
+			// differently would be an account-existence oracle.
+		},
+
+		async signInWithMagicLink(token: string, signal?: AbortSignal): Promise<SessionSnapshot> {
+			await wait(signal);
+
+			if (failWith) throw failWith;
+
+			if (!magicLinkTokens.includes(token)) {
+				throw {
+					code: 'token_expired',
+					message: 'That sign-in link is no longer valid. Ask for a new one.'
+				} satisfies AuthError;
+			}
+
+			return session;
 		},
 
 		async beginOAuth(provider: string, signal?: AbortSignal): Promise<OAuthStart> {

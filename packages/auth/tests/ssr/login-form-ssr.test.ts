@@ -24,6 +24,8 @@ import ForgotPasswordForm from '../../src/lib/components/ForgotPasswordForm.svel
 import ResetPasswordForm from '../../src/lib/components/ResetPasswordForm.svelte';
 import MfaChallengeForm from '../../src/lib/components/MfaChallengeForm.svelte';
 import MfaEnrolment from '../../src/lib/components/MfaEnrolment.svelte';
+import MagicLinkRequestForm from '../../src/lib/components/MagicLinkRequestForm.svelte';
+import MagicLinkSignIn from '../../src/lib/components/MagicLinkSignIn.svelte';
 import OAuthSignIn from '../../src/lib/components/OAuthSignIn.svelte';
 import OAuthCallback from '../../src/lib/components/OAuthCallback.svelte';
 import { createInitialLoginState, loginReducer } from '../../src/lib/flows/login/reducer.js';
@@ -44,6 +46,12 @@ import {
 	createInitialMfaChallengeState,
 	mfaChallengeReducer
 } from '../../src/lib/flows/mfa-challenge/reducer.js';
+import {
+	createInitialMagicLinkRequestState,
+	magicLinkRequestReducer,
+	createInitialMagicLinkSignInState,
+	magicLinkSignInReducer
+} from '../../src/lib/flows/index.js';
 import {
 	createInitialOAuthStartState,
 	oauthStartReducer,
@@ -519,5 +527,60 @@ describe('OAuth on the server', () => {
 		expect(() => storage.put({ provider: 'github', state: 'st_1', returnTo: null })).toThrow();
 
 		expect(() => createBrowserRedirect()).not.toThrow();
+	});
+});
+
+describe('magic link on the server', () => {
+	const refuse = (what: string) => () => {
+		throw new Error(`the server must not ${what}`);
+	};
+	const noSession = { dispatch: () => {} };
+
+	it('renders the offer without spending the token', () => {
+		// Belt and braces over the component's own design: effects do not run on
+		// the server either, so neither the press nor a mount effect could fire.
+		const flowStore = createStore({
+			initialState: createInitialMagicLinkSignInState('tok_1'),
+			reducer: magicLinkSignInReducer,
+			dependencies: { signInWithMagicLink: refuse('spend a sign-in token') }
+		});
+		const body = render(MagicLinkSignIn, {
+			props: {
+				flowStore,
+				sessionStore: noSession,
+				onRequestNewLink: () => {},
+				headingLevel: 1
+			}
+		}).body;
+
+		expect(body).toContain('<h1');
+		expect(body).toContain('Sign in');
+		expect(body).toContain('Press the button');
+	});
+
+	it('renders the dead-link branch and its way out from state alone', () => {
+		const flowStore = createStore({
+			initialState: createInitialMagicLinkSignInState(null),
+			reducer: magicLinkSignInReducer,
+			dependencies: { signInWithMagicLink: refuse('spend a sign-in token') }
+		});
+		const body = render(MagicLinkSignIn, {
+			props: { flowStore, sessionStore: noSession, onRequestNewLink: () => {} }
+		}).body;
+
+		expect(body).toContain('Nothing to sign in with');
+		expect(body).toContain('Send me a new link');
+	});
+
+	it('renders the request form without asking for a link', () => {
+		const flowStore = createStore({
+			initialState: createInitialMagicLinkRequestState(),
+			reducer: magicLinkRequestReducer,
+			dependencies: { requestMagicLink: refuse('send a link') }
+		});
+		const body = render(MagicLinkRequestForm, { props: { flowStore } }).body;
+
+		expect(body).toContain('type="email"');
+		expect(body).toContain('Email me a link');
 	});
 });

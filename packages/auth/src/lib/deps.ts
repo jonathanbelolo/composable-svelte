@@ -190,6 +190,31 @@ export interface AuthDependencies extends SessionDependencies {
 		signal?: AbortSignal
 	) => Promise<MfaEnrolmentResult>;
 	/**
+	 * Send a sign-in link to an address.
+	 *
+	 * Resolves whether or not the address has an account — the same rule
+	 * `requestPasswordReset` and `resendVerification` follow, and for the same
+	 * reason: a version that rejected for unknown addresses would be an account
+	 * checker with a friendly face.
+	 *
+	 * Rejects with `rate_limited` for a hammered endpoint. Little else can go
+	 * wrong that a caller could act on.
+	 */
+	requestMagicLink: (email: string, signal?: AbortSignal) => Promise<void>;
+	/**
+	 * Exchange a sign-in link's token for a session.
+	 *
+	 * Returns a session, not a nullable one: following a magic link *is* signing
+	 * in. The same reasoning as `verifyMfaChallenge`, and unlike `verifyEmail`,
+	 * where "verified but not signed in" is a real case.
+	 *
+	 * Rejects with `token_expired` for a link that is stale, already used, or
+	 * malformed — not distinguished, for the reason `verifyEmail` documents — and
+	 * with `mfa_required` when the account needs a second factor even after the
+	 * link proved control of the mailbox.
+	 */
+	signInWithMagicLink: (token: string, signal?: AbortSignal) => Promise<SessionSnapshot>;
+	/**
 	 * Start an OAuth sign-in, getting back somewhere to send the browser.
 	 *
 	 * Mirrors `beginMfaEnrolment`: the backend does the part that needs the

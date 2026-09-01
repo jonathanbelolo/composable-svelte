@@ -205,6 +205,39 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			return decodeEnrolmentStart(response);
 		},
 
+		async requestMagicLink(email: string, signal?: AbortSignal): Promise<void> {
+			const response = await fetch(url('/auth/magic-link'), {
+				method: 'POST',
+				credentials: 'include',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ email }),
+				...(signal !== undefined && { signal })
+			});
+
+			if (!response.ok) {
+				throw await authErrorFromResponse(response, 'Could not send that link.');
+			}
+		},
+
+		async signInWithMagicLink(token: string, signal?: AbortSignal): Promise<SessionSnapshot> {
+			const response = await fetch(url('/auth/magic-link/signin'), {
+				method: 'POST',
+				credentials: 'include',
+				headers: { 'content-type': 'application/json' },
+				// POST, and the token in the body rather than the query — which is
+				// the same reason the surface waits for a press. A link that signs
+				// someone in on GET is a link a mail scanner can spend.
+				body: JSON.stringify({ token }),
+				...(signal !== undefined && { signal })
+			});
+
+			if (!response.ok) {
+				throw await authErrorFromResponse(response, 'That sign-in link is no longer valid.');
+			}
+
+			return decodeSessionSnapshot(response);
+		},
+
 		async beginOAuth(provider: string, signal?: AbortSignal): Promise<OAuthStart> {
 			const response = await fetch(url('/auth/oauth/begin'), {
 				method: 'POST',

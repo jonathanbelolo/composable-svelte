@@ -29,5 +29,7 @@ export { default as ResetPasswordForm } from './ResetPasswordForm.svelte';
 export { default as MfaChallengeForm } from './MfaChallengeForm.svelte';
 export { default as MfaEnrolment } from './MfaEnrolment.svelte';
 export { default as OneTimeCodeInput } from './OneTimeCodeInput.svelte';
+export { default as MagicLinkRequestForm } from './MagicLinkRequestForm.svelte';
+export { default as MagicLinkSignIn } from './MagicLinkSignIn.svelte';
 export { default as OAuthSignIn } from './OAuthSignIn.svelte';
 export { default as OAuthCallback } from './OAuthCallback.svelte';

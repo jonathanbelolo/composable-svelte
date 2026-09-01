@@ -163,6 +163,52 @@ describe('the mock', () => {
 	});
 });
 
+describe('the magic-link wire', () => {
+	it('posts the address, and asks for nothing back', async () => {
+		const calls = stubFetch(new Response(null, { status: 204 }));
+
+		await createHttpAuthDeps('/api').requestMagicLink('ada@example.com');
+
+		expect(calls[0]!.url).toBe('/api/auth/magic-link');
+		expect(JSON.parse(String(calls[0]!.init.body))).toEqual({ email: 'ada@example.com' });
+	});
+
+	it('POSTs the token in the body, not the query', async () => {
+		// The same reason the surface waits for a press: a link that signs someone
+		// in on GET is a link a mail scanner can spend.
+		const calls = stubFetch(json({ subject_id: 'u1', display_name: 'Ada', roles: [] }));
+
+		await createHttpAuthDeps('/api').signInWithMagicLink('tok_1');
+
+		expect(calls[0]!.url).toBe('/api/auth/magic-link/signin');
+		expect(calls[0]!.url).not.toContain('tok_1');
+		expect(calls[0]!.init.method).toBe('POST');
+		expect(JSON.parse(String(calls[0]!.init.body))).toEqual({ token: 'tok_1' });
+	});
+
+	it('classifies a spent link as expired', async () => {
+		stubFetch(json({ error: { code: 'token_expired', message: 'Already used.' } }, 410));
+
+		await expect(createHttpAuthDeps().signInWithMagicLink('tok_1')).rejects.toMatchObject({
+			code: 'token_expired'
+		});
+	});
+
+	it('resolves the request for any address, so it is not an account oracle', async () => {
+		const api = createMockAuthDeps();
+		await expect(api.requestMagicLink('nobody@example.com')).resolves.toBeUndefined();
+		await expect(api.requestMagicLink('ada@example.com')).resolves.toBeUndefined();
+	});
+
+	it('rejects a token the fake was not told to accept', async () => {
+		const api = createMockAuthDeps({ magicLinkTokens: ['good'] });
+		await expect(api.signInWithMagicLink('bad')).rejects.toMatchObject({ code: 'token_expired' });
+		await expect(api.signInWithMagicLink('good')).resolves.toMatchObject({
+			display_name: expect.any(String)
+		});
+	});
+});
+
 describe('the pending storage that ships', () => {
 	it('round-trips through sessionStorage, once', () => {
 		const storage = createPendingOAuthStorage();
