@@ -27,6 +27,12 @@
 	interface Props {
 		/** The field's `id`, which a `<label for>` must match. */
 		id: string;
+		/**
+		 * The form field name. Required, as every other input in this package has
+		 * one: it is what a native submission and a browser's form restore key on,
+		 * and this was the single field that omitted it.
+		 */
+		name: string;
 		value: string;
 		oninput: (event: Event & { currentTarget: HTMLInputElement }) => void;
 		onblur?: (() => void) | undefined;
@@ -51,6 +57,7 @@
 
 	let {
 		id,
+		name,
 		value,
 		oninput,
 		onblur,
@@ -67,6 +74,7 @@
 
 <input
 	{id}
+	{name}
 	type="text"
 	{value}
 	{placeholder}

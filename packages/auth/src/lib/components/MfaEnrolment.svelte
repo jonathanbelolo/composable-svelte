@@ -25,6 +25,9 @@
 	import type { MfaEnrolmentAction, MfaEnrolmentState } from '../flows/mfa-enrolment/types.js';
 	import type { MfaCodeFields } from '../flows/mfa-challenge/schema.js';
 
+	/** How long a copy button confirms for. Long enough to read, short enough to retry. */
+	const COPIED_FOR_MS = 2000;
+
 	interface Props {
 		flowStore: {
 			readonly state: MfaEnrolmentState;
@@ -95,19 +98,27 @@
 	const isSubmitting = $derived(status === 'submitting');
 
 	/**
-	 * Whether this component has asked for an enrolment.
+	 * Whether the mount effect has already asked for an enrolment.
 	 *
 	 * The same shape as `EmailVerification`'s guard and for the same reason: this
 	 * dispatches from an effect, and an effect re-runs for reasons unrelated to
 	 * its subject. A second start issues a new secret and silently invalidates
 	 * the one already on screen. The reducer refuses too; both are wanted.
+	 *
+	 * **Never reset.** An earlier version had the retry button clear it, and that
+	 * worked only because `started ||` short-circuits before the status read: a
+	 * settled effect stops tracking status, so it cannot fire again. A guard held
+	 * up by the order of two clauses. Reorder them and the effect keeps tracking;
+	 * every failing retry then costs a second request nobody asked for, against a
+	 * backend already refusing. Retrying dispatches directly instead — the reducer
+	 * accepts it whenever the flow is idle — and this flag records only what the
+	 * mount effect did.
 	 */
 	let started = false;
 
 	$effect(() => {
-		if (started || flowStore.state.status !== 'idle') return;
-		// Reading status keeps this honest: nothing is recorded as started until
-		// the flow is actually in a state to take it.
+		if (started) return;
+		if (flowStore.state.status !== 'idle') return;
 		started = true;
 		flowStore.dispatch({ type: 'enrolmentRequested' });
 	});
@@ -119,18 +130,40 @@
 		if (status === 'enrolled') panel?.focus();
 	});
 
-	let copied = $state(false);
+	/**
+	 * Which of the two things was last copied, if either.
+	 *
+	 * Not a boolean. One flag shared by "Copy key" and "Copy codes" reads fine —
+	 * the two buttons are never on screen together — but the component outlives
+	 * the transition between them, so copying the setup key left the recovery
+	 * panel claiming the *codes* had been copied. That is the one screen where a
+	 * false reassurance costs the account: the codes are shown once, and someone
+	 * who believes they already have them will close the panel without them.
+	 *
+	 * It also clears itself, so a second copy of the same thing still confirms.
+	 */
+	let copied = $state<'key' | 'codes' | null>(null);
+	let clearCopied: ReturnType<typeof setTimeout> | null = null;
 
-	async function copy(text: string) {
+	async function copy(what: 'key' | 'codes', text: string) {
 		try {
 			await navigator.clipboard.writeText(text);
-			copied = true;
+			copied = what;
+			if (clearCopied !== null) clearTimeout(clearCopied);
+			clearCopied = setTimeout(() => {
+				copied = null;
+				clearCopied = null;
+			}, COPIED_FOR_MS);
 		} catch {
 			// Clipboard access can be refused, and there is nothing useful to say
 			// about it: the value is on screen and selectable either way.
-			copied = false;
+			copied = null;
 		}
 	}
+
+	$effect(() => () => {
+		if (clearCopied !== null) clearTimeout(clearCopied);
+	});
 </script>
 
 <div class="mfa-enrolment {className}">
@@ -165,9 +198,9 @@
 				<button
 					type="button"
 					class="mfa-enrolment__secondary"
-					onclick={() => copy(recoveryCodes.join('\n'))}
+					onclick={() => copy('codes', recoveryCodes.join('\n'))}
 				>
-					{copied ? 'Copied' : 'Copy codes'}
+					{copied === 'codes' ? 'Copied' : 'Copy codes'}
 				</button>
 				{#if onDone}
 					<button type="button" class="mfa-enrolment__action" onclick={() => onDone()}>
@@ -194,10 +227,7 @@
 		<button
 			type="button"
 			class="mfa-enrolment__action"
-			onclick={() => {
-				started = false;
-				flowStore.dispatch({ type: 'enrolmentRequested' });
-			}}
+			onclick={() => flowStore.dispatch({ type: 'enrolmentRequested' })}
 		>
 			Try again
 		</button>
@@ -224,8 +254,8 @@
 				can be read aloud or copied by hand.
 			-->
 			<p class="mfa-enrolment__key" id={secretId}>{secret}</p>
-			<button type="button" class="mfa-enrolment__secondary" onclick={() => copy(secret)}>
-				{copied ? 'Copied' : 'Copy key'}
+			<button type="button" class="mfa-enrolment__secondary" onclick={() => copy('key', secret)}>
+				{copied === 'key' ? 'Copied' : 'Copy key'}
 			</button>
 		</div>
 
@@ -244,6 +274,7 @@
 						</label>
 						<OneTimeCodeInput
 							id={codeId}
+							name="code"
 							value={field.value}
 							invalid={!!field.error}
 							errorId={codeErrorId}

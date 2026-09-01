@@ -49,7 +49,7 @@
 		onStartOver: () => void;
 		headingLevel?: 1 | 2 | 3 | 4 | undefined;
 		submitLabel?: string | undefined;
-		/** Rendered below the form — a link back to sign-in, say. */
+		/** Rendered below the form, on every branch — a link back to sign-in, say. */
 		footer?: Snippet | undefined;
 		class?: string | undefined;
 	}
@@ -197,6 +197,7 @@
 						</label>
 						<OneTimeCodeInput
 							id={codeId}
+							name="code"
 							value={field.value}
 							invalid={!!field.error}
 							errorId={codeErrorId}
@@ -243,9 +244,15 @@
 			</button>
 		{/if}
 
-		{#if footer}
-			<div class="mfa-challenge__footer">{@render footer()}</div>
-		{/if}
+	{/if}
+
+	<!--
+		Outside the branches, as `ForgotPasswordForm` renders its own: a footer is
+		usually a way out — back to sign in, or someone to ask — and dropping it on
+		the expired branch removes it exactly when the user is most stuck.
+	-->
+	{#if footer}
+		<div class="mfa-challenge__footer">{@render footer()}</div>
 	{/if}
 </div>
 

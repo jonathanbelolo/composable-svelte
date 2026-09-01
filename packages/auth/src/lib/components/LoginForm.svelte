@@ -199,19 +199,27 @@
 	let handedOver = false;
 
 	/**
-	 * The challenge already handed to `onMfaRequired`.
+	 * Whether this challenge has been reported.
 	 *
-	 * Keyed on the id rather than a boolean: a second sign-in attempt produces a
-	 * *different* challenge, and reporting only the first would strand the user on
-	 * a code prompt for an attempt that no longer exists.
+	 * Cleared whenever the flow is not sitting on an `mfa_required`, which makes
+	 * it "once per challenge" rather than "once per distinct id". Comparing ids —
+	 * the obvious first attempt — swallowed the case where a backend returns the
+	 * *same* pending challenge for a repeated sign-in, which many do. The user
+	 * navigates back, submits again, and nothing happens at all: the callback
+	 * does not fire and the banner is suppressed, so the button looks dead.
+	 *
+	 * Submitting clears `error`, so the flag resets before the next answer lands.
 	 */
-	let reportedChallenge: string | null = null;
+	let reportedChallenge = false;
 
 	$effect(() => {
 		const error = flowStore.state.error;
-		if (onMfaRequired === undefined || !isMfaRequired(error)) return;
-		if (error.challengeId === reportedChallenge) return;
-		reportedChallenge = error.challengeId;
+		if (onMfaRequired === undefined || !isMfaRequired(error)) {
+			reportedChallenge = false;
+			return;
+		}
+		if (reportedChallenge) return;
+		reportedChallenge = true;
 		onMfaRequired({ challengeId: error.challengeId, methods: error.methods });
 	});
 

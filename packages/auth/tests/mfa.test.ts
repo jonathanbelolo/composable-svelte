@@ -214,6 +214,55 @@ describe('the handoff from sign-in', () => {
 		}
 	});
 
+	it('reports a repeated challenge, even when the id is the same', async () => {
+		// Many backends return the *same* pending challenge for a repeated sign-in.
+		// Keying on the id meant the second submit did nothing at all: the callback
+		// did not fire and the banner is suppressed, so the button looked dead.
+		const onMfaRequired = vi.fn();
+		const target = mountTarget();
+		const login = vi.fn(async () => {
+			throw MFA_REQUIRED;
+		});
+		const flowStore = createStore({
+			initialState: createInitialLoginState(),
+			reducer: loginReducer,
+			dependencies: { login }
+		});
+		const spy = sessionSpy();
+		const component = mount(LoginForm, {
+			target,
+			props: { flowStore, sessionStore: spy.store, onMfaRequired } as never
+		});
+
+		try {
+			await userEvent.fill(target.querySelector('input[type="email"]')!, 'ada@example.com');
+			await userEvent.fill(target.querySelector('input[name="password"]')!, 'hunter2');
+			flushSync();
+			await userEvent.click(target.querySelector('button[type="submit"]')!);
+			await vi.waitFor(() => {
+				flushSync();
+				expect(onMfaRequired).toHaveBeenCalledTimes(1);
+			});
+
+			// The user came back and submitted again; the backend hands back the
+			// same pending challenge.
+			await userEvent.click(target.querySelector('button[type="submit"]')!);
+			await vi.waitFor(() => {
+				flushSync();
+				expect(onMfaRequired, 'a repeated challenge was swallowed').toHaveBeenCalledTimes(2);
+			});
+
+			expect(login).toHaveBeenCalledTimes(2);
+			expect(onMfaRequired).toHaveBeenLastCalledWith({
+				challengeId: 'chal_live',
+				methods: ['totp', 'recovery_code']
+			});
+		} finally {
+			unmount(component);
+			target.remove();
+		}
+	});
+
 	it('still shows the banner when nothing is handling it', async () => {
 		// Non-vacuity, and the pre-existing behaviour: a consumer without MFA
 		// support should not silently swallow the message.
@@ -462,6 +511,42 @@ function mountEnrolment(deps: Partial<MfaEnrolmentDependencies> = {}, props: Rec
 	};
 }
 
+describe('the footer', () => {
+	it('stays on screen when the challenge is dead', async () => {
+		// A footer is a way out — back to sign in, or someone to ask. It used to
+		// render only inside the live branch, so it vanished exactly when the user
+		// was most stuck. `ForgotPasswordForm` renders its own outside the
+		// branches, which is the shape this now matches.
+		const target = mountTarget();
+		const flowStore = createStore({
+			initialState: createInitialMfaChallengeState(null, ['totp']),
+			reducer: mfaChallengeReducer,
+			dependencies: { verifyMfaChallenge: vi.fn(async () => session) }
+		});
+		const component = mount(MfaChallengeForm, {
+			target,
+			props: {
+				flowStore,
+				sessionStore: sessionSpy().store,
+				onStartOver: () => {},
+				footer: createRawSnippet(() => ({ render: () => '<a href="/help">Get help</a>' }))
+			} as never
+		});
+
+		try {
+			flushSync();
+			expect(target.textContent).toContain('Nothing to verify');
+			expect(
+				target.querySelector('a[href="/help"]'),
+				'the footer was dropped on the dead branch'
+			).not.toBeNull();
+		} finally {
+			unmount(component);
+			target.remove();
+		}
+	});
+});
+
 describe('enrolment', () => {
 	it('shows the secret for manual entry, with or without a QR', async () => {
 		// No QR is a supported configuration, not a degraded one: manual entry is
@@ -591,6 +676,104 @@ describe('enrolment', () => {
 		}
 	});
 
+	it('does not claim the recovery codes were copied when only the key was', async () => {
+		// The two copy buttons are never on screen together, so one flag between
+		// them reads fine — but the component outlives the transition. Copying the
+		// setup key left the recovery panel saying "Copied" for codes nobody had.
+		// That screen is shown once; someone who believes they already have the
+		// codes closes it without them and loses the account on the next lost
+		// phone.
+		const writeText = vi.fn(async () => undefined);
+		const clipboard = { writeText };
+		const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+		Object.defineProperty(navigator, 'clipboard', { value: clipboard, configurable: true });
+
+		const h = mountEnrolment();
+		try {
+			await vi.waitFor(() => {
+				flushSync();
+				expect(h.text()).toContain('JBSWY3DPEHPK3PXP');
+			});
+
+			const button = (label: string) =>
+				[...h.target.querySelectorAll('button')].find((b) => b.textContent?.trim() === label);
+
+			await userEvent.click(button('Copy key')!);
+			await vi.waitFor(() => {
+				flushSync();
+				expect(button('Copied'), 'copying the key gave no confirmation').toBeDefined();
+			});
+			expect(writeText).toHaveBeenCalledWith('JBSWY3DPEHPK3PXP');
+
+			await userEvent.fill(h.code()!, '123456');
+			flushSync();
+			await userEvent.click(h.submit());
+			await vi.waitFor(() => {
+				flushSync();
+				expect(h.text()).toContain('Save your recovery codes');
+			});
+
+			expect(
+				button('Copy codes'),
+				'the recovery panel claimed codes were copied that never were'
+			).toBeDefined();
+
+			await userEvent.click(button('Copy codes')!);
+			await vi.waitFor(() => {
+				flushSync();
+				expect(button('Copied')).toBeDefined();
+			});
+			expect(writeText).toHaveBeenLastCalledWith('aaa-111\nbbb-222');
+		} finally {
+			h.cleanup();
+			if (original) Object.defineProperty(navigator, 'clipboard', original);
+		}
+	});
+
+	it('starts exactly one enrolment per retry, on a backend that keeps failing', async () => {
+		// One start per gesture. The guard used to be held up by clause ordering:
+		// `started ||` short-circuits before the status read, so a settled effect
+		// stops tracking status and cannot fire again. Reorder those two lines
+		// while the button still clears the flag and each failing retry costs two
+		// requests — the second one nobody asked for, against a backend that is
+		// already refusing. Retrying just dispatches now, and `started` records
+		// only what the mount effect did.
+		const beginMfaEnrolment = vi
+			.fn<MfaEnrolmentDependencies['beginMfaEnrolment']>()
+			.mockRejectedValue({ code: 'rate_limited', message: 'Slow down.' });
+		const h = mountEnrolment({ beginMfaEnrolment });
+
+		try {
+			await vi.waitFor(() => {
+				flushSync();
+				expect(h.text()).toContain('Could not start setup');
+			});
+			expect(beginMfaEnrolment).toHaveBeenCalledTimes(1);
+
+			const retry = () =>
+				[...h.target.querySelectorAll('button')].find((b) => b.textContent?.includes('Try again'))!;
+			await userEvent.click(retry());
+			await vi.waitFor(() => {
+				flushSync();
+				expect(h.text()).toContain('Could not start setup');
+			});
+			await new Promise((resolve) => setTimeout(resolve, 40));
+			flushSync();
+			expect(beginMfaEnrolment, 'one click started two enrolments').toHaveBeenCalledTimes(2);
+
+			await userEvent.click(retry());
+			await vi.waitFor(() => {
+				flushSync();
+				expect(beginMfaEnrolment).toHaveBeenCalledTimes(3);
+			});
+			await new Promise((resolve) => setTimeout(resolve, 40));
+			flushSync();
+			expect(beginMfaEnrolment, 'a second click started two enrolments').toHaveBeenCalledTimes(3);
+		} finally {
+			h.cleanup();
+		}
+	});
+
 	it('offers a retry when the start fails', async () => {
 		const beginMfaEnrolment = vi
 			.fn<MfaEnrolmentDependencies['beginMfaEnrolment']>()
@@ -625,7 +808,7 @@ describe('OneTimeCodeInput', () => {
 		const target = mountTarget();
 		const component = mount(OneTimeCodeInput, {
 			target,
-			props: { id: 'c', value: '', oninput: () => {} }
+			props: { id: 'c', name: 'code', value: '', oninput: () => {} }
 		});
 		try {
 			expect(target.querySelectorAll('input').length).toBe(1);
@@ -646,7 +829,7 @@ describe('OneTimeCodeInput', () => {
 		const target = mountTarget();
 		const component = mount(OneTimeCodeInput, {
 			target,
-			props: { id: 'c', value: '', oninput: () => {} }
+			props: { id: 'c', name: 'code', value: '', oninput: () => {} }
 		});
 		try {
 			expect(target.querySelector('input')!.hasAttribute('maxlength')).toBe(false);

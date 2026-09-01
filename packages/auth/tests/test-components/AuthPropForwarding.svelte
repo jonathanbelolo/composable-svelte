@@ -366,6 +366,7 @@
 	class={enrolmentClass}
 />
 <OneTimeCodeInput
+	name="code"
 	id={codeId}
 	value={codeValue}
 	oninput={codeOninput}

@@ -272,7 +272,10 @@
   `LoginForm` gains `onMfaRequired`, which is that first caller. Supplying it
   also **suppresses the error banner**: being asked for a second factor is this
   flow branching, not a failure, and a red alert on the way to a code prompt is
-  alarming and wrong. Optional, unlike `ResetPasswordForm`'s `onRequestNewLink`
+  alarming and wrong. It reports once per *challenge*, not once per distinct
+  challenge id — plenty of backends hand back the same pending challenge for a
+  repeated sign-in, and keying on the id meant the second attempt did nothing
+  visible at all: no callback, and no banner either, because it is suppressed. Optional, unlike `ResetPasswordForm`'s `onRequestNewLink`
   — MFA is off for most backends, so requiring it would break every consumer for
   a branch they never reach.
 
@@ -288,15 +291,19 @@
   **Enrolment needs the guards reset-password deliberately does not.** It
   fetches on entry, so a re-firing effect starts a second enrolment and silently
   invalidates the secret the user is at that moment typing into their phone;
-  both the reducer and the component refuse a repeat. Recovery codes are shown
-  once, and `onDone` fires when the *user* acknowledges them rather than when
-  enrolment completes.
+  both the reducer and the component refuse a repeat, and retrying is a button
+  rather than anything the effect re-derives. Recovery codes are shown once,
+  `onDone` fires when the *user* acknowledges them rather than when enrolment
+  completes, and the two copy buttons track what was copied rather than sharing
+  one flag — the panel must never tell someone the codes are saved when what
+  they copied was the setup key.
 
   **`OneTimeCodeInput` is one field, not six** — reversing what the previous
   round said MFA would need. A single input with `inputmode="numeric"` and
   `autocomplete="one-time-code"` autofills from the OS, pastes with no handler,
   and has one label and one error; split boxes must re-implement paste and
-  backspace and announce as six unlabelled inputs.
+  backspace and announce as six unlabelled inputs. `name` is required, as on
+  every other input this package renders.
 
   **No QR encoder was added.** Nothing in the repository can produce one and
   there is no precedent for a satellite package computing SVG, so an encoder
