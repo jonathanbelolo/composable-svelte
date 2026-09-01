@@ -192,10 +192,52 @@ export function deniedCapabilities(text: string, capabilities = CAPABILITIES): s
 	return denied;
 }
 
-/** Relative link targets in a markdown document, minus URLs and bare anchors. */
+/**
+ * Markdown as a matcher must read it.
+ *
+ * Blockquote prefixes first, then emphasis and code spans, then whitespace — in
+ * that order, because `> **email\n> verification**` needs all three before it is
+ * one phrase. Without this the guard reads hard-wrapped prose as a sequence of
+ * unrelated lines, which is a silent false negative on every multi-word claim:
+ * measured, `no\nOAuth` was invisible to the denial arm, and hard wrapping at
+ * eighty columns is what every document here actually does.
+ *
+ * Underscores deliberately survive. `mfa_required` appears in the very
+ * paragraph that explains why the union names it, and a normaliser that split
+ * it would hand `\bMFA\b` a match inside the explanation.
+ */
+export function normalise(source: string): string {
+	return source
+		.replace(/\r\n/g, '\n')
+		.replace(/^[ \t]*>[ \t]?/gm, '')
+		.replace(/[*`]/g, '')
+		.replace(/\s+/g, ' ');
+}
+
+/**
+ * The document with fenced code blocks removed.
+ *
+ * A fence is illustration, not navigation. Measured: a ```markdown sample
+ * containing `[b](./example.md)` was reported as a dead link, and the
+ * TypeScript line `arr[0](./x.md)` was extracted as one — neither is a link
+ * anybody can click. `demo-headings.test.ts` had to learn the same lesson about
+ * sample content inside a template literal.
+ */
+export function withoutFences(source: string): string {
+	return source.replace(/^```[\s\S]*?^```/gm, '');
+}
+
+/**
+ * Relative link targets, minus URLs and bare anchors.
+ *
+ * The optional trailing `"Title"` is part of the markdown link syntax and was
+ * missed by a simpler pattern, so a dead link that carried a title was
+ * invisible. Angle-bracketed targets — `](<path with spaces>)` — are the
+ * sanctioned way to write a target containing spaces, and are unwrapped here.
+ */
 export function relativeLinks(source: string): string[] {
-	return [...source.matchAll(/\]\(([^)\s]+)\)/g)]
-		.map((match) => match[1]!)
+	return [...withoutFences(source).matchAll(/\]\(\s*<([^>]+)>|\]\(\s*([^)\s]+)(?:\s+"[^"]*")?\s*\)/g)]
+		.map((match) => match[1] ?? match[2]!)
 		.filter((target) => !/^(https?|mailto|tel):/i.test(target))
 		.map((target) => target.split('#')[0]!)
 		.filter((target) => target.length > 0);
@@ -282,6 +324,26 @@ describe('the front door', () => {
 		expect(revived, 'these links work now — drop them from DEAD_LINKS').toEqual([]);
 	});
 
+	it('registers no link that is no longer even found', () => {
+		// The completeness direction, and a gap the fence fix exposed: the arm
+		// above only asks whether a registered link *resolves*. An entry that
+		// stopped being extracted at all — because its document was deleted, or
+		// because it moved inside a code fence — would sit in the register
+		// forever, guarding nothing and looking like diligence.
+		const found = new Set(
+			documents().flatMap((file) =>
+				relativeLinks(readFileSync(file, 'utf8')).map(
+					(target) => `${file.slice(repoRoot.length)} -> ${target}`
+				)
+			)
+		);
+		const phantom = DEAD_LINKS.filter((entry) => !found.has(entry));
+
+		expect(phantom, 'these registered links are no longer in any document — drop them').toEqual(
+			[]
+		);
+	});
+
 	it('registers no package that is documented after all', () => {
 		const stale = UNDOCUMENTED.filter(
 			(name) =>
@@ -297,7 +359,7 @@ describe('the front door', () => {
 				const shipped = CAPABILITIES.filter((c) =>
 				c.dirs.some((dir) => existsSync(join(flowsDir, dir)))
 			);
-			return deniedCapabilities(readFileSync(file, 'utf8'), shipped).map(
+			return deniedCapabilities(normalise(withoutFences(readFileSync(file, 'utf8'))), shipped).map(
 				(name) => `${file.slice(repoRoot.length)}: says this repository has no ${name}`
 			);
 		});
@@ -308,6 +370,56 @@ describe('the front door', () => {
 				'removed — in which case delete its CAPABILITIES entry — or the document ' +
 				'is stale. This is the failure COMPLETENESS-AUDIT G5 shipped twice'
 		).toEqual([]);
+	});
+
+	it('reads a denial that markdown wrapped', () => {
+		// Not tidiness. Measured before this existed: `no\nOAuth` was invisible,
+		// and every document here hard-wraps at eighty columns — so the wrapped
+		// form is the likely one, not the exception. The auth README's disclaimer
+		// is a blockquote as well, which adds a `> ` to the front of every line.
+		for (const shape of [
+			'the package has no\nOAuth at all',
+			'> the package has no\n> OAuth at all',
+			'the package has **no\nOAuth** at all'
+		]) {
+			expect(
+				deniedCapabilities(normalise(shape)),
+				`a wrapped denial was missed: ${JSON.stringify(shape)}`
+			).toEqual(['OAuth']);
+		}
+
+		// And the paragraph that explains why the union names `mfa_required` must
+		// not read as a denial of MFA.
+		expect(normalise('`mfa_required`')).toContain('mfa_required');
+		expect(deniedCapabilities(normalise('no `mfa_required` arm was added'))).toEqual([]);
+	});
+
+	it('does not mistake illustration for navigation', () => {
+		// A fenced sample is not a link anybody can click. Measured before this
+		// existed: a ```markdown block containing `[b](./example.md)` was reported
+		// dead, and the TypeScript line `arr[0](./x.md)` was extracted as a link.
+		const doc = [
+			'[real](./a.md)',
+			'',
+			'```markdown',
+			'[an example](./not-a-real-file.md)',
+			'```',
+			'',
+			'```ts',
+			'const first = handlers[0](./x.md);',
+			'```'
+		].join('\n');
+
+		expect(relativeLinks(doc)).toEqual(['./a.md']);
+	});
+
+	it('sees a link that carries a title', () => {
+		// Legal markdown, and invisible to a simpler pattern — so a dead link
+		// with a title was never checked.
+		expect(relativeLinks('[a](./x.md "Some title")')).toEqual(['./x.md']);
+		expect(relativeLinks('[a](<./with spaces.md>)')).toEqual(['./with spaces.md']);
+		expect(relativeLinks('[a](#anchor)')).toEqual([]);
+		expect(relativeLinks('![img](./pic.png)')).toEqual(['./pic.png']);
 	});
 
 	it('still detects a denial, and still tolerates a qualified one', () => {
