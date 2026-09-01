@@ -246,3 +246,5 @@ export {
 
 // Testing — a backend-shaped fake, so a demo or a test needs no server
 export { createMockAuthDeps, type MockAuthOptions } from './testing/index.js';
+
+export { emailField } from './flows/index.js';

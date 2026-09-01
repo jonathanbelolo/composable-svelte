@@ -201,3 +201,5 @@ export type {
 	MagicLinkSignInStatus,
 	MagicLinkSignInDependencies
 } from './magic-link-signin/index.js';
+
+export { emailField } from './email-field.js';

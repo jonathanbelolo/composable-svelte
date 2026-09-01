@@ -423,7 +423,14 @@ export function createFormReducer<T extends Record<string, any>>(
 				return [
 					{
 						...state,
-						...(action.data !== undefined && { data: action.data }),
+						// Merged over the existing data, not swapped for it. Zod
+						// object schemas strip keys they do not declare, so replacing
+						// would silently delete anything a consumer kept in `data`
+						// beside the validated fields — and the form would lose it at
+						// the moment of submitting, which is the worst possible time.
+						// Merging still applies every transform and default, because
+						// the parsed values win.
+						...(action.data !== undefined && { data: { ...state.data, ...action.data } }),
 						isValidating: false,
 						formErrors: []
 					},

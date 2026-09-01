@@ -946,6 +946,40 @@ describe('a schema transform reaches the data', () => {
 		expect(store.state.data.note, 'a keystroke was rewritten mid-word').toBe('John ');
 	});
 
+	it('keeps data the schema does not declare', async () => {
+		// Zod object schemas strip keys they do not declare, so a write-back that
+		// *replaced* `data` would delete anything a consumer kept beside the
+		// validated fields — at the moment of submitting, which is the worst time
+		// to lose it. The parsed values are merged over the existing data instead.
+		const onSubmit = vi.fn(async () => {});
+		const config: FormConfig<Trimmed> = {
+			schema: trimmed,
+			// A key the schema knows nothing about. Cast, because the type says it
+			// cannot happen — and the type is exactly what would stop anyone
+			// noticing that it does.
+			initialData: { email: '', note: '', draftId: 'kept' } as unknown as Trimmed,
+			mode: 'onSubmit',
+			onSubmit
+		};
+		const store = createTestStore({
+			initialState: createInitialFormState(config),
+			reducer: createFormReducer(config)
+		});
+
+		await store.send({ type: 'fieldChanged', field: 'email', value: '  ada@example.com  ' });
+		await store.send({ type: 'submitTriggered' });
+		await store.receive({ type: 'formValidationStarted' });
+		await store.receive({ type: 'formValidationCompleted' }, (state) => {
+			expect(
+				(state.data as unknown as { draftId?: string }).draftId,
+				'the schema stripped a key the form was holding'
+			).toBe('kept');
+			expect(state.data.email, 'the transform stopped being applied').toBe('ada@example.com');
+		});
+		await store.receive({ type: 'submissionStarted' });
+		await store.receive({ type: 'submissionSucceeded' });
+	});
+
 	it('keeps exactly what was typed when validation fails', async () => {
 		// A form that did not validate has nothing to write back, and rewriting
 		// on failure would move the cursor under someone correcting a typo.
