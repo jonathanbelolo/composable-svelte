@@ -84,18 +84,29 @@
 	const requestedFor = $derived(flowStore.state.requestedFor);
 
 	/**
-	 * The address the last `onSent` reported.
+	 * Whether this acceptance has been reported.
 	 *
-	 * Not a boolean, because this form can be used repeatedly — a mistyped
-	 * address, then the right one — and each acceptance is worth reporting. A
-	 * plain `let`, per the animation-guard convention.
+	 * Cleared whenever the flow leaves `sent`, which is what makes it "once per
+	 * acceptance" rather than "once per distinct address". Comparing addresses
+	 * instead — the obvious first attempt — silently swallowed the commonest
+	 * repeat there is: the mail did not arrive, so the user pressed send again
+	 * with the same address, the backend accepted it again, and the consumer was
+	 * never told.
+	 *
+	 * A plain `let`, per the animation-guard convention, and the same shape as
+	 * `handedOver` in the other forms here.
 	 */
-	let reported: string | null = null;
+	let reported = false;
 
 	$effect(() => {
-		if (status !== 'sent' || requestedFor === null || requestedFor === reported) return;
-		reported = requestedFor;
-		onSent?.(requestedFor);
+		const state = flowStore.state;
+		if (state.status !== 'sent') {
+			reported = false;
+			return;
+		}
+		if (reported || state.requestedFor === null) return;
+		reported = true;
+		onSent?.(state.requestedFor);
 	});
 </script>
 

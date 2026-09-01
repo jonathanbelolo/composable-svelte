@@ -154,6 +154,37 @@ describe('asking for a reset link', () => {
 		}
 	});
 
+	it('reports a repeat of the same address, not just a different one', async () => {
+		// The commonest repeat there is: the mail did not arrive, so the user
+		// presses send again with the address already in the field. The backend
+		// accepts it again, and a consumer showing a "sent" toast must be told —
+		// otherwise the second press looks broken. Comparing addresses rather
+		// than attempts swallowed exactly this.
+		const onSent = vi.fn();
+		const requestPasswordReset = vi.fn(async () => undefined);
+		const h = mountForgot({ requestPasswordReset }, { onSent });
+
+		try {
+			await ask(h, 'ada@example.com');
+			await vi.waitFor(() => {
+				flushSync();
+				expect(onSent).toHaveBeenCalledTimes(1);
+			});
+
+			// Same address, pressed again.
+			await userEvent.click(h.submit());
+			await vi.waitFor(() => {
+				flushSync();
+				expect(onSent, 'a repeat of the same address was swallowed').toHaveBeenCalledTimes(2);
+			});
+
+			expect(requestPasswordReset).toHaveBeenCalledTimes(2);
+			expect(onSent).toHaveBeenLastCalledWith('ada@example.com');
+		} finally {
+			h.cleanup();
+		}
+	});
+
 	it('reports a rate limit rather than claiming a mail was sent', async () => {
 		const h = mountForgot({
 			requestPasswordReset: vi.fn(async () => {
@@ -205,7 +236,9 @@ function mountReset(
 	};
 	const component = mount(ResetPasswordForm, {
 		target,
-		props: { flowStore, sessionStore, ...props } as never
+		// `onRequestNewLink` is required, so the harness always has one; a test
+		// that cares passes its own spy.
+		props: { flowStore, sessionStore, onRequestNewLink: () => {}, ...props } as never
 	});
 	const inputs = () => [...target.querySelectorAll('input')] as HTMLInputElement[];
 	return {
@@ -316,6 +349,27 @@ describe('setting a new password', () => {
 
 			expect(h.banner()!.getAttribute('data-error-code')).toBe('token_expired');
 			expect(h.password(), 'a form was left up that cannot succeed').toBeUndefined();
+		} finally {
+			h.cleanup();
+		}
+	});
+
+	it('always offers a way out of a dead link', async () => {
+		// It used to be possible to render this branch with no control at all: the
+		// panel said "Ask for a new one to continue" and gave the user nothing to
+		// do it with. `onRequestNewLink` is required now, so the branch cannot be
+		// reached without one — this asserts the control is actually there.
+		const h = mountReset(
+			{ resetPassword: vi.fn() as unknown as ResetPasswordDependencies['resetPassword'] },
+			{},
+			null
+		);
+
+		try {
+			flushSync();
+			const actions = [...h.target.querySelectorAll('button, a')];
+			expect(actions.length, 'a dead-end panel with nothing to act on').toBeGreaterThan(0);
+			expect(h.button('Send me a new link')).toBeDefined();
 		} finally {
 			h.cleanup();
 		}

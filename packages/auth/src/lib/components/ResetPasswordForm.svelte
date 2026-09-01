@@ -49,8 +49,16 @@
 		onSuccess?: (() => void) | undefined;
 		/** Offered once the password is changed but no session was issued. */
 		onSignIn?: (() => void) | undefined;
-		/** Offered when the link is dead or missing — a route to the request page. */
-		onRequestNewLink?: (() => void) | undefined;
+		/**
+		 * Where "send me a new link" goes. **Required.**
+		 *
+		 * Not optional, for the same reason `sessionStore` is not: a reset page
+		 * whose dead-link branch has no way out is broken by construction, and
+		 * omitting the prop failed *silently* — the panel told the user to ask for
+		 * a new link and rendered no control to do it with. Only the consumer
+		 * knows that route, so the compiler is the right place to insist on it.
+		 */
+		onRequestNewLink: () => void;
 		headingLevel?: 1 | 2 | 3 | 4 | undefined;
 		submitLabel?: string | undefined;
 		passwordLabel?: string | undefined;
@@ -205,11 +213,9 @@
 				Reset links are single-use and time-limited. Ask for a new one to continue.
 			</p>
 		{/if}
-		{#if onRequestNewLink}
-			<button type="button" class="reset-form__action" onclick={() => onRequestNewLink()}>
-				Send me a new link
-			</button>
-		{/if}
+		<button type="button" class="reset-form__action" onclick={() => onRequestNewLink()}>
+			Send me a new link
+		</button>
 	{:else}
 		<svelte:element this={`h${headingLevel}`} class="reset-form__title">
 			Choose a new password

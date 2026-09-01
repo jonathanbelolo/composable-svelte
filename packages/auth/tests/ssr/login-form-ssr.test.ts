@@ -297,7 +297,7 @@ describe('the server build of the recovery pair', () => {
 			dependencies: { resetPassword: async () => null }
 		});
 		const body = render(ResetPasswordForm, {
-			props: { flowStore, sessionStore: inertSession() }
+			props: { flowStore, sessionStore: inertSession(), onRequestNewLink: () => {} }
 		}).body;
 
 		expect((body.match(/type="password"/g) ?? []).length).toBe(2);
@@ -312,7 +312,7 @@ describe('the server build of the recovery pair', () => {
 			dependencies: { resetPassword: async () => null }
 		});
 		const body = render(ResetPasswordForm, {
-			props: { flowStore, sessionStore: inertSession() }
+			props: { flowStore, sessionStore: inertSession(), onRequestNewLink: () => {} }
 		}).body;
 
 		expect(body).toContain('This link is incomplete');

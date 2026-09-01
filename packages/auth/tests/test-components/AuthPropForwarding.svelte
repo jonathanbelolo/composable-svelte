@@ -194,7 +194,7 @@
 			dispatch(action: ResetPasswordAction): void;
 			subscribe(listener: (state: ResetPasswordState) => void): () => void;
 		};
-		onRequestNewLink?: () => void;
+		onRequestNewLink: () => void;
 		done?: Snippet<[{ signedIn: boolean }]>;
 		resetClass?: string;
 	} = $props();
