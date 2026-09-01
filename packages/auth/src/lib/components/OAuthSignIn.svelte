@@ -81,6 +81,27 @@
 	const busy = (id: OAuthProvider): boolean => inFlight === id && status !== 'idle';
 
 	/**
+	 * The provider being worked on, as the object rather than the id.
+	 *
+	 * So that anything spoken says "GitHub" and not "github". The live region
+	 * below used to interpolate the raw id, which is a machine identifier read
+	 * aloud to a person, and it used the wrong verb as well — announcing
+	 * "Connecting" while the button it describes said "Taking you to GitHub".
+	 */
+	const active = $derived(
+		inFlight === null ? null : (providers.find((entry) => entry.id === inFlight) ?? null)
+	);
+
+	/** What the live region says. Same verb as the button, always the label. */
+	const announcement = $derived(
+		active === null || status === 'idle'
+			? ''
+			: status === 'redirecting'
+				? `Taking you to ${active.label}…`
+				: `Connecting to ${active.label}…`
+	);
+
+	/**
 	 * A button is disabled only while its own request is open.
 	 *
 	 * The asymmetry with `redirecting` is deliberate and both halves have a
@@ -155,7 +176,7 @@
 	{/if}
 
 	<p class="oauth-signin__status" role="status" aria-live="polite">
-		{busy(inFlight ?? '') && inFlight !== null ? `Connecting to ${inFlight}…` : ''}
+		{announcement}
 	</p>
 </div>
 

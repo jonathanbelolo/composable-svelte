@@ -163,6 +163,31 @@ describe('starting a sign-in', () => {
 		store.assertNoPendingActions();
 	});
 
+	it('reports a redirect that refuses, instead of hanging on it', async () => {
+		// `createBrowserRedirect` throws on a URL that is not `http(s):`, and a
+		// consumer-supplied one may refuse for its own reasons. Unwrapped, that
+		// throw escapes the effect and leaves the flow in `redirecting` — a status
+		// only a navigation can leave — with `error` null and the button reading
+		// "Taking you to GitHub…" permanently.
+		//
+		// The same species as the `take()` throw in the callback half, and it was
+		// still open in the change that closed that one.
+		const store = startStore({
+			redirect: () => {
+				throw new TypeError('refusing to navigate to javascript:');
+			}
+		});
+
+		await store.send({ type: 'authorizationRequested', provider: 'github' });
+		await store.receive({ type: 'authorizationReady' });
+		await store.receive({ type: 'authorizationFailed' }, (s) => {
+			expect(s.status, 'a refused redirect left the flow stuck').toBe('idle');
+			expect(s.error, 'a refused redirect said nothing').not.toBeNull();
+		});
+
+		store.assertNoPendingActions();
+	});
+
 	it('reports a refused start without leaving', async () => {
 		const redirect = vi.fn();
 		const store = startStore({
@@ -272,6 +297,29 @@ describe('returnTo', () => {
 		]) {
 			expect(normaliseReturnTo(hostile), `${String(hostile)} was let through`).toBeNull();
 		}
+	});
+
+	it('rejects the characters a browser strips before it resolves a URL', () => {
+		// The WHATWG URL parser removes tab, LF and CR *before* resolving, so
+		// `/<TAB>/evil.example` reads as a rooted path here and arrives at the
+		// browser as `//evil.example` — protocol-relative, absolute, off-site.
+		// Checking the raw string checks something the browser never sees.
+		for (const hostile of [
+			'/\t/evil.example',
+			'/\n/evil.example',
+			'/\r/evil.example',
+			'/\t\\evil.example',
+			'/\r\n/evil.example'
+		]) {
+			expect(normaliseReturnTo(hostile), `${JSON.stringify(hostile)} was let through`).toBeNull();
+		}
+
+		// A space is *not* stripped — it is percent-encoded and stays in the path
+		// — so this really is a same-origin path and must survive.
+		expect(normaliseReturnTo('/a b/c')).toBe('/a b/c');
+		// Stripped, then kept: storing the raw form would park a value that means
+		// one thing here and another when it is navigated to.
+		expect(normaliseReturnTo('/dash\tboard')).toBe('/dashboard');
 	});
 
 	it('normalises on the way into storage, not only at the edge', async () => {

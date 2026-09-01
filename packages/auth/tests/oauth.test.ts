@@ -219,6 +219,35 @@ describe('OAuthSignIn', () => {
 		}
 	});
 
+	it('announces the label, with the same verb the button uses', async () => {
+		// The live region is the only thing that announces this change at all — a
+		// button's text changing is not announced. It used to interpolate the raw
+		// provider id, so a screen reader said "github", and it said "Connecting"
+		// while the button it describes said "Taking you to GitHub".
+		const slow = deferred<{ authorizeUrl: string; state: string }>();
+		const h = mountSignIn({ beginOAuth: vi.fn(() => slow.promise) });
+		const region = () => h.target.querySelector('[role="status"]')?.textContent ?? '';
+
+		try {
+			await userEvent.click(h.labelled('GitHub')!);
+			await vi.waitFor(() => {
+				flushSync();
+				expect(region()).toContain('Connecting to');
+			});
+			expect(region(), 'a machine id was read aloud').toContain('GitHub');
+			expect(region()).not.toMatch(/\bgithub\b/);
+
+			slow.resolve({ authorizeUrl: 'https://provider.example/authorize', state: 'st_1' });
+			await vi.waitFor(() => {
+				flushSync();
+				expect(h.labelled('Taking you to GitHub')).toBeDefined();
+			});
+			expect(region(), 'the region and the button disagreed').toContain('Taking you to GitHub');
+		} finally {
+			h.cleanup();
+		}
+	});
+
 	it('leaves every provider clickable after a failure', async () => {
 		const h = mountSignIn({
 			beginOAuth: vi.fn(async () => {

@@ -95,7 +95,21 @@ export function oauthStartReducer(
 						dispatch({ type: 'authorizationFailed', provider, error: toAuthError(error) });
 						return;
 					}
-					deps.redirect(authorizeUrl);
+					try {
+						deps.redirect(authorizeUrl);
+					} catch (error) {
+						// The redirect refuses a URL that is not `http(s):`, and a
+						// consumer-supplied one may refuse for its own reasons. Without
+						// this the throw escapes the effect and `redirecting` — a status
+						// only a navigation leaves — becomes permanent, with `error` null
+						// and the button reading "Taking you to GitHub…" forever.
+						//
+						// The same species as the `take()` throw in `oauth-callback`, and
+						// it was left open in the same change that closed that one. The
+						// lesson is that every `deps.*` call reachable from an effect
+						// needs a catch, not just the awaited ones.
+						dispatch({ type: 'authorizationFailed', provider, error: toAuthError(error) });
+					}
 				})
 			];
 		}

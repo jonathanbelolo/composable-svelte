@@ -87,15 +87,32 @@ const KEY = 'pending';
  * `//evil.example` is rejected along with the rest — it starts with a slash and
  * is a protocol-relative *absolute* URL, which is exactly the case a naive
  * `startsWith('/')` check waves through.
+ *
+ * So is `/&lt;TAB&gt;/evil.example`, and that one is the reason this function is not
+ * three lines. The WHATWG URL parser **removes** tab, line feed and carriage
+ * return before it resolves anything, so a string that reads as a rooted path
+ * here becomes `//evil.example` in the browser — protocol-relative, absolute,
+ * and off-site. Checking the raw string is checking something the browser will
+ * never see, so the strip happens first and the checks run on what actually
+ * gets resolved.
  */
 export function normaliseReturnTo(value: string | null | undefined): string | null {
 	if (typeof value !== 'string' || value === '') return null;
-	if (!value.startsWith('/')) return null;
-	if (value.startsWith('//')) return null;
+
+	// Exactly the three the URL parser drops. A space is *not* one of them — it
+	// is percent-encoded and stays in the path — so `/ /evil.example` is a real
+	// same-origin path and is left alone.
+	const resolved = value.replace(/[\t\n\r]/g, '');
+
+	if (!resolved.startsWith('/')) return null;
+	if (resolved.startsWith('//')) return null;
 	// A backslash after the leading slash is normalised to a forward slash by
 	// some browsers, which turns `/\evil.example` into a protocol-relative URL.
-	if (value.startsWith('/\\')) return null;
-	return value;
+	if (resolved.startsWith('/\\')) return null;
+
+	// The stripped form, not the original: storing the raw string would park a
+	// value that means one thing here and another when it is navigated to.
+	return resolved;
 }
 
 function isPendingOAuth(value: unknown): value is PendingOAuth {
