@@ -43,8 +43,11 @@
 		 * "change" or "set". Offering to *change* a password an OAuth-only account
 		 * never had is a small lie that makes the whole panel untrustworthy.
 		 *
-		 * `undefined` while the account is still loading — the wording then stays
-		 * neutral rather than guessing and correcting itself a moment later.
+		 * `undefined` means not known yet, and the panel then says "change" —
+		 * the commoner case, and the one that is wrong only for an account that
+		 * has no password. **It will flip to "set" when the account arrives**, so
+		 * a surface that would rather not show that flicker should render the
+		 * panel once the account has loaded, as the styleguide demo does.
 		 */
 		hasPassword?: boolean | undefined;
 		/** Called once the password has been changed. */

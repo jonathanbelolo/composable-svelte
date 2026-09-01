@@ -231,6 +231,42 @@ describe('SignOutButton', () => {
 		}
 	});
 
+	it('is not fooled by a session resolve that fails', async () => {
+		// `sessionResolveFailed` produces byte-identical state to a failed logout —
+		// `status: 'anonymous'` with an `error` — because both are fail-closed. So
+		// "the session became anonymous" does not mean "we signed out".
+		//
+		// Measured before the fix: mounting this button and letting a
+		// `resolveSession` fail called `onSignedOut` once, with nobody having
+		// pressed anything. A consumer navigating on that callback throws the user
+		// out of the app on a transient blip.
+		const h = mountSignOut(
+			{
+				fetchSession: vi.fn(async () => {
+					throw new Error('session endpoint is down');
+				})
+			},
+			{ status: 'unresolved' }
+		);
+
+		try {
+			h.store.dispatch({ type: 'resolveSession' });
+			await vi.waitFor(() => {
+				flushSync();
+				expect(h.store.state.status).toBe('anonymous');
+			});
+			expect(h.store.state.error, 'the probe needs a resolve that actually failed').not.toBeNull();
+
+			expect(h.onSignedOut, 'a failed resolve was reported as a sign-out').not.toHaveBeenCalled();
+			expect(
+				h.text(),
+				'a sign-out that never happened was said to have half-failed'
+			).not.toContain('still be signed in elsewhere');
+		} finally {
+			h.cleanup();
+		}
+	});
+
 	it('says nothing when the sign-out was clean', async () => {
 		// The non-vacuity partner: without this, always rendering the warning
 		// would pass the arm above.

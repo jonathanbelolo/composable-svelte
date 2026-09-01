@@ -21,7 +21,20 @@ export type AccountStatus =
 	/** Reading. */
 	| 'loading'
 	/** `account` is populated. */
-	| 'loaded';
+	| 'loaded'
+	/**
+	 * The first read failed and there is nothing to show.
+	 *
+	 * A real status rather than a return to `idle`, and that is load-bearing. A
+	 * surface reads this from a mount effect — `if (status === 'idle') request` —
+	 * and returning to `idle` on failure re-arms exactly that condition: fail,
+	 * re-dispatch, fail, forever. Measured before this existed: a probe using the
+	 * documented pattern hung the test runner for ten minutes.
+	 *
+	 * Retrying is `reloadRequested`, which is unguarded and is what a "try again"
+	 * button dispatches.
+	 */
+	| 'failed';
 
 export interface AccountState {
 	status: AccountStatus;

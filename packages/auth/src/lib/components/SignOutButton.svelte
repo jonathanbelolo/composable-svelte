@@ -65,33 +65,61 @@
 	const error = $derived(store.state.error);
 
 	/**
-	 * Whether the sign-out has been reported.
+	 * Whether *this button* started the sign-out that is in flight.
 	 *
-	 * Cleared whenever the session is not anonymous, so it is once per sign-out
-	 * rather than once per lifetime — a component that stays mounted across a
-	 * sign-out, a sign-in and a second sign-out would otherwise report only the
-	 * first. The species fixed in `LoginForm` and again in `ForgotPasswordForm`.
+	 * Load-bearing, and it took a probe to see why. `sessionResolveFailed`
+	 * produces byte-identical state to a failed logout — `status: 'anonymous'`
+	 * with an `error` — because both are fail-closed. So "the session became
+	 * anonymous" does not mean "we signed out": a session endpoint that blips on
+	 * page load lands in exactly the same place.
+	 *
+	 * Measured before this existed: mounting this button and letting a
+	 * `resolveSession` fail called `onSignedOut` once, with nobody having pressed
+	 * anything. A consumer navigating on that callback would throw the user out
+	 * of the app on a transient failure.
+	 *
+	 * Reset when the session leaves `loggingOut`-or-`anonymous`, so it is once
+	 * per sign-out rather than once per lifetime — the species fixed in
+	 * `LoginForm` and again in `ForgotPasswordForm`.
+	 *
+	 * **`$state`, not a plain `let`** — unlike every other guard flag in this
+	 * package. Those record what a component has already *done* and are read only
+	 * inside effects, so they need no reactivity. This one is also read by the
+	 * `$derived` below that decides whether to render the warning, and a plain
+	 * `let` is invisible to a derived: the flag flipped, nothing recomputed, and
+	 * the warning silently stopped appearing for real failures.
 	 */
+	let initiated = $state(false);
+
+	/** Whether the sign-out this button started has been reported. */
 	let reported = false;
 
 	$effect(() => {
-		if (store.state.status !== 'anonymous') {
+		const current = store.state.status;
+		if (current !== 'anonymous') {
+			// Still signing out is not yet done; anything else means a new session,
+			// and the next press starts a fresh sign-out.
+			// Guarded, because this writes state the effect also reads: an
+			// unconditional assignment is a needless re-run at best.
+			if (current !== 'loggingOut' && initiated) initiated = false;
 			reported = false;
 			return;
 		}
-		if (reported) return;
+		if (!initiated || reported) return;
 		reported = true;
 		onSignedOut?.();
 	});
 
 	/**
-	 * A failure worth showing, and only after the sign-out finished.
+	 * A failure worth showing, and only for a sign-out this button started.
 	 *
-	 * `SessionState.error` is shared — a failed sign-in writes it too — so this
-	 * narrows to the one window where it can only mean the logout: settled on
-	 * anonymous, with an error still attached.
+	 * `SessionState.error` is shared: a failed sign-in writes it, and so does a
+	 * failed session *resolve* — which also settles on `anonymous`. Narrowing on
+	 * status alone told someone whose session endpoint blipped that their
+	 * sign-out might not have reached the server, about a sign-out that never
+	 * happened.
 	 */
-	const failed = $derived(showFailure && status === 'anonymous' && error !== null);
+	const failed = $derived(showFailure && initiated && status === 'anonymous' && error !== null);
 </script>
 
 <div class="sign-out {className}">
@@ -99,7 +127,10 @@
 		type="button"
 		class="sign-out__button"
 		disabled={isSigningOut}
-		onclick={() => store.dispatch({ type: 'logout' })}
+		onclick={() => {
+			initiated = true;
+			store.dispatch({ type: 'logout' });
+		}}
 	>
 		{#if children}
 			{@render children()}

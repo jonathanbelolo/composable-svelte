@@ -171,24 +171,48 @@ describe('reading the account', () => {
 		});
 	});
 
-	it('returns to idle when a first load fails, so it can be retried', async () => {
-		const store = accountStore({
-			fetchAccount: vi.fn(async () => {
-				throw { code: 'network', message: 'Offline.' } satisfies AuthError;
-			})
+	it('does not re-arm a mount guard when the first load fails', async () => {
+		// The runaway this status exists to prevent. A surface reads
+		// `status === 'idle'` from a mount effect; an earlier version returned to
+		// `idle` on failure, which re-armed that condition — fail, re-dispatch,
+		// fail. Measured with the documented pattern against a down endpoint: the
+		// test runner hung for ten minutes.
+		const fetchAccount = vi.fn<AccountDependencies['fetchAccount']>(async () => {
+			throw { code: 'network', message: 'Offline.' } satisfies AuthError;
 		});
+		const store = accountStore({ fetchAccount });
 
 		await store.send({ type: 'accountRequested' });
 		await store.receive({ type: 'accountFailed' }, (s) => {
-			expect(s.status).toBe('idle');
+			expect(s.status, 'a mount effect reading `idle` would fire again').toBe('failed');
 			expect(s.account).toBeNull();
 		});
 
-		// `idle` again, so the guard above lets a retry through.
+		// The mount effect fires again — a store change re-runs it — and is
+		// refused, because `failed` is not `idle`.
 		await store.send({ type: 'accountRequested' }, (s) => {
-			expect(s.status).toBe('loading');
+			expect(s.status).toBe('failed');
 		});
+		expect(fetchAccount, 'the guard let a second load through').toHaveBeenCalledTimes(1);
+		store.assertNoPendingActions();
+	});
+
+	it('retries through the unguarded reload', async () => {
+		// The counterpart: a "try again" button must still work from `failed`.
+		const fetchAccount = vi
+			.fn<AccountDependencies['fetchAccount']>()
+			.mockRejectedValueOnce({ code: 'network', message: 'Offline.' } satisfies AuthError)
+			.mockResolvedValueOnce(ACCOUNT);
+		const store = accountStore({ fetchAccount });
+
+		await store.send({ type: 'accountRequested' });
 		await store.receive({ type: 'accountFailed' });
+
+		await store.send({ type: 'reloadRequested' });
+		await store.receive({ type: 'accountLoaded' }, (s) => {
+			expect(s.status).toBe('loaded');
+			expect(s.account).toEqual(ACCOUNT);
+		});
 	});
 });
 

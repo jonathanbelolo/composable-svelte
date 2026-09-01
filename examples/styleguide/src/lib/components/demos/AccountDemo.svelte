@@ -170,6 +170,15 @@
 
 				{#key `${scenario}-${attempt}`}
 					<div class="grid gap-6 md:grid-cols-2">
+						{#if account === null}
+							<!--
+								Rendered only once the account is known. `hasPassword`
+								defaults the wording to "change", so mounting before the read
+								lands would say "Change your password" and then flip to "Set"
+								— a flicker on the one thing this panel is careful about.
+							-->
+							<p class="text-muted-foreground text-sm">Reading your account…</p>
+						{:else}
 						<ChangePasswordForm
 							flowStore={passwordStore}
 							{sessionStore}
@@ -183,6 +192,7 @@
 							}}
 							onReauthenticationRequired={({ methods }) => (demand = methods)}
 						/>
+						{/if}
 
 						<div class="rounded-lg border p-4 text-sm space-y-3">
 							<div>
