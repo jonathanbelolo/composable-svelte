@@ -64,6 +64,15 @@ export type EmailVerificationAction =
 	| { type: 'resendRequested' }
 	| { type: 'resendSucceeded' }
 	| { type: 'resendFailed'; error: AuthError }
+	/**
+	 * Tell the flow where a resend should go.
+	 *
+	 * Without this the address could only be set when the store was built, so a
+	 * user who arrived with no token and no known address had **no path forward
+	 * at all** — the surface could not offer a resend and there was no way to
+	 * give it one. That is the commonest way to reach this page.
+	 */
+	| { type: 'emailProvided'; email: string }
 	/** Clear both failures — the surface shows them together. */
 	| { type: 'errorDismissed' };
 

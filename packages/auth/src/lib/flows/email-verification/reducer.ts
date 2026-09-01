@@ -123,6 +123,13 @@ export const emailVerificationReducer: Reducer<
 			return [{ ...state, resendStatus: 'idle', resendError: action.error }, Effect.none()];
 		}
 
+		case 'emailProvided': {
+			// Only the address changes. A resend already in flight is going to the
+			// old one and is left alone: cancelling it would lose a mail the user
+			// already asked for, and `resendStatus` would lie about what happened.
+			return [{ ...state, email: action.email }, Effect.none()];
+		}
+
 		case 'errorDismissed': {
 			// `state` unchanged when there is nothing to clear: an identical object
 			// still notifies every subscriber.

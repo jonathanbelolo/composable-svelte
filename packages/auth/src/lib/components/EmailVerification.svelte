@@ -67,18 +67,32 @@
 	const resendError = $derived(flowStore.state.resendError);
 
 	/**
-	 * The token this component has already asked about.
+	 * The token this component has already handed to the flow.
 	 *
-	 * A plain `let`, per the animation-guard convention. The reducer refuses a
-	 * second exchange as well, and both guards are wanted: this one stops the
-	 * dispatch, that one stops anything that gets past it. A confirmation token
-	 * is single-use, so a duplicate exchange turns a working link into a spent
-	 * one and blames the user for it.
+	 * A plain `let`, per the animation-guard convention. Both this and the
+	 * reducer's own guard are load-bearing, and they cover **different states** —
+	 * measured, not assumed:
+	 *
+	 * - The reducer refuses unless the status is `idle`, which stops a re-exchange
+	 *   while one is running or after it succeeded.
+	 * - `idle` is the one state it must leave open, so a *fresh* token can be
+	 *   tried after a failure. That is exactly the state a failed verification
+	 *   returns to — so without this guard, a dead link becomes a runaway: fail,
+	 *   re-dispatch, fail. With it, one exchange; without it, the test cannot
+	 *   even finish.
+	 *
+	 * The status read matters too. A token that arrives *while another is in
+	 * flight* is refused by the reducer, and recording it here anyway would mean
+	 * it was never tried at all — silently, and forever. Not recording it leaves
+	 * the effect to pick it up when the flow returns to `idle`.
 	 */
 	let requested: string | null = null;
 
 	$effect(() => {
 		if (token === null || token === requested) return;
+		// Reading status is what makes the line above safe to rely on: nothing is
+		// recorded as handed over until the flow is actually in a state to take it.
+		if (flowStore.state.status !== 'idle') return;
 		requested = token;
 		flowStore.dispatch({ type: 'verificationRequested', token });
 	});
@@ -98,7 +112,18 @@
 		onSuccess?.();
 	});
 
-	/** Focused when a terminal panel replaces whatever was there. */
+	/**
+	 * The default confirmed panel, focused when it replaces what was there.
+	 *
+	 * The submit-shaped control the user last touched is gone, and without this
+	 * focus falls to `<body>`. Some screen readers will then announce the panel
+	 * twice — once as the live region, once on focus — which is the lesser of the
+	 * two, exactly as in `SignupForm`.
+	 *
+	 * **A consumer supplying `verified` owns focus themselves.** This binding is
+	 * inside the default branch, so it is null when the snippet replaces it and
+	 * the call below is a no-op rather than a surprise.
+	 */
 	let panel = $state<HTMLElement | null>(null);
 
 	$effect(() => {

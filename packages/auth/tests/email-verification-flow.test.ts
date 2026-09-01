@@ -245,6 +245,48 @@ describe('resending', () => {
 	});
 });
 
+describe('learning the address later', () => {
+	it('accepts one after the store was built', async () => {
+		// Arriving with no token and no known address is the commonest way to
+		// reach this page. Without this action the surface could not offer a
+		// resend and had no way to be given an address — a dead end.
+		const resendVerification = vi.fn(async () => undefined);
+		const store = makeStore({ resendVerification }, { email: null });
+
+		await store.send({ type: 'resendRequested' });
+		expect(resendVerification, 'sent with nowhere to send it').not.toHaveBeenCalled();
+
+		await store.send({ type: 'emailProvided', email: 'ada@example.com' }, (state) => {
+			expect(state.email).toBe('ada@example.com');
+		});
+
+		await store.send({ type: 'resendRequested' });
+		await store.receive({ type: 'resendSucceeded' });
+
+		expect(resendVerification).toHaveBeenCalledWith('ada@example.com', expect.anything());
+		store.assertNoPendingActions();
+	});
+
+	it('leaves a resend already in flight alone', async () => {
+		// It is going to the old address, and cancelling would lose a mail the
+		// user already asked for while `resendStatus` claimed otherwise.
+		const gate = deferred<void>();
+		const resendVerification = vi.fn(async () => gate.promise);
+		const store = makeStore({ resendVerification }, { email: 'old@example.com' });
+
+		await store.send({ type: 'resendRequested' });
+		await store.send({ type: 'emailProvided', email: 'new@example.com' }, (state) => {
+			expect(state.resendStatus, 'an in-flight resend was disturbed').toBe('sending');
+			expect(state.email).toBe('new@example.com');
+		});
+
+		gate.resolve();
+		await store.receive({ type: 'resendSucceeded' });
+		expect(resendVerification).toHaveBeenCalledWith('old@example.com', expect.anything());
+		store.assertNoPendingActions();
+	});
+});
+
 describe('dismissing', () => {
 	it('clears both channels, because the surface shows them together', async () => {
 		const store = makeStore({}, { error: EXPIRED, resendError: EXPIRED });

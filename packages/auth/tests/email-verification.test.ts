@@ -15,6 +15,7 @@ import { userEvent } from 'vitest/browser';
 import { createStore } from '@composable-svelte/core';
 
 import EmailVerification from '../src/lib/components/EmailVerification.svelte';
+import VerificationTokenSwap from './test-components/VerificationTokenSwap.svelte';
 import {
 	createInitialEmailVerificationState,
 	emailVerificationReducer
@@ -133,6 +134,67 @@ describe('starting on mount', () => {
 			expect(verifyEmail, 'the token was exchanged more than once').toHaveBeenCalledTimes(1);
 		} finally {
 			h.cleanup();
+		}
+	});
+
+	it('does not lose a token that arrives while another is in flight', async () => {
+		// The component records what it handed over. Recording a token the reducer
+		// *refused* — because one was already running — would mean it was never
+		// tried at all, silently and forever.
+		//
+		// The first link fails, which is the realistic pairing: a stale link is
+		// open, a resent one arrives, and the second has to be picked up once the
+		// first finishes. If the first had succeeded there would be nothing to
+		// pick up — the address is already confirmed and exchanging another token
+		// would spend it for nothing.
+		let failFirst!: () => void;
+		const first = new Promise<null>((_resolve, reject) => {
+			failFirst = () => reject(EXPIRED);
+		});
+		const seen: string[] = [];
+		const verifyEmail = vi.fn(async (token: string) => {
+			seen.push(token);
+			return seen.length === 1 ? first : null;
+		});
+
+		const target = mountTarget();
+		const flowStore = createStore({
+			initialState: createInitialEmailVerificationState('ada@example.com'),
+			reducer: emailVerificationReducer,
+			dependencies: { verifyEmail, resendVerification: vi.fn(async () => undefined) }
+		});
+		const component = mount(VerificationTokenSwap, {
+			target,
+			props: {
+				flowStore,
+				sessionStore: { dispatch: () => {} },
+				initialToken: 'tok_1'
+			} as never
+		}) as unknown as { swap: (next: string) => void };
+
+		try {
+			await vi.waitFor(() => {
+				flushSync();
+				expect(seen).toEqual(['tok_1']);
+			});
+
+			// A second link opened while the first is still being exchanged.
+			component.swap('tok_2');
+			flushSync();
+			expect(seen, 'the reducer should have refused it').toEqual(['tok_1']);
+
+			// The first finishes — badly. The second must not have been forgotten.
+			failFirst();
+			await vi.waitFor(() => {
+				flushSync();
+				expect(seen, 'a token that arrived mid-flight was dropped forever').toEqual([
+					'tok_1',
+					'tok_2'
+				]);
+			});
+		} finally {
+			unmount(component as never);
+			target.remove();
 		}
 	});
 
