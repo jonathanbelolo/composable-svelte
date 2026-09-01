@@ -925,6 +925,16 @@ and tell someone a link that just worked is no longer valid.
   distinguished for the reason `verifyEmail` documents; a hammered request
   endpoint is `rate_limited`; and `mfa_required` reaches here too, because
   proving control of a mailbox is not proving possession of a device.
+- **Wire `onMfaRequired` if your backend can answer with it.** `mfa_required`
+  means the exchange got far enough to consume the token, so pressing again
+  cannot work. Unhandled, the component stops offering the press and says the
+  link is used up rather than inviting a retry that will fail — but the user is
+  then stuck with no way to finish, which is a configuration gap, not a state
+  worth designing for.
+- **`token` is a prop, and dispatching it is how it reaches the flow.** The
+  store can be seeded through `createMagicLinkSignInStore(deps, token)` instead;
+  the prop exists for a token that arrives *after* mount, which is what a router
+  resolving its parameters does.
 
 ---
 

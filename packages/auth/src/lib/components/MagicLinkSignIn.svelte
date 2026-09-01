@@ -35,6 +35,20 @@
 		};
 		sessionStore: { dispatch(action: SessionAction): void };
 		/**
+		 * The token from the link.
+		 *
+		 * Optional: the store may already hold one, seeded through
+		 * `createMagicLinkSignInStore(deps, token)`. When both are present this
+		 * wins, and it is dispatched rather than read directly so the reducer
+		 * stays the single source of truth — the same arrangement
+		 * `ResetPasswordForm` uses.
+		 *
+		 * Without it a token that arrives *after* mount — an SPA router resolving
+		 * its parameters, a link opened into an already-running app — has no way
+		 * into the flow, and `tokenProvided` has no caller anywhere.
+		 */
+		token?: string | null | undefined;
+		/**
 		 * Who the link was for, if the surface knows.
 		 *
 		 * **Display only, and the consumer owns its provenance.** The token is
@@ -79,6 +93,7 @@
 	let {
 		flowStore,
 		sessionStore,
+		token = null,
 		email = null,
 		onSuccess,
 		onRequestNewLink,
@@ -92,8 +107,25 @@
 
 	const status = $derived(flowStore.state.status);
 	const error = $derived(flowStore.state.error);
-	const token = $derived(flowStore.state.token);
+	/** The store's token, which the prop feeds rather than replaces. */
+	const heldToken = $derived(flowStore.state.token);
 	const isSubmitting = $derived(status === 'submitting');
+
+	/**
+	 * The token this component has already handed to the flow.
+	 *
+	 * Nothing like `EmailVerification`'s guard — that one stops a single-use
+	 * token being *spent* twice. Nothing is spent here without a press, so this
+	 * only stops a redundant dispatch when the prop re-evaluates. Keying on the
+	 * value is therefore safe: `tokenProvided` is idempotent.
+	 */
+	let provided: string | null = null;
+
+	$effect(() => {
+		if (token === null || token === provided) return;
+		provided = token;
+		flowStore.dispatch({ type: 'tokenProvided', token });
+	});
 
 	/** Whether the session has been handed over. */
 	let handedOver = false;
@@ -138,18 +170,36 @@
 		if (status === 'succeeded') panel?.focus();
 	});
 
-	/**
-	 * Whether the link is unusable — missing, or refused as spent.
-	 *
-	 * Both end in the same offer, so they share a branch and the button is
-	 * withdrawn rather than left up to fail again. Other failures are *not* in
-	 * here: a network blip may mean the request never arrived and the token is
-	 * untouched, so pressing again is a real recovery and the button must stay.
-	 */
-	const linkIsDead = $derived(token === null || error?.code === 'token_expired');
-
 	/** Suppressed while a consumer routes to the second factor. */
 	const handlingMfa = $derived(onMfaRequired !== undefined && isMfaRequired(error));
+
+	/**
+	 * Whether pressing again could possibly help.
+	 *
+	 * Three cases where it cannot, and they share a branch because they share an
+	 * offer: there is no token; the backend called it spent; or the exchange
+	 * *succeeded* far enough to demand a second factor, which means the token is
+	 * gone even though this page never got a session.
+	 *
+	 * That third case was a dead end on the first pass — the exact one this
+	 * package's MFA work exists to close. The user was shown "enter the code
+	 * from your authenticator app", given nowhere to enter it, and offered a
+	 * "Sign in" button that would re-spend a consumed token and fail. A consumer
+	 * whose backend can answer `mfa_required` must wire `onMfaRequired`; when
+	 * they have not, the honest thing is to stop offering the press.
+	 *
+	 * Everything else keeps the button. A network blip may mean the request
+	 * never arrived and the token is untouched, so pressing again is a real
+	 * recovery.
+	 */
+	const canPress = $derived(
+		heldToken !== null && error?.code !== 'token_expired' && !isMfaRequired(error)
+	);
+
+	/** What the withdrawn branch is about, so its wording can be accurate. */
+	const deadReason = $derived(
+		heldToken === null ? 'missing' : isMfaRequired(error) ? 'needsSecondFactor' : 'spent'
+	);
 </script>
 
 <div class="magic-signin {className}">
@@ -170,9 +220,21 @@
 				<p class="magic-signin__body">Welcome back.</p>
 			{/if}
 		</div>
-	{:else if linkIsDead}
+	{:else if handlingMfa}
+		<!-- The consumer is routing to the code prompt. Not a failure, so no alert. -->
 		<svelte:element this={`h${headingLevel}`} class="magic-signin__title">
-			{token === null ? 'Nothing to sign in with' : 'That link has expired'}
+			One more step
+		</svelte:element>
+		<p class="magic-signin__body" role="status" aria-live="polite">
+			Taking you to your second factor…
+		</p>
+	{:else if !canPress}
+		<svelte:element this={`h${headingLevel}`} class="magic-signin__title">
+			{deadReason === 'missing'
+				? 'Nothing to sign in with'
+				: deadReason === 'needsSecondFactor'
+					? 'One more step is needed'
+					: 'That link has expired'}
 		</svelte:element>
 		{#if error}
 			<div
@@ -188,17 +250,15 @@
 				Sign-in links work once and expire quickly. Ask for a fresh one to continue.
 			</p>
 		{/if}
+		{#if deadReason === 'needsSecondFactor'}
+			<p class="magic-signin__body">
+				This link is used up, and finishing needs a step this page cannot offer. Ask for a fresh
+				one, or sign in another way.
+			</p>
+		{/if}
 		<button type="button" class="magic-signin__action" onclick={() => onRequestNewLink()}>
 			Send me a new link
 		</button>
-	{:else if handlingMfa}
-		<!-- The consumer is routing to the code prompt. Not a failure, so no alert. -->
-		<svelte:element this={`h${headingLevel}`} class="magic-signin__title">
-			One more step
-		</svelte:element>
-		<p class="magic-signin__body" role="status" aria-live="polite">
-			Taking you to your second factor…
-		</p>
 	{:else}
 		<svelte:element this={`h${headingLevel}`} class="magic-signin__title">
 			Sign in

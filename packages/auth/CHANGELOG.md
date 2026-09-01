@@ -308,6 +308,18 @@
   on the attempt rather than the address — the defect `ForgotPasswordForm`
   shipped, where asking twice for the same inbox produced one callback.
 
+  `MagicLinkSignIn` takes a `token` prop and dispatches `tokenProvided`, as all
+  four siblings do with their own values. It shipped without one on the first
+  pass, which left `tokenProvided` declared, documented, and with no caller
+  anywhere — and left a token arriving after mount, from a router resolving its
+  parameters, with no way into the flow.
+
+  An unhandled `mfa_required` **withdraws the press** rather than offering it.
+  That case means the exchange got far enough to consume the token, so pressing
+  again cannot work; the first pass offered a "Sign in" button that would
+  re-spend a consumed token and fail, which is the same dead end the MFA work
+  exists to close, rebuilt in a new component.
+
   `MagicLinkSignIn.email` is display-only, and the doc comment says plainly that
   the consumer owns its provenance: the token is opaque, so the component cannot
   learn the address from it, and a value read straight out of the URL would be

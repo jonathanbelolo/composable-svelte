@@ -15,6 +15,7 @@ import { createStore } from '@composable-svelte/core';
 
 import MagicLinkRequestForm from '../src/lib/components/MagicLinkRequestForm.svelte';
 import MagicLinkSignIn from '../src/lib/components/MagicLinkSignIn.svelte';
+import MagicLinkTokenSwap from './test-components/MagicLinkTokenSwap.svelte';
 import {
 	magicLinkRequestReducer,
 	createInitialMagicLinkRequestState,
@@ -312,6 +313,75 @@ describe('MagicLinkSignIn', () => {
 			} finally {
 				h.cleanup();
 			}
+		}
+	});
+
+	it('takes a token that arrives after mount', async () => {
+		// `tokenProvided` existed, was documented as "hand the flow the token from
+		// the URL", and had no caller anywhere in the package. All four siblings —
+		// `ResetPasswordForm`, `EmailVerification`, `MfaChallengeForm`,
+		// `OAuthCallback` — take their value as a prop and dispatch it; this one
+		// took nothing, so a router resolving its parameters after mount, or a
+		// link opened into a running app, had no way in.
+		const target = mountTarget();
+		const flowStore = createStore({
+			initialState: createInitialMagicLinkSignInState(null),
+			reducer: magicLinkSignInReducer,
+			dependencies: { signInWithMagicLink: vi.fn(async () => session) }
+		});
+		const component = mount(MagicLinkTokenSwap, {
+			target,
+			props: { flowStore, sessionStore: sessionSpy().store, initialToken: null } as never
+		});
+
+		try {
+			flushSync();
+			expect(target.textContent).toContain('Nothing to sign in with');
+
+			// The router catches up.
+			component.swap('tok_late');
+			flushSync();
+
+			expect(flowStore.state.token, 'a late token never reached the flow').toBe('tok_late');
+			expect(target.textContent).toContain('Press the button');
+		} finally {
+			unmount(component);
+			target.remove();
+		}
+	});
+
+	it('stops offering the press when a second factor is needed and nothing handles it', async () => {
+		// The exact species this package's MFA work exists to close, reintroduced
+		// in a new component: the user was told "enter the code from your
+		// authenticator app", given nowhere to enter it, and offered a "Sign in"
+		// button that re-spends a token the backend has already consumed.
+		const signInWithMagicLink = vi.fn<MagicLinkSignInDependencies['signInWithMagicLink']>(
+			async () => session
+		);
+		const h = mountSignIn(
+			{ signInWithMagicLink },
+			{},
+			{
+				error: {
+					code: 'mfa_required',
+					message: 'Enter the code from your authenticator app.',
+					challengeId: 'c1',
+					methods: ['totp']
+				} satisfies AuthError
+			}
+		);
+
+		try {
+			flushSync();
+			const labels = h.buttons().map((b) => b.textContent?.trim() ?? '');
+			expect(labels, 'still offered to re-spend a consumed token').not.toContain('Sign in');
+			expect(labels.length, 'left the user with nothing to click').toBeGreaterThan(0);
+
+			await userEvent.click(h.buttons()[0]!);
+			expect(h.onRequestNewLink).toHaveBeenCalled();
+			expect(signInWithMagicLink, 'a consumed token was spent again').not.toHaveBeenCalled();
+		} finally {
+			h.cleanup();
 		}
 	});
 

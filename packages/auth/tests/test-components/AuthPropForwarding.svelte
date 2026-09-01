@@ -143,6 +143,7 @@
 		magicRequestFlowStore,
 		magicRequestClass,
 		magicSignInFlowStore,
+		magicToken,
 		magicEmail,
 		signedIn,
 		magicSignInClass,
@@ -299,6 +300,7 @@
 			readonly state: MagicLinkSignInState;
 			dispatch(action: MagicLinkSignInAction): void;
 		};
+		magicToken?: string | null;
 		magicEmail?: string | null;
 		signedIn?: Snippet;
 		magicSignInClass?: string;
@@ -493,6 +495,7 @@
 <MagicLinkSignIn
 	flowStore={magicSignInFlowStore}
 	{sessionStore}
+	token={magicToken}
 	email={magicEmail}
 	{onSuccess}
 	{onRequestNewLink}
