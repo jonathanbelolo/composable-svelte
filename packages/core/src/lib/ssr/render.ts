@@ -36,6 +36,15 @@ interface RenderResult {
  */
 export interface RenderOptions {
   /**
+   * Tags non-JSON values on the way out — `Date`, `Map`, `Set`.
+   *
+   * The **same object** must reach `parseState` or `hydrateStore` on the
+   * client, or the tags this writes are never untagged and hydration produces
+   * `{ __composableType: 'Date', value: '…' }` where a `Date` is expected.
+   */
+  serializer?: import('./serializer.js').StateSerializer | undefined;
+
+  /**
    * Title for the HTML document.
    * Default: 'Composable Svelte App'
    */
@@ -123,7 +132,7 @@ export function renderToHTML<Props extends ComponentProps>(
   if ((props as any).store) {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      stateJSON = serializeStore((props as any).store as Store<any, any>);
+      stateJSON = serializeStore((props as any).store as Store<any, any>, options.serializer);
     } catch (error) {
       console.error('[Composable Svelte] Failed to serialize store:', error);
       // Continue with empty state rather than crashing
@@ -215,9 +224,10 @@ export function renderComponent<Props extends ComponentProps>(
  * ```
  */
 export function buildHydrationScript<State, Action>(
-  store: Store<State, Action>
+  store: Store<State, Action>,
+  serializer?: import('./serializer.js').StateSerializer
 ): string {
-  const stateJSON = serializeStore(store);
+  const stateJSON = serializeStore(store, serializer);
 
   return `<script id="__COMPOSABLE_SVELTE_STATE__" type="application/json">
 ${escapeJSONInScript(stateJSON)}

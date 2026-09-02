@@ -198,22 +198,44 @@ const store = hydrateStore(stateJSON, { reducer, dependencies });
 
 ### Custom Serialization (Advanced)
 
-For complex types (Date, Map, Set), provide custom serializers:
+
+
+**Without a serializer, non-JSON values are corrupted silently — not rejected.**
+`serializeState` is `JSON.stringify`, so only a `BigInt` or a cycle throws. A
+`Date` arrives on the client as a `string`, a `Map` or `Set` arrives as `{}`
+with every entry lost, and TypeScript claims the original type throughout.
 
 ```typescript
-import { serializeState, parseState } from '@composable-svelte/core/ssr';
+import { serializeState, parseState, createTaggedSerializer } from '@composable-svelte/core/ssr';
 
-// Server. One argument: this is `JSON.stringify` with a clearer error.
-const serialized = serializeState(store.state);
+interface AppState {
+  at: Date;
+  seen: Set<string>;
+}
+declare const store: { state: AppState };
+
+// The SAME object goes to both halves. A tag written by a replacer that no
+// reviver reads is worse than no tagging at all, which is why they travel
+// together rather than as two options.
+const serializer = createTaggedSerializer();
+
+// Server
+const serialized = serializeState(store.state, serializer);
 
 // Client
-const state = parseState<AppState>(serialized);
+const state = parseState<AppState>(serialized, serializer);
+state.at instanceof Date;  // true
+state.seen.has('a');       // works — a Set, not `{}`
 
-// There are **no** custom serializers. `serializeState` throws if the state is
-// not plain JSON — "State should only contain plain objects, arrays, and
-// primitives" — so a `Date` or a `Map` in state must be converted by your own
-// reducer before it is serialized, and converted back after hydration.
+// `renderToHTML` takes it as an option, and `hydrateStore` as a config key:
+//   renderToHTML(App, { store }, { serializer })
+//   hydrateStore(json, { reducer, serializer })
 ```
+
+`createTaggedSerializer` covers `Date`, `Map` and `Set`. An `undefined`
+property is still dropped, deliberately: restoring it would make the key
+*present with value `undefined`*, which under `exactOptionalPropertyTypes` is a
+different type from absent.
 
 ---
 

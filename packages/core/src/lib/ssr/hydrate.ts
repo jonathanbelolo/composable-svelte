@@ -6,6 +6,12 @@
 
 import { createStore } from '../store.svelte.js';
 import type { Store, StoreConfig } from '../types.js';
+import type { StateSerializer } from './serializer.js';
+
+/**
+ * The in-half of a {@link StateSerializer}. Counterpart to `StateReplacer`.
+ */
+export type StateReviver = Pick<StateSerializer, 'reviver'>;
 
 /**
  * Hydrates a store from serialized state JSON.
@@ -59,6 +65,8 @@ export function hydrateStore<State, Action, Dependencies = any>(
   data: string,
   config: Omit<StoreConfig<State, Action, Dependencies>, 'initialState'> & {
     initialState?: State;
+    /** Must be the same object whose `replacer` produced this JSON. */
+    serializer?: StateReviver | undefined;
   }
 ): Store<State, Action> {
   if (!data) {
@@ -76,7 +84,10 @@ export function hydrateStore<State, Action, Dependencies = any>(
   let hydratedState: State;
 
   try {
-    hydratedState = JSON.parse(data) as State;
+    // NOT `parseState` — this has always inlined its own parse, so a reviver
+    // added to only one of them would work in tests and fail in a real
+    // hydration. Both take it.
+    hydratedState = JSON.parse(data, config.serializer?.reviver) as State;
   } catch (error) {
     throw new TypeError(
       `hydrateStore: Failed to parse state JSON. ` +
@@ -119,13 +130,13 @@ export function hydrateStore<State, Action, Dependencies = any>(
  * });
  * ```
  */
-export function parseState<State>(data: string): State {
+export function parseState<State>(data: string, serializer?: StateReviver): State {
   if (!data) {
     throw new TypeError('parseState: data is required');
   }
 
   try {
-    return JSON.parse(data) as State;
+    return JSON.parse(data, serializer?.reviver) as State;
   } catch (error) {
     throw new TypeError(
       `parseState: Failed to parse state JSON. ` +

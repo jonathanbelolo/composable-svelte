@@ -335,6 +335,8 @@ export { serializeStore, serializeState } from './ssr/index.js';
 
 // Hydration
 export { hydrateStore, parseState } from './ssr/index.js';
+export { createTaggedSerializer } from './ssr/index.js';
+export type { StateSerializer } from './ssr/index.js';
 
 // Rendering
 export {

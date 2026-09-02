@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Custom serializers for SSR state** — `createTaggedSerializer()` and the
+  `StateSerializer` type, accepted by `serializeState`, `serializeStore`,
+  `buildHydrationScript`, `renderToHTML` (as `options.serializer`), `parseState`
+  and `hydrateStore` (as `config.serializer`).
+
+  The documentation claimed `serializeState` **throws** on a `Date` or a `Map`.
+  It does not, and that was the dangerous half of the claim, because a throw is
+  loud. What actually happened: a `Date` arrived on the client as a `string`, a
+  `Map` or `Set` arrived as `{}` with every entry lost, and TypeScript asserted
+  the original type on both sides. Only a `BigInt` or a cycle ever threw.
+
+  The replacer and reviver travel as **one object**, because a tag written by a
+  replacer that no reviver reads is worse than no tagging at all — the state
+  arrives as a visible wrapper instead of a value. Passing one object to both
+  halves is what makes that hard to get wrong.
+
 - **`ConnectionStats.messagesQueued`** — how many messages a queuing wrapper is
   holding for the connection. `0` for a client that does not queue.
 

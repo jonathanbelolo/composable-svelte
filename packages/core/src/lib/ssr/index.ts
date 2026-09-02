@@ -128,3 +128,9 @@ export type {
   SSGResult,
   SSGGenerateOptions
 } from './ssg.js';
+
+// Custom serializers — for state holding `Date`, `Map` or `Set`.
+export { createTaggedSerializer } from './serializer.js';
+export type { StateSerializer } from './serializer.js';
+export type { StateReplacer } from './serialize.js';
+export type { StateReviver } from './hydrate.js';

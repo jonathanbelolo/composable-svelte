@@ -21,6 +21,8 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { renderToHTML, buildHydrationScript } from '../../src/lib/ssr/render';
+import { hydrateStore, parseState } from '../../src/lib/ssr/hydrate';
+import { createTaggedSerializer } from '../../src/lib/ssr/serializer';
 import { createStore } from '../../src/lib/store.svelte';
 import { Effect } from '../../src/lib/effect';
 import type { Reducer } from '../../src/lib/types';
@@ -93,4 +95,76 @@ describe.each(SITES)('$name embeds state that cannot break out', ({ render }) =>
     const parsed = JSON.parse(embeddedJSON(render('ordinary'))) as State;
     expect(parsed.title).toBe('ordinary');
   });
+});
+
+describe('a serializer reaches every site on the round trip', () => {
+	// There are four ways state goes out — `serializeState`, `serializeStore`,
+	// `buildHydrationScript` and `renderToHTML` (which calls `serializeStore`
+	// and must forward) — and two ways it comes back: `parseState`, and
+	// `hydrateStore`, which inlines its own `JSON.parse` rather than calling
+	// `parseState`. A serializer wired into some of them and not others writes
+	// tags nothing untags, which is worse than not tagging at all.
+
+	interface Dated {
+		at: Date;
+	}
+	const datedReducer: Reducer<Dated, Action> = (state) => [state, Effect.none()];
+	const AT = new Date('2026-01-01T00:00:00.000Z');
+
+	function datedStore() {
+		return createStore<Dated, Action>({ initialState: { at: AT }, reducer: datedReducer });
+	}
+
+	it('renderToHTML forwards it to serializeStore', () => {
+		const html = renderToHTML({} as never, { store: datedStore() }, {
+			serializer: createTaggedSerializer()
+		});
+
+		const parsed = JSON.parse(embeddedJSON(html)) as { at: unknown };
+		expect(parsed.at).toEqual({ __composableType: 'Date', value: AT.toISOString() });
+	});
+
+	it('buildHydrationScript forwards it', () => {
+		const html = buildHydrationScript(datedStore(), createTaggedSerializer());
+		const parsed = JSON.parse(embeddedJSON(html)) as { at: unknown };
+		expect(parsed.at).toEqual({ __composableType: 'Date', value: AT.toISOString() });
+	});
+
+	it('hydrateStore applies the reviver, despite parsing for itself', () => {
+		// The asymmetry arm. `hydrateStore` does not call `parseState`, so wiring
+		// only the latter would pass every test above and still hand a real app a
+		// tag wrapper where it expects a Date.
+		const serializer = createTaggedSerializer();
+		const json = buildHydrationScript(datedStore(), serializer);
+
+		const hydrated = hydrateStore<Dated, Action>(embeddedJSON(json), {
+			reducer: datedReducer,
+			serializer
+		});
+
+		expect(hydrated.state.at).toBeInstanceOf(Date);
+		expect(hydrated.state.at.getTime()).toBe(AT.getTime());
+	});
+
+	it('composes with the script escape', () => {
+		// The two features meet in one string: a tagged value beside a payload
+		// that would close the script tag.
+		const serializer = createTaggedSerializer();
+		interface Both {
+			at: Date;
+			note: string;
+		}
+		const reducer: Reducer<Both, Action> = (state) => [state, Effect.none()];
+		const store = createStore<Both, Action>({
+			initialState: { at: AT, note: '</script><img src=x>' },
+			reducer
+		});
+
+		const html = renderToHTML({} as never, { store }, { serializer });
+		expect(html.match(/<\/script/gi) ?? []).toHaveLength((html.match(/<script/gi) ?? []).length);
+
+		const back = parseState<Both>(embeddedJSON(html), serializer);
+		expect(back.at).toBeInstanceOf(Date);
+		expect(back.note).toBe('</script><img src=x>');
+	});
 });

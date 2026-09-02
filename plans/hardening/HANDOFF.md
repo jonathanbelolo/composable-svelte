@@ -584,7 +584,11 @@ Breaking, deliberate, and the better API.
   was a pending count, and that is a number — it is now
   `stats.messagesQueued`, on the object that already carried every other
   read-only number about the connection.
-- `serializeState` with custom serializers
+- `serializeState` with custom serializers — **built**, as a matched
+  `{ replacer, reviver }` pair threaded through all four out-sites and both
+  in-sites. Building it turned up something worse than the missing API: the
+  *narrowed* doc was itself false. It said `serializeState` throws on a `Date`
+  or a `Map`; it does not, and the real behaviour is silent corruption.
 - `Clock.live` / `Storage.live` — **declined, with reasons recorded.** See
   `plans/hardening/README.md`; the short version is that `Storage.live` cannot
   be a value at all.
