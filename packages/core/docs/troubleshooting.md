@@ -1012,19 +1012,27 @@ again:
 **Cause: Not passing dependencies to store**
 
 ```typescript
+import { createStore, createAPIClient, createSystemClock } from '@composable-svelte/core';
+
+declare const initialState: { count: number };
+declare const reducer: never;
+
 // ❌ BAD: No dependencies provided
-const store = createStore({
+const bad = createStore({
   initialState,
   reducer
 });
 
 // ✅ GOOD: Provide dependencies
-const store = createStore({
+const good = createStore({
   initialState,
   reducer,
   dependencies: {
-    apiClient: new ApiClient(),
-    clock: Clock.live,
+    // Factory functions, not `new` and not a `.live` namespace: `Clock` and
+    // `Storage` are types. The live implementations are `createSystemClock()`
+    // and `createLocalStorage()`.
+    apiClient: createAPIClient({ baseURL: '/api' }),
+    clock: createSystemClock(),
     dismiss: () => {}
   }
 });

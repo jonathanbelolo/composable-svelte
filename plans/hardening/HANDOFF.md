@@ -581,7 +581,9 @@ Breaking, deliberate, and the better API.
   worth building: the queue is an implementation detail of reconnection, and
   exposing it invites reaching into it.
 - `serializeState` with custom serializers
-- `Clock.live` / `Storage.live`
+- `Clock.live` / `Storage.live` — **declined, with reasons recorded.** See
+  `plans/hardening/README.md`; the short version is that `Storage.live` cannot
+  be a value at all.
 - `createParserConfig`
 
 *Built, but a different shape than documented* — three. None is a naming

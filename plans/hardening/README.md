@@ -438,6 +438,35 @@ scoped CSS — `auth`'s and `media`'s — render correctly either way.
   schema's output back into `state.data` at **submit-time** validation only;
   doing it per-field would rewrite a keystroke mid-word. The two MFA reducers
   dropped their duplicated trims as a result.
+- **`Clock.live` / `Storage.live` are not being built, and here is why — in
+  order of weight, because the weakest reason is the one a future reader will
+  knock down first.**
+
+  The weak one: `Clock` and `Storage` are type-only exports, so `.live` needs a
+  runtime value of the same name. That is only an inconvenience — nothing stops
+  `export const Clock = { live: createSystemClock() }` sitting beside
+  `export type Clock`.
+
+  The load-bearing ones. **`Storage.live` cannot be a value.**
+  `createLocalStorage<T>()` is generic and takes `StorageConfig<T>` — `prefix`,
+  `validator`, `debug` — and a bare `.live` discards all four facts. That is
+  exactly what the pre-narrowing document did, and it is why the API read
+  plausibly while being unimplementable. And **`createLocalStorage()` throws on
+  a server** (`EnvironmentNotSupportedError`), so a `Storage.live` evaluated at
+  module scope breaks SSR — which is not hypothetical: `packages/auth`'s README
+  calls its dependency factories at module scope, and
+  `flows/oauth-pending.ts` carries a try/catch for precisely this.
+
+  The convention `create<Impl><Thing>()` is now 8 for 8 across the dependencies
+  barrel with `createMockStorage` added.
+
+  The last live claim, `packages/core/docs/troubleshooting.md`, is fixed — it
+  sat inside a `// ✅ GOOD` block, i.e. presented as the correct form in the fix
+  half of a broken/fixed pair. Two other things in the same six lines were also
+  not the API (`new ApiClient()`, when it is `createAPIClient({...})`). The
+  fence now carries an import line, so the next such error fails the build
+  rather than sitting there.
+
 - **Core ships `createMockStorage`. This entry was closed twice as a position,
   and the position was wrong.** It was first recorded as a gap, then closed as
   deliberate on the strength of a doc comment that had "already ruled on it",
