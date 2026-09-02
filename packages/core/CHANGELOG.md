@@ -33,9 +33,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   string remains the fallback, so no existing caller changes behaviour.
   `AlertDialog` wires them to its own title and description automatically.
 
-  **`Modal`, `Sheet` and `Drawer` still carry the same defect** — `"Modal
-  dialog"`, `"Bottom sheet"`, `"Side drawer"`. Named here rather than implied,
-  so the scope of this fix is not mistaken for completeness.
+  **`Modal`, `Sheet` and `Drawer` carried the identical defect** — `"Modal
+  dialog"`, `"Bottom sheet"`, `"Side drawer"` — and take the same three props
+  now, with the same fallbacks. Every modal surface in the library can be named
+  by its content.
+
+  Still hardcoded, and deliberately: the `aria-label` on `NavigationStack`,
+  `Sidebar` and `Tabs`. Those are landmark and tablist roles, where naming the
+  region after the component is a reasonable default rather than a dead end.
 
 - **`createParserConfig(routes, options?)`** — builds a `ParserConfig` from a
   pattern-to-handler map, so a route stops being four lines of

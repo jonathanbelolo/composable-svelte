@@ -55,6 +55,26 @@
     class?: string | undefined;
 
     /**
+     * The id of the element that names this sheet — normally its title.
+     *
+     * Takes precedence over `ariaLabel`. Without one it announced the
+     * hardcoded string "Bottom sheet", which names the *component* and never what
+     * it is for.
+     */
+    ariaLabelledby?: string | undefined;
+
+    /**
+     * A name, when there is no title element to point at.
+     *
+     * Ignored when `ariaLabelledby` is set. Defaults to the old hardcoded
+     * string, so no existing caller changes behaviour.
+     */
+    ariaLabel?: string | undefined;
+
+    /** The id of the element describing this sheet. */
+    ariaDescribedby?: string | undefined;
+
+    /**
      * Disable click-outside to dismiss.
      * @default false
      */
@@ -99,6 +119,9 @@
     onDismissalComplete,
     springConfig,
     unstyled = false,
+    ariaLabelledby,
+    ariaLabel,
+    ariaDescribedby,
     backdropClass,
     class: className,
     disableClickOutside = false,
@@ -159,7 +182,10 @@
       style:opacity={initialOpacity}
       role="dialog"
       aria-modal="true"
-      aria-label="Bottom sheet"
+      {...ariaLabelledby !== undefined
+        ? { 'aria-labelledby': ariaLabelledby }
+        : { 'aria-label': ariaLabel ?? 'Bottom sheet' }}
+      {...ariaDescribedby !== undefined ? { 'aria-describedby': ariaDescribedby } : {}}
       data-dialog-type="sheet"
     >
       {@render renderContent?.({ visible, store, height })}
