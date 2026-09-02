@@ -220,6 +220,9 @@ interface ConnectionStats {
   reconnects: number;
   errors: number;
   uptime: number; // milliseconds
+  // Messages a queuing wrapper is holding for the connection. Always 0 for a
+  // client that does not queue.
+  messagesQueued: number;
 }
 
 // Access stats
@@ -227,6 +230,7 @@ const stats = websocket.stats;
 console.log(stats.messagesSent); // 42
 console.log(stats.reconnects); // 2
 console.log(stats.uptime); // 123456 (ms)
+console.log(stats.messagesQueued); // 3
 ```
 
 ## Sending Messages
@@ -627,9 +631,29 @@ await websocket.connect('wss://api.example.com');
 
 ### Inspecting the queue
 
+**For a pending count, read `stats.messagesQueued`:**
+
+```typescript
+import { createQueuedWebSocket, createLiveWebSocket } from '@composable-svelte/core';
+
+const client = createQueuedWebSocket(createLiveWebSocket(), 100);
+await client.send({ type: 'chat', text: 'held while offline' });
+
+console.log(client.stats.messagesQueued); // 1
+```
+
 `createQueuedWebSocket` owns its queue and returns only the client, so there is
-nothing on the client to inspect — no `websocket.queue`. When you need to show a
-pending count or clear the buffer, drive the queue yourself:
+still no `websocket.queue`, and that is deliberate: a handle invites reaching
+into a structure that belongs to reconnection, whereas a read-only number on
+`stats` — already the public home for numbers about the connection — cannot be
+misused.
+
+There is no `isFull` either. It is the comparison `size >= maxSize`, and
+reaching it is not an error: the oldest message is dropped to make room.
+
+**To clear the buffer, or to see what is actually in it**, drive the queue
+yourself — that is what the wrapper does internally, and `createMessageQueue` is
+exported for it:
 
 ```typescript
 import { createMessageQueue, createLiveWebSocket } from '@composable-svelte/core';

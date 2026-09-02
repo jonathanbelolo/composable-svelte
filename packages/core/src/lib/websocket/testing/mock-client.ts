@@ -95,7 +95,9 @@ export function createMockWebSocket<T = unknown>(
     bytesSent: 0,
     bytesReceived: 0,
     reconnects: 0,
-    errors: 0
+    errors: 0,
+    // The mock does not queue; only `createQueuedWebSocket` reports otherwise.
+    messagesQueued: 0
   };
 
   async function connect(url: string, protocols: string[] = []): Promise<void> {

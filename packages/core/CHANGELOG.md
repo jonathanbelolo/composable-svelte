@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`ConnectionStats.messagesQueued`** — how many messages a queuing wrapper is
+  holding for the connection. `0` for a client that does not queue.
+
+  The register had declined queue inspection outright, on the grounds that the
+  queue is an implementation detail of reconnection and exposing it invites
+  reaching into it. That reasoning holds for a *handle* and there is still no
+  `websocket.queue`; but the need behind the request was a pending count, and a
+  read-only number on `stats` cannot be reached into.
+
+  Required rather than optional: under `exactOptionalPropertyTypes` an optional
+  field would force `stats.messagesQueued ?? 0` at every read, which is worse
+  for the one thing it exists to do. Additive for readers of `stats`, breaking
+  for anyone implementing `WebSocketClient` with a hand-written `stats` object.
+
 - **`createMockStorage()`** — an in-memory `SyncStorage<T>` for tests, the
   counterpart to `createMockCookieStorage` that the localStorage/sessionStorage
   pair never had. `createNoopStorage()` discards writes and reads back `null`,

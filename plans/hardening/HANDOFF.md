@@ -577,9 +577,13 @@ Breaking, deliberate, and the better API.
 - `createMockStorage` — **built.** The decline said "no caller"; there were two,
   unmeasured: core's own storage test hand-rolled one and used it 48 times, and
   `auth` wrote a narrow substitute. See `plans/hardening/README.md`.
-- WebSocket **queue inspection** (`ws.queue.length` and friends). Judged not
-  worth building: the queue is an implementation detail of reconnection, and
-  exposing it invites reaching into it.
+- WebSocket **queue inspection** (`ws.queue.length` and friends) — **narrowed
+  and built.** The decline stands for a *handle*: the queue is an
+  implementation detail of reconnection, and exposing it invites reaching into
+  it, so there is still no `websocket.queue`. But the need behind the request
+  was a pending count, and that is a number — it is now
+  `stats.messagesQueued`, on the object that already carried every other
+  read-only number about the connection.
 - `serializeState` with custom serializers
 - `Clock.live` / `Storage.live` — **declined, with reasons recorded.** See
   `plans/hardening/README.md`; the short version is that `Storage.live` cannot

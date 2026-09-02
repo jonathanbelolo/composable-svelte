@@ -327,6 +327,72 @@ describe('Queued WebSocket Client', () => {
     });
   });
 
+  describe('Pending count on stats', () => {
+    // The narrow answer to "how many messages are waiting". There is
+    // deliberately no `websocket.queue`: a handle invites reaching into a
+    // structure that belongs to reconnection. `stats` was already the public,
+    // read-only home for numbers about the connection.
+
+    it('reports zero while connected', async () => {
+      const base = createMockWebSocket();
+      const client = createQueuedWebSocket(base, 100);
+      await client.connect('ws://test');
+
+      await client.send({ hello: 'world' });
+
+      expect(client.stats.messagesQueued).toBe(0);
+    });
+
+    it('counts messages held while disconnected', async () => {
+      const client = createQueuedWebSocket(createMockWebSocket(), 100);
+
+      await client.send({ n: 1 });
+      await client.send({ n: 2 });
+      await client.send({ n: 3 });
+
+      expect(client.stats.messagesQueued).toBe(3);
+    });
+
+    it('returns to zero once the queue flushes', async () => {
+      const base = createMockWebSocket();
+      const client = createQueuedWebSocket(base, 100);
+
+      await client.send({ n: 1 });
+      await client.send({ n: 2 });
+      expect(client.stats.messagesQueued).toBe(2);
+
+      await client.connect('ws://test');
+
+      expect(client.stats.messagesQueued).toBe(0);
+    });
+
+    it('stops at maxSize, because overflow drops the oldest', async () => {
+      const client = createQueuedWebSocket(createMockWebSocket(), 5);
+
+      for (let i = 0; i < 12; i += 1) await client.send({ n: i });
+
+      expect(client.stats.messagesQueued).toBe(5);
+    });
+
+    it('leaves the other seven fields to the wrapped client', async () => {
+      // The wrapper owns exactly one field. If it built a fresh literal instead
+      // of spreading, every other number would silently read zero.
+      const base = createMockWebSocket();
+      const client = createQueuedWebSocket(base, 100);
+      await client.connect('ws://test');
+      await client.send({ hello: 'world' });
+
+      expect(client.stats.messagesSent).toBe(base.stats.messagesSent);
+      expect(client.stats.bytesSent).toBe(base.stats.bytesSent);
+      expect(client.stats.reconnects).toBe(base.stats.reconnects);
+      expect(client.stats.errors).toBe(base.stats.errors);
+    });
+
+    it('reports zero for a client that does not queue at all', () => {
+      expect(createMockWebSocket().stats.messagesQueued).toBe(0);
+    });
+  });
+
   describe('State Preservation', () => {
     it('should preserve client state', async () => {
       const baseClient = createMockWebSocket();

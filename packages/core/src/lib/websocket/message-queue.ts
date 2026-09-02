@@ -6,7 +6,7 @@
  * sent when connection is restored.
  */
 
-import type { WebSocketClient } from './types.js';
+import type { ConnectionStats, WebSocketClient } from './types.js';
 
 export interface MessageQueue<T = unknown> {
   /**
@@ -134,6 +134,12 @@ export function createQueuedWebSocket<T = unknown>(
     subscribe: client.subscribe.bind(client),
     subscribeToEvents: client.subscribeToEvents.bind(client),
     get state() { return client.state; },
-    get stats() { return client.stats; }
+    get stats(): ConnectionStats {
+      // Seven fields belong to the wrapped client; the eighth is ours. The
+      // explicit return type is load-bearing — it makes a future
+      // `ConnectionStats` field a compile error here rather than a silently
+      // stale spread.
+      return { ...client.stats, messagesQueued: queue.size };
+    }
   };
 }

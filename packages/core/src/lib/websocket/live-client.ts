@@ -77,7 +77,9 @@ export function createLiveWebSocket<T = unknown>(
     bytesReceived: 0,
     reconnects: 0,
     errors: 0,
-    uptime: 0
+    uptime: 0,
+    // This client does not queue; `createQueuedWebSocket` reports its own.
+    messagesQueued: 0
   };
 
   // Listeners
