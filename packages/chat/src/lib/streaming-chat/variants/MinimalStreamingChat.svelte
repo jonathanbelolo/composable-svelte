@@ -202,8 +202,8 @@
 		display: flex;
 		flex-direction: column;
 		height: 100%;
-		background: #ffffff;
-		border: 1px solid #e0e0e0;
+		background: hsl(var(--background, 0 0% 100%));
+		border: 1px solid hsl(var(--border, 0 0% 87.8%));
 		border-radius: 8px;
 		overflow: hidden;
 	}
@@ -221,7 +221,7 @@
 		align-items: center;
 		justify-content: center;
 		height: 100%;
-		color: #999;
+		color: hsl(var(--muted-foreground, 0 0% 60%));
 		font-size: 14px;
 	}
 
@@ -232,7 +232,7 @@
 		padding: 12px 16px;
 		background: #fee;
 		border-top: 1px solid #fcc;
-		color: #c00;
+		color: hsl(var(--destructive, 0 100% 40%));
 		font-size: 14px;
 	}
 
@@ -243,7 +243,7 @@
 	.minimal-streaming-chat__error-close {
 		background: none;
 		border: none;
-		color: #c00;
+		color: hsl(var(--destructive, 0 100% 40%));
 		cursor: pointer;
 		font-size: 18px;
 		padding: 0 8px;
@@ -254,9 +254,9 @@
 	}
 
 	.minimal-streaming-chat__form {
-		border-top: 1px solid #e0e0e0;
+		border-top: 1px solid hsl(var(--border, 0 0% 87.8%));
 		padding: 16px;
-		background: #fafafa;
+		background: hsl(var(--muted, 0 0% 98%));
 	}
 
 	.minimal-streaming-chat__input-wrapper {
@@ -268,23 +268,23 @@
 	.minimal-streaming-chat__input {
 		flex: 1;
 		padding: 12px;
-		border: 1px solid #d0d0d0;
+		border: 1px solid hsl(var(--border, 0 0% 81.6%));
 		border-radius: 6px;
 		font-size: 14px;
 		font-family: inherit;
 		resize: none;
 		max-height: 120px;
 		min-height: 44px;
-		background: white;
+		background: hsl(var(--background, 0 0% 100%));
 	}
 
 	.minimal-streaming-chat__input:focus {
 		outline: none;
-		border-color: #007aff;
+		border-color: hsl(var(--primary, 211.3 100% 50%));
 	}
 
 	.minimal-streaming-chat__input:disabled {
-		background: #f5f5f5;
+		background: hsl(var(--muted, 0 0% 96.1%));
 		cursor: not-allowed;
 	}
 
@@ -296,8 +296,8 @@
 		font-weight: 600;
 		cursor: pointer;
 		white-space: nowrap;
-		background: #007aff;
-		color: white;
+		background: hsl(var(--primary, 211.3 100% 50%));
+		color: hsl(var(--primary-foreground, 0 0% 100%));
 	}
 
 	.minimal-streaming-chat__button:hover:not(:disabled) {
@@ -307,30 +307,4 @@
 	.minimal-streaming-chat__button:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
-	}
-
-	/* Dark mode support */
-	:global(.dark) .minimal-streaming-chat {
-		background: #1a1a1a;
-		border-color: #333;
-	}
-
-	:global(.dark) .minimal-streaming-chat__form {
-		background: #222;
-		border-top-color: #333;
-	}
-
-	:global(.dark) .minimal-streaming-chat__input {
-		background: #2a2a2a;
-		border-color: #444;
-		color: #e0e0e0;
-	}
-
-	:global(.dark) .minimal-streaming-chat__input:disabled {
-		background: #1a1a1a;
-	}
-
-	:global(.dark) .minimal-streaming-chat__empty {
-		color: #666;
-	}
-</style>
+	}</style>

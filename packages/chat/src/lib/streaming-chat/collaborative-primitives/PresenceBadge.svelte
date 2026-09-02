@@ -70,7 +70,7 @@
 	 */
 	.presence-dot {
 		border-radius: 50%;
-		border: 2px solid white;
+		border: 2px solid hsl(var(--background, 0 0% 100%));
 		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 		flex-shrink: 0;
 		background-clip: content-box;
@@ -94,16 +94,16 @@
 	.presence-text {
 		font-size: 12px;
 		font-weight: 500;
-		color: #64748b;
+		color: hsl(var(--muted-foreground, 215.4 16.3% 46.9%));
 	}
 
 	@media (prefers-color-scheme: dark) {
 		.presence-dot {
-			border-color: #1e293b;
+			border-color: hsl(var(--card, 217.2 32.6% 17.5%));
 		}
 
 		.presence-text {
-			color: #94a3b8;
+			color: hsl(var(--muted-foreground, 215 20.2% 65.1%));
 		}
 	}
 </style>

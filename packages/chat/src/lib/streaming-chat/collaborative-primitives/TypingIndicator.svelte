@@ -41,9 +41,9 @@
 		gap: 8px;
 		padding: 8px 12px;
 		border-radius: 16px;
-		background-color: #f1f5f9;
+		background-color: hsl(var(--muted, 210 40% 96.1%));
 		font-size: 13px;
-		color: #64748b;
+		color: hsl(var(--muted-foreground, 215.4 16.3% 46.9%));
 	}
 
 	.typing-dots {
@@ -56,7 +56,7 @@
 		width: 6px;
 		height: 6px;
 		border-radius: 50%;
-		background-color: #64748b;
+		background-color: hsl(var(--muted, 215.4 16.3% 46.9%));
 		animation: typing-pulse 1.4s ease-in-out infinite;
 	}
 
@@ -91,12 +91,12 @@
 
 	@media (prefers-color-scheme: dark) {
 		.typing-indicator {
-			background-color: #1e293b;
-			color: #94a3b8;
+			background-color: hsl(var(--card, 217.2 32.6% 17.5%));
+			color: hsl(var(--muted-foreground, 215 20.2% 65.1%));
 		}
 
 		.dot {
-			background-color: #94a3b8;
+			background-color: hsl(var(--muted, 215 20.2% 65.1%));
 		}
 	}
 </style>

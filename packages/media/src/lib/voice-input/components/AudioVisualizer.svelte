@@ -78,7 +78,7 @@
 		flex: 1;
 		min-width: 2px;
 		max-width: 6px;
-		background: var(--color, #007aff);
+		background: var(--color, hsl(var(--primary, 211.3 100% 50%)));
 		border-radius: 2px;
 		height: var(--height, 10%);
 		/* height only. `barPulse` below already owns opacity, and a transition on
@@ -109,7 +109,7 @@
 		width: 40px;
 		height: 40px;
 		border-radius: 50%;
-		background: var(--color, #007aff);
+		background: var(--color, hsl(var(--primary, 211.3 100% 50%)));
 		opacity: 0.6;
 		transform: scale(var(--scale, 1));
 		transition: transform 0.1s ease-out;

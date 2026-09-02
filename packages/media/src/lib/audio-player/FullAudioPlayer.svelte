@@ -632,7 +632,7 @@
 		padding: 1.5rem;
 		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 		border-radius: 12px;
-		color: white;
+		color: hsl(var(--background, 0 0% 100%));
 		font-family: system-ui, -apple-system, sans-serif;
 		max-width: 600px;
 		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
@@ -708,7 +708,7 @@
 	.progress-fill-large {
 		position: absolute;
 		height: 100%;
-		background: white;
+		background: hsl(var(--background, 0 0% 100%));
 		border-radius: 4px;
 		transition: width 0.1s;
 	}
@@ -719,7 +719,7 @@
 		transform: translate(-50%, -50%);
 		width: 16px;
 		height: 16px;
-		background: white;
+		background: hsl(var(--background, 0 0% 100%));
 		border-radius: 50%;
 		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 		opacity: 0;
@@ -753,7 +753,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		color: white;
+		color: hsl(var(--background, 0 0% 100%));
 		cursor: pointer;
 		position: relative;
 	}
@@ -782,7 +782,7 @@
 		height: 64px;
 		border-radius: 50%;
 		border: none;
-		background: white;
+		background: hsl(var(--background, 0 0% 100%));
 		color: #667eea;
 		cursor: pointer;
 		display: flex;
@@ -825,7 +825,7 @@
 		border: none;
 		padding: 0.5rem;
 		cursor: pointer;
-		color: white;
+		color: hsl(var(--background, 0 0% 100%));
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -851,7 +851,7 @@
 		width: 14px;
 		height: 14px;
 		border-radius: 50%;
-		background: white;
+		background: hsl(var(--background, 0 0% 100%));
 		cursor: pointer;
 		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 	}
@@ -860,7 +860,7 @@
 		width: 14px;
 		height: 14px;
 		border-radius: 50%;
-		background: white;
+		background: hsl(var(--background, 0 0% 100%));
 		cursor: pointer;
 		border: none;
 		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
@@ -875,7 +875,7 @@
 		border: none;
 		border-radius: 20px;
 		padding: 0.5rem 1rem;
-		color: white;
+		color: hsl(var(--background, 0 0% 100%));
 		cursor: pointer;
 		font-size: 0.9rem;
 		font-weight: 600;
@@ -891,7 +891,7 @@
 		bottom: 100%;
 		right: 0;
 		margin-bottom: 0.5rem;
-		background: white;
+		background: hsl(var(--background, 0 0% 100%));
 		border-radius: 8px;
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 		padding: 0.5rem;
@@ -913,12 +913,12 @@
 	}
 
 	.speed-option:hover {
-		background: #f0f0f0;
+		background: hsl(var(--muted, 0 0% 94.1%));
 	}
 
 	.speed-option.active {
 		background: #667eea;
-		color: white;
+		color: hsl(var(--background, 0 0% 100%));
 	}
 
 	.expand-btn {
@@ -930,7 +930,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		color: white;
+		color: hsl(var(--background, 0 0% 100%));
 		cursor: pointer;
 	}
 
@@ -942,7 +942,7 @@
 	.error-message-large {
 		padding: 0.75rem;
 		background: rgba(255, 255, 255, 0.2);
-		color: white;
+		color: hsl(var(--background, 0 0% 100%));
 		border-radius: 6px;
 		font-size: 0.9rem;
 		text-align: center;
@@ -953,7 +953,7 @@
 		top: 1rem;
 		right: 1rem;
 		background: rgba(0, 0, 0, 0.7);
-		color: white;
+		color: hsl(var(--background, 0 0% 100%));
 		padding: 0.5rem 1rem;
 		border-radius: 20px;
 		font-size: 0.85rem;

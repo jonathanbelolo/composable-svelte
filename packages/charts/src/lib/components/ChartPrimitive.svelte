@@ -372,7 +372,7 @@ function attachBrushBehavior(svg: SVGSVGElement): () => void {
   }
 
   .chart-primitive :global(text) {
-    fill: #374151;
+    fill: hsl(var(--muted-foreground, 216.9 19.1% 26.7%));
   }
 
   .chart-primitive :global(.plot-axis) {

@@ -234,8 +234,8 @@
 	.image-preview {
 		display: flex;
 		flex-direction: column;
-		background: white;
-		border: 1px solid #e5e7eb;
+		background: hsl(var(--background, 0 0% 100%));
+		border: 1px solid hsl(var(--border, 220 13% 91%));
 		border-radius: 0.5rem;
 		overflow: hidden;
 		max-width: 800px;
@@ -245,7 +245,7 @@
 		max-width: none;
 		border: none;
 		border-radius: 0;
-		background: black;
+		background: hsl(var(--foreground, 0 0% 0%));
 	}
 
 	.image-preview-header {
@@ -253,8 +253,8 @@
 		align-items: center;
 		justify-content: space-between;
 		padding: 0.75rem 1rem;
-		background: #f9fafb;
-		border-bottom: 1px solid #e5e7eb;
+		background: hsl(var(--muted, 210 20% 98%));
+		border-bottom: 1px solid hsl(var(--border, 220 13% 91%));
 		gap: 1rem;
 	}
 
@@ -282,7 +282,7 @@
 	.image-filename {
 		font-size: 0.875rem;
 		font-weight: 500;
-		color: #111827;
+		color: hsl(var(--foreground, 220.9 39.3% 11%));
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
@@ -293,11 +293,11 @@
 		align-items: center;
 		gap: 0.5rem;
 		font-size: 0.75rem;
-		color: #6b7280;
+		color: hsl(var(--muted-foreground, 220 8.9% 46.1%));
 	}
 
 	.image-separator {
-		color: #d1d5db;
+		color: hsl(var(--foreground, 216 12.2% 83.9%));
 	}
 
 	.fullscreen-btn {
@@ -306,21 +306,21 @@
 		justify-content: center;
 		width: 2rem;
 		height: 2rem;
-		background: white;
-		border: 1px solid #d1d5db;
+		background: hsl(var(--background, 0 0% 100%));
+		border: 1px solid hsl(var(--border, 216 12.2% 83.9%));
 		border-radius: 0.375rem;
-		color: #374151;
+		color: hsl(var(--muted-foreground, 216.9 19.1% 26.7%));
 		cursor: pointer;
 		flex-shrink: 0;
 	}
 
 	.fullscreen-btn:hover {
-		background: #f9fafb;
-		border-color: #9ca3af;
+		background: hsl(var(--muted, 210 20% 98%));
+		border-color: hsl(var(--muted-foreground, 217.9 10.6% 64.9%));
 	}
 
 	.fullscreen-btn:focus-visible {
-		outline: 2px solid #3b82f6;
+		outline: 2px solid hsl(var(--primary, 217.2 91.2% 59.8%));
 		outline-offset: 2px;
 	}
 
@@ -329,13 +329,13 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: #f9fafb;
+		background: hsl(var(--muted, 210 20% 98%));
 		min-height: 200px;
 	}
 
 	.fullscreen .image-container {
 		min-height: 100vh;
-		background: black;
+		background: hsl(var(--foreground, 0 0% 0%));
 	}
 
 	/* The wrapper is a real button for keyboard access, and had no rule at all —
@@ -388,18 +388,18 @@
 	}
 
 	.image-loading {
-		color: #6b7280;
+		color: hsl(var(--muted-foreground, 220 8.9% 46.1%));
 	}
 
 	.image-error {
-		color: #dc2626;
+		color: hsl(var(--destructive, 0 72.2% 50.6%));
 	}
 
 	.spinner {
 		width: 2rem;
 		height: 2rem;
-		border: 3px solid #e5e7eb;
-		border-top-color: #3b82f6;
+		border: 3px solid hsl(var(--border, 220 13% 91%));
+		border-top-color: hsl(var(--primary, 217.2 91.2% 59.8%));
 		border-radius: 50%;
 		animation: spin 0.6s linear infinite;
 	}
@@ -435,7 +435,7 @@
 		background: rgba(0, 0, 0, 0.6);
 		border: 1px solid rgba(255, 255, 255, 0.2);
 		border-radius: 0.375rem;
-		color: white;
+		color: hsl(var(--background, 0 0% 100%));
 		cursor: pointer;
 	}
 
@@ -444,7 +444,7 @@
 	}
 
 	.fullscreen-close-btn:focus-visible {
-		outline: 2px solid white;
+		outline: 2px solid hsl(var(--background, 0 0% 100%));
 		outline-offset: 2px;
 	}
 </style>

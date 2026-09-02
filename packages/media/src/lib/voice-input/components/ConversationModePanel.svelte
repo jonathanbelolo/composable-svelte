@@ -13,9 +13,17 @@
 	interface Props {
 		store: Store<VoiceInputState, VoiceInputAction>;
 		transcripts?: string[] | undefined; // History of transcripts in this conversation
+	/**
+	 * Which heading element to render.
+	 *
+	 * The level belongs to the page, not to the component: put this under an
+	 * `<h2>` and a fixed `<h3>` jumps the outline, which no consumer can fix from
+	 * the outside. Defaults to the level it has always rendered.
+	 */
+		headingLevel?: 1 | 2 | 3 | 4 | 5 | 6 | undefined;
 	}
 
-	const { store, transcripts = [] }: Props = $props();
+	const { store, transcripts = [], headingLevel = 3 }: Props = $props();
 
 	let rootElement: HTMLDivElement | undefined = $state();
 
@@ -62,7 +70,7 @@
 	<div class="panel-content">
 		<!-- Header -->
 		<div class="panel-header">
-			<h3 class="panel-title">Conversation Mode</h3>
+			<svelte:element this={`h${headingLevel}`} class="panel-title">Conversation Mode</svelte:element>
 			<button class="stop-button" onclick={handleStop}>Stop</button>
 		</div>
 
@@ -133,7 +141,7 @@
 	}
 
 	.panel-content {
-		background: white;
+		background: hsl(var(--background, 0 0% 100%));
 		border-radius: 16px;
 		padding: 20px;
 		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
@@ -155,24 +163,24 @@
 		margin: 0;
 		font-size: 16px;
 		font-weight: 600;
-		color: #1a1a1a;
+		color: hsl(var(--foreground, 0 0% 10.2%));
 	}
 
 	.stop-button {
 		padding: 6px 12px;
-		border: 1px solid #e0e0e0;
-		background: white;
+		border: 1px solid hsl(var(--border, 0 0% 87.8%));
+		background: hsl(var(--background, 0 0% 100%));
 		border-radius: 6px;
 		font-size: 13px;
 		font-weight: 500;
-		color: #666;
+		color: hsl(var(--muted-foreground, 0 0% 40%));
 		cursor: pointer;
 	}
 
 	.stop-button:hover {
 		background: #fee;
 		border-color: #fcc;
-		color: #c33;
+		color: hsl(var(--destructive, 0 60% 50%));
 	}
 
 	.visualizer-container {
@@ -194,7 +202,7 @@
 		width: 8px;
 		height: 8px;
 		border-radius: 50%;
-		background: #ccc;
+		background: hsl(var(--muted, 0 0% 80%));
 	}
 
 	.status-dot.active {
@@ -204,7 +212,7 @@
 	}
 
 	.status-dot.processing {
-		background: #3b82f6;
+		background: hsl(var(--primary, 217.2 91.2% 59.8%));
 		animation: spin 1s linear infinite;
 	}
 
@@ -220,7 +228,7 @@
 
 	.status-text {
 		font-size: 14px;
-		color: #666;
+		color: hsl(var(--muted-foreground, 0 0% 40%));
 		font-weight: 500;
 	}
 
@@ -239,13 +247,13 @@
 
 	.progress-fill {
 		height: 100%;
-		background: #3b82f6;
+		background: hsl(var(--primary, 217.2 91.2% 59.8%));
 		transition: width 0.1s linear;
 	}
 
 	.progress-text {
 		font-size: 11px;
-		color: #999;
+		color: hsl(var(--muted-foreground, 0 0% 60%));
 		text-align: center;
 	}
 
@@ -260,7 +268,7 @@
 	.history-label {
 		font-size: 11px;
 		font-weight: 600;
-		color: #666;
+		color: hsl(var(--muted-foreground, 0 0% 40%));
 		text-transform: uppercase;
 		letter-spacing: 0.5px;
 		margin-bottom: 8px;
@@ -277,17 +285,17 @@
 		gap: 8px;
 		font-size: 13px;
 		line-height: 1.5;
-		color: #666;
+		color: hsl(var(--muted-foreground, 0 0% 40%));
 	}
 
 	.item-number {
 		font-weight: 600;
-		color: #999;
+		color: hsl(var(--muted-foreground, 0 0% 60%));
 		flex-shrink: 0;
 	}
 
 	.item-text {
-		color: #1a1a1a;
+		color: hsl(var(--foreground, 0 0% 10.2%));
 	}
 
 	.panel-actions {
@@ -300,8 +308,8 @@
 
 	.send-button {
 		padding: 8px 16px;
-		background: #3b82f6;
-		color: white;
+		background: hsl(var(--primary, 217.2 91.2% 59.8%));
+		color: hsl(var(--primary-foreground, 0 0% 100%));
 		border: none;
 		border-radius: 8px;
 		font-size: 14px;
@@ -310,7 +318,7 @@
 	}
 
 	.send-button:hover:not(:disabled) {
-		background: #2563eb;
+		background: hsl(var(--primary, 221.2 83.2% 53.3%));
 	}
 
 	.send-button:disabled {
@@ -320,29 +328,29 @@
 
 	.hint-text {
 		font-size: 12px;
-		color: #999;
+		color: hsl(var(--muted-foreground, 0 0% 60%));
 	}
 
 	/* Dark mode */
 	@media (prefers-color-scheme: dark) {
 		.panel-content {
-			background: #2a2a2a;
+			background: hsl(var(--card, 0 0% 16.5%));
 			border-color: rgba(255, 255, 255, 0.1);
 		}
 
 		.panel-title {
-			color: #e0e0e0;
+			color: hsl(var(--foreground, 0 0% 87.8%));
 		}
 
 		.stop-button {
-			background: #333;
-			border-color: #444;
-			color: #ccc;
+			background: hsl(var(--muted, 0 0% 20%));
+			border-color: hsl(var(--border, 0 0% 26.7%));
+			color: hsl(var(--foreground, 0 0% 80%));
 		}
 
 		.stop-button:hover {
-			background: #400;
-			border-color: #600;
+			background: hsl(var(--destructive, 0 100% 13.3%));
+			border-color: hsl(var(--destructive, 0 100% 20%));
 			color: #fcc;
 		}
 
@@ -351,11 +359,11 @@
 		}
 
 		.status-text {
-			color: #aaa;
+			color: hsl(var(--muted-foreground, 0 0% 66.7%));
 		}
 
 		.item-text {
-			color: #e0e0e0;
+			color: hsl(var(--foreground, 0 0% 87.8%));
 		}
 
 		.transcript-history {

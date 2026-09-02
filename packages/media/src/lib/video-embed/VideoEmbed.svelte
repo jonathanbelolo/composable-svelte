@@ -195,10 +195,10 @@
 
 	.video-embed__title {
 		padding: 8px 12px;
-		background: #f5f5f5;
+		background: hsl(var(--muted, 0 0% 96.1%));
 		font-size: 14px;
 		font-weight: 500;
-		color: #333;
+		color: hsl(var(--foreground, 0 0% 20%));
 	}
 
 	.video-embed__container {
@@ -219,7 +219,7 @@
 
 	/* Focus visible for accessibility */
 	.video-embed:focus-within {
-		outline: 2px solid #007aff;
+		outline: 2px solid hsl(var(--primary, 211.3 100% 50%));
 		outline-offset: 2px;
 	}
 

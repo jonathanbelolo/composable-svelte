@@ -77,7 +77,7 @@
 	}
 
 	.popover-content {
-		background: white;
+		background: hsl(var(--background, 0 0% 100%));
 		border-radius: 12px;
 		padding: 16px;
 		min-width: 200px;
@@ -92,7 +92,7 @@
 	.hint-text {
 		margin: 0;
 		font-size: 12px;
-		color: #666;
+		color: hsl(var(--muted-foreground, 0 0% 40%));
 		text-align: center;
 		white-space: nowrap;
 	}
@@ -100,12 +100,12 @@
 	/* Dark mode */
 	@media (prefers-color-scheme: dark) {
 		.popover-content {
-			background: #2a2a2a;
+			background: hsl(var(--card, 0 0% 16.5%));
 			border-color: rgba(255, 255, 255, 0.1);
 		}
 
 		.hint-text {
-			color: #999;
+			color: hsl(var(--muted-foreground, 0 0% 60%));
 		}
 	}
 </style>

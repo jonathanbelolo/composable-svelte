@@ -49,6 +49,16 @@
 		 * Placeholder text.
 		 */
 		placeholder?: string | undefined;
+		/**
+		 * The accessible name for the text input.
+		 *
+		 * **Defaults to `placeholder`**, so this control is never nameless. It
+		 * renders `role="combobox"` and spreads no rest props onto the input, which
+		 * meant a consumer had no way to name it at all — a screen reader announced
+		 * "combobox" and nothing else. A placeholder is what a sighted user reads,
+		 * so it is the right default; pass this when the two should differ.
+		 */
+		ariaLabel?: string | undefined;
 
 		/**
 		 * Disabled state.
@@ -81,6 +91,7 @@
 		options = [],
 		value = $bindable(null),
 		placeholder = 'Search...',
+		ariaLabel,
 		disabled = false,
 		class: className,
 		loadOptions,
@@ -282,6 +293,7 @@
 			{disabled}
 			value={displayValue}
 			role="combobox"
+			aria-label={ariaLabel ?? placeholder}
 			aria-expanded={$store.dropdown.status !== 'idle'}
 			aria-autocomplete="list"
 			aria-controls="combobox-dropdown"

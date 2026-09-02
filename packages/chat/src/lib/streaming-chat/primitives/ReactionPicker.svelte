@@ -185,8 +185,8 @@
 	}
 
 	.reaction-picker {
-		background: white;
-		border: 1px solid #e0e0e0;
+		background: hsl(var(--background, 0 0% 100%));
+		border: 1px solid hsl(var(--border, 0 0% 87.8%));
 		border-radius: 12px;
 		box-shadow:
 			0 4px 6px rgba(0, 0, 0, 0.1),
@@ -207,7 +207,7 @@
 	.reaction-picker__title {
 		font-size: 12px;
 		font-weight: 600;
-		color: #666;
+		color: hsl(var(--muted-foreground, 0 0% 40%));
 		text-transform: uppercase;
 		letter-spacing: 0.5px;
 	}
@@ -218,7 +218,7 @@
 		border-radius: 50%;
 		background: transparent;
 		border: none;
-		color: #999;
+		color: hsl(var(--muted-foreground, 0 0% 60%));
 		font-size: 14px;
 		display: flex;
 		align-items: center;
@@ -227,8 +227,8 @@
 	}
 
 	.reaction-picker__close:hover {
-		background: #f5f5f5;
-		color: #333;
+		background: hsl(var(--muted, 0 0% 96.1%));
+		color: hsl(var(--foreground, 0 0% 20%));
 	}
 
 	.reaction-picker__emojis {
@@ -254,37 +254,10 @@
 	}
 
 	.reaction-picker__emoji:hover {
-		background: #f5f5f5;
+		background: hsl(var(--muted, 0 0% 96.1%));
 		transform: scale(1.15);
 	}
 
 	.reaction-picker__emoji:active {
 		transform: scale(0.95);
-	}
-
-	/* Dark mode support */
-	:global(.dark) .reaction-picker {
-		background: #1a1a1a;
-		border-color: #333;
-		box-shadow:
-			0 4px 6px rgba(0, 0, 0, 0.3),
-			0 10px 25px rgba(0, 0, 0, 0.4);
-	}
-
-	:global(.dark) .reaction-picker__title {
-		color: #999;
-	}
-
-	:global(.dark) .reaction-picker__close {
-		color: #666;
-	}
-
-	:global(.dark) .reaction-picker__close:hover {
-		background: #2a2a2a;
-		color: #e0e0e0;
-	}
-
-	:global(.dark) .reaction-picker__emoji:hover {
-		background: #2a2a2a;
-	}
-</style>
+	}</style>

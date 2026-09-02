@@ -2,13 +2,22 @@
 	import { createStore } from '@composable-svelte/core';
 	import {
 		ChangePasswordForm,
+		ConnectedAccountsPanel,
+		MfaManagementPanel,
 		SignOutButton,
 		accountReducer,
+		connectedAccountsReducer,
 		createInitialAccountState,
+		createInitialConnectedAccountsState,
+		createInitialMfaManagementState,
+		createInitialOAuthStartState,
+		createMemoryPendingOAuthStorage,
 		changePasswordReducer,
 		createInitialChangePasswordState,
 		createMockAuthDeps,
 		createInitialSessionState,
+		mfaManagementReducer,
+		oauthStartReducer,
 		sessionReducer,
 		subjectDisplayName
 	} from '@composable-svelte/auth';
@@ -47,17 +56,32 @@
 		}
 	];
 
+	/** What this demo's account starts as. Changed by the panels, then re-read. */
+	const PROVIDERS = [
+		{ id: 'github' as const, label: 'GitHub' },
+		{ id: 'google' as const, label: 'Google' }
+	];
+
 	let scenario = $state<Scenario>('hasPassword');
 	let attempt = $state(0);
 	let demand = $state<readonly string[] | null>(null);
 	let changes = $state(0);
+	/** Where the redirect would have gone. The whole reason `redirect` is injected. */
+	let wouldRedirectTo = $state<string | null>(null);
 
 	const deps = $derived.by(() => {
 		void attempt;
 		return createMockAuthDeps({
 			latencyMs: 400,
-			account: { hasPassword: scenario !== 'noPassword' },
-			reauthenticateFor: scenario === 'needsProof' ? ['changePassword'] : []
+			account: {
+				hasPassword: scenario !== 'noPassword',
+				mfaEnabled: true,
+				providers: scenario === 'noPassword' ? ['github'] : ['github', 'google']
+			},
+			reauthenticateFor:
+				scenario === 'needsProof'
+					? ['changePassword', 'disableMfa', 'regenerateRecoveryCodes', 'unlinkOAuthProvider']
+					: []
 		});
 	});
 
@@ -92,6 +116,48 @@
 		return store;
 	});
 
+	const mfaStore = $derived.by(() => {
+		void attempt;
+		void scenario;
+		return createStore({
+			initialState: createInitialMfaManagementState(),
+			reducer: mfaManagementReducer,
+			dependencies: {
+				disableMfa: deps.disableMfa,
+				regenerateRecoveryCodes: deps.regenerateRecoveryCodes
+			}
+		});
+	});
+
+	const connectedStore = $derived.by(() => {
+		void attempt;
+		void scenario;
+		return createStore({
+			initialState: createInitialConnectedAccountsState(),
+			reducer: connectedAccountsReducer,
+			dependencies: { unlinkOAuthProvider: deps.unlinkOAuthProvider }
+		});
+	});
+
+	const oauthStore = $derived.by(() => {
+		void attempt;
+		void scenario;
+		return createStore({
+			initialState: createInitialOAuthStartState(),
+			reducer: oauthStartReducer,
+			dependencies: {
+				beginOAuth: deps.beginOAuth,
+				pendingOAuth: createMemoryPendingOAuthStorage(),
+				// Refused, so the page stays put. A real app leaves for the provider
+				// here and comes back to `OAuthCallback`, which reads the intent out
+				// of the pending record and links instead of signing in.
+				redirect: (url: string) => {
+					wouldRedirectTo = url;
+				}
+			}
+		});
+	});
+
 	// The mount-driven read, dispatched once. The reducer refuses a second.
 	$effect(() => {
 		if (accountStore.state.status === 'idle') {
@@ -100,6 +166,7 @@
 	});
 
 	const account = $derived(accountStore.state.account);
+	const reRead = () => accountStore.dispatch({ type: 'reloadRequested' });
 	const displayName = $derived(subjectDisplayName(sessionStore.state.subject));
 </script>
 
@@ -123,6 +190,9 @@
 				<li>✓ "Set" or "change" decided by the account, not guessed</li>
 				<li>✓ No current-password field — the client cannot know there is one</li>
 				<li>✓ A demand for proof shown as a branch, not a red failure</li>
+				<li>✓ Recovery codes that say they replace the ones you had</li>
+				<li>✓ "Only way in" said as a warning, never as a disabled button</li>
+				<li>✓ Linking reusing the sign-in redirect, with one field changed</li>
 				<li>✓ Sign-out that says so when it could not reach the server</li>
 			</ul>
 		</div>
@@ -225,6 +295,122 @@
 									{changes === 1 ? 'time' : 'times'}, and the account was re-read each time.
 								</p>
 							{/if}
+						</div>
+					</div>
+				{/key}
+			</CardContent>
+		</Card>
+	</section>
+
+	<section class="space-y-6">
+		<div>
+			<h3 class="text-xl font-semibold mb-2">Managing an authenticator</h3>
+			<p class="text-muted-foreground text-sm">
+				Turning it <em>on</em> is <code>MfaEnrolment</code>, which needs a secret and a code to
+				confirm it. This panel is the other two operations, and neither takes a password — the
+				backend asks for proof if it wants it.
+			</p>
+		</div>
+
+		<Card>
+			<CardHeader>
+				<CardTitle>Two-factor settings</CardTitle>
+				<CardDescription>
+					Reissuing codes says the old ones stop working. A panel that did not say so would leave
+					someone holding a list they trust and cannot use.
+				</CardDescription>
+			</CardHeader>
+			<CardContent>
+				{#key `${scenario}-${attempt}`}
+					<div class="grid gap-6 md:grid-cols-2">
+						<MfaManagementPanel
+							store={mfaStore}
+							mfaEnabled={account?.mfaEnabled}
+							headingLevel={4}
+							onChanged={reRead}
+							onReauthenticationRequired={({ methods }) => (demand = methods)}
+						/>
+
+						<div class="rounded-lg border p-4 text-sm space-y-3">
+							<h4 class="font-semibold mb-1">What the flow holds</h4>
+							<pre class="bg-muted rounded p-3 overflow-x-auto text-xs"><code
+									>{JSON.stringify(
+										{
+											status: mfaStore.state.status,
+											operation: mfaStore.state.operation,
+											recoveryCodes: mfaStore.state.recoveryCodes === null ? null : 'on screen'
+										},
+										null,
+										2
+									)}</code
+								></pre>
+							<p class="text-muted-foreground">
+								<code>operation</code> is <code>null</code> exactly when <code>error</code> is. It exists
+								because a confirmation prompt on another screen cannot recover which button was pressed.
+							</p>
+						</div>
+					</div>
+				{/key}
+			</CardContent>
+		</Card>
+	</section>
+
+	<section class="space-y-6">
+		<div>
+			<h3 class="text-xl font-semibold mb-2">Connected accounts</h3>
+			<p class="text-muted-foreground text-sm">
+				Connecting one is the <em>same</em> redirect as signing in — same pending record, same
+				callback — with <code>intent: 'link'</code> written into it. A parallel flow would drift
+				from the one that has been reviewed twice.
+			</p>
+		</div>
+
+		<Card>
+			<CardHeader>
+				<CardTitle>Attaching and detaching</CardTitle>
+				<CardDescription>
+					Pick "Signed up with OAuth" above to see the advisory: one provider, no password. It is
+					words, not a disabled button — the client cannot know whether this backend offers magic
+					links.
+				</CardDescription>
+			</CardHeader>
+			<CardContent>
+				{#key `${scenario}-${attempt}`}
+					<div class="grid gap-6 md:grid-cols-2">
+						<ConnectedAccountsPanel
+							store={connectedStore}
+							{oauthStore}
+							providers={account?.providers}
+							hasPassword={account?.hasPassword}
+							available={PROVIDERS}
+							returnTo="/settings"
+							headingLevel={4}
+							onUnlinked={reRead}
+							onReauthenticationRequired={({ methods }) => (demand = methods)}
+						/>
+
+						<div class="rounded-lg border p-4 text-sm space-y-3">
+							<div>
+								<h4 class="font-semibold mb-1">Where the redirect would have gone</h4>
+								{#if wouldRedirectTo === null}
+									<p class="text-muted-foreground">
+										Nothing yet. Press Connect — this demo substitutes a <code>redirect</code> that
+										records the URL instead of leaving the page.
+									</p>
+								{:else}
+									<pre class="bg-muted rounded p-3 overflow-x-auto text-xs"><code
+											>{wouldRedirectTo}</code
+										></pre>
+								{/if}
+							</div>
+							<div>
+								<h4 class="font-semibold mb-1">Detached this session</h4>
+								<p class="text-muted-foreground">
+									{connectedStore.state.unlinked.length === 0
+										? 'None. A detached provider leaves the list immediately, before the account has been re-read.'
+										: connectedStore.state.unlinked.join(', ')}
+								</p>
+							</div>
 						</div>
 					</div>
 				{/key}

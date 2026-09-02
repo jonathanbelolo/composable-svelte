@@ -167,8 +167,8 @@
 		margin: 8px 0;
 		border-radius: 8px;
 		max-width: 85%;
-		background: #007aff;
-		color: white;
+		background: hsl(var(--primary, 211.3 100% 50%));
+		color: hsl(var(--primary-foreground, 0 0% 100%));
 		margin-left: auto;
 		align-self: flex-end;
 	}
@@ -200,7 +200,7 @@
 		font-size: 14px;
 		font-family: inherit;
 		background: rgba(255, 255, 255, 0.95);
-		color: #1a1a1a;
+		color: hsl(var(--foreground, 0 0% 10.2%));
 		resize: vertical;
 		min-height: 60px;
 	}
@@ -208,7 +208,7 @@
 	.chat-message__edit-textarea:focus {
 		outline: none;
 		border-color: rgba(255, 255, 255, 0.6);
-		background: white;
+		background: hsl(var(--background, 0 0% 100%));
 	}
 
 	.chat-message__edit-actions {
@@ -237,16 +237,10 @@
 
 	.chat-message__edit-button--cancel {
 		background: rgba(255, 255, 255, 0.2);
-		color: white;
+		color: hsl(var(--background, 0 0% 100%));
 	}
 
 	.chat-message__edit-button--save {
-		background: white;
-		color: #007aff;
-	}
-
-	/* Dark mode support */
-	:global(.dark) .chat-message--editing {
-		background: #0066cc;
-	}
-</style>
+		background: hsl(var(--background, 0 0% 100%));
+		color: hsl(var(--primary, 211.3 100% 50%));
+	}</style>

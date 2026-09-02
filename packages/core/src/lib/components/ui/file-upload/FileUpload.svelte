@@ -14,7 +14,8 @@
     onFilesChange,
     onUpload,
     class: className = '',
-    disabled = false
+    disabled = false,
+    headingLevel = 3
   }: FileUploadProps = $props();
 
   // Build validation config from props
@@ -243,9 +244,9 @@
   {#if $store.files.length > 0}
     <div class="mt-4">
       <div class="flex items-center justify-between mb-3">
-        <h3 class="text-sm font-medium text-gray-700">
+        <svelte:element this={`h${headingLevel}`} class="text-sm font-medium text-gray-700">
           Files ({$store.files.length})
-        </h3>
+        </svelte:element>
         <button
           onclick={handleClearAll}
           class="text-sm text-red-600 hover:text-red-700"

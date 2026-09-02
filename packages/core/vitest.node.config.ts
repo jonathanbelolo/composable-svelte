@@ -62,6 +62,7 @@ export default defineConfig({
       'tests/repo/flat-barrel.test.ts',
       'tests/repo/skill-examples.test.ts',
 			'tests/repo/optional-props.test.ts',
+			'tests/repo/satellite-theming.test.ts',
       'tests/styles/**/*.test.ts',
       'tests/i18n/ssr.test.ts'
     ],

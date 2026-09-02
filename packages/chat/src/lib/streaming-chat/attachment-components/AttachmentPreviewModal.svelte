@@ -21,6 +21,15 @@
 	import FileAttachment from './FileAttachment.svelte';
 
 	interface Props {
+	/**
+	 * Which heading element to render.
+	 *
+	 * The level belongs to the page, not to the component: put this under an
+	 * `<svelte:element this={`h${headingLevel}`}>` and a fixed `<h2>` jumps the outline, which no consumer can fix from
+	 * the outside. Defaults to the level it has always rendered, so nothing
+	 * changes for anyone who does not pass it.
+	 */
+	headingLevel?: 1 | 2 | 3 | 4 | 5 | 6 | undefined;
 		/** Attachment to preview */
 		attachment: MessageAttachment | null;
 		/** Whether modal is open */
@@ -49,8 +58,7 @@
 		onremove,
 		presentation = undefined,
 		onPresentationComplete = undefined,
-		onDismissalComplete = undefined
-	}: Props = $props();
+		onDismissalComplete = undefined, headingLevel = 2 }: Props = $props();
 
 	// The element must outlive `open`. `open` goes false the moment a dismissal
 	// starts — it is what the parent's UI reads — but the dialog has to stay
@@ -179,9 +187,9 @@
 		<div class="attachment-preview-modal__container" bind:this={containerElement}>
 			<!-- Header -->
 			<div class="attachment-preview-modal__header">
-				<h2 id="preview-title" class="attachment-preview-modal__title">
+				<svelte:element this={`h${headingLevel}`} id="preview-title" class="attachment-preview-modal__title">
 					{attachment.filename}
-				</h2>
+				</svelte:element>
 				<button
 					type="button"
 					class="attachment-preview-modal__close"
@@ -269,7 +277,7 @@
 
 
 	.attachment-preview-modal__container {
-		background: white;
+		background: hsl(var(--background, 0 0% 100%));
 		border-radius: 12px;
 		max-width: 900px;
 		width: 100%;
@@ -285,7 +293,7 @@
 		align-items: center;
 		justify-content: space-between;
 		padding: 20px 24px;
-		border-bottom: 1px solid #e0e0e0;
+		border-bottom: 1px solid hsl(var(--border, 0 0% 87.8%));
 		flex-shrink: 0;
 	}
 
@@ -293,7 +301,7 @@
 		margin: 0;
 		font-size: 18px;
 		font-weight: 600;
-		color: #1a1a1a;
+		color: hsl(var(--foreground, 0 0% 10.2%));
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
@@ -305,9 +313,9 @@
 		width: 36px;
 		height: 36px;
 		border-radius: 50%;
-		background: #f5f5f5;
+		background: hsl(var(--muted, 0 0% 96.1%));
 		border: none;
-		color: #666;
+		color: hsl(var(--muted-foreground, 0 0% 40%));
 		font-size: 20px;
 		display: flex;
 		align-items: center;
@@ -317,8 +325,8 @@
 	}
 
 	.attachment-preview-modal__close:hover {
-		background: #e0e0e0;
-		color: #1a1a1a;
+		background: hsl(var(--muted, 0 0% 87.8%));
+		color: hsl(var(--foreground, 0 0% 10.2%));
 	}
 
 	.attachment-preview-modal__content {
@@ -352,7 +360,7 @@
 	}
 
 	.attachment-preview-modal__footer {
-		border-top: 1px solid #e0e0e0;
+		border-top: 1px solid hsl(var(--border, 0 0% 87.8%));
 		padding: 20px 24px;
 		display: flex;
 		flex-direction: column;
@@ -374,12 +382,12 @@
 
 	.metadata-label {
 		font-weight: 600;
-		color: #666;
+		color: hsl(var(--muted-foreground, 0 0% 40%));
 		min-width: 60px;
 	}
 
 	.metadata-value {
-		color: #1a1a1a;
+		color: hsl(var(--foreground, 0 0% 10.2%));
 		word-break: break-word;
 	}
 
@@ -407,68 +415,22 @@
 	}
 
 	.modal-button--secondary {
-		background: #f5f5f5;
-		color: #1a1a1a;
+		background: hsl(var(--muted, 0 0% 96.1%));
+		color: hsl(var(--foreground, 0 0% 10.2%));
 	}
 
 	.modal-button--secondary:hover {
-		background: #e0e0e0;
+		background: hsl(var(--muted, 0 0% 87.8%));
 	}
 
 	.modal-button--danger {
-		background: #dc2626;
-		color: white;
+		background: hsl(var(--destructive, 0 72.2% 50.6%));
+		color: hsl(var(--destructive-foreground, 0 0% 100%));
 	}
 
 	.modal-button--danger:hover {
-		background: #b91c1c;
-	}
-
-	/* Dark mode support */
-	:global(.dark) .attachment-preview-modal__container {
-		background: #1a1a1a;
-	}
-
-	:global(.dark) .attachment-preview-modal__header {
-		border-bottom-color: #333;
-	}
-
-	:global(.dark) .attachment-preview-modal__title {
-		color: #e0e0e0;
-	}
-
-	:global(.dark) .attachment-preview-modal__close {
-		background: #2a2a2a;
-		color: #999;
-	}
-
-	:global(.dark) .attachment-preview-modal__close:hover {
-		background: #333;
-		color: #e0e0e0;
-	}
-
-	:global(.dark) .attachment-preview-modal__footer {
-		border-top-color: #333;
-	}
-
-	:global(.dark) .metadata-label {
-		color: #999;
-	}
-
-	:global(.dark) .metadata-value {
-		color: #e0e0e0;
-	}
-
-	:global(.dark) .modal-button--secondary {
-		background: #2a2a2a;
-		color: #e0e0e0;
-	}
-
-	:global(.dark) .modal-button--secondary:hover {
-		background: #333;
-	}
-
-	/* Responsive */
+		background: hsl(var(--destructive, 0 73.7% 41.8%));
+	}	/* Responsive */
 	@media (max-width: 640px) {
 		.attachment-preview-modal {
 			padding: 0;

@@ -152,6 +152,6 @@
 	.voice-input__error {
 		margin-top: 0.5rem;
 		font-size: 0.8125rem;
-		color: #c33;
+		color: hsl(var(--destructive, 0 60% 50%));
 	}
 </style>

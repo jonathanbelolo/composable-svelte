@@ -503,7 +503,7 @@
 	.video-player {
 		display: flex;
 		flex-direction: column;
-		background: black;
+		background: hsl(var(--foreground, 0 0% 0%));
 		border-radius: 0.5rem;
 		overflow: hidden;
 		max-width: 800px;
@@ -516,8 +516,8 @@
 
 	.video-player-header {
 		padding: 0.75rem 1rem;
-		background: #f9fafb;
-		border-bottom: 1px solid #e5e7eb;
+		background: hsl(var(--muted, 210 20% 98%));
+		border-bottom: 1px solid hsl(var(--border, 220 13% 91%));
 	}
 
 	.video-player-title {
@@ -542,7 +542,7 @@
 	.video-filename {
 		font-size: 0.875rem;
 		font-weight: 500;
-		color: #111827;
+		color: hsl(var(--foreground, 220.9 39.3% 11%));
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
@@ -550,12 +550,12 @@
 
 	.video-filesize {
 		font-size: 0.75rem;
-		color: #6b7280;
+		color: hsl(var(--muted-foreground, 220 8.9% 46.1%));
 	}
 
 	.video-container {
 		position: relative;
-		background: black;
+		background: hsl(var(--foreground, 0 0% 0%));
 		aspect-ratio: 16 / 9;
 	}
 
@@ -583,7 +583,7 @@
 		justify-content: center;
 		gap: 1rem;
 		background: rgba(0, 0, 0, 0.8);
-		color: white;
+		color: hsl(var(--background, 0 0% 100%));
 		pointer-events: none;
 	}
 
@@ -591,7 +591,7 @@
 		width: 3rem;
 		height: 3rem;
 		border: 4px solid rgba(255, 255, 255, 0.3);
-		border-top-color: white;
+		border-top-color: hsl(var(--background, 0 0% 100%));
 		border-radius: 50%;
 		animation: spin 0.6s linear infinite;
 	}
@@ -624,7 +624,7 @@
 		padding: 0.375rem 0.75rem;
 		border-radius: 0.375rem;
 		background: rgba(0, 0, 0, 0.75);
-		color: white;
+		color: hsl(var(--background, 0 0% 100%));
 		font-size: 0.8125rem;
 		z-index: 3;
 	}
@@ -636,7 +636,7 @@
 		transform: translate(-50%, -50%);
 		background: none;
 		border: none;
-		color: white;
+		color: hsl(var(--background, 0 0% 100%));
 		cursor: pointer;
 	}
 
@@ -677,8 +677,8 @@
 		height: 0.25rem;
 		background: linear-gradient(
 			to right,
-			#3b82f6 0%,
-			#3b82f6 var(--progress),
+			hsl(var(--primary, 217.2 91.2% 59.8%)) 0%,
+			hsl(var(--primary, 217.2 91.2% 59.8%)) var(--progress),
 			rgba(255, 255, 255, 0.3) var(--progress),
 			rgba(255, 255, 255, 0.3) 100%
 		);
@@ -689,7 +689,7 @@
 		appearance: none;
 		width: 0.875rem;
 		height: 0.875rem;
-		background: #3b82f6;
+		background: hsl(var(--primary, 217.2 91.2% 59.8%));
 		border-radius: 50%;
 		margin-top: -0.3125rem;
 	}
@@ -703,14 +703,14 @@
 
 	.video-progress::-moz-range-progress {
 		height: 0.25rem;
-		background: #3b82f6;
+		background: hsl(var(--primary, 217.2 91.2% 59.8%));
 		border-radius: 0.125rem;
 	}
 
 	.video-progress::-moz-range-thumb {
 		width: 0.875rem;
 		height: 0.875rem;
-		background: #3b82f6;
+		background: hsl(var(--primary, 217.2 91.2% 59.8%));
 		border: none;
 		border-radius: 50%;
 	}
@@ -729,7 +729,7 @@
 		height: 2rem;
 		background: none;
 		border: none;
-		color: white;
+		color: hsl(var(--background, 0 0% 100%));
 		cursor: pointer;
 		flex-shrink: 0;
 	}
@@ -740,7 +740,7 @@
 
 	.video-time {
 		font-size: 0.875rem;
-		color: white;
+		color: hsl(var(--background, 0 0% 100%));
 		font-variant-numeric: tabular-nums;
 		white-space: nowrap;
 	}
@@ -768,14 +768,14 @@
 		appearance: none;
 		width: 0.75rem;
 		height: 0.75rem;
-		background: white;
+		background: hsl(var(--background, 0 0% 100%));
 		border-radius: 50%;
 	}
 
 	.video-volume-slider::-moz-range-thumb {
 		width: 0.75rem;
 		height: 0.75rem;
-		background: white;
+		background: hsl(var(--background, 0 0% 100%));
 		border: none;
 		border-radius: 50%;
 	}
@@ -783,7 +783,7 @@
 	.video-speed {
 		padding: 0.25rem 0.5rem;
 		font-size: 0.75rem;
-		color: white;
+		color: hsl(var(--background, 0 0% 100%));
 		background: rgba(255, 255, 255, 0.1);
 		border: 1px solid rgba(255, 255, 255, 0.2);
 		border-radius: 0.25rem;

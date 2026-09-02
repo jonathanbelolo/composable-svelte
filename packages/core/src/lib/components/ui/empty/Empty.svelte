@@ -33,6 +33,15 @@
 	 */
 
 	interface EmptyProps extends Omit<HTMLAttributes<HTMLDivElement>, 'class' | 'children'> {
+	/**
+	 * Which heading element to render.
+	 *
+	 * The level belongs to the page, not to the component: put this under an
+	 * `<h2>` and a fixed `<h3>` jumps the outline, which no consumer can fix from
+	 * the outside. Defaults to the level it has always rendered, so nothing
+	 * changes for anyone who does not pass it.
+	 */
+	headingLevel?: 1 | 2 | 3 | 4 | 5 | 6 | undefined;
 		/**
 		 * Main title text.
 		 */
@@ -64,9 +73,8 @@
 		description,
 		class: className,
 		icon,
-		children,
-		...restProps
-	}: EmptyProps = $props();
+		children, headingLevel = 3,
+		...restProps }: EmptyProps = $props();
 
 	const containerClasses = $derived(
 		cn('flex flex-col items-center justify-center py-12 px-4 text-center', className)
@@ -98,7 +106,7 @@
 		</div>
 	{/if}
 
-	<h3 class="mb-2 text-lg font-semibold text-foreground">{title}</h3>
+	<svelte:element this={`h${headingLevel}`} class="mb-2 text-lg font-semibold text-foreground">{title}</svelte:element>
 
 	{#if description}
 		<p class="mb-4 max-w-sm text-sm text-muted-foreground">{description}</p>

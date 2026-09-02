@@ -28,6 +28,15 @@
 	}
 
 	interface Props {
+	/**
+	 * Which heading element to render.
+	 *
+	 * The level belongs to the page, not to the component: put this under an
+	 * `<h2>` and a fixed `<h3>` jumps the outline, which no consumer can fix from
+	 * the outside. Defaults to the level it has always rendered, so nothing
+	 * changes for anyone who does not pass it.
+	 */
+	headingLevel?: 1 | 2 | 3 | 4 | 5 | 6 | undefined;
 		/** Array of users to display */
 		users: User[];
 		/** Group users by presence status */
@@ -45,8 +54,7 @@
 		groupByPresence = false,
 		showEmptyState = true,
 		class: className = '',
-		locale = undefined
-	}: Props = $props();
+		locale = undefined, headingLevel = 3 }: Props = $props();
 
 	// Core's formatter rather than another hand-rolled one — it picks the unit and
 	// falls back safely when `Intl.RelativeTimeFormat` is unavailable. Core is a
@@ -115,9 +123,9 @@
 			{@const usersInGroup = groupedUsers[presenceStatus]}
 			{#if usersInGroup.length > 0}
 				<div class="presence-group">
-					<h3 class="group-header">
+					<svelte:element this={`h${headingLevel}`} class="group-header">
 						{presenceLabels[presenceStatus]} ({usersInGroup.length})
-					</h3>
+					</svelte:element>
 					<div class="user-list">
 						{#each usersInGroup as user (user.id)}
 							<div class="user-item">
@@ -175,7 +183,7 @@
 	.empty-state {
 		padding: 32px;
 		text-align: center;
-		color: #94a3b8;
+		color: hsl(var(--muted-foreground, 215 20.2% 65.1%));
 		font-size: 14px;
 	}
 
@@ -189,7 +197,7 @@
 		font-size: 12px;
 		font-weight: 600;
 		text-transform: uppercase;
-		color: #64748b;
+		color: hsl(var(--muted-foreground, 215.4 16.3% 46.9%));
 		margin: 0;
 		padding: 0 12px;
 	}
@@ -209,7 +217,7 @@
 	}
 
 	.user-item:hover {
-		background-color: #f1f5f9;
+		background-color: hsl(var(--muted, 210 40% 96.1%));
 	}
 
 	.user-avatar {
@@ -219,7 +227,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		color: white;
+		color: hsl(var(--background, 0 0% 100%));
 		font-weight: 600;
 		font-size: 14px;
 		flex-shrink: 0;
@@ -238,7 +246,7 @@
 
 	.user-last-seen {
 		font-size: 11px;
-		color: #94a3b8;
+		color: hsl(var(--muted-foreground, 215 20.2% 65.1%));
 	}
 
 	.user-info {
@@ -249,7 +257,7 @@
 	.user-name {
 		font-size: 14px;
 		font-weight: 500;
-		color: #1e293b;
+		color: hsl(var(--foreground, 217.2 32.6% 17.5%));
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
@@ -257,19 +265,19 @@
 
 	@media (prefers-color-scheme: dark) {
 		.empty-state {
-			color: #64748b;
+			color: hsl(var(--muted-foreground, 215.4 16.3% 46.9%));
 		}
 
 		.group-header {
-			color: #94a3b8;
+			color: hsl(var(--muted-foreground, 215 20.2% 65.1%));
 		}
 
 		.user-item:hover {
-			background-color: #1e293b;
+			background-color: hsl(var(--card, 217.2 32.6% 17.5%));
 		}
 
 		.user-name {
-			color: #e2e8f0;
+			color: hsl(var(--foreground, 214.3 31.8% 91.4%));
 		}
 	}
 </style>

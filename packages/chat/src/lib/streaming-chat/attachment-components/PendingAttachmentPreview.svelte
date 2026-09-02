@@ -101,14 +101,14 @@
 		align-items: center;
 		gap: 8px;
 		padding: 8px;
-		background: white;
-		border: 1px solid #e0e0e0;
+		background: hsl(var(--background, 0 0% 100%));
+		border: 1px solid hsl(var(--border, 0 0% 87.8%));
 		border-radius: 8px;
 	}
 
 	.pending-attachment:hover {
-		border-color: #007aff;
-		box-shadow: 0 2px 8px rgba(0, 122, 255, 0.1);
+		border-color: hsl(var(--primary, 211.3 100% 50%));
+		box-shadow: 0 2px 8px hsl(var(--primary, 211.3 100% 50%) / 0.1);
 	}
 
 	.pending-attachment__content {
@@ -130,7 +130,7 @@
 		border-radius: 6px;
 		overflow: hidden;
 		flex-shrink: 0;
-		background: #f5f5f5;
+		background: hsl(var(--muted, 0 0% 96.1%));
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -164,7 +164,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		color: white;
+		color: hsl(var(--background, 0 0% 100%));
 		font-size: 10px;
 		padding-left: 2px;
 		pointer-events: none;
@@ -174,12 +174,12 @@
 		width: 60px;
 		height: 60px;
 		border-radius: 6px;
-		background: #f5f5f5;
+		background: hsl(var(--muted, 0 0% 96.1%));
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		flex-shrink: 0;
-		border: 1px solid #e0e0e0;
+		border: 1px solid hsl(var(--border, 0 0% 87.8%));
 	}
 
 	.pending-attachment__icon-text {
@@ -197,7 +197,7 @@
 	.pending-attachment__filename {
 		font-size: 14px;
 		font-weight: 600;
-		color: #1a1a1a;
+		color: hsl(var(--foreground, 0 0% 10.2%));
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
@@ -205,16 +205,16 @@
 
 	.pending-attachment__meta {
 		font-size: 12px;
-		color: #666;
+		color: hsl(var(--muted-foreground, 0 0% 40%));
 	}
 
 	.pending-attachment__remove {
 		width: 28px;
 		height: 28px;
 		border-radius: 50%;
-		background: #f5f5f5;
-		border: 1px solid #e0e0e0;
-		color: #666;
+		background: hsl(var(--muted, 0 0% 96.1%));
+		border: 1px solid hsl(var(--border, 0 0% 87.8%));
+		color: hsl(var(--muted-foreground, 0 0% 40%));
 		font-size: 16px;
 		display: flex;
 		align-items: center;
@@ -225,46 +225,13 @@
 
 	.pending-attachment__remove:hover {
 		background: #fee;
-		color: #c00;
+		color: hsl(var(--destructive, 0 100% 40%));
 		border-color: #fcc;
 	}
 
 	.pending-attachment__remove:active {
 		transform: scale(0.95);
-	}
-
-	/* Dark mode support */
-	:global(.dark) .pending-attachment {
-		background: #2a2a2a;
-		border-color: #444;
-	}
-
-	:global(.dark) .pending-attachment:hover {
-		border-color: #0066cc;
-		box-shadow: 0 2px 8px rgba(0, 102, 204, 0.2);
-	}
-
-	:global(.dark) .pending-attachment__thumbnail,
-	:global(.dark) .pending-attachment__icon {
-		background: #1a1a1a;
-		border-color: #444;
-	}
-
-	:global(.dark) .pending-attachment__filename {
-		color: #e0e0e0;
-	}
-
-	:global(.dark) .pending-attachment__meta {
-		color: #999;
-	}
-
-	:global(.dark) .pending-attachment__remove {
-		background: #1a1a1a;
-		border-color: #444;
-		color: #999;
-	}
-
-	:global(.dark) .pending-attachment__remove:hover {
+	}	:global(.dark) .pending-attachment__remove:hover {
 		background: #3a1a1a;
 		color: #f66;
 		border-color: #644;

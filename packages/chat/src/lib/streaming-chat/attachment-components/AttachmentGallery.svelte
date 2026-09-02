@@ -114,7 +114,7 @@
 		height: 4px;
 		margin-bottom: 0.25rem;
 		border-radius: 2px;
-		background: #e5e7eb;
+		background: hsl(var(--muted, 220 13% 91%));
 		overflow: hidden;
 	}
 
@@ -123,13 +123,13 @@
 	   transitioned, so nothing here animates. */
 	.attachment-progress-bar {
 		height: 100%;
-		background: #3b82f6;
+		background: hsl(var(--primary, 217.2 91.2% 59.8%));
 	}
 
 	.attachment-upload-error {
 		margin: 0 0 0.25rem 0;
 		font-size: 0.75rem;
-		color: #b91c1c;
+		color: hsl(var(--destructive, 0 73.7% 41.8%));
 	}
 
 	.attachment-gallery {
@@ -148,7 +148,7 @@
 	.attachment-count {
 		font-size: 0.875rem;
 		font-weight: 500;
-		color: #6b7280;
+		color: hsl(var(--muted-foreground, 220 8.9% 46.1%));
 	}
 
 	.gallery-empty {
@@ -157,8 +157,8 @@
 		align-items: center;
 		justify-content: center;
 		padding: 3rem 1rem;
-		background: #f9fafb;
-		border: 1px dashed #d1d5db;
+		background: hsl(var(--muted, 210 20% 98%));
+		border: 1px dashed hsl(var(--border, 216 12.2% 83.9%));
 		border-radius: 0.5rem;
 		gap: 0.75rem;
 	}
@@ -171,7 +171,7 @@
 	.empty-text {
 		margin: 0;
 		font-size: 0.875rem;
-		color: #9ca3af;
+		color: hsl(var(--muted-foreground, 217.9 10.6% 64.9%));
 	}
 
 	.gallery-content {

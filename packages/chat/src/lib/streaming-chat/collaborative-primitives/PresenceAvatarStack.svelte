@@ -95,9 +95,9 @@
 		align-items: center;
 		justify-content: center;
 		border-radius: 50%;
-		border: 2px solid white;
-		background-color: #e2e8f0;
-		color: white;
+		border: 2px solid hsl(var(--background, 0 0% 100%));
+		background-color: hsl(var(--muted, 214.3 31.8% 91.4%));
+		color: hsl(var(--muted-foreground, 0 0% 100%));
 		font-weight: 600;
 		overflow: hidden;
 		cursor: default;
@@ -154,9 +154,9 @@
 		align-items: center;
 		justify-content: center;
 		border-radius: 50%;
-		border: 2px solid white;
-		background-color: #64748b;
-		color: white;
+		border: 2px solid hsl(var(--background, 0 0% 100%));
+		background-color: hsl(var(--muted, 215.4 16.3% 46.9%));
+		color: hsl(var(--muted-foreground, 0 0% 100%));
 		font-weight: 600;
 		margin-left: -8px;
 		cursor: default;
@@ -164,12 +164,12 @@
 
 	@media (prefers-color-scheme: dark) {
 		.avatar {
-			border-color: #1e293b;
+			border-color: hsl(var(--card, 217.2 32.6% 17.5%));
 		}
 
 		.avatar-more {
-			border-color: #1e293b;
-			background-color: #475569;
+			border-color: hsl(var(--card, 217.2 32.6% 17.5%));
+			background-color: hsl(var(--muted, 215.3 19.3% 34.5%));
 		}
 	}
 </style>

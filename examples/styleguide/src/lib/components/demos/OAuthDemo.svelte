@@ -114,7 +114,15 @@
 		// A fresh record each time, because `take()` consumes it — which is the
 		// real behaviour: the nonce is single-use.
 		const storage = createMemoryPendingOAuthStorage();
-		storage.put({ provider: 'github', state: 'st_demo', returnTo: '/dashboard' });
+		// `intent: 'signIn'` — the callback reads this to decide whether to sign in
+		// or attach the provider to an account already signed in. A record without
+		// one is refused rather than defaulted.
+		storage.put({
+			provider: 'github',
+			intent: 'signIn',
+			state: 'st_demo',
+			returnTo: '/dashboard'
+		});
 		const api = createMockAuthDeps({ latencyMs: 400 });
 		return createStore({
 			initialState: createInitialOAuthCallbackState(),

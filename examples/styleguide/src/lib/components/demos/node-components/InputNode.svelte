@@ -17,6 +17,7 @@
 		type="text"
 		bind:value={data.value}
 		placeholder="Enter text..."
+		aria-label="Node input text"
 		class="w-full px-2 py-1 text-sm border rounded bg-gray-50 dark:bg-gray-900"
 	/>
 	<Handle type="source" position={Position.Right} id="output" />

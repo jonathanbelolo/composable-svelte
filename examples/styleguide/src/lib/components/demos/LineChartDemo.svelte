@@ -76,10 +76,10 @@
   <div class="border rounded-lg p-6 bg-card space-y-4">
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-2">
-        <Button variant="outline" size="sm" onclick={handleZoomIn}>
+        <Button variant="outline" size="sm" onclick={handleZoomIn} aria-label="Zoom in">
           <ZoomIn class="h-4 w-4" />
         </Button>
-        <Button variant="outline" size="sm" onclick={handleZoomOut}>
+        <Button variant="outline" size="sm" onclick={handleZoomOut} aria-label="Zoom out">
           <ZoomOut class="h-4 w-4" />
         </Button>
         <Button variant="outline" size="sm" onclick={handleResetZoom}>
