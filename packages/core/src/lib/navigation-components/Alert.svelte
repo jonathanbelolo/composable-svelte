@@ -55,6 +55,28 @@
     class?: string | undefined;
 
     /**
+     * The id of the element that names this dialog — normally its title.
+     *
+     * Takes precedence over `ariaLabel`. Without one the dialog announced the
+     * hardcoded string "Alert dialog", which names the *component* and never
+     * the question being asked: a screen-reader user heard the same three
+     * words whether they were being asked to delete an account or discard a
+     * draft.
+     */
+    ariaLabelledby?: string | undefined;
+
+    /**
+     * A name for the dialog, when there is no title element to point at.
+     *
+     * Ignored when `ariaLabelledby` is set. Defaults to the old hardcoded
+     * string so that no existing caller changes behaviour.
+     */
+    ariaLabel?: string | undefined;
+
+    /** The id of the element describing this dialog — normally its body text. */
+    ariaDescribedby?: string | undefined;
+
+    /**
      * Disable click-outside to dismiss.
      * @default false
      */
@@ -86,6 +108,9 @@
     onDismissalComplete,
     springConfig,
     unstyled = false,
+    ariaLabelledby,
+    ariaLabel,
+    ariaDescribedby,
     backdropClass,
     class: className,
     disableClickOutside = false,
@@ -138,7 +163,10 @@
       class={contentClasses}
       role="alertdialog"
       aria-modal="true"
-      aria-label="Alert dialog"
+      {...ariaLabelledby !== undefined
+        ? { 'aria-labelledby': ariaLabelledby }
+        : { 'aria-label': ariaLabel ?? 'Alert dialog' }}
+      {...ariaDescribedby !== undefined ? { 'aria-describedby': ariaDescribedby } : {}}
       data-dialog-type="alert"
       style:opacity={initialOpacity}
       style:transform="translate(-50%, -50%)"

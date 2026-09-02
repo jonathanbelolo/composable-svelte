@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`AlertDialog`** and its parts — `AlertDialogHeader`, `AlertDialogTitle`,
+  `AlertDialogDescription`, `AlertDialogFooter`, `AlertDialogAction`,
+  `AlertDialogCancel`. A titled, described confirmation composed over `Alert`,
+  following the compound-parts convention `Card` and `Banner` already use.
+
+  `Alert` was a presentation shell with a bare `children` snippet and nothing
+  to say, so every app needing a confirmation wrote its own heading, paragraph
+  and two buttons inside it.
+
+  No `Trigger` part: presentation here is state-driven, and a trigger would be
+  a second, imperative way to open a dialog. No `Content` part: `Alert` is
+  already the box. `onclick` is required on both buttons — a `Cancel` that
+  dismissed by itself would bypass the parent reducer that owns the dismissal
+  transition.
+
+### Fixed
+
+- **`Alert` announced itself rather than its question.** It hardcoded
+  `aria-label="Alert dialog"`, so a screen-reader user heard the same three
+  words whether they were being asked to delete an account or discard a draft.
+  New `ariaLabelledby`, `ariaLabel` and `ariaDescribedby` props; the hardcoded
+  string remains the fallback, so no existing caller changes behaviour.
+  `AlertDialog` wires them to its own title and description automatically.
+
+  **`Modal`, `Sheet` and `Drawer` still carry the same defect** — `"Modal
+  dialog"`, `"Bottom sheet"`, `"Side drawer"`. Named here rather than implied,
+  so the scope of this fix is not mistaken for completeness.
+
 - **`createParserConfig(routes, options?)`** — builds a `ParserConfig` from a
   pattern-to-handler map, so a route stops being four lines of
   `const p = matchPath(pattern, path); return p ? {...} : null`. Additive:

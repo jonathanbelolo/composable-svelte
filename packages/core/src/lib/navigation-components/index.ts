@@ -23,3 +23,14 @@ export type {
 // Headless primitives. Also available from the package root; re-exported here so
 // this subpath is a complete view of the navigation surface.
 export * from './primitives/index.js';
+
+// Alert dialog — a titled confirmation, composed over `Alert`.
+export {
+	AlertDialog,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogAction,
+	AlertDialogCancel
+} from './alert-dialog/index.js';
