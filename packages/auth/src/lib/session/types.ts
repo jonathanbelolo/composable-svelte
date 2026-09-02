@@ -62,6 +62,19 @@ export interface SessionState {
 	 * superseded request's late feedback could clobber newer state.
 	 */
 	epoch: number;
+	/**
+	 * When the backend says the session lapses, ISO 8601, or `null`.
+	 *
+	 * **Advisory, and it reverses what this package used to promise.** The old
+	 * contract said the client receives no expiry signal at all and its only
+	 * hook is a 401 from a domain call. That hook is still here and is still the
+	 * backstop — a server can end a session at any moment for reasons no expiry
+	 * can anticipate — but a backend that advertises one lets a client refresh
+	 * *before* the user hits a wall rather than after.
+	 *
+	 * Nothing in this reducer acts on it. The `session-refresh` flow does.
+	 */
+	expiresAt: string | null;
 }
 
 /**
@@ -156,9 +169,16 @@ export interface SessionDependencies {
 	 * Resolve the current session. Resolves `null` when anonymous (no/
 	 * expired session); rejects only on unexpected failures.
 	 *
-	 * Sessions carry a server-side TTL and the client receives NO expiry
-	 * signal — an `authenticated` store can be stale. The consumer's hook is
-	 * a 401 from any domain API call: dispatch `resolveSession` to re-sync.
+	 * Sessions carry a server-side TTL. A backend **may** advertise when it
+	 * lapses, in `expires_at`; when it does, that reaches `SessionState.expiresAt`
+	 * and the `session-refresh` flow can extend the session before the user hits
+	 * a wall.
+	 *
+	 * When it does not — and even when it does — an `authenticated` store can
+	 * still be stale, because a session can end at any moment for reasons no
+	 * expiry anticipates: an administrator revoked it, a deploy flushed the
+	 * store. The backstop is a 401 from any domain API call, which
+	 * `createUnauthorizedHandler` turns into a `resolveSession` for you.
 	 */
 	fetchSession: (signal?: AbortSignal) => Promise<SessionSnapshot | null>;
 }

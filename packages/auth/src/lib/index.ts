@@ -56,6 +56,9 @@ export {
 	createSessionStore,
 	createHttpSessionDeps,
 	MalformedSessionError,
+	createUnauthorizedHandler,
+	type UnauthorizedHandler,
+	type SessionStoreSlice,
 	type SessionState,
 	type SessionStatus,
 	type SessionAction,
@@ -262,6 +265,7 @@ export type {
 	AccountSnapshot,
 	MfaEnrolmentResult,
 	OAuthStart,
+	SessionLifetime,
 	AuthErrorBody
 } from './deps.js';
 

@@ -20,13 +20,14 @@ import { authErrorFromResponse } from './errors.js';
 import { send } from './transport.js';
 
 import type {
+	AccountSnapshot,
 	AuthDependencies,
 	LoginCredentials,
 	MfaEnrolmentResult,
 	MfaEnrolmentStart,
-	AccountSnapshot,
 	MfaMethod,
 	OAuthStart,
+	SessionLifetime,
 	SignupCredentials,
 	SignupOutcome
 } from '../deps.js';
@@ -280,6 +281,84 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			return decodeSessionSnapshot(response);
 		},
 
+		async requestEmailChange(newEmail: string, signal?: AbortSignal): Promise<void> {
+			const response = await send(url('/auth/account/email'), {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				credentials: 'include',
+				body: JSON.stringify({ email: newEmail }),
+				...(signal !== undefined && { signal })
+			});
+
+			if (!response.ok) {
+				throw await authErrorFromResponse(response, 'Could not change your email address.');
+			}
+		},
+
+		async resendEmailChange(signal?: AbortSignal): Promise<void> {
+			// No body: the pending address lives on the session, so there is
+			// nothing for the client to send back.
+			const response = await send(url('/auth/account/email/resend'), {
+				method: 'POST',
+				credentials: 'include',
+				...(signal !== undefined && { signal })
+			});
+
+			if (!response.ok) {
+				throw await authErrorFromResponse(response, 'Could not send that again.');
+			}
+		},
+
+		async confirmEmailChange(token: string, signal?: AbortSignal): Promise<string> {
+			const response = await send(url('/auth/account/email/confirm'), {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				credentials: 'include',
+				body: JSON.stringify({ token }),
+				...(signal !== undefined && { signal })
+			});
+
+			if (!response.ok) {
+				throw await authErrorFromResponse(response, 'That link is no longer valid.');
+			}
+
+			return decodeChangedEmail(response);
+		},
+
+		async deleteAccount(signal?: AbortSignal): Promise<void> {
+			// DELETE, the only one in this adapter. A cross-site `<form>` cannot
+			// issue it and it forces a CORS preflight, so the most destructive
+			// endpoint here is also the hardest to trigger by navigation.
+			const response = await send(url('/auth/account'), {
+				method: 'DELETE',
+				credentials: 'include',
+				...(signal !== undefined && { signal })
+			});
+
+			if (!response.ok) {
+				throw await authErrorFromResponse(response, 'Could not delete your account.');
+			}
+		},
+
+		async refreshSession(signal?: AbortSignal): Promise<SessionLifetime> {
+			// POST rather than GET, and that is load-bearing even though the
+			// reference cookie is SameSite=Lax. Lax withholds the cookie from a
+			// cross-site POST entirely, but *sends* it on a cross-site top-level
+			// GET navigation — so a GET version could be extended by luring
+			// someone to click a link.
+			const response = await send(url('/auth/session/refresh'), {
+				method: 'POST',
+				credentials: 'include',
+				...(signal !== undefined && { signal })
+			});
+
+			if (!response.ok) {
+				throw await authErrorFromResponse(response, 'Could not extend your session.');
+			}
+
+			return decodeSessionLifetime(response);
+		},
+
 		async disableMfa(signal?: AbortSignal): Promise<void> {
 			const response = await send(url('/auth/mfa/disable'), {
 				method: 'POST',
@@ -466,6 +545,7 @@ async function decodeAccountSnapshot(response: Response): Promise<AccountSnapsho
 	const hasPassword = payload['has_password'];
 	const mfaEnabled = payload['mfa_enabled'];
 	const providers = payload['providers'];
+	const pendingEmail = payload['pending_email'];
 
 	if (
 		typeof email !== 'string' ||
@@ -484,6 +564,12 @@ async function decodeAccountSnapshot(response: Response): Promise<AccountSnapsho
 		throw new MalformedSessionError('account providers must be an array when present');
 	}
 
+	// Absent or null is "no change pending". A present-but-wrong value is
+	// refused rather than coerced, like every other field here.
+	if (pendingEmail !== undefined && pendingEmail !== null && typeof pendingEmail !== 'string') {
+		throw new MalformedSessionError('account pending_email must be a string when present');
+	}
+
 	return {
 		email,
 		emailVerified,
@@ -491,8 +577,48 @@ async function decodeAccountSnapshot(response: Response): Promise<AccountSnapsho
 		mfaEnabled,
 		providers: ((providers ?? []) as unknown[]).filter(
 			(entry): entry is string => typeof entry === 'string'
-		)
+		),
+		pendingEmail: (pendingEmail as string | null | undefined) ?? null
 	};
+}
+
+/**
+ * The address now on the account, after a confirmed change.
+ *
+ * Refuses rather than guesses, like every decoder here: a confirmation page has
+ * no other source for what it just changed to.
+ */
+async function decodeChangedEmail(response: Response): Promise<string> {
+	const payload = await readJson(response);
+	const email = (payload as Record<string, unknown>)['email'];
+
+	if (typeof email !== 'string') {
+		throw new MalformedSessionError('confirmation must carry the new email');
+	}
+
+	return email;
+}
+
+/**
+ * The advertised session expiry.
+ *
+ * A 204 and a 200 with no `expires_at` both mean "the backend states none",
+ * which is a legitimate answer rather than a malformed one — the client simply
+ * has nothing to schedule against and falls back to reacting to a 401.
+ */
+async function decodeSessionLifetime(response: Response): Promise<SessionLifetime> {
+	if (response.status === 204) {
+		return { expiresAt: null };
+	}
+
+	const payload = await readJson(response);
+	const expiresAt = (payload as Record<string, unknown>)['expires_at'];
+
+	if (expiresAt !== undefined && expiresAt !== null && typeof expiresAt !== 'string') {
+		throw new MalformedSessionError('session expires_at must be a string when present');
+	}
+
+	return { expiresAt: (expiresAt as string | null | undefined) ?? null };
 }
 
 async function decodeOAuthStart(response: Response): Promise<OAuthStart> {

@@ -65,7 +65,8 @@ describe('a flow establishing a session', () => {
 				status: 'loginFailed',
 				subject: { kind: 'anonymous' },
 				error: { code: 'invalid_credentials', message: 'Wrong password.' },
-				epoch: 3
+				epoch: 3,
+				expiresAt: null
 			}
 		);
 
@@ -83,7 +84,8 @@ describe('a flow establishing a session', () => {
 			status: 'loggingOut',
 			subject: { kind: 'anonymous' },
 			error: null,
-			epoch: 7
+			epoch: 7,
+			expiresAt: null
 		});
 
 		await store.send({ type: 'sessionEstablished', session }, (state) => {
@@ -101,7 +103,8 @@ describe('a flow establishing a session', () => {
 			status: 'resolving',
 			subject: { kind: 'anonymous' },
 			error: null,
-			epoch: 1
+			epoch: 1,
+			expiresAt: null
 		});
 
 		await store.send({ type: 'sessionEstablished', session }, (state) => {
@@ -151,7 +154,8 @@ describe('a flow announcing that it has started', () => {
 			status: 'loggingOut',
 			subject: { kind: 'anonymous' },
 			error: null,
-			epoch: 2
+			epoch: 2,
+			expiresAt: null
 		});
 
 		await store.send({ type: 'loginStarted' }, (state) => {
@@ -196,7 +200,8 @@ describe('a flow whose sign-in fails', () => {
 			status: 'authenticated',
 			subject: { kind: 'authenticated', id: 'u1', attributes: { roles: [] } },
 			error: null,
-			epoch: 4
+			epoch: 4,
+			expiresAt: null
 		});
 
 		await store.send({ type: 'loginStarted' }, (state) => {

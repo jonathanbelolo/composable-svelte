@@ -94,6 +94,40 @@ export interface AccountSnapshot {
 	mfaEnabled: boolean;
 	/** Providers linked today. Empty is normal. */
 	providers: readonly string[];
+	/**
+	 * An address a change has been requested to but not yet confirmed, or `null`.
+	 *
+	 * Distinct from `email`, which is what the account answers to *today*. A
+	 * panel has to show both — "you are ada@example.com; we have sent a link to
+	 * ada@work.example" — and a single field cannot say that.
+	 *
+	 * **Required, not optional.** A hand-written `AuthDependencies` has to
+	 * decide, and `null` is one word; making it optional would let an adapter
+	 * omit it and leave every settings panel unable to distinguish "no change
+	 * pending" from "this backend does not tell us".
+	 */
+	pendingEmail: string | null;
+}
+
+/**
+ * How long the current session has left, as the backend advertises it.
+ *
+ * **Not a `SessionSnapshot`, deliberately.** Extending a session is not
+ * establishing one, and returning a snapshot here would invite a
+ * `sessionEstablished` hand-off — which the session reducer refuses only while
+ * `loggingOut`, so a refresh landing just after a sign-out would sign the user
+ * back in. `linkOAuthProvider` returns `void` for the same reason.
+ *
+ * `expiresAt` is an ISO 8601 **string**, never a `Date`: state crosses SSR
+ * hydration through `JSON.stringify`, which turns a `Date` into a string while
+ * the type goes on claiming `Date`. `AccountLockedError.until` follows the same
+ * rule.
+ *
+ * `null` means the backend states no expiry. Never invent one — the rule
+ * `retryDelaySeconds` already follows.
+ */
+export interface SessionLifetime {
+	expiresAt: string | null;
 }
 
 export interface OAuthStart {
@@ -317,6 +351,87 @@ export interface AuthDependencies extends SessionDependencies {
 	 * the user rejects, and the message it sends is what the surface shows.
 	 */
 	unlinkOAuthProvider: (provider: string, signal?: AbortSignal) => Promise<void>;
+
+	/**
+	 * Ask to move the account to a different email address.
+	 *
+	 * Sends a confirmation link to the **new** address; nothing changes until
+	 * that link is followed. Resolves when the request is accepted, which is not
+	 * the same as the change having happened — `AccountSnapshot.pendingEmail` is
+	 * where a surface reads what is outstanding.
+	 *
+	 * Rejects with `email_taken` when the address already has an account, and
+	 * **this is the one place in the package where naming that is right rather
+	 * than an oracle**: the caller is already authenticated as themselves, so
+	 * the only thing disclosed is disclosed to its owner. `resendVerification`
+	 * takes the opposite posture for the opposite reason — it is reachable by
+	 * anyone. Also `reauthentication_required` and `rate_limited`.
+	 */
+	requestEmailChange: (newEmail: string, signal?: AbortSignal) => Promise<void>;
+
+	/**
+	 * Send the confirmation link again.
+	 *
+	 * **Takes no address.** The pending one lives on the session server-side, so
+	 * a panel does not round-trip a value it just read back through a form.
+	 * Contrast `resendVerification(email)`, which has no session to read from.
+	 *
+	 * Rejects with `unknown` when there is no pending change, and `email_taken`
+	 * when the address has been claimed since the request.
+	 */
+	resendEmailChange: (signal?: AbortSignal) => Promise<void>;
+
+	/**
+	 * Confirm a change with the token from the link.
+	 *
+	 * Resolves with the address now on the account — **not a session**.
+	 * Confirming acts on an account the caller is already signed into, and a
+	 * session here would be a second sign-in nobody asked for; that is
+	 * `linkOAuthProvider`'s reasoning. It returns the address rather than `void`
+	 * because a confirmation page has no other way to say what changed: the
+	 * token is opaque and the page has no account read of its own.
+	 *
+	 * This is why `verifyEmail` could not be reused — different verb, different
+	 * return type, and that one confirms *the account's* address rather than
+	 * swapping to another.
+	 *
+	 * Rejects with `token_expired`, `email_taken` (claimed since the request),
+	 * and `invalid_credentials` when there is no session.
+	 */
+	confirmEmailChange: (token: string, signal?: AbortSignal) => Promise<string>;
+
+	/**
+	 * Delete the account, permanently.
+	 *
+	 * Takes nothing — not a typed confirmation phrase, which is a property of a
+	 * surface rather than of the I/O and which a backend cannot meaningfully
+	 * check. `disableMfa`'s contract exactly: the session says who is asking and
+	 * the backend decides whether that is enough.
+	 *
+	 * The session is destroyed with the account, so a caller must tell its
+	 * session store. `DeleteAccountPanel` requires one for that reason.
+	 *
+	 * Rejects with `reauthentication_required` — the principal arm, and the
+	 * whole reason this is not a one-line call — or `unknown` when a backend
+	 * refuses for its own reason, such as the last owner of an organisation.
+	 */
+	deleteAccount: (signal?: AbortSignal) => Promise<void>;
+
+	/**
+	 * Extend the current session's lifetime.
+	 *
+	 * **Not a credential check and not a step-up.** This must never demand
+	 * `reauthentication_required`: an endpoint that required a freshly proven
+	 * credential to extend a session could only extend the session that least
+	 * needs extending.
+	 *
+	 * Resolves with the advertised expiry, or `{ expiresAt: null }` from a
+	 * backend that states none. Rejects with `invalid_credentials` when there is
+	 * no live session — the only failure that means "stop asking" — or
+	 * `network`, which means the request may never have arrived and is
+	 * deliberately not treated as a sign-out.
+	 */
+	refreshSession: (signal?: AbortSignal) => Promise<SessionLifetime>;
 	/**
 	 * Start an OAuth sign-in, getting back somewhere to send the browser.
 	 *

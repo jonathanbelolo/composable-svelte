@@ -13,13 +13,14 @@
  */
 
 import type {
+	AccountSnapshot,
 	AuthDependencies,
 	LoginCredentials,
 	MfaEnrolmentResult,
 	MfaEnrolmentStart,
-	AccountSnapshot,
 	MfaMethod,
 	OAuthStart,
+	SessionLifetime,
 	SignupCredentials,
 	SignupOutcome
 } from '../deps.js';
@@ -126,6 +127,8 @@ export interface MockAuthOptions {
 				| 'regenerateRecoveryCodes'
 				| 'linkOAuthProvider'
 				| 'unlinkOAuthProvider'
+				| 'requestEmailChange'
+				| 'deleteAccount'
 		  )[]
 		| undefined;
 	/**
@@ -154,6 +157,29 @@ export interface MockAuthOptions {
 	oauthState?: string | undefined;
 	/** Codes `completeOAuth` accepts. Anything else is `token_expired`. */
 	oauthCodes?: readonly string[] | undefined;
+	/**
+	 * Addresses `requestEmailChange` refuses as `email_taken`.
+	 *
+	 * Separate from `takenEmails`, which is signup's: a demo wants a taken
+	 * signup address and a free change address at the same time.
+	 */
+	takenChangeEmails?: readonly string[] | undefined;
+	/** Tokens `confirmEmailChange` accepts. Anything else is `token_expired`. */
+	emailChangeTokens?: readonly string[] | undefined;
+	/**
+	 * The advertised session expiry, ISO 8601.
+	 *
+	 * `null` models a backend that advertises none, which is a legitimate answer
+	 * and the one a client has to cope with by falling back to the 401 hook.
+	 */
+	sessionExpiresAt?: string | null | undefined;
+	/**
+	 * How many refreshes succeed before the fake reports the session gone.
+	 *
+	 * Without this the `ended` branch is unreachable in a demo, and it is the
+	 * branch that decides whether a user is signed out or merely told to retry.
+	 */
+	refreshesBeforeEnd?: number | undefined;
 }
 
 const defaultSession: SessionSnapshot = {
@@ -210,7 +236,11 @@ export function createMockAuthDeps(options: MockAuthOptions = {}): AuthDependenc
 		oauthProviders = ['google', 'github'],
 		oauthAuthorizeUrl = 'https://provider.example/authorize?client_id=demo&response_type=code',
 		oauthState = 'st_demo',
-		oauthCodes = ['code_demo']
+		oauthCodes = ['code_demo'],
+		takenChangeEmails = [],
+		emailChangeTokens = ['change_demo'],
+		sessionExpiresAt = null,
+		refreshesBeforeEnd
 	} = options;
 
 	/**
@@ -228,14 +258,29 @@ export function createMockAuthDeps(options: MockAuthOptions = {}): AuthDependenc
 		hasPassword: boolean;
 		mfaEnabled: boolean;
 		providers: readonly string[];
+		pendingEmail: string | null;
 	} = {
 		email: 'ada@example.com',
 		emailVerified: true,
 		hasPassword: true,
 		mfaEnabled: false,
 		providers: [],
+		pendingEmail: null,
 		...account
 	};
+
+	/**
+	 * Whether `deleteAccount` has been called.
+	 *
+	 * The fake goes anonymous afterwards rather than carrying on answering, for
+	 * the reason `liveAccount` is stateful at all: a double that lets you read
+	 * an account you just deleted teaches the wrong thing.
+	 */
+	let deleted = false;
+
+	/** The advertised expiry, moved forward by each refresh. */
+	let expiresAt: string | null = sessionExpiresAt ?? null;
+	let refreshes = 0;
 
 	/** Bumped per regeneration, so successive code sets differ visibly. */
 	let issue = 0;
@@ -395,8 +440,76 @@ export function createMockAuthDeps(options: MockAuthOptions = {}): AuthDependenc
 			await wait(signal);
 			if (failWith) throw failWith;
 			if (reauthenticateFor.includes('fetchAccount')) throw needsReauthentication();
+			if (deleted) {
+				throw { code: 'invalid_credentials', message: 'You are not signed in.' } satisfies AuthError;
+			}
 
 			return { ...liveAccount };
+		},
+
+		async requestEmailChange(newEmail: string, signal?: AbortSignal): Promise<void> {
+			await wait(signal);
+			if (failWith) throw failWith;
+			if (reauthenticateFor.includes('requestEmailChange')) throw needsReauthentication();
+			if (takenChangeEmails.includes(newEmail)) {
+				// Naming it is right here: the caller is already authenticated as
+				// themselves, so the only thing disclosed is disclosed to its owner.
+				throw { code: 'email_taken', message: 'That address already has an account.', email: newEmail } satisfies AuthError;
+			}
+
+			liveAccount.pendingEmail = newEmail;
+		},
+
+		async resendEmailChange(signal?: AbortSignal): Promise<void> {
+			await wait(signal);
+			if (failWith) throw failWith;
+			if (liveAccount.pendingEmail === null) {
+				throw { code: 'unknown', message: 'There is no email change to confirm.' } satisfies AuthError;
+			}
+		},
+
+		async confirmEmailChange(token: string, signal?: AbortSignal): Promise<string> {
+			await wait(signal);
+			if (failWith) throw failWith;
+			if (!emailChangeTokens.includes(token)) {
+				throw { code: 'token_expired', message: 'That link is no longer valid.' } satisfies AuthError;
+			}
+			if (liveAccount.pendingEmail === null) {
+				throw { code: 'unknown', message: 'There is no email change to confirm.' } satisfies AuthError;
+			}
+
+			liveAccount.email = liveAccount.pendingEmail;
+			liveAccount.emailVerified = true;
+			liveAccount.pendingEmail = null;
+			return liveAccount.email;
+		},
+
+		async deleteAccount(signal?: AbortSignal): Promise<void> {
+			await wait(signal);
+			if (failWith) throw failWith;
+			if (reauthenticateFor.includes('deleteAccount')) throw needsReauthentication();
+
+			deleted = true;
+		},
+
+		async refreshSession(signal?: AbortSignal): Promise<SessionLifetime> {
+			await wait(signal);
+			if (failWith) throw failWith;
+			if (deleted) {
+				throw { code: 'invalid_credentials', message: 'You are not signed in.' } satisfies AuthError;
+			}
+
+			refreshes += 1;
+			if (refreshesBeforeEnd !== undefined && refreshes > refreshesBeforeEnd) {
+				// The `ended` branch, reachable on demand. A client must stop asking
+				// after this rather than retrying forever.
+				throw { code: 'invalid_credentials', message: 'Your session has ended.' } satisfies AuthError;
+			}
+
+			if (expiresAt !== null) {
+				expiresAt = new Date(Date.parse(expiresAt) + 15 * 60_000).toISOString();
+			}
+			return { expiresAt };
 		},
 
 		async disableMfa(signal?: AbortSignal): Promise<void> {

@@ -114,7 +114,8 @@ describe('AuthGuard', () => {
 			status: 'resolving',
 			subject: subjectFromSession(session),
 			error: null,
-			epoch: 1
+			epoch: 1,
+			expiresAt: null
 		});
 		const target = mountTarget();
 
@@ -146,7 +147,8 @@ describe('AuthGuard', () => {
 			status: 'resolving',
 			subject: { kind: 'anonymous' },
 			error: null,
-			epoch: 1
+			epoch: 1,
+			expiresAt: null
 		});
 		const target = mountTarget();
 

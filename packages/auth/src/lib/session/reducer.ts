@@ -31,7 +31,8 @@ export function createInitialSessionState(): SessionState {
 		status: 'unresolved',
 		subject: anonymousSubject,
 		error: null,
-		epoch: 0
+		epoch: 0,
+		expiresAt: null
 	};
 }
 
@@ -118,7 +119,14 @@ export const sessionReducer: Reducer<SessionState, SessionAction, SessionDepende
 			}
 			if (action.session === null) {
 				return [
-					{ status: 'anonymous', subject: anonymousSubject, error: null, epoch: state.epoch },
+					{
+						status: 'anonymous',
+						subject: anonymousSubject,
+						error: null,
+						epoch: state.epoch,
+						// No session, so nothing to expire.
+						expiresAt: null
+					},
 					Effect.none()
 				];
 			}
@@ -127,7 +135,9 @@ export const sessionReducer: Reducer<SessionState, SessionAction, SessionDepende
 					status: 'authenticated',
 					subject: subjectFromSession(action.session),
 					error: null,
-					epoch: state.epoch
+					epoch: state.epoch,
+					// Advisory: absent means the backend states none.
+					expiresAt: action.session.expires_at ?? null
 				},
 				Effect.none()
 			];
@@ -140,7 +150,13 @@ export const sessionReducer: Reducer<SessionState, SessionAction, SessionDepende
 			}
 			// Fail-closed: an unreachable/failing session endpoint means anonymous.
 			return [
-				{ status: 'anonymous', subject: anonymousSubject, error: action.error, epoch: state.epoch },
+				{
+					status: 'anonymous',
+					subject: anonymousSubject,
+					error: action.error,
+					epoch: state.epoch,
+					expiresAt: null
+				},
 				Effect.none()
 			];
 		}
@@ -185,7 +201,9 @@ export const sessionReducer: Reducer<SessionState, SessionAction, SessionDepende
 					status: 'authenticated',
 					subject: subjectFromSession(action.session),
 					error: null,
-					epoch: state.epoch
+					epoch: state.epoch,
+					// Advisory: absent means the backend states none.
+					expiresAt: action.session.expires_at ?? null
 				},
 				Effect.none()
 			];
@@ -207,13 +225,21 @@ export const sessionReducer: Reducer<SessionState, SessionAction, SessionDepende
 						status: 'authenticated',
 						subject: state.subject,
 						error: action.error,
-						epoch: state.epoch
+						epoch: state.epoch,
+						// The session did not change, so neither does its expiry.
+						expiresAt: state.expiresAt
 					},
 					Effect.none()
 				];
 			}
 			return [
-				{ status: 'loginFailed', subject: anonymousSubject, error: action.error, epoch: state.epoch },
+				{
+					status: 'loginFailed',
+					subject: anonymousSubject,
+					error: action.error,
+					epoch: state.epoch,
+					expiresAt: null
+				},
 				Effect.none()
 			];
 		}
@@ -268,7 +294,8 @@ export const sessionReducer: Reducer<SessionState, SessionAction, SessionDepende
 					status: 'anonymous',
 					subject: anonymousSubject,
 					error: action.error ?? null,
-					epoch: state.epoch
+					epoch: state.epoch,
+					expiresAt: null
 				},
 				Effect.none()
 			];
@@ -310,7 +337,9 @@ export const sessionReducer: Reducer<SessionState, SessionAction, SessionDepende
 					status: 'authenticated',
 					subject: subjectFromSession(action.session),
 					error: null,
-					epoch: state.epoch
+					epoch: state.epoch,
+					// Advisory: absent means the backend states none.
+					expiresAt: action.session.expires_at ?? null
 				},
 				Effect.none()
 			];

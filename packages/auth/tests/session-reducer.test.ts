@@ -52,7 +52,8 @@ const authenticatedState: SessionState = {
 	status: 'authenticated',
 	subject: subjectFromSession(session),
 	error: null,
-	epoch: 0
+	epoch: 0,
+	expiresAt: null
 };
 
 describe('resolveSession', () => {

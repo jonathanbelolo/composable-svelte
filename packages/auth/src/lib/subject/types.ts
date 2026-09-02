@@ -66,6 +66,17 @@ export interface SessionSnapshot {
 	 * stamps into `author_id` on events this subject causes.
 	 */
 	subject_id: string;
+	/**
+	 * When the backend says this session lapses, ISO 8601.
+	 *
+	 * Advisory and optional: a backend that says nothing is not malformed, and a
+	 * client that receives nothing falls back to reacting to a 401.
+	 *
+	 * A **string**, never a `Date`. This crosses SSR hydration through
+	 * `JSON.stringify`, which turns a `Date` into a string while the type goes
+	 * on claiming `Date` — the rule `AccountLockedError.until` already follows.
+	 */
+	expires_at?: string;
 	/** Display name of the signed-in account (present on login responses). */
 	display_name?: string;
 	/**

@@ -42,7 +42,8 @@ const ACCOUNT: AccountSnapshot = {
 	emailVerified: true,
 	hasPassword: true,
 	mfaEnabled: false,
-	providers: []
+	providers: [],
+	pendingEmail: null
 };
 
 const PASSWORD = 'correct-horse-battery-staple';

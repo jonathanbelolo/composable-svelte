@@ -226,7 +226,9 @@ describe('the account wire', () => {
 			emailVerified: true,
 			hasPassword: true,
 			mfaEnabled: false,
-			providers: ['github']
+			providers: ['github'],
+			// Absent on the wire is "no change pending", not missing data.
+			pendingEmail: null
 		});
 		expect(calls[0]!.url).toBe('/api/auth/account');
 		expect(calls[0]!.init.method).toBe('GET');

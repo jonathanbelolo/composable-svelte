@@ -90,7 +90,8 @@ describe('AuthGuard fallback', () => {
 			status: 'loginFailed',
 			subject: { kind: 'anonymous' },
 			error: { code: 'unknown', message: 'Login failed (503)', status: 503 },
-			epoch: 1
+			epoch: 1,
+			expiresAt: null
 		});
 
 		const { target, dispose } = mountIn(AuthGuard, {

@@ -77,6 +77,11 @@ function parseSessionSnapshot(payload: unknown): SessionSnapshot {
 	if (record['roles'] !== undefined && !Array.isArray(record['roles'])) {
 		throw new MalformedSessionError('roles is present but not an array');
 	}
+	// Advisory, so absent is fine — a backend that says nothing about expiry is
+	// not malformed. A present-but-wrong value is refused, like `roles`.
+	if (record['expires_at'] !== undefined && typeof record['expires_at'] !== 'string') {
+		throw new MalformedSessionError('expires_at is present but not a string');
+	}
 	return payload as SessionSnapshot;
 }
 
