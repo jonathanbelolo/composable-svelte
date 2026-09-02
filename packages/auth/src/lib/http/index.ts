@@ -17,6 +17,7 @@ import {
 	MalformedSessionError
 } from '../session/http.js';
 import { authErrorFromResponse } from './errors.js';
+import { send } from './transport.js';
 
 import type {
 	AuthDependencies,
@@ -55,7 +56,7 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 		...createHttpSessionDeps(baseUrl),
 
 		async login(credentials: LoginCredentials, signal?: AbortSignal): Promise<SessionSnapshot> {
-			const response = await fetch(url('/auth/password-login'), {
+			const response = await send(url('/auth/password-login'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: { 'content-type': 'application/json' },
@@ -78,7 +79,7 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 		},
 
 		async signup(credentials: SignupCredentials, signal?: AbortSignal): Promise<SignupOutcome> {
-			const response = await fetch(url('/auth/signup'), {
+			const response = await send(url('/auth/signup'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: { 'content-type': 'application/json' },
@@ -106,7 +107,7 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 		},
 
 		async verifyEmail(token: string, signal?: AbortSignal): Promise<SessionSnapshot | null> {
-			const response = await fetch(url('/auth/verify-email'), {
+			const response = await send(url('/auth/verify-email'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: { 'content-type': 'application/json' },
@@ -127,7 +128,7 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 		},
 
 		async requestPasswordReset(email: string, signal?: AbortSignal): Promise<void> {
-			const response = await fetch(url('/auth/request-password-reset'), {
+			const response = await send(url('/auth/request-password-reset'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: { 'content-type': 'application/json' },
@@ -149,7 +150,7 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			password: string,
 			signal?: AbortSignal
 		): Promise<SessionSnapshot | null> {
-			const response = await fetch(url('/auth/reset-password'), {
+			const response = await send(url('/auth/reset-password'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: { 'content-type': 'application/json' },
@@ -174,7 +175,7 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			method: MfaMethod,
 			signal?: AbortSignal
 		): Promise<SessionSnapshot> {
-			const response = await fetch(url('/auth/mfa/verify'), {
+			const response = await send(url('/auth/mfa/verify'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: { 'content-type': 'application/json' },
@@ -193,7 +194,7 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 		},
 
 		async beginMfaEnrolment(signal?: AbortSignal): Promise<MfaEnrolmentStart> {
-			const response = await fetch(url('/auth/mfa/enrol'), {
+			const response = await send(url('/auth/mfa/enrol'), {
 				method: 'POST',
 				credentials: 'include',
 				...(signal !== undefined && { signal })
@@ -207,7 +208,7 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 		},
 
 		async requestMagicLink(email: string, signal?: AbortSignal): Promise<void> {
-			const response = await fetch(url('/auth/magic-link'), {
+			const response = await send(url('/auth/magic-link'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: { 'content-type': 'application/json' },
@@ -221,7 +222,7 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 		},
 
 		async signInWithMagicLink(token: string, signal?: AbortSignal): Promise<SessionSnapshot> {
-			const response = await fetch(url('/auth/magic-link/signin'), {
+			const response = await send(url('/auth/magic-link/signin'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: { 'content-type': 'application/json' },
@@ -243,7 +244,7 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			// The second read in this adapter, and the second non-POST. `GET`
 			// because it is a read: the settings surface asks this on entry and
 			// again after anything changes.
-			const response = await fetch(url('/auth/account'), {
+			const response = await send(url('/auth/account'), {
 				method: 'GET',
 				credentials: 'include',
 				...(signal !== undefined && { signal })
@@ -260,7 +261,7 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			newPassword: string,
 			signal?: AbortSignal
 		): Promise<SessionSnapshot | null> {
-			const response = await fetch(url('/auth/account/password'), {
+			const response = await send(url('/auth/account/password'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: { 'content-type': 'application/json' },
@@ -279,8 +280,74 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			return decodeSessionSnapshot(response);
 		},
 
+		async disableMfa(signal?: AbortSignal): Promise<void> {
+			const response = await send(url('/auth/mfa/disable'), {
+				method: 'POST',
+				credentials: 'include',
+				...(signal !== undefined && { signal })
+			});
+
+			if (!response.ok) {
+				throw await authErrorFromResponse(response, 'Could not turn that off.');
+			}
+		},
+
+		async regenerateRecoveryCodes(signal?: AbortSignal): Promise<MfaEnrolmentResult> {
+			const response = await send(url('/auth/mfa/recovery-codes'), {
+				method: 'POST',
+				credentials: 'include',
+				...(signal !== undefined && { signal })
+			});
+
+			if (!response.ok) {
+				throw await authErrorFromResponse(response, 'Could not issue new codes.');
+			}
+
+			// The same decoder enrolment uses, which refuses an empty array: a
+			// surface that showed none would tell the user they were finished when
+			// they were not.
+			return decodeEnrolmentResult(response);
+		},
+
+		async linkOAuthProvider(
+			provider: string,
+			code: string,
+			state: string,
+			signal?: AbortSignal
+		): Promise<void> {
+			const response = await send(url('/auth/oauth/link'), {
+				method: 'POST',
+				credentials: 'include',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ provider, code, state }),
+				...(signal !== undefined && { signal })
+			});
+
+			if (!response.ok) {
+				throw await authErrorFromResponse(response, 'Could not link that account.');
+			}
+			// Nothing is decoded, deliberately. A link that returned a session
+			// would be a second sign-in nobody asked for, and reading one here
+			// would invite a backend to send it.
+		},
+
+		async unlinkOAuthProvider(provider: string, signal?: AbortSignal): Promise<void> {
+			const response = await send(url('/auth/oauth/unlink'), {
+				method: 'POST',
+				credentials: 'include',
+				headers: { 'content-type': 'application/json' },
+				// In the body, never the path — the rule `beginOAuth` states.
+				body: JSON.stringify({ provider }),
+				...(signal !== undefined && { signal })
+			});
+
+			if (!response.ok) {
+				throw await authErrorFromResponse(response, 'Could not unlink that account.');
+			}
+		},
+
 		async beginOAuth(provider: string, signal?: AbortSignal): Promise<OAuthStart> {
-			const response = await fetch(url('/auth/oauth/begin'), {
+			const response = await send(url('/auth/oauth/begin'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: { 'content-type': 'application/json' },
@@ -304,7 +371,7 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			state: string,
 			signal?: AbortSignal
 		): Promise<SessionSnapshot> {
-			const response = await fetch(url('/auth/oauth/complete'), {
+			const response = await send(url('/auth/oauth/complete'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: { 'content-type': 'application/json' },
@@ -327,7 +394,7 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 			code: string,
 			signal?: AbortSignal
 		): Promise<MfaEnrolmentResult> {
-			const response = await fetch(url('/auth/mfa/enrol/confirm'), {
+			const response = await send(url('/auth/mfa/enrol/confirm'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: { 'content-type': 'application/json' },
@@ -343,7 +410,7 @@ export function createHttpAuthDeps(baseUrl: string = ''): AuthDependencies {
 		},
 
 		async resendVerification(email: string, signal?: AbortSignal): Promise<void> {
-			const response = await fetch(url('/auth/resend-verification'), {
+			const response = await send(url('/auth/resend-verification'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: { 'content-type': 'application/json' },

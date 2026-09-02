@@ -14,6 +14,7 @@ import {
 import type { SessionDependencies, SessionState } from '../src/lib/session/types';
 import { subjectFromSession } from '../src/lib/subject/helpers';
 import type { SessionSnapshot } from '../src/lib/subject/types';
+import type { AuthError } from '../src/lib/errors/types';
 
 const session: SessionSnapshot = {
 	subject_id: '3f2a58f0-0000-0000-0000-000000000001',
@@ -91,10 +92,20 @@ describe('resolveSession', () => {
 	});
 
 	it('fails closed to anonymous when the resolve call rejects', async () => {
+		// The dependency rejects the way the HTTP adapter now does — with an
+		// `AuthError`, not a bare `Error`. This test used to throw
+		// `new Error('network down')` while its comment claimed `toAuthError`
+		// "reads the TypeError `fetch` throws as `network`". A plain `Error` is
+		// never a `TypeError`, so the code was `unknown` and the assertion only
+		// ever checked the message — a vacuous pass sitting on the defect the
+		// comment described.
 		const store = makeStore(
 			mockDeps({
 				fetchSession: vi.fn(async () => {
-					throw new Error('network down');
+					throw {
+						code: 'network',
+						message: 'Could not reach the server. Check your connection and try again.'
+					} satisfies AuthError;
 				})
 			})
 		);
@@ -103,10 +114,10 @@ describe('resolveSession', () => {
 		await store.receive({ type: 'sessionResolveFailed' }, (state) => {
 			expect(state.status).toBe('anonymous');
 			expect(state.subject.kind).toBe('anonymous');
-			// A structured failure now, not a string: `toAuthError` reads the
-			// TypeError `fetch` throws as `network`, which is what a caller checks
-			// before offering a retry.
-			expect(state.error?.message).toBe('network down');
+			// The code is the part a caller branches on before offering a retry,
+			// and it is the part nothing checked.
+			expect(state.error?.code).toBe('network');
+			expect(state.error?.message).toContain('Could not reach the server');
 		});
 
 		store.assertNoPendingActions();

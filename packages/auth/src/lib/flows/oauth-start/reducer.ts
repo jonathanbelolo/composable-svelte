@@ -37,6 +37,7 @@ export function oauthStartReducer(
 			// guard would have protected — a second press supersedes the first — and
 			// the two arms below discard the superseded answer when it lands.
 			const { provider } = action;
+			const intent = action.intent ?? 'signIn';
 			const returnTo = normaliseReturnTo(action.returnTo);
 
 			return [
@@ -47,6 +48,7 @@ export function oauthStartReducer(
 						dispatch({
 							type: 'authorizationReady',
 							provider,
+							intent,
 							authorizeUrl: start.authorizeUrl,
 							state: start.state,
 							returnTo
@@ -68,7 +70,7 @@ export function oauthStartReducer(
 				return [state, Effect.none()];
 			}
 
-			const { provider, authorizeUrl, state: nonce, returnTo } = action;
+			const { provider, intent, authorizeUrl, state: nonce, returnTo } = action;
 
 			return [
 				{ ...state, status: 'redirecting', error: null },
@@ -86,7 +88,7 @@ export function oauthStartReducer(
 				// clause short-circuiting — right today, silently wrong later.
 				Effect.run<OAuthStartAction>(async (dispatch) => {
 					try {
-						deps.pendingOAuth.put({ provider, state: nonce, returnTo });
+						deps.pendingOAuth.put({ provider, intent, state: nonce, returnTo });
 					} catch (error) {
 						// Storing failed, so do not navigate. Leaving now would spend a
 						// real authorization round trip to arrive at an unverifiable

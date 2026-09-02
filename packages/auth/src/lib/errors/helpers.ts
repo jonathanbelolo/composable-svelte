@@ -20,7 +20,20 @@ import type { AuthError, MfaRequiredError, ReauthenticationRequiredError } from 
  * report precisely and still be wrapped defensively by its caller.
  */
 export function toAuthError(thrown: unknown): AuthError {
-	if (isAuthError(thrown)) return thrown;
+	if (isAuthError(thrown)) {
+		if (!(thrown instanceof Error)) return thrown;
+
+		// Copied into a plain object when it arrived as an `Error`. An `Error`'s
+		// `message` is non-enumerable, so `JSON.stringify` drops it — and core
+		// hydrates SSR state exactly that way, which would land a
+		// `MalformedSessionError` on the client as `{"code":"unknown"}` with the
+		// explanation gone.
+		//
+		// The assertion is needed rather than lazy: `thrown` is already narrowed
+		// to `AuthError`, but spreading a union widens `code` back to every arm
+		// at once and TypeScript cannot re-discriminate an object literal from it.
+		return { ...thrown, message: thrown.message } as AuthError;
+	}
 
 	if (thrown instanceof DOMException && thrown.name === 'AbortError') {
 		return { code: 'network', message: 'The request was cancelled.' };

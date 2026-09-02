@@ -35,8 +35,25 @@ import {
  */
 export type OAuthProvider = string;
 
+/**
+ * Why the browser was sent to a provider.
+ *
+ * An app has exactly one callback URL — `beginOAuth` takes no redirect URI,
+ * because the backend registered it with the provider — so nothing on the
+ * returning page can know whether this was a sign-in or a link until the record
+ * is read. That is why the intent travels in the record rather than in the URL
+ * or in two different components.
+ */
+export type OAuthIntent = 'signIn' | 'link';
+
 export interface PendingOAuth {
 	provider: OAuthProvider;
+	/**
+	 * Whether to sign in or to attach the provider to the current account.
+	 *
+	 * **Required, and never defaulted** — see the validator below.
+	 */
+	intent: OAuthIntent;
 	/** The nonce the backend minted, compared against `?state=` on return. */
 	state: string;
 	/**
@@ -120,6 +137,13 @@ function isPendingOAuth(value: unknown): value is PendingOAuth {
 	const record = value as Record<string, unknown>;
 	return (
 		typeof record['provider'] === 'string' &&
+		// Required, and deliberately not defaulted. A record written before this
+		// field existed, or by anything that did not set it, is refused — because
+		// defaulting to `signIn` would turn an abandoned *link* attempt into an
+		// unrequested sign-in, which is the one outcome nobody asked for. A
+		// refused record reads as `oauth_state_mismatch`, whose meaning is
+		// exactly "cannot verify".
+		(record['intent'] === 'signIn' || record['intent'] === 'link') &&
 		typeof record['state'] === 'string' &&
 		record['state'] !== '' &&
 		(record['returnTo'] === null || typeof record['returnTo'] === 'string')

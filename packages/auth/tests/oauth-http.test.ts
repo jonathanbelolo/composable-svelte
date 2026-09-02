@@ -326,28 +326,37 @@ describe('the account wire', () => {
 describe('the pending storage that ships', () => {
 	it('round-trips through sessionStorage, once', () => {
 		const storage = createPendingOAuthStorage();
-		storage.put({ provider: 'github', state: 'st_1', returnTo: '/app' });
+		storage.put({ provider: 'github', intent: 'signIn', state: 'st_1', returnTo: '/app' });
 
 		expect(Object.keys(sessionStorage)).toEqual(['auth:oauth:pending']);
-		expect(storage.take()).toEqual({ provider: 'github', state: 'st_1', returnTo: '/app' });
+		expect(storage.take()).toEqual({
+			provider: 'github',
+			intent: 'signIn',
+			state: 'st_1',
+			returnTo: '/app'
+		});
 		expect(storage.take(), 'the nonce was reusable').toBeNull();
 		expect(Object.keys(sessionStorage), 'the record outlived its use').toEqual([]);
 	});
 
 	it('overwrites rather than accumulating', () => {
 		const storage = createPendingOAuthStorage();
-		storage.put({ provider: 'a', state: 'st_a', returnTo: null });
-		storage.put({ provider: 'b', state: 'st_b', returnTo: null });
+		storage.put({ provider: 'a', intent: 'signIn', state: 'st_a', returnTo: null });
+		storage.put({ provider: 'b', intent: 'link', state: 'st_b', returnTo: null });
 
 		expect(Object.keys(sessionStorage)).toHaveLength(1);
-		expect(storage.take()?.state).toBe('st_b');
+		const taken = storage.take();
+		expect(taken?.state).toBe('st_b');
+		// The intent goes round with it — a record whose intent was dropped is
+		// refused entirely, so this also pins that `put` writes it.
+		expect(taken?.intent).toBe('link');
 	});
 
 	it('answers null for a record that was tampered with', () => {
 		// "Cannot verify" is the honest verdict, and it is the one that lands on
 		// `oauth_state_mismatch` rather than crashing the callback page.
 		const storage = createPendingOAuthStorage();
-		storage.put({ provider: 'github', state: 'st_1', returnTo: null });
+		storage.put({ provider: 'github', intent: 'signIn', state: 'st_1', returnTo: null });
 
 		sessionStorage.setItem('auth:oauth:pending', JSON.stringify({ provider: 'evil' }));
 		expect(storage.take()).toBeNull();
@@ -358,7 +367,12 @@ describe('the pending storage that ships', () => {
 
 	it('normalises returnTo on the way in, not only at the reducer', () => {
 		const storage = createPendingOAuthStorage();
-		storage.put({ provider: 'github', state: 'st_1', returnTo: 'https://evil.example' });
+		storage.put({
+			provider: 'github',
+			intent: 'signIn',
+			state: 'st_1',
+			returnTo: 'https://evil.example'
+		});
 		expect(storage.take()?.returnTo).toBeNull();
 	});
 });

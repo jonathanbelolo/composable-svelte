@@ -8,11 +8,12 @@ thin guard components.
 > seeded-user passwordless login, **password sign-in**, **signup**, **email
 > verification**, **password recovery**, **MFA** (challenge and enrolment),
 > **OAuth** (redirect and callback), **magic links** (request and sign-in) and
-> the first of the **account** surface — an account read model, changing or
-> setting a password, and signing out. Headless flows, HTTP adapter and styled
-> components throughout. What does not exist yet: changing an email, deleting an
-> account, token refresh, account linking, and MFA management — disabling it or
-> regenerating recovery codes. The `AuthError`
+> the **account** surface — an account read model, changing or setting a
+> password, signing out, **MFA management** (turning it off, reissuing recovery
+> codes) and **connected accounts** (attaching and detaching OAuth providers).
+> Headless flows, HTTP adapter and styled components throughout. What does not
+> exist yet: changing an email, deleting an account, and token refresh. The
+> `AuthError`
 > union already names the failures those flows produce (`mfa_required`,
 > `email_unverified`, …) because the backend contract needs them; a code
 > appearing there is not a promise that the flow behind it ships today.
@@ -208,6 +209,13 @@ resolve → logout → resolve, or slow login A → logout → login B).
 
 ## Backend endpoints
 
+The three session calls are below. The other nineteen — everything
+`createHttpAuthDeps` adds — are specified, and implemented, in
+[`examples/auth-server`](../../examples/auth-server): a Fastify reference
+backend this package's integration suite runs against. Its README is the
+endpoint table for the full surface, including which statuses mean what and the
+four traps that fail silently.
+
 | Call           | Endpoint            | Notes                                          |
 | -------------- | ------------------- | ---------------------------------------------- |
 | `fetchLogin`   | `POST /auth/login`  | `{ "user_id": ... }` → session JSON + cookie   |
@@ -249,8 +257,16 @@ pnpm dev
 ```
 
 Then open **Login Form**, **Signup Form**, **Email Verification**, **Password
-Recovery**, **Multi-Factor Auth**, **OAuth Sign-In** or **Magic Link** — all
-under *Form Components - Advanced*.
+Recovery**, **Multi-Factor Auth**, **OAuth Sign-In**, **Magic Link** or
+**Account** — all under *Form Components - Advanced*.
+
+Those demos run on `createMockAuthDeps`. For every flow wired to a **real
+backend** — a real session cookie, a real OAuth redirect — see
+[`examples/auth-server`](../../examples/auth-server), whose `pnpm dev` serves a
+reference client against a reference server. The **Account** demo is
+the signed-in half: the read model, changing a password, MFA management and
+connected accounts, each with its re-authentication branch reachable from a
+scenario picker.
 
 ## Related Packages
 

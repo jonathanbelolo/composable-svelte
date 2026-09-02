@@ -118,7 +118,26 @@ export interface MockAuthOptions {
 	 * Named so a demo and a test can reach that branch, which is otherwise only
 	 * producible by a real backend.
 	 */
-	reauthenticateFor?: readonly ('changePassword' | 'fetchAccount')[] | undefined;
+	reauthenticateFor?:
+		| readonly (
+				| 'changePassword'
+				| 'fetchAccount'
+				| 'disableMfa'
+				| 'regenerateRecoveryCodes'
+				| 'linkOAuthProvider'
+				| 'unlinkOAuthProvider'
+		  )[]
+		| undefined;
+	/**
+	 * Providers the fake refuses to unlink, as a real backend would when doing so
+	 * would leave no way in.
+	 *
+	 * Named rather than computed, because the client cannot compute it — a magic
+	 * link is also a way in, and nothing in `AccountSnapshot` says whether the
+	 * backend offers them. This is the fake standing in for a judgement only a
+	 * backend can make.
+	 */
+	undetachableProviders?: readonly string[] | undefined;
 	/** Sign-in link tokens the fake accepts. Anything else is `token_expired`. */
 	magicLinkTokens?: readonly string[] | undefined;
 	/** Providers the fake offers. Anything else is rejected as `unknown`. */
@@ -186,12 +205,40 @@ export function createMockAuthDeps(options: MockAuthOptions = {}): AuthDependenc
 		],
 		account,
 		reauthenticateFor = [],
+		undetachableProviders = [],
 		magicLinkTokens = ['magic_demo'],
 		oauthProviders = ['google', 'github'],
 		oauthAuthorizeUrl = 'https://provider.example/authorize?client_id=demo&response_type=code',
 		oauthState = 'st_demo',
 		oauthCodes = ['code_demo']
 	} = options;
+
+	/**
+	 * The account, mutated by the operations that change it.
+	 *
+	 * Stateful on purpose, and the one place this fake is. Every other method
+	 * answers the same way however often it is called — but a settings surface
+	 * re-reads the account after acting, so a stateless fake would show someone
+	 * turning MFA off and then immediately being told it was still on. The demo
+	 * would be teaching the opposite of what the panels do.
+	 */
+	const liveAccount: {
+		email: string;
+		emailVerified: boolean;
+		hasPassword: boolean;
+		mfaEnabled: boolean;
+		providers: readonly string[];
+	} = {
+		email: 'ada@example.com',
+		emailVerified: true,
+		hasPassword: true,
+		mfaEnabled: false,
+		providers: [],
+		...account
+	};
+
+	/** Bumped per regeneration, so successive code sets differ visibly. */
+	let issue = 0;
 
 	const needsReauthentication = (): AuthError => ({
 		code: 'reauthentication_required',
@@ -349,14 +396,71 @@ export function createMockAuthDeps(options: MockAuthOptions = {}): AuthDependenc
 			if (failWith) throw failWith;
 			if (reauthenticateFor.includes('fetchAccount')) throw needsReauthentication();
 
-			return {
-				email: 'ada@example.com',
-				emailVerified: true,
-				hasPassword: true,
-				mfaEnabled: false,
-				providers: [],
-				...account
-			};
+			return { ...liveAccount };
+		},
+
+		async disableMfa(signal?: AbortSignal): Promise<void> {
+			await wait(signal);
+			if (failWith) throw failWith;
+			if (reauthenticateFor.includes('disableMfa')) throw needsReauthentication();
+
+			liveAccount.mfaEnabled = false;
+		},
+
+		async regenerateRecoveryCodes(signal?: AbortSignal): Promise<MfaEnrolmentResult> {
+			await wait(signal);
+			if (failWith) throw failWith;
+			if (reauthenticateFor.includes('regenerateRecoveryCodes')) throw needsReauthentication();
+
+			// Different codes each time, so a demo can see they really are new and
+			// a test can tell one issue from the next.
+			issue += 1;
+			return { recoveryCodes: recoveryCodes.map((code) => `${code}-${issue}`) };
+		},
+
+		async linkOAuthProvider(
+			provider: string,
+			code: string,
+			state: string,
+			signal?: AbortSignal
+		): Promise<void> {
+			await wait(signal);
+			if (failWith) throw failWith;
+			if (reauthenticateFor.includes('linkOAuthProvider')) throw needsReauthentication();
+
+			if (state !== oauthState) {
+				throw {
+					code: 'oauth_state_mismatch',
+					message: 'That link could not be verified. Start again.'
+				} satisfies AuthError;
+			}
+			if (!oauthCodes.includes(code)) {
+				throw {
+					code: 'token_expired',
+					message: 'That link attempt has expired or been used already.'
+				} satisfies AuthError;
+			}
+
+			if (!liveAccount.providers.includes(provider)) {
+				liveAccount.providers = [...liveAccount.providers, provider];
+			}
+		},
+
+		async unlinkOAuthProvider(provider: string, signal?: AbortSignal): Promise<void> {
+			await wait(signal);
+			if (failWith) throw failWith;
+			if (reauthenticateFor.includes('unlinkOAuthProvider')) throw needsReauthentication();
+
+			if (undetachableProviders.includes(provider)) {
+				// The judgement only a backend can make, and the shape a real
+				// refusal takes: a sentence, not a code a surface branches on.
+				throw {
+					code: 'unknown',
+					message: `Add another way to sign in before removing ${provider}.`
+				} satisfies AuthError;
+			}
+
+			liveAccount.providers = liveAccount.providers.filter((p) => p !== provider);
 		},
 
 		async changePassword(

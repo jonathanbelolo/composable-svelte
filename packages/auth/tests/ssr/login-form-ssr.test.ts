@@ -530,7 +530,7 @@ describe('OAuth on the server', () => {
 		// be constructible here — the failure has to wait until they are used.
 		const storage = createPendingOAuthStorage();
 		expect(storage.take()).toBeNull();
-		expect(() => storage.put({ provider: 'github', state: 'st_1', returnTo: null })).toThrow();
+		expect(() => storage.put({ intent: 'signIn', provider: 'github', state: 'st_1', returnTo: null })).toThrow();
 
 		expect(() => createBrowserRedirect()).not.toThrow();
 	});

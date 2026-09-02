@@ -12,7 +12,7 @@
 
 import type { AuthError } from '../../errors/types.js';
 import type { AuthDependencies } from '../../deps.js';
-import type { OAuthProvider, PendingOAuthStorage } from '../oauth-pending.js';
+import type { OAuthIntent, OAuthProvider, PendingOAuthStorage } from '../oauth-pending.js';
 import type { Redirect } from './redirect.js';
 
 export type OAuthStartStatus =
@@ -48,6 +48,14 @@ export type OAuthStartAction =
 	| {
 			type: 'authorizationRequested';
 			provider: OAuthProvider;
+			/**
+			 * Sign in, or attach this provider to the account already signed in.
+			 *
+			 * Defaults to `'signIn'` at the reducer, so every existing caller keeps
+			 * working — but it is written into the pending record explicitly, and
+			 * the record's validator refuses one without it.
+			 */
+			intent?: OAuthIntent | undefined;
 			/** Where to land afterwards. Normalised to a same-origin path or dropped. */
 			returnTo?: string | null | undefined;
 	  }
@@ -55,6 +63,7 @@ export type OAuthStartAction =
 	| {
 			type: 'authorizationReady';
 			provider: OAuthProvider;
+			intent: OAuthIntent;
 			authorizeUrl: string;
 			state: string;
 			returnTo: string | null;

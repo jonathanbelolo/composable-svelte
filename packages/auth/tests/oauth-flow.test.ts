@@ -136,7 +136,12 @@ describe('starting a sign-in', () => {
 		await store.finish();
 
 		expect(recordAtRedirect, 'redirected before the record was stored').not.toBeNull();
-		expect(recordAtRedirect!).toEqual({ provider: 'github', state: 'st_1', returnTo: '/app' });
+		expect(recordAtRedirect!).toEqual({
+			provider: 'github',
+			intent: 'signIn',
+			state: 'st_1',
+			returnTo: '/app'
+		});
 	});
 
 	it('does not redirect when the record could not be stored', async () => {
@@ -258,6 +263,7 @@ describe('starting a sign-in', () => {
 			{
 				type: 'authorizationReady',
 				provider: 'google',
+				intent: 'signIn',
 				authorizeUrl: 'https://stale.example/x',
 				state: 'st_stale',
 				returnTo: null
@@ -347,7 +353,7 @@ describe('finishing a sign-in', () => {
 		const completeOAuth = vi.fn(async () => session);
 		const store = callbackStore({
 			completeOAuth,
-			pendingOAuth: seeded({ provider: 'github', state: 'st_1', returnTo: '/app' })
+			pendingOAuth: seeded({ intent: 'signIn', provider: 'github', state: 'st_1', returnTo: '/app' })
 		});
 
 		await store.send(
@@ -373,12 +379,12 @@ describe('finishing a sign-in', () => {
 			[
 				{
 					name: 'a state that does not match',
-					storage: seeded({ provider: 'github', state: 'st_real', returnTo: null }),
+					storage: seeded({ intent: 'signIn', provider: 'github', state: 'st_real', returnTo: null }),
 					sent: params({ code: 'c_1', state: 'st_forged' })
 				},
 				{
 					name: 'no state at all',
-					storage: seeded({ provider: 'github', state: 'st_real', returnTo: null }),
+					storage: seeded({ intent: 'signIn', provider: 'github', state: 'st_real', returnTo: null }),
 					sent: params({ code: 'c_1' })
 				},
 				{
@@ -431,7 +437,7 @@ describe('finishing a sign-in', () => {
 		const completeOAuth = vi.fn<OAuthCallbackDependencies['completeOAuth']>(async () => session);
 		const store = callbackStore({
 			completeOAuth,
-			pendingOAuth: seeded({ provider: 'github', state: 'st_1', returnTo: null })
+			pendingOAuth: seeded({ intent: 'signIn', provider: 'github', state: 'st_1', returnTo: null })
 		});
 
 		await store.send({
@@ -449,7 +455,7 @@ describe('finishing a sign-in', () => {
 		const completeOAuth = vi.fn(async () => session);
 		const store = callbackStore({
 			completeOAuth,
-			pendingOAuth: seeded({ provider: 'google', state: 'st_1', returnTo: null })
+			pendingOAuth: seeded({ intent: 'signIn', provider: 'google', state: 'st_1', returnTo: null })
 		});
 
 		await store.send({ type: 'callbackReceived', params: params({ error: 'access_denied' }) });
@@ -481,7 +487,7 @@ describe('finishing a sign-in', () => {
 		// a scripting hole — but a banner in the app's own chrome reading "Your
 		// account is locked, call 1-800-…" is a phishing surface regardless.
 		const store = callbackStore({
-			pendingOAuth: seeded({ provider: 'github', state: 'st_1', returnTo: null })
+			pendingOAuth: seeded({ intent: 'signIn', provider: 'github', state: 'st_1', returnTo: null })
 		});
 		await store.send({ type: 'callbackReceived', params: params({ error: 'server_error' }) });
 		await store.receive({ type: 'exchangeFailed' }, (s) => {
@@ -491,7 +497,7 @@ describe('finishing a sign-in', () => {
 
 		const hostile = 'Your account is locked. Call 1-800-555-0100 to restore it.';
 		const store2 = callbackStore({
-			pendingOAuth: seeded({ provider: 'github', state: 'st_1', returnTo: null })
+			pendingOAuth: seeded({ intent: 'signIn', provider: 'github', state: 'st_1', returnTo: null })
 		});
 		await store2.send({ type: 'callbackReceived', params: params({ error: hostile }) });
 		await store2.receive({ type: 'exchangeFailed' }, (s) => {
@@ -509,7 +515,7 @@ describe('finishing a sign-in', () => {
 			const store = callbackStore(
 				{
 					completeOAuth,
-					pendingOAuth: seeded({ provider: 'github', state: 'st_1', returnTo: null })
+					pendingOAuth: seeded({ intent: 'signIn', provider: 'github', state: 'st_1', returnTo: null })
 				},
 				{ status }
 			);
@@ -534,7 +540,7 @@ describe('finishing a sign-in', () => {
 					methods: ['totp']
 				} satisfies AuthError;
 			}),
-			pendingOAuth: seeded({ provider: 'github', state: 'st_1', returnTo: null })
+			pendingOAuth: seeded({ intent: 'signIn', provider: 'github', state: 'st_1', returnTo: null })
 		});
 
 		await store.send({
@@ -550,7 +556,7 @@ describe('finishing a sign-in', () => {
 		const completeOAuth = vi.fn(async () => session);
 		const store = callbackStore({
 			completeOAuth,
-			pendingOAuth: seeded({ provider: 'github', state: 'st_1', returnTo: null })
+			pendingOAuth: seeded({ intent: 'signIn', provider: 'github', state: 'st_1', returnTo: null })
 		});
 
 		await store.send({ type: 'callbackReceived', params: params({ state: 'st_1' }) });

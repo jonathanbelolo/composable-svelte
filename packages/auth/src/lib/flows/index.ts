@@ -140,7 +140,12 @@ export {
 	normaliseReturnTo
 } from './oauth-pending.js';
 
-export type { OAuthProvider, PendingOAuth, PendingOAuthStorage } from './oauth-pending.js';
+export type {
+	OAuthIntent,
+	OAuthProvider,
+	PendingOAuth,
+	PendingOAuthStorage
+} from './oauth-pending.js';
 
 export {
 	oauthStartReducer,
@@ -233,3 +238,30 @@ export type {
 	ChangePasswordStatus,
 	ChangePasswordDependencies
 } from './change-password/index.js';
+
+export {
+	mfaManagementReducer,
+	createInitialMfaManagementState,
+	createMfaManagementStore
+} from './mfa-management/index.js';
+
+export type {
+	MfaManagementState,
+	MfaManagementAction,
+	MfaManagementStatus,
+	MfaManagementDependencies,
+	MfaOperation
+} from './mfa-management/index.js';
+
+export {
+	connectedAccountsReducer,
+	createInitialConnectedAccountsState,
+	createConnectedAccountsStore
+} from './connected-accounts/index.js';
+
+export type {
+	ConnectedAccountsState,
+	ConnectedAccountsAction,
+	ConnectedAccountsStatus,
+	ConnectedAccountsDependencies
+} from './connected-accounts/index.js';

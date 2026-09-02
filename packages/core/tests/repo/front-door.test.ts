@@ -112,26 +112,30 @@ const CAPABILITIES: Capability[] = [
 	},
 	{
 		name: 'MFA',
-		dirs: ['mfa-challenge', 'mfa-enrolment'],
+		dirs: ['mfa-challenge', 'mfa-enrolment', 'mfa-management'],
 		denials: [/\bno MFA\b/gi],
-		// MFA ships; disabling it and regenerating recovery codes do not.
-		qualifiers: ['management', 'enrolment management']
+		// All of it ships now — challenge, enrolment, disabling and reissuing
+		// recovery codes. The `management` qualifier that used to sit here is gone
+		// deliberately: leaving it would let a document claim there is no MFA
+		// management and still pass.
+		qualifiers: []
 	},
 	{
 		name: 'OAuth',
-		dirs: ['oauth-start', 'oauth-callback'],
+		dirs: ['oauth-start', 'oauth-callback', 'connected-accounts'],
 		denials: [/\bno OAuth\b/gi],
-		// The provider flow ships; linking an identity to an existing account
-		// does not.
-		qualifiers: ['account linking', 'linking', 'unlinking']
+		// Signing in, linking and unlinking all ship. The qualifiers that used to
+		// excuse a denial of linking are gone for the same reason as MFA's.
+		qualifiers: []
 	},
 	{
 		name: 'account settings',
 		dirs: ['account', 'change-password'],
 		denials: [/\bno account settings\b/gi],
-		// The read model and changing a password ship; the panels built on them
-		// do not yet.
-		qualifiers: ['for email', 'for deletion', 'for MFA', 'for connected accounts']
+		// The read model, changing a password, MFA management and connected
+		// accounts ship. Changing an email address and deleting an account do
+		// not — the latter needs a confirmation component this repo does not have.
+		qualifiers: ['for email', 'for deletion']
 	},
 	{
 		name: 'email verification',
@@ -419,9 +423,13 @@ describe('the front door', () => {
 			'OAuth'
 		]);
 		expect(
-			deniedCapabilities('no MFA management, and no OAuth account linking'),
+			deniedCapabilities('no account settings for email, and none for deletion'),
 			'a qualified denial was reported as a false claim'
 		).toEqual([]);
+		expect(
+			deniedCapabilities('there is no MFA management'),
+			'MFA management ships now, so denying it is a false claim the guard must catch'
+		).toEqual(['MFA']);
 		expect(deniedCapabilities('no MFA at all'), 'an unqualified denial slipped through').toEqual([
 			'MFA'
 		]);

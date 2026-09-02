@@ -335,7 +335,7 @@ describe('OAuthSignIn', () => {
 describe('OAuthCallback', () => {
 	it('exchanges on mount, hands the session over, and offers a way onward', async () => {
 		const pendingOAuth = createMemoryPendingOAuthStorage();
-		pendingOAuth.put({ provider: 'github', state: 'st_1', returnTo: '/app' });
+		pendingOAuth.put({ provider: 'github', intent: 'signIn', state: 'st_1', returnTo: '/app' });
 		const completeOAuth = vi.fn<OAuthCallbackDependencies['completeOAuth']>(async () => session);
 		const h = mountCallback(
 			{ completeOAuth, pendingOAuth },
@@ -352,7 +352,7 @@ describe('OAuthCallback', () => {
 			const onward = h.buttons().find((b) => b.textContent?.includes('Continue'));
 			expect(onward, 'a completed sign-in had nowhere to go').toBeDefined();
 			await userEvent.click(onward!);
-			expect(h.onSuccess).toHaveBeenCalledWith({ returnTo: '/app' });
+			expect(h.onSuccess).toHaveBeenCalledWith({ intent: 'signIn', returnTo: '/app' });
 		} finally {
 			h.cleanup();
 		}
@@ -360,7 +360,7 @@ describe('OAuthCallback', () => {
 
 	it('exchanges exactly once, however often the store churns', async () => {
 		const pendingOAuth = createMemoryPendingOAuthStorage();
-		pendingOAuth.put({ provider: 'github', state: 'st_1', returnTo: null });
+		pendingOAuth.put({ provider: 'github', intent: 'signIn', state: 'st_1', returnTo: null });
 		const completeOAuth = vi.fn<OAuthCallbackDependencies['completeOAuth']>(async () => session);
 		const h = mountCallback(
 			{ completeOAuth, pendingOAuth },

@@ -20,6 +20,7 @@
 
 	import { isMfaRequired } from '../errors/helpers.js';
 	import type { MfaMethod } from '../deps.js';
+	import type { OAuthIntent } from '../flows/oauth-pending.js';
 	import type {
 		OAuthCallbackAction,
 		OAuthCallbackParams,
@@ -40,8 +41,15 @@
 		 * this URL directly, and the useful answer is a way back to sign-in.
 		 */
 		params?: OAuthCallbackParams | null | undefined;
-		/** Where a completed sign-in goes. **Required** — see above. */
-		onSuccess: (result: { returnTo: string | null }) => void;
+		/**
+		 * Where a completed callback goes. **Required** — see above.
+		 *
+		 * `intent` says which kind of completion it was. A link returns to
+		 * settings and a sign-in returns to the app, and those are rarely the same
+		 * place — so the surface is told rather than left to guess from a
+		 * `returnTo` that is `null` more often than not.
+		 */
+		onSuccess: (result: { intent: OAuthIntent; returnTo: string | null }) => void;
 		/**
 		 * Where "start again" goes. **Required.**
 		 *
@@ -64,8 +72,8 @@
 			| ((challenge: { challengeId: string; methods: readonly MfaMethod[] }) => void)
 			| undefined;
 		headingLevel?: 1 | 2 | 3 | 4 | undefined;
-		/** Replaces the completed panel. */
-		completed?: Snippet<[{ returnTo: string | null }]> | undefined;
+		/** Replaces the completed panel. Receives the same `intent` as `onSuccess`. */
+		completed?: Snippet<[{ intent: OAuthIntent; returnTo: string | null }]> | undefined;
 		/** Rendered on every branch — see the note by the markup. */
 		footer?: Snippet | undefined;
 		class?: string | undefined;
@@ -87,6 +95,15 @@
 	const status = $derived(flowStore.state.status);
 	const error = $derived(flowStore.state.error);
 	const returnTo = $derived(flowStore.state.returnTo);
+	/**
+	 * What the return was for.
+	 *
+	 * Falls back to `'signIn'` only for the wording below, and only where the
+	 * flow has not read a record yet — the completed branch always has a real
+	 * one, because the reducer sets both fields in the same action.
+	 */
+	const intent = $derived<OAuthIntent>(flowStore.state.intent ?? 'signIn');
+	const isLink = $derived(intent === 'link');
 
 	/** Whether there is anything here to act on at all. */
 	const hasCallback = $derived(
@@ -118,6 +135,9 @@
 	/** Whether the session has been handed over. */
 	let handedOver = false;
 
+	// `session === null` is the whole link path: the reducer never produces one
+	// for a link, so this effect is inert there without needing to know about
+	// intents. Attaching a provider must not establish a second session.
 	$effect(() => {
 		if (handedOver) return;
 		const state = flowStore.state;
@@ -186,7 +206,14 @@
 			tabindex="-1"
 		>
 			{#if completed}
-				{@render completed({ returnTo })}
+				{@render completed({ intent, returnTo })}
+			{:else if isLink}
+				<svelte:element this={`h${headingLevel}`} class="oauth-callback__title">
+					Account connected
+				</svelte:element>
+				<p class="oauth-callback__body">
+					You can now sign in with it as well. Nothing else about your account has changed.
+				</p>
 			{:else}
 				<svelte:element this={`h${headingLevel}`} class="oauth-callback__title">
 					You're signed in
@@ -201,9 +228,9 @@
 			<button
 				type="button"
 				class="oauth-callback__action"
-				onclick={() => onSuccess({ returnTo })}
+				onclick={() => onSuccess({ intent, returnTo })}
 			>
-				Continue
+				{isLink ? 'Back to your account' : 'Continue'}
 			</button>
 		</div>
 	{:else if handlingMfa}
@@ -223,7 +250,13 @@
 			tabindex="-1"
 		>
 			<svelte:element this={`h${headingLevel}`} class="oauth-callback__title">
-				{isDenied ? 'Sign-in cancelled' : "We couldn't finish that sign-in"}
+				{#if isDenied}
+					{isLink ? 'Connection cancelled' : 'Sign-in cancelled'}
+				{:else}
+					{isLink
+						? "We couldn't connect that account"
+						: "We couldn't finish that sign-in"}
+				{/if}
 			</svelte:element>
 			{#if error}
 				<p

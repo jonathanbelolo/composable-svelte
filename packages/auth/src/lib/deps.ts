@@ -274,6 +274,50 @@ export interface AuthDependencies extends SessionDependencies {
 	 */
 	signInWithMagicLink: (token: string, signal?: AbortSignal) => Promise<SessionSnapshot>;
 	/**
+	 * Turn multi-factor authentication off.
+	 *
+	 * Takes nothing: the session says who is asking, and whether that is enough
+	 * is the backend's call — `reauthentication_required` is how it asks for
+	 * more. Removing a second factor is exactly the action that should demand
+	 * proof, and exactly the action a client cannot demand proof *for*, because
+	 * it does not know what proof the account can give.
+	 */
+	disableMfa: (signal?: AbortSignal) => Promise<void>;
+	/**
+	 * Issue a fresh set of recovery codes, invalidating the old ones.
+	 *
+	 * Returns the same {@link MfaEnrolmentResult} enrolment does, because it
+	 * produces the same thing — codes shown once and never retrievable. A
+	 * surface that loses them has locked the user out of their own recovery, so
+	 * the panel that shows them is shared with enrolment rather than rewritten.
+	 */
+	regenerateRecoveryCodes: (signal?: AbortSignal) => Promise<MfaEnrolmentResult>;
+	/**
+	 * Attach a provider to the account already signed in.
+	 *
+	 * **Returns `void`, and must not return a session.** That is the whole
+	 * difference from `completeOAuth`: linking adds a way into the account you
+	 * are already in, and a link that established a session would be a second
+	 * sign-in nobody asked for. The arguments match `completeOAuth`'s because
+	 * the redirect that produced them is the same one.
+	 */
+	linkOAuthProvider: (
+		provider: string,
+		code: string,
+		state: string,
+		signal?: AbortSignal
+	) => Promise<void>;
+	/**
+	 * Detach a provider.
+	 *
+	 * **The backend decides whether this is safe**, and the client genuinely
+	 * cannot: a magic link is also a way in, and nothing in `AccountSnapshot`
+	 * says whether the backend offers them — so an account with no password and
+	 * one provider may be perfectly fine to unlink. A backend that would strand
+	 * the user rejects, and the message it sends is what the surface shows.
+	 */
+	unlinkOAuthProvider: (provider: string, signal?: AbortSignal) => Promise<void>;
+	/**
 	 * Start an OAuth sign-in, getting back somewhere to send the browser.
 	 *
 	 * Mirrors `beginMfaEnrolment`: the backend does the part that needs the

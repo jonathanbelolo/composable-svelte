@@ -2,6 +2,55 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- **The HTTP adapter now honours the contract `AuthDependencies` states.** Its
+  module doc promises "every member reports failure by rejecting with an
+  `AuthError`", and none of the 22 `fetch` calls was wrapped — a transport
+  failure escaped as a raw `TypeError`. `toAuthError` caught most by matching
+  four engine strings, but undici's `terminated`, React Native's `Network
+  request failed` and Deno's phrasing all fell through to `unknown`.
+
+  Wrapping the `fetch` call itself removes the guessing: a rejection from
+  `fetch` and nothing else is, by construction, a request that never reached a
+  verdict. This is what `toAuthError`'s own comment anticipated — *"a dependency
+  that knows it was doing I/O should report `{ code: 'network' }` itself … the
+  HTTP adapter will"* — future tense since it was written. An abort still passes
+  through untouched: it is a cancellation, not a failure.
+
+- **`network` reads as a sentence.** Components render `error.message` straight
+  into a banner, so a user was shown the engine's string — "fetch failed" on
+  Node, "Failed to fetch" in Chrome. It is now "Could not reach the server.
+  Check your connection and try again."
+
+- **`fetchLogin` / `fetchLogout` / `fetchSession` report `AuthError`s.** They
+  threw `new Error('Login failed (401)')` — a status in a sentence with the body
+  discarded, which is the precise defect `http/errors.ts` was written to fix and
+  which was fixed only for the flow surface. A 401 on the seeded login is now
+  `invalid_credentials`. Because `sessionReducer` prefers a thrown value's own
+  wording over its fallback, that raw string was reaching `AuthGuard` and being
+  rendered.
+
+- **`MalformedSessionError` satisfies the contract**, carrying `code: 'unknown'`
+  so it passes `isAuthError` structurally while `instanceof` keeps working. And
+  `toAuthError` copies an `Error`-shaped `AuthError` into a plain object —
+  `Error.prototype.message` is non-enumerable, so SSR hydration through
+  `JSON.stringify` was dropping the explanation and leaving `{"code":"unknown"}`.
+
+- **`ConnectedAccountsPanel` no longer hides a re-attached provider.** The
+  flow's doc said the panel unioned the account's list with the locally detached
+  one; it subtracted, and `unlinked` only ever grew. A provider disconnected and
+  then reconnected vanished from the list *and* was offered under "Connect".
+  `providersObserved` now prunes an entry once the read it covered has landed.
+
+- **`mfa-management`'s `disabled` status is no longer a dead end.** Nothing in
+  its eight-arm action union moved off it, and the reference client reached it:
+  one store kept across an enrolment left the panel saying "two-factor is off"
+  for an account that had just turned it on, with two buttons whose dispatches
+  the guards silently ate. `mfaObserved` returns it to `idle` — but only on a
+  *change*, so the stale `true` still in props cannot undo a disable the moment
+  it succeeds.
+
 ### Changed
 
 - **BREAKING: `AuthDependencies` gains six members** — `beginOAuth`,
@@ -513,3 +562,21 @@ not have. The
 `AuthError` union names the failures those flows produce because the wire
 contract needs them — a code appearing there is not a promise that the flow
 behind it ships today.
+
+## [0.1.1] - 2026-08-18
+
+Prepared alongside core 0.6.0 and **never published** — npm has `0.1.0`.
+
+### Changed
+
+- Patch-bumped so a widened `@composable-svelte/core` peer range could reach
+  consumers. No functional change to the package.
+
+## [0.1.0] - 2026-07-05
+
+The first published release: session resolution, seeded-user passwordless
+login, and the `AuthGuard` / `RoleGate` UX gates.
+
+Everything the package has grown since — password sign-in, signup, email
+verification, password recovery, MFA, OAuth, magic links and the account
+surface — is under [Unreleased] above, because none of it has reached a user.

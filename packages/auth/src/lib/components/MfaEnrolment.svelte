@@ -22,6 +22,7 @@
 	import type { Snippet } from 'svelte';
 
 	import OneTimeCodeInput from './OneTimeCodeInput.svelte';
+	import RecoveryCodes from './RecoveryCodes.svelte';
 	import type { MfaEnrolmentAction, MfaEnrolmentState } from '../flows/mfa-enrolment/types.js';
 	import type { MfaCodeFields } from '../flows/mfa-challenge/schema.js';
 
@@ -123,29 +124,26 @@
 		flowStore.dispatch({ type: 'enrolmentRequested' });
 	});
 
-	/** The recovery panel, focused when it replaces the form. */
-	let panel = $state<HTMLElement | null>(null);
-
-	$effect(() => {
-		if (status === 'enrolled') panel?.focus();
-	});
-
 	/**
-	 * Which of the two things was last copied, if either.
+	 * What was last copied, if anything.
 	 *
-	 * Not a boolean. One flag shared by "Copy key" and "Copy codes" reads fine —
-	 * the two buttons are never on screen together — but the component outlives
-	 * the transition between them, so copying the setup key left the recovery
+	 * Only the setup key can be copied from *this* component — the recovery panel
+	 * is `RecoveryCodes`, with its own flag — and that separation is the fix, not
+	 * a tidy-up. One flag shared by "Copy key" and "Copy codes" read fine, since
+	 * the two buttons are never on screen together, but the component outlived
+	 * the transition between them and copying the setup key left the recovery
 	 * panel claiming the *codes* had been copied. That is the one screen where a
-	 * false reassurance costs the account: the codes are shown once, and someone
-	 * who believes they already have them will close the panel without them.
+	 * false reassurance costs the account.
+	 *
+	 * Kept as a named value rather than a boolean so that adding a second copy
+	 * button here forces that question again instead of quietly sharing a flag.
 	 *
 	 * It also clears itself, so a second copy of the same thing still confirms.
 	 */
-	let copied = $state<'key' | 'codes' | null>(null);
+	let copied = $state<'key' | null>(null);
 	let clearCopied: ReturnType<typeof setTimeout> | null = null;
 
-	async function copy(what: 'key' | 'codes', text: string) {
+	async function copy(what: 'key', text: string) {
 		try {
 			await navigator.clipboard.writeText(text);
 			copied = what;
@@ -168,47 +166,14 @@
 
 <div class="mfa-enrolment {className}">
 	{#if status === 'enrolled' && recoveryCodes !== null}
-		<div
-			bind:this={panel}
-			class="mfa-enrolment__panel"
-			role="status"
-			aria-live="polite"
-			tabindex="-1"
-		>
-			<svelte:element this={`h${headingLevel}`} class="mfa-enrolment__title">
-				Save your recovery codes
-			</svelte:element>
-			<!--
-				`role="alert"` would be wrong — nothing failed — but this is the one
-				thing on the page that cannot be recovered if ignored, so it is not
-				phrased as a congratulation.
-			-->
-			<p class="mfa-enrolment__body">
-				Authentication is on. These codes are the only way back in if you lose your device, and
-				they are shown <strong>once</strong>. Save them somewhere safe now.
-			</p>
-
-			<ul class="mfa-enrolment__codes">
-				{#each recoveryCodes as code (code)}
-					<li>{code}</li>
-				{/each}
-			</ul>
-
-			<div class="mfa-enrolment__row">
-				<button
-					type="button"
-					class="mfa-enrolment__secondary"
-					onclick={() => copy('codes', recoveryCodes.join('\n'))}
-				>
-					{copied === 'codes' ? 'Copied' : 'Copy codes'}
-				</button>
-				{#if onDone}
-					<button type="button" class="mfa-enrolment__action" onclick={() => onDone()}>
-						I have saved them
-					</button>
-				{/if}
-			</div>
-		</div>
+		<RecoveryCodes codes={recoveryCodes} {headingLevel} onAcknowledged={onDone}>
+			{#snippet intro()}
+				<p class="mfa-enrolment__body">
+					Authentication is on. These codes are the only way back in if you lose your device,
+					and they are shown <strong>once</strong>. Save them somewhere safe now.
+				</p>
+			{/snippet}
+		</RecoveryCodes>
 	{:else if status === 'starting' || (status === 'idle' && error === null)}
 		<svelte:element this={`h${headingLevel}`} class="mfa-enrolment__title">
 			Set up authentication
@@ -330,17 +295,6 @@
 		gap: 1rem;
 	}
 
-	.mfa-enrolment__panel {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-	}
-
-	.mfa-enrolment__panel:focus-visible {
-		outline: 2px solid hsl(var(--ring, 222.2 84% 4.9%));
-		outline-offset: 4px;
-	}
-
 	.mfa-enrolment__body {
 		margin: 0;
 		font-size: 0.875rem;
@@ -367,26 +321,6 @@
 		word-break: break-all;
 		color: hsl(var(--foreground, 222.2 84% 4.9%));
 		user-select: all;
-	}
-
-	.mfa-enrolment__codes {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
-		gap: 0.25rem 1rem;
-		margin: 0;
-		padding: 0.75rem;
-		font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-		font-size: 0.875rem;
-		list-style: none;
-		background: hsl(var(--muted, 210 40% 96.1%));
-		border-radius: 0.375rem;
-		user-select: all;
-	}
-
-	.mfa-enrolment__row {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.5rem;
 	}
 
 	.mfa-enrolment__field {

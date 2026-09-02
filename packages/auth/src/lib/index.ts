@@ -166,7 +166,13 @@ export {
 	createChangePasswordStore,
 	changePasswordFormConfig,
 	changePasswordSchema,
-	emptyChangePasswordFields
+	emptyChangePasswordFields,
+	mfaManagementReducer,
+	createInitialMfaManagementState,
+	createMfaManagementStore,
+	connectedAccountsReducer,
+	createInitialConnectedAccountsState,
+	createConnectedAccountsStore
 } from './flows/index.js';
 
 export type {
@@ -178,7 +184,16 @@ export type {
 	ChangePasswordState,
 	ChangePasswordAction,
 	ChangePasswordStatus,
-	ChangePasswordDependencies
+	ChangePasswordDependencies,
+	MfaManagementState,
+	MfaManagementAction,
+	MfaManagementStatus,
+	MfaManagementDependencies,
+	MfaOperation,
+	ConnectedAccountsState,
+	ConnectedAccountsAction,
+	ConnectedAccountsStatus,
+	ConnectedAccountsDependencies
 } from './flows/index.js';
 
 export {
@@ -220,6 +235,7 @@ export {
 } from './flows/index.js';
 
 export type {
+	OAuthIntent,
 	OAuthProvider,
 	PendingOAuth,
 	PendingOAuthStorage,
@@ -263,6 +279,8 @@ export {
 	ResetPasswordForm,
 	MfaChallengeForm,
 	MfaEnrolment,
+	MfaManagementPanel,
+	RecoveryCodes,
 	OneTimeCodeInput,
 	ChangePasswordForm,
 	SignOutButton,
@@ -270,6 +288,7 @@ export {
 	MagicLinkSignIn,
 	OAuthSignIn,
 	OAuthCallback,
+	ConnectedAccountsPanel,
 	PasswordInput,
 	PasswordCriteria
 } from './components/index.js';

@@ -20,13 +20,24 @@
 
 import type { SessionSnapshot } from '../subject/types.js';
 import type { SessionDependencies } from './types.js';
+import { authErrorFromResponse } from '../http/errors.js';
+import { send } from '../http/transport.js';
 
 /**
  * A 2xx auth response carried a body that is not a valid session snapshot.
  * Treated exactly like a request failure by the session reducer (fail-closed
  * to anonymous on resolve; login surfaces the error).
+ *
+ * **Also an `AuthError`.** `isAuthError` is structural — a `code` string and a
+ * `message` string — so carrying `code` makes this satisfy the contract
+ * `AuthDependencies` states for every member, while `instanceof` keeps working
+ * for the consumers that branch on it. `unknown` rather than an arm of its own
+ * because that is what it is: a backend that answered 200 with something else
+ * is misconfigured, and there is nothing a user can do about it.
  */
 export class MalformedSessionError extends Error {
+	readonly code = 'unknown' as const;
+
 	constructor(detail: string) {
 		super(`Malformed session payload: ${detail}`);
 		this.name = 'MalformedSessionError';
@@ -86,7 +97,7 @@ export function createHttpSessionDeps(baseUrl: string = ''): SessionDependencies
 
 	return {
 		async fetchLogin(seededUserId: string, signal?: AbortSignal): Promise<SessionSnapshot> {
-			const response = await fetch(url('/auth/login'), {
+			const response = await send(url('/auth/login'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: { 'content-type': 'application/json' },
@@ -94,24 +105,30 @@ export function createHttpSessionDeps(baseUrl: string = ''): SessionDependencies
 				...(signal !== undefined && { signal })
 			});
 			if (!response.ok) {
-				throw new Error(`Login failed (${response.status})`);
+				// Through the same reader every other endpoint uses. These three
+				// used to throw `new Error('Login failed (401)')`, which is the exact
+				// defect `http/errors.ts` was written to fix — a status in a sentence,
+				// with the body discarded — and the fix reached the flow surface and
+				// stopped there. A 401 here is `invalid_credentials`, which is the
+				// whole point of the union.
+				throw await authErrorFromResponse(response, 'Sign-in failed.');
 			}
 			return decodeSessionSnapshot(response);
 		},
 
 		async fetchLogout(signal?: AbortSignal): Promise<void> {
-			const response = await fetch(url('/auth/logout'), {
+			const response = await send(url('/auth/logout'), {
 				method: 'POST',
 				credentials: 'include',
 				...(signal !== undefined && { signal })
 			});
 			if (!response.ok) {
-				throw new Error(`Logout failed (${response.status})`);
+				throw await authErrorFromResponse(response, 'Sign-out failed.');
 			}
 		},
 
 		async fetchSession(signal?: AbortSignal): Promise<SessionSnapshot | null> {
-			const response = await fetch(url('/auth/session'), {
+			const response = await send(url('/auth/session'), {
 				method: 'GET',
 				credentials: 'include',
 				...(signal !== undefined && { signal })
@@ -121,7 +138,7 @@ export function createHttpSessionDeps(baseUrl: string = ''): SessionDependencies
 				return null;
 			}
 			if (!response.ok) {
-				throw new Error(`Session resolve failed (${response.status})`);
+				throw await authErrorFromResponse(response, 'Could not check your session.');
 			}
 			return decodeSessionSnapshot(response);
 		}

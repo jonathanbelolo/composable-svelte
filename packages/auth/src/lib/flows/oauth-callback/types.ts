@@ -11,7 +11,7 @@
 import type { AuthError } from '../../errors/types.js';
 import type { AuthDependencies } from '../../deps.js';
 import type { SessionSnapshot } from '../../subject/types.js';
-import type { PendingOAuthStorage } from '../oauth-pending.js';
+import type { OAuthIntent, PendingOAuthStorage } from '../oauth-pending.js';
 
 /**
  * The four query parameters an OAuth callback can arrive with.
@@ -46,7 +46,14 @@ export type OAuthCallbackStatus =
 	| 'idle'
 	/** Verifying and exchanging. */
 	| 'exchanging'
-	/** Signed in. `session` is populated. */
+	/**
+	 * Done. `session` is populated for a sign-in, and `null` for a link.
+	 *
+	 * One status for both outcomes, because every branch after this — focus, the
+	 * way onward, the footer — is identical. What differs is `intent`, and a
+	 * surface reads that rather than a second status it would have to keep in
+	 * step.
+	 */
 	| 'completed'
 	/**
 	 * Terminal failure. `error` says which.
@@ -62,6 +69,20 @@ export type OAuthCallbackStatus =
 export interface OAuthCallbackState {
 	status: OAuthCallbackStatus;
 	error: AuthError | null;
+	/**
+	 * What the return was for, once the record has been read.
+	 *
+	 * `null` until then — and it stays `null` when the record could not be read
+	 * at all, which is the branch that reports `oauth_state_mismatch`.
+	 */
+	intent: OAuthIntent | null;
+	/**
+	 * The session, for a sign-in.
+	 *
+	 * **Always `null` for a link**, and that is the point of the whole intent:
+	 * attaching a provider to the account you are already in must not establish
+	 * a second session.
+	 */
 	session: SessionSnapshot | null;
 	/** Recovered from the pending record — a same-origin path, or `null`. */
 	returnTo: string | null;
@@ -70,8 +91,26 @@ export interface OAuthCallbackState {
 export type OAuthCallbackAction =
 	/** The callback query. Dispatched on mount, once, by the surface. */
 	| { type: 'callbackReceived'; params: OAuthCallbackParams }
-	| { type: 'exchangeSucceeded'; session: SessionSnapshot; returnTo: string | null }
-	| { type: 'exchangeFailed'; error: AuthError };
+	| {
+			type: 'exchangeSucceeded';
+			intent: OAuthIntent;
+			/** `null` for a link — see the state field. */
+			session: SessionSnapshot | null;
+			returnTo: string | null;
+	  }
+	| {
+			type: 'exchangeFailed';
+			error: AuthError;
+			/**
+			 * What the return was for, if that could be established.
+			 *
+			 * `null` when the pending record could not be read — which is precisely
+			 * the branch that cannot know. Carried on the failure too, because
+			 * otherwise every failed *link* is worded as a failed sign-in, which is
+			 * the wrong thing to tell someone who is already signed in.
+			 */
+			intent: OAuthIntent | null;
+	  };
 
 // There is deliberately no `errorDismissed`. The other flows have one because
 // dismissing leaves a form or a button behind to try again with; here it would
@@ -80,6 +119,14 @@ export type OAuthCallbackAction =
 
 export interface OAuthCallbackDependencies {
 	completeOAuth: AuthDependencies['completeOAuth'];
+	/**
+	 * Attaching a provider instead of signing in.
+	 *
+	 * Optional: an app that never offers linking should not have to supply it,
+	 * and a returning link record with no way to complete it is a configuration
+	 * error the flow reports rather than crashes on.
+	 */
+	linkOAuthProvider?: AuthDependencies['linkOAuthProvider'] | undefined;
 	/** The record written before the redirect. See `OAuthStartDependencies`. */
 	pendingOAuth: PendingOAuthStorage;
 }

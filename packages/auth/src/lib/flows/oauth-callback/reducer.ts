@@ -102,7 +102,7 @@ function stateMismatch(): AuthError {
 }
 
 export function createInitialOAuthCallbackState(): OAuthCallbackState {
-	return { status: 'idle', error: null, session: null, returnTo: null };
+	return { status: 'idle', error: null, intent: null, session: null, returnTo: null };
 }
 
 export function oauthCallbackReducer(
@@ -156,7 +156,8 @@ export function oauthCallbackReducer(
 						if (params.error !== null) {
 							dispatch({
 								type: 'exchangeFailed',
-								error: providerError(params.error, pending?.provider)
+								error: providerError(params.error, pending?.provider),
+								intent: pending?.intent ?? null
 							});
 							return;
 						}
@@ -167,7 +168,10 @@ export function oauthCallbackReducer(
 						// `verifyEmail` already gives for not separating a stale token
 						// from a malformed one.
 						if (pending === null || params.state === null || params.state !== pending.state) {
-							dispatch({ type: 'exchangeFailed', error: stateMismatch() });
+							// `intent: null` — this is the one branch that genuinely does
+							// not know, because it is the branch where the record could not
+							// be read or did not match.
+							dispatch({ type: 'exchangeFailed', error: stateMismatch(), intent: null });
 							return;
 						}
 
@@ -177,12 +181,47 @@ export function oauthCallbackReducer(
 								error: {
 									code: 'unknown',
 									message: 'That sign-in came back without an authorization code.'
-								}
+								},
+								intent: pending.intent
 							});
 							return;
 						}
 
 						const { code } = params;
+
+						// The intent decides which call is made and whether a session
+						// crosses over. Everything before this point — the gate, the
+						// provider, every failure branch — is identical for both.
+						if (pending.intent === 'link') {
+							if (deps.linkOAuthProvider === undefined) {
+								dispatch({
+									type: 'exchangeFailed',
+									error: {
+										code: 'unknown',
+										message:
+											'This app cannot finish linking an account. Nothing has changed.'
+									},
+									intent: 'link'
+								});
+								return;
+							}
+
+							try {
+								await deps.linkOAuthProvider(pending.provider, code, pending.state, signal);
+								// `session: null`, always. Linking adds a way into the
+								// account you are already in; establishing a session here
+								// would be a second sign-in nobody asked for.
+								dispatch({
+									type: 'exchangeSucceeded',
+									intent: 'link',
+									session: null,
+									returnTo: pending.returnTo
+								});
+							} catch (error) {
+								dispatch({ type: 'exchangeFailed', error: toAuthError(error), intent: 'link' });
+							}
+							return;
+						}
 
 						try {
 							// `pending.provider`, never anything from the URL. The provider
@@ -194,9 +233,18 @@ export function oauthCallbackReducer(
 								pending.state,
 								signal
 							);
-							dispatch({ type: 'exchangeSucceeded', session, returnTo: pending.returnTo });
+							dispatch({
+								type: 'exchangeSucceeded',
+								intent: 'signIn',
+								session,
+								returnTo: pending.returnTo
+							});
 						} catch (error) {
-							dispatch({ type: 'exchangeFailed', error: toAuthError(error) });
+							dispatch({
+								type: 'exchangeFailed',
+								error: toAuthError(error),
+								intent: 'signIn'
+							});
 						}
 					}
 				)
@@ -209,6 +257,7 @@ export function oauthCallbackReducer(
 					...state,
 					status: 'completed',
 					error: null,
+					intent: action.intent,
 					session: action.session,
 					returnTo: action.returnTo
 				},
@@ -217,7 +266,10 @@ export function oauthCallbackReducer(
 		}
 
 		case 'exchangeFailed': {
-			return [{ ...state, status: 'failed', error: action.error }, Effect.none()];
+			return [
+				{ ...state, status: 'failed', error: action.error, intent: action.intent },
+				Effect.none()
+			];
 		}
 
 		default: {
