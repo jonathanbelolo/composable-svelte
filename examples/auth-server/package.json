@@ -1,0 +1,39 @@
+{
+  "name": "@composable-svelte/example-auth-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A reference backend for @composable-svelte/auth, and the integration tests it makes possible",
+  "scripts": {
+    "dev": "concurrently -k \"pnpm dev:server\" \"pnpm dev:app\"",
+    "dev:server": "tsx watch src/main.ts",
+    "dev:app": "vite",
+    "start": "tsx src/main.ts",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit",
+    "check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^11.1.2",
+    "fastify": "^5.12.1",
+    "otpauth": "^9.5.1",
+    "svelte": "^5.0.0"
+  },
+  "devDependencies": {
+    "@composable-svelte/auth": "workspace:*",
+    "@composable-svelte/core": "workspace:*",
+    "@types/node": "^20.14.0",
+    "tsx": "^4.16.0",
+    "typescript": "^5.5.4",
+    "vitest": "^4.0.7",
+    "@playwright/test": "^1.56.1",
+    "@sveltejs/vite-plugin-svelte": "^6.2.1",
+    "concurrently": "^9.1.0",
+    "svelte-check": "^4.3.3",
+    "vite": "^6.4.1"
+  }
+}
