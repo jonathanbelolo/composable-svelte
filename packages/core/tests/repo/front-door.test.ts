@@ -132,10 +132,29 @@ const CAPABILITIES: Capability[] = [
 		name: 'account settings',
 		dirs: ['account', 'change-password'],
 		denials: [/\bno account settings\b/gi],
-		// The read model, changing a password, MFA management and connected
-		// accounts ship. Changing an email address and deleting an account do
-		// not — the latter needs a confirmation component this repo does not have.
-		qualifiers: ['for email', 'for deletion']
+		// All of it ships now — the read model, changing a password and an email
+		// address, MFA management, connected accounts and deletion. The
+		// qualifiers that used to excuse denying the last two are gone, so a
+		// document claiming either is missing now fails.
+		qualifiers: []
+	},
+	{
+		name: 'email change',
+		dirs: ['change-email', 'change-email-confirm'],
+		denials: [/\bno (?:email|address) change\b/gi, /\bcannot change (?:their |your )?email\b/gi],
+		qualifiers: []
+	},
+	{
+		name: 'account deletion',
+		dirs: ['delete-account'],
+		denials: [/\bno account deletion\b/gi, /\bcannot delete (?:their |your )?account\b/gi],
+		qualifiers: []
+	},
+	{
+		name: 'session refresh',
+		dirs: ['session-refresh'],
+		denials: [/\bno session refresh\b/gi, /\bno expiry signal\b/gi],
+		qualifiers: []
 	},
 	{
 		name: 'email verification',
@@ -423,9 +442,9 @@ describe('the front door', () => {
 			'OAuth'
 		]);
 		expect(
-			deniedCapabilities('no account settings for email, and none for deletion'),
-			'a qualified denial was reported as a false claim'
-		).toEqual([]);
+			deniedCapabilities('there is no account deletion'),
+			'account deletion ships now, so denying it is a false claim the guard must catch'
+		).toEqual(['account deletion']);
 		expect(
 			deniedCapabilities('there is no MFA management'),
 			'MFA management ships now, so denying it is a false claim the guard must catch'

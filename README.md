@@ -18,7 +18,7 @@ see the table below before you depend on one.
 | **charts** | feature-complete for 5 chart types | scatter, line, bar, area, histogram. Heatmap, network graph and hierarchy layouts are deferred |
 | **graphics** | usable | WebGL overlay and a Babylon adapter. `engine: 'webgpu'` is accepted and **runs WebGL** — real WebGPU is not implemented |
 | **maps** | **in development** | 3D buildings, marker clustering, geocoding/search, drawing tools and routing are all unbuilt |
-| **auth** | usable, broad | sign-in flows, sessions, guards and account settings — including MFA management and connecting OAuth providers. No token refresh, no way to change an email address, and no account deletion (that one needs a confirmation component this repo does not have). It speaks to one backend shape |
+| **auth** | usable, broad | sign-in flows, sessions, guards and the full account-settings surface — MFA management, connected OAuth providers, changing an email address, deleting an account, and session-lifetime management over a server-owned cookie. It speaks to one backend shape |
 
 Accessibility: `svelte-check --fail-on-warnings` is clean across all 19
 workspaces, and `charts` has a keyboard cursor, a data-table fallback and an AA

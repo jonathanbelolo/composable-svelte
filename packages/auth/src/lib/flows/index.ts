@@ -240,6 +240,65 @@ export type {
 } from './change-password/index.js';
 
 export {
+	changeEmailReducer,
+	createInitialChangeEmailState,
+	createChangeEmailStore,
+	changeEmailFormConfig,
+	changeEmailSchema,
+	emptyChangeEmailFields
+} from './change-email/index.js';
+
+export type {
+	ChangeEmailFields,
+	ChangeEmailState,
+	ChangeEmailAction,
+	ChangeEmailStatus,
+	ChangeEmailResendStatus,
+	ChangeEmailDependencies
+} from './change-email/index.js';
+
+export {
+	changeEmailConfirmReducer,
+	createInitialChangeEmailConfirmState,
+	createChangeEmailConfirmStore
+} from './change-email-confirm/index.js';
+
+export type {
+	ChangeEmailConfirmState,
+	ChangeEmailConfirmAction,
+	ChangeEmailConfirmStatus,
+	ChangeEmailConfirmDependencies
+} from './change-email-confirm/index.js';
+
+export {
+	deleteAccountReducer,
+	createInitialDeleteAccountState,
+	createDeleteAccountStore
+} from './delete-account/index.js';
+
+export type {
+	DeleteAccountState,
+	DeleteAccountAction,
+	DeleteAccountStatus,
+	DeleteAccountDependencies
+} from './delete-account/index.js';
+
+export {
+	sessionRefreshReducer,
+	createInitialSessionRefreshState,
+	createSessionRefreshStore,
+	DEFAULT_LEAD_MS,
+	DEFAULT_TICK_MS
+} from './session-refresh/index.js';
+
+export type {
+	SessionRefreshState,
+	SessionRefreshAction,
+	SessionRefreshStatus,
+	SessionRefreshDependencies
+} from './session-refresh/index.js';
+
+export {
 	mfaManagementReducer,
 	createInitialMfaManagementState,
 	createMfaManagementStore
