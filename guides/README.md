@@ -71,8 +71,8 @@ import { syncBrowserHistory } from '@composable-svelte/core/routing';
 
 Sessions and the flows that establish them, over a dependency surface any backend can satisfy.
 
-- **Flows**: password sign-in, signup, email verification, password recovery, MFA (challenge and enrolment), OAuth (redirect and callback), magic links (request and sign-in), and the account read model plus change-password — each a headless reducer usable without the components
-- **Components**: `LoginForm`, `SignupForm`, `EmailVerification`, `ForgotPasswordForm`, `ResetPasswordForm`, `MfaChallengeForm`, `MfaEnrolment`, `OAuthSignIn`, `OAuthCallback`, `MagicLinkRequestForm`, `MagicLinkSignIn`, `ChangePasswordForm`, `SignOutButton`, plus `AuthGuard` / `RoleGate` for UX gating
+- **Flows**: password sign-in, signup, email verification, password recovery, MFA (challenge, enrolment and management), OAuth (redirect, callback and connected accounts), magic links (request and sign-in), and the account read model plus change-password — each a headless reducer usable without the components
+- **Components**: `LoginForm`, `SignupForm`, `EmailVerification`, `ForgotPasswordForm`, `ResetPasswordForm`, `MfaChallengeForm`, `MfaEnrolment`, `MfaManagementPanel`, `RecoveryCodes`, `OAuthSignIn`, `OAuthCallback`, `ConnectedAccountsPanel`, `MagicLinkRequestForm`, `MagicLinkSignIn`, `ChangePasswordForm`, `SignOutButton`, plus `AuthGuard` / `RoleGate` for UX gating
 - **State**: `sessionReducer` owns "who am I"; every flow hands its result over with one action, `sessionEstablished`
 - **Errors**: `AuthError`, a discriminated union a surface branches on — `mfa_required` is the login flow branching, not a failure
 - **Built on**: zod, and `@composable-svelte/core`'s form system. No other runtime dependency
@@ -533,6 +533,7 @@ type PresentationStatus = 'idle' | 'presenting' | 'presented' | 'dismissing';
 | `examples/product-gallery` | Full navigation: Modal, Sheet, Drawer, nested 3 levels |
 | `examples/url-routing` | Browser history, pattern matching, query params |
 | `examples/ssr-server` | SSR + SSG with multi-locale i18n |
+| `examples/auth-server` | A reference auth backend, and every flow wired to it |
 | `examples/file-browser` | Tree view, keyboard navigation |
 | `examples/shader-gallery` | WebGL + graphics package integration |
 | `examples/styleguide` | Every UI component, and the auth flows, showcased |

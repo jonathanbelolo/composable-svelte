@@ -131,7 +131,7 @@ justified in place, `charts` has a keyboard cursor and a data-table fallback and
 an AA review — and no independent WCAG 2.1 AA audit of the other packages has
 been done. That last part is a gap, not a defect.
 
-### Satellite components ignore the theme — OPEN, and agreed to fix
+### Satellite components ignore the theme — CLOSED
 
 **438 hardcoded colour declarations across 37 component files** in `chat`,
 `media`, `code`, `maps` and `charts`, against **zero** references to any of
@@ -169,7 +169,42 @@ The sweep across the other five is agreed, sized above, and wants its own
 before/after in the styleguide plus a guard — no hardcoded colours in
 `packages/*/src` — on the model of `animation-policy.test.ts`.
 
-### Library components hardcode a heading level — OPEN
+**Fixed, and the count here was low.** Measured at the sweep: **653**
+declarations across **38** files, not 438 across 37 — the ninth wrong count this
+register has held. All of them now read `hsl(var(--token, <the colour it was>))`,
+so an app that never imports core's stylesheet is unchanged and one that does
+follows the theme. Satellite token references went from ~9 to 320.
+
+`chat`'s fake dark mode is gone: **68 `:global(.dark)` rules**, containing zero
+non-colour declarations, deleted. Core redefines every token under `.dark`, so
+the light rules now handle dark mode by themselves — which is what "theme-aware"
+was supposed to mean.
+
+Three things a value-based sweep got wrong, all caught by rendering rather than
+by tests:
+
+- **A colour's role depends on context.** `#e0e0e0` is a border in light mode
+  and a text colour in dark. 51 substitutions were re-pointed by role.
+- **`background: white` is invisible to a regex looking for `#`.** 66 bare
+  colour keywords were missed on the first pass. In dark mode a white button
+  kept its white background while the inherited text turned near-white — a
+  contrast of 1.05 on four controls, found by computing contrast in the browser.
+- **Text on a themed surface needs that surface's own foreground token.** 18
+  pairs took `--primary-foreground` rather than `--background`, because
+  `--primary` inverts in dark mode.
+
+146 literals remain, and the residue is principled: neutral scrims
+(`rgba(0,0,0,α)`), Prism and CodeMirror syntax palettes, and 33 colours in
+categories core has no token for — success green, info blue, decorative
+gradients, and error *tints*, which cannot use the fallback pattern because a
+tint's fallback would render at 10% alpha rather than as the original solid.
+
+Guarded by `packages/core/tests/repo/satellite-theming.test.ts`, which carries
+the residue as a named list with reasons — so a *new* hardcoded `#3b82f6` fails
+while these keep passing — plus a floor on token references and a positive
+control.
+
+### Library components hardcode a heading level — CLOSED
 
 `core`'s `BannerTitle` renders `<h5>`. Put a `Banner` under an `<h2>`, which the
 styleguide does, and the page outline jumps `2 -> 5`. That is not the demo's
@@ -199,7 +234,15 @@ selects by element rather than by class. That is not hypothetical: the sweep
 recorded below broke exactly that way in two demos, and only
 `svelte-check --fail-on-warnings` caught it.
 
-### Controls with no accessible name in the styleguide — OPEN, unclassified
+**Fixed.** All nine take a `headingLevel` prop defaulting to the level they have
+always rendered, so nothing changes for a caller who does not pass one, and
+render through `<svelte:element>`. `FileUpload`'s prop lives in its sibling
+`file-upload.types.ts`; `ConversationModePanel` destructures with `const`, not
+`let`. `pnpm -r check --fail-on-warnings` was the gate, as this entry predicted:
+it caught a first attempt that put the default after a rest element and, in two
+files, rewrote the `<h3>` inside the doc comment instead of the markup.
+
+### Controls with no accessible name in the styleguide — CLOSED
 
 A browser pass over all 60 demo routes found 24 controls with no accessible
 name, on 7 routes. They are **not one defect** and the number should not be
@@ -214,6 +257,21 @@ quoted as if they were:
   accessible name by the spec's last resort, so this is a weak finding: poor
   practice, not a missing name. Counted here because the detector cannot tell
   the difference, and pretending it can is how 24 becomes a headline.
+
+**Fixed, and one of the three groups was a component defect rather than a demo
+one.** `Combobox` rendered `role="combobox"` and spread no rest props onto its
+input, so a consumer had **no way to name it at all** — those 8 were not the
+demo's to fix. It now takes `ariaLabel`, defaulting to `placeholder`, which is
+what a sighted user reads and means the control is never nameless.
+
+The other 16 were demo fixes: six icon-only buttons in `button-group`, four
+chart zoom controls, and a node input with only a placeholder. Icons are marked
+`aria-hidden` so the name is not announced twice.
+
+Measured after the fix by walking 12 routes in a real browser and computing the
+accessible name for every control: **0 remaining**. One apparent violation was a
+false positive — a `display:none` file input, which is not in the accessibility
+tree at all.
 
 ### Styleguide heading outlines — CLOSED
 
@@ -267,10 +325,16 @@ Several of these were closed by the documentation sweep; the rest stand.
   Now guarded by an arm in `side-effects.test.ts`: a package may not source its
   own exports from a sibling. This one ships, unlike a markdown error — the
   comment is copied verbatim into `dist/*.js` and `dist/*.d.ts`.
-- `charts` skill tells users to `npm install @observablehq/plot`, which is already
-  a hard dependency.
-- `maps` exports the component as `MapPopup`; `API.md` uses bare `Popup`, which is
-  a type only.
+- ~~`charts` skill tells users to `npm install @observablehq/plot`~~ — **fixed.**
+  It is in `dependencies`, so the line told a reader to install something they
+  already had, and put a wrong step first in a troubleshooting list.
+- ~~`maps` exports the component as `MapPopup`; `API.md` uses bare `Popup`~~ —
+  **stale; the document is correct.** `Popup` *is* exported, as a type
+  (`src/lib/index.ts:23`), and `API.md` uses it as one — `popups: Popup[]`,
+  `interface Popup`, `popup: Popup`. Where it means the component it writes
+  `<MapPopup>` (lines 335, 355, 365). Both names are used correctly, and acting
+  on this entry would have broken working documentation — the same failure the
+  `code` README entry above records.
 
 The API-name errors this section used to list — `createTestStore`'s import path,
 `createLiveAPI`, `matchPattern`, `createParserConfig`, `createMockStorage` — are
@@ -290,6 +354,41 @@ Two things found after that limit was written show it is not theoretical. Svelte
 invisible to both guards — `$props<Props>()` appeared in eight examples and in
 none of `src`, because `svelte-check` rejects it in a real component and only
 documentation could keep it.
+
+## Packaging, measured as a consumer — CLOSED
+
+**The packages have now been installed the way a user installs them**, which had
+never been done. `pnpm verify:package` (`scripts/verify-package.mjs`) packs all
+eight, installs them **together** outside the workspace, and resolves every
+declared entry point. Nothing contacts a registry.
+
+Result, first run: **53 entry points, 0 broken.** 26 import in plain Node, 26
+resolve but need a Svelte loader (Node has none — resolution is the check that
+matters), 1 needs the optional `mapbox-gl` peer, and 3 deep paths are correctly
+refused with `ERR_PACKAGE_PATH_NOT_EXPORTED`. Mutation-verified by declaring a
+subpath that points at nothing.
+
+Two further measurements taken against the tarballs:
+
+- **A consumer typechecks clean under `nodenext`** with `strict`,
+  `exactOptionalPropertyTypes` and — the part that matters —
+  `skipLibCheck: false`, so the shipped `.d.ts` files were themselves checked.
+- **Tree-shaking works, and here are the numbers** `side-effects.test.ts` says
+  were only ever taken once by hand. Built from the tarballs through Vite:
+  `createStore` alone is **29,305 bytes**; `createStore` plus `Effect` is
+  **29,308**, because `Effect` is already in that graph; the whole core barrel is
+  **506,010**, seventeen times larger. One auth flow is 111,139 against 324,709
+  for the auth barrel.
+
+**The Tailwind trap is real and the documented fix works.** Rendering core's
+`Button` from a tarball with only `styles/globals.css` imported gives the
+browser's default button — `rgb(239,239,239)`, `padding: 1px 6px`, no radius —
+because the utility classes have no CSS behind them. Wiring Tailwind v4 exactly
+as `CLAUDE.md` prescribes (`@import 'tailwindcss'` then
+`@import '@composable-svelte/core/styles/tailwind.css'`) produces the intended
+control: `--primary` background, 8×16 padding, 6px radius, 17:1 contrast, and
+opaque rather than the see-through body that entry records. Components with
+scoped CSS — `auth`'s and `media`'s — render correctly either way.
 
 ## Product gaps, not defects
 

@@ -19,12 +19,14 @@ forms), the `AuthError` union, `AuthGuard` / `RoleGate` / `LoginForm` /
 `ResetPasswordForm` / `MfaChallengeForm` / `MfaEnrolment` / `PasswordInput` /
 `PasswordCriteria` / `OneTimeCodeInput` / `OAuthSignIn` / `OAuthCallback` /
 `MagicLinkRequestForm` / `MagicLinkSignIn` / `ChangePasswordForm` /
-`SignOutButton`, a mock dependency set, SSR coverage.
+`SignOutButton` / `MfaManagementPanel` / `ConnectedAccountsPanel` /
+`RecoveryCodes`, a mock dependency set, SSR coverage.
 
-**What does not exist yet.** Change email, delete account, token refresh,
-account linking, and MFA *management* — disabling it or regenerating recovery
-codes. The account **read model** (`fetchAccount`) and the re-authentication arm
-they all need now exist; each remaining panel is a flow on top of them. The `AuthError` union already *names* the failures those
+**What does not exist yet.** Change email, delete account, and token refresh.
+The account **read model** (`fetchAccount`) and the re-authentication arm they
+need already exist, so each is a flow on top of them — but delete account also
+needs a confirmation component this repo does not have (`Alert` is a bare
+shell). The `AuthError` union already *names* the failures those
 flows produce (`mfa_required`, `email_unverified`, `token_expired`) because the
 wire contract needs them — **a code appearing in the union is not a promise that
 the flow behind it ships.** Check `src/lib/flows/` before telling a user a flow
@@ -1059,6 +1061,33 @@ const custom: AuthDependencies = {
 		void signal;
 		// Shown once, and never retrievable again.
 		return { recoveryCodes: ['aaa-111', 'bbb-222'] };
+	},
+	async disableMfa(signal) {
+		void signal;
+		// Sensitive, and takes no password: reject with
+		// `reauthentication_required` if you want proof.
+	},
+	async regenerateRecoveryCodes(signal) {
+		void signal;
+		// The same shape `confirmMfaEnrolment` returns, and the same rule — these
+		// replace the previous set, which stops working.
+		return { recoveryCodes: ['ccc-333', 'ddd-444'] };
+	},
+	async linkOAuthProvider(provider, code, state, signal) {
+		void provider;
+		void code;
+		void state;
+		void signal;
+		// **Returns nothing, deliberately.** Linking attaches a provider to the
+		// session the user already has; returning a session here would be a
+		// second sign-in nobody asked for.
+	},
+	async unlinkOAuthProvider(provider, signal) {
+		void provider;
+		void signal;
+		// Refuse — with your own message — if this is the last way into the
+		// account. The client cannot make that judgement: it does not know
+		// whether you offer magic links.
 	},
 	async fetchLogin(seededUserId: string) {
 		void seededUserId;

@@ -9,7 +9,8 @@
     "test:ui": "pnpm --filter @composable-svelte/core test:ui",
     "test:coverage": "pnpm -r --workspace-concurrency=1 test:coverage",
     "check": "pnpm -r check",
-    "typecheck": "pnpm -r typecheck"
+    "typecheck": "pnpm -r typecheck",
+    "verify:package": "node scripts/verify-package.mjs"
   },
   "devDependencies": {
     "svelte": "^5.0.0",

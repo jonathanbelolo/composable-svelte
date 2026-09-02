@@ -450,11 +450,18 @@ This library is heavily inspired by TCA for Swift but adapted for Svelte/TypeScr
 - ✅ **Vitest + jsdom**: Fast, Vite-native testing
 - ✅ **TestStore API**: Exhaustive action testing with send/receive
 - ✅ **Mock Implementations**: MockClock, MockCookieStorage, MockWebSocket, MockAPI
-- ✅ **3,852 Tests**: 3,746 across the eight packages plus 106 in the examples.
-  Run them with `pnpm test`, which passes `--workspace-concurrency=1`: seven of
-  the eight packages use real browser mode, and running workspaces in parallel
-  makes suites fail on scheduling rather than on code. See
-  `guides/VERIFICATION-PROTOCOL.md`.
+- ✅ **4,480 Tests**: 4,308 across the eight packages plus 172 in the examples —
+  including a 65-test integration suite in `examples/auth-server` that drives
+  `@composable-svelte/auth`'s HTTP adapter against a real Fastify backend rather
+  than a `fetch` stub. Its 6 Playwright tests (the cookie and the OAuth
+  redirect, in a real browser) run separately via `pnpm --filter
+  @composable-svelte/example-auth-server test:e2e`, which CI runs as its own
+  step.
+  Run them with `pnpm test`, which passes `--workspace-concurrency=1`: five of
+  the eight packages — core, auth, chat, code and media — drive a real Chromium
+  through Vitest browser mode, and running workspaces in parallel makes suites
+  fail on scheduling rather than on code. (charts, graphics and maps use jsdom.)
+  See `guides/VERIFICATION-PROTOCOL.md`.
 
 ### Examples & Documentation
 - ✅ **Styleguide**: Component showcase with interactive examples

@@ -9,11 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Components follow core's theme.** Every colour the theme should own now
+  reads `hsl(var(--token, <the colour it was>))` — the fallback keeps today's
+  appearance for an app that does not import core's stylesheet, while one that
+  does now restyles these components with the rest of the UI. Neutral scrims,
+  success greens and decorative gradients are deliberately unchanged.
+
 - **BREAKING (types): every optional prop now accepts `undefined`.** Under
   `exactOptionalPropertyTypes` a prop read from `$props()` is `T | undefined`
   and cannot land on a bare `T?`, so the audio, video and voice components could
   not be wrapped by a consumer forwarding its own props. See
   `@composable-svelte/core`'s entry for the full account.
+
+### Added
+
+- **`headingLevel` on `ConversationModePanel`**, defaulting to the `<h3>` it
+  already rendered.
 
 ## [0.3.0] - 2026-08-23
 

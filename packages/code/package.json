@@ -42,7 +42,7 @@
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
-    "prepublishOnly": "pnpm run build && pnpm run typecheck && pnpm run check",
+    "prepublishOnly": "pnpm run build && pnpm run typecheck && pnpm run check && SILENT_TESTS=true pnpm test",
     "prepack": "pnpm run build",
     "check": "svelte-check --tsconfig ./tsconfig.test.json --fail-on-warnings"
   },
@@ -118,5 +118,8 @@
   "sideEffects": [
     "**/*.css",
     "**/*.svelte"
-  ]
+  ],
+  "engines": {
+    "node": ">=20"
+  }
 }

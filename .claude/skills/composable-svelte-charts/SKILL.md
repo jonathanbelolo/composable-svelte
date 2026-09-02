@@ -1017,7 +1017,6 @@ await store.send({ type: 'clearSelection' }, (state) => {
 ## TROUBLESHOOTING
 
 **Chart not rendering**:
-- Check Observable Plot installed: `npm install @observablehq/plot`
 - Verify data is non-empty array
 - Ensure x/y accessors match data properties
 

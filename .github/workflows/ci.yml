@@ -60,7 +60,7 @@ jobs:
       - name: Type check
         run: pnpm -r typecheck
 
-      # `--workspace-concurrency=1`: seven of eight packages run vitest in real
+      # `--workspace-concurrency=1`: five of eight packages run vitest in real
       # browser mode, and pnpm's default is four workspaces at once. Chromium
       # instances then contend for the machine and suites fail on scheduling
       # rather than on code — which reads exactly like a flaky test and has been
@@ -78,3 +78,14 @@ jobs:
       # so a local `pnpm check` matches CI.
       - name: Svelte check
         run: pnpm -r check
+
+      # The browser half of the auth integration suite. Separate from `test`
+      # because it boots two servers and drives a real browser; the Node half
+      # (all 22 endpoints, every error arm) runs above with everything else.
+      #
+      # It is a *step*, not a manual script, because `examples/ssr-server` has
+      # no `test` key and its Playwright suite has consequently never run here —
+      # exactly the rot the rest of this file works to prevent. Chromium only:
+      # that is all the install step above provides.
+      - name: Auth integration (browser)
+        run: pnpm --filter @composable-svelte/example-auth-server test:e2e

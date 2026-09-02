@@ -22,7 +22,8 @@
   "files": [
     "dist",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "svelte-package -o dist",
@@ -32,7 +33,7 @@
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
-    "prepublishOnly": "pnpm run build && pnpm run typecheck && pnpm run check",
+    "prepublishOnly": "pnpm run build && pnpm run typecheck && pnpm run check && SILENT_TESTS=true pnpm test",
     "prepack": "pnpm run build"
   },
   "keywords": [
@@ -93,5 +94,8 @@
     "mapbox-gl": {
       "optional": true
     }
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

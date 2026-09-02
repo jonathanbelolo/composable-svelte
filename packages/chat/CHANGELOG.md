@@ -33,6 +33,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Components follow core's theme.** Every colour the theme should own now
+  reads `hsl(var(--token, <the colour it was>))`, so an app that does not import
+  core's stylesheet is unchanged and one that does now restyles these components
+  when it overrides `--primary`, `--background` and the rest.
+
+  **The dark mode was not real.** It hooked `:global(.dark)` — core's own
+  dark-mode class — and then hardcoded its own palette, so changing
+  `--background` left it on `#1a1a1a`. Those 68 rules held nothing but colours
+  and are gone; core redefines every token under `.dark`, so the light rules now
+  handle dark mode themselves.
+
+  Deliberately unchanged: neutral scrims and shadows, syntax-highlighting
+  palettes, and colours in categories core has no token for — success green,
+  info blue, decorative gradients and error tints.
+
 - **`CollaborativeStreamingChatState` gains `currentPresence`.** Additive, and
   `createInitialCollaborativeState()` supplies it; only code that builds the
   state object by hand is affected.
@@ -46,6 +61,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and cannot land on a bare `T?`, so these components could not be wrapped by a
   consumer forwarding its own props. See `@composable-svelte/core`'s entry for
   the full account; 87 optional props here are affected.
+
+### Added
+
+- **`headingLevel` on `AttachmentPreviewModal`, `FileAttachment` and
+  `PresenceList`**, each defaulting to the level it already rendered. The level
+  belongs to the page; a fixed `<h3>` jumps a consumer's outline and they cannot
+  fix it from outside.
 
 ## [0.3.0] - 2026-08-22
 

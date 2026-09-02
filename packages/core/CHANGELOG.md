@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`Combobox` can be given an accessible name.** It rendered `role="combobox"`
+  and spread no rest props onto its input, so a consumer had no way to name it at
+  all and a screen reader announced "combobox" and nothing else. New `ariaLabel`
+  prop, **defaulting to `placeholder`** — what a sighted user reads — so the
+  control is never nameless and no existing caller has to change.
+
 - **Cross-field validation now runs outside `onSubmit`.** Per-field validation
   did `schema.shape[field].safeParse(value)` — one sub-schema, one value. A
   `.refine()` lives in the parent object's checks, so it was never in scope:
@@ -56,6 +62,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   subscription.
 
 ### Added
+
+- **`headingLevel` on `BannerTitle`, `CardTitle`, `ToastTitle`, `Empty` and
+  `FileUpload`.** The level belongs to the page, not the component: `BannerTitle`
+  rendered a fixed `<h5>`, so putting a `Banner` under an `<h2>` jumped the
+  outline from 2 to 5 and no consumer could fix it from outside. Each defaults to
+  the level it has always rendered, so nothing changes unless you pass one.
 
 - **`parseRetryAfter` is exported from `@composable-svelte/core/api`.** It
   handles both the delay-seconds and HTTP-date forms of `Retry-After` and was

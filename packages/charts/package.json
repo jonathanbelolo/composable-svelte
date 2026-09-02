@@ -17,7 +17,8 @@
   "files": [
     "dist",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "svelte-package -o dist",
@@ -89,5 +90,8 @@
   "publishConfig": {
     "access": "public"
   },
-  "sideEffects": false
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  }
 }

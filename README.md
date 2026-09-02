@@ -18,7 +18,7 @@ see the table below before you depend on one.
 | **charts** | feature-complete for 5 chart types | scatter, line, bar, area, histogram. Heatmap, network graph and hierarchy layouts are deferred |
 | **graphics** | usable | WebGL overlay and a Babylon adapter. `engine: 'webgpu'` is accepted and **runs WebGL** — real WebGPU is not implemented |
 | **maps** | **in development** | 3D buildings, marker clustering, geocoding/search, drawing tools and routing are all unbuilt |
-| **auth** | usable, broad | sign-in flows, sessions and guards. No token refresh, no account linking, and no MFA management (disabling it, regenerating recovery codes) — those need an account-settings surface that does not exist. It speaks to one backend shape |
+| **auth** | usable, broad | sign-in flows, sessions, guards and account settings — including MFA management and connecting OAuth providers. No token refresh, no way to change an email address, and no account deletion (that one needs a confirmation component this repo does not have). It speaks to one backend shape |
 
 Accessibility: `svelte-check --fail-on-warnings` is clean across all 19
 workspaces, and `charts` has a keyboard cursor, a data-table fallback and an AA
@@ -56,6 +56,36 @@ pnpm add @composable-svelte/core
 > (This note previously said the package was "not yet published to npm", while
 > `packages/core/README.md` carried an npm version badge and an install command
 > one screen apart. Both cannot be true.)
+
+### Versioning
+
+**This project is on a 0.x line, and staying there is a deliberate choice.**
+
+Measured across the history: **57 commits carry a breaking marker** — graphics
+21, chat 11, auth 7, core 6, charts 6, maps 5, media 4, code 3. That is a lot of
+breakage to have shipped under `0.x` minors, and it is the sort of thing that
+deserves defending rather than assuming.
+
+The reason is that the API is still moving where it matters. Several of those 57
+were the *result* of review finding a shape wrong — a component that could not
+be wrapped, an export that reached nothing, a peer range that widened its
+ceiling and left its floor behind. A 1.0 is a promise not to do that again, and
+the honest position today is that more of it is likely.
+
+So, concretely, on this line:
+
+- **A breaking change bumps the minor** — `0.11.x` → `0.12.0`. Under semver,
+  `^0.11.0` does not match `0.12.0`, so a consumer is not moved onto a breaking
+  change by a caret range.
+- **A fix or an addition bumps the patch.**
+- **Satellites track core exactly.** Each pins `@composable-svelte/core` to
+  `^<major>.<minor>.0` of the core it is built against, enforced by
+  `packages/core/tests/repo/peer-ranges.test.ts`. Ranges are never widened by
+  appending, which moves a ceiling and leaves the floor behind.
+
+**What would move this to 1.0:** a release cycle that goes by without review
+turning up a shape that has to change, and a WCAG audit the project has not had.
+Until both, `0.x` is the accurate signal.
 
 ### Styling (component library)
 
@@ -379,6 +409,7 @@ Explore working examples in the `examples/` directory:
 - **[Styleguide](./examples/styleguide)**: Component showcase — browse the full set there, including a working demo of every auth flow
 - **[Product Gallery](./examples/product-gallery)**: Full-featured product browsing app
 - **[URL Routing](./examples/url-routing)**: Browser history integration examples
+- **[Auth Server](./examples/auth-server)**: A reference backend for `@composable-svelte/auth`, and a client driving every flow against it — the only example that talks to a real server rather than a mock
 
 ```bash
 # Run styleguide

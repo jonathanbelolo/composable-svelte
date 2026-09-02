@@ -248,5 +248,8 @@
     "dist/index.js",
     "dist/websocket/index.js",
     "dist/websocket/effect-websocket.js"
-  ]
+  ],
+  "engines": {
+    "node": ">=20"
+  }
 }
