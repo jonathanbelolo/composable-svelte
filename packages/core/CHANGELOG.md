@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **State embedded in the hydration script could break out of it.** Both
+  `renderToHTML` and `buildHydrationScript` wrote the serialized store raw into
+  `<script id="__COMPOSABLE_SVELTE_STATE__" type="application/json">`. A state
+  value containing `</script>` closed that element early and everything after it
+  was parsed as markup — stored XSS, reachable through any state field a user
+  influences: a display name, a search term, a URL parameter. `escapeHtml` was
+  defined in the same file and applied to the page title and the client-script
+  src, never to the state.
+
+  Both sites now escape `<` as `\u003C`, which is invariant under `JSON.parse`
+  and closes `</script`, `<script` and `<!--` in one rule. **Not `escapeHtml`,
+  deliberately**: a script element's contents are not entity-decoded, so `&lt;`
+  would reach `JSON.parse` literally and break hydration instead — a test pins
+  that distinction so the obvious wrong fix cannot be substituted later.
+  `generateStaticSite` calls `renderToHTML`, so every generated page is covered.
+
 - **`Combobox` can be given an accessible name.** It rendered `role="combobox"`
   and spread no rest props onto its input, so a consumer had no way to name it at
   all and a screen reader announced "combobox" and nothing else. New `ariaLabel`

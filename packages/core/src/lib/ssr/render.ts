@@ -148,7 +148,7 @@ export function renderToHTML<Props extends ComponentProps>(
 <body>
   ${result.body}
   <script id="__COMPOSABLE_SVELTE_STATE__" type="application/json">
-${stateJSON}
+${escapeJSONInScript(stateJSON)}
   </script>
   <script type="module" src="${escapeHtml(clientScript)}"></script>
   ${additionalBodyScripts}
@@ -220,12 +220,39 @@ export function buildHydrationScript<State, Action>(
   const stateJSON = serializeStore(store);
 
   return `<script id="__COMPOSABLE_SVELTE_STATE__" type="application/json">
-${stateJSON}
+${escapeJSONInScript(stateJSON)}
 </script>`;
 }
 
 /**
+ * Escapes JSON that is about to sit inside a `<script>` element.
+ *
+ * **Not `escapeHtml`, and reaching for it here produces a hydration bug rather
+ * than a fix.** Inside a script element the HTML parser does not decode
+ * entities, so an `&lt;` written by `escapeHtml` would arrive at `JSON.parse`
+ * literally and the parse would fail.
+ *
+ * Escaping every `<` as `\u003C` is invariant under `JSON.parse` — the parser
+ * reads the escape back as `<` — and it makes `</script`, `<script` and `<!--`,
+ * the three sequences that move the tokenizer out of script-data state, all
+ * unreachable in one rule rather than three special cases.
+ *
+ * U+2028 and U+2029 are line terminators in JavaScript source but legal inside
+ * JSON strings. They are harmless in `type="application/json"`, and escaped
+ * here so this stays correct if the tag ever becomes an inline assignment.
+ */
+function escapeJSONInScript(json: string): string {
+  return json
+    .replace(/</g, '\\u003C')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+}
+
+/**
  * Escapes HTML special characters to prevent XSS.
+ *
+ * For text in ordinary markup. State going into a `<script>` element uses
+ * {@link escapeJSONInScript} instead — see the note there.
  *
  * @param str - String to escape
  * @returns Escaped string safe for HTML
