@@ -25,11 +25,12 @@
  * nothing downstream has to remember to trim again.
  *
  * Ordering makes an all-whitespace entry produce *both* issues — required, and
- * not an address — and which one is shown depends on the path: per-field
- * validation takes the first, whole-form validation takes the last. That
- * inconsistency is core's, is older than this, and is recorded in the hardening
- * backlog rather than papered over here. Either message refuses the value,
- * which is what matters.
+ * not an address — and ordering is what decides which is shown: core's two
+ * validation paths now both report the **first** issue, so this reads "Email is
+ * required" whether it is validated on blur or on submit. It used to differ by
+ * path, which meant one message while typing and another on submit; that is
+ * fixed, and `min(1)` sits before `.email()` here so the message a user sees
+ * names the actual problem.
  *
  * **Passwords deliberately have no equivalent.** Leading and trailing whitespace
  * is legitimate password content, and trimming would silently change what gets

@@ -430,7 +430,9 @@ UI inputs from `@composable-svelte/core/components/ui`:
 ```typescript
 interface FormState<T extends Record<string, any>> {
   data: T;                                    // Current form data
-  fields: { [K in keyof T]: FieldState };     // Per-field state
+  // Keyed by field PATH — 'email', 'address.zip', 'items.0.name'. Partial: an
+  // entry exists only once its path exists in the data.
+  fields: Partial<Record<FieldPath<T>, FieldState>>;
   schema: ZodSchema<T>;                       // Zod schema
   formErrors: string[];                       // Cross-field validation errors
   isValidating: boolean;                      // Form-level validation in progress
@@ -441,7 +443,7 @@ interface FormState<T extends Record<string, any>> {
 }
 
 interface FieldState {
-  value: any;           // Current field value
+  // No `value`: it lives in `data`, and a copy here went stale immediately.
   touched: boolean;     // Has user interacted?
   dirty: boolean;       // Has value changed from initial?
   error: string | null; // Validation error
@@ -678,8 +680,14 @@ User clicks submit button (type="submit")
 // WRONG — errors record doesn't exist
 formStore.state.errors.email
 
-// CORRECT — per-field state
+// WRONG — `fields` is partial, so this is a type error
 formStore.state.fields.email.error
+
+// CORRECT — per-field state, acknowledging that a field may have no record yet
+formStore.state.fields.email?.error
+
+// CORRECT — a nested field is addressed by its full path
+formStore.state.fields['address.zip']?.error
 
 // WRONG — submission.status doesn't exist
 formStore.state.submission.status === 'submitting'

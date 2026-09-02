@@ -160,7 +160,7 @@ describe('asking for a reset link', () => {
 		await requestFor(store, 'not-an-address');
 
 		expect(requestPasswordReset).not.toHaveBeenCalled();
-		expect(store.state.form.fields.email.error).toBe('Enter a valid email address');
+		expect(store.state.form.fields.email?.error).toBe('Enter a valid email address');
 		store.assertNoPendingActions();
 	});
 
@@ -292,7 +292,7 @@ describe('setting a new password', () => {
 		await submitReset(store, GOOD, 'something-else-entirely');
 
 		expect(resetPassword).not.toHaveBeenCalled();
-		expect(store.state.form.fields.confirmPassword.error).toBe('Passwords do not match');
+		expect(store.state.form.fields.confirmPassword?.error).toBe('Passwords do not match');
 	});
 
 	it('spends the token once when submitted twice', async () => {

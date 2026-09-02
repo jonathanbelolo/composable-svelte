@@ -8,6 +8,8 @@
 
 import type { ZodSchema } from 'zod';
 
+import type { AsyncValidators, FieldPath, FormFields } from './field-path.js';
+
 /**
  * Complete form state for a given data shape.
  *
@@ -48,9 +50,7 @@ export interface FormState<T extends Record<string, any>> {
 	 * Per-field state tracking.
 	 * Each key corresponds to a field in the form data.
 	 */
-	fields: {
-		[K in keyof T]: FieldState;
-	};
+	fields: FormFields<T>;
 
 	/**
 	 * Zod schema for validation.
@@ -71,7 +71,7 @@ export interface FormState<T extends Record<string, any>> {
 	 * marking a field touched on focus would fire its "required" error as the
 	 * user tabs in. `fieldBlurred` is what touches.
 	 */
-	focusedField: keyof T | null;
+	focusedField: FieldPath<T> | null;
 
 	/**
 	 * Is entire form currently validating?
@@ -236,9 +236,7 @@ export interface FormConfig<T extends Record<string, any>> {
 	 * }
 	 * ```
 	 */
-	asyncValidators?: Partial<{
-		[K in keyof T]: (value: T[K]) => Promise<void>;
-	}>;
+	asyncValidators?: AsyncValidators<T>;
 
 	/**
 	 * Submission handler - called after successful validation.
@@ -296,16 +294,16 @@ export type FormAction<T extends Record<string, any>> =
 	// ================================================================
 	| {
 			type: 'fieldChanged';
-			field: keyof T;
+			field: FieldPath<T>;
 			value: unknown;
 	  }
 	| {
 			type: 'fieldBlurred';
-			field: keyof T;
+			field: FieldPath<T>;
 	  }
 	| {
 			type: 'fieldFocused';
-			field: keyof T;
+			field: FieldPath<T>;
 	  }
 
 	// ================================================================
@@ -313,11 +311,11 @@ export type FormAction<T extends Record<string, any>> =
 	// ================================================================
 	| {
 			type: 'fieldValidationStarted';
-			field: keyof T;
+			field: FieldPath<T>;
 	  }
 	| {
 			type: 'fieldValidationCompleted';
-			field: keyof T;
+			field: FieldPath<T>;
 			error: string | null;
 			warnings?: string[];
 	  }
@@ -330,7 +328,7 @@ export type FormAction<T extends Record<string, any>> =
 	  }
 	| {
 			type: 'formValidationCompleted';
-			fieldErrors: Partial<Record<keyof T, string>>;
+			fieldErrors: Partial<Record<FieldPath<T>, string>>;
 			formErrors: string[];
 			/**
 			 * The schema's *output*, when validation passed.
@@ -373,17 +371,17 @@ export type FormAction<T extends Record<string, any>> =
 	  }
 	| {
 			type: 'setFieldValue';
-			field: keyof T;
+			field: FieldPath<T>;
 			value: unknown;
 	  }
 	| {
 			type: 'setFieldError';
-			field: keyof T;
+			field: FieldPath<T>;
 			error: string;
 	  }
 	| {
 			type: 'clearFieldError';
-			field: keyof T;
+			field: FieldPath<T>;
 	  };
 
 /**
@@ -448,7 +446,7 @@ export interface FormFieldProps<T extends Record<string, any>> {
 	/**
 	 * The name of the field in the form data.
 	 */
-	name: keyof T & string;
+	name: FieldPath<T>;
 	/**
 	 * Optional class name for the field wrapper.
 	 */

@@ -153,12 +153,16 @@ describe('asking for a link', () => {
 	it('still refuses an address that is only whitespace', async () => {
 		// The trim must not turn "required" into "accepted".
 		//
-		// The message asserted here is the *whole-form* one. All-whitespace
-		// produces two Zod issues — required, and not an address — and core's two
-		// validation paths disagree about which to show: per-field uses `find`
-		// (first issue), whole-form assigns in a loop (last issue wins). That is
-		// core's inconsistency, older than this change, and backlogged. Pinned as
-		// it is so a future fix to that has to come past this test deliberately.
+		// All-whitespace produces two Zod issues — required, and not an address.
+		// Core's two validation paths used to disagree about which to show:
+		// per-field used `find` (first issue), whole-form assigned in a loop (last
+		// issue won), so this said one thing while typing and another on submit.
+		// Both now take the FIRST, which for
+		// `.min(1, 'Email is required').email(...)` is the actionable one — the
+		// address is not merely malformed, it is absent.
+		//
+		// This test was pinned to the old last-wins message so the fix had to come
+		// past it deliberately. It did.
 		const requestMagicLink = vi.fn<MagicLinkRequestDependencies['requestMagicLink']>(
 			async () => undefined
 		);
@@ -172,7 +176,7 @@ describe('asking for a link', () => {
 		await store.receive({ type: 'form' });
 		await store.receive({ type: 'form' }, (s) => {
 			expect(s.status).toBe('idle');
-			expect(s.form.fields.email.error).toBe('Enter a valid email address');
+			expect(s.form.fields.email?.error).toBe('Email is required');
 		});
 
 		expect(requestMagicLink).not.toHaveBeenCalled();

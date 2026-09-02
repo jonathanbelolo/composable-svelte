@@ -48,8 +48,14 @@ describe('the stored field record', () => {
 
 		await store.send({ type: 'fieldChanged', field: 'name', value: 'Ada' }, (state) => {
 			expect(state.data.name, 'the real value').toBe('Ada');
+			// The record must exist first. `fields` is keyed by path and partial,
+			// so `'value' in undefined` would not compile — and `?? {}` would make
+			// this pass for a field that was never created at all, which is the
+			// vacuous-guard shape this file exists to argue against.
+			const record = state.fields.name;
+			expect(record, 'no record for `name`, so the check below proves nothing').toBeDefined();
 			expect(
-				'value' in state.fields.name,
+				'value' in record!,
 				'fields.name.value is a second source of truth and goes stale immediately'
 			).toBe(false);
 		});
@@ -60,8 +66,14 @@ describe('the stored field record', () => {
 
 		await store.send({ type: 'fieldFocused', field: 'name' }, (state) => {
 			expect(state.focusedField, 'the real answer').toBe('name');
+			// The record must exist first. `fields` is keyed by path and partial,
+			// so `'focused' in undefined` would not compile — and `?? {}` would make
+			// this pass for a field that was never created at all, which is the
+			// vacuous-guard shape this file exists to argue against.
+			const record = state.fields.name;
+			expect(record, 'no record for `name`, so the check below proves nothing').toBeDefined();
 			expect(
-				'focused' in state.fields.name,
+				'focused' in record!,
 				'fields.name.focused was written once as false and never updated'
 			).toBe(false);
 		});

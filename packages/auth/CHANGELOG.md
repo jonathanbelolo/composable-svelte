@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **An all-whitespace email address now reports "Email is required" on submit**,
+  matching what it already said while typing. Core's two validation paths used
+  to disagree about which of the two issues to show; both now take the first.
+  `magic-link-flow.test.ts` pinned the old message deliberately so that a fix
+  had to come past it, and it did.
+
+- The `FormState` slices in the eight flow states change shape with core's:
+  `fields` is keyed by field path and is partial, so `state.form.fields.email.error`
+  becomes `state.form.fields.email?.error`.
+
 ### Fixed
 
 - **The HTTP adapter now honours the contract `AuthDependencies` states.** Its

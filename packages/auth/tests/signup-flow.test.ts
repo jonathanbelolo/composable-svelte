@@ -181,7 +181,7 @@ describe('creating an account', () => {
 
 		expect(signup).not.toHaveBeenCalled();
 		expect(store.state.status).toBe('idle');
-		expect(store.state.form.fields.confirmPassword.error).toBe('Passwords do not match');
+		expect(store.state.form.fields.confirmPassword?.error).toBe('Passwords do not match');
 		store.assertNoPendingActions();
 	});
 
@@ -192,7 +192,7 @@ describe('creating an account', () => {
 		await submit(store, 'grace@example.com', 'short', 'short');
 
 		expect(signup).not.toHaveBeenCalled();
-		expect(store.state.form.fields.password.error).toContain(String(PASSWORD_MIN_LENGTH));
+		expect(store.state.form.fields.password?.error).toContain(String(PASSWORD_MIN_LENGTH));
 		store.assertNoPendingActions();
 	});
 });

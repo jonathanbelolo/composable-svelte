@@ -187,7 +187,7 @@ describe('Form - Integrated Mode', () => {
 
 			// Verify form state updated
 			expect(store.state.contactForm.data.name).toBe('John Doe');
-			expect(store.state.contactForm.fields.name.dirty).toBe(true);
+			expect(store.state.contactForm.fields.name?.dirty).toBe(true);
 		});
 
 		it('validates fields through integrated reducer', async () => {
@@ -221,8 +221,8 @@ describe('Form - Integrated Mode', () => {
 			await store.receive({ type: 'contactForm' });
 
 			// Check state directly - error should be set
-			expect(store.state.contactForm.fields.name.touched).toBe(true);
-			expect(store.state.contactForm.fields.name.error).toBe('Name must be at least 2 characters');
+			expect(store.state.contactForm.fields.name?.touched).toBe(true);
+			expect(store.state.contactForm.fields.name?.error).toBe('Name must be at least 2 characters');
 		});
 	});
 

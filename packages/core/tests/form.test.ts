@@ -110,8 +110,8 @@ describe('Field Changes', () => {
 	it('updates field value and marks as dirty', async () => {
 		await store.send({ type: 'fieldChanged', field: 'name', value: 'John' }, (state) => {
 			expect(state.data.name).toBe('John');
-			expect(state.fields.name.dirty).toBe(true);
-			expect(state.fields.name.error).toBe(null); // Cleared on change
+			expect(state.fields.name?.dirty).toBe(true);
+			expect(state.fields.name?.error).toBe(null); // Cleared on change
 		});
 	});
 
@@ -126,8 +126,8 @@ describe('Field Changes', () => {
 		await store.receive(
 			{ type: 'fieldValidationCompleted', field: 'name', error: 'Name must be at least 2 characters' },
 			(state) => {
-				expect(state.fields.name.isValidating).toBe(false);
-				expect(state.fields.name.error).toBe('Name must be at least 2 characters');
+				expect(state.fields.name?.isValidating).toBe(false);
+				expect(state.fields.name?.error).toBe('Name must be at least 2 characters');
 			}
 		);
 	});
@@ -171,7 +171,7 @@ describe('Field Blur', () => {
 
 	it('marks field as touched', async () => {
 		await store.send({ type: 'fieldBlurred', field: 'email' }, (state) => {
-			expect(state.fields.email.touched).toBe(true);
+			expect(state.fields.email?.touched).toBe(true);
 		});
 	});
 
@@ -183,7 +183,7 @@ describe('Field Blur', () => {
 
 		// Blur should trigger validation
 		await store.send({ type: 'fieldBlurred', field: 'email' }, (state) => {
-			expect(state.fields.email.touched).toBe(true);
+			expect(state.fields.email?.touched).toBe(true);
 		});
 
 		await store.receive({ type: 'fieldValidationStarted', field: 'email' });
@@ -191,7 +191,7 @@ describe('Field Blur', () => {
 		await store.receive(
 			{ type: 'fieldValidationCompleted', field: 'email', error: 'Invalid email address' },
 			(state) => {
-				expect(state.fields.email.error).toBe('Invalid email address');
+				expect(state.fields.email?.error).toBe('Invalid email address');
 			}
 		);
 	});
@@ -248,7 +248,7 @@ describe('Debounced Validation', () => {
 			{ type: 'fieldValidationCompleted', field: 'name', error: null },
 			(state) => {
 				expect(state.data.name).toBe('John');
-				expect(state.fields.name.error).toBe(null);
+				expect(state.fields.name?.error).toBe(null);
 			}
 		);
 	});
@@ -292,7 +292,7 @@ describe('Async Validation', () => {
 		await store.receive(
 			{ type: 'fieldValidationCompleted', field: 'email', error: 'Email already registered' },
 			(state) => {
-				expect(state.fields.email.error).toBe('Email already registered');
+				expect(state.fields.email?.error).toBe('Email already registered');
 				expect(checkEmailAvailability).toHaveBeenCalledWith('taken@test.com');
 			}
 		);
@@ -326,7 +326,7 @@ describe('Async Validation', () => {
 		await store.receive(
 			{ type: 'fieldValidationCompleted', field: 'email', error: 'Invalid email address' },
 			(state) => {
-				expect(state.fields.email.error).toBe('Invalid email address');
+				expect(state.fields.email?.error).toBe('Invalid email address');
 				expect(checkEmailAvailability).not.toHaveBeenCalled(); // Zod failed first
 			}
 		);
@@ -360,9 +360,9 @@ describe('Form Submission', () => {
 
 		// Check final state - validation errors should be present
 		expect(store.state.isValidating).toBe(false);
-		expect(store.state.fields.name.error).toBe('Name must be at least 2 characters');
-		expect(store.state.fields.email.error).toBe('Invalid email address');
-		expect(store.state.fields.message.error).toBe('Message must be at least 10 characters');
+		expect(store.state.fields.name?.error).toBe('Name must be at least 2 characters');
+		expect(store.state.fields.email?.error).toBe('Invalid email address');
+		expect(store.state.fields.message?.error).toBe('Message must be at least 10 characters');
 		expect(store.state.submitCount).toBe(1); // Incremented even on validation failure
 
 		// Should not proceed to submission
@@ -526,9 +526,9 @@ describe('Form Reset', () => {
 		// Reset
 		await store.send({ type: 'formReset' }, (state) => {
 			expect(state.data).toEqual({ name: '', email: '', message: '' });
-			expect(state.fields.name.dirty).toBe(false);
-			expect(state.fields.name.touched).toBe(false);
-			expect(state.fields.name.error).toBe(null);
+			expect(state.fields.name?.dirty).toBe(false);
+			expect(state.fields.name?.touched).toBe(false);
+			expect(state.fields.name?.error).toBe(null);
 		});
 	});
 
@@ -537,8 +537,8 @@ describe('Form Reset', () => {
 
 		await store.send({ type: 'formReset', data: resetData }, (state) => {
 			expect(state.data).toEqual(resetData);
-			expect(state.fields.name.dirty).toBe(false);
-			expect(state.fields.name.touched).toBe(false);
+			expect(state.fields.name?.dirty).toBe(false);
+			expect(state.fields.name?.touched).toBe(false);
 		});
 	});
 });
@@ -565,13 +565,13 @@ describe('Programmatic Field Updates', () => {
 	it('sets field value programmatically', async () => {
 		await store.send({ type: 'setFieldValue', field: 'email', value: 'test@example.com' }, (state) => {
 			expect(state.data.email).toBe('test@example.com');
-			expect(state.fields.email.dirty).toBe(true);
+			expect(state.fields.email?.dirty).toBe(true);
 		});
 	});
 
 	it('sets field error programmatically', async () => {
 		await store.send({ type: 'setFieldError', field: 'name', error: 'Custom error' }, (state) => {
-			expect(state.fields.name.error).toBe('Custom error');
+			expect(state.fields.name?.error).toBe('Custom error');
 		});
 	});
 
@@ -581,7 +581,7 @@ describe('Programmatic Field Updates', () => {
 
 		// Clear it
 		await store.send({ type: 'clearFieldError', field: 'name' }, (state) => {
-			expect(state.fields.name.error).toBe(null);
+			expect(state.fields.name?.error).toBe(null);
 		});
 	});
 });
@@ -685,7 +685,7 @@ describe('Cross-Field Validation', () => {
 		await store.receive(
 			{ type: 'fieldValidationCompleted', field: 'confirmPassword', error: 'Passwords do not match' },
 			(state) => {
-				expect(state.fields.confirmPassword.error).toBe('Passwords do not match');
+				expect(state.fields.confirmPassword?.error).toBe('Passwords do not match');
 			}
 		);
 
@@ -706,7 +706,7 @@ describe('Cross-Field Validation', () => {
 		await store.receive(
 			{ type: 'fieldValidationCompleted', field: 'confirmPassword', error: 'Passwords do not match' },
 			(state) => {
-				expect(state.fields.confirmPassword.error, 'the rule never came back').toBe(
+				expect(state.fields.confirmPassword?.error, 'the rule never came back').toBe(
 					'Passwords do not match'
 				);
 			}
@@ -738,7 +738,7 @@ describe('Cross-Field Validation', () => {
 		await store.receive(
 			{ type: 'fieldValidationCompleted', field: 'confirmPassword', error: null },
 			(state) => {
-				expect(state.fields.confirmPassword.error, 'a stale, false error survived').toBe(null);
+				expect(state.fields.confirmPassword?.error, 'a stale, false error survived').toBe(null);
 			}
 		);
 
@@ -758,7 +758,7 @@ describe('Cross-Field Validation', () => {
 		await store.receive(
 			{ type: 'fieldValidationCompleted', field: 'confirmPassword', error: null },
 			(state) => {
-				expect(state.fields.password.error, 'flagged an untouched field').toBe(null);
+				expect(state.fields.password?.error, 'flagged an untouched field').toBe(null);
 			}
 		);
 
@@ -834,9 +834,9 @@ describe('Validation Modes', () => {
 		await store.receive({ type: 'formValidationCompleted' });
 
 		// Check final state - all field errors should be present
-		expect(store.state.fields.name.error).toBe('Name must be at least 2 characters');
-		expect(store.state.fields.email.error).toBe('Invalid email address');
-		expect(store.state.fields.message.error).toBe('Message must be at least 10 characters');
+		expect(store.state.fields.name?.error).toBe('Name must be at least 2 characters');
+		expect(store.state.fields.email?.error).toBe('Invalid email address');
+		expect(store.state.fields.message?.error).toBe('Message must be at least 10 characters');
 		expect(store.state.formErrors).toEqual([]);
 	});
 
@@ -990,7 +990,7 @@ describe('a schema transform reaches the data', () => {
 		await store.receive({ type: 'formValidationStarted' });
 		await store.receive({ type: 'formValidationCompleted' }, (state) => {
 			expect(state.data.email).toBe('  not-an-email  ');
-			expect(state.fields.email.error).toBe('Enter a valid email address');
+			expect(state.fields.email?.error).toBe('Enter a valid email address');
 		});
 
 		expect(onSubmit).not.toHaveBeenCalled();

@@ -15,6 +15,15 @@ import type {
 	FieldState
 } from './form.types.js';
 import type { Reducer } from '../../types.js';
+import {
+	collectFieldPaths,
+	defaultFieldState,
+	readAtPath,
+	setAtPath,
+	toFieldPath,
+	withField
+} from './field-path.js';
+import type { FieldPath, FormFields } from './field-path.js';
 
 /**
  * Create initial form state from configuration.
@@ -36,16 +45,17 @@ export function createInitialFormState<T extends Record<string, any>>(
 ): FormState<T> {
 	const formData = data ?? config.initialData;
 
-	// Create FieldState for each field
-	const fields: any = {};
-	for (const key in formData) {
-		fields[key] = {
-			touched: false,
-			dirty: false,
-			error: null,
-			isValidating: false,
-			warnings: []
-		} satisfies FieldState;
+	// A record for every addressable path, not just the top level.
+	//
+	// `for (const key in formData)` walked one level, which is where a nested
+	// form first lost its shape: `address.zip` had nowhere to put an error, so
+	// the error went to `address` and named a field the user cannot see.
+	//
+	// Every node is keyed, not only the leaves — a whole-object `.refine()`
+	// produces an issue at `['address']` and needs a home too.
+	const fields: FormFields<T> = {};
+	for (const path of collectFieldPaths(formData)) {
+		fields[path as FieldPath<T>] = defaultFieldState();
 	}
 
 	return {
@@ -94,15 +104,11 @@ export function createFormReducer<T extends Record<string, any>>(
 
 				const newState: FormState<T> = {
 					...state,
-					data: { ...state.data, [field]: value },
-					fields: {
-						...state.fields,
-						[field]: {
-							...state.fields[field],
-							dirty: true,
-							error: null // Clear error on change for immediate feedback
-						}
-					}
+					data: setAtPath(state.data, field, value),
+					fields: withField(state.fields, field, {
+						dirty: true,
+						error: null // Clear error on change for immediate feedback
+					})
 				};
 
 				// Trigger validation based on mode
@@ -136,13 +142,7 @@ export function createFormReducer<T extends Record<string, any>>(
 					// the time a stale blur is processed, and clearing unconditionally
 					// would blank the attribute on the live field.
 					focusedField: state.focusedField === field ? null : state.focusedField,
-					fields: {
-						...state.fields,
-						[field]: {
-							...state.fields[field],
-							touched: true
-						}
-					}
+					fields: withField(state.fields, field, { touched: true })
 				};
 
 				// Trigger validation based on mode
@@ -180,13 +180,7 @@ export function createFormReducer<T extends Record<string, any>>(
 
 				const newState: FormState<T> = {
 					...state,
-					fields: {
-						...state.fields,
-						[field]: {
-							...state.fields[field],
-							isValidating: true
-						}
-					}
+					fields: withField(state.fields, field, { isValidating: true })
 				};
 
 				// Run Zod validation + async validators
@@ -196,7 +190,7 @@ export function createFormReducer<T extends Record<string, any>>(
 					Effect.cancellable(
 						`validate-${String(field)}`, // Cancel previous validation for this field
 						async (dispatch) => {
-							const fieldValue = state.data[field];
+							const fieldValue = readAtPath(state.data, field);
 							let error: string | null = null;
 							const warnings: string[] = [];
 
@@ -226,8 +220,20 @@ export function createFormReducer<T extends Record<string, any>>(
 								error = e instanceof Error ? e.message : 'Validation error';
 							}
 
-							const issueFor = (name: keyof T): string | null =>
-								issues.find((issue) => issue.path[0] === name)?.message ?? null;
+							// The FIRST issue for this exact path.
+							//
+							// `find` takes the first, and Zod emits in schema-declaration
+							// order — so `.min(1, 'Email is required').email(...)` reports
+							// "required" for whitespace, which is the actionable one. The
+							// whole-form path below assigns in a loop and used to keep the
+							// LAST, so the same input said one thing while typing and
+							// another on submit.
+							//
+							// Exact, not prefix: a prefix match would put the zip code's
+							// error on `address` as well as `address.zip`.
+							const issueFor = (name: string): string | null =>
+								issues.find((issue) => toFieldPath(issue.path) === name)?.message ??
+								null;
 
 							if (error === null) error = issueFor(field);
 
@@ -261,7 +267,7 @@ export function createFormReducer<T extends Record<string, any>>(
 							// The rule, and why this is safe: an error may DISAPPEAR from
 							// any field, but may only APPEAR on the field being validated.
 							// Nothing here flags a field the user has not touched.
-							for (const name of Object.keys(state.fields) as (keyof T)[]) {
+							for (const name of Object.keys(state.fields) as FieldPath<T>[]) {
 								if (name === field) continue;
 								if (state.fields[name]?.error == null) continue;
 								if (issueFor(name) !== null) continue;
@@ -287,15 +293,11 @@ export function createFormReducer<T extends Record<string, any>>(
 				return [
 					{
 						...state,
-						fields: {
-							...state.fields,
-							[field]: {
-								...state.fields[field],
-								isValidating: false,
-								error,
-								warnings
-							}
-						}
+						fields: withField(state.fields, field, {
+							isValidating: false,
+							error,
+							warnings
+						})
 					},
 					Effect.none()
 				];
@@ -339,19 +341,37 @@ export function createFormReducer<T extends Record<string, any>>(
 						} catch (e) {
 							if (e instanceof ZodError) {
 								// Map Zod errors to field errors
-								const fieldErrors: Partial<Record<keyof T, string>> = {};
+								// A Map, and the first issue per path wins.
+								//
+								// Two fixes in one loop. This used to read `issue.path[0]`,
+								// so a nested issue at ['address','zip'] was filed under
+								// `address`; and it assigned unconditionally, so the LAST
+								// issue for a field overwrote every earlier one while the
+								// per-field path above kept the FIRST. Same input, two
+								// different messages depending on how validation was
+								// triggered.
+								//
+								// `typeof path === 'string'` is gone with it: a numeric
+								// segment is falsy at index 0 and not a string, so an array
+								// element's issue fell into `formErrors`, which no component
+								// renders.
+								const seen = new Map<string, string>();
 								const formErrors: string[] = [];
 
 								for (const issue of e.issues || []) {
-									const path = issue.path[0];
-									if (path && typeof path === 'string') {
-										// Field-level error
-										fieldErrors[path as keyof T] = issue.message;
-									} else {
-										// Form-level error (refinements, etc.)
+									const path = toFieldPath(issue.path);
+									if (path === null) {
+										// Form-level: a top-level refinement, or a path this
+										// cannot address.
 										formErrors.push(issue.message);
+									} else if (!seen.has(path)) {
+										seen.set(path, issue.message);
 									}
 								}
+
+								const fieldErrors = Object.fromEntries(seen) as Partial<
+									Record<FieldPath<T>, string>
+								>;
 
 								dispatch({
 									type: 'formValidationCompleted',
@@ -381,13 +401,16 @@ export function createFormReducer<T extends Record<string, any>>(
 
 				if (hasErrors) {
 					// Update field errors and stop (don't submit)
-					const newFields = { ...state.fields };
-					for (const field in fieldErrors) {
-						newFields[field as keyof T] = {
-							...newFields[field as keyof T],
-							error: fieldErrors[field as keyof T] ?? null,
+					// `withField` bases each write on a complete default, so an error
+					// for a path with no record yet — an array element that did not
+					// exist at init — gets all five keys rather than a two-key object
+					// spread from `undefined`.
+					let newFields = state.fields;
+					for (const field of Object.keys(fieldErrors) as FieldPath<T>[]) {
+						newFields = withField(newFields, field, {
+							error: fieldErrors[field] ?? null,
 							touched: true // Mark as touched to show error
-						};
+						});
 					}
 
 					return [
@@ -523,14 +546,8 @@ export function createFormReducer<T extends Record<string, any>>(
 				return [
 					{
 						...state,
-						data: { ...state.data, [action.field]: action.value },
-						fields: {
-							...state.fields,
-							[action.field]: {
-								...state.fields[action.field],
-								dirty: true
-							}
-						}
+						data: setAtPath(state.data, action.field, action.value),
+						fields: withField(state.fields, action.field, { dirty: true })
 					},
 					Effect.none()
 				];
@@ -543,13 +560,7 @@ export function createFormReducer<T extends Record<string, any>>(
 				return [
 					{
 						...state,
-						fields: {
-							...state.fields,
-							[action.field]: {
-								...state.fields[action.field],
-								error: action.error
-							}
-						}
+						fields: withField(state.fields, action.field, { error: action.error })
 					},
 					Effect.none()
 				];
@@ -562,13 +573,7 @@ export function createFormReducer<T extends Record<string, any>>(
 				return [
 					{
 						...state,
-						fields: {
-							...state.fields,
-							[action.field]: {
-								...state.fields[action.field],
-								error: null
-							}
-						}
+						fields: withField(state.fields, action.field, { error: null })
 					},
 					Effect.none()
 				];

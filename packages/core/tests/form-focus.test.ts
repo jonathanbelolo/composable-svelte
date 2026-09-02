@@ -62,8 +62,8 @@ describe('fieldFocused in the reducer', () => {
 		const store = makeStore();
 
 		await store.send({ type: 'fieldFocused', field: 'name' }, (state) => {
-			expect(state.fields.name.touched).toBe(false);
-			expect(state.fields.name.error).toBeNull();
+			expect(state.fields.name?.touched).toBe(false);
+			expect(state.fields.name?.error).toBeNull();
 		});
 	});
 
@@ -82,7 +82,7 @@ describe('fieldFocused in the reducer', () => {
 		await store.send({ type: 'fieldFocused', field: 'name' });
 		await store.send({ type: 'fieldBlurred', field: 'name' }, (state) => {
 			expect(state.focusedField).toBeNull();
-			expect(state.fields.name.touched, 'blur is what touches').toBe(true);
+			expect(state.fields.name?.touched, 'blur is what touches').toBe(true);
 		});
 	});
 

@@ -346,7 +346,7 @@ describe('changing the password', () => {
 		await store.send({ type: 'form', action: { type: 'submitTriggered' } });
 		await store.receive({ type: 'form' });
 		await store.receive({ type: 'form' }, (s) => {
-			expect(s.form.fields.confirmPassword.error).toBe('Passwords do not match');
+			expect(s.form.fields.confirmPassword?.error).toBe('Passwords do not match');
 		});
 
 		expect(changePassword).not.toHaveBeenCalled();

@@ -7,7 +7,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`FormState.fields` is keyed by field path. Breaking.** It was keyed by
+  top-level name, and Zod issues were routed with `issue.path[0]`, so a nested
+  schema's error at `['address','zip']` landed on `address` — it could not be
+  shown beside the input that caused it, and the field it named might not be on
+  screen at all.
+
+  `fields` is now `Partial<Record<FieldPath<T>, FieldState>>`, so `'address.zip'`
+  and `'items.0.name'` are keys. `focusedField`, the eight `field:`-carrying
+  actions, `formValidationCompleted.fieldErrors`, `asyncValidators` and
+  `FormFieldProps.name` move to `FieldPath<T>` with it.
+
+  **`Partial`, not total, and deliberately so.** A total record would have
+  compiled with no churn at all and then thrown: an entry exists only once its
+  path exists in the data, so an optional field or an array element that was
+  absent at init has none. That is the lie `form-field-record.test.ts` exists to
+  refuse. In practice `state.fields.email.error` becomes
+  `state.fields.email?.error` — and since `noUncheckedIndexedAccess` is already
+  on repo-wide, widening to `Record<string, FieldState>` would have cost exactly
+  the same and lost compile-time checking of the key as well. `fieldStateAt()`
+  is exported for callers who want a total read, so they opt into it explicitly.
+
+  **A flat schema produces exactly the keys it always did**, so a form over a
+  flat schema changes only in that its reads acknowledge absence.
+
+  **`id` is the raw path**, so an input for `address.zip` gets `id="address.zip"`.
+  That is legal HTML, and `for=`/`aria-describedby` associate by string
+  equality, so labels and error announcements are unaffected.
+  `querySelector('#address.zip')` is not — use `CSS.escape`, or the
+  `[data-field="address.zip"]` attribute the component already emits.
+  Sanitising the dot was rejected: it invents a namespace in which fields `a.b`
+  and `a_b` collide, and the collision is a wrong label association, which fails
+  silently and only for screen-reader users.
+
 ### Fixed
+
+- **The two validation paths disagreed about which message to show.** Per-field
+  validation took the *first* Zod issue (`issues.find`), whole-form took the
+  *last* (assignment in a loop). So `"   "` in an email field said "Email is
+  required" while typing and "Enter a valid email address" on submit — same
+  input, same schema, two answers.
+
+  Both now take the first. Zod emits in schema-declaration order, so for
+  `.min(1, 'Email is required').email(...)` the first is the one that names the
+  actual problem. The per-field match is on the full path and is exact rather
+  than by prefix, so a zip code's error does not also appear on `address`.
+
+  Two consequences of the old routing go with it. A numeric path segment no
+  longer falls through to `formErrors` — it was neither truthy at index 0 nor a
+  string, so an array element's error went where nothing renders it. And an
+  error for a path with no record yet now creates a complete `FieldState`
+  instead of spreading `undefined` into a two-key object missing `warnings` and
+  `isValidating`.
 
 - **State embedded in the hydration script could break out of it.** Both
   `renderToHTML` and `buildHydrationScript` wrote the serialized store raw into
