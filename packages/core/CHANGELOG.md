@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`createParserConfig(routes, options?)`** — builds a `ParserConfig` from a
+  pattern-to-handler map, so a route stops being four lines of
+  `const p = matchPath(pattern, path); return p ? {...} : null`. Additive:
+  `ParserConfig` and `parseDestination` are untouched, and the `parsers` list
+  form stays for routes that are not a single pattern — a custom regular
+  expression, or one parser drawing on two. The two mix, because the config is
+  a plain object.
+
+  It also restores the symmetry with `SerializerConfig`, whose half has always
+  been a keyed map.
+
+  Keys are tried in insertion order, and the map form hides that, so a more
+  specific pattern must come first. A handler may return `null` to decline
+  *after* its pattern matched, which is what lets a route reject a value it
+  does not like without claiming it.
+
 - **Custom serializers for SSR state** — `createTaggedSerializer()` and the
   `StateSerializer` type, accepted by `serializeState`, `serializeStore`,
   `buildHydrationScript`, `renderToHTML` (as `options.serializer`), `parseState`

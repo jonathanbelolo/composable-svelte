@@ -6,7 +6,12 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { parseDestination, matchPath, type ParserConfig } from '../../src/lib/routing/parser';
+import {
+	parseDestination,
+	matchPath,
+	createParserConfig,
+	type ParserConfig
+} from '../../src/lib/routing/parser';
 
 // Test Types
 type InventoryDestination =
@@ -460,5 +465,131 @@ describe('matchPath, exactly as documented', () => {
 			path: 'docs/readme.md'
 		});
 		expect(matchPath('/files/*path', '/files/readme.md')).toEqual({ path: 'readme.md' });
+	});
+});
+
+describe('createParserConfig', () => {
+	type Dest =
+		| { type: 'edit'; state: { itemId: string } }
+		| { type: 'detail'; state: { itemId: string } }
+		| { type: 'add'; state: Record<string, never> };
+
+	it('agrees with the list form under a basePath', () => {
+		// The arm worth having: prove the two forms agree on the same inputs,
+		// rather than testing the map form in isolation and hoping.
+		const fromMap = createParserConfig<Dest>(
+			{
+				'/item/:itemId/edit': (p) => ({ type: 'edit', state: { itemId: p.itemId ?? '' } }),
+				'/item/:itemId': (p) => ({ type: 'detail', state: { itemId: p.itemId ?? '' } }),
+				'/add': () => ({ type: 'add', state: {} })
+			},
+			{ basePath: '/shop' }
+		);
+		const byHand: ParserConfig<Dest> = {
+			basePath: '/shop',
+			parsers: [
+				(path) => {
+					const p = matchPath('/item/:itemId/edit', path);
+					return p ? { type: 'edit', state: { itemId: p.itemId ?? '' } } : null;
+				},
+				(path) => {
+					const p = matchPath('/item/:itemId', path);
+					return p ? { type: 'detail', state: { itemId: p.itemId ?? '' } } : null;
+				},
+				(path) => (path === '/add' ? { type: 'add', state: {} } : null)
+			]
+		};
+
+		for (const path of ['/shop/item/7/edit', '/shop/item/7', '/shop/add', '/shop/nope']) {
+			expect(parseDestination(path, fromMap), path).toEqual(parseDestination(path, byHand));
+		}
+	});
+
+	it('still matches with no basePath, where the hand-written form does not', () => {
+		// Not a difference for its own sake. `parseDestination` defaults
+		// `basePath` to '/' and strips it, so a parser receives 'add' rather than
+		// '/add' — and a pattern written the obvious way, with a leading slash,
+		// silently never matches. Route patterns always carry the slash, so
+		// `createParserConfig` normalises rather than requiring every author to
+		// know this. The list form is left exactly as it was.
+		const fromMap = createParserConfig<Dest>({ '/add': () => ({ type: 'add', state: {} }) });
+		const byHand: ParserConfig<Dest> = {
+			parsers: [(path) => (matchPath('/add', path) ? { type: 'add', state: {} } : null)]
+		};
+
+		expect(parseDestination('/add', fromMap)?.type).toBe('add');
+		expect(parseDestination('/add', byHand), 'the trap this normalises away').toBeNull();
+	});
+
+	// These two use a wildcard on purpose. An earlier version paired
+	// '/item/:id/edit' with '/item/:id', which do not actually overlap — `:id`
+	// matches one segment, so '/item/:id' never matches '/item/7/edit' and the
+	// order made no difference. Both arms passed with the map reversed, which is
+	// to say they tested nothing. A wildcard genuinely shadows.
+
+	it('tries keys in insertion order — specific first wins', () => {
+		const config = createParserConfig<Dest>({
+			'/item/:itemId': (p) => ({ type: 'detail', state: { itemId: p.itemId ?? '' } }),
+			'/*rest': () => ({ type: 'add', state: {} })
+		});
+
+		expect(parseDestination('/item/7', config)?.type).toBe('detail');
+	});
+
+	it('tries keys in insertion order — general first shadows, which is the hazard', () => {
+		// The same two routes the other way round, so the guarantee is proved in
+		// both directions rather than by one lucky example.
+		const config = createParserConfig<Dest>({
+			'/*rest': () => ({ type: 'add', state: {} }),
+			'/item/:itemId': (p) => ({ type: 'detail', state: { itemId: p.itemId ?? '' } })
+		});
+
+		expect(parseDestination('/item/7', config)?.type).toBe('add');
+	});
+
+	it('lets a handler decline after its pattern matched', () => {
+		// What the list form could always do and a naive map form could not:
+		// match the shape, then reject the value.
+		const config = createParserConfig<Dest>({
+			'/item/:itemId': (p) => (/^\d+$/.test(p.itemId ?? '') ? { type: 'detail', state: { itemId: p.itemId ?? '' } } : null),
+			'/item/:itemId/edit': (p) => ({ type: 'edit', state: { itemId: p.itemId ?? '' } })
+		});
+
+		expect(parseDestination('/item/7', config)?.type).toBe('detail');
+		expect(parseDestination('/item/abc', config)).toBeNull();
+	});
+
+	it('passes every parameter and the matched path to the handler', () => {
+		const seen: Array<[Record<string, string>, string]> = [];
+		const config = createParserConfig<Dest>({
+			'/item/:itemId/:field': (params, path) => {
+				seen.push([params, path]);
+				return { type: 'edit', state: { itemId: params.itemId ?? '' } };
+			}
+		});
+
+		parseDestination('/item/7/name', config);
+
+		expect(seen).toEqual([[{ itemId: '7', field: 'name' }, '/item/7/name']]);
+	});
+
+	it('honours basePath', () => {
+		const config = createParserConfig<Dest>({ '/add': () => ({ type: 'add', state: {} }) }, {
+			basePath: '/inventory'
+		});
+
+		expect(parseDestination('/inventory/add', config)?.type).toBe('add');
+		expect(parseDestination('/add', config)).toBeNull();
+	});
+
+	it('omits basePath rather than setting it undefined', () => {
+		// `exactOptionalPropertyTypes`: `{ basePath: undefined }` is not the same
+		// as `{}`, and only the latter is assignable.
+		expect('basePath' in createParserConfig<Dest>({})).toBe(false);
+	});
+
+	it('yields null when nothing matches', () => {
+		const config = createParserConfig<Dest>({ '/add': () => ({ type: 'add', state: {} }) });
+		expect(parseDestination('/elsewhere', config)).toBeNull();
 	});
 });

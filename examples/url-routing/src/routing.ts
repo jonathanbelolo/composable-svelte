@@ -5,13 +5,7 @@
  * Phase 7: URL Synchronization (Browser History Integration)
  */
 
-import {
-	serializeDestination,
-	parseDestination,
-	matchPath,
-	type SerializerConfig,
-	type ParserConfig
-} from '@composable-svelte/core/routing';
+import { createParserConfig, parseDestination, serializeDestination, type ParserConfig, type SerializerConfig } from '@composable-svelte/core/routing';
 import type { InventoryDestination, InventoryAction } from './types';
 
 // ============================================================================
@@ -37,30 +31,17 @@ export function serializeInventoryState(destination: InventoryDestination | null
 // Parsing Config (URL → State)
 // ============================================================================
 
-export const parserConfig: ParserConfig<InventoryDestination> = {
-	basePath: '/inventory',
-	parsers: [
-		// Parser for add destination
-		(path) => {
-			if (path === '/add') {
-				return { type: 'add', state: {} };
-			}
-			return null;
-		},
-
-		// Parser for detail destination
-		(path) => {
-			const params = matchPath('/item/:itemId', path);
-			if (params) {
-				return {
-					type: 'detail',
-					state: { itemId: params.itemId ?? '' }
-				};
-			}
-			return null;
-		}
-	]
-};
+// Keys are tried in insertion order, so a more specific pattern goes before a
+// more general one.
+export const parserConfig: ParserConfig<InventoryDestination> = createParserConfig<
+	InventoryDestination
+>(
+	{
+		'/add': () => ({ type: 'add', state: {} }),
+		'/item/:itemId': (params) => ({ type: 'detail', state: { itemId: params.itemId ?? '' } })
+	},
+	{ basePath: '/inventory' }
+);
 
 /**
  * Parse URL path to inventory destination.

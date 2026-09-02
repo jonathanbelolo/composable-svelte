@@ -592,7 +592,9 @@ Breaking, deliberate, and the better API.
 - `Clock.live` / `Storage.live` — **declined, with reasons recorded.** See
   `plans/hardening/README.md`; the short version is that `Storage.live` cannot
   be a value at all.
-- `createParserConfig`
+- `createParserConfig` — **built**, purely additive: `ParserConfig` and
+  `parseDestination` are unchanged and the `parsers` list form remains for
+  routes that are not a single `matchPath` pattern.
 
 *Built, but a different shape than documented* — three. None is a naming
 problem, so none would have been caught by an export-name check:

@@ -54,6 +54,95 @@ export interface ParserConfig<Dest extends { type: string; state: any }> {
 }
 
 /**
+ * A pattern-to-handler map, the shape {@link createParserConfig} takes.
+ *
+ * Each handler is given the parameters `matchPath` extracted and the path it
+ * matched, and returns a destination — or `null` to decline, in which case the
+ * next route is tried. Declining after a match is what lets a route reject a
+ * value it does not like (an id that is not numeric, say) without claiming it.
+ */
+export type ParserRoutes<Dest extends { type: string; state: any }> = Record<
+	string,
+	(params: Record<string, string>, path: string) => Dest | null
+>;
+
+/** Options for {@link createParserConfig}. */
+export interface ParserConfigOptions {
+	/**
+	 * Base path for all routes.
+	 * @default '/'
+	 */
+	basePath?: string | undefined;
+}
+
+/**
+ * Build a {@link ParserConfig} from a pattern-to-handler map.
+ *
+ * Sugar over the `parsers` list, which every call site was writing by hand as
+ * `const p = matchPath(pattern, path); return p ? {...} : null`. It also
+ * restores the symmetry with `SerializerConfig`, whose half has always been a
+ * keyed map.
+ *
+ * **Order matters, and the map form hides that** — which is the one real cost
+ * of this shape. Keys are tried in insertion order, so a more specific pattern
+ * must come before a more general one, or the general one swallows it. (The
+ * guarantee is exact rather than incidental: route patterns begin with `/`, so
+ * they are never integer-like keys, which are the only ones JavaScript
+ * reorders.)
+ *
+ * The `parsers` list is not going anywhere. Use it when a route is not a single
+ * `matchPath` pattern — a custom regular expression, or one parser drawing on
+ * two patterns. The two mix, because the config is a plain object:
+ *
+ * ```ts
+ * const config = createParserConfig(routes, { basePath: '/app' });
+ * const withFallback = { ...config, parsers: [...config.parsers, customParser] };
+ * ```
+ *
+ * @example
+ * ```typescript
+ * import { createParserConfig, parseDestination } from '@composable-svelte/core/routing';
+ *
+ * type Dest =
+ *   | { type: 'edit'; state: { itemId: string } }
+ *   | { type: 'detail'; state: { itemId: string } }
+ *   | { type: 'add'; state: Record<string, never> };
+ *
+ * const config = createParserConfig<Dest>({
+ *   // Specific first: '/item/:id' would otherwise never reach '/item/:id/edit'.
+ *   '/item/:id/edit': (params) => ({ type: 'edit', state: { itemId: params.id ?? '' } }),
+ *   '/item/:id': (params) => ({ type: 'detail', state: { itemId: params.id ?? '' } }),
+ *   '/add': () => ({ type: 'add', state: {} })
+ * });
+ *
+ * const destination = parseDestination('/item/42/edit', config);
+ * ```
+ */
+export function createParserConfig<Dest extends { type: string; state: any }>(
+	routes: ParserRoutes<Dest>,
+	options: ParserConfigOptions = {}
+): ParserConfig<Dest> {
+	const parsers = Object.entries(routes).map(
+		([pattern, handler]) =>
+			(path: string): Dest | null => {
+				// `parseDestination` hands parsers a path with the base stripped, and
+				// when there is no `basePath` it defaults to '/' and strips that —
+				// so '/add' arrives as 'add', without its leading slash, while
+				// '/shop/add' under basePath '/shop' arrives as '/add' with one.
+				// Patterns are written with a leading slash either way, so normalise
+				// rather than make every route author know that.
+				const normalised = path.startsWith('/') ? path : `/${path}`;
+				const params = matchPath(pattern, normalised);
+				return params === null ? null : handler(params, normalised);
+			}
+	);
+
+	// `exactOptionalPropertyTypes`: `basePath: undefined` is not assignable to
+	// `basePath?: string`, so the key is omitted rather than set to undefined.
+	return options.basePath !== undefined ? { basePath: options.basePath, parsers } : { parsers };
+}
+
+/**
  * Parse URL path to destination state.
  *
  * Attempts to parse a URL path into a destination state object

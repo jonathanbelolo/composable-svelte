@@ -438,6 +438,24 @@ scoped CSS — `auth`'s and `media`'s — render correctly either way.
   schema's output back into `state.data` at **submit-time** validation only;
   doing it per-field would rewrite a keystroke mid-word. The two MFA reducers
   dropped their duplicated trims as a result.
+- **`parseDestination` strips a leading slash when there is no `basePath`, and
+  patterns written the obvious way then silently never match.** `basePath`
+  defaults to `'/'` and the relative path is `path.slice(basePath.length)`, so
+  `'/add'` reaches a parser as `'add'` while `'/shop/add'` under `basePath:
+  '/shop'` reaches it as `'/add'`. A pattern is written `'/add'` in both cases,
+  so one of them matches nothing at all — no error, no warning, just a route
+  that never fires.
+
+  Found while building `createParserConfig`, and it is not theoretical:
+  `examples/ssr-server/src/shared/routing.ts` had worked around it by writing
+  its patterns *without* leading slashes and leaving a comment explaining why.
+
+  `createParserConfig` normalises the path it receives, so the new API is not
+  born with the trap, and that example is now written the ordinary way.
+  **`parseDestination` itself is unchanged**, because fixing it is breaking for
+  anyone who has already worked around it — exactly as that example had. Open,
+  and worth a decision rather than a quiet fix.
+
 - **`Clock.live` / `Storage.live` are not being built, and here is why — in
   order of weight, because the weakest reason is the one a future reader will
   knock down first.**

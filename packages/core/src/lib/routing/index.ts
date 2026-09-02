@@ -14,8 +14,8 @@ export { serializeDestination, pathSegment } from './serializer.js';
 export type { SerializerConfig } from './serializer.js';
 
 // Parsing API
-export { parseDestination, matchPath } from './parser.js';
-export type { ParserConfig } from './parser.js';
+export { parseDestination, matchPath, createParserConfig } from './parser.js';
+export type { ParserConfig, ParserRoutes, ParserConfigOptions } from './parser.js';
 
 // Type Definitions
 export type {
