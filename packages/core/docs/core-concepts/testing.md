@@ -1013,35 +1013,36 @@ await store.send({ type: 'checkElapsed' });
 
 ### Mock Storage
 
+`createMockStorage()` is an in-memory `SyncStorage<T>`. Note that core's
+`Storage<T>` is **synchronous** — this section used to hand-roll an `async`
+one, which was a second and wrong contract for a type the library ships.
+
 ```typescript
-interface Storage<T> {
-  get(key: string): Promise<T | null>;
-  set(key: string, value: T): Promise<void>;
-  remove(key: string): Promise<void>;
+import { createMockStorage } from '@composable-svelte/core';
+import { createTestStore } from '@composable-svelte/core/test';
+
+interface UserPreferences {
+  theme: string;
 }
 
-function createMockStorage<T>(): Storage<T> {
-  const data = new Map<string, T>();
+declare const initialState: { theme: string };
+declare const reducer: never;
 
-  return {
-    get: async (key) => data.get(key) ?? null,
-    set: async (key, value) => {
-      data.set(key, value);
-    },
-    remove: async (key) => {
-      data.delete(key);
-    }
-  };
-}
+const storage = createMockStorage<UserPreferences>();
 
-// Usage in tests
-const store = createTestStore({
-  initialState,
-  reducer,
-  dependencies: {
-    storage: createMockStorage<UserPreferences>()
-  }
+// Writes read back — which `createNoopStorage()` cannot do, since it discards
+// them. Use that one to model storage being *unavailable*.
+storage.setItem('prefs', { theme: 'dark' });
+const saved: UserPreferences | null = storage.getItem('prefs');
+
+// `subscribe` fires only for changes from another browsing context, so
+// `setItem` above is deliberately silent. `simulateSetItem` is how a test
+// plays the part of the other tab.
+const stop = storage.subscribe((event) => {
+  console.log(event.key, event.newValue);
 });
+storage.simulateSetItem('prefs', { theme: 'light' });
+stop();
 ```
 
 ### Spy Dependencies

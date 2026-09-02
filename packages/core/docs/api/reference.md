@@ -1727,14 +1727,24 @@ expect(clock.now()).toEqual(new Date('2024-01-01T00:00:01Z'));
 
 ### Storage
 
-Async storage interface.
+**Synchronous** storage interface — it wraps `localStorage`, which is itself
+synchronous. This was documented as returning promises, which it never has.
+
+`subscribe` is not on `Storage`; it is on `SyncStorage`, which extends it.
 
 ```typescript
-interface Storage<T = any> {
-  getItem(key: string): Promise<T | null>;
-  setItem(key: string, value: T): Promise<void>;
-  removeItem(key: string): Promise<void>;
-  clear(): Promise<void>;
+interface Storage<T = unknown> {
+  getItem(key: string): T | null;
+  setItem(key: string, value: T): void;
+  removeItem(key: string): void;
+  keys(): string[];
+  has(key: string): boolean;
+  clear(): void;
+  size(): number;
+}
+
+interface SyncStorage<T = unknown> extends Storage<T> {
+  /** Fires only for writes from *another* browsing context. */
   subscribe(listener: StorageEventListener<T>): Unsubscribe;
 }
 ```
@@ -1749,11 +1759,13 @@ Create localStorage wrapper.
 function createLocalStorage<T = any>(config?: StorageConfig<T>): Storage<T>
 ```
 
-**Config:**
-- `prefix` - Key prefix (default: '')
-- `serialize` - Custom serializer (default: JSON.stringify)
-- `deserialize` - Custom deserializer (default: JSON.parse)
-- `validate` - Schema validator
+**Config** (`StorageConfig<T>`):
+- `prefix` - Key prefix (default: `''`)
+- `validator` - Type guard run on read; a value it rejects reads back as `null`
+- `debug` - Log to the console
+
+There are no `serialize` / `deserialize` options; values go through
+`JSON.stringify` / `JSON.parse`.
 
 **Example:**
 

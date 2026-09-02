@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`createMockStorage()`** — an in-memory `SyncStorage<T>` for tests, the
+  counterpart to `createMockCookieStorage` that the localStorage/sessionStorage
+  pair never had. `createNoopStorage()` discards writes and reads back `null`,
+  which models "storage unavailable" and cannot express a round trip, so callers
+  hand-rolled their own: core's own storage test built one and used it 48 times.
+  It now imports this instead.
+
+  Values are held as **JSON strings**, not live objects, so a `Date` put in
+  comes back as a string exactly as it would through real storage — a
+  `Map<string, T>` double hides that, and hiding it is how a test passes where
+  production does not. `prefix`, `validator` and `debug` all behave as they do
+  in `createLocalStorage`, which makes "a stored value the validator rejects
+  reads back as `null`" testable for the first time.
+
+  **`setItem` does not fire `subscribe`, deliberately.** That contract is
+  cross-context only, and no browser delivers a `storage` event to the tab that
+  caused the write. `simulateSetItem` / `simulateRemoveItem` play the part of
+  the other tab — which is the first time `SyncStorage.subscribe` has been
+  exercisable at all.
+
 ### Changed
 
 - **`FormState.fields` is keyed by field path. Breaking.** It was keyed by

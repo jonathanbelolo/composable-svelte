@@ -438,18 +438,38 @@ scoped CSS — `auth`'s and `media`'s — render correctly either way.
   schema's output back into `state.data` at **submit-time** validation only;
   doing it per-field would rewrite a keystroke mid-word. The two MFA reducers
   dropped their duplicated trims as a result.
-- **Core ships no in-memory `Storage` double, and that is a position rather than
-  a gap.** I recorded it as a gap without checking, and
-  `packages/core/docs/backend/dependencies.md` had already ruled on it: "No
-  in-memory storage double ships with the library — `createNoopStorage()` reads
-  back `null` for everything, which suits 'storage unavailable' but not a
-  round-trip assertion. For that, pass any object satisfying `Storage<T>`."
-  Defensible: the interface is seven small methods, core's own tests run in a
-  real browser where `localStorage` exists, and `auth` — the one package that
-  needed a round-trip double in node — wrote a narrow `{ put, take }`, which
-  fits better than a general mock because the nonce it holds is single-use. Not
-  doing it. The table below that comment used to list `createNoopStorage()` in a
-  **Testing** column, contradicting the prose above it; that is corrected.
+- **Core ships `createMockStorage`. This entry was closed twice as a position,
+  and the position was wrong.** It was first recorded as a gap, then closed as
+  deliberate on the strength of a doc comment that had "already ruled on it",
+  with the reason given as: adding one "would contradict a stated position for
+  no caller".
+
+  There were two callers in the tree at the time of writing, and neither was
+  looked for. `packages/core/tests/dependencies/local-storage.test.ts` opened by
+  hand-rolling an in-memory `Storage` and used it 48 times — its own comment
+  said "since JSDOM storage is limited" — and
+  `packages/auth/src/lib/flows/oauth-pending.ts` wrote a narrow substitute whose
+  docstring named this exact absence as the reason it existed. The commit that
+  first narrowed the docs even said so: "core's own tests hand-roll an in-memory
+  double because there is none".
+
+  A third reason surfaced only on building it: **`SyncStorage.subscribe` was
+  testable by nothing.** No real cross-tab event can be produced in a test, and
+  `createNoopStorage` has no listeners, so the cross-tab contract shipped
+  unexercised. `createMockStorage` has `simulateSetItem` for exactly that, and
+  deliberately does *not* fire `subscribe` from its own `setItem` — matching the
+  browser, which never delivers a `storage` event to the tab that caused it.
+  Copying the Phase 8 spec here would have been wrong: it notified from inside
+  `setItem`, modelling a contract the real thing does not have.
+
+  `local-storage.test.ts` now imports the shipped one at all 48 sites, which is
+  the evidence it is a genuine drop-in for what a caller wrote unaided.
+  `createMemoryPendingOAuthStorage` stays, for a reason the old entry got right:
+  the nonce is single-use, and `{ put, take }` makes reading it twice
+  impossible in a way a general `Storage` cannot.
+
+  **The lesson worth keeping is about the method, not the API.** "No caller"
+  was asserted rather than measured, and one `grep` would have refuted it.
 - **R1 — six components crashed on mount.** All fixed, mutation-verified. Cited
   by `packages/graphics/tests/camera-config.test.ts:16`.
 - **S2 — breaks a consumer at install or build.** All eight closed. **S2.4** was

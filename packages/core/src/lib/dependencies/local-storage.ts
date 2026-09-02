@@ -372,6 +372,164 @@ export function createSessionStorage<T = unknown>(
  *   : createNoopStorage<User>();
  * ```
  */
+/**
+ * What {@link createMockStorage} adds beyond `SyncStorage`.
+ *
+ * The `simulate*` naming matches `createMockWebSocket`, which already uses
+ * `simulateMessage` / `simulateEvent` / `simulateDisconnect` / `reset` for the
+ * same idea: a method that models something the outside world did, as distinct
+ * from something this object was asked to do.
+ */
+export interface MockStorage<T = unknown> extends SyncStorage<T> {
+	/**
+	 * Another browsing context wrote this key.
+	 *
+	 * Updates the store and then notifies every subscriber. This is the only
+	 * path that fires `subscribe`; `setItem` deliberately does not, because no
+	 * browser delivers a `storage` event to the tab that caused it.
+	 */
+	simulateSetItem(key: string, value: T, url?: string): void;
+
+	/** Another browsing context removed this key. */
+	simulateRemoveItem(key: string, url?: string): void;
+
+	/**
+	 * The backing store: prefixed keys, serialized values.
+	 *
+	 * For assertions the `Storage` interface cannot make — that a value was
+	 * written under the prefix you expected, or serialized the way you expected.
+	 */
+	readonly data: Readonly<Record<string, string>>;
+
+	/** Empty the store and drop every subscriber. */
+	reset(): void;
+}
+
+/**
+ * An in-memory `SyncStorage`, for tests.
+ *
+ * The counterpart to `createMockCookieStorage`, which has existed all along —
+ * the localStorage/sessionStorage pair simply never got one. `createNoopStorage`
+ * discards writes and reads back `null`, which models "storage unavailable"
+ * and cannot express a round trip, so callers hand-rolled their own: core's own
+ * `local-storage.test.ts` built one and used it 48 times, and `auth` wrote a
+ * narrow `{ put, take }` for OAuth rather than widen this surface mid-feature.
+ *
+ * **Values are stored as JSON strings, not as live objects.** That is what
+ * makes it a faithful double rather than a convenient one: a `Date` put in
+ * comes back as a string, exactly as it would through real storage. A `Map<string, T>`
+ * would hide that, and hiding it is how a test passes and production does not.
+ *
+ * **`setItem` does not notify subscribers, and that is the contract.**
+ * `SyncStorage.subscribe` fires only "for changes from different browsing
+ * contexts", and no browser dispatches `storage` to the tab that made the
+ * write. Use {@link MockStorage.simulateSetItem} to model another tab — which
+ * is the first way `subscribe` has ever been testable at all.
+ *
+ * @example
+ * ```typescript
+ * import { createMockStorage } from '@composable-svelte/core';
+ *
+ * const storage = createMockStorage<{ name: string }>();
+ * storage.setItem('user', { name: 'Ada' });
+ * const user: { name: string } | null = storage.getItem('user');
+ *
+ * // Another tab writes; only this fires `subscribe`.
+ * const stop = storage.subscribe((event) => console.log(event.key, event.newValue));
+ * storage.simulateSetItem('user', { name: 'Grace' });
+ * stop();
+ * ```
+ */
+export function createMockStorage<T = unknown>(config: StorageConfig<T> = {}): MockStorage<T> {
+	const { prefix = '', validator, debug = false } = config;
+	const store = new Map<string, string>();
+	const listeners = new Set<StorageEventListener<T>>();
+
+	const full = (key: string): string => prefix + key;
+	const bare = (key: string): string =>
+		prefix && key.startsWith(prefix) ? key.slice(prefix.length) : key;
+
+	const log = (message: string, ...args: unknown[]): void => {
+		if (debug) console.log(`[MockStorage${prefix ? ` ${prefix}` : ''}] ${message}`, ...args);
+	};
+
+	// Mirrors `_parseJSON` above, validator included — so a stored value the
+	// validator rejects reads back as `null` here exactly as it does for real.
+	const parse = (key: string, raw: string | undefined): T | null => {
+		if (raw === undefined) return null;
+		try {
+			const parsed: unknown = JSON.parse(raw);
+			if (validator && !validator(parsed)) {
+				log(`Validation failed for key "${key}"`, parsed);
+				return null;
+			}
+			return parsed as T;
+		} catch (error) {
+			log(`Failed to parse JSON for key "${key}"`, error);
+			return null;
+		}
+	};
+
+	const notify = (key: string, newValue: T | null, oldValue: T | null, url: string): void => {
+		listeners.forEach((listener) => {
+			try {
+				listener({ key, newValue, oldValue, url });
+			} catch (error) {
+				// One bad listener must not stop the others, as in the real one.
+				console.error('[MockStorage] Error in listener:', error);
+			}
+		});
+	};
+
+	return {
+		getItem(key: string): T | null {
+			return parse(key, store.get(full(key)));
+		},
+		setItem(key: string, value: T): void {
+			// Deliberately silent: see the note above about browsing contexts.
+			store.set(full(key), JSON.stringify(value));
+		},
+		removeItem(key: string): void {
+			store.delete(full(key));
+		},
+		keys(): string[] {
+			return [...store.keys()].filter((k) => k.startsWith(prefix)).map(bare);
+		},
+		has(key: string): boolean {
+			return store.has(full(key));
+		},
+		clear(): void {
+			for (const key of [...store.keys()]) {
+				if (key.startsWith(prefix)) store.delete(key);
+			}
+		},
+		size(): number {
+			return this.keys().length;
+		},
+		subscribe(listener: StorageEventListener<T>): Unsubscribe {
+			listeners.add(listener);
+			return () => listeners.delete(listener);
+		},
+		simulateSetItem(key: string, value: T, url = ''): void {
+			const oldValue = parse(key, store.get(full(key)));
+			store.set(full(key), JSON.stringify(value));
+			notify(key, parse(key, store.get(full(key))), oldValue, url);
+		},
+		simulateRemoveItem(key: string, url = ''): void {
+			const oldValue = parse(key, store.get(full(key)));
+			store.delete(full(key));
+			notify(key, null, oldValue, url);
+		},
+		get data(): Readonly<Record<string, string>> {
+			return Object.fromEntries(store);
+		},
+		reset(): void {
+			store.clear();
+			listeners.clear();
+		}
+	};
+}
+
 export function createNoopStorage<T = unknown>(): Storage<T> {
 	return {
 		getItem(): T | null {

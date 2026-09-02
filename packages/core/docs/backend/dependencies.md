@@ -89,10 +89,11 @@ const myReducer = (state: State, action: Action, deps: typeof dependencies) => {
 // 4. Mock in tests
 const testDeps = {
   clock: createMockClock(0),
-  // No in-memory storage double ships with the library — `createNoopStorage()`
-  // reads back `null` for everything, which suits "storage unavailable" but not
-  // a round-trip assertion. For that, pass any object satisfying `Storage<T>`.
-  storage: createNoopStorage(),
+  // `createMockStorage()` is an in-memory `SyncStorage`: writes read back, and
+  // `simulateSetItem` fires `subscribe` the way another tab would.
+  // `createNoopStorage()` is still the right choice for modelling storage being
+  // unavailable — it discards writes and reads back `null`.
+  storage: createMockStorage(),
   api: createMockAPI({ ... }),
   websocket: createMockWebSocket()
 };
@@ -105,8 +106,8 @@ Composable Svelte provides several built-in dependency types:
 | Dependency | Production | Testing | Purpose |
 |------------|-----------|---------|---------|
 | Clock | `createSystemClock()` | `createMockClock()` | Time operations |
-| LocalStorage | `createLocalStorage()` | any `Storage<T>` — see above | Persistent storage |
-| SessionStorage | `createSessionStorage()` | any `Storage<T>` — see above | Session storage |
+| LocalStorage | `createLocalStorage()` | `createMockStorage()` | Persistent storage |
+| SessionStorage | `createSessionStorage()` | `createMockStorage()` | Session storage |
 | CookieStorage | `createCookieStorage()` | `createMockCookieStorage()` | Cookie storage |
 | API Client | `createAPIClient()` | `createMockAPI()` | HTTP requests |
 | WebSocket | `createLiveWebSocket()` | `createMockWebSocket()` | Real-time communication |

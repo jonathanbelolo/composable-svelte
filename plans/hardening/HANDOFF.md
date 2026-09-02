@@ -574,7 +574,9 @@ Breaking, deliberate, and the better API.
 
 *Documented but never built* — five:
 
-- `createMockStorage`
+- `createMockStorage` — **built.** The decline said "no caller"; there were two,
+  unmeasured: core's own storage test hand-rolled one and used it 48 times, and
+  `auth` wrote a narrow substitute. See `plans/hardening/README.md`.
 - WebSocket **queue inspection** (`ws.queue.length` and friends). Judged not
   worth building: the queue is an implementation detail of reconnection, and
   exposing it invites reaching into it.

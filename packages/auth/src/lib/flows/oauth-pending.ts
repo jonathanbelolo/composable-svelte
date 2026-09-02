@@ -210,9 +210,15 @@ export function createPendingOAuthStorage(prefix = 'auth:oauth:'): PendingOAuthS
 /**
  * An in-memory record, for tests and demos.
  *
- * Core has `createMockClock` and `createMockCookieStorage` but no
- * `createMockStorage`, and `createNoopStorage` discards writes — so there is
- * nothing to assert a round trip against. This is the narrow substitute.
+ * Core now ships `createMockStorage`, which is a general in-memory
+ * `SyncStorage` — this docstring used to name its absence as the reason this
+ * exists, and that reason is gone.
+ *
+ * This stays anyway, because it models something a general storage double
+ * cannot: the record is **single-use**. `take()` reads and clears in one step,
+ * because the nonce it holds is spent on read. A `Storage` mock would let a
+ * test read it twice and pass, which is precisely the mistake this shape makes
+ * impossible.
  */
 export function createMemoryPendingOAuthStorage(): PendingOAuthStorage {
 	let held: PendingOAuth | null = null;

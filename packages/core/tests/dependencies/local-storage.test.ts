@@ -7,74 +7,9 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
-	createNoopStorage
+	createNoopStorage,
+	createMockStorage
 } from '../../src/lib/dependencies/local-storage.js';
-import type { Storage } from '../../src/lib/dependencies/storage.js';
-
-// Mock storage implementation for testing (since JSDOM storage is limited)
-function createMockStorage<T = unknown>(prefix = ''): Storage<T> {
-	const store = new Map<string, string>();
-
-	function _prefixKey(key: string): string {
-		return prefix + key;
-	}
-
-	function _unprefixKey(key: string): string {
-		return prefix && key.startsWith(prefix) ? key.slice(prefix.length) : key;
-	}
-
-	function _parseJSON(raw: string): T | null {
-		try {
-			return JSON.parse(raw) as T;
-		} catch {
-			return null;
-		}
-	}
-
-	return {
-		getItem(key: string): T | null {
-			const prefixedKey = _prefixKey(key);
-			const raw = store.get(prefixedKey);
-			return raw ? _parseJSON(raw) : null;
-		},
-
-		setItem(key: string, value: T): void {
-			const prefixedKey = _prefixKey(key);
-			store.set(prefixedKey, JSON.stringify(value));
-		},
-
-		removeItem(key: string): void {
-			const prefixedKey = _prefixKey(key);
-			store.delete(prefixedKey);
-		},
-
-		keys(): string[] {
-			const allKeys: string[] = [];
-			for (const key of store.keys()) {
-				if (key.startsWith(prefix)) {
-					allKeys.push(_unprefixKey(key));
-				}
-			}
-			return allKeys;
-		},
-
-		has(key: string): boolean {
-			const prefixedKey = _prefixKey(key);
-			return store.has(prefixedKey);
-		},
-
-		clear(): void {
-			const keysToRemove = this.keys();
-			keysToRemove.forEach((key) => {
-				store.delete(_prefixKey(key));
-			});
-		},
-
-		size(): number {
-			return this.keys().length;
-		}
-	};
-}
 
 describe('Storage (LocalStorage & SessionStorage)', () => {
 	describe('Basic Operations', () => {
@@ -288,7 +223,7 @@ describe('Storage (LocalStorage & SessionStorage)', () => {
 
 	describe('Prefix Namespacing', () => {
 		it('should apply prefix to keys', () => {
-			const storage = createMockStorage<string>('app:');
+			const storage = createMockStorage<string>({ prefix: 'app:' });
 
 			storage.setItem('key', 'value');
 
@@ -297,8 +232,8 @@ describe('Storage (LocalStorage & SessionStorage)', () => {
 		});
 
 		it('should isolate prefixed storage', () => {
-			const authStorage = createMockStorage<string>('auth:');
-			const prefStorage = createMockStorage<string>('pref:');
+			const authStorage = createMockStorage<string>({ prefix: 'auth:' });
+			const prefStorage = createMockStorage<string>({ prefix: 'pref:' });
 
 			authStorage.setItem('token', 'auth-token');
 			prefStorage.setItem('token', 'pref-token');
@@ -308,7 +243,7 @@ describe('Storage (LocalStorage & SessionStorage)', () => {
 		});
 
 		it('should only list keys with prefix', () => {
-			const storage = createMockStorage<string>('app:');
+			const storage = createMockStorage<string>({ prefix: 'app:' });
 
 			storage.setItem('a', '1');
 			storage.setItem('b', '2');
@@ -319,8 +254,8 @@ describe('Storage (LocalStorage & SessionStorage)', () => {
 		});
 
 		it('should only clear keys with prefix', () => {
-			const appStorage = createMockStorage<string>('app:');
-			const authStorage = createMockStorage<string>('auth:');
+			const appStorage = createMockStorage<string>({ prefix: 'app:' });
+			const authStorage = createMockStorage<string>({ prefix: 'auth:' });
 
 			appStorage.setItem('data', 'value');
 			authStorage.setItem('token', 'abc');

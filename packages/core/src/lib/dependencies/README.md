@@ -142,7 +142,7 @@ const reducer = (
 ### Testing with Mocks
 
 ```typescript
-import { createMockClock, createNoopStorage } from '@composable-svelte/core/dependencies';
+import { createMockClock, createMockStorage } from '@composable-svelte/core/dependencies';
 
 describe('Reducer', () => {
 	it('should save draft with timestamp', () => {

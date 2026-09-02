@@ -139,6 +139,7 @@ export {
 export type {
   Clock,
   MockClock,
+  MockStorage,
   Storage,
   SyncStorage,
   CookieStorage,
@@ -159,6 +160,7 @@ export {
   createNoopStorage,
   createCookieStorage,
   createMockCookieStorage,
+  createMockStorage,
   isBrowser,
   getStorageQuota,
   getByteSize,
