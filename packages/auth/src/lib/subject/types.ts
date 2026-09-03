@@ -76,7 +76,7 @@ export interface SessionSnapshot {
 	 * `JSON.stringify`, which turns a `Date` into a string while the type goes
 	 * on claiming `Date` — the rule `AccountLockedError.until` already follows.
 	 */
-	expires_at?: string;
+	expires_at?: string | undefined;
 	/** Display name of the signed-in account (present on login responses). */
 	display_name?: string;
 	/**

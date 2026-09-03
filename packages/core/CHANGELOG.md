@@ -24,6 +24,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   dismissed by itself would bypass the parent reducer that owns the dismissal
   transition.
 
+
+- **`headingLevel` on `BannerTitle`, `CardTitle`, `ToastTitle`, `Empty` and
+  `FileUpload`.** The level belongs to the page, not the component: `BannerTitle`
+  rendered a fixed `<h5>`, so putting a `Banner` under an `<h2>` jumped the
+  outline from 2 to 5 and no consumer could fix it from outside. Each defaults to
+  the level it has always rendered, so nothing changes unless you pass one.
+
+- **`parseRetryAfter` is exported from `@composable-svelte/core/api`.** It
+  handles both the delay-seconds and HTTP-date forms of `Retry-After` and was
+  private to `api/retry.ts`; `@composable-svelte/auth` needs it and a second
+  implementation would drift. Returns milliseconds.
+
+
+- `tests/repo/optional-props.test.ts` — a repo-wide guard requiring
+  `| undefined` on every optional prop, with a register for the `$bindable`
+  exemptions. Function types must be parenthesised first:
+  `(() => void) | undefined`, never `() => void | undefined`, which is a
+  function *returning* `void | undefined` and forwards nothing.
+
 ### Fixed
 
 - **`Alert` announced itself rather than its question.** It hardcoded
@@ -108,42 +127,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the other tab — which is the first time `SyncStorage.subscribe` has been
   exercisable at all.
 
-### Changed
-
-- **`FormState.fields` is keyed by field path. Breaking.** It was keyed by
-  top-level name, and Zod issues were routed with `issue.path[0]`, so a nested
-  schema's error at `['address','zip']` landed on `address` — it could not be
-  shown beside the input that caused it, and the field it named might not be on
-  screen at all.
-
-  `fields` is now `Partial<Record<FieldPath<T>, FieldState>>`, so `'address.zip'`
-  and `'items.0.name'` are keys. `focusedField`, the eight `field:`-carrying
-  actions, `formValidationCompleted.fieldErrors`, `asyncValidators` and
-  `FormFieldProps.name` move to `FieldPath<T>` with it.
-
-  **`Partial`, not total, and deliberately so.** A total record would have
-  compiled with no churn at all and then thrown: an entry exists only once its
-  path exists in the data, so an optional field or an array element that was
-  absent at init has none. That is the lie `form-field-record.test.ts` exists to
-  refuse. In practice `state.fields.email.error` becomes
-  `state.fields.email?.error` — and since `noUncheckedIndexedAccess` is already
-  on repo-wide, widening to `Record<string, FieldState>` would have cost exactly
-  the same and lost compile-time checking of the key as well. `fieldStateAt()`
-  is exported for callers who want a total read, so they opt into it explicitly.
-
-  **A flat schema produces exactly the keys it always did**, so a form over a
-  flat schema changes only in that its reads acknowledge absence.
-
-  **`id` is the raw path**, so an input for `address.zip` gets `id="address.zip"`.
-  That is legal HTML, and `for=`/`aria-describedby` associate by string
-  equality, so labels and error announcements are unaffected.
-  `querySelector('#address.zip')` is not — use `CSS.escape`, or the
-  `[data-field="address.zip"]` attribute the component already emits.
-  Sanitising the dot was rejected: it invents a namespace in which fields `a.b`
-  and `a_b` collide, and the collision is a wrong label association, which fails
-  silently and only for screen-reader users.
-
-### Fixed
 
 - **The two validation paths disagreed about which message to show.** Per-field
   validation took the *first* Zod issue (`issues.find`), whole-form took the
@@ -231,20 +214,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   also aborts an in-flight cancellable rather than only tearing down a
   subscription.
 
-### Added
-
-- **`headingLevel` on `BannerTitle`, `CardTitle`, `ToastTitle`, `Empty` and
-  `FileUpload`.** The level belongs to the page, not the component: `BannerTitle`
-  rendered a fixed `<h5>`, so putting a `Banner` under an `<h2>` jumped the
-  outline from 2 to 5 and no consumer could fix it from outside. Each defaults to
-  the level it has always rendered, so nothing changes unless you pass one.
-
-- **`parseRetryAfter` is exported from `@composable-svelte/core/api`.** It
-  handles both the delay-seconds and HTTP-date forms of `Retry-After` and was
-  private to `api/retry.ts`; `@composable-svelte/auth` needs it and a second
-  implementation would drift. Returns milliseconds.
-
-### Fixed
 
 - **`BrowserHistoryConfig.serialize` is no longer required.** `syncBrowserHistory`
   handles one direction — URL → state — and never called it, so the type forced
@@ -253,6 +222,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   only: callers still passing `serialize` compile unchanged.
 
 ### Changed
+
+- **`FormState.fields` is keyed by field path. Breaking.** It was keyed by
+  top-level name, and Zod issues were routed with `issue.path[0]`, so a nested
+  schema's error at `['address','zip']` landed on `address` — it could not be
+  shown beside the input that caused it, and the field it named might not be on
+  screen at all.
+
+  `fields` is now `Partial<Record<FieldPath<T>, FieldState>>`, so `'address.zip'`
+  and `'items.0.name'` are keys. `focusedField`, the eight `field:`-carrying
+  actions, `formValidationCompleted.fieldErrors`, `asyncValidators` and
+  `FormFieldProps.name` move to `FieldPath<T>` with it.
+
+  **`Partial`, not total, and deliberately so.** A total record would have
+  compiled with no churn at all and then thrown: an entry exists only once its
+  path exists in the data, so an optional field or an array element that was
+  absent at init has none. That is the lie `form-field-record.test.ts` exists to
+  refuse. In practice `state.fields.email.error` becomes
+  `state.fields.email?.error` — and since `noUncheckedIndexedAccess` is already
+  on repo-wide, widening to `Record<string, FieldState>` would have cost exactly
+  the same and lost compile-time checking of the key as well. `fieldStateAt()`
+  is exported for callers who want a total read, so they opt into it explicitly.
+
+  **A flat schema produces exactly the keys it always did**, so a form over a
+  flat schema changes only in that its reads acknowledge absence.
+
+  **`id` is the raw path**, so an input for `address.zip` gets `id="address.zip"`.
+  That is legal HTML, and `for=`/`aria-describedby` associate by string
+  equality, so labels and error announcements are unaffected.
+  `querySelector('#address.zip')` is not — use `CSS.escape`, or the
+  `[data-field="address.zip"]` attribute the component already emits.
+  Sanitising the dot was rejected: it invents a namespace in which fields `a.b`
+  and `a_b` collide, and the collision is a wrong label association, which fails
+  silently and only for screen-reader users.
+
 
 - **BREAKING (types): every optional prop now accepts `undefined`.** Under
   `exactOptionalPropertyTypes`, an optional prop read from `$props()` has type
@@ -277,14 +280,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   declares `children?: Snippet` bare and a derived interface may not widen an
   inherited member, so omitting it is what lets these accept a forwarded
   `Snippet | undefined`. Passing children as markup is unaffected.
-
-### Added
-
-- `tests/repo/optional-props.test.ts` — a repo-wide guard requiring
-  `| undefined` on every optional prop, with a register for the `$bindable`
-  exemptions. Function types must be parenthesised first:
-  `(() => void) | undefined`, never `() => void | undefined`, which is a
-  function *returning* `void | undefined` and forwards nothing.
 
 ## [0.11.2] - 2026-08-23
 

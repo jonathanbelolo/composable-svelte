@@ -48,15 +48,19 @@ export type StateReplacer = Pick<StateSerializer, 'replacer'>;
  *   dependencies: {}  // Empty on server
  * });
  *
- * const html = renderToHTML(App, { store });
+ * // The JSON itself — for a cache, a log, or a channel of your own.
  * const stateJSON = serializeStore(store);
  *
- * // Embed in HTML
+ * // **To put it in a `<script>` tag, use `buildHydrationScript` instead.**
+ * // This example used to interpolate `stateJSON` into a script tag by hand,
+ * // which is unsafe: a state value containing `</script>` closes the tag early
+ * // and everything after it is parsed as markup. `buildHydrationScript`
+ * // escapes `<` as a JSON escape, which survives `JSON.parse` and cannot
+ * // break out.
+ * const html = renderToHTML(App, { store });
  * const fullHTML = `
  *   ${html}
- *   <script id="__COMPOSABLE_SVELTE_STATE__" type="application/json">
- *     ${stateJSON}
- *   </script>
+ *   ${buildHydrationScript(store)}
  * `;
  * ```
  */

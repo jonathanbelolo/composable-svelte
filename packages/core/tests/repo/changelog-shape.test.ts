@@ -78,6 +78,35 @@ function packages(): Pkg[] {
 		});
 }
 
+/**
+ * The `### ` headings under each `## ` section, keyed by that section.
+ *
+ * This guard was written because two `## [Unreleased]` headings mean two
+ * answers to "what is unreleased". It then let the identical defect through one
+ * level down: five appends to one release section produced three `### Added`
+ * and three `### Fixed` under a single `[Unreleased]`, so a reader met the same
+ * heading three times and a tool reading "what was added" found three disjoint
+ * lists. Same failure, same file, missed because the check stopped at `##`.
+ */
+export function duplicateSubsections(text: string): string[] {
+	const found: string[] = [];
+	let section: string | null = null;
+	const seen = new Map<string, Set<string>>();
+
+	for (const line of text.split('\n')) {
+		if (line.startsWith('## ')) {
+			section = line;
+			seen.set(section, new Set());
+		} else if (line.startsWith('### ') && section !== null) {
+			const within = seen.get(section)!;
+			if (within.has(line)) found.push(`${section} :: ${line}`);
+			else within.add(line);
+		}
+	}
+
+	return found;
+}
+
 /** Every `## ` heading, in file order. */
 function headings(text: string): string[] {
 	return text.split('\n').filter((line) => line.startsWith('## '));
@@ -149,6 +178,17 @@ describe('every published package keeps a changelog', () => {
 	);
 
 	it.each(withChangelog)(
+		'$name names each kind of change once per release',
+		({ name, changelog }) => {
+			expect(
+				duplicateSubsections(changelog!),
+				`${name} repeats a \`###\` heading inside one release section. Merge them: ` +
+					'three `### Added` under one version is three answers to "what was added"'
+			).toEqual([]);
+		}
+	);
+
+	it.each(withChangelog)(
 		'$name has an entry for the version it declares',
 		({ name, version, changelog }) => {
 			// A manifest ahead of its changelog means a version was bumped and never
@@ -178,6 +218,15 @@ describe('the check itself', () => {
 		// a rollup is a fact about one file's history, not a blanket exemption.
 		expect(malformed('core', '## [0.5.0] – [0.5.2]\n')).toEqual([]);
 		expect(malformed('auth', '## [0.5.0] – [0.5.2]\n')).toEqual(['## [0.5.0] – [0.5.2]']);
+	});
+
+	it('sees a repeated subsection, and tolerates the same one across releases', () => {
+		const repeated = '## [Unreleased]\n### Added\n- a\n### Fixed\n- b\n### Added\n- c\n';
+		expect(duplicateSubsections(repeated)).toEqual(['## [Unreleased] :: ### Added']);
+
+		// The same heading under *different* releases is correct, not a duplicate.
+		const across = '## [Unreleased]\n### Added\n- a\n\n## [1.0.0] - 2026-01-01\n### Added\n- b\n';
+		expect(duplicateSubsections(across)).toEqual([]);
 	});
 
 	it('reads the newest release past an Unreleased section', () => {

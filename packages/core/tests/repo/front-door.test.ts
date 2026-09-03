@@ -153,7 +153,15 @@ const CAPABILITIES: Capability[] = [
 	{
 		name: 'session refresh',
 		dirs: ['session-refresh'],
-		denials: [/\bno session refresh\b/gi, /\bno expiry signal\b/gi],
+		// Deny the *capability*, never the backend's behaviour. `no expiry signal`
+		// was in this list and was wrong: "when the backend gives no expiry
+		// signal, fall back to the 401 hook" is a true and useful sentence, and a
+		// guard that fires on it pressures an author into deleting accurate
+		// documentation — worse than not firing at all.
+		denials: [
+			/\bno session refresh\b/gi,
+			/\bno way to (?:extend|refresh) (?:a |the |their |your )?session\b/gi
+		],
 		qualifiers: []
 	},
 	{
@@ -445,6 +453,14 @@ describe('the front door', () => {
 			deniedCapabilities('there is no account deletion'),
 			'account deletion ships now, so denying it is a false claim the guard must catch'
 		).toEqual(['account deletion']);
+		expect(
+			deniedCapabilities('there is no session refresh'),
+			'session refresh ships, so denying it must be caught'
+		).toEqual(['session refresh']);
+		expect(
+			deniedCapabilities('a backend that sends no expiry signal falls back to the 401 hook'),
+			'a true statement about a backend is not a denial of the capability'
+		).toEqual([]);
 		expect(
 			deniedCapabilities('there is no MFA management'),
 			'MFA management ships now, so denying it is a false claim the guard must catch'

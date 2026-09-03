@@ -54,19 +54,14 @@
 		onDismissalComplete?: (() => void) | undefined;
 		springConfig?: Partial<SpringConfig> | undefined;
 		/**
-		 * Whether an `AlertDialogTitle` is rendered inside.
+		 * A name for the dialog when it renders no `AlertDialogTitle`.
 		 *
-		 * `true` points `aria-labelledby` at that title. Pass `false` — with an
-		 * `ariaLabel` — when there is no title, because `aria-labelledby`
-		 * pointing at an id that never renders makes assistive technology
-		 * announce **nothing**, which is worse than a generic name.
-		 * @default true
+		 * Ignored when there is one — the title names it. There is deliberately
+		 * no `labelled` or `described` prop: the parts register themselves, so
+		 * the root never emits an `aria-labelledby` or `aria-describedby`
+		 * pointing at an element that was not rendered.
 		 */
-		labelled?: boolean | undefined;
-		/** Used when `labelled` is false. */
 		ariaLabel?: string | undefined;
-		/** Whether an `AlertDialogDescription` is rendered inside. @default true */
-		described?: boolean | undefined;
 		unstyled?: boolean | undefined;
 		backdropClass?: string | undefined;
 		class?: string | undefined;
@@ -83,9 +78,7 @@
 		onPresentationComplete,
 		onDismissalComplete,
 		springConfig,
-		labelled = true,
 		ariaLabel,
-		described = true,
 		unstyled = false,
 		backdropClass,
 		class: className,
@@ -100,7 +93,21 @@
 	const titleId = `${uid}-title`;
 	const descriptionId = `${uid}-description`;
 
-	setContext<AlertDialogContext>(ALERT_DIALOG_KEY, { titleId, descriptionId });
+	// Set by the parts as they initialise. The root emits each attribute only
+	// once something has claimed the id it would point at.
+	let hasTitle = $state(false);
+	let hasDescription = $state(false);
+
+	setContext<AlertDialogContext>(ALERT_DIALOG_KEY, {
+		titleId,
+		descriptionId,
+		registerTitle: () => {
+			hasTitle = true;
+		},
+		registerDescription: () => {
+			hasDescription = true;
+		}
+	});
 </script>
 
 <Alert
@@ -114,9 +121,9 @@
 	class={className}
 	{disableClickOutside}
 	{disableEscapeKey}
-	ariaLabelledby={labelled ? titleId : undefined}
+	ariaLabelledby={hasTitle ? titleId : undefined}
 	{ariaLabel}
-	ariaDescribedby={described ? descriptionId : undefined}
+	ariaDescribedby={hasDescription ? descriptionId : undefined}
 >
 	{#snippet children({ visible, store: scoped })}
 		{@render children?.({ visible, store: scoped })}

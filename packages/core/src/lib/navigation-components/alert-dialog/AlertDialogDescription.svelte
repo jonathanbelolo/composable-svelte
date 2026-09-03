@@ -13,6 +13,7 @@
 	let { class: className, children }: Props = $props();
 
 	const ctx = getContext<AlertDialogContext | undefined>(ALERT_DIALOG_KEY);
+	ctx?.registerDescription();
 </script>
 
 <p id={ctx?.descriptionId} class={cn('text-sm text-muted-foreground', className)}>

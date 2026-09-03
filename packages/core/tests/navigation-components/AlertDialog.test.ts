@@ -69,6 +69,22 @@ describe('AlertDialog naming', () => {
 		expect(dialog.getAttribute('aria-label')).toBe('Named directly');
 	});
 
+	it('does not point aria-describedby at a description that is not there', async () => {
+		// The asymmetry this review found. `aria-labelledby` was guarded against
+		// naming a missing element; `aria-describedby` was not, so a dialog with a
+		// title and no description referenced an id that never rendered.
+		render(AlertDialogTestWrapper, { parentStore: parent(), twice: true });
+
+		for (const dialog of document.querySelectorAll('[role="alertdialog"]')) {
+			const describedBy = dialog.getAttribute('aria-describedby');
+			if (describedBy === null) continue;
+			expect(
+				document.getElementById(describedBy),
+				'aria-describedby names an element that does not exist'
+			).not.toBeNull();
+		}
+	});
+
 	it('gives two dialogs on one page distinct title ids', async () => {
 		render(AlertDialogTestWrapper, { parentStore: parent(), twice: true });
 

@@ -14,56 +14,6 @@
   `fields` is keyed by field path and is partial, so `state.form.fields.email.error`
   becomes `state.form.fields.email?.error`.
 
-### Fixed
-
-- **The HTTP adapter now honours the contract `AuthDependencies` states.** Its
-  module doc promises "every member reports failure by rejecting with an
-  `AuthError`", and none of the 22 `fetch` calls was wrapped — a transport
-  failure escaped as a raw `TypeError`. `toAuthError` caught most by matching
-  four engine strings, but undici's `terminated`, React Native's `Network
-  request failed` and Deno's phrasing all fell through to `unknown`.
-
-  Wrapping the `fetch` call itself removes the guessing: a rejection from
-  `fetch` and nothing else is, by construction, a request that never reached a
-  verdict. This is what `toAuthError`'s own comment anticipated — *"a dependency
-  that knows it was doing I/O should report `{ code: 'network' }` itself … the
-  HTTP adapter will"* — future tense since it was written. An abort still passes
-  through untouched: it is a cancellation, not a failure.
-
-- **`network` reads as a sentence.** Components render `error.message` straight
-  into a banner, so a user was shown the engine's string — "fetch failed" on
-  Node, "Failed to fetch" in Chrome. It is now "Could not reach the server.
-  Check your connection and try again."
-
-- **`fetchLogin` / `fetchLogout` / `fetchSession` report `AuthError`s.** They
-  threw `new Error('Login failed (401)')` — a status in a sentence with the body
-  discarded, which is the precise defect `http/errors.ts` was written to fix and
-  which was fixed only for the flow surface. A 401 on the seeded login is now
-  `invalid_credentials`. Because `sessionReducer` prefers a thrown value's own
-  wording over its fallback, that raw string was reaching `AuthGuard` and being
-  rendered.
-
-- **`MalformedSessionError` satisfies the contract**, carrying `code: 'unknown'`
-  so it passes `isAuthError` structurally while `instanceof` keeps working. And
-  `toAuthError` copies an `Error`-shaped `AuthError` into a plain object —
-  `Error.prototype.message` is non-enumerable, so SSR hydration through
-  `JSON.stringify` was dropping the explanation and leaving `{"code":"unknown"}`.
-
-- **`ConnectedAccountsPanel` no longer hides a re-attached provider.** The
-  flow's doc said the panel unioned the account's list with the locally detached
-  one; it subtracted, and `unlinked` only ever grew. A provider disconnected and
-  then reconnected vanished from the list *and* was offered under "Connect".
-  `providersObserved` now prunes an entry once the read it covered has landed.
-
-- **`mfa-management`'s `disabled` status is no longer a dead end.** Nothing in
-  its eight-arm action union moved off it, and the reference client reached it:
-  one store kept across an enrolment left the panel saying "two-factor is off"
-  for an account that had just turned it on, with two buttons whose dispatches
-  the guards silently ate. `mfaObserved` returns it to `idle` — but only on a
-  *change*, so the stale `true` still in props cannot undo a disable the moment
-  it succeeds.
-
-### Changed
 
 - **BREAKING: `AuthDependencies` gains six members** — `beginOAuth`,
   `completeOAuth`, `requestMagicLink`, `signInWithMagicLink`, `fetchAccount` and
@@ -98,157 +48,6 @@
   which turns a `Date` into a string while the type still claims `Date`, so
   `until.toISOString()` would typecheck and throw after hydration.
 
-### Added
-
-- **`sessionEstablished`** — a flow outside this store completing a sign-in.
-  The session store owns "who am I"; it does not own every way of becoming
-  someone. A credentials login, an MFA challenge, an OAuth callback and a magic
-  link each need their own multi-step reducer, and all of them end with a
-  `SessionSnapshot`. This is the handover.
-
-  Refused in exactly one status, `loggingOut`: a slow sign-in resolving after
-  the user has signed out would otherwise put them back in a session they left.
-  Every other status yields to it, on the principle the `login` arm already
-  states — explicit intent supersedes a background resolve.
-
-- **`loginStarted`** — optional, and only about presentation: it moves the status
-  to `loggingIn` so `AuthGuard` shows its pending branch while a flow works.
-
-- **`@composable-svelte/auth/errors`** — the union, plus `toAuthError`,
-  `isAuthError`, `isMfaRequired` and `retryDelaySeconds`. Errors are plain
-  objects and `isAuthError` is structural, so they survive `structuredClone` and
-  an SSR boundary; `instanceof` would survive neither.
-
-  `retryDelaySeconds` returns `null` for failures that waiting does not fix, and
-  refuses to invent a delay the backend did not state — guessing an interval is
-  how a client turns one rate limit into several.
-
-- **`@composable-svelte/auth/flows`** — the headless sign-in flow:
-  `loginReducer`, `createLoginStore`, `createInitialLoginState`, `loginSchema`
-  and the state and action types. Markup-free, so a consumer with their own
-  design system builds over the same machine.
-
-  **The flow owns the submission, not the form**, and that is forced rather than
-  stylistic. Core's `createFormReducer` catches whatever `config.onSubmit`
-  throws and stores `error.message` — a string. Route the auth call through it
-  and the union above is flattened on arrival: `mfa_required` loses its
-  `challengeId`, `rate_limited` loses its delay, and the whole of this release
-  buys nothing. So `onSubmit` is a no-op, the form's job ends at "these fields
-  are valid", and the flow observes `submissionSucceeded` and makes the request.
-
-  Two behaviours the form reducer does not provide. A second submit while the
-  first is in flight **supersedes** it rather than racing — a fixed cancellation
-  id, so two sign-ins cannot be resolved in whichever order the network picks.
-  And editing any field clears the last failure, because core never clears its
-  own `submitError` on `fieldChanged`, which otherwise leaves "Invalid
-  credentials" sitting above the password being retyped.
-
-- **`@composable-svelte/auth/http`** — `createHttpAuthDeps`, the Composable Rust
-  adapter, which **reads the response body on failure**. Two layers, so another
-  backend still gets something useful: status codes map as a baseline (401 →
-  `invalid_credentials`, 423 → `account_locked`, 429 → `rate_limited` with the
-  `Retry-After` header, 410 → `token_expired`), and an optional
-  `{ error: { code, … } }` body overrides and enriches that — which is the only
-  way `mfa_required` can carry a challenge id.
-
-- **`LoginForm` and `PasswordInput`** — the styled layer, on the `components`
-  subpath and the root barrel.
-
-  `LoginForm` takes **both** stores. A completed sign-in has to cross from the
-  flow to the session, and a required prop makes a forgotten wiring a compile
-  error; composing into a parent reducer or injecting an `onSessionEstablished`
-  callback both fail silently instead. The handoff fires once per successful
-  sign-in, not once per dispatch.
-
-  `PasswordInput`'s toggle is a real `<button type="button">`, tabbable, with
-  `aria-pressed` and a label that changes between "Show password" and "Hide
-  password". It is *not* `tabindex="-1"` like `Combobox`'s chevron: that one
-  duplicates keyboard access the input already offers, and this one has no
-  keyboard equivalent at all.
-
-  Both ship **scoped CSS, not Tailwind classes**. The preset's content glob
-  covers core's `dist` only, so a utility class in this package's `dist` is
-  purged in every consuming app — the "renders transparent" defect the root
-  CLAUDE.md opens with. Colours are `hsl(var(--token, fallback))`, so they
-  follow core's theme and dark mode when its stylesheet is present and fall back
-  when it is not.
-
-- **`@composable-svelte/auth/testing`** — `createMockAuthDeps`, a backend-shaped
-  fake. Every auth failure is server-side, so a demo or test that can only show
-  the happy path shows almost nothing; this rejects with real `AuthError`
-  shapes, including `mfa_required`, and honours the `AbortSignal` so a
-  superseded sign-in stops pretending to work.
-
-- **`createLoginStore`**, mirroring `createSessionStore`.
-
-- **`createHttpAuthDeps` and `authErrorFromResponse` on the root barrel**, beside
-  `createHttpSessionDeps`, which was already there. They were reachable only
-  through `./http`, which made the package's own documentation wrong about its
-  API — every other subpath was already re-exported. `flat-barrel.test.ts` holds
-  the rule now: for this package a subpath is a convenience, never the only way
-  in.
-
-### Fixed in review
-
-- **`LoginForm` detached silently when `flowStore` was replaced.** `Form`
-  captures its store into context at init and `FormField` reads
-  `$store.data[name]`, so both hold whatever object the component handed them on
-  its first render. Delegating `subscribe` straight through pinned the
-  subscription to the *first* store: the field went on showing the old data
-  while dispatches went to the new one, and typing left the input uncontrolled —
-  DOM holding one value, store another, nothing thrown. Recreating the store to
-  reset a form is how a consumer meets that.
-
-- **`createMockAuthDeps` ignored an already-aborted signal** unless `latencyMs`
-  was above zero — and zero is the default. At the setting every test uses, a
-  cancelled request resolved *successfully*, so a flow that had stopped
-  cancelling would still have looked correct.
-
-- **The default heading was `<h1>`.** This component is embeddable; an `<h1>`
-  inside a page that already has one is a document-structure defect that renders
-  identically to a correct one. It is `<h2>` now, with `headingLevel` for a
-  dedicated `/login` page.
-
-- **The in-flight state was announced to nobody.** Assistive technology skips a
-  disabled control, so the button's label changing to "Signing in…" was silent.
-  A `role="status"` region carries it.
-
-- **The fields were disabled during the request** along with the button. That
-  buys nothing — the credentials were captured at dispatch — and costs focus:
-  submitting with Enter leaves focus in the password field, and disabling the
-  focused element drops focus to `<body>`. Only the submit button is disabled,
-  which the HTML spec says also suppresses implicit submission.
-
-- Inputs carry `name` as well as `autocomplete`, which password-manager
-  heuristics fall back to; the form's own styles no longer reach out of the
-  component through a bare `:global` class.
-
-- **`@composable-svelte/auth/flows` gains signup** — `signupReducer`,
-  `createSignupStore`, `signupSchema`, `passwordCriteria`, and `SignupForm` /
-  `PasswordCriteria` beside them.
-
-  **Two terminal states, and both are successes.** A backend that requires email
-  confirmation cannot return a session, and one that does not should not be
-  forced into a second round trip — so `deps.signup` answers with a union,
-  `{ kind: 'session' }` or `{ kind: 'verificationRequired' }`, rather than a
-  nullable session. There is no field to forget to check. `awaitingVerification`
-  leaves `error` null and replaces the form with a terminal panel; dispatching
-  `sessionEstablished` there would sign in an account that cannot be used yet.
-
-  **The password policy is length and nothing else**, following NIST 800-63B.
-  Composition rules push people toward `Passw0rd!` — predictable substitutions
-  on a short base — while a longer passphrase is stronger and easier to
-  remember. `PasswordCriteria` is derived from the same constants the schema
-  validates against, so the checklist cannot say "done" while the form
-  disagrees; a test asserts they agree on every sample, and another fails if a
-  character-class rule is ever added.
-
-  `signupFormConfig` uses `mode: 'onBlur'` where sign-in uses `onSubmit`,
-  because the confirm field is the one place a submit-only rule means retyping a
-  password the user believed they had already entered twice. That is only
-  possible since cross-field validation was fixed in core.
-
-### Changed
 
 - **`AuthError` gained `email_taken`** (8 arms → 9), and `409` maps to it.
   Signup's characteristic failure previously arrived as `unknown`, and the
@@ -318,7 +117,6 @@
   in the same offer of a new link. `resetPassword` resolving with `null` is a
   success — the password changed, and the user signs in with it.
 
-### Changed
 
 - **The password policy moved to `flows/password-policy.ts`**, shared by signup
   and reset so a user cannot be told one thing creating an account and another
@@ -565,6 +363,205 @@
   would be this package's second runtime dependency for something that is not
   its concern. `MfaEnrolment` renders the secret for manual entry and takes a
   `qr` snippet receiving `{ otpauthUri, secret }`.
+
+### Fixed
+
+- **The HTTP adapter now honours the contract `AuthDependencies` states.** Its
+  module doc promises "every member reports failure by rejecting with an
+  `AuthError`", and none of the 22 `fetch` calls was wrapped — a transport
+  failure escaped as a raw `TypeError`. `toAuthError` caught most by matching
+  four engine strings, but undici's `terminated`, React Native's `Network
+  request failed` and Deno's phrasing all fell through to `unknown`.
+
+  Wrapping the `fetch` call itself removes the guessing: a rejection from
+  `fetch` and nothing else is, by construction, a request that never reached a
+  verdict. This is what `toAuthError`'s own comment anticipated — *"a dependency
+  that knows it was doing I/O should report `{ code: 'network' }` itself … the
+  HTTP adapter will"* — future tense since it was written. An abort still passes
+  through untouched: it is a cancellation, not a failure.
+
+- **`network` reads as a sentence.** Components render `error.message` straight
+  into a banner, so a user was shown the engine's string — "fetch failed" on
+  Node, "Failed to fetch" in Chrome. It is now "Could not reach the server.
+  Check your connection and try again."
+
+- **`fetchLogin` / `fetchLogout` / `fetchSession` report `AuthError`s.** They
+  threw `new Error('Login failed (401)')` — a status in a sentence with the body
+  discarded, which is the precise defect `http/errors.ts` was written to fix and
+  which was fixed only for the flow surface. A 401 on the seeded login is now
+  `invalid_credentials`. Because `sessionReducer` prefers a thrown value's own
+  wording over its fallback, that raw string was reaching `AuthGuard` and being
+  rendered.
+
+- **`MalformedSessionError` satisfies the contract**, carrying `code: 'unknown'`
+  so it passes `isAuthError` structurally while `instanceof` keeps working. And
+  `toAuthError` copies an `Error`-shaped `AuthError` into a plain object —
+  `Error.prototype.message` is non-enumerable, so SSR hydration through
+  `JSON.stringify` was dropping the explanation and leaving `{"code":"unknown"}`.
+
+- **`ConnectedAccountsPanel` no longer hides a re-attached provider.** The
+  flow's doc said the panel unioned the account's list with the locally detached
+  one; it subtracted, and `unlinked` only ever grew. A provider disconnected and
+  then reconnected vanished from the list *and* was offered under "Connect".
+  `providersObserved` now prunes an entry once the read it covered has landed.
+
+- **`mfa-management`'s `disabled` status is no longer a dead end.** Nothing in
+  its eight-arm action union moved off it, and the reference client reached it:
+  one store kept across an enrolment left the panel saying "two-factor is off"
+  for an account that had just turned it on, with two buttons whose dispatches
+  the guards silently ate. `mfaObserved` returns it to `idle` — but only on a
+  *change*, so the stale `true` still in props cannot undo a disable the moment
+  it succeeds.
+
+### Added
+
+- **`sessionEstablished`** — a flow outside this store completing a sign-in.
+  The session store owns "who am I"; it does not own every way of becoming
+  someone. A credentials login, an MFA challenge, an OAuth callback and a magic
+  link each need their own multi-step reducer, and all of them end with a
+  `SessionSnapshot`. This is the handover.
+
+  Refused in exactly one status, `loggingOut`: a slow sign-in resolving after
+  the user has signed out would otherwise put them back in a session they left.
+  Every other status yields to it, on the principle the `login` arm already
+  states — explicit intent supersedes a background resolve.
+
+- **`loginStarted`** — optional, and only about presentation: it moves the status
+  to `loggingIn` so `AuthGuard` shows its pending branch while a flow works.
+
+- **`@composable-svelte/auth/errors`** — the union, plus `toAuthError`,
+  `isAuthError`, `isMfaRequired` and `retryDelaySeconds`. Errors are plain
+  objects and `isAuthError` is structural, so they survive `structuredClone` and
+  an SSR boundary; `instanceof` would survive neither.
+
+  `retryDelaySeconds` returns `null` for failures that waiting does not fix, and
+  refuses to invent a delay the backend did not state — guessing an interval is
+  how a client turns one rate limit into several.
+
+- **`@composable-svelte/auth/flows`** — the headless sign-in flow:
+  `loginReducer`, `createLoginStore`, `createInitialLoginState`, `loginSchema`
+  and the state and action types. Markup-free, so a consumer with their own
+  design system builds over the same machine.
+
+  **The flow owns the submission, not the form**, and that is forced rather than
+  stylistic. Core's `createFormReducer` catches whatever `config.onSubmit`
+  throws and stores `error.message` — a string. Route the auth call through it
+  and the union above is flattened on arrival: `mfa_required` loses its
+  `challengeId`, `rate_limited` loses its delay, and the whole of this release
+  buys nothing. So `onSubmit` is a no-op, the form's job ends at "these fields
+  are valid", and the flow observes `submissionSucceeded` and makes the request.
+
+  Two behaviours the form reducer does not provide. A second submit while the
+  first is in flight **supersedes** it rather than racing — a fixed cancellation
+  id, so two sign-ins cannot be resolved in whichever order the network picks.
+  And editing any field clears the last failure, because core never clears its
+  own `submitError` on `fieldChanged`, which otherwise leaves "Invalid
+  credentials" sitting above the password being retyped.
+
+- **`@composable-svelte/auth/http`** — `createHttpAuthDeps`, the Composable Rust
+  adapter, which **reads the response body on failure**. Two layers, so another
+  backend still gets something useful: status codes map as a baseline (401 →
+  `invalid_credentials`, 423 → `account_locked`, 429 → `rate_limited` with the
+  `Retry-After` header, 410 → `token_expired`), and an optional
+  `{ error: { code, … } }` body overrides and enriches that — which is the only
+  way `mfa_required` can carry a challenge id.
+
+- **`LoginForm` and `PasswordInput`** — the styled layer, on the `components`
+  subpath and the root barrel.
+
+  `LoginForm` takes **both** stores. A completed sign-in has to cross from the
+  flow to the session, and a required prop makes a forgotten wiring a compile
+  error; composing into a parent reducer or injecting an `onSessionEstablished`
+  callback both fail silently instead. The handoff fires once per successful
+  sign-in, not once per dispatch.
+
+  `PasswordInput`'s toggle is a real `<button type="button">`, tabbable, with
+  `aria-pressed` and a label that changes between "Show password" and "Hide
+  password". It is *not* `tabindex="-1"` like `Combobox`'s chevron: that one
+  duplicates keyboard access the input already offers, and this one has no
+  keyboard equivalent at all.
+
+  Both ship **scoped CSS, not Tailwind classes**. The preset's content glob
+  covers core's `dist` only, so a utility class in this package's `dist` is
+  purged in every consuming app — the "renders transparent" defect the root
+  CLAUDE.md opens with. Colours are `hsl(var(--token, fallback))`, so they
+  follow core's theme and dark mode when its stylesheet is present and fall back
+  when it is not.
+
+- **`@composable-svelte/auth/testing`** — `createMockAuthDeps`, a backend-shaped
+  fake. Every auth failure is server-side, so a demo or test that can only show
+  the happy path shows almost nothing; this rejects with real `AuthError`
+  shapes, including `mfa_required`, and honours the `AbortSignal` so a
+  superseded sign-in stops pretending to work.
+
+- **`createLoginStore`**, mirroring `createSessionStore`.
+
+- **`createHttpAuthDeps` and `authErrorFromResponse` on the root barrel**, beside
+  `createHttpSessionDeps`, which was already there. They were reachable only
+  through `./http`, which made the package's own documentation wrong about its
+  API — every other subpath was already re-exported. `flat-barrel.test.ts` holds
+  the rule now: for this package a subpath is a convenience, never the only way
+  in.
+
+### Fixed in review
+
+- **`LoginForm` detached silently when `flowStore` was replaced.** `Form`
+  captures its store into context at init and `FormField` reads
+  `$store.data[name]`, so both hold whatever object the component handed them on
+  its first render. Delegating `subscribe` straight through pinned the
+  subscription to the *first* store: the field went on showing the old data
+  while dispatches went to the new one, and typing left the input uncontrolled —
+  DOM holding one value, store another, nothing thrown. Recreating the store to
+  reset a form is how a consumer meets that.
+
+- **`createMockAuthDeps` ignored an already-aborted signal** unless `latencyMs`
+  was above zero — and zero is the default. At the setting every test uses, a
+  cancelled request resolved *successfully*, so a flow that had stopped
+  cancelling would still have looked correct.
+
+- **The default heading was `<h1>`.** This component is embeddable; an `<h1>`
+  inside a page that already has one is a document-structure defect that renders
+  identically to a correct one. It is `<h2>` now, with `headingLevel` for a
+  dedicated `/login` page.
+
+- **The in-flight state was announced to nobody.** Assistive technology skips a
+  disabled control, so the button's label changing to "Signing in…" was silent.
+  A `role="status"` region carries it.
+
+- **The fields were disabled during the request** along with the button. That
+  buys nothing — the credentials were captured at dispatch — and costs focus:
+  submitting with Enter leaves focus in the password field, and disabling the
+  focused element drops focus to `<body>`. Only the submit button is disabled,
+  which the HTML spec says also suppresses implicit submission.
+
+- Inputs carry `name` as well as `autocomplete`, which password-manager
+  heuristics fall back to; the form's own styles no longer reach out of the
+  component through a bare `:global` class.
+
+- **`@composable-svelte/auth/flows` gains signup** — `signupReducer`,
+  `createSignupStore`, `signupSchema`, `passwordCriteria`, and `SignupForm` /
+  `PasswordCriteria` beside them.
+
+  **Two terminal states, and both are successes.** A backend that requires email
+  confirmation cannot return a session, and one that does not should not be
+  forced into a second round trip — so `deps.signup` answers with a union,
+  `{ kind: 'session' }` or `{ kind: 'verificationRequired' }`, rather than a
+  nullable session. There is no field to forget to check. `awaitingVerification`
+  leaves `error` null and replaces the form with a terminal panel; dispatching
+  `sessionEstablished` there would sign in an account that cannot be used yet.
+
+  **The password policy is length and nothing else**, following NIST 800-63B.
+  Composition rules push people toward `Passw0rd!` — predictable substitutions
+  on a short base — while a longer passphrase is stronger and easier to
+  remember. `PasswordCriteria` is derived from the same constants the schema
+  validates against, so the checklist cannot say "done" while the form
+  disagrees; a test asserts they agree on every sample, and another fails if a
+  character-class rule is ever added.
+
+  `signupFormConfig` uses `mode: 'onBlur'` where sign-in uses `onSubmit`,
+  because the confirm field is the one place a submit-only rule means retyping a
+  password the user believed they had already entered twice. That is only
+  possible since cross-field validation was fixed in core.
 
 ### Still missing
 

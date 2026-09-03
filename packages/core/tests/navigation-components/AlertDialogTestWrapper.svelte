@@ -32,7 +32,7 @@
 
 {#if scopedStore}
 	{#if unlabelled}
-		<AlertDialog store={scopedStore} labelled={false} described={false} ariaLabel="Named directly">
+		<AlertDialog store={scopedStore} ariaLabel="Named directly">
 			{#snippet children()}
 				<AlertDialogFooter>
 					<AlertDialogCancel onclick={() => onCancel?.()}>Cancel</AlertDialogCancel>

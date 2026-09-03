@@ -20,10 +20,12 @@
 
 	let { headingLevel = 2, class: className, children }: Props = $props();
 
-	// The root generated this id and pointed `aria-labelledby` at it. This is the
-	// element that has to carry it, or the dialog names something that does not
-	// exist and assistive technology announces nothing at all.
+	// Announce this title to the root, which only emits `aria-labelledby` once
+	// something has claimed the id. The root cannot tell from its own props
+	// whether a title was rendered, and naming an element that does not exist
+	// makes assistive technology announce nothing at all.
 	const ctx = getContext<AlertDialogContext | undefined>(ALERT_DIALOG_KEY);
+	ctx?.registerTitle();
 </script>
 
 <svelte:element
