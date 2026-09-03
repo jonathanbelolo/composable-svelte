@@ -26,7 +26,7 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { token as newToken } from '../crypto.js';
 import { fail } from '../errors.js';
 import { requireAccount, requireFresh } from '../guard.js';
-import { establish, snapshot } from '../session.js';
+import { establish, sessionWindows, snapshot } from '../session.js';
 import { createAccount, type Account } from '../store.js';
 import type { ServerContext } from '../server.js';
 
@@ -86,7 +86,7 @@ export async function oauthRoutes(
 	app: FastifyInstance,
 	options: { context: ServerContext }
 ): Promise<void> {
-	const { store, freshnessMs, callbackPath, secureCookie } = options.context;
+	const { store, freshnessMs, callbackPath, secureCookie, now, idleMs, absoluteMs } = options.context;
 
 	const providerBody = {
 		type: 'object',
@@ -236,7 +236,15 @@ export async function oauthRoutes(
 
 			// **`authenticatedAt: 0` — born stale.** An account at Google is not a
 			// credential on this account.
-			establish(reply, store, account.id, 0, secureCookie);
+			establish(
+				reply,
+				store,
+				account.id,
+				// `authenticatedAt: 0` — no credential of this account was proven,
+				// which is what makes `reauthentication_required` reachable honestly.
+				sessionWindows(options.context, false),
+				secureCookie
+			);
 			return reply.status(200).send(snapshot(account));
 		}
 	);
@@ -245,7 +253,7 @@ export async function oauthRoutes(
 		'/auth/oauth/link',
 		{ schema: { body: exchangeBody } },
 		async (request, reply) => {
-			const current = requireAccount(request, reply, store);
+			const current = requireAccount(request, reply, store, { now, idleMs });
 			if (current === null) return reply;
 
 			const { provider, code, state } = request.body;
@@ -282,9 +290,9 @@ export async function oauthRoutes(
 		'/auth/oauth/unlink',
 		{ schema: { body: providerBody } },
 		async (request, reply) => {
-			const current = requireAccount(request, reply, store);
+			const current = requireAccount(request, reply, store, { now, idleMs });
 			if (current === null) return reply;
-			if (!requireFresh(reply, current, freshnessMs)) return reply;
+			if (!requireFresh(reply, current, { freshnessMs, now })) return reply;
 
 			const { provider } = request.body;
 			if (!current.account.providers.includes(provider)) {

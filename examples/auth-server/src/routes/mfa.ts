@@ -12,7 +12,7 @@ import type { FastifyInstance } from 'fastify';
 import { id, recoveryCodes } from '../crypto.js';
 import { fail } from '../errors.js';
 import { requireAccount, requireFresh } from '../guard.js';
-import { currentSession, establish, proveCredential, snapshot } from '../session.js';
+import { currentSession, establish, proveCredential, sessionWindows, snapshot } from '../session.js';
 import { newSecret, otpauthUri, verifyTotp } from '../totp.js';
 import type { ServerContext } from '../server.js';
 
@@ -20,7 +20,7 @@ export async function mfaRoutes(
 	app: FastifyInstance,
 	options: { context: ServerContext }
 ): Promise<void> {
-	const { store, freshnessMs, secureCookie } = options.context;
+	const { store, freshnessMs, secureCookie, now, idleMs, absoluteMs } = options.context;
 
 	app.post<{ Body: { challenge_id: string; code: string; method: string } }>(
 		'/auth/mfa/verify',
@@ -66,11 +66,17 @@ export async function mfaRoutes(
 			// **A session, always.** There is no 204 branch: a second factor that
 			// verified without producing one would leave the user having proved who
 			// they are and still signed out.
-			const existing = currentSession(request, store);
+			const existing = currentSession(request, store, { now, idleMs });
 			if (existing !== null && existing.accountId === account.id) {
 				proveCredential(existing, Date.now());
 			} else {
-				establish(reply, store, account.id, Date.now(), secureCookie);
+				establish(
+				reply,
+				store,
+				account.id,
+				sessionWindows(options.context, true),
+				secureCookie
+			);
 			}
 			return reply.status(200).send(snapshot(account));
 		}
@@ -78,7 +84,7 @@ export async function mfaRoutes(
 
 	/** No body, so no schema. Starts an enrolment without touching the account. */
 	app.post('/auth/mfa/enrol', async (request, reply) => {
-		const current = requireAccount(request, reply, store);
+		const current = requireAccount(request, reply, store, { now, idleMs });
 		if (current === null) return reply;
 
 		const secret = newSecret();
@@ -111,7 +117,7 @@ export async function mfaRoutes(
 			}
 		},
 		async (request, reply) => {
-			const current = requireAccount(request, reply, store);
+			const current = requireAccount(request, reply, store, { now, idleMs });
 			if (current === null) return reply;
 
 			const enrolment = store.enrolments.peek(request.body.enrolment_id);
@@ -137,9 +143,9 @@ export async function mfaRoutes(
 
 	/** No body. Sensitive, so it demands a freshly proven credential. */
 	app.post('/auth/mfa/disable', async (request, reply) => {
-		const current = requireAccount(request, reply, store);
+		const current = requireAccount(request, reply, store, { now, idleMs });
 		if (current === null) return reply;
-		if (!requireFresh(reply, current, freshnessMs)) return reply;
+		if (!requireFresh(reply, current, { freshnessMs, now })) return reply;
 
 		current.account.mfaEnabled = false;
 		current.account.mfaSecret = null;
@@ -152,9 +158,9 @@ export async function mfaRoutes(
 
 	/** No body. Also sensitive — new codes invalidate whatever the user has saved. */
 	app.post('/auth/mfa/recovery-codes', async (request, reply) => {
-		const current = requireAccount(request, reply, store);
+		const current = requireAccount(request, reply, store, { now, idleMs });
 		if (current === null) return reply;
-		if (!requireFresh(reply, current, freshnessMs)) return reply;
+		if (!requireFresh(reply, current, { freshnessMs, now })) return reply;
 
 		if (!current.account.mfaEnabled) {
 			return fail(reply, 422, 'unknown', 'Two-factor authentication is not turned on.');

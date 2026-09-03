@@ -9,14 +9,14 @@
 
 import type { FastifyInstance } from 'fastify';
 
-import { clear, currentAccount, establish, snapshot } from '../session.js';
+import { clear, currentAccount, establish, sessionWindows, snapshot } from '../session.js';
 import type { ServerContext } from '../server.js';
 
 export async function sessionRoutes(
 	app: FastifyInstance,
 	options: { context: ServerContext }
 ): Promise<void> {
-	const { store, secureCookie } = options.context;
+	const { store, secureCookie, now, idleMs, absoluteMs } = options.context;
 
 	/**
 	 * The seeded dev sign-in: pick an account by id, no credential.
@@ -49,7 +49,13 @@ export async function sessionRoutes(
 			if (account === undefined) {
 				return reply.status(404).send();
 			}
-			establish(reply, store, account.id, Date.now(), secureCookie);
+			establish(
+				reply,
+				store,
+				account.id,
+				sessionWindows(options.context, true),
+				secureCookie
+			);
 			return reply.status(200).send(snapshot(account));
 		}
 	);
@@ -64,7 +70,7 @@ export async function sessionRoutes(
 	 * 204, because the client never reads the response.
 	 */
 	app.post('/auth/logout', async (request, reply) => {
-		const current = currentAccount(request, store);
+		const current = currentAccount(request, store, { now, idleMs });
 		clear(reply, store, current === null ? null : current.session, secureCookie);
 		return reply.status(204).send();
 	});
@@ -76,7 +82,7 @@ export async function sessionRoutes(
 	 * one this sends is a server option so a test can prove that.
 	 */
 	app.get('/auth/session', async (request, reply) => {
-		const current = currentAccount(request, store);
+		const current = currentAccount(request, store, { now, idleMs });
 		if (current === null) {
 			return reply.status(options.context.anonymousStatus).send();
 		}

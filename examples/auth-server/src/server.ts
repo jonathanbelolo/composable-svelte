@@ -42,6 +42,33 @@ export interface ServerOptions {
 	 */
 	freshnessMs?: number | undefined;
 	/**
+	 * The clock, injected. Boot-time only, like `freshnessMs` above and for the
+	 * same reason.
+	 *
+	 * It exists because lifetime assertions are otherwise same-millisecond
+	 * races — the flake `demandReauthentication`'s own comment records, which
+	 * was green alone and red under a full-suite run.
+	 *
+	 * **One clock, not two.** It reaches `createStore()` as well, so the
+	 * expiring maps read it too. An injected clock that reached only the session
+	 * would leave token expiry on wall time, and a test that passes because half
+	 * the fixture ignored the clock it was given is worse than no test.
+	 */
+	now?: (() => number) | undefined;
+	/**
+	 * How long a session survives without being used. Slides on every
+	 * authenticated request. Default 30 minutes.
+	 */
+	idleMs?: number | undefined;
+	/**
+	 * How long a session may live at all, counted from sign-in and **never
+	 * extended**. Default 12 hours.
+	 *
+	 * Without a cap, a session used often enough never expires — the idle window
+	 * alone is not an expiry policy.
+	 */
+	absoluteMs?: number | undefined;
+	/**
 	 * How an anonymous `GET /auth/session` answers.
 	 *
 	 * The client accepts **either** 401 or 204, interchangeably. Making it an
@@ -81,6 +108,9 @@ export interface ServerOptions {
 
 export interface ServerContext {
 	store: Store;
+	now: () => number;
+	idleMs: number;
+	absoluteMs: number;
 	freshnessMs: number;
 	anonymousStatus: 401 | 204;
 	rotateSessionOnPasswordChange: boolean;
@@ -103,11 +133,18 @@ export interface Server {
 }
 
 export async function createServer(options: ServerOptions = {}): Promise<Server> {
-	const store = createStore();
+	// Hoisted above `createStore`, which needs it: the expiring maps must read
+	// the same clock as the session's windows.
+	const now = options.now ?? Date.now;
+
+	const store = createStore(now);
 	await store.seed();
 
 	const context: ServerContext = {
 		store,
+		now,
+		idleMs: options.idleMs ?? 30 * 60_000,
+		absoluteMs: options.absoluteMs ?? 12 * 60 * 60_000,
 		freshnessMs: options.freshnessMs ?? 300_000,
 		anonymousStatus: options.anonymousStatus ?? 401,
 		rotateSessionOnPasswordChange: options.rotateSessionOnPasswordChange ?? true,

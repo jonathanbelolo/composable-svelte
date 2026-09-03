@@ -18,7 +18,7 @@ import type { FastifyInstance } from 'fastify';
 
 import { hashPassword, id, token as newToken, verifyPassword } from '../crypto.js';
 import { fail } from '../errors.js';
-import { currentSession, establish, proveCredential, snapshot } from '../session.js';
+import { currentSession, establish, proveCredential, sessionWindows, snapshot } from '../session.js';
 import { createAccount, type Account, type Store, type TokenKind } from '../store.js';
 import type { ServerContext } from '../server.js';
 
@@ -43,7 +43,7 @@ export async function credentialRoutes(
 	app: FastifyInstance,
 	options: { context: ServerContext }
 ): Promise<void> {
-	const { store, secureCookie } = options.context;
+	const { store, secureCookie, now, idleMs, absoluteMs } = options.context;
 
 	const emailPassword = {
 		type: 'object',
@@ -132,13 +132,19 @@ export async function credentialRoutes(
 			// rather than minting a second one. That is what closes the
 			// re-authentication loop — prompt, sign in again, retry — with no
 			// twenty-third endpoint.
-			const existing = currentSession(request, store);
+			const existing = currentSession(request, store, { now, idleMs });
 			if (existing !== null && existing.accountId === account.id) {
 				proveCredential(existing, Date.now());
 				return reply.status(200).send(snapshot(account));
 			}
 
-			establish(reply, store, account.id, Date.now(), secureCookie);
+			establish(
+				reply,
+				store,
+				account.id,
+				sessionWindows(options.context, true),
+				secureCookie
+			);
 			return reply.status(200).send(snapshot(account));
 		}
 	);
@@ -284,7 +290,15 @@ export async function credentialRoutes(
 			// proving a credential on this account, so sensitive operations will
 			// demand re-authentication. This is the policy that makes
 			// `reauthentication_required` reachable with no configuration at all.
-			establish(reply, store, account.id, 0, secureCookie);
+			establish(
+				reply,
+				store,
+				account.id,
+				// `authenticatedAt: 0` — no credential of this account was proven,
+				// which is what makes `reauthentication_required` reachable honestly.
+				sessionWindows(options.context, false),
+				secureCookie
+			);
 			return reply.status(200).send(snapshot(account));
 		}
 	);

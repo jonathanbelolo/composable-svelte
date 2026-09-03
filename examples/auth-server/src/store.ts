@@ -40,6 +40,23 @@ export interface Session {
 	 * `reauthentication_required` reachable without any test-only switch.
 	 */
 	authenticatedAt: number;
+	/**
+	 * When this session began. Fixed at sign-in; the absolute cap counts from
+	 * here and never moves.
+	 */
+	startedAt: number;
+	/**
+	 * When the idle window lapses.
+	 *
+	 * Extended by activity — see `extendIdleWindow` — but never past
+	 * `absoluteExpiresAt`. An idle window that could push the cap is not a cap.
+	 */
+	idleExpiresAt: number;
+	/**
+	 * `startedAt + absoluteMs`. **Non-sliding**, which is the whole point:
+	 * without it a session used often enough never expires at all.
+	 */
+	absoluteExpiresAt: number;
 }
 
 export type TokenKind = 'verify-email' | 'reset-password' | 'magic-link';
@@ -95,12 +112,17 @@ interface Expiring<T extends { expiresAt: number }> {
 	clear(): void;
 }
 
-function expiring<T extends { expiresAt: number }>(): Expiring<T> {
+function expiring<T extends { expiresAt: number }>(now: () => number): Expiring<T> {
 	const held = new Map<string, T>();
 	const live = (key: string): T | null => {
 		const value = held.get(key);
 		if (value === undefined) return null;
-		if (value.expiresAt <= Date.now()) {
+		// The injected clock, not `Date.now()`. This map and the session's
+		// freshness window used to read two different clocks, so injecting one
+		// for a lifetime test would have left token expiry on wall time — and a
+		// test that passes because half the fixture ignored the clock it was
+		// given is worse than no test.
+		if (value.expiresAt <= now()) {
 			held.delete(key);
 			return null;
 		}
@@ -212,15 +234,15 @@ export interface Store {
 	seed(): Promise<void>;
 }
 
-export function createStore(): Store {
+export function createStore(now: () => number = Date.now): Store {
 	const accounts = new Map<string, Account>();
 	const outbox: Sent[] = [];
 	const sessions = new Map<string, Session>();
-	const tokens = expiring<TokenRecord>();
-	const challenges = expiring<Challenge>();
-	const enrolments = expiring<Enrolment>();
-	const oauthStates = expiring<OAuthStateRecord>();
-	const oauthCodes = expiring<OAuthCodeRecord>();
+	const tokens = expiring<TokenRecord>(now);
+	const challenges = expiring<Challenge>(now);
+	const enrolments = expiring<Enrolment>(now);
+	const oauthStates = expiring<OAuthStateRecord>(now);
+	const oauthCodes = expiring<OAuthCodeRecord>(now);
 	const counters = new Map<string, { count: number; resetAt: number }>();
 
 	return {
@@ -242,23 +264,23 @@ export function createStore(): Store {
 		},
 
 		rateLimit(key: string, limit: number, windowMs: number): number | null {
-			const now = Date.now();
+			const at = now();
 			const existing = counters.get(key);
-			if (existing === undefined || existing.resetAt <= now) {
-				counters.set(key, { count: 1, resetAt: now + windowMs });
+			if (existing === undefined || existing.resetAt <= at) {
+				counters.set(key, { count: 1, resetAt: at + windowMs });
 				return null;
 			}
 			existing.count += 1;
 			if (existing.count <= limit) return null;
-			return Math.max(1, Math.ceil((existing.resetAt - now) / 1000));
+			return Math.max(1, Math.ceil((existing.resetAt - at) / 1000));
 		},
 
 		rateStatus(key: string, limit: number): number | null {
-			const now = Date.now();
+			const at = now();
 			const existing = counters.get(key);
-			if (existing === undefined || existing.resetAt <= now) return null;
+			if (existing === undefined || existing.resetAt <= at) return null;
 			if (existing.count <= limit) return null;
-			return Math.max(1, Math.ceil((existing.resetAt - now) / 1000));
+			return Math.max(1, Math.ceil((existing.resetAt - at) / 1000));
 		},
 
 		clearRate(key: string): void {

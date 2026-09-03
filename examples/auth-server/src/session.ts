@@ -38,18 +38,88 @@ function attributes(secure: boolean) {
 	} as const;
 }
 
-/** Start a session. `authenticatedAt: 0` means "no credential of this account was proven". */
+/** What a new session needs to know about time. */
+export interface SessionWindows {
+	/** Now, from the injected clock. */
+	at: number;
+	/**
+	 * When a credential *of this account* was proven, or `0` for never.
+	 *
+	 * `0` is what makes `reauthentication_required` reachable with no test-only
+	 * switch: magic-link and OAuth sign-ins mint sessions that way on purpose.
+	 */
+	authenticatedAt: number;
+	idleMs: number;
+	absoluteMs: number;
+}
+
+/**
+ * Build the windows for a new session.
+ *
+ * `at` and `authenticatedAt` come from one clock read, so a proven session
+ * cannot have them a millisecond apart — which would be invisible in every test
+ * and confusing in exactly one.
+ *
+ * `proven: false` leaves `authenticatedAt` at `0`, which is how magic-link and
+ * OAuth sign-ins make `reauthentication_required` reachable without a
+ * test-only switch.
+ */
+export function sessionWindows(
+	clock: { now: () => number; idleMs: number; absoluteMs: number },
+	proven: boolean
+): SessionWindows {
+	const at = clock.now();
+	return { at, authenticatedAt: proven ? at : 0, idleMs: clock.idleMs, absoluteMs: clock.absoluteMs };
+}
+
+/**
+ * Start a session.
+ *
+ * The tail is an options object rather than more positional arguments so that
+ * adding the windows was a compile error at all eight call sites instead of a
+ * boolean quietly landing in the wrong slot.
+ *
+ * **No `maxAge` on the cookie.** Lifetime lives in the `Session` record, which
+ * the server can shorten or revoke; a cookie expiry only tells the browser when
+ * to stop sending it and can be edited by anyone holding it.
+ */
 export function establish(
 	reply: FastifyReply,
 	store: Store,
 	accountId: string,
-	authenticatedAt: number,
+	windows: SessionWindows,
 	secure = false
 ): Session {
-	const session: Session = { id: id(24), accountId, authenticatedAt };
+	const session: Session = {
+		id: id(24),
+		accountId,
+		authenticatedAt: windows.authenticatedAt,
+		startedAt: windows.at,
+		idleExpiresAt: windows.at + windows.idleMs,
+		absoluteExpiresAt: windows.at + windows.absoluteMs
+	};
+	// The idle window can never start beyond the cap — a one-day idle window on
+	// a one-hour cap is a one-hour session.
+	session.idleExpiresAt = Math.min(session.idleExpiresAt, session.absoluteExpiresAt);
 	store.sessions.set(session.id, session);
 	void reply.setCookie(COOKIE, session.id, attributes(secure));
 	return session;
+}
+
+/**
+ * Restart the idle clock on a live session.
+ *
+ * **This must never touch `authenticatedAt`.** That field is the sudo-mode
+ * window — see `proveCredential` below. A sliding session that also slid the
+ * freshness window would hold sudo mode open forever and six sensitive
+ * endpoints would stop demanding re-authentication. That is privilege
+ * escalation, not a UX regression, and `tests/session-lifetime.test.ts` pins it.
+ *
+ * Never past the absolute cap: an idle window that could push the cap is not a
+ * cap.
+ */
+export function extendIdleWindow(session: Session, idleMs: number, now: number): void {
+	session.idleExpiresAt = Math.min(now + idleMs, session.absoluteExpiresAt);
 }
 
 export function clear(
@@ -62,17 +132,54 @@ export function clear(
 	void reply.clearCookie(COOKIE, attributes(secure));
 }
 
-export function currentSession(request: FastifyRequest, store: Store): Session | null {
+/** The clock and windows every read needs, straight off `ServerContext`. */
+export interface SessionClock {
+	now: () => number;
+	idleMs: number;
+}
+
+/**
+ * The live session, or `null`.
+ *
+ * **Expiry and sliding both live here**, deliberately: a read and a slide that
+ * lived apart would drift, and every authenticated route already funnels
+ * through this one function — so all of them inherit correct expiry and answer
+ * 401 `invalid_credentials` through `requireAccount` without knowing anything
+ * about it. That is also the only failure the client's `refreshSession`
+ * contract treats as "stop asking".
+ *
+ * The dead session is **deleted**, not merely refused, which is this fixture's
+ * lazy-expiry rule: nothing here uses `setInterval`, so things expire when they
+ * are read.
+ */
+export function currentSession(
+	request: FastifyRequest,
+	store: Store,
+	clock: SessionClock
+): Session | null {
 	const sid = request.cookies[COOKIE];
 	if (sid === undefined) return null;
-	return store.sessions.get(sid) ?? null;
+
+	const session = store.sessions.get(sid);
+	if (session === undefined) return null;
+
+	const at = clock.now();
+	if (at >= session.idleExpiresAt || at >= session.absoluteExpiresAt) {
+		store.sessions.delete(session.id);
+		return null;
+	}
+
+	// Any authenticated request is activity. `authenticatedAt` is untouched.
+	extendIdleWindow(session, clock.idleMs, at);
+	return session;
 }
 
 export function currentAccount(
 	request: FastifyRequest,
-	store: Store
+	store: Store,
+	clock: SessionClock
 ): { session: Session; account: Account } | null {
-	const session = currentSession(request, store);
+	const session = currentSession(request, store, clock);
 	if (session === null) return null;
 	const account = store.accounts.get(session.accountId);
 	if (account === undefined) return null;
@@ -107,7 +214,8 @@ export function proofMethods(account: Account): string[] {
 export function demandReauthentication(
 	session: Session,
 	account: Account,
-	freshnessMs: number
+	freshnessMs: number,
+	now: number
 ): string[] | null {
 	const methods = proofMethods(account);
 	if (methods.length === 0) return null;
@@ -120,7 +228,7 @@ export function demandReauthentication(
 	const fresh =
 		freshnessMs > 0 &&
 		session.authenticatedAt > 0 &&
-		Date.now() - session.authenticatedAt <= freshnessMs;
+		now - session.authenticatedAt <= freshnessMs;
 	return fresh ? null : methods;
 }
 

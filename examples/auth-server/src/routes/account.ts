@@ -13,17 +13,17 @@ import type { FastifyInstance } from 'fastify';
 
 import { hashPassword } from '../crypto.js';
 import { requireAccount, requireFresh } from '../guard.js';
-import { establish, snapshot } from '../session.js';
+import { establish, sessionWindows, snapshot } from '../session.js';
 import type { ServerContext } from '../server.js';
 
 export async function accountRoutes(
 	app: FastifyInstance,
 	options: { context: ServerContext }
 ): Promise<void> {
-	const { store, freshnessMs, rotateSessionOnPasswordChange, secureCookie } = options.context;
+	const { store, freshnessMs, rotateSessionOnPasswordChange, secureCookie, now, idleMs, absoluteMs } = options.context;
 
 	app.get('/auth/account', async (request, reply) => {
-		const current = requireAccount(request, reply, store);
+		const current = requireAccount(request, reply, store, { now, idleMs });
 		if (current === null) return reply;
 
 		const { account } = current;
@@ -56,9 +56,9 @@ export async function accountRoutes(
 			}
 		},
 		async (request, reply) => {
-			const current = requireAccount(request, reply, store);
+			const current = requireAccount(request, reply, store, { now, idleMs });
 			if (current === null) return reply;
-			if (!requireFresh(reply, current, freshnessMs)) return reply;
+			if (!requireFresh(reply, current, { freshnessMs, now })) return reply;
 
 			current.account.passwordHash = await hashPassword(request.body.password);
 
@@ -71,7 +71,13 @@ export async function accountRoutes(
 			// and it is the branch with handover logic on the client, where the new
 			// snapshot has to cross into the session store.
 			store.sessions.delete(current.session.id);
-			establish(reply, store, current.account.id, Date.now(), secureCookie);
+			establish(
+				reply,
+				store,
+				current.account.id,
+				sessionWindows(options.context, true),
+				secureCookie
+			);
 			return reply.status(200).send(snapshot(current.account));
 		}
 	);

@@ -9,7 +9,7 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
 import { fail } from './errors.js';
-import { currentAccount, demandReauthentication } from './session.js';
+import { currentAccount, demandReauthentication, type SessionClock } from './session.js';
 import type { Account, Session, Store } from './store.js';
 
 export interface Authenticated {
@@ -27,9 +27,13 @@ export interface Authenticated {
 export function requireAccount(
 	request: FastifyRequest,
 	reply: FastifyReply,
-	store: Store
+	store: Store,
+	clock: SessionClock
 ): Authenticated | null {
-	const current = currentAccount(request, store);
+	// `currentAccount` is also where a lapsed session is expired and deleted, so
+	// an idle or capped-out session arrives here as "not signed in" — 401
+	// `invalid_credentials`, the one failure the client stops retrying on.
+	const current = currentAccount(request, store, clock);
 	if (current === null) {
 		void fail(reply, 401, 'invalid_credentials', 'You are not signed in.');
 		return null;
@@ -47,9 +51,14 @@ export function requireAccount(
 export function requireFresh(
 	reply: FastifyReply,
 	current: Authenticated,
-	freshnessMs: number
+	policy: { freshnessMs: number; now: () => number }
 ): boolean {
-	const methods = demandReauthentication(current.session, current.account, freshnessMs);
+	const methods = demandReauthentication(
+		current.session,
+		current.account,
+		policy.freshnessMs,
+		policy.now()
+	);
 	if (methods === null) return true;
 
 	void fail(

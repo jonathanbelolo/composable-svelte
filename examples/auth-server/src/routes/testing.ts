@@ -19,7 +19,7 @@ export async function testingRoutes(
 	app: FastifyInstance,
 	options: { context: ServerContext }
 ): Promise<void> {
-	const { store } = options.context;
+	const { store, now, idleMs, absoluteMs } = options.context;
 
 	app.post('/__test__/reset', async (_request, reply) => {
 		await store.seed();
