@@ -8,12 +8,39 @@
  */
 
 import { createHttpAuthDeps } from '@composable-svelte/auth/http';
-import { createSessionStore, createPendingOAuthStorage, createBrowserRedirect } from '@composable-svelte/auth';
+import {
+	createSessionStore,
+	createPendingOAuthStorage,
+	createBrowserRedirect,
+	createSessionRefreshStore,
+	createUnauthorizedHandler
+} from '@composable-svelte/auth';
 
 export const deps = createHttpAuthDeps();
 
 /** One session store for the whole app. Every flow hands its result here. */
 export const session = createSessionStore(deps);
+
+/**
+ * Session lifetime, over the cookie the client cannot read.
+ *
+ * One store for the whole app, like the session it watches — a second would be
+ * a second timer asking the same question.
+ */
+export const sessionRefresh = createSessionRefreshStore({
+	refreshSession: deps.refreshSession
+});
+
+/**
+ * The backstop for everything an expiry cannot anticipate.
+ *
+ * A session ends for reasons no advertised `expires_at` predicts — an
+ * administrator revoked it, the absolute cap was reached mid-request. The only
+ * signal is a 401 from something unrelated to auth, and this turns that into a
+ * re-resolve. It coalesces, so a page firing several requests that all 401
+ * dispatches one.
+ */
+export const unauthorized = createUnauthorizedHandler(session);
 
 export const pendingOAuth = createPendingOAuthStorage();
 export const redirect = createBrowserRedirect();

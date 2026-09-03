@@ -8,13 +8,17 @@
 	 * Neither is decided here — the panels ask, and show what comes back.
 	 */
 	import {
+		ChangeEmailForm,
 		ChangePasswordForm,
+		DeleteAccountPanel,
 		ConnectedAccountsPanel,
 		MfaEnrolment,
 		MfaManagementPanel,
 		SignOutButton,
 		createAccountStore,
+		createChangeEmailStore,
 		createChangePasswordStore,
+		createDeleteAccountStore,
 		createConnectedAccountsStore,
 		createMfaEnrolmentStore,
 		createMfaManagementStore,
@@ -25,6 +29,8 @@
 
 	const account = createAccountStore(deps);
 	const password = createChangePasswordStore(deps);
+	const changeEmail = createChangeEmailStore(deps);
+	const deleteAccount = createDeleteAccountStore(deps);
 	const mfa = createMfaManagementStore(deps);
 	const enrolment = createMfaEnrolmentStore(deps);
 	const connected = createConnectedAccountsStore(deps);
@@ -115,6 +121,40 @@
 			available={PROVIDERS}
 			returnTo="/settings"
 			onUnlinked={reload}
+			onReauthenticationRequired={({ methods }) => (demand = methods)}
+		/>
+	</section>
+
+	<section>
+		<!--
+			The link goes to the *new* address, and nothing changes until it is
+			followed — so the panel keeps showing the current one beside what is
+			pending. `pendingEmail` comes from the account read rather than from
+			this store, so a change confirmed in another tab wins.
+		-->
+		<ChangeEmailForm
+			flowStore={changeEmail}
+			currentEmail={snapshot.email}
+			emailVerified={snapshot.emailVerified}
+			pendingEmail={snapshot.pendingEmail}
+			onChanged={reload}
+			onReauthenticationRequired={({ methods }) => (demand = methods)}
+		/>
+	</section>
+
+	<section>
+		<!--
+			**Inline confirmation, not core's `AlertDialog`.** This app wires no
+			Tailwind and imports no core stylesheet, so an `AlertDialog` here would
+			render as a transparent full-screen overlay — the exact defect the root
+			CLAUDE.md opens with. The styleguide, which is Tailwind-based, shows the
+			modal composition instead.
+		-->
+		<DeleteAccountPanel
+			store={deleteAccount}
+			sessionStore={session}
+			email={snapshot.email}
+			onDeleted={() => go('/')}
 			onReauthenticationRequired={({ methods }) => (demand = methods)}
 		/>
 	</section>

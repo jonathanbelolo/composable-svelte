@@ -32,6 +32,7 @@ export const COMPONENT_REGISTRY: ComponentInfo[] = [
   { id: 'drawer', name: 'Drawer', category: 'Navigation Components', description: 'Permanent side navigation' },
   { id: 'sidebar', name: 'Sidebar', category: 'Navigation Components', description: 'Collapsible side panel' },
   { id: 'alert', name: 'Alert', category: 'Navigation Components', description: 'Action confirmation dialogs' },
+  { id: 'alert-dialog', name: 'Alert Dialog', category: 'Navigation Components', description: 'A titled, described confirmation over Alert - named by its own title, so a screen reader announces the question rather than the component' },
   { id: 'popover', name: 'Popover', category: 'Navigation Components', description: 'Floating context panels' },
   { id: 'dropdown-menu', name: 'Dropdown Menu', category: 'Navigation Components', description: 'Context menus' },
   { id: 'tabs', name: 'Tabs', category: 'Navigation Components', description: 'Tabbed content panels' },

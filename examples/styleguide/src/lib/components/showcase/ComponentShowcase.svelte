@@ -7,6 +7,7 @@
   import DrawerDemo from '../demos/DrawerDemo.svelte';
   import SidebarDemo from '../demos/SidebarDemo.svelte';
   import AlertDemo from '../demos/AlertDemo.svelte';
+  import AlertDialogDemo from '../demos/AlertDialogDemo.svelte';
   import PopoverDemo from '../demos/PopoverDemo.svelte';
   import DropdownMenuDemo from '../demos/DropdownMenuDemo.svelte';
   import TabsDemo from '../demos/TabsDemo.svelte';
@@ -95,6 +96,7 @@
     'drawer': DrawerDemo,
     'sidebar': SidebarDemo,
     'alert': AlertDemo,
+    'alert-dialog': AlertDialogDemo,
     'popover': PopoverDemo,
     'dropdown-menu': DropdownMenuDemo,
     'tabs': TabsDemo,

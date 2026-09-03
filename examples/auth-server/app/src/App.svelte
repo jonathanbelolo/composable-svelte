@@ -12,9 +12,9 @@
 	 * enough for eleven pages, and pulling in a router would put a dependency
 	 * between the reader and the thing being demonstrated.
 	 */
-	import { AuthGuard } from '@composable-svelte/auth';
+	import { AuthGuard, SessionRefresh } from '@composable-svelte/auth';
 
-	import { currentPath, go, session } from './deps.js';
+	import { currentPath, go, session, sessionRefresh } from './deps.js';
 	import Callback from './routes/Callback.svelte';
 	import Forgot from './routes/Forgot.svelte';
 	import Home from './routes/Home.svelte';
@@ -23,6 +23,7 @@
 	import MagicSignIn from './routes/MagicSignIn.svelte';
 	import Reset from './routes/Reset.svelte';
 	import Settings from './routes/Settings.svelte';
+	import ConfirmEmail from './routes/ConfirmEmail.svelte';
 	import Signup from './routes/Signup.svelte';
 	import Verify from './routes/Verify.svelte';
 
@@ -45,6 +46,13 @@
 
 	const status = $derived(session.state.status);
 </script>
+
+<!--
+	Renders nothing. It starts the watch, bridges the advertised expiry from the
+	session store into the refresh flow, and re-resolves once if the backend
+	says the session is gone.
+-->
+<SessionRefresh flowStore={sessionRefresh} sessionStore={session} />
 
 <main>
 	<nav>
@@ -73,6 +81,9 @@
 			there would be swallowed by the proxy and never reach this page.
 		-->
 		<Callback />
+	{:else if path === '/email/confirm'}
+		<!-- Not under `/auth`: Vite proxies that to the fixture. -->
+		<ConfirmEmail />
 	{:else if path === '/settings'}
 		<!--
 			`AuthGuard` is UX gating, not security: the server refuses these calls
