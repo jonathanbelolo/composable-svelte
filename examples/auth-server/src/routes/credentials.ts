@@ -91,7 +91,7 @@ export async function credentialRoutes(
 
 			const locked = (wait: number) =>
 				fail(reply, 423, 'account_locked', 'Too many attempts. Try again shortly.', {
-					lockedUntil: new Date(Date.now() + wait * 1000).toISOString()
+					lockedUntil: new Date(now() + wait * 1000).toISOString()
 				});
 
 			// **Checked before the password is verified.** Afterwards would mean a
@@ -129,7 +129,7 @@ export async function credentialRoutes(
 				const challengeId = id();
 				store.challenges.put(challengeId, {
 					accountId: account.id,
-					expiresAt: Date.now() + 5 * 60_000
+					expiresAt: now() + 5 * 60_000
 				});
 				// `challenge_id` is mandatory. Without it the client degrades the whole
 				// thing to `unknown` — silently — and the second-factor step becomes

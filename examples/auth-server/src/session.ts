@@ -94,7 +94,6 @@ export function establish(
 		id: id(24),
 		accountId,
 		authenticatedAt: windows.authenticatedAt,
-		startedAt: windows.at,
 		idleExpiresAt: windows.at + windows.idleMs,
 		absoluteExpiresAt: windows.at + windows.absoluteMs
 	};

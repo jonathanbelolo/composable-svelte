@@ -38,7 +38,7 @@ halves of *this* repository agree, and it exercises everything environmental.
 
 ```bash
 pnpm dev          # fixture on :4100 and the reference client on :4101
-pnpm test         # the Node conformance suite — all 27 endpoints, 90 tests
+pnpm test         # the Node conformance suite — all 27 endpoints, 93 tests
 pnpm test:e2e     # Playwright: the cookie and the redirect, in a real browser
 ```
 

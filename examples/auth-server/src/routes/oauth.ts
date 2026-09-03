@@ -110,7 +110,7 @@ export async function oauthRoutes(
 		async (request, reply) => {
 			const { provider } = request.body;
 			const state = newToken();
-			store.oauthStates.put(state, { provider, expiresAt: Date.now() + STATE_TTL_MS });
+			store.oauthStates.put(state, { provider, expiresAt: now() + STATE_TTL_MS });
 
 			// Built with `URL`, and with its origin taken from the request — never a
 			// constant. A hardcoded port breaks the moment the server listens on an
@@ -171,7 +171,7 @@ export async function oauthRoutes(
 			email: email.trim().toLowerCase(),
 			// Recorded, and deliberately **not trusted** — see `complete`.
 			providerVerifiedEmail: true,
-			expiresAt: Date.now() + CODE_TTL_MS
+			expiresAt: now() + CODE_TTL_MS
 		});
 
 		back.searchParams.set('code', code);

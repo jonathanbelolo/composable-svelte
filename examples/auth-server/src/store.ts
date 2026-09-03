@@ -41,11 +41,6 @@ export interface Session {
 	 */
 	authenticatedAt: number;
 	/**
-	 * When this session began. Fixed at sign-in; the absolute cap counts from
-	 * here and never moves.
-	 */
-	startedAt: number;
-	/**
 	 * When the idle window lapses.
 	 *
 	 * Extended by activity — see `extendIdleWindow` — but never past

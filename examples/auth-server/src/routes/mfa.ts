@@ -96,7 +96,7 @@ export async function mfaRoutes(
 		store.enrolments.put(enrolmentId, {
 			accountId: current.account.id,
 			secret,
-			expiresAt: Date.now() + 10 * 60_000
+			expiresAt: now() + 10 * 60_000
 		});
 
 		// All three fields are required by the client's decoder: a secret with no

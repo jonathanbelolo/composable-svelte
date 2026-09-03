@@ -159,6 +159,27 @@ describe('session lifetime', () => {
 		}
 	});
 
+	it('expires every other record on the injected clock too', async () => {
+		// The clock reaches `expiring()`'s *reads*, and for a while it did not
+		// reach its *writes*: five sites still stamped `expiresAt` with
+		// `Date.now()`, so under an injected clock those records either never
+		// expired or expired instantly, depending on which way the clock was set.
+		// That is worse than one wall clock, and it is exactly the "tests that
+		// pass for the wrong reason" this injection was meant to prevent.
+		const failed = await h.deps
+			.login({ email: SEED.turing.email, password: SEED_PASSWORD })
+			.catch((error: unknown) => error);
+		const challengeId = (failed as { challengeId?: string }).challengeId;
+		expect(challengeId, 'turing has MFA, so signing in must mint a challenge').toBeDefined();
+
+		// Twenty minutes of injected time against a ten-minute TTL.
+		clock.advance(20 * 60_000);
+
+		await expect(
+			h.deps.verifyMfaChallenge(challengeId!, '000000', 'totp')
+		).rejects.toMatchObject({ code: 'token_expired' });
+	});
+
 	it('gives a rotated session a new absolute cap', async () => {
 		// Rotation on a password change is an authentication event, so the cap
 		// counts from the new sign-in rather than the old one.

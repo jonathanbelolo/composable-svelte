@@ -450,8 +450,8 @@ This library is heavily inspired by TCA for Swift but adapted for Svelte/TypeScr
 - ✅ **Vitest + jsdom**: Fast, Vite-native testing
 - ✅ **TestStore API**: Exhaustive action testing with send/receive
 - ✅ **Mock Implementations**: MockClock, MockCookieStorage, MockWebSocket, MockAPI
-- ✅ **4,480 Tests**: 4,308 across the eight packages plus 172 in the examples —
-  including a 65-test integration suite in `examples/auth-server` that drives
+- ✅ **4,641 Tests**: 4,441 across the eight packages plus 200 in the examples —
+  including a 93-test integration suite in `examples/auth-server` that drives
   `@composable-svelte/auth`'s HTTP adapter against a real Fastify backend rather
   than a `fetch` stub. Its 6 Playwright tests (the cookie and the OAuth
   redirect, in a real browser) run separately via `pnpm --filter

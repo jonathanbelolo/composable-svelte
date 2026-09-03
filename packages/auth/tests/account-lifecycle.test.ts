@@ -24,6 +24,7 @@ import { createStore } from '@composable-svelte/core';
 import ChangeEmailForm from '../src/lib/components/ChangeEmailForm.svelte';
 import EmailChangeConfirmation from '../src/lib/components/EmailChangeConfirmation.svelte';
 import DeleteAccountPanel from '../src/lib/components/DeleteAccountPanel.svelte';
+import DeleteAccountWithConfirm from './test-components/DeleteAccountWithConfirm.svelte';
 import SessionRefresh from '../src/lib/components/SessionRefresh.svelte';
 import {
 	changeEmailReducer,
@@ -38,7 +39,8 @@ import {
 	type ChangeEmailDependencies,
 	type ChangeEmailConfirmDependencies,
 	type DeleteAccountDependencies,
-	type SessionRefreshDependencies
+	type SessionRefreshDependencies,
+	type SessionRefreshAction
 } from '../src/lib/index.js';
 import { createMockClock } from '@composable-svelte/core';
 import type { AuthError } from '../src/lib/errors/types.js';
@@ -366,15 +368,36 @@ describe('DeleteAccountPanel', () => {
 		}
 	});
 
-	it('hands the confirmation to a snippet when given one', () => {
-		// The seam. With a snippet the inline confirmation must not also render.
-		const h = mountDelete();
+	it('hands the confirmation to a snippet, and stands aside', async () => {
+		// The seam, actually exercised. The previous version of this test passed
+		// no snippet at all and asserted the *inline* markup — which the test
+		// above already covers — so it could never have failed.
+		const target = mountTarget();
+		const deleteAccount = vi.fn(async () => undefined);
+		const store = createStore({
+			initialState: createInitialDeleteAccountState(),
+			reducer: deleteAccountReducer,
+			dependencies: { deleteAccount } satisfies DeleteAccountDependencies
+		});
+		const component = mount(DeleteAccountWithConfirm, {
+			target,
+			props: { store, sessionStore: { dispatch: () => {} } } as never
+		});
 		try {
-			h.store.dispatch({ type: 'confirmationRequested' });
+			store.dispatch({ type: 'confirmationRequested' });
 			flushSync();
-			expect(h.text()).toContain('Are you sure');
+
+			expect(target.querySelector('[data-testid="custom-confirm"]')).not.toBeNull();
+			expect(
+				collapse(target),
+				'the inline confirmation rendered alongside the snippet'
+			).not.toContain('Are you sure');
+
+			button(target, 'Yes, wipe it')!.click();
+			await vi.waitFor(() => expect(deleteAccount).toHaveBeenCalledTimes(1));
 		} finally {
-			h.cleanup();
+			unmount(component);
+			target.remove();
 		}
 	});
 
@@ -416,13 +439,27 @@ describe('SessionRefresh', () => {
 			},
 			dispatch: (a: unknown) => dispatched.push(a)
 		};
+		// A recording wrapper: what this component tells the *flow* is the thing
+		// under test, and it is otherwise invisible — the component renders
+		// nothing and the reducer turns `watchStarted` into a subscription.
+		const toFlow: string[] = [];
+		const recordingFlowStore = {
+			get state() {
+				return flowStore.state;
+			},
+			dispatch(action: SessionRefreshAction) {
+				toFlow.push(action.type);
+				flowStore.dispatch(action);
+			}
+		};
 		const component = mount(SessionRefresh, {
 			target,
-			props: { flowStore, sessionStore, ...props } as never
+			props: { flowStore: recordingFlowStore, sessionStore, ...props } as never
 		});
 		return {
 			target,
 			flowStore,
+			toFlow,
 			dispatched,
 			setExpiry: (value: string | null) => {
 				sessionState = { ...sessionState, expiresAt: value };
@@ -435,14 +472,16 @@ describe('SessionRefresh', () => {
 	}
 
 	it('starts the watch on mount and stops it on unmount', () => {
+		// This previously ended in `expect(true).toBe(true)` and could not fail.
+		// A navigated-away page holding a live interval is exactly what the
+		// unmount half prevents.
 		const h = mountRefresh();
 		flushSync();
-		// The watch is a store effect; observable here as the flow having been
-		// told, which the reducer turns into a cancellable subscription.
+		expect(h.toFlow).toContain('watchStarted');
+		expect(h.toFlow).not.toContain('watchStopped');
+
 		h.cleanup();
-		// No assertion on internals — the point is that unmount does not throw
-		// and the subscription is cancelled by id.
-		expect(true).toBe(true);
+		expect(h.toFlow, 'unmount left the watch running').toContain('watchStopped');
 	});
 
 	it('reports an ending with resolveSession, never logout', () => {

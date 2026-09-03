@@ -191,7 +191,11 @@ export async function accountRoutes(
 			const current = requireAccount(request, reply, store, { now, idleMs });
 			if (current === null) return reply;
 
-			const record = store.tokens.take(request.body.token);
+			// **`peek`, not `take`.** A single-use token must be spent only when it
+			// is actually used. Consuming first and validating after meant posting
+			// a *verification* link here destroyed it and then answered 410 — the
+			// user's link dead, for pasting it into the wrong page.
+			const record = store.tokens.peek(request.body.token);
 			if (record === null || record.kind !== 'change-email') {
 				return fail(reply, 410, 'token_expired', 'That link is no longer valid.');
 			}
@@ -216,6 +220,8 @@ export async function accountRoutes(
 				});
 			}
 
+			// Everything checked out, so now the link is spent.
+			store.tokens.delete(request.body.token);
 			store.pendingEmails.delete(current.account.id);
 			current.account.email = pending.email;
 			// Confirmed by construction: the link went to this address and was

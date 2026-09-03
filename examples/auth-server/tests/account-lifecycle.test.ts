@@ -107,6 +107,42 @@ describe('changing an email address', () => {
 		});
 	});
 
+	it('spends the link on success', async () => {
+		await h.deps.requestEmailChange(MOVING_TO);
+		const token = linkFor(MOVING_TO);
+
+		await h.deps.confirmEmailChange(token);
+
+		// **Asserted on the store, not through a second call.** Re-confirming
+		// fails whether or not the token was spent, because the *pending record*
+		// is gone either way — so the behavioural check alone passed happily
+		// while the token sat in memory for an hour, unspent.
+		expect(h.store.tokens.peek(token), 'a single-use token outlived its use').toBeNull();
+
+		await expect(h.deps.confirmEmailChange(token)).rejects.toMatchObject({
+			code: 'token_expired'
+		});
+	});
+
+	it('does not spend a token of another kind posted to this endpoint', async () => {
+		// `take` consumed the token *before* checking its kind, so posting a
+		// verification link here destroyed it and then answered 410 — someone's
+		// link dead for pasting it into the wrong page. It is `peek`, validate,
+		// then spend.
+		await h.deps.resendVerification(SEED.hopper.email);
+		const sent = [...h.store.outbox]
+			.reverse()
+			.find((s) => s.to === SEED.hopper.email && s.kind === 'verify-email');
+		if (sent === undefined) throw new Error('no verification link was sent');
+
+		await expect(h.deps.confirmEmailChange(sent.token)).rejects.toMatchObject({
+			code: 'token_expired'
+		});
+
+		// Still good. It was never this endpoint's to spend.
+		await expect(h.deps.verifyEmail(sent.token)).resolves.toBeDefined();
+	});
+
 	it('resends to the pending address without being told what it is', async () => {
 		await h.deps.requestEmailChange(MOVING_TO);
 		await h.deps.resendEmailChange();
