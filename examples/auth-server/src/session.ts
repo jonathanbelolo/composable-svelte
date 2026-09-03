@@ -125,16 +125,23 @@ export function demandReauthentication(
 }
 
 /**
- * Mark the live session as freshly proven.
+ * Mark the live session as freshly proven — the sudo-mode window.
  *
  * This is how the client's recovery loop closes without a twenty-third
  * endpoint: prompt, sign in again with a password or a second factor, retry.
  * `password-login` and `mfa/verify` call it when the credential belongs to the
- * account already signed in, refreshing that session rather than minting a
- * second one.
+ * account already signed in, reusing that session rather than minting a second.
+ *
+ * **It was called `refresh`, and that name was a trap.** A session *refresh*
+ * endpoint — extending how long a session lives — is a different thing entirely,
+ * and it now exists one file away. Confusing the two is not a naming quibble: a
+ * lifetime extension that also set `authenticatedAt` would hold sudo mode open
+ * forever, and every operation behind `requireFresh` would stop demanding
+ * proof. `extendIdleWindow` is the other one, and it must never touch this
+ * field.
  */
-export function refresh(session: Session): void {
-	session.authenticatedAt = Date.now();
+export function proveCredential(session: Session, now: number): void {
+	session.authenticatedAt = now;
 }
 
 /** The wire shape the client's `decodeSessionSnapshot` requires. */

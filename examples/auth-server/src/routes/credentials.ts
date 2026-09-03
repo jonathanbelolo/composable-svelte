@@ -18,7 +18,7 @@ import type { FastifyInstance } from 'fastify';
 
 import { hashPassword, id, token as newToken, verifyPassword } from '../crypto.js';
 import { fail } from '../errors.js';
-import { currentSession, establish, refresh, snapshot } from '../session.js';
+import { currentSession, establish, proveCredential, snapshot } from '../session.js';
 import { createAccount, type Account, type Store, type TokenKind } from '../store.js';
 import type { ServerContext } from '../server.js';
 
@@ -134,7 +134,7 @@ export async function credentialRoutes(
 			// twenty-third endpoint.
 			const existing = currentSession(request, store);
 			if (existing !== null && existing.accountId === account.id) {
-				refresh(existing);
+				proveCredential(existing, Date.now());
 				return reply.status(200).send(snapshot(account));
 			}
 

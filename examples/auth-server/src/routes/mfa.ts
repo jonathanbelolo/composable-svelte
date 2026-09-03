@@ -12,7 +12,7 @@ import type { FastifyInstance } from 'fastify';
 import { id, recoveryCodes } from '../crypto.js';
 import { fail } from '../errors.js';
 import { requireAccount, requireFresh } from '../guard.js';
-import { currentSession, establish, refresh, snapshot } from '../session.js';
+import { currentSession, establish, proveCredential, snapshot } from '../session.js';
 import { newSecret, otpauthUri, verifyTotp } from '../totp.js';
 import type { ServerContext } from '../server.js';
 
@@ -68,7 +68,7 @@ export async function mfaRoutes(
 			// they are and still signed out.
 			const existing = currentSession(request, store);
 			if (existing !== null && existing.accountId === account.id) {
-				refresh(existing);
+				proveCredential(existing, Date.now());
 			} else {
 				establish(reply, store, account.id, Date.now(), secureCookie);
 			}
