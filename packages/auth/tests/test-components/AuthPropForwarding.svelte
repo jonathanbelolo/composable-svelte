@@ -9,6 +9,13 @@
 	import ForgotPasswordForm from '../../src/lib/components/ForgotPasswordForm.svelte';
 	import ResetPasswordForm from '../../src/lib/components/ResetPasswordForm.svelte';
 	import MfaChallengeForm from '../../src/lib/components/MfaChallengeForm.svelte';
+	import MfaManagementPanel from '../../src/lib/components/MfaManagementPanel.svelte';
+	import ConnectedAccountsPanel from '../../src/lib/components/ConnectedAccountsPanel.svelte';
+	import RecoveryCodes from '../../src/lib/components/RecoveryCodes.svelte';
+	import ChangeEmailForm from '../../src/lib/components/ChangeEmailForm.svelte';
+	import EmailChangeConfirmation from '../../src/lib/components/EmailChangeConfirmation.svelte';
+	import DeleteAccountPanel from '../../src/lib/components/DeleteAccountPanel.svelte';
+	import SessionRefresh from '../../src/lib/components/SessionRefresh.svelte';
 	import MfaEnrolment from '../../src/lib/components/MfaEnrolment.svelte';
 	import OneTimeCodeInput from '../../src/lib/components/OneTimeCodeInput.svelte';
 	import ChangePasswordForm from '../../src/lib/components/ChangePasswordForm.svelte';
@@ -63,6 +70,30 @@
 	} from '../../src/lib/flows/oauth-callback/types.js';
 	import type { LoginAction, LoginState } from '../../src/lib/flows/login/types.js';
 	import type { SessionAction, SessionState } from '../../src/lib/session/types.js';
+	import type {
+		MfaManagementAction,
+		MfaManagementState
+	} from '../../src/lib/flows/mfa-management/types.js';
+	import type {
+		ConnectedAccountsAction,
+		ConnectedAccountsState
+	} from '../../src/lib/flows/connected-accounts/types.js';
+	import type {
+		ChangeEmailAction,
+		ChangeEmailState
+	} from '../../src/lib/flows/change-email/types.js';
+	import type {
+		ChangeEmailConfirmAction,
+		ChangeEmailConfirmState
+	} from '../../src/lib/flows/change-email-confirm/types.js';
+	import type {
+		DeleteAccountAction,
+		DeleteAccountState
+	} from '../../src/lib/flows/delete-account/types.js';
+	import type {
+		SessionRefreshAction,
+		SessionRefreshState
+	} from '../../src/lib/flows/session-refresh/types.js';
 	import type { Snippet } from 'svelte';
 
 	/**
@@ -177,7 +208,40 @@
 		codeValue,
 		codeOninput,
 		oneTimeCode,
-		maxlength
+		maxlength,
+		mfaManagementStore,
+		mfaEnabled,
+		enrol,
+		mfaManagementClass,
+		connectedStore,
+		connectedOauthStore,
+		connectedProviders,
+		availableProviders,
+		onUnlinked,
+		onProviderReauthenticationRequired,
+		connectedClass,
+		codes,
+		onAcknowledged,
+		codesClass,
+		changeEmailFlowStore,
+		currentEmail,
+		emailVerified,
+		pendingEmail,
+		changeEmailClass,
+		confirmFlowStore,
+		confirmToken,
+		confirmOnSignIn,
+		onConfirmed,
+		confirmedSnippet,
+		confirmClass,
+		deleteStore,
+		accountEmail,
+		onDeleted,
+		confirmSnippet,
+		deleteClass,
+		refreshSessionStore,
+		refreshFlowStore,
+		endedSnippet
 	}: {
 		store: { readonly state: SessionState };
 		onAnonymous?: () => void;
@@ -324,6 +388,67 @@
 		signOutLabel?: string;
 		showFailure?: boolean;
 		signOutClass?: string;
+		mfaManagementStore: {
+			readonly state: MfaManagementState;
+			dispatch(action: MfaManagementAction): void;
+		};
+		mfaEnabled?: boolean;
+		enrol?: Snippet;
+		mfaManagementClass?: string;
+		connectedStore: {
+			readonly state: ConnectedAccountsState;
+			dispatch(action: ConnectedAccountsAction): void;
+		};
+		connectedOauthStore: {
+			readonly state: OAuthStartState;
+			dispatch(action: OAuthStartAction): void;
+		};
+		connectedProviders?: readonly string[];
+		availableProviders?: readonly { id: string; label: string }[];
+		onUnlinked?: () => void;
+		onProviderReauthenticationRequired?: (demand: {
+			provider: string;
+			methods: readonly ('password' | 'totp' | 'recovery_code')[];
+		}) => void;
+		connectedClass?: string;
+		codes: readonly string[];
+		onAcknowledged?: () => void;
+		codesClass?: string;
+		changeEmailFlowStore: {
+			readonly state: ChangeEmailState;
+			dispatch(action: ChangeEmailAction): void;
+			subscribe(listener: (state: ChangeEmailState) => void): () => void;
+		};
+		currentEmail?: string;
+		emailVerified?: boolean;
+		pendingEmail?: string | null;
+		changeEmailClass?: string;
+		confirmFlowStore: {
+			readonly state: ChangeEmailConfirmState;
+			dispatch(action: ChangeEmailConfirmAction): void;
+		};
+		confirmToken?: string | null;
+		confirmOnSignIn: () => void;
+		onConfirmed?: (email: string) => void;
+		confirmedSnippet?: Snippet<[{ email: string }]>;
+		confirmClass?: string;
+		deleteStore: {
+			readonly state: DeleteAccountState;
+			dispatch(action: DeleteAccountAction): void;
+		};
+		accountEmail?: string;
+		onDeleted?: () => void;
+		confirmSnippet?: Snippet<[{ confirm: () => void; cancel: () => void; busy: boolean }]>;
+		deleteClass?: string;
+		refreshSessionStore: {
+			readonly state: SessionState;
+			dispatch(action: SessionAction): void;
+		};
+		refreshFlowStore: {
+			readonly state: SessionRefreshState;
+			dispatch(action: SessionRefreshAction): void;
+		};
+		endedSnippet?: Snippet;
 
 		// MagicLinkRequestForm.
 		magicRequestFlowStore: {
@@ -564,3 +689,61 @@
 	{showFailure}
 	class={signOutClass}
 />
+<MfaManagementPanel
+	store={mfaManagementStore}
+	{mfaEnabled}
+	{onChanged}
+	{onReauthenticationRequired}
+	{enrol}
+	{headingLevel}
+	{footer}
+	class={mfaManagementClass}
+/>
+<ConnectedAccountsPanel
+	store={connectedStore}
+	oauthStore={connectedOauthStore}
+	providers={connectedProviders}
+	available={availableProviders}
+	{hasPassword}
+	{returnTo}
+	{onUnlinked}
+	onReauthenticationRequired={onProviderReauthenticationRequired}
+	{headingLevel}
+	{footer}
+	class={connectedClass}
+/>
+<RecoveryCodes {codes} {onAcknowledged} {headingLevel} class={codesClass} />
+<ChangeEmailForm
+	flowStore={changeEmailFlowStore}
+	{currentEmail}
+	{emailVerified}
+	{pendingEmail}
+	{onChanged}
+	{onReauthenticationRequired}
+	{headingLevel}
+	{submitLabel}
+	{emailLabel}
+	{footer}
+	class={changeEmailClass}
+/>
+<EmailChangeConfirmation
+	flowStore={confirmFlowStore}
+	token={confirmToken}
+	onSignIn={confirmOnSignIn}
+	{onConfirmed}
+	{headingLevel}
+	confirmed={confirmedSnippet}
+	class={confirmClass}
+/>
+<DeleteAccountPanel
+	store={deleteStore}
+	{sessionStore}
+	email={accountEmail}
+	{onDeleted}
+	{onReauthenticationRequired}
+	confirm={confirmSnippet}
+	{headingLevel}
+	{footer}
+	class={deleteClass}
+/>
+<SessionRefresh flowStore={refreshFlowStore} sessionStore={refreshSessionStore} ended={endedSnippet} />

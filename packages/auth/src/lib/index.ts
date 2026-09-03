@@ -328,6 +328,10 @@ export {
 	OAuthSignIn,
 	OAuthCallback,
 	ConnectedAccountsPanel,
+	ChangeEmailForm,
+	EmailChangeConfirmation,
+	DeleteAccountPanel,
+	SessionRefresh,
 	PasswordInput,
 	PasswordCriteria
 } from './components/index.js';

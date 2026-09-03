@@ -38,3 +38,7 @@ export { default as MagicLinkSignIn } from './MagicLinkSignIn.svelte';
 export { default as OAuthSignIn } from './OAuthSignIn.svelte';
 export { default as OAuthCallback } from './OAuthCallback.svelte';
 export { default as ConnectedAccountsPanel } from './ConnectedAccountsPanel.svelte';
+export { default as ChangeEmailForm } from './ChangeEmailForm.svelte';
+export { default as EmailChangeConfirmation } from './EmailChangeConfirmation.svelte';
+export { default as DeleteAccountPanel } from './DeleteAccountPanel.svelte';
+export { default as SessionRefresh } from './SessionRefresh.svelte';
