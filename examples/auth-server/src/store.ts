@@ -59,11 +59,35 @@ export interface Session {
 	absoluteExpiresAt: number;
 }
 
-export type TokenKind = 'verify-email' | 'reset-password' | 'magic-link';
+export type TokenKind = 'verify-email' | 'reset-password' | 'magic-link' | 'change-email';
 
 export interface TokenRecord {
 	accountId: string;
 	kind: TokenKind;
+	expiresAt: number;
+}
+
+/**
+ * An email change that has been requested but not confirmed.
+ *
+ * Keyed by **account**, because `GET /auth/account` has to answer
+ * `pending_email` for the signed-in account while `tokens` is keyed by token.
+ * Two maps, one record — the token map decides whether a link is valid, this
+ * one decides what the account is currently waiting on.
+ */
+export interface PendingEmailChange {
+	accountId: string;
+	/** The address being moved to. Not yet the account's. */
+	email: string;
+	/**
+	 * The token this record was issued with.
+	 *
+	 * Requesting a second change overwrites this record while the **first**
+	 * token is still live in `tokens`. Without comparing, redeeming that older
+	 * link would apply the newer address — a link doing something other than
+	 * what its mail said. Confirmation checks it and answers `token_expired`.
+	 */
+	token: string;
 	expiresAt: number;
 }
 
@@ -210,6 +234,8 @@ export interface Store {
 	enrolments: Expiring<Enrolment>;
 	oauthStates: Expiring<OAuthStateRecord>;
 	oauthCodes: Expiring<OAuthCodeRecord>;
+	/** Keyed by account id, unlike `tokens`. */
+	pendingEmails: Expiring<PendingEmailChange>;
 	byEmail(email: string): Account | null;
 	/**
 	 * Count a hit against `key`. Returns the seconds to wait, or `null` to allow.
@@ -243,6 +269,7 @@ export function createStore(now: () => number = Date.now): Store {
 	const enrolments = expiring<Enrolment>(now);
 	const oauthStates = expiring<OAuthStateRecord>(now);
 	const oauthCodes = expiring<OAuthCodeRecord>(now);
+	const pendingEmails = expiring<PendingEmailChange>(now);
 	const counters = new Map<string, { count: number; resetAt: number }>();
 
 	return {
@@ -254,6 +281,7 @@ export function createStore(now: () => number = Date.now): Store {
 		enrolments,
 		oauthStates,
 		oauthCodes,
+		pendingEmails,
 
 		byEmail(email: string): Account | null {
 			const wanted = email.trim().toLowerCase();
@@ -296,6 +324,7 @@ export function createStore(now: () => number = Date.now): Store {
 			enrolments.clear();
 			oauthStates.clear();
 			oauthCodes.clear();
+			pendingEmails.clear();
 			counters.clear();
 
 			const hash = await hashPassword(SEED_PASSWORD);

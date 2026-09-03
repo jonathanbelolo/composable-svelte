@@ -236,7 +236,7 @@ export async function oauthRoutes(
 
 			// **`authenticatedAt: 0` — born stale.** An account at Google is not a
 			// credential on this account.
-			establish(
+			const session = establish(
 				reply,
 				store,
 				account.id,
@@ -245,7 +245,7 @@ export async function oauthRoutes(
 				sessionWindows(options.context, false),
 				secureCookie
 			);
-			return reply.status(200).send(snapshot(account));
+			return reply.status(200).send(snapshot(account, session));
 		}
 	);
 

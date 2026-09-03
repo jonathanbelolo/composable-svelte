@@ -9,6 +9,7 @@
 
 import type { FastifyInstance } from 'fastify';
 
+import { requireAccount } from '../guard.js';
 import { clear, currentAccount, establish, sessionWindows, snapshot } from '../session.js';
 import type { ServerContext } from '../server.js';
 
@@ -49,14 +50,14 @@ export async function sessionRoutes(
 			if (account === undefined) {
 				return reply.status(404).send();
 			}
-			establish(
+			const session = establish(
 				reply,
 				store,
 				account.id,
 				sessionWindows(options.context, true),
 				secureCookie
 			);
-			return reply.status(200).send(snapshot(account));
+			return reply.status(200).send(snapshot(account, session));
 		}
 	);
 
@@ -86,6 +87,36 @@ export async function sessionRoutes(
 		if (current === null) {
 			return reply.status(options.context.anonymousStatus).send();
 		}
-		return reply.status(200).send(snapshot(current.account));
+		return reply.status(200).send(snapshot(current.account, current.session));
+	});
+
+	/**
+	 * Extend the session's idle window.
+	 *
+	 * **`requireAccount` and deliberately no `requireFresh`.** Demanding a
+	 * freshly proven credential to extend a session would mean only the session
+	 * that least needs extending can be extended, and the endpoint would be
+	 * decorative.
+	 *
+	 * **The session id is not rotated.** Two tabs refreshing concurrently would
+	 * race, and the loser would hold a cookie the server has forgotten.
+	 * Rotation belongs on authentication events, which is where it already is:
+	 * `POST /auth/account/password` deletes and re-establishes.
+	 *
+	 * **POST, not GET**, and that is load-bearing even under `SameSite=Lax`:
+	 * Lax withholds the cookie from a cross-site POST entirely, but *sends* it
+	 * on a cross-site top-level GET navigation — so a GET version could be
+	 * extended by luring someone into clicking a link.
+	 *
+	 * `currentSession` has already slid the window by the time this runs, so
+	 * there is nothing left to do but report it.
+	 */
+	app.post('/auth/session/refresh', async (request, reply) => {
+		const current = requireAccount(request, reply, store, { now, idleMs });
+		if (current === null) return reply;
+
+		return reply
+			.status(200)
+			.send({ expires_at: new Date(current.session.idleExpiresAt).toISOString() });
 	});
 }

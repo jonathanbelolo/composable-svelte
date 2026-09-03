@@ -252,16 +252,33 @@ export function proveCredential(session: Session, now: number): void {
 	session.authenticatedAt = now;
 }
 
-/** The wire shape the client's `decodeSessionSnapshot` requires. */
-export function snapshot(account: Account): {
+/**
+ * The wire shape the client's `decodeSessionSnapshot` requires.
+ *
+ * `expires_at` is **advisory**: a client that receives it can refresh before
+ * the user hits a wall, and one that does not falls back to reacting to a 401.
+ * An ISO 8601 **string**, never a number and never a `Date` —
+ * `session/http.ts` refuses anything else, and a `Date` would survive
+ * `JSON.stringify` as a string while the type went on claiming `Date`.
+ *
+ * It reports the **idle** window, which is the one that actually ends most
+ * sessions. A client refreshing against it is extended up to the absolute cap
+ * and no further.
+ */
+export function snapshot(
+	account: Account,
+	session: Session
+): {
 	subject_id: string;
 	display_name: string;
 	roles: string[];
+	expires_at: string;
 } {
 	const name = account.email.split('@')[0] ?? account.email;
 	return {
 		subject_id: account.id,
 		display_name: name.charAt(0).toUpperCase() + name.slice(1),
-		roles: ['member']
+		roles: ['member'],
+		expires_at: new Date(session.idleExpiresAt).toISOString()
 	};
 }

@@ -66,19 +66,23 @@ export async function mfaRoutes(
 			// **A session, always.** There is no 204 branch: a second factor that
 			// verified without producing one would leave the user having proved who
 			// they are and still signed out.
+			// Signing in as the account already in the cookie proves a credential on
+			// that session rather than minting a second one — which is what closes
+			// the re-authentication loop with no twenty-third endpoint.
 			const existing = currentSession(request, store, { now, idleMs });
-			if (existing !== null && existing.accountId === account.id) {
-				proveCredential(existing, Date.now());
-			} else {
-				establish(
-				reply,
-				store,
-				account.id,
-				sessionWindows(options.context, true),
-				secureCookie
-			);
-			}
-			return reply.status(200).send(snapshot(account));
+			const session =
+				existing !== null && existing.accountId === account.id
+					? existing
+					: establish(
+							reply,
+							store,
+							account.id,
+							sessionWindows(options.context, true),
+							secureCookie
+						);
+			if (session === existing) proveCredential(session, now());
+
+			return reply.status(200).send(snapshot(account, session));
 		}
 	);
 

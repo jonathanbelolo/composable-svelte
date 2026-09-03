@@ -22,7 +22,7 @@ import { currentSession, establish, proveCredential, sessionWindows, snapshot } 
 import { createAccount, type Account, type Store, type TokenKind } from '../store.js';
 import type { ServerContext } from '../server.js';
 
-const HOUR = 60 * 60 * 1000;
+export const HOUR = 60 * 60 * 1000;
 
 /** Wrong passwords tolerated in a window before the account locks. */
 const LOCK_AFTER = 3;
@@ -32,10 +32,25 @@ const LOCK_WINDOW_MS = 60_000;
 const LINK_LIMIT = 1;
 const LINK_WINDOW_MS = 60_000;
 
-function issue(store: Store, account: Account, kind: TokenKind, ttlMs = HOUR): string {
+/**
+ * Mint a single-use token and post the link.
+ *
+ * `to` defaults to the account's address because that is where every link
+ * except one goes. A change-email confirmation goes to the address being moved
+ * *to* — sending it to the current one would confirm control of a mailbox the
+ * user has already proved they hold, which is not what the link is for.
+ */
+export function issue(
+	store: Store,
+	account: Account,
+	kind: TokenKind,
+	now: () => number,
+	ttlMs = HOUR,
+	to: string = account.email
+): string {
 	const value = newToken();
-	store.tokens.put(value, { accountId: account.id, kind, expiresAt: Date.now() + ttlMs });
-	store.outbox.push({ to: account.email, kind, token: value });
+	store.tokens.put(value, { accountId: account.id, kind, expiresAt: now() + ttlMs });
+	store.outbox.push({ to, kind, token: value });
 	return value;
 }
 
@@ -134,18 +149,18 @@ export async function credentialRoutes(
 			// twenty-third endpoint.
 			const existing = currentSession(request, store, { now, idleMs });
 			if (existing !== null && existing.accountId === account.id) {
-				proveCredential(existing, Date.now());
-				return reply.status(200).send(snapshot(account));
+				proveCredential(existing, now());
+				return reply.status(200).send(snapshot(account, existing));
 			}
 
-			establish(
+			const session = establish(
 				reply,
 				store,
 				account.id,
 				sessionWindows(options.context, true),
 				secureCookie
 			);
-			return reply.status(200).send(snapshot(account));
+			return reply.status(200).send(snapshot(account, session));
 		}
 	);
 
@@ -164,7 +179,7 @@ export async function credentialRoutes(
 			const account = createAccount(email);
 			account.passwordHash = await hashPassword(password);
 			store.accounts.set(account.id, account);
-			issue(store, account, 'verify-email');
+			issue(store, account, 'verify-email', now);
 
 			// **202, and the client reads the status, never the body.** A 200 here
 			// carrying an explanatory object would be decoded as a session and throw
@@ -197,7 +212,7 @@ export async function credentialRoutes(
 		{ schema: { body: emailOnly } },
 		async (request, reply) => {
 			const account = store.byEmail(request.body.email);
-			if (account !== null && !account.emailVerified) issue(store, account, 'verify-email');
+			if (account !== null && !account.emailVerified) issue(store, account, 'verify-email', now);
 			// 204 whatever happened above. The outbox differs; the response does not.
 			return reply.status(204).send();
 		}
@@ -208,7 +223,7 @@ export async function credentialRoutes(
 		{ schema: { body: emailOnly } },
 		async (request, reply) => {
 			const account = store.byEmail(request.body.email);
-			if (account !== null) issue(store, account, 'reset-password');
+			if (account !== null) issue(store, account, 'reset-password', now);
 			return reply.status(204).send();
 		}
 	);
@@ -265,7 +280,7 @@ export async function credentialRoutes(
 			}
 
 			const account = store.byEmail(address);
-			if (account !== null) issue(store, account, 'magic-link', 15 * 60_000);
+			if (account !== null) issue(store, account, 'magic-link', now, 15 * 60_000);
 			return reply.status(204).send();
 		}
 	);
@@ -290,7 +305,7 @@ export async function credentialRoutes(
 			// proving a credential on this account, so sensitive operations will
 			// demand re-authentication. This is the policy that makes
 			// `reauthentication_required` reachable with no configuration at all.
-			establish(
+			const session = establish(
 				reply,
 				store,
 				account.id,
@@ -299,7 +314,7 @@ export async function credentialRoutes(
 				sessionWindows(options.context, false),
 				secureCookie
 			);
-			return reply.status(200).send(snapshot(account));
+			return reply.status(200).send(snapshot(account, session));
 		}
 	);
 }
