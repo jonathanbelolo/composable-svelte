@@ -42,8 +42,11 @@ That is the single most useful process finding here.
 
 ## Size
 
-`git diff main..HEAD --shortstat`: **262 files, +19,065 / −1,912**, over 23
-commits, 4 of them marked breaking (`!`).
+`git diff main..753e61c --shortstat`: **262 files, +19,065 / −1,912**, over
+23 commits, 4 of them marked breaking (`!`).
+
+The hash rather than `HEAD`, so the command still reproduces the number once
+this file is itself committed.
 
 Concentrated in `packages/auth` (71 files), `packages/core` (69) and
 `examples/auth-server` (47).
@@ -52,9 +55,11 @@ Concentrated in `packages/auth` (71 files), `packages/core` (69) and
 
 ## What landed
 
-**Step 0 — the tree split.** 115 uncommitted files spanning four unrelated
-pieces of work, committed as four coherent commits (`6d71e42`…`4bbaf5f`) with
-the gate green first. `vitest.node.config.ts` was edited twice so each new guard
+**Step 0 — the tree split.** An uncommitted tree spanning four unrelated pieces
+of work — 115 entries in `git status --porcelain`, which is **161 files** once
+untracked directories are expanded (`git diff --name-only main 4bbaf5f`) —
+committed as four coherent commits (`6d71e42`…`4bbaf5f`) with the gate green
+first. One stray screenshot was deleted rather than committed. `vitest.node.config.ts` was edited twice so each new guard
 landed in the same commit as the fix it guards.
 
 **1.0 — the hydration-script XSS** (`87e20d7`). `renderToHTML` *and*
@@ -63,7 +68,7 @@ a state value containing `</script>` closed it early — stored XSS through any
 user-influenced field. Two sites, not one, and `renderToHTML` is the more
 travelled path. The obvious fix is wrong: `escapeHtml` was already in that file,
 but a script element's contents are not entity-decoded, so `&lt;` would reach
-`JSON.parse` literally. It escapes `<` as `<`, which survives `JSON.parse`
+`JSON.parse` literally. It escapes `<` as `\u003C`, which survives `JSON.parse`
 and closes `</script`, `<script` and `<!--` in one rule. Both sites
 mutation-verified independently.
 
@@ -111,9 +116,15 @@ feature. Re-introducing the confusion fails **five** tests.
 ## Two adversarial reviews, ten defects
 
 Both reviews were of my own work, and both found real defects. They are worth
-recording as a pair because **eight of the ten are the same species**: a
-property asserted in prose — a commit message, a test name, a guard's own
-docstring — that the code or the test did not establish.
+recording as a pair because **five of the ten are one species**: a property
+asserted in prose — a commit message, a test name, a guard's own docstring —
+that the code or the test did not establish. Those are R1.4, R1.5, R2.2, R2.3
+and R2.4 below.
+
+The other five are ordinary: one process failure, two code defects, a guard
+whose regex was simply wrong, and a field written and never read. Worth
+separating, because the two kinds are caught by different things — the first
+kind survives a green suite by construction.
 
 **Review 1** (`dd0d5bd`), of the thirteen commits before it:
 
@@ -145,14 +156,22 @@ docstring — that the code or the test did not establish.
    the other passed no snippet to the test named for the snippet seam
 5. `Session.startedAt` was written and never read
 
-**Mutation testing caught every one of the eight test-quality defects, and
-nothing else would have.** Both reviews also found stale counts in documents
-that the same session's work had invalidated.
+**On what caught what**, since the two kinds fail differently. Mutation testing
+caught R2.2 — the single-use test that passed whether or not the token was
+spent. The two vacuous component tests (R2.4) were caught by *reading* them;
+mutation then verified the replacements. Mutation also caught two more vacuous
+guards earlier in the phase, outside either review: `createParserConfig`'s
+ordering test paired two patterns that do not overlap, so reversing the map
+changed nothing, and three of four "is a leaf" arms would have passed without
+the guard they named.
+
+The rest were found by reading code against its own claims. Both reviews also
+found stale counts in documents that the same session's work had invalidated.
 
 Two process rules earned the hard way: run the *whole* gate before each commit,
 and use per-file backups when mutating — a `cp -r`/`rm -rf` pair destroyed
 `packages/core/src/lib/navigation-components/` once, recovered from git plus a
-rewrite of the eight untracked files.
+rewrite of the nine untracked files.
 
 ---
 
