@@ -27,10 +27,15 @@ All six steps, run at `753e61c`:
 skips are in `core`'s `test-store.test.ts` and predate this work — the baseline
 at the start of the phase was 4,480 passed with the same 3 skips.
 
-**Run the whole gate before each commit, not the touched package.** Four commits
-in this phase went in red because `auth`'s suite does not contain `core`'s repo
-guards — and `pnpm -r test` *aborts at core*, so nothing after it ran either.
-That is the single most useful process finding here.
+**Run the whole gate before each commit, not the touched package.** Two commits
+in this phase went in red — `bf04ef9`, which introduced a bare optional that
+tripped the `optional-props` ratchet, and `fd4af4e` after it — because `auth`'s
+suite does not contain `core`'s repo guards. Worse, `pnpm -r test` *aborts at
+core*, so nothing after it ran either and the blast radius was the whole
+remaining suite, not one ratchet.
+
+(Both this file and `dd0d5bd`'s message first said *four*. Measured with
+`git log -S "expires_at?: string;"`, which bounds the window to two.)
 
 ## Repository
 
@@ -109,7 +114,15 @@ The sharpest constraint in it: the server's `refresh(session)` set
 landing one file away, that name was a trap — a lifetime extension that also set
 it would hold sudo open forever and six sensitive endpoints would stop demanding
 proof. Renamed to `proveCredential` in its own commit (`fa0620f`), before the
-feature. Re-introducing the confusion fails **five** tests.
+feature.
+
+Re-introducing the confusion — one line, `session.authenticatedAt = now`, inside
+`extendIdleWindow` — fails **six** tests: the two pins written for it, and four
+pre-existing `reauthentication_required` arms that simply stop demanding proof.
+That second group is the point. It was five when first measured at `70926e6`
+and became six when review 2 added the email-change and deletion arms; a number
+that was right when taken and quoted later is the commonest way this register
+has gone wrong.
 
 ---
 
@@ -126,7 +139,7 @@ whose regex was simply wrong, and a field written and never read. Worth
 separating, because the two kinds are caught by different things — the first
 kind survives a green suite by construction.
 
-**Review 1** (`dd0d5bd`), of the thirteen commits before it:
+**Review 1** (`dd0d5bd`), of the 15 commits before it:
 
 1. The gate had been red for four commits (a bare optional tripping the
    `optional-props` ratchet), unnoticed because only per-package suites were run
