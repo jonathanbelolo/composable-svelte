@@ -38,7 +38,7 @@ halves of *this* repository agree, and it exercises everything environmental.
 
 ```bash
 pnpm dev          # fixture on :4100 and the reference client on :4101
-pnpm test         # the Node conformance suite — all 22 endpoints, 65 tests
+pnpm test         # the Node conformance suite — all 27 endpoints, 90 tests
 pnpm test:e2e     # Playwright: the cookie and the redirect, in a real browser
 ```
 
@@ -107,10 +107,17 @@ now; **`magic-link/signin` and `oauth/complete` set it to `0`** — a magic link
 proves control of a mailbox and an OAuth redirect proves an account at Google,
 and neither proves a credential *here*. GitHub's sudo mode behaves the same way.
 
-Four operations require a fresh session: changing a password, disabling MFA,
-reissuing recovery codes, unlinking a provider. The consequence is that a test
-reaches `reauthentication_required` with **no configuration at all**: sign in by
-link, then try to change your password.
+**Six** operations require a fresh session: changing a password, disabling MFA,
+reissuing recovery codes, unlinking a provider, requesting an email change, and
+deleting the account. The consequence is that a test reaches
+`reauthentication_required` with **no configuration at all**: sign in by link,
+then try to change your password.
+
+`POST /auth/session/refresh` is deliberately **not** one of them. An endpoint
+that demanded a freshly proven credential to extend a session could only extend
+the session that least needs extending. Confirming an email change is not one
+either: proof was required to *ask*, and demanding it again an hour later when
+the link is followed would strand someone who already gave it.
 
 `methods` is **computed from the account** — `password` if it has one, plus
 `totp`/`recovery_code` if MFA is on. If that list would be empty, the operation
@@ -119,6 +126,38 @@ strands the user on a prompt with nothing to answer.
 
 The window is a boot-time option (`freshnessMs`). Nothing in a request can
 change it — that is the line between configuration and a backdoor.
+
+## Session lifetime
+
+Two windows. The **idle** one slides on every authenticated request; the
+**absolute** one is fixed at sign-in and never moves. Both are needed — without
+the cap, a session used often enough never expires, so an idle window alone is
+not an expiry policy. `idleMs` and `absoluteMs` are boot-time options, like
+`freshnessMs`.
+
+Expiry lives in `currentSession`, which is the one place that both reads a
+session and slides it: a read and a slide that lived apart would drift, and
+every authenticated route already funnels through it. A lapsed session is
+**deleted**, not merely refused — nothing here may use `setInterval`, so things
+expire when they are read.
+
+**`extendIdleWindow` must never touch `authenticatedAt`.** That field is the
+sudo-mode window from the section above, and a sliding session that also slid
+it would hold sudo open forever — all six operations behind `requireFresh`
+would silently stop demanding proof. That is privilege escalation, not a UX
+regression. It is why the function that *does* set `authenticatedAt` is called
+`proveCredential` rather than `refresh`: with a session refresh endpoint one
+file away, the old name was an accident waiting to happen.
+`tests/session-lifetime.test.ts` pins the separation, and re-introducing it
+fails five tests.
+
+`GET /auth/session` advertises the idle expiry as `expires_at`, an ISO 8601
+string. It is advisory: a client that receives it can refresh before the user
+hits a wall, and one that does not falls back to reacting to a 401.
+
+The clock is injectable (`now`), and it reaches **both** the session windows
+and the expiring token maps. An injected clock reaching only one would produce
+tests that pass for the wrong reason.
 
 ## The stub identity provider
 
@@ -165,6 +204,11 @@ status**.
 | `POST /auth/mfa/recovery-codes` | 200 + `{recovery_codes}` | No body. Needs a fresh session |
 | `GET /auth/account` | 200 + account | All four of `email`, `email_verified`, `has_password`, `mfa_enabled` are required |
 | `POST /auth/account/password` | 200 + session, or 204 | Rotating is the default; both are legal |
+| `POST /auth/account/email` | 204 | The link goes to the **new** address. Needs a fresh session. 409 `email_taken`, 422 if it is already yours |
+| `POST /auth/account/email/resend` | 204 | **No body** — the pending address lives on the session. 422 when nothing is pending |
+| `POST /auth/account/email/confirm` | 200 + `{email}` | Needs a session but **not** a fresh one. 410 for a spent *or superseded* link |
+| `DELETE /auth/account` | 204 | Needs a fresh session. Ends **every** session for the account |
+| `POST /auth/session/refresh` | 200 + `{expires_at}` | Needs a session, **never** a fresh one. Does not rotate the id |
 | `POST /auth/oauth/begin` | 200 + `{authorize_url, state}` | `authorize_url` must be absolute http(s) |
 | `POST /auth/oauth/complete` | 200 + session | Session is born **stale** |
 | `POST /auth/oauth/link` | **204, and no `Set-Cookie`** | Linking is not a sign-in |

@@ -438,6 +438,20 @@ scoped CSS — `auth`'s and `media`'s — render correctly either way.
   schema's output back into `state.data` at **submit-time** validation only;
   doing it per-field would rewrite a keystroke mid-word. The two MFA reducers
   dropped their duplicated trims as a result.
+- **`examples/product-gallery` compares a `$state` proxy with `===`.** Its
+  Delete Flow test logs `state_proxy_equality_mismatch` twice — Svelte's warning
+  that a reactive proxy and the value it proxies have different identities, so
+  `===` between them silently answers `false`.
+
+  Pre-existing and unrelated to the account-lifecycle work; found while checking
+  the gate log for warnings from a different change. The test passes, because
+  nothing asserts on the comparison that is misbehaving — which is exactly why
+  it is worth recording rather than leaving to be re-found. Example code, not
+  shipped library code, so it is a real defect in a low-consequence place.
+
+  Open. Reproduce with `pnpm --filter @composable-svelte/example-product-gallery
+  test` and read stderr.
+
 - **`parseDestination` strips a leading slash when there is no `basePath`, and
   patterns written the obvious way then silently never match.** `basePath`
   defaults to `'/'` and the relative path is `path.slice(basePath.length)`, so

@@ -415,6 +415,46 @@
 
 ### Added
 
+- **The account lifecycle completes** — changing an email address, deleting an
+  account, and session-lifetime management.
+
+  Changing an address is **two** flows. `change-email` is the request, a form in
+  a settings panel; `change-email-confirm` is the link target, formless. They
+  are separate because the halves run in different page loads — the criterion
+  this package already applies to OAuth and magic links. Nothing is shared with
+  `email-verification` but the word "token": that one confirms *the account's*
+  address and may return a session, this one swaps to a different address on a
+  session that already exists and returns the new address.
+
+  Confirming requires a live session. Accepting the token alone would let a
+  forwarded mail, a shared inbox or a mail scanner complete an identity change
+  silently — and unlike verifying an address, which is what its link was for,
+  this *moves* the account. The cost is a real cliff, so
+  `EmailChangeConfirmation` takes a **required** `onSignIn`.
+
+  `delete-account` puts the confirmation in the **reducer**:
+  `deletionRequested` is reachable only from `confirming`, so a consumer who
+  renders their own dialog — or none — cannot delete an account with one
+  dispatch. `DeleteAccountPanel` takes a `confirm` snippet for a modal and
+  confirms inline without one; it deliberately does not import core's
+  `AlertDialog`, which is Tailwind and would render transparent in an app that
+  has not wired it.
+
+  `session-refresh` is session lifetime, **not bearer tokens**, and none is
+  introduced: a refresh token reachable by JavaScript is exfiltrable by any XSS,
+  which is exactly what the HttpOnly cookie avoids. The decision "is it time
+  yet" is pure over an injected `Clock`, so `createMockClock` drives it with no
+  timers. Only `invalid_credentials` ends a session — a `network` failure keeps
+  the expiry and retries, because signing someone out of a working session when
+  their wifi drops is worse than a late refresh.
+
+- **`createUnauthorizedHandler`** ships the 401 backstop the README previously
+  only described. It coalesces on `status !== 'resolving'`, so a page firing a
+  dozen requests that all 401 dispatches one re-resolve rather than a dozen.
+
+- **Four components** — `ChangeEmailForm`, `EmailChangeConfirmation`,
+  `DeleteAccountPanel`, `SessionRefresh`.
+
 - **`sessionEstablished`** — a flow outside this store completing a sign-in.
   The session store owns "who am I"; it does not own every way of becoming
   someone. A credentials login, an MFA challenge, an OAuth callback and a magic

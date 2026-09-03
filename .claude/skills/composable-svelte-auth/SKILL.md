@@ -20,17 +20,29 @@ forms), the `AuthError` union, `AuthGuard` / `RoleGate` / `LoginForm` /
 `PasswordCriteria` / `OneTimeCodeInput` / `OAuthSignIn` / `OAuthCallback` /
 `MagicLinkRequestForm` / `MagicLinkSignIn` / `ChangePasswordForm` /
 `SignOutButton` / `MfaManagementPanel` / `ConnectedAccountsPanel` /
-`RecoveryCodes`, a mock dependency set, SSR coverage.
+`RecoveryCodes` / `ChangeEmailForm` / `EmailChangeConfirmation` /
+`DeleteAccountPanel` / `SessionRefresh`, a mock dependency set, SSR coverage.
 
-**What does not exist yet.** Change email, delete account, and token refresh.
-The account **read model** (`fetchAccount`) and the re-authentication arm they
-need already exist, so each is a flow on top of them — but delete account also
-needs a confirmation component this repo does not have (`Alert` is a bare
-shell). The `AuthError` union already *names* the failures those
-flows produce (`mfa_required`, `email_unverified`, `token_expired`) because the
-wire contract needs them — **a code appearing in the union is not a promise that
-the flow behind it ships.** Check `src/lib/flows/` before telling a user a flow
-exists.
+**The account lifecycle ships.** Changing an address is **two** flows —
+`change-email` (a form in a settings panel) and `change-email-confirm` (the
+link target) — because the halves run in different page loads, the same
+criterion that splits OAuth and magic links. Confirming requires a live
+session, so `EmailChangeConfirmation` takes a **required** `onSignIn`: a link
+opened on a signed-out device 401s, and that must be a route onward.
+
+`delete-account` puts the confirmation **in the reducer** —
+`deletionRequested` is reachable only from `confirming` — so a consumer who
+renders their own dialog, or none, cannot delete an account with one dispatch.
+`DeleteAccountPanel` takes a `confirm` snippet for a modal and confirms inline
+without one; it does **not** import core's `AlertDialog`, because that is
+Tailwind and auth components must work with none.
+
+`session-refresh` is session **lifetime**, not bearer tokens, and none may be
+introduced: a refresh token reachable by JavaScript is exfiltrable by any XSS,
+which is what the HttpOnly cookie avoids.
+
+**A code appearing in the `AuthError` union is still not a promise that a flow
+behind it ships.** Check `src/lib/flows/` before telling a user one exists.
 
 **Entry points.** `.`, `./subject`, `./errors`, `./session`, `./flows`,
 `./components`, `./http`, `./testing` — and every one of them is also on the
@@ -1247,7 +1259,9 @@ The shape to copy, in order. `flows/login/` is the worked example.
 6. **Tests at both layers** on the day it lands. Every new `.svelte` must be
    imported by a test (`component-coverage.test.ts` follows imports) and added
    to `tests/test-components/AuthPropForwarding.svelte`.
-7. **CHANGELOG**, and the README's "what does not exist yet" list.
+7. **CHANGELOG**, and the README's summary of what ships — plus
+   `front-door.test.ts`'s `CAPABILITIES`, which fails if a document denies
+   something a flow directory now provides.
 
 ### Constraints that will fail the build
 

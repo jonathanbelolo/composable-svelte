@@ -11,12 +11,13 @@ thin guard components.
 > the **account** surface — an account read model, changing or setting a
 > password, signing out, **MFA management** (turning it off, reissuing recovery
 > codes) and **connected accounts** (attaching and detaching OAuth providers).
-> Headless flows, HTTP adapter and styled components throughout. What does not
-> exist yet: changing an email, deleting an account, and token refresh. The
-> `AuthError`
-> union already names the failures those flows produce (`mfa_required`,
-> `email_unverified`, …) because the backend contract needs them; a code
-> appearing there is not a promise that the flow behind it ships today.
+> Headless flows, HTTP adapter and styled components throughout — including
+> changing an email address, deleting an account, and session-lifetime
+> management over a server-owned cookie.
+>
+> The `AuthError` union names failures the backend contract needs, and a code
+> appearing there is still not a promise that a flow behind it ships. Check
+> `src/lib/flows/` before telling anyone a flow exists.
 >
 > The HTTP adapter speaks to one backend shape (Composable Rust). Every
 > dependency is injected, so another backend supplies its own object — but only
@@ -240,10 +241,22 @@ what an HTML proxy error page or an SPA index fallback looks like.
 - **`POST /auth/login` is dev/preview only.** The seeded-login endpoint is
   compiled out of production backend builds; production sign-in goes through
   the backend's real identity flows.
-- **Sessions expire server-side with no client signal.** Sessions carry a
-  server-side TTL; the client receives no expiry event, so an
-  `authenticated` store can be stale. The consumer's hook is a 401 from any
-  domain API call — dispatch `resolveSession` to re-sync.
+- **A session can end without the client being told.** A backend *may*
+  advertise when it lapses, in `expires_at`; when it does, that reaches
+  `SessionState.expiresAt` and the `session-refresh` flow extends the session
+  before the user hits a wall.
+
+  It is advisory, and it is not the whole story: a session ends for reasons no
+  expiry anticipates — an administrator revoked it, a deploy flushed the store,
+  an absolute cap was reached mid-request. The backstop is a 401 from any
+  domain API call, and `createUnauthorizedHandler` turns that into a
+  `resolveSession` for you. It coalesces, so a page firing a dozen requests
+  that all 401 dispatches one re-resolve rather than a dozen.
+
+  **There is no bearer token and there must not be one.** The session cookie is
+  HttpOnly and server-owned; a refresh token reachable by JavaScript is
+  exfiltrable by any XSS, which is exactly what that design avoids. "Refresh"
+  here means asking the server to extend the session it already holds.
 
 ## Examples
 
