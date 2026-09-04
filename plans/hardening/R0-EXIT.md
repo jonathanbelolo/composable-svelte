@@ -14,7 +14,7 @@ section "The review, and what it changed" lists each finding and the commit
 that answered it. Claims the first report made that the tree did not support
 are corrected in place below, not preserved.
 
-**Where it ends.** The last code commit of R0 is `a2add99`; this document is
+**Where it ends.** The last code commit of R0 is `3760b29`; this document is
 committed on top of it. Nothing published, tagged or version-bumped.
 
 ## The gate at the exit
@@ -26,11 +26,19 @@ committed on top of it. Nothing published, tagged or version-bumped.
 | test | `pnpm --filter @composable-svelte/core test` | 2190 browser + 583 node passed, **0 skipped** |
 | check | `pnpm --filter @composable-svelte/core check` | 0 errors, 0 warnings |
 
-Every R0.5 commit carries the same four lines, run on that commit's tree and
-nothing else. Four R0 commits do not: `fb57248`, `9187e4b`, `a4d8062` and
-`0c38b97` were made 68 to 100 seconds after their predecessors, less than one
-core gate takes, so their gate lines report the gate of the batch they were
-split from, not of each commit (found by the review from the timestamps).
+Every commit in the ledger that touches `packages/core` carries the same four
+lines, run on that commit's tree; the script-only commit `f7a5fbd` records
+that the core gate is unaffected, and the docs commits carry the
+whole-repository line. The raw gate outputs are in
+`plans/hardening/gate-logs/`, one per commit, with their original times in
+that directory's README: each ends between the previous commit and its own,
+and its counts are specific to its tree. The first revision of this report
+said four R0 commits (`fb57248`, `9187e4b`, `a4d8062`, `0c38b97`) carried
+the gate of a batch, because the review had estimated a core gate at several
+minutes and those commits were 68 to 100 seconds apart; the logs show the
+gates, and a core gate measures under a minute (Vitest runs files in
+parallel: browser 13–24 s wall clock, node 4–11 s, build about 10 s, check
+about 6 s). Commit `b0a4742`'s message repeats the wrong inference.
 
 The whole-repository gate (`pnpm -r build && pnpm -r typecheck && pnpm -r
 --workspace-concurrency=1 test && pnpm -r check`), run at the same tree:
@@ -38,9 +46,10 @@ every workspace green — build and typecheck exit 0, 4,734 tests passed across 
 workspaces with **0 skipped**, svelte-check 0 errors and 0 warnings in all 20.
 
 At the start of R0 the core gate read 2,169 passed with **3 skipped** in the
-browser project and 511 node (`plans/hardening/PHASE-1-STATE.md` at
-`37afb0d`; the `2,172` in the first report counted the skipped tests as
-passed).
+browser project and 511 node: the R0.1.a gate (`gate-logs/gate-R0.1.a.log`)
+reads 2,172 + 511 after the three were un-skipped and nothing else changed.
+`plans/hardening/PHASE-1-STATE.md` at `37afb0d` gives the whole-repository
+line, 4,641 passed with 3 skipped.
 
 **Continuous integration has not run this branch.** `.github/workflows/ci.yml`
 triggers on pushes and pull requests to `main` and `develop` only; every gate
@@ -170,7 +179,9 @@ Every commit in `37afb0d..HEAD`, in order.
 | R0.5.e | `f7a5fbd` | the baseline script kills by name, after a clean run |
 | R0.5.f | `560a5fe` | skill fixtures pin what they say; DA-X2 corrected |
 | R0.5.f | `a2add99` | doc-typecheck's Vite shim matches Vite; DA-X1 corrected |
-| R0.5.g | this commit | the findings register annotated, the plan and this report corrected |
+| R0.5.g | `b0a4742` | the findings register annotated, the plan and this report corrected; its message repeats the batch-gating inference this revision withdraws |
+| R0.5.h | `3760b29` | the sub-barrel extractor sees async, abstract and declare declarations |
+| R0.5.h | this commit | the record corrected after the review of the closure; the gate logs committed |
 
 ## The review, and what it changed
 
@@ -196,9 +207,11 @@ Verified by mutation in a worktree or by reading, then closed:
 6. **The doc-typecheck register carried the guard's own shim error and two
    excerpt artefacts as documentation defects.** → `a2add99`.
 7. **DA-X2 called a valid fence invalid, called all nineteen "not valid
-   Svelte", and was silent on twelve import-outside-script fences and the
+   Svelte", and was silent on thirteen import-outside-script fences and the
    forms stand-ins; four fixture headers described a comment-pinning
-   mechanism the guard no longer used.** → `560a5fe`.
+   mechanism the guard no longer used.** → `560a5fe`; the fence line numbers
+   corrected again in R0.5.h (thirteen import-outside-script fences, cited by
+   their `import` line).
 8. **Guard registration was a substring search over the config text**, and
    nothing pinned the styles glob or the setup control. → `949c185`.
 9. **`public-exports` could not see a symbol declared in place in a
@@ -209,7 +222,43 @@ Verified by mutation in a worktree or by reading, then closed:
 11. **The findings register showed every R0 finding untouched; four ticked
     plan lines described work that shipped differently; the first report
     misstated the whole-repository gate, the ledger, M4, animation-policy and
-    CLAUDE.md coverage.** → this commit.
+    CLAUDE.md coverage.** → `b0a4742`.
+
+### Review of the closure
+
+R0.5 was reviewed the same way on 4 September, after the closure. Every proof
+the eight commits claim was re-run as a plant or mutation in a fresh worktree
+at `b0a4742` and behaved as claimed: the three tests fail under the mutation
+of the code they name; the console guard fails one-declared-two-logged and
+accepts explicit counts under both configs; the harnesses restore themselves
+after two scripted fetches in one test and after an install from a nested
+`beforeEach`; the mutation marker reports an indented or block-wrapped
+assignment and the shape arm names a minified file; guard registration by
+comment fails both arms and the glob and setup entries are pinned; an
+in-place declaration and a constant `newest()` are caught; the structural P1
+pin passes under barrel-only and leaf-only listings and fails under the whole
+chain; the baseline script reports a wrong expected name as SUSPECT, a moved
+anchor as ERROR, and stops at a planted red baseline; a typo in the new ssr
+fixture fails the guard and svelte-check; a fence moved into a fixture's
+script fails the guard; reverting the shim or deleting an EXCERPT entry fails
+doc-typecheck. What did not hold was the record, corrected in R0.5.h:
+
+1. The plan ticked R0.5.g as done including a push and pull request that
+   never happened (refused by the permission layer). → the tick names only
+   what shipped; the push is R0.5.i, the user's.
+2. This report said four R0 commits carried the gate of a batch. The retained
+   logs refute it; see the gate section. → corrected, logs committed.
+3. "Every R0.5 commit carries the same four lines" was false for the
+   script-only and docs commits. → corrected.
+4. DA-X2 cited the components fences by fence-opener line, the code and media
+   fences by import line, and missed the eleventh components fence, whose
+   `import` spans two lines. → all thirteen cited by import line.
+5. The start-of-R0 figure cited the whole-repository line for a core split
+   derived from the R0.1.a gate. → cited correctly.
+6. `declaredExports` in `public-exports` missed `export async function` and
+   `export abstract class` (planted, not caught). → widened; the plant is
+   caught.
+7. The gate logs lived only in the session's scratch directory. → committed.
 
 Known and left as they are, each recorded where it applies:
 

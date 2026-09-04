@@ -1,0 +1,56 @@
+# Gate logs for R0 and its closure
+
+The raw outputs of the core gate (`pnpm --filter @composable-svelte/core build
+&& … typecheck && … test && … check`) as it was run before each commit of R0
+and R0.5, retained from the session that made them and committed on
+4 September 2026 after the review of the closure. ANSI colour codes are
+stripped; nothing else is edited. Each log's original modification time is
+the moment its last step finished; the gate's steps ran in sequence, and the
+whole gate measures under a minute on the machine that ran it (Vitest runs
+files in parallel: browser 13–24 s wall clock, node 4–11 s, build about 10 s,
+svelte-check about 6 s). Start times were not recorded.
+
+Why they are here: the review of R0 inferred from commit spacing that four
+commits could not have had their own gate, and the first revision of
+`R0-EXIT.md` repeated that. These files are the evidence either way. Read
+them against the table: a log that ends after the previous commit and before
+its own, with counts specific to that commit's tree, is that commit's gate.
+
+Times are local to the machine, 4 September 2026.
+
+| Log | Precedes commit (author time) | Log ends | Previous commit | Counts, browser + node |
+|---|---|---|---|---|
+| gate-R0.1.a.log | `180b57f` 08:50:55 | 08:49:44 | `ae26201` 08:48:25 | 2172 + 511 |
+| gate-R0.1.b.log | — (first run for `55cfdb1`; one failure, `select-animation` "fades in rather than appearing instantly", a known flake; re-run alone per the verification protocol) | 08:55:27 | `180b57f` 08:50:55 | red: 1 failed |
+| gate-R0.1.b-2.log | `55cfdb1` 08:58:06 | 08:57:32 | `180b57f` 08:50:55 | 2178 + 517 |
+| gate-R0.1.c.log | `e583ec7` 09:00:59 | 08:58:52 | `55cfdb1` 08:58:06 | 2178 + 517 |
+| gate-R0.1.d.log | `9cae3fe` 09:05:51 | 09:05:21 | `e583ec7` 09:00:59 | 2178 + 517 |
+| gate-R0.1.e.log | `0c38b97` 09:07:22 | 09:06:36 | `9cae3fe` 09:05:51 | 2179 + 517 |
+| gate-R0.2.e.log | `b4be3f9` 09:09:49 | 09:09:24 | `0c38b97` 09:07:22 | 2179 + 519 |
+| gate-R0.2.c.log | `063d6b2` 09:12:12 | 09:11:19 | `b4be3f9` 09:09:49 | 2179 + 523 |
+| gate-R0.2.b.log | `ebe96b1` 09:15:47 | 09:15:30 | `063d6b2` 09:12:12 | 2179 + 524 |
+| gate-R0.2.a.log | `ff989f5` 09:18:28 | 09:17:55 | `ebe96b1` 09:15:47 | 2179 + 529 |
+| gate-R0.2.d.log | `f857011` 09:21:41 | 09:20:06 | `ff989f5` 09:18:28 | 2179 + 556 |
+| gate-R0.2.f.log | `9a76281` 09:24:39 | 09:23:13 | `f857011` 09:21:41 | 2179 + 557 |
+| gate-R0.3.a.log | `fb57248` 09:26:19 | 09:25:52 | `9a76281` 09:24:39 | 2181 + 557 |
+| gate-R0.3.b.log | `9187e4b` 09:27:27 | 09:27:08 | `fb57248` 09:26:19 | 2183 + 557 |
+| gate-R0.3.c.log | `a4d8062` 09:29:04 | 09:28:46 | `9187e4b` 09:27:27 | 2188 + 557 |
+| gate-R0.3.d.log | `55b6442` 09:35:06 | 09:30:10 | `a4d8062` 09:29:04 | 2188 + 563 |
+| gate-R0.2.g.log | `bd717ac` 09:55:02 | 09:54:17 | `55b6442` 09:35:06 | a NOT_COMPILED staleness proof, `pnpm -r check` over 20 workspaces, then 2188 + 566 |
+| gate-R0.3.e.log | `6f39c8c` 09:58:54 | 09:58:39 | `bd717ac` 09:55:02 | 2188; node config red — four `typecheck-coverage` timeouts. Committed red; its message says so |
+| gate-R0.3.e-2.log | `02fc6b1` 10:02:26 | 10:02:01 | `6f39c8c` 09:58:54 | 2188 + 570 |
+| gate-R0.4.a.log | `2751a41` 10:06:16 | 10:03:25 | `02fc6b1` 10:02:26 | the mutation baseline (7/7 by exit code, the first script) then 2189 + 570 |
+| gate-R0-end.log | `c79ca25` 10:16:36 | 10:13:07 | `2751a41` 10:06:16 | whole repository; the summary lines were lost to a colour-blind filter, so the test step was re-run: |
+| gate-R0-end.test.log | `c79ca25` 10:16:36 | 10:16:13 | `2751a41` 10:06:16 | whole repository, every workspace, 4,720 tests |
+| gate-R0.5.a.log | `165030c` 15:35:52 | 15:35:10 | `c79ca25` 10:16:36 | 2189 + 570 |
+| gate-R0.5.b.log | `d407b32` 15:40:45 | 15:38:11 | `165030c` 15:35:52 | 2190 + 571 |
+| gate-R0.5.c.log | `949c185` 15:43:49 | 15:42:29 | `d407b32` 15:40:45 | 2190 + 583 |
+| gate-R0.5.d.log | `cba25a6` 15:45:54 | 15:44:53 | `949c185` 15:43:49 | 2190 + 583 |
+| baseline-main-final.out | `f7a5fbd` 15:49:03 | 15:46:48 | `cba25a6` 15:45:54 | `node scripts/mutation-baseline.mjs --strict`: baseline green, 7/7 KILLED by name, exit 0. A scripts-only commit; the core gate is unaffected |
+| gate-R0.5.f1.log | `560a5fe` 15:51:01 | 15:50:28 | `f7a5fbd` 15:49:03 | 2190 + 583 |
+| gate-R0.5.f2.log | `a2add99` 15:52:31 | 15:52:07 | `560a5fe` 15:51:01 | 2190 + 583 |
+| gate-R0-end2.log | `b0a4742` 15:59:10 | 15:58:04 | `a2add99` 15:52:31 | whole repository, every workspace, 4,734 tests, 20/20 svelte-check |
+| gate-R0.5.h1.log | `3760b29` 20:46:59 | 20:45:43 | `b0a4742` 15:59:10 | 2190 + 583 |
+
+The commit that adds this directory cannot carry its own log; its gate is
+recorded in its message.

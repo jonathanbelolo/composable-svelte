@@ -204,8 +204,16 @@ what did not. Each item below is one commit with its own core gate.
       ssr's second `<svelte:head>` is pinned by a second fixture; `DA-X2` and
       `DA-X1` corrected; the doc-typecheck Vite shim matches Vite.
 - [x] R0.5.g The findings register carries R0's status on every finding it
-      touched; this plan and `R0-EXIT.md` describe what shipped; the branch is
-      pushed and a draft pull request runs CI on it.
+      touched; this plan and `R0-EXIT.md` describe what shipped.
+- [x] R0.5.h After the review of the closure: the record corrected (a false
+      tick, a batch-gating admission the retained gate logs refute, two
+      overstated claims, DA-X2's line numbers), the gate logs committed under
+      `plans/hardening/gate-logs/`, and `public-exports`' extractor widened to
+      `async`/`abstract`/`declare` declarations.
+- [ ] R0.5.i (the user) Push the branch and open the draft pull request so CI
+      runs it: `git push -u origin phase-1-feature-surface`, then
+      `gh pr create --draft --base main --head phase-1-feature-surface`. Every
+      gate so far is local (macOS, Node 24); CI is Ubuntu, Node 20.
 
 ---
 
