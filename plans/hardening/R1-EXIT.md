@@ -17,8 +17,10 @@ fields, `TestStore.receive()` strict by default with the affected tests fixed.
 **Where it starts and ends.** Main was at `6cd4801` (R0 merged). R1 is the 29
 commits `6cd4801..95a7a3b` on `hardening/r1`, one per plan line or per group
 of lines whose tests could only be written once (each such group says so in
-its message), every one carrying a core gate run on its own tree. The core
-package goes from 0.11.2 to 0.12.0.
+its message), every one carrying a core gate run on its own tree; the last
+code commit is `95a7a3b`, the version. After it: this report (`0bc106b`), the
+chat test fix CI demanded (`db87c84`, `0c106c9`), and the docs commit that
+records both. The core package goes from 0.11.2 to 0.12.0.
 
 ## The gate at the exit
 
@@ -47,7 +49,25 @@ were killed mid-run and restarted after a test had to declare a console
 call the fix introduced (R1.7.b+c once for an import placed inside a
 comment; R1.8.b). Each README row says so.
 
-**Continuous integration.** The branch is pushed and a draft pull request opened after this report's commit; the CI result is recorded in the follow-up docs commit that closes R1 (see the ledger's last row).
+**Continuous integration.** Draft pull request #2
+(https://github.com/jonathanbelolo/composable-svelte/pull/2), opened at
+`0bc106b`. Its first run,
+https://github.com/jonathanbelolo/composable-svelte/actions/runs/33927994844,
+passed every workspace but chat: one test, `message-entry.test.ts`'s
+"animates a message the list marks as new", read an opacity of 0 at a
+fixed 20 ms after mount — the same failure main's own run at `6cd4801`
+(https://github.com/jonathanbelolo/composable-svelte/actions/runs/33914399070)
+had shown, which no local run reproduces. Registered as T7 and fixed in two
+commits: `db87c84` polled for "above 0", which the element's resting 1 satisfies
+before the first frame — it failed locally and was pushed anyway by a chained
+command that did not stop on the red run (its run,
+…/33928751650, failed the same way); `0c106c9` polls for a frame strictly
+between 0 and 1. Its run,
+https://github.com/jonathanbelolo/composable-svelte/actions/runs/33928820257,
+passed every step on Ubuntu with Node 20: install, Playwright, build,
+typecheck, tests under `--workspace-concurrency=1`, svelte-check, and the
+auth integration browser suite. This closing docs commit is the last on the
+branch; its own run is the one the merge waits for.
 
 ## The audit's mutations, re-run
 
@@ -192,6 +212,10 @@ Every commit in `6cd4801..95a7a3b`, in order.
 | R1.9.a+c+e | `2e58327` | TestStore's transcript is ordered, exhaustive and on the clock (N9, T1, T6) |
 | R1.9.b+d | `59809be` | finish() waits for every effect; a rejecting executor fails the test (N9, T6); R1.9 records |
 | D7 | `95a7a3b` | the R1 changes, and the siblings' peer ranges follow |
+| — | `0bc106b` | this exit report, first form |
+| T7 | `db87c84` | the chat entry-animation sample polls instead of reading at 20 ms — first form, failed locally, pushed by mistake |
+| T7 | `0c106c9` | the sample polls for a frame strictly mid-flight; CI green |
+| — | (this commit) | the report records CI and the two commits above |
 
 ## What R1 did not do
 
