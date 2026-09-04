@@ -5,27 +5,53 @@
  * Seven source mutations survived the suite on 3 September 2026
  * (plans/hardening/AUDIT-2026-09-03-FINDINGS.md, MUTATION RESULTS). Each is
  * applied as an exact literal replacement, the named suite is run, the file
- * is restored from a per-file backup and checked byte-for-byte, and the
- * verdict is printed. A mutation that does not change the file is an error,
- * not a verdict (guides/VERIFICATION-PROTOCOL.md rules 1 and 3).
+ * is restored from a backup and checked byte-for-byte, and the verdict is
+ * printed. A mutation that does not change the file is an error, not a
+ * verdict (guides/VERIFICATION-PROTOCOL.md rules 1 and 3).
  *
- * Restoring a source file bumps its mtime, which trips dist-freshness on the
- * next node-config run, so the script ends by rebuilding core.
+ * A verdict is KILLED only when the test named in `expect` is among the
+ * failures. The first version read any non-zero exit as a kill, so a flake,
+ * a console-guard trip or a suite already red for another reason counted as
+ * one (found by the R0 review). Two further consequences of that:
+ *
+ * - The seven suites are run once *unmutated* first. A red baseline makes
+ *   every later verdict meaningless, so the script stops there.
+ * - A suite that fails without the expected test failing is SUSPECT, listed
+ *   with what did fail, and counts as not killed under --strict.
+ *
+ * Backups live in a temp directory, not beside the source; SIGINT and a
+ * timed-out suite restore them too. Restoring a source file bumps its mtime,
+ * which trips dist-freshness on the next node-config run, so the script ends
+ * by rebuilding core.
  *
  *   node scripts/mutation-baseline.mjs            # report
- *   node scripts/mutation-baseline.mjs --strict   # exit 1 if any survives (R5.4)
+ *   node scripts/mutation-baseline.mjs --strict   # exit 1 unless all KILLED (R5.4)
  */
 
 import { execSync } from 'node:child_process';
-import { readFileSync, writeFileSync, copyFileSync, unlinkSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 
 const repoRoot = fileURLToPath(new URL('../', import.meta.url));
 const core = join(repoRoot, 'packages', 'core');
 const strict = process.argv.includes('--strict');
+const SUITE_TIMEOUT_MS = 10 * 60_000;
 
-/** @type {Array<{id: string, file: string, find: string, replace: string, config: 'browser' | 'node', suite: string, guards: string}>} */
+/**
+ * @typedef {object} Mutation
+ * @property {string} id
+ * @property {string} file
+ * @property {string} find
+ * @property {string} replace
+ * @property {'browser' | 'node'} config
+ * @property {string} suite
+ * @property {string} expect  the test that must fail, as a substring of its full name
+ * @property {string} guards
+ */
+
+/** @type {Mutation[]} */
 const MUTATIONS = [
 	{
 		id: 'M1',
@@ -34,6 +60,7 @@ const MUTATIONS = [
 		replace: 'if (false && this.receivedActions.length > 0)',
 		config: 'browser',
 		suite: 'tests/test-store.test.ts',
+		expect: 'throws when pending actions in exhaustive mode',
 		guards: 'TestStore exhaustivity'
 	},
 	{
@@ -43,6 +70,7 @@ const MUTATIONS = [
 		replace: '/* mutated: abort loop removed */',
 		config: 'browser',
 		suite: 'tests/store.test.ts',
+		expect: 'destroy() aborts the in-flight cancellable',
 		guards: 'destroy() aborts in-flight cancellables'
 	},
 	{
@@ -52,6 +80,7 @@ const MUTATIONS = [
 		replace: '      /* mutated: presented check removed */',
 		config: 'browser',
 		suite: 'tests/navigation/operators.test.ts',
+		expect: 'returns null when the wrapper is not a presented action',
 		guards: 'matchPresentationAction requires the presented wrapper'
 	},
 	{
@@ -61,6 +90,7 @@ const MUTATIONS = [
 		replace: 'const parentEffect = childEffect;',
 		config: 'browser',
 		suite: 'tests/composition.test.ts',
+		expect: 'lifts child effects to parent actions',
 		guards: 'scope() lifts child effects to parent actions'
 	},
 	{
@@ -70,6 +100,7 @@ const MUTATIONS = [
 		replace: '      /* mutated: no-pong branch removed */',
 		config: 'browser',
 		suite: 'tests/websocket/heartbeat.test.ts',
+		expect: 'should disconnect if second ping sent without pong from first',
 		guards: "the heartbeat's missed-pong branch"
 	},
 	{
@@ -79,6 +110,7 @@ const MUTATIONS = [
 		replace: "        return 'MUTATED';",
 		config: 'browser',
 		suite: 'tests/i18n/icu.test.ts',
+		expect: 'should handle formatting errors gracefully',
 		guards: 'the ICU formatting-error fallback'
 	},
 	{
@@ -88,9 +120,89 @@ const MUTATIONS = [
 		replace: "\t\treturn '';",
 		config: 'browser',
 		suite: 'tests/routing/query-params.test.ts',
+		expect: 'returns original value if decode fails',
 		guards: 'the query-param decode fallback'
 	}
 ];
+
+// ---------------------------------------------------------------------------
+// Backups: one directory, restored on every exit path.
+
+const backupDir = mkdtempSync(join(tmpdir(), 'mutation-baseline-'));
+/** @type {Map<string, string>} absolute source path -> backup path */
+const active = new Map();
+
+function restoreAll() {
+	for (const [path, backup] of active) {
+		copyFileSync(backup, path);
+		active.delete(path);
+	}
+}
+process.on('exit', () => {
+	restoreAll();
+	rmSync(backupDir, { recursive: true, force: true });
+});
+process.on('SIGINT', () => {
+	console.error('\ninterrupted — restoring sources');
+	process.exit(130);
+});
+process.on('SIGTERM', () => process.exit(143));
+
+// ---------------------------------------------------------------------------
+// Running a suite and reading what failed.
+
+/**
+ * @param {string} suite
+ * @param {'browser' | 'node'} config
+ * @returns {{ exit: number, failed: string[] | null }} failed test full names; null when no JSON came back
+ */
+function runSuite(suite, config) {
+	const out = join(backupDir, `${suite.replace(/[^\w.-]/g, '_')}.json`);
+	rmSync(out, { force: true });
+	const cfg = config === 'node' ? '--config vitest.node.config.ts ' : '';
+	let exit = 0;
+	try {
+		execSync(`npx vitest run ${cfg}--reporter=json --outputFile=${out} ${suite}`, {
+			cwd: core,
+			stdio: 'ignore',
+			timeout: SUITE_TIMEOUT_MS
+		});
+	} catch (error) {
+		exit = typeof error?.status === 'number' ? error.status : -1;
+	}
+	if (!existsSync(out)) return { exit, failed: null };
+	const report = JSON.parse(readFileSync(out, 'utf8'));
+	const failed = [];
+	for (const file of report.testResults ?? []) {
+		for (const test of file.assertionResults ?? []) {
+			if (test.status === 'failed') failed.push(test.fullName ?? test.title);
+		}
+	}
+	return { exit, failed };
+}
+
+// ---------------------------------------------------------------------------
+// 1. The baseline: every suite green before anything is mutated.
+
+console.log('Baseline: running the seven suites unmutated…');
+const suites = [...new Set(MUTATIONS.map((m) => `${m.config}:${m.suite}`))];
+const redBaseline = [];
+for (const entry of suites) {
+	const [config, suite] = entry.split(':');
+	const { exit, failed } = runSuite(suite, config);
+	if (exit !== 0 || failed === null || failed.length > 0) {
+		redBaseline.push(`${suite}: ${failed === null ? `no report (exit ${exit})` : failed.join('; ') || `exit ${exit}`}`);
+	}
+}
+if (redBaseline.length > 0) {
+	console.error('\nThe baseline is red; no verdict below would mean anything. Fix first:');
+	for (const line of redBaseline) console.error(`  ${line}`);
+	process.exit(2);
+}
+console.log('Baseline green.\n');
+
+// ---------------------------------------------------------------------------
+// 2. The mutations.
 
 const rows = [];
 for (const m of MUTATIONS) {
@@ -106,36 +218,57 @@ for (const m of MUTATIONS) {
 		rows.push({ ...m, verdict: 'ERROR', detail: 'mutation did not change the file' });
 		continue;
 	}
-	const backup = `${path}.mutation-backup`;
+
+	const backup = join(backupDir, `${m.id}.bak`);
 	copyFileSync(path, backup);
+	active.set(path, backup);
 	writeFileSync(path, mutated);
-	let killed;
+	let result;
 	try {
-		const cfg = m.config === 'node' ? '--config vitest.node.config.ts ' : '';
-		execSync(`npx vitest run ${cfg}${m.suite}`, { cwd: core, stdio: 'ignore' });
-		killed = false;
-	} catch {
-		killed = true;
+		result = runSuite(m.suite, m.config);
 	} finally {
 		copyFileSync(backup, path);
-		unlinkSync(backup);
+		active.delete(path);
 	}
 	if (readFileSync(path, 'utf8') !== original) {
 		rows.push({ ...m, verdict: 'ERROR', detail: 'restore did not reproduce the original — check the file' });
 		continue;
 	}
-	rows.push({ ...m, verdict: killed ? 'KILLED' : 'SURVIVED', detail: '' });
+
+	const { exit, failed } = result;
+	if (failed === null) {
+		rows.push({ ...m, verdict: 'ERROR', detail: `the suite produced no report (exit ${exit}) — a crash or a timeout, not a verdict` });
+	} else if (failed.some((name) => name.includes(m.expect))) {
+		const others = failed.filter((name) => !name.includes(m.expect));
+		rows.push({ ...m, verdict: 'KILLED', detail: others.length ? `also failed: ${others.join('; ')}` : '' });
+	} else if (exit !== 0 || failed.length > 0) {
+		rows.push({
+			...m,
+			verdict: 'SUSPECT',
+			detail: `the suite failed but not the test that guards this line (${JSON.stringify(m.expect)}); failed: ${failed.join('; ') || `exit ${exit}, no failed test`}`
+		});
+	} else {
+		rows.push({ ...m, verdict: 'SURVIVED', detail: '' });
+	}
 }
 
-console.log('| id | mutation | suite | verdict |');
-console.log('|---|---|---|---|');
-for (const r of rows) console.log(`| ${r.id} | ${r.guards} | ${r.suite} | **${r.verdict}**${r.detail ? ` — ${r.detail}` : ''} |`);
+console.log('| id | mutation | suite | verdict | detail |');
+console.log('|---|---|---|---|---|');
+for (const r of rows) console.log(`| ${r.id} | ${r.guards} | ${r.suite} | **${r.verdict}** | ${r.detail} |`);
 
-console.log('\nRebuilding core so dist-freshness does not read the restored mtimes as stale…');
-execSync('pnpm --filter @composable-svelte/core build', { cwd: repoRoot, stdio: 'ignore' });
+// ---------------------------------------------------------------------------
+// 3. Rebuild, so dist-freshness does not read the restored mtimes as stale.
 
-const survivors = rows.filter((r) => r.verdict !== 'KILLED');
-if (strict && survivors.length > 0) {
-	console.error(`\n${survivors.length} mutation(s) not killed.`);
+console.log('\nRebuilding core…');
+try {
+	execSync('pnpm --filter @composable-svelte/core build', { cwd: repoRoot, stdio: 'pipe' });
+} catch (error) {
+	console.error('core did not rebuild; dist may be stale:\n' + String(error?.stderr ?? error));
+	process.exit(3);
+}
+
+const notKilled = rows.filter((r) => r.verdict !== 'KILLED');
+if (strict && notKilled.length > 0) {
+	console.error(`\n${notKilled.length} mutation(s) not killed.`);
 	process.exit(1);
 }
