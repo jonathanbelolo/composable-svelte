@@ -682,5 +682,19 @@ describe('SSG (Static Site Generation)', () => {
       expect(result.errors).toEqual([{ path: '/404', error: expect.objectContaining({ message: 'disk full' }) }]);
     });
   });
+
+  describe('the canonical link (SS2)', () => {
+    it('attribute-escapes the path', async () => {
+      const hostile = '/a"><script>alert(1)</script>';
+      await generateStaticSite(
+        MockComponent,
+        { routes: [{ path: hostile }], outDir: './dist', baseURL: 'https://x.example', generate404: false },
+        { reducer, dependencies: {}, getInitialState: async () => initialState }
+      );
+      const html = String(vi.mocked(fs.writeFile).mock.calls[0]![1]);
+      expect(html).toContain('<link rel="canonical" href="https://x.example/a&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;">');
+      expect(html).not.toContain('href="https://x.example/a"><script>');
+    });
+  });
 });
 

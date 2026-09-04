@@ -32,3 +32,22 @@ export function isServer(): boolean {
 export function isBrowser(): boolean {
   return !isServer();
 }
+
+/**
+ * Escapes HTML special characters to prevent XSS.
+ *
+ * For text in ordinary markup and for attribute values (both quote
+ * characters are escaped). State going into a `<script>` element uses
+ * `escapeJSONInScript` in `render.ts` instead — see the note there.
+ */
+export function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/** `escapeHtml`, named for the place it is used: a double-quoted attribute. */
+export const escapeAttribute = escapeHtml;

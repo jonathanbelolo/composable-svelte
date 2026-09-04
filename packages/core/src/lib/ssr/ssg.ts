@@ -56,6 +56,7 @@ import { createStore } from '../store.svelte.js';
 // These are only called during build, never in browser
 import { mkdir, writeFile } from 'fs/promises';
 import { dirname, join, resolve, sep } from 'path';
+import { escapeAttribute } from './utils.js';
 
 /**
  * Svelte component type (compatible with Svelte 5).
@@ -290,8 +291,10 @@ export async function generateStaticSite<State, Action, Dependencies>(
           renderOptions: {
             ...options.renderOptions,
             // Override canonical URL if baseURL is provided
+            // Attribute-escaped: a path with `"` closed the attribute and the
+            // rest was markup — stored XSS from a route (SS2).
             ...(config.baseURL && {
-              head: `${options.renderOptions?.head || ''}\n<link rel="canonical" href="${config.baseURL}${path}">`
+              head: `${options.renderOptions?.head || ''}\n<link rel="canonical" href="${escapeAttribute(`${config.baseURL}${path}`)}">`
             })
           },
           outDir

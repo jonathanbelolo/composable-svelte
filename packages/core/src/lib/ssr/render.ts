@@ -8,6 +8,7 @@
 // @ts-ignore - svelte/server is available at runtime but not in types during dev
 import { render as svelteRender } from 'svelte/server';
 import { serializeStore } from './serialize.js';
+import { escapeHtml } from './utils.js';
 import type { Store } from '../types.js';
 
 /**
@@ -258,20 +259,3 @@ function escapeJSONInScript(json: string): string {
     .replace(/\u2029/g, '\\u2029');
 }
 
-/**
- * Escapes HTML special characters to prevent XSS.
- *
- * For text in ordinary markup. State going into a `<script>` element uses
- * {@link escapeJSONInScript} instead — see the note there.
- *
- * @param str - String to escape
- * @returns Escaped string safe for HTML
- */
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}

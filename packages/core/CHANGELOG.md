@@ -71,6 +71,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The SSG canonical link and `generateAlternateLinks` escape what they
+  interpolate.** The canonical `href` took `baseURL + path` raw, so a route
+  with `"` closed the attribute — stored XSS from a path;
+  `generateAlternateLinks` did the same with `path`, `locale` and `baseUrl`,
+  and its example fed the request path through `{@html}` — reflected XSS.
+  Attribute values are entity-escaped, the path is URI-encoded, and the
+  example hands the result to `renderToHTML`'s `head`.
+  (AUDIT-2026-09-03-FINDINGS SS2, SS5)
+
 - **SSG cannot write outside `outDir`.** `pathToFilePath` stripped one slash
   and joined, and `join` resolves `..`, so a data-derived path of
   `/../../etc/x` wrote there at build time. Segments are checked after

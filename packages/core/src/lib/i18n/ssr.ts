@@ -68,6 +68,7 @@ import {
 } from './types.js';
 import { Effect } from '../effect.js';
 import { createNoopStorage } from '../dependencies/local-storage.js';
+import { escapeAttribute } from '../ssr/utils.js';
 
 /**
  * Configuration for server-side i18n initialization.
@@ -339,11 +340,18 @@ export function createI18nHandle(config: {
  * Search engines use these to understand that your content is available
  * in multiple languages.
  *
- * @example +page.svelte
- * ```svelte
- * <svelte:head>
- *   {@html generateAlternateLinks('/products', ['en', 'pt-BR', 'es'])}
- * </svelte:head>
+ * The path is URI-encoded and every attribute value is escaped, so a
+ * request-derived path cannot break out of the `href` (the first form
+ * interpolated raw, and its example fed the request path through `{@html}`
+ * — reflected XSS; AUDIT-2026-09-03-FINDINGS SS5). Pass the raw path, not a
+ * percent-encoded one. The output is head markup: hand it to `renderToHTML`'s
+ * `head` option on the server.
+ *
+ * @example
+ * ```typescript
+ * const html = renderToHTML(App, { store }, {
+ *   head: generateAlternateLinks(route.path, ['en', 'pt-BR', 'es'], 'https://example.com')
+ * });
  * ```
  */
 export function generateAlternateLinks(
@@ -353,8 +361,8 @@ export function generateAlternateLinks(
 ): string {
   return locales
     .map((locale) => {
-      const url = `${baseUrl}${path}?lang=${locale}`;
-      return `<link rel="alternate" hreflang="${locale}" href="${url}" />`;
+      const url = `${baseUrl}${encodeURI(path)}?lang=${encodeURIComponent(locale)}`;
+      return `<link rel="alternate" hreflang="${escapeAttribute(locale)}" href="${escapeAttribute(url)}" />`;
     })
     .join('\n');
 }
