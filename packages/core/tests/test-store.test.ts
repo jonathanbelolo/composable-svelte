@@ -672,3 +672,71 @@ describe('a rejecting executor fails the test, not the process (N9)', () => {
 	});
 });
 
+describe('finish() waits for what is still running (N9, T6)', () => {
+	type State = { n: number };
+	type Action = { type: 'go' } | { type: 'late' };
+
+	it('a Run that dispatches late is waited for, and its action then fails finish() by name', async () => {
+		const reducer: Reducer<State, Action> = (state, action) =>
+			action.type === 'go'
+				? [state, Effect.run(async (dispatch) => { await new Promise((r) => setTimeout(r, 30)); dispatch({ type: 'late' }); })]
+				: [{ n: state.n + 1 }, Effect.none()];
+		const store = new TestStore({ initialState: { n: 0 }, reducer });
+		await store.send({ type: 'go' });
+		// advanceTime(0) alone saw nothing and the first form passed here.
+		await expect(store.finish()).rejects.toThrow(/Expected no pending actions, but found 1 unasserted action\(s\):\nTypes: \["late"\]/);
+	});
+
+	it('a Run that never settles fails finish() with a message, not a test timeout', async () => {
+		const reducer: Reducer<State, Action> = (state, action) =>
+			action.type === 'go' ? [state, Effect.run(() => new Promise<void>(() => {}))] : [state, Effect.none()];
+		const store = new TestStore({ initialState: { n: 0 }, reducer });
+		await store.send({ type: 'go' });
+		await expect(store.finish(100)).rejects.toThrow(/finish\(\): 1 effect\(s\) still running after 100ms/);
+	});
+
+	it('an AfterDelay still pending under fake timers fails finish() until the clock is advanced', async () => {
+		vi.useFakeTimers();
+		try {
+			const reducer: Reducer<State, Action> = (state, action) =>
+				action.type === 'go' ? [state, Effect.afterDelay(200, (dispatch) => dispatch({ type: 'late' }))] : [{ n: state.n + 1 }, Effect.none()];
+			const store = new TestStore({ initialState: { n: 0 }, reducer });
+			await store.send({ type: 'go' });
+			await expect(store.finish()).rejects.toThrow(/1 AfterDelay effect\(s\) still pending under fake timers/);
+			await store.advanceTime(200);
+			await store.receive({ type: 'late' });
+			await store.finish();
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('an AfterDelay under real timers is waited for', async () => {
+		const reducer: Reducer<State, Action> = (state, action) =>
+			action.type === 'go' ? [state, Effect.afterDelay(30, (dispatch) => dispatch({ type: 'late' }))] : [{ n: state.n + 1 }, Effect.none()];
+		const store = new TestStore({ initialState: { n: 0 }, reducer });
+		await store.send({ type: 'go' });
+		await expect(store.finish()).rejects.toThrow(/Types: \["late"\]/);
+	});
+});
+
+describe('a rejecting executor fails the test, not the process (N9)', () => {
+	type State = { n: number };
+	type Action = { type: 'go' };
+
+	it('finish() throws with the error\'s message', async () => {
+		const reducer: Reducer<State, Action> = (state) => [state, Effect.run(async () => { throw new Error('backend down'); })];
+		const store = new TestStore({ initialState: { n: 0 }, reducer });
+		await store.send({ type: 'go' });
+		await expect(store.finish()).rejects.toThrow(/\[TestStore\] effect rejected: backend down/);
+	});
+
+	it('receive() and send() report it too', async () => {
+		const reducer: Reducer<State, Action> = (state) => [state, Effect.run(async () => { throw new Error('backend down'); })];
+		const store = new TestStore({ initialState: { n: 0 }, reducer });
+		await store.send({ type: 'go' });
+		await store.advanceTime(0);
+		await expect(store.send({ type: 'go' })).rejects.toThrow(/effect rejected: backend down/);
+	});
+});
+

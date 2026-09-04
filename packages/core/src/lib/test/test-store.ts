@@ -242,7 +242,12 @@ export class TestStore<State, Action, Dependencies = any> {
   private actionHistory: Action[] = [];
   private receivedActions: Action[] = [];
   private pendingEffects: Promise<void>[] = [];
-  private pendingTimers: number = 0; // Track number of scheduled timers
+  /** Effects whose promise has not settled — what `finish()` waits for. */
+  private _inFlight = 0;
+  /** Executors that rejected and have not yet failed a `receive()`, `send()` or `finish()`. */
+  private _failures: unknown[] = [];
+  /** AfterDelay timers by when they are due, so `finish()` knows what is pending. */
+  private _pendingDelays = new Map<ReturnType<typeof setTimeout>, number>();
   private _subscriptionCleanups = new Map<string, () => void | Promise<void>>();
   /** In-flight cancellables by id, so re-registering one aborts its predecessor. */
   private _inFlightEffects = new Map<string, AbortController>();
@@ -285,6 +290,7 @@ export class TestStore<State, Action, Dependencies = any> {
     action: Action,
     assert?: StateAssertion<State>
   ): Promise<void> {
+    this._throwFailures();
     // Operands ordered unlike assertNoPendingActions()'s, which the mutation
     // baseline (M1) anchors on by exact text.
     if (this.receivedActions.length > 0 && this.exhaustivity === 'on') {
@@ -306,7 +312,7 @@ export class TestStore<State, Action, Dependencies = any> {
     }
 
     if (effect._tag !== 'None') {
-      this.pendingEffects.push(this._executeEffect(effect));
+      this._track(this._executeEffect(effect));
     }
   }
 
@@ -332,6 +338,7 @@ export class TestStore<State, Action, Dependencies = any> {
     timeout: number = 1000
   ): Promise<void> {
     const { vi } = await import('vitest');
+    this._throwFailures();
     let outOfOrder: Error | null = null;
 
     // Use vi.waitFor to poll for the action (like store.test.ts does)
@@ -374,10 +381,65 @@ export class TestStore<State, Action, Dependencies = any> {
     }, { timeout });
 
     if (outOfOrder) throw outOfOrder;
+    this._throwFailures();
 
     if (assert) {
       await assert(this._state);
     }
+  }
+
+  /**
+   * An executor that rejected fails the next `receive()`, `send()` or
+   * `finish()`, with its message. The first form let the rejection escape the
+   * process as an unhandled rejection while `finish()` passed
+   * (AUDIT-2026-09-03-FINDINGS N9).
+   */
+  private _throwFailures(): void {
+    if (this._failures.length === 0) return;
+    const [first, ...rest] = this._failures.splice(0);
+    const message = first instanceof Error ? first.message : String(first);
+    throw new Error(
+      `[TestStore] effect rejected: ${message}` +
+        (rest.length > 0 ? ` (and ${rest.length} more)` : ''),
+      { cause: first }
+    );
+  }
+
+  /** Register an effect promise: counted while running, its rejection kept. */
+  private _track(promise: Promise<void>): void {
+    this._inFlight++;
+    const tracked = promise.then(
+      () => {
+        this._inFlight--;
+      },
+      (error: unknown) => {
+        this._inFlight--;
+        this._failures.push(error);
+        this._failUnconsumed(error);
+      }
+    );
+    this.pendingEffects.push(tracked);
+  }
+
+  /**
+   * A rejection nobody asks about must still fail the test that owns the
+   * store, not vanish: if the test ends with it unconsumed, it is thrown from
+   * the test's own finish hook. Outside a test (a plain script) there is no
+   * hook, and the rejection stays recorded for the next call.
+   */
+  private _failUnconsumed(error: unknown): void {
+    import('vitest')
+      .then(({ onTestFinished }) => {
+        onTestFinished(() => {
+          if (!this._failures.includes(error)) return;
+          this._failures.splice(this._failures.indexOf(error), 1);
+          const message = error instanceof Error ? error.message : String(error);
+          throw new Error(`[TestStore] effect rejected, and nothing asked: ${message}`, { cause: error });
+        });
+      })
+      .catch(() => {
+        /* not inside a test */
+      });
   }
 
   /** The unasserted received actions, one per line, for a message. */
@@ -401,9 +463,15 @@ export class TestStore<State, Action, Dependencies = any> {
   }
 
   /**
-   * Convenience method to complete the test.
-   * Waits for any pending effects and asserts no actions remain.
-   * Equivalent to: await advanceTime(0); assertNoPendingActions();
+   * Complete the test: every effect has settled, no delay is pending, no
+   * received action is unasserted, and no executor rejected.
+   *
+   * Effects still running are waited for, up to `timeout` (a hung one fails
+   * with a message naming the count, not a test timeout). An `AfterDelay` still
+   * pending fails under fake timers — advance the clock with `advanceTime(ms)`
+   * first — and is waited for under real timers. The first form did
+   * `advanceTime(0)` and looked at the queue, so it passed with a `Run` still
+   * in flight and a delay still armed (AUDIT-2026-09-03-FINDINGS N9, T6).
    *
    * @example
    * ```typescript
@@ -412,7 +480,41 @@ export class TestStore<State, Action, Dependencies = any> {
    * await store.finish(); // Verify test is complete
    * ```
    */
-  async finish(): Promise<void> {
+  async finish(timeout: number = 1000): Promise<void> {
+    const { vi } = await import('vitest');
+    this._throwFailures();
+    await this.advanceTime(0);
+
+    if (this._pendingDelays.size > 0) {
+      if (vi.isFakeTimers?.()) {
+        const due = [...this._pendingDelays.values()].map((at) => at - Date.now());
+        throw new Error(
+          `finish(): ${this._pendingDelays.size} AfterDelay effect(s) still pending under fake timers ` +
+            `(due in ${JSON.stringify(due)} ms). Advance the clock with advanceTime(ms) first, ` +
+            `or assert that the delay was cancelled.`
+        );
+      }
+      // Real timers: the only way to reach the point is to wait for it.
+      const latest = Math.max(...this._pendingDelays.values()) - Date.now();
+      await new Promise((resolve) => setTimeout(resolve, Math.max(0, latest) + 20));
+      await this.advanceTime(0);
+    }
+
+    let hung: Error | null = null;
+    await vi.waitFor(
+      () => {
+        if (this._failures.length > 0) return; // reported below, not retried
+        if (this._inFlight > 0) {
+          throw new Error(`finish(): ${this._inFlight} effect(s) still running after ${timeout}ms`);
+        }
+      },
+      { timeout }
+    ).catch((error: Error) => {
+      hung = error;
+    });
+    if (hung) throw hung;
+    this._throwFailures();
+
     await this.advanceTime(0);
     this.assertNoPendingActions();
   }
@@ -456,7 +558,7 @@ export class TestStore<State, Action, Dependencies = any> {
     this._state = newState;
 
     if (newEffect._tag !== 'None') {
-      this.pendingEffects.push(this._executeEffect(newEffect));
+      this._track(this._executeEffect(newEffect));
     }
   }
 
@@ -590,25 +692,22 @@ export class TestStore<State, Action, Dependencies = any> {
         break;
       }
 
-      case 'AfterDelay':
-        // Schedule the effect to execute after delay using setTimeout
-        // Don't track the promise - just let setTimeout fire naturally
-        // When vi.advanceTimersByTime() is called, this will execute
-        setTimeout(async () => {
-          try {
-            await effect.execute(dispatch);
-          } catch (error) {
-            console.error('[TestStore] Effect error:', error);
-          }
+      case 'AfterDelay': {
+        // Fires on the clock — fake or real; finish() knows it is pending.
+        const timer = setTimeout(() => {
+          this._pendingDelays.delete(timer);
+          this._track(Promise.resolve().then(() => effect.execute(dispatch)));
         }, effect.ms);
+        this._pendingDelays.set(timer, Date.now() + effect.ms);
         break;
+      }
 
       case 'Debounced': {
         const existing = this._debounceTimers.get(effect.id);
         if (existing !== undefined) clearTimeout(existing);
         const timer = setTimeout(() => {
           this._debounceTimers.delete(effect.id);
-          this.pendingEffects.push(this._runLater(effect.execute, dispatch));
+          this._track(Promise.resolve().then(() => effect.execute(dispatch)));
         }, effect.ms);
         this._debounceTimers.set(effect.id, timer);
         break;
@@ -626,7 +725,7 @@ export class TestStore<State, Action, Dependencies = any> {
           // Trailing edge: once, when the window closes.
           const timeout = setTimeout(() => {
             this._throttleState.set(effect.id, { lastRun: Date.now() });
-            this.pendingEffects.push(this._runLater(effect.execute, dispatch));
+            this._track(Promise.resolve().then(() => effect.execute(dispatch)));
           }, effect.ms - (now - throttle.lastRun));
           this._throttleState.set(effect.id, { lastRun: throttle.lastRun, timeout });
         }
@@ -654,18 +753,6 @@ export class TestStore<State, Action, Dependencies = any> {
         // Exhaustiveness check
         const _exhaustive: never = effect;
         throw new Error(`Unhandled effect type: ${(_exhaustive as any)._tag}`);
-    }
-  }
-
-  /** Run a timer-scheduled executor, reporting a failure the way AfterDelay does. */
-  private async _runLater(
-    execute: (dispatch: Dispatch<Action>) => void | Promise<void>,
-    dispatch: Dispatch<Action>
-  ): Promise<void> {
-    try {
-      await execute(dispatch);
-    } catch (error) {
-      console.error('[TestStore] Effect error:', error);
     }
   }
 

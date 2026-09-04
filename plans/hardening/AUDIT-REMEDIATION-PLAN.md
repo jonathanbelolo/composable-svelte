@@ -350,14 +350,14 @@ dependency, not severity: R1.1 needs D1, R1.3 needs D3.
 
 ### R1.9 — TestStore keeps its promises (`N9`, `T1`, `T6`) — M
 
-- [ ] R1.9.a `receive()` enforces order and fails on an unexpected action when
+- [x] R1.9.a `receive()` enforces order and fails on an unexpected action when
       exhaustivity is on.
-- [ ] R1.9.b `finish()` awaits pending effects, including `AfterDelay` under
+- [x] R1.9.b `finish()` awaits pending effects, including `AfterDelay` under
       real timers, and fails with the list of unasserted actions.
-- [ ] R1.9.c `Debounced` and `Throttled` are modelled with the test clock, not
+- [x] R1.9.c `Debounced` and `Throttled` are modelled with the test clock, not
       executed immediately, so `Effect.cancel` on a debounce is testable.
-- [ ] R1.9.d A rejecting `Run` fails the test rather than the process.
-- [ ] R1.9.e `send()` assertion sees the state after the reducer, before the
+- [x] R1.9.d A rejecting `Run` fails the test rather than the process.
+- [x] R1.9.e `send()` assertion sees the state after the reducer, before the
       effect's synchronous prefix (`N9` last item).
       Proof: mutation M1 killed; the three formerly skipped tests pass;
       `.claude/skills/composable-svelte-testing/SKILL.md:16,62,486` become true.

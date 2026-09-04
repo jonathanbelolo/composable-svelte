@@ -97,3 +97,4 @@ before the fix is kept as `red-R1.x.y.log`, and the gate as `gate-R1.x.y.log`.
 | gate-R1.8.b.log | R1.8.b | core gate: 2258 browser + 611 node, 0 skipped, check clean (a first run was killed: an existing destroy test's dispatch-after-destroy now warns and had to declare it) |
 | red-R1.9.0.log | R1.9.0 | the shadow measurement before TestStore's semantics change: per-file counts of out-of-order receives (9), leftovers at send (7), immediate debounces (17) and send-assertions after a synchronous dispatch (27) across core and auth; nothing in flight at finish anywhere; chat and graphics clean |
 | gate-R1.9.ace.log | R1.9.a+c+e | core gate: 2267 browser + 611 node, 0 skipped, check clean; auth's suites (537 + 30) green against the rebuilt dist |
+| gate-R1.9.bd.log | R1.9.b+d | core gate: 2279 browser + 611 node, 0 skipped, check clean |
