@@ -421,7 +421,7 @@ describe('Dismiss Dependency Integration', () => {
             { ...state, isDirty: false },
             Effect.batch(
               Effect.run(() => {
-                console.log('Saving...');
+                /* saving */
               }),
               deps.dismiss()
             )

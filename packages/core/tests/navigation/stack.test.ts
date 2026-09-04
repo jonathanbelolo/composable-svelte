@@ -3,6 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { expectConsole } from '../helpers/console.js';
 import { Effect } from '../../src/lib/effect.js';
 import {
   push,
@@ -469,6 +470,7 @@ describe('handleStackAction()', () => {
   });
 
   it('validates screen index and logs warning for invalid index', () => {
+    expectConsole('warn');
     const state: ParentState = {
       stack: [
         { step: 1, data: 'first' },
@@ -506,6 +508,7 @@ describe('handleStackAction()', () => {
   });
 
   it('validates negative screen index', () => {
+    expectConsole('warn');
     const state: ParentState = {
       stack: [
         { step: 1, data: 'first' },

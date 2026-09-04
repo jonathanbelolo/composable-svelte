@@ -5,6 +5,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { expectConsole } from '../helpers/console.js';
 import {
   i18nReducer,
   createInitialI18nState,
@@ -153,6 +154,7 @@ describe('i18nReducer', () => {
     });
 
     it('still refuses a locale that is not in availableLocales', () => {
+      expectConsole('warn');
       mockDeps.localeDetector.getSupportedLocales = vi.fn(() => ['en', 'de']);
 
       const [newState] = i18nReducer(
@@ -229,7 +231,7 @@ describe('i18nReducer', () => {
     });
 
     it('should warn and return unchanged state for unsupported locale', () => {
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleSpy = expectConsole('warn');
 
       const action: I18nAction = {
         type: 'i18n/setLocale',
@@ -240,11 +242,10 @@ describe('i18nReducer', () => {
 
       expect(newState).toBe(initialState);
       expect(effect._tag).toBe('None');
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(consoleSpy[0]?.[0]).toEqual(
         expect.stringContaining('Unsupported locale: invalid')
       );
 
-      consoleSpy.mockRestore();
     });
 
     it('should preload namespaces when specified', () => {
@@ -393,7 +394,7 @@ describe('i18nReducer', () => {
 
   describe('i18n/namespaceLoadFailed', () => {
     it('should remove loading state and log error', () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = expectConsole('error');
 
       const state: I18nState = {
         ...initialState,
@@ -412,12 +413,11 @@ describe('i18nReducer', () => {
 
       expect(newState.loadingNamespaces).not.toContain('en:common');
       expect(effect._tag).toBe('None');
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(consoleSpy[0]).toEqual([
         expect.stringContaining('Failed to load namespace common for en'),
         error
-      );
+      ]);
 
-      consoleSpy.mockRestore();
     });
   });
 

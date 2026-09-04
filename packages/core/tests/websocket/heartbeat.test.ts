@@ -3,6 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { expectConsole } from '../helpers/console.js';
 import { createHeartbeat } from '../../src/lib/websocket/heartbeat.js';
 import { createMockWebSocket } from '../../src/lib/websocket/testing/mock-client.js';
 import type { HeartbeatConfig } from '../../src/lib/websocket/types.js';
@@ -262,6 +263,7 @@ describe('WebSocket Heartbeat', () => {
 
   describe('Timeout Behavior', () => {
     it('should disconnect on pong timeout', () => {
+      expectConsole('warn');
       const client = createMockWebSocket();
       client.connect('wss://example.com');
       vi.advanceTimersByTime(10); // Let connection complete
@@ -284,6 +286,7 @@ describe('WebSocket Heartbeat', () => {
     });
 
     it('should disconnect if second ping sent without pong from first', () => {
+      expectConsole('warn');
       const client = createMockWebSocket();
       client.connect('wss://example.com');
       vi.advanceTimersByTime(10); // Let connection complete
@@ -405,7 +408,7 @@ describe('WebSocket Heartbeat', () => {
       };
       const heartbeat = createHeartbeat(client, config);
 
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = expectConsole('error');
 
       heartbeat.start();
 
@@ -416,9 +419,8 @@ describe('WebSocket Heartbeat', () => {
 
       // Should stop after send error
       expect(heartbeat.isRunning).toBe(false);
-      expect(consoleSpy).toHaveBeenCalled();
+      expect(consoleSpy.length).toBeGreaterThan(0);
 
-      consoleSpy.mockRestore();
     });
   });
 

@@ -7,6 +7,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { expectConsole } from '../helpers/console.js';
 import { createHeartbeat } from '../../src/lib/websocket/heartbeat.js';
 import { createMockWebSocket } from '../../src/lib/websocket/testing/mock-client.js';
 import type { HeartbeatConfig } from '../../src/lib/websocket/types.js';
@@ -160,6 +161,7 @@ describe('WebSocket Heartbeat - Basic', () => {
 
   describe('Timeout Handling', () => {
     it('should disconnect on timeout', async () => {
+      expectConsole('warn');
       const client = createMockWebSocket();
       await client.connect('wss://example.com');
 
@@ -226,6 +228,7 @@ describe('WebSocket Heartbeat - Basic', () => {
 
   describe('Cleanup', () => {
     it('should stop sending pings after stop', async () => {
+      expectConsole('warn');
       const client = createMockWebSocket();
       await client.connect('wss://example.com');
 

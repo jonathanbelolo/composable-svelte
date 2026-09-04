@@ -35,6 +35,7 @@ function svelteRuneModules(): Plugin {
 export default defineConfig({
   plugins: [svelteRuneModules()],
   test: {
+    setupFiles: ['./tests/setup.ts'],
     globals: true,
     environment: 'node',
     include: [
@@ -67,7 +68,9 @@ export default defineConfig({
 			'tests/repo/satellite-theming.test.ts',
 			'tests/repo/changelog-shape.test.ts',
       'tests/styles/**/*.test.ts',
-      'tests/i18n/ssr.test.ts'
+      'tests/i18n/ssr.test.ts',
+      // The console guard's own positive controls; browser mode collects it by glob.
+      'tests/setup.test.ts'
     ],
     silent: process.env.CI === 'true' || process.env.SILENT_TESTS === 'true'
   }

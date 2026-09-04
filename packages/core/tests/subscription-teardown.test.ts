@@ -11,6 +11,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { expectConsole } from './helpers/console.js';
 import { createStore } from '../src/lib/store.svelte';
 import { Effect } from '../src/lib/effect';
 
@@ -41,6 +42,7 @@ describe('subscription teardown', () => {
 	});
 
 	it('survives a cleanup that throws synchronously', () => {
+		expectConsole('error');
 		const store = storeWith(() => () => {
 			throw new Error('close failed');
 		});
@@ -54,6 +56,7 @@ describe('subscription teardown', () => {
 	});
 
 	it('still tears down everything after one cleanup fails', () => {
+		expectConsole('error');
 		let second = 0;
 		const store = createStore<S, A>({
 			initialState: { n: 0 },

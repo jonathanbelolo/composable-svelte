@@ -3,6 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { expectConsole } from '../helpers/console.js';
 import { generateStaticSite, generateStaticPage } from '../../src/lib/ssr/ssg';
 import type { Reducer } from '../../src/lib/types';
 import { Effect } from '../../src/lib/effect';
@@ -398,6 +399,7 @@ describe('SSG (Static Site Generation)', () => {
     });
 
     it('handles errors gracefully and continues generation', async () => {
+      expectConsole('error');
       const getInitialState = vi.fn(async (path: string) => {
         if (path === '/error') {
           throw new Error('Failed to load data');

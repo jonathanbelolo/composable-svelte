@@ -3,6 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { expectConsole } from '../helpers/console.js';
 import { Effect } from '../../src/lib/effect.js';
 import {
   ifLet,
@@ -508,6 +509,7 @@ describe('createDestinationReducer()', () => {
   });
 
   it('returns unchanged destination for unknown destination type', () => {
+    expectConsole('warn');
     const reducer = createDestinationReducer<Destination, DestinationAction, null>({
       addItem: addItemReducer,
       editItem: editItemReducer

@@ -6,6 +6,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
+import { expectConsole } from '../helpers/console.js';
 import { serializeDestination, pathSegment, type SerializerConfig } from '../../src/lib/routing/serializer';
 
 // Test Types
@@ -136,7 +137,7 @@ describe('serializeDestination', () => {
 
 	describe('unknown destination type handling', () => {
 		it('warns and returns basePath for unknown type', () => {
-			const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+			const consoleSpy = expectConsole('warn');
 
 			// Cast to bypass type checking to test runtime behavior
 			const unknownDestination = {
@@ -146,16 +147,15 @@ describe('serializeDestination', () => {
 
 			const result = serializeDestination(unknownDestination, basicConfig);
 
-			expect(consoleSpy).toHaveBeenCalledWith(
+			expect(consoleSpy[0]?.[0]).toEqual(
 				'[Composable Svelte] No serializer found for destination type: "unknownType". Falling back to base path.'
 			);
 			expect(result).toBe('/inventory');
 
-			consoleSpy.mockRestore();
 		});
 
 		it('warns only once per unknown type', () => {
-			const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+			const consoleSpy = expectConsole('warn');
 
 			const unknownDestination = {
 				type: 'anotherUnknown',
@@ -164,12 +164,11 @@ describe('serializeDestination', () => {
 
 			serializeDestination(unknownDestination, basicConfig);
 
-			expect(consoleSpy).toHaveBeenCalledTimes(1);
-			expect(consoleSpy).toHaveBeenCalledWith(
+			expect(consoleSpy).toHaveLength(1);
+			expect(consoleSpy[0]?.[0]).toEqual(
 				'[Composable Svelte] No serializer found for destination type: "anotherUnknown". Falling back to base path.'
 			);
 
-			consoleSpy.mockRestore();
 		});
 	});
 

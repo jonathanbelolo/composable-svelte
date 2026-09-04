@@ -404,7 +404,7 @@ describe('createURLSyncEffect', () => {
 			};
 
 			const urlEffect = syncEffect(state);
-			const otherEffect = Effect.fireAndForget(() => console.log('other'));
+			const otherEffect = Effect.fireAndForget(() => {});
 			const batchedEffect = Effect.batch(urlEffect, otherEffect);
 
 			expect(batchedEffect._tag).toBe('Batch');

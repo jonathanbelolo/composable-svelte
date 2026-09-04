@@ -3,6 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { expectConsole } from '../helpers/console.js';
 import {
   isICUMessage,
   compileICU,
@@ -231,11 +232,13 @@ describe('compileICU', () => {
 
   describe('Error Handling', () => {
     it('should handle invalid ICU syntax gracefully', () => {
+      expectConsole('error');
       const format = compileICU('{count, plural, one {# item}', 'en'); // Missing closing brace
       expect(format({ count: 1 })).toBe('{count, plural, one {# item}'); // Returns original message
     });
 
     it('should handle missing parameters', () => {
+      expectConsole('error');
       const format = compileICU('{count, plural, one {# item} other {# items}}', 'en');
       const result = format({});
       expect(result).toBeTruthy(); // Should not crash

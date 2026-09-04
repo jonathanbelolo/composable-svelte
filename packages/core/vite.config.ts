@@ -17,6 +17,10 @@ export default defineConfig({
   // Browser Mode Configuration (Vitest 4)
   // ============================================================================
   test: {
+    // The console guard (tests/helpers/console.ts): undeclared console.error / warn
+    // output fails the test that produced it.
+    setupFiles: ['./tests/setup.ts'],
+
     browser: {
       enabled: true,
       provider: playwright(),

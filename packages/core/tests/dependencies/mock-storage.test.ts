@@ -11,6 +11,7 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
+import { expectConsole } from '../helpers/console.js';
 
 import { createMockStorage } from '../../src/lib/dependencies/local-storage.js';
 
@@ -81,7 +82,7 @@ describe('cross-tab events', () => {
 
 	it('lets one throwing listener not stop the others', () => {
 		const storage = createMockStorage<string>();
-		const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+		expectConsole('error');
 		const second = vi.fn();
 
 		storage.subscribe(() => {
@@ -91,7 +92,6 @@ describe('cross-tab events', () => {
 		storage.simulateSetItem('k', 'v');
 
 		expect(second).toHaveBeenCalledTimes(1);
-		spy.mockRestore();
 	});
 });
 
