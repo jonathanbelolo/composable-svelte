@@ -219,10 +219,20 @@ function builtTypePaths(): { paths: Record<string, string[]>; missing: string[] 
  *
  * Without this the guard reported four errors against documentation that was
  * right, which is worse than reporting nothing: it would have had me "fix"
- * working examples into broken ones.
+ * working examples into broken ones. The index signature is `any`, as Vite's
+ * own `importMeta.d.ts` declares it; a narrower one typed
+ * `import.meta.env.VITE_MAPBOX_TOKEN` as `string | boolean | undefined` and
+ * put a fifth error against a correct README in the register (R0 review).
  */
 const VITE_AMBIENT = `
-interface ImportMetaEnv { readonly [key: string]: string | boolean | undefined }
+interface ImportMetaEnv {
+	readonly [key: string]: any;
+	readonly BASE_URL: string;
+	readonly MODE: string;
+	readonly DEV: boolean;
+	readonly PROD: boolean;
+	readonly SSR: boolean;
+}
 interface ImportMetaHot {
 	dispose(callback: () => void): void;
 	accept(callback?: (module: unknown) => void): void;
