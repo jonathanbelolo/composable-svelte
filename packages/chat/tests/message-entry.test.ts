@@ -22,7 +22,7 @@
  * slideIn twice per reply for exactly that reason.
  */
 
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { mount, unmount, flushSync } from 'svelte';
 import { createStore } from '@composable-svelte/core';
 import ChatMessage from '../src/lib/streaming-chat/primitives/ChatMessage.svelte';
@@ -133,12 +133,22 @@ describe('the entry animation reaches the DOM', () => {
 
 	it('animates a message the list marks as new', async () => {
 		const el = render({ message, animateIn: true });
-		await wait(20);
 
-		// Mid-flight: Motion One writes inline styles, so this is observable.
-		const opacity = parseFloat(getComputedStyle(el).opacity);
+		// Mid-flight: Motion One writes inline styles, so this is observable. The
+		// sample waits for the first frame rather than a fixed 20 ms: on CI's
+		// runner the spring had not produced one by then, so opacity read 0 and
+		// main's own run at 6cd4801 failed here (AUDIT-2026-09-03-FINDINGS T7).
+		// The spring runs for hundreds of milliseconds; a 5 ms poll cannot miss
+		// the whole flight.
+		let opacity = 0;
+		await vi.waitFor(
+			() => {
+				opacity = parseFloat(getComputedStyle(el).opacity);
+				expect(opacity, `opacity was ${opacity}`).toBeGreaterThan(0);
+			},
+			{ timeout: 2000, interval: 5 }
+		);
 		expect(opacity, `opacity was ${opacity}`).toBeLessThan(1);
-		expect(opacity).toBeGreaterThan(0);
 	});
 
 	it('places a message that is not new — the restore case', async () => {
