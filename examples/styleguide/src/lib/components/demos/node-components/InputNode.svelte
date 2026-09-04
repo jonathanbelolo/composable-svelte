@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { Handle, Position } from '@xyflow/svelte';
-	import type { NodeProps } from '@xyflow/svelte';
+	import type { Node, NodeProps } from '@xyflow/svelte';
 
-	interface InputNodeData {
+	interface InputNodeData extends Record<string, unknown> {
 		value: string;
 		outputType: 'string' | 'number';
 	}
 
-	type Props = NodeProps<InputNodeData>;
+	type Props = NodeProps<Node<InputNodeData>>;
 	const { data }: Props = $props();
 </script>
 
@@ -17,6 +17,7 @@
 		type="text"
 		bind:value={data.value}
 		placeholder="Enter text..."
+		aria-label="Node input text"
 		class="w-full px-2 py-1 text-sm border rounded bg-gray-50 dark:bg-gray-900"
 	/>
 	<Handle type="source" position={Position.Right} id="output" />

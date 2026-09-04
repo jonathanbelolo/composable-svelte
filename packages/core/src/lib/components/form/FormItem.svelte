@@ -22,11 +22,11 @@
 		/**
 		 * Optional class name
 		 */
-		class?: string;
+		class?: string | undefined;
 		/**
 		 * Children elements
 		 */
-		children?: import('svelte').Snippet;
+		children?: import('svelte').Snippet | undefined;
 	}
 
 	let { class: className, children }: Props = $props();

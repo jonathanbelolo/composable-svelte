@@ -2,7 +2,27 @@
 
 A **Composable Architecture** library for Svelte 5, inspired by [The Composable Architecture (TCA)](https://github.com/pointfreeco/swift-composable-architecture) from Swift/iOS.
 
-**Status**: ✅ Production-ready with 420+ tests
+**Status**: `@composable-svelte/core` is production-ready, and every package is
+covered by tests — the current count is in Project Status below, measured rather
+than carried forward. **The satellite packages vary, and two of them substantially** —
+see the table below before you depend on one.
+
+## Packages, and how finished each is
+
+| package | state | what is not there |
+|---|---|---|
+| **core** | production-ready | no store middleware, no devtools integration, no persistence or time-travel (there *is* an action `history` and `subscribeToActions`, so you can build a logger yourself) |
+| **chat** | usable | "collaborative" means presence, typing and cursors — **there is no CRDT layer**, so concurrent document editing is not supported |
+| **media** | usable | audio player, `VideoEmbed` (YouTube/Vimeo/Twitch), voice input — no video *player*, no streaming formats |
+| **code** | usable, thin | three wrappers: CodeMirror, Prism, SvelteFlow |
+| **charts** | feature-complete for 5 chart types | scatter, line, bar, area, histogram. Heatmap, network graph and hierarchy layouts are deferred |
+| **graphics** | usable | WebGL overlay and a Babylon adapter. `engine: 'webgpu'` is accepted and **runs WebGL** — real WebGPU is not implemented |
+| **maps** | **in development** | 3D buildings, marker clustering, geocoding/search, drawing tools and routing are all unbuilt |
+| **auth** | usable, broad | sign-in flows, sessions, guards and the full account-settings surface — MFA management, connected OAuth providers, changing an email address, deleting an account, and session-lifetime management over a server-owned cookie. It speaks to one backend shape |
+
+Accessibility: `svelte-check --fail-on-warnings` is clean across all 19
+workspaces, and `charts` has a keyboard cursor, a data-table fallback and an AA
+review. No independent WCAG 2.1 AA audit has been done on the other packages.
 
 ## Features
 
@@ -13,8 +33,9 @@ A **Composable Architecture** library for Svelte 5, inspired by [The Composable 
 - ✅ **Svelte 5 Runes**: Full integration with Svelte's reactivity system (`$state`, `$derived`)
 - ✅ **TestStore**: Exhaustive action testing with send/receive pattern
 - ✅ **Complete Backend**: API client, WebSocket, Storage, Clock dependencies
-- ✅ **77 Components**: shadcn-svelte integration with reducer-driven patterns
+- ✅ **Component library**: shadcn-svelte integration with reducer-driven patterns — browse the full set in [the styleguide](examples/styleguide)
 - ✅ **URL Routing**: Browser history sync with pattern matching
+- ✅ **Auth**: Sessions plus password sign-in, signup, email verification, password recovery, MFA, OAuth, magic links and account settings — headless flows and styled components, over injected dependencies. See [`@composable-svelte/auth`](./packages/auth/README.md)
 
 ## Quick Start
 
@@ -26,7 +47,45 @@ npm install @composable-svelte/core
 pnpm add @composable-svelte/core
 ```
 
-> **Note**: Package is not yet published to npm. Clone the repo to use it.
+> **Note on versions.** `@composable-svelte/core` **is** on npm, but the latest
+> published version is **0.5.2** while this repository is at **0.11.2** — so
+> `npm install` gets you an API six minor versions older than the one documented
+> here, and the sibling packages pin `@composable-svelte/core ^0.11.0`, which the
+> registry cannot satisfy. Until a release is cut, clone the repo.
+>
+> (This note previously said the package was "not yet published to npm", while
+> `packages/core/README.md` carried an npm version badge and an install command
+> one screen apart. Both cannot be true.)
+
+### Versioning
+
+**This project is on a 0.x line, and staying there is a deliberate choice.**
+
+Measured across the history: **57 commits carry a breaking marker** — graphics
+21, chat 11, auth 7, core 6, charts 6, maps 5, media 4, code 3. That is a lot of
+breakage to have shipped under `0.x` minors, and it is the sort of thing that
+deserves defending rather than assuming.
+
+The reason is that the API is still moving where it matters. Several of those 57
+were the *result* of review finding a shape wrong — a component that could not
+be wrapped, an export that reached nothing, a peer range that widened its
+ceiling and left its floor behind. A 1.0 is a promise not to do that again, and
+the honest position today is that more of it is likely.
+
+So, concretely, on this line:
+
+- **A breaking change bumps the minor** — `0.11.x` → `0.12.0`. Under semver,
+  `^0.11.0` does not match `0.12.0`, so a consumer is not moved onto a breaking
+  change by a caret range.
+- **A fix or an addition bumps the patch.**
+- **Satellites track core exactly.** Each pins `@composable-svelte/core` to
+  `^<major>.<minor>.0` of the core it is built against, enforced by
+  `packages/core/tests/repo/peer-ranges.test.ts`. Ranges are never widened by
+  appending, which moves a ceiling and leaves the floor behind.
+
+**What would move this to 1.0:** a release cycle that goes by without review
+turning up a shape that has to change, and a WCAG audit the project has not had.
+Until both, `0.x` is the accurate signal.
 
 ### Styling (component library)
 
@@ -238,10 +297,12 @@ case 'addButtonTapped':
 Use `TestStore` for exhaustive action testing:
 
 ```typescript
-import { createTestStore } from '@composable-svelte/core';
+import { createTestStore } from '@composable-svelte/core/test';
 
 const store = createTestStore({
-  initialState: { count: 0 },
+  // The initial state has to carry every field the assertions below read —
+  // `isLoading` included, or the example does not compile for a reader either.
+  initialState: { count: 0, isLoading: false },
   reducer: counterReducer
 });
 
@@ -266,16 +327,20 @@ await store.receive({ type: 'incrementCompleted' }, (state) => {
 ### API Client
 
 ```typescript
-import { createLiveAPI } from '@composable-svelte/core/api';
+import { createAPIClient } from '@composable-svelte/core/api';
 
-const api = createLiveAPI({
+const api = createAPIClient({
   baseURL: 'https://api.example.com',
-  interceptors: {
-    request: async (config) => {
-      config.headers.Authorization = `Bearer ${token}`;
-      return config;
+  // `interceptors` is a list, and a request interceptor is an object with
+  // `onRequest(url, config)` — it receives the URL as well as the config.
+  interceptors: [
+    {
+      onRequest: async (url, config) => ({
+        ...config,
+        headers: { ...config.headers, Authorization: `Bearer ${token}` }
+      })
     }
-  }
+  ]
 });
 
 // In reducer
@@ -307,10 +372,12 @@ const ws = createLiveWebSocket({
 
 // In reducer
 Effect.run(async (dispatch) => {
-  ws.on('message', (data) => {
+  // `subscribe` takes a message listener and returns an unsubscribe function;
+  // lifecycle events come from `subscribeToEvents`.
+  ws.subscribe((data) => {
     dispatch({ type: 'messageReceived', data });
   });
-  await ws.connect();
+  await ws.connect('wss://api.example.com');
 });
 ```
 
@@ -339,9 +406,10 @@ const timestamp = deps.clock.now();
 
 Explore working examples in the `examples/` directory:
 
-- **[Styleguide](./examples/styleguide)**: Component showcase with 77 components
+- **[Styleguide](./examples/styleguide)**: Component showcase — browse the full set there, including a working demo of every auth flow
 - **[Product Gallery](./examples/product-gallery)**: Full-featured product browsing app
 - **[URL Routing](./examples/url-routing)**: Browser history integration examples
+- **[Auth Server](./examples/auth-server)**: A reference backend for `@composable-svelte/auth`, and a client driving every flow against it — the only example that talks to a real server rather than a mock
 
 ```bash
 # Run styleguide
@@ -352,8 +420,10 @@ pnpm dev
 
 ## Documentation
 
-- **[API Documentation](./packages/core/src/dependencies/README.md)**: Dependencies module
-- **[Security Guide](./packages/core/src/dependencies/SECURITY.md)**: Storage security best practices
+- **[API Documentation](./packages/core/src/lib/dependencies/README.md)**: Dependencies module
+- **[Security Guide](./packages/core/src/lib/dependencies/SECURITY.md)**: Storage security best practices
+- **[Auth](./packages/auth/README.md)**: Sessions, the sign-in flows, and the backend contract
+- **[Architecture & tutorial guide](./guides/README.md)**: Every package, and a feature built from scratch
 - **[CLAUDE.md](./CLAUDE.md)**: Full project documentation for contributors
 
 ## Architecture
@@ -375,11 +445,19 @@ Inspired by [The Composable Architecture (TCA)](https://github.com/pointfreeco/s
 # Install dependencies
 pnpm install
 
+# Build first. `dist/` is gitignored, and every satellite package and example
+# resolves @composable-svelte/core through its exports map, which points at
+# dist — so typecheck, test and check all fail with TS2307 without this.
+pnpm build
+
 # Run tests
 pnpm test
 
-# Type check
+# Type check (`tsc` never reads .svelte)
 pnpm typecheck
+
+# Check components — types, props and a11y inside .svelte files
+pnpm check
 
 # Run examples
 cd examples/styleguide
@@ -393,11 +471,17 @@ pnpm dev
 - ✅ Phase 2: Navigation (Modal, Sheet, Drawer)
 - ✅ Phase 3: DSL & Matchers
 - ✅ Phase 4: Animation
-- ✅ Phase 6: Component Library (77 components)
+- ✅ Phase 6: Component Library (shadcn-svelte integration)
 - ✅ Phase 7: URL Routing
 - ✅ Phase 8: Backend Integration (API, WebSocket, Dependencies)
 
-**Test Coverage**: 420+ tests across all modules
+**Test Coverage**: 4,271 tests, all passing — measured by running `pnpm test`
+on 2026-09-01, not carried over from a previous edit. Two figures used to live
+in this file and they disagreed with each other; a count is the one claim here
+that changes on every commit, so it is stated once and dated.
+Run with `pnpm test`; it serialises the workspaces, because most of them drive a
+real browser and running four at once produces failures about scheduling rather
+than about code.
 
 ## Contributing
 

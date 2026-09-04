@@ -4,8 +4,9 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createSpyAPI } from '../../src/lib/api/testing/spy-client.js';
-import { createMockAPI } from '../../src/lib/api/testing/mock-client.js';
+import { createMockAPI, type MockHandler } from '../../src/lib/api/testing/mock-client.js';
 import { APIError } from '../../src/lib/api/errors.js';
+import { clearCache } from '../../src/lib/api/cache.js';
 
 describe('createSpyAPI', () => {
   describe('Call Tracking', () => {
@@ -18,9 +19,9 @@ describe('createSpyAPI', () => {
       await spy.get('/api/products');
 
       expect(spy.calls).toHaveLength(1);
-      expect(spy.calls[0].method).toBe('GET');
-      expect(spy.calls[0].url).toBe('/api/products');
-      expect(spy.calls[0].timestamp).toBeDefined();
+      expect(spy.calls[0]!.method).toBe('GET');
+      expect(spy.calls[0]!.url).toBe('/api/products');
+      expect(spy.calls[0]!.timestamp).toBeDefined();
     });
 
     it('tracks POST request calls with config', async () => {
@@ -32,11 +33,11 @@ describe('createSpyAPI', () => {
       await spy.post('/api/products', { name: 'Product' }, { headers: { 'X-Custom': 'value' } });
 
       expect(spy.calls).toHaveLength(1);
-      expect(spy.calls[0].method).toBe('POST');
-      expect(spy.calls[0].url).toBe('/api/products');
-      expect(spy.calls[0].config).toBeDefined();
-      expect(spy.calls[0].config?.body).toEqual({ name: 'Product' });
-      expect(spy.calls[0].config?.headers).toEqual({ 'X-Custom': 'value' });
+      expect(spy.calls[0]!.method).toBe('POST');
+      expect(spy.calls[0]!.url).toBe('/api/products');
+      expect(spy.calls[0]!.config).toBeDefined();
+      expect(spy.calls[0]!.config?.body).toEqual({ name: 'Product' });
+      expect(spy.calls[0]!.config?.headers).toEqual({ 'X-Custom': 'value' });
     });
 
     it('tracks PUT request calls', async () => {
@@ -48,8 +49,8 @@ describe('createSpyAPI', () => {
       await spy.put('/api/products/1', { name: 'Updated' });
 
       expect(spy.calls).toHaveLength(1);
-      expect(spy.calls[0].method).toBe('PUT');
-      expect(spy.calls[0].url).toBe('/api/products/1');
+      expect(spy.calls[0]!.method).toBe('PUT');
+      expect(spy.calls[0]!.url).toBe('/api/products/1');
     });
 
     it('tracks PATCH request calls', async () => {
@@ -61,7 +62,7 @@ describe('createSpyAPI', () => {
       await spy.patch('/api/products/1', { name: 'Patched' });
 
       expect(spy.calls).toHaveLength(1);
-      expect(spy.calls[0].method).toBe('PATCH');
+      expect(spy.calls[0]!.method).toBe('PATCH');
     });
 
     it('tracks DELETE request calls', async () => {
@@ -73,7 +74,7 @@ describe('createSpyAPI', () => {
       await spy.delete('/api/products/1');
 
       expect(spy.calls).toHaveLength(1);
-      expect(spy.calls[0].method).toBe('DELETE');
+      expect(spy.calls[0]!.method).toBe('DELETE');
     });
 
     it('tracks HEAD request calls', async () => {
@@ -85,7 +86,7 @@ describe('createSpyAPI', () => {
       await spy.head('/api/products');
 
       expect(spy.calls).toHaveLength(1);
-      expect(spy.calls[0].method).toBe('HEAD');
+      expect(spy.calls[0]!.method).toBe('HEAD');
     });
 
     it('tracks request() method calls', async () => {
@@ -100,8 +101,8 @@ describe('createSpyAPI', () => {
       });
 
       expect(spy.calls).toHaveLength(1);
-      expect(spy.calls[0].method).toBe('GET');
-      expect(spy.calls[0].url).toBe('/api/products');
+      expect(spy.calls[0]!.method).toBe('GET');
+      expect(spy.calls[0]!.url).toBe('/api/products');
     });
 
     it('tracks multiple calls in order', async () => {
@@ -117,9 +118,9 @@ describe('createSpyAPI', () => {
       await spy.delete('/api/products/1');
 
       expect(spy.calls).toHaveLength(3);
-      expect(spy.calls[0].method).toBe('GET');
-      expect(spy.calls[1].method).toBe('POST');
-      expect(spy.calls[2].method).toBe('DELETE');
+      expect(spy.calls[0]!.method).toBe('GET');
+      expect(spy.calls[1]!.method).toBe('POST');
+      expect(spy.calls[2]!.method).toBe('DELETE');
     });
 
     it('tracks timestamps for each call', async () => {
@@ -132,8 +133,8 @@ describe('createSpyAPI', () => {
       await spy.get('/api/products');
       const after = Date.now();
 
-      expect(spy.calls[0].timestamp).toBeGreaterThanOrEqual(before);
-      expect(spy.calls[0].timestamp).toBeLessThanOrEqual(after);
+      expect(spy.calls[0]!.timestamp).toBeGreaterThanOrEqual(before);
+      expect(spy.calls[0]!.timestamp).toBeLessThanOrEqual(after);
     });
   });
 
@@ -147,8 +148,8 @@ describe('createSpyAPI', () => {
       await spy.get('/api/products');
 
       expect(spy.responses).toHaveLength(1);
-      expect(spy.responses[0].data).toEqual([{ id: '1', name: 'Product 1' }]);
-      expect(spy.responses[0].status).toBe(200);
+      expect(spy.responses[0]!.data).toEqual([{ id: '1', name: 'Product 1' }]);
+      expect(spy.responses[0]!.status).toBe(200);
     });
 
     it('tracks multiple responses', async () => {
@@ -162,8 +163,8 @@ describe('createSpyAPI', () => {
       await spy.post('/api/products', { name: 'New' });
 
       expect(spy.responses).toHaveLength(2);
-      expect(spy.responses[0].data).toEqual([{ id: '1' }]);
-      expect(spy.responses[1].data).toEqual({ id: '2' });
+      expect(spy.responses[0]!.data).toEqual([{ id: '1' }]);
+      expect(spy.responses[1]!.data).toEqual({ id: '2' });
     });
 
     it('returns response to caller', async () => {
@@ -192,7 +193,7 @@ describe('createSpyAPI', () => {
 
       expect(spy.errors).toHaveLength(1);
       expect(spy.errors[0]).toBeInstanceOf(APIError);
-      expect(spy.errors[0].message).toBe('Server error');
+      expect(spy.errors[0]!.message).toBe('Server error');
     });
 
     it('tracks multiple errors', async () => {
@@ -206,8 +207,8 @@ describe('createSpyAPI', () => {
       await expect(spy.get('/api/error2')).rejects.toThrow();
 
       expect(spy.errors).toHaveLength(2);
-      expect(spy.errors[0].message).toBe('Error 1');
-      expect(spy.errors[1].message).toBe('Error 2');
+      expect(spy.errors[0]!.message).toBe('Error 1');
+      expect(spy.errors[1]!.message).toBe('Error 2');
     });
 
     it('re-throws error to caller', async () => {
@@ -248,8 +249,8 @@ describe('createSpyAPI', () => {
       const getCalls = spy.callsTo('GET', '/api/products');
 
       expect(getCalls).toHaveLength(1);
-      expect(getCalls[0].method).toBe('GET');
-      expect(getCalls[0].url).toBe('/api/products');
+      expect(getCalls[0]!.method).toBe('GET');
+      expect(getCalls[0]!.url).toBe('/api/products');
     });
 
     it('returns empty array when no matches', async () => {
@@ -327,7 +328,7 @@ describe('createSpyAPI', () => {
       const calls = spy.callsMatching('GET', /\/api\/products\/\d+/);
 
       expect(calls).toHaveLength(1);
-      expect(calls[0].url).toBe('/api/products/123');
+      expect(calls[0]!.url).toBe('/api/products/123');
     });
 
     it('combines method and URL pattern filtering', async () => {
@@ -343,7 +344,7 @@ describe('createSpyAPI', () => {
       const calls = spy.callsMatching('GET', '/api/products/*');
 
       expect(calls).toHaveLength(1);
-      expect(calls[0].method).toBe('GET');
+      expect(calls[0]!.method).toBe('GET');
     });
   });
 
@@ -460,23 +461,54 @@ describe('createSpyAPI', () => {
   });
 
   describe('Proxy Methods', () => {
-    it('addInterceptor delegates to base client', () => {
-      const spy = createSpyAPI();
-      const cleanup = spy.addInterceptor({});
+    // These asserted `typeof cleanup === 'function'` and two `not.toThrow()`s,
+    // which passed while the underlying mock's three methods were empty
+    // closures. Now that the mock implements them, "delegates" is a claim with
+    // observable consequences, so it is asserted as one.
 
-      expect(typeof cleanup).toBe('function');
+    it('addInterceptor delegates to the base client', async () => {
+      const spy = createSpyAPI(
+        createMockAPI({
+          'GET /api/me': ((config) => ({
+            seen: config.headers?.['x-test'] ?? null
+          })) satisfies MockHandler
+        })
+      );
+
+      const remove = spy.addInterceptor({
+        onRequest: (_url, config) => ({ ...config, headers: { ...config.headers, 'x-test': 'yes' } })
+      });
+
+      const withInterceptor = await spy.get<{ seen: string | null }>('/api/me');
+      expect(withInterceptor.data.seen).toBe('yes');
+
+      remove();
+      const without = await spy.get<{ seen: string | null }>('/api/me');
+      expect(without.data.seen).toBeNull();
     });
 
-    it('clearCache delegates to base client', () => {
-      const spy = createSpyAPI();
+    it('clearCache delegates to the base client', async () => {
+      clearCache();
+      let hits = 0;
+      const spy = createSpyAPI(createMockAPI({ 'GET /api/count': () => ({ n: (hits += 1) }) }));
 
-      expect(() => spy.clearCache()).not.toThrow();
+      await spy.get('/api/count', { cache: true });
+      spy.clearCache();
+      const second = await spy.get<{ n: number }>('/api/count', { cache: true });
+
+      expect(second.data.n).toBe(2);
     });
 
-    it('invalidateCache delegates to base client', () => {
-      const spy = createSpyAPI();
+    it('invalidateCache delegates to the base client', async () => {
+      clearCache();
+      let hits = 0;
+      const spy = createSpyAPI(createMockAPI({ 'GET /api/items': () => ({ n: (hits += 1) }) }));
 
-      expect(() => spy.invalidateCache('/api/*')).not.toThrow();
+      await spy.get('/api/items', { cache: true });
+      spy.invalidateCache('/api/items');
+      const second = await spy.get<{ n: number }>('/api/items', { cache: true });
+
+      expect(second.data.n).toBe(2);
     });
   });
 
@@ -484,7 +516,10 @@ describe('createSpyAPI', () => {
     it('verifies API call sequence in component test', async () => {
       const mock = createMockAPI({
         'GET /api/products': [{ id: '1', name: 'Product 1' }],
-        'POST /api/products': (config) => ({ id: '2', ...config.body }),
+        'POST /api/products': ((config) => ({
+          id: '2',
+          ...(config.body as Record<string, unknown>)
+        })) satisfies MockHandler,
         'DELETE /api/products/1': { success: true }
       });
       const spy = createSpyAPI(mock);
@@ -496,17 +531,17 @@ describe('createSpyAPI', () => {
 
       // Verify call sequence
       expect(spy.calls).toHaveLength(3);
-      expect(spy.calls[0].method).toBe('GET');
-      expect(spy.calls[1].method).toBe('POST');
-      expect(spy.calls[2].method).toBe('DELETE');
+      expect(spy.calls[0]!.method).toBe('GET');
+      expect(spy.calls[1]!.method).toBe('POST');
+      expect(spy.calls[2]!.method).toBe('DELETE');
 
       // Verify responses
-      expect(spy.responses[0].data).toHaveLength(1);
-      expect(spy.responses[1].data).toEqual({ id: '2', name: 'New Product' });
-      expect(spy.responses[2].data).toEqual({ success: true });
+      expect(spy.responses[0]!.data).toHaveLength(1);
+      expect(spy.responses[1]!.data).toEqual({ id: '2', name: 'New Product' });
+      expect(spy.responses[2]!.data).toEqual({ success: true });
     });
 
-    it('verifies retry behavior', async () => {
+    it('records the failed calls in errors and the success in responses', async () => {
       let callCount = 0;
       const mock = createMockAPI({
         'GET /api/flaky': () => {
@@ -535,11 +570,11 @@ describe('createSpyAPI', () => {
     it('verifies authentication flow', async () => {
       const mock = createMockAPI({
         'POST /api/login': { token: 'abc123' },
-        'GET /api/profile': (config) => {
+        'GET /api/profile': ((config) => {
           const auth = config.headers?.['Authorization'];
           if (!auth) throw new APIError('Unauthorized', 401, null, {}, false);
           return { name: 'John Doe' };
-        }
+        }) satisfies MockHandler
       });
       const spy = createSpyAPI(mock);
 
@@ -554,8 +589,8 @@ describe('createSpyAPI', () => {
 
       // Verify sequence
       expect(spy.calls).toHaveLength(2);
-      expect(spy.calls[0].method).toBe('POST');
-      expect(spy.calls[1].config?.headers?.['Authorization']).toBe('Bearer abc123');
+      expect(spy.calls[0]!.method).toBe('POST');
+      expect(spy.calls[1]!.config?.headers?.['Authorization']).toBe('Bearer abc123');
     });
   });
 });

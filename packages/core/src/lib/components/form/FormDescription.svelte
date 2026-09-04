@@ -17,11 +17,11 @@
 		/**
 		 * Optional class name
 		 */
-		class?: string;
+		class?: string | undefined;
 		/**
 		 * Description text
 		 */
-		children?: import('svelte').Snippet;
+		children?: import('svelte').Snippet | undefined;
 	}
 
 	let { class: className, children }: Props = $props();

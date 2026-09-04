@@ -65,7 +65,7 @@
           onBack: (() => void) | undefined;
         }
       ]
-    >;
+    > | undefined;
   }
 
   let {
@@ -86,7 +86,7 @@
 
   const defaultContainerClasses = 'flex flex-col h-full';
   const defaultHeaderClasses = 'flex items-center border-b bg-background px-4 py-3';
-  const defaultBackButtonClasses = 'inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 w-10';
+  const defaultBackButtonClasses = 'inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 w-10';
   const defaultContentClasses = 'flex-1 overflow-auto';
 
   const containerClasses = $derived(

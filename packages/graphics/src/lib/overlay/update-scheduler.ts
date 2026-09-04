@@ -7,10 +7,9 @@
  * - static: Never update (images)
  * - frame: Every animation frame (videos)
  * - manual: Explicit updateElement() calls
- * - reactive: Svelte $effect triggers
  */
 
-import type { ElementRegistration, UpdateStrategy } from './overlay-types.js';
+import type { ElementRegistration } from './overlay-types.js';
 
 export type UpdateCallback = (elementId: string) => void;
 
@@ -20,6 +19,19 @@ export class UpdateScheduler {
 	private frameUpdateElements = new Set<string>();
 	private rafId: number | null = null;
 	private isRunning = false;
+
+	/**
+	 * Video listeners to remove when an element goes, keyed by element id.
+	 *
+	 * This used to be done by **rebinding `this.unregisterElement`** with a
+	 * wrapper closing over the video — once per registration, never unwound. So
+	 * after n videos every call walked n wrappers, and each one pinned a
+	 * `HTMLVideoElement` and its registration for the scheduler's lifetime.
+	 * `destroy()` did not unwind it either, and since only the wrapper removed
+	 * the listeners, tearing the scheduler down without unregistering first left
+	 * them on the video.
+	 */
+	private videoListeners = new Map<string, () => void>();
 
 	/**
 	 * Set the callback to trigger when an element needs updating
@@ -40,16 +52,20 @@ export class UpdateScheduler {
 
 		// Add to frame update set if using frame strategy
 		if (registration.updateStrategy === 'frame') {
-			this.frameUpdateElements.add(registration.id);
+			// A video with `requestVideoFrameCallback` drives itself, and its own
+			// comment calls that "more efficient than requestAnimationFrame" —
+			// *instead of*, not *as well as*. Registering both meant every video
+			// frame called `notifyUpdate` twice and uploaded the texture twice.
+			const selfDriving =
+				registration.type === 'video' && this.setupVideoUpdates(registration);
 
-			// Start frame loop if not already running
-			if (!this.isRunning) {
-				this.start();
-			}
+			if (!selfDriving) {
+				this.frameUpdateElements.add(registration.id);
 
-			// Set up video-specific handling
-			if (registration.type === 'video') {
-				this.setupVideoUpdates(registration);
+				// Start frame loop if not already running
+				if (!this.isRunning) {
+					this.start();
+				}
 			}
 		}
 	}
@@ -69,6 +85,9 @@ export class UpdateScheduler {
 				(registration.element as any).cancelVideoFrameCallback(registration.animationFrameId);
 			}
 		}
+
+		// Release the video's play/pause listeners
+		this.releaseVideoListeners(id);
 
 		// Remove from frame updates
 		this.frameUpdateElements.delete(id);
@@ -107,20 +126,20 @@ export class UpdateScheduler {
 	}
 
 	/**
-	 * Trigger reactive update for an element
+	 * Service an element that has no texture yet, whatever its strategy.
 	 *
-	 * Called by Svelte's $effect when dependencies change.
+	 * The strategy gate on `triggerUpdate` is about *re-reading* a source: a
+	 * `static` element is static precisely so a consumer does not re-upload an
+	 * unchanging image every frame. An element with no texture has nothing to
+	 * re-read — the call is asking for the first upload — so the gate does not
+	 * apply, and applying it made a refusal permanent for every element whose
+	 * inferred strategy is not `manual`.
 	 *
-	 * @param id - Element identifier
+	 * The caller decides that; the scheduler does not know about textures.
 	 */
-	triggerReactiveUpdate(id: string): void {
-		const registration = this.elements.get(id);
-		if (!registration) return;
-
-		if (registration.updateStrategy !== 'reactive') {
-			console.warn(
-				`[UpdateScheduler] Element ${id} has strategy '${registration.updateStrategy}', not 'reactive'`
-			);
+	triggerRetry(id: string): void {
+		if (!this.elements.has(id)) {
+			console.warn(`[UpdateScheduler] Element ${id} not found`);
 			return;
 		}
 
@@ -151,33 +170,8 @@ export class UpdateScheduler {
 		}
 	}
 
-	/**
-	 * Check if scheduler is running
-	 *
-	 * @returns true if running
-	 */
-	running(): boolean {
-		return this.isRunning;
-	}
 
-	/**
-	 * Get all registered elements
-	 *
-	 * @returns Array of element registrations
-	 */
-	getElements(): ElementRegistration[] {
-		return Array.from(this.elements.values());
-	}
 
-	/**
-	 * Get a specific element registration
-	 *
-	 * @param id - Element identifier
-	 * @returns Element registration or undefined
-	 */
-	getElement(id: string): ElementRegistration | undefined {
-		return this.elements.get(id);
-	}
 
 	/**
 	 * Schedule next frame update
@@ -185,25 +179,24 @@ export class UpdateScheduler {
 	private scheduleFrameUpdate(): void {
 		if (!this.isRunning) return;
 
-		this.rafId = requestAnimationFrame((timestamp) => {
-			this.processFrameUpdates(timestamp);
+		this.rafId = requestAnimationFrame(() => {
+			this.processFrameUpdates();
 			this.scheduleFrameUpdate();
 		});
 	}
 
 	/**
 	 * Process all frame-strategy elements
-	 *
-	 * @param timestamp - Current timestamp
 	 */
-	private processFrameUpdates(timestamp: number): void {
+	private processFrameUpdates(): void {
 		for (const id of this.frameUpdateElements) {
 			const registration = this.elements.get(id);
 			if (!registration) continue;
 
-			// Check if element needs update (rate limiting)
-			if (this.shouldUpdateElement(registration, timestamp)) {
-				registration.lastUpdate = timestamp;
+			// Whether this element is worth sampling this frame. Not rate
+			// limiting — `RenderLoop` paces frames, and `targetFPS` is honoured
+			// there.
+			if (this.shouldUpdateElement(registration)) {
 				this.notifyUpdate(id);
 			}
 		}
@@ -212,16 +205,25 @@ export class UpdateScheduler {
 	/**
 	 * Check if element should be updated
 	 *
-	 * Implements rate limiting to avoid unnecessary updates.
+	 * There is no rate limiting here, despite what this line used to claim. The
+	 * only thing it decides is whether a video is worth sampling; frame pacing
+	 * is `RenderLoop`'s job, and `targetFPS` is honoured there.
+	 *
+	 * It used to consult a `lastUpdate` field via `if (!registration.lastUpdate)
+	 * return true`. That was recorded as a no-op branch, and it was not: it
+	 * forced an update on an element's *first* frame, which was the only reason
+	 * a paused video ever got one. Removing it changed behaviour and a test
+	 * caught it.
+	 *
+	 * The behaviour is not restored, deliberately. A paused video has nothing
+	 * new to sample, and its texture is already created at registration — so
+	 * skipping it is what this method is for. What the field bought was one
+	 * redundant upload per element.
 	 *
 	 * @param registration - Element registration
-	 * @param timestamp - Current timestamp
 	 * @returns true if should update
 	 */
-	private shouldUpdateElement(registration: ElementRegistration, timestamp: number): boolean {
-		// Always update if no last update
-		if (!registration.lastUpdate) return true;
-
+	private shouldUpdateElement(registration: ElementRegistration): boolean {
 		// For videos, check if new frame is available
 		if (registration.type === 'video') {
 			const video = registration.element as HTMLVideoElement;
@@ -245,13 +247,13 @@ export class UpdateScheduler {
 	 *
 	 * @param registration - Element registration
 	 */
-	private setupVideoUpdates(registration: ElementRegistration): void {
+	private setupVideoUpdates(registration: ElementRegistration): boolean {
 		const video = registration.element as HTMLVideoElement;
 
 		// Check if requestVideoFrameCallback is supported
 		if (!('requestVideoFrameCallback' in video)) {
 			// Fall back to frame-based updates
-			return;
+			return false;
 		}
 
 		const scheduleVideoUpdate = () => {
@@ -282,22 +284,27 @@ export class UpdateScheduler {
 		const handlePause = () => {
 			if (registration.animationFrameId) {
 				(video as any).cancelVideoFrameCallback(registration.animationFrameId);
-				registration.animationFrameId = undefined;
+				delete registration.animationFrameId;
 			}
 		};
 
 		video.addEventListener('play', handlePlay);
 		video.addEventListener('pause', handlePause);
 
-		// Clean up listeners when element is unregistered
-		const originalUnregister = this.unregisterElement.bind(this);
-		this.unregisterElement = (id: string) => {
-			if (id === registration.id) {
-				video.removeEventListener('play', handlePlay);
-				video.removeEventListener('pause', handlePause);
-			}
-			originalUnregister(id);
-		};
+		// Recorded, not wrapped. `unregisterElement` and `destroy` both call
+		// this; the method itself is never reassigned.
+		this.videoListeners.set(registration.id, () => {
+			video.removeEventListener('play', handlePlay);
+			video.removeEventListener('pause', handlePause);
+		});
+
+		return true;
+	}
+
+	/** Remove the video listeners registered for an element, if any. */
+	private releaseVideoListeners(id: string): void {
+		this.videoListeners.get(id)?.();
+		this.videoListeners.delete(id);
 	}
 
 	/**
@@ -309,103 +316,6 @@ export class UpdateScheduler {
 		if (this.updateCallback) {
 			this.updateCallback(id);
 		}
-	}
-
-	/**
-	 * Change update strategy for an element
-	 *
-	 * @param id - Element identifier
-	 * @param strategy - New update strategy
-	 */
-	changeStrategy(id: string, strategy: UpdateStrategy): void {
-		const registration = this.elements.get(id);
-		if (!registration) {
-			console.warn(`[UpdateScheduler] Element ${id} not found`);
-			return;
-		}
-
-		const oldStrategy = registration.updateStrategy;
-		if (oldStrategy === strategy) return;
-
-		// Remove from frame updates if was 'frame'
-		if (oldStrategy === 'frame') {
-			this.frameUpdateElements.delete(id);
-
-			// Clean up video frame callback
-			if (registration.animationFrameId) {
-				const video = registration.element as HTMLVideoElement;
-				if ('cancelVideoFrameCallback' in video) {
-					(video as any).cancelVideoFrameCallback(registration.animationFrameId);
-					registration.animationFrameId = undefined;
-				}
-			}
-		}
-
-		// Update strategy
-		registration.updateStrategy = strategy;
-
-		// Add to frame updates if new strategy is 'frame'
-		if (strategy === 'frame') {
-			this.frameUpdateElements.add(id);
-
-			// Start frame loop if not running
-			if (!this.isRunning) {
-				this.start();
-			}
-
-			// Set up video updates if needed
-			if (registration.type === 'video') {
-				this.setupVideoUpdates(registration);
-			}
-		}
-
-		// Stop frame loop if no more frame updates
-		if (this.frameUpdateElements.size === 0 && this.isRunning) {
-			this.stop();
-		}
-	}
-
-	/**
-	 * Get elements by update strategy
-	 *
-	 * @param strategy - Update strategy
-	 * @returns Array of element IDs
-	 */
-	getElementsByStrategy(strategy: UpdateStrategy): string[] {
-		const result: string[] = [];
-
-		for (const [id, registration] of this.elements) {
-			if (registration.updateStrategy === strategy) {
-				result.push(id);
-			}
-		}
-
-		return result;
-	}
-
-	/**
-	 * Get update statistics
-	 *
-	 * @returns Statistics object
-	 */
-	getStatistics() {
-		const strategies: Record<UpdateStrategy, number> = {
-			static: 0,
-			frame: 0,
-			manual: 0,
-			reactive: 0
-		};
-
-		for (const registration of this.elements.values()) {
-			strategies[registration.updateStrategy]++;
-		}
-
-		return {
-			totalElements: this.elements.size,
-			frameUpdateElements: this.frameUpdateElements.size,
-			isRunning: this.isRunning,
-			strategies
-		};
 	}
 
 	/**
@@ -422,6 +332,13 @@ export class UpdateScheduler {
 					(video as any).cancelVideoFrameCallback(registration.animationFrameId);
 				}
 			}
+		}
+
+		// Release every video's listeners. These used to be removed only by the
+		// rebound `unregisterElement`, so destroying without unregistering left
+		// them on the video elements.
+		for (const id of Array.from(this.videoListeners.keys())) {
+			this.releaseVideoListeners(id);
 		}
 
 		this.elements.clear();

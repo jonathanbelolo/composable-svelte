@@ -11,9 +11,9 @@
 		/** Array of reactions to display */
 		reactions: MessageReaction[];
 		/** Click handler for reactions */
-		onclick?: (emoji: string) => void;
+		onclick?: ((emoji: string) => void) | undefined;
 		/** Optional class name */
-		class?: string;
+		class?: string | undefined;
 	}
 
 	let { reactions, onclick, class: className = '' }: Props = $props();
@@ -25,8 +25,10 @@
 			<button
 				type="button"
 				class="message-reaction"
+				class:message-reaction--mine={reaction.reactedByMe}
 				onclick={() => onclick?.(reaction.emoji)}
 				disabled={!onclick}
+				aria-pressed={reaction.reactedByMe ?? false}
 				aria-label="{reaction.emoji} {reaction.count}"
 			>
 				<span class="message-reaction__emoji">{reaction.emoji}</span>
@@ -55,13 +57,19 @@
 		border: 1px solid rgba(0, 0, 0, 0.1);
 		border-radius: 12px;
 		cursor: pointer;
-		transition: background 0.2s, border-color 0.2s, transform 0.1s;
 		font-size: 14px;
 	}
 
+	/* Which reactions are yours. There was no selected state at all before the
+	   chips could be toggled — only `:hover` and `:disabled`. */
+	.message-reaction--mine {
+		background: hsl(var(--primary, 211.3 100% 50%) / 0.12);
+		border-color: hsl(var(--primary, 211.3 100% 50%) / 0.4);
+	}
+
 	.message-reaction:hover:not(:disabled) {
-		background: rgba(0, 122, 255, 0.1);
-		border-color: rgba(0, 122, 255, 0.3);
+		background: hsl(var(--primary, 211.3 100% 50%) / 0.1);
+		border-color: hsl(var(--primary, 211.3 100% 50%) / 0.3);
 		transform: scale(1.05);
 	}
 
@@ -86,20 +94,4 @@
 		font-weight: 600;
 		color: rgba(0, 0, 0, 0.6);
 		line-height: 1;
-	}
-
-	/* Dark mode support */
-	:global(.dark) .message-reaction {
-		background: rgba(255, 255, 255, 0.08);
-		border-color: rgba(255, 255, 255, 0.15);
-	}
-
-	:global(.dark) .message-reaction:hover:not(:disabled) {
-		background: rgba(0, 102, 204, 0.2);
-		border-color: rgba(0, 102, 204, 0.4);
-	}
-
-	:global(.dark) .message-reaction__count {
-		color: rgba(255, 255, 255, 0.7);
-	}
-</style>
+	}</style>

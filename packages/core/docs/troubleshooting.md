@@ -688,7 +688,7 @@ interface State {
 
 **Cause: Not using $derived or memoization**
 
-```typescript
+```svelte
 // ❌ BAD: Compute on every render
 {#each store.state.items.filter(i => i.active).sort((a, b) => a.name.localeCompare(b.name)) as item}
   <ItemRow {item} />
@@ -965,23 +965,31 @@ See the "Styling & Theming" section of the package README for the full setup.
 
 **Cause: Not using store.state reactively**
 
-```typescript
-// ❌ BAD: Accessing state non-reactively
+❌ Not reactive — `count` is read once, when the component is created, and never
+again:
+
+```svelte
 <script>
   let { store } = $props();
-  const count = store.state.count; // Not reactive!
+  const count = store.state.count;
 </script>
 
 <div>Count: {count}</div>
+```
 
-// ✅ GOOD: Access state in template or use $derived
+✅ Read it in the template, where the access is tracked:
+
+```svelte
 <script>
   let { store } = $props();
 </script>
 
 <div>Count: {store.state.count}</div>
+```
 
-// OR with $derived
+✅ Or with `$derived`, when the value is needed in the script too:
+
+```svelte
 <script>
   let { store } = $props();
   const count = $derived(store.state.count);
@@ -1004,19 +1012,27 @@ See the "Styling & Theming" section of the package README for the full setup.
 **Cause: Not passing dependencies to store**
 
 ```typescript
+import { createStore, createAPIClient, createSystemClock } from '@composable-svelte/core';
+
+declare const initialState: { count: number };
+declare const reducer: never;
+
 // ❌ BAD: No dependencies provided
-const store = createStore({
+const bad = createStore({
   initialState,
   reducer
 });
 
 // ✅ GOOD: Provide dependencies
-const store = createStore({
+const good = createStore({
   initialState,
   reducer,
   dependencies: {
-    apiClient: new ApiClient(),
-    clock: Clock.live,
+    // Factory functions, not `new` and not a `.live` namespace: `Clock` and
+    // `Storage` are types. The live implementations are `createSystemClock()`
+    // and `createLocalStorage()`.
+    apiClient: createAPIClient({ baseURL: '/api' }),
+    clock: createSystemClock(),
     dismiss: () => {}
   }
 });
@@ -1137,7 +1153,7 @@ case 'presentationTimeout':
 If you encounter issues not covered in this guide:
 
 1. Check the [API documentation](/packages/core/docs/api)
-2. Review [examples](/packages/core/examples)
+2. Review [examples](/examples)
 3. Search existing GitHub issues
 4. Create a new issue with:
    - Minimal reproduction

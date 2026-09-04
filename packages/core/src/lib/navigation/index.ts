@@ -37,10 +37,17 @@ export { ifLet, ifLetPresentation } from './if-let.js';
 
 export {
   createDestinationReducer,
-  createDestination,
+  destinationState,
   isDestinationType,
   extractDestinationState
 } from './destination-reducer.js';
+
+// The navigation DSL. `createDestination` builds the routing reducer *and* the
+// matcher API from a map of child reducers, and is what every specification and
+// skill document describes — 33 documented examples use this form and none used
+// the state constructor that held the name before it.
+export { createDestination } from './destination.js';
+export type { Destination } from './destination.js';
 
 export type {
   DestinationState,
@@ -87,7 +94,7 @@ export {
   scopeToOptional
 } from './scope-to-destination.js';
 
-export type { ScopedDestinationStore } from './scope-to-destination.js';
+export type { ScopedDestinationStore, ScopableStore } from './scope-to-destination.js';
 
 export { scopeToElement } from './scope-to-element.js';
 

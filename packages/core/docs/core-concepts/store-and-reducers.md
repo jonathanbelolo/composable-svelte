@@ -246,6 +246,26 @@ const userReducer = (
 Dependencies make reducers testable by avoiding direct access to globals:
 
 ```typescript
+import {
+  createStore,
+  createAPIClient,
+  createMockAPI,
+  createSystemClock,
+  createMockClock,
+  createLocalStorage,
+  createMockStorage
+} from '@composable-svelte/core';
+import type { APIClient, Clock, Storage } from '@composable-svelte/core';
+// `createTestStore` ships from its own subpath, not the root barrel.
+import { createTestStore } from '@composable-svelte/core/test';
+
+interface AppData {
+  id: string;
+}
+declare const initialState: { user: null };
+declare const reducer: never;
+declare const mockUser: { id: string };
+
 interface Dependencies {
   api: APIClient;
   clock: Clock;

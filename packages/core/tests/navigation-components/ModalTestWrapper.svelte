@@ -1,7 +1,9 @@
 <script lang="ts">
   import Modal from '../../src/lib/navigation-components/Modal.svelte';
   import { scopeToDestination } from '../../src/lib/navigation/scope-to-destination.js';
-  import type { Store } from '../../src/lib/store.svelte.js';
+  // `Store` is declared in types.ts; store.svelte.ts imports it without
+  // re-exporting, so this path resolved to nothing.
+  import type { Store } from '../../src/lib/types.js';
 
   interface Props {
     parentStore: Store<any, any>;

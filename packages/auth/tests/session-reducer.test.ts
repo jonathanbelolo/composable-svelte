@@ -14,6 +14,7 @@ import {
 import type { SessionDependencies, SessionState } from '../src/lib/session/types';
 import { subjectFromSession } from '../src/lib/subject/helpers';
 import type { SessionSnapshot } from '../src/lib/subject/types';
+import type { AuthError } from '../src/lib/errors/types';
 
 const session: SessionSnapshot = {
 	subject_id: '3f2a58f0-0000-0000-0000-000000000001',
@@ -51,7 +52,8 @@ const authenticatedState: SessionState = {
 	status: 'authenticated',
 	subject: subjectFromSession(session),
 	error: null,
-	epoch: 0
+	epoch: 0,
+	expiresAt: null
 };
 
 describe('resolveSession', () => {
@@ -91,10 +93,20 @@ describe('resolveSession', () => {
 	});
 
 	it('fails closed to anonymous when the resolve call rejects', async () => {
+		// The dependency rejects the way the HTTP adapter now does — with an
+		// `AuthError`, not a bare `Error`. This test used to throw
+		// `new Error('network down')` while its comment claimed `toAuthError`
+		// "reads the TypeError `fetch` throws as `network`". A plain `Error` is
+		// never a `TypeError`, so the code was `unknown` and the assertion only
+		// ever checked the message — a vacuous pass sitting on the defect the
+		// comment described.
 		const store = makeStore(
 			mockDeps({
 				fetchSession: vi.fn(async () => {
-					throw new Error('network down');
+					throw {
+						code: 'network',
+						message: 'Could not reach the server. Check your connection and try again.'
+					} satisfies AuthError;
 				})
 			})
 		);
@@ -103,7 +115,10 @@ describe('resolveSession', () => {
 		await store.receive({ type: 'sessionResolveFailed' }, (state) => {
 			expect(state.status).toBe('anonymous');
 			expect(state.subject.kind).toBe('anonymous');
-			expect(state.error).toBe('network down');
+			// The code is the part a caller branches on before offering a retry,
+			// and it is the part nothing checked.
+			expect(state.error?.code).toBe('network');
+			expect(state.error?.message).toContain('Could not reach the server');
 		});
 
 		store.assertNoPendingActions();
@@ -165,7 +180,7 @@ describe('login', () => {
 		await store.receive({ type: 'loginFailed' }, (state) => {
 			expect(state.status).toBe('loginFailed');
 			expect(state.subject.kind).toBe('anonymous');
-			expect(state.error).toBe('Unknown account');
+			expect(state.error?.message).toBe('Unknown account');
 		});
 
 		store.assertNoPendingActions();
@@ -197,7 +212,7 @@ describe('login', () => {
 				expect(state.subject.id).toBe(session.subject_id);
 			}
 			// The failure is still surfaced for the login UI.
-			expect(state.error).toBe('Unknown account');
+			expect(state.error?.message).toBe('Unknown account');
 		});
 
 		store.assertNoPendingActions();
@@ -257,32 +272,49 @@ describe('logout', () => {
 		await store.receive({ type: 'loggedOut' }, (state) => {
 			expect(state.status).toBe('anonymous');
 			expect(state.subject.kind).toBe('anonymous');
-			expect(state.error).toBe('server unreachable');
+			expect(state.error?.message).toBe('server unreachable');
 		});
 
 		store.assertNoPendingActions();
 	});
 
-	it('ignores a duplicate logout while one is in flight (single request)', async () => {
-		// Hold the first logout open so the second send provably races it.
-		const gate = deferred<void>();
-		const deps = mockDeps({ fetchLogout: vi.fn(() => gate.promise) });
+	it('supersedes a duplicate logout rather than swallowing it', async () => {
+		// This used to assert the opposite — that the second dispatch was a
+		// guarded no-op firing a single request. That guard made logout the only
+		// operation with no way out of its own in-flight state: nothing else is
+		// honoured from `loggingOut`, and the only thing that leaves it is this
+		// effect's own `loggedOut`. A request that never settled trapped the
+		// store permanently, and clicking sign out again did nothing.
+		//
+		// It is `Effect.cancellable` under a fixed id now, so re-dispatching
+		// cancels the in-flight request and starts a fresh one. The mock does
+		// not honour the abort signal, so it records two calls; the real
+		// `fetchLogout` is handed the signal and aborts (`http.ts`).
+		// `tests/logout-liveness.test.ts` covers the journey end to end.
+		// A fresh gate per call, so the superseded request can be left hanging —
+		// which is what the abort does in the real implementation.
+		const gates: Array<ReturnType<typeof deferred<void>>> = [];
+		const deps = mockDeps({
+			fetchLogout: vi.fn(() => {
+				const gate = deferred<void>();
+				gates.push(gate);
+				return gate.promise;
+			})
+		});
 		const store = makeStore(deps, authenticatedState);
 
 		await store.send({ type: 'logout' }, (state) => {
 			expect(state.status).toBe('loggingOut');
 		});
-		// Second logout while the first is still in flight: guarded no-op.
 		await store.send({ type: 'logout' }, (state) => {
 			expect(state.status).toBe('loggingOut');
 		});
-		expect(deps.fetchLogout).toHaveBeenCalledTimes(1);
+		expect(deps.fetchLogout, 'the retry was swallowed').toHaveBeenCalledTimes(2);
 
-		gate.resolve(undefined);
-		await store.receive({ type: 'loggedOut' }, (state) => {
+		gates[1]!.resolve(undefined);
+		await store.receive({ type: 'loggedOut', epoch: 2 }, (state) => {
 			expect(state.status).toBe('anonymous');
 		});
-		expect(deps.fetchLogout).toHaveBeenCalledTimes(1);
 		store.assertNoPendingActions();
 	});
 });

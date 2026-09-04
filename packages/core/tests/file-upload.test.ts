@@ -43,8 +43,8 @@ describe('File Upload Component', () => {
 
       await store.receive({ type: 'filesValidated' }, (state) => {
         expect(state.files.length).toBe(2);
-        expect(state.files[0].file.name).toBe('test1.png');
-        expect(state.files[1].file.name).toBe('test2.png');
+        expect(state.files[0]!.file.name).toBe('test1.png');
+        expect(state.files[1]!.file.name).toBe('test2.png');
         expect(state.errors.length).toBe(0);
       });
     });
@@ -70,10 +70,10 @@ describe('File Upload Component', () => {
 
       await store.receive({ type: 'filesValidated' }, (state) => {
         expect(state.files.length).toBe(1);
-        expect(state.files[0].file.name).toBe('small.png');
+        expect(state.files[0]!.file.name).toBe('small.png');
         expect(state.errors.length).toBe(1);
-        expect(state.errors[0].type).toBe('max-size');
-        expect(state.errors[0].fileName).toBe('large.png');
+        expect(state.errors[0]!.type).toBe('max-size');
+        expect(state.errors[0]!.fileName).toBe('large.png');
       });
     });
 
@@ -97,10 +97,10 @@ describe('File Upload Component', () => {
 
       await store.receive({ type: 'filesValidated' }, (state) => {
         expect(state.files.length).toBe(1);
-        expect(state.files[0].file.name).toBe('image.png');
+        expect(state.files[0]!.file.name).toBe('image.png');
         expect(state.errors.length).toBe(1);
-        expect(state.errors[0].type).toBe('invalid-type');
-        expect(state.errors[0].fileName).toBe('document.pdf');
+        expect(state.errors[0]!.type).toBe('invalid-type');
+        expect(state.errors[0]!.fileName).toBe('document.pdf');
       });
     });
 
@@ -126,7 +126,7 @@ describe('File Upload Component', () => {
       await store.receive({ type: 'filesValidated' }, (state) => {
         expect(state.files.length).toBe(2);
         expect(state.errors.length).toBe(1);
-        expect(state.errors[0].type).toBe('max-files');
+        expect(state.errors[0]!.type).toBe('max-files');
       });
     });
 
@@ -152,7 +152,7 @@ describe('File Upload Component', () => {
       await store.receive({ type: 'filesValidated' }, (state) => {
         expect(state.files.length).toBe(2);
         expect(state.errors.length).toBe(1);
-        expect(state.errors[0].fileName).toBe('image.gif');
+        expect(state.errors[0]!.fileName).toBe('image.gif');
       });
     });
 
@@ -187,7 +187,7 @@ describe('File Upload Component', () => {
       await store.receive({ type: 'filesValidated' }, (state) => {
         expect(state.files.length).toBe(2);
         expect(state.errors.length).toBe(1);
-        expect(state.errors[0].type).toBe('max-files');
+        expect(state.errors[0]!.type).toBe('max-files');
       });
     });
   });
@@ -217,7 +217,7 @@ describe('File Upload Component', () => {
 
       await store.send({ type: 'fileRemoved', fileId: 'file-1' }, (state) => {
         expect(state.files.length).toBe(1);
-        expect(state.files[0].id).toBe('file-2');
+        expect(state.files[0]!.id).toBe('file-2');
       });
     });
 
@@ -286,8 +286,8 @@ describe('File Upload Component', () => {
       });
 
       await store.send({ type: 'uploadStarted', fileId: 'file-1' }, (state) => {
-        expect(state.files[0].status).toBe('uploading');
-        expect(state.files[0].progress).toBe(0);
+        expect(state.files[0]!.status).toBe('uploading');
+        expect(state.files[0]!.progress).toBe(0);
         expect(state.isUploading).toBe(true);
       });
     });
@@ -310,11 +310,11 @@ describe('File Upload Component', () => {
       });
 
       await store.send({ type: 'uploadProgress', fileId: 'file-1', progress: 50 }, (state) => {
-        expect(state.files[0].progress).toBe(50);
+        expect(state.files[0]!.progress).toBe(50);
       });
 
       await store.send({ type: 'uploadProgress', fileId: 'file-1', progress: 100 }, (state) => {
-        expect(state.files[0].progress).toBe(100);
+        expect(state.files[0]!.progress).toBe(100);
       });
     });
 
@@ -335,11 +335,11 @@ describe('File Upload Component', () => {
       });
 
       await store.send({ type: 'uploadProgress', fileId: 'file-1', progress: -10 }, (state) => {
-        expect(state.files[0].progress).toBe(0);
+        expect(state.files[0]!.progress).toBe(0);
       });
 
       await store.send({ type: 'uploadProgress', fileId: 'file-1', progress: 150 }, (state) => {
-        expect(state.files[0].progress).toBe(100);
+        expect(state.files[0]!.progress).toBe(100);
       });
     });
 
@@ -361,8 +361,8 @@ describe('File Upload Component', () => {
       });
 
       await store.send({ type: 'uploadCompleted', fileId: 'file-1' }, (state) => {
-        expect(state.files[0].status).toBe('success');
-        expect(state.files[0].progress).toBe(100);
+        expect(state.files[0]!.status).toBe('success');
+        expect(state.files[0]!.progress).toBe(100);
         expect(state.isUploading).toBe(false);
       });
     });
@@ -387,8 +387,8 @@ describe('File Upload Component', () => {
       await store.send(
         { type: 'uploadFailed', fileId: 'file-1', error: 'Network error' },
         (state) => {
-          expect(state.files[0].status).toBe('error');
-          expect(state.files[0].error).toBe('Network error');
+          expect(state.files[0]!.status).toBe('error');
+          expect(state.files[0]!.error).toBe('Network error');
           expect(state.isUploading).toBe(false);
         }
       );
@@ -542,8 +542,8 @@ describe('File Upload Component', () => {
 
       await store.send({ type: 'errorDismissed', index: 1 }, (state) => {
         expect(state.errors.length).toBe(2);
-        expect(state.errors[0].message).toBe('Error 1');
-        expect(state.errors[1].message).toBe('Error 3');
+        expect(state.errors[0]!.message).toBe('Error 1');
+        expect(state.errors[1]!.message).toBe('Error 3');
       });
     });
   });
@@ -564,8 +564,10 @@ describe('File Upload Component', () => {
       await store.receive({ type: 'filesValidated' });
 
       expect(onFilesChange).toHaveBeenCalled();
-      expect(onFilesChange.mock.calls[0][0].length).toBe(1);
-      expect(onFilesChange.mock.calls[0][0][0].file.name).toBe('file.png');
+      // The `!` belongs on the indexed reads, not on `.mock`, which is not
+      // optional. `calls[0]` and `[0][0]` are what may be absent.
+      expect(onFilesChange.mock.calls[0]![0].length).toBe(1);
+      expect(onFilesChange.mock.calls[0]![0][0].file.name).toBe('file.png');
     });
 
     it('should trigger upload when onUpload is provided', async () => {
@@ -584,7 +586,9 @@ describe('File Upload Component', () => {
       await store.receive({ type: 'uploadStarted' });
       await store.receive({ type: 'uploadCompleted' });
 
-      expect(onUpload).toHaveBeenCalledWith(files[0]);
+      // Widened: `onUpload` now also receives a progress callback, which is
+      // what gives `uploadProgress` a dispatcher at all.
+      expect(onUpload).toHaveBeenCalledWith(files[0], expect.any(Function));
     });
 
     it('should handle upload errors from onUpload', async () => {
@@ -602,8 +606,8 @@ describe('File Upload Component', () => {
       await store.receive({ type: 'filesValidated' });
       await store.receive({ type: 'uploadStarted' });
       await store.receive({ type: 'uploadFailed' }, (state) => {
-        expect(state.files[0].status).toBe('error');
-        expect(state.files[0].error).toBe('Upload failed');
+        expect(state.files[0]!.status).toBe('error');
+        expect(state.files[0]!.error).toBe('Upload failed');
       });
     });
   });
@@ -639,4 +643,81 @@ describe('File Upload Component', () => {
       expect(state.isUploading).toBe(false);
     });
   });
+});
+
+// ================================================================
+// Test Suite: Upload progress
+// ================================================================
+
+describe('Upload progress', () => {
+	/**
+	 * The progress bar sat at 0% for every upload. `uploadProgress` existed as
+	 * an action and a reducer case, and NOTHING dispatched it — `onUpload` was
+	 * `(file) => Promise<void>`, so a consumer had no channel to report through.
+	 * The bar went 0 → (gone), never a value in between.
+	 */
+	it('reports progress from the consumer', async () => {
+		let report: ((percent: number) => void) | undefined;
+		const settled: { resolve?: () => void } = {};
+		const onUpload = vi.fn(
+			(_file: File, onProgress: (percent: number) => void) =>
+				new Promise<void>((resolve) => {
+					report = onProgress;
+					settled.resolve = resolve;
+				})
+		);
+
+		const store = new TestStore({
+			initialState: createInitialFileUploadState(),
+			reducer: fileUploadReducer,
+			dependencies: { onUpload }
+		});
+
+		await store.send({
+			type: 'filesSelected',
+			files: [new File(['x'], 'a.txt', { type: 'text/plain' })]
+		});
+		await store.receive({ type: 'filesValidated' });
+		await store.receive({ type: 'uploadStarted' });
+
+		expect(onUpload, 'onUpload was given no progress callback').toHaveBeenCalledTimes(1);
+		expect(typeof report, 'the second argument is missing').toBe('function');
+
+		report!(37);
+		await store.receive({ type: 'uploadProgress' }, (state) => {
+			expect(state.files[0]!.progress).toBe(37);
+			expect(state.files[0]!.status).toBe('uploading');
+		});
+
+		settled.resolve!();
+		await store.receive({ type: 'uploadCompleted' }, (state) => {
+			expect(state.files[0]!.progress).toBe(100);
+		});
+	});
+
+	it('ignores progress reported after the upload finished', async () => {
+		// A late callback must not rewind a finished bar back to mid-upload.
+		// The naive implementation updates any matching file regardless of state.
+		const store = new TestStore({
+			initialState: createInitialFileUploadState(),
+			reducer: fileUploadReducer,
+			dependencies: {}
+		});
+
+		await store.send({
+			type: 'filesSelected',
+			files: [new File(['x'], 'a.txt', { type: 'text/plain' })]
+		});
+		await store.receive({ type: 'filesValidated' });
+
+		const id = store.state.files[0]!.id;
+		await store.send({ type: 'uploadStarted', fileId: id });
+		await store.send({ type: 'uploadCompleted', fileId: id }, (state) => {
+			expect(state.files[0]!.progress).toBe(100);
+		});
+
+		await store.send({ type: 'uploadProgress', fileId: id, progress: 40 }, (state) => {
+			expect(state.files[0]!.progress, 'a late callback rewound a finished upload').toBe(100);
+		});
+	});
 });

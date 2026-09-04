@@ -10,8 +10,7 @@ import type {
 	CollaborativeStreamingChatState,
 	CollaborativeAction,
 	CollaborativeDependencies,
-	CollaborativeUser,
-	PendingAction
+	CollaborativeUser
 } from './collaborative-types.js';
 
 /**
@@ -19,22 +18,58 @@ import type {
  *
  * Handles all collaborative features with optimistic updates and rollback.
  */
+/**
+ * Identifies the WebSocket subscription so it can be cancelled.
+ *
+ * One id for the whole reducer: a store holds at most one collaborative
+ * connection, and re-registering the same id cancels the previous cleanup
+ * before installing the new one — which is what makes `reconnectRequested`
+ * close-then-open without needing to know it is doing so.
+ */
+const CONNECTION_SUBSCRIPTION = 'collaborative-websocket';
+
+/**
+ * Broadcast a frame, swallowing transport failures.
+ *
+ * Every outgoing frame goes through here. The typing and cursor cases used to
+ * inline their own copy of this and so escaped the connection check below — the
+ * defect the check was added for was only half fixed, and this docstring
+ * described an extraction that had not happened.
+ */
+function broadcast(
+	state: CollaborativeStreamingChatState,
+	deps: CollaborativeDependencies,
+	message: Record<string, unknown>,
+	what: string
+): EffectType<CollaborativeAction> {
+	// Nothing goes out over a socket that is not open. `useHeartbeat` runs on a
+	// 30-second interval and `disconnectFromConversation` leaves `currentUserId`
+	// set — deliberately, since the selectors need it to exclude you — so without
+	// this a disconnected tab drips send failures into the console forever.
+	if (state.connection.status !== 'connected') {
+		return Effect.none();
+	}
+
+	return Effect.run(async () => {
+		try {
+			await deps.sendWebSocketMessage(message);
+		} catch (error) {
+			console.error(`[Collaborative] Failed to send ${what}:`, error);
+		}
+	});
+}
+
 export function collaborativeReducer(
 	state: CollaborativeStreamingChatState,
 	action: CollaborativeAction,
 	deps: CollaborativeDependencies
 ): [CollaborativeStreamingChatState, EffectType<CollaborativeAction>] {
-	const generateId = deps.generateId || (() => crypto.randomUUID());
+	// `generateId` and `generateUserColor` used to be resolved here too, and
+	// referenced nowhere else in the file. Nothing in this reducer mints an id or
+	// a colour — `userJoined` is handed a complete `CollaborativeUser`, colour
+	// included — so both were dependencies a consumer could supply that changed
+	// nothing. `generateRandomUserColor` is still exported for building that user.
 	const getTimestamp = deps.getTimestamp || (() => Date.now());
-	const generateColor = deps.generateUserColor || ((id: string) => {
-		// Simple hash-based color generation
-		let hash = 0;
-		for (let i = 0; i < id.length; i++) {
-			hash = id.charCodeAt(i) + ((hash << 5) - hash);
-		}
-		const hue = Math.abs(hash % 360);
-		return `hsl(${hue}, 70%, 60%)`;
-	});
 
 	switch (action.type) {
 		// === Connection Management === //
@@ -47,10 +82,21 @@ export function collaborativeReducer(
 					currentUserId: action.userId,
 					connection: { status: 'connecting', attempt: 1 }
 				},
-				Effect.run(async (dispatch) => {
+				// A subscription, not `Effect.run`. `connectWebSocket` hands back a
+				// cleanup function; it used to be assigned to a `const` inside an async
+				// closure and dropped on the floor, under a comment saying it "would
+				// need to be tracked in state". Nothing ever called it, so the socket
+				// outlived disconnect, outlived reconnect, and outlived the store.
+				//
+				// The store owns it now: `Effect.cancel` runs it, `destroy()` runs it,
+				// and re-registering the same id cancels the previous one first — which
+				// is why `reconnectRequested` needs no change of its own.
+				//
+				// Setup is synchronous and must return a cleanup on every path,
+				// including the failure path.
+				Effect.subscription(CONNECTION_SUBSCRIPTION, (dispatch) => {
 					try {
-						// Connect to WebSocket
-						const cleanup = deps.connectWebSocket(
+						return deps.connectWebSocket(
 							action.conversationId,
 							action.userId,
 							(message) => {
@@ -83,11 +129,14 @@ export function collaborativeReducer(
 								} else if (msg.type === 'cursor_cleared') {
 									dispatch({ type: 'userCursorCleared', userId: msg.userId });
 								} else if (msg.type === 'sync_update') {
-									dispatch({ type: 'serverStateUpdate', update: msg.update });
-								} else if (msg.type === 'action_confirmed') {
-									dispatch({ type: 'actionConfirmed', tempId: msg.tempId, serverId: msg.serverId });
-								} else if (msg.type === 'action_failed') {
-									dispatch({ type: 'actionFailed', tempId: msg.tempId, error: msg.error });
+									// Deliberately unhandled, and now deliberately loud. This used
+									// to dispatch `serverStateUpdate`, whose only meaningful line
+									// (`Y.applyUpdate`) was commented out — so a server sending
+									// real CRDT payloads had them silently discarded. There is no
+									// CRDT layer to apply them to; saying so beats pretending.
+									console.warn(
+										'[Collaborative] Received a sync_update, but CRDT sync is not implemented. Ignoring.'
+									);
 								}
 							},
 							(connectionState) => {
@@ -95,7 +144,6 @@ export function collaborativeReducer(
 							}
 						);
 
-						// Store cleanup function (would need to be tracked in state)
 					} catch (error) {
 						dispatch({
 							type: 'connectionStateChanged',
@@ -105,12 +153,42 @@ export function collaborativeReducer(
 								canRetry: true
 							}
 						});
+						// Nothing was opened, so there is nothing to close — but a
+						// subscription must always hand back a cleanup.
+						return () => {};
 					}
 				})
 			];
 		}
 
 		case 'connectionStateChanged': {
+			// Anything dispatched before the socket opened was dropped by the gate
+			// in `broadcast`, and `usePresenceTracking` only dispatches on *change*
+			// — so a transition made during `connecting` was lost until the next
+			// one, and the room could see you as `away` indefinitely. Announcing on
+			// open is also just correct: a room that has only now heard of you
+			// needs your current state, not your next change.
+			if (
+				action.connection.status === 'connected' &&
+				state.connection.status !== 'connected' &&
+				state.currentUserId
+			) {
+				const connected = { ...state, connection: action.connection };
+				return [
+					connected,
+					broadcast(
+						connected,
+						deps,
+						{
+							type: 'presence_changed',
+							userId: state.currentUserId,
+							presence: state.currentPresence
+						},
+						'presence on connect'
+					)
+				];
+			}
+
 			return [
 				{
 					...state,
@@ -127,9 +205,12 @@ export function collaborativeReducer(
 					connection: { status: 'disconnected', reason: 'User disconnected' },
 					conversationId: null
 				},
-				Effect.run(async (dispatch) => {
-					// Cleanup handled by WebSocket manager
-				})
+				// This was an `Effect.run` with an empty body, under a comment claiming
+				// "Cleanup handled by WebSocket manager". There was no manager on this
+				// path and no reference held to anything, so the action only relabelled
+				// the state: it reported `disconnected` over a socket that was still
+				// open and still delivering messages.
+				Effect.cancel(CONNECTION_SUBSCRIPTION)
 			];
 		}
 
@@ -190,13 +271,12 @@ export function collaborativeReducer(
 				});
 			}
 
-			return [
-				{
-					...state,
-					users
-				},
-				Effect.none()
-			];
+			// Arrived from the wire. Never broadcast: a server that fans out to the
+			// whole room sends my own frame back to me, and it carries my own id —
+			// so the `userId === currentUserId` test this used to rely on could not
+			// tell an echo from something I had just done, and two clients would
+			// ping-pong without bound. `updatePresence` is the outbound half.
+			return [{ ...state, users }, Effect.none()];
 		}
 
 		case 'heartbeatReceived': {
@@ -206,17 +286,68 @@ export function collaborativeReducer(
 			if (user) {
 				users.set(action.userId, {
 					...user,
-					lastHeartbeat: action.timestamp,
 					lastSeen: action.timestamp
 				});
 			}
 
+			// Inbound only, for the same reason. `sendHeartbeat` is the outbound
+			// half.
+			return [{ ...state, users }, Effect.none()];
+		}
+
+		case 'updatePresence': {
+			if (!state.currentUserId) {
+				return [state, Effect.none()];
+			}
+
+			const users = new Map(state.users);
+			const me = users.get(state.currentUserId);
+
+			// The `users` entry is updated when it exists, but my presence is
+			// recorded either way. Guarding the whole arm on `me` meant this did
+			// nothing at all until the server echoed me back — see
+			// `currentPresence` in collaborative-types.ts.
+			if (me) {
+				users.set(state.currentUserId, {
+					...me,
+					presence: action.presence,
+					lastSeen: getTimestamp()
+				});
+			}
+
+			// `usePresenceTracking` dispatches this, and until this pass the result
+			// never left the browser: a hook documented as tracking online/away
+			// status that nobody else could see.
 			return [
-				{
-					...state,
-					users
-				},
-				Effect.none()
+				{ ...state, users, currentPresence: action.presence },
+				broadcast(
+					state,
+					deps,
+					{ type: 'presence_changed', userId: state.currentUserId, presence: action.presence },
+					'presence'
+				)
+			];
+		}
+
+		case 'sendHeartbeat': {
+			if (!state.currentUserId) {
+				return [state, Effect.none()];
+			}
+
+			const timestamp = getTimestamp();
+			const users = new Map(state.users);
+			const me = users.get(state.currentUserId);
+
+			if (me) {
+				users.set(state.currentUserId, { ...me, lastSeen: timestamp });
+			}
+
+			// `useHeartbeat` is documented as a keep-alive, and no frame ever left
+			// the browser. A server that times out idle connections dropped every
+			// client that was merely quiet.
+			return [
+				{ ...state, users },
+				broadcast(state, deps, { type: 'heartbeat', userId: state.currentUserId, timestamp }, 'heartbeat')
 			];
 		}
 
@@ -290,18 +421,12 @@ export function collaborativeReducer(
 					...state,
 					users
 				},
-				Effect.run(async (dispatch) => {
-					// Send to server
-					try {
-						await deps.sendWebSocketMessage({
-							type: 'typing_started',
-							userId: state.currentUserId,
-							info: typingInfo
-						});
-					} catch (error) {
-						console.error('[Collaborative] Failed to send typing indicator:', error);
-					}
-				})
+				broadcast(
+					state,
+					deps,
+					{ type: 'typing_started', userId: state.currentUserId, info: typingInfo },
+					'typing indicator'
+				)
 			];
 		}
 
@@ -326,17 +451,12 @@ export function collaborativeReducer(
 					...state,
 					users
 				},
-				Effect.run(async (dispatch) => {
-					// Send to server
-					try {
-						await deps.sendWebSocketMessage({
-							type: 'typing_stopped',
-							userId: state.currentUserId
-						});
-					} catch (error) {
-						console.error('[Collaborative] Failed to send typing stop:', error);
-					}
-				})
+				broadcast(
+					state,
+					deps,
+					{ type: 'typing_stopped', userId: state.currentUserId },
+					'typing stop'
+				)
 			];
 		}
 
@@ -409,19 +529,14 @@ export function collaborativeReducer(
 					...state,
 					users
 				},
-				Effect.run(async (dispatch) => {
-					// Throttle cursor updates (send at most every 100ms)
-					// This would need a more sophisticated throttling mechanism
-					try {
-						await deps.sendWebSocketMessage({
-							type: 'cursor_moved',
-							userId: state.currentUserId,
-							cursor: cursorPosition
-						});
-					} catch (error) {
-						console.error('[Collaborative] Failed to send cursor update:', error);
-					}
-				})
+				// Throttling is `useCursorTracking`'s job, and it does it — this is
+				// dispatched at most every `throttleMs`.
+				broadcast(
+					state,
+					deps,
+					{ type: 'cursor_moved', userId: state.currentUserId, cursor: cursorPosition },
+					'cursor update'
+				)
 			];
 		}
 
@@ -446,224 +561,18 @@ export function collaborativeReducer(
 					...state,
 					users
 				},
-				Effect.run(async (dispatch) => {
-					try {
-						await deps.sendWebSocketMessage({
-							type: 'cursor_cleared',
-							userId: state.currentUserId
-						});
-					} catch (error) {
-						console.error('[Collaborative] Failed to send cursor clear:', error);
-					}
-				})
+				broadcast(
+					state,
+					deps,
+					{ type: 'cursor_cleared', userId: state.currentUserId },
+					'cursor clear'
+				)
 			];
 		}
 
 		// === Optimistic Updates === //
 
-		case 'actionConfirmed': {
-			// Remove from pending actions
-			const pendingActions = new Map(state.sync.pendingActions);
-			pendingActions.delete(action.tempId);
-
-			return [
-				{
-					...state,
-					sync: {
-						...state.sync,
-						pendingActions
-					}
-				},
-				Effect.none()
-			];
-		}
-
-		case 'actionFailed': {
-			// Move to failed actions
-			const pendingActions = new Map(state.sync.pendingActions);
-			const pendingAction = pendingActions.get(action.tempId);
-
-			if (pendingAction) {
-				pendingActions.delete(action.tempId);
-
-				return [
-					{
-						...state,
-						sync: {
-							...state.sync,
-							pendingActions,
-							failedActions: [
-								...state.sync.failedActions,
-								{
-									tempId: action.tempId,
-									error: action.error,
-									action: pendingAction
-								}
-							]
-						}
-					},
-					Effect.none()
-				];
-			}
-
-			return [state, Effect.none()];
-		}
-
-		case 'retryFailedAction': {
-			const failedAction = state.sync.failedActions.find((a) => a.tempId === action.tempId);
-
-			if (!failedAction) {
-				return [state, Effect.none()];
-			}
-
-			// Remove from failed actions
-			const failedActions = state.sync.failedActions.filter((a) => a.tempId !== action.tempId);
-
-			// Add back to pending with incremented retry count
-			const pendingActions = new Map(state.sync.pendingActions);
-			pendingActions.set(action.tempId, {
-				...failedAction.action,
-				retryCount: failedAction.action.retryCount + 1
-			});
-
-			return [
-				{
-					...state,
-					sync: {
-						...state.sync,
-						pendingActions,
-						failedActions
-					}
-				},
-				Effect.run(async (dispatch) => {
-					// Retry the action
-					try {
-						await deps.sendWebSocketMessage(failedAction.action.action);
-					} catch (error) {
-						dispatch({
-							type: 'actionFailed',
-							tempId: action.tempId,
-							error: error instanceof Error ? error.message : 'Retry failed'
-						});
-					}
-				})
-			];
-		}
-
-		case 'discardFailedAction': {
-			const failedActions = state.sync.failedActions.filter((a) => a.tempId !== action.tempId);
-
-			return [
-				{
-					...state,
-					sync: {
-						...state.sync,
-						failedActions
-					}
-				},
-				Effect.none()
-			];
-		}
-
 		// === Sync === //
-
-		case 'syncCompleted': {
-			return [
-				{
-					...state,
-					sync: {
-						...state.sync,
-						lastSequenceNumber: action.sequenceNumber,
-						isSyncing: false
-					}
-				},
-				Effect.none()
-			];
-		}
-
-		case 'syncFailed': {
-			return [
-				{
-					...state,
-					sync: {
-						...state.sync,
-						isSyncing: false
-					}
-				},
-				Effect.none()
-			];
-		}
-
-		case 'flushOfflineQueue': {
-			if (state.sync.offlineQueue.length === 0) {
-				return [state, Effect.none()];
-			}
-
-			const queue = [...state.sync.offlineQueue];
-
-			return [
-				{
-					...state,
-					sync: {
-						...state.sync,
-						offlineQueue: [],
-						isSyncing: true
-					}
-				},
-				Effect.run(async (dispatch) => {
-					// Send queued actions
-					for (const item of queue) {
-						try {
-							await deps.sendWebSocketMessage(item.action);
-						} catch (error) {
-							console.error('[Collaborative] Failed to flush queue item:', error);
-						}
-					}
-
-					dispatch({ type: 'syncCompleted', sequenceNumber: state.sync.lastSequenceNumber + queue.length });
-				})
-			];
-		}
-
-		case 'serverStateUpdate': {
-			// Apply Yjs update
-			// Y.applyUpdate(state.ydoc, action.update);
-
-			return [state, Effect.none()];
-		}
-
-		case 'serverMessageReceived': {
-			return [
-				{
-					...state,
-					sync: {
-						...state.sync,
-						lastSequenceNumber: Math.max(state.sync.lastSequenceNumber, action.sequenceNumber)
-					}
-				},
-				Effect.none()
-			];
-		}
-
-		case 'userPermissionsChanged': {
-			const users = new Map(state.users);
-			const user = users.get(action.userId);
-
-			if (user) {
-				users.set(action.userId, {
-					...user,
-					permissions: action.permissions
-				});
-			}
-
-			return [
-				{
-					...state,
-					users
-				},
-				Effect.none()
-			];
-		}
 
 		default: {
 			const _never: never = action;

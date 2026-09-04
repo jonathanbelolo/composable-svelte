@@ -1,0 +1,326 @@
+/**
+ * Headless auth flows.
+ *
+ * Each flow is a reducer, its state and action types, and the Zod schema its
+ * form validates against — no markup. The styled components in
+ * `@composable-svelte/auth/components` are built on these, and a consumer who
+ * wants their own markup can use these directly.
+ */
+
+export {
+	loginReducer,
+	createInitialLoginState,
+	createLoginStore,
+	loginFormConfig,
+	loginSchema,
+	emptyLoginFields
+} from './login/index.js';
+
+export type {
+	LoginFields,
+	LoginState,
+	LoginAction,
+	LoginStatus,
+	LoginDependencies
+} from './login/index.js';
+
+// The password policy — shared by every flow that takes a password, which is
+// why it is not inside any one of them.
+export {
+	passwordCriteria,
+	evaluatePasswordCriteria,
+	meetsPasswordCriteria,
+	passwordField,
+	PASSWORD_MIN_LENGTH,
+	PASSWORD_MAX_LENGTH
+} from './password-policy.js';
+
+export type { PasswordCriterion } from './password-policy.js';
+
+export {
+	signupReducer,
+	createInitialSignupState,
+	createSignupStore,
+	signupFormConfig,
+	signupSchema,
+	emptySignupFields
+} from './signup/index.js';
+
+export type {
+	SignupFields,
+	SignupState,
+	SignupAction,
+	SignupStatus,
+	SignupDependencies
+} from './signup/index.js';
+
+export {
+	emailVerificationReducer,
+	createInitialEmailVerificationState,
+	createEmailVerificationStore,
+	tokenFromUrl
+} from './email-verification/index.js';
+
+export type {
+	EmailVerificationState,
+	EmailVerificationAction,
+	EmailVerificationStatus,
+	EmailVerificationDependencies,
+	ResendStatus
+} from './email-verification/index.js';
+
+export {
+	forgotPasswordReducer,
+	createInitialForgotPasswordState,
+	createForgotPasswordStore,
+	forgotPasswordFormConfig,
+	forgotPasswordSchema,
+	emptyForgotPasswordFields
+} from './forgot-password/index.js';
+
+export type {
+	ForgotPasswordFields,
+	ForgotPasswordState,
+	ForgotPasswordAction,
+	ForgotPasswordStatus,
+	ForgotPasswordDependencies
+} from './forgot-password/index.js';
+
+export {
+	resetPasswordReducer,
+	createInitialResetPasswordState,
+	createResetPasswordStore,
+	resetPasswordFormConfig,
+	resetPasswordSchema,
+	emptyResetPasswordFields
+} from './reset-password/index.js';
+
+export type {
+	ResetPasswordFields,
+	ResetPasswordState,
+	ResetPasswordAction,
+	ResetPasswordStatus,
+	ResetPasswordDependencies
+} from './reset-password/index.js';
+
+export {
+	mfaChallengeReducer,
+	createInitialMfaChallengeState,
+	createMfaChallengeStore,
+	mfaChallengeFormConfig,
+	mfaCodeSchema,
+	emptyMfaCodeFields
+} from './mfa-challenge/index.js';
+
+export type {
+	MfaCodeFields,
+	MfaChallengeState,
+	MfaChallengeAction,
+	MfaChallengeStatus,
+	MfaChallengeDependencies
+} from './mfa-challenge/index.js';
+
+export {
+	mfaEnrolmentReducer,
+	createInitialMfaEnrolmentState,
+	createMfaEnrolmentStore,
+	mfaEnrolmentFormConfig
+} from './mfa-enrolment/index.js';
+
+export type {
+	MfaEnrolmentState,
+	MfaEnrolmentAction,
+	MfaEnrolmentStatus,
+	MfaEnrolmentDependencies
+} from './mfa-enrolment/index.js';
+
+export {
+	createPendingOAuthStorage,
+	createMemoryPendingOAuthStorage,
+	normaliseReturnTo
+} from './oauth-pending.js';
+
+export type {
+	OAuthIntent,
+	OAuthProvider,
+	PendingOAuth,
+	PendingOAuthStorage
+} from './oauth-pending.js';
+
+export {
+	oauthStartReducer,
+	createInitialOAuthStartState,
+	createOAuthStartStore,
+	createBrowserRedirect
+} from './oauth-start/index.js';
+
+export type {
+	Redirect,
+	OAuthStartState,
+	OAuthStartAction,
+	OAuthStartStatus,
+	OAuthStartDependencies
+} from './oauth-start/index.js';
+
+export {
+	oauthCallbackReducer,
+	createInitialOAuthCallbackState,
+	createOAuthCallbackStore,
+	oauthParamsFromUrl
+} from './oauth-callback/index.js';
+
+export type {
+	OAuthCallbackState,
+	OAuthCallbackAction,
+	OAuthCallbackStatus,
+	OAuthCallbackParams,
+	OAuthCallbackDependencies
+} from './oauth-callback/index.js';
+
+export {
+	magicLinkRequestReducer,
+	createInitialMagicLinkRequestState,
+	createMagicLinkRequestStore,
+	magicLinkRequestFormConfig,
+	magicLinkSchema,
+	emptyMagicLinkFields
+} from './magic-link-request/index.js';
+
+export type {
+	MagicLinkFields,
+	MagicLinkRequestState,
+	MagicLinkRequestAction,
+	MagicLinkRequestStatus,
+	MagicLinkRequestDependencies
+} from './magic-link-request/index.js';
+
+export {
+	magicLinkSignInReducer,
+	createInitialMagicLinkSignInState,
+	createMagicLinkSignInStore
+} from './magic-link-signin/index.js';
+
+export type {
+	MagicLinkSignInState,
+	MagicLinkSignInAction,
+	MagicLinkSignInStatus,
+	MagicLinkSignInDependencies
+} from './magic-link-signin/index.js';
+
+export { emailField } from './email-field.js';
+
+export {
+	accountReducer,
+	createInitialAccountState,
+	createAccountStore
+} from './account/index.js';
+
+export type {
+	AccountState,
+	AccountAction,
+	AccountStatus,
+	AccountDependencies
+} from './account/index.js';
+
+export {
+	changePasswordReducer,
+	createInitialChangePasswordState,
+	createChangePasswordStore,
+	changePasswordFormConfig,
+	changePasswordSchema,
+	emptyChangePasswordFields
+} from './change-password/index.js';
+
+export type {
+	ChangePasswordFields,
+	ChangePasswordState,
+	ChangePasswordAction,
+	ChangePasswordStatus,
+	ChangePasswordDependencies
+} from './change-password/index.js';
+
+export {
+	changeEmailReducer,
+	createInitialChangeEmailState,
+	createChangeEmailStore,
+	changeEmailFormConfig,
+	changeEmailSchema,
+	emptyChangeEmailFields
+} from './change-email/index.js';
+
+export type {
+	ChangeEmailFields,
+	ChangeEmailState,
+	ChangeEmailAction,
+	ChangeEmailStatus,
+	ChangeEmailResendStatus,
+	ChangeEmailDependencies
+} from './change-email/index.js';
+
+export {
+	changeEmailConfirmReducer,
+	createInitialChangeEmailConfirmState,
+	createChangeEmailConfirmStore
+} from './change-email-confirm/index.js';
+
+export type {
+	ChangeEmailConfirmState,
+	ChangeEmailConfirmAction,
+	ChangeEmailConfirmStatus,
+	ChangeEmailConfirmDependencies
+} from './change-email-confirm/index.js';
+
+export {
+	deleteAccountReducer,
+	createInitialDeleteAccountState,
+	createDeleteAccountStore
+} from './delete-account/index.js';
+
+export type {
+	DeleteAccountState,
+	DeleteAccountAction,
+	DeleteAccountStatus,
+	DeleteAccountDependencies
+} from './delete-account/index.js';
+
+export {
+	sessionRefreshReducer,
+	createInitialSessionRefreshState,
+	createSessionRefreshStore,
+	DEFAULT_LEAD_MS,
+	DEFAULT_TICK_MS
+} from './session-refresh/index.js';
+
+export type {
+	SessionRefreshState,
+	SessionRefreshAction,
+	SessionRefreshStatus,
+	SessionRefreshDependencies
+} from './session-refresh/index.js';
+
+export {
+	mfaManagementReducer,
+	createInitialMfaManagementState,
+	createMfaManagementStore
+} from './mfa-management/index.js';
+
+export type {
+	MfaManagementState,
+	MfaManagementAction,
+	MfaManagementStatus,
+	MfaManagementDependencies,
+	MfaOperation
+} from './mfa-management/index.js';
+
+export {
+	connectedAccountsReducer,
+	createInitialConnectedAccountsState,
+	createConnectedAccountsStore
+} from './connected-accounts/index.js';
+
+export type {
+	ConnectedAccountsState,
+	ConnectedAccountsAction,
+	ConnectedAccountsStatus,
+	ConnectedAccountsDependencies
+} from './connected-accounts/index.js';

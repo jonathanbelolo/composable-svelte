@@ -2,8 +2,8 @@
 	import type { Snippet } from 'svelte';
 	import type { HTMLLiAttributes } from 'svelte/elements';
 
-	interface BreadcrumbSeparatorProps extends HTMLLiAttributes {
-		children?: Snippet;
+	interface BreadcrumbSeparatorProps extends Omit<HTMLLiAttributes, 'children'> {
+		children?: Snippet | undefined;
 	}
 
 	let { children, ...restProps }: BreadcrumbSeparatorProps = $props();

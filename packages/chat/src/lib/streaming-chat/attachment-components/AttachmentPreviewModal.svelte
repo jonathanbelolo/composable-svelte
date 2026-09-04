@@ -6,6 +6,13 @@
 	 * Shows large preview with metadata and remove option.
 	 */
 	import type { MessageAttachment } from '../types.js';
+	import type { PresentationState } from '@composable-svelte/core';
+	import {
+		animateBackdropIn,
+		animateBackdropOut,
+		animatePopoverIn,
+		animatePopoverOut
+	} from '@composable-svelte/core/animation';
 	import { formatFileSize } from '../utils.js';
 	import ImagePreview from './ImagePreview.svelte';
 	import VideoPlayer from './VideoPlayer.svelte';
@@ -14,6 +21,15 @@
 	import FileAttachment from './FileAttachment.svelte';
 
 	interface Props {
+	/**
+	 * Which heading element to render.
+	 *
+	 * The level belongs to the page, not to the component: put this under an
+	 * `<svelte:element this={`h${headingLevel}`}>` and a fixed `<h2>` jumps the outline, which no consumer can fix from
+	 * the outside. Defaults to the level it has always rendered, so nothing
+	 * changes for anyone who does not pass it.
+	 */
+	headingLevel?: 1 | 2 | 3 | 4 | 5 | 6 | undefined;
 		/** Attachment to preview */
 		attachment: MessageAttachment | null;
 		/** Whether modal is open */
@@ -21,21 +37,50 @@
 		/** Close handler */
 		onclose: () => void;
 		/** Remove attachment handler */
-		onremove?: () => void;
+		onremove?: (() => void) | undefined;
+		/**
+		 * Animation lifecycle, when a store owns one.
+		 *
+		 * Optional on purpose. Left undefined the modal behaves exactly as it did
+		 * before it could animate — appears and disappears instantly — which is how
+		 * it is mounted standalone in tests and how any consumer holding it open
+		 * with a plain boolean still gets a working dialog.
+		 */
+		presentation?: PresentationState<MessageAttachment> | undefined;
+		onPresentationComplete?: (() => void) | undefined;
+		onDismissalComplete?: (() => void) | undefined;
 	}
 
-	let { attachment, open, onclose, onremove }: Props = $props();
+	let {
+		attachment,
+		open,
+		onclose,
+		onremove,
+		presentation = undefined,
+		onPresentationComplete = undefined,
+		onDismissalComplete = undefined, headingLevel = 2 }: Props = $props();
+
+	// The element must outlive `open`. `open` goes false the moment a dismissal
+	// starts — it is what the parent's UI reads — but the dialog has to stay
+	// mounted for the exit animation to have something to animate.
+	const visible = $derived(open || presentation?.status === 'dismissing');
+
+	// Interactions are refused until the entrance finishes, mirroring the
+	// reducer's own guards. With no `presentation` there is no entrance to wait
+	// for, so the instant path stays fully interactive — which is what keeps
+	// Escape working when the component is mounted standalone.
+	const interactive = $derived(presentation ? presentation.status === 'presented' : true);
 
 	// Handle escape key
 	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === 'Escape') {
+		if (e.key === 'Escape' && interactive) {
 			onclose();
 		}
 	}
 
 	// Handle backdrop click
 	function handleBackdropClick(e: MouseEvent) {
-		if (e.target === e.currentTarget) {
+		if (e.target === e.currentTarget && interactive) {
 			onclose();
 		}
 	}
@@ -58,24 +103,93 @@
 
 		return items.length > 0 ? items.join(' • ') : null;
 	});
+
+	let dialogElement: HTMLDivElement | undefined = $state();
+	let containerElement: HTMLDivElement | undefined = $state();
+	let previouslyFocused: HTMLElement | null = null;
+
+	// Without this the dialog is never focused, so keydown never reaches it and
+	// Escape does nothing — the warning about the missing tabindex was pointing
+	// at a modal with no keyboard exit. Mirrors ImageLightbox in core.
+	// Keyed on `visible`, not `open`. Focus is taken as soon as the dialog exists
+	// — synchronously, never behind the animation, because a 300ms window where
+	// focus sits on a trigger behind an `aria-modal` overlay is a real defect and
+	// because the Escape test dispatches from `document.activeElement` right after
+	// mount. It is *restored* on unmount; keying the teardown on `open` would snap
+	// focus back to the trigger the instant a dismissal began, while the dialog
+	// was still on screen still claiming `aria-modal`.
+	$effect(() => {
+		if (!visible || !dialogElement) return;
+		previouslyFocused = document.activeElement as HTMLElement | null;
+		dialogElement.focus();
+		return () => previouslyFocused?.focus();
+	});
+
+	// The (status, content) pair this effect last acted on.
+	//
+	// A plain `let`, never `$state`: the effect reads and writes it, and a
+	// reactive guard would re-trigger the effect it lives in. Keyed on the pair
+	// rather than "have I animated yet", because those diverge when a component
+	// mounts already `presented` — and that difference is a permanent deadlock.
+	let lastAnimated: { status: string; content: unknown } | null = null;
+
+	// One effect fanning out over both elements, not two racing each other.
+	// `animateBackdropIn/Out` for the dialog root, which is itself the backdrop,
+	// and `animatePopoverIn/Out` for the container — deliberately not
+	// `animateModalIn`, which hard-codes `translate(-50%, -50%)` for an
+	// absolutely-positioned element and would shove this flex-centred container
+	// up and left by half its own size, permanently.
+	$effect(() => {
+		if (!presentation || !dialogElement || !containerElement) return;
+
+		if (presentation.status === 'idle') {
+			lastAnimated = null;
+			return;
+		}
+
+		const { status, content } = presentation;
+		if (lastAnimated?.status === status && lastAnimated.content === content) return;
+		lastAnimated = { status, content };
+
+		if (status === 'presenting') {
+			Promise.all([
+				animateBackdropIn(dialogElement),
+				animatePopoverIn(containerElement)
+			]).then(() => queueMicrotask(() => onPresentationComplete?.()));
+		}
+
+		if (status === 'dismissing') {
+			Promise.all([
+				animateBackdropOut(dialogElement),
+				animatePopoverOut(containerElement)
+			]).then(() => queueMicrotask(() => onDismissalComplete?.()));
+		}
+	});
 </script>
 
-{#if open && attachment}
-	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+{#if visible && attachment}
+	<!-- This element is itself the backdrop (fixed, inset 0, dark), so
+	     handleBackdropClick's target check is what distinguishes a click outside
+	     the container from one inside it. The dropped
+	     `svelte-ignore a11y_no_noninteractive_element_interactions` suppressed
+	     nothing: `dialog` is an interactive role, so that rule could never fire
+	     here. -->
 	<div
+		bind:this={dialogElement}
 		class="attachment-preview-modal"
 		role="dialog"
 		aria-modal="true"
 		aria-labelledby="preview-title"
+		tabindex="-1"
 		onclick={handleBackdropClick}
 		onkeydown={handleKeydown}
 	>
-		<div class="attachment-preview-modal__container">
+		<div class="attachment-preview-modal__container" bind:this={containerElement}>
 			<!-- Header -->
 			<div class="attachment-preview-modal__header">
-				<h2 id="preview-title" class="attachment-preview-modal__title">
+				<svelte:element this={`h${headingLevel}`} id="preview-title" class="attachment-preview-modal__title">
 					{attachment.filename}
-				</h2>
+				</svelte:element>
 				<button
 					type="button"
 					class="attachment-preview-modal__close"
@@ -159,20 +273,11 @@
 		justify-content: center;
 		z-index: 1000;
 		padding: 20px;
-		animation: fadeIn 0.2s ease-out;
 	}
 
-	@keyframes fadeIn {
-		from {
-			opacity: 0;
-		}
-		to {
-			opacity: 1;
-		}
-	}
 
 	.attachment-preview-modal__container {
-		background: white;
+		background: hsl(var(--background, 0 0% 100%));
 		border-radius: 12px;
 		max-width: 900px;
 		width: 100%;
@@ -180,26 +285,15 @@
 		display: flex;
 		flex-direction: column;
 		overflow: hidden;
-		animation: slideUp 0.3s ease-out;
 	}
 
-	@keyframes slideUp {
-		from {
-			opacity: 0;
-			transform: translateY(20px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
 
 	.attachment-preview-modal__header {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		padding: 20px 24px;
-		border-bottom: 1px solid #e0e0e0;
+		border-bottom: 1px solid hsl(var(--border, 0 0% 87.8%));
 		flex-shrink: 0;
 	}
 
@@ -207,7 +301,7 @@
 		margin: 0;
 		font-size: 18px;
 		font-weight: 600;
-		color: #1a1a1a;
+		color: hsl(var(--foreground, 0 0% 10.2%));
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
@@ -219,21 +313,20 @@
 		width: 36px;
 		height: 36px;
 		border-radius: 50%;
-		background: #f5f5f5;
+		background: hsl(var(--muted, 0 0% 96.1%));
 		border: none;
-		color: #666;
+		color: hsl(var(--muted-foreground, 0 0% 40%));
 		font-size: 20px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		cursor: pointer;
-		transition: background 0.2s, color 0.2s;
 		flex-shrink: 0;
 	}
 
 	.attachment-preview-modal__close:hover {
-		background: #e0e0e0;
-		color: #1a1a1a;
+		background: hsl(var(--muted, 0 0% 87.8%));
+		color: hsl(var(--foreground, 0 0% 10.2%));
 	}
 
 	.attachment-preview-modal__content {
@@ -267,7 +360,7 @@
 	}
 
 	.attachment-preview-modal__footer {
-		border-top: 1px solid #e0e0e0;
+		border-top: 1px solid hsl(var(--border, 0 0% 87.8%));
 		padding: 20px 24px;
 		display: flex;
 		flex-direction: column;
@@ -289,12 +382,12 @@
 
 	.metadata-label {
 		font-weight: 600;
-		color: #666;
+		color: hsl(var(--muted-foreground, 0 0% 40%));
 		min-width: 60px;
 	}
 
 	.metadata-value {
-		color: #1a1a1a;
+		color: hsl(var(--foreground, 0 0% 10.2%));
 		word-break: break-word;
 	}
 
@@ -311,7 +404,6 @@
 		font-size: 14px;
 		font-weight: 600;
 		cursor: pointer;
-		transition: opacity 0.2s, background 0.2s;
 	}
 
 	.modal-button:hover {
@@ -323,68 +415,22 @@
 	}
 
 	.modal-button--secondary {
-		background: #f5f5f5;
-		color: #1a1a1a;
+		background: hsl(var(--muted, 0 0% 96.1%));
+		color: hsl(var(--foreground, 0 0% 10.2%));
 	}
 
 	.modal-button--secondary:hover {
-		background: #e0e0e0;
+		background: hsl(var(--muted, 0 0% 87.8%));
 	}
 
 	.modal-button--danger {
-		background: #dc2626;
-		color: white;
+		background: hsl(var(--destructive, 0 72.2% 50.6%));
+		color: hsl(var(--destructive-foreground, 0 0% 100%));
 	}
 
 	.modal-button--danger:hover {
-		background: #b91c1c;
-	}
-
-	/* Dark mode support */
-	:global(.dark) .attachment-preview-modal__container {
-		background: #1a1a1a;
-	}
-
-	:global(.dark) .attachment-preview-modal__header {
-		border-bottom-color: #333;
-	}
-
-	:global(.dark) .attachment-preview-modal__title {
-		color: #e0e0e0;
-	}
-
-	:global(.dark) .attachment-preview-modal__close {
-		background: #2a2a2a;
-		color: #999;
-	}
-
-	:global(.dark) .attachment-preview-modal__close:hover {
-		background: #333;
-		color: #e0e0e0;
-	}
-
-	:global(.dark) .attachment-preview-modal__footer {
-		border-top-color: #333;
-	}
-
-	:global(.dark) .metadata-label {
-		color: #999;
-	}
-
-	:global(.dark) .metadata-value {
-		color: #e0e0e0;
-	}
-
-	:global(.dark) .modal-button--secondary {
-		background: #2a2a2a;
-		color: #e0e0e0;
-	}
-
-	:global(.dark) .modal-button--secondary:hover {
-		background: #333;
-	}
-
-	/* Responsive */
+		background: hsl(var(--destructive, 0 73.7% 41.8%));
+	}	/* Responsive */
 	@media (max-width: 640px) {
 		.attachment-preview-modal {
 			padding: 0;

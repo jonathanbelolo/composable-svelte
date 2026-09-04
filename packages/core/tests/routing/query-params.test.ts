@@ -151,8 +151,8 @@ describe('parseQueryParams', () => {
 		it('returns original value if decode fails', () => {
 			const result = parseQueryParams('?key=%E0%A4%A');
 
-			// Should return malformed string as-is rather than throwing
-			expect(result.key).toBeDefined();
+			// The malformed string comes back as-is rather than throwing.
+			expect(result.key).toBe('%E0%A4%A');
 		});
 
 		it('handles partially encoded strings', () => {

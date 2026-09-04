@@ -14,8 +14,6 @@ export {
 	MinimalStreamingChat,
 	StandardStreamingChat,
 	FullStreamingChat,
-	// Legacy
-	StreamingChat,
 	// Primitives
 	SimpleChatMessage,
 	ChatMessage,
@@ -41,14 +39,10 @@ export {
 	type UserPresence,
 	type TypingInfo,
 	type CursorPosition,
-	type UserPermissions,
 	type CollaborativeStreamingChatState,
 	type CollaborativeAction,
 	type CollaborativeDependencies,
 	type WebSocketConnectionState,
-	type PendingAction,
-	type SyncState,
-	DEFAULT_USER_PERMISSIONS,
 	// Collaborative primitives
 	PresenceBadge,
 	PresenceAvatarStack,
@@ -66,13 +60,8 @@ export {
 	getActiveUsers,
 	getCursorPositions,
 	formatTypingIndicator,
-	// WebSocket manager
-	WebSocketManager,
-	createWebSocketManager,
-	type WebSocketConfig,
-	type WebSocketMessage,
 	// Cleanup utilities
 	CleanupTracker,
 	createCleanupTracker,
 	type CleanupFunction
-} from './streaming-chat/index';
+} from './streaming-chat/index.js';

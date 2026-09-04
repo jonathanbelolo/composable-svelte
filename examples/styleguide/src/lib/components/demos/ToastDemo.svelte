@@ -11,7 +11,7 @@
   <!-- Toast Preview Section -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Toast Notifications</h3>
+      <h2 class="text-xl font-semibold mb-2">Toast Notifications</h2>
       <p class="text-muted-foreground text-sm">
         Temporary messages that appear and auto-dismiss
       </p>
@@ -78,7 +78,7 @@
   <!-- Use Cases -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Common Use Cases</h3>
+      <h2 class="text-xl font-semibold mb-2">Common Use Cases</h2>
       <p class="text-muted-foreground text-sm">
         Practical examples of toast notifications
       </p>
@@ -186,7 +186,7 @@
   <!-- Action Confirmations -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Action Confirmations</h3>
+      <h2 class="text-xl font-semibold mb-2">Action Confirmations</h2>
       <p class="text-muted-foreground text-sm">
         Quick feedback for user actions
       </p>
@@ -245,7 +245,7 @@
   <!-- Error Messages -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Error Handling</h3>
+      <h2 class="text-xl font-semibold mb-2">Error Handling</h2>
       <p class="text-muted-foreground text-sm">
         Inform users of errors and issues
       </p>
@@ -279,7 +279,7 @@
   <!-- Toast Positioning -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Toast Positioning</h3>
+      <h2 class="text-xl font-semibold mb-2">Toast Positioning</h2>
       <p class="text-muted-foreground text-sm">
         Common placement patterns for toast notifications
       </p>
@@ -310,7 +310,7 @@
   <!-- Best Practices -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Best Practices</h3>
+      <h2 class="text-xl font-semibold mb-2">Best Practices</h2>
       <p class="text-muted-foreground text-sm">
         Guidelines for using toast notifications effectively
       </p>

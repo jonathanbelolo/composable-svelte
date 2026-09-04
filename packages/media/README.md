@@ -5,7 +5,7 @@ Audio player, video embed, and voice input components for Composable Svelte. Bui
 ## Features
 
 - **Audio playback** - Full player with playlist support, shuffle, loop, and seek
-- **Video embedding** - Auto-detects YouTube, Vimeo, Twitch, and more
+- **Video embedding** - Auto-detects YouTube, Vimeo and Twitch
 - **Voice input** - Push-to-talk and conversation modes via MediaRecorder API
 - **State-driven** - Full Composable Architecture integration with testable reducers
 - **No external deps** - Built entirely on native Web APIs
@@ -40,19 +40,23 @@ Compact player with play/pause, seek, and volume:
   import {
     MinimalAudioPlayer,
     audioPlayerReducer,
-    createInitialAudioPlayerState
+    createInitialAudioPlayerState,
+    type AudioTrack
   } from '@composable-svelte/media';
 
+  const tracks: AudioTrack[] = [
+    { id: '1', title: 'Track One', url: '/audio/track1.mp3' },
+    { id: '2', title: 'Track Two', url: '/audio/track2.mp3' }
+  ];
+
   const store = createStore({
-    initialState: createInitialAudioPlayerState({
-      tracks: [
-        { id: '1', title: 'Track One', src: '/audio/track1.mp3' },
-        { id: '2', title: 'Track Two', src: '/audio/track2.mp3' }
-      ]
-    }),
+    initialState: createInitialAudioPlayerState({ volume: 0.8 }),
     reducer: audioPlayerReducer,
     dependencies: {}
   });
+
+  // The factory takes preferences; the playlist arrives as an action.
+  store.dispatch({ type: 'loadPlaylist', tracks });
 </script>
 
 <MinimalAudioPlayer {store} />
@@ -74,66 +78,137 @@ Standalone playlist component:
 <PlaylistView {store} />
 ```
 
-**State:**
+**State** — shown by building one, so this block fails to compile if the shape
+drifts. The previous version listed `tracks`, `shuffle` and `loop`; none exist:
 
 ```typescript
-interface AudioPlayerState {
-  tracks: AudioTrack[];
-  currentTrackIndex: number;
-  isPlaying: boolean;
-  currentTime: number;
-  duration: number;
-  volume: number;
-  isMuted: boolean;
-  shuffle: boolean;
-  loop: 'none' | 'one' | 'all';
-  error: string | null;
-}
+import type { AudioPlayerState } from '@composable-svelte/media';
+
+const state: AudioPlayerState = {
+  currentTrack: null,
+
+  isPlaying: false,
+  isLoading: false,
+  isBuffering: false,
+
+  currentTime: 0,
+  duration: 0,
+  buffered: 0,
+
+  volume: 1,
+  isMuted: false,
+  previousVolume: 1,
+
+  playbackSpeed: 1,
+  seekPosition: null,
+
+  loopMode: 'none',
+  isShuffled: false,
+  shuffleOrder: [],
+
+  playlist: [],
+  currentTrackIndex: 0,
+
+  isExpanded: false,
+  error: null
+};
 ```
 
-**Key Actions:** `play`, `pause`, `togglePlayPause`, `seekTo`, `setVolume`, `toggleMute`, `nextTrack`, `previousTrack`, `toggleShuffle`, `setLoop`, `selectTrack`
+**Key Actions:** `play`, `pause`, `togglePlayPause`, `stop`, `seekTo`,
+`volumeChanged`, `toggleMute`, `next`, `previous`, `shuffleToggled`,
+`loopModeChanged`, `trackSelected`, `loadPlaylist`, `speedChanged`.
+
+The previous list named `setVolume`, `nextTrack`, `previousTrack`,
+`toggleShuffle`, `setLoop` and `selectTrack` — **none of which exist**. A
+`TestStore` would have rejected every one.
 
 #### AudioManager
 
 Shared audio context manager for coordinating playback across components:
 
+This package has **two** audio managers and they are different classes, so
+neither owns the bare name. AudioPlayer's wraps an `AudioContext` for playback;
+VoiceInput's wraps a `MediaRecorder` for capture:
+
 ```typescript
-import { createAudioManager, getAudioManager } from '@composable-svelte/media';
+import {
+  createAudioPlayerManager,
+  getAudioPlayerManager,
+  createVoiceInputAudioManager,
+  getVoiceInputAudioManager,
+  type AudioPlayerAction
+} from '@composable-svelte/media';
 
-// Create a named audio manager
-createAudioManager('player-1');
+const onAction = (action: AudioPlayerAction) => console.log(action.type);
 
-// Retrieve it elsewhere
-const manager = getAudioManager('player-1');
+// AudioPlayer: the config carries the callback, not an id.
+const player = createAudioPlayerManager({ onAction });
+
+// Registered by id — get-or-create, so the config is required every time.
+const registered = getAudioPlayerManager('player-1', { onAction });
+
+// VoiceInput: addressed by id alone.
+createVoiceInputAudioManager('mic-1');
+const recorder = getVoiceInputAudioManager('mic-1');
 ```
+
+Until this was renamed, the un-suffixed `createAudioManager` resolved to the
+**VoiceInput** one while being documented here under AudioPlayer. Because both
+factories accept a string, the wrong call typechecked and returned an object of
+the wrong class — a worse failure than a name that does not resolve.
 
 ### VideoEmbed
 
-Responsive video embedding with automatic platform detection. Supports YouTube, Vimeo, Twitch, and generic video URLs.
+Responsive video embedding for YouTube, Vimeo and Twitch — the three platforms
+`getSupportedPlatforms()` returns.
 
 ```svelte
 <script lang="ts">
-  import { VideoEmbed } from '@composable-svelte/media';
+  import { VideoEmbed, detectVideo } from '@composable-svelte/media';
+
+  // Pass a URL and let the component detect the platform…
+  const url = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+
+  // …or detect it yourself, when you need the metadata before rendering.
+  const detected = detectVideo('https://vimeo.com/76979871');
 </script>
 
-<!-- Auto-detects platform from URL -->
-<VideoEmbed url="https://www.youtube.com/watch?v=dQw4w9WgXcQ" />
+<VideoEmbed {url} />
 
-<!-- Vimeo -->
-<VideoEmbed url="https://vimeo.com/123456789" aspectRatio="16:9" />
+<VideoEmbed url="https://www.twitch.tv/videos/123456789" aspectRatio="4:3" />
 
-<!-- Twitch -->
-<VideoEmbed url="https://www.twitch.tv/videos/123456789" />
+<!-- Muted, because browsers block autoplay with sound. -->
+<VideoEmbed {url} autoplay muted />
+
+{#if detected}
+  <p>{detected.platform} video {detected.videoId}</p>
+  <VideoEmbed video={detected} showTitle />
+{/if}
 ```
+
+This block is [`tests/doc-examples/video-embed.svelte`](tests/doc-examples/video-embed.svelte),
+quoted verbatim. The file is typechecked by `svelte-check` in the repo gate and a
+test asserts this README still matches it — so a prop that does not exist is a
+build failure rather than something a reader discovers by pasting.
 
 **Props:**
 
 | Prop | Type | Description |
 |------|------|-------------|
-| `url` | `string` | Video URL (auto-detected platform) |
-| `aspectRatio` | `'16:9' \| '4:3' \| '1:1' \| '21:9'` | Aspect ratio (default: `'16:9'`) |
-| `autoplay` | `boolean` | Auto-play on load |
+| `url` | `string` | Video URL; the platform is detected. Mutually exclusive with `video` |
+| `video` | `VideoEmbed` | An already-detected video from `detectVideo()`. Mutually exclusive with `url` |
+| `aspectRatio` | `'16:9' \| '4:3' \| '1:1' \| '9:16'` | Overrides the platform default |
+| `autoplay` | `boolean` | Autoplay on load. Browsers block this unless `muted` is also set |
 | `muted` | `boolean` | Start muted |
+| `showTitle` | `boolean` | Show the video title above the embed |
+| `class` | `string` | Additional CSS class |
+
+Exactly one of `url` or `video` is required, enforced by the type rather than at
+runtime. A `url` that matches no known platform renders nothing.
+
+**Twitch** additionally needs a `parent` matching the page it is embedded in.
+The component supplies it from the current hostname; `detectVideo` deliberately
+does not, because detection cannot know where the result will be rendered.
 
 **Utilities:**
 
@@ -142,7 +217,7 @@ import { detectVideo, extractVideosFromMarkdown, getSupportedPlatforms } from '@
 
 // Detect platform from URL
 const info = detectVideo('https://youtube.com/watch?v=abc');
-// { platform: 'youtube', id: 'abc', embedUrl: '...' }
+// { url, platform: 'youtube', videoId: 'abc', aspectRatio: '16:9', embedUrl: '...' }
 
 // Extract all video URLs from markdown text
 const videos = extractVideosFromMarkdown(markdownText);
@@ -158,17 +233,21 @@ Voice recording component with push-to-talk and continuous conversation modes. B
   import {
     VoiceInput,
     voiceInputReducer,
-    createInitialVoiceInputState
+    createInitialVoiceInputState,
+    getVoiceInputAudioManager
   } from '@composable-svelte/media';
 
   const store = createStore({
     initialState: createInitialVoiceInputState(),
     reducer: voiceInputReducer,
-    dependencies: {}
+    dependencies: {
+      transcribeAudio: async (audio: Blob) => sendToSpeechToText(audio),
+      getAudioManager: getVoiceInputAudioManager
+    }
   });
 </script>
 
-<VoiceInput {store} mode="push-to-talk" />
+<VoiceInput {store} defaultMode="push-to-talk" onTranscript={(text) => console.log(text)} />
 ```
 
 **Modes:**
@@ -181,22 +260,39 @@ Voice recording component with push-to-talk and continuous conversation modes. B
 **State:**
 
 ```typescript
-interface VoiceInputState {
-  isRecording: boolean;
-  duration: number;
-  audioBlob: Blob | null;
-  audioUrl: string | null;
-  error: string | null;
-  mode: 'push-to-talk' | 'conversation';
-}
+import type { VoiceInputState } from '@composable-svelte/media';
+
+const state: VoiceInputState = {
+  mode: 'push-to-talk',
+  status: 'idle',
+  permission: null,
+  audioLevel: 0,
+  recordingStartTime: null,
+  vadState: null,
+  errorMessage: null,
+  _audioManagerId: null
+};
 ```
 
-**Key Actions:** `startRecording`, `stopRecording`, `recordingCompleted`, `recordingFailed`, `clearRecording`
+Recording is a `status`, not a boolean, and duration is derived from
+`recordingStartTime`. The previous version documented `isRecording`, `duration`,
+`audioBlob` and `audioUrl` — none of which exist.
+
+**Key Actions:** `activatePushToTalk`, `startPushToTalkRecording`,
+`stopPushToTalkRecording`, `cancelPushToTalkRecording`,
+`activateConversationMode`, `conversationModeToggled`,
+`requestMicrophonePermission`, `microphonePermissionGranted`,
+`microphonePermissionDenied`, `speechDetected`, `silenceDetected`,
+`autoSendTriggered`, `manualSendRequested`, `transcriptionCompleted`,
+`audioProcessingComplete`, `audioProcessingFailed`, `deactivateVoiceInput`.
+
+The previous list named `startRecording`, `stopRecording`,
+`recordingCompleted`, `recordingFailed` and `clearRecording` — none exist.
 
 ## Testing
 
 ```typescript
-import { createTestStore } from '@composable-svelte/core';
+import { createTestStore } from '@composable-svelte/core/test';
 import { audioPlayerReducer, createInitialAudioPlayerState } from '@composable-svelte/media';
 
 const store = createTestStore({
@@ -238,9 +334,12 @@ await store.send({ type: 'nextTrack' }, (state) => {
 | `voiceInputReducer` | Reducer for voice input |
 | `createInitialAudioPlayerState()` | Create initial audio state |
 | `createInitialVoiceInputState()` | Create initial voice state |
-| `createAudioManager(id)` | Create a named AudioManager |
-| `getAudioManager(id)` | Retrieve an AudioManager by ID |
-| `deleteAudioManager(id)` | Destroy an AudioManager |
+| `createAudioPlayerManager(config)` | Create a playback `AudioContext` manager |
+| `getAudioPlayerManager(id, config)` | Get-or-create a registered playback manager |
+| `createVoiceInputAudioManager(id)` | Create a `MediaRecorder` capture manager |
+| `getVoiceInputAudioManager(id)` | Retrieve a capture manager by id |
+| `deleteAudioPlayerManager(id)` | Destroy a registered playback manager |
+| `deleteVoiceInputAudioManager(id)` | Destroy a registered capture manager |
 | `detectVideo(url)` | Detect video platform from URL |
 | `extractVideosFromMarkdown(text)` | Find video URLs in markdown |
 | `getSupportedPlatforms()` | List supported video platforms |

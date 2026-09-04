@@ -12,7 +12,7 @@
  *   FullAudioPlayer,
  *   audioPlayerReducer,
  *   createInitialAudioPlayerState
- * } from '@composable-svelte/code';
+ * } from '@composable-svelte/media';
  *
  * const store = createStore({
  *   initialState: createInitialAudioPlayerState(),
@@ -29,7 +29,7 @@ export {
 	createShuffleOrder,
 	getNextTrackIndex,
 	getPreviousTrackIndex,
-	clamp,
+	nextLoopMode,
 	type AudioTrack,
 	type LoopMode,
 	type AudioPlayerState,

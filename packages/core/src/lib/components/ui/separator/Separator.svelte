@@ -13,16 +13,16 @@
 		 * Orientation of the separator.
 		 * @default 'horizontal'
 		 */
-		orientation?: 'horizontal' | 'vertical';
+		orientation?: 'horizontal' | 'vertical' | undefined;
 		/**
 		 * Whether the separator is decorative (hidden from screen readers).
 		 * @default true
 		 */
-		decorative?: boolean;
+		decorative?: boolean | undefined;
 		/**
 		 * Additional CSS classes to apply.
 		 */
-		class?: string;
+		class?: string | undefined;
 	}
 
 	let {
@@ -46,4 +46,4 @@
 	aria-orientation={decorative ? undefined : orientation}
 	class={separatorClasses}
 	{...restProps}
-/>
+></div>

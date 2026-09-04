@@ -24,23 +24,23 @@
 		/**
 		 * Minimum value.
 		 */
-		min?: number;
+		min?: number | undefined;
 		/**
 		 * Maximum value.
 		 */
-		max?: number;
+		max?: number | undefined;
 		/**
 		 * Step increment.
 		 */
-		step?: number;
+		step?: number | undefined;
 		/**
 		 * Whether the slider is disabled.
 		 */
-		disabled?: boolean;
+		disabled?: boolean | undefined;
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 	}
 
 	let {
@@ -73,27 +73,27 @@
 		bind:value
 		oninput={handleInput}
 		class={cn(
-			'relative h-2 w-full cursor-pointer appearance-none rounded-full bg-secondary transition-opacity',
+			'relative h-2 w-full cursor-pointer appearance-none rounded-full bg-secondary',
 			'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
 			'disabled:cursor-not-allowed disabled:opacity-50',
 			// Webkit (Chrome, Safari, Edge) thumb styling
 			'[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5',
 			'[&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-primary',
 			'[&::-webkit-slider-thumb]:bg-background [&::-webkit-slider-thumb]:shadow-lg',
-			'[&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-110',
+			'[&::-webkit-slider-thumb]:hover:scale-110',
 			'disabled:[&::-webkit-slider-thumb]:hover:scale-100',
 			// Firefox thumb styling
 			'[&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:appearance-none',
 			'[&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-primary',
 			'[&::-moz-range-thumb]:bg-background [&::-moz-range-thumb]:shadow-lg',
-			'[&::-moz-range-thumb]:transition-transform [&::-moz-range-thumb]:hover:scale-110',
+			'[&::-moz-range-thumb]:hover:scale-110',
 			'disabled:[&::-moz-range-thumb]:hover:scale-100'
 		)}
 		{...restProps}
 	/>
 	<!-- Progress fill indicator -->
 	<div
-		class="pointer-events-none absolute left-0 h-2 rounded-full bg-primary transition-all"
+		class="pointer-events-none absolute left-0 h-2 rounded-full bg-primary"
 		style="width: {percentage}%"
 		aria-hidden="true"
 	></div>

@@ -19,15 +19,15 @@
 		/** Store containing audio player state */
 		store: Store<AudioPlayerState, AudioPlayerAction>;
 		/** Optional CSS class */
-		class?: string;
+		class?: string | undefined;
 		/** Show track numbers (default: true) */
-		showTrackNumbers?: boolean;
+		showTrackNumbers?: boolean | undefined;
 		/** Show duration (default: true) */
-		showDuration?: boolean;
+		showDuration?: boolean | undefined;
 		/** Enable drag-to-reorder (default: true) */
-		enableReorder?: boolean;
+		enableReorder?: boolean | undefined;
 		/** Enable remove track (default: true) */
-		enableRemove?: boolean;
+		enableRemove?: boolean | undefined;
 	}
 
 	let {
@@ -39,7 +39,7 @@
 		enableRemove = true
 	}: Props = $props();
 
-	const state = $derived($store);
+	const playerState = $derived($store);
 
 	// Drag and drop state
 	let draggedIndex = $state<number | null>(null);
@@ -61,7 +61,9 @@
 
 	// Handle track removal
 	function removeTrack(index: number, event: Event) {
-		event.stopPropagation();
+		// No stopPropagation: the row itself no longer has a click handler, so
+		// there is nothing to stop.
+		void event;
 		store.dispatch({ type: 'trackRemoved', index });
 	}
 
@@ -105,7 +107,7 @@
 </script>
 
 <div class="playlist-view {className}" role="list" aria-label="Playlist">
-	{#if state.playlist.length === 0}
+	{#if playerState.playlist.length === 0}
 		<div class="empty-playlist">
 			<svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor" opacity="0.3">
 				<path
@@ -115,11 +117,10 @@
 			<p>No tracks in playlist</p>
 		</div>
 	{:else}
-		{#each state.playlist as track, index (track.id)}
+		{#each playerState.playlist as track, index (track.id)}
 			<div
-				class="playlist-item {index === state.currentTrackIndex ? 'active' : ''} {draggedIndex === index ? 'dragging' : ''} {dragOverIndex === index ? 'drag-over' : ''}"
+				class="playlist-item {index === playerState.currentTrackIndex ? 'active' : ''} {draggedIndex === index ? 'dragging' : ''} {dragOverIndex === index ? 'drag-over' : ''}"
 				role="listitem"
-				onclick={() => selectTrack(index)}
 				ondragstart={(e) => handleDragStart(index, e)}
 				ondragover={(e) => handleDragOver(index, e)}
 				ondragleave={handleDragLeave}
@@ -138,10 +139,19 @@
 					</div>
 				{/if}
 
+				<!-- Selecting the track is a real button, so Enter and Space work and
+				     it takes a focus ring. It wraps the informational region only:
+				     the drag handle and remove button stay outside it. -->
+				<button
+					type="button"
+					class="playlist-item__select"
+					onclick={() => selectTrack(index)}
+					aria-current={index === playerState.currentTrackIndex ? 'true' : undefined}
+				>
 				<!-- Track number -->
 				{#if showTrackNumbers}
 					<div class="track-number">
-						{#if index === state.currentTrackIndex && state.isPlaying}
+						{#if index === playerState.currentTrackIndex && playerState.isPlaying}
 							<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="playing-icon">
 								<path d="M8 5v14l11-7z" />
 							</svg>
@@ -173,6 +183,7 @@
 				{#if showDuration}
 					<div class="track-duration">{formatDuration(track.duration)}</div>
 				{/if}
+				</button>
 
 				<!-- Remove button -->
 				{#if enableRemove}
@@ -202,7 +213,7 @@
 		max-height: 400px;
 		overflow-y: auto;
 		padding: 0.5rem;
-		background: #f8f9fa;
+		background: hsl(var(--muted, 210 16.7% 97.6%));
 		border-radius: 8px;
 	}
 
@@ -212,7 +223,7 @@
 		align-items: center;
 		justify-content: center;
 		padding: 3rem 1rem;
-		color: #6c757d;
+		color: hsl(var(--muted-foreground, 208.2 7.3% 45.7%));
 		text-align: center;
 	}
 
@@ -226,20 +237,41 @@
 		align-items: center;
 		gap: 0.75rem;
 		padding: 0.75rem;
-		background: white;
+		background: hsl(var(--background, 0 0% 100%));
 		border-radius: 6px;
-		cursor: pointer;
-		transition: all 0.2s;
 		border: 2px solid transparent;
 	}
 
+	/* The track-selection button. Reset to inherit the row's look; it carries the
+	   pointer cursor the row used to. */
+	.playlist-item__select {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		flex: 1;
+		min-width: 0;
+		border: 0;
+		padding: 0;
+		background: none;
+		font: inherit;
+		color: inherit;
+		text-align: left;
+		cursor: pointer;
+	}
+
+	.playlist-item__select:focus-visible {
+		outline: 2px solid #3498db;
+		outline-offset: 2px;
+		border-radius: 4px;
+	}
+
 	.playlist-item:hover {
-		background: #f0f0f0;
+		background: hsl(var(--muted, 0 0% 94.1%));
 	}
 
 	.playlist-item.active {
 		background: #e7f3ff;
-		border-color: #007bff;
+		border-color: hsl(var(--primary, 211.1 100% 50%));
 	}
 
 	.playlist-item.dragging {
@@ -247,13 +279,13 @@
 	}
 
 	.playlist-item.drag-over {
-		border-color: #007bff;
+		border-color: hsl(var(--primary, 211.1 100% 50%));
 		border-style: dashed;
 	}
 
 	.drag-handle {
 		cursor: grab;
-		color: #adb5bd;
+		color: hsl(var(--muted-foreground, 210 10.8% 71%));
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -268,13 +300,13 @@
 		width: 24px;
 		text-align: center;
 		font-size: 0.85rem;
-		color: #6c757d;
+		color: hsl(var(--muted-foreground, 208.2 7.3% 45.7%));
 		font-weight: 600;
 		flex-shrink: 0;
 	}
 
 	.playing-icon {
-		color: #007bff;
+		color: hsl(var(--primary, 211.1 100% 50%));
 	}
 
 	.track-cover {
@@ -293,7 +325,7 @@
 	.track-title-playlist {
 		font-weight: 600;
 		font-size: 0.9rem;
-		color: #212529;
+		color: hsl(var(--foreground, 210 10.8% 14.5%));
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -301,7 +333,7 @@
 
 	.track-artist-playlist {
 		font-size: 0.8rem;
-		color: #6c757d;
+		color: hsl(var(--muted-foreground, 208.2 7.3% 45.7%));
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -309,7 +341,7 @@
 
 	.track-duration {
 		font-size: 0.85rem;
-		color: #6c757d;
+		color: hsl(var(--muted-foreground, 208.2 7.3% 45.7%));
 		font-variant-numeric: tabular-nums;
 		flex-shrink: 0;
 	}
@@ -319,12 +351,11 @@
 		border: none;
 		padding: 0.25rem;
 		cursor: pointer;
-		color: #adb5bd;
+		color: hsl(var(--muted-foreground, 210 10.8% 71%));
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		border-radius: 4px;
-		transition: all 0.2s;
 		flex-shrink: 0;
 		opacity: 0;
 	}
@@ -335,7 +366,7 @@
 
 	.remove-btn:hover {
 		background: #f8d7da;
-		color: #721c24;
+		color: hsl(var(--destructive, 354.4 60.6% 27.8%));
 	}
 
 	/* Custom scrollbar */
@@ -344,16 +375,16 @@
 	}
 
 	.playlist-view::-webkit-scrollbar-track {
-		background: #e9ecef;
+		background: hsl(var(--muted, 210 15.8% 92.5%));
 		border-radius: 4px;
 	}
 
 	.playlist-view::-webkit-scrollbar-thumb {
-		background: #adb5bd;
+		background: hsl(var(--muted, 210 10.8% 71%));
 		border-radius: 4px;
 	}
 
 	.playlist-view::-webkit-scrollbar-thumb:hover {
-		background: #6c757d;
+		background: hsl(var(--muted, 208.2 7.3% 45.7%));
 	}
 </style>

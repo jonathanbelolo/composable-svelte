@@ -229,14 +229,10 @@ testStore.receive(action, assertion)
 // Operators
 ifLet(/* lenses */)(state, action, deps)
 createDestinationReducer({ addItem, editItem })
-
-// Components
-<Modal store={scopedStore}>
-<Sheet store={scopedStore}>
-<Drawer store={scopedStore}>
-<Alert store={scopedStore}>
-<NavigationStack store={scopedStore}>
 ```
+
+Components, each taking a scoped `store` prop: `<Modal>`, `<Sheet>`, `<Drawer>`,
+`<Alert>`, `<NavigationStack>`.
 
 ### DSL
 
@@ -332,11 +328,11 @@ Ready to deploy? See:
 
 ## 📝 Contributing
 
-Want to improve the docs? See [Contributing Guidelines](../../../CONTRIBUTING.md).
+Want to improve the docs? See [Contributing Guidelines](../../../CLAUDE.md).
 
 ## 📜 License
 
-MIT - see [LICENSE](../../../LICENSE).
+MIT - see [LICENSE](../LICENSE).
 
 ## 🙏 Acknowledgments
 

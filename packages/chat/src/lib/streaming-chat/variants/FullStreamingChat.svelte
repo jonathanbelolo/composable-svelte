@@ -14,6 +14,8 @@
 	 * - Full-featured AI assistants
 	 */
 
+	import { createScrollFollower, prefersReducedMotion } from '@composable-svelte/core/animation';
+	import type { ScrollFollower } from '@composable-svelte/core/animation';
 	import { onDestroy } from 'svelte';
 	import type { Store } from '@composable-svelte/core';
 	import type { StreamingChatState, StreamingChatAction, MessageAttachment } from '../types.js';
@@ -37,60 +39,60 @@
 		/**
 		 * Placeholder text for input.
 		 */
-		placeholder?: string;
+		placeholder?: string | undefined;
 
 		/**
 		 * Show clear button.
 		 */
-		showClearButton?: boolean;
+		showClearButton?: boolean | undefined;
 
 		/**
 		 * Custom CSS class.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Maximum file size in MB (default: 10MB).
 		 */
-		maxFileSizeMB?: number;
+		maxFileSizeMB?: number | undefined;
 
 		/**
 		 * Accepted file types (e.g., ["image/*", ".pdf"]).
 		 * Empty array allows all types (default).
 		 */
-		acceptedFileTypes?: string[];
+		acceptedFileTypes?: string[] | undefined;
 
 		/**
 		 * Value to prefill the input with.
 		 * When changed, sets the input value. Parent should manage when to clear.
 		 */
-		prefillValue?: string;
+		prefillValue?: string | undefined;
 
 		/**
 		 * Callback when prefill has been applied and input is ready for user.
 		 * Call this to acknowledge the prefill was consumed.
 		 */
-		onPrefillApplied?: () => void;
+		onPrefillApplied?: (() => void) | undefined;
 
 		/**
 		 * Custom label for user messages (default: "You").
 		 */
-		userLabel?: string;
+		userLabel?: string | undefined;
 
 		/**
 		 * Custom label for assistant messages (default: "Assistant").
 		 */
-		assistantLabel?: string;
+		assistantLabel?: string | undefined;
 
 		/**
 		 * Avatar URL for user messages.
 		 */
-		userAvatarUrl?: string;
+		userAvatarUrl?: string | undefined;
 
 		/**
 		 * Avatar URL for assistant messages.
 		 */
-		assistantAvatarUrl?: string;
+		assistantAvatarUrl?: string | undefined;
 	}
 
 	const {
@@ -113,8 +115,21 @@
 	let messagesContainer: HTMLDivElement;
 	let shouldAutoScroll = $state(true);
 	let fileInputRef: HTMLInputElement;
-	let pendingAttachments = $state<MessageAttachment[]>([]);
-	let previewingAttachment = $state<MessageAttachment | null>(null);
+	// The store is the single source of truth. This used to be a component-local
+	// `$state` array, which meant `state.pendingAttachments` was permanently `[]`
+	// — its three reducer actions had no dispatcher, its exhaustive tests covered
+	// a path nothing took, and attachments could not survive a session restore.
+	const pendingAttachments = $derived($store.pendingAttachments);
+	// The preview lifecycle lives in the store, like `pendingAttachments` before
+	// it. A component-local boolean could not hold the element on screen for its
+	// exit animation, nor defer the removal until that exit finished.
+	const previewPresentation = $derived($store.attachmentPreview.presentation);
+	const previewingAttachment = $derived(
+		previewPresentation.status === 'idle' ? null : previewPresentation.content
+	);
+	const previewOpen = $derived(
+		previewPresentation.status === 'presenting' || previewPresentation.status === 'presented'
+	);
 	let inputRef: HTMLTextAreaElement;
 
 	// Handle prefill value changes
@@ -138,20 +153,47 @@
 			(inputValue.trim().length > 0 || pendingAttachments.length > 0)
 	);
 
-	// Auto-scroll to bottom when new messages arrive
+	// The follower owns the smooth scroll, because the browser must not.
+	//
+	// `scroll-behavior: smooth` used to do this, and it was quietly breaking the
+	// gate below: `handleScroll` listens to the same `scroll` event and cannot
+	// tell a programmatic scroll from a user's, so the browser's intermediate
+	// animation frames — each more than 50px short of the bottom — kept setting
+	// `shouldAutoScroll = false` and latching auto-scroll off mid-response.
+	let follower: ScrollFollower | null = null;
+
 	$effect(() => {
-		if (
-			messagesContainer &&
-			shouldAutoScroll &&
-			($store.currentStreaming || $store.messages.length > 0)
-		) {
-			messagesContainer.scrollTop = messagesContainer.scrollHeight;
+		if (!messagesContainer) return;
+		follower = createScrollFollower(messagesContainer, {
+			reducedMotion: prefersReducedMotion()
+		});
+		return () => {
+			follower?.stop();
+			follower = null;
+		};
+	});
+
+	// Re-runs per streamed chunk, which is the point: `follow()` is idempotent and
+	// the running loop re-reads the target, so a chunk retargets the animation in
+	// flight rather than starting a competing one.
+	$effect(() => {
+		if (!messagesContainer) return;
+
+		if (shouldAutoScroll && ($store.currentStreaming || $store.messages.length > 0)) {
+			follower?.follow();
+		} else {
+			// Stopping matters as much as starting. `follow()` runs until it reaches
+			// the bottom, so gating only the *call* would let a loop already in
+			// flight drag the user back down the moment they scrolled away.
+			follower?.stop();
 		}
 	});
 
 	// Detect if user has scrolled up
 	function handleScroll() {
 		if (!messagesContainer) return;
+		// Our own frames are not the user leaving.
+		if (follower?.isSelfScroll()) return;
 
 		const { scrollTop, scrollHeight, clientHeight } = messagesContainer;
 		const isAtBottom = scrollHeight - scrollTop - clientHeight < 50;
@@ -164,15 +206,13 @@
 		if (!canSendMessage) return;
 
 		const message = inputValue.trim();
-		const attachments = pendingAttachments.length > 0 ? [...pendingAttachments] : undefined;
-
 		inputValue = '';
-		pendingAttachments = [];
 
+		// No `attachments` field: the reducer reads `state.pendingAttachments` and
+		// clears it. Passing them here is what made that branch unreachable.
 		store.dispatch({
 			type: 'sendMessage',
-			message: message || '(Attachments)',
-			attachments
+			message: message || '(Attachments)'
 		});
 	}
 
@@ -235,7 +275,9 @@
 				validFiles.map((file) => createAttachmentFromFile(file))
 			);
 
-			pendingAttachments = [...pendingAttachments, ...newAttachments];
+			for (const attachment of newAttachments) {
+				store.dispatch({ type: 'addAttachment', attachment });
+			}
 		} catch (error) {
 			store.dispatch({
 				type: 'streamError',
@@ -247,18 +289,18 @@
 		input.value = '';
 	}
 
-	function removeAttachment(index: number) {
-		// Revoke blob URL to prevent memory leak
-		const attachment = pendingAttachments[index];
-		if (attachment) {
-			revokeFileBlobURL(attachment.url);
-		}
-		pendingAttachments = pendingAttachments.filter((_, i) => i !== index);
+	// By id, not by index. The reducer removes by id, this removed by array index
+	// and the preview modal resolved by object *reference* — three identities for
+	// one list, of which only the reducer's survives the move into the store.
+	// Revoking the blob URL is the reducer's job now, in an effect.
+	function removeAttachment(attachmentId: string) {
+		store.dispatch({ type: 'removeAttachment', attachmentId });
 	}
 
-	// Cleanup blob URLs on unmount to prevent memory leaks
+	// Unmount still revokes: the store outlives this component, and the URLs
+	// belong to the browser rather than to either of them.
 	onDestroy(() => {
-		pendingAttachments.forEach((attachment) => {
+		$store.pendingAttachments.forEach((attachment) => {
 			revokeFileBlobURL(attachment.url);
 		});
 	});
@@ -273,7 +315,15 @@
 			</div>
 		{:else}
 			{#each $store.messages as message (message.id)}
-				<ChatMessageWithActions {message} {store} {userLabel} {assistantLabel} {userAvatarUrl} {assistantAvatarUrl} />
+				<ChatMessageWithActions
+					{message}
+					{store}
+					{userLabel}
+					{assistantLabel}
+					{userAvatarUrl}
+					{assistantAvatarUrl}
+					animateIn={message.id === $store.lastAppendedId}
+				/>
 			{/each}
 
 			{#if $store.currentStreaming}
@@ -314,11 +364,11 @@
 		<!-- Pending Attachments Preview -->
 		{#if pendingAttachments.length > 0}
 			<div class="full-streaming-chat__attachments-preview">
-				{#each pendingAttachments as attachment, index (attachment.id || `${attachment.filename}-${index}`)}
+				{#each pendingAttachments as attachment (attachment.id)}
 					<PendingAttachmentPreview
 						{attachment}
-						onclick={() => (previewingAttachment = attachment)}
-						onremove={() => removeAttachment(index)}
+						onclick={() => store.dispatch({ type: 'attachmentPreviewOpened', attachment })}
+						onremove={() => removeAttachment(attachment.id)}
 					/>
 				{/each}
 			</div>
@@ -358,7 +408,7 @@
 				disabled={$store.isWaitingForResponse}
 				rows="1"
 				aria-label="Chat message input"
-			/>
+			></textarea>
 			<div class="full-streaming-chat__actions">
 				{#if showClearButton && $store.messages.length > 0}
 					<button
@@ -397,16 +447,20 @@
 <!-- Attachment Preview Modal -->
 <AttachmentPreviewModal
 	attachment={previewingAttachment}
-	open={previewingAttachment !== null}
-	onclose={() => (previewingAttachment = null)}
-	onremove={() => {
-		if (previewingAttachment) {
-			const index = pendingAttachments.findIndex((a) => a === previewingAttachment);
-			if (index !== -1) {
-				removeAttachment(index);
-			}
-		}
-	}}
+	open={previewOpen}
+	presentation={previewPresentation}
+	onclose={() => store.dispatch({ type: 'attachmentPreviewDismissed' })}
+	onremove={() => store.dispatch({ type: 'attachmentPreviewRemoveRequested' })}
+	onPresentationComplete={() =>
+		store.dispatch({
+			type: 'attachmentPreviewPresentation',
+			event: { type: 'presentationCompleted' }
+		})}
+	onDismissalComplete={() =>
+		store.dispatch({
+			type: 'attachmentPreviewPresentation',
+			event: { type: 'dismissalCompleted' }
+		})}
 />
 
 <style>
@@ -414,8 +468,8 @@
 		display: flex;
 		flex-direction: column;
 		height: 100%;
-		background: #ffffff;
-		border: 1px solid #e0e0e0;
+		background: hsl(var(--background, 0 0% 100%));
+		border: 1px solid hsl(var(--border, 0 0% 87.8%));
 		border-radius: 8px;
 		overflow: hidden;
 	}
@@ -426,7 +480,6 @@
 		padding: 16px;
 		display: flex;
 		flex-direction: column;
-		scroll-behavior: smooth;
 	}
 
 	.full-streaming-chat__empty {
@@ -434,7 +487,7 @@
 		align-items: center;
 		justify-content: center;
 		height: 100%;
-		color: #999;
+		color: hsl(var(--muted-foreground, 0 0% 60%));
 		font-size: 14px;
 	}
 
@@ -445,7 +498,7 @@
 		padding: 12px 16px;
 		background: #fee;
 		border-top: 1px solid #fcc;
-		color: #c00;
+		color: hsl(var(--destructive, 0 100% 40%));
 		font-size: 14px;
 	}
 
@@ -456,7 +509,7 @@
 	.full-streaming-chat__error-close {
 		background: none;
 		border: none;
-		color: #c00;
+		color: hsl(var(--destructive, 0 100% 40%));
 		cursor: pointer;
 		font-size: 18px;
 		padding: 0 8px;
@@ -467,9 +520,9 @@
 	}
 
 	.full-streaming-chat__form {
-		border-top: 1px solid #e0e0e0;
+		border-top: 1px solid hsl(var(--border, 0 0% 87.8%));
 		padding: 16px;
-		background: #fafafa;
+		background: hsl(var(--muted, 0 0% 98%));
 	}
 
 	.full-streaming-chat__attachments-preview {
@@ -487,12 +540,11 @@
 
 	.full-streaming-chat__attach-btn {
 		padding: 10px;
-		background: white;
-		border: 1px solid #d0d0d0;
+		background: hsl(var(--background, 0 0% 100%));
+		border: 1px solid hsl(var(--border, 0 0% 81.6%));
 		border-radius: 6px;
 		font-size: 20px;
 		cursor: pointer;
-		transition: background 0.2s, border-color 0.2s;
 		flex-shrink: 0;
 		display: flex;
 		align-items: center;
@@ -502,8 +554,8 @@
 	}
 
 	.full-streaming-chat__attach-btn:hover:not(:disabled) {
-		background: #f5f5f5;
-		border-color: #007aff;
+		background: hsl(var(--muted, 0 0% 96.1%));
+		border-color: hsl(var(--primary, 211.3 100% 50%));
 	}
 
 	.full-streaming-chat__attach-btn:disabled {
@@ -514,23 +566,23 @@
 	.full-streaming-chat__input {
 		flex: 1;
 		padding: 12px;
-		border: 1px solid #d0d0d0;
+		border: 1px solid hsl(var(--border, 0 0% 81.6%));
 		border-radius: 6px;
 		font-size: 14px;
 		font-family: inherit;
 		resize: none;
 		max-height: 120px;
 		min-height: 44px;
-		background: white;
+		background: hsl(var(--background, 0 0% 100%));
 	}
 
 	.full-streaming-chat__input:focus {
 		outline: none;
-		border-color: #007aff;
+		border-color: hsl(var(--primary, 211.3 100% 50%));
 	}
 
 	.full-streaming-chat__input:disabled {
-		background: #f5f5f5;
+		background: hsl(var(--muted, 0 0% 96.1%));
 		cursor: not-allowed;
 	}
 
@@ -546,7 +598,6 @@
 		font-size: 14px;
 		font-weight: 600;
 		cursor: pointer;
-		transition: opacity 0.2s;
 		white-space: nowrap;
 	}
 
@@ -560,58 +611,16 @@
 	}
 
 	.full-streaming-chat__button--primary {
-		background: #007aff;
-		color: white;
+		background: hsl(var(--primary, 211.3 100% 50%));
+		color: hsl(var(--primary-foreground, 0 0% 100%));
 	}
 
 	.full-streaming-chat__button--secondary {
-		background: #e0e0e0;
-		color: #333;
+		background: hsl(var(--muted, 0 0% 87.8%));
+		color: hsl(var(--foreground, 0 0% 20%));
 	}
 
 	.full-streaming-chat__button--stop {
-		background: #dc2626;
-		color: white;
-	}
-
-	/* Dark mode support */
-	:global(.dark) .full-streaming-chat {
-		background: #1a1a1a;
-		border-color: #333;
-	}
-
-	:global(.dark) .full-streaming-chat__form {
-		background: #222;
-		border-top-color: #333;
-	}
-
-	:global(.dark) .full-streaming-chat__input {
-		background: #2a2a2a;
-		border-color: #444;
-		color: #e0e0e0;
-	}
-
-	:global(.dark) .full-streaming-chat__input:disabled {
-		background: #1a1a1a;
-	}
-
-	:global(.dark) .full-streaming-chat__button--secondary {
-		background: #333;
-		color: #e0e0e0;
-	}
-
-	:global(.dark) .full-streaming-chat__empty {
-		color: #666;
-	}
-
-	:global(.dark) .full-streaming-chat__attach-btn {
-		background: #2a2a2a;
-		border-color: #444;
-		color: #e0e0e0;
-	}
-
-	:global(.dark) .full-streaming-chat__attach-btn:hover:not(:disabled) {
-		background: #333;
-		border-color: #0066cc;
-	}
-</style>
+		background: hsl(var(--destructive, 0 72.2% 50.6%));
+		color: hsl(var(--destructive-foreground, 0 0% 100%));
+	}</style>

@@ -3,6 +3,8 @@ import { TestStore } from '../src/lib/test/test-store.js';
 import { comboboxReducer } from '../src/lib/components/ui/combobox/combobox.reducer.js';
 import {
 	createInitialComboboxState,
+	type ComboboxState,
+	type ComboboxAction,
 	type ComboboxOption
 } from '../src/lib/components/ui/combobox/combobox.types.js';
 
@@ -46,7 +48,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(testOptions),
-					dropdown: { status: 'open' }
+					dropdown: { status: 'open' as const }
 				},
 				reducer: comboboxReducer
 			});
@@ -95,7 +97,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(testOptions),
-					dropdown: { status: 'open' }
+					dropdown: { status: 'open' as const }
 				},
 				reducer: comboboxReducer
 			});
@@ -123,7 +125,7 @@ describe('Combobox', () => {
 			await store.send({ type: 'searchChanged', query: 'ban' }, (state) => {
 				expect(state.searchQuery).toBe('ban');
 				expect(state.filteredOptions).toHaveLength(1);
-				expect(state.filteredOptions[0].label).toBe('Banana');
+				expect(state.filteredOptions[0]!.label).toBe('Banana');
 				expect(state.highlightedIndex).toBe(0);
 			});
 
@@ -147,8 +149,8 @@ describe('Combobox', () => {
 			await store.send({ type: 'searchChanged', query: 'red fruit' }, (state) => {
 				expect(state.searchQuery).toBe('red fruit');
 				expect(state.filteredOptions).toHaveLength(2);
-				expect(state.filteredOptions[0].label).toBe('Apple');
-				expect(state.filteredOptions[1].label).toBe('Cherry');
+				expect(state.filteredOptions[0]!.label).toBe('Apple');
+				expect(state.filteredOptions[1]!.label).toBe('Cherry');
 			});
 		});
 
@@ -217,8 +219,11 @@ describe('Combobox', () => {
 				{ value: '1', label: `Result: ${query}` }
 			]);
 
-			const store = new TestStore({
-				initialState: createInitialComboboxState([], null, 300),
+			// Explicit `<string>`: `createInitialComboboxState([], null, 300)` gets no
+			// options to infer from, so `T` lands on `null` and the reducer — which
+			// is `ComboboxState<string>` — stops being assignable.
+			const store = new TestStore<ComboboxState<string>, ComboboxAction>({
+				initialState: createInitialComboboxState<string>([], null, 300),
 				reducer: comboboxReducer,
 				dependencies: { loadOptions }
 			});
@@ -237,8 +242,11 @@ describe('Combobox', () => {
 				{ value: '1', label: `Result: ${query}` }
 			]);
 
-			const store = new TestStore({
-				initialState: createInitialComboboxState([], null, 300),
+			// Explicit `<string>`: `createInitialComboboxState([], null, 300)` gets no
+			// options to infer from, so `T` lands on `null` and the reducer — which
+			// is `ComboboxState<string>` — stops being assignable.
+			const store = new TestStore<ComboboxState<string>, ComboboxAction>({
+				initialState: createInitialComboboxState<string>([], null, 300),
 				reducer: comboboxReducer,
 				dependencies: { loadOptions }
 			});
@@ -284,8 +292,11 @@ describe('Combobox', () => {
 				{ value: '1', label: `Result: ${query}` }
 			]);
 
-			const store = new TestStore({
-				initialState: createInitialComboboxState([], null, 300),
+			// Explicit `<string>`: `createInitialComboboxState([], null, 300)` gets no
+			// options to infer from, so `T` lands on `null` and the reducer — which
+			// is `ComboboxState<string>` — stops being assignable.
+			const store = new TestStore<ComboboxState<string>, ComboboxAction>({
+				initialState: createInitialComboboxState<string>([], null, 300),
 				reducer: comboboxReducer,
 				dependencies: { loadOptions }
 			});
@@ -306,7 +317,7 @@ describe('Combobox', () => {
 			await store.receive({ type: 'loadingCompleted' }, (state) => {
 				expect(state.isLoading).toBe(false);
 				expect(state.filteredOptions).toHaveLength(1);
-				expect(state.filteredOptions[0].label).toBe('Result: test');
+				expect(state.filteredOptions[0]!.label).toBe('Result: test');
 			});
 
 			expect(loadOptions).toHaveBeenCalledWith('test');
@@ -318,8 +329,11 @@ describe('Combobox', () => {
 				{ value: '1', label: `Result: ${query}` }
 			]);
 
-			const store = new TestStore({
-				initialState: createInitialComboboxState([], null, 300),
+			// Explicit `<string>`: `createInitialComboboxState([], null, 300)` gets no
+			// options to infer from, so `T` lands on `null` and the reducer — which
+			// is `ComboboxState<string>` — stops being assignable.
+			const store = new TestStore<ComboboxState<string>, ComboboxAction>({
+				initialState: createInitialComboboxState<string>([], null, 300),
 				reducer: comboboxReducer,
 				dependencies: { loadOptions }
 			});
@@ -376,7 +390,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(testOptions),
-					dropdown: { status: 'open' }
+					dropdown: { status: 'open' as const }
 				},
 				reducer: comboboxReducer
 			});
@@ -415,7 +429,18 @@ describe('Combobox', () => {
 			const onChange = vi.fn();
 
 			const store = new TestStore({
-				initialState: { ...createInitialComboboxState(testOptions), selected: '2' },
+				// Seeded dirty on purpose. This started from a pristine state, where
+				// every assertion below was already true before the action ran — so a
+				// `cleared` that preserved the search instead of resetting it passed.
+				// Verified by mutation: swapping the resets for `state.searchQuery` &c.
+				// left all 41 tests green.
+				initialState: {
+					...createInitialComboboxState(testOptions),
+					selected: '2',
+					searchQuery: 'App',
+					filteredOptions: [testOptions[0]!],
+					highlightedIndex: 0
+				},
 				reducer: comboboxReducer,
 				dependencies: { onChange }
 			});
@@ -436,7 +461,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(testOptions),
-					dropdown: { status: 'open' },
+					dropdown: { status: 'open' as const },
 					highlightedIndex: 0
 				},
 				reducer: comboboxReducer
@@ -451,7 +476,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(testOptions),
-					dropdown: { status: 'open' },
+					dropdown: { status: 'open' as const },
 					highlightedIndex: 2
 				},
 				reducer: comboboxReducer
@@ -466,7 +491,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(testOptions),
-					dropdown: { status: 'open' },
+					dropdown: { status: 'open' as const },
 					highlightedIndex: 4
 				},
 				reducer: comboboxReducer
@@ -481,7 +506,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(testOptions),
-					dropdown: { status: 'open' },
+					dropdown: { status: 'open' as const },
 					highlightedIndex: 0
 				},
 				reducer: comboboxReducer
@@ -496,7 +521,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(testOptions),
-					dropdown: { status: 'open' },
+					dropdown: { status: 'open' as const },
 					highlightedIndex: 3
 				},
 				reducer: comboboxReducer
@@ -511,7 +536,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(testOptions),
-					dropdown: { status: 'open' },
+					dropdown: { status: 'open' as const },
 					highlightedIndex: 1
 				},
 				reducer: comboboxReducer
@@ -526,7 +551,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(testOptions),
-					dropdown: { status: 'open' },
+					dropdown: { status: 'open' as const },
 					highlightedIndex: 2
 				},
 				reducer: comboboxReducer
@@ -557,7 +582,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(optionsWithDisabled),
-					dropdown: { status: 'open' },
+					dropdown: { status: 'open' as const },
 					highlightedIndex: 0
 				},
 				reducer: comboboxReducer
@@ -644,7 +669,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(disabledOptions),
-					dropdown: { status: 'open' }
+					dropdown: { status: 'open' as const }
 				},
 				reducer: comboboxReducer
 			});
@@ -664,7 +689,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(singleOption),
-					dropdown: { status: 'open' },
+					dropdown: { status: 'open' as const },
 					highlightedIndex: 0
 				},
 				reducer: comboboxReducer
@@ -707,7 +732,7 @@ describe('Combobox', () => {
 			const store = new TestStore({
 				initialState: {
 					...createInitialComboboxState(optionsWithDisabled),
-					dropdown: { status: 'open' },
+					dropdown: { status: 'open' as const },
 					highlightedIndex: 1
 				},
 				reducer: comboboxReducer
@@ -731,6 +756,103 @@ describe('Combobox', () => {
 
 			await store.send({ type: 'highlightChanged', index: -5 }, (state) => {
 				expect(state.highlightedIndex).toBe(-1);
+			});
+		});
+	});
+	describe('External prop sync', () => {
+		// `Combobox.svelte` mirrored its `value` prop into the store by writing
+		// `store.state.selected = value` directly. `state` is `$state.raw` behind a
+		// getter with no setter, so the write landed on the underlying object,
+		// notified no subscriber, and skipped the reducer entirely — which is why
+		// the search query and the filtering it produced were never reset. It was
+		// the last direct state write in the repo.
+		it('applies an externally changed value', async () => {
+			const store = new TestStore({
+				initialState: createInitialComboboxState(testOptions, '1'),
+				reducer: comboboxReducer
+			});
+
+			await store.send({ type: 'valueChanged', value: '2' }, (state) => {
+				expect(state.selected).toBe('2');
+			});
+
+			store.assertNoPendingActions();
+		});
+
+		it('clears an active search and its filtering', async () => {
+			// The half a direct mutation could never have done, and the reason the
+			// dispatch matters rather than being a stylistic preference.
+			const store = new TestStore({
+				initialState: {
+					...createInitialComboboxState(testOptions, '1'),
+					searchQuery: 'App',
+					filteredOptions: [testOptions[0]!],
+					highlightedIndex: 0
+				},
+				reducer: comboboxReducer
+			});
+
+			await store.send({ type: 'valueChanged', value: '3' }, (state) => {
+				expect(state.selected).toBe('3');
+				expect(state.searchQuery).toBe('');
+				expect(state.filteredOptions).toEqual(testOptions);
+				expect(state.highlightedIndex).toBe(-1);
+			});
+
+			store.assertNoPendingActions();
+		});
+
+		it('returns the identical state object when the value already matches', async () => {
+			const initial = createInitialComboboxState(testOptions, '1');
+			const store = new TestStore({ initialState: initial, reducer: comboboxReducer });
+
+			await store.send({ type: 'valueChanged', value: '1' });
+
+			// Reference identity, not deep equality: `dispatchCore` only notifies
+			// subscribers when `!Object.is(state, newState)`, and the component
+			// dispatches this from an `$effect` that reads store state. A fresh
+			// object here re-triggers that effect forever. Deep equality would pass
+			// on the loop-causing version.
+			expect(store.state).toBe(initial);
+			store.assertNoPendingActions();
+		});
+	});
+
+	describe('Search state resets on close', () => {
+		// Select resets both `searchQuery` and `filteredOptions` when the dropdown
+		// closes or an option is picked (select.reducer.ts:147,177). Combobox reset
+		// only the query, so: type "App", pick Apple, reopen — a one-item list with
+		// an empty search box.
+		it('optionSelected clears the filtering, not just the query', async () => {
+			const store = new TestStore({
+				initialState: {
+					...createInitialComboboxState(testOptions),
+					searchQuery: 'App',
+					filteredOptions: [testOptions[0]!]
+				},
+				reducer: comboboxReducer
+			});
+
+			await store.send({ type: 'optionSelected', value: '1' }, (state) => {
+				expect(state.searchQuery).toBe('');
+				expect(state.filteredOptions).toEqual(testOptions);
+			});
+		});
+
+		it('closingCompleted clears the filtering, not just the query', async () => {
+			const store = new TestStore({
+				initialState: {
+					...createInitialComboboxState(testOptions),
+					searchQuery: 'App',
+					filteredOptions: [testOptions[0]!],
+					dropdown: { status: 'closing' as const }
+				},
+				reducer: comboboxReducer
+			});
+
+			await store.send({ type: 'closingCompleted' }, (state) => {
+				expect(state.searchQuery).toBe('');
+				expect(state.filteredOptions).toEqual(testOptions);
 			});
 		});
 	});

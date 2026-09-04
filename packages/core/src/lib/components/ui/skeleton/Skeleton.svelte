@@ -31,12 +31,12 @@
 		 * - circle: Circular shape (for avatars)
 		 * - text: Thin line (for text placeholders)
 		 */
-		variant?: 'default' | 'circle' | 'text';
+		variant?: 'default' | 'circle' | 'text' | undefined;
 
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 	}
 
 	let { variant = 'default', class: className, ...restProps }: SkeletonProps = $props();

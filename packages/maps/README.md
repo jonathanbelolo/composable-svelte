@@ -6,13 +6,13 @@
 
 ## Overview
 
-`@composable-svelte/maps` provides state-driven, interactive map components built on top of [Maplibre GL](https://maplibre.org/) (open source) with [Mapbox GL](https://www.mapbox.com/mapbox-gljs) compatibility. All map state is managed using the Composable Architecture patterns from `@composable-svelte/core`.
+`@composable-svelte/maps` provides state-driven, interactive map components built on top of [Maplibre GL](https://maplibre.org/) (open source), with an optional [Mapbox GL](https://www.mapbox.com/mapbox-gl-js) adapter you install and opt into yourself. All map state is managed using the Composable Architecture patterns from `@composable-svelte/core`.
 
 ## Features
 
 - 🗺️ **State-Driven**: All map state managed via reducers (viewport, markers, layers)
 - 🌍 **Open Source**: Built on Maplibre GL (no API key required)
-- 📦 **Mapbox Compatible**: Optional Mapbox GL support for users with API keys
+- 🔌 **Bring your own engine**: `MapAdapter` is a real extension point — MapLibre by default, Mapbox behind `@composable-svelte/maps/mapbox`, or your own
 - 🎨 **Multiple Tile Providers**: Switch between OpenStreetMap, Stadia Maps, CARTO, Maptiler, and more
 - 🖱️ **Interactive**: Pan, zoom, markers, popups
 - 📊 **GeoJSON & Heatmap Layers**: Render polygons, points, and density visualizations
@@ -28,7 +28,7 @@ pnpm add @composable-svelte/maps
 ```
 
 **Peer dependencies**:
-- `@composable-svelte/core` ^0.3.0
+- `@composable-svelte/core` ^0.11.0
 - `svelte` ^5.0.0
 
 ## Quick Start
@@ -83,21 +83,46 @@ const store = createStore({
 });
 ```
 
-### Mapbox GL (Optional)
+### Mapbox GL (optional)
 
-Requires Mapbox API key. Better performance and more features.
+`mapbox-gl` is an **optional peer dependency**: it is not installed unless you
+ask for it, and nothing in this package's root imports it. It also ships under
+the [Mapbox Terms of Service](https://www.mapbox.com/legal/tos), "for use only
+with the relevant Mapbox product(s)", and needs an active Mapbox account — so
+installing it is your decision to make, not this package's.
 
-```typescript
-const store = createStore({
-  initialState: createInitialMapState({
-    provider: 'mapbox',
-    accessToken: process.env.MAPBOX_TOKEN,
-    center: [-74.006, 40.7128],
-    zoom: 12
-  }),
-  reducer: mapReducer
-});
+```bash
+npm install mapbox-gl
 ```
+
+```svelte
+<script lang="ts">
+  import { Map, mapReducer, createInitialMapState } from '@composable-svelte/maps';
+  import { MapboxAdapter } from '@composable-svelte/maps/mapbox';
+  import { createStore } from '@composable-svelte/core';
+
+  const store = createStore({
+    initialState: createInitialMapState({
+      accessToken: import.meta.env.VITE_MAPBOX_TOKEN,
+      center: [-74.006, 40.7128],
+      zoom: 12
+    }),
+    reducer: mapReducer,
+    dependencies: {}
+  });
+</script>
+
+<Map {store} adapter={new MapboxAdapter()} />
+```
+
+The adapter throws if no `accessToken` is set, rather than letting Mapbox answer
+with a 401 that looks like a broken map.
+
+### Any other engine
+
+`MapAdapter` is the whole contract. Implement it and pass it as `adapter` — the
+same route `MapboxAdapter` takes, and the one the tests use to drive
+`MapPrimitive` without a WebGL context.
 
 ## Tile Providers
 
@@ -109,7 +134,7 @@ Switch between different map styles on the fly.
 const store = createStore({
   initialState: createInitialMapState({
     provider: 'maplibre',
-    tileProvider: 'carto-dark',  // 'openstreetmap', 'stadia', 'carto-light', 'carto-dark', 'maptiler', 'mapbox'
+    tileProvider: 'carto-dark',  // 'openstreetmap', 'stadia', 'carto-light', 'carto-dark', 'maptiler'
     center: [-74.006, 40.7128],
     zoom: 12
   }),
@@ -149,8 +174,7 @@ const store = createStore({
 
 ```typescript
 interface MapState {
-  provider: 'maplibre' | 'mapbox';
-  accessToken?: string;
+  accessToken?: string;   // tile provider API key, or Mapbox access token
   viewport: {
     center: [number, number];  // [lng, lat]
     zoom: number;
@@ -173,7 +197,6 @@ type MapAction =
 ```typescript
 // Create initial map state
 function createInitialMapState(config: {
-  provider?: 'maplibre' | 'mapbox';
   accessToken?: string;
   center?: [number, number];
   zoom?: number;
@@ -189,7 +212,7 @@ const mapReducer: Reducer<MapState, MapAction, {}>
 ### Phase 12A: Core Foundation ✅ **COMPLETE**
 - [x] Map component infrastructure
 - [x] MapPrimitive with Maplibre GL integration
-- [x] Mapbox adapter support
+- [x] Injectable map adapters (MapLibre built in, Mapbox opt-in)
 - [x] Basic mapReducer with viewport management
 - [x] Marker support
 - [x] Pan/zoom interactions
@@ -217,8 +240,10 @@ const mapReducer: Reducer<MapState, MapAction, {}>
 
 ## Dependencies
 
-- `maplibre-gl` ^4.7.0 - Open source mapping library
-- `mapbox-gl` ^3.7.0 (optional) - Mapbox GL JS
+- `maplibre-gl` ^4.7.1 — open source mapping library, a real dependency
+- `mapbox-gl` ^3.0.0 — **optional peer**, installed only if you want the Mapbox
+  adapter. It was previously an `optionalDependency`, which npm installs by
+  default, so every consumer received 58 MB of an SDK nothing imported.
 
 ## License
 

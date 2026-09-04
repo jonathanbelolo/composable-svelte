@@ -15,29 +15,58 @@
 	interface Props {
 		message: Message;
 		store: Store<StreamingChatState, StreamingChatAction>;
-		isStreaming?: boolean;
+		isStreaming?: boolean | undefined;
+		/** Forwarded to `ChatMessage`; the list decides. */
+		animateIn?: boolean | undefined;
 		/** Custom label for user messages (default: "You") */
-		userLabel?: string;
+		userLabel?: string | undefined;
 		/** Custom label for assistant messages (default: "Assistant") */
-		assistantLabel?: string;
+		assistantLabel?: string | undefined;
 		/** Avatar URL for user messages */
-		userAvatarUrl?: string;
+		userAvatarUrl?: string | undefined;
 		/** Avatar URL for assistant messages */
-		assistantAvatarUrl?: string;
+		assistantAvatarUrl?: string | undefined;
 	}
 
-	const { message, store, isStreaming = false, userLabel = 'You', assistantLabel = 'Assistant', userAvatarUrl, assistantAvatarUrl }: Props = $props();
+	const { message, store, isStreaming = false, animateIn = false, userLabel = 'You', assistantLabel = 'Assistant', userAvatarUrl, assistantAvatarUrl }: Props = $props();
 
 	// Check if this message is being edited
 	const isEditing = $derived($store.editingMessage?.id === message.id);
+
+	let editTextarea: HTMLTextAreaElement | undefined = $state();
+
+	// Replaces `autofocus`. Runs once per edit session, since the textarea only
+	// exists while editing. Caret at the end rather than 0, matching the prefill
+	// behaviour in FullStreamingChat.
+	$effect(() => {
+		if (!isEditing || !editTextarea) return;
+		editTextarea.focus();
+		const end = editTextarea.value.length;
+		editTextarea.setSelectionRange(end, end);
+	});
 	const editContent = $derived($store.editingMessage?.content ?? '');
 
 	// Reaction picker state
-	let showReactionPicker = $state(false);
+	// One slot in the store, not a boolean per message. Two component-local
+	// booleans meant two stacked full-viewport backdrops, and the first became
+	// unclosable.
+	const picker = $derived($store.reactionPicker);
+	const pickerIsMine = $derived(picker.status !== 'idle' && picker.content === message.id);
+	const pickerOpen = $derived(
+		pickerIsMine && (picker.status === 'presenting' || picker.status === 'presented')
+	);
 
-	// Handle reaction click (toggle or add/remove)
+	// A real toggle. This was byte-identical to `handleAddReaction` below — it
+	// dispatched `addReaction` unconditionally while its comment claimed to
+	// toggle, so a reaction count could only ever go up and `removeReaction` had
+	// no dispatcher anywhere in the repo.
 	function handleReactionClick(emoji: string) {
-		store.dispatch({ type: 'addReaction', messageId: message.id, emoji });
+		const mine = message.reactions?.find((r) => r.emoji === emoji)?.reactedByMe;
+		store.dispatch({
+			type: mine ? 'removeReaction' : 'addReaction',
+			messageId: message.id,
+			emoji
+		});
 	}
 
 	// Handle adding reaction from picker
@@ -50,10 +79,16 @@
 	<!-- Edit mode for user messages -->
 	<div class="chat-message chat-message--editing" data-role="user">
 		<div class="chat-message__header">
-			<span class="chat-message__role">{userLabel} (editing)</span>
+			<!--
+				`senderName` first, as everywhere else. This branch showed the generic
+				label, so a message from "Alice" became "You (editing)" the moment the
+				edit button was pressed and reverted on save.
+			-->
+			<span class="chat-message__role">{message.senderName ?? userLabel} (editing)</span>
 		</div>
 		<div class="chat-message__edit-form">
 			<textarea
+				bind:this={editTextarea}
 				class="chat-message__edit-textarea"
 				value={editContent}
 				oninput={(e) => store.dispatch({
@@ -61,8 +96,7 @@
 					content: (e.target as HTMLTextAreaElement).value
 				})}
 				rows="3"
-				autofocus
-			/>
+			></textarea>
 			<div class="chat-message__edit-actions">
 				<button
 					type="button"
@@ -86,6 +120,7 @@
 	<!-- Normal display mode -->
 	<div class="chat-message-with-actions">
 		<ChatMessage
+		{animateIn}
 			{message}
 			{isStreaming}
 			{userLabel}
@@ -93,20 +128,31 @@
 			{userAvatarUrl}
 			{assistantAvatarUrl}
 			onReactionClick={handleReactionClick}
-			onAddReaction={() => (showReactionPicker = true)}
+			onAddReaction={() => store.dispatch({ type: 'reactionPickerOpened', messageId: message.id })}
 		>
 			{#snippet headerActions()}
 				{#if !isStreaming}
-					<ContextMenu {message} {store} onAddReaction={() => (showReactionPicker = true)} />
+					<ContextMenu {message} {store} onAddReaction={() => store.dispatch({ type: 'reactionPickerOpened', messageId: message.id })} />
 				{/if}
 			{/snippet}
 		</ChatMessage>
 
 		<!-- Reaction Picker -->
 		<ReactionPicker
-			open={showReactionPicker}
+			open={pickerOpen}
+			presentation={pickerIsMine ? picker : undefined}
 			onselect={handleAddReaction}
-			onclose={() => (showReactionPicker = false)}
+			onclose={() => store.dispatch({ type: 'reactionPickerDismissed' })}
+			onPresentationComplete={() =>
+				store.dispatch({
+					type: 'reactionPickerPresentation',
+					event: { type: 'presentationCompleted' }
+				})}
+			onDismissalComplete={() =>
+				store.dispatch({
+					type: 'reactionPickerPresentation',
+					event: { type: 'dismissalCompleted' }
+				})}
 		/>
 	</div>
 {/if}
@@ -121,8 +167,8 @@
 		margin: 8px 0;
 		border-radius: 8px;
 		max-width: 85%;
-		background: #007aff;
-		color: white;
+		background: hsl(var(--primary, 211.3 100% 50%));
+		color: hsl(var(--primary-foreground, 0 0% 100%));
 		margin-left: auto;
 		align-self: flex-end;
 	}
@@ -154,7 +200,7 @@
 		font-size: 14px;
 		font-family: inherit;
 		background: rgba(255, 255, 255, 0.95);
-		color: #1a1a1a;
+		color: hsl(var(--foreground, 0 0% 10.2%));
 		resize: vertical;
 		min-height: 60px;
 	}
@@ -162,7 +208,7 @@
 	.chat-message__edit-textarea:focus {
 		outline: none;
 		border-color: rgba(255, 255, 255, 0.6);
-		background: white;
+		background: hsl(var(--background, 0 0% 100%));
 	}
 
 	.chat-message__edit-actions {
@@ -178,7 +224,6 @@
 		font-size: 13px;
 		font-weight: 600;
 		cursor: pointer;
-		transition: opacity 0.2s;
 	}
 
 	.chat-message__edit-button:hover:not(:disabled) {
@@ -192,16 +237,10 @@
 
 	.chat-message__edit-button--cancel {
 		background: rgba(255, 255, 255, 0.2);
-		color: white;
+		color: hsl(var(--background, 0 0% 100%));
 	}
 
 	.chat-message__edit-button--save {
-		background: white;
-		color: #007aff;
-	}
-
-	/* Dark mode support */
-	:global(.dark) .chat-message--editing {
-		background: #0066cc;
-	}
-</style>
+		background: hsl(var(--background, 0 0% 100%));
+		color: hsl(var(--primary, 211.3 100% 50%));
+	}</style>

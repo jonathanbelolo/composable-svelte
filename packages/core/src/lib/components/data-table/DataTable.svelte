@@ -17,7 +17,7 @@
 		/**
 		 * Header row content (column headers with sorting controls).
 		 */
-		header?: Snippet;
+		header?: Snippet | undefined;
 
 		/**
 		 * Row rendering snippet (receives row data).
@@ -27,27 +27,27 @@
 		/**
 		 * Optional footer content.
 		 */
-		footer?: Snippet;
+		footer?: Snippet | undefined;
 
 		/**
 		 * Empty state message (default: "No data available").
 		 */
-		emptyMessage?: string;
+		emptyMessage?: string | undefined;
 
 		/**
 		 * Loading message (default: "Loading...").
 		 */
-		loadingMessage?: string;
+		loadingMessage?: string | undefined;
 
 		/**
 		 * Additional CSS classes for the table container.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Additional CSS classes for the table element.
 		 */
-		tableClass?: string;
+		tableClass?: string | undefined;
 
 		/**
 		 * Row identity for the keyed `{#each}`.
@@ -58,7 +58,7 @@
 		 *
 		 * @default (row) => String(row.id)
 		 */
-		getRowId?: (row: T) => string;
+		getRowId?: ((row: T) => string) | undefined;
 	}
 
 	let {

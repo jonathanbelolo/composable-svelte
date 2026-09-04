@@ -9,15 +9,24 @@
 	import { formatFileSize } from '../utils.js';
 
 	interface Props {
+	/**
+	 * Which heading element to render.
+	 *
+	 * The level belongs to the page, not to the component: put this under an
+	 * `<h2>` and a fixed `<h3>` jumps the outline, which no consumer can fix from
+	 * the outside. Defaults to the level it has always rendered, so nothing
+	 * changes for anyone who does not pass it.
+	 */
+	headingLevel?: 1 | 2 | 3 | 4 | 5 | 6 | undefined;
 		/** File attachment to display */
 		attachment: MessageAttachment;
 		/** Optional class name */
-		class?: string;
+		class?: string | undefined;
 		/** Whether to show download button (default: true) */
-		showDownload?: boolean;
+		showDownload?: boolean | undefined;
 	}
 
-	let { attachment, class: className = '', showDownload = true }: Props = $props();
+	let { attachment, class: className = '', showDownload = true, headingLevel = 3 }: Props = $props();
 
 	// Get file extension
 	const fileExtension = $derived(
@@ -74,9 +83,9 @@
 		<!-- File Info Section -->
 		<div class="file-info-section">
 			<div class="file-details">
-				<h3 class="file-name" title={attachment.filename}>
+				<svelte:element this={`h${headingLevel}`} class="file-name" title={attachment.filename}>
 					{attachment.filename}
-				</h3>
+				</svelte:element>
 				<div class="file-meta">
 					<span class="file-size">{formatFileSize(attachment.size)}</span>
 					<span class="file-type-separator">•</span>
@@ -107,8 +116,8 @@
 	.file-attachment {
 		display: flex;
 		flex-direction: column;
-		background: white;
-		border: 1px solid #e5e7eb;
+		background: hsl(var(--background, 0 0% 100%));
+		border: 1px solid hsl(var(--border, 220 13% 91%));
 		border-radius: 0.5rem;
 		overflow: hidden;
 		max-width: 600px;
@@ -132,8 +141,8 @@
 		justify-content: center;
 		width: 4rem;
 		height: 4rem;
-		background: #f9fafb;
-		border: 1px solid #e5e7eb;
+		background: hsl(var(--muted, 210 20% 98%));
+		border: 1px solid hsl(var(--border, 220 13% 91%));
 		border-radius: 0.5rem;
 	}
 
@@ -147,11 +156,11 @@
 		right: 0.25rem;
 		font-size: 0.625rem;
 		font-weight: 600;
-		color: #6b7280;
-		background: white;
+		color: hsl(var(--muted-foreground, 220 8.9% 46.1%));
+		background: hsl(var(--background, 0 0% 100%));
 		padding: 0.125rem 0.25rem;
 		border-radius: 0.25rem;
-		border: 1px solid #e5e7eb;
+		border: 1px solid hsl(var(--border, 220 13% 91%));
 		line-height: 1;
 	}
 
@@ -175,7 +184,7 @@
 		margin: 0;
 		font-size: 0.9375rem;
 		font-weight: 600;
-		color: #111827;
+		color: hsl(var(--foreground, 220.9 39.3% 11%));
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
@@ -186,7 +195,7 @@
 		align-items: center;
 		gap: 0.5rem;
 		font-size: 0.8125rem;
-		color: #6b7280;
+		color: hsl(var(--muted-foreground, 220 8.9% 46.1%));
 	}
 
 	.file-size {
@@ -194,7 +203,7 @@
 	}
 
 	.file-type-separator {
-		color: #d1d5db;
+		color: hsl(var(--foreground, 216 12.2% 83.9%));
 	}
 
 	.file-type {
@@ -208,27 +217,26 @@
 		align-items: center;
 		gap: 0.5rem;
 		padding: 0.625rem 1rem;
-		background: #3b82f6;
+		background: hsl(var(--primary, 217.2 91.2% 59.8%));
 		border: none;
 		border-radius: 0.375rem;
-		color: white;
+		color: hsl(var(--primary-foreground, 0 0% 100%));
 		font-size: 0.875rem;
 		font-weight: 500;
 		cursor: pointer;
-		transition: background-color 0.15s;
 		flex-shrink: 0;
 	}
 
 	.download-btn:hover {
-		background: #2563eb;
+		background: hsl(var(--primary, 221.2 83.2% 53.3%));
 	}
 
 	.download-btn:active {
-		background: #1d4ed8;
+		background: hsl(var(--primary, 224.3 76.3% 48%));
 	}
 
 	.download-btn:focus-visible {
-		outline: 2px solid #3b82f6;
+		outline: 2px solid hsl(var(--primary, 217.2 91.2% 59.8%));
 		outline-offset: 2px;
 	}
 

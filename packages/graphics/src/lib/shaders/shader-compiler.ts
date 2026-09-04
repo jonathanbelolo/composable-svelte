@@ -205,16 +205,9 @@ export class ShaderCompiler {
 	 *
 	 * @param vertexSource - Vertex shader source
 	 * @param fragmentSource - Fragment shader source
-	 * @param attributeNames - Expected attribute names
-	 * @param uniformNames - Expected uniform names
 	 * @returns Compiled program or error
 	 */
-	compileProgram(
-		vertexSource: string,
-		fragmentSource: string,
-		attributeNames: string[] = [],
-		uniformNames: string[] = []
-	): CompiledProgram | OverlayError {
+	compileProgram(vertexSource: string, fragmentSource: string): CompiledProgram | OverlayError {
 		const gl = this.gl;
 
 		// Compile vertex shader
@@ -248,24 +241,25 @@ export class ShaderCompiler {
 		gl.deleteShader(vertexResult.shader!);
 		gl.deleteShader(fragmentResult.shader!);
 
-		// Cache attribute locations
+		// Cache every location the *program* has, rather than the ones the caller
+		// happened to name.
+		//
+		// This used to walk `attributeNames`/`uniformNames`, a list assembled at
+		// registration from the shader object's `uniforms` keys. Anything the
+		// shader declared but that list omitted had no cached location, and
+		// `setUniform` warns and returns on a miss — so `updateUniforms` could
+		// never introduce a uniform, and it warned once per uniform per frame
+		// while failing. Asking the linked program is both correct and shorter.
 		const attributes = new Map<string, number>();
-		for (const name of attributeNames) {
-			const location = gl.getAttribLocation(program, name);
-			if (location >= 0) {
-				attributes.set(name, location);
-			}
-			// Note: Attributes not found are silently ignored (shader may not use them)
+		for (const attribute of this.getActiveAttributes(program)) {
+			attributes.set(attribute.name, attribute.location);
 		}
 
-		// Cache uniform locations
 		const uniforms = new Map<string, WebGLUniformLocation>();
-		for (const name of uniformNames) {
-			const location = gl.getUniformLocation(program, name);
-			if (location) {
-				uniforms.set(name, location);
+		for (const uniform of this.getActiveUniforms(program)) {
+			if (uniform.location) {
+				uniforms.set(uniform.name, uniform.location);
 			}
-			// Note: Uniforms not found are silently ignored (shader may not use them)
 		}
 
 		return {

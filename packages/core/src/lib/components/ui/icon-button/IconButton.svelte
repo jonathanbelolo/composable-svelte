@@ -36,37 +36,37 @@
 		/**
 		 * Visual variant.
 		 */
-		variant?: 'default' | 'primary' | 'secondary' | 'destructive' | 'outline' | 'ghost';
+		variant?: 'default' | 'primary' | 'secondary' | 'destructive' | 'outline' | 'ghost' | undefined;
 
 		/**
 		 * Size of the button.
 		 */
-		size?: 'sm' | 'md' | 'lg';
+		size?: 'sm' | 'md' | 'lg' | undefined;
 
 		/**
 		 * Disabled state.
 		 */
-		disabled?: boolean;
+		disabled?: boolean | undefined;
 
 		/**
 		 * Loading state.
 		 */
-		loading?: boolean;
+		loading?: boolean | undefined;
 
 		/**
 		 * Reducer action to dispatch on click.
 		 */
-		action?: Action;
+		action?: Action | undefined;
 
 		/**
 		 * Dispatch function from store.
 		 */
-		dispatch?: Dispatch<Action>;
+		dispatch?: Dispatch<Action> | undefined;
 
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Icon content (must provide aria-label for accessibility).
@@ -88,7 +88,7 @@
 	}: IconButtonProps<Action> = $props();
 
 	const baseClasses =
-		'inline-flex items-center justify-center rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50';
+		'inline-flex items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50';
 
 	const variantClasses = {
 		default: 'bg-primary text-primary-foreground hover:bg-primary/90',

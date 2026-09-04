@@ -14,7 +14,7 @@ import type {
 	CodeHighlightState,
 	CodeHighlightAction,
 	CodeHighlightDependencies
-} from './code-highlight.types';
+} from './code-highlight.types.js';
 
 /**
  * CodeHighlight reducer
@@ -126,10 +126,17 @@ export const codeHighlightReducer: Reducer<
 			];
 
 		case 'copyFailed':
-			return [{ ...state, copyStatus: 'failed' }, Effect.none()];
+			// Keeps the message and schedules a reset, mirroring `copyCompleted`.
+			// It used to drop `action.error` and leave `copyStatus` at 'failed'
+			// forever — and 'failed' rendered as "Copy", so a denied clipboard was
+			// indistinguishable from never having tried.
+			return [
+				{ ...state, copyStatus: 'failed', copyError: action.error },
+				Effect.afterDelay(2000, (dispatch) => dispatch({ type: 'resetCopyStatus' }))
+			];
 
 		case 'resetCopyStatus':
-			return [{ ...state, copyStatus: 'idle' }, Effect.none()];
+			return [{ ...state, copyStatus: 'idle', copyError: null }, Effect.none()];
 
 		case 'toggleLineNumbers':
 			return [{ ...state, showLineNumbers: !state.showLineNumbers }, Effect.none()];

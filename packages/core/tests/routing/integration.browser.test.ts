@@ -8,7 +8,7 @@
  * @vitest-environment jsdom
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createStore } from '../../src/lib/store.svelte';
 import { Effect } from '../../src/lib/effect';
 import type { Reducer } from '../../src/lib/types';
@@ -71,14 +71,14 @@ const parserConfig: ParserConfig<InventoryDestination> = {
 		(path) => {
 			const params = matchPath('/item-:itemId/edit', path);
 			if (params) {
-				return { type: 'edit', state: { itemId: params.itemId } };
+				return { type: 'edit', state: { itemId: params.itemId! } };
 			}
 			return null;
 		},
 		(path) => {
 			const params = matchPath('/item-:itemId', path);
 			if (params) {
-				return { type: 'detail', state: { itemId: params.itemId } };
+				return { type: 'detail', state: { itemId: params.itemId! } };
 			}
 			return null;
 		},
@@ -244,7 +244,7 @@ describe('Routing Integration', () => {
 
 			// URL should reflect final state
 			expect(window.location.pathname).toBe('/inventory/item-3');
-			expect(store.state.destination?.state.itemId).toBe('3');
+			expect(store.state.destination).toEqual({ type: 'detail', state: { itemId: '3' } });
 		});
 	});
 
@@ -366,14 +366,14 @@ describe('Routing Integration', () => {
 			await new Promise((resolve) => setTimeout(resolve, 50));
 
 			expect(window.location.pathname).toBe('/inventory/item-abc');
-			expect(store.state.destination?.state.itemId).toBe('abc');
+			expect(store.state.destination).toEqual({ type: 'detail', state: { itemId: 'abc' } });
 
 			// 2. URL → State: Browser navigation
 			history.pushState(null, '', '/inventory/item-xyz');
 			window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
 			await new Promise((resolve) => setTimeout(resolve, 50));
 
-			expect(store.state.destination?.state.itemId).toBe('xyz');
+			expect(store.state.destination).toEqual({ type: 'detail', state: { itemId: 'xyz' } });
 
 			// 3. State → URL: Another action
 			store.dispatch({ type: 'editTapped', itemId: 'xyz' });
@@ -393,18 +393,29 @@ describe('Routing Integration', () => {
 			cleanup();
 		});
 
-		it('prevents infinite loops', async () => {
-			const defaultState: InventoryState = {
-				destination: null,
-				items: [],
-				searchQuery: ''
+		it('ignores the popstate that follows its own pushState', async () => {
+			// The guard under test is the popstate handler in browser-history.ts: a
+			// popstate carrying our own metadata within 50 ms of our pushState is
+			// ours, and dispatching for it would loop. A pushState never fires
+			// popstate by itself, so the earlier form of this test — dispatch, wait,
+			// count history writes — never reached that branch and passed with the
+			// guard deleted. The popstate is now fired by hand: once inside the
+			// window, once outside it.
+			const seen: InventoryAction[] = [];
+			const recording: Reducer<InventoryState, InventoryAction, {}> = (state, action, deps) => {
+				seen.push(action);
+				return inventoryReducer(state, action, deps);
 			};
-
 			const store = createStore({
-				initialState: defaultState,
-				reducer: inventoryReducer,
+				initialState: { destination: null, items: [], searchQuery: '' } as InventoryState,
+				reducer: recording,
 				dependencies: {}
 			});
+
+			// Installed before syncBrowserHistory, which wraps history.pushState and
+			// calls through to whatever was there — this spy, which calls through to
+			// the real method, so the URL still changes.
+			const pushes = vi.spyOn(history, 'pushState');
 
 			const cleanup = syncBrowserHistory(store, {
 				parse: (path) => parseDestination(path, parserConfig),
@@ -412,17 +423,28 @@ describe('Routing Integration', () => {
 				destinationToAction
 			});
 
-			// Dispatch action (will trigger URL update with metadata flag)
 			store.dispatch({ type: 'itemSelected', itemId: '123' });
-			await new Promise((resolve) => setTimeout(resolve, 50));
+			await new Promise((resolve) => setTimeout(resolve, 10));
 
-			// URL was updated, but popstate handler should ignore it (metadata flag)
 			expect(window.location.pathname).toBe('/inventory/item-123');
-			expect(store.state.destination?.state.itemId).toBe('123');
+			expect(pushes).toHaveBeenCalledTimes(1);
+			expect(seen).toHaveLength(1);
 
-			// No loop should occur (test passes if no infinite recursion)
+			// Inside the window: ours, so ignored.
+			window.dispatchEvent(new PopStateEvent('popstate', { state: { composableSvelteSync: true } }));
+			await new Promise((resolve) => setTimeout(resolve, 10));
+			expect(seen, 'the popstate after our own pushState was dispatched for').toHaveLength(1);
+
+			// Outside the window: a real navigation to the same URL, handled. Without
+			// this the arm above passes against a handler that never dispatches.
+			await new Promise((resolve) => setTimeout(resolve, 60));
+			window.dispatchEvent(new PopStateEvent('popstate', { state: { composableSvelteSync: true } }));
+			await new Promise((resolve) => setTimeout(resolve, 10));
+			expect(seen).toHaveLength(2);
+			expect(seen[1]).toEqual({ type: 'itemSelected', itemId: '123' });
 
 			cleanup();
+			pushes.mockRestore();
 		});
 	});
 
@@ -477,7 +499,7 @@ describe('Routing Integration', () => {
 
 			// Items should be preserved
 			expect(store.state.items).toHaveLength(1);
-			expect(store.state.items[0].id).toBe('456');
+			expect(store.state.items[0]!.id).toBe('456');
 		});
 
 		it('falls back to default state for invalid URL', () => {
@@ -569,7 +591,7 @@ describe('Routing Integration', () => {
 			await new Promise((resolve) => setTimeout(resolve, 50));
 
 			// Destination remains (orphaned state - app logic could handle this)
-			expect(store.state.destination?.state.itemId).toBe('1');
+			expect(store.state.destination).toEqual({ type: 'detail', state: { itemId: '1' } });
 			expect(store.state.items).toHaveLength(0);
 		});
 
@@ -609,8 +631,8 @@ describe('Routing Integration', () => {
 			window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
 			await new Promise((resolve) => setTimeout(resolve, 50));
 
-			expect(store1.state.destination?.state.itemId).toBe('multi');
-			expect(store2.state.destination?.state.itemId).toBe('multi');
+			expect(store1.state.destination).toEqual({ type: 'detail', state: { itemId: 'multi' } });
+			expect(store2.state.destination).toEqual({ type: 'detail', state: { itemId: 'multi' } });
 
 			cleanup1();
 			cleanup2();
@@ -667,7 +689,7 @@ describe('Routing Integration', () => {
 			await new Promise((resolve) => setTimeout(resolve, 50));
 
 			expect(window.location.pathname).toBe('/inventory/item-1000');
-			expect(store.state.destination?.state.itemId).toBe('1000');
+			expect(store.state.destination).toEqual({ type: 'detail', state: { itemId: '1000' } });
 
 			// 4. User searches (URL unchanged)
 			store.dispatch({ type: 'searchChanged', query: 'another' });

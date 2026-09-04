@@ -15,12 +15,12 @@
     <div class="flex items-center gap-3">
       <button
         onclick={() => {/* TODO: Navigate home */}}
-        class="flex items-center gap-3 hover:opacity-80 transition-opacity"
+        class="flex items-center gap-3 hover:opacity-80"
       >
         <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
           <span class="text-primary-foreground font-bold text-lg">CS</span>
         </div>
-        <h1 class="text-xl font-bold">Component Showcase</h1>
+        <span class="text-xl font-bold">Component Showcase</span>
       </button>
     </div>
 
@@ -29,7 +29,7 @@
       <!-- Theme Toggle -->
       <button
         onclick={onThemeToggle}
-        class="w-10 h-10 rounded-lg hover:bg-accent flex items-center justify-center transition-colors"
+        class="w-10 h-10 rounded-lg hover:bg-accent flex items-center justify-center"
         aria-label="Toggle theme"
         title="Toggle theme"
       >

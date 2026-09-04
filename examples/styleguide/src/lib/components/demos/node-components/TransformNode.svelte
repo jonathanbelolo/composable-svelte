@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { Handle, Position } from '@xyflow/svelte';
-	import type { NodeProps } from '@xyflow/svelte';
+	import type { Node, NodeProps } from '@xyflow/svelte';
 
-	interface TransformNodeData {
+	interface TransformNodeData extends Record<string, unknown> {
 		operation: 'uppercase' | 'lowercase' | 'reverse';
 	}
 
-	type Props = NodeProps<TransformNodeData>;
+	type Props = NodeProps<Node<TransformNodeData>>;
 	const { data }: Props = $props();
 </script>
 

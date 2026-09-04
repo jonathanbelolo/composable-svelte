@@ -255,28 +255,6 @@ export function validateFileType(file: File, acceptedTypes: string[]): boolean {
 }
 
 /**
- * Create a data URL from a file (for previews).
- *
- * @param file - File to convert
- * @returns Promise resolving to data URL
- */
-export function createFileDataURL(file: File): Promise<string> {
-	return new Promise((resolve, reject) => {
-		const reader = new FileReader();
-
-		reader.onload = () => {
-			resolve(reader.result as string);
-		};
-
-		reader.onerror = () => {
-			reject(new Error('Failed to read file'));
-		};
-
-		reader.readAsDataURL(file);
-	});
-}
-
-/**
  * Create a blob URL from a file (for previews).
  *
  * @param file - File to convert

@@ -5,12 +5,25 @@
 
 /**
  * Supported tile providers
+ *
+ * `'mapbox'` was removed. Its style URL was `mapbox://styles/mapbox/streets-v12`,
+ * and MapLibre cannot resolve that scheme — its bundle contains no reference to
+ * `mapbox://`, and its request path takes `http(s):`/`file:` or a handler
+ * registered through `addProtocol`, of which none is. The style request was
+ * never made, so the entry did not degrade to an unstyled map, it broke one.
+ * `getAvailableTileProviders` offered it, `TileProviderControl` put it in a
+ * dropdown, and the styleguide's MapDemo renders that control.
+ *
+ * Its `requiresAPIKey: true` was hollow besides: `getStyleURL` only passes the
+ * key to providers whose `styleURL` is a function, and this one's was a string.
+ *
+ * Mapbox styles need the Mapbox SDK, which is what `MapboxAdapter` in
+ * `@composable-svelte/maps/mapbox` is for.
  */
 export type TileProvider =
   | 'openstreetmap'
   | 'stadia'
   | 'maptiler'
-  | 'mapbox'
   | 'carto-light'
   | 'carto-dark'
   | 'custom';
@@ -60,14 +73,6 @@ export const TILE_PROVIDERS: Record<TileProvider, TileProviderConfig> = {
     description: 'Professional map style from Maptiler (requires API key)'
   },
 
-  'mapbox': {
-    id: 'mapbox',
-    name: 'Mapbox Streets',
-    styleURL: 'mapbox://styles/mapbox/streets-v12',
-    attribution: '© Mapbox © OpenStreetMap contributors',
-    requiresAPIKey: true,
-    description: 'Official Mapbox streets style (requires API key)'
-  },
 
   'carto-light': {
     id: 'carto-light',

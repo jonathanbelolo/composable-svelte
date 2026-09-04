@@ -45,7 +45,7 @@
   <!-- Interactive Demo -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Complete Form Example</h3>
+      <h2 class="text-xl font-semibold mb-2">Complete Form Example</h2>
       <p class="text-muted-foreground text-sm">
         All form components working together
       </p>
@@ -150,7 +150,7 @@
   <!-- Form Summary -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Current Form Values</h3>
+      <h2 class="text-xl font-semibold mb-2">Current Form Values</h2>
       <p class="text-muted-foreground text-sm">
         Live preview of form state
       </p>
@@ -197,7 +197,7 @@
   <!-- Form Components Used -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Components Used</h3>
+      <h2 class="text-xl font-semibold mb-2">Components Used</h2>
       <p class="text-muted-foreground text-sm">
         This form demonstrates all form system components
       </p>

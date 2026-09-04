@@ -10,9 +10,64 @@ import type {
 	CommandState,
 	CommandAction,
 	CommandDependencies,
-	CommandItem
+	CommandItem,
+	CommandGroup
 } from './command.types.js';
-import { defaultFilterFunction, getSelectedCommand } from './command.types.js';
+import { applyFilter, getSelectedCommand } from './command.types.js';
+
+/**
+ * Whether two command lists are equivalent.
+ *
+ * `Command.svelte` dispatches `commandsUpdated` from an unguarded `$effect`,
+ * and `dispatch` reads store state inside that effect's tracking scope — so
+ * returning a fresh state object on every dispatch re-triggers the effect
+ * forever (`effect_update_depth_exceeded`). Comparing by reference is not
+ * enough: `commands={[...]}` inline is a new array on every render.
+ */
+function sameKeywords(a: string[] | undefined, b: string[] | undefined): boolean {
+	if (a === b) return true;
+	if (!a || !b) return false;
+	return a.length === b.length && a.every((keyword, i) => keyword === b[i]);
+}
+
+function sameCommands(a: CommandItem[], b: CommandItem[]): boolean {
+	if (a === b) return true;
+	if (a.length !== b.length) return false;
+	return a.every((command, i) => {
+		const other = b[i]!;
+		return (
+			command.id === other.id &&
+			command.label === other.label &&
+			command.description === other.description &&
+			command.group === other.group &&
+			command.disabled === other.disabled &&
+			// `icon` and `shortcut` are compared because `CommandList` now renders
+			// them from store state — before it did, a change to either was
+			// invisible and harmless; now it would leave stale pixels on screen.
+			command.icon === other.icon &&
+			command.shortcut === other.shortcut &&
+			// `onSelect`/`action` decide what EXECUTING does, and `keywords` what
+			// matches. A change to any of them that the guard swallowed left the
+			// store running a stale closure or filtering on stale terms.
+			command.onSelect === other.onSelect &&
+			command.action === other.action &&
+			sameKeywords(command.keywords, other.keywords)
+		);
+	});
+}
+
+/**
+ * Are two group lists equal by value?
+ *
+ * Same reasoning as `sameCommands` — `groups={[...]}` inline is a fresh array
+ * every render, and `groups` now travels in the same guarded effect.
+ */
+function sameGroups(a: CommandGroup[] | undefined, b: CommandGroup[] | undefined): boolean {
+	if (a === b) return true;
+	if (!a || !b) return false;
+	if (a.length !== b.length) return false;
+	return a.every((group, i) => group.id === b[i]!.id && group.label === b[i]!.label);
+}
 
 /**
  * Command Palette Reducer.
@@ -48,7 +103,7 @@ export const commandReducer: Reducer<CommandState, CommandAction, CommandDepende
 					...state,
 					isOpen: true,
 					query: '',
-					filteredCommands: state.commands,
+					filteredCommands: applyFilter(state, state.commands, '', deps),
 					selectedIndex: 0,
 					presentation: {
 						status: 'presenting',
@@ -96,7 +151,7 @@ export const commandReducer: Reducer<CommandState, CommandAction, CommandDepende
 					...state,
 					isOpen: false,
 					query: '',
-					filteredCommands: state.commands,
+					filteredCommands: applyFilter(state, state.commands, '', deps),
 					selectedIndex: 0,
 					presentation: { status: 'idle' }
 				},
@@ -104,27 +159,8 @@ export const commandReducer: Reducer<CommandState, CommandAction, CommandDepende
 			];
 		}
 
-		case 'toggled': {
-			// Toggle by dispatching open or close
-			const newIsOpen = !state.isOpen;
-
-			if (newIsOpen) {
-				// Dispatch 'opened' action to trigger animation
-				return commandReducer(state, { type: 'opened' }, deps);
-			} else {
-				// Dispatch 'closed' action to trigger animation
-				return commandReducer(state, { type: 'closed' }, deps);
-			}
-		}
-
 		case 'queryChanged': {
-			const filterFn = deps?.filterFunction ?? defaultFilterFunction;
-			let filtered = filterFn(state.commands, action.query);
-
-			// Apply max results limit
-			if (state.maxResults && filtered.length > state.maxResults) {
-				filtered = filtered.slice(0, state.maxResults);
-			}
+			const filtered = applyFilter(state, state.commands, action.query, deps);
 
 			return [
 				{
@@ -139,18 +175,32 @@ export const commandReducer: Reducer<CommandState, CommandAction, CommandDepende
 		}
 
 		case 'commandsUpdated': {
-			const filterFn = deps?.filterFunction ?? defaultFilterFunction;
-			let filtered = filterFn(action.commands, state.query);
-
-			// Apply max results limit
-			if (state.maxResults && filtered.length > state.maxResults) {
-				filtered = filtered.slice(0, state.maxResults);
+			// Guard FIRST, before computing anything. This is dispatched from an
+			// unguarded `$effect`, and `commands={[...]}` / `groups={[...]}`
+			// inline are fresh arrays every render, so returning the identical
+			// state is what stops that effect re-triggering forever.
+			//
+			// Computing before the guard also ran `deps.filterFunction` on the
+			// converging dispatch — measured at 2 calls per change for a
+			// consumer's filter, which for an expensive one is real waste.
+			if (sameCommands(state.commands, action.commands) && sameGroups(state.groups, action.groups)) {
+				return [state, Effect.none()];
 			}
+
+			// `groups` is assigned unconditionally, including to undefined.
+			// Writing it only when defined meant clearing groups produced a fresh
+			// state object forever while `groups` never actually cleared — not a
+			// stale value but an unterminating loop.
+			const nextState: CommandState = {
+				...state,
+				commands: action.commands,
+				groups: action.groups
+			};
+			const filtered = applyFilter(nextState, action.commands, state.query, deps);
 
 			return [
 				{
-					...state,
-					commands: action.commands,
+					...nextState,
 					filteredCommands: filtered,
 					selectedIndex: Math.min(state.selectedIndex, filtered.length - 1)
 				},
@@ -227,7 +277,7 @@ export const commandReducer: Reducer<CommandState, CommandAction, CommandDepende
 				...state,
 				isOpen: false,
 				query: '',
-				filteredCommands: state.commands,
+				filteredCommands: applyFilter(state, state.commands, '', deps),
 				selectedIndex: 0
 			};
 
@@ -242,7 +292,15 @@ export const commandReducer: Reducer<CommandState, CommandAction, CommandDepende
 				}
 			});
 
-			return [newState, effect];
+			// Route the dismissal through `closed` rather than hand-rolling it.
+			// This case used to set `isOpen: false` and stop, leaving
+			// `presentation` at `presented` — and the markup renders on
+			// `presentation.status !== 'idle'`, so the palette stayed on screen
+			// with the store believing it had closed. Executing a command is the
+			// primary way a palette closes, so this was the most-used route.
+			const [closedState, closeEffect] = commandReducer(newState, { type: 'closed' }, deps);
+
+			return [closedState, Effect.batch(effect, closeEffect)];
 		}
 
 		case 'clearQuery': {
@@ -250,7 +308,7 @@ export const commandReducer: Reducer<CommandState, CommandAction, CommandDepende
 				{
 					...state,
 					query: '',
-					filteredCommands: state.commands,
+					filteredCommands: applyFilter(state, state.commands, '', deps),
 					selectedIndex: 0
 				},
 				Effect.none()
@@ -262,7 +320,7 @@ export const commandReducer: Reducer<CommandState, CommandAction, CommandDepende
 				{
 					...state,
 					query: '',
-					filteredCommands: state.commands,
+					filteredCommands: applyFilter(state, state.commands, '', deps),
 					selectedIndex: 0,
 					isOpen: false,
 					presentation: { status: 'idle' }
@@ -301,7 +359,7 @@ export const commandReducer: Reducer<CommandState, CommandAction, CommandDepende
 						...state,
 						isOpen: false,
 						query: '',
-						filteredCommands: state.commands,
+						filteredCommands: applyFilter(state, state.commands, '', deps),
 						selectedIndex: 0,
 						presentation: { status: 'idle' }
 					},

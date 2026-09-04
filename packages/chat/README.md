@@ -6,12 +6,13 @@ Streaming chat components with collaborative features for Composable Svelte. Bui
 
 - **Transport-agnostic** - Bring your own streaming backend (WebSocket, SSE, REST, etc.)
 - **Three UI tiers** - Minimal, Standard, and Full chat variants for different complexity needs
-- **Markdown rendering** - Built-in markdown support with code highlighting via marked
+- **Markdown rendering** - via `marked`, with optional Prism syntax highlighting
 - **File attachments** - Attach images, documents, and media to messages
 - **Message reactions** - Emoji reactions on messages
 - **Message editing** - Edit and delete sent messages
-- **Collaborative** - Real-time presence tracking, typing indicators, and cursor markers
-- **WebSocket management** - Built-in WebSocket client with reconnection and cleanup
+- **Collaborative** - Real-time presence, typing indicators, and live cursors
+- **Bring your own socket** - You supply `connectWebSocket`; the store owns its
+  teardown, including across reconnects
 - **State-driven** - Full Composable Architecture integration with testable reducers
 - **Customizable** - Custom sender names, avatars, labels, and message rendering
 
@@ -31,7 +32,7 @@ pnpm add @composable-svelte/core svelte
 
 ```bash
 pnpm add @composable-svelte/code   # Code block syntax highlighting
-pnpm add @composable-svelte/media  # Audio/video embeds in messages
+pnpm add @composable-svelte/media  # YouTube/Vimeo/Twitch embeds detected in markdown
 pnpm add prismjs                   # Prism.js syntax highlighting
 pnpm add pdfjs-dist                # PDF attachment previews
 ```
@@ -51,18 +52,25 @@ pnpm add pdfjs-dist                # PDF attachment previews
     initialState: createInitialStreamingChatState(),
     reducer: streamingChatReducer,
     dependencies: {
-      streamMessage: (message, onChunk, onComplete, onError) => {
-        // Connect to your LLM backend
-        const response = await fetch('/api/chat', {
-          method: 'POST',
-          body: JSON.stringify({ message })
-        });
-        const reader = response.body.getReader();
-        // Stream chunks...
-        return new AbortController(); // For cancellation
-      },
-      generateId: () => crypto.randomUUID(),
-      getTimestamp: () => Date.now()
+      streamMessage: (message, onChunk, onComplete, onError, attachments) => {
+        const controller = new AbortController();
+
+        (async () => {
+          try {
+            const response = await fetch('/api/chat', {
+              method: 'POST',
+              body: JSON.stringify({ message, attachments }),
+              signal: controller.signal
+            });
+            // Read response.body and call onChunk(text) per chunk...
+            onComplete();
+          } catch (e) {
+            onError(String(e));
+          }
+        })();
+
+        return controller; // Returned so `stopGeneration` can abort
+      }
     }
   });
 </script>
@@ -92,68 +100,161 @@ Adds message metadata (timestamps, sender info), typing indicators, and scroll m
 
 Complete chat experience with attachments, reactions, editing, and all features enabled.
 
+Attachments and reactions are not feature flags — `FullStreamingChat` is the
+variant that has them.
+
 ```svelte
 <FullStreamingChat
   {store}
   userLabel="You"
   assistantLabel="Assistant"
-  enableAttachments={true}
-  enableReactions={true}
+  maxFileSizeMB={10}
+  acceptedFileTypes={['image/*', 'application/pdf']}
 />
 ```
 
 ### SimpleChatMessage / ChatMessage
 
-Individual message components for custom layouts:
+Individual message components for custom layouts. The role comes from the
+message, not from a prop:
 
 ```svelte
-<ChatMessage message={msg} variant="assistant" showAvatar={true} />
+<ChatMessage message={msg} userLabel="You" assistantLabel="Assistant" />
 ```
+
+`ChatMessage` renders markdown, attachments, reactions, image galleries and
+video embeds. `SimpleChatMessage` renders markdown for assistant messages too,
+with copy buttons on code blocks — it leaves out the attachment, reaction and
+embed machinery, not the formatting.
 
 ## Collaborative Features
 
-For multi-user chat with real-time presence:
+**Collaboration is a second store.** `collaborativeReducer` has its own state —
+`CollaborativeStreamingChatState` does not extend `StreamingChatState`, and the
+chat store has no `users` field. Build both and let each do its own job.
 
 ```svelte
 <script lang="ts">
+  import { onMount } from 'svelte';
+  import { createStore } from '@composable-svelte/core';
   import {
     collaborativeReducer,
+    createInitialCollaborativeState,
     PresenceAvatarStack,
     TypingIndicator,
-    usePresenceTracking,
-    useTypingEmitter,
-    WebSocketManager
+    getActiveUsers,
+    getTypingUsers
   } from '@composable-svelte/chat';
+
+  const currentUserId = 'me';
+
+  const collabStore = createStore({
+    initialState: createInitialCollaborativeState(),
+    reducer: collaborativeReducer,
+    dependencies: {
+      connectWebSocket: (conversationId, userId, onMessage, onConnectionChange) => {
+        // See "Supplying the connection" below. A cleanup is required.
+        const socket = new WebSocket(`wss://chat.example.com/${conversationId}`);
+        socket.onmessage = (e) => onMessage(JSON.parse(e.data));
+        socket.onopen = () => onConnectionChange({ status: 'connected', connectedAt: Date.now() });
+        return () => socket.close();
+      },
+      sendWebSocketMessage: async (message) => {
+        /* send it */
+      }
+    }
+  });
+
+  // Nothing works until this: it is what opens the socket and what tells the
+  // store who you are. Presence, typing and cursors all no-op without it.
+  onMount(() => {
+    collabStore.dispatch({
+      type: 'connectToConversation',
+      conversationId: 'room-1',
+      userId: currentUserId
+    });
+    return () => collabStore.destroy();
+  });
+
+  // Users live in one flat Map — there is no `presence` sub-object. Both
+  // selectors take your own id and leave you out, so nobody is shown their own
+  // presence dot or told that they are typing.
+  const online = $derived(getActiveUsers($collabStore.users, currentUserId));
+  const typing = $derived(getTypingUsers($collabStore.users, currentUserId, 'message'));
 </script>
 
-<!-- Show who's online -->
-<PresenceAvatarStack users={$store.presence.users} />
-
-<!-- Show who's typing -->
-<TypingIndicator users={$store.typing.activeUsers} />
+<PresenceAvatarStack users={online} />
+<TypingIndicator users={typing} />
 ```
+
+### Live cursors
+
+`CursorOverlay` floats other users' carets over your composer. It measures a
+single line, so give it an `<input>` rather than a wrapping `<textarea>`, and it
+must not take pointer events — which is why each marker's name flag is always
+visible rather than shown on hover.
+
+Continuing from the collaborative store above:
+
+```svelte
+<script lang="ts">
+  import { CursorOverlay, getCursorPositions, useCursorTracking } from '@composable-svelte/chat';
+
+  let inputElement = $state<HTMLInputElement | undefined>(undefined);
+  let draft = $state('');
+
+  // Returns its own teardown, which is what an effect wants returned.
+  $effect(() => {
+    if (!inputElement) return;
+    return useCursorTracking(collabStore, inputElement);
+  });
+</script>
+
+<input type="text" bind:this={inputElement} bind:value={draft} />
+{#if inputElement}
+  <CursorOverlay {inputElement} text={draft}
+    cursors={getCursorPositions($collabStore.users, currentUserId)} />
+{/if}
+```
+
+`examples/styleguide`'s Collaborative Chat page is the full working version —
+same wiring, plus seeded users and a mock socket so it runs without a server.
 
 ### Collaborative Hooks
 
-| Hook | Purpose |
-|------|---------|
-| `usePresenceTracking` | Track user online/offline/idle status |
-| `useTypingEmitter` | Broadcast typing start/stop events |
-| `useCursorTracking` | Share cursor position in real-time |
-| `useHeartbeat` | Keep-alive pings for connection health |
+Each takes the **collaborative** store, and each only transmits once
+`connectToConversation` has run. Three return a teardown function;
+`useTypingEmitter` returns an object with one on it.
 
-### WebSocketManager
+| Hook | Signature | Purpose |
+|------|-----------|---------|
+| `usePresenceTracking` | `(store)` | Watches activity and broadcasts `active` / `idle` / `away`. It never reports `offline` — that is a disconnect, not an idle timer. |
+| `useTypingEmitter` | `(store, target, messageId?)` | Returns `{ start, stop, update, cleanup }` rather than a bare teardown |
+| `useCursorTracking` | `(store, element, throttleMs?)` | Shares the caret position in `element` |
+| `useHeartbeat` | `(store, intervalMs?)` | Periodic keep-alive so a server that drops idle connections does not drop a quiet one |
 
-Manages WebSocket lifecycle with automatic reconnection:
+### Supplying the connection
+
+There is no `WebSocketManager`. The socket is yours: pass a `connectWebSocket`
+dependency that opens it and **returns a cleanup function**. The store owns that
+cleanup — `disconnectFromConversation` runs it, re-connecting runs it before
+opening the next one, and destroying the store runs it too.
 
 ```typescript
-import { WebSocketManager } from '@composable-svelte/chat';
-
-const ws = new WebSocketManager('wss://chat.example.com', {
-  reconnect: true,
-  maxRetries: 5
-});
+dependencies: {
+  connectWebSocket: (conversationId, userId, onMessage, onConnectionChange) => {
+    const socket = new WebSocket(`wss://chat.example.com/${conversationId}`);
+    socket.onmessage = (e) => onMessage(JSON.parse(e.data));
+    socket.onopen = () => onConnectionChange({ status: 'connected', connectedAt: Date.now() });
+    return () => socket.close();
+  }
+}
 ```
+
+The return type is `() => void`, not optional: a cleanup is required on every
+path, including the failure path, because the store is what runs it. Reports made
+from inside a cleanup are ignored, so a socket's `onclose` cannot overwrite the
+state of the connection that replaced it.
 
 ## State Management
 
@@ -162,57 +263,155 @@ const ws = new WebSocketManager('wss://chat.example.com', {
 ```typescript
 interface StreamingChatState {
   messages: Message[];
-  currentStreaming: StreamingState | null;
-  pendingAttachments: MessageAttachment[];
-  isLoading: boolean;
+  currentStreaming: { content: string; abortController?: AbortController } | null;
+  isWaitingForResponse: boolean;
   error: string | null;
+  editingMessage: { id: string; content: string } | null;
+  pendingAttachments: MessageAttachment[];
+  /** The message just sent — the one thing on screen that is new rather than
+      merely present, so a restored session does not animate every message in. */
+  lastAppendedId: string | null;
+  attachmentPreview: AttachmentPreviewState;
+  /** One picker for the whole conversation; `content` is the message id. */
+  reactionPicker: PresentationState<string>;
 }
 ```
+
+`createInitialStreamingChatState()` returns all of it. The last three fields are
+lifecycles rather than data — see *Animation* below.
 
 ### Key Actions
 
 | Action | Description |
 |--------|-------------|
-| `sendMessage` | Send a user message and trigger streaming |
-| `addAttachment` / `removeAttachment` | Manage file attachments |
-| `editMessage` / `deleteMessage` | Modify existing messages |
-| `addReaction` / `removeReaction` | Toggle emoji reactions |
-| `cancelStreaming` | Abort in-progress streaming |
-| `restoreMessages` | Restore messages from a previous session |
+| `sendMessage` | Send a user message (`message`, plus optional `attachments`) and start streaming |
+| `stopGeneration` | Abort streaming in progress |
+| `addAttachment` / `removeAttachment` / `clearAttachments` | Manage pending attachments; removal is by `attachmentId` |
+| `startEditingMessage` / `updateEditingContent` / `submitEditedMessage` / `cancelEditing` | The edit cycle — there is no single `editMessage` |
+| `deleteMessage` | Remove a message. Deleting a *user* message also drops everything after it |
+| `addReaction` / `removeReaction` | Toggle an emoji. `addReaction` is idempotent and `removeReaction` refuses a reaction that is not yours |
+| `reactionPickerOpened` / `reactionPickerDismissed` | Open and close the picker |
+| `attachmentPreviewOpened` / `attachmentPreviewDismissed` / `attachmentPreviewRemoveRequested` | The preview modal |
+| `restoreMessages` | Restore a previous session |
+| `clearMessages` / `clearError` | Reset |
 
 ### Dependencies
 
 ```typescript
 interface StreamingChatDependencies {
-  streamMessage: (message: string, onChunk, onComplete, onError) => AbortController;
-  generateId: () => string;
-  getTimestamp: () => number;
+  streamMessage: (
+    message: string,
+    onChunk: (chunk: string) => void,
+    onComplete: () => void,
+    onError: (error: string) => void,
+    /** Attachments, with `uploadFile`'s URLs already resolved. Trailing and
+        optional, so an existing four-parameter implementation still fits. */
+    attachments?: MessageAttachment[]
+  ) => AbortController | void;
+
+  /** Both default: `crypto.randomUUID()` and `Date.now()`. */
+  generateId?: () => string;
+  getTimestamp?: () => number;
+
+  /**
+   * Upload a file and return its URL. Called on **send**, not on attach, so
+   * nothing is uploaded until the user commits. Without it, attachments keep
+   * the blob URLs they were created with, which do not survive a reload.
+   */
+  uploadFile?: (
+    file: File,
+    onProgress?: (loaded: number, total: number) => void
+  ) => Promise<string>;
 }
 ```
+
+An upload that fails does not block the send: the attachment keeps its local URL,
+`uploadStatus` becomes `'error'`, and the message goes out — the sender still
+sees their file, and `uploadError` says why nobody else will.
+
+### Reactions
+
+```typescript
+interface MessageReaction {
+  emoji: string;
+  count: number;
+  /** Whether the current user is one of them. */
+  reactedByMe?: boolean;
+}
+```
+
+One bit rather than the list of who reacted: a popular message would otherwise
+ship thousands of user ids to render "👍 12". It is also why nothing here needs a
+current-user identity — the flag *is* the answer to "did I react?".
+
+### Animation
+
+This package runs no CSS lifecycle animations. Anything that appears, disappears,
+expands or collapses uses a Motion One helper from
+`@composable-svelte/core/animation`, so the store can sequence on it and a test
+can observe it. The two overlays — the attachment preview and the reaction picker
+— carry a `PresentationState` and animate both halves; message entry and the
+image/video fades are fire-and-forget.
+
+`guides/ANIMATION-GUIDELINES.md` is the rule, and
+`packages/core/tests/repo/animation-policy.test.ts` enforces it.
 
 ## Testing
 
 ```typescript
-import { createTestStore } from '@composable-svelte/core';
+import { describe, it, expect } from 'vitest';
+import { createTestStore } from '@composable-svelte/core/test';
 import { streamingChatReducer, createInitialStreamingChatState } from '@composable-svelte/chat';
 
-const store = createTestStore({
-  initialState: createInitialStreamingChatState(),
-  reducer: streamingChatReducer,
-  dependencies: {
-    streamMessage: vi.fn((msg, onChunk, onComplete) => {
-      setTimeout(() => onComplete(), 0);
-      return new AbortController();
-    }),
-    generateId: () => 'test-id',
-    getTimestamp: () => 1000
-  }
-});
+describe('StreamingChat', () => {
+  it('sends a message and receives the reply', async () => {
+    let chunk!: (text: string) => void;
+    let complete!: () => void;
 
-await store.send({ type: 'sendMessage', content: 'Hello' }, (state) => {
-  expect(state.messages).toHaveLength(1);
+    const store = createTestStore({
+      initialState: createInitialStreamingChatState(),
+      reducer: streamingChatReducer,
+      dependencies: {
+        // Hand the callbacks out rather than calling them here: `send` starts
+        // the effect *before* running its assertion, so a fake that streams
+        // synchronously means the whole reply lands first and every line of
+        // that assertion is wrong.
+        streamMessage: (_message, onChunk, onComplete) => {
+          chunk = onChunk;
+          complete = onComplete;
+        },
+        generateId: () => 'test-id',
+        getTimestamp: () => 1000
+      }
+    });
+
+    await store.send({ type: 'sendMessage', message: 'Hello' }, (state) => {
+      expect(state.messages).toHaveLength(1);
+      expect(state.isWaitingForResponse).toBe(true);
+    });
+
+    chunk('Hi');
+    await store.receive({ type: 'chunkReceived', chunk: 'Hi' });
+
+    complete();
+    await store.receive({ type: 'streamComplete' });
+    await store.finish();
+  });
 });
 ```
+
+The full version of this is `packages/chat/tests/teststore-example.test.ts`,
+which runs on every build.
+
+`createMockStreamingChat()` supplies `streamMessage`, `generateId` and
+`getTimestamp`, faking a streamed reply — for demos and for tests that do not
+care about the transport. It supplies no `uploadFile`, so attachments keep their
+local URLs under it.
+
+It fakes a *slow* reply — two to three seconds. `TestStore.receive` times out
+after one second and `finish()` refuses any unasserted action, so a `TestStore`
+driven by this mock needs its own `streamMessage` — like the one above — rather
+than this.
 
 ## API Reference
 
@@ -239,11 +438,27 @@ await store.send({ type: 'sendMessage', content: 'Hello' }, (state) => {
 |----------|-------------|
 | `streamingChatReducer` | Main chat reducer |
 | `createInitialStreamingChatState()` | Create initial state with defaults |
+| `createMockStreamingChat()` | Fakes a streamed reply (`streamMessage`, `generateId`, `getTimestamp`) |
 | `collaborativeReducer` | Reducer for collaborative features |
-| `createMockStreamingChat()` | Mock for testing |
+| `createInitialCollaborativeState()` | Initial state for the above |
+| `getActiveUsers(users, currentUserId)` | Everyone present but you, minus the offline |
+| `getTypingUsers(users, currentUserId, target?)` | Everyone typing but you |
+| `getCursorPositions(users, currentUserId)` | Every caret but yours, for `CursorOverlay` |
+| `formatTypingIndicator(users)` | "Ada is typing", "3 people are typing" — no ellipsis; `TypingIndicator` draws animated dots beside it |
+| `generateRandomUserColor(userId)` | Stable colour from an id |
+
+Markdown helpers — `renderMarkdown`, `extractVideosFromMarkdown`,
+`extractImagesFromMarkdown` — are on the `@composable-svelte/chat/streaming-chat/markdown`
+subpath rather than the root barrel. Video extraction returns `[]` until
+`@composable-svelte/media` has loaded, since that peer is optional and imported
+dynamically.
+
+All three selectors take the current user's id and exclude them: nobody is shown
+their own presence dot, told that they are typing, or given their own caret.
 
 ## Dependencies
 
-- **Runtime**: [marked](https://github.com/markedjs/marked) (markdown parsing)
+- **Runtime**: [marked](https://github.com/markedjs/marked) (markdown parsing),
+  [isomorphic-dompurify](https://github.com/kkomelin/isomorphic-dompurify) (sanitising it)
 - **Peer**: `@composable-svelte/core`, `svelte`
 - **Optional**: `@composable-svelte/code`, `@composable-svelte/media`, `prismjs`, `pdfjs-dist`

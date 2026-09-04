@@ -11,7 +11,7 @@
 <div class="space-y-12">
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Interactive Demo</h3>
+      <h2 class="text-xl font-semibold mb-2">Interactive Demo</h2>
       <p class="text-muted-foreground text-sm">Range input for selecting numeric values</p>
     </div>
 
@@ -33,12 +33,12 @@
 
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Slider Variants</h3>
+      <h2 class="text-xl font-semibold mb-2">Slider Variants</h2>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">Default (0-100)</h4>
+        <h3 class="font-semibold">Default (0-100)</h3>
         <div class="space-y-2">
           <div class="flex justify-between">
             <Label for="brightness-slider">Brightness</Label>
@@ -54,7 +54,7 @@
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">Custom range (-10 to 40)</h4>
+        <h3 class="font-semibold">Custom range (-10 to 40)</h3>
         <div class="space-y-2">
           <div class="flex justify-between">
             <Label for="temp-slider">Temperature</Label>
@@ -70,7 +70,7 @@
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">With step (50)</h4>
+        <h3 class="font-semibold">With step (50)</h3>
         <div class="space-y-2">
           <div class="flex justify-between">
             <Label for="price-slider">Price</Label>
@@ -87,7 +87,7 @@
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">Disabled</h4>
+        <h3 class="font-semibold">Disabled</h3>
         <div class="space-y-2">
           <div class="flex justify-between">
             <Label for="disabled-slider">Locked value</Label>
@@ -105,7 +105,7 @@
 
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Common Use Cases</h3>
+      <h2 class="text-xl font-semibold mb-2">Common Use Cases</h2>
     </div>
 
     <div class="rounded-lg border bg-card p-6 space-y-6">

@@ -119,7 +119,7 @@ case 'destination':
   import { Modal, Sheet, Drawer, Alert } from '@composable-svelte/core/navigation-components';
   import { scopeToOptional } from '@composable-svelte/core';
 
-  const scopedStore = scopeToOptional(store, 'destination');
+  const scopedStore = scopeToOptional(store, ['destination'], 'destination');
 </script>
 
 {#if scopedStore}
@@ -151,13 +151,14 @@ const destinationReducer = createDestinationReducer({
 ```typescript
 import { createDestination } from '@composable-svelte/core';
 
-const { reducer, Destination } = createDestination({
+// The returned object *is* the destination: `reducer` plus the matchers.
+const Destination = createDestination({
   addItem: addItemReducer,
   editItem: editItemReducer
 });
 
 // In parent reducer
-const [newState, effect] = reducer(state.destination, action, deps);
+const [newState, effect] = Destination.reducer(state.destination, action, deps);
 return [{ ...state, destination: newState }, effect];
 
 // Type-safe matching
@@ -165,8 +166,12 @@ if (Destination.is(action, 'addItem.saveButtonTapped')) {
   // action matched saveButtonTapped in addItem
 }
 
-const editState = Destination.extract(state, 'editItem');
+const editState = Destination.extract(state.destination, 'editItem');
 // editState is EditItemState | null
+
+// And typed initial state for one case — the case name is checked against the
+// reducer map, which a bare object literal is not.
+const initial = Destination.initial('addItem', { name: '', quantity: 0 });
 ```
 
 ### Case Path Matching
@@ -200,15 +205,20 @@ if (result.matched) {
 ```typescript
 import { scopeToOptional, scopeToDestination } from '@composable-svelte/core';
 
-// Scope to optional field
-const scopedStore = scopeToOptional(store, 'destination');
+// Scope to optional field. Same array-path shape as `scopeToDestination`:
+// (parentStore, statePath, actionField).
+const optionalStore = scopeToOptional(store, ['destination'], 'destination');
 
 // Scope to enum destination
-const scopedStore = scopeToDestination(store, 'destination', 'addItem');
+const scopedStore = scopeToDestination(store, ['destination'], 'addItem', 'destination');
 
-// Fluent API (alternative)
+// Fluent API (alternative). `.into(field)` is checked against the state type,
+// so the store must be typed — an untyped store makes every field `never`.
 import { scopeTo } from '@composable-svelte/core';
-const scopedStore = scopeTo(store).into('destination').case('addItem');
+import type { Store } from '@composable-svelte/core';
+
+declare const typedStore: Store<{ destination: AppDestination | null }, AppAction>;
+const fluentStore = scopeTo(typedStore).into('destination').case('addItem');
 ```
 
 ## Animation
@@ -269,19 +279,21 @@ $effect(() => {
 ### API Client
 
 ```typescript
-import { createLiveAPI } from '@composable-svelte/core/api';
+import { createAPIClient } from '@composable-svelte/core/api';
 
-const api = createLiveAPI({
+const api = createAPIClient({
   baseURL: 'https://api.example.com',
-  interceptors: {
-    request: async (config) => {
-      config.headers.Authorization = `Bearer ${token}`;
-      return config;
+  // A list, not a map — and each interceptor is an object with `onRequest`,
+  // `onResponse` or `onError`. A request interceptor receives the URL too.
+  interceptors: [
+    {
+      onRequest: async (url, config) => ({
+        ...config,
+        headers: { ...config.headers, Authorization: `Bearer ${token}` }
+      })
     },
-    response: async (response) => {
-      return response;
-    }
-  }
+    { onResponse: async (response) => response }
+  ]
 });
 
 // In reducer
@@ -317,17 +329,24 @@ const ws = createLiveWebSocket({
   }
 });
 
-// In reducer
+// In reducer.
+//
+// Messages and lifecycle events are two subscriptions, not one `on(name, …)`:
+// `subscribe` takes a message listener, `subscribeToEvents` takes an event
+// listener. Both return an unsubscribe function.
 Effect.run(async (dispatch) => {
-  ws.on('message', (data) => {
+  ws.subscribe((data) => {
     dispatch({ type: 'messageReceived', data });
   });
 
-  ws.on('connected', () => {
-    dispatch({ type: 'wsConnected' });
+  ws.subscribeToEvents((event) => {
+    if (event.type === 'connected') {
+      dispatch({ type: 'wsConnected' });
+    }
   });
 
-  await ws.connect();
+  // `connect` needs the URL — there is no default.
+  await ws.connect('wss://api.example.com');
 })
 
 // Send messages
@@ -381,9 +400,9 @@ case 'navigate':
   ];
 
 // Pattern matching
-import { matchPattern } from '@composable-svelte/core/routing';
+import { matchPath } from '@composable-svelte/core/routing';
 
-const match = matchPattern('/users/:id/posts/:postId', '/users/123/posts/456');
+const match = matchPath('/users/:id/posts/:postId', '/users/123/posts/456');
 if (match) {
   console.log(match.params); // { id: '123', postId: '456' }
 }
@@ -420,7 +439,12 @@ const store = createStore({
   reducer: appReducer,
   dependencies: {
     translationLoader,
-    localeDetector: createBrowserLocaleDetector(['en', 'fr']),
+    // A config object, not a bare list — the detector needs to know which
+    // locale to fall back to, and optionally where to look for an override.
+    localeDetector: createBrowserLocaleDetector({
+      supportedLocales: ['en', 'fr'],
+      defaultLocale: 'en'
+    }),
     storage: localStorage,
     dom: browserDOM
   }
@@ -576,7 +600,7 @@ await generateStaticSite(App, { routes, outDir: './static' }, { reducer: appRedu
 ### TestStore
 
 ```typescript
-import { createTestStore } from '@composable-svelte/core';
+import { createTestStore } from '@composable-svelte/core/test';
 
 const store = createTestStore({
   initialState: { count: 0, isLoading: false },
@@ -665,10 +689,10 @@ Destination.is(action, 'addItem.saveButtonTapped')
 import { createDismissDependency } from '@composable-svelte/core';
 
 // In parent
-const dismissDep = createDismissDependency<ParentAction>((action) => ({
-  type: 'destination',
-  action: { type: 'dismiss' }
-}));
+const dismissDep = createDismissDependency<ParentAction>(
+  store.dispatch,
+  (action) => ({ type: 'destination', action })
+);
 
 // Pass to child
 const [newState, effect] = childReducer(

@@ -15,12 +15,13 @@
     "preview": "npm run build && npm run start",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:headed": "playwright test --headed"
+    "test:e2e:headed": "playwright test --headed",
+    "check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings"
   },
   "dependencies": {
     "@composable-svelte/core": "workspace:*",
-    "@fastify/static": "^7.0.4",
-    "fastify": "^4.28.1",
+    "@fastify/static": "^8.0.0",
+    "fastify": "^5.12.1",
     "isomorphic-dompurify": "^2.16.0",
     "svelte": "^5.0.0"
   },
@@ -28,6 +29,7 @@
     "@playwright/test": "^1.56.1",
     "@sveltejs/vite-plugin-svelte": "^6.2.1",
     "@types/node": "^20.14.0",
+    "svelte-check": "^4.3.3",
     "tsx": "^4.16.0",
     "typescript": "^5.5.0",
     "vite": "^6.4.1"

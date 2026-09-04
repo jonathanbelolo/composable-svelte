@@ -1,7 +1,7 @@
 <script lang="ts" generics="T extends Record<string, any>">
 	import { getContext } from 'svelte';
-	import type { Store } from '../../types.js';
-	import type { FormState, FormAction, FieldState } from './form.types.js';
+	import type { FormAction, FieldRenderState, FormStore } from './form.types.js';
+	import type { FieldPath } from './field-path.js';
 
 	/**
 	 * FormControl component - Wraps form input elements and handles events.
@@ -26,22 +26,22 @@
 		/**
 		 * Optional class name for the control wrapper
 		 */
-		class?: string;
+		class?: string | undefined;
 		/**
 		 * Children - input elements
 		 */
 		children?: import('svelte').Snippet<
-			[{ props: Record<string, any>; field: FieldState }]
-		>;
+			[{ props: Record<string, any>; field: FieldRenderState }]
+		> | undefined;
 	}
 
 	let { class: className, children }: Props = $props();
 
 	// Get store and field info from context. fieldState is a holder with a
 	// getter so reads of .current re-evaluate the parent's $derived reactively.
-	const store = getContext<Store<FormState<T>, FormAction<T>>>('formStore');
-	const fieldName = getContext<keyof T & string>('fieldName');
-	const fieldStateCtx = getContext<{ current: FieldState }>('fieldState');
+	const store = getContext<FormStore<T>>('formStore');
+	const fieldName = getContext<FieldPath<T>>('fieldName');
+	const fieldStateCtx = getContext<{ current: FieldRenderState }>('fieldState');
 
 	if (!store || !fieldName) {
 		throw new Error('FormControl must be used within a FormField component');
@@ -85,6 +85,7 @@
 		'data-touched': fieldStateCtx.current.touched || undefined,
 		'data-dirty': fieldStateCtx.current.dirty || undefined,
 		'data-validating': fieldStateCtx.current.isValidating || undefined,
+		'data-focused': fieldStateCtx.current.focused || undefined,
 		onchange: handleChange,
 		onblur: handleBlur,
 		onfocus: handleFocus

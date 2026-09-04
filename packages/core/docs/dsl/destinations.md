@@ -705,12 +705,18 @@ Matches an action against multiple case paths with typed handlers.
 
 **Signature:**
 ```typescript
-match<T>(
+match<H extends Record<string, (childState: any) => unknown>>(
   action: unknown,
   state: DestinationState<Reducers> | null,
-  handlers: Record<string, (childState: any) => T>
-): { matched: true; value: T } | { matched: false }
+  handlers: H
+): { matched: true; value: ReturnType<H[keyof H]> } | { matched: false }
 ```
+
+`value` is the union of the handlers' return types, so a handler map whose
+handlers return different shapes works — that is the point of the helper. The
+type parameter is the **handler map**, not the result: an explicit
+`match<MyResult>(…)` no longer compiles. Let it infer.
+
 
 **Parameters:**
 - `action` - The action to match

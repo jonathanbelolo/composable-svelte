@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { Handle, Position } from '@xyflow/svelte';
-	import type { NodeProps } from '@xyflow/svelte';
+	import type { Node, NodeProps } from '@xyflow/svelte';
 
-	interface OutputNodeData {
+	interface OutputNodeData extends Record<string, unknown> {
 		displayValue: string;
 	}
 
-	type Props = NodeProps<OutputNodeData>;
+	type Props = NodeProps<Node<OutputNodeData>>;
 	const { data }: Props = $props();
 </script>
 

@@ -9,18 +9,39 @@
 	 */
 	interface Props {
 		store: Store<VoiceInputState, VoiceInputAction>;
-		variant?: 'icon' | 'button' | 'fab';
-		label?: string;
-		disabled?: boolean;
-		isRecording?: boolean;
-		mode?: 'push-to-talk' | 'conversation'; // Interaction mode
-		class?: string;
+		variant?: 'icon' | 'button' | 'fab' | undefined;
+		label?: string | undefined;
+		disabled?: boolean | undefined;
+		isRecording?: boolean | undefined;
+		/**
+		 * Force an interaction mode. Left unset — the normal case — the button
+		 * follows the store, so enabling conversation mode makes the button a
+		 * toggle.
+		 */
+		mode?: 'push-to-talk' | 'conversation' | undefined;
+		class?: string | undefined;
 	}
 
-	const { store, variant = 'icon', label = 'Voice Input', disabled = false, isRecording: isRecordingProp = false, mode = 'push-to-talk', class: className = '' }: Props = $props();
+	const {
+		store,
+		variant = 'icon',
+		label = 'Voice Input',
+		disabled = false,
+		isRecording: isRecordingProp = false,
+		mode = undefined,
+		class: className = ''
+	}: Props = $props();
 
-	// Determine interaction mode from store or prop
-	const interactionMode = $derived(mode || ($store.mode === 'conversation' ? 'conversation' : 'push-to-talk'));
+	// No default on `mode`. It used to default to `'push-to-talk'`, which is
+	// truthy, so `mode || (…)` short-circuited on it and the store-derived
+	// fallback below never once evaluated — `interactionMode` was pinned to
+	// push-to-talk and `handleClick` returned at its guard every time. The
+	// conversation toggle was therefore unreachable, and clicking the button
+	// during a live conversation fell through to `handlePointerDown` and
+	// corrupted the session into push-to-talk instead of stopping it.
+	const interactionMode = $derived(
+		mode ?? ($store.mode === 'conversation' ? 'conversation' : 'push-to-talk')
+	);
 
 	// Handle click for conversation mode (toggle)
 	function handleClick(e: MouseEvent) {
@@ -136,10 +157,6 @@
 		cursor: pointer;
 		user-select: none;
 		touch-action: none; /* Prevent scroll on mobile */
-		transition:
-			background 0.2s ease,
-			transform 0.1s ease,
-			color 0.2s ease;
 		border: none;
 		outline: none;
 		position: relative;
@@ -161,7 +178,7 @@
 		width: 40px;
 		height: 40px;
 		padding: 0;
-		color: #1a1a1a;
+		color: hsl(var(--foreground, 0 0% 10.2%));
 	}
 
 	.voice-input-button--icon:hover:not(:disabled) {
@@ -170,8 +187,8 @@
 
 	/* Button variant */
 	.voice-input-button--button {
-		background: #007aff;
-		color: white;
+		background: hsl(var(--primary, 211.3 100% 50%));
+		color: hsl(var(--primary-foreground, 0 0% 100%));
 		border-radius: 8px;
 		padding: 8px 16px;
 		font-size: 14px;
@@ -179,29 +196,29 @@
 	}
 
 	.voice-input-button--button:hover:not(:disabled) {
-		background: #0066cc;
+		background: hsl(var(--primary, 210 100% 40%));
 	}
 
 	/* FAB variant */
 	.voice-input-button--fab {
-		background: #007aff;
-		color: white;
+		background: hsl(var(--primary, 211.3 100% 50%));
+		color: hsl(var(--primary-foreground, 0 0% 100%));
 		border-radius: 50%;
 		width: 56px;
 		height: 56px;
 		padding: 0;
-		box-shadow: 0 4px 12px rgba(0, 122, 255, 0.4);
+		box-shadow: 0 4px 12px hsl(var(--primary, 211.3 100% 50%) / 0.4);
 	}
 
 	.voice-input-button--fab:hover:not(:disabled) {
-		background: #0066cc;
-		box-shadow: 0 6px 16px rgba(0, 122, 255, 0.5);
+		background: hsl(var(--primary, 210 100% 40%));
+		box-shadow: 0 6px 16px hsl(var(--primary, 211.3 100% 50%) / 0.5);
 	}
 
 	/* Recording state */
 	.voice-input-button--recording {
-		background: #dc2626 !important;
-		color: white !important;
+		background: hsl(var(--destructive, 0 72.2% 50.6%)) !important;
+		color: hsl(var(--destructive-foreground, 0 0% 100%)) !important;
 		animation: pulse-recording 1.5s ease-in-out infinite;
 		z-index: 1001; /* Stay above modal (z-index: 1000) */
 	}
@@ -209,17 +226,17 @@
 	@keyframes pulse-recording {
 		0%,
 		100% {
-			box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
+			box-shadow: 0 0 0 0 hsl(var(--destructive, 0 72.2% 50.6%) / 0.7);
 		}
 		50% {
-			box-shadow: 0 0 0 8px rgba(220, 38, 38, 0);
+			box-shadow: 0 0 0 8px hsl(var(--destructive, 0 72.2% 50.6%) / 0);
 		}
 	}
 
 	/* Conversation mode active state */
 	.voice-input-button--conversation-active {
 		background: #22c55e !important;
-		color: white !important;
+		color: hsl(var(--background, 0 0% 100%)) !important;
 		animation: pulse-conversation 2s ease-in-out infinite;
 		z-index: 1001;
 	}
@@ -236,15 +253,15 @@
 
 	/* Processing state */
 	.voice-input-button--processing {
-		background: rgba(0, 122, 255, 0.1);
-		color: #007aff;
+		background: hsl(var(--primary, 211.3 100% 50%) / 0.1);
+		color: hsl(var(--primary, 211.3 100% 50%));
 		cursor: wait;
 	}
 
 	/* Error state */
 	.voice-input-button--error {
-		background: rgba(220, 38, 38, 0.1);
-		color: #dc2626;
+		background: hsl(var(--destructive, 0 72.2% 50.6%) / 0.1);
+		color: hsl(var(--destructive, 0 72.2% 50.6%));
 	}
 
 	/* Icon */

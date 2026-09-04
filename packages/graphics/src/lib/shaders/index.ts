@@ -10,7 +10,6 @@
 export {
 	DEFAULT_VERTEX_SHADER,
 	DEFAULT_FRAGMENT_SHADER,
-	DEFAULT_SHADER_CONFIG,
 	getShaderInfo,
 	validateShaderSource,
 	ensurePrecision,

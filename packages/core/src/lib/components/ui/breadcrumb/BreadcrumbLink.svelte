@@ -5,13 +5,13 @@
 
 	interface BreadcrumbLinkProps extends HTMLAnchorAttributes {
 		children: Snippet;
-		class?: string;
-		href?: string;
+		class?: string | undefined;
+		href?: string | undefined;
 	}
 
 	let { children, class: className, href = '#', ...restProps }: BreadcrumbLinkProps = $props();
 </script>
 
-<a {href} class={cn('transition-colors hover:text-foreground', className)} {...restProps}>
+<a {href} class={cn('hover:text-foreground', className)} {...restProps}>
 	{@render children()}
 </a>

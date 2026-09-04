@@ -26,6 +26,7 @@ export {
   createConnectionValidator,
   permissiveValidator,
   strictValidator,
+  createStrictValidator,
   composeValidators
 } from './validation.js';
 

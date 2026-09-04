@@ -107,7 +107,9 @@ Function that executes an effect and may dispatch actions.
 
 ```typescript
 type EffectExecutor<Action> = (
-  dispatch: Dispatch<Action>
+  dispatch: Dispatch<Action>,
+  // Provided for Effect.cancellable only; undefined elsewhere.
+  signal?: AbortSignal
 ) => void | Promise<void>
 ```
 
@@ -229,8 +231,14 @@ const store = createStore({
   dependencies: { apiClient }
 });
 
-// In Svelte component
-const count = $derived(store.state.count);
+```
+
+In a Svelte component:
+
+```svelte
+<script lang="ts">
+  const count = $derived(store.state.count);
+</script>
 
 <button onclick={() => store.dispatch({ type: 'incrementTapped' })}>
   Count: {count}
@@ -1268,11 +1276,11 @@ interface Destination<Reducers> {
   ): ExtractState<Reducers[K]> | null;
 
   // Multi-case matching with handlers
-  match<T>(
+  match<H extends Record<string, (childState: any) => unknown>>(
     action: unknown,
     state: DestinationState<Reducers> | null,
-    handlers: Record<string, (childState: any) => T>
-  ): { matched: true; value: T } | { matched: false };
+    handlers: H
+  ): { matched: true; value: ReturnType<H[keyof H]> } | { matched: false };
 }
 ```
 
@@ -1488,54 +1496,91 @@ function scopeToOptional<State, Action, ChildState>(
 Create a dismiss dependency for child features.
 
 ```typescript
-function createDismissDependency<Action>(
-  createDismissAction: () => Action
-): DismissDependency<Action>
+function createDismissDependency<ParentAction>(
+  dispatch: Dispatch<ParentAction>,
+  actionWrapper: (action: PresentationAction<any>) => ParentAction
+): DismissDependency
 ```
 
-**Returns:** Object with `dismiss()` method
+**Returns:** `DismissDependency` — a function returning an `Effect` that
+dispatches the wrapped dismiss action.
+
+The effect dispatches through the `dispatch` captured here, *not* through the
+dispatch it is executed with. That is deliberate: a child's effects are mapped
+by `ifLet` with `fromChildAction`, and `actionWrapper` already produces a parent
+action, so dispatching through the effect stream would wrap the dismiss twice
+and the parent could not route it.
+
+Build it where the store is built. A reducer is `(state, action, dependencies)`
+and has no `dispatch` in scope, so capture the store's dispatch lazily.
 
 **Example:**
 
 ```typescript
-const dismissDep = createDismissDependency(() => ({
-  type: 'destination',
-  action: PresentationAction.dismiss()
-}));
+let dispatch: Dispatch<ParentAction> = () => {};
 
-// In child reducer
-const childReducer: Reducer<ChildState, ChildAction, { dismiss: DismissDependency }> = (state, action, deps) => {
+const store = createStore({
+  initialState,
+  reducer: parentReducer,
+  dependencies: {
+    dismiss: createDismissDependency(
+      (action) => dispatch(action),
+      (pa) => ({ type: 'destination', action: pa })
+    )
+  }
+});
+
+dispatch = (action) => store.dispatch(action);
+
+// In the child reducer — `deps.dismiss()` IS the effect; return it.
+const childReducer: Reducer<ChildState, ChildAction, { dismiss: DismissDependency }> = (
+  state,
+  action,
+  deps
+) => {
   switch (action.type) {
     case 'cancelButtonTapped':
-      return [state, Effect.run(async (dispatch) => {
-        deps.dismiss.dismiss(dispatch);
-      })];
+      return [state, deps.dismiss()];
+    default:
+      return [state, Effect.none()];
   }
 };
 ```
+
+Under `TestStore`, hand the dependency `store.dispatch` the same way; the
+dismiss then arrives as a received action.
 
 ---
 
 #### createDismissDependencyWithCleanup
 
-Create a dismiss dependency with cleanup effect.
+Create a dismiss dependency that runs a cleanup callback before dismissing.
 
 ```typescript
-function createDismissDependencyWithCleanup<Action>(
-  createDismissAction: () => Action,
-  cleanupEffect: Effect<Action>
-): DismissDependency<Action>
+function createDismissDependencyWithCleanup<ParentAction>(
+  dispatch: Dispatch<ParentAction>,
+  actionWrapper: (action: PresentationAction<any>) => ParentAction,
+  cleanup?: () => void | Promise<void>
+): DismissDependency
 ```
+
+The cleanup is awaited before the dismiss action is dispatched.
 
 ---
 
 #### dismissDependency
 
-Pre-configured dismiss dependency constant.
+Convenience wrapper for the common parent action shape
+`{ type: actionField, action: PresentationAction }`.
 
 ```typescript
-const dismissDependency: DismissDependency<PresentationAction<any>>
+function dismissDependency<ParentAction>(
+  dispatch: Dispatch<ParentAction>,
+  actionField: string
+): DismissDependency
 ```
+
+Equivalent to `createDismissDependency(dispatch, (pa) => ({ type: actionField, action: pa }))`.
 
 ---
 
@@ -1682,14 +1727,24 @@ expect(clock.now()).toEqual(new Date('2024-01-01T00:00:01Z'));
 
 ### Storage
 
-Async storage interface.
+**Synchronous** storage interface — it wraps `localStorage`, which is itself
+synchronous. This was documented as returning promises, which it never has.
+
+`subscribe` is not on `Storage`; it is on `SyncStorage`, which extends it.
 
 ```typescript
-interface Storage<T = any> {
-  getItem(key: string): Promise<T | null>;
-  setItem(key: string, value: T): Promise<void>;
-  removeItem(key: string): Promise<void>;
-  clear(): Promise<void>;
+interface Storage<T = unknown> {
+  getItem(key: string): T | null;
+  setItem(key: string, value: T): void;
+  removeItem(key: string): void;
+  keys(): string[];
+  has(key: string): boolean;
+  clear(): void;
+  size(): number;
+}
+
+interface SyncStorage<T = unknown> extends Storage<T> {
+  /** Fires only for writes from *another* browsing context. */
   subscribe(listener: StorageEventListener<T>): Unsubscribe;
 }
 ```
@@ -1704,11 +1759,13 @@ Create localStorage wrapper.
 function createLocalStorage<T = any>(config?: StorageConfig<T>): Storage<T>
 ```
 
-**Config:**
-- `prefix` - Key prefix (default: '')
-- `serialize` - Custom serializer (default: JSON.stringify)
-- `deserialize` - Custom deserializer (default: JSON.parse)
-- `validate` - Schema validator
+**Config** (`StorageConfig<T>`):
+- `prefix` - Key prefix (default: `''`)
+- `validator` - Type guard run on read; a value it rejects reads back as `null`
+- `debug` - Log to the console
+
+There are no `serialize` / `deserialize` options; values go through
+`JSON.stringify` / `JSON.parse`.
 
 **Example:**
 

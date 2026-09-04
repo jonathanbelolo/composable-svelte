@@ -1,11 +1,11 @@
 ---
 name: composable-svelte-graphics
-description: 3D graphics and WebGPU/WebGL rendering with Composable Svelte. Use when building 3D scenes, working with cameras, lights, meshes, materials, or implementing WebGPU/WebGL graphics. Covers Scene, Camera, Light, Mesh components, geometry types (box, sphere, cylinder, torus, plane), material properties, and state-driven 3D rendering.
+description: 3D graphics and WebGL rendering with Composable Svelte. Use when building 3D scenes, working with cameras, lights, meshes, materials, or implementing WebGL graphics. Covers Scene, Camera, Light, Mesh components, geometry types (box, sphere, cylinder, torus, plane, custom), material properties, and state-driven 3D rendering.
 ---
 
 # Composable Svelte Graphics
 
-State-driven 3D graphics for Composable Svelte using WebGPU/WebGL with Babylon.js.
+State-driven 3D graphics for Composable Svelte using WebGL with Babylon.js.
 
 ---
 
@@ -13,17 +13,23 @@ State-driven 3D graphics for Composable Svelte using WebGPU/WebGL with Babylon.j
 
 **Package**: `@composable-svelte/graphics`
 
-**Purpose**: Declarative 3D graphics with automatic WebGPU/WebGL renderer selection.
+**Purpose**: Declarative 3D graphics over Babylon.js, driven entirely by store state.
 
 **Technology Stack**:
 - **Babylon.js**: Industry-standard 3D engine
-- **WebGPU**: Modern high-performance graphics API (auto-detected)
-- **WebGL**: Fallback for broader browser support
+- **WebGL**: Babylon's `Engine`, which is what this package renders through
 
-**Renderer Selection**:
-1. Try WebGPU (if browser supports it)
-2. Fallback to WebGL (universal support)
-3. Transparent to the user
+**Renderer**:
+There is one renderer, and it is WebGL. This file used to describe automatic
+WebGPU detection with a transparent WebGL fallback; that never happened. Both
+branches of the "detection" constructed the same `new Engine(canvas, …)` — the
+WebGPU branch's own comment said Babylon would handle it — so finding a WebGPU
+adapter changed no rendering at all. It changed the *label*, which the store
+surfaced as `renderer.activeRenderer`: it reported `webgpu`, with
+`supportsWebGL: false`, while WebGL ran.
+
+Real WebGPU means Babylon's `WebGPUEngine` and its own async initialisation.
+Nobody built that, so it is recorded as a gap rather than claimed.
 
 **Core Components**:
 - `Scene` - Root container, manages renderer lifecycle
@@ -40,7 +46,7 @@ State-driven 3D graphics for Composable Svelte using WebGPU/WebGL with Babylon.j
 
 ## QUICK START
 
-```typescript
+```svelte
 import { createStore } from '@composable-svelte/core';
 import {
   Scene,
@@ -71,7 +77,7 @@ function rotateShapes() {
 <Scene {store} height="500px">
   <Camera {store} position={[0, 4, 12]} lookAt={[0, 0, 0]} fov={45} />
   <Light {store} type="ambient" intensity={0.4} />
-  <Light {store} type="directional" position={[5, 10, 7.5]} intensity={1.2} />
+  <Light {store} type="directional" direction={[5, 10, 7.5]} intensity={1.2} />
 
   <Mesh
     {store}
@@ -100,29 +106,35 @@ function rotateShapes() {
 
 **Behavior**:
 1. Creates canvas element
-2. Initializes Babylon.js engine
-3. Attempts WebGPU, falls back to WebGL
-4. Dispatches `rendererInitialized` action with capabilities
-5. Syncs store updates to Babylon.js scene
-6. Cleans up engine on unmount
+2. Initializes Babylon.js `Engine` (WebGL)
+3. Dispatches `rendererInitialized` action with capabilities
+4. Syncs store updates to Babylon.js scene
+5. Cleans up engine on unmount — including when unmounted mid-initialisation
 
 **Usage**:
-```typescript
+```svelte
 <Scene {store} height="500px">
   <!-- Children render here -->
 </Scene>
 ```
 
 **State Synchronization**:
-Scene uses manual subscription (like MapPrimitive) to avoid infinite loops:
-- Tracks previous state values
-- Only updates Babylon.js when state actually changes
-- Uses JSON.stringify for deep comparison
+Scene uses a manual subscription rather than an `$effect`, because the callback
+drives a renderer and an effect that both reads the store and mutates the scene
+loops. The diffing lives in `core/scene-sync.ts` so it can be tested against a
+spy adapter.
+
+It diffs by **object identity**, not `JSON.stringify`. The reducer is pure and
+the store holds `$state.raw`, so every arm returns new objects for what changed
+and the very same objects for what did not — which makes identity exact and
+O(1). That matters: a running animation dispatches a `tick` per frame, and
+stringifying every mesh at 60fps is a cost. Meshes and lights are diffed per
+item by `id`, so one changed light does not disturb the others.
 
 **Renderer Info**:
 Access renderer info from store:
 ```typescript
-$store.renderer.activeRenderer // 'webgpu' | 'webgl'
+$store.renderer.activeRenderer // 'webgl' | null
 $store.renderer.isInitialized  // boolean
 $store.renderer.capabilities   // { maxTextureSize, ... }
 $store.renderer.error          // string | null
@@ -140,6 +152,8 @@ $store.renderer.error          // string | null
 - `position: [number, number, number]` - Camera position (required)
 - `lookAt: [number, number, number]` - Target point to look at (required)
 - `fov: number` - Field of view in degrees (default: 45, perspective only)
+- `orthoSize: number` - Half-height of the view in world units (default: 5,
+  orthographic only). The half-width follows from the viewport aspect.
 - `near: number` - Near clipping plane (optional)
 - `far: number` - Far clipping plane (optional)
 
@@ -149,7 +163,7 @@ $store.renderer.error          // string | null
 - Does not render visual output (state-only component)
 
 **Usage**:
-```typescript
+```svelte
 <!-- Perspective camera (default) -->
 <Camera
   {store}
@@ -162,6 +176,7 @@ $store.renderer.error          // string | null
 <Camera
   {store}
   type="orthographic"
+  orthoSize={8}
   position={[0, 10, 0]}
   lookAt={[0, 0, 0]}
 />
@@ -179,6 +194,20 @@ $store.renderer.error          // string | null
 
 **Purpose**: Add illumination to the scene. Supports multiple light types.
 
+**Every light has an `id`.** The `id` prop is optional — `<Light>` generates a
+stable one per component instance via `$props.id()` when you omit it, so the
+markup below works unchanged. Supply one when you need to address the light from
+outside the component, and make it unique: a second `<Light>` claiming an id
+that is already taken warns and renders nothing rather than fighting the first
+one for it.
+
+```svelte
+<Light {store} id="key" type="directional" direction={[5, 10, 7]} intensity={1.2} />
+```
+
+Changing `id` moves the light rather than orphaning it, and unmounting removes
+exactly the light that component owns.
+
 **Light Types**:
 
 ### Ambient Light
@@ -187,25 +216,32 @@ Uniform light from all directions (no position/direction).
 **Props**:
 - `type: 'ambient'`
 - `intensity: number` - Light intensity (0-1 typical, can exceed)
-- `color: string` - Light color (hex or CSS color, default: '#ffffff')
+- `color: string` - Light color, **6-digit hex only** (`'#ffffff'`, default)
 
 **Usage**:
-```typescript
+```svelte
 <Light {store} type="ambient" intensity={0.4} color="#ffffff" />
 ```
+
+**The props below are discriminated by `type`.** Passing one that does not
+belong to the type you asked for — `radius` on an ambient light, `angle` on a
+point light — is a compile error, not a silent drop.
 
 ### Directional Light
 Parallel rays from a specific direction (like sunlight).
 
 **Props**:
 - `type: 'directional'`
-- `position: [number, number, number]` - Light position (defines direction)
+- `direction: [number, number, number]` - The direction the light travels in
+  (optional; defaults to `[0, 1, 0]`). A directional light has no position —
+  this prop was called `position` until recently, and never was one: the adapter
+  passed it straight into Babylon's direction argument.
 - `intensity: number` - Light intensity
 - `color: string` - Light color (optional)
 
 **Usage**:
-```typescript
-<Light {store} type="directional" position={[5, 10, 7.5]} intensity={1.2} />
+```svelte
+<Light {store} type="directional" direction={[5, 10, 7.5]} intensity={1.2} />
 ```
 
 ### Point Light
@@ -213,13 +249,13 @@ Emits light in all directions from a point (like a light bulb).
 
 **Props**:
 - `type: 'point'`
-- `position: [number, number, number]` - Light position
+- `position: [number, number, number]` - Light position (optional; defaults to `[0, 1, 0]`)
 - `intensity: number` - Light intensity
 - `radius: number` - Light radius/range (optional)
 - `color: string` - Light color (optional)
 
 **Usage**:
-```typescript
+```svelte
 <Light {store} type="point" position={[0, 3, 0]} intensity={1.5} radius={10} />
 ```
 
@@ -228,14 +264,14 @@ Cone-shaped light (like a flashlight).
 
 **Props**:
 - `type: 'spot'`
-- `position: [number, number, number]` - Light position
-- `direction: [number, number, number]` - Light direction vector
-- `angle: number` - Cone angle in radians (default: Math.PI / 4)
+- `position: [number, number, number]` - Light position (optional; defaults to `[0, 1, 0]`)
+- `direction: [number, number, number]` - Light direction vector (optional; defaults to `[0, -1, 0]`)
+- `angle: number` - Cone half-angle in radians (optional; defaults to `Math.PI / 4`)
 - `intensity: number` - Light intensity
 - `color: string` - Light color (optional)
 
 **Usage**:
-```typescript
+```svelte
 <Light
   {store}
   type="spot"
@@ -248,16 +284,16 @@ Cone-shaped light (like a flashlight).
 
 **Common Lighting Setups**:
 
-```typescript
+```svelte
 <!-- Three-point lighting (photography standard) -->
 <Light {store} type="ambient" intensity={0.3} />
-<Light {store} type="directional" position={[5, 5, 5]} intensity={1.0} />     <!-- Key -->
-<Light {store} type="directional" position={[-3, 3, -3]} intensity={0.5} />   <!-- Fill -->
-<Light {store} type="directional" position={[0, 2, -5]} intensity={0.3} />    <!-- Back -->
+<Light {store} type="directional" direction={[5, 5, 5]} intensity={1.0} />     <!-- Key -->
+<Light {store} type="directional" direction={[-3, 3, -3]} intensity={0.5} />   <!-- Fill -->
+<Light {store} type="directional" direction={[0, 2, -5]} intensity={0.3} />    <!-- Back -->
 
 <!-- Outdoor scene (sun + ambient) -->
 <Light {store} type="ambient" intensity={0.4} color="#87ceeb" />
-<Light {store} type="directional" position={[10, 20, 10]} intensity={1.5} color="#fff8dc" />
+<Light {store} type="directional" direction={[10, 20, 10]} intensity={1.5} color="#fff8dc" />
 
 <!-- Indoor scene (ambient + point lights) -->
 <Light {store} type="ambient" intensity={0.2} />
@@ -287,7 +323,7 @@ Cone-shaped light (like a flashlight).
 - `onDestroy`: Dispatches `removeMesh` action
 
 **Usage**:
-```typescript
+```svelte
 <Mesh
   {store}
   id="my-cube"
@@ -312,7 +348,7 @@ Rectangular prism.
 ```
 
 **Example**:
-```typescript
+```svelte
 <Mesh
   {store}
   id="cube"
@@ -335,7 +371,7 @@ Spherical geometry.
 ```
 
 **Example**:
-```typescript
+```svelte
 <Mesh
   {store}
   id="ball"
@@ -363,7 +399,7 @@ Cylindrical geometry.
 ```
 
 **Example**:
-```typescript
+```svelte
 <Mesh
   {store}
   id="pillar"
@@ -387,7 +423,7 @@ Donut-shaped geometry.
 ```
 
 **Example**:
-```typescript
+```svelte
 <Mesh
   {store}
   id="ring"
@@ -410,7 +446,7 @@ Flat rectangular surface.
 ```
 
 **Example**:
-```typescript
+```svelte
 <!-- Ground plane (rotated to horizontal) -->
 <Mesh
   {store}
@@ -424,6 +460,54 @@ Flat rectangular surface.
 
 **Note**: Planes are initially vertical (facing Z-axis). Rotate by `[Math.PI / 2, 0, 0]` to make horizontal (ground).
 
+### Custom
+
+Arbitrary geometry from raw vertex data.
+
+```typescript
+{
+  type: 'custom';
+  vertices: number[];   // flat xyz triples
+  indices: number[];    // flat triangles, indexing into vertices
+  normals?: number[];   // one per vertex; computed for you when omitted
+  uvs?: number[];       // two per vertex
+}
+```
+
+**Example**:
+```svelte
+<!-- A single triangle in the XY plane -->
+<Mesh
+  {store}
+  id="tri"
+  geometry={{
+    type: 'custom',
+    vertices: [0, 0, 0, 1, 0, 0, 0, 1, 0],
+    indices: [0, 1, 2],
+    uvs: [0, 0, 1, 0, 0, 1]
+  }}
+  material={{ color: '#ff6b6b' }}
+  position={[0, 0, 0]}
+/>
+```
+
+**Validated before it reaches the store.** A mesh whose custom geometry fails
+any rule below is warned about and **ignored** — it never enters `state.meshes`,
+so nothing renders and no later `updateMesh` for that id does anything either.
+
+| rule | why |
+|---|---|
+| `vertices` and `indices` both non-empty | an empty array passes every other rule — 0 is a multiple of 3, and the range check is vacuous — so an empty mesh would be admitted and draw nothing |
+| `vertices.length` a multiple of 3 | xyz triples |
+| `indices.length` a multiple of 3 | triangles |
+| every index a whole number in `0 .. vertices.length / 3 - 1` | Babylon truncates a float index through a `Uint16Array` and silently draws a different triangle |
+| every value in `vertices`, `normals` and `uvs` finite | one `NaN` makes computed normals `NaN` for all three vertices of any triangle touching it |
+| `normals.length === vertices.length`, if given | one per vertex |
+| `uvs.length === vertices.length / 3 * 2`, if given | two per vertex; wrong here mistextures every face without erroring |
+
+Babylon validates none of this: bad indices produce garbage geometry or throw
+from inside the engine.
+
 ---
 
 ## MATERIAL PROPERTIES
@@ -431,24 +515,73 @@ Flat rectangular surface.
 **MaterialConfig Interface**:
 ```typescript
 interface MaterialConfig {
-  color: string;           // Hex or CSS color
-  metallic?: number;       // 0-1 (default: 0.5)
-  roughness?: number;      // 0-1 (default: 0.5)
+  color: string;           // 6-digit hex, e.g. '#ff6b6b' — see below
+  metallic?: number;       // 0-1 (default: 0 — a white, untinted highlight)
+  roughness?: number;      // 0-1 (default: 0.5 — Babylon's own specularPower)
   emissive?: string;       // Emissive color (optional)
   alpha?: number;          // 0-1 transparency (optional)
   wireframe?: boolean;     // Wireframe mode (default: false)
 }
 ```
 
-**PBR Workflow**:
-Materials use Physically Based Rendering (PBR) with metallic/roughness workflow.
+**Colours are 6-digit hex, and only that.** `'#ff6b6b'` and `'ff6b6b'` both
+parse; `'red'`, `'rgb(255,0,0)'` and the 3-digit `'#f00'` do not, and render as
+white with a warning. This file used to say "Hex or CSS color", which was never
+true of the parser.
+
+**Not PBR.** This section used to say "Materials use Physically Based Rendering
+(PBR) with metallic/roughness workflow". They do not: the adapter builds a
+Babylon `StandardMaterial`, which has no metallic or roughness channel.
+`roughness` was read by nothing at all until recently.
+
+Both are mapped onto the closest levers `StandardMaterial` offers. They are
+approximations, not physically based shading, but the values below do read the
+way you expect — a high `roughness` looks rough:
+
+- `metallic` **tints** the highlight, interpolating `specularColor` from white
+  toward the surface colour. Dielectrics reflect white; metals reflect their own
+  colour, which is the one real difference a specular/glossiness model can
+  express. A floor keeps it from reaching black, so a very dark metal still has
+  a highlight for `roughness` to sharpen.
+
+  How visible `metallic` is depends on the surface colour: on a white or
+  near-white surface it does nothing, because white tinted toward white is
+  white. That is correct — a white metal and white plastic really do reflect the
+  same colour — but it means `metallic` alone does not separate the `chrome`
+  preset from white plastic. `roughness` is what separates those.
+- `roughness` sets how tight the highlight is (`specularPower`) and, past the
+  midpoint, how bright. Breadth alone is not enough — a fully rough surface at
+  full strength reads as wet rather than matte. Below the midpoint it is at full
+  strength and only sharpens, so `roughness: 0.5` lands on Babylon's untouched
+  defaults in both channels.
+
+Omitting both fields leaves the material looking exactly as `StandardMaterial`
+would on its own.
+
+An earlier version of this section said `roughness` now worked while `metallic`
+still mapped straight onto `specularColor` as a grey — which meant
+`metallic: 0.0` gave black, and Babylon's default shader is
+`finalSpecular = specularBase * specularColor`, a multiply. `specularPower` could
+not change a single pixel. Since `metallic: 0.0` is what this file teaches for
+plastic, rubber, wood, stone and glass, `roughness` was inert for 7 of the 13
+presets below, the mirror included.
+
+Real PBR is Babylon's `PBRMaterial`, which would change the lighting model for
+every existing mesh and needs an environment texture to look right. Recorded as
+a gap rather than claimed.
 
 ### Metallic (0-1)
-Controls how metal-like the surface appears.
+Controls how metal-like the surface appears — specifically, how much the
+highlight takes on the surface's own colour. It has the most effect on a
+saturated or dark surface and none at all on a white one.
 
-- `0.0`: Non-metallic (plastic, rubber, wood, stone)
+- `0.0`: Non-metallic (plastic, rubber, wood, stone) — a white highlight
 - `0.5`: Semi-metallic (painted metal, worn surfaces)
-- `1.0`: Fully metallic (polished metal, chrome)
+- `1.0`: Fully metallic (polished metal, chrome) — the highlight is the
+  surface colour
+
+Note that `0.0` does **not** mean "no highlight": a non-metal still reflects
+light, and `roughness` is what controls how much.
 
 **Examples**:
 ```typescript
@@ -512,7 +645,7 @@ const rubber = { color: '#1a1a1a', metallic: 0.0, roughness: 1.0 };
 
 Full scene with all geometry types:
 
-```typescript
+```svelte
 <script lang="ts">
 import { createStore } from '@composable-svelte/core';
 import {
@@ -557,7 +690,7 @@ function rotateShapes() {
 <Scene {store} height="500px">
   <Camera {store} position={[0, 4, 12]} lookAt={[0, 0, 0]} fov={45} />
   <Light {store} type="ambient" intensity={0.4} color="#ffffff" />
-  <Light {store} type="directional" position={[5, 10, 7.5]} intensity={1.2} color="#ffffff" />
+  <Light {store} type="directional" direction={[5, 10, 7.5]} intensity={1.2} color="#ffffff" />
 
   <!-- Row 1: Box, Sphere, Cylinder -->
   <Mesh
@@ -619,12 +752,17 @@ function rotateShapes() {
 
 ```typescript
 interface GraphicsState {
+  // Identity — required. Keys this scene's animation frame loop, so two scenes
+  // in one store do not cancel each other's. `createInitialGraphicsState`
+  // generates it; pass your own for a stable id across reloads, and make it
+  // unique.
+  sceneId: string;
+
   // Renderer
   renderer: {
-    activeRenderer: 'webgpu' | 'webgl' | null;
+    activeRenderer: 'webgl' | null;
     isInitialized: boolean;
     capabilities: {
-      supportsWebGPU: boolean;
       supportsWebGL: boolean;
       maxTextureSize: number;
       maxVertexAttributes: number;
@@ -633,7 +771,6 @@ interface GraphicsState {
   };
 
   // Scene
-  scene: SceneNode;
   backgroundColor: string;
 
   // Camera
@@ -645,21 +782,31 @@ interface GraphicsState {
   // Meshes
   meshes: MeshConfig[];
 
-  // Animations (future)
+  // Animations
   animations: AnimationState[];
 
   // Loading
   isLoading: boolean;
-  loadingProgress: number; // 0-1
 }
 ```
+
+`sceneId` is a **required** field and a breaking change: state built by hand,
+or hydrated from a payload serialised before it existed, arrives without one.
+The reducer warns in that case rather than falling back silently, because the
+fallback is a shared constant — which is exactly the cross-feature cancellation
+the field prevents, and a single such scene runs perfectly.
+
+`scene: SceneNode` and `loadingProgress: number` used to be listed here. Both
+were removed: `scene` was built once and never read or written by anything, and
+`loadingProgress` was set to `0` at creation and never touched again — so a
+consumer reading it saw `0` forever, including after loading finished.
 
 ### GraphicsAction Types
 
 ```typescript
 type GraphicsAction =
   // Renderer
-  | { type: 'rendererInitialized'; renderer: 'webgpu' | 'webgl'; capabilities: RendererCapabilities }
+  | { type: 'rendererInitialized'; renderer: 'webgl'; capabilities: RendererCapabilities }
   | { type: 'rendererError'; error: string }
 
   // Camera
@@ -678,20 +825,38 @@ type GraphicsAction =
 
   // Light
   | { type: 'addLight'; light: LightConfig }
-  | { type: 'removeLight'; index: number }
-  | { type: 'updateLight'; index: number; light: Partial<LightConfig> }
+  | { type: 'removeLight'; id: string }
+  | { type: 'updateLight'; id: string; light: LightConfig }
+
+  // Animation
+  | { type: 'startAnimation'; animation: AnimationConfig }
+  | { type: 'stopAnimation'; id: string }
+  | { type: 'tick'; time: number }
 
   // Scene
   | { type: 'setBackgroundColor'; color: string }
   | { type: 'clearScene' };
 ```
 
+**Lights are addressed by `id`, not by index.** `removeLight` and `updateLight`
+took an `index` until recently, and `LightConfig` had no identity at all — so a
+light could only be named by its position in the array. That is what made
+removal wrong: `<Light>` captured `state.lights.length - 1` at mount and removed
+by that number, while the reducer filtered positionally, so with the default
+ambient light in slot 0, unmounting three `<Light>` children removed index 1,
+then index 2 of the already-shifted array. `LightConfig.id` is now required, and
+`<Light>` supplies one via `$props.id()` when you do not.
+
+`updateLight` takes a whole `LightConfig`, not a `Partial`: it is a
+discriminated union, and a partial cannot be spread across one without losing
+the discriminant.
+
 ### Reducer Pattern
 
 Graphics reducer is pure and testable:
 
 ```typescript
-import { graphicsReducer } from '@composable-svelte/graphics';
+import { graphicsReducer, createInitialGraphicsState } from '@composable-svelte/graphics';
 import { TestStore } from '@composable-svelte/core/test';
 
 const store = new TestStore({
@@ -748,7 +913,7 @@ geometry={{ type: 'sphere', radius: 1, segments: 64 }}
 Each mesh = 1 draw call. Minimize meshes for better performance.
 
 **Good**:
-```typescript
+```svelte
 // 3 meshes = 3 draw calls
 <Mesh id="obj1" ... />
 <Mesh id="obj2" ... />
@@ -756,7 +921,7 @@ Each mesh = 1 draw call. Minimize meshes for better performance.
 ```
 
 **Bad**:
-```typescript
+```svelte
 // 1000 meshes = 1000 draw calls (very slow!)
 {#each items as item}
   <Mesh id={item.id} ... />
@@ -767,10 +932,18 @@ Each mesh = 1 draw call. Minimize meshes for better performance.
 
 ### Update Frequency
 
-Scene sync uses deep comparison (JSON.stringify). Avoid updating mesh props every frame.
+Scene sync diffs by **object identity**, per mesh and per light, keyed by `id`.
+It used to stringify, which is what made per-frame updates expensive; identity
+is O(1) and the reducer guarantees it (a pure reducer over `$state.raw` returns
+new objects for what changed and the same objects for what did not).
+
+Updating a mesh prop every frame is still work — it reaches the renderer, which
+is the point — but it is no longer *quadratic* work, and a reducer arm that
+returns an unchanged value now costs nothing at all. Animations are the
+supported way to drive per-frame change; see `startAnimation`.
 
 **Good**:
-```typescript
+```svelte
 // Update rotation only when button clicked
 let rotation = $state(0);
 function rotate() { rotation += Math.PI / 4; }
@@ -779,7 +952,7 @@ function rotate() { rotation += Math.PI / 4; }
 ```
 
 **Bad**:
-```typescript
+```svelte
 // Updates every frame (60 FPS) - expensive!
 let time = $state(0);
 setInterval(() => { time += 0.01; }, 16);
@@ -787,7 +960,11 @@ setInterval(() => { time += 0.01; }, 16);
 <Mesh rotation={[0, time, 0]} ... />
 ```
 
-**Solution**: Use animation system (future feature) or throttle updates.
+**Solution**: drive it through `startAnimation` rather than dispatching a prop
+change per frame — the reducer advances one frame loop for the whole store and
+skips meshes whose value has not moved. (This line used to call the animation
+system a "future feature"; it has not been one for some time, and two other
+places in this file say so.)
 
 ---
 
@@ -795,7 +972,7 @@ setInterval(() => { time += 0.01; }, 16);
 
 ### Rotation Animation
 
-```typescript
+```svelte
 let rotation = $state(0);
 
 function rotateObject() {
@@ -808,7 +985,7 @@ function rotateObject() {
 
 ### Camera Controls
 
-```typescript
+```svelte
 let cameraDistance = $state(12);
 
 function zoomIn() {
@@ -819,28 +996,28 @@ function zoomOut() {
   cameraDistance = Math.min(20, cameraDistance + 2);
 }
 
-<Camera position={[0, 4, cameraDistance]} lookAt={[0, 0, 0]} />
+<Camera {store} position={[0, 4, cameraDistance]} lookAt={[0, 0, 0]} />
 <button onclick={zoomIn}>Zoom In</button>
 <button onclick={zoomOut}>Zoom Out</button>
 ```
 
 ### Dynamic Lighting
 
-```typescript
+```svelte
 let lightIntensity = $state(1.0);
 
 function adjustBrightness(delta: number) {
   lightIntensity = Math.max(0, Math.min(2, lightIntensity + delta));
 }
 
-<Light type="directional" position={[5, 10, 7.5]} intensity={lightIntensity} />
+<Light {store} type="directional" direction={[5, 10, 7.5]} intensity={lightIntensity} />
 <button onclick={() => adjustBrightness(0.2)}>Brighter</button>
 <button onclick={() => adjustBrightness(-0.2)}>Dimmer</button>
 ```
 
 ### Toggle Visibility
 
-```typescript
+```svelte
 let showObject = $state(true);
 
 // Option 1: Conditional rendering
@@ -863,23 +1040,19 @@ let showObject = $state(true);
 These features are planned but not yet implemented:
 
 ### Custom Shaders
-```typescript
-// Future API
-<Mesh
-  id="custom"
-  geometry={{ type: 'sphere', radius: 1 }}
-  material={{
-    type: 'custom',
-    vertexShader: '...',
-    fragmentShader: '...',
-    uniforms: { time: 0.0 }
-  }}
-  position={[0, 0, 0]}
-/>
-```
+
+Not modelled in the types, and the sketch that used to sit here was never
+accurate: it showed a `type: 'custom'` discriminant that the
+`CustomShaderMaterial` interface did not have, and that interface has been
+removed — the adapter's `if ('color' in material)` narrow dropped it in silence
+and rendered Babylon's default material instead.
+
+`MeshConfig.material` is `MaterialConfig` alone. Per-pixel shader work today
+goes through `<WebGLOverlay>` and its 21 presets, which is a different subject:
+it shades DOM elements rather than scene meshes.
 
 ### Textures
-```typescript
+```svelte
 // Future API
 <Mesh
   id="textured"
@@ -893,10 +1066,39 @@ These features are planned but not yet implemented:
 />
 ```
 
-### Animations
+### A declarative `animation` prop on `<Mesh>`
+
+Animations themselves are **implemented** — this section used to list them as a
+future feature. Drive them through the store:
+
 ```typescript
+store.dispatch({
+  type: 'startAnimation',
+  animation: {
+    id: 'spin',
+    targetId: 'my-cube',
+    property: 'rotation',   // 'position' | 'rotation' | 'scale'
+    from: [0, 0, 0],
+    to: [0, Math.PI * 2, 0],
+    duration: 2000,
+    loop: true,
+    easing: 'linear'        // 'linear' | 'easeIn' | 'easeOut' | 'easeInOut'
+  }
+});
+
+store.dispatch({ type: 'stopAnimation', id: 'spin' });
+```
+
+`targetId` must name a mesh that already exists; an animation naming no mesh is
+rejected with a warning rather than ticking forever against nothing. Removing a
+mesh stops the animations targeting it.
+
+What is still future is expressing that as a prop:
+
+```svelte
 // Future API
 <Mesh
+  {store}
   id="animated"
   geometry={{ type: 'box', size: 1 }}
   material={{ color: '#ff6b6b' }}
@@ -913,7 +1115,7 @@ These features are planned but not yet implemented:
 ```
 
 ### Post-Processing
-```typescript
+```svelte
 // Future API
 <Scene {store} postProcessing={{
   bloom: { enabled: true, intensity: 0.5 },
@@ -934,7 +1136,7 @@ These features are planned but not yet implemented:
 - **composable-svelte-testing**: TestStore for testing graphics reducers
 
 **When to Use Each Package**:
-- **graphics**: 3D scenes, WebGPU/WebGL rendering
+- **graphics**: 3D scenes, WebGL rendering
 - **charts**: 2D data visualization (see composable-svelte-charts)
 - **maps**: Geospatial data (see composable-svelte-maps)
 - **code**: Code editors, syntax highlighting (see composable-svelte-code)
@@ -944,7 +1146,7 @@ These features are planned but not yet implemented:
 ## TROUBLESHOOTING
 
 **Scene not rendering**:
-- Check browser WebGPU/WebGL support
+- Check browser WebGL support
 - Verify store is created with `graphicsReducer`
 - Check console for renderer errors in `$store.renderer.error`
 
@@ -971,21 +1173,110 @@ These features are planned but not yet implemented:
 
 ### WebGLOverlay
 
-Embeds a WebGL/WebGPU canvas as an overlay within a web layout:
+A full-viewport WebGL canvas that renders shader effects over ordinary DOM
+elements. It is an **imperative escape hatch, not a reducer-driven component**:
+it holds no store, dispatches no actions and imports nothing from
+`@composable-svelte/core`. It is driven entirely through methods on a
+`bind:this` reference. Call those from a reducer's effect if you want the
+architecture around it — nothing in the overlay itself will impose it.
+
+Its canvas is `position: fixed`, full-viewport, `pointer-events: none` and
+`z-index: 1000`, and it resizes with the window. There is no `width` or `height`
+prop and it does not sit inline in a layout.
+
+It takes **exactly one prop**, `options`, and every field of it is optional:
 
 ```svelte
-import { WebGLOverlay } from '@composable-svelte/graphics';
+<script lang="ts">
+  import { WebGLOverlay } from '@composable-svelte/graphics';
 
-<WebGLOverlay {store} width={800} height={600} />
+  let overlay: WebGLOverlay | null = $state(null);
+  let hero: HTMLImageElement | null = $state(null);
+
+  function applyEffect(): void {
+    if (!overlay || !hero) return;
+    overlay.registerElement({
+      id: 'hero',
+      domElement: hero,
+      shader: 'ripple-gentle'
+    });
+  }
+</script>
+
+<WebGLOverlay bind:this={overlay} />
+<img bind:this={hero} src="/hero.jpg" alt="Hero" onload={applyEffect} />
 ```
+
+**`OverlayOptions`**:
+
+| option | meaning |
+|---|---|
+| `targetFPS` | render-loop cap. Default 60 desktop, 30 mobile |
+| `maxTextureSize` | **downscale** a source larger than this — `<img>`, `<video>` and `<canvas>` alike, at registration and on every re-upload. It only narrows: a value above the driver's `MAX_TEXTURE_SIZE` is clamped to it, and a value that is not a whole number ≥ 1 is reported and ignored. The default is **not** simply the driver's answer: on a device detected as mobile it is `Math.min(driver, 2048)`, and it falls back to 2048 anywhere the driver reports nothing usable. It never refuses a source for being large — but `memoryBudget` refuses, and so does a source with **no pixels yet** |
+| `memoryBudget` | total texture bytes before further textures are rejected. Default 200MB |
+| `debug` | console logging |
+| `handleContextLoss` | whether to rebuild resources after a context loss. Default `true`; the two callbacks below fire either way, so `false` means "tell me, but do not recover for me" |
+| `onContextLost`, `onContextRestored` | notification hooks |
+| `onError` | receives an `OverlayError`. Import it and `OverlayErrorCode` to narrow on `error.code` |
+
+**The methods**, reached through `bind:this`:
+
+| method | |
+|---|---|
+| `registerElement({ id, domElement, shader, updateStrategy?, onTextureLoaded? })` | start rendering over the element. `onTextureLoaded` fires when the texture actually exists; failures go to `onError` instead |
+| `unregisterElement(id)` | stop, releasing the texture and the compiled program |
+| `updateElementShader(id, shader)` | recompile the element with a different effect |
+| `updateUniforms(id, uniforms)` | change what the *existing* program is fed, without recompiling — this is how a shader parameter is driven over time |
+| `updateElement(id)` | re-read the element's pixels. The trigger for the `manual` strategy, which is what a `<canvas>` gets by default — and, for an element that has **no texture yet**, the retry that recovers one refused at registration, whatever its strategy. An `<img>` infers `static` and needs this to recover after being registered before it decoded |
+| `updateElementPosition(id)` | re-read the element's bounds after a CSS transform moves it |
+| `getElement(id)`, `getElements()` | the registrations, carrying the resolved shader, current bounds, and any `OverlayError` |
+| `getCanvas()`, `getContext()` | the canvas and the live WebGL context, for drawing alongside |
+| `getCurrentFPS()` | measured, not target |
+| `start()`, `stop()`, `isRunning()` | mounting starts the loop; `stop()` pauses it with registrations intact |
+
+`updateStrategy` is `'static'` (images), `'frame'` (videos) or `'manual'`
+(canvases) — inferred from the element type when you do not pass it. A `manual`
+element only updates when `updateElement` says so.
+
+Only `<img>`, `<video>` and `<canvas>` can be registered. Anything else is
+refused by tag name with a console error rather than mislabelled an unloaded
+image.
 
 ### Shader Presets
 
-Pre-built shader configurations available via:
+21 built-in effects, addressed by name through the preset registry:
 
 ```typescript
-import { /* shader presets */ } from '@composable-svelte/graphics';
+import {
+  getPreset,
+  hasPreset,
+  getAllPresetNames,
+  getPresetsByCategory,
+  getPresetMetadata,
+  type PresetName
+} from '@composable-svelte/graphics';
+
+const effect = getPreset('wave-flowing');
 ```
+
+`registerElement` takes the **name** — `shader: 'wave-flowing'` — and resolves
+it internally. `getPreset` returns `CustomShaderEffect | undefined`, so passing
+its result straight through is a type error under `strict`; reach for it when
+you want to read or clone an effect, not to register one.
+
+| family | names |
+|---|---|
+| ripple | `ripple-gentle`, `ripple-strong`, `ripple-pulse` |
+| wave | `wave-gentle-horizontal`, `wave-strong-horizontal`, `wave-gentle-vertical`, `wave-strong-vertical`, `wave-flowing`, `wave-heat` |
+| pixelate | `pixelate-small`, `pixelate-medium`, `pixelate-large` |
+| blur | `blur-slight`, `blur-medium`, `blur-strong` |
+| glitch | `glitch-subtle`, `glitch-medium`, `glitch-intense` |
+| zoom | `zoom-breathing`, `zoom-pulse`, `zoom-intense` |
+
+Every preset constant is also exported directly (`RIPPLE_GENTLE`, `WAVE_HEAT`,
+…), and each family has a factory — `createRippleEffect`, `createWaveEffect`,
+`createPixelateEffect`, `createBlurEffect`, `createGlitchEffect`,
+`createZoomEffect` — for parameters the fixed presets do not cover.
 
 ### BabylonAdapter
 
@@ -994,5 +1285,5 @@ Direct access to the Babylon.js engine for advanced use cases beyond the declara
 ```typescript
 import { BabylonAdapter } from '@composable-svelte/graphics';
 
-const adapter = new BabylonAdapter(canvas, { webgpu: true });
+const adapter = new BabylonAdapter();
 ```

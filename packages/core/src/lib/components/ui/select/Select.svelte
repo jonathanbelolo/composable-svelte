@@ -4,6 +4,11 @@
 	import { createInitialSelectState } from './select.types.js';
 	import type { SelectOption } from './select.types.js';
 	import { cn } from '../../../utils.js';
+	import {
+		animateChevron,
+		animateDropdownIn,
+		animateDropdownOut
+	} from '../../../animation/animate.js';
 
 	/**
 	 * Select component - Dropdown select with search and multi-select support.
@@ -32,6 +37,15 @@
 		options: SelectOption<T>[];
 
 		/**
+		 * `id` for the trigger, so a `<label for=…>` can address it.
+		 *
+		 * The component does not spread rest props, so without this an `id`
+		 * passed by a consumer was silently dropped and their label association
+		 * did nothing.
+		 */
+		id?: string | undefined;
+
+		/**
 		 * Selected value (single or multi-select array).
 		 * Use bind:value for two-way binding.
 		 */
@@ -40,36 +54,37 @@
 		/**
 		 * Placeholder text.
 		 */
-		placeholder?: string;
+		placeholder?: string | undefined;
 
 		/**
 		 * Enable search/filter.
 		 */
-		searchable?: boolean;
+		searchable?: boolean | undefined;
 
 		/**
 		 * Enable multi-select.
 		 */
-		multiple?: boolean;
+		multiple?: boolean | undefined;
 
 		/**
 		 * Disabled state.
 		 */
-		disabled?: boolean;
+		disabled?: boolean | undefined;
 
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Callback when value changes.
 		 */
-		onchange?: (value: T | T[] | null) => void;
+		onchange?: ((value: T | T[] | null) => void) | undefined;
 	}
 
 	let {
 		options,
+		id,
 		value = $bindable(null),
 		placeholder = 'Select an option...',
 		searchable = false,
@@ -103,6 +118,7 @@
 		store.dispatch({ type: 'optionsChanged', options });
 	});
 
+	let containerElement: HTMLElement | null = $state(null);
 	let triggerElement: HTMLElement | null = $state(null);
 	let dropdownElement: HTMLElement | null = $state(null);
 	let searchInputElement: HTMLInputElement | null = $state(null);
@@ -219,10 +235,10 @@
 
 	// Close on click outside
 	function handleClickOutside(event: MouseEvent) {
-		if (
-			!dropdownElement?.contains(event.target as Node) &&
-			!triggerElement?.contains(event.target as Node)
-		) {
+		// The whole container, not trigger + dropdown: the clear button is a
+		// sibling of the trigger, so a narrower test would treat clearing as an
+		// outside click and close the dropdown.
+		if (containerElement && !containerElement.contains(event.target as Node)) {
 			store.dispatch({ type: 'closed' });
 		}
 	}
@@ -235,39 +251,121 @@
 			document.removeEventListener('click', handleClickOutside);
 		};
 	});
+
+	// Rotate the caret on the dropdown's own timeline. A utility-class transition
+	// would be a second, unrelated one — and unobservable under test, since
+	// Tailwind is not compiled here. Plain `let` guard: the effect reads and
+	// writes it, and a reactive guard re-triggers the effect it lives in.
+
+	// Captured once, never reactive — this is the element's position *before* any
+	// animation, and it is the only thing the server can emit. `$effect` does not
+	// run during SSR, so a purely effect-driven transform renders every chevron
+	// unrotated on the server and pops on hydration. Verified by compiling with
+	// `generate: 'server'`.
+	//
+	// Because it never changes, Svelte writes it once and then leaves the property
+	// alone, which keeps invariant 6 (one property, one author): the markup places,
+	// Motion One animates.
+	const initialChevronTransform = $store.isOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+
+	let chevronElement: SVGElement | null = $state(null);
+	let lastRotated: boolean | undefined = undefined;
+
+	$effect(() => {
+		const open = $store.isOpen;
+		if (!chevronElement || lastRotated === open) return;
+		const first = lastRotated === undefined;
+		lastRotated = open;
+		if (first) {
+			// Placement is the markup's job (see `initialChevronTransform`); the
+			// first run only seeds the guard.
+			return;
+		}
+		animateChevron(chevronElement, open);
+	});
+
+	// Drive the dropdown's own lifecycle. `dropdownElement` was bound and read by
+	// nothing — it is precisely the handle these helpers need.
+	//
+	// Plain `let` guard keyed on the (status, content) pair, per
+	// guides/ANIMATION-GUIDELINES.md: a reactive guard would re-trigger the effect
+	// it lives in, and a "have I animated yet" guard deadlocks a component that
+	// mounts already open.
+	let lastAnimated: { status: string; content: unknown } | null = null;
+
+	$effect(() => {
+		const presentation = $store.presentation;
+		if (!dropdownElement) return;
+
+		if (presentation.status === 'idle') {
+			lastAnimated = null;
+			return;
+		}
+
+		const { status, content } = presentation;
+		if (lastAnimated?.status === status && lastAnimated.content === content) return;
+		lastAnimated = { status, content };
+
+		if (status === 'presenting') {
+			animateDropdownIn(dropdownElement).then(() => {
+				queueMicrotask(() =>
+					store.dispatch({ type: 'presentation', event: { type: 'presentationCompleted' } })
+				);
+			});
+		} else if (status === 'dismissing') {
+			animateDropdownOut(dropdownElement).then(() => {
+				queueMicrotask(() =>
+					store.dispatch({ type: 'presentation', event: { type: 'dismissalCompleted' } })
+				);
+			});
+		}
+	});
 </script>
 
 <svelte:window onkeydown={handleDropdownKeyDown} />
 
-<div class="relative inline-block w-full">
+<div bind:this={containerElement} class="relative inline-block w-full">
 	<!-- Trigger -->
-	<button
-		bind:this={triggerElement}
-		type="button"
-		class={cn(
-			'flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm',
-			'ring-offset-background placeholder:text-muted-foreground',
-			'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
-			disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
-			className
-		)}
-		aria-haspopup="listbox"
-		aria-expanded={$store.isOpen}
-		{disabled}
-		onclick={handleTriggerClick}
-		onkeydown={handleTriggerKeyDown}
-	>
-		<span class={cn('truncate', !$store.selected && 'text-muted-foreground')}>
-			{displayText}
-		</span>
-		<div class="flex items-center gap-2">
+	<div class="relative">
+		<button
+			bind:this={triggerElement}
+			{id}
+			type="button"
+			class={cn(
+				'flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm',
+				'ring-offset-background placeholder:text-muted-foreground',
+				'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+				disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
+				// Reserve room for the overlaid controls. Keyed on the same
+				// condition as the clear button so the text area reflows exactly
+				// as it did when they shared a flex row.
+				$store.selected && !disabled ? 'pr-[3.25rem]' : 'pr-7',
+				className
+			)}
+			aria-haspopup="listbox"
+			aria-expanded={$store.isOpen}
+			{disabled}
+			onclick={handleTriggerClick}
+			onkeydown={handleTriggerKeyDown}
+		>
+			<span class={cn('truncate', !$store.selected && 'text-muted-foreground')}>
+				{displayText}
+			</span>
+		</button>
+
+		<!-- Controls: siblings of the trigger, not children. A <button> inside a
+		     <button> is invalid HTML — the parser closes the outer one, so a
+		     server-rendered Select hydrated against a different tree. -->
+		<div class="absolute inset-y-0 right-0 flex items-center gap-2 pr-3">
 			{#if $store.selected && !disabled}
 				<button
 					type="button"
 					class="text-muted-foreground hover:text-foreground"
+					aria-label="Clear selection"
 					onclick={handleClear}
 				>
 					<svg
+						aria-hidden="true"
 						xmlns="http://www.w3.org/2000/svg"
 						width="16"
 						height="16"
@@ -293,20 +391,21 @@
 				stroke-width="2"
 				stroke-linecap="round"
 				stroke-linejoin="round"
-				class={cn(
-					'transition-transform',
-					$store.isOpen && 'rotate-180'
-				)}
+				bind:this={chevronElement}
+				style:transform={initialChevronTransform}
 			>
 				<polyline points="6 9 12 15 18 9"></polyline>
 			</svg>
 		</div>
-	</button>
+	</div>
 
 	<!-- Dropdown -->
-	{#if $store.isOpen}
+	<!-- Mounted while open *and* while dismissing, so the exit animation has
+	     something to animate. `isOpen` alone unmounts on the same tick. -->
+	{#if $store.isOpen || $store.presentation.status === 'dismissing'}
 		<div
 			bind:this={dropdownElement}
+			style:opacity={$store.presentation.status === 'presenting' ? '0' : undefined}
 			class="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border border-border bg-popover shadow-md"
 			role="listbox"
 			aria-multiselectable={multiple}
@@ -335,7 +434,7 @@
 							type="button"
 							class={cn(
 								'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-left outline-none',
-								'transition-colors',
+								'',
 								$store.highlightedIndex === index
 									? 'bg-accent text-accent-foreground'
 									: 'text-foreground',

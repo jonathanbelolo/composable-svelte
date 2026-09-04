@@ -32,12 +32,18 @@
 		onDismiss: (id: string) => void;
 
 		/**
+		 * Called when the toast's action button is clicked. Required: the view
+		 * must not decide what an action means — the reducer does.
+		 */
+		onAction: (id: string) => void;
+
+		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 	}
 
-	let { toast, onDismiss, class: className }: ToastProps = $props();
+	let { toast, onDismiss, onAction, class: className }: ToastProps = $props();
 
 	const variantClasses = {
 		default: 'bg-background text-foreground border-border',
@@ -60,13 +66,16 @@
 	}
 
 	function handleAction() {
-		toast.action?.onClick();
-		onDismiss(toast.id);
+		// Routed through the store, not called locally. Calling `onClick()` here
+		// and then dismissing was observationally identical, but it made "acted
+		// on it" and "discarded it" indistinguishable in the action history and
+		// to `onToastDismissed`. The reducer owns what an action means.
+		onAction(toast.id);
 	}
 
 	const toastClasses = $derived(
 		cn(
-			'group pointer-events-auto relative flex w-full max-w-md items-start gap-3 overflow-hidden rounded-lg border p-4 pr-8 shadow-lg transition-all',
+			'group pointer-events-auto relative flex w-full max-w-md items-start gap-3 overflow-hidden rounded-lg border p-4 pr-8 shadow-lg',
 			variantClasses[toast.variant],
 			className
 		)
@@ -74,10 +83,28 @@
 
 	let toastElement: HTMLElement;
 
-	// Animate in on mount
+	// Animate in on mount.
 	$effect(() => {
 		if (toastElement) {
 			animateToastIn(toastElement);
+		}
+	});
+
+	// Not $state: read and written by the effect below, and a reactive guard
+	// re-triggers the effect it lives in.
+	let animatedOut = false;
+
+	/**
+	 * Animate out once the reducer marks the toast `dismissing`.
+	 *
+	 * Removal is deferred by `exitDurationMs` so this has time to run —
+	 * `animateToastOut` existed, was exported, and had no caller at all, so
+	 * toasts popped out of existence.
+	 */
+	$effect(() => {
+		if (toast.dismissing && toastElement && !animatedOut) {
+			animatedOut = true;
+			animateToastOut(toastElement);
 		}
 	});
 </script>
@@ -113,7 +140,7 @@
 	{#if toast.dismissible !== false}
 		<button
 			type="button"
-			class="absolute right-2 top-2 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100"
+			class="absolute right-2 top-2 rounded-md p-1 text-foreground/50 opacity-0 hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100"
 			onclick={handleDismiss}
 			aria-label="Dismiss"
 		>

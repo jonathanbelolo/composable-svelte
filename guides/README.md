@@ -37,7 +37,7 @@ User Action → Store.dispatch(action)
 
 All packages follow the Composable Architecture pattern (reducer + effects + store), depend on `@composable-svelte/core`, and are built for Svelte 5. Source lives in `packages/<name>/src/lib/`.
 
-### `@composable-svelte/core` (v0.4.3)
+### `@composable-svelte/core`
 
 The foundation library. Everything else builds on this.
 
@@ -46,7 +46,7 @@ The foundation library. Everything else builds on this.
 | Root (`core`) | `createStore`, `Effect`, `Reducer`, `scope`, `combineReducers`, `forEach` (**not** `TestStore` — see `core/test`) |
 | `core/navigation` | `ifLetPresentation`, `scopeToDestination`, `createDestinationReducer`, `push`, `pop`, dismiss dependency |
 | `core/navigation-components` | Modal, Sheet, Drawer, Alert, Popover, Sidebar, Tabs, NavigationStack |
-| `core/components/ui` | 77 shadcn-svelte components (Button, Input, Card, Select, Accordion, etc.) |
+| `core/components/ui` | shadcn-svelte components (Button, Input, Card, Select, Accordion, …) — browse the full set in the styleguide |
 | `core/components/form` | Form system with Zod validation, `createFormReducer`, `FormField` |
 | `core/routing` | URL routing with `path-to-regexp`, browser history sync, query params |
 | `core/api` | HTTP client with interceptors, retries, caching, deduplication |
@@ -67,7 +67,21 @@ import { hydrateStore } from '@composable-svelte/core/ssr';
 import { syncBrowserHistory } from '@composable-svelte/core/routing';
 ```
 
-### `@composable-svelte/chat` (v0.2.1)
+### `@composable-svelte/auth`
+
+Sessions and the flows that establish them, over a dependency surface any backend can satisfy.
+
+- **Flows**: password sign-in, signup, email verification, password recovery, MFA (challenge, enrolment and management), OAuth (redirect, callback and connected accounts), magic links (request and sign-in), and the account read model plus change-password — each a headless reducer usable without the components
+- **Components**: `LoginForm`, `SignupForm`, `EmailVerification`, `ForgotPasswordForm`, `ResetPasswordForm`, `MfaChallengeForm`, `MfaEnrolment`, `MfaManagementPanel`, `RecoveryCodes`, `OAuthSignIn`, `OAuthCallback`, `ConnectedAccountsPanel`, `MagicLinkRequestForm`, `MagicLinkSignIn`, `ChangePasswordForm`, `SignOutButton`, plus `AuthGuard` / `RoleGate` for UX gating
+- **State**: `sessionReducer` owns "who am I"; every flow hands its result over with one action, `sessionEstablished`
+- **Errors**: `AuthError`, a discriminated union a surface branches on — `mfa_required` is the login flow branching, not a failure
+- **Built on**: zod, and `@composable-svelte/core`'s form system. No other runtime dependency
+
+```typescript
+import { LoginForm, createLoginStore, createHttpAuthDeps } from '@composable-svelte/auth';
+```
+
+### `@composable-svelte/chat`
 
 Transport-agnostic streaming chat for LLM interactions and real-time collaboration.
 
@@ -82,11 +96,11 @@ Transport-agnostic streaming chat for LLM interactions and real-time collaborati
 import { FullStreamingChat, streamingChatReducer } from '@composable-svelte/chat';
 ```
 
-### `@composable-svelte/charts` (v0.1.0)
+### `@composable-svelte/charts`
 
 Interactive data visualization built on Observable Plot and D3.
 
-- **Components**: `Chart`, `ChartPrimitive`, `ChartTooltip`
+- **Components**: `Chart`, `ChartPrimitive` (tooltips are native to Observable Plot)
 - **State**: `chartReducer` with zoom, brush, selection, and responsive support
 - **Utilities**: `plotBuilder` for declarative chart config, `data-transforms` for preprocessing
 - **Built on**: @observablehq/plot, D3 (d3-array, d3-brush, d3-scale, d3-selection, d3-zoom)
@@ -95,7 +109,7 @@ Interactive data visualization built on Observable Plot and D3.
 import { Chart, chartReducer, createInitialChartState } from '@composable-svelte/charts';
 ```
 
-### `@composable-svelte/code` (v0.1.0)
+### `@composable-svelte/code`
 
 Code editing, syntax highlighting, and visual node programming.
 
@@ -109,20 +123,20 @@ Code editing, syntax highlighting, and visual node programming.
 import { CodeEditor, CodeHighlight, NodeCanvas } from '@composable-svelte/code';
 ```
 
-### `@composable-svelte/graphics` (v0.1.0)
+### `@composable-svelte/graphics`
 
 State-driven 3D graphics with Babylon.js.
 
 - **Components**: `Scene`, `Camera`, `Mesh`, `Light`, `WebGLOverlay`
-- **State**: `graphicsReducer` — manages meshes, cameras, lights, renderer settings through actions
+- **State**: `graphicsReducer` — manages meshes, cameras, lights and animations through actions
 - **Adapter**: `BabylonAdapter` for advanced Babylon.js integration
-- **Built on**: @babylonjs/core, @babylonjs/loaders
+- **Built on**: @babylonjs/core
 
 ```typescript
 import { Scene, Camera, Mesh, Light } from '@composable-svelte/graphics';
 ```
 
-### `@composable-svelte/maps` (v0.1.0)
+### `@composable-svelte/maps`
 
 Interactive geospatial maps with Maplibre GL / Mapbox GL.
 
@@ -135,7 +149,7 @@ Interactive geospatial maps with Maplibre GL / Mapbox GL.
 import { Map, GeoJSONLayer, mapReducer } from '@composable-svelte/maps';
 ```
 
-### `@composable-svelte/media` (v0.1.0)
+### `@composable-svelte/media`
 
 Audio playback, video embedding, and voice input using native Web APIs.
 
@@ -345,15 +359,22 @@ const appReducer = scope(
 
 ### `combineReducers()` — Multiple children at the same level
 
+Takes **one object**, keyed by the state field each child owns, and does the
+scoping itself — you do not pass pre-scoped reducers to it. Each child reducer
+sees only its own slice.
+
 ```typescript
 import { combineReducers } from '@composable-svelte/core';
 
-const rootReducer = combineReducers(
-  scopedCounterReducer,
-  scopedTodoReducer,
-  scopedSettingsReducer
-);
+const rootReducer = combineReducers({
+  counter: counterReducer,
+  todos: todosReducer,
+  settings: settingsReducer
+});
 ```
+
+Reach for `scope()` instead when a child's action needs wrapping or its state
+does not sit under a field of its own name.
 
 ### `ifLet()` — Optional child (navigation)
 
@@ -361,10 +382,14 @@ const rootReducer = combineReducers(
 import { ifLetPresentation } from '@composable-svelte/core/navigation';
 
 // Only runs child reducer when destination is non-null
+// (toChildState, fromChildState, actionType, fromChildAction, childReducer) —
+// the fourth argument wraps a child action back into a parent one, which is how
+// the child's effects find their way home.
 const [newState, effect] = ifLetPresentation(
   (s) => s.destination,
   (s, d) => ({ ...s, destination: d }),
   'destination',
+  (childAction) => ({ type: 'destination', action: childAction }),
   childReducer
 )(state, action, deps);
 ```
@@ -385,8 +410,16 @@ interface AppState {
 Components react to this state:
 
 ```svelte
-{#if $derived(store.state.destination?.type === 'addItem')}
-  <Modal store={scopedStore}>
+<script lang="ts">
+  import { scopeToDestination } from '@composable-svelte/core';
+
+  const addItemStore = $derived(
+    scopeToDestination(store, ['destination'], 'addItem', 'destination')
+  );
+</script>
+
+{#if addItemStore.state}
+  <Modal store={addItemStore}>
     <AddItemForm />
   </Modal>
 {/if}
@@ -435,7 +468,7 @@ packages/core/src/lib/
 ├── ssr/                  # Server-side rendering, static site generation
 ├── dependencies/         # Clock, Storage, Cookies (injectable)
 ├── animation/            # Motion One helpers for lifecycle animations
-├── components/ui/        # 77 shadcn-svelte components
+├── components/ui/        # shadcn-svelte components
 ├── components/form/      # Form system with Zod validation
 ├── test/                 # TestStore for exhaustive testing
 └── styles/               # Tailwind base styles
@@ -500,9 +533,10 @@ type PresentationStatus = 'idle' | 'presenting' | 'presented' | 'dismissing';
 | `examples/product-gallery` | Full navigation: Modal, Sheet, Drawer, nested 3 levels |
 | `examples/url-routing` | Browser history, pattern matching, query params |
 | `examples/ssr-server` | SSR + SSG with multi-locale i18n |
+| `examples/auth-server` | A reference auth backend, and every flow wired to it |
 | `examples/file-browser` | Tree view, keyboard navigation |
 | `examples/shader-gallery` | WebGL + graphics package integration |
-| `examples/styleguide` | All 70+ UI components showcased |
+| `examples/styleguide` | Every UI component, and the auth flows, showcased |
 | `examples/registration-form` | Form validation patterns |
 
 ---
@@ -513,10 +547,10 @@ type PresentationStatus = 'idle' | 'presenting' | 'presented' | 'dismissing';
 # Install dependencies
 pnpm install
 
-# Run tests (root — jsdom, 1670+ tests)
+# Run tests (every workspace, serially — the suites drive real browsers)
 pnpm test
 
-# Run tests (core package — Playwright browser, 1670+ tests)
+# Run tests (core package only — Playwright browser)
 cd packages/core && pnpm test
 
 # Build core package
@@ -539,6 +573,7 @@ cd examples/counter && pnpm dev
 | [NAVIGATION-GUIDE.md](./NAVIGATION-GUIDE.md) | Tree/stack navigation, all 8 components, store scoping |
 | [forms-guide.md](./forms-guide.md) | Form system, Zod validation, standalone vs integrated mode |
 | [navigation-best-practices.md](./navigation-best-practices.md) | Patterns, pitfalls, dismiss vs observation, testing |
+| [VERIFICATION-PROTOCOL.md](./VERIFICATION-PROTOCOL.md) | How a change is checked before it is believed — mutation-verify every fix |
 
 Specs (original design documents): `specs/frontend/`
 Phase plans and completion summaries: `plans/`

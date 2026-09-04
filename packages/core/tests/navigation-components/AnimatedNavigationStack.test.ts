@@ -52,26 +52,22 @@ describe('AnimatedNavigationStack', () => {
 	it('renders the stack when idle', async () => {
 		const stack = [{ id: '1', title: 'Screen 1' }];
 		render(AnimatedNavigationStack, {
-			props: {
 				store: makeScopedStore(stack),
 				stack,
 				presentation: { status: 'idle' as const },
 				onBack: () => {}
-			}
-		});
+			});
 
 		await expect.element(page.getByRole('navigation')).toBeInTheDocument();
 	});
 
 	it('renders nothing when the store is null', async () => {
 		render(AnimatedNavigationStack, {
-			props: {
 				store: null,
 				stack: [],
 				presentation: { status: 'idle' as const },
 				onBack: () => {}
-			}
-		});
+			});
 
 		expect(page.getByRole('navigation').elements().length).toBe(0);
 	});
@@ -86,13 +82,11 @@ describe('AnimatedNavigationStack', () => {
 		const store = makeScopedStore(stack);
 
 		const { rerender } = render(AnimatedNavigationStack, {
-			props: {
 				store,
 				stack,
 				presentation: { status: 'presenting' as const, content: stack[1], duration: 300 },
 				onBack: () => {}
-			}
-		});
+			});
 
 		await settle();
 		await rerender({
@@ -128,13 +122,11 @@ describe('AnimatedNavigationStack', () => {
 			{ id: '2', title: 'Screen 2' }
 		];
 		render(AnimatedNavigationStack, {
-			props: {
 				store: makeScopedStore(stack),
 				stack,
 				presentation: { status: 'presented' as const, content: stack[1] },
 				onBack: () => {}
-			}
-		});
+			});
 
 		await expect.element(page.getByRole('button', { name: 'Go back' })).toBeInTheDocument();
 	});
@@ -149,12 +141,10 @@ describe('AnimatedNavigationStack', () => {
 		const store = makeScopedStore(stack);
 
 		render(AnimatedStackTest, {
-			props: {
 				store,
 				stack,
 				presentation: { status: 'dismissing' as const, content: stack[1], duration: 300 }
-			}
-		});
+			});
 
 		// Both layers are mounted: the outgoing one shows the screen being popped
 		// back to, the current one shows the screen being dismissed.

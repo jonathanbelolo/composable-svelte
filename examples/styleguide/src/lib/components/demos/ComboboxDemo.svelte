@@ -153,13 +153,13 @@
   <!-- Basic Combobox -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Basic Combobox</h3>
+      <h2 class="text-xl font-semibold mb-2">Basic Combobox</h2>
       <p class="text-muted-foreground text-sm">
         Searchable select with local filtering
       </p>
       {#if selectedFruit}
         <div class="mt-2">
-          <Badge variant="primary">Selected: {selectedFruit}</Badge>
+          <Badge variant="default">Selected: {selectedFruit}</Badge>
         </div>
       {/if}
     </div>
@@ -167,7 +167,7 @@
     <Card>
       <CardContent class="p-6">
         <div class="max-w-md">
-          <label class="text-sm font-medium mb-2 block">Choose a fruit</label>
+          <span class="text-sm font-medium mb-2 block">Choose a fruit</span>
           <Combobox
             options={fruitOptions}
             bind:value={selectedFruit}
@@ -182,7 +182,7 @@
   <!-- Multiple Comboboxes -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Multiple Comboboxes</h3>
+      <h2 class="text-xl font-semibold mb-2">Multiple Comboboxes</h2>
       <p class="text-muted-foreground text-sm">
         Different select dropdowns in a form
       </p>
@@ -194,7 +194,7 @@
       </CardHeader>
       <CardContent class="space-y-4">
         <div>
-          <label class="text-sm font-medium mb-2 block">Country</label>
+          <span class="text-sm font-medium mb-2 block">Country</span>
           <Combobox
             options={countryOptions}
             bind:value={selectedCountry}
@@ -203,7 +203,7 @@
         </div>
 
         <div>
-          <label class="text-sm font-medium mb-2 block">Favorite Language</label>
+          <span class="text-sm font-medium mb-2 block">Favorite Language</span>
           <Combobox
             options={languageOptions}
             bind:value={selectedLanguage}
@@ -212,7 +212,7 @@
         </div>
 
         <div>
-          <label class="text-sm font-medium mb-2 block">Preferred Framework</label>
+          <span class="text-sm font-medium mb-2 block">Preferred Framework</span>
           <Combobox
             options={frameworkOptions}
             bind:value={selectedFramework}
@@ -243,7 +243,7 @@
   <!-- Async Search - Users -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Async Search</h3>
+      <h2 class="text-xl font-semibold mb-2">Async Search</h2>
       <p class="text-muted-foreground text-sm">
         Load options dynamically from async source
       </p>
@@ -277,13 +277,13 @@
   <!-- Async Search - Cities -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Async with Fast Debounce</h3>
+      <h2 class="text-xl font-semibold mb-2">Async with Fast Debounce</h2>
       <p class="text-muted-foreground text-sm">
         Faster response time with reduced debounce delay
       </p>
       {#if selectedCity}
         <div class="mt-2">
-          <Badge variant="primary">City ID: {selectedCity}</Badge>
+          <Badge variant="default">City ID: {selectedCity}</Badge>
         </div>
       {/if}
     </div>
@@ -311,7 +311,7 @@
   <!-- Disabled State -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Disabled State</h3>
+      <h2 class="text-xl font-semibold mb-2">Disabled State</h2>
       <p class="text-muted-foreground text-sm">
         Combobox in disabled state
       </p>
@@ -320,7 +320,7 @@
     <Card>
       <CardContent class="p-6">
         <div class="max-w-md">
-          <label class="text-sm font-medium mb-2 block">Disabled Combobox</label>
+          <span class="text-sm font-medium mb-2 block">Disabled Combobox</span>
           <Combobox
             options={fruitOptions}
             placeholder="This combobox is disabled"
@@ -334,7 +334,7 @@
   <!-- Keyboard Navigation -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Keyboard Navigation</h3>
+      <h2 class="text-xl font-semibold mb-2">Keyboard Navigation</h2>
       <p class="text-muted-foreground text-sm">
         Full keyboard accessibility support
       </p>

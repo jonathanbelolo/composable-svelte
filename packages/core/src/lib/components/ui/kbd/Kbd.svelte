@@ -24,21 +24,21 @@
 	 * ```
 	 */
 
-	interface KbdProps extends Omit<HTMLAttributes<HTMLElement>, 'class'> {
+	interface KbdProps extends Omit<HTMLAttributes<HTMLElement>, 'class' | 'children'> {
 		/**
 		 * Size variant.
 		 */
-		size?: 'sm' | 'base' | 'lg';
+		size?: 'sm' | 'base' | 'lg' | undefined;
 
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Key content.
 		 */
-		children?: import('svelte').Snippet;
+		children?: import('svelte').Snippet | undefined;
 	}
 
 	let { size = 'base', class: className, children, ...restProps }: KbdProps = $props();

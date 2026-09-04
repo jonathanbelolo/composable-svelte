@@ -6,6 +6,7 @@
 	 * Supports various image formats (JPEG, PNG, GIF, WebP, SVG).
 	 */
 	import { onMount } from 'svelte';
+	import { animateFadeIn } from '@composable-svelte/core/animation';
 	import type { MessageAttachment } from '../types.js';
 	import { formatFileSize } from '../utils.js';
 
@@ -13,11 +14,11 @@
 		/** Image attachment to display */
 		attachment: MessageAttachment;
 		/** Optional class name */
-		class?: string;
+		class?: string | undefined;
 		/** Show image info header (default: true) */
-		showHeader?: boolean;
+		showHeader?: boolean | undefined;
 		/** Allow fullscreen view (default: true) */
-		allowFullscreen?: boolean;
+		allowFullscreen?: boolean | undefined;
 	}
 
 	let { attachment, class: className = '', showHeader = true, allowFullscreen = true }: Props = $props();
@@ -50,6 +51,64 @@
 		isLoading = false;
 	}
 
+	/**
+	 * Which image has already faded in.
+	 *
+	 * A plain `let`, not `$state` — writing it inside the effect that reads it
+	 * would re-trigger that effect. Keyed on the URL rather than a bare boolean
+	 * so a component handed a different attachment fades the new one in too.
+	 */
+	let fadedInFor: string | undefined;
+
+	/** The source the load state below currently describes. Also a plain `let`. */
+	let sourceUrl: string | undefined;
+
+	/**
+	 * A new `attachment` is a new load, and nothing said so.
+	 *
+	 * `isLoading` was set once at construction and never reset, so swapping the
+	 * prop left `ready` already true: the fade fired immediately on the element
+	 * still painting the *previous* image — visible, blink out, fade back in —
+	 * and then never fired for the new one, which arrived at full opacity with no
+	 * entrance and no spinner. `AttachmentPreviewModal` reuses one instance
+	 * rather than keying, so this is reachable.
+	 */
+	$effect(() => {
+		const url = attachment.url;
+		if (sourceUrl === url) return;
+
+		const isFirstRun = sourceUrl === undefined;
+		sourceUrl = url;
+		// On the first run the markup already rendered in this state; writing it
+		// again would only risk clobbering a load that beat the effect.
+		if (isFirstRun) return;
+
+		isLoading = true;
+		error = null;
+		fadedInFor = undefined;
+		// The header reads these. Left alone, it described image A while the
+		// spinner was up for image B.
+		naturalWidth = 0;
+		naturalHeight = 0;
+	});
+
+	// Was `img { opacity: 0 }` plus `img.loaded { opacity: 1 }` and a CSS
+	// transition — a state-driven lifecycle the policy prohibits, and one that
+	// rendered every server-side image permanently invisible, since `$effect`
+	// never runs there and `.loaded` is only ever added by a client-side load
+	// handler. `animateFadeIn` supplies its own `opacity: [0, 1]`, so the resting
+	// state in CSS is simply "visible".
+	$effect(() => {
+		const element = imgRef;
+		const ready = !isLoading && !error;
+		const url = attachment.url;
+
+		if (!element || !ready || fadedInFor === url) return;
+
+		fadedInFor = url;
+		void animateFadeIn(element);
+	});
+
 	async function toggleFullscreen() {
 		if (!containerRef || !allowFullscreen) return;
 
@@ -69,9 +128,10 @@
 	}
 
 	function handleImageClick() {
-		if (allowFullscreen && !isFullscreen) {
-			toggleFullscreen();
-		}
+		// No guard: the button's `disabled` is the exact same condition, so this
+		// only runs when it is already satisfied. Repeating it here was a branch
+		// that could not be false, and two places to keep in step.
+		toggleFullscreen();
 	}
 
 	// Format dimensions
@@ -130,15 +190,27 @@
 			</div>
 		{/if}
 
-		<img
-			bind:this={imgRef}
-			src={attachment.url}
-			alt={attachment.filename}
-			class:loaded={!isLoading && !error}
-			onload={handleLoad}
-			onerror={handleError}
+		<button
+			type="button"
+			class="image-preview__zoom"
 			onclick={handleImageClick}
-		/>
+			disabled={!allowFullscreen || isFullscreen || error !== null}
+			aria-label="View {attachment.filename} fullscreen"
+		>
+			<!-- Hidden on error, and that is not cosmetic: with the fade moved to
+			     Motion One the `<img>`'s resting opacity is 1, so a failed load
+			     painted its broken-image placeholder straight over the ⚠️ card
+			     below. `opacity: 0` used to hide it as a side effect. -->
+			{#if !error}
+				<img
+					bind:this={imgRef}
+					src={attachment.url}
+					alt={attachment.filename}
+					onload={handleLoad}
+					onerror={handleError}
+				/>
+			{/if}
+		</button>
 
 		<!-- Fullscreen overlay controls -->
 		{#if isFullscreen}
@@ -162,8 +234,8 @@
 	.image-preview {
 		display: flex;
 		flex-direction: column;
-		background: white;
-		border: 1px solid #e5e7eb;
+		background: hsl(var(--background, 0 0% 100%));
+		border: 1px solid hsl(var(--border, 220 13% 91%));
 		border-radius: 0.5rem;
 		overflow: hidden;
 		max-width: 800px;
@@ -173,7 +245,7 @@
 		max-width: none;
 		border: none;
 		border-radius: 0;
-		background: black;
+		background: hsl(var(--foreground, 0 0% 0%));
 	}
 
 	.image-preview-header {
@@ -181,8 +253,8 @@
 		align-items: center;
 		justify-content: space-between;
 		padding: 0.75rem 1rem;
-		background: #f9fafb;
-		border-bottom: 1px solid #e5e7eb;
+		background: hsl(var(--muted, 210 20% 98%));
+		border-bottom: 1px solid hsl(var(--border, 220 13% 91%));
 		gap: 1rem;
 	}
 
@@ -210,7 +282,7 @@
 	.image-filename {
 		font-size: 0.875rem;
 		font-weight: 500;
-		color: #111827;
+		color: hsl(var(--foreground, 220.9 39.3% 11%));
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
@@ -221,11 +293,11 @@
 		align-items: center;
 		gap: 0.5rem;
 		font-size: 0.75rem;
-		color: #6b7280;
+		color: hsl(var(--muted-foreground, 220 8.9% 46.1%));
 	}
 
 	.image-separator {
-		color: #d1d5db;
+		color: hsl(var(--foreground, 216 12.2% 83.9%));
 	}
 
 	.fullscreen-btn {
@@ -234,22 +306,21 @@
 		justify-content: center;
 		width: 2rem;
 		height: 2rem;
-		background: white;
-		border: 1px solid #d1d5db;
+		background: hsl(var(--background, 0 0% 100%));
+		border: 1px solid hsl(var(--border, 216 12.2% 83.9%));
 		border-radius: 0.375rem;
-		color: #374151;
+		color: hsl(var(--muted-foreground, 216.9 19.1% 26.7%));
 		cursor: pointer;
-		transition: all 0.15s;
 		flex-shrink: 0;
 	}
 
 	.fullscreen-btn:hover {
-		background: #f9fafb;
-		border-color: #9ca3af;
+		background: hsl(var(--muted, 210 20% 98%));
+		border-color: hsl(var(--muted-foreground, 217.9 10.6% 64.9%));
 	}
 
 	.fullscreen-btn:focus-visible {
-		outline: 2px solid #3b82f6;
+		outline: 2px solid hsl(var(--primary, 217.2 91.2% 59.8%));
 		outline-offset: 2px;
 	}
 
@@ -258,13 +329,26 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: #f9fafb;
+		background: hsl(var(--muted, 210 20% 98%));
 		min-height: 200px;
 	}
 
 	.fullscreen .image-container {
 		min-height: 100vh;
-		background: black;
+		background: hsl(var(--foreground, 0 0% 0%));
+	}
+
+	/* The wrapper is a real button for keyboard access, and had no rule at all —
+	   so every image in the gallery and the preview modal rendered inside default
+	   UA button chrome: a grey `buttonface` box with a 2px outset border. */
+	.image-preview__zoom {
+		display: block;
+		padding: 0;
+		border: none;
+		background: none;
+		font: inherit;
+		color: inherit;
+		max-width: 100%;
 	}
 
 	img {
@@ -273,12 +357,6 @@
 		max-height: 600px;
 		width: auto;
 		height: auto;
-		opacity: 0;
-		transition: opacity 0.2s;
-	}
-
-	img.loaded {
-		opacity: 1;
 	}
 
 	.fullscreen img {
@@ -292,7 +370,10 @@
 	}
 
 	.image-preview.clickable img:hover {
-		opacity: 0.9;
+		/* Was `opacity: 0.9`, which the fade-in's committed inline opacity now
+		   outranks — one property, one author. `filter` keeps the same feedback
+		   on a property nothing else writes. */
+		filter: brightness(0.92);
 	}
 
 	.image-loading,
@@ -307,18 +388,18 @@
 	}
 
 	.image-loading {
-		color: #6b7280;
+		color: hsl(var(--muted-foreground, 220 8.9% 46.1%));
 	}
 
 	.image-error {
-		color: #dc2626;
+		color: hsl(var(--destructive, 0 72.2% 50.6%));
 	}
 
 	.spinner {
 		width: 2rem;
 		height: 2rem;
-		border: 3px solid #e5e7eb;
-		border-top-color: #3b82f6;
+		border: 3px solid hsl(var(--border, 220 13% 91%));
+		border-top-color: hsl(var(--primary, 217.2 91.2% 59.8%));
 		border-radius: 50%;
 		animation: spin 0.6s linear infinite;
 	}
@@ -354,9 +435,8 @@
 		background: rgba(0, 0, 0, 0.6);
 		border: 1px solid rgba(255, 255, 255, 0.2);
 		border-radius: 0.375rem;
-		color: white;
+		color: hsl(var(--background, 0 0% 100%));
 		cursor: pointer;
-		transition: background-color 0.15s;
 	}
 
 	.fullscreen-close-btn:hover {
@@ -364,7 +444,7 @@
 	}
 
 	.fullscreen-close-btn:focus-visible {
-		outline: 2px solid white;
+		outline: 2px solid hsl(var(--background, 0 0% 100%));
 		outline-offset: 2px;
 	}
 </style>

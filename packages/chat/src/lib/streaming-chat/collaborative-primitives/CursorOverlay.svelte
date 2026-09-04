@@ -4,6 +4,11 @@
 	 *
 	 * Overlays cursor markers on top of an input field to show
 	 * where other users are typing in real-time.
+	 *
+	 * Positions are measured by rendering the text before the caret into a
+	 * hidden span, which makes this **single-line only**: a `<textarea>` whose
+	 * content wraps gets every caret placed on the first line. Pass a
+	 * single-line `<input>`, or a textarea you know does not wrap.
 	 */
 
 	import { onMount } from 'svelte';
@@ -25,16 +30,37 @@
 		/** Current text content (to calculate positions) */
 		text: string;
 		/** Custom class */
-		class?: string;
+		class?: string | undefined;
 	}
 
 	let { inputElement, cursors, text, class: className = '' }: Props = $props();
+
+	/**
+	 * Vertical room reserved above the input for the name flags.
+	 *
+	 * `CursorMarker` hangs its label at `top: -24px` — above the caret, tail
+	 * pointing down at it. This overlay clips with `overflow: hidden`, so
+	 * without a gutter the flag is scissored off by its own parent however
+	 * visible its opacity says it is. Markers are pushed down by the same
+	 * amount, so the gutter itself moves no caret.
+	 */
+	const LABEL_GUTTER = 24;
 
 	let overlayElement: HTMLDivElement;
 	let cursorPositions: Map<
 		string,
 		{ left: number; top: number; selectionWidth: number }
 	> = $state(new Map());
+
+	/**
+	 * The input's own horizontal scroll, mirrored into state.
+	 *
+	 * Measured offsets are from the start of the text, not from the start of
+	 * what is on screen. Once the user types past the field's width the two
+	 * diverge, and every flag points at the wrong character. Kept in `$state`
+	 * because the positions effect needs it as a dependency, not just a value.
+	 */
+	let inputScrollLeft = $state(0);
 
 	// Calculate pixel position for a cursor
 	function calculateCursorPosition(
@@ -74,13 +100,20 @@
 
 		document.body.removeChild(measureSpan);
 
-		// Get input padding
-		const paddingLeft = parseInt(window.getComputedStyle(inputElement).paddingLeft) || 0;
-		const paddingTop = parseInt(window.getComputedStyle(inputElement).paddingTop) || 0;
+		// Distance from the element's *border-box* origin to where its text
+		// starts. The overlay is placed from `getBoundingClientRect()`, which is a
+		// border box, so leaving the border out put every caret one border-width
+		// up and to the left of the character it names — 1px in this repo's own
+		// demo, and invisible to a test that uses a border-less input.
+		const style = window.getComputedStyle(inputElement);
+		const insetLeft =
+			(parseFloat(style.borderLeftWidth) || 0) + (parseFloat(style.paddingLeft) || 0);
+		const insetTop =
+			(parseFloat(style.borderTopWidth) || 0) + (parseFloat(style.paddingTop) || 0);
 
 		return {
-			left: left + paddingLeft,
-			top: paddingTop,
+			left: left + insetLeft - inputScrollLeft,
+			top: insetTop + LABEL_GUTTER,
 			selectionWidth
 		};
 	}
@@ -101,11 +134,13 @@
 	function updateOverlayPosition() {
 		if (!inputElement || !overlayElement) return;
 
+		inputScrollLeft = inputElement.scrollLeft;
+
 		const rect = inputElement.getBoundingClientRect();
 		overlayElement.style.left = `${rect.left}px`;
-		overlayElement.style.top = `${rect.top}px`;
+		overlayElement.style.top = `${rect.top - LABEL_GUTTER}px`;
 		overlayElement.style.width = `${rect.width}px`;
-		overlayElement.style.height = `${rect.height}px`;
+		overlayElement.style.height = `${rect.height + LABEL_GUTTER}px`;
 	}
 
 	onMount(() => {

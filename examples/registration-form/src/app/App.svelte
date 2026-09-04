@@ -192,7 +192,9 @@
 
             <!-- Helper Text -->
             <p class="text-xs text-gray-500 text-center">
-              Already have an account? <a href="#" class="text-blue-600 hover:text-blue-700">Sign in</a>
+              <!-- Not a link: this demo has no sign-in route, so href="#" would be a
+                   focusable control that does nothing. -->
+              Already have an account? <span class="text-blue-600">Sign in</span>
             </p>
           </div>
         </Form>

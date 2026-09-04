@@ -2,7 +2,8 @@
  * Tests for WebSocket Message Queue
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { expectConsole } from '../helpers/console.js';
 import { createMessageQueue, createQueuedWebSocket } from '../../src/lib/websocket/message-queue.js';
 import { createMockWebSocket } from '../../src/lib/websocket/testing/mock-client.js';
 
@@ -136,8 +137,8 @@ describe('Message Queue', () => {
 
       const messages = queue.flush();
 
-      expect(messages[0].user).toBe('Alice');
-      expect(messages[1].user).toBe('Bob');
+      expect(messages[0]!.user).toBe('Alice');
+      expect(messages[1]!.user).toBe('Bob');
     });
 
     it('should work with complex object types', () => {
@@ -162,7 +163,7 @@ describe('Message Queue', () => {
       queue.enqueue(msg);
 
       const messages = queue.flush();
-      expect(messages[0].data.nested.value).toBe('test');
+      expect(messages[0]!.data.nested.value).toBe('test');
     });
   });
 
@@ -327,6 +328,72 @@ describe('Queued WebSocket Client', () => {
     });
   });
 
+  describe('Pending count on stats', () => {
+    // The narrow answer to "how many messages are waiting". There is
+    // deliberately no `websocket.queue`: a handle invites reaching into a
+    // structure that belongs to reconnection. `stats` was already the public,
+    // read-only home for numbers about the connection.
+
+    it('reports zero while connected', async () => {
+      const base = createMockWebSocket();
+      const client = createQueuedWebSocket(base, 100);
+      await client.connect('ws://test');
+
+      await client.send({ hello: 'world' });
+
+      expect(client.stats.messagesQueued).toBe(0);
+    });
+
+    it('counts messages held while disconnected', async () => {
+      const client = createQueuedWebSocket(createMockWebSocket(), 100);
+
+      await client.send({ n: 1 });
+      await client.send({ n: 2 });
+      await client.send({ n: 3 });
+
+      expect(client.stats.messagesQueued).toBe(3);
+    });
+
+    it('returns to zero once the queue flushes', async () => {
+      const base = createMockWebSocket();
+      const client = createQueuedWebSocket(base, 100);
+
+      await client.send({ n: 1 });
+      await client.send({ n: 2 });
+      expect(client.stats.messagesQueued).toBe(2);
+
+      await client.connect('ws://test');
+
+      expect(client.stats.messagesQueued).toBe(0);
+    });
+
+    it('stops at maxSize, because overflow drops the oldest', async () => {
+      const client = createQueuedWebSocket(createMockWebSocket(), 5);
+
+      for (let i = 0; i < 12; i += 1) await client.send({ n: i });
+
+      expect(client.stats.messagesQueued).toBe(5);
+    });
+
+    it('leaves the other seven fields to the wrapped client', async () => {
+      // The wrapper owns exactly one field. If it built a fresh literal instead
+      // of spreading, every other number would silently read zero.
+      const base = createMockWebSocket();
+      const client = createQueuedWebSocket(base, 100);
+      await client.connect('ws://test');
+      await client.send({ hello: 'world' });
+
+      expect(client.stats.messagesSent).toBe(base.stats.messagesSent);
+      expect(client.stats.bytesSent).toBe(base.stats.bytesSent);
+      expect(client.stats.reconnects).toBe(base.stats.reconnects);
+      expect(client.stats.errors).toBe(base.stats.errors);
+    });
+
+    it('reports zero for a client that does not queue at all', () => {
+      expect(createMockWebSocket().stats.messagesQueued).toBe(0);
+    });
+  });
+
   describe('State Preservation', () => {
     it('should preserve client state', async () => {
       const baseClient = createMockWebSocket();
@@ -394,20 +461,21 @@ describe('Queued WebSocket Client', () => {
 
   describe('Error Handling', () => {
     it('should handle flush errors gracefully', async () => {
+      const errors = expectConsole('error');
       const baseClient = createMockWebSocket();
+      // The flush's `.catch(console.error)` is the behaviour under test, so the
+      // send it flushes through has to reject. The old form never made one
+      // reject and asserted the base client's own disconnect.
+      vi.spyOn(baseClient, 'send').mockRejectedValue(new Error('send failed'));
       const queuedClient = createQueuedWebSocket(baseClient, 100);
 
-      // Queue message
       await queuedClient.send({ type: 'test' });
-
-      // Connect
       await queuedClient.connect('wss://example.com');
 
-      // Immediately disconnect before flush completes
-      await queuedClient.disconnect();
-
-      // Should not throw
-      expect(baseClient.state.status).toBe('disconnected');
+      await vi.waitFor(() => expect(errors).toHaveLength(1));
+      expect(String(errors[0]?.[0])).toContain('send failed');
+      // The client is still usable afterwards.
+      expect(baseClient.state.status).toBe('connected');
     });
   });
 
@@ -428,8 +496,8 @@ describe('Queued WebSocket Client', () => {
 
       await new Promise(resolve => setTimeout(resolve, 10));
 
-      expect(baseClient.sentMessages[0].user).toBe('Alice');
-      expect(baseClient.sentMessages[0].text).toBe('Hello');
+      expect(baseClient.sentMessages[0]!.user).toBe('Alice');
+      expect(baseClient.sentMessages[0]!.text).toBe('Hello');
     });
   });
 

@@ -33,7 +33,7 @@
 
 <div class="space-y-6">
   <div class="space-y-2">
-    <h3 class="text-lg font-semibold">Bar Chart</h3>
+    <h2 class="text-lg font-semibold">Bar Chart</h2>
     <p class="text-sm text-muted-foreground">
       Categorical data visualization with vertical bars and interactive tooltips.
     </p>
@@ -53,7 +53,7 @@
   </div>
 
   <div class="space-y-2">
-    <h4 class="text-sm font-semibold">Features:</h4>
+    <h3 class="text-sm font-semibold">Features:</h3>
     <ul class="text-sm text-muted-foreground space-y-1 list-disc list-inside">
       <li>Categorical data visualization</li>
       <li>Interactive tooltips on hover</li>

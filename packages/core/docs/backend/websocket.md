@@ -42,9 +42,14 @@ import { createLiveWebSocket, Effect } from '@composable-svelte/core';
 // 1. Create client
 const websocket = createLiveWebSocket({
   reconnect: {
+    // Every field is required — `ReconnectConfig` has no optional members, so
+    // there are no defaults to fall back on.
     enabled: true,
     maxAttempts: 5,
-    initialDelay: 1000
+    initialDelay: 1000,
+    maxDelay: 30_000,
+    backoffMultiplier: 2,
+    jitter: true
   }
 });
 
@@ -215,6 +220,9 @@ interface ConnectionStats {
   reconnects: number;
   errors: number;
   uptime: number; // milliseconds
+  // Messages a queuing wrapper is holding for the connection. Always 0 for a
+  // client that does not queue.
+  messagesQueued: number;
 }
 
 // Access stats
@@ -222,6 +230,7 @@ const stats = websocket.stats;
 console.log(stats.messagesSent); // 42
 console.log(stats.reconnects); // 2
 console.log(stats.uptime); // 123456 (ms)
+console.log(stats.messagesQueued); // 3
 ```
 
 ## Sending Messages
@@ -263,10 +272,8 @@ Messages sent while disconnected can be queued:
 ```typescript
 import { createQueuedWebSocket } from '@composable-svelte/core';
 
-const websocket = createQueuedWebSocket(
-  createLiveWebSocket(),
-  { maxSize: 100 }
-);
+// The second argument is the queue size, a plain number.
+const websocket = createQueuedWebSocket(createLiveWebSocket(), 100);
 
 // Send while disconnected - queued automatically
 await websocket.send({ type: 'chat', text: 'Hello!' });
@@ -609,41 +616,72 @@ Buffer messages while offline and send when reconnected.
 ```typescript
 import { createQueuedWebSocket } from '@composable-svelte/core';
 
-const websocket = createQueuedWebSocket(
-  createLiveWebSocket(),
-  {
-    maxSize: 100,  // Queue up to 100 messages
-    dropStrategy: 'oldest' // Drop oldest when full
-  }
-);
+// Queue up to 100 messages. When it is full the **oldest** is dropped; that is
+// the only behaviour, not a configurable strategy.
+const websocket = createQueuedWebSocket(createLiveWebSocket(), 100);
 
 // Send while disconnected - queued automatically
 await websocket.send({ type: 'chat', text: 'Message 1' });
 await websocket.send({ type: 'chat', text: 'Message 2' });
 
-console.log(websocket.queue.size); // 2
-console.log(websocket.queue.isFull); // false
-
 // Connect - queue flushes automatically
 await websocket.connect('wss://api.example.com');
 // Both messages sent
-console.log(websocket.queue.size); // 0
 ```
 
-### Manual Queue Management
+### Inspecting the queue
+
+**For a pending count, read `stats.messagesQueued`:**
 
 ```typescript
-// Peek at queue
-const messages = websocket.queue.peek();
-console.log(messages);
+import { createQueuedWebSocket, createLiveWebSocket } from '@composable-svelte/core';
 
-// Clear queue
-websocket.queue.clear();
+const client = createQueuedWebSocket(createLiveWebSocket(), 100);
+await client.send({ type: 'chat', text: 'held while offline' });
 
-// Check if full
-if (websocket.queue.isFull) {
-  console.log('Queue full - dropping messages');
+console.log(client.stats.messagesQueued); // 1
+```
+
+`createQueuedWebSocket` owns its queue and returns only the client, so there is
+still no `websocket.queue`, and that is deliberate: a handle invites reaching
+into a structure that belongs to reconnection, whereas a read-only number on
+`stats` — already the public home for numbers about the connection — cannot be
+misused.
+
+There is no `isFull` either. It is the comparison `size >= maxSize`, and
+reaching it is not an error: the oldest message is dropped to make room.
+
+**To clear the buffer, or to see what is actually in it**, drive the queue
+yourself — that is what the wrapper does internally, and `createMessageQueue` is
+exported for it:
+
+```typescript
+import { createMessageQueue, createLiveWebSocket } from '@composable-svelte/core';
+
+const queue = createMessageQueue<ChatMessage>(100);
+const websocket = createLiveWebSocket<ChatMessage>();
+
+async function send(message: ChatMessage) {
+  try {
+    await websocket.send(message);
+  } catch {
+    queue.enqueue(message); // offline: hold it
+  }
 }
+
+console.log(queue.size, queue.maxSize); // 2 100
+
+// There is no `isFull`; it is the comparison, and reaching it is not an error —
+// the oldest message is dropped to make room.
+const full = queue.size >= queue.maxSize;
+
+// Flush when the connection returns — `flush()` empties the queue and hands
+// back what it held.
+for (const message of queue.flush()) {
+  await websocket.send(message);
+}
+
+queue.clear();
 ```
 
 ## Error Handling
@@ -962,14 +1000,18 @@ mockWS.reset();
 ### Testing Reducers
 
 ```typescript
-import { TestStore } from '@composable-svelte/core';
+import { TestStore } from '@composable-svelte/core/test';
 
 describe('Chat Reducer', () => {
   it('should connect and receive messages', async () => {
     const mockWS = createMockWebSocket<ChatMessage>();
 
     const store = new TestStore({
-      initialState: { connected: false, messages: [] },
+      initialState: {
+        connected: false,
+        connecting: false,
+        messages: [] as ChatMessage[]
+      },
       reducer: chatReducer,
       dependencies: { websocket: mockWS }
     });
@@ -1261,4 +1303,4 @@ For more information, see:
 - [API Client](./api-client.md)
 - [Dependencies Overview](./dependencies.md)
 - [Effect System](../core-concepts/effects.md)
-- [Testing Guide](../testing/unit-testing.md)
+- [Testing Guide](../core-concepts/testing.md)

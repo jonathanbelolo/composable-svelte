@@ -82,7 +82,7 @@ describe('scope()', () => {
     expect(effect._tag).toBe('None');
   });
 
-  it('lifts child effects to parent actions', () => {
+  it('lifts child effects to parent actions', async () => {
     const effectfulReducer: Reducer<CounterState, CounterAction> = (state, action) => {
       if (action.type === 'increment') {
         return [
@@ -116,6 +116,15 @@ describe('scope()', () => {
 
     expect(newState.counter.count).toBe(1);
     expect(effect._tag).toBe('Run');
+
+    // "Lifts" means the child's action comes out wrapped as the parent's.
+    // Asserting only the tag passes with the lift replaced by identity.
+    if (effect._tag !== 'Run') throw new Error('unreachable');
+    const dispatched: ParentAction[] = [];
+    await effect.execute((a) => {
+      dispatched.push(a);
+    });
+    expect(dispatched).toEqual([{ type: 'counter', action: { type: 'decrement' } }]);
   });
 });
 

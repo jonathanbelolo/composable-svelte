@@ -14,7 +14,7 @@
  *   streamingChatReducer,
  *   createInitialStreamingChatState,
  *   createMockStreamingChat
- * } from '@composable-svelte/code';
+ * } from '@composable-svelte/chat';
  *
  * const store = createStore({
  *   initialState: createInitialStreamingChatState(),
@@ -39,8 +39,6 @@ export {
 	ChatMessageWithActions
 } from './primitives/index.js';
 
-// Legacy export (use FullStreamingChat instead)
-export { default as StreamingChat } from './StreamingChat.svelte';
 
 // Core functionality
 export { streamingChatReducer } from './reducer.js';
@@ -59,12 +57,12 @@ export {
 
 // Utilities
 export {
+	createAttachmentFromFile,
 	detectFileType,
 	extractFileMetadata,
 	formatFileSize,
 	validateFileSize,
 	validateFileType,
-	createFileDataURL,
 	createFileBlobURL,
 	revokeFileBlobURL,
 	getFileExtension,
@@ -80,14 +78,10 @@ export {
 	type UserPresence,
 	type TypingInfo,
 	type CursorPosition,
-	type UserPermissions,
 	type CollaborativeStreamingChatState,
 	type CollaborativeAction,
 	type CollaborativeDependencies,
 	type WebSocketConnectionState,
-	type PendingAction,
-	type SyncState,
-	DEFAULT_USER_PERMISSIONS
 } from './collaborative-types.js';
 
 // Collaborative primitives
@@ -112,14 +106,6 @@ export {
 	getCursorPositions,
 	formatTypingIndicator
 } from './collaborative-hooks.js';
-
-// WebSocket manager
-export {
-	WebSocketManager,
-	createWebSocketManager,
-	type WebSocketConfig,
-	type WebSocketMessage
-} from './websocket-manager.js';
 
 // Cleanup utilities
 export { CleanupTracker, createCleanupTracker, type CleanupFunction } from './cleanup-tracker.js';

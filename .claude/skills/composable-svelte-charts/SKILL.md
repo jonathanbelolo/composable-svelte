@@ -41,26 +41,27 @@ All charts use pure reducers with type-safe actions following Composable Archite
 
 ## QUICK START
 
-```typescript
-import { createStore } from '@composable-svelte/core';
-import { Chart, chartReducer, createInitialChartState } from '@composable-svelte/charts';
+```svelte
+<script lang="ts">
+  import { createStore } from '@composable-svelte/core';
+  import { Chart, chartReducer, createInitialChartState } from '@composable-svelte/charts';
 
-// Sample data
-const data = [
-  { x: 1, y: 10, category: 'A' },
-  { x: 2, y: 25, category: 'B' },
-  { x: 3, y: 15, category: 'A' },
-  { x: 4, y: 30, category: 'B' }
-];
+  // Sample data
+  const data = [
+    { x: 1, y: 10, category: 'A' },
+    { x: 2, y: 25, category: 'B' },
+    { x: 3, y: 15, category: 'A' },
+    { x: 4, y: 30, category: 'B' }
+  ];
 
-// Create chart store
-const chartStore = createStore({
-  initialState: createInitialChartState({ data }),
-  reducer: chartReducer,
-  dependencies: {}
-});
+  // Create chart store
+  const chartStore = createStore({
+    initialState: createInitialChartState({ data }),
+    reducer: chartReducer,
+    dependencies: {}
+  });
+</script>
 
-// Render scatter plot
 <Chart
   store={chartStore}
   type="scatter"
@@ -86,8 +87,9 @@ const chartStore = createStore({
 - `type: 'scatter' | 'line' | 'bar' | 'area' | 'histogram'` - Chart type (default: 'scatter')
 - `width: number` - Chart width (optional, responsive if omitted)
 - `height: number` - Chart height (optional, defaults to 400px)
-- `x: string | ((d) => any)` - X accessor (required)
-- `y: string | ((d) => any)` - Y accessor (required)
+- `x: string | ((d) => any)` - X accessor (optional; Observable Plot has its own
+  defaults, and the summary and data table degrade to the row's own keys without it)
+- `y: string | ((d) => any)` - Y accessor (optional, same)
 - `color: string | ((d) => any)` - Color accessor (optional)
 - `size: number` - Mark size (optional)
 - `xDomain: [number, number] | 'auto'` - X domain (optional)
@@ -100,7 +102,7 @@ const chartStore = createStore({
 
 ### Usage
 
-```typescript
+```svelte
 <Chart
   store={chartStore}
   type="scatter"
@@ -126,7 +128,7 @@ const chartStore = createStore({
 
 **Best for**: Correlations, distributions, outliers.
 
-```typescript
+```svelte
 <Chart
   store={chartStore}
   type="scatter"
@@ -150,7 +152,7 @@ const chartStore = createStore({
 
 **Best for**: Time series, trends, comparisons.
 
-```typescript
+```svelte
 <Chart
   store={chartStore}
   type="line"
@@ -172,7 +174,7 @@ const chartStore = createStore({
 
 **Best for**: Category comparisons, rankings, distributions.
 
-```typescript
+```svelte
 <Chart
   store={chartStore}
   type="bar"
@@ -194,7 +196,7 @@ const chartStore = createStore({
 
 **Best for**: Cumulative data, part-to-whole relationships.
 
-```typescript
+```svelte
 <Chart
   store={chartStore}
   type="area"
@@ -215,7 +217,7 @@ const chartStore = createStore({
 
 **Best for**: Data distributions, frequency analysis.
 
-```typescript
+```svelte
 <Chart
   store={chartStore}
   type="histogram"
@@ -242,7 +244,6 @@ interface ChartState<T = unknown> {
   filteredData: T[];             // After filters applied
 
   // Visualization config
-  spec: PlotSpec;                // Observable Plot spec
   dimensions: {
     width: number;
     height: number;
@@ -253,9 +254,13 @@ interface ChartState<T = unknown> {
     type: 'none' | 'point' | 'range' | 'brush';
     selectedData: T[];
     selectedIndices: number[];
-    brushExtent?: [[number, number], [number, number]];
     range?: [number, number];
   };
+
+  // Keyboard cursor: an index into `filteredData`, or null for no cursor.
+  // Not the same thing as selection — moving it announces and rings a point
+  // and nothing else. Cleared whenever the data changes.
+  focusedIndex: number | null;
 
   // Zoom/pan
   transform: {
@@ -267,7 +272,7 @@ interface ChartState<T = unknown> {
 
   // Animation
   isAnimating: boolean;
-  transitionDuration: number;
+  transitionDuration: number;      // milliseconds, default 400
 }
 ```
 
@@ -282,11 +287,19 @@ type ChartAction<T = unknown> =
 
   // Selection
   | { type: 'selectPoint'; data: T; index: number }
-  | { type: 'selectRange'; range: [number, number] }
-  | { type: 'brushStart'; position: [number, number] }
-  | { type: 'brushMove'; extent: [[number, number], [number, number]] }
-  | { type: 'brushEnd' }
+  | { type: 'selectRange'; range: [number, number] }   // a contiguous span
+  | { type: 'selectPoints'; indices: number[] }        // an arbitrary set — what a brush produces
+  | { type: 'brushStart' }
   | { type: 'clearSelection' }
+
+  // Keyboard cursor
+  | { type: 'focusPoint'; index: number }
+  | { type: 'focusNext' }
+  | { type: 'focusPrevious' }
+  | { type: 'focusFirst' }
+  | { type: 'focusLast' }
+  | { type: 'clearFocus' }
+  | { type: 'selectFocused' }
 
   // Zoom/pan
   | { type: 'zoom'; transform: ZoomTransform }
@@ -294,12 +307,13 @@ type ChartAction<T = unknown> =
   | { type: 'zoomProgress'; transform: ZoomTransform }
   | { type: 'zoomComplete' }
   | { type: 'resetZoom' }
+  | { type: 'zoomIn' }
+  | { type: 'zoomOut' }
 
   // Dimensions
   | { type: 'resize'; dimensions: { width: number; height: number } }
 
-  // Config
-  | { type: 'updateSpec'; spec: Partial<PlotSpec> };
+  // Config;
 ```
 
 ### Creating Initial State
@@ -325,7 +339,9 @@ const initialState = createInitialChartState({
 **Controls**:
 - Mouse wheel: Zoom in/out
 - Click + drag: Pan
-- Double-click: Reset zoom
+
+There is no double-click handler in this package. d3-zoom's own default
+double-click zooms *in*; it does not reset. Dispatch `resetZoom` for that.
 
 **Programmatic zoom**:
 ```typescript
@@ -362,7 +378,7 @@ console.log('Selected points:', selected);
 ```
 
 **Callback**:
-```typescript
+```svelte
 <Chart
   store={chartStore}
   enableBrush={true}
@@ -398,7 +414,9 @@ const spec = {
 
 ### Point Selection
 
-**Enable**: Click on points when `enableBrush={false}`
+**Enable**: dispatch `selectPoint` yourself. There is no click handler anywhere
+in this package, so clicking a point does nothing — the only built-in gesture
+that produces a selection is the brush.
 
 ```typescript
 // Listen for point selection
@@ -484,7 +502,7 @@ Effect.run(async (dispatch) => {
 
 Omit `width` and `height` for responsive sizing:
 
-```typescript
+```svelte
 <Chart
   store={chartStore}
   type="scatter"
@@ -500,7 +518,7 @@ Chart will:
 
 ### Fixed Dimensions
 
-```typescript
+```svelte
 <Chart
   store={chartStore}
   type="scatter"
@@ -528,7 +546,7 @@ Chart will:
 
 ### Responsive Breakpoints
 
-```typescript
+```svelte
 let chartWidth = $state(800);
 
 $effect(() => {
@@ -549,43 +567,84 @@ $effect(() => {
 
 ## ACCESSIBILITY
 
-### ARIA Labels
+Every chart is keyboard-operable as soon as it renders. There is no prop to
+switch it on, and no prop to switch it off.
 
-Chart component includes:
-- `role="img"` - Marks as image
-- `aria-label` - Describes chart content
-- `aria-describedby` - Links to summary
+### ARIA
 
-```svelte
-<Chart
-  store={chartStore}
-  type="scatter"
-  x="x"
-  y="y"
-  aria-label="Scatter plot showing relationship between X and Y"
-/>
+The chart container carries:
+
+- `role="application"` with `aria-roledescription="interactive chart"`. It was
+  `role="img"`, which told assistive technology the subtree was a static graphic
+  while the chart supported zoom and brush selection.
+- `aria-label` naming the type, the **filtered** point count and the selection.
+- `aria-describedby` pointing at a per-instance summary — generated with
+  `$props.id()`, so two charts on one page are not described by each other.
+
+`<Chart>` takes no `aria-label` prop. It has no rest-spread, so one passed in is
+silently dropped; the label is generated from the store. (This file previously
+showed an example passing one.)
+
+### Keyboard
+
+| key | does |
+|---|---|
+| `Tab` | move focus to the chart |
+| `←` `→` `↑` `↓` | previous / next data point |
+| `Home` / `End` | first / last data point |
+| `Enter` / `Space` | select the focused point |
+| `Escape` | clear the selection |
+| `Shift` + arrows | pan |
+| `+` / `-` | zoom in / out |
+| `0` | reset the zoom |
+
+Arrows move the cursor and `Shift`+arrows pan, which is the reverse of what this
+file used to document — none of which was implemented. Reaching the data matters
+more than moving the viewport, so traversal takes the unmodified key.
+
+Each binding is one dispatch into the reducer, so the same navigation is
+available programmatically:
+
+```typescript
+chartStore.dispatch({ type: 'focusNext' });
+chartStore.dispatch({ type: 'selectFocused' });
 ```
 
-### Screen Reader Summary
+That is also how to test it — no synthetic key events needed.
 
-Auto-generated summary includes:
-- Chart type
-- Number of data points
-- Selection status
-- Filter status
+### What a screen reader gets
 
-**Example output**:
-```
-"Scatter plot showing 42 data points, 5 selected"
-```
+- A polite live region announcing each point as the cursor reaches it: its
+  position in the series, its values, and whether it is selected.
+- A visually hidden data table of the filtered rows, capped at 100 with the
+  caption stating the truncation. It is rendered **outside** the
+  `role="application"` element, because `application` makes a screen reader pass
+  keystrokes through instead of browsing — right for the plot, fatal for a table.
 
-### Keyboard Navigation
+### Focus indicator
 
-- `Tab`: Focus chart
-- `Arrow keys`: Pan (when zoomed)
-- `+/-`: Zoom in/out
-- `0`: Reset zoom
-- `Escape`: Clear selection
+The chart draws a `:focus-visible` outline, and the focused point is ringed on
+every chart type. A histogram gets a dashed rule at the point's x instead, since
+binning leaves no per-point `y` to ring.
+
+### Contrast
+
+Measured from constants in `src/lib/utils/palette.ts` and re-checked by
+`tests/contrast.test.ts` against light and dark backgrounds. Data marks clear
+SC 1.4.11's 3:1 at full strength and stay at the floor when dimmed behind a
+selection. Do **not** lower `DIMMED_OPACITY` to make dimming more obvious — the
+selection is carried by an added mark, not by suppressing the rest, and the test
+fails if you do.
+
+State markers use `currentColor`, never a fixed ink: black is 21:1 on white and
+1.02:1 on near-black, so a hardcoded focus ring disappears in dark mode.
+
+### WCAG 2.1 AA
+
+Reviewed criterion by criterion in `tests/wcag-conformance.test.ts` — keyboard
+trap, character-key shortcut scoping, use of colour, on-focus behaviour, and
+name/role/value. It is a self-review, not a third-party audit, and the criteria
+belonging to the surrounding page are the application's.
 
 ---
 
@@ -593,7 +652,7 @@ Auto-generated summary includes:
 
 ### Basic Scatter Plot
 
-```typescript
+```svelte
 <script lang="ts">
 import { createStore } from '@composable-svelte/core';
 import { Chart, chartReducer, createInitialChartState } from '@composable-svelte/charts';
@@ -628,7 +687,7 @@ const chartStore = createStore({
 
 ### Time Series Line Chart
 
-```typescript
+```svelte
 <script lang="ts">
 import { createStore } from '@composable-svelte/core';
 import { Chart, chartReducer, createInitialChartState } from '@composable-svelte/charts';
@@ -670,7 +729,7 @@ const chartStore = createStore({
 
 ### Interactive Bar Chart
 
-```typescript
+```svelte
 <script lang="ts">
 import { createStore } from '@composable-svelte/core';
 import { Chart, chartReducer, createInitialChartState } from '@composable-svelte/charts';
@@ -714,7 +773,7 @@ function handleSelection(selected: any[]) {
 
 ### Real-time Data Visualization
 
-```typescript
+```svelte
 <script lang="ts">
 import { createStore, Effect } from '@composable-svelte/core';
 import { Chart, chartReducer, createInitialChartState } from '@composable-svelte/charts';
@@ -768,12 +827,20 @@ onMount(() => {
 
 ### Multiple Charts with Shared Selection
 
-```typescript
+```svelte
 <script lang="ts">
-const data = [...]; // Shared data
+const data = [{ x: 1, y: 10 }, { x: 2, y: 25 }]; // Shared data
 
-const chartStore1 = createStore({...});
-const chartStore2 = createStore({...});
+const chartStore1 = createStore({
+  initialState: createInitialChartState({ data }),
+  reducer: chartReducer,
+  dependencies: {}
+});
+const chartStore2 = createStore({
+  initialState: createInitialChartState({ data }),
+  reducer: chartReducer,
+  dependencies: {}
+});
 
 let selectedData = $state<any[]>([]);
 
@@ -793,10 +860,10 @@ function syncSelection(selected: any[]) {
 
 ### Linked Zoom
 
-```typescript
+```svelte
 <script lang="ts">
-const masterStore = createStore({...});
-const detailStore = createStore({...});
+const masterStore = createStore({ initialState: masterState, reducer: chartReducer, dependencies: {} });
+const detailStore = createStore({ initialState: detailState, reducer: chartReducer, dependencies: {} });
 
 $effect(() => {
   const transform = $masterStore.transform;
@@ -810,7 +877,7 @@ $effect(() => {
 
 ### Dynamic Filtering
 
-```typescript
+```svelte
 <script lang="ts">
 let minValue = $state(0);
 let maxValue = $state(100);
@@ -884,7 +951,7 @@ function queueUpdate(newData: any[]) {
 
 Disable animations for large datasets or frequent updates:
 
-```typescript
+```svelte
 <Chart
   store={chartStore}
   enableAnimations={false}
@@ -950,7 +1017,6 @@ await store.send({ type: 'clearSelection' }, (state) => {
 ## TROUBLESHOOTING
 
 **Chart not rendering**:
-- Check Observable Plot installed: `npm install @observablehq/plot`
 - Verify data is non-empty array
 - Ensure x/y accessors match data properties
 
@@ -971,7 +1037,7 @@ await store.send({ type: 'clearSelection' }, (state) => {
 
 **Selection not updating**:
 - Check `onSelectionChange` callback
-- Verify `enableBrush={true}` or `enableSelection={true}`
+- Verify `enableBrush={true}`. (There is no `enableSelection` prop; it never existed.)
 - Ensure store is reactive (`$chartStore.selection`)
 
 ---
@@ -985,7 +1051,7 @@ await store.send({ type: 'clearSelection' }, (state) => {
 
 **When to Use Each Package**:
 - **charts**: 2D data visualization, interactive charts
-- **graphics**: 3D scenes, WebGPU/WebGL (see composable-svelte-graphics)
+- **graphics**: 3D scenes, WebGL (see composable-svelte-graphics)
 - **maps**: Geospatial data (see composable-svelte-maps)
 - **code**: Code editors, media players (see composable-svelte-code)
 
@@ -1002,7 +1068,6 @@ All exports from `@composable-svelte/charts`:
 - `ChartConfig` - Chart configuration options
 - `SelectionState` - Selection state (point, range, brush)
 - `ZoomTransform` - Zoom/pan transform `{ x, y, k }`
-- `PlotSpec` - Observable Plot specification
 - `DataTransform` - Data transform function type `(data: T[]) => T[]`
 - `DataTransforms` - Namespace object with all transform functions
 
@@ -1015,7 +1080,6 @@ All exports from `@composable-svelte/charts`:
 
 - `Chart` - High-level chart component (scatter, line, bar, area, histogram)
 - `ChartPrimitive` - Low-level chart primitive for custom chart implementations
-- `ChartTooltip` - Standalone tooltip component for chart data points
 
 ### Utility Exports: Plot Builder (`plot-builder`)
 
@@ -1033,10 +1097,10 @@ All exports from `@composable-svelte/charts`:
 - `filter(predicate)` - Filter data by predicate
 - `sortBy(field, direction)` - Sort data by field
 - `groupBy(field)` - Group data by field
-- `aggregate(field, fn)` - Aggregate grouped data
+- `aggregate(operation, field?)` - Reduce data to one number. `operation` is 'sum' | 'mean' | 'median' | 'count' | 'min' | 'max'
 - `compose(...transforms)` - Compose multiple transforms into a pipeline
 - `binData(field, bins)` - Bin numerical data into histogram buckets
-- `rollup(field, fn)` - Roll up grouped data with aggregation
+- `rollup(window, field, operation?)` - Rolling window over `field`; `operation` defaults to the mean
 - `topN(n, field)` - Take top N items by field value
 - `unique(field)` - Deduplicate data by field
 - `sample(n)` - Randomly sample N items from data
@@ -1045,5 +1109,7 @@ All exports from `@composable-svelte/charts`:
 ### Utility Exports: Responsive (`responsive`)
 
 - `createResizeObserver(element, dispatch)` - Create ResizeObserver for auto-sizing
-- `calculateDimensions(container)` - Calculate dimensions from container element
-- `debounce(fn, delay)` - Debounce function for resize throttling
+- `calculateDimensions(container, aspectRatio?)` - Dimensions from a container element
+- `debounce(fn, delay)` - A debounce helper. Note that `createResizeObserver`
+  does **not** use it: it dedupes by value instead, dispatching only when the
+  measured dimensions actually change. Resizes are therefore not throttled.

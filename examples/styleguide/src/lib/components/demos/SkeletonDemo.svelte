@@ -11,7 +11,7 @@
   <!-- Basic Skeletons -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Basic Skeleton Shapes</h3>
+      <h2 class="text-xl font-semibold mb-2">Basic Skeleton Shapes</h2>
       <p class="text-muted-foreground text-sm">
         Loading placeholders for different content types
       </p>
@@ -56,7 +56,7 @@
   <!-- Card Skeleton -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Card Loading States</h3>
+      <h2 class="text-xl font-semibold mb-2">Card Loading States</h2>
       <p class="text-muted-foreground text-sm">
         Skeleton placeholders for card components
       </p>
@@ -124,7 +124,7 @@
   <!-- List Skeletons -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">List Loading States</h3>
+      <h2 class="text-xl font-semibold mb-2">List Loading States</h2>
       <p class="text-muted-foreground text-sm">
         Skeleton placeholders for list items
       </p>
@@ -176,7 +176,7 @@
   <!-- Interactive Demo -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Interactive Loading Example</h3>
+      <h2 class="text-xl font-semibold mb-2">Interactive Loading Example</h2>
       <p class="text-muted-foreground text-sm">
         Toggle between loading and loaded states
       </p>
@@ -202,7 +202,7 @@
             <div class="flex items-start gap-4">
               <Avatar fallback="JD" size="xl" />
               <div class="flex-1">
-                <h3 class="text-lg font-semibold">John Doe</h3>
+                <h2 class="text-lg font-semibold">John Doe</h2>
                 <p class="text-sm text-muted-foreground">@johndoe</p>
                 <p class="text-sm mt-2">
                   Full-stack developer with 5+ years of experience. Passionate about
@@ -275,7 +275,7 @@
   <!-- Table Skeleton -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Table Loading State</h3>
+      <h2 class="text-xl font-semibold mb-2">Table Loading State</h2>
       <p class="text-muted-foreground text-sm">
         Skeleton for tabular data
       </p>
@@ -312,7 +312,7 @@
   <!-- Grid Skeleton -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Grid Loading State</h3>
+      <h2 class="text-xl font-semibold mb-2">Grid Loading State</h2>
       <p class="text-muted-foreground text-sm">
         Skeleton for grid layouts
       </p>
@@ -339,7 +339,7 @@
   <!-- Form Skeleton -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Form Loading State</h3>
+      <h2 class="text-xl font-semibold mb-2">Form Loading State</h2>
       <p class="text-muted-foreground text-sm">
         Skeleton for form inputs
       </p>

@@ -1,9 +1,47 @@
+import type { PresentationState } from '@composable-svelte/core';
 /**
  * Streaming Chat Types
  *
  * Transport-agnostic types for streaming chat interface.
  * Users provide their own streaming implementation (SSE, WebSocket, etc.).
  */
+
+/**
+ * A video detected in message markdown.
+ *
+ * Structurally the same as `VideoEmbed` from `@composable-svelte/media`, and
+ * declared here rather than imported from it on purpose: media is an **optional**
+ * peer, and a type-only import of it lands in this package's emitted `.d.ts`.
+ * `@composable-svelte/chat/streaming-chat/markdown` is a public subpath, so a
+ * consumer without media, typechecking with `skipLibCheck: false`, got
+ * `TS2307: Cannot find module '@composable-svelte/media'` — the optional peer
+ * turning out not to be optional, which is the defect this package has already
+ * been through once.
+ *
+ * `platform` and `aspectRatio` are widened to `string` because chat only passes
+ * this object through to media's `VideoEmbed` component and never inspects
+ * either field. Every other field is carried at full fidelity — an earlier
+ * version of this type declared only `url` and `platform`, which broke the
+ * component that consumes it.
+ *
+ * `tests/media-type-conformance.test.ts` asserts media's own type still
+ * satisfies this one, and `tsconfig.test.json` is what makes that assertion
+ * actually run.
+ */
+export interface VideoEmbedData {
+	/** Original URL from markdown */
+	url: string;
+	/** Detected platform, e.g. 'youtube' */
+	platform: string;
+	/** Extracted video ID */
+	videoId: string;
+	/** Optional video title */
+	title?: string;
+	/** Aspect ratio, e.g. '16:9' */
+	aspectRatio: string;
+	/** Platform-specific embed URL */
+	embedUrl: string;
+}
 
 /**
  * Attachment metadata for images and videos
@@ -19,6 +57,20 @@ export interface AttachmentMetadata {
 	pageCount?: number;
 	/** Thumbnail URL (optional preview) */
 	thumbnail?: string;
+	/**
+	 * Caption track for videos.
+	 *
+	 * The library cannot caption a user's uploaded video, but a consumer that
+	 * has a track can supply one here and VideoPlayer will render it.
+	 */
+	captions?: {
+		/** URL of the WebVTT file */
+		src: string;
+		/** BCP 47 language tag, e.g. 'en' */
+		srclang: string;
+		/** Human-readable label shown in the track menu */
+		label: string;
+	};
 }
 
 /**
@@ -39,6 +91,18 @@ export interface MessageAttachment {
 	mimeType: string;
 	/** Optional metadata */
 	metadata?: AttachmentMetadata;
+
+	/**
+	 * Upload lifecycle, present only once a send has attempted one.
+	 *
+	 * `'error'` is not a failure to send: the attachment keeps its local URL and
+	 * the message goes out anyway, so the sender still sees their file. It will
+	 * not resolve for anyone else, which is what `uploadError` is for.
+	 */
+	uploadStatus?: 'uploading' | 'success' | 'error';
+	/** 0-100, clamped. */
+	uploadProgress?: number;
+	uploadError?: string;
 }
 
 /**
@@ -49,6 +113,22 @@ export interface MessageReaction {
 	emoji: string;
 	/** Number of times this emoji was reacted */
 	count: number;
+
+	/**
+	 * Whether the current user is one of them.
+	 *
+	 * One bit rather than the list of who reacted. A popular message would have
+	 * to ship thousands of user ids just to render "👍 12", and paging that list
+	 * means carrying a separate count anyway — so `count` stays the aggregate a
+	 * server can supply cheaply and this answers the only question the UI asks.
+	 *
+	 * It is also why nothing here needs a current-user identity: the flag *is*
+	 * the answer to "did I react?", so no code compares ids.
+	 *
+	 * Optional because `restoreMessages` assigns whatever the caller persisted,
+	 * which for older data is nothing. Absent means "not mine".
+	 */
+	reactedByMe?: boolean;
 }
 
 /**
@@ -65,7 +145,12 @@ export interface Message {
 	content: string;
 	timestamp: number;
 	/** Optional file attachments */
-	attachments?: MessageAttachment[];
+	/**
+	 * `| undefined` because `exactOptionalPropertyTypes` is on: without it a
+	 * computed value that may be absent cannot be assigned to this key at all,
+	 * which is what `markUploading` ran into on the edit and regenerate paths.
+	 */
+	attachments?: MessageAttachment[] | undefined;
 	/** Optional emoji reactions */
 	reactions?: MessageReaction[];
 	/** Optional custom sender name (overrides userLabel/assistantLabel in display) */
@@ -82,7 +167,6 @@ export interface StreamingChatState {
 	/** Currently streaming message (if any) */
 	currentStreaming: {
 		content: string;
-		isComplete: boolean;
 		/** Controller for cancelling the stream */
 		abortController?: AbortController;
 	} | null;
@@ -99,15 +183,73 @@ export interface StreamingChatState {
 		content: string;
 	} | null;
 
-	/** Context menu state */
-	contextMenu: {
-		isOpen: boolean;
-		messageId: string | null;
-		position: { x: number; y: number };
-	} | null;
 
 	/** Pending file attachments (before sending message) */
 	pendingAttachments: MessageAttachment[];
+
+	/**
+	 * The message the user has just sent — the one thing on screen that is
+	 * genuinely *new* rather than merely present.
+	 *
+	 * A keyed `{#each}` gives each message component exactly one run, so a
+	 * component cannot tell "I have just appeared" from "I was restored". That
+	 * distinction lives in the list's diff and nothing recorded it: appending and
+	 * restoring produced structurally identical state, so a restored session
+	 * animated every message in as though it had just arrived.
+	 *
+	 * Set only by `sendMessage`, cleared by `restoreMessages`. A completed
+	 * assistant reply is deliberately excluded — it was already on screen as the
+	 * streaming placeholder, so animating it in would re-animate text the reader
+	 * has been watching, in place.
+	 */
+	lastAppendedId: string | null;
+
+	/** Attachment preview modal lifecycle. */
+	attachmentPreview: AttachmentPreviewState;
+
+	/**
+	 * Which message's reaction picker is open, and where in its lifecycle.
+	 *
+	 * One slot for the whole conversation. Each message used to own a boolean
+	 * *and* render its own full-viewport backdrop, so opening a second picker
+	 * stacked two of them and left the first unclosable. A single slot makes
+	 * one-at-a-time an invariant rather than something usage has to respect.
+	 *
+	 * `content` is the message id.
+	 */
+	reactionPicker: PresentationState<string>;
+}
+
+/**
+ * Presentation lifecycle events chat's own overlays dispatch.
+ *
+ * Deliberately narrower than core's canonical `PresentationEvent`, and named
+ * apart from it — the precedent is `DropdownMenuPresentationEvent`. These two
+ * members are the ones anything here actually sends; importing the wider union
+ * would invite timeout cases with no reachable trigger, which is the dead
+ * behaviour this package is being cleared of.
+ */
+export type ChatPresentationEvent =
+	| { type: 'presentationCompleted' }
+	| { type: 'dismissalCompleted' };
+
+/**
+ * The attachment preview modal's lifecycle.
+ *
+ * `content` is the attachment **object**, not its id. An id would be resolved
+ * against `pendingAttachments` on every render, and anything that empties that
+ * list while the exit animation is in flight would resolve to nothing and blank
+ * the modal mid-fade. One transient copy is cheaper than that class of bug.
+ */
+export interface AttachmentPreviewState {
+	presentation: PresentationState<MessageAttachment>;
+
+	/**
+	 * The user pressed Remove. Recorded rather than performed: `removeAttachment`
+	 * revokes the blob URL that the `<img>` in this very modal is still showing,
+	 * so the removal waits until the exit animation has finished.
+	 */
+	removeOnDismiss: boolean;
 }
 
 /**
@@ -116,6 +258,20 @@ export interface StreamingChatState {
 export type StreamingChatAction =
 	// Message sending and streaming
 	| { type: 'sendMessage'; message: string; attachments?: MessageAttachment[] }
+	/** Internal: an upload reported progress for one attachment of a sent message. */
+	| {
+			type: '_internal_attachmentUploadProgress';
+			messageId: string;
+			attachmentId: string;
+			progress: number;
+	  }
+	/** Internal: every upload for a message has settled; stream it. */
+	| {
+			type: '_internal_attachmentsResolved';
+			messageId: string;
+			message: string;
+			attachments: MessageAttachment[];
+	  }
 	| { type: 'chunkReceived'; chunk: string }
 	| { type: 'streamComplete' }
 	| { type: 'streamError'; error: string }
@@ -132,8 +288,6 @@ export type StreamingChatAction =
 	| { type: 'submitEditedMessage' }
 	| { type: 'cancelEditing' }
 	// Context menu
-	| { type: 'openContextMenu'; messageId: string; position: { x: number; y: number } }
-	| { type: 'closeContextMenu' }
 	// File attachments
 	| { type: 'addAttachment'; attachment: MessageAttachment }
 	| { type: 'removeAttachment'; attachmentId: string }
@@ -146,6 +300,15 @@ export type StreamingChatAction =
 	| { type: 'clearMessages' }
 	// Session restore (for persistence/recovery)
 	| { type: 'restoreMessages'; messages: Message[] }
+	// Attachment preview modal
+	| { type: 'attachmentPreviewOpened'; attachment: MessageAttachment }
+	| { type: 'attachmentPreviewDismissed' }
+	| { type: 'attachmentPreviewRemoveRequested' }
+	| { type: 'attachmentPreviewPresentation'; event: ChatPresentationEvent }
+	// Reaction picker
+	| { type: 'reactionPickerOpened'; messageId: string }
+	| { type: 'reactionPickerDismissed' }
+	| { type: 'reactionPickerPresentation'; event: ChatPresentationEvent }
 	// Internal actions
 	| { type: '_internal_setAbortController'; abortController: AbortController };
 
@@ -163,13 +326,19 @@ export interface StreamingChatDependencies {
 	 * @param onChunk - Called for each chunk of the response
 	 * @param onComplete - Called when streaming is complete
 	 * @param onError - Called if an error occurs
+	 * @param attachments - Files sent with the message, with `uploadFile`'s URLs
+	 *   already resolved. Trailing and optional, so an existing four-parameter
+	 *   implementation stays assignable under TypeScript's fewer-parameters rule.
+	 *   Without it, attachments reached the rendered message and stopped there —
+	 *   the backend and the model never saw them.
 	 * @returns AbortController for cancellation (optional)
 	 */
 	streamMessage: (
 		message: string,
 		onChunk: (chunk: string) => void,
 		onComplete: () => void,
-		onError: (error: string) => void
+		onError: (error: string) => void,
+		attachments?: MessageAttachment[]
 	) => AbortController | void;
 
 	/**
@@ -208,8 +377,10 @@ export function createInitialStreamingChatState(): StreamingChatState {
 		isWaitingForResponse: false,
 		error: null,
 		editingMessage: null,
-		contextMenu: null,
-		pendingAttachments: []
+		pendingAttachments: [],
+		lastAppendedId: null,
+		attachmentPreview: { presentation: { status: 'idle' }, removeOnDismiss: false },
+		reactionPicker: { status: 'idle' }
 	};
 }
 

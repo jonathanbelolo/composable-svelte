@@ -42,7 +42,9 @@ function declaredIn(css: string, selector: string): Set<string> {
 	// assertion below vacuous) the moment the file was reformatted with spaces.
 	const end = css.indexOf('}', start);
 	if (end === -1) throw new Error(`unterminated block: ${selector}`);
-	const names = [...css.slice(start, end).matchAll(/^\s*(--[\w-]+):/gm)].map((m) => m[1]);
+	// A capture group is `string | undefined` to the compiler even when the
+	// pattern makes it mandatory, as this one does.
+	const names = [...css.slice(start, end).matchAll(/^\s*(--[\w-]+):/gm)].map((m) => m[1]!);
 	if (names.length === 0) throw new Error(`no tokens found in ${selector}`);
 	return new Set(names);
 }
@@ -52,7 +54,7 @@ function valuesIn(css: string, selector: string): Record<string, string> {
 	const start = css.indexOf(`${selector} {`);
 	const body = css.slice(start, css.indexOf('}', start));
 	return Object.fromEntries(
-		[...body.matchAll(/(--[\w-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()])
+		[...body.matchAll(/(--[\w-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2]!.trim()])
 	);
 }
 
@@ -195,7 +197,7 @@ describe('tailwind.css (v4 entry)', () => {
 		for (const [, name, token] of themeBlock.matchAll(
 			/(--color-[\w-]+):\s*hsl\(var\((--[\w-]+),/g
 		)) {
-			expect(rootTokens.has(token), `${name} → ${token}`).toBe(true);
+			expect(rootTokens.has(token!), `${name} → ${token}`).toBe(true);
 		}
 	});
 
@@ -250,7 +252,7 @@ describe('back-compatibility', () => {
 			const start = css.indexOf(`${selector} {`);
 			const body = css.slice(start, css.indexOf('}', start));
 			return [...body.matchAll(/(--[\w-]+):\s*([^;]+);/g)]
-				.map((m) => `${m[1]}:${m[2].trim()}`)
+				.map((m) => `${m[1]}:${m[2]!.trim()}`)
 				.sort();
 		};
 		expect(pairs(globalsCss, ':root')).toEqual(pairs(tokensCss, ':root'));

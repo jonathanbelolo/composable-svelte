@@ -91,7 +91,17 @@ export interface FileUploadDependencies {
   /** Callback when files change */
   onFilesChange?: ((files: UploadedFile[]) => void) | undefined;
   /** Callback to handle file upload (returns promise) */
-  onUpload?: ((file: File) => Promise<void>) | undefined;
+  /**
+   * Handle an upload, reporting progress.
+   *
+   * `onProgress` is a widening, not a breaking change: an existing
+   * `(file) => Promise<void>` stays assignable under TypeScript's
+   * fewer-parameters rule. Without it there was no channel to report through,
+   * so `uploadProgress` had no dispatcher and the bar sat at 0% throughout.
+   */
+  onUpload?:
+    | ((file: File, onProgress: (percent: number) => void) => Promise<void>)
+    | undefined;
   /** File validation configuration */
   validation?: FileValidationConfig | undefined;
 }
@@ -100,26 +110,44 @@ export interface FileUploadDependencies {
  * Props for the FileUpload component
  */
 export interface FileUploadProps {
+  /**
+   * Which heading element to render.
+   *
+   * The level belongs to the page, not to the component: put this under an
+   * `<h2>` and a fixed `<h3>` jumps the outline, which no consumer can fix from
+   * the outside. Defaults to the level it has always rendered.
+   */
+  headingLevel?: 1 | 2 | 3 | 4 | 5 | 6 | undefined;
   /** Accept attribute for file input (e.g., "image/*" or ".jpg,.png") */
-  accept?: string;
+  accept?: string | undefined;
   /** Whether to allow multiple files */
-  multiple?: boolean;
+  multiple?: boolean | undefined;
   /** Whether to show file previews for images */
-  showPreviews?: boolean;
+  showPreviews?: boolean | undefined;
   /** Maximum file size in bytes */
-  maxSize?: number;
+  maxSize?: number | undefined;
   /** Maximum number of files */
-  maxFiles?: number;
+  maxFiles?: number | undefined;
   /** Custom text for the drop zone */
-  dropzoneText?: string;
+  dropzoneText?: string | undefined;
   /** Callback when files are selected */
-  onFilesChange?: (files: UploadedFile[]) => void;
-  /** Callback to handle file upload */
-  onUpload?: (file: File) => Promise<void>;
+  onFilesChange?: ((files: UploadedFile[]) => void) | undefined;
+  /**
+   * Callback to handle file upload.
+   *
+   * `onProgress` is the channel the component reports through: the reducer
+   * passes it on every call, and each invocation dispatches `uploadProgress`.
+   * A handler that ignores it is fine — a one-parameter function is assignable
+   * here — but one that wants it must be able to declare it, which is what was
+   * broken while the component kept its own one-parameter copy of this type.
+   */
+  onUpload?:
+    | ((file: File, onProgress: (percent: number) => void) => Promise<void>)
+    | undefined;
   /** Custom class for container */
-  class?: string;
+  class?: string | undefined;
   /** Whether the component is disabled */
-  disabled?: boolean;
+  disabled?: boolean | undefined;
 }
 
 /**

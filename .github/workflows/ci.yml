@@ -60,11 +60,32 @@ jobs:
       - name: Type check
         run: pnpm -r typecheck
 
+      # `--workspace-concurrency=1`: five of eight packages run vitest in real
+      # browser mode, and pnpm's default is four workspaces at once. Chromium
+      # instances then contend for the machine and suites fail on scheduling
+      # rather than on code — which reads exactly like a flaky test and has been
+      # chased as one more than once. `guides/VERIFICATION-PROTOCOL.md` rule 5
+      # says run them sequentially; this is that rule, enforced where it counts.
       - name: Run tests
-        run: pnpm -r test
+        run: pnpm -r --workspace-concurrency=1 test
 
-      # `tsc` never reads .svelte, which is how a broken `spring.js` import and
-      # 21 components with an undeclared `children` prop stayed invisible.
-      # Errors gate; the a11y and unused-CSS warnings do not.
+      # `tsc` never reads .svelte, which is how a broken `spring.js` import, 21
+      # components with an undeclared `children` prop, and a <button> nested in a
+      # <button> all stayed invisible. Warnings gate too: the nested button was
+      # reported for months as a warning while this step passed, because
+      # `--threshold` only filters what is printed and never affected the exit
+      # code. `--fail-on-warnings` is the flag that gates. The script carries it
+      # so a local `pnpm check` matches CI.
       - name: Svelte check
-        run: pnpm --filter @composable-svelte/core check --threshold error
+        run: pnpm -r check
+
+      # The browser half of the auth integration suite. Separate from `test`
+      # because it boots two servers and drives a real browser; the Node half
+      # (all 22 endpoints, every error arm) runs above with everything else.
+      #
+      # It is a *step*, not a manual script, because `examples/ssr-server` has
+      # no `test` key and its Playwright suite has consequently never run here —
+      # exactly the rot the rest of this file works to prevent. Chromium only:
+      # that is all the install step above provides.
+      - name: Auth integration (browser)
+        run: pnpm --filter @composable-svelte/example-auth-server test:e2e

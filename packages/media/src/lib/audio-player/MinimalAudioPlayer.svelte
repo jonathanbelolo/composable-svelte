@@ -21,11 +21,11 @@
 		/** Store containing audio player state */
 		store: Store<AudioPlayerState, AudioPlayerAction>;
 		/** Optional CSS class */
-		class?: string;
+		class?: string | undefined;
 		/** Show volume control (default: true) */
-		showVolume?: boolean;
+		showVolume?: boolean | undefined;
 		/** Unique ID for this player instance */
-		id?: string;
+		id?: string | undefined;
 	}
 
 	let {
@@ -35,7 +35,7 @@
 		id = 'minimal-audio-player'
 	}: Props = $props();
 
-	const state = $derived($store);
+	const playerState = $derived($store);
 
 	// Audio manager
 	let audioManager: ReturnType<typeof getAudioManager> | null = null;
@@ -59,11 +59,11 @@
 	}
 
 	// Get display time (current or seek position)
-	const displayTime = $derived(state.seekPosition ?? state.currentTime);
+	const displayTime = $derived(playerState.seekPosition ?? playerState.currentTime);
 
 	// Progress percentage
 	const progressPercent = $derived(
-		state.duration > 0 ? (displayTime / state.duration) * 100 : 0
+		playerState.duration > 0 ? (displayTime / playerState.duration) * 100 : 0
 	);
 
 	// Handle play/pause toggle
@@ -77,7 +77,7 @@
 		const rect = target.getBoundingClientRect();
 		const x = event.clientX - rect.left;
 		const percent = x / rect.width;
-		const time = percent * state.duration;
+		const time = percent * playerState.duration;
 
 		store.dispatch({ type: 'seekTo', time });
 	}
@@ -95,14 +95,14 @@
 		const rect = target.getBoundingClientRect();
 		const x = event.clientX - rect.left;
 		const percent = x / rect.width;
-		const time = percent * state.duration;
+		const time = percent * playerState.duration;
 
 		store.dispatch({ type: 'seekStarted', position: time });
 
 		function handleMouseMove(e: MouseEvent) {
 			const x = e.clientX - rect.left;
 			const percent = Math.max(0, Math.min(1, x / rect.width));
-			const time = percent * state.duration;
+			const time = percent * playerState.duration;
 
 			store.dispatch({ type: 'seekUpdated', position: time });
 		}
@@ -110,7 +110,7 @@
 		function handleMouseUp(e: MouseEvent) {
 			const x = e.clientX - rect.left;
 			const percent = Math.max(0, Math.min(1, x / rect.width));
-			const time = percent * state.duration;
+			const time = percent * playerState.duration;
 
 			store.dispatch({ type: 'seekEnded', position: time });
 
@@ -146,7 +146,7 @@
 		if (!audioManager) return;
 
 		// Update audio element based on state changes
-		const track = state.currentTrack;
+		const track = playerState.currentTrack;
 
 		// Load track only if URL changed
 		if (track && track.url !== loadedTrackUrl) {
@@ -156,23 +156,28 @@
 			loadedTrackUrl = null;
 		}
 
-		if (state.isPlaying && audioManager.getAudioElement().paused) {
+		if (playerState.isPlaying && audioManager.getAudioElement().paused) {
 			audioManager.play();
-		} else if (!state.isPlaying && !audioManager.getAudioElement().paused) {
+		} else if (!playerState.isPlaying && !audioManager.getAudioElement().paused) {
 			audioManager.pause();
 		}
 
-		audioManager.setVolume(state.volume);
-		audioManager.setPlaybackSpeed(state.playbackSpeed);
+		audioManager.setVolume(playerState.volume);
+		audioManager.setPlaybackSpeed(playerState.playbackSpeed);
 
 		// Seek if needed (and not currently seeking)
-		if (!isSeeking && Math.abs(audioManager.getAudioElement().currentTime - state.currentTime) > 0.5) {
-			audioManager.seek(state.currentTime);
+		if (!isSeeking && Math.abs(audioManager.getAudioElement().currentTime - playerState.currentTime) > 0.5) {
+			audioManager.seek(playerState.currentTime);
 		}
 	});
 
 	// Initialize audio manager on mount
 	onMount(() => {
+		// Ask for the user's saved volume and speed. `loadVolume`/`loadSpeed` are
+		// optional dependencies, and this is what makes them reachable — every
+		// change was persisted and nothing ever read it back.
+		store.dispatch({ type: 'restorePreferences' });
+
 		audioManager = getAudioManager(id, {
 			onAction: (action) => {
 				store.dispatch(action);
@@ -180,9 +185,9 @@
 		});
 
 		// Load initial track if available
-		if (state.currentTrack) {
-			audioManager.loadTrack(state.currentTrack);
-			loadedTrackUrl = state.currentTrack.url;
+		if (playerState.currentTrack) {
+			audioManager.loadTrack(playerState.currentTrack);
+			loadedTrackUrl = playerState.currentTrack.url;
 		}
 
 		return () => {
@@ -196,23 +201,63 @@
 			loadedTrackUrl = null;
 		};
 	});
+
+	const SEEK_STEP_SECONDS = 5;
+	const SEEK_PAGE_SECONDS = 30;
+
+	/**
+	 * WAI-ARIA slider keys. Dispatches the same `seekTo` the click handler does,
+	 * and does not clamp — the reducer already does, in one place.
+	 */
+	function handleProgressKeyDown(event: KeyboardEvent) {
+		if (playerState.duration <= 0) return;
+
+		let time: number;
+		switch (event.key) {
+			case 'ArrowLeft':
+			case 'ArrowDown':
+				time = playerState.currentTime - SEEK_STEP_SECONDS;
+				break;
+			case 'ArrowRight':
+			case 'ArrowUp':
+				time = playerState.currentTime + SEEK_STEP_SECONDS;
+				break;
+			case 'PageDown':
+				time = playerState.currentTime - SEEK_PAGE_SECONDS;
+				break;
+			case 'PageUp':
+				time = playerState.currentTime + SEEK_PAGE_SECONDS;
+				break;
+			case 'Home':
+				time = 0;
+				break;
+			case 'End':
+				time = playerState.duration;
+				break;
+			default:
+				return;
+		}
+
+		event.preventDefault();
+		store.dispatch({ type: 'seekTo', time });
+	}
 </script>
 
 <div class="minimal-audio-player {className}" role="region" aria-label="Audio player">
 	<!-- Track info (if available) -->
-	{#if state.currentTrack}
+	{#if playerState.currentTrack}
 		<div class="track-info">
-			{#if state.currentTrack.coverArt}
+			{#if playerState.currentTrack.coverArt}
 				<img
-					src={state.currentTrack.coverArt}
-					alt="{state.currentTrack.title} cover"
+					src={playerState.currentTrack.coverArt}
+					alt="{playerState.currentTrack.title} cover"
 					class="cover-art"
 				/>
 			{/if}
 			<div class="track-details">
-				<div class="track-title">{state.currentTrack.title}</div>
-				{#if state.currentTrack.artist}
-					<div class="track-artist">{state.currentTrack.artist}</div>
+				<div class="track-title">{playerState.currentTrack.title}</div>
+				{#if playerState.currentTrack.artist}
+					<div class="track-artist">{playerState.currentTrack.artist}</div>
 				{/if}
 			</div>
 		</div>
@@ -224,12 +269,12 @@
 		<button
 			class="play-pause-btn"
 			onclick={handlePlayPause}
-			disabled={!state.currentTrack}
-			aria-label={state.isPlaying ? 'Pause' : 'Play'}
+			disabled={!playerState.currentTrack}
+			aria-label={playerState.isPlaying ? 'Pause' : 'Play'}
 		>
-			{#if state.isLoading}
+			{#if playerState.isLoading}
 				<span class="loading-spinner">⏳</span>
-			{:else if state.isPlaying}
+			{:else if playerState.isPlaying}
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
 					<rect x="6" y="4" width="4" height="16" />
 					<rect x="14" y="4" width="4" height="16" />
@@ -248,10 +293,12 @@
 				role="slider"
 				aria-label="Seek"
 				aria-valuemin={0}
-				aria-valuemax={state.duration}
+				aria-valuemax={playerState.duration}
 				aria-valuenow={displayTime}
+				aria-valuetext={formatTime(displayTime)}
 				tabindex="0"
 				onclick={handleProgressClick}
+				onkeydown={handleProgressKeyDown}
 				onmousedown={handleProgressMouseDown}
 			>
 				<div class="progress-fill" style="width: {progressPercent}%"></div>
@@ -262,7 +309,7 @@
 			<div class="time-display">
 				<span class="current-time">{formatTime(displayTime)}</span>
 				<span class="separator">/</span>
-				<span class="duration">{formatTime(state.duration)}</span>
+				<span class="duration">{formatTime(playerState.duration)}</span>
 			</div>
 		</div>
 
@@ -272,15 +319,15 @@
 				<button
 					class="volume-icon"
 					onclick={() => store.dispatch({ type: 'toggleMute' })}
-					aria-label={state.isMuted ? 'Unmute' : 'Mute'}
+					aria-label={playerState.isMuted ? 'Unmute' : 'Mute'}
 				>
-					{#if state.isMuted || state.volume === 0}
+					{#if playerState.isMuted || playerState.volume === 0}
 						<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
 							<path
 								d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"
 							/>
 						</svg>
-					{:else if state.volume < 0.5}
+					{:else if playerState.volume < 0.5}
 						<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
 							<path d="M7 9v6h4l5 5V4l-5 5H7z" />
 						</svg>
@@ -298,7 +345,7 @@
 					min="0"
 					max="1"
 					step="0.01"
-					value={state.volume}
+					value={playerState.volume}
 					oninput={handleVolumeChange}
 					class="volume-slider"
 					aria-label="Volume"
@@ -308,9 +355,9 @@
 	</div>
 
 	<!-- Error display -->
-	{#if state.error}
+	{#if playerState.error}
 		<div class="error-message" role="alert">
-			{state.error}
+			{playerState.error}
 		</div>
 	{/if}
 </div>
@@ -321,9 +368,9 @@
 		flex-direction: column;
 		gap: 0.5rem;
 		padding: 0.75rem;
-		background: #f8f9fa;
+		background: hsl(var(--muted, 210 16.7% 97.6%));
 		border-radius: 8px;
-		border: 1px solid #e9ecef;
+		border: 1px solid hsl(var(--border, 210 15.8% 92.5%));
 		font-family: system-ui, -apple-system, sans-serif;
 		max-width: 500px;
 	}
@@ -349,7 +396,7 @@
 	.track-title {
 		font-weight: 600;
 		font-size: 0.9rem;
-		color: #212529;
+		color: hsl(var(--foreground, 210 10.8% 14.5%));
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -357,7 +404,7 @@
 
 	.track-artist {
 		font-size: 0.8rem;
-		color: #6c757d;
+		color: hsl(var(--muted-foreground, 208.2 7.3% 45.7%));
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -374,22 +421,21 @@
 		height: 40px;
 		border-radius: 50%;
 		border: none;
-		background: #007bff;
-		color: white;
+		background: hsl(var(--primary, 211.1 100% 50%));
+		color: hsl(var(--primary-foreground, 0 0% 100%));
 		cursor: pointer;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		flex-shrink: 0;
-		transition: background 0.2s;
 	}
 
 	.play-pause-btn:hover:not(:disabled) {
-		background: #0056b3;
+		background: hsl(var(--primary, 211.2 100% 35.1%));
 	}
 
 	.play-pause-btn:disabled {
-		background: #adb5bd;
+		background: hsl(var(--muted, 210 10.8% 71%));
 		cursor: not-allowed;
 	}
 
@@ -406,7 +452,7 @@
 
 	.progress-bar {
 		height: 6px;
-		background: #dee2e6;
+		background: hsl(var(--muted, 210 13.8% 88.6%));
 		border-radius: 3px;
 		position: relative;
 		cursor: pointer;
@@ -414,7 +460,7 @@
 
 	.progress-fill {
 		height: 100%;
-		background: #007bff;
+		background: hsl(var(--primary, 211.1 100% 50%));
 		border-radius: 3px;
 		transition: width 0.1s;
 	}
@@ -425,10 +471,9 @@
 		transform: translate(-50%, -50%);
 		width: 12px;
 		height: 12px;
-		background: #007bff;
+		background: hsl(var(--primary, 211.1 100% 50%));
 		border-radius: 50%;
 		opacity: 0;
-		transition: opacity 0.2s;
 	}
 
 	.progress-bar:hover .progress-thumb,
@@ -440,7 +485,7 @@
 		display: flex;
 		gap: 0.25rem;
 		font-size: 0.75rem;
-		color: #6c757d;
+		color: hsl(var(--muted-foreground, 208.2 7.3% 45.7%));
 		justify-content: center;
 	}
 
@@ -455,21 +500,21 @@
 		border: none;
 		padding: 0.25rem;
 		cursor: pointer;
-		color: #495057;
+		color: hsl(var(--foreground, 210 8.8% 31.4%));
 		display: flex;
 		align-items: center;
 		justify-content: center;
 	}
 
 	.volume-icon:hover {
-		color: #212529;
+		color: hsl(var(--foreground, 210 10.8% 14.5%));
 	}
 
 	.volume-slider {
 		width: 80px;
 		height: 6px;
 		border-radius: 3px;
-		background: #dee2e6;
+		background: hsl(var(--muted, 210 13.8% 88.6%));
 		outline: none;
 		-webkit-appearance: none;
 		appearance: none;
@@ -481,7 +526,7 @@
 		width: 12px;
 		height: 12px;
 		border-radius: 50%;
-		background: #007bff;
+		background: hsl(var(--primary, 211.1 100% 50%));
 		cursor: pointer;
 	}
 
@@ -489,7 +534,7 @@
 		width: 12px;
 		height: 12px;
 		border-radius: 50%;
-		background: #007bff;
+		background: hsl(var(--primary, 211.1 100% 50%));
 		cursor: pointer;
 		border: none;
 	}
@@ -497,7 +542,7 @@
 	.error-message {
 		padding: 0.5rem;
 		background: #f8d7da;
-		color: #721c24;
+		color: hsl(var(--destructive, 354.4 60.6% 27.8%));
 		border-radius: 4px;
 		font-size: 0.85rem;
 		text-align: center;

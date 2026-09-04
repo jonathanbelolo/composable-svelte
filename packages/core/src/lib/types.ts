@@ -27,10 +27,21 @@ export type Selector<State, Value> = (state: State) => Value;
 /**
  * Function that executes an effect and may dispatch actions.
  *
+ * `signal` is provided for `Effect.cancellable` only, because that is the one
+ * kind the store holds a controller for. It is `undefined` for `run`,
+ * `debounced`, `throttled` and `afterDelay` — and since `fetch` accepts an
+ * `undefined` signal without complaint, passing it there fails silently rather
+ * than loudly. Check before relying on it.
+ *
+ * Observing it is optional: dispatches from a cancelled effect are dropped
+ * regardless, so cancellation is correct without cooperation. Using the signal
+ * additionally stops the work in flight.
+ *
  * @template Action - The action type
  */
 export type EffectExecutor<Action> = (
-  dispatch: Dispatch<Action>
+  dispatch: Dispatch<Action>,
+  signal?: AbortSignal
 ) => void | Promise<void>;
 
 /**
@@ -58,11 +69,40 @@ export type Effect<Action> =
   | { readonly _tag: 'Run'; readonly execute: EffectExecutor<Action> }
   | { readonly _tag: 'FireAndForget'; readonly execute: () => void | Promise<void> }
   | { readonly _tag: 'Batch'; readonly effects: readonly Effect<Action>[] }
-  | { readonly _tag: 'Cancellable'; readonly id: string; readonly execute: EffectExecutor<Action> }
+  | {
+      readonly _tag: 'Cancellable';
+      readonly id: string;
+      readonly execute: EffectExecutor<Action>;
+      /**
+       * Marks `Effect.cancel(id)` — a cancellation with no work of its own.
+       *
+       * Structural, because the store used to tell the two apart by stringifying
+       * the executor and looking for `{}`. A real effect whose body happened to
+       * contain an empty object literal was silently classified as a bare cancel
+       * and never ran, and the check already needed to accept both `{}` and
+       * `{ }` because the build reformats the no-op it was matching.
+       */
+      readonly cancelOnly?: true;
+    }
   | { readonly _tag: 'Debounced'; readonly id: string; readonly ms: number; readonly execute: EffectExecutor<Action> }
   | { readonly _tag: 'Throttled'; readonly id: string; readonly ms: number; readonly execute: EffectExecutor<Action> }
   | { readonly _tag: 'AfterDelay'; readonly ms: number; readonly execute: EffectExecutor<Action> }
   | { readonly _tag: 'Subscription'; readonly id: string; readonly setup: SubscriptionSetup<Action> };
+
+/**
+ * One member of the `Effect` union, by tag.
+ *
+ * The constructors below return these rather than the whole union. They always
+ * did at runtime — `Effect.run()` has only ever produced a `Run` — but each was
+ * annotated with `Effect<Action>`, so `Effect.run(fn).execute` did not
+ * typecheck for a consumer any more than it did for the tests that navigate
+ * these structures. Narrowing a return type is backwards compatible: every
+ * member is still assignable to the union.
+ */
+export type EffectOfTag<Action, Tag extends Effect<Action>['_tag']> = Extract<
+  Effect<Action>,
+  { readonly _tag: Tag }
+>;
 
 /**
  * A pure function that transforms state based on an action.

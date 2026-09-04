@@ -20,11 +20,14 @@ ssr-server/
 │   ├── client/
 │   │   └── index.ts       # Client hydration entry point
 │   └── shared/
-│       ├── App.svelte     # Main application component
-│       ├── PostList.svelte
-│       ├── PostDetail.svelte
-│       ├── types.ts       # Shared types
-│       └── reducer.ts     # Application reducer
+│       ├── App.svelte            # Main application component
+│       ├── PostListPage.svelte
+│       ├── PostDetailPage.svelte
+│       ├── PostCommentsPage.svelte
+│       ├── LanguageSwitcher.svelte
+│       ├── routing.ts            # Path <-> destination mapping
+│       ├── types.ts              # Shared types
+│       └── reducer.ts            # Application reducer
 ├── package.json
 ├── vite.config.ts
 └── tsconfig.json
@@ -329,7 +332,7 @@ The E2E test suite (`tests/e2e/ssr.spec.ts`) verifies:
 ## 📚 Learn More
 
 - [Composable Svelte Docs](../../packages/core/README.md)
-- [SSR Module Docs](../../packages/core/src/lib/ssr/README.md)
+- [SSR Module Docs](../../packages/core/docs/ssr/server-rendering.md)
 - [Fastify Documentation](https://fastify.dev)
 - [Svelte 5 Documentation](https://svelte.dev/docs/svelte/overview)
 

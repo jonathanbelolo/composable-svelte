@@ -2,6 +2,7 @@ export {
 	anonymousSubject,
 	subjectFromSession,
 	subjectRoles,
+	subjectDisplayName,
 	hasRole,
 	hasAnyRole
 } from './helpers.js';

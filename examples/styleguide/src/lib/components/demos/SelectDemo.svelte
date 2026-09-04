@@ -27,7 +27,7 @@
 <div class="space-y-12">
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Interactive Demo</h3>
+      <h2 class="text-xl font-semibold mb-2">Interactive Demo</h2>
       <p class="text-muted-foreground text-sm">Dropdown selection with search</p>
     </div>
 
@@ -49,12 +49,12 @@
 
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Select Variants</h3>
+      <h2 class="text-xl font-semibold mb-2">Select Variants</h2>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">Basic select</h4>
+        <h3 class="font-semibold">Basic select</h3>
         <div class="space-y-2">
           <Label for="basic-select">Country</Label>
           <Select
@@ -67,7 +67,7 @@
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">With search</h4>
+        <h3 class="font-semibold">With search</h3>
         <div class="space-y-2">
           <Label for="search-select">Country (searchable)</Label>
           <Select
@@ -80,7 +80,7 @@
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">Multi-select</h4>
+        <h3 class="font-semibold">Multi-select</h3>
         <div class="space-y-2">
           <Label for="multi-select">Languages</Label>
           <Select
@@ -99,7 +99,7 @@
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">Disabled</h4>
+        <h3 class="font-semibold">Disabled</h3>
         <div class="space-y-2">
           <Label for="disabled-select">Disabled select</Label>
           <Select

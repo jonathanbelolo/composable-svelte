@@ -126,8 +126,7 @@ case 'destination': {
 ```typescript
 // ❌ WRONG for save — parent needs to handle the save data
 case 'saveButtonTapped':
-  deps.dismiss();  // Parent never sees this action!
-  return [state, Effect.none()];
+  return [state, deps.dismiss()];  // Parent never sees this action!
 ```
 
 The `dismiss` dependency (via `createDismissDependency()`) is fine for simple close/cancel buttons where the parent doesn't need to react.
@@ -242,7 +241,7 @@ import { scopeToDestination } from '@composable-svelte/core/navigation';
 
 // In your Svelte component
 const addToCartStore = $derived(
-  scopeToDestination(store, 'destination', 'addToCart')
+  scopeToDestination(store, ['destination'], 'addToCart', 'destination')
 );
 ```
 
@@ -255,7 +254,7 @@ const addToCartStore = $derived(
   let { store } = $props();
 
   const addToCartStore = $derived(
-    scopeToDestination(store, 'destination', 'addToCart')
+    scopeToDestination(store, ['destination'], 'addToCart', 'destination')
   );
 </script>
 
@@ -309,12 +308,16 @@ const wizardReducer: Reducer<WizardState, WizardAction, WizardDeps> = (state, ac
 
     case 'stack':
       // Handle stack actions (screen dispatched action)
-      return handleStackAction(
+      // (state, action, deps, screenReducer, getStack, setStack) — the deps come
+  // before the reducer, and the last two say how the stack is read from and
+  // written back into the parent state.
+  return handleStackAction(
         state,
         action,
-        (screenState, screenAction, screenDeps) =>
-          screenReducer(screenState, screenAction, screenDeps),
-        deps
+        deps,
+        screenReducer,
+        (s) => s.stack,
+        (s, stack) => ({ ...s, stack })
       );
 
     default:
@@ -545,13 +548,11 @@ case 'addToCart': {
 ```typescript
 // ❌ WRONG for save actions — parent never sees this
 case 'addButtonTapped':
-  deps.dismiss(); // Parent can't observe the save!
-  return [state, Effect.none()];
+  return [state, deps.dismiss()]; // Parent can't observe the save!
 
 // ✅ OK for simple close
 case 'cancelButtonTapped':
-  deps.dismiss(); // Fine — parent doesn't need to react
-  return [state, Effect.none()];
+  return [state, deps.dismiss()]; // Fine — parent doesn't need to react
 ```
 
 ### 2. Type Annotations for Action Mappers
@@ -590,7 +591,7 @@ Always check for null before rendering:
 
 ```svelte
 <script lang="ts">
-  const scopedStore = $derived(scopeToDestination(store, 'destination', 'addToCart'));
+  const scopedStore = $derived(scopeToDestination(store, ['destination'], 'addToCart', 'destination'));
 </script>
 
 {#if scopedStore}
@@ -676,7 +677,7 @@ const store: Store<AppState, AppAction> = createStore({
 });
 
 // Scoped store is also fully typed
-const childStore = scopeToDestination(store, 'destination', 'addItem');
+const childStore = scopeToDestination(store, ['destination'], 'addItem', 'destination');
 // Type: Store<AddItemState, AddItemAction> | null
 ```
 

@@ -3,12 +3,12 @@
 	import {
 		CodeEditor,
 		codeEditorReducer,
-		createEditorInitialState
+		createInitialCodeEditorState
 	} from '@composable-svelte/code';
 
 	// Example 1: JavaScript Editor
 	const jsStore = createStore({
-		initialState: createEditorInitialState({
+		initialState: createInitialCodeEditorState({
 			value: `// JavaScript Example
 function fibonacci(n) {
   if (n <= 1) return n;
@@ -31,7 +31,7 @@ console.log(fibonacci(10));`,
 
 	// Example 2: TypeScript Editor with formatter
 	const tsStore = createStore({
-		initialState: createEditorInitialState({
+		initialState: createInitialCodeEditorState({
 			value: `// TypeScript Example
 interface User{name:string;age:number;}
 const user:User={name:"Alice",age:30};
@@ -61,7 +61,7 @@ console.log(greet(user));`,
 
 	// Example 3: HTML Editor (Light Theme)
 	const htmlStore = createStore({
-		initialState: createEditorInitialState({
+		initialState: createInitialCodeEditorState({
 			value: `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -81,7 +81,7 @@ console.log(greet(user));`,
 
 	// Example 4: Python Editor (Read-only)
 	const pythonStore = createStore({
-		initialState: createEditorInitialState({
+		initialState: createInitialCodeEditorState({
 			value: `# Python Example
 def quicksort(arr):
     if len(arr) <= 1:
@@ -105,7 +105,7 @@ print(quicksort([3, 6, 8, 10, 1, 2, 1]))`,
 	<!-- Live Demo Section -->
 	<section class="space-y-6">
 		<div>
-			<h3 class="text-xl font-semibold mb-2">Interactive Demo</h3>
+			<h2 class="text-xl font-semibold mb-2">Interactive Demo</h2>
 			<p class="text-muted-foreground text-sm">
 				Full-featured code editor with syntax highlighting, line numbers, and save functionality
 			</p>
@@ -114,7 +114,7 @@ print(quicksort([3, 6, 8, 10, 1, 2, 1]))`,
 		<div class="space-y-8">
 			<!-- Example 1: JavaScript Editor -->
 			<div class="space-y-4">
-				<h4 class="text-sm font-medium text-muted-foreground">JavaScript Editor (Dark Theme)</h4>
+				<h3 class="text-sm font-medium text-muted-foreground">JavaScript Editor (Dark Theme)</h3>
 				<div class="h-[300px]">
 					<CodeEditor store={jsStore} />
 				</div>
@@ -125,9 +125,9 @@ print(quicksort([3, 6, 8, 10, 1, 2, 1]))`,
 
 			<!-- Example 2: TypeScript Editor with Formatter -->
 			<div class="space-y-4">
-				<h4 class="text-sm font-medium text-muted-foreground">
+				<h3 class="text-sm font-medium text-muted-foreground">
 					TypeScript Editor with Formatter
-				</h4>
+				</h3>
 				<div class="h-[300px]">
 					<CodeEditor store={tsStore} />
 				</div>
@@ -138,7 +138,7 @@ print(quicksort([3, 6, 8, 10, 1, 2, 1]))`,
 
 			<!-- Example 3: HTML Editor (Light Theme) -->
 			<div class="space-y-4">
-				<h4 class="text-sm font-medium text-muted-foreground">HTML Editor (Light Theme)</h4>
+				<h3 class="text-sm font-medium text-muted-foreground">HTML Editor (Light Theme)</h3>
 				<div class="h-[300px]">
 					<CodeEditor store={htmlStore} />
 				</div>
@@ -149,7 +149,7 @@ print(quicksort([3, 6, 8, 10, 1, 2, 1]))`,
 
 			<!-- Example 4: Python Editor (Read-only) -->
 			<div class="space-y-4">
-				<h4 class="text-sm font-medium text-muted-foreground">Python Editor (Read-only)</h4>
+				<h3 class="text-sm font-medium text-muted-foreground">Python Editor (Read-only)</h3>
 				<div class="h-[300px]">
 					<CodeEditor store={pythonStore} />
 				</div>
@@ -161,7 +161,7 @@ print(quicksort([3, 6, 8, 10, 1, 2, 1]))`,
 	</section>
 
 	<!-- Description -->\n\t<section class="space-y-4">
-		<h3 class="text-xl font-semibold">Usage</h3>
+		<h2 class="text-xl font-semibold">Usage</h2>
 		<div class="prose prose-sm dark:prose-invert">
 			<p>
 				The CodeEditor component provides a full-featured interactive code editor built on
@@ -184,13 +184,13 @@ print(quicksort([3, 6, 8, 10, 1, 2, 1]))`,
 	<!-- Features Section -->
 	<section class="space-y-6">
 		<div>
-			<h3 class="text-xl font-semibold mb-2">Key Features</h3>
+			<h2 class="text-xl font-semibold mb-2">Key Features</h2>
 		</div>
 
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 			<div class="rounded-lg border bg-card p-6 space-y-3">
 				<div class="text-2xl">🎨</div>
-				<h4 class="font-semibold">Syntax Highlighting</h4>
+				<h3 class="font-semibold">Syntax Highlighting</h3>
 				<p class="text-sm text-muted-foreground">
 					Support for 11+ languages including TypeScript, JavaScript, Python, Rust, HTML, CSS,
 					and more
@@ -199,7 +199,7 @@ print(quicksort([3, 6, 8, 10, 1, 2, 1]))`,
 
 			<div class="rounded-lg border bg-card p-6 space-y-3">
 				<div class="text-2xl">💾</div>
-				<h4 class="font-semibold">Smart Save</h4>
+				<h3 class="font-semibold">Smart Save</h3>
 				<p class="text-sm text-muted-foreground">
 					Tracks unsaved changes with visual indicator. Async save handler with error handling.
 				</p>
@@ -207,7 +207,7 @@ print(quicksort([3, 6, 8, 10, 1, 2, 1]))`,
 
 			<div class="rounded-lg border bg-card p-6 space-y-3">
 				<div class="text-2xl">⌨️</div>
-				<h4 class="font-semibold">Keyboard Shortcuts</h4>
+				<h3 class="font-semibold">Keyboard Shortcuts</h3>
 				<p class="text-sm text-muted-foreground">
 					Cmd+S to save, Cmd+Shift+F to format, plus all standard editor shortcuts
 				</p>
@@ -215,7 +215,7 @@ print(quicksort([3, 6, 8, 10, 1, 2, 1]))`,
 
 			<div class="rounded-lg border bg-card p-6 space-y-3">
 				<div class="text-2xl">🌓</div>
-				<h4 class="font-semibold">Theme Support</h4>
+				<h3 class="font-semibold">Theme Support</h3>
 				<p class="text-sm text-muted-foreground">
 					Light and dark themes with auto-detection of system preference
 				</p>
@@ -223,7 +223,7 @@ print(quicksort([3, 6, 8, 10, 1, 2, 1]))`,
 
 			<div class="rounded-lg border bg-card p-6 space-y-3">
 				<div class="text-2xl">📊</div>
-				<h4 class="font-semibold">Status Bar</h4>
+				<h3 class="font-semibold">Status Bar</h3>
 				<p class="text-sm text-muted-foreground">
 					Shows cursor position, selection info, and current language
 				</p>
@@ -231,7 +231,7 @@ print(quicksort([3, 6, 8, 10, 1, 2, 1]))`,
 
 			<div class="rounded-lg border bg-card p-6 space-y-3">
 				<div class="text-2xl">🏗️</div>
-				<h4 class="font-semibold">Composable Architecture</h4>
+				<h3 class="font-semibold">Composable Architecture</h3>
 				<p class="text-sm text-muted-foreground">
 					All state in store, pure reducers, effects as data, fully testable
 				</p>
@@ -242,26 +242,26 @@ print(quicksort([3, 6, 8, 10, 1, 2, 1]))`,
 	<!-- Use Cases Section -->
 	<section class="space-y-6">
 		<div>
-			<h3 class="text-xl font-semibold mb-2">Common Use Cases</h3>
+			<h2 class="text-xl font-semibold mb-2">Common Use Cases</h2>
 		</div>
 
 		<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 			<div class="rounded-lg border bg-card p-6 space-y-3">
-				<h4 class="font-semibold">Code Playgrounds</h4>
+				<h3 class="font-semibold">Code Playgrounds</h3>
 				<p class="text-sm text-muted-foreground">
 					Interactive coding environments where users can write and execute code
 				</p>
 			</div>
 
 			<div class="rounded-lg border bg-card p-6 space-y-3">
-				<h4 class="font-semibold">Documentation</h4>
+				<h3 class="font-semibold">Documentation</h3>
 				<p class="text-sm text-muted-foreground">
 					Show editable code examples in documentation with syntax highlighting
 				</p>
 			</div>
 
 			<div class="rounded-lg border bg-card p-6 space-y-3">
-				<h4 class="font-semibold">Development Tools</h4>
+				<h3 class="font-semibold">Development Tools</h3>
 				<p class="text-sm text-muted-foreground">
 					Build IDE-like features for web-based development environments
 				</p>
@@ -271,12 +271,12 @@ print(quicksort([3, 6, 8, 10, 1, 2, 1]))`,
 
 	<!-- Best Practices -->\n\t<section class="space-y-6">
 		<div>
-			<h3 class="text-xl font-semibold mb-2">Best Practices</h3>
+			<h2 class="text-xl font-semibold mb-2">Best Practices</h2>
 		</div>
 
 		<div class="space-y-4">
 			<div class="rounded-lg border bg-card p-6">
-				<h4 class="font-semibold mb-3">When to Use CodeEditor vs CodeHighlight</h4>
+				<h3 class="font-semibold mb-3">When to Use CodeEditor vs CodeHighlight</h3>
 				<ul class="list-disc list-inside text-sm space-y-2 text-muted-foreground">
 					<li>Use <strong>CodeEditor</strong> when users need to edit code</li>
 					<li>Use <strong>CodeHighlight</strong> for read-only code display</li>
@@ -286,7 +286,7 @@ print(quicksort([3, 6, 8, 10, 1, 2, 1]))`,
 			</div>
 
 			<div class="rounded-lg border bg-card p-6">
-				<h4 class="font-semibold mb-3">Performance Tips</h4>
+				<h3 class="font-semibold mb-3">Performance Tips</h3>
 				<ul class="list-disc list-inside text-sm space-y-2 text-muted-foreground">
 					<li>Use read-only mode when editing is not needed</li>
 					<li>Debounce save operations for large files</li>
@@ -296,7 +296,7 @@ print(quicksort([3, 6, 8, 10, 1, 2, 1]))`,
 			</div>
 
 			<div class="rounded-lg border bg-card p-6">
-				<h4 class="font-semibold mb-3">Keyboard Shortcuts</h4>
+				<h3 class="font-semibold mb-3">Keyboard Shortcuts</h3>
 				<ul class="list-disc list-inside text-sm space-y-2 text-muted-foreground">
 					<li><strong>Cmd+S / Ctrl+S:</strong> Save code</li>
 					<li><strong>Cmd+Shift+F / Ctrl+Shift+F:</strong> Format code</li>
@@ -311,7 +311,7 @@ print(quicksort([3, 6, 8, 10, 1, 2, 1]))`,
 	<!-- Architecture Details -->
 	<section class="space-y-6">
 		<div>
-			<h3 class="text-xl font-semibold mb-2">Architecture</h3>
+			<h2 class="text-xl font-semibold mb-2">Architecture</h2>
 		</div>
 
 		<div class="rounded-lg border bg-card p-6 space-y-4">

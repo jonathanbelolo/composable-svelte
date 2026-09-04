@@ -48,15 +48,13 @@ describe('Tabs Component', () => {
     const tabs = ['Tab 1', 'Tab 2', 'Tab 3'];
 
     render(Tabs, {
-      props: {
         store: scopedStore,
         tabs,
         activeTab,
         onTabChange: (index: number) => {
           activeTab = index;
         }
-      }
-    });
+      });
 
     const tablist = page.getByRole('tablist');
     await expect.element(tablist).toBeInTheDocument();
@@ -66,13 +64,11 @@ describe('Tabs Component', () => {
     const tabs = ['Tab 1', 'Tab 2', 'Tab 3'];
 
     render(Tabs, {
-      props: {
         store: null,
         tabs,
         activeTab: 0,
         onTabChange: () => {}
-      }
-    });
+      });
 
     // Check that no tablist exists
     const tablists = page.getByRole('tablist').elements();
@@ -97,13 +93,11 @@ describe('Tabs Component', () => {
     const tabs = ['Tab 1', 'Tab 2', 'Tab 3'];
 
     render(Tabs, {
-      props: {
         store: scopedStore,
         tabs,
         activeTab: 0,
         onTabChange: () => {}
-      }
-    });
+      });
 
     const tabButtons = page.getByRole('tab').elements();
     expect(tabButtons.length).toBe(3);
@@ -127,18 +121,16 @@ describe('Tabs Component', () => {
     const tabs = ['Tab 1', 'Tab 2', 'Tab 3'];
 
     render(Tabs, {
-      props: {
         store: scopedStore,
         tabs,
         activeTab: 1,
         onTabChange: () => {}
-      }
-    });
+      });
 
     const tabButtons = page.getByRole('tab').elements();
-    expect(tabButtons[0].getAttribute('aria-selected')).toBe('false');
-    expect(tabButtons[1].getAttribute('aria-selected')).toBe('true');
-    expect(tabButtons[2].getAttribute('aria-selected')).toBe('false');
+    expect(tabButtons[0]!.getAttribute('aria-selected')).toBe('false');
+    expect(tabButtons[1]!.getAttribute('aria-selected')).toBe('true');
+    expect(tabButtons[2]!.getAttribute('aria-selected')).toBe('false');
   });
 
   it('calls onTabChange when tab is clicked', async () => {
@@ -160,18 +152,16 @@ describe('Tabs Component', () => {
     let clickedIndex = -1;
 
     render(Tabs, {
-      props: {
         store: scopedStore,
         tabs,
         activeTab: 0,
         onTabChange: (index: number) => {
           clickedIndex = index;
         }
-      }
-    });
+      });
 
     const tabButtons = page.getByRole('tab').elements();
-    await userEvent.click(tabButtons[2]);
+    await userEvent.click(tabButtons[2]!);
 
     expect(clickedIndex).toBe(2);
   });
@@ -194,13 +184,11 @@ describe('Tabs Component', () => {
     const tabs = ['Tab 1', 'Tab 2', 'Tab 3'];
 
     render(Tabs, {
-      props: {
         store: scopedStore,
         tabs,
         activeTab: 1,
         onTabChange: () => {}
-      }
-    });
+      });
 
     const tabpanel = page.getByRole('tabpanel');
     await expect.element(tabpanel).toBeInTheDocument();
@@ -226,14 +214,12 @@ describe('Tabs Component', () => {
     const tabs = ['Tab 1', 'Tab 2', 'Tab 3'];
 
     render(Tabs, {
-      props: {
         store: scopedStore,
         tabs,
         activeTab: 0,
         onTabChange: () => {},
         class: 'custom-content'
-      }
-    });
+      });
 
     const tabpanel = page.getByRole('tabpanel');
     await expect.element(tabpanel).toHaveClass(/custom-content/);
@@ -257,14 +243,12 @@ describe('Tabs Component', () => {
     const tabs = ['Tab 1', 'Tab 2', 'Tab 3'];
 
     render(Tabs, {
-      props: {
         store: scopedStore,
         tabs,
         activeTab: 0,
         onTabChange: () => {},
         unstyled: true
-      }
-    });
+      });
 
     const tablist = page.getByRole('tablist');
     const className = tablist.element().className;
@@ -292,13 +276,11 @@ describe('Tabs Component', () => {
     const tabs = ['Tab 1', 'Tab 2', 'Tab 3'];
 
     render(Tabs, {
-      props: {
         store: scopedStore,
         tabs,
         activeTab: 0,
         onTabChange: () => {}
-      }
-    });
+      });
 
     // Check body overflow is NOT set to hidden (tabs don't lock scroll)
     const bodyStyle = document.body.style.overflow;

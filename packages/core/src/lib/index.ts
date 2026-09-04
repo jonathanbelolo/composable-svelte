@@ -30,7 +30,12 @@ export type {
   // MiddlewareAPI
 } from './types.js';
 
-// Export Effect type with alias to avoid name conflict with Effect namespace
+// `Effect` is exported from `./effect.js` below carrying **both** meanings —
+// the constructor namespace and the type — because they are declared in one
+// module there, which is the only arrangement TypeScript merges. This alias
+// stays because every reducer in this repo and in `examples/` imports it, and
+// because inside a file that also calls `Effect.run(...)` the longer name reads
+// better. It is not deprecated.
 export type { Effect as EffectType } from './types.js';
 
 // Note: Most users won't need to explicitly import EffectType.
@@ -89,6 +94,7 @@ export type {
   CasePath,
   StackResult,
   ScopedDestinationStore,
+  ScopableStore,
   ScopedStore,
   DismissDependency
 } from './navigation/index.js';
@@ -100,6 +106,7 @@ export {
   ifLetPresentation,
   createDestinationReducer,
   createDestination,
+  destinationState,
   isDestinationType,
   extractDestinationState,
   matchPresentationAction,
@@ -132,6 +139,7 @@ export {
 export type {
   Clock,
   MockClock,
+  MockStorage,
   Storage,
   SyncStorage,
   CookieStorage,
@@ -152,6 +160,7 @@ export {
   createNoopStorage,
   createCookieStorage,
   createMockCookieStorage,
+  createMockStorage,
   isBrowser,
   getStorageQuota,
   getByteSize,
@@ -326,6 +335,8 @@ export { serializeStore, serializeState } from './ssr/index.js';
 
 // Hydration
 export { hydrateStore, parseState } from './ssr/index.js';
+export { createTaggedSerializer } from './ssr/index.js';
+export type { StateSerializer } from './ssr/index.js';
 
 // Rendering
 export {

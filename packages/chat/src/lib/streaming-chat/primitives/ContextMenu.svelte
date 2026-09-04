@@ -10,7 +10,7 @@
 	interface Props {
 		message: Message;
 		store: Store<StreamingChatState, StreamingChatAction>;
-		onAddReaction?: () => void;
+		onAddReaction?: (() => void) | undefined;
 	}
 
 	const { message, store, onAddReaction }: Props = $props();
@@ -151,7 +151,6 @@
 		align-items: center;
 		justify-content: center;
 		color: currentColor;
-		transition: background 0.2s ease, transform 0.1s ease;
 		width: 24px;
 		height: 24px;
 	}
@@ -169,8 +168,8 @@
 		top: 100%;
 		right: 0;
 		margin-top: 4px;
-		background: white;
-		border: 1px solid #e0e0e0;
+		background: hsl(var(--background, 0 0% 100%));
+		border: 1px solid hsl(var(--border, 0 0% 87.8%));
 		border-radius: 6px;
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 		min-width: 160px;
@@ -188,13 +187,12 @@
 		background: none;
 		cursor: pointer;
 		font-size: 14px;
-		color: #1a1a1a;
+		color: hsl(var(--foreground, 0 0% 10.2%));
 		text-align: left;
-		transition: background 0.15s ease;
 	}
 
 	.context-menu__item:hover:not(:disabled) {
-		background: #f5f5f5;
+		background: hsl(var(--muted, 0 0% 96.1%));
 	}
 
 	.context-menu__item:disabled {
@@ -203,7 +201,7 @@
 	}
 
 	.context-menu__item--danger {
-		color: #dc2626;
+		color: hsl(var(--destructive, 0 72.2% 50.6%));
 	}
 
 	.context-menu__item--danger:hover:not(:disabled) {
@@ -222,7 +220,7 @@
 
 	.context-menu__divider {
 		height: 1px;
-		background: #e0e0e0;
+		background: hsl(var(--muted, 0 0% 87.8%));
 		margin: 4px 0;
 	}
 
@@ -233,32 +231,7 @@
 
 	:global(.chat-message[data-role='user']) .context-menu__trigger:hover {
 		background: rgba(255, 255, 255, 0.3);
-	}
-
-	/* Dark mode support */
-	:global(.dark) .context-menu__dropdown {
-		background: #2a2a2a;
-		border-color: #444;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-	}
-
-	:global(.dark) .context-menu__item {
-		color: #e0e0e0;
-	}
-
-	:global(.dark) .context-menu__item:hover:not(:disabled) {
-		background: #333;
-	}
-
-	:global(.dark) .context-menu__item--danger:hover:not(:disabled) {
-		background: rgba(220, 38, 38, 0.2);
-	}
-
-	:global(.dark) .context-menu__divider {
-		background: #444;
-	}
-
-	:global(.dark .chat-message[data-role='assistant']) .context-menu__trigger {
+	}	:global(.dark .chat-message[data-role='assistant']) .context-menu__trigger {
 		background: rgba(255, 255, 255, 0.1);
 	}
 

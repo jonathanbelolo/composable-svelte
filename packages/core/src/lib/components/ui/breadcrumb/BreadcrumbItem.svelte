@@ -5,7 +5,7 @@
 
 	interface BreadcrumbItemProps extends HTMLLiAttributes {
 		children: Snippet;
-		class?: string;
+		class?: string | undefined;
 	}
 
 	let { children, class: className, ...restProps }: BreadcrumbItemProps = $props();

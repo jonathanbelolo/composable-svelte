@@ -15,7 +15,7 @@
 
 import { onMount, onDestroy } from 'svelte';
 import type { Store } from '@composable-svelte/core';
-import type { MapState, MapAction, GeoJSON, LayerStyle } from '../types/map.types';
+import type { MapState, MapAction, GeoJSON, LayerStyle } from '../types/map.types.js';
 
 // Props
 let {
@@ -31,11 +31,11 @@ let {
   store: Store<MapState, MapAction>;
   id: string;
   data: GeoJSON | string;
-  visible?: boolean;
-  interactive?: boolean;
-  intensity?: number;
-  radius?: number;
-  colorGradient?: [number, string][];
+  visible?: boolean | undefined;
+  interactive?: boolean | undefined;
+  intensity?: number | undefined;
+  radius?: number | undefined;
+  colorGradient?: [number, string][] | undefined;
 } = $props();
 
 // Build layer style from props

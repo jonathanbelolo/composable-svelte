@@ -18,7 +18,7 @@
 
 import { onMount, onDestroy } from 'svelte';
 import type { Store } from '@composable-svelte/core';
-import type { MapState, MapAction, LngLat } from '../types/map.types';
+import type { MapState, MapAction, LngLat } from '../types/map.types.js';
 import type { Snippet } from 'svelte';
 
 // Props
@@ -34,10 +34,10 @@ let {
   store: Store<MapState, MapAction>;
   id: string;
   position: LngLat;
-  isOpen?: boolean;
-  closeButton?: boolean;
-  closeOnClick?: boolean;
-  children?: Snippet;
+  isOpen?: boolean | undefined;
+  closeButton?: boolean | undefined;
+  closeOnClick?: boolean | undefined;
+  children?: Snippet | undefined;
 } = $props();
 
 // Container for popup content

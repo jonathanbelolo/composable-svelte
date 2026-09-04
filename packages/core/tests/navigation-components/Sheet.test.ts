@@ -5,6 +5,7 @@ import Sheet from '../../src/lib/navigation-components/Sheet.svelte';
 import { createStore } from '../../src/lib/store.svelte.js';
 import { scopeToDestination } from '../../src/lib/navigation/scope-to-destination.js';
 import { Effect } from '../../src/lib/effect.js';
+import { resetBodyScroll } from '../helpers/body-scroll.js';
 
 // ============================================================================
 // Test Fixtures
@@ -44,18 +45,14 @@ describe('Sheet Component', () => {
       'destination'
     );
 
-    render(Sheet, {
-      props: { store: scopedStore }
-    });
+    render(Sheet, { store: scopedStore });
 
     const dialog = page.getByRole('dialog');
     await expect.element(dialog).toBeInTheDocument();
   });
 
   it('hides when store is null', async () => {
-    render(Sheet, {
-      props: { store: null }
-    });
+    render(Sheet, { store: null });
 
     // Check that no dialog exists
     const dialogs = page.getByRole('dialog').elements();
@@ -88,9 +85,7 @@ describe('Sheet Component', () => {
       'destination'
     );
 
-    render(Sheet, {
-      props: { store: scopedStore }
-    });
+    render(Sheet, { store: scopedStore });
 
     // Sheet should be visible
     const dialog = page.getByRole('dialog');
@@ -132,9 +127,7 @@ describe('Sheet Component', () => {
       'destination'
     );
 
-    render(Sheet, {
-      props: { store: scopedStore }
-    });
+    render(Sheet, { store: scopedStore });
 
     // Sheet should be visible
     const dialog = page.getByRole('dialog');
@@ -178,9 +171,7 @@ describe('Sheet Component', () => {
       'destination'
     );
 
-    render(Sheet, {
-      props: { store: scopedStore, disableEscapeKey: true }
-    });
+    render(Sheet, { store: scopedStore, disableEscapeKey: true });
 
     // Press Escape
     await userEvent.keyboard('{Escape}');
@@ -216,9 +207,7 @@ describe('Sheet Component', () => {
       'destination'
     );
 
-    render(Sheet, {
-      props: { store: scopedStore, disableClickOutside: true }
-    });
+    render(Sheet, { store: scopedStore, disableClickOutside: true });
 
     // Trigger pointerdown event on document
     const pointerEvent = new PointerEvent('pointerdown', {
@@ -252,9 +241,7 @@ describe('Sheet Component', () => {
       'destination'
     );
 
-    render(Sheet, {
-      props: { store: scopedStore, height: '80vh' }
-    });
+    render(Sheet, { store: scopedStore, height: '80vh' });
 
     const dialog = page.getByRole('dialog');
     const style = dialog.element().getAttribute('style');
@@ -277,12 +264,10 @@ describe('Sheet Component', () => {
     );
 
     render(Sheet, {
-      props: {
         store: scopedStore,
         class: 'custom-sheet-content',
         backdropClass: 'custom-backdrop'
-      }
-    });
+      });
 
     const dialog = page.getByRole('dialog');
     await expect.element(dialog).toHaveClass(/custom-sheet-content/);
@@ -303,9 +288,7 @@ describe('Sheet Component', () => {
       'destination'
     );
 
-    render(Sheet, {
-      props: { store: scopedStore, unstyled: true }
-    });
+    render(Sheet, { store: scopedStore, unstyled: true });
 
     const dialog = page.getByRole('dialog');
     const className = dialog.element().className;
@@ -327,12 +310,15 @@ describe('Sheet Component', () => {
       'destination'
     );
 
-    render(Sheet, {
-      props: { store: scopedStore }
-    });
+    // Reset first: body.style is shared across every test in the worker, and
+    // a lock leaked by an earlier test made the old form pass on its own.
+    resetBodyScroll();
+    expect(document.body.style.overflow).toBe('');
 
-    // Check body overflow style directly
-    const bodyStyle = document.body.style.overflow;
-    expect(bodyStyle).toBe('hidden');
+    const screen = render(Sheet, { store: scopedStore });
+    expect(document.body.style.overflow).toBe('hidden');
+
+    screen.unmount();
+    expect(document.body.style.overflow).toBe('');
   });
 });

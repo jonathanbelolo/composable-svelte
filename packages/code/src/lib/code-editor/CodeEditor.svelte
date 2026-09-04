@@ -2,49 +2,254 @@
 	import { onMount } from 'svelte';
 	import type { Store } from '@composable-svelte/core';
 	import type { EditorView } from 'codemirror';
-	import type { CodeEditorState, CodeEditorAction } from './code-editor.types';
-	import { createEditorView, updateEditorValue } from './codemirror-wrapper';
+	import type {
+		CodeEditorState,
+		CodeEditorAction,
+		SupportedLanguage
+	} from './code-editor.types.js';
+	import {
+		createEditorView,
+		updateEditorValue,
+		updateEditorLanguage,
+		updateEditorTheme,
+		updateEditorReadOnly,
+		updateTabSize,
+		updateLineNumbers,
+		updateFolding,
+		updateAutocomplete,
+		runEditorCommand
+	} from './codemirror-wrapper.js';
 
 	/**
 	 * Store containing all component state
 	 * NO component $state - all application state lives in the store
 	 */
-	const { store, showToolbar = true }: { store: Store<CodeEditorState, CodeEditorAction>; showToolbar?: boolean } = $props();
+	const { store, showToolbar = true }: { store: Store<CodeEditorState, CodeEditorAction>; showToolbar?: boolean | undefined } = $props();
 
 	// Editor DOM reference
 	let editorElement: HTMLElement;
 	let view: EditorView | null = null;
 
-	// Track CodeMirror's internal value to prevent circular updates
-	let codemirrorValue = $state('');
+	// Track CodeMirror's internal value to prevent circular updates.
+	//
+	// Not $state: this is read AND written inside the effect below, which is the
+	// shape that produces `effect_update_depth_exceeded`. It terminated only
+	// because the write falsified its own condition. It is never read from the
+	// template, so a plain `let` is both sufficient and safer.
+	let codemirrorValue = '';
+
+	// Not $state, for the same reason: the sync effect reads and writes these.
+	// A reactive guard re-triggers the effect it lives in. Same pattern and same
+	// rationale as `DropdownMenu.svelte` in core.
+	let appliedLanguage: SupportedLanguage | null = null;
+	let appliedTheme: 'light' | 'dark' | 'auto' | null = null;
+	let appliedReadOnly: boolean | null = null;
+	let appliedTabSize: number | null = null;
+	let appliedShowLineNumbers: boolean | null = null;
+	let appliedFolding: boolean | null = null;
+	let appliedAutocomplete: boolean | null = null;
+
+	/**
+	 * Push store config into the live view, skipping anything already applied.
+	 *
+	 * Idempotent by value, and that is load-bearing rather than an optimisation:
+	 * flipping `readOnly` while the editor has focus blurs `contentDOM`, the
+	 * update listener sees `focusChanged` and dispatches `blurred` back into the
+	 * store, which re-runs this effect. These guards are what make that second
+	 * pass a no-op instead of a cycle. The same applies to the ~2 dispatches per
+	 * keystroke.
+	 */
+	function syncConfig(
+		editor: EditorView,
+		language: SupportedLanguage,
+		theme: 'light' | 'dark' | 'auto',
+		readOnly: boolean,
+		tabSize: number,
+		showLineNumbers: boolean,
+		enableFolding: boolean,
+		enableAutocomplete: boolean
+	): void {
+		if (theme !== appliedTheme) {
+			appliedTheme = theme;
+			updateEditorTheme(editor, theme);
+		}
+		if (readOnly !== appliedReadOnly) {
+			appliedReadOnly = readOnly;
+			updateEditorReadOnly(editor, readOnly);
+		}
+		if (tabSize !== appliedTabSize) {
+			appliedTabSize = tabSize;
+			updateTabSize(editor, tabSize);
+		}
+		if (showLineNumbers !== appliedShowLineNumbers) {
+			appliedShowLineNumbers = showLineNumbers;
+			updateLineNumbers(editor, showLineNumbers);
+		}
+		if (enableFolding !== appliedFolding) {
+			appliedFolding = enableFolding;
+			updateFolding(editor, enableFolding);
+		}
+		if (enableAutocomplete !== appliedAutocomplete) {
+			appliedAutocomplete = enableAutocomplete;
+			updateAutocomplete(editor, enableAutocomplete);
+		}
+		if (language !== appliedLanguage) {
+			appliedLanguage = language;
+			// Stale-request guarded inside the wrapper.
+			updateEditorLanguage(editor, language).catch((e: unknown) => {
+				// Surface it. This used to reset the guard and drop the reason,
+				// which is why `state.error` had no writer and its banner was
+				// unreachable markup.
+				store.dispatch({
+					type: 'languageLoadFailed',
+					language,
+					error: e instanceof Error ? e.message : String(e)
+				});
+				// The dynamic import failed — a stale chunk after a deploy, or
+				// offline. Without this the guard still reads "applied", so
+				// re-selecting the same language is a permanent no-op and the
+				// editor stays on the previous grammar with no way back. Clearing
+				// it lets a retry actually retry. The `catch` also stops this
+				// becoming an unhandled rejection.
+				if (appliedLanguage === language) appliedLanguage = null;
+			});
+		}
+	}
 
 	// Initialize CodeMirror on mount
 	onMount(() => {
-		createEditorView(editorElement, store, {
+		const initial = {
 			value: $store.value,
 			language: $store.language,
 			theme: $store.theme,
 			showLineNumbers: $store.showLineNumbers,
 			readOnly: $store.readOnly,
 			enableAutocomplete: $store.enableAutocomplete,
+			enableFolding: $store.enableFolding,
 			tabSize: $store.tabSize
-		}).then((editorView) => {
+		};
+
+		createEditorView(editorElement, store, initial).then((editorView) => {
 			view = editorView;
-			codemirrorValue = $store.value;
+			// Record what CodeMirror actually received, not what the store says
+			// by the time this promise resolves.
+			codemirrorValue = initial.value;
+			appliedLanguage = initial.language;
+			appliedTheme = initial.theme;
+			appliedReadOnly = initial.readOnly;
+			appliedTabSize = initial.tabSize;
+			appliedShowLineNumbers = initial.showLineNumbers;
+			appliedFolding = initial.enableFolding;
+			appliedAutocomplete = initial.enableAutocomplete;
+
+			// Catch up on anything dispatched while the view was being built.
+			// The effect below cannot do this: `view` is deliberately not
+			// reactive, so its dependency set is the store scalars only and it
+			// does not re-run when the view lands.
+			const current = store.state;
+			syncConfig(
+				editorView,
+				current.language,
+				current.theme,
+				current.readOnly,
+				current.tabSize,
+				current.showLineNumbers,
+				current.enableFolding,
+				current.enableAutocomplete
+			);
+			if (current.value !== codemirrorValue) {
+				// Not undoable: this is the editor catching up to state it was
+				// built from, not an edit. Without this the editor opens with
+				// Undo already enabled and one press wipes the seeded content.
+				updateEditorValue(editorView, current.value, { addToHistory: false });
+				codemirrorValue = current.value;
+			}
 		});
 
+		// Command actions reach the editor here.
+		//
+		// Deliberately `subscribeToActions` and not an `$effect`: Svelte
+		// coalesces effect runs, so two commands dispatched in the same tick
+		// would collapse into one. This fires synchronously, once per dispatch.
+		// It reads no store *state*, so it never re-subscribes.
+		const unsubscribe = store.subscribeToActions?.((action) => {
+			if (!view) return;
+			switch (action.type) {
+				case 'undo':
+				case 'redo':
+				case 'selectAll':
+				case 'deleteSelection':
+				case 'focus':
+				case 'blur':
+					runEditorCommand(view, action);
+					return;
+				case 'insertText':
+					runEditorCommand(view, action);
+					return;
+			}
+		});
+
+		if (!unsubscribe) {
+			// `subscribeToActions` is optional on the Store contract
+			// (`core/types.ts:239`). Without it the command actions silently do
+			// nothing, which is the exact defect class this component is being
+			// cleaned of — so say so loudly rather than degrade quietly.
+			console.warn(
+				'[CodeEditor] this store does not implement subscribeToActions, so ' +
+					'undo / redo / insertText / deleteSelection / selectAll cannot reach the editor.'
+			);
+		}
+
 		return () => {
+			unsubscribe?.();
 			view?.destroy();
 		};
 	});
 
-	// Sync programmatic value updates (from store → CodeMirror)
-	// This handles external changes like loading a file or formatting
+	// Sync programmatic value updates (from store → CodeMirror).
+	// This handles external changes like loading a file or formatting.
 	$effect(() => {
-		if (view && $store.value !== codemirrorValue) {
-			updateEditorValue(view, $store.value);
-			codemirrorValue = $store.value;
+		// Read the store FIRST. This was `if (view && $store.value !== ...)`, and
+		// `view` is a deliberately non-reactive `let` that is null on the effect's
+		// first run because `createEditorView` is async. `&&` short-circuited
+		// before `$store.value` was ever read, so the effect captured no
+		// dependencies at all and never ran again — programmatic value changes,
+		// including the whole format flow, never reached the editor.
+		//
+		// Exactly the hazard noted on the config effect below; this one had it in
+		// `&&` form rather than early-`return` form and was missed.
+		const nextValue = $store.value;
+
+		if (view && nextValue !== codemirrorValue) {
+			updateEditorValue(view, nextValue);
+			codemirrorValue = nextValue;
 		}
+	});
+
+	// Sync editor configuration (store -> CodeMirror).
+	$effect(() => {
+		// Read every tracked value first. An early `return` above these would
+		// leave the effect depending only on `view`, which is deliberately not
+		// reactive — and it would then never re-run.
+		const language = $store.language;
+		const theme = $store.theme;
+		const readOnly = $store.readOnly;
+		const tabSize = $store.tabSize;
+		const showLineNumbers = $store.showLineNumbers;
+		const enableFolding = $store.enableFolding;
+		const enableAutocomplete = $store.enableAutocomplete;
+
+		if (!view) return;
+		syncConfig(
+			view,
+			language,
+			theme,
+			readOnly,
+			tabSize,
+			showLineNumbers,
+			enableFolding,
+			enableAutocomplete
+		);
 	});
 
 	// Use Svelte's auto-subscription pattern - ZERO boilerplate!
@@ -52,7 +257,11 @@
 	const saveButtonDisabled = $derived(!$store.hasUnsavedChanges);
 </script>
 
-<div class="code-editor" data-theme={$store.theme}>
+<div
+	class="code-editor"
+	class:code-editor--focused={$store.isFocused}
+	data-theme={$store.theme}
+>
 	{#if showToolbar}
 		<div class="code-editor__toolbar">
 			<div class="code-editor__toolbar-left">
@@ -77,6 +286,24 @@
 
 				<button
 					class="code-editor__button"
+					onclick={() => store.dispatch({ type: 'undo' })}
+					disabled={!$store.canUndo}
+					aria-label="Undo"
+				>
+					Undo
+				</button>
+
+				<button
+					class="code-editor__button"
+					onclick={() => store.dispatch({ type: 'redo' })}
+					disabled={!$store.canRedo}
+					aria-label="Redo"
+				>
+					Redo
+				</button>
+
+				<button
+					class="code-editor__button"
 					onclick={() => store.dispatch({ type: 'toggleLineNumbers' })}
 					aria-label="Toggle line numbers"
 				>
@@ -93,10 +320,19 @@
 			</div>
 
 			<div class="code-editor__toolbar-right">
+				<!--
+					Disabled by read-only alone. It also used to disable on
+					`formatError !== null`, which was a one-way trap: `formatError` is
+					cleared inside `case 'format'` (code-editor.reducer.ts:156), and a
+					disabled button can never dispatch `format` to reach it. One failed
+					format killed the button for the session — and with no `formatter`
+					dependency the very first click fails, which is exactly what the
+					README's example configures. The error still shows in the banner below.
+				-->
 				<button
 					class="code-editor__button"
 					onclick={() => store.dispatch({ type: 'format' })}
-					disabled={$store.readOnly || $store.formatError !== null}
+					disabled={$store.readOnly}
 					aria-label="Format code"
 				>
 					Format
@@ -166,6 +402,17 @@
 		font-family: 'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace;
 	}
 
+	/*
+	 * Specificity matters here, not just presence. `.code-editor--focused` is
+	 * (0,1,0) while `.code-editor[data-theme='light']` is (0,2,0) and always
+	 * matches — `data-theme` is unconditional on the root — so the plain class
+	 * lost every contest in the light theme and painted nothing. Matching on the
+	 * attribute too puts both selectors at (0,2,0), and the later rule wins.
+	 */
+	.code-editor[data-theme].code-editor--focused {
+		border-color: #007acc;
+	}
+
 	.code-editor[data-theme='light'] {
 		background: #ffffff;
 		border-color: rgba(0, 0, 0, 0.2);
@@ -201,7 +448,6 @@
 		border: 1px solid rgba(255, 255, 255, 0.2);
 		border-radius: 4px;
 		cursor: pointer;
-		transition: all 0.2s;
 	}
 
 	.code-editor__select:hover {
@@ -227,7 +473,6 @@
 		border: 1px solid rgba(255, 255, 255, 0.2);
 		border-radius: 4px;
 		cursor: pointer;
-		transition: all 0.2s;
 		white-space: nowrap;
 	}
 

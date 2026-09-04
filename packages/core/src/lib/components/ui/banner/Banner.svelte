@@ -32,21 +32,21 @@
 	 * ```
 	 */
 
-	interface BannerProps extends Omit<HTMLAttributes<HTMLDivElement>, 'class'> {
+	interface BannerProps extends Omit<HTMLAttributes<HTMLDivElement>, 'class' | 'children'> {
 		/**
 		 * Banner style variant.
 		 */
-		variant?: 'default' | 'success' | 'warning' | 'destructive';
+		variant?: 'default' | 'success' | 'warning' | 'destructive' | undefined;
 
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Banner content.
 		 */
-		children?: import('svelte').Snippet;
+		children?: import('svelte').Snippet | undefined;
 	}
 
 	let { variant = 'default', class: className, children, ...restProps }: BannerProps = $props();

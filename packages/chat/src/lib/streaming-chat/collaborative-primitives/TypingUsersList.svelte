@@ -10,18 +10,18 @@
 		id: string;
 		name: string;
 		color: string;
-		avatar?: string;
+		avatar?: string | undefined;
 	}
 
 	interface Props {
 		/** Array of users currently typing */
 		users: User[];
 		/** Show avatars */
-		showAvatars?: boolean;
+		showAvatars?: boolean | undefined;
 		/** Compact mode (smaller) */
-		compact?: boolean;
+		compact?: boolean | undefined;
 		/** Custom class */
-		class?: string;
+		class?: string | undefined;
 	}
 
 	let { users, showAvatars = true, compact = false, class: className = '' }: Props = $props();
@@ -81,7 +81,7 @@
 		gap: 8px;
 		padding: 6px 12px;
 		border-radius: 8px;
-		background-color: #f1f5f9;
+		background-color: hsl(var(--muted, 210 40% 96.1%));
 	}
 
 	.user-avatar {
@@ -91,7 +91,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		color: white;
+		color: hsl(var(--background, 0 0% 100%));
 		font-weight: 600;
 		font-size: 11px;
 		flex-shrink: 0;
@@ -124,7 +124,7 @@
 	.user-name {
 		font-size: 13px;
 		font-weight: 500;
-		color: #475569;
+		color: hsl(var(--muted-foreground, 215.3 19.3% 34.5%));
 		flex: 1;
 		min-width: 0;
 		overflow: hidden;
@@ -147,7 +147,7 @@
 		width: 5px;
 		height: 5px;
 		border-radius: 50%;
-		background-color: #94a3b8;
+		background-color: hsl(var(--muted, 215 20.2% 65.1%));
 		animation: typing-pulse 1.4s ease-in-out infinite;
 	}
 
@@ -183,15 +183,15 @@
 
 	@media (prefers-color-scheme: dark) {
 		.typing-user {
-			background-color: #1e293b;
+			background-color: hsl(var(--card, 217.2 32.6% 17.5%));
 		}
 
 		.user-name {
-			color: #cbd5e1;
+			color: hsl(var(--foreground, 212.7 26.8% 83.9%));
 		}
 
 		.dot {
-			background-color: #64748b;
+			background-color: hsl(var(--muted, 215.4 16.3% 46.9%));
 		}
 	}
 </style>

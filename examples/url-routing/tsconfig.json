@@ -1,3 +1,8 @@
+// Note: this project deliberately sets no `types`, so Node globals are absent.
+// That is load-bearing. `require()` had sat in App.svelte's serialize callback
+// in a browser ESM bundle, and it was `Cannot find name 'require'` that caught
+// it. Adding "node" to `types` would make that error — and any future one like
+// it — silently disappear.
 {
 	"extends": "../../tsconfig.json",
 	"compilerOptions": {

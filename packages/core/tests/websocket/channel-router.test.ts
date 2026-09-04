@@ -3,6 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { expectConsole } from '../helpers/console.js';
 import { createChannelRouter, createChannelWebSocket } from '../../src/lib/websocket/channel-router.js';
 import { createMockWebSocket } from '../../src/lib/websocket/testing/mock-client.js';
 import type { WebSocketMessage } from '../../src/lib/websocket/types.js';
@@ -403,7 +404,7 @@ describe('Channel Router', () => {
         (msg) => msg.channel
       );
 
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = expectConsole('error');
       const goodListener = vi.fn();
 
       // Add failing listener
@@ -418,9 +419,8 @@ describe('Channel Router', () => {
 
       // Good listener should still be called
       expect(goodListener).toHaveBeenCalledTimes(1);
-      expect(consoleSpy).toHaveBeenCalled();
+      expect(consoleSpy.length).toBeGreaterThan(0);
 
-      consoleSpy.mockRestore();
     });
   });
 
@@ -504,8 +504,8 @@ describe('Channel Router', () => {
         payload: { user: 'Alice', content: 'Hello' }
       });
 
-      expect(messages[0].data.payload.user).toBe('Alice');
-      expect(messages[0].data.payload.content).toBe('Hello');
+      expect(messages[0]!.data.payload.user).toBe('Alice');
+      expect(messages[0]!.data.payload.content).toBe('Hello');
     });
   });
 });

@@ -80,7 +80,7 @@
           initialOpacity: string | undefined;
         }
       ]
-    >;
+    > | undefined;
   }
 
   let {
@@ -117,9 +117,19 @@
 
   let modalContentElement: HTMLElement | undefined = $state();
   let modalBackdropElement: HTMLElement | undefined = $state();
-  // Not $state: the effect below reads and writes this, and a reactive
-  // guard would re-trigger the effect it lives in (effect_update_depth_exceeded).
-  let lastAnimatedContent: any = null;
+
+  // The (status, content) pair this effect last acted on.
+  //
+  // Not $state: the effect below reads and writes it, and a reactive guard would
+  // re-trigger the effect it lives in (effect_update_depth_exceeded).
+  //
+  // Keyed on the *pair*, not on "have I animated anything yet". Those two
+  // questions only diverge when the component mounts already `presented` — SSR
+  // hydration of a page rendered with this overlay open — and the difference is
+  // a permanent deadlock: the collapse branch is refused, `dismissalCompleted`
+  // never fires, and the reducer's own `status !== 'presented'` guard then
+  // rejects every further dismiss.
+  let lastAnimated: { status: string; content: unknown } | null = null;
   let clickOutsideCleanup: (() => void) | undefined = undefined;
 
   // Watch presentation status and trigger animations
@@ -127,16 +137,16 @@
     if (!presentation || !modalContentElement || !modalBackdropElement) return;
 
     // Only animate if content changed and we're in the right state
-    // `content` exists on every status except `idle`.
-    const currentContent = presentation.status === 'idle' ? null : presentation.content;
-
-    // Handle deep linking case: if we start with 'presented', mark content as animated
-    if (presentation.status === 'presented' && lastAnimatedContent === null && currentContent) {
-      lastAnimatedContent = currentContent;
+    if (presentation.status === 'idle') {
+      lastAnimated = null;
+      return;
     }
 
-    if (presentation.status === 'presenting' && lastAnimatedContent !== currentContent) {
-      lastAnimatedContent = currentContent;
+    const { status, content } = presentation;
+    if (lastAnimated?.status === status && lastAnimated.content === content) return;
+    lastAnimated = { status, content };
+
+    if (status === 'presenting') {
       // Animate in: content + backdrop in parallel
       Promise.all([
         animateModalIn(modalContentElement, springConfig),
@@ -147,8 +157,7 @@
       });
     }
 
-    if (presentation.status === 'dismissing' && lastAnimatedContent !== null) {
-      lastAnimatedContent = null;
+    if (status === 'dismissing') {
       // Animate out: content + backdrop in parallel
       Promise.all([
         animateModalOut(modalContentElement, springConfig),
@@ -249,11 +258,3 @@
     </div>
   </div>
 {/if}
-
-<style>
-  .modal-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 50;
-  }
-</style>

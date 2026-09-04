@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { HTMLTextareaAttributes } from 'svelte/elements';
 	import { cn } from '../../../utils.js';
 
 	/**
@@ -14,7 +15,11 @@
 	 * ```
 	 */
 
-	interface Props {
+	// Extends the real textarea attributes, as Input does with HTMLInputAttributes.
+	// A hand-rolled interface with an `[key: string]: any` catch-all typechecked,
+	// but it swallowed every DOM handler: `oninput={(e) => …}` gave `e` an
+	// implicit `any`, so nothing could be read off `e.currentTarget` safely.
+	interface Props extends Omit<HTMLTextareaAttributes, 'class' | 'value' | 'rows'> {
 		/**
 		 * The textarea value
 		 */
@@ -22,27 +27,23 @@
 		/**
 		 * Number of visible text rows
 		 */
-		rows?: number;
+		rows?: number | undefined;
 		/**
 		 * Placeholder text
 		 */
-		placeholder?: string;
+		placeholder?: string | undefined;
 		/**
 		 * Whether the textarea is disabled
 		 */
-		disabled?: boolean;
+		disabled?: boolean | undefined;
 		/**
 		 * Whether to allow resizing (vertical, horizontal, both, none)
 		 */
-		resize?: 'none' | 'vertical' | 'horizontal' | 'both';
+		resize?: 'none' | 'vertical' | 'horizontal' | 'both' | undefined;
 		/**
 		 * Optional class name
 		 */
-		class?: string;
-		/**
-		 * All other textarea attributes
-		 */
-		[key: string]: any;
+		class?: string | undefined;
 	}
 
 	let {

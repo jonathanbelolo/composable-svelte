@@ -24,21 +24,21 @@
 	 * ```
 	 */
 
-	interface ButtonGroupProps extends Omit<HTMLAttributes<HTMLDivElement>, 'class'> {
+	interface ButtonGroupProps extends Omit<HTMLAttributes<HTMLDivElement>, 'class' | 'children'> {
 		/**
 		 * Layout orientation.
 		 */
-		orientation?: 'horizontal' | 'vertical';
+		orientation?: 'horizontal' | 'vertical' | undefined;
 
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Button elements.
 		 */
-		children?: import('svelte').Snippet;
+		children?: import('svelte').Snippet | undefined;
 	}
 
 	let {

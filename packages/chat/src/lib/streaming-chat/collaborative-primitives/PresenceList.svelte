@@ -7,35 +7,72 @@
 	 */
 
 	import PresenceBadge from './PresenceBadge.svelte';
+	import { createIntlFormatters } from '@composable-svelte/core/i18n';
 	import type { UserPresence } from '../collaborative-types.js';
 
 	interface User {
 		id: string;
 		name: string;
-		avatar?: string;
+		avatar?: string | undefined;
 		color: string;
 		presence: UserPresence;
+		/**
+		 * When this user was last seen, as a timestamp.
+		 *
+		 * Optional so existing callers keep compiling — `CollaborativeUser`
+		 * declares it as required, and the reducer has always written it on
+		 * `userPresenceChanged` and `heartbeatReceived`. Nothing read it until
+		 * now, which is why it is being surfaced here rather than deleted.
+		 */
+		lastSeen?: number | undefined;
 	}
 
 	interface Props {
+	/**
+	 * Which heading element to render.
+	 *
+	 * The level belongs to the page, not to the component: put this under an
+	 * `<h2>` and a fixed `<h3>` jumps the outline, which no consumer can fix from
+	 * the outside. Defaults to the level it has always rendered, so nothing
+	 * changes for anyone who does not pass it.
+	 */
+	headingLevel?: 1 | 2 | 3 | 4 | 5 | 6 | undefined;
 		/** Array of users to display */
 		users: User[];
 		/** Group users by presence status */
-		groupByPresence?: boolean;
+		groupByPresence?: boolean | undefined;
 		/** Show empty state when no users */
-		showEmptyState?: boolean;
+		showEmptyState?: boolean | undefined;
 		/** Custom class */
-		class?: string;
+		class?: string | undefined;
+		/** Locale for the "last seen" text. Defaults to the browser's. */
+		locale?: string | undefined;
 	}
 
-	let { users, groupByPresence = false, showEmptyState = true, class: className = '' }: Props = $props();
+	let {
+		users,
+		groupByPresence = false,
+		showEmptyState = true,
+		class: className = '',
+		locale = undefined, headingLevel = 3 }: Props = $props();
+
+	// Core's formatter rather than another hand-rolled one — it picks the unit and
+	// falls back safely when `Intl.RelativeTimeFormat` is unavailable. Core is a
+	// required peer, so this costs no new dependency.
+	const formatters = createIntlFormatters();
+	const resolvedLocale = $derived(
+		locale ?? (typeof navigator !== 'undefined' ? navigator.language : 'en')
+	);
+
+	// Only for users who are not currently here. "Last seen 2 minutes ago" next to
+	// an active badge is noise.
+	function lastSeenLabel(user: User): string | null {
+		if (user.presence === 'active' || user.lastSeen === undefined) return null;
+		return formatters.formatRelativeTime(new Date(user.lastSeen), resolvedLocale);
+	}
 
 	// Group users by presence if requested
-	const groupedUsers = $derived(() => {
-		if (!groupByPresence) {
-			return { all: users };
-		}
-
+	const groupedUsers = $derived.by(() => {
 		const groups: Record<UserPresence, User[]> = {
 			active: [],
 			idle: [],
@@ -43,8 +80,14 @@
 			offline: []
 		};
 
+		// Only the grouped branch of the template reads this; when grouping is off
+		// the template iterates `users` directly, so skip the work.
+		if (!groupByPresence) return groups;
+
 		for (const user of users) {
-			groups[user.presence].push(user);
+			// `presence` arrives over a WebSocket, so an out-of-range value is a
+			// server bug away — bucket it rather than throwing on undefined.push.
+			(groups[user.presence] ?? groups.offline).push(user);
 		}
 
 		return groups;
@@ -77,12 +120,12 @@
 		</div>
 	{:else if groupByPresence}
 		{#each presenceOrder as presenceStatus}
-			{@const usersInGroup = groupedUsers()[presenceStatus]}
+			{@const usersInGroup = groupedUsers[presenceStatus]}
 			{#if usersInGroup.length > 0}
 				<div class="presence-group">
-					<h3 class="group-header">
+					<svelte:element this={`h${headingLevel}`} class="group-header">
 						{presenceLabels[presenceStatus]} ({usersInGroup.length})
-					</h3>
+					</svelte:element>
 					<div class="user-list">
 						{#each usersInGroup as user (user.id)}
 							<div class="user-item">
@@ -95,6 +138,9 @@
 								</div>
 								<div class="user-info">
 									<span class="user-name">{user.name}</span>
+									{#if lastSeenLabel(user)}
+										<span class="user-last-seen">Last seen {lastSeenLabel(user)}</span>
+									{/if}
 								</div>
 								<PresenceBadge presence={user.presence} size="sm" />
 							</div>
@@ -116,6 +162,9 @@
 					</div>
 					<div class="user-info">
 						<span class="user-name">{user.name}</span>
+						{#if lastSeenLabel(user)}
+							<span class="user-last-seen">Last seen {lastSeenLabel(user)}</span>
+						{/if}
 					</div>
 					<PresenceBadge presence={user.presence} size="sm" />
 				</div>
@@ -134,7 +183,7 @@
 	.empty-state {
 		padding: 32px;
 		text-align: center;
-		color: #94a3b8;
+		color: hsl(var(--muted-foreground, 215 20.2% 65.1%));
 		font-size: 14px;
 	}
 
@@ -148,7 +197,7 @@
 		font-size: 12px;
 		font-weight: 600;
 		text-transform: uppercase;
-		color: #64748b;
+		color: hsl(var(--muted-foreground, 215.4 16.3% 46.9%));
 		margin: 0;
 		padding: 0 12px;
 	}
@@ -165,11 +214,10 @@
 		gap: 12px;
 		padding: 8px 12px;
 		border-radius: 8px;
-		transition: background-color 0.15s;
 	}
 
 	.user-item:hover {
-		background-color: #f1f5f9;
+		background-color: hsl(var(--muted, 210 40% 96.1%));
 	}
 
 	.user-avatar {
@@ -179,7 +227,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		color: white;
+		color: hsl(var(--background, 0 0% 100%));
 		font-weight: 600;
 		font-size: 14px;
 		flex-shrink: 0;
@@ -196,6 +244,11 @@
 		user-select: none;
 	}
 
+	.user-last-seen {
+		font-size: 11px;
+		color: hsl(var(--muted-foreground, 215 20.2% 65.1%));
+	}
+
 	.user-info {
 		flex: 1;
 		min-width: 0;
@@ -204,7 +257,7 @@
 	.user-name {
 		font-size: 14px;
 		font-weight: 500;
-		color: #1e293b;
+		color: hsl(var(--foreground, 217.2 32.6% 17.5%));
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
@@ -212,19 +265,19 @@
 
 	@media (prefers-color-scheme: dark) {
 		.empty-state {
-			color: #64748b;
+			color: hsl(var(--muted-foreground, 215.4 16.3% 46.9%));
 		}
 
 		.group-header {
-			color: #94a3b8;
+			color: hsl(var(--muted-foreground, 215 20.2% 65.1%));
 		}
 
 		.user-item:hover {
-			background-color: #1e293b;
+			background-color: hsl(var(--card, 217.2 32.6% 17.5%));
 		}
 
 		.user-name {
-			color: #e2e8f0;
+			color: hsl(var(--foreground, 214.3 31.8% 91.4%));
 		}
 	}
 </style>

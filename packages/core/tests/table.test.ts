@@ -69,9 +69,9 @@ describe('DataTable - Sorting', () => {
 		await store.send({ type: 'sortChanged', column: 'price', direction: 'asc' }, (state) => {
 			expect(state.sorting).toEqual([{ column: 'price', direction: 'asc' }]);
 			// Data should be sorted by price ascending
-			expect(state.data[0].price).toBe(1); // Pencil
-			expect(state.data[1].price).toBe(2); // Pen
-			expect(state.data[9].price).toBe(999); // Laptop
+			expect(state.data[0]!.price).toBe(1); // Pencil
+			expect(state.data[1]!.price).toBe(2); // Pen
+			expect(state.data[9]!.price).toBe(999); // Laptop
 		});
 	});
 
@@ -83,9 +83,9 @@ describe('DataTable - Sorting', () => {
 		await store.send({ type: 'sortChanged', column: 'price', direction: 'desc' }, (state) => {
 			expect(state.sorting).toEqual([{ column: 'price', direction: 'desc' }]);
 			// Data should be sorted by price descending
-			expect(state.data[0].price).toBe(999); // Laptop
-			expect(state.data[1].price).toBe(300); // Monitor
-			expect(state.data[9].price).toBe(1); // Pencil
+			expect(state.data[0]!.price).toBe(999); // Laptop
+			expect(state.data[1]!.price).toBe(300); // Monitor
+			expect(state.data[9]!.price).toBe(1); // Pencil
 		});
 	});
 
@@ -95,9 +95,9 @@ describe('DataTable - Sorting', () => {
 		const store = new TestStore({ initialState, reducer });
 
 		await store.send({ type: 'sortChanged', column: 'name', direction: 'asc' }, (state) => {
-			expect(state.data[0].name).toBe('Chair');
-			expect(state.data[1].name).toBe('Desk');
-			expect(state.data[9].name).toBe('Pencil');
+			expect(state.data[0]!.name).toBe('Chair');
+			expect(state.data[1]!.name).toBe('Desk');
+			expect(state.data[9]!.name).toBe('Pencil');
 		});
 	});
 
@@ -115,7 +115,7 @@ describe('DataTable - Sorting', () => {
 		await store.send({ type: 'sortCleared' }, (state) => {
 			expect(state.sorting).toEqual([]);
 			// Data should be back to original order
-			expect(state.data[0].id).toBe('1'); // Laptop (first in original)
+			expect(state.data[0]!.id).toBe('1'); // Laptop (first in original)
 		});
 	});
 
@@ -132,8 +132,8 @@ describe('DataTable - Sorting', () => {
 		// Then sort by price (should keep category sort)
 		await store.send({ type: 'sortChanged', column: 'price', direction: 'asc' }, (state) => {
 			expect(state.sorting).toHaveLength(2);
-			expect(state.sorting[0].column).toBe('category');
-			expect(state.sorting[1].column).toBe('price');
+			expect(state.sorting[0]!.column).toBe('category');
+			expect(state.sorting[1]!.column).toBe('price');
 		});
 	});
 });
@@ -170,7 +170,7 @@ describe('DataTable - Filtering', () => {
 			},
 			(state) => {
 				expect(state.data).toHaveLength(1); // Only "Notebook"
-				expect(state.data[0].name).toBe('Notebook');
+				expect(state.data[0]!.name).toBe('Notebook');
 			}
 		);
 	});
@@ -304,7 +304,7 @@ describe('DataTable - Pagination', () => {
 
 		// Initial page (0) should show first 3 items
 		expect(store.state.data).toHaveLength(3);
-		expect(store.state.data[0].id).toBe('1');
+		expect(store.state.data[0]!.id).toBe('1');
 		expect(store.state.pagination.page).toBe(0);
 		expect(store.state.pagination.total).toBe(10);
 
@@ -312,14 +312,14 @@ describe('DataTable - Pagination', () => {
 		await store.send({ type: 'pageChanged', page: 1 }, (state) => {
 			expect(state.pagination.page).toBe(1);
 			expect(state.data).toHaveLength(3);
-			expect(state.data[0].id).toBe('4'); // Fourth item
+			expect(state.data[0]!.id).toBe('4'); // Fourth item
 		});
 
 		// Go to last page (page 3, items 10)
 		await store.send({ type: 'pageChanged', page: 3 }, (state) => {
 			expect(state.pagination.page).toBe(3);
 			expect(state.data).toHaveLength(1); // Only 1 item on last page
-			expect(state.data[0].id).toBe('10');
+			expect(state.data[0]!.id).toBe('10');
 		});
 	});
 
@@ -473,15 +473,15 @@ describe('DataTable - Combined Operations', () => {
 
 		// 2. Sort by price ascending
 		await store.send({ type: 'sortChanged', column: 'price', direction: 'asc' }, (state) => {
-			expect(state.data[0].price).toBe(25); // Mouse (cheapest electronics)
-			expect(state.data[1].price).toBe(75); // Keyboard
+			expect(state.data[0]!.price).toBe(25); // Mouse (cheapest electronics)
+			expect(state.data[1]!.price).toBe(75); // Keyboard
 		});
 
 		// 3. Go to page 2
 		await store.send({ type: 'pageChanged', page: 1 }, (state) => {
 			expect(state.data).toHaveLength(2);
-			expect(state.data[0].price).toBe(300); // Monitor
-			expect(state.data[1].price).toBe(999); // Laptop
+			expect(state.data[0]!.price).toBe(300); // Monitor
+			expect(state.data[1]!.price).toBe(999); // Laptop
 		});
 	});
 

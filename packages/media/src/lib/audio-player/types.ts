@@ -43,10 +43,6 @@ export interface AudioPlayerState {
 	// Playback state
 	/** Audio is actively playing */
 	isPlaying: boolean;
-	/** Audio is paused */
-	isPaused: boolean;
-	/** Audio is stopped */
-	isStopped: boolean;
 	/** Track is loading */
 	isLoading: boolean;
 	/** Track is buffering */
@@ -122,6 +118,11 @@ export type AudioPlayerAction =
 	| { type: 'seekTo'; time: number }
 
 	// Volume
+	// Ask the injected persistence for the user's saved volume and speed. The
+	// component dispatches this on mount; `loadVolume`/`loadSpeed` existed and
+	// were never called, so preferences were saved and never restored.
+	| { type: 'restorePreferences' }
+	| { type: 'preferencesRestored'; volume?: number; speed?: number }
 	| { type: 'volumeChanged'; volume: number }
 	| { type: 'toggleMute' }
 	| { type: 'volumeUp'; amount?: number }
@@ -160,12 +161,6 @@ export type AudioPlayerAction =
  */
 export interface AudioPlayerDependencies {
 	/**
-	 * Create an HTML audio element.
-	 * Default: () => new Audio()
-	 */
-	createAudioElement?: () => HTMLAudioElement;
-
-	/**
 	 * Clock dependency for time operations.
 	 * Used for mock playback simulation.
 	 */
@@ -188,7 +183,7 @@ export interface AudioPlayerDependencies {
 	/**
 	 * Load volume from persistent storage.
 	 */
-	loadVolume?: () => number;
+	loadVolume?: () => number | undefined;
 
 	/**
 	 * Save playback speed to persistent storage.
@@ -198,7 +193,7 @@ export interface AudioPlayerDependencies {
 	/**
 	 * Load playback speed from persistent storage.
 	 */
-	loadSpeed?: () => number;
+	loadSpeed?: () => number | undefined;
 
 	/**
 	 * Track playback analytics (optional).
@@ -209,12 +204,6 @@ export interface AudioPlayerDependencies {
 	 * Track skip analytics (optional).
 	 */
 	trackSkip?: (track: AudioTrack) => void;
-
-	/**
-	 * Generate unique ID.
-	 * Default: crypto.randomUUID()
-	 */
-	generateId?: () => string;
 }
 
 /**
@@ -231,8 +220,6 @@ export function createInitialAudioPlayerState(
 	return {
 		currentTrack: null,
 		isPlaying: false,
-		isPaused: false,
-		isStopped: true,
 		isLoading: false,
 		isBuffering: false,
 		currentTime: 0,
@@ -355,7 +342,22 @@ export function getPreviousTrackIndex(
 }
 
 /**
+ * The loop mode that follows `mode` in the none -> one -> all -> none cycle.
+ *
+ * A total mapping rather than an index into an array: `noUncheckedIndexedAccess`
+ * cannot see that `(i + 1) % 3` is in range, and a `Record` over the union means
+ * adding a fourth LoopMode is a compile error instead of a broken cycle.
+ */
+export function nextLoopMode(mode: LoopMode): LoopMode {
+	const next: Record<LoopMode, LoopMode> = { none: 'one', one: 'all', all: 'none' };
+	return next[mode];
+}
+
+/**
  * Clamp a value between min and max.
+ *
+ * Internal to this package. It is deliberately not re-exported from either
+ * barrel: a three-line numeric helper is not part of a media library's API.
  */
 export function clamp(value: number, min: number, max: number): number {
 	return Math.min(Math.max(value, min), max);

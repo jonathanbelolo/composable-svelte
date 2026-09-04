@@ -5,6 +5,7 @@ import Drawer from '../../src/lib/navigation-components/Drawer.svelte';
 import { createStore } from '../../src/lib/store.svelte.js';
 import { scopeToDestination } from '../../src/lib/navigation/scope-to-destination.js';
 import { Effect } from '../../src/lib/effect.js';
+import { resetBodyScroll } from '../helpers/body-scroll.js';
 
 // ============================================================================
 // Test Fixtures
@@ -44,18 +45,14 @@ describe('Drawer Component', () => {
       'destination'
     );
 
-    render(Drawer, {
-      props: { store: scopedStore }
-    });
+    render(Drawer, { store: scopedStore });
 
     const drawer = page.getByRole('dialog');
     await expect.element(drawer).toBeInTheDocument();
   });
 
   it('hides when store is null', async () => {
-    render(Drawer, {
-      props: { store: null }
-    });
+    render(Drawer, { store: null });
 
     // Check that no dialog exists
     const drawers = page.getByRole('dialog').elements();
@@ -88,9 +85,7 @@ describe('Drawer Component', () => {
       'destination'
     );
 
-    render(Drawer, {
-      props: { store: scopedStore }
-    });
+    render(Drawer, { store: scopedStore });
 
     // Drawer should be visible
     const drawer = page.getByRole('dialog');
@@ -132,9 +127,7 @@ describe('Drawer Component', () => {
       'destination'
     );
 
-    render(Drawer, {
-      props: { store: scopedStore }
-    });
+    render(Drawer, { store: scopedStore });
 
     // Drawer should be visible
     const drawer = page.getByRole('dialog');
@@ -178,9 +171,7 @@ describe('Drawer Component', () => {
       'destination'
     );
 
-    render(Drawer, {
-      props: { store: scopedStore, disableEscapeKey: true }
-    });
+    render(Drawer, { store: scopedStore, disableEscapeKey: true });
 
     // Press Escape
     await userEvent.keyboard('{Escape}');
@@ -216,9 +207,7 @@ describe('Drawer Component', () => {
       'destination'
     );
 
-    render(Drawer, {
-      props: { store: scopedStore, disableClickOutside: true }
-    });
+    render(Drawer, { store: scopedStore, disableClickOutside: true });
 
     // Trigger pointerdown event on document
     const pointerEvent = new PointerEvent('pointerdown', {
@@ -252,9 +241,7 @@ describe('Drawer Component', () => {
       'destination'
     );
 
-    render(Drawer, {
-      props: { store: scopedStore, width: '400px' }
-    });
+    render(Drawer, { store: scopedStore, width: '400px' });
 
     const drawer = page.getByRole('dialog');
     const style = drawer.element().getAttribute('style');
@@ -276,9 +263,7 @@ describe('Drawer Component', () => {
       'destination'
     );
 
-    render(Drawer, {
-      props: { store: scopedStore }
-    });
+    render(Drawer, { store: scopedStore });
 
     const drawer = page.getByRole('dialog');
     await expect.element(drawer).toHaveClass(/left-0/);
@@ -300,9 +285,7 @@ describe('Drawer Component', () => {
       'destination'
     );
 
-    render(Drawer, {
-      props: { store: scopedStore, side: 'right' }
-    });
+    render(Drawer, { store: scopedStore, side: 'right' });
 
     const drawer = page.getByRole('dialog');
     await expect.element(drawer).toHaveClass(/right-0/);
@@ -325,12 +308,10 @@ describe('Drawer Component', () => {
     );
 
     render(Drawer, {
-      props: {
         store: scopedStore,
         class: 'custom-drawer-content',
         backdropClass: 'custom-backdrop'
-      }
-    });
+      });
 
     const drawer = page.getByRole('dialog');
     await expect.element(drawer).toHaveClass(/custom-drawer-content/);
@@ -351,9 +332,7 @@ describe('Drawer Component', () => {
       'destination'
     );
 
-    render(Drawer, {
-      props: { store: scopedStore, unstyled: true }
-    });
+    render(Drawer, { store: scopedStore, unstyled: true });
 
     const drawer = page.getByRole('dialog');
     const className = drawer.element().className;
@@ -375,12 +354,15 @@ describe('Drawer Component', () => {
       'destination'
     );
 
-    render(Drawer, {
-      props: { store: scopedStore }
-    });
+    // Reset first: body.style is shared across every test in the worker, and
+    // a lock leaked by an earlier test made the old form pass on its own.
+    resetBodyScroll();
+    expect(document.body.style.overflow).toBe('');
 
-    // Check body overflow style directly
-    const bodyStyle = document.body.style.overflow;
-    expect(bodyStyle).toBe('hidden');
+    const screen = render(Drawer, { store: scopedStore });
+    expect(document.body.style.overflow).toBe('hidden');
+
+    screen.unmount();
+    expect(document.body.style.overflow).toBe('');
   });
 });

@@ -77,7 +77,7 @@
           store: ScopedDestinationStore<State, Action> | null;
         }
       ]
-    >;
+    > | undefined;
   }
 
   let {

@@ -5,6 +5,789 @@ All notable changes to `@composable-svelte/core` will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`AlertDialog`** and its parts — `AlertDialogHeader`, `AlertDialogTitle`,
+  `AlertDialogDescription`, `AlertDialogFooter`, `AlertDialogAction`,
+  `AlertDialogCancel`. A titled, described confirmation composed over `Alert`,
+  following the compound-parts convention `Card` and `Banner` already use.
+
+  `Alert` was a presentation shell with a bare `children` snippet and nothing
+  to say, so every app needing a confirmation wrote its own heading, paragraph
+  and two buttons inside it.
+
+  No `Trigger` part: presentation here is state-driven, and a trigger would be
+  a second, imperative way to open a dialog. No `Content` part: `Alert` is
+  already the box. `onclick` is required on both buttons — a `Cancel` that
+  dismissed by itself would bypass the parent reducer that owns the dismissal
+  transition.
+
+
+- **`headingLevel` on `BannerTitle`, `CardTitle`, `ToastTitle`, `Empty` and
+  `FileUpload`.** The level belongs to the page, not the component: `BannerTitle`
+  rendered a fixed `<h5>`, so putting a `Banner` under an `<h2>` jumped the
+  outline from 2 to 5 and no consumer could fix it from outside. Each defaults to
+  the level it has always rendered, so nothing changes unless you pass one.
+
+- **`parseRetryAfter` is exported from `@composable-svelte/core/api`.** It
+  handles both the delay-seconds and HTTP-date forms of `Retry-After` and was
+  private to `api/retry.ts`; `@composable-svelte/auth` needs it and a second
+  implementation would drift. Returns milliseconds.
+
+
+- `tests/repo/optional-props.test.ts` — a repo-wide guard requiring
+  `| undefined` on every optional prop, with a register for the `$bindable`
+  exemptions. Function types must be parenthesised first:
+  `(() => void) | undefined`, never `() => void | undefined`, which is a
+  function *returning* `void | undefined` and forwards nothing.
+
+### Fixed
+
+- **`Alert` announced itself rather than its question.** It hardcoded
+  `aria-label="Alert dialog"`, so a screen-reader user heard the same three
+  words whether they were being asked to delete an account or discard a draft.
+  New `ariaLabelledby`, `ariaLabel` and `ariaDescribedby` props; the hardcoded
+  string remains the fallback, so no existing caller changes behaviour.
+  `AlertDialog` wires them to its own title and description automatically.
+
+  **`Modal`, `Sheet` and `Drawer` carried the identical defect** — `"Modal
+  dialog"`, `"Bottom sheet"`, `"Side drawer"` — and take the same three props
+  now, with the same fallbacks. Every modal surface in the library can be named
+  by its content.
+
+  Still hardcoded, and deliberately: the `aria-label` on `NavigationStack`,
+  `Sidebar` and `Tabs`. Those are landmark and tablist roles, where naming the
+  region after the component is a reasonable default rather than a dead end.
+
+- **`createParserConfig(routes, options?)`** — builds a `ParserConfig` from a
+  pattern-to-handler map, so a route stops being four lines of
+  `const p = matchPath(pattern, path); return p ? {...} : null`. Additive:
+  `ParserConfig` and `parseDestination` are untouched, and the `parsers` list
+  form stays for routes that are not a single pattern — a custom regular
+  expression, or one parser drawing on two. The two mix, because the config is
+  a plain object.
+
+  It also restores the symmetry with `SerializerConfig`, whose half has always
+  been a keyed map.
+
+  Keys are tried in insertion order, and the map form hides that, so a more
+  specific pattern must come first. A handler may return `null` to decline
+  *after* its pattern matched, which is what lets a route reject a value it
+  does not like without claiming it.
+
+- **Custom serializers for SSR state** — `createTaggedSerializer()` and the
+  `StateSerializer` type, accepted by `serializeState`, `serializeStore`,
+  `buildHydrationScript`, `renderToHTML` (as `options.serializer`), `parseState`
+  and `hydrateStore` (as `config.serializer`).
+
+  The documentation claimed `serializeState` **throws** on a `Date` or a `Map`.
+  It does not, and that was the dangerous half of the claim, because a throw is
+  loud. What actually happened: a `Date` arrived on the client as a `string`, a
+  `Map` or `Set` arrived as `{}` with every entry lost, and TypeScript asserted
+  the original type on both sides. Only a `BigInt` or a cycle ever threw.
+
+  The replacer and reviver travel as **one object**, because a tag written by a
+  replacer that no reviver reads is worse than no tagging at all — the state
+  arrives as a visible wrapper instead of a value. Passing one object to both
+  halves is what makes that hard to get wrong.
+
+- **`ConnectionStats.messagesQueued`** — how many messages a queuing wrapper is
+  holding for the connection. `0` for a client that does not queue.
+
+  The register had declined queue inspection outright, on the grounds that the
+  queue is an implementation detail of reconnection and exposing it invites
+  reaching into it. That reasoning holds for a *handle* and there is still no
+  `websocket.queue`; but the need behind the request was a pending count, and a
+  read-only number on `stats` cannot be reached into.
+
+  Required rather than optional: under `exactOptionalPropertyTypes` an optional
+  field would force `stats.messagesQueued ?? 0` at every read, which is worse
+  for the one thing it exists to do. Additive for readers of `stats`, breaking
+  for anyone implementing `WebSocketClient` with a hand-written `stats` object.
+
+- **`createMockStorage()`** — an in-memory `SyncStorage<T>` for tests, the
+  counterpart to `createMockCookieStorage` that the localStorage/sessionStorage
+  pair never had. `createNoopStorage()` discards writes and reads back `null`,
+  which models "storage unavailable" and cannot express a round trip, so callers
+  hand-rolled their own: core's own storage test built one and used it 48 times.
+  It now imports this instead.
+
+  Values are held as **JSON strings**, not live objects, so a `Date` put in
+  comes back as a string exactly as it would through real storage — a
+  `Map<string, T>` double hides that, and hiding it is how a test passes where
+  production does not. `prefix`, `validator` and `debug` all behave as they do
+  in `createLocalStorage`, which makes "a stored value the validator rejects
+  reads back as `null`" testable for the first time.
+
+  **`setItem` does not fire `subscribe`, deliberately.** That contract is
+  cross-context only, and no browser delivers a `storage` event to the tab that
+  caused the write. `simulateSetItem` / `simulateRemoveItem` play the part of
+  the other tab — which is the first time `SyncStorage.subscribe` has been
+  exercisable at all.
+
+
+- **The two validation paths disagreed about which message to show.** Per-field
+  validation took the *first* Zod issue (`issues.find`), whole-form took the
+  *last* (assignment in a loop). So `"   "` in an email field said "Email is
+  required" while typing and "Enter a valid email address" on submit — same
+  input, same schema, two answers.
+
+  Both now take the first. Zod emits in schema-declaration order, so for
+  `.min(1, 'Email is required').email(...)` the first is the one that names the
+  actual problem. The per-field match is on the full path and is exact rather
+  than by prefix, so a zip code's error does not also appear on `address`.
+
+  Two consequences of the old routing go with it. A numeric path segment no
+  longer falls through to `formErrors` — it was neither truthy at index 0 nor a
+  string, so an array element's error went where nothing renders it. And an
+  error for a path with no record yet now creates a complete `FieldState`
+  instead of spreading `undefined` into a two-key object missing `warnings` and
+  `isValidating`.
+
+- **State embedded in the hydration script could break out of it.** Both
+  `renderToHTML` and `buildHydrationScript` wrote the serialized store raw into
+  `<script id="__COMPOSABLE_SVELTE_STATE__" type="application/json">`. A state
+  value containing `</script>` closed that element early and everything after it
+  was parsed as markup — stored XSS, reachable through any state field a user
+  influences: a display name, a search term, a URL parameter. `escapeHtml` was
+  defined in the same file and applied to the page title and the client-script
+  src, never to the state.
+
+  Both sites now escape `<` as `\u003C`, which is invariant under `JSON.parse`
+  and closes `</script`, `<script` and `<!--` in one rule. **Not `escapeHtml`,
+  deliberately**: a script element's contents are not entity-decoded, so `&lt;`
+  would reach `JSON.parse` literally and break hydration instead — a test pins
+  that distinction so the obvious wrong fix cannot be substituted later.
+  `generateStaticSite` calls `renderToHTML`, so every generated page is covered.
+
+- **`Combobox` can be given an accessible name.** It rendered `role="combobox"`
+  and spread no rest props onto its input, so a consumer had no way to name it at
+  all and a screen reader announced "combobox" and nothing else. New `ariaLabel`
+  prop, **defaulting to `placeholder`** — what a sighted user reads — so the
+  control is never nameless and no existing caller has to change.
+
+- **Cross-field validation now runs outside `onSubmit`.** Per-field validation
+  did `schema.shape[field].safeParse(value)` — one sub-schema, one value. A
+  `.refine()` lives in the parent object's checks, so it was never in scope:
+  `shape.confirmPassword.safeParse('does-not-match')` returns success, and a
+  "passwords must match" rule was invisible in `onBlur`, `onChange` and `all`.
+  It fired only when the whole schema was parsed, at submit.
+
+  Three consequences, all of them visible to a user. The mismatch appeared only
+  after a submit. Typing one character into the confirm field cleared it, and
+  nothing could put it back before the next submit. And fixing the *other*
+  field left the message on screen saying two values did not match when they
+  now did.
+
+  Per-field validation parses the whole schema and takes the issues for the
+  field being validated. One asymmetry is deliberate: a pass may **clear** an
+  error on any field the parse exonerates, but only **sets** one on the field
+  being validated — so fixing `password` clears a stale message from
+  `confirmPassword` without flagging fields the user has not reached.
+
+  This also deletes the `(schema as any).shape` cast, and with it a silent
+  failure mode: when `.shape` was absent the lookup yielded `undefined`, the
+  branch was skipped, and every field validated as clean with no error and no
+  warning.
+
+  **How it survived:** not a missing review — `form.reducer.ts` carries one — but
+  a combinatorial gap. The suite has two axes, schema kind and validation mode,
+  and covered three of the four cells. The single cross-field test avoided the
+  defect on every axis at once: `path: []` rather than a field path, `onSubmit`
+  so per-field validation never ran, pre-populated data so `fieldChanged` never
+  fired, and one assertion so nothing checked that a fixed error cleared. Four
+  tests now occupy the empty cell, each mutation-verified.
+
+- **`formErrors` is cleared by a successful validation.** It was written only on
+  failure and cleared only by `formReset`, so a form-level message outlived the
+  validation that disproved it and stayed for the life of the form.
+
+- **`TestStore` now models cancellation.** Its `Cancellable` case ran
+  `effect.execute(dispatch)` with no `AbortController`, no in-flight registry
+  and no dispatch gating, so re-registering an id did not cancel the effect
+  already running under it — both dispatched — and the executor received no
+  `signal`. That is the one effect type whose entire purpose is cancellation,
+  and any reducer using a fixed id to make a second request supersede the first
+  behaved one way in production and another under test. `Effect.cancel(id)` now
+  also aborts an in-flight cancellable rather than only tearing down a
+  subscription.
+
+
+- **`BrowserHistoryConfig.serialize` is no longer required.** `syncBrowserHistory`
+  handles one direction — URL → state — and never called it, so the type forced
+  every caller to write a function that was then never invoked. The other
+  direction is `createURLSyncEffect`, which takes its own serializer. Widening
+  only: callers still passing `serialize` compile unchanged.
+
+### Changed
+
+- **`FormState.fields` is keyed by field path. Breaking.** It was keyed by
+  top-level name, and Zod issues were routed with `issue.path[0]`, so a nested
+  schema's error at `['address','zip']` landed on `address` — it could not be
+  shown beside the input that caused it, and the field it named might not be on
+  screen at all.
+
+  `fields` is now `Partial<Record<FieldPath<T>, FieldState>>`, so `'address.zip'`
+  and `'items.0.name'` are keys. `focusedField`, the eight `field:`-carrying
+  actions, `formValidationCompleted.fieldErrors`, `asyncValidators` and
+  `FormFieldProps.name` move to `FieldPath<T>` with it.
+
+  **`Partial`, not total, and deliberately so.** A total record would have
+  compiled with no churn at all and then thrown: an entry exists only once its
+  path exists in the data, so an optional field or an array element that was
+  absent at init has none. That is the lie `form-field-record.test.ts` exists to
+  refuse. In practice `state.fields.email.error` becomes
+  `state.fields.email?.error` — and since `noUncheckedIndexedAccess` is already
+  on repo-wide, widening to `Record<string, FieldState>` would have cost exactly
+  the same and lost compile-time checking of the key as well. `fieldStateAt()`
+  is exported for callers who want a total read, so they opt into it explicitly.
+
+  **A flat schema produces exactly the keys it always did**, so a form over a
+  flat schema changes only in that its reads acknowledge absence.
+
+  **`id` is the raw path**, so an input for `address.zip` gets `id="address.zip"`.
+  That is legal HTML, and `for=`/`aria-describedby` associate by string
+  equality, so labels and error announcements are unaffected.
+  `querySelector('#address.zip')` is not — use `CSS.escape`, or the
+  `[data-field="address.zip"]` attribute the component already emits.
+  Sanitising the dot was rejected: it invents a namespace in which fields `a.b`
+  and `a_b` collide, and the collision is a wrong label association, which fails
+  silently and only for screen-reader users.
+
+
+- **BREAKING (types): every optional prop now accepts `undefined`.** Under
+  `exactOptionalPropertyTypes`, an optional prop read from `$props()` has type
+  `T | undefined`, which cannot be assigned to a bare `T?` — so a component
+  forwarding its own props to one of ours did not typecheck, and our components
+  could not be wrapped. 0.11.2 fixed `Command` and said "`Command` is not
+  special: 266 optional props are still bare". Measured properly it was **476
+  across 143 files in eight packages**; all are fixed.
+
+  Only 13 remain bare, all `$bindable`: `bind:value={x}` requires the parent's
+  variable to match the prop type, so `| undefined` there makes binding
+  *stricter* for consumers rather than looser.
+
+- **BREAKING (types): `ImageGallery`'s mode discriminants are `?: undefined`,
+  not `?: never`.** `never` refuses an explicit `undefined` — which is exactly
+  what a forwarding wrapper holds — so neither branch of its props union could
+  be forwarded. The runtime mode detection is unchanged.
+
+- Twelve layout components (`Box`, `Panel`, `Text`, `Heading`, `Kbd`, `Empty`,
+  `Banner*`, `ButtonGroup`, `AspectRatio`, `BreadcrumbSeparator`) now
+  `Omit<…, 'class' | 'children'>` from their `HTMLAttributes` base. `svelte/elements`
+  declares `children?: Snippet` bare and a derived interface may not widen an
+  inherited member, so omitting it is what lets these accept a forwarded
+  `Snippet | undefined`. Passing children as markup is unaffected.
+
+## [0.11.2] - 2026-08-23
+
+### Fixed
+
+- **`deps.dismiss()` never dismissed anything through `ifLet`.**
+  `createDismissDependency` and `createDismissDependencyWithCleanup` were handed
+  the parent's `dispatch` and ignored it, dispatching through the effect's own
+  executor argument instead. Child effects are mapped by `ifLet` with
+  `fromChildAction`, and the wrapper already produces a parent action, so the
+  dismiss arrived double-wrapped as
+  `{ child: { presented: { child: { dismiss } } } }`. Under a real store that is
+  not merely ignored: `ifLetPresentation` unwraps `presented` and hands the
+  result back to the child reducer, which dismisses again — an unbounded loop
+  ending in `RangeError: Maximum call stack size exceeded`.
+
+  Both factories now dispatch through the captured parent dispatch, which makes
+  `ifLet`'s mapping a no-op.
+
+  Every existing test executed the effect directly with the parent's dispatch,
+  so with no `ifLet` in the path there was no second wrapping and none of them
+  could see it.
+
+- **Documented call shapes for all three dismiss factories were wrong**, and
+  harmless only because the first argument was dead. `docs/api/reference.md`
+  documented an API that never existed (a one-argument form, a
+  `DismissDependency<Action>` type parameter, and `deps.dismiss.dismiss(dispatch)`
+  on what is a plain function); the navigation skill passed a *store* where the
+  dispatch goes and a string where the wrapper goes; several examples built the
+  dependency inside a reducer, which has no `dispatch` in scope; and several
+  called `deps.dismiss()` as a statement and returned `Effect.none()`, discarding
+  the dismiss. All corrected, and `tests/repo/doc-examples.test.ts` now checks
+  these shapes across every markdown file in the repo.
+
+- **`scopeTo(...).into()` could not chain past an optional level.** `keyof
+  Current` is `never` the moment `Current` is nullable, while the builder's own
+  `getValue()` explicitly walks through a null and returns null — the signature
+  forbade what the implementation documents and does. It looks through the null
+  now and carries the nullability into the result.
+
+- **`Command`'s optional props did not accept an explicit `undefined`**, so
+  under `exactOptionalPropertyTypes` a component forwarding its own `$props()`
+  to `<Command>` did not typecheck — the palette could not be wrapped. All seven
+  now say `| undefined`, pinned by
+  `tests/test-components/CommandPropForwarding.svelte`, which exists to be
+  typechecked rather than rendered.
+
+  `Command` is not special: 266 optional props across `src/lib/**/*.svelte` are
+  still bare, against 134 that are not, so most components in this library
+  cannot be wrapped either. Recorded in `plans/hardening/README.md` §S11 as its
+  own item rather than claimed fixed here.
+
+- **`Destination.match` could not take handlers returning different types.**
+  BREAKING: the type parameter is now the handler map rather than the result, so
+  an explicit `Destination.match<MyResult>(…)` no longer compiles — let it
+  infer. No in-repo caller used that form. `docs/api/reference.md` and
+  `docs/dsl/destinations.md` are updated.
+  It inferred a single `T` from the handler map, so `T` came from the first
+  handler and every other one was checked against it — the multi-case form in
+  its own JSDoc, the form the helper exists for, typechecked for nobody. It now
+  infers the map and distributes `ReturnType` over it, giving the union the
+  caller actually receives.
+
+- **`combineReducers` could not infer its `Action` type**, so the form shown in
+  its own JSDoc did not typecheck for anyone — `Action` resolved to `unknown`
+  because a reverse-mapped type yields inference candidates only for the
+  parameter under the key. The parameter now carries a second, non-mapped
+  inference site. Nothing that was rejected before is accepted now.
+
+- **Two of `matchPath`'s five documented examples threw** rather than matching:
+  `:action?` gave `Unexpected ?` and a bare `*` gave `Missing parameter name`,
+  both pre-v8 path-to-regexp syntax, while the doc block above them claimed
+  support for "optional params, wildcards". Rewritten in v8 syntax (`{/:action}`
+  and `*path`) and all five are now pinned by tests. Two tests skipped as
+  "requires the END option, deferred to v1.1" were testing `{action}`, an
+  optional *literal* segment that never captured anything; repaired and
+  un-skipped.
+
+### Added
+
+- **`TestStore.dispatch(action)`** — delivers an action from outside the
+  reducer, exactly as an effect would, so `receive()` matches it. A dependency
+  holding the parent's dispatch had no way to reach a `TestStore` before, which
+  meant a dismiss could not be observed under test at all: `receive()` could
+  never match it, and a test asserting only on the state before the dismiss
+  passed, as did `assertNoPendingActions()`.
+
+- **`Effect.api`, `Effect.apiAll`, `Effect.apiFireAndForget` and
+  `Effect.websocket` were typed as non-existent.** Both extension modules
+  augmented a name with nothing to merge into — `api/effect-api.ts` declared
+  `interface Effect`, `websocket/effect-websocket.ts` declared `interface
+  EffectNamespace` — while `Effect` is a `const`. Merging an interface
+  contributes nothing to a const of the same name, so both augmentations were
+  inert while `(Effect as any).api = api` made the runtime work anyway.
+
+  All of it is documented — `docs/backend/api-client.md`,
+  `docs/backend/websocket.md`, and the JSDoc example at
+  `src/lib/websocket/index.ts:26` — so a consumer following the documentation
+  wrote code that ran and did not typecheck.
+
+  `Effect` now carries an `EffectExtensions` seam that both modules merge into.
+  Purely additive: nothing that compiled before stops compiling.
+
+## [0.11.1] - 2026-08-23
+
+### Fixed
+
+- `TestStore.advanceTime` called `vi.advanceTimersByTime` whenever the method
+  existed — which it always does — and Vitest throws "a function to advance
+  timers was called but the timers APIs are not mocked" when they are not. So
+  `finish()`, whose documented job is to wait for pending effects and assert
+  none remain, threw in any test that had no reason to fake time. **Twenty-one
+  documented examples in this repo were unrunnable because of it.**
+
+  It now advances virtual time only when a clock is actually faked, and waits on
+  the real one otherwise — so `advanceTime(300)` means the same thing in both
+  modes.
+
+## [0.11.0] - 2026-08-22
+
+### Added
+
+- `animateFadeIn` / `animateFadeOut` and the `FadeOptions` they take — the
+  generic pair, for something that is not a modal, a toast or a list item. They
+  replace the last two state-driven CSS transitions in `@composable-svelte/chat`:
+  an image preview lifting `opacity` on a `.loaded` class, and a video player's
+  controls lifting it on `.visible`.
+
+  Three things about them are deliberate, and all three were measured rather than
+  designed:
+
+  - **They own the start value.** `opacity: [0, 1]` means the element's resting
+    state in CSS is "visible". Both sites they replace parked their element at
+    `opacity: 0` and lifted it from a client-side handler, so server-rendered
+    HTML — and any client with JavaScript off — showed nothing at all.
+  - **They write their own end state.** Motion commits its final style a frame or
+    two *after* `.finished` resolves: the promise settles with the inline style
+    still empty and the computed value back at the cascade's. For an element that
+    unmounts nobody sees it; for one that stays, it is a visible flash.
+  - **Reduced motion is asymmetric.** `animateFadeIn` cannot simply return early
+    — a previous fade-out may have left the element at zero — and `animateFadeOut`
+    has to write `opacity: 0` itself. Skipping the animation must never skip the
+    outcome.
+
+  An instant show should be `animateFadeIn(element, { duration: 0 })` rather than
+  an inline `style.opacity`: a running Web Animation outranks an inline style, so
+  assigning the style leaves a fade-out in flight to finish anyway.
+
+### Changed
+
+- `createScrollFollower` now reads `prefers-reduced-motion` itself when its
+  `reducedMotion` option is omitted, instead of animating regardless. Callers
+  that already pass the option are unaffected.
+
+### Fixed
+
+- Every sibling package declared `@composable-svelte/core` as an ever-growing
+  `"^0.4.1 || … || ^0.10.0"` list. Each core release appended a minor, which
+  moves the ceiling and never the floor, so packages kept advertising
+  compatibility with versions that lacked the exports they import. The ranges are
+  now exactly the core they are built against, and
+  `tests/repo/peer-ranges.test.ts` keeps them there.
+
+- `tests/repo/dist-freshness.test.ts` fails when a package's `dist/` is older
+  than its `src/`. Cross-package tests resolve through the exports map to built
+  output, so a stale build produced a green suite that said nothing about the
+  code under change — verified in both directions before the guard was written.
+
+## [0.10.0] - 2026-08-22
+
+### Added
+
+- `animateListItemIn` — the entry animation for an item appearing in a list,
+  replacing the one-shot `@keyframes` chat used on message bubbles. It uses
+  `springPresets.listItem`, which had been defined for exactly this and never
+  called by anything.
+
+  It supplies its own start values (`opacity: [0, 1]`) rather than relying on a
+  CSS `opacity: 0`, because `$effect` never runs on the server: an element parked
+  at zero opacity awaiting an effect renders permanently invisible in server HTML
+  and with JavaScript disabled. Owning the start value keeps the resting state —
+  and the server's output — simply "visible".
+
+  It consults `prefersReducedMotion()`, making it the second animation in the
+  package to honour the preference. Skipping it cannot skip the outcome, because
+  the outcome is the element's natural state.
+
+## [0.9.0] - 2026-08-22
+
+### Added
+
+- `createScrollFollower` — smooth scrolling the caller owns, for following a
+  target that keeps moving. `scroll-behavior: smooth` is prohibited by the
+  animation guideline (the store cannot see, sequence on or cancel it), and the
+  case that needed replacing is a chat list auto-scrolling as tokens stream in:
+  the target moves every chunk, so a one-shot animation per chunk would be
+  interrupted by the next, and an interrupted Motion One `.finished` never
+  settles. A single `requestAnimationFrame` loop that re-reads the target each
+  frame retargets for nothing.
+
+  Its `isSelfScroll()` answers "was that scroll event mine?" by comparing the
+  live position against the last value written — deliberately not "am I
+  running?". A listener that went deaf while the animation ran would leave a user
+  unable to scroll away from a stream at all.
+
+- `prefersReducedMotion()` and `watchReducedMotion()`. The guideline requires
+  every animation to be skippable and records that none of the 28 helpers in
+  `animate.ts` consults the preference. This does not close that gap — it
+  provides the reader, not the plumbing — but `createScrollFollower` honours it,
+  which makes it the first animation in the package that does.
+
+## [0.8.0] - 2026-08-22
+
+The effect system's cancellation was inert. Found while building a package's
+socket teardown on top of it.
+
+### Fixed
+
+- **`Effect.cancel` could not cancel an `Effect.cancellable`.** The store created
+  an `AbortController`, stored it and aborted it — but `EffectExecutor` took only
+  `dispatch`, so the signal never reached anyone. The work ran to completion and
+  still dispatched. Executors now receive the signal as a second argument, and
+  dispatches from a cancelled effect are dropped whether or not the executor
+  observes it, so cancellation is correct without the author opting in.
+- **`Effect.cancel` was identified by stringifying the executor** and testing for
+  `{}`, so a real effect whose body contained an empty object literal was
+  silently treated as a cancellation and never ran. It already had to accept both
+  `{}` and `{ }` because the build reformats the no-op it was matching. There is
+  a structural `cancelOnly` marker now, and `Effect.map` preserves it — mapping a
+  cancel through a scoped child reducer used to turn it into a phantom
+  cancellable.
+- **Subscription cleanups could take down the whole teardown.** A setup that
+  returned nothing — the shape this repo's own examples use for a WebSocket
+  dependency — meant `undefined` was stored and later called, throwing a
+  *synchronous* TypeError that the surrounding `.catch` could not see. `destroy()`
+  threw, and every later step (remaining cleanups, the subscription map, debounce
+  and throttle timers, the subscriber list) was skipped. A cleanup that throws
+  synchronously escaped through `dispatch()` into the caller's event handler and
+  left itself installed to throw again at destroy. Both are absorbed now.
+- **A cancelled subscription could still dispatch.** A real socket's `close()`
+  fires `onclose` on a later task, so a dead subscription's report overwrote the
+  live one's state: a deliberate disconnect displayed "connection failed", and a
+  reconnect reported failed while a healthy socket delivered messages. Dispatch
+  is gated on the subscription still being current.
+- **A superseded cancellable deleted its successor's controller** when it settled,
+  after which `Effect.cancel` for that id found nothing.
+- A non-object rejection (`throw null`, bare `Promise.reject()`) threw a second
+  `TypeError` inside the error handler, turning a handled failure into an
+  unhandled rejection.
+- **`TestStore` ignored cancellation entirely** — it never ran subscription
+  cleanups on `Effect.cancel` and never honoured `cancelOnly`, so a reducer whose
+  disconnect is `Effect.cancel(subscriptionId)` tore nothing down under test while
+  behaving correctly in production. The obvious test passed vacuously.
+
+### Changed
+
+- **BREAKING** — `EffectExecutor` takes an optional `signal: AbortSignal` second
+  parameter. Additive, so existing executors are unaffected. It is supplied for
+  `Effect.cancellable` only and is `undefined` for `run`, `debounced`, `throttled`
+  and `afterDelay`; since `fetch` accepts an undefined signal without complaint,
+  that distinction is documented on the type.
+- **BREAKING** — a cancelled effect's dispatches are dropped where they
+  previously landed. Any code depending on that was depending on `Effect.cancel`
+  not working.
+
+## [0.7.0] - 2026-08-21
+
+A sweep to remove **dead behaviour**: anything a consumer can pass, configure,
+click or import that produces no effect. Everything below was reachable and
+inert, not merely unimplemented. Nothing here is deprecated-then-removed —
+0.x, and the alternative to a breaking change was leaving a lie in place.
+
+### Animation compliance
+
+`guides/ANIMATION-GUIDELINES.md` is rewritten and now mechanically enforced. An
+audit found **135 CSS animation sites** in shipped source that the previous
+version could not adjudicate — it contradicted itself on Pattern A, treated
+`@keyframes` as allowed regardless of whether it repeated, and had an
+exceptions category with no criteria.
+
+- **The rule is now one question**: what *drives* the change — a pseudo-class, a
+  state change, an endless loop, or a continuous external source. A one-shot
+  `@keyframes` is a lifecycle animation, not an allowed keyframe animation; the
+  `infinite` keyword is the test.
+- **`PresentationState` is required only where the lifecycle must be in the
+  store** — something sequencing on completion, or an element that must animate
+  out before unmounting. Elsewhere a plain boolean plus Motion One is the
+  sanctioned pattern, and the guide is explicit that it is fire-and-forget.
+- **Reduced motion is mandatory**, and a skipped animation must still dispatch
+  its completion — otherwise skipping it deadlocks the state machine. No helper
+  in `animate.ts` honours the preference yet; that gap is now recorded rather
+  than silently carried.
+- **`packages/core/tests/repo/animation-policy.test.ts`** enforces the CSS ban as
+  a ratchet: it fails on any violation outside a recorded backlog *and* on any
+  backlog entry whose file has become clean, so an excuse cannot outlive its
+  defect.
+- **Converted**: the four disclosure chevrons (Accordion, Collapsible, Select,
+  Combobox) onto `animateChevron`; `Select`'s dropdown, which had no animation at
+  all and a bound-but-unread `dropdownElement`; and the `Switch` thumb, which had
+  three authors for one property.
+
+### Fixed
+
+- **Collapsible's collapse animated from 0 to 0.** The `{#if}` sat inside the
+  element being measured, so Svelte emptied it before the effect read
+  `scrollHeight`. Measured: five consecutive height samples of exactly 0.
+- **Accordion and Collapsible content had three authors** for height, opacity and
+  overflow — a reactive style attribute, Tailwind utilities, and Motion One. The
+  reactive attribute compiles to a `cssText` assignment, which wipes every inline
+  style Motion wrote, and fires exactly when an animation is starting or being
+  interrupted.
+- **Server rendering of animated elements.** Moving an element's position from
+  markup into an `$effect` means the server emits it at rest, because effects do
+  not run there: a checked `<Switch>` was sent with `bg-primary` on the track and
+  its thumb at zero. Positions are now placed declaratively from a non-reactive
+  value and animated by Motion One thereafter, and
+  `tests/ssr/animated-initial-state.test.ts` compiles the components the way the
+  server does — the entire browser-mode suite is blind to this class of defect.
+- **`Toaster` could not display anything a consumer controlled.** It rendered
+  `externalToasts ?? $store.toasts`, the only dispatch any rendered element
+  could produce was `toastDismissed`, and that case returned early for any toast
+  not in the internal store. Prop-supplied toasts never entered it and nothing
+  could put one in — no `store` prop, no context, no export. `position` was
+  written by `positionChanged` and read by nothing, since the container was
+  classed from the component's own prop. `toastActionClicked` had no dispatcher:
+  `Toast.svelte` called `toast.action.onClick()` locally and then dismissed,
+  making "acted on it" and "discarded it" indistinguishable to
+  `onToastDismissed` and in the action history. `animateToastOut` was exported
+  with no caller, so toasts vanished rather than animating out; dismissal is now
+  two-step (`toastDismissed` marks, `toastRemoved` removes) so the exit
+  animation has somewhere to happen.
+- **i18n `setLocale` validated against the wrong list.** It checked
+  `deps.localeDetector.getSupportedLocales()` while the UI renders from
+  `state.availableLocales` — `examples/ssr-server`'s LanguageSwitcher builds its
+  buttons from exactly that — so a shipped switcher could offer a locale the
+  reducer silently refused with a `console.warn`. It failed both ways: a locale
+  the app lists but the detector does not was rejected, and one the detector
+  knows but the app does not was accepted. The detector detects a starting
+  locale; it does not authorise a switch.
+- **`Command`'s children drove a different store.** `Command.svelte` rendered
+  `{@render children()}` with no arguments and provided no context, while
+  `CommandInput` / `CommandList` / `CommandItem` each *required* a `store` prop
+  — so a consumer built a second store and everything `<Command>` was configured
+  with (`commands`, `filterFunction`, `maxResults`, `caseSensitive`, `groups`)
+  fed an internal store nothing rendered. `CommandList` never iterated
+  `filteredCommands` at all, so there was nowhere for that configuration to
+  become visible even in principle. Children now take the palette's store from
+  context, with a `{@render children({ store })}` payload as the escape hatch;
+  `store` stays optional because standalone use with a consumer-owned store was
+  the one configuration that worked.
+- **`maxResults` was ignored by seven of nine paths.** Applied by `queryChanged`
+  and `commandsUpdated`, ignored by `opened`, `closed`, `executeCommand`,
+  `clearQuery`, `reset`, `dismissalCompleted` and the state factory — so the
+  palette exceeded its own limit after every open, close, clear and execute. All
+  nine now route through one `applyFilter` (filter, order by group, bound).
+  Ordering happens there rather than in the view because `nextCommand`,
+  `selectCommand` and `executeCommand` index into `filteredCommands`, so sorting
+  anywhere else makes the keyboard highlight and the executed command disagree.
+- **The Combobox chevron was a dead click zone.** A bare `<svg>` with no handler
+  that nevertheless rotated with `$store.dropdown.status` — it looked like the
+  toggle, sat exactly where a user clicks to open a combobox, and did nothing.
+  The `toggled` action existed with no dispatcher. It is now a real button with
+  `aria-expanded`.
+- **FileUpload's progress bar sat at 0% for every upload.** `uploadProgress`
+  existed as an action and a reducer case with no dispatcher, because `onUpload`
+  was `(file) => Promise<void>` and gave a consumer no channel to report
+  through. The bar went 0 → gone, never a value between.
+- **`Sidebar` never finished presenting, and `springConfig` did nothing.** It
+  animated through a CSS `transition-[width]` + `transitionend` handshake that
+  could not complete: the wrapper mounts only once it is already visible, so it
+  was born at its target width, no transition ran, `transitionend` never fired
+  and `onPresentationComplete` was unreachable. With no spring there was nothing
+  for `springConfig` to configure, so it sat destructured and unused. It is now
+  Motion One, which CLAUDE.md requires for lifecycle animation, using the
+  `animateSidebarExpand` / `animateSidebarCollapse` helpers that had shipped
+  exported with zero callers.
+- **An overlay hydrated in the open state could never be dismissed.** Five
+  primitives spelled their animation guard `lastAnimatedContent !== null` —
+  "have I animated anything yet?" — which differs from "is this a transition I
+  have already run" whenever a component mounts already `presented`. The
+  collapse branch was refused, `dismissalCompleted` never fired, and the
+  reducer's own `status !== 'presented'` guard then rejected every further
+  dismiss: an undismissable overlay, permanently, with no error. That is what
+  SSR hydration produces for a page rendered with an overlay open, and what
+  every mount of a persistent desktop sidebar looks like. `ModalPrimitive` alone
+  carried an ad-hoc "deep linking" seed for this and it had never been
+  propagated; all six now key on the `(status, content)` pair.
+- **`Calendar` ignored a `selectedDate` in another month.** `propsChanged` never
+  touched `currentMonth`, so a date picker setting `selectedDate` to a date
+  elsewhere left the grid on the old month with the selection off-screen —
+  indistinguishable from nothing being selected, on the default path. Range mode
+  had the identical problem. `monthSet` was the action for exactly this and had
+  no dispatcher anywhere in the repo; the default header rendered month and year
+  as static text, so reaching a distant month meant one chevron click per month.
+- **TreeView's bulk operations had no dispatcher.** `expandAll`, `collapseAll`
+  and `allNodesDeselected` were implemented, tested at the reducer level, and
+  unreachable — the component owns its store privately and handed out no
+  reference. `expandAll` also used `getAllNodeIds`, marking leaves as expanded,
+  and marked `lazy` nodes expanded without dispatching their load, so such a
+  branch rendered open, empty and with no spinner, permanently.
+- **`fieldFocused` was a no-op that said so in a comment.** `FormControl`
+  dispatches it on every `onfocus`, so it was reachable, carried a field name
+  and changed nothing; its siblings `touched` and `dirty` reach the DOM as
+  `data-touched` / `data-dirty` and focus had no counterpart.
+- **The lightbox's loading state had no reader.** `lightbox.isImageLoading` was
+  written in eleven places and read in none, so opening a lightbox on a
+  full-size photo showed an empty frame with nothing to say the image was
+  coming.
+- **Range calendars could not select anything.** The prop-sync effects compared
+  `store.state.X` against the `X` prop, and that comparison cannot tell which
+  side moved — the effect reads both, so it re-runs on either. Single mode
+  survived only by accident, because `dateSelected` writes the `selectedDate`
+  prop through `deps.onDateSelect`. `rangeStarted` notifies nobody, so the first
+  click set `selectedRange.from` in the store, the effect saw a difference, and
+  `propsChanged` put the stale prop back; `rangeCompleted` was unreachable
+  because it needs a `from` that could never survive. Each effect now keys on its
+  own prop's previous value.
+- **`DropdownMenu` never animated, and its whole presentation subsystem was
+  unreachable.** No action wrote `presenting` or `dismissing` — `opened`,
+  `closed`, `toggled`, `escape` and `itemSelected` touched only `isOpen` — and
+  the only dispatcher of `{ type: 'presentation' }` was the component's own
+  `$effect`, which can fire only in those two statuses. A closed loop with no
+  entry point, so `animateDropdownIn`/`Out`, the `presenting` opacity gate, the
+  `dismissing` mount arm, the reducer's `presentation` case and
+  `DropdownMenuState.presentation` were all dead. The menu popped in with no
+  animation, against CLAUDE.md's Motion One requirement.
+- **Disclosure chevrons animated on a separate timeline from what they
+  disclose.** The Combobox chevron rotated via a Tailwind transition while its
+  dropdown animated through Motion One — two uncoordinated timelines for one
+  gesture, which `guides/ANIMATION-GUIDELINES.md` names as the reason
+  state-driven animation exists. Both halves now run from the same effect via a
+  new `animateChevron` helper.
+- **`MockAPIClient` stubbed a third of `APIClient`.** `addInterceptor` returned
+  an empty closure and `clearCache` / `invalidateCache` did nothing. Anything a
+  consumer builds on interceptors — auth headers, response shaping, error
+  mapping — silently stopped existing under test, so a test covering that code
+  proved the opposite of what it appeared to. All three are now real, and
+  `cache` defaults to `false` exactly as in `createAPIClient`.
+
+### Added
+
+- `createToastStore(config)`, and a `store` prop on `Toaster`.
+- `Command` exports `setCommandContext` / `getCommandContext`, and `Command`
+  accepts `groups` and `caseSensitive`.
+- `Calendar`'s default header has month and year `<select>`s, and its `header`
+  snippet payload gains `setMonth`. Offered years are clamped to `minDate` /
+  `maxDate` when set.
+- `TreeView` accepts a `controls` snippet receiving `expandAll`, `collapseAll`,
+  `deselectAll`, `expandedCount` and `selectedCount`. Not a `store` prop: the
+  state is `Set<string>`, which is not JSON-serialisable and would break SSR
+  hydration.
+- `FormState.focusedField`, `FieldState.focused`, and `data-focused` on control
+  props. Focus deliberately does **not** set `touched` — that gates error
+  display, so touching on focus fires "required" on every field the user tabs
+  through.
+- `role="progressbar"` and `aria-valuenow` on FileUpload's bar; a loading
+  spinner in `ImageLightbox`.
+- `animateChevron(element, expanded, springConfig?)` in the animation module.
+- `FieldRenderState`, the payload `FormField` hands its children — the stored
+  `FieldState` plus `value` and `focused`, which the form tracks centrally.
+- Calendar's month `<select>` disables months with no selectable day in them,
+  matching the year select's clamping.
+- Styleguide demos for Toast, Command and TreeView's toolbar. Toast and Command
+  had none, which is part of why these shipped unnoticed.
+
+### Changed
+
+- **`onUpload` is now `(file, onProgress) => Promise<void>`.** Source-compatible:
+  an existing one-argument function stays assignable under TypeScript's
+  fewer-parameters rule.
+- **`Command`'s `children` snippet receives `{ store }`.** Also
+  source-compatible — `Snippet` is a call-signature interface, so a
+  zero-argument `{#snippet children()}` stays assignable.
+- **`SidebarPrimitive`'s children snippet payload** drops `targetWidth` and
+  `onTransitionEnd`, which described the CSS-transition contract that is gone.
+
+### Removed
+
+- **`Toaster`'s `toasts` and `dependencies` props**, and its `maxToasts` /
+  `defaultDuration` / `position` config props. All were unreachable;
+  `dependencies` is exactly redundant with `createToastStore({ dependencies })`.
+  `store` and the config props are mutually exclusive and now **throw** when
+  both are given, rather than silently ignoring one.
+- **`Command`'s `toggled` action.** `open` is `$bindable`, and the only snippet
+  that could dispatch `toggled` renders while the palette is open — so it could
+  only ever close, and a half-reachable action is still a lie.
+- **`CommandGroup.items`** — a third source of truth for group membership,
+  alongside `groups` (labels and ordering) and `CommandItem.group`.
+- **`FormDependencies`.** An empty interface accepts any object, so it
+  constrained nothing: a type-level no-op wearing the shape of a contract.
+- **`TreeNodeItemProps`.** `TreeNodeItem` is a snippet that types its own
+  parameter inline, so the interface described nothing.
+- **`Effect.animated()` and `Effect.transition()`.** Both had zero callers, and
+  they exist to time a fixed-duration CSS animation from the reducer — which the
+  animation guideline now prohibits. Investigating whether they were needed as a
+  timeout fallback produced a finding worth keeping: Motion One's `.finished`
+  captures no `reject` and never settles when an animation is interrupted, so
+  the `try/catch` in every helper is dead code for that path. The components
+  survive it because the `(status, content)` guard means the live promise always
+  matches the live status, and `tests/animation-interruption.test.ts` pins that.
+  A fallback is required only where that correspondence breaks, so adding one by
+  default would have been unreachable code.
+- **`FieldState.value` and `FieldState.focused`** from the *stored* per-field
+  record. The reducer wrote both exactly once, at init, and never again: the real
+  value lives in `state.data` and focus in `state.focusedField`, so both stored
+  copies were stale the moment anything happened. They remain on
+  `FieldRenderState`, where they are derived correctly.
+
 ## [0.6.0] - 2026-08-18
 
 ### Fixed
@@ -390,6 +1173,11 @@ await generateStaticSite(App, {
 ### Added
 - **Phase 16**: WebGL Overlay System for shader-based image effects
 - **Graphics Package Integration**: Full WebGL/WebGPU rendering capabilities
+  > **Correction, added later.** WebGPU was never implemented. Both branches of
+  > the adapter's detection built the same WebGL `Engine`, so the label was the
+  > only thing that varied, and `activeRenderer` reports `'webgl'`. The entry
+  > above is left as published rather than rewritten — this note is how it is
+  > corrected.
 
 ## [0.2.6] - 2025-11-04
 

@@ -319,22 +319,26 @@ case 'searchChanged':
 3. User types "l" → **cancels** search for "he", starts search for "hel"
 4. Only the last search completes
 
-**Example: Abort controller**
+**Example: abort the request too**
 
-The store uses `AbortController` internally. You can access it if needed:
+The store passes its `AbortSignal` as the executor's second argument. Hand it to
+`fetch` and the request itself is cancelled, not merely its result ignored:
 
 ```typescript
-Effect.cancellable('fetch', async (dispatch) => {
-  const controller = new AbortController();
-
-  const response = await fetch('/api/data', {
-    signal: controller.signal
-  });
-
+Effect.cancellable('fetch', async (dispatch, signal) => {
+  const response = await fetch('/api/data', { signal });
   const data = await response.json();
   dispatch({ type: 'dataLoaded', data });
 });
 ```
+
+Cooperating is optional. Dispatches from a cancelled effect are dropped whether
+or not the executor observes the signal, so cancellation is correct either way —
+using the signal additionally stops the work.
+
+The signal is provided for `Effect.cancellable` only; it is `undefined` for
+`run`, `debounced`, `throttled` and `afterDelay`, none of which the store can
+cancel individually.
 
 **When to use**:
 - Search-as-you-type

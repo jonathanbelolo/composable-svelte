@@ -9,7 +9,8 @@ import { createTestStore } from '../src/lib/test/test-store.js';
 import { commandReducer } from '../src/lib/components/command/command.reducer.js';
 import {
 	createInitialCommandState,
-	type CommandItem
+	type CommandItem,
+	type CommandAction
 } from '../src/lib/components/command/command.types.js';
 
 describe('Command Palette', () => {
@@ -45,37 +46,74 @@ describe('Command Palette', () => {
 			store.assertNoPendingActions();
 		});
 
-		it('closes the command palette', async () => {
+		it('closes the command palette, animating out first', async () => {
+			// This test used to assert that `closed` set `isOpen: false` in one step.
+			// It only did so because `createInitialCommandState({ isOpen: true })`
+			// produced `presentation: 'idle'`, which sent `closed` down its
+			// "not yet presented, just close immediately" branch.
+			//
+			// That inconsistency is the defect fixed in `command.types.ts`: an
+			// initially-open palette is now genuinely `presented`, so it dismisses
+			// through the same animated path as one opened by `opened`. Uniform
+			// behaviour is the point — the two-step lifecycle below is what a
+			// palette closing on screen has always done.
 			const store = createTestStore({
 				initialState: createInitialCommandState({ commands: sampleCommands, isOpen: true }),
 				reducer: commandReducer
 			});
 
 			await store.send({ type: 'closed' }, (state) => {
-				expect(state.isOpen).toBe(false);
-				expect(state.query).toBe('');
-				expect(state.selectedIndex).toBe(0);
+				// Still open, now animating out.
+				expect(state.presentation.status).toBe('dismissing');
+				expect(state.isOpen).toBe(true);
 			});
+
+			await store.receive(
+				{ type: 'presentation', event: { type: 'dismissalCompleted' } },
+				(state) => {
+					expect(state.isOpen).toBe(false);
+					expect(state.query).toBe('');
+					expect(state.selectedIndex).toBe(0);
+					expect(state.presentation.status).toBe('idle');
+				}
+			);
 
 			store.assertNoPendingActions();
 		});
 
-		it('toggles open state', async () => {
+		it('opens and closes through the explicit actions', async () => {
+			// Was `toggles open state`, driving the removed `toggled` action.
+			// `toggled` was only reachable from inside the open palette, where it
+			// could only ever close — half of what its name said. `open` is
+			// `$bindable`, so a consumer already opens and closes by binding it,
+			// and `opened`/`closed` are the actions that say what they do.
 			const store = createTestStore({
 				initialState: createInitialCommandState({ commands: sampleCommands }),
 				reducer: commandReducer
 			});
 
-			// Toggle open
-			await store.send({ type: 'toggled' }, (state) => {
+			await store.send({ type: 'opened' }, (state) => {
 				expect(state.isOpen).toBe(true);
 			});
 
-			// Toggle closed
-			await store.send({ type: 'toggled' }, (state) => {
-				expect(state.isOpen).toBe(false);
-				expect(state.query).toBe('');
+			await store.receive(
+				{ type: 'presentation', event: { type: 'presentationCompleted' } },
+				(state) => {
+					expect(state.presentation.status).toBe('presented');
+				}
+			);
+
+			await store.send({ type: 'closed' }, (state) => {
+				expect(state.presentation.status).toBe('dismissing');
 			});
+
+			await store.receive(
+				{ type: 'presentation', event: { type: 'dismissalCompleted' } },
+				(state) => {
+					expect(state.isOpen).toBe(false);
+					expect(state.query).toBe('');
+				}
+			);
 
 			store.assertNoPendingActions();
 		});
@@ -84,7 +122,7 @@ describe('Command Palette', () => {
 			const initialState = createInitialCommandState({ commands: sampleCommands });
 			initialState.query = 'test';
 			initialState.selectedIndex = 2;
-			initialState.filteredCommands = [sampleCommands[0]];
+			initialState.filteredCommands = [sampleCommands[0]!];
 
 			const store = createTestStore({
 				initialState,
@@ -141,7 +179,7 @@ describe('Command Palette', () => {
 
 			await store.send({ type: 'queryChanged', query: 'directory' }, (state) => {
 				expect(state.filteredCommands).toHaveLength(1);
-				expect(state.filteredCommands[0].id).toBe('5');
+				expect(state.filteredCommands[0]!.id).toBe('5');
 			});
 
 			store.assertNoPendingActions();
@@ -197,7 +235,7 @@ describe('Command Palette', () => {
 				isOpen: true
 			});
 			initialState.query = 'file';
-			initialState.filteredCommands = [sampleCommands[0]];
+			initialState.filteredCommands = [sampleCommands[0]!];
 
 			const store = createTestStore({
 				initialState,
@@ -252,9 +290,9 @@ describe('Command Palette', () => {
 
 	describe('Keyboard Navigation', () => {
 		const filteredCommands: CommandItem[] = [
-			sampleCommands[0],
-			sampleCommands[1],
-			sampleCommands[2]
+			sampleCommands[0]!,
+			sampleCommands[1]!,
+			sampleCommands[2]!
 		];
 
 		it('navigates to next command', async () => {
@@ -409,7 +447,7 @@ describe('Command Palette', () => {
 	describe('Command Execution', () => {
 		it('executes selected command and closes palette', async () => {
 			const executedCommands: CommandItem[] = [];
-			const command = sampleCommands[1];
+			const command = sampleCommands[1]!;
 
 			const initialState = createInitialCommandState({
 				commands: sampleCommands,
@@ -430,7 +468,21 @@ describe('Command Palette', () => {
 				expect(state.isOpen).toBe(false);
 				expect(state.query).toBe('');
 				expect(state.selectedIndex).toBe(0);
+				// `executeCommand` now routes its dismissal through `closed`
+				// instead of hand-rolling it. It used to set `isOpen: false` and
+				// leave `presentation` at `presented`, and the markup renders on
+				// `presentation.status !== 'idle'` — so the palette stayed on
+				// screen. This assertion is what makes that visible here.
+				expect(state.presentation.status).toBe('dismissing');
 			});
+
+			await store.receive(
+				{ type: 'presentation', event: { type: 'dismissalCompleted' } },
+				(state) => {
+					expect(state.presentation.status).toBe('idle');
+					expect(state.isOpen).toBe(false);
+				}
+			);
 
 			store.assertNoPendingActions();
 			expect(executedCommands).toEqual([command]);
@@ -438,7 +490,7 @@ describe('Command Palette', () => {
 
 		it('executes command by index', async () => {
 			const executedCommands: CommandItem[] = [];
-			const filteredCommands = [sampleCommands[0], sampleCommands[1], sampleCommands[2]];
+			const filteredCommands = [sampleCommands[0]!, sampleCommands[1]!, sampleCommands[2]!];
 
 			const initialState = createInitialCommandState({
 				commands: sampleCommands,
@@ -465,7 +517,7 @@ describe('Command Palette', () => {
 
 		it('ignores execution of disabled commands', async () => {
 			const executedCommands: CommandItem[] = [];
-			const disabledCommand = sampleCommands[3]; // Disabled
+			const disabledCommand = sampleCommands[3]!; // Disabled
 
 			const initialState = createInitialCommandState({
 				commands: sampleCommands,
@@ -497,7 +549,7 @@ describe('Command Palette', () => {
 				commands: sampleCommands,
 				isOpen: true
 			});
-			initialState.filteredCommands = [sampleCommands[0]];
+			initialState.filteredCommands = [sampleCommands[0]!];
 			initialState.selectedIndex = 0;
 
 			const store = createTestStore({
@@ -578,8 +630,14 @@ describe('Command Palette', () => {
 				expect(state.isOpen).toBe(false);
 			});
 
-			// Receive the dispatched custom action
-			await store.receive({ type: 'customAction', payload: 'test' }, (state) => {
+			// Receive the dispatched custom action. The cast is load-bearing, not
+			// noise: `CommandItem.action` is declared `any` (command.types.ts:52)
+			// so a command can carry a *host* store's action, and the reducer
+			// dispatches it straight into a `Dispatch<CommandAction>` stream
+			// (command.reducer.ts:291). This palette is therefore documented to
+			// emit actions outside its own action type, and that is what is
+			// being pinned here.
+			await store.receive({ type: 'customAction', payload: 'test' } as unknown as CommandAction, (state) => {
 				// The custom action doesn't change command state, so state should be unchanged
 				expect(state.isOpen).toBe(false);
 			});
@@ -592,11 +650,11 @@ describe('Command Palette', () => {
 	describe('Commands Update', () => {
 		it('updates commands and refilters', async () => {
 			const initialState = createInitialCommandState({
-				commands: [sampleCommands[0]],
+				commands: [sampleCommands[0]!],
 				isOpen: true
 			});
 			initialState.query = 'file';
-			initialState.filteredCommands = [sampleCommands[0]];
+			initialState.filteredCommands = [sampleCommands[0]!];
 
 			const store = createTestStore({
 				initialState,
@@ -626,7 +684,7 @@ describe('Command Palette', () => {
 				reducer: commandReducer
 			});
 
-			const newCommands = [sampleCommands[0], sampleCommands[1]]; // Only 2 items
+			const newCommands = [sampleCommands[0]!, sampleCommands[1]!]; // Only 2 items
 
 			await store.send({ type: 'commandsUpdated', commands: newCommands }, (state) => {
 				expect(state.selectedIndex).toBe(1); // Adjusted to last valid index
@@ -644,7 +702,7 @@ describe('Command Palette', () => {
 			});
 			initialState.query = 'test';
 			initialState.selectedIndex = 2;
-			initialState.filteredCommands = [sampleCommands[0]];
+			initialState.filteredCommands = [sampleCommands[0]!];
 
 			const store = createTestStore({
 				initialState,
@@ -681,7 +739,7 @@ describe('Command Palette', () => {
 
 			await store.send({ type: 'queryChanged', query: 'New File' }, (state) => {
 				expect(state.filteredCommands).toHaveLength(1);
-				expect(state.filteredCommands[0].id).toBe('1');
+				expect(state.filteredCommands[0]!.id).toBe('1');
 			});
 
 			store.assertNoPendingActions();
@@ -759,5 +817,94 @@ describe('Command Palette', () => {
 
 			store.assertNoPendingActions();
 		});
+	});
+
+	describe('Reducer idempotency', () => {
+		// `Command.svelte` dispatches `commandsUpdated` from an unguarded `$effect`,
+		// and `dispatch` reads store state inside that effect's tracking scope. A
+		// reducer returning a fresh object every time therefore re-triggers the
+		// effect forever — `<Command open commands={[...]} />` threw
+		// `effect_update_depth_exceeded` on mount. Comparison is by value, since an
+		// inline array is a new reference on every render.
+		it('returns the same state when commands are unchanged by value', async () => {
+			const initial = createInitialCommandState({ commands: sampleCommands });
+			const store = createTestStore({ initialState: initial, reducer: commandReducer });
+
+			await store.send({ type: 'commandsUpdated', commands: sampleCommands.map((c) => ({ ...c })) });
+
+			expect(store.state).toBe(initial);
+			store.assertNoPendingActions();
+		});
+
+		it('still applies genuinely changed commands', async () => {
+			const initial = createInitialCommandState({ commands: sampleCommands });
+			const store = createTestStore({ initialState: initial, reducer: commandReducer });
+
+			await store.send(
+				{ type: 'commandsUpdated', commands: [{ id: 'zzz', label: 'Brand New' }] },
+				(state) => {
+					expect(state.commands).toEqual([{ id: 'zzz', label: 'Brand New' }]);
+				}
+			);
+			expect(store.state).not.toBe(initial);
+			store.assertNoPendingActions();
+		});
+	});
+});
+
+describe('commandsUpdated convergence', () => {
+	/**
+	 * `Command.svelte` dispatches this from an unguarded `$effect` that reads
+	 * store state, so a case returning a fresh object on every dispatch loops
+	 * forever. `sameCommands`/`sameGroups` exist to stop that.
+	 *
+	 * They did not, for one path: `sameGroups(array, undefined)` returned false,
+	 * but the case only wrote `groups` when `action.groups !== undefined` — so
+	 * clearing groups produced a new state object on EVERY dispatch while
+	 * `groups` never actually cleared. Measured: 10 identical dispatches, 10 new
+	 * states, groups unchanged. In a browser that pinned a core at 100% with no
+	 * error, because it never reaches Svelte's depth guard.
+	 */
+	it('converges when groups is cleared', () => {
+		let state = createInitialCommandState({
+			commands: [{ id: 'a', label: 'A' }],
+			groups: [{ id: 'file', label: 'Files' }]
+		});
+
+		let changed = 0;
+		for (let i = 0; i < 10; i += 1) {
+			const [next] = commandReducer(
+				state,
+				{ type: 'commandsUpdated', commands: state.commands, groups: undefined },
+				{}
+			);
+			if (next !== state) changed += 1;
+			state = next;
+		}
+
+		expect(changed, 'the guard never converged — this is an infinite effect loop').toBe(1);
+		expect(state.groups, 'groups never actually cleared').toBeUndefined();
+	});
+
+	it('stays converged when nothing changes', () => {
+		// The other half: a fix that always returns a new state would pass the
+		// test above only by never converging at all.
+		let state = createInitialCommandState({
+			commands: [{ id: 'a', label: 'A' }],
+			groups: [{ id: 'file', label: 'Files' }]
+		});
+
+		let changed = 0;
+		for (let i = 0; i < 5; i += 1) {
+			const [next] = commandReducer(
+				state,
+				{ type: 'commandsUpdated', commands: state.commands, groups: state.groups },
+				{}
+			);
+			if (next !== state) changed += 1;
+			state = next;
+		}
+
+		expect(changed).toBe(0);
 	});
 });

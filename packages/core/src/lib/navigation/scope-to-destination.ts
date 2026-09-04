@@ -14,9 +14,23 @@
  * @packageDocumentation
  */
 
-import type { Store } from '../types.js';
 import type { DestinationState } from './destination-reducer.js';
 import type { PresentationAction } from './types.js';
+
+/**
+ * The part of a store these helpers actually consume.
+ *
+ * Deliberately narrower than `Store`: the implementations only ever read
+ * `.state` and call `.dispatch`, never `select`, `subscribe`, `history` or
+ * `destroy`. Declaring the whole `Store` shut out the one caller that matters —
+ * a component holding a `ScopedDestinationStore` and scoping again, which is how
+ * nested destinations are built. A real `Store` still satisfies this
+ * structurally, so every existing call site is unaffected.
+ */
+export interface ScopableStore<State, Action> {
+  readonly state: State;
+  dispatch(action: Action): void;
+}
 
 /**
  * Scoped store for a specific destination case.
@@ -108,7 +122,7 @@ export interface ScopedDestinationStore<State, Action> {
  * ```
  */
 export function scopeToDestination<DestState, DestAction, ParentState = any, ParentAction = any>(
-  parentStore: Store<ParentState, ParentAction>,
+  parentStore: ScopableStore<ParentState, ParentAction>,
   destinationPath: (string | number)[],
   caseType: string,
   actionField: string
@@ -217,7 +231,7 @@ function _getValueAtPath(obj: any, path: (string | number)[]): any {
  * ```
  */
 export function scopeToOptional<ChildState, ChildAction, ParentState = any, ParentAction = any>(
-  parentStore: Store<ParentState, ParentAction>,
+  parentStore: ScopableStore<ParentState, ParentAction>,
   statePath: (string | number)[],
   actionField: string
 ): ScopedDestinationStore<ChildState, ChildAction> {

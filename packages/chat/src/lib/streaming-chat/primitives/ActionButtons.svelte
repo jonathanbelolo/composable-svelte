@@ -5,7 +5,14 @@
 	/**
 	 * Message action buttons primitive.
 	 *
-	 * Provides Copy, Edit (for user messages), and Regenerate (for assistant messages) buttons.
+	 * Provides Copy, Edit (for user messages), and Regenerate (for assistant
+	 * messages) buttons.
+	 *
+	 * **Render it inside a `ChatMessage`**, through that component's
+	 * `headerActions` snippet. The buttons are hidden until the surrounding
+	 * `.chat-message` is hovered or holds focus, so anywhere else they never
+	 * appear. `ChatMessageWithActions` uses a context menu instead; this is the
+	 * always-visible-on-hover alternative.
 	 */
 	interface Props {
 		message: Message;
@@ -55,16 +62,30 @@
 </div>
 
 <style>
+	/*
+	 * Hidden until the message is hovered or something inside it has focus.
+	 *
+	 * Two things about this were wrong. `opacity: 0` alone leaves the buttons
+	 * clickable, so an invisible row of controls sat over the message catching
+	 * pointers; `pointer-events` now follows the opacity. And the reveal was
+	 * hover-only, which means a keyboard user could never see these at all —
+	 * `:focus-within` is what makes them reachable without a mouse.
+	 *
+	 * The `.chat-message` ancestor is required, and it is `ChatMessage`'s own root
+	 * element: render this through that component's `headerActions` snippet.
+	 */
 	.action-buttons {
 		display: flex;
 		gap: 4px;
 		margin-left: auto;
 		opacity: 0;
-		transition: opacity 0.2s ease;
+		pointer-events: none;
 	}
 
-	:global(.chat-message:hover) .action-buttons {
+	:global(.chat-message:hover) .action-buttons,
+	:global(.chat-message:focus-within) .action-buttons {
 		opacity: 1;
+		pointer-events: auto;
 	}
 
 	.action-button {
@@ -77,7 +98,6 @@
 		align-items: center;
 		justify-content: center;
 		color: currentColor;
-		transition: background 0.2s ease, transform 0.1s ease;
 		width: 24px;
 		height: 24px;
 	}

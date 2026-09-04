@@ -8,6 +8,7 @@
  * is by resolving the session endpoint.
  */
 
+import type { AuthError } from '../errors/types.js';
 import type { SessionSnapshot, Subject } from '../subject/types.js';
 
 /**
@@ -41,8 +42,15 @@ export interface SessionState {
 	status: SessionStatus;
 	/** Anonymous until a session resolves or a login succeeds. */
 	subject: Subject;
-	/** Last auth error message, or `null`. */
-	error: string | null;
+	/**
+	 * Why the last auth operation failed, or `null`.
+	 *
+	 * A structured {@link AuthError} rather than a string: "wrong password",
+	 * "confirm your email", "this account is locked" and "now enter your second
+	 * factor" are different outcomes, and the last is not a failure at all — it
+	 * is the login flow branching. A message alone cannot be branched on.
+	 */
+	error: AuthError | null;
 	/**
 	 * Request epoch — a monotonic counter incremented by every initiator
 	 * (`resolveSession` / `login` / `logout`). The initiator's effect closure
@@ -54,6 +62,19 @@ export interface SessionState {
 	 * superseded request's late feedback could clobber newer state.
 	 */
 	epoch: number;
+	/**
+	 * When the backend says the session lapses, ISO 8601, or `null`.
+	 *
+	 * **Advisory, and it reverses what this package used to promise.** The old
+	 * contract said the client receives no expiry signal at all and its only
+	 * hook is a 401 from a domain call. That hook is still here and is still the
+	 * backstop — a server can end a session at any moment for reasons no expiry
+	 * can anticipate — but a backend that advertises one lets a client refresh
+	 * *before* the user hits a wall rather than after.
+	 *
+	 * Nothing in this reducer acts on it. The `session-refresh` flow does.
+	 */
+	expiresAt: string | null;
 }
 
 /**
@@ -69,20 +90,56 @@ export type SessionAction =
 	/** Effect feedback: resolve finished. `null` session = anonymous. */
 	| { type: 'sessionResolved'; session: SessionSnapshot | null; epoch: number }
 	/** Effect feedback: resolve errored (network/server). Fail-closed to anonymous. */
-	| { type: 'sessionResolveFailed'; error: string; epoch: number }
+	| { type: 'sessionResolveFailed'; error: AuthError; epoch: number }
 	/** Sign in as a seeded account (passwordless picker semantics). */
 	| { type: 'login'; seededUserId: string }
 	/** Effect feedback: login succeeded with the issued session. */
 	| { type: 'loginSucceeded'; session: SessionSnapshot; epoch: number }
 	/** Effect feedback: login failed. */
-	| { type: 'loginFailed'; error: string; epoch: number }
+	| { type: 'loginFailed'; error: AuthError; epoch: number }
 	/** Sign out (server-side session invalidation). */
 	| { type: 'logout' }
 	/**
 	 * Effect feedback: logout finished. The client goes anonymous even when
 	 * the server call failed (`error` records the failure) — fail-closed.
 	 */
-	| { type: 'loggedOut'; error?: string; epoch: number };
+	| { type: 'loggedOut'; error?: AuthError | undefined; epoch: number }
+	/**
+	 * A flow outside this store completed a sign-in.
+	 *
+	 * The session store owns "who am I"; it does not own every way of becoming
+	 * someone. A credentials login, an MFA challenge, an OAuth callback and a
+	 * magic link all end the same way — with a `SessionSnapshot` — and each runs
+	 * its own reducer with its own multi-step state. This is how they hand the
+	 * result over.
+	 *
+	 * Refused only while `loggingOut`. That is the race worth guarding: a slow
+	 * sign-in resolving after the user has signed out would otherwise
+	 * re-authenticate them. Every other status yields to it on the same
+	 * principle the `login` arm already follows — explicit user intent
+	 * supersedes a background resolve.
+	 */
+	| { type: 'sessionEstablished'; session: SessionSnapshot }
+	/**
+	 * A flow outside this store has started a sign-in.
+	 *
+	 * Optional, and only about presentation: it moves the status to `loggingIn`
+	 * so `AuthGuard` renders its pending branch while the flow works. A flow
+	 * that owns its own busy state does not need to send it.
+	 *
+	 * **A flow that sends it owns getting back out.** Success is
+	 * `sessionEstablished`; failure is `loginFailed` carrying the epoch the store
+	 * is currently holding:
+	 *
+	 * ```ts
+	 * store.dispatch({ type: 'loginFailed', error, epoch: store.state.epoch });
+	 * ```
+	 *
+	 * Reading the epoch at dispatch is not racy — dispatch is synchronous, so
+	 * nothing can bump it in between. Without one of the two, the session sits in
+	 * `loggingIn` and `AuthGuard` shows a pending state forever.
+	 */
+	| { type: 'loginStarted' };
 
 /**
  * Injected auth I/O. Production apps use {@link createHttpSessionDeps};
@@ -98,16 +155,30 @@ export interface SessionDependencies {
 	 * builds — in production this call fails and sign-in happens through the
 	 * backend's real identity flows. Dev/preview only.
 	 */
-	fetchLogin: (seededUserId: string) => Promise<SessionSnapshot>;
-	/** `POST /auth/logout` — server-side session invalidation. */
-	fetchLogout: () => Promise<void>;
+	fetchLogin: (seededUserId: string, signal?: AbortSignal) => Promise<SessionSnapshot>;
+	/**
+	 * `POST /auth/logout` — server-side session invalidation.
+	 *
+	 * The `signal` is supplied when the store supersedes an in-flight logout —
+	 * a second `logout` dispatch cancels the first. Honouring it aborts the
+	 * request; ignoring it is safe, because the store drops a cancelled
+	 * effect's dispatches either way.
+	 */
+	fetchLogout: (signal?: AbortSignal) => Promise<void>;
 	/**
 	 * Resolve the current session. Resolves `null` when anonymous (no/
 	 * expired session); rejects only on unexpected failures.
 	 *
-	 * Sessions carry a server-side TTL and the client receives NO expiry
-	 * signal — an `authenticated` store can be stale. The consumer's hook is
-	 * a 401 from any domain API call: dispatch `resolveSession` to re-sync.
+	 * Sessions carry a server-side TTL. A backend **may** advertise when it
+	 * lapses, in `expires_at`; when it does, that reaches `SessionState.expiresAt`
+	 * and the `session-refresh` flow can extend the session before the user hits
+	 * a wall.
+	 *
+	 * When it does not — and even when it does — an `authenticated` store can
+	 * still be stale, because a session can end at any moment for reasons no
+	 * expiry anticipates: an administrator revoked it, a deploy flushed the
+	 * store. The backstop is a 401 from any domain API call, which
+	 * `createUnauthorizedHandler` turns into a `resolveSession` for you.
 	 */
-	fetchSession: () => Promise<SessionSnapshot | null>;
+	fetchSession: (signal?: AbortSignal) => Promise<SessionSnapshot | null>;
 }

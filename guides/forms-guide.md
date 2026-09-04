@@ -32,15 +32,47 @@ The Composable Svelte form system is a **reducer-first** form state management s
 
 ### Core FormState Interface
 
+These are hand-written summaries no longer. The block below **imports the real
+types**, so `doc-typecheck.test.ts` reads it and this section cannot drift from
+the library again — which it had, silently: the `FieldState` shape printed here
+still listed a `value` field that was removed.
+
+```typescript
+import type { FormState, FieldPath, FieldState } from '@composable-svelte/core/components/form';
+
+type Contact = { name: string; address: { zip: string } };
+
+declare const state: FormState<Contact>;
+
+// `fields` is keyed by PATH, and every entry is optional.
+const zipError: string | null | undefined = state.fields['address.zip']?.error;
+const nameError: string | null | undefined = state.fields.name?.error;
+
+// A path is checked at compile time.
+const path: FieldPath<Contact> = 'address.zip';
+
+// Five keys, and `value` is deliberately not one of them — the value lives in
+// `data`, and a copy here would go stale the moment the field changed.
+declare const field: FieldState;
+const parts: [boolean, boolean, string | null, boolean, string[]] = [
+  field.touched,
+  field.dirty,
+  field.error,
+  field.isValidating,
+  field.warnings
+];
+```
+
+For reference, the rest of the interface:
+
 ```typescript
 interface FormState<T extends Record<string, any>> {
   // Form data values
   data: T;
 
-  // Per-field state (touched, dirty, error, isValidating, warnings)
-  fields: {
-    [K in keyof T]: FieldState;
-  };
+  // Per-field state, keyed by field path: 'name', 'address.zip', 'items.0.name'.
+  // Partial — an entry exists only once its path exists in the data.
+  fields: Partial<Record<FieldPath<T>, FieldState>>;
 
   // Zod schema for validation
   schema: ZodSchema<T>;
@@ -69,7 +101,7 @@ interface FormState<T extends Record<string, any>> {
 
 ```typescript
 interface FieldState {
-  value: any;                // Current field value
+  // No `value`. It lives in `data`; a copy here went stale immediately.
   touched: boolean;          // Has user interacted with field?
   dirty: boolean;            // Has value changed from initial?
   error: string | null;      // Field validation error

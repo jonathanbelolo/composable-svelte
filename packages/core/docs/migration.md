@@ -273,16 +273,19 @@ const store = createStore({
   reducer: appReducer,
   dependencies: {
     apiClient: new ApiClient(),
-    clock: Clock.live,
-    storage: Storage.live
+    // `Clock` and `Storage` are types, not namespaces — the live
+    // implementations are factory functions.
+    clock: createSystemClock(),
+    storage: createLocalStorage()
   }
 });
 ```
 
 #### Step 7: Update Component Usage
 
-```typescript
-// ❌ Redux with react-redux
+❌ Redux with react-redux:
+
+```tsx
 import { useSelector, useDispatch } from 'react-redux';
 
 function Counter() {
@@ -298,8 +301,11 @@ function Counter() {
     </div>
   );
 }
+```
 
-// ✅ Composable Svelte
+✅ Composable Svelte:
+
+```svelte
 <script lang="ts">
   import { getContext } from 'svelte';
   import type { Store } from '@composable-svelte/core';
@@ -907,8 +913,9 @@ describe('Counter (migration verification)', () => {
 
 #### Extract Reducer from Complex Component
 
-```typescript
-// Before: Logic in component
+Before — the logic is in the component:
+
+```svelte
 <script>
   let count = $state(0);
   let loading = $state(false);
@@ -920,8 +927,11 @@ describe('Counter (migration verification)', () => {
     loading = false;
   }
 </script>
+```
 
-// After: Logic in reducer
+After — the logic is in the reducer:
+
+```svelte
 <script>
   const store = createStore({
     initialState: { count: 0, loading: false },
@@ -1008,7 +1018,7 @@ case 'save':
 
 For migration assistance:
 
-1. Review [examples](/packages/core/examples) showing common patterns
+1. Review [examples](/examples) showing common patterns
 2. Check [troubleshooting guide](/packages/core/docs/troubleshooting.md)
 3. Join community discussions
 4. File issues with "migration" label
@@ -1018,4 +1028,4 @@ For migration assistance:
 - [Core Concepts](/packages/core/docs/core-concepts)
 - [API Reference](/packages/core/docs/api)
 - [Testing Guide](/packages/core/docs/core-concepts/testing.md)
-- [Examples](/packages/core/examples)
+- [Examples](/examples)

@@ -6,11 +6,10 @@ Transport-agnostic streaming chat interface for LLM interactions.
 
 - 🔄 **Transport-Agnostic**: Works with SSE, WebSocket, or any streaming mechanism
 - 🏗️ **Composable Architecture**: Pure reducer pattern with full testability
-- 🎨 **Auto-Scroll**: Intelligent scroll behavior (pauses when user scrolls up)
+- 🎨 **Auto-Scroll**: Follows the stream, and stops following once the user scrolls up
 - ⚡ **Real-time Streaming**: Displays response as it streams in
-- 🌓 **Dark Mode**: Built-in dark mode support
-- ♿ **Accessible**: ARIA labels and keyboard navigation
-- 📱 **Responsive**: Mobile-friendly design
+- 🌓 **Dark Mode**: Styles under a `.dark` ancestor
+- ♿ **Accessible**: ARIA labels; Enter sends, Shift+Enter inserts a newline
 
 ## Basic Usage
 
@@ -18,11 +17,11 @@ Transport-agnostic streaming chat interface for LLM interactions.
 <script lang="ts">
   import { createStore } from '@composable-svelte/core';
   import {
-    StreamingChat,
+    StandardStreamingChat,
     streamingChatReducer,
     createInitialStreamingChatState,
     createMockStreamingChat
-  } from '@composable-svelte/code';
+  } from '@composable-svelte/chat';
 
   const store = createStore({
     initialState: createInitialStreamingChatState(),
@@ -32,9 +31,13 @@ Transport-agnostic streaming chat interface for LLM interactions.
 </script>
 
 <div style="height: 600px;">
-  <StreamingChat {store} placeholder="Ask me anything..." />
+  <StandardStreamingChat {store} placeholder="Ask me anything..." />
 </div>
 ```
+
+Three variants are exported — `MinimalStreamingChat`, `StandardStreamingChat` and
+`FullStreamingChat`. They differ in props and chrome, not in state: all three
+drive the same store. See [Component Props](#component-props).
 
 ## Transport Implementations
 
@@ -46,25 +49,40 @@ interface StreamingChatDependencies {
     message: string,
     onChunk: (chunk: string) => void,
     onComplete: () => void,
-    onError: (error: string) => void
+    onError: (error: string) => void,
+    attachments?: MessageAttachment[]
   ) => AbortController | void;
 
   generateId?: () => string;        // Default: crypto.randomUUID()
   getTimestamp?: () => number;      // Default: Date.now()
+
+  /**
+   * Upload a file and resolve to its URL. Optional; when absent, attachments
+   * keep the blob URL they were created with.
+   */
+  uploadFile?: (
+    file: File,
+    onProgress?: (loaded: number, total: number) => void
+  ) => Promise<string>;
 }
 ```
+
+`attachments` is trailing and optional so an existing four-parameter
+implementation stays assignable. When `uploadFile` is supplied and the message
+carries attachments, the reducer uploads them all first and only then calls
+`streamMessage`, with the resolved URLs in place.
 
 ### SSE (Server-Sent Events) Implementation
 
 ```typescript
 const sseStreamingChat: StreamingChatDependencies = {
-  streamMessage: (message, onChunk, onComplete, onError) => {
+  streamMessage: (message, onChunk, onComplete, onError, attachments) => {
     const controller = new AbortController();
 
     fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message, attachments }),
       signal: controller.signal
     })
       .then(response => {
@@ -131,32 +149,42 @@ const wsStreamingChat: StreamingChatDependencies = {
 };
 ```
 
-### Using Existing WebSocket Client
+### Using Core's WebSocket Client
+
+`@composable-svelte/core` exports `createLiveWebSocket`, which adds reconnection
+and typed message parsing on top of the raw socket.
 
 ```typescript
-import { createWebSocketClient } from '@composable-svelte/core';
-
-const wsClient = createWebSocketClient({ url: 'wss://your-backend.com' });
+import { createLiveWebSocket } from '@composable-svelte/core';
 
 const wsStreamingChat: StreamingChatDependencies = {
   streamMessage: (message, onChunk, onComplete, onError) => {
-    const channel = `chat-${Date.now()}`;
+    const client = createLiveWebSocket<{ type: string; content?: string }>();
+    const controller = new AbortController();
 
-    wsClient.subscribe(channel, (event) => {
-      if (event.type === 'chunk') {
-        onChunk(event.data);
-      } else if (event.type === 'complete') {
+    // `subscribe` takes a single listener and returns an unsubscribe function;
+    // it receives the whole `WebSocketMessage`, whose `data` is the parsed body.
+    const unsubscribe = client.subscribe(({ data }) => {
+      if (data.type === 'chunk' && data.content) {
+        onChunk(data.content);
+      } else if (data.type === 'complete') {
         onComplete();
-      } else if (event.type === 'error') {
-        onError(event.data);
+        void client.disconnect();
+      } else if (data.type === 'error') {
+        onError(data.content ?? 'Stream failed');
       }
     });
 
-    wsClient.send({ channel, message });
+    client
+      .connect('wss://your-backend.com/chat')
+      .then(() => client.send({ type: 'message', content: message }))
+      .catch((error) =>
+        onError(error instanceof Error ? error.message : 'Connection failed')
+      );
 
-    const controller = new AbortController();
     controller.signal.addEventListener('abort', () => {
-      wsClient.unsubscribe(channel);
+      void unsubscribe();
+      void client.disconnect();
     });
 
     return controller;
@@ -236,33 +264,101 @@ export async function POST({ request }) {
 
 ## Component Props
 
+Every variant takes the same store. `MinimalStreamingChat`:
+
 ```typescript
-interface StreamingChatProps {
+interface MinimalStreamingChatProps {
   /** Store managing chat state */
   store: Store<StreamingChatState, StreamingChatAction>;
 
-  /** Placeholder text for input */
+  /** Placeholder text for input (default: "Type your message...") */
   placeholder?: string;
-
-  /** Show clear button */
-  showClearButton?: boolean;
 
   /** Custom CSS class */
   class?: string;
+
+  /** Label for user messages (default: "You") */
+  userLabel?: string;
+
+  /** Label for assistant messages (default: "Assistant") */
+  assistantLabel?: string;
 }
 ```
+
+`StandardStreamingChat` adds the Stop and Clear controls:
+
+```typescript
+interface StandardStreamingChatProps extends MinimalStreamingChatProps {
+  /** Show clear button (default: true) */
+  showClearButton?: boolean;
+}
+```
+
+`FullStreamingChat` adds per-message actions, attachments and avatars:
+
+```typescript
+interface FullStreamingChatProps extends StandardStreamingChatProps {
+  /** Maximum file size in MB (default: 10) */
+  maxFileSizeMB?: number;
+
+  /** Accepted file types, e.g. ["image/*", ".pdf"]. Empty allows all (default) */
+  acceptedFileTypes?: string[];
+
+  /** Value to prefill the input with */
+  prefillValue?: string;
+
+  /** Called once the prefill has been applied */
+  onPrefillApplied?: () => void;
+
+  /** Avatar URL for user messages */
+  userAvatarUrl?: string;
+
+  /** Avatar URL for assistant messages */
+  assistantAvatarUrl?: string;
+}
+```
+
+There are no `enableAttachments` / `enableReactions` style flags. A variant
+either has the feature or it does not.
 
 ## State Structure
 
 ```typescript
 interface StreamingChatState {
   messages: Message[];
+
+  /** Non-null while a response is streaming */
   currentStreaming: {
     content: string;
-    isComplete: boolean;
+    abortController?: AbortController;
   } | null;
+
+  /** True between sending and the first chunk */
   isWaitingForResponse: boolean;
+
   error: string | null;
+
+  /** Message being edited, if any */
+  editingMessage: { id: string; content: string } | null;
+
+  /** Attachments staged in the composer, before sending */
+  pendingAttachments: MessageAttachment[];
+
+  /**
+   * Id of the message just appended by `sendMessage`, so the list can animate
+   * exactly that one in. Cleared by `restoreMessages`.
+   */
+  lastAppendedId: string | null;
+
+  /** Attachment preview modal lifecycle */
+  attachmentPreview: {
+    presentation: PresentationState<MessageAttachment>;
+    /** Remove was pressed; the removal waits for the exit animation */
+    removeOnDismiss: boolean;
+  };
+
+  /** Which message's reaction picker is open. `content` is the message id */
+  reactionPicker: PresentationState<string>;
 }
 
 interface Message {
@@ -270,6 +366,17 @@ interface Message {
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: number;
+  attachments?: MessageAttachment[];
+  reactions?: MessageReaction[];
+  /** Overrides userLabel/assistantLabel for this message */
+  senderName?: string;
+}
+
+interface MessageReaction {
+  emoji: string;
+  count: number;
+  /** Whether the current user is one of them. Absent means "not mine" */
+  reactedByMe?: boolean;
 }
 ```
 
@@ -277,49 +384,109 @@ interface Message {
 
 ```typescript
 type StreamingChatAction =
-  | { type: 'sendMessage'; message: string }
+  // Message sending and streaming
+  | { type: 'sendMessage'; message: string; attachments?: MessageAttachment[] }
   | { type: 'chunkReceived'; chunk: string }
   | { type: 'streamComplete' }
   | { type: 'streamError'; error: string }
+  | { type: 'stopGeneration' }
+  // Message operations
+  | { type: 'regenerateMessage'; messageId: string }
+  | { type: 'copyMessage'; messageId: string }
+  | { type: 'copySuccess' }
+  | { type: 'copyError'; error: string }
+  | { type: 'deleteMessage'; messageId: string }
+  // Message editing
+  | { type: 'startEditingMessage'; messageId: string }
+  | { type: 'updateEditingContent'; content: string }
+  | { type: 'submitEditedMessage' }
+  | { type: 'cancelEditing' }
+  // File attachments
+  | { type: 'addAttachment'; attachment: MessageAttachment }
+  | { type: 'removeAttachment'; attachmentId: string }
+  | { type: 'clearAttachments' }
+  // Message reactions
+  | { type: 'addReaction'; messageId: string; emoji: string }
+  | { type: 'removeReaction'; messageId: string; emoji: string }
+  // Utility
   | { type: 'clearError' }
-  | { type: 'clearMessages' };
+  | { type: 'clearMessages' }
+  | { type: 'restoreMessages'; messages: Message[] }
+  // Attachment preview modal
+  | { type: 'attachmentPreviewOpened'; attachment: MessageAttachment }
+  | { type: 'attachmentPreviewDismissed' }
+  | { type: 'attachmentPreviewRemoveRequested' }
+  | { type: 'attachmentPreviewPresentation'; event: ChatPresentationEvent }
+  // Reaction picker
+  | { type: 'reactionPickerOpened'; messageId: string }
+  | { type: 'reactionPickerDismissed' }
+  | { type: 'reactionPickerPresentation'; event: ChatPresentationEvent };
 ```
+
+`addReaction` is idempotent: reacting twice with the same emoji does not
+increment `count` a second time. `removeReaction` takes the `emoji`, not a
+reaction id.
+
+`ChatPresentationEvent` is
+`{ type: 'presentationCompleted' } | { type: 'dismissalCompleted' }` — chat's own
+narrow lifecycle union, declared in `types.ts` and not exported from the package
+root.
+
+The union also carries members prefixed `_internal_`
+(`_internal_setAbortController`, `_internal_attachmentUploadProgress`,
+`_internal_attachmentsResolved`). The reducer dispatches those to itself; do not
+send them from a component.
 
 ## Testing
 
-Use the mock implementation for testing:
+**Do not drive a `TestStore` with `createMockStreamingChat()`.** It fakes a
+realistic reply — a 300ms lead-in, then a word every 50ms, forty-odd words — and
+`TestStore` is exhaustive: `receive` gives up after one second, and `finish()`
+refuses to pass while any dispatched action is unasserted. A one-chunk fake is
+what a reducer test wants.
 
 ```typescript
-import { createTestStore } from '@composable-svelte/core/test';
-import {
-  streamingChatReducer,
-  createInitialStreamingChatState,
-  createMockStreamingChat
-} from '@composable-svelte/code';
+import { describe, it, expect } from 'vitest';
+import { TestStore } from '@composable-svelte/core/test';
+import { streamingChatReducer, createInitialStreamingChatState } from '@composable-svelte/chat';
 
 describe('StreamingChat', () => {
-  it('sends message and receives streaming response', async () => {
-    const store = createTestStore({
+  it('sends a message and receives the reply', async () => {
+    let chunk!: (text: string) => void;
+    let complete!: () => void;
+
+    const store = new TestStore({
       initialState: createInitialStreamingChatState(),
       reducer: streamingChatReducer,
-      dependencies: createMockStreamingChat()
+      dependencies: {
+        // Hand the callbacks out rather than calling them here: `send` starts
+        // the effect *before* running its assertion, so a fake that streams
+        // synchronously means the whole reply lands first and every line of
+        // that assertion is wrong.
+        streamMessage: (_message, onChunk, onComplete) => {
+          chunk = onChunk;
+          complete = onComplete;
+        },
+        generateId: () => 'm1',
+        getTimestamp: () => 0
+      }
     });
 
     await store.send({ type: 'sendMessage', message: 'Hello' }, (state) => {
       expect(state.messages).toHaveLength(1);
-      expect(state.messages[0].content).toBe('Hello');
       expect(state.isWaitingForResponse).toBe(true);
+      expect(state.currentStreaming).toEqual({ content: '' });
     });
 
-    // Receive chunks
-    await store.receive({ type: 'chunkReceived' }, (state) => {
-      expect(state.currentStreaming).not.toBeNull();
+    chunk('Hi');
+    await store.receive({ type: 'chunkReceived', chunk: 'Hi' }, (state) => {
+      expect(state.currentStreaming?.content).toBe('Hi');
     });
 
-    // Stream completes
+    complete();
     await store.receive({ type: 'streamComplete' }, (state) => {
-      expect(state.messages).toHaveLength(2);
       expect(state.currentStreaming).toBeNull();
+      expect(state.messages).toHaveLength(2); // User + assistant
     });
 
     await store.finish();
@@ -327,30 +494,30 @@ describe('StreamingChat', () => {
 });
 ```
 
+This example is `packages/chat/tests/teststore-example.test.ts`, so it is run on
+every build rather than trusted.
+
+`createMockStreamingChat()` takes no configuration and is for demos and
+component tests, where the delays are the point. It supplies `streamMessage`,
+`generateId` and `getTimestamp` — no `uploadFile`, so attachments keep their
+local URLs under it — and honours the `AbortController` it returns.
+
 ## Styling
 
-The component uses CSS custom properties for theming:
+Styles are scoped CSS on each component, with hard-coded values — there are no
+`--chat-*` custom properties to override. The hooks a consumer has are the
+`class` prop on every variant, and a `.dark` ancestor:
 
 ```css
-.streaming-chat {
-  --chat-bg: #ffffff;
-  --chat-border: #e0e0e0;
-  --user-bg: #007aff;
-  --assistant-bg: #f0f0f0;
-}
-
-/* Dark mode automatically applied via :global(.dark) */
+/* Each variant ships its own dark rules, e.g. */
+:global(.dark) .standard-streaming-chat { /* ... */ }
 ```
 
-## Future Enhancements
-
-Planned features for future versions:
-
-- Markdown rendering with syntax highlighting
-- Code block copy buttons
-- Multi-modal support (images, files)
-- Regenerate/edit functionality
-- Token usage display
-- Thinking/reasoning blocks (Claude-style)
-- Message reactions
-- Conversation export
+The package contains no CSS lifecycle animations. Anything that appears,
+disappears, expands or collapses is animated with the Motion One helpers from
+`@composable-svelte/core/animation` — `animateListItemIn` for a newly sent
+message, `animatePopoverIn` / `animatePopoverOut` and `animateBackdropIn` /
+`animateBackdropOut` for the reaction picker and the attachment preview modal,
+and `createScrollFollower` for auto-scroll, which reads `prefersReducedMotion()`.
+The only `@keyframes` left are infinite loops: the streaming caret blink, the
+typing-indicator dots, the live-cursor blink, and loading spinners.

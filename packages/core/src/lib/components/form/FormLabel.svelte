@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 	import Label from '../ui/label/Label.svelte';
-	import type { FieldState } from './form.types.js';
+	import type { FieldRenderState } from './form.types.js';
 
 	/**
 	 * FormLabel component - Label for form fields with error styling.
@@ -17,11 +17,11 @@
 		/**
 		 * Optional class name
 		 */
-		class?: string;
+		class?: string | undefined;
 		/**
 		 * Label text
 		 */
-		children?: import('svelte').Snippet;
+		children?: import('svelte').Snippet | undefined;
 	}
 
 	let { class: className, children }: Props = $props();
@@ -29,7 +29,7 @@
 	// Get field info from context. fieldState is a holder with a getter so
 	// reads of .current re-evaluate the parent's $derived reactively.
 	const fieldName = getContext<string>('fieldName');
-	const fieldStateCtx = getContext<{ current: FieldState }>('fieldState');
+	const fieldStateCtx = getContext<{ current: FieldRenderState }>('fieldState');
 
 	const hasError = $derived(!!fieldStateCtx?.current?.error);
 </script>

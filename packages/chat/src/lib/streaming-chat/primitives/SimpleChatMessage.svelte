@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { animateListItemIn } from '@composable-svelte/core/animation';
 	import type { Message } from '../types.js';
 	import { renderSimpleMarkdown, attachSimpleCopyButtons } from '../simple-markdown.js';
 
@@ -10,10 +11,49 @@
 	 */
 	interface Props {
 		message: Message;
-		isStreaming?: boolean;
+		isStreaming?: boolean | undefined;
+		/** Animate this message in. The list decides; see `lastAppendedId`. */
+		animateIn?: boolean | undefined;
+		/** Custom label for user messages (default: "You"). */
+		userLabel?: string | undefined;
+		/** Custom label for assistant messages (default: "Assistant"). */
+		assistantLabel?: string | undefined;
 	}
 
-	const { message, isStreaming = false }: Props = $props();
+	const {
+		message,
+		isStreaming = false,
+		animateIn = false,
+		userLabel = 'You',
+		assistantLabel = 'Assistant'
+	}: Props = $props();
+
+	let rootElement: HTMLElement | undefined = $state();
+
+	// Animate in only if this message is the one the user has just sent.
+	//
+	// A keyed `{#each}` gives this component exactly one run, so the usual
+	// first-run guard would suppress every animation forever — invariant 7 does
+	// not transplant onto a list item, because newness is a property of the
+	// list's diff rather than of the item's own lifecycle. The store records it.
+	//
+	// The guard is a plain `let`, never `$state`: the effect reads and writes it,
+	// and a reactive guard re-triggers the effect it lives in.
+	let hasEntered = false;
+
+	$effect(() => {
+		if (hasEntered || !rootElement) return;
+		hasEntered = true;
+		if (animateIn) animateListItemIn(rootElement);
+	});
+
+	// `senderName` wins, matching `ChatMessage` — `??` rather than `||`, so an
+	// empty string is honoured as a name and only undefined falls through. This
+	// component hardcoded 'You' / 'Assistant', so a message carrying a sender name
+	// showed the generic label instead, and `MinimalStreamingChat` had no way to
+	// pass one either.
+	const defaultLabel = $derived(message.role === 'user' ? userLabel : assistantLabel);
+	const roleLabel = $derived(message.senderName ?? defaultLabel);
 
 	let contentElement: HTMLDivElement | undefined = $state();
 
@@ -33,17 +73,15 @@
 
 	// Attach copy buttons to code blocks after content is rendered
 	$effect(() => {
-		if (contentElement && message.role === 'assistant' && !isStreaming) {
-			const cleanup = attachSimpleCopyButtons(contentElement);
-			return cleanup;
-		}
+		if (!contentElement || message.role !== 'assistant' || isStreaming) return;
+		return attachSimpleCopyButtons(contentElement);
 	});
 </script>
 
-<div class="chat-message" data-role={message.role} data-streaming={isStreaming}>
+<div class="chat-message" data-role={message.role} data-streaming={isStreaming} bind:this={rootElement}>
 	<div class="chat-message__header">
 		<span class="chat-message__role">
-			{message.role === 'user' ? 'You' : 'Assistant'}
+			{roleLabel}
 		</span>
 		<span class="chat-message__time">{timeString()}</span>
 	</div>
@@ -66,36 +104,25 @@
 		margin: 8px 0;
 		border-radius: 8px;
 		max-width: 85%;
-		animation: slideIn 0.2s ease-out;
 	}
 
-	@keyframes slideIn {
-		from {
-			opacity: 0;
-			transform: translateY(8px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
 
 	.chat-message[data-role='user'] {
-		background: #007aff;
-		color: white;
+		background: hsl(var(--primary, 211.3 100% 50%));
+		color: hsl(var(--primary-foreground, 0 0% 100%));
 		margin-left: auto;
 		align-self: flex-end;
 	}
 
 	.chat-message[data-role='assistant'] {
-		background: #f0f0f0;
-		color: #1a1a1a;
+		background: hsl(var(--muted, 0 0% 94.1%));
+		color: hsl(var(--foreground, 0 0% 10.2%));
 		margin-right: auto;
 		align-self: flex-start;
 	}
 
 	.chat-message[data-role='assistant'][data-streaming='true'] {
-		background: #e8e8e8;
+		background: hsl(var(--muted, 0 0% 91%));
 	}
 
 	.chat-message__header {
@@ -260,9 +287,6 @@
 		padding: 6px;
 		cursor: pointer;
 		opacity: 0;
-		transition:
-			opacity 0.2s ease,
-			background 0.2s ease;
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -336,41 +360,4 @@
 		50% {
 			opacity: 0;
 		}
-	}
-
-	/* Dark mode support */
-	:global(.dark) .chat-message[data-role='assistant'] {
-		background: #2a2a2a;
-		color: #e0e0e0;
-	}
-
-	:global(.dark) .chat-message[data-role='assistant'][data-streaming='true'] {
-		background: #333333;
-	}
-
-	:global(.dark) .chat-message[data-role='user'] {
-		background: #0066cc;
-	}
-
-	:global(.dark) .chat-message__content :global(blockquote) {
-		border-left-color: rgba(255, 255, 255, 0.2);
-		background: rgba(255, 255, 255, 0.05);
-	}
-
-	:global(.dark) .chat-message__content :global(.inline-code) {
-		background: rgba(255, 255, 255, 0.1);
-	}
-
-	:global(.dark) .chat-message__content :global(th),
-	:global(.dark) .chat-message__content :global(td) {
-		border-color: rgba(255, 255, 255, 0.2);
-	}
-
-	:global(.dark) .chat-message__content :global(th) {
-		background: rgba(255, 255, 255, 0.05);
-	}
-
-	:global(.dark) .chat-message__content :global(hr) {
-		border-top-color: rgba(255, 255, 255, 0.2);
-	}
-</style>
+	}</style>

@@ -101,7 +101,7 @@
   <!-- Live Demo Section -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Interactive Demo</h3>
+      <h2 class="text-xl font-semibold mb-2">Interactive Demo</h2>
       <p class="text-muted-foreground text-sm">
         Click the button to open a modal dialog
       </p>
@@ -134,7 +134,7 @@
 
   <!-- Description -->
   <section class="space-y-4">
-    <h3 class="text-xl font-semibold">Usage</h3>
+    <h2 class="text-xl font-semibold">Usage</h2>
     <div class="prose prose-sm dark:prose-invert">
       <p>
         The Modal component provides a full-screen overlay dialog for displaying content
@@ -153,13 +153,13 @@
   <!-- Features Section -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Key Features</h3>
+      <h2 class="text-xl font-semibold mb-2">Key Features</h2>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div class="rounded-lg border bg-card p-6 space-y-3">
         <div class="text-2xl">🎯</div>
-        <h4 class="font-semibold">Focus Management</h4>
+        <h3 class="font-semibold">Focus Management</h3>
         <p class="text-sm text-muted-foreground">
           Automatically traps focus within the modal and restores it when closed
         </p>
@@ -167,7 +167,7 @@
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
         <div class="text-2xl">⌨️</div>
-        <h4 class="font-semibold">Keyboard Support</h4>
+        <h3 class="font-semibold">Keyboard Support</h3>
         <p class="text-sm text-muted-foreground">
           Press ESC to close, Tab to navigate between elements
         </p>
@@ -175,7 +175,7 @@
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
         <div class="text-2xl">🎨</div>
-        <h4 class="font-semibold">Customizable Styling</h4>
+        <h3 class="font-semibold">Customizable Styling</h3>
         <p class="text-sm text-muted-foreground">
           Full control over appearance with Tailwind CSS classes
         </p>
@@ -183,7 +183,7 @@
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
         <div class="text-2xl">✨</div>
-        <h4 class="font-semibold">Animated Transitions</h4>
+        <h3 class="font-semibold">Animated Transitions</h3>
         <p class="text-sm text-muted-foreground">
           Smooth enter and exit animations with Svelte transitions
         </p>

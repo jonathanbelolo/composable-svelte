@@ -9,6 +9,7 @@ import type { Store } from '@composable-svelte/core';
 import type {
 	CollaborativeStreamingChatState,
 	CollaborativeAction,
+	CollaborativeUser,
 	UserPresence
 } from './collaborative-types.js';
 import { CleanupTracker } from './cleanup-tracker.js';
@@ -21,13 +22,15 @@ import { CleanupTracker } from './cleanup-tracker.js';
  * - 'idle' after 2 minutes of inactivity
  * - 'away' after 5 minutes of inactivity
  *
+ * Takes no user id: the store already knows who you are, from
+ * `connectToConversation`. Passing one alongside was a parameter a consumer
+ * could get wrong and that changed nothing.
+ *
  * @param store - Collaborative store
- * @param userId - Current user ID
  * @returns Cleanup function
  */
 export function usePresenceTracking(
-	store: Store<CollaborativeStreamingChatState, CollaborativeAction>,
-	userId: string
+	store: Store<CollaborativeStreamingChatState, CollaborativeAction>
 ): () => void {
 	const cleanup = new CleanupTracker();
 
@@ -40,7 +43,7 @@ export function usePresenceTracking(
 
 		if (currentPresence !== 'active') {
 			currentPresence = 'active';
-			store.dispatch({ type: 'userPresenceChanged', userId, presence: 'active' });
+			store.dispatch({ type: 'updatePresence', presence: 'active' });
 		}
 	};
 
@@ -66,7 +69,7 @@ export function usePresenceTracking(
 
 		if (newPresence !== currentPresence) {
 			currentPresence = newPresence;
-			store.dispatch({ type: 'userPresenceChanged', userId, presence: newPresence });
+			store.dispatch({ type: 'updatePresence', presence: newPresence });
 		}
 	}, 30000); // Check every 30 seconds
 
@@ -118,7 +121,7 @@ export function useTypingEmitter(
 
 		// Reset auto-stop timer
 		if (stopTypingTimer) {
-			clearTimeout(stopTypingTimer);
+			cleanup.clearTimeout(stopTypingTimer);
 		}
 
 		stopTypingTimer = cleanup.setTimeout(() => {
@@ -132,7 +135,7 @@ export function useTypingEmitter(
 			store.dispatch({ type: 'stopTyping' });
 
 			if (stopTypingTimer) {
-				clearTimeout(stopTypingTimer);
+				cleanup.clearTimeout(stopTypingTimer);
 				stopTypingTimer = null;
 			}
 		}
@@ -142,7 +145,7 @@ export function useTypingEmitter(
 		if (isTyping) {
 			// Reset auto-stop timer
 			if (stopTypingTimer) {
-				clearTimeout(stopTypingTimer);
+				cleanup.clearTimeout(stopTypingTimer);
 			}
 
 			stopTypingTimer = cleanup.setTimeout(() => {
@@ -231,25 +234,25 @@ export function useCursorTracking(
 /**
  * Send periodic heartbeat to prevent timeout.
  *
+ * Takes no user id, for the same reason as `usePresenceTracking`.
+ *
  * @param store - Collaborative store
- * @param userId - Current user ID
  * @param intervalMs - Heartbeat interval in milliseconds
  * @returns Cleanup function
  */
 export function useHeartbeat(
 	store: Store<CollaborativeStreamingChatState, CollaborativeAction>,
-	userId: string,
 	intervalMs = 30000
 ): () => void {
 	const cleanup = new CleanupTracker();
 
-	// Send heartbeat periodically
+	// One dispatch, not two. `sendHeartbeat` already stamps `lastSeen`, and the
+	// second dispatch — a presence change to `active` — used to overwrite the very
+	// timestamp the first had just written. It also claimed the user was active
+	// on a timer, which is what `usePresenceTracking` is for and what it watches
+	// real input to decide.
 	cleanup.setInterval(() => {
-		const timestamp = Date.now();
-		store.dispatch({ type: 'heartbeatReceived', userId, timestamp });
-
-		// Also update last seen
-		store.dispatch({ type: 'userPresenceChanged', userId, presence: 'active' });
+		store.dispatch({ type: 'sendHeartbeat' });
 	}, intervalMs);
 
 	return () => cleanup.dispose();
@@ -264,7 +267,7 @@ export function useHeartbeat(
  * @returns Array of typing users
  */
 export function getTypingUsers(
-	users: Map<string, any>,
+	users: Map<string, CollaborativeUser>,
 	currentUserId: string | null,
 	target?: 'message' | 'edit'
 ): Array<{ id: string; name: string; color: string }> {
@@ -298,15 +301,23 @@ export function getTypingUsers(
  * @returns Array of active users
  */
 export function getActiveUsers(
-	users: Map<string, any>,
+	users: Map<string, CollaborativeUser>,
 	currentUserId: string | null
-): Array<{ id: string; name: string; color: string; presence: UserPresence; avatar?: string }> {
+): Array<{
+	id: string;
+	name: string;
+	color: string;
+	presence: UserPresence;
+	avatar?: string;
+	lastSeen: number;
+}> {
 	const activeUsers: Array<{
 		id: string;
 		name: string;
 		color: string;
 		presence: UserPresence;
 		avatar?: string;
+		lastSeen: number;
 	}> = [];
 
 	for (const [userId, user] of users.entries()) {
@@ -320,7 +331,16 @@ export function getActiveUsers(
 				name: user.name,
 				color: user.color,
 				presence: user.presence,
-				avatar: user.avatar
+				// Carried through because `PresenceList` renders a "last seen" label
+				// from it, and this selector is the documented way to feed that
+				// component — dropping the field here made the label unreachable
+				// through the only path anyone follows.
+				lastSeen: user.lastSeen,
+				// Spread rather than `avatar: user.avatar`: under
+				// `exactOptionalPropertyTypes` the declared `avatar?: string` means
+				// "absent or a string", and writing the key as `undefined` is
+				// neither. The `Map<string, any>` this used to take hid that.
+				...(user.avatar === undefined ? {} : { avatar: user.avatar })
 			});
 		}
 	}
@@ -336,7 +356,7 @@ export function getActiveUsers(
  * @returns Array of cursor positions with user info
  */
 export function getCursorPositions(
-	users: Map<string, any>,
+	users: Map<string, CollaborativeUser>,
 	currentUserId: string | null
 ): Array<{
 	userId: string;
@@ -375,25 +395,28 @@ export function getCursorPositions(
 /**
  * Smart typing indicator aggregation.
  *
- * Shows individual names for 1-2 users, "X people typing" for more.
+ * Shows individual names for 1-2 users, "X people are typing" for more.
+ *
+ * No trailing ellipsis: `TypingIndicator` renders animated dots beside this, and
+ * the two together read as "Alice is typing...•••". The component used to carry
+ * its own copy of this logic — same phrasing, different punctuation — and this
+ * one had no caller at all.
  *
  * @param typingUsers - Array of typing users
  * @returns Formatted typing indicator text
  */
-export function formatTypingIndicator(
-	typingUsers: Array<{ id: string; name: string; color: string }>
-): string {
+export function formatTypingIndicator(typingUsers: Array<{ name: string }>): string {
 	if (typingUsers.length === 0) {
 		return '';
 	}
 
 	if (typingUsers.length === 1) {
-		return `${typingUsers[0]!.name} is typing...`;
+		return `${typingUsers[0]!.name} is typing`;
 	}
 
 	if (typingUsers.length === 2) {
-		return `${typingUsers[0]!.name} and ${typingUsers[1]!.name} are typing...`;
+		return `${typingUsers[0]!.name} and ${typingUsers[1]!.name} are typing`;
 	}
 
-	return `${typingUsers.length} people are typing...`;
+	return `${typingUsers.length} people are typing`;
 }

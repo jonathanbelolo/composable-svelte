@@ -7,7 +7,7 @@
   <!-- Basic Variants -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Banner Variants</h3>
+      <h2 class="text-xl font-semibold mb-2">Banner Variants</h2>
       <p class="text-muted-foreground text-sm">
         Different banner styles for various message types
       </p>
@@ -39,7 +39,7 @@
   <!-- With Actions -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">With Action Buttons</h3>
+      <h2 class="text-xl font-semibold mb-2">With Action Buttons</h2>
       <p class="text-muted-foreground text-sm">
         Banners can include action buttons
       </p>
@@ -74,7 +74,7 @@
   <!-- Use Cases -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Common Use Cases</h3>
+      <h2 class="text-xl font-semibold mb-2">Common Use Cases</h2>
       <p class="text-muted-foreground text-sm">
         Real-world banner examples
       </p>

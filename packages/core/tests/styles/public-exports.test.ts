@@ -14,35 +14,64 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { readdirSync, readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
+import { listDirs, walkFiles } from '../repo/walk.js';
 
 const uiDir = fileURLToPath(new URL('../../src/lib/components/ui/', import.meta.url));
+/**
+ * Comment-stripped, for the same reason `barrel` above is: a raw substring match
+ * passes on a commented-out export. This guard shipped with that flaw and a
+ * hostile review caught it — `// export * from …` left the assertion green.
+ */
+const componentsExports = readFileSync(
+	fileURLToPath(new URL('../../src/lib/components-exports.ts', import.meta.url)),
+	'utf8'
+)
+	.replace(/\/\*[\s\S]*?\*\//g, '')
+	.replace(/\/\/.*$/gm, '');
 const barrelSource = readFileSync(join(uiDir, 'index.ts'), 'utf8');
 /** Comments name some of these symbols to explain their absence — scan code only. */
 const barrel = barrelSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
 
-/** Named exports declared by a sub-barrel's own `index.ts`. */
-function subBarrelExports(dir: string): string[] {
-	const file = join(uiDir, dir, 'index.ts');
-	if (!existsSync(file)) return [];
-	const source = readFileSync(file, 'utf8');
+/**
+ * The names a module's own text exports: `export { a, b as c }` clauses and
+ * declarations made in place (`export const x`, `export function f`). The
+ * first form read clauses only, so a symbol declared in a sub-barrel's index
+ * was invisible to the reachability arm — the R0 review planted one and the
+ * guard stayed green. Exported for its control.
+ */
+export function declaredExports(source: string): string[] {
 	const names: string[] = [];
-
 	for (const [, clause] of source.matchAll(/export\s+(?:type\s+)?\{([^}]+)\}/g)) {
-		for (const entry of clause.split(',')) {
+		for (const entry of clause!.split(',')) {
 			const name = entry.trim().split(/\s+as\s+/).pop()?.trim();
 			if (name && name !== 'default') names.push(name);
 		}
 	}
+	for (const [, name] of source.matchAll(
+		/^export\s+(?:async\s+|abstract\s+|declare\s+)?(?:const|let|var|function|class|type|interface|enum)\s+(\w+)/gm
+	)) {
+		names.push(name!);
+	}
+	return names;
+}
+
+/** Named exports declared by a sub-barrel's own `index.ts`. */
+export function subBarrelExports(dir: string): string[] {
+	const file = join(uiDir, dir, 'index.ts');
+	if (!existsSync(file)) return [];
+	const source = readFileSync(file, 'utf8');
+	const names: string[] = declaredExports(source);
+
 	// `export * from './x.types.js'` — pull the names out of the target file.
 	for (const [, target] of source.matchAll(/export\s+\*\s+from\s+'\.\/([\w.-]+)\.js'/g)) {
 		const tsFile = join(uiDir, dir, `${target}.ts`);
 		if (!existsSync(tsFile)) continue;
 		const decls = readFileSync(tsFile, 'utf8');
 		for (const [, name] of decls.matchAll(/^export\s+(?:type|interface|const|function)\s+(\w+)/gm)) {
-			names.push(name);
+			names.push(name!);
 		}
 	}
 	return [...new Set(names)];
@@ -64,14 +93,16 @@ const INTENTIONALLY_PRIVATE = new Set([
 	'getFirstDayOfMonth',
 	'getLastDayOfMonth',
 	'getCalendarDays',
+	'isSameMonth',
 	// file-upload internals
 	'generateFileId',
 	'formatFileSize'
 ]);
 
-const subBarrels = readdirSync(uiDir, { withFileTypes: true })
-	.filter((e) => e.isDirectory() && existsSync(join(uiDir, e.name, 'index.ts')))
-	.map((e) => e.name);
+// `listDirs`, not `readdirSync` + `isDirectory()`: the latter is false for a
+// symlinked directory, which is the defect `walk.ts` exists to remove.
+// `guard-integrity` scans this directory for the raw call now.
+const subBarrels = listDirs(uiDir).filter((name) => existsSync(join(uiDir, name, 'index.ts')));
 
 describe('components/ui public surface', () => {
 	it('finds the sub-barrels', () => {
@@ -80,7 +111,9 @@ describe('components/ui public surface', () => {
 
 	it.each(subBarrels)('re-exports everything from %s', (dir) => {
 		const declared = subBarrelExports(dir);
-		if (declared.length === 0) return;
+		// A floor, not a silent `return`: an extractor that stopped matching made
+		// every per-directory arm pass with nothing checked.
+		expect(declared.length, `${dir}/index.ts declares nothing the extractor can see`).toBeGreaterThan(0);
 
 		if (barrel.includes(`export * from './${dir}/index.js'`)) return;
 
@@ -105,5 +138,57 @@ describe('components/ui public surface', () => {
 				barrel.includes(`export * from './collapsible/index.js'`) || barrel.includes(name);
 			expect(reachable, `${name} must be reachable`).toBe(true);
 		}
+	});
+});
+
+/**
+ * The same defect, one level up.
+ *
+ * `src/lib/index.ts`'s only component re-export is `export * from
+ * './components-exports.js'`, and that file was a hand-written list of component
+ * *values*. So the fix above — making every type, reducer and state factory
+ * reachable from `components/ui` — stopped there and never reached the package
+ * root. 75 names, across 11 root-exported components, and `Collapsible` was
+ * unusable from `@composable-svelte/core` for exactly the reason the header
+ * comment describes.
+ *
+ * This asserts on source rather than on the built `dist`, so it runs without a
+ * build. The star is what carries the names; naming them individually here
+ * would just be a second list to drift.
+ */
+describe('package root public surface', () => {
+	it('re-exports the component sub-barrels', () => {
+		expect(
+			componentsExports.includes(`export * from './components/ui/index.js'`),
+			'components-exports.ts must star-export components/ui, or every prop type, ' +
+				'reducer and state factory becomes unreachable from the package root'
+		).toBe(true);
+	});
+});
+
+describe('the extractor and the private register', () => {
+	it('reads a real sub-barrel', () => {
+		// The positive control, on the same barrel component-coverage pins.
+		expect(subBarrelExports('breadcrumb')).toContain('Breadcrumb');
+	});
+
+	it.each([...INTENTIONALLY_PRIVATE])('%s is still declared somewhere under components/ui', (name) => {
+		// A private helper that was deleted leaves a permanent, invisible licence
+		// in the register. Same arm every other register in tests/repo keeps.
+		const declared = walkFiles(uiDir, { keep: (n) => n.endsWith('.ts') }).files.some((file) =>
+			new RegExp(`\\b(?:function|const|let|class)\\s+${name}\\b`).test(readFileSync(file, 'utf8'))
+		);
+		expect(declared, `${name} is no longer declared — drop it from INTENTIONALLY_PRIVATE`).toBe(true);
+	});
+});
+
+describe('the extractor itself', () => {
+	it('sees a clause and a declaration made in place', () => {
+		const names = declaredExports(
+			'export const zz = 1;\nexport { a, b as c };\nexport function f() {}\nexport type T = 1;\n' +
+				'export async function g() {}\nexport abstract class K {}\n'
+		);
+		// `async` and `abstract` were invisible to the first form (R0.5 review plant).
+		expect(names.sort()).toEqual(['K', 'T', 'a', 'c', 'f', 'g', 'zz']);
 	});
 });

@@ -1,9 +1,52 @@
 # Phase 16: Generalized WebGLOverlay
 
-**Status**: Planning (Production-Ready)
+**Status**: Shipped, partially — see "What actually shipped" below
 **Duration**: 6 weeks (revised after ultrathink review)
 **Priority**: High
 **Complexity**: High
+
+---
+
+## What actually shipped
+
+This is the original planning document, kept as written. The code it planned has
+shipped, but **not all of it** — the deliverables and progress lists below record
+the plan's intent, not the state of the package. What is real, as of the T9
+hardening sweep:
+
+**Built**: the `WebGLOverlay` component and the `createOverlay` core beneath it,
+the texture factory, position tracker and update scheduler, the shader compiler,
+program manager and render pipeline, structured `OverlayError`s, context
+loss/recovery, texture size and memory validation, device capability detection
+and the browser compatibility layer.
+
+**Not built**:
+
+- **The five wrapper components** — `OverlayImage`, `OverlayText`,
+  `OverlayVideo`, `OverlayCanvas`, `OverlayElement`. The overlay is driven
+  imperatively through a `bind:this` reference instead, and
+  `examples/shader-gallery` wrote its own `ShaderImage2` wrapper rather than
+  using one from the package.
+- **Text and HTML elements.** `html2canvas` was never added as a dependency, so
+  that path could not have run at any point; it was removed in T9 along with the
+  HTML sanitizer written to serve it. Only `<img>`, `<video>` and `<canvas>` can
+  be registered.
+- **The `reactive` update strategy**, which existed only to serve text and HTML
+  and went with them. `static`, `frame` and `manual` remain.
+- **`chromatic`, `glow` and `noise` presets.** 21 presets shipped: ripple, wave,
+  pixelate, blur, glitch and zoom.
+- **Texture pooling and visibility culling.** Program caching by shader source
+  did ship, with refcounts that release on unregister.
+
+**One claim below is false, and worth naming because it shaped the testing
+plan**: "Playwright for WebGL tests (jsdom cannot test WebGL)". jsdom cannot
+*run* WebGL, but the overlay's logic tests fine under jsdom against a fake `gl`
+object — which is how T9 found and pinned the resource leaks, since create/delete
+counters turn a leak into an equality. The package has no Playwright suite and
+did not need one. The general shape of the error is worth remembering: "this
+cannot be tested" is a claim that needs checking, not assuming.
+
+The performance targets below were never measured; there is no benchmark suite.
 
 ---
 

@@ -23,15 +23,15 @@
 		/**
 		 * Whether the radio is disabled
 		 */
-		disabled?: boolean;
+		disabled?: boolean | undefined;
 		/**
 		 * Optional class name
 		 */
-		class?: string;
+		class?: string | undefined;
 		/**
 		 * Label content
 		 */
-		children?: import('svelte').Snippet;
+		children?: import('svelte').Snippet | undefined;
 		/**
 		 * All other input attributes
 		 */
@@ -71,8 +71,7 @@
 				'disabled:cursor-not-allowed disabled:opacity-50',
 				className
 			)}
-			role="radio"
-			aria-checked={isChecked}
+				aria-checked={isChecked}
 			{...restProps}
 		/>
 

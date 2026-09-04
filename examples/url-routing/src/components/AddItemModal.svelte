@@ -37,9 +37,15 @@
 		quantity = 0;
 		price = 0;
 	}
+
+	function handleWindowKeydown(event: KeyboardEvent) {
+		if (event.key === 'Escape') onClose();
+	}
 </script>
 
-<div class="backdrop" onclick={onClose}></div>
+<svelte:window onkeydown={handleWindowKeydown} />
+
+<div class="backdrop" onclick={onClose} aria-hidden="true"></div>
 <div class="modal">
 	<form onsubmit={handleSubmit}>
 		<div class="modal-header">
@@ -150,7 +156,6 @@
 		width: 32px;
 		height: 32px;
 		border-radius: 4px;
-		transition: all 0.2s;
 	}
 
 	.close-button:hover {
@@ -188,7 +193,6 @@
 		border: 2px solid #e0e0e0;
 		border-radius: 8px;
 		font-size: 1rem;
-		transition: border-color 0.2s;
 	}
 
 	input:focus {
@@ -212,7 +216,6 @@
 		border-radius: 8px;
 		font-size: 1rem;
 		cursor: pointer;
-		transition: background 0.2s;
 	}
 
 	.cancel-button:hover {
@@ -228,7 +231,6 @@
 		font-size: 1rem;
 		font-weight: 600;
 		cursor: pointer;
-		transition: background 0.2s;
 	}
 
 	.submit-button:hover {

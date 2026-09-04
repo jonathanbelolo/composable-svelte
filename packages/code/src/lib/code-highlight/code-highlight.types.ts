@@ -56,6 +56,14 @@ export interface CodeHighlightState {
 
 	/** Highlighting error */
 	error: string | null;
+
+	/**
+	 * Why the last copy failed, or null.
+	 *
+	 * Separate from `error`, which is the *highlighting* error the banner
+	 * renders. `copyFailed` used to discard its message entirely.
+	 */
+	copyError: string | null;
 }
 
 /**
@@ -107,6 +115,7 @@ export function createInitialState(config: Partial<CodeHighlightState> = {}): Co
 		startLine: config.startLine ?? 1,
 		highlightLines: config.highlightLines ?? [],
 		isHighlighting: config.isHighlighting ?? false,
-		error: config.error ?? null
+		error: config.error ?? null,
+		copyError: config.copyError ?? null
 	};
 }

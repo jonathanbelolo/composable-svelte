@@ -9,7 +9,7 @@
 <div class="space-y-12">
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Interactive Demo</h3>
+      <h2 class="text-xl font-semibold mb-2">Interactive Demo</h2>
       <p class="text-muted-foreground text-sm">Multi-line text input for longer content</p>
     </div>
 
@@ -31,12 +31,12 @@
 
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Variants</h3>
+      <h2 class="text-xl font-semibold mb-2">Variants</h2>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">Default</h4>
+        <h3 class="font-semibold">Default</h3>
         <div class="space-y-2">
           <Label for="default-textarea">Description</Label>
           <Textarea id="default-textarea" placeholder="Enter description..." />
@@ -44,7 +44,7 @@
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">Disabled</h4>
+        <h3 class="font-semibold">Disabled</h3>
         <div class="space-y-2">
           <Label for="disabled-textarea">Readonly content</Label>
           <Textarea id="disabled-textarea" value="This content is disabled" disabled />
@@ -52,7 +52,7 @@
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">With row limit</h4>
+        <h3 class="font-semibold">With row limit</h3>
         <div class="space-y-2">
           <Label for="rows-textarea">Short message (3 rows)</Label>
           <Textarea id="rows-textarea" rows={3} placeholder="Compact textarea..." />
@@ -60,7 +60,7 @@
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">Large textarea</h4>
+        <h3 class="font-semibold">Large textarea</h3>
         <div class="space-y-2">
           <Label for="large-textarea">Long-form content (10 rows)</Label>
           <Textarea id="large-textarea" rows={10} placeholder="Write a long message..." />

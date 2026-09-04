@@ -291,6 +291,39 @@ describe('Registration Form - Integrated Mode', () => {
       expect(confirmPasswordError?.textContent).toContain('do not match');
     });
 
+    test('shows the mismatch before submit, and clears it when the other field is fixed', async () => {
+      // This form is `mode: 'all'` with `path: ['confirmPassword']` — the exact
+      // configuration where cross-field validation used to be dead. The rule ran
+      // only at submit, because per-field validation parsed one sub-schema in
+      // isolation and a `.refine()` lives on the parent object. The test above
+      // records that in its own name: "...on submit".
+      const { container } = render(App);
+      await waitForUpdates();
+
+      const passwordInput = container.querySelector('#password') as HTMLInputElement;
+      const confirmPasswordInput = container.querySelector('#confirmPassword') as HTMLInputElement;
+
+      await userEvent.clear(passwordInput);
+      await userEvent.type(passwordInput, 'Password123');
+      await userEvent.clear(confirmPasswordInput);
+      await userEvent.type(confirmPasswordInput, 'Password456');
+      await userEvent.tab();
+      await waitForAsyncValidation();
+
+      const error = () => container.querySelector('[data-testid="confirm-password-error"]');
+      expect(error(), 'the mismatch is still invisible until submit').toBeTruthy();
+      expect(error()?.textContent).toContain('do not match');
+
+      // Now fix it by editing the OTHER field. The message was about a state
+      // that no longer exists, and it used to stay on screen regardless.
+      await userEvent.clear(passwordInput);
+      await userEvent.type(passwordInput, 'Password456');
+      await userEvent.tab();
+      await waitForAsyncValidation();
+
+      expect(error(), 'a stale, now-false error survived on the untouched field').toBeFalsy();
+    });
+
     test('submits successfully when passwords match', async () => {
       const { container } = render(App);
       await waitForUpdates();

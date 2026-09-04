@@ -67,7 +67,7 @@
 
 <div class="space-y-6">
   <div class="space-y-2">
-    <h3 class="text-lg font-semibold">Line Chart with Zoom</h3>
+    <h2 class="text-lg font-semibold">Line Chart with Zoom</h2>
     <p class="text-sm text-muted-foreground">
       Time series visualization with zoom/pan and tooltips. Perfect for exploring stock prices and trends.
     </p>
@@ -76,10 +76,10 @@
   <div class="border rounded-lg p-6 bg-card space-y-4">
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-2">
-        <Button variant="outline" size="sm" onclick={handleZoomIn}>
+        <Button variant="outline" size="sm" onclick={handleZoomIn} aria-label="Zoom in">
           <ZoomIn class="h-4 w-4" />
         </Button>
-        <Button variant="outline" size="sm" onclick={handleZoomOut}>
+        <Button variant="outline" size="sm" onclick={handleZoomOut} aria-label="Zoom out">
           <ZoomOut class="h-4 w-4" />
         </Button>
         <Button variant="outline" size="sm" onclick={handleResetZoom}>
@@ -106,7 +106,7 @@
   </div>
 
   <div class="space-y-2">
-    <h4 class="text-sm font-semibold">Features:</h4>
+    <h3 class="text-sm font-semibold">Features:</h3>
     <ul class="text-sm text-muted-foreground space-y-1 list-disc list-inside">
       <li>Smooth line rendering</li>
       <li>Automatic date formatting</li>

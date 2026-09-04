@@ -207,7 +207,9 @@ describe('Routing Types', () => {
 
 			// Verify config structure
 			expect(config.basePath).toBe('/inventory');
-			expect(config.serializers.detailItem({ itemId: '123' })).toBe('/inventory/item-123');
+			// `serializers` is a record keyed by destination type, so a lookup is
+			// `T | undefined`; the assertion below is what pins its presence.
+			expect(config.serializers.detailItem!({ itemId: '123' })).toBe('/inventory/item-123');
 			expect(config.parsers.length).toBe(1);
 			expect(config.destinationToAction(null)).toEqual({ type: 'closeDestination' });
 		});
@@ -242,7 +244,7 @@ describe('Routing Types', () => {
 				destinationToAction: () => null
 			};
 
-			expect(config.serializers.detailItem({ itemId: '123' })).toBe('/item-123');
+			expect(config.serializers.detailItem!({ itemId: '123' })).toBe('/item-123');
 		});
 	});
 });

@@ -43,7 +43,7 @@
         <!-- Step Circle -->
         <button
           type="button"
-          class="flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all {isStepCurrent(step.step)
+          class="flex items-center justify-center w-10 h-10 rounded-full border-2 {isStepCurrent(step.step)
             ? 'border-blue-600 bg-blue-600 text-white'
             : isStepCompleted(step.step)
               ? 'border-green-600 bg-green-600 text-white'

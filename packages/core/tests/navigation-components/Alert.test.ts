@@ -5,6 +5,7 @@ import Alert from '../../src/lib/navigation-components/Alert.svelte';
 import { createStore } from '../../src/lib/store.svelte.js';
 import { scopeToDestination } from '../../src/lib/navigation/scope-to-destination.js';
 import { Effect } from '../../src/lib/effect.js';
+import { resetBodyScroll } from '../helpers/body-scroll.js';
 
 // ============================================================================
 // Test Fixtures
@@ -44,18 +45,14 @@ describe('Alert Component', () => {
       'destination'
     );
 
-    render(Alert, {
-      props: { store: scopedStore }
-    });
+    render(Alert, { store: scopedStore });
 
     const alert = page.getByRole('alertdialog');
     await expect.element(alert).toBeInTheDocument();
   });
 
   it('hides when store is null', async () => {
-    render(Alert, {
-      props: { store: null }
-    });
+    render(Alert, { store: null });
 
     // Check that no alertdialog exists
     const alerts = page.getByRole('alertdialog').elements();
@@ -88,9 +85,7 @@ describe('Alert Component', () => {
       'destination'
     );
 
-    render(Alert, {
-      props: { store: scopedStore }
-    });
+    render(Alert, { store: scopedStore });
 
     // Alert should be visible
     const alert = page.getByRole('alertdialog');
@@ -132,9 +127,7 @@ describe('Alert Component', () => {
       'destination'
     );
 
-    render(Alert, {
-      props: { store: scopedStore }
-    });
+    render(Alert, { store: scopedStore });
 
     // Alert should be visible
     const alert = page.getByRole('alertdialog');
@@ -178,9 +171,7 @@ describe('Alert Component', () => {
       'destination'
     );
 
-    render(Alert, {
-      props: { store: scopedStore, disableEscapeKey: true }
-    });
+    render(Alert, { store: scopedStore, disableEscapeKey: true });
 
     // Press Escape
     await userEvent.keyboard('{Escape}');
@@ -216,9 +207,7 @@ describe('Alert Component', () => {
       'destination'
     );
 
-    render(Alert, {
-      props: { store: scopedStore, disableClickOutside: true }
-    });
+    render(Alert, { store: scopedStore, disableClickOutside: true });
 
     // Trigger pointerdown event on document
     const pointerEvent = new PointerEvent('pointerdown', {
@@ -253,12 +242,10 @@ describe('Alert Component', () => {
     );
 
     render(Alert, {
-      props: {
         store: scopedStore,
         class: 'custom-alert-content',
         backdropClass: 'custom-backdrop'
-      }
-    });
+      });
 
     const alert = page.getByRole('alertdialog');
     await expect.element(alert).toHaveClass(/custom-alert-content/);
@@ -279,9 +266,7 @@ describe('Alert Component', () => {
       'destination'
     );
 
-    render(Alert, {
-      props: { store: scopedStore, unstyled: true }
-    });
+    render(Alert, { store: scopedStore, unstyled: true });
 
     const alert = page.getByRole('alertdialog');
     const className = alert.element().className;
@@ -303,13 +288,16 @@ describe('Alert Component', () => {
       'destination'
     );
 
-    render(Alert, {
-      props: { store: scopedStore }
-    });
+    // Reset first: body.style is shared across every test in the worker, and
+    // a lock leaked by an earlier test made the old form pass on its own.
+    resetBodyScroll();
+    expect(document.body.style.overflow).toBe('');
 
-    // Check body overflow style directly
-    const bodyStyle = document.body.style.overflow;
-    expect(bodyStyle).toBe('hidden');
+    const screen = render(Alert, { store: scopedStore });
+    expect(document.body.style.overflow).toBe('hidden');
+
+    screen.unmount();
+    expect(document.body.style.overflow).toBe('');
   });
 
   it('uses max-w-md (smaller than modal)', async () => {
@@ -327,9 +315,7 @@ describe('Alert Component', () => {
       'destination'
     );
 
-    render(Alert, {
-      props: { store: scopedStore }
-    });
+    render(Alert, { store: scopedStore });
 
     const alert = page.getByRole('alertdialog');
     await expect.element(alert).toHaveClass(/max-w-md/);

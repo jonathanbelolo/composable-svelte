@@ -44,18 +44,14 @@ describe('Sidebar Component', () => {
       'destination'
     );
 
-    render(Sidebar, {
-      props: { store: scopedStore }
-    });
+    render(Sidebar, { store: scopedStore });
 
     const sidebar = page.getByRole('navigation');
     await expect.element(sidebar).toBeInTheDocument();
   });
 
   it('hides when store is null', async () => {
-    render(Sidebar, {
-      props: { store: null }
-    });
+    render(Sidebar, { store: null });
 
     // Check that no complementary element exists
     const sidebars = page.getByRole('navigation').elements();
@@ -88,9 +84,7 @@ describe('Sidebar Component', () => {
       'destination'
     );
 
-    render(Sidebar, {
-      props: { store: scopedStore }
-    });
+    render(Sidebar, { store: scopedStore });
 
     // Sidebar should be visible
     const sidebar = page.getByRole('navigation');
@@ -129,9 +123,7 @@ describe('Sidebar Component', () => {
       'destination'
     );
 
-    render(Sidebar, {
-      props: { store: scopedStore, disableEscapeKey: true }
-    });
+    render(Sidebar, { store: scopedStore, disableEscapeKey: true });
 
     // Press Escape
     await userEvent.keyboard('{Escape}');
@@ -156,9 +148,7 @@ describe('Sidebar Component', () => {
       'destination'
     );
 
-    render(Sidebar, {
-      props: { store: scopedStore, width: '300px' }
-    });
+    render(Sidebar, { store: scopedStore, width: '300px' });
 
     const sidebar = page.getByRole('navigation');
     const style = sidebar.element().getAttribute('style');
@@ -180,9 +170,7 @@ describe('Sidebar Component', () => {
       'destination'
     );
 
-    render(Sidebar, {
-      props: { store: scopedStore }
-    });
+    render(Sidebar, { store: scopedStore });
 
     const sidebar = page.getByRole('navigation');
     await expect.element(sidebar).toHaveClass(/border-r/);
@@ -203,9 +191,7 @@ describe('Sidebar Component', () => {
       'destination'
     );
 
-    render(Sidebar, {
-      props: { store: scopedStore, side: 'right' }
-    });
+    render(Sidebar, { store: scopedStore, side: 'right' });
 
     const sidebar = page.getByRole('navigation');
     await expect.element(sidebar).toHaveClass(/border-l/);
@@ -227,11 +213,9 @@ describe('Sidebar Component', () => {
     );
 
     render(Sidebar, {
-      props: {
         store: scopedStore,
         class: 'custom-sidebar-content'
-      }
-    });
+      });
 
     const sidebar = page.getByRole('navigation');
     await expect.element(sidebar).toHaveClass(/custom-sidebar-content/);
@@ -252,9 +236,7 @@ describe('Sidebar Component', () => {
       'destination'
     );
 
-    render(Sidebar, {
-      props: { store: scopedStore, unstyled: true }
-    });
+    render(Sidebar, { store: scopedStore, unstyled: true });
 
     const sidebar = page.getByRole('navigation');
     const className = sidebar.element().className;
@@ -279,9 +261,7 @@ describe('Sidebar Component', () => {
       'destination'
     );
 
-    render(Sidebar, {
-      props: { store: scopedStore }
-    });
+    render(Sidebar, { store: scopedStore });
 
     // Check body overflow is NOT set to hidden (sidebars don't lock scroll)
     const bodyStyle = document.body.style.overflow;

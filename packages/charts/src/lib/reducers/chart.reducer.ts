@@ -7,8 +7,20 @@
  */
 
 import type { Reducer } from '@composable-svelte/core';
-import type { ChartState, ChartAction } from '../types/chart.types';
+import type { ChartState, ChartAction } from '../types/chart.types.js';
 import { Effect } from '@composable-svelte/core';
+
+/**
+ * The scale bounds, and the step `zoomIn`/`zoomOut` move by.
+ *
+ * Exported because `ChartPrimitive` hands `ZOOM_MIN`/`ZOOM_MAX` to d3-zoom's
+ * `scaleExtent`. One definition, two readers: the keyboard and the wheel cannot
+ * disagree about how far a chart zooms, and a later change to one cannot leave
+ * the other behind.
+ */
+export const ZOOM_MIN = 0.5;
+export const ZOOM_MAX = 10;
+export const ZOOM_STEP = 1.5;
 
 /**
  * @function chartReducer
@@ -30,7 +42,6 @@ import { Effect } from '@composable-svelte/core';
  * - `zoomComplete` - Complete animation
  * - `resetZoom` - Reset to identity transform
  * - `resize` - Update chart dimensions
- * - `updateSpec` - Update Observable Plot specification
  *
  * @example
  * ```typescript
@@ -67,12 +78,18 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
     // Data Actions
     // ========================================================================
 
+    // Every case here clears `focusedIndex`. A keyboard cursor is an index into
+    // `filteredData`, so once those rows change the index either points past the
+    // end or — worse, because nothing looks wrong — points at a different datum
+    // than the one that was announced. Clearing is the only outcome that cannot
+    // silently mislead; the next arrow press re-enters at the first point.
     case 'setData': {
       return [
         {
           ...state,
           data: action.data,
-          filteredData: action.data
+          filteredData: action.data,
+          focusedIndex: null
         },
         Effect.none()
       ];
@@ -83,7 +100,8 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
       return [
         {
           ...state,
-          filteredData
+          filteredData,
+          focusedIndex: null
         },
         Effect.none()
       ];
@@ -93,7 +111,8 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
       return [
         {
           ...state,
-          filteredData: state.data
+          filteredData: state.data,
+          focusedIndex: null
         },
         Effect.none()
       ];
@@ -104,6 +123,19 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
     // ========================================================================
 
     case 'selectPoint': {
+      // Idempotent by value, returning the *identical* state object. Re-clicking
+      // an already-selected point is ordinary chart use, and allocating a fresh
+      // `[action.data]` every time changed the array's identity, so `Chart`'s
+      // narrowed `$derived` fired `onSelectionChange` again with equal contents.
+      const sel = state.selection;
+      if (
+        sel.type === 'point' &&
+        sel.selectedIndices.length === 1 &&
+        sel.selectedIndices[0] === action.index &&
+        sel.selectedData[0] === action.data
+      ) {
+        return [state, Effect.none()];
+      }
       return [
         {
           ...state,
@@ -129,6 +161,21 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
         }
       });
 
+      // Idempotent by value, same reasoning as `selectPoint` and
+      // `clearSelection`. This is the case a real brush gesture hits:
+      // `ChartPrimitive.svelte:275` dispatches it on every brush end, so
+      // re-brushing the same points re-notified with equal contents.
+      const prev = state.selection;
+      if (
+        prev.type === 'range' &&
+        prev.range?.[0] === action.range[0] &&
+        prev.range?.[1] === action.range[1] &&
+        prev.selectedIndices.length === selectedIndices.length &&
+        prev.selectedIndices.every((v, i) => v === selectedIndices[i])
+      ) {
+        return [state, Effect.none()];
+      }
+
       return [
         {
           ...state,
@@ -139,6 +186,48 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
             range: action.range
           }
         },
+        Effect.none()
+      ];
+    }
+
+    case 'selectPoints': {
+      // The rows a brush actually caught. `selectRange` could not express this:
+      // it describes a contiguous span, so a gesture that caught the first and
+      // last points of a scattered cloud reported a range covering everything
+      // between them, and the reducer duly selected all of it. The user saw
+      // points highlighted that their brush never touched.
+      const indices: number[] = [];
+      const selectedData: any[] = [];
+      const seen = new Set<number>();
+
+      for (const index of action.indices) {
+        if (seen.has(index)) continue;
+        const datum = state.filteredData[index];
+        if (datum === undefined) continue;
+        seen.add(index);
+        indices.push(index);
+        selectedData.push(datum);
+      }
+
+      // An empty brush is a cleared selection, not a `brush` selection of
+      // nothing — otherwise `selection.type` would report an active brush that
+      // holds no rows.
+      const type = indices.length > 0 ? ('brush' as const) : ('none' as const);
+
+      // Idempotent by value, as every other selection case is. A brush end
+      // fires on each gesture, and re-brushing the same points would otherwise
+      // re-notify `onSelectionChange` with equal contents.
+      const prev = state.selection;
+      if (
+        prev.type === type &&
+        prev.selectedIndices.length === indices.length &&
+        prev.selectedIndices.every((v, i) => v === indices[i])
+      ) {
+        return [state, Effect.none()];
+      }
+
+      return [
+        { ...state, selection: { type, selectedData, selectedIndices: indices } },
         Effect.none()
       ];
     }
@@ -156,27 +245,12 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
       ];
     }
 
-    case 'brushMove': {
-      // Will be implemented with actual data filtering logic
-      return [
-        {
-          ...state,
-          selection: {
-            ...state.selection,
-            type: 'brush',
-            brushExtent: action.extent
-          }
-        },
-        Effect.none()
-      ];
-    }
-
-    case 'brushEnd': {
-      // Finalize selection based on brush extent
-      return [state, Effect.none()];
-    }
-
     case 'clearSelection': {
+      // Idempotent by value, same reasoning. Reachable with nothing selected —
+      // `ChartPrimitive.svelte:245` dispatches it whenever a brush is cleared.
+      if (state.selection.type === 'none' && state.selection.selectedData.length === 0) {
+        return [state, Effect.none()];
+      }
       return [
         {
           ...state,
@@ -184,6 +258,108 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
             type: 'none',
             selectedData: [],
             selectedIndices: []
+          }
+        },
+        Effect.none()
+      ];
+    }
+
+    // ========================================================================
+    // Keyboard Focus Actions
+    // ========================================================================
+    //
+    // A cursor over `filteredData`, moved by the arrow keys. Separate from
+    // `selection` on purpose: moving the cursor announces a point and rings it,
+    // and must not fire `onSelectionChange` — a consumer wiring that callback to
+    // a details panel would otherwise see the panel change on every keystroke.
+    // `selectFocused` is the deliberate act that crosses over.
+    //
+    // Every no-op returns the *identical* state object, matching `selectPoint`
+    // and `clearSelection` above. Holding an arrow key at the end of the data is
+    // ordinary use, and re-allocating an equal state on each repeat would churn
+    // `$store` for every one of them.
+
+    case 'focusPoint': {
+      // Out of range is ignored rather than clamped. This is the programmatic
+      // entry point, so a caller handing it a stale index should get nothing
+      // rather than a silently different point — the same reasoning that makes
+      // a data change clear the cursor.
+      if (
+        !Number.isInteger(action.index) ||
+        action.index < 0 ||
+        action.index >= state.filteredData.length
+      ) {
+        return [state, Effect.none()];
+      }
+      if (state.focusedIndex === action.index) return [state, Effect.none()];
+      return [{ ...state, focusedIndex: action.index }, Effect.none()];
+    }
+
+    case 'focusNext':
+    case 'focusPrevious':
+    case 'focusFirst':
+    case 'focusLast': {
+      const count = state.filteredData.length;
+      if (count === 0) {
+        // Nothing to put a cursor on. Not even `focusedIndex: null` is written,
+        // because it already is.
+        return [state, Effect.none()];
+      }
+
+      let next: number;
+      if (state.focusedIndex === null) {
+        // Entering the chart. Both arrows land on the first point rather than
+        // one of them wrapping to the last: the user is arriving, not
+        // continuing, and "the arrow moved me to the end" reads as a bug.
+        next = action.type === 'focusLast' ? count - 1 : 0;
+      } else if (action.type === 'focusNext') {
+        next = Math.min(state.focusedIndex + 1, count - 1);
+      } else if (action.type === 'focusPrevious') {
+        next = Math.max(state.focusedIndex - 1, 0);
+      } else {
+        next = action.type === 'focusFirst' ? 0 : count - 1;
+      }
+
+      // Clamped rather than wrapping. Wrapping means holding an arrow key
+      // silently cycles the whole series, and a screen reader user has no edge
+      // to feel; stopping at the end is how they know they reached it.
+      if (next === state.focusedIndex) return [state, Effect.none()];
+      return [{ ...state, focusedIndex: next }, Effect.none()];
+    }
+
+    case 'clearFocus': {
+      if (state.focusedIndex === null) return [state, Effect.none()];
+      return [{ ...state, focusedIndex: null }, Effect.none()];
+    }
+
+    case 'selectFocused': {
+      const index = state.focusedIndex;
+      if (index === null) return [state, Effect.none()];
+      const datum = state.filteredData[index];
+      // `noUncheckedIndexedAccess` makes this the length check as well, and it
+      // is a real case rather than a type-system formality: a cursor can outlive
+      // its row if a consumer mutates state outside the reducer.
+      if (datum === undefined) return [state, Effect.none()];
+
+      // Idempotent by value, exactly as `selectPoint` is, and for the same
+      // reason: Enter on an already-selected point is ordinary use.
+      const sel = state.selection;
+      if (
+        sel.type === 'point' &&
+        sel.selectedIndices.length === 1 &&
+        sel.selectedIndices[0] === index &&
+        sel.selectedData[0] === datum
+      ) {
+        return [state, Effect.none()];
+      }
+
+      return [
+        {
+          ...state,
+          selection: {
+            type: 'point',
+            selectedData: [datum],
+            selectedIndices: [index]
           }
         },
         Effect.none()
@@ -256,6 +432,30 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
       ];
     }
 
+    case 'zoomIn':
+    case 'zoomOut': {
+      // Same shape as `resetZoom`: record a target and let the component
+      // animate towards it. The bounds are `ChartPrimitive`'s d3-zoom
+      // `scaleExtent([0.5, 10])`, so a key press cannot reach a scale the wheel
+      // refuses — two paths to one behaviour disagreeing is how `enableTooltip`
+      // and `enableAnimations` became inert.
+      const factor = action.type === 'zoomIn' ? ZOOM_STEP : 1 / ZOOM_STEP;
+      const k = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, state.transform.k * factor));
+
+      // Already at the stop. Returning the identical state keeps a held `+` from
+      // re-entering the animation on every repeat.
+      if (k === state.transform.k) return [state, Effect.none()];
+
+      return [
+        {
+          ...state,
+          isAnimating: true,
+          targetTransform: { ...state.transform, k }
+        },
+        Effect.none()
+      ];
+    }
+
     // ========================================================================
     // Tooltip Actions - Handled by Observable Plot
     // ========================================================================
@@ -280,19 +480,6 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
     // Spec Updates
     // ========================================================================
 
-    case 'updateSpec': {
-      return [
-        {
-          ...state,
-          spec: {
-            ...state.spec,
-            ...action.spec
-          }
-        },
-        Effect.none()
-      ];
-    }
-
     default: {
       const _exhaustive: never = action;
       return [state, Effect.none()];
@@ -314,7 +501,7 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
  * - `selection`: No selection (type: 'none')
  * - `transform`: Identity transform {x: 0, y: 0, k: 1}
  * - `isAnimating`: false
- * - `transitionDuration`: 0.3s
+ * - `transitionDuration`: 400ms
  * - `spec`: Empty object (Observable Plot will use defaults)
  *
  * @example
@@ -346,7 +533,6 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
  * @template T - Type of data items in the dataset
  * @param {Object} config - Configuration object
  * @param {T[]} [config.data=[]] - Initial dataset
- * @param {Partial<ChartState['spec']>} [config.spec={}] - Observable Plot specification overrides
  * @param {{width: number, height: number}} [config.dimensions] - Chart dimensions (default: 600x400)
  * @returns {ChartState<T>} Initial chart state
  *
@@ -355,21 +541,23 @@ export const chartReducer: Reducer<ChartState, ChartAction, {}> = (
  */
 export function createInitialChartState<T = unknown>(config: {
   data?: T[];
-  spec?: Partial<ChartState['spec']>;
   dimensions?: { width: number; height: number };
+  /** Zoom animation length, in milliseconds. Default 400. */
+  transitionDuration?: number;
 }): ChartState<T> {
   const data = config.data ?? [];
 
   return {
     data,
     filteredData: data,
-    spec: config.spec ?? {},
     dimensions: config.dimensions ?? { width: 600, height: 400 },
     selection: {
       type: 'none',
       selectedData: [],
       selectedIndices: []
     },
+    // No keyboard cursor until the user arrows into the chart.
+    focusedIndex: null,
     transform: {
       x: 0,
       y: 0,
@@ -377,6 +565,6 @@ export function createInitialChartState<T = unknown>(config: {
     },
     // Tooltips handled by Observable Plot (no state needed)
     isAnimating: false,
-    transitionDuration: 0.3
+    transitionDuration: config.transitionDuration ?? 400
   };
 }

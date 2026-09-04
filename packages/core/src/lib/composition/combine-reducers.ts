@@ -24,18 +24,33 @@ import type { Reducer, Effect as EffectType } from '../types.js';
  * ```
  */
 export function combineReducers<State extends Record<string, any>, Action, Dependencies = any>(
+  // The mapped type alone infers `State` but leaves `Action` as `unknown`: a
+  // reverse-mapped type only yields inference candidates for the parameter
+  // under the key, so `Action` never gets one and the documented call form
+  // above did not typecheck for anyone. The intersection adds a second,
+  // non-mapped inference site for `Action` without loosening anything — a
+  // reducer disagreeing about the action type, a missing slice, and a slice
+  // whose state does not match are all still rejected.
   reducers: {
     [K in keyof State]: Reducer<State[K], Action, Dependencies>;
-  }
-): Reducer<State, Action, Dependencies> {
-  return (state, action, dependencies): readonly [State, EffectType<Action>] => {
+  } & Record<string, Reducer<any, Action, Dependencies>>
+): Reducer<State, Action, Dependencies>;
+
+// Implementation signature. The intersection above gives callers inference but
+// turns `reducers` into an index-signature type inside the body, where writing
+// `nextState[key]` on a generic `State` is no longer allowed. The overload
+// keeps the public contract exact and the body permissive.
+export function combineReducers(
+  reducers: Record<string, Reducer<any, any, any>>
+): Reducer<any, any, any> {
+  return (state, action, dependencies): readonly [any, EffectType<any>] => {
     let hasChanged = false;
-    const effects: EffectType<Action>[] = [];
-    const nextState = {} as State;
+    const effects: EffectType<any>[] = [];
+    const nextState: Record<string, unknown> = {};
 
     // Process each slice independently
     for (const key in reducers) {
-      const reducer = reducers[key];
+      const reducer = reducers[key]!;
       const previousStateForKey = state[key];
       const [nextStateForKey, effect] = reducer(previousStateForKey, action, dependencies);
 
@@ -49,7 +64,7 @@ export function combineReducers<State extends Record<string, any>, Action, Depen
     }
 
     // Return combined state and effects
-    const finalEffect: EffectType<Action> =
+    const finalEffect: EffectType<any> =
       effects.length === 0
         ? Effect.none()
         : effects.length === 1

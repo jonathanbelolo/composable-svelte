@@ -75,7 +75,7 @@
           initialOpacity: string | undefined;
         }
       ]
-    >;
+    > | undefined;
   }
 
   let {
@@ -113,30 +113,40 @@
   let contentElement: HTMLElement | undefined = $state();
   let positionTransform: string = $state('');
 
-  // Track last animated content to prevent duplicate animations
-  // Not $state: the effect below reads and writes this, and a reactive
-  // guard would re-trigger the effect it lives in (effect_update_depth_exceeded).
-  let lastAnimatedContent: any = null;
+
+  // The (status, content) pair this effect last acted on.
+  //
+  // Not $state: the effect below reads and writes it, and a reactive guard would
+  // re-trigger the effect it lives in (effect_update_depth_exceeded).
+  //
+  // Keyed on the *pair*, not on "have I animated anything yet". Those two
+  // questions only diverge when the component mounts already `presented` — SSR
+  // hydration of a page rendered with this overlay open — and the difference is
+  // a permanent deadlock: the collapse branch is refused, `dismissalCompleted`
+  // never fires, and the reducer's own `status !== 'presented'` guard then
+  // rejects every further dismiss.
+  let lastAnimated: { status: string; content: unknown } | null = null;
 
   // Watch presentation status and trigger animations
   $effect(() => {
     if (!presentation || !contentElement) return;
 
-    // `content` exists on every status except `idle`.
-    const currentContent = presentation.status === 'idle' ? null : presentation.content;
+    if (presentation.status === 'idle') {
+      lastAnimated = null;
+      return;
+    }
 
-    if (
-      presentation.status === 'presenting' &&
-      lastAnimatedContent !== currentContent
-    ) {
-      lastAnimatedContent = currentContent;
+    const { status, content } = presentation;
+    if (lastAnimated?.status === status && lastAnimated.content === content) return;
+    lastAnimated = { status, content };
+
+    if (status === 'presenting') {
       animatePopoverIn(contentElement, positionTransform, springConfig).then(() => {
         queueMicrotask(() => onPresentationComplete?.());
       });
     }
 
-    if (presentation.status === 'dismissing' && lastAnimatedContent !== null) {
-      lastAnimatedContent = null;
+    if (status === 'dismissing') {
       animatePopoverOut(contentElement, positionTransform, springConfig).then(() => {
         queueMicrotask(() => onDismissalComplete?.());
       });

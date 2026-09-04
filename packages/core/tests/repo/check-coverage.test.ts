@@ -1,0 +1,199 @@
+/**
+ * Every workspace must be covered by the `svelte-check` gate.
+ *
+ * `pnpm -r check` runs the script wherever it is defined and **skips every
+ * workspace that lacks it, silently and with exit 0**. That is not a
+ * hypothetical: CI ran `pnpm -r check` for months while only `core` and
+ * `graphics` declared the script, so fifteen workspaces — including six
+ * packages that had never had svelte-check run on them at all — were never
+ * measured. The step was green and meant almost nothing.
+ *
+ * Adding the missing scripts fixed that. It does not stop the twentieth
+ * workspace from being added ungated tomorrow, or a script from being quietly
+ * deleted the first time it turns red. This test is the part that holds.
+ *
+ * `tsc` cannot substitute for any of it: it never reads `.svelte`, and every
+ * workspace here ships `.svelte` files.
+ *
+ * Modelled on `tests/ssr/entry-graph.test.ts` — same shape, same reason for
+ * living in `core` (it is a repo-level invariant that needs a home, and `core`
+ * is the only workspace with a node-environment suite). `files: ["dist"]` keeps
+ * it out of the published tarball.
+ */
+
+import { describe, it, expect } from 'vitest';
+import { readFileSync, existsSync } from 'node:fs';
+import { listDirs } from './walk.js';
+import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
+
+const repoRoot = fileURLToPath(new URL('../../../../', import.meta.url));
+
+/**
+ * The script, byte-identical everywhere for a given config, so that a local
+ * `pnpm check` and CI cannot disagree.
+ *
+ * `--fail-on-warnings` is the flag that gates. `--threshold error` does not —
+ * it only filters which diagnostics are printed, which is why a `<button>`
+ * nested in a `<button>` was reported for months while the step stayed green.
+ *
+ * Two variants, and which one a workspace gets is not a preference: a
+ * `tsconfig.json` here excludes `**\/*.test.ts`, so checking against it leaves
+ * the test files unmeasured. A workspace that has a `tsconfig.test.json` must
+ * point `check` at it — that config is the only thing that puts tests under the
+ * gate. `tests/repo/typecheck-coverage.test.ts` is what verifies the config
+ * then actually resolves them.
+ */
+const checkScript = (tsconfig: string) =>
+	`svelte-check --tsconfig ./${tsconfig} --fail-on-warnings`;
+
+interface Workspace {
+	dir: string;
+	pkg: {
+		name?: string;
+		private?: boolean;
+		scripts?: Record<string, string>;
+		devDependencies?: Record<string, string>;
+	};
+}
+
+/**
+ * Resolve `pnpm-workspace.yaml`'s globs rather than hardcoding the directory
+ * list, so a workspace added under a new glob is picked up here too.
+ *
+ * The globs in this repo are all of the form `dir/*`; anything more exotic
+ * should fail loudly rather than be silently skipped.
+ */
+function workspaceDirs(): string[] {
+	const yaml = readFileSync(join(repoRoot, 'pnpm-workspace.yaml'), 'utf8');
+	const globs = [...yaml.matchAll(/^\s*-\s*'([^']+)'/gm)].map((m) => m[1]!);
+	expect(globs.length, 'pnpm-workspace.yaml declares no package globs').toBeGreaterThan(0);
+
+	return globs.flatMap((glob) => {
+		const [parent, star] = glob.split('/');
+		expect(star, `unsupported workspace glob: ${glob}`).toBe('*');
+		const parentDir = join(repoRoot, parent!);
+		return listDirs(parentDir)
+			.filter((name) => existsSync(join(parentDir, name, 'package.json')))
+			.map((name) => `${parent}/${name}`);
+	});
+}
+
+const workspaces: Workspace[] = workspaceDirs().map((dir) => ({
+	dir,
+	pkg: JSON.parse(readFileSync(join(repoRoot, dir, 'package.json'), 'utf8'))
+}));
+
+const isGated = (w: Workspace) => w.pkg.scripts?.check !== undefined;
+
+describe('svelte-check gate coverage', () => {
+	it('found every workspace', () => {
+		expect(workspaces.length).toBeGreaterThanOrEqual(19);
+	});
+
+	it.each(workspaces.map((w) => [w.dir, w] as const))('%s is gated', (dir, w) => {
+		// Unconditional. This assertion carried a NOT_YET_GATED allowlist while the
+		// gap was being closed; the allowlist is gone because it reached zero.
+		// Adding a workspace now means gating it in the same change.
+		expect(
+			isGated(w),
+			`${dir} has no \`check\` script. Every workspace in this repo ships ` +
+				`.svelte files, and \`tsc\` does not read them.`
+		).toBe(true);
+	});
+
+	const gatedWorkspaces = workspaces.filter(isGated);
+
+	it.each(gatedWorkspaces.map((w) => [w.dir, w] as const))(
+		'%s runs the canonical check script and declares svelte-check',
+		(dir, w) => {
+			// Byte-identical, so `pnpm check` locally is the same command CI runs.
+			// A workspace carrying a `tsconfig.test.json` must check against it;
+			// checking against `tsconfig.json` would exclude every test file.
+			const expected = checkScript(
+				existsSync(join(repoRoot, dir, 'tsconfig.test.json'))
+					? 'tsconfig.test.json'
+					: 'tsconfig.json'
+			);
+			expect(w.pkg.scripts!.check, `${dir}'s check script has drifted`).toBe(expected);
+
+			// pnpm puts the workspace-root `.bin` on PATH, so an undeclared
+			// svelte-check would still resolve — by accident. Declaring it is the
+			// same correction `bbab5ca` made for vitest.
+			expect(
+				w.pkg.devDependencies?.['svelte-check'],
+				`${dir} runs svelte-check without declaring it`
+			).toBeDefined();
+		}
+	);
+
+	it.each(gatedWorkspaces.filter((w) => !w.pkg.private).map((w) => [w.dir, w] as const))(
+		'%s checks before it publishes',
+		(dir, w) => {
+			// `tsc --noEmit` cannot see `.svelte`, and components are the product.
+			// Every packaging defect in the hardening register shipped through a
+			// green prepublishOnly.
+			//
+			// Match the whole step, not the substring `check` — `typecheck`
+			// contains it, so a substring assertion here passes on every package
+			// that runs typecheck and can never fail. It is a guard that cannot
+			// fail, which is not a guard.
+			const steps = (w.pkg.scripts?.prepublishOnly ?? '').split('&&').map((s) => s.trim());
+			expect(steps, `${dir} publishes without running its own check script`).toContain(
+				'pnpm run check'
+			);
+		}
+	);
+
+});
+
+/**
+ * A wildcard `exports` map must accept the `.js` form of its own subpaths.
+ *
+ * `"./*"` substitutes the match verbatim, so `pkg/foo.js` resolves to
+ * `dist/foo.js.js` — which does not exist. A consumer under
+ * `moduleResolution: nodenext` writes `.js` by habit and cannot reach any
+ * subpath at all. That is the exact configuration the 58-specifier sweep in
+ * fa796ee was justified by, and all six wildcard packages were broken on it.
+ *
+ * Verified against Node's real resolver before relying on it: with `"./*.js"`
+ * listed alongside `"./*"`, Node prefers the longer pattern and both forms
+ * resolve, while the exact `"./package.json"` key still wins over both.
+ */
+describe('wildcard exports accept the .js form', () => {
+	const wildcardPackages = workspaces.filter(
+		(w) => (w.pkg as { exports?: Record<string, unknown> }).exports?.['./*'] !== undefined
+	);
+
+	it('there are none left, so the rule below is dormant', () => {
+		// This arm used to assert the opposite — that wildcards existed — as its
+		// vacuity check, and it failed the moment the last one was narrowed. That
+		// is the arm working: an `it.each` over an empty list produces no tests
+		// and would have gone quiet without saying so.
+		//
+		// The rule itself is kept rather than deleted. It is correct, it is
+		// cheap, and it applies to any package that reintroduces a wildcard —
+		// which `export-surface.test.ts` will also refuse, so a new one fails
+		// twice with two different explanations rather than none.
+		expect(
+			wildcardPackages.map((w) => w.dir),
+			'a package has a "./*" exports map again — narrow it, or register it in ' +
+				'WILDCARD_EXPORTS_PENDING and make sure "./*.js" is mapped alongside it'
+		).toEqual([]);
+	});
+
+	it.each(wildcardPackages.map((w) => [w.dir, w] as const))(
+		'%s also maps ./*.js',
+		(dir, w) => {
+			const exports = (w.pkg as { exports: Record<string, unknown> }).exports;
+			expect(
+				exports['./*.js'],
+				`${dir}: has a "./*" wildcard but no "./*.js", so ` +
+					`\`${w.pkg.name}/some/module.js\` resolves to \`dist/some/module.js.js\` ` +
+					`and fails. nodenext consumers write the .js form.`
+			).toBeDefined();
+			// The two must agree, or the .js form silently resolves somewhere else.
+			expect(exports['./*.js']).toEqual(exports['./*']);
+		}
+	);
+});

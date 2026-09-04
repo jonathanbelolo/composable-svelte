@@ -118,7 +118,6 @@ $: currentShader = (() => {
     cursor: pointer;
     font-size: 14px;
     font-weight: 600;
-    transition: all 0.2s;
   }
 
   button:hover {

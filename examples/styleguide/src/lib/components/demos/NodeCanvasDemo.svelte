@@ -17,6 +17,7 @@
 		CardDescription,
 		CardContent
 	} from '@composable-svelte/core/components/ui';
+	import type { ConnectionLineType } from '@xyflow/svelte';
 	import { Button } from '@composable-svelte/core/components/ui';
 	import InputNodeComponent from './node-components/InputNode.svelte';
 	import TransformNodeComponent from './node-components/TransformNode.svelte';
@@ -26,16 +27,16 @@
 	// Custom Node Data Types
 	// ========================================================================
 
-	interface InputNodeData {
+	interface InputNodeData extends Record<string, unknown> {
 		value: string;
 		outputType: 'string' | 'number';
 	}
 
-	interface TransformNodeData {
+	interface TransformNodeData extends Record<string, unknown> {
 		operation: 'uppercase' | 'lowercase' | 'reverse';
 	}
 
-	interface OutputNodeData {
+	interface OutputNodeData extends Record<string, unknown> {
 		displayValue: string;
 	}
 
@@ -95,7 +96,12 @@
 		{ id: 'edge-2', source: 'transform-1', target: 'output-1', sourceHandle: 'output', targetHandle: 'input' }
 	];
 
-	const canvasStore = createStore({
+	// nodeCanvasReducer is generic; without explicit arguments createStore infers
+	// Action as unknown and the reducer no longer matches.
+	const canvasStore = createStore<
+		NodeCanvasState<CustomNodeData>,
+		NodeCanvasAction<CustomNodeData>
+	>({
 		initialState: createInitialNodeCanvasState({
 			nodes: Object.fromEntries(initialNodes.map((n) => [n.id, n])),
 			edges: Object.fromEntries(initialEdges.map((e) => [e.id, e]))
@@ -120,7 +126,7 @@
 		<div
 			class="bg-purple-50 dark:bg-purple-950 border border-purple-200 dark:border-purple-800 rounded-lg p-4"
 		>
-			<h4 class="font-semibold text-purple-900 dark:text-purple-100 mb-2">Key Features</h4>
+			<h3 class="font-semibold text-purple-900 dark:text-purple-100 mb-2">Key Features</h3>
 			<ul class="text-sm text-purple-800 dark:text-purple-200 space-y-1">
 				<li>✓ Drag & drop nodes with optional grid snapping</li>
 				<li>✓ Type-safe connection validation</li>
@@ -216,7 +222,7 @@
 							transform: TransformNodeComponent,
 							output: OutputNodeComponent
 						}}
-						connectionLineType="smoothstep"
+						connectionLineType={'smoothstep' as ConnectionLineType}
 					/>
 				</div>
 			</CardContent>

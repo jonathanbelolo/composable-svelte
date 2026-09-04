@@ -94,6 +94,24 @@ function getAllNodeIds<T>(nodes: TreeNode<T>[]): string[] {
 }
 
 /**
+ * Ids of nodes that have loaded children, so expanding them shows something.
+ *
+ * Deliberately excludes `lazy` nodes with no children yet: expanding one is only
+ * meaningful alongside the load `nodeExpanded` dispatches, and a bulk action
+ * firing one request per branch is a different feature.
+ */
+function getExpandableNodeIds<T>(nodes: TreeNode<T>[]): string[] {
+	const ids: string[] = [];
+	for (const node of nodes) {
+		if (node.children && node.children.length > 0) {
+			ids.push(node.id);
+			ids.push(...getExpandableNodeIds(node.children));
+		}
+	}
+	return ids;
+}
+
+/**
  * TreeView reducer.
  *
  * Handles:
@@ -529,8 +547,20 @@ export const treeViewReducer: Reducer<
 		}
 
 		case 'expandAll': {
-			const allIds = getAllNodeIds(state.nodes);
-			const newExpandedIds = new Set(allIds);
+			// Only branches whose children are already here.
+			//
+			// `getAllNodeIds` returns every id, so this used to mark leaves as
+			// expanded — invisible, since nothing renders differently for an
+			// expanded leaf — and, worse, marked *lazy* nodes expanded without
+			// dispatching their load. `nodeExpanded` adds a lazy node to
+			// `loadingIds` and fetches; this did neither, so the branch rendered
+			// open, empty and with no spinner, permanently.
+			// A union, not a replacement. Narrowing the set alone would let
+			// "Expand all" *close* anything already open that is not in it — a lazy
+			// node the user opened is in `expandedIds` and in `loadingIds` with no
+			// children yet, so it fell outside the new set and got collapsed
+			// mid-load, leaving `childrenLoaded` to land on a closed node.
+			const newExpandedIds = new Set([...state.expandedIds, ...getExpandableNodeIds(state.nodes)]);
 
 			return [
 				{

@@ -5,13 +5,30 @@
  */
 
 import type { Store } from '../types.js';
+import type { StateSerializer } from './serializer.js';
+
+/**
+ * The out-half of a {@link StateSerializer}.
+ *
+ * Taken as a `Pick` so a caller passes the whole pair object to both halves of
+ * the round trip; a replacer without its matching reviver writes a tag nothing
+ * untags.
+ */
+export type StateReplacer = Pick<StateSerializer, 'replacer'>;
 
 /**
  * Serializes store state to JSON string for client hydration.
  *
- * The state MUST be pure, serializable data (no functions, Map, Set, etc.).
- * This is enforced by Composable Svelte's architecture - state is always
- * plain objects/arrays/primitives.
+ * **This does not enforce anything, and it is important to know what it lets
+ * through.** It is `JSON.stringify` with a clearer error, so only a `BigInt` or
+ * a cycle actually throws. A `Date` becomes an ISO string, a `Map` or `Set`
+ * becomes `{}` with every entry lost, and an `undefined` property disappears —
+ * all silently, and all while TypeScript still claims the original type on the
+ * client.
+ *
+ * Pass a {@link StateSerializer} — `createTaggedSerializer()` handles `Date`,
+ * `Map` and `Set` — and give the *same object* to `parseState` or
+ * `hydrateStore` on the way back.
  *
  * @template State - The state type
  * @template Action - The action type
@@ -19,7 +36,8 @@ import type { Store } from '../types.js';
  * @param store - The store to serialize
  * @returns JSON string containing the serialized state
  *
- * @throws {TypeError} If state contains non-serializable values (should never happen)
+ * @throws {TypeError} On a `BigInt` or a circular reference. Note that a `Date`,
+ *   `Map` or `Set` does **not** throw — see above.
  *
  * @example
  * ```typescript
@@ -30,20 +48,25 @@ import type { Store } from '../types.js';
  *   dependencies: {}  // Empty on server
  * });
  *
- * const html = renderToHTML(App, { store });
+ * // The JSON itself — for a cache, a log, or a channel of your own.
  * const stateJSON = serializeStore(store);
  *
- * // Embed in HTML
+ * // **To put it in a `<script>` tag, use `buildHydrationScript` instead.**
+ * // This example used to interpolate `stateJSON` into a script tag by hand,
+ * // which is unsafe: a state value containing `</script>` closes the tag early
+ * // and everything after it is parsed as markup. `buildHydrationScript`
+ * // escapes `<` as a JSON escape, which survives `JSON.parse` and cannot
+ * // break out.
+ * const html = renderToHTML(App, { store });
  * const fullHTML = `
  *   ${html}
- *   <script id="__COMPOSABLE_SVELTE_STATE__" type="application/json">
- *     ${stateJSON}
- *   </script>
+ *   ${buildHydrationScript(store)}
  * `;
  * ```
  */
 export function serializeStore<State, Action>(
-  store: Store<State, Action>
+  store: Store<State, Action>,
+  serializer?: StateReplacer
 ): string {
   if (!store) {
     throw new TypeError('serializeStore: store is required');
@@ -52,7 +75,7 @@ export function serializeStore<State, Action>(
   try {
     // State should always be serializable by design
     // No need to validate - JSON.stringify will throw if not serializable
-    return JSON.stringify(store.state);
+    return JSON.stringify(store.state, serializer?.replacer);
   } catch (error) {
     // This should never happen if architecture is followed correctly
     throw new TypeError(
@@ -79,13 +102,13 @@ export function serializeStore<State, Action>(
  * const stateJSON = serializeState(state);
  * ```
  */
-export function serializeState<State>(state: State): string {
+export function serializeState<State>(state: State, serializer?: StateReplacer): string {
   if (state === undefined) {
     throw new TypeError('serializeState: state is required');
   }
 
   try {
-    return JSON.stringify(state);
+    return JSON.stringify(state, serializer?.replacer);
   } catch (error) {
     throw new TypeError(
       `serializeState: State is not serializable. ` +

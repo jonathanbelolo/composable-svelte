@@ -7,8 +7,8 @@
 	 */
 	interface Props {
 		startTime: number;
-		maxDuration?: number; // Optional max (e.g., 60 seconds)
-		onMaxDurationReached?: () => void;
+		maxDuration?: number | undefined; // Optional max (e.g., 60 seconds)
+		onMaxDurationReached?: (() => void) | undefined;
 	}
 
 	const { startTime, maxDuration, onMaxDurationReached }: Props = $props();
@@ -59,7 +59,7 @@
 		width: 8px;
 		height: 8px;
 		border-radius: 50%;
-		background: #dc2626;
+		background: hsl(var(--destructive, 0 72.2% 50.6%));
 		animation: pulse 1s ease-in-out infinite;
 	}
 
@@ -76,7 +76,7 @@
 	.recording-time {
 		font-size: 14px;
 		font-weight: 600;
-		color: #dc2626;
+		color: hsl(var(--destructive, 0 72.2% 50.6%));
 		min-width: 48px;
 	}
 

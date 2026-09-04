@@ -18,7 +18,7 @@ Audio playback, video embedding, and voice input components.
 **Technology Stack**:
 - **Web Audio API**: High-performance audio playback
 - **MediaRecorder API**: Voice recording and processing
-- **Platform Integration**: YouTube, Vimeo, Twitch, Dailymotion, Wistia, etc.
+- **Platform Integration**: YouTube, Vimeo and Twitch — exactly what `getSupportedPlatforms()` returns. Dailymotion, Wistia, TikTok, Twitter and a generic fallback have all been claimed here at some point; none has ever existed in the registry.
 
 **Core Components**:
 - `AudioPlayer` - Full-featured audio player with playlists
@@ -36,41 +36,42 @@ All components follow Composable Architecture patterns with dedicated reducers a
 
 ### Quick Start
 
-```typescript
-import { createStore } from '@composable-svelte/core';
-import {
-  MinimalAudioPlayer,
-  FullAudioPlayer,
-  audioPlayerReducer,
-  createInitialAudioPlayerState
-} from '@composable-svelte/media';
+```svelte
+<script lang="ts">
+  import { createStore } from '@composable-svelte/core';
+  import {
+    MinimalAudioPlayer,
+    FullAudioPlayer,
+    audioPlayerReducer,
+    createInitialAudioPlayerState
+  } from '@composable-svelte/media';
 
-// Create player store
-const playerStore = createStore({
-  initialState: createInitialAudioPlayerState({
-    tracks: [
-      {
-        id: '1',
-        title: 'Summer Breeze',
-        artist: 'Jazz Ensemble',
-        url: '/audio/track1.mp3',
-        duration: 245
-      },
-      {
-        id: '2',
-        title: 'Midnight Drive',
-        artist: 'Synthwave Collective',
-        url: '/audio/track2.mp3',
-        duration: 312
-      }
-    ]
-  }),
-  reducer: audioPlayerReducer,
-  dependencies: {}
-});
+  // Create player store
+  const playerStore = createStore({
+    initialState: createInitialAudioPlayerState({
+      tracks: [
+        {
+          id: '1',
+          title: 'Summer Breeze',
+          artist: 'Jazz Ensemble',
+          url: '/audio/track1.mp3',
+          duration: 245
+        },
+        {
+          id: '2',
+          title: 'Midnight Drive',
+          artist: 'Synthwave Collective',
+          url: '/audio/track2.mp3',
+          duration: 312
+        }
+      ]
+    }),
+    reducer: audioPlayerReducer,
+    dependencies: {}
+  });
+</script>
 
-// Render player
-<FullAudioPlayer {playerStore} />
+<FullAudioPlayer store={playerStore} />
 ```
 
 ### Component Variants
@@ -183,7 +184,7 @@ type AudioPlayerAction =
 
 ### Complete Example
 
-```typescript
+```svelte
 <script lang="ts">
 import { createStore } from '@composable-svelte/core';
 import {
@@ -251,11 +252,11 @@ function addTrackToPlaylist(track: AudioTrack) {
 
 ## VIDEO EMBED
 
-**Purpose**: Platform-agnostic video embedding for YouTube, Vimeo, Twitch, Dailymotion, and more.
+**Purpose**: Video embedding for YouTube, Vimeo and Twitch. A URL from anywhere else returns `null` from `detectVideo` and renders nothing.
 
 ### Quick Start
 
-```typescript
+```svelte
 import { VideoEmbed } from '@composable-svelte/media';
 
 <!-- YouTube video -->
@@ -278,21 +279,34 @@ import { VideoEmbed } from '@composable-svelte/media';
 
 - **YouTube** (youtube.com, youtu.be)
 - **Vimeo** (vimeo.com)
-- **Twitch** (twitch.tv - videos and clips)
-- **Dailymotion** (dailymotion.com)
-- **Wistia** (wistia.com)
-- **Generic video** (mp4, webm, ogg via HTML5 video element)
+- **Twitch** (twitch.tv — VODs and clips, which embed differently: a VOD is
+  `player.twitch.tv/?video=v<id>`, a clip is `clips.twitch.tv/embed?clip=<slug>`.
+  `VideoEmbed.kind` records which one was detected.)
+
+**Twitch needs a `parent`** matching the embedding page, and `detectVideo` does
+not set one — it cannot know where the result will be rendered, and guessing
+`localhost` is what used to break server-rendered pages. `<VideoEmbed>` supplies
+it; a caller building URLs directly passes `parent` in `EmbedOptions`.
 
 ### Props
 
-- `url: string` - Video URL (required)
-- `aspectRatio: '16:9' | '4:3' | '1:1' | '21:9'` - Aspect ratio (default: '16:9')
-- `autoplay: boolean` - Auto-play video (default: false)
-- `muted: boolean` - Start muted (default: false)
-- `controls: boolean` - Show controls (default: true)
-- `loop: boolean` - Loop video (default: false)
-- `startTime: number` - Start position in seconds (optional)
-- `class: string` - Custom CSS class (optional)
+Exactly one of `url` or `video` is required — a union, so passing both or
+neither is a compile error.
+
+- `url: string` - Video URL; the platform is detected. A URL from no known
+  platform renders nothing.
+- `video: VideoEmbed` - An already-detected video from `detectVideo()`, for when
+  you need the metadata before rendering.
+- `aspectRatio: '16:9' | '4:3' | '1:1' | '9:16'` - overrides the platform default
+- `autoplay: boolean` - browsers block this unless `muted` is also set
+- `muted: boolean` - start muted (default: false)
+- `showTitle: boolean` - show `video.title` above the embed (default: false)
+- `class: string` - custom CSS class
+
+`controls`, `loop` and `startTime` are **not** props, though this file listed
+them. `loop` and `startTime` exist in `EmbedOptions` and reach an embed only
+through `buildEmbedUrl`; `controls` exists nowhere. `'21:9'` was listed as an
+aspect ratio and is not in the union.
 
 ### Utility Functions
 
@@ -305,25 +319,26 @@ import {
 } from '@composable-svelte/media';
 
 // Detect platform from URL
-const platform = detectVideo('https://www.youtube.com/watch?v=abc123');
-// Returns: 'youtube'
+const video = detectVideo('https://www.youtube.com/watch?v=abc123');
+// Returns a VideoEmbed, or null:
+// { url, platform: 'youtube', videoId: 'abc123', aspectRatio: '16:9', embedUrl }
 
 // Extract all videos from markdown
 const videos = extractVideosFromMarkdown(markdownText);
-// Returns: [{ url: '...', platform: 'youtube', id: 'abc123' }, ...]
+// Returns: [{ url, platform: 'youtube', videoId: 'abc123', ... }, ...] in document order
 
 // Get platform configuration
 const config = getPlatformConfig('youtube');
-// Returns: { name: 'YouTube', embedTemplate: '...', ... }
+// Returns: { name, urlPatterns, extractId, buildEmbedUrl, defaultAspectRatio }
 
 // List all supported platforms
 const platforms = getSupportedPlatforms();
-// Returns: ['youtube', 'vimeo', 'twitch', ...]
+// Returns: ['youtube', 'vimeo', 'twitch'] — all of them, not a prefix
 ```
 
 ### Examples
 
-```typescript
+```svelte
 <!-- Basic YouTube embed -->
 <VideoEmbed url="https://www.youtube.com/watch?v=dQw4w9WgXcQ" />
 
@@ -333,30 +348,21 @@ const platforms = getSupportedPlatforms();
   aspectRatio="4:3"
 />
 
-<!-- Twitch clip with autoplay -->
+<!-- Twitch clip. The detected URL form is twitch.tv/<channel>/clip/<slug>;
+     a clips.twitch.tv/<slug> share link is not matched. -->
 <VideoEmbed
-  url="https://clips.twitch.tv/ClipSlugHere"
+  url="https://www.twitch.tv/somestreamer/clip/BraveHilariousOtterPeteZaroll"
   autoplay={true}
   muted={true}
 />
 
-<!-- YouTube starting at specific time -->
-<VideoEmbed
-  url="https://www.youtube.com/watch?v=abc123"
-  startTime={90}
-/>
-
-<!-- Generic video file -->
-<VideoEmbed
-  url="/videos/tutorial.mp4"
-  controls={true}
-  loop={false}
-/>
+<!-- Twitch VOD -->
+<VideoEmbed url="https://www.twitch.tv/videos/123456789" />
 ```
 
 ### Markdown Integration
 
-```typescript
+```svelte
 <script lang="ts">
 import { VideoEmbed, extractVideosFromMarkdown } from '@composable-svelte/media';
 
@@ -387,36 +393,38 @@ const videos = extractVideosFromMarkdown(markdown);
 
 ### Quick Start
 
-```typescript
-import { createStore } from '@composable-svelte/core';
-import {
-  VoiceInput,
-  voiceInputReducer,
-  createInitialVoiceInputState
-} from '@composable-svelte/media';
+```svelte
+<script lang="ts">
+  import { createStore } from '@composable-svelte/core';
+  import {
+    VoiceInput,
+    voiceInputReducer,
+    createInitialVoiceInputState
+  } from '@composable-svelte/media';
 
-// Create voice input store
-const voiceStore = createStore({
-  initialState: createInitialVoiceInputState({
-    mode: 'push-to-talk'
-  }),
-  reducer: voiceInputReducer,
-  dependencies: {
-    onAudioData: async (audioBlob) => {
-      // Send to transcription service
-      const formData = new FormData();
-      formData.append('audio', audioBlob);
-      const response = await fetch('/api/transcribe', {
-        method: 'POST',
-        body: formData
-      });
-      const { text } = await response.json();
-      return text;
+  // Create voice input store
+  const voiceStore = createStore({
+    // `createInitialVoiceInputState()` takes no arguments; the mode is chosen by
+    // dispatching, not by seeding the state.
+    initialState: createInitialVoiceInputState(),
+    reducer: voiceInputReducer,
+    dependencies: {
+      onAudioData: async (audioBlob) => {
+        // Send to transcription service
+        const formData = new FormData();
+        formData.append('audio', audioBlob);
+        const response = await fetch('/api/transcribe', {
+          method: 'POST',
+          body: formData
+        });
+        const { text } = await response.json();
+        return text;
+      }
     }
-  }
-});
+  });
+</script>
 
-<VoiceInput {voiceStore} />
+<VoiceInput store={voiceStore} />
 ```
 
 ### Recording Modes
@@ -445,7 +453,6 @@ const voiceStore = createStore({
 interface VoiceInputState {
   // Recording
   isRecording: boolean;
-  isPaused: boolean;
   mode: 'push-to-talk' | 'conversation';
 
   // Audio
@@ -510,7 +517,7 @@ interface VoiceInputDependencies {
 
 ### Complete Example
 
-```typescript
+```svelte
 <script lang="ts">
 import { createStore, Effect } from '@composable-svelte/core';
 import {
@@ -521,9 +528,9 @@ import {
 
 // Create voice input store with transcription
 const voiceStore = createStore({
-  initialState: createInitialVoiceInputState({
-    mode: 'push-to-talk'
-  }),
+  // `createInitialVoiceInputState()` takes no arguments; the mode is chosen by
+  // dispatching, not by seeding the state.
+  initialState: createInitialVoiceInputState(),
   reducer: voiceInputReducer,
   dependencies: {
     // Send audio to Whisper API for transcription
@@ -606,29 +613,27 @@ if ($voiceStore.permissionDenied) {
 
 ```typescript
 import {
-  AudioManager,
-  createAudioManager,
-  getAudioManager,
-  deleteAudioManager
+  createAudioPlayerManager,
+  getAudioPlayerManager,
+  deleteAudioPlayerManager,
+  type AudioPlayerAction,
+  type AudioTrack
 } from '@composable-svelte/media';
 
-// Create manager
-const manager = createAudioManager({
-  id: 'my-player',
-  onTimeUpdate: (time) => console.log('Time:', time),
-  onEnded: () => console.log('Ended'),
-  onError: (error) => console.error('Error:', error)
-});
+// The manager reports back through one callback; it takes no id.
+const onAction = (action: AudioPlayerAction) => console.log(action.type);
+const manager = createAudioPlayerManager({ onAction });
 
-// Load and play
-await manager.load('/audio/track.mp3');
-manager.play();
+const track: AudioTrack = { id: '1', title: 'Track One', url: '/audio/track.mp3' };
+manager.loadTrack(track);
+manager.pause();
+manager.seek(30);
+manager.setVolume(0.5);
 
-// Get existing manager
-const existing = getAudioManager('my-player');
-
-// Cleanup
-deleteAudioManager('my-player');
+// Registered managers are addressed by id — get-or-create, so the config
+// is required on every call.
+const registered = getAudioPlayerManager('my-player', { onAction });
+deleteAudioPlayerManager('my-player');
 ```
 
 ---
@@ -672,7 +677,7 @@ deleteAudioManager('my-player');
 - **media**: Audio players, video embeds, voice input
 - **chat**: Real-time chat, streaming responses
 - **code**: Code editors, syntax highlighting, visual programming
-- **graphics**: 3D scenes, WebGPU/WebGL rendering
+- **graphics**: 3D scenes, WebGL rendering
 - **charts**: 2D data visualization
 
 ---
@@ -723,7 +728,8 @@ const store = new TestStore({
 // Test recording start
 await store.send({ type: 'startRecording' });
 await store.receive({ type: 'recordingStarted' }, (state) => {
-  expect(state.isRecording).toBe(true);
+  // `VoiceInputState` has no `isRecording`; the status field carries it.
+  expect(state.status).toBe('recording');
 });
 ```
 

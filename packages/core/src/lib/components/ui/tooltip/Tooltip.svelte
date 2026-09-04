@@ -29,24 +29,24 @@
 		 * Tooltip position relative to trigger element.
 		 * @default 'top'
 		 */
-		position?: 'top' | 'bottom' | 'left' | 'right';
+		position?: 'top' | 'bottom' | 'left' | 'right' | undefined;
 
 		/**
 		 * Delay before showing tooltip (ms).
 		 * @default 300
 		 */
-		delay?: number;
+		delay?: number | undefined;
 
 		/**
 		 * Additional CSS classes for the tooltip container.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Disable tooltip.
 		 * @default false
 		 */
-		disabled?: boolean;
+		disabled?: boolean | undefined;
 
 		/**
 		 * Trigger element (wrapped children).
@@ -67,7 +67,13 @@
 	const store = createStore({
 		initialState: initialTooltipState,
 		reducer: tooltipReducer,
-		dependencies: { hoverDelay: delay }
+		// Getter for the same reason as FileUpload: a literal would freeze the
+		// mount-time delay and ignore later changes to the prop.
+		dependencies: {
+			get hoverDelay() {
+				return delay;
+			}
+		}
 	});
 
 	// Subscribe to store for reactivity
@@ -109,13 +115,17 @@
 	}
 </script>
 
+<!-- This wrapper only positions the tooltip; the real trigger is the caller's
+     own element, rendered via `children`. Giving the wrapper an interactive
+     role would misdescribe it and simply trade this warning for another. -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
 	bind:this={wrapperElement}
 	class="relative inline-flex"
 	onmouseenter={handleMouseEnter}
 	onmouseleave={handleMouseLeave}
-	onfocus={handleMouseEnter}
-	onblur={handleMouseLeave}
+	onfocusin={handleMouseEnter}
+	onfocusout={handleMouseLeave}
 >
 	<!-- Trigger element -->
 	{@render children()}

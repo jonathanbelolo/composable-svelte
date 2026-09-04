@@ -48,9 +48,21 @@ export const toastReducer: Reducer<ToastState, ToastAction, ToastDependencies> =
 			// Add toast to queue
 			let newToasts = [...state.toasts, toast];
 
-			// Enforce max toasts limit (remove oldest)
-			if (newToasts.length > state.maxToasts) {
-				newToasts = newToasts.slice(newToasts.length - state.maxToasts);
+			// Enforce the cap, evicting toasts that are already animating out
+			// FIRST. Two problems appeared once removal was deferred: a toast
+			// mid-dismissal held a slot and a fully live one was evicted in its
+			// place, and a dismissing toast sliced out here never reached
+			// `toastRemoved`, so `onToastDismissed` fired zero times for a
+			// dismissal the user had actually performed.
+			//
+			// Evicted dismissing toasts are reported here instead, so the
+			// callback fires exactly once on every path.
+			const evicted: Toast[] = [];
+			while (newToasts.length > state.maxToasts) {
+				const victimIndex = newToasts.findIndex((t) => t.dismissing);
+				const index = victimIndex === -1 ? 0 : victimIndex;
+				evicted.push(newToasts[index]!);
+				newToasts = [...newToasts.slice(0, index), ...newToasts.slice(index + 1)];
 			}
 
 			const newState: ToastState = {
@@ -67,6 +79,18 @@ export const toastReducer: Reducer<ToastState, ToastAction, ToastDependencies> =
 						dispatch({ type: 'toastAutoDismissed', id: toast.id });
 					})
 				);
+			}
+
+			// Report any dismissal the cap cut short, so `onToastDismissed` fires
+			// exactly once per dismissed toast on every path.
+			for (const victim of evicted) {
+				if (victim.dismissing && deps?.onToastDismissed) {
+					effects.push(
+						Effect.run<ToastAction>(async () => {
+							deps.onToastDismissed?.(victim);
+						})
+					);
+				}
 			}
 
 			// Call onToastAdded callback
@@ -86,26 +110,28 @@ export const toastReducer: Reducer<ToastState, ToastAction, ToastDependencies> =
 
 		case 'toastDismissed': {
 			const toast = state.toasts.find((t) => t.id === action.id);
-			if (!toast) {
+			// Idempotent: a second dismiss while already animating out is a no-op,
+			// returning the identical state so `dispatchCore` does not notify.
+			if (!toast || toast.dismissing) {
 				return [state, Effect.none<ToastAction>()];
 			}
 
+			// Marked, not removed. The view animates it out and `toastRemoved`
+			// takes it away — toasts used to pop out of existence.
 			const newState: ToastState = {
 				...state,
-				toasts: state.toasts.filter((t) => t.id !== action.id)
+				toasts: state.toasts.map((t) => (t.id === action.id ? { ...t, dismissing: true } : t))
 			};
 
-			// Call onToastDismissed callback
-			const effect = deps?.onToastDismissed
-				? Effect.run<ToastAction>(async () => {
-						deps.onToastDismissed?.(toast);
-					})
-				: Effect.none<ToastAction>();
-
-			return [newState, effect];
+			return [
+				newState,
+				Effect.afterDelay<ToastAction>(state.exitDurationMs, (dispatch) =>
+					dispatch({ type: 'toastRemoved', id: action.id })
+				)
+			];
 		}
 
-		case 'toastAutoDismissed': {
+		case 'toastRemoved': {
 			const toast = state.toasts.find((t) => t.id === action.id);
 			if (!toast) {
 				return [state, Effect.none<ToastAction>()];
@@ -116,7 +142,7 @@ export const toastReducer: Reducer<ToastState, ToastAction, ToastDependencies> =
 				toasts: state.toasts.filter((t) => t.id !== action.id)
 			};
 
-			// Call onToastDismissed callback
+			// The dependency fires here, once, when the toast is actually gone.
 			const effect = deps?.onToastDismissed
 				? Effect.run<ToastAction>(async () => {
 						deps.onToastDismissed?.(toast);
@@ -125,54 +151,66 @@ export const toastReducer: Reducer<ToastState, ToastAction, ToastDependencies> =
 
 			return [newState, effect];
 		}
+
+		case 'toastAutoDismissed':
+			// Same path as a manual dismiss, so an auto-dismissed toast animates
+			// out too rather than vanishing.
+			return toastReducer(state, { type: 'toastDismissed', id: action.id }, deps);
 
 		case 'toastActionClicked': {
 			const toast = state.toasts.find((t) => t.id === action.id);
-			if (!toast || !toast.action) {
+			// `dismissing` guard, matching `toastDismissed`. Removal is deferred
+			// for the exit animation, so the action button stays in the DOM and
+			// clickable for that whole window — without this a second click
+			// re-ran `onClick`, which for an "Undo" or "Retry" is a data bug.
+			if (!toast || !toast.action || toast.dismissing) {
 				return [state, Effect.none<ToastAction>()];
 			}
 
-			// Execute the action and dismiss the toast
-			const newState: ToastState = {
-				...state,
-				toasts: state.toasts.filter((t) => t.id !== action.id)
-			};
+			// Run the action, then dismiss through the normal path so it animates
+			// out and fires `onToastDismissed` exactly once, in one place.
+			const [dismissedState, dismissEffect] = toastReducer(
+				state,
+				{ type: 'toastDismissed', id: action.id },
+				deps
+			);
 
-			const effects: EffectType<ToastAction>[] = [
-				Effect.run<ToastAction>(async () => {
-					toast.action?.onClick();
-				})
-			];
-
-			if (deps?.onToastDismissed) {
-				effects.push(
+			return [
+				dismissedState,
+				Effect.batch(
 					Effect.run<ToastAction>(async () => {
-						deps.onToastDismissed?.(toast);
-					})
-				);
-			}
-
-			return [newState, Effect.batch(...effects)];
+						toast.action?.onClick();
+					}),
+					dismissEffect
+				)
+			];
 		}
 
 		case 'allToastsDismissed': {
-			const dismissedToasts = state.toasts;
+			// Marks, like every other dismissal path. Clearing the array outright
+			// meant these toasts still popped out of existence with no exit
+			// animation — the very thing the two-step dismissal exists to fix,
+			// left unfixed on this path.
+			const pending = state.toasts.filter((t) => !t.dismissing);
+			if (pending.length === 0) {
+				return [state, Effect.none<ToastAction>()];
+			}
 
 			const newState: ToastState = {
 				...state,
-				toasts: []
+				toasts: state.toasts.map((t) => (t.dismissing ? t : { ...t, dismissing: true }))
 			};
 
-			// Call onToastDismissed for each toast
-			const effect = deps?.onToastDismissed
-				? Effect.run<ToastAction>(async () => {
-						dismissedToasts.forEach((toast) => {
-							deps.onToastDismissed?.(toast);
-						});
-					})
-				: Effect.none<ToastAction>();
-
-			return [newState, effect];
+			return [
+				newState,
+				Effect.batch(
+					...pending.map((toast) =>
+						Effect.afterDelay<ToastAction>(state.exitDurationMs, (dispatch) =>
+							dispatch({ type: 'toastRemoved', id: toast.id })
+						)
+					)
+				)
+			];
 		}
 
 		case 'maxToastsChanged': {

@@ -65,8 +65,10 @@ export function fileUploadReducer(
               dispatch({ type: 'uploadStarted', fileId: uploadedFile.id });
 
               try {
-                // Call the upload function
-                await deps.onUpload!(uploadedFile.file);
+                // Call the upload function, giving it a progress channel.
+                await deps.onUpload!(uploadedFile.file, (percent) => {
+                  dispatch({ type: 'uploadProgress', fileId: uploadedFile.id, progress: percent });
+                });
                 dispatch({ type: 'uploadCompleted', fileId: uploadedFile.id });
               } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Upload failed';
@@ -130,9 +132,21 @@ export function fileUploadReducer(
     case 'uploadProgress': {
       const { fileId, progress } = action;
 
-      const newFiles = state.files.map((f) =>
-        f.id === fileId ? { ...f, progress: Math.min(100, Math.max(0, progress)) } : f
-      );
+      // Only while uploading. A callback arriving after `uploadCompleted` would
+      // otherwise rewind a finished bar from 100% back to mid-upload — and a
+      // consumer's progress reporting is not guaranteed to stop the instant its
+      // promise resolves.
+      const target = state.files.find((f) => f.id === fileId);
+      if (!target || target.status !== 'uploading') {
+        return [state, Effect.none<FileUploadAction>()];
+      }
+
+      const clamped = Math.min(100, Math.max(0, progress));
+      if (target.progress === clamped) {
+        return [state, Effect.none<FileUploadAction>()];
+      }
+
+      const newFiles = state.files.map((f) => (f.id === fileId ? { ...f, progress: clamped } : f));
 
       return [{ ...state, files: newFiles }, Effect.none<FileUploadAction>()];
     }

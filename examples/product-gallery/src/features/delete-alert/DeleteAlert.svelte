@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Store } from '@composable-svelte/core';
+  import type { ScopedDestinationStore } from '@composable-svelte/core';
   import type { DeleteAlertState, DeleteAlertAction } from './delete-alert.types.js';
   import type { Product } from '../../models/product.js';
 
@@ -8,7 +8,7 @@
   // ============================================================================
 
   interface DeleteAlertProps {
-    store: Store<DeleteAlertState, DeleteAlertAction>;
+    store: ScopedDestinationStore<DeleteAlertState, DeleteAlertAction>;
     product: Product;
   }
 

@@ -39,7 +39,10 @@
                 duration: 300
               }
             },
-            Effect.afterDelay(300, (d) => d({ type: 'presentation', event: { type: 'presentationCompleted' } }))
+            // Fallback only. Motion One drives the real `onPresentationComplete`;
+            // this is the 3x-duration recovery CLAUDE.md asks for, and the guard
+            // in the `presentation` case makes the loser of the race a no-op.
+            Effect.afterDelay(1200, (d) => d({ type: 'presentation', event: { type: 'presentationCompleted' } }))
           ];
 
         case 'closeSidebar':
@@ -56,7 +59,7 @@
                 duration: 200
               }
             },
-            Effect.afterDelay(200, (d) => d({ type: 'presentation', event: { type: 'dismissalCompleted' } }))
+            Effect.afterDelay(1200, (d) => d({ type: 'presentation', event: { type: 'dismissalCompleted' } }))
           ];
 
         case 'toggleSidebar':
@@ -74,7 +77,7 @@
                   duration: 200
                 }
               },
-              Effect.afterDelay(200, (d) => d({ type: 'presentation', event: { type: 'dismissalCompleted' } }))
+              Effect.afterDelay(1200, (d) => d({ type: 'presentation', event: { type: 'dismissalCompleted' } }))
             ];
           } else {
             // Open if closed
@@ -87,24 +90,31 @@
                   duration: 300
                 }
               },
-              Effect.afterDelay(300, (d) => d({ type: 'presentation', event: { type: 'presentationCompleted' } }))
+              // Fallback only. Motion One drives the real `onPresentationComplete`;
+            // this is the 3x-duration recovery CLAUDE.md asks for, and the guard
+            // in the `presentation` case makes the loser of the race a no-op.
+            Effect.afterDelay(1200, (d) => d({ type: 'presentation', event: { type: 'presentationCompleted' } }))
             ];
           }
 
         case 'presentation':
           if (action.event.type === 'presentationCompleted') {
+            // Identical state when already presented — the animation callback and
+            // the fallback timer both fire, and the loser must change nothing.
+            if (state.presentation.status !== 'presenting') return [state, Effect.none()];
             return [
               {
                 ...state,
                 presentation: {
                   status: 'presented' as const,
-                  content: state.presentation.status === 'presenting' ? state.presentation.content : true
+                  content: state.presentation.content
                 }
               },
               Effect.none()
             ];
           }
           if (action.event.type === 'dismissalCompleted') {
+            if (state.presentation.status !== 'dismissing') return [state, Effect.none()];
             return [
               {
                 showSidebar: false,
@@ -141,7 +151,7 @@
   <!-- Live Demo Section -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Interactive Demo</h3>
+      <h2 class="text-xl font-semibold mb-2">Interactive Demo</h2>
       <p class="text-muted-foreground text-sm">
         Toggle the sidebar to see it integrate with page layout
       </p>
@@ -165,7 +175,7 @@
             <div class="p-4 space-y-4 h-full flex flex-col">
               <!-- Sidebar Header -->
               <div class="flex items-center justify-between pb-3 border-b">
-                <h3 class="font-semibold">Navigation</h3>
+                <h2 class="font-semibold">Navigation</h2>
                 <button
                   onclick={() => demoStore.dispatch({ type: 'closeSidebar' })}
                   class="w-6 h-6 rounded hover:bg-accent flex items-center justify-center text-xs"
@@ -177,21 +187,21 @@
 
               <!-- Navigation Links -->
               <nav class="flex-1 space-y-1">
-                <a href="#" class="block px-3 py-2 rounded-lg hover:bg-accent transition-colors">
+                <button type="button" class="block px-3 py-2 rounded-lg hover:bg-accent w-full text-left">
                   Dashboard
-                </a>
-                <a href="#" class="block px-3 py-2 rounded-lg hover:bg-accent transition-colors">
+                </button>
+                <button type="button" class="block px-3 py-2 rounded-lg hover:bg-accent w-full text-left">
                   Projects
-                </a>
-                <a href="#" class="block px-3 py-2 rounded-lg hover:bg-accent transition-colors">
+                </button>
+                <button type="button" class="block px-3 py-2 rounded-lg hover:bg-accent w-full text-left">
                   Team
-                </a>
-                <a href="#" class="block px-3 py-2 rounded-lg bg-accent font-medium transition-colors">
+                </button>
+                <button type="button" class="block px-3 py-2 rounded-lg bg-accent font-medium w-full text-left">
                   Settings
-                </a>
-                <a href="#" class="block px-3 py-2 rounded-lg hover:bg-accent transition-colors">
+                </button>
+                <button type="button" class="block px-3 py-2 rounded-lg hover:bg-accent w-full text-left">
                   Help
-                </a>
+                </button>
               </nav>
 
               <!-- Sidebar Footer -->
@@ -242,7 +252,7 @@
 
   <!-- Description -->
   <section class="space-y-4">
-    <h3 class="text-xl font-semibold">Usage</h3>
+    <h2 class="text-xl font-semibold">Usage</h2>
     <div class="prose prose-sm dark:prose-invert">
       <p>
         The Sidebar component provides an inline navigation panel that integrates
@@ -264,13 +274,13 @@
   <!-- Features Section -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Key Features</h3>
+      <h2 class="text-xl font-semibold mb-2">Key Features</h2>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div class="rounded-lg border bg-card p-6 space-y-3">
         <div class="text-2xl">📐</div>
-        <h4 class="font-semibold">Layout Integration</h4>
+        <h3 class="font-semibold">Layout Integration</h3>
         <p class="text-sm text-muted-foreground">
           Inline component that pushes content, not an overlay
         </p>
@@ -278,7 +288,7 @@
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
         <div class="text-2xl">⚡</div>
-        <h4 class="font-semibold">Smooth Animations</h4>
+        <h3 class="font-semibold">Smooth Animations</h3>
         <p class="text-sm text-muted-foreground">
           State-driven width animations for polished layout changes (300ms)
         </p>
@@ -286,7 +296,7 @@
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
         <div class="text-2xl">↔️</div>
-        <h4 class="font-semibold">Side Positioning</h4>
+        <h3 class="font-semibold">Side Positioning</h3>
         <p class="text-sm text-muted-foreground">
           Configure to appear on left or right side
         </p>
@@ -294,7 +304,7 @@
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
         <div class="text-2xl">🎯</div>
-        <h4 class="font-semibold">Persistent Navigation</h4>
+        <h3 class="font-semibold">Persistent Navigation</h3>
         <p class="text-sm text-muted-foreground">
           Perfect for always-visible navigation menus
         </p>
@@ -305,26 +315,26 @@
   <!-- Use Cases Section -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Common Use Cases</h3>
+      <h2 class="text-xl font-semibold mb-2">Common Use Cases</h2>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       <div class="rounded-lg border bg-card p-6 space-y-3">
-        <h4 class="font-semibold">App Navigation</h4>
+        <h3 class="font-semibold">App Navigation</h3>
         <p class="text-sm text-muted-foreground">
           Main navigation for web applications
         </p>
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
-        <h4 class="font-semibold">Dashboard Layouts</h4>
+        <h3 class="font-semibold">Dashboard Layouts</h3>
         <p class="text-sm text-muted-foreground">
           Persistent sidebar for admin dashboards
         </p>
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-3">
-        <h4 class="font-semibold">Document Browser</h4>
+        <h3 class="font-semibold">Document Browser</h3>
         <p class="text-sm text-muted-foreground">
           File tree or table of contents navigation
         </p>
@@ -335,13 +345,13 @@
   <!-- Comparison Section -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Sidebar vs Drawer</h3>
+      <h2 class="text-xl font-semibold mb-2">Sidebar vs Drawer</h2>
     </div>
 
     <div class="rounded-lg border bg-card p-8">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div class="space-y-3">
-          <h4 class="font-semibold">Sidebar (This Component)</h4>
+          <h3 class="font-semibold">Sidebar (This Component)</h3>
           <ul class="text-sm text-muted-foreground space-y-2">
             <li>✓ Inline in document flow</li>
             <li>✓ State-driven width animations</li>
@@ -352,7 +362,7 @@
         </div>
 
         <div class="space-y-3">
-          <h4 class="font-semibold">Drawer (Overlay)</h4>
+          <h3 class="font-semibold">Drawer (Overlay)</h3>
           <ul class="text-sm text-muted-foreground space-y-2">
             <li>✓ Fixed/absolute positioning</li>
             <li>✓ Animated slide-in</li>

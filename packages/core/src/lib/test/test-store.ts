@@ -216,7 +216,24 @@ export type PartialAction<Action> = Partial<Action> & { type: string };
  * ```
  */
 export class TestStore<State, Action, Dependencies = any> {
-  private state: State;
+  private _state: State;
+
+  /**
+   * Current state (read-only).
+   *
+   * Readable because every documented testing example reads it — asserting on
+   * state is what `TestStore` is for. It was `private`, which TypeScript erases,
+   * so tests ran fine and only consumers who typecheck their own tests ever saw
+   * it; that accounted for 74 of the errors hidden behind core's untypechecked
+   * test suite.
+   *
+   * A getter rather than a field, mirroring `store.svelte.ts`: making it a
+   * mutable public field would have let `store.state = x` bypass the reducer
+   * silently, which is the one invariant a test store exists to hold.
+   */
+  get state(): State {
+    return this._state;
+  }
   private reducer: Reducer<State, Action, Dependencies>;
   private dependencies: Dependencies;
   private actionHistory: Action[] = [];
@@ -224,6 +241,8 @@ export class TestStore<State, Action, Dependencies = any> {
   private pendingEffects: Promise<void>[] = [];
   private pendingTimers: number = 0; // Track number of scheduled timers
   private _subscriptionCleanups = new Map<string, () => void | Promise<void>>();
+  /** In-flight cancellables by id, so re-registering one aborts its predecessor. */
+  private _inFlightEffects = new Map<string, AbortController>();
 
   /**
    * Control exhaustiveness checking for received actions.
@@ -232,7 +251,7 @@ export class TestStore<State, Action, Dependencies = any> {
   public exhaustivity: 'on' | 'off' = 'on';
 
   constructor(config: TestStoreConfig<State, Action, Dependencies>) {
-    this.state = config.initialState;
+    this._state = config.initialState;
     this.reducer = config.reducer;
     this.dependencies = config.dependencies ?? ({} as Dependencies);
   }
@@ -249,15 +268,15 @@ export class TestStore<State, Action, Dependencies = any> {
   ): Promise<void> {
     this.actionHistory.push(action);
 
-    const [newState, effect] = this.reducer(this.state, action, this.dependencies);
-    this.state = newState;
+    const [newState, effect] = this.reducer(this._state, action, this.dependencies);
+    this._state = newState;
 
     if (effect._tag !== 'None') {
       this.pendingEffects.push(this._executeEffect(effect));
     }
 
     if (assert) {
-      await assert(this.state);
+      await assert(this._state);
     }
   }
 
@@ -318,7 +337,7 @@ export class TestStore<State, Action, Dependencies = any> {
     }, { timeout });
 
     if (assert) {
-      await assert(this.state);
+      await assert(this._state);
     }
   }
 
@@ -357,8 +376,48 @@ export class TestStore<State, Action, Dependencies = any> {
   /**
    * Get current state.
    */
+  /**
+   * Deliver an action from outside the reducer, exactly as an effect would.
+   *
+   * The action is recorded as *received* — so `receive()` matches it and
+   * `assertNoPendingActions()` will flag it if you never assert on it — rather
+   * than as a user action the way `send()` does.
+   *
+   * This is what a dependency holding the parent's dispatch needs. The dismiss
+   * dependency is the motivating case: it dispatches through the dispatch it
+   * captured, deliberately bypassing the child's effect stream so `ifLet`
+   * cannot wrap the dismiss a second time. Without a dispatch to capture there
+   * is no way to observe a dismiss under `TestStore` at all.
+   *
+   * @example
+   * ```typescript
+   * let dispatch: Dispatch<ParentAction>;
+   * const store = createTestStore({
+   *   initialState,
+   *   reducer,
+   *   // Lazily, because the dependency has to exist before the store does.
+   *   dependencies: { dismiss: dismissDependency((a) => dispatch(a), 'child') }
+   * });
+   * dispatch = (a) => store.dispatch(a);
+   *
+   * await store.send({ type: 'child', action: { type: 'presented', action } });
+   * await store.receive({ type: 'child', action: { type: 'dismiss' } });
+   * ```
+   *
+   * @param action - The action to deliver
+   */
+  dispatch(action: Action): void {
+    this.receivedActions.push(action);
+    const [newState, newEffect] = this.reducer(this._state, action, this.dependencies);
+    this._state = newState;
+
+    if (newEffect._tag !== 'None') {
+      this.pendingEffects.push(this._executeEffect(newEffect));
+    }
+  }
+
   getState(): State {
-    return this.state;
+    return this._state;
   }
 
   /**
@@ -400,10 +459,20 @@ export class TestStore<State, Action, Dependencies = any> {
     // Import vi dynamically to avoid issues in non-test environments
     const { vi } = await import('vitest');
 
-    // Check if vi is available (jsdom mode has it, browser mode doesn't)
-    if (typeof vi !== 'undefined' && vi.advanceTimersByTime) {
-      // Use synchronous timer advancement (this fires all timers up to ms)
+    // Only advance virtual time when there is virtual time to advance.
+    //
+    // This used to call `advanceTimersByTime` whenever the method existed —
+    // which it always does — and Vitest throws "a function to advance timers was
+    // called but the timers APIs are not mocked" when they are not. So
+    // `finish()`, whose documented job is "wait for pending effects and assert
+    // none remain", threw in any test that had no reason to fake time at all.
+    // Twenty-one documented examples in this repo were unrunnable because of it.
+    if (typeof vi !== 'undefined' && vi.isFakeTimers?.()) {
+      // Synchronous advancement: fires every timer due within `ms`.
       vi.advanceTimersByTime(ms);
+    } else if (ms > 0) {
+      // Real timers: the only way to reach the same point is to wait.
+      await new Promise((resolve) => setTimeout(resolve, ms));
     }
 
     // Flush microtask queue to let async callbacks execute
@@ -415,24 +484,65 @@ export class TestStore<State, Action, Dependencies = any> {
    * Execute an effect and track dispatched actions.
    */
   private async _executeEffect(effect: Effect<Action>): Promise<void> {
-    const dispatch: Dispatch<Action> = (action: Action) => {
-      this.receivedActions.push(action);
-      const [newState, newEffect] = this.reducer(this.state, action, this.dependencies);
-      this.state = newState;
-
-      if (newEffect._tag !== 'None') {
-        this.pendingEffects.push(this._executeEffect(newEffect));
-      }
-    };
+    const dispatch: Dispatch<Action> = (action: Action) => this.dispatch(action);
 
     switch (effect._tag) {
       case 'None':
         break;
 
       case 'Run':
-      case 'Cancellable':
         await effect.execute(dispatch);
         break;
+
+      case 'Cancellable': {
+        // `Effect.cancel(id)` carries no work — it cancels. TestStore used to run
+        // its no-op executor and stop there, so a reducer whose disconnect is
+        // `Effect.cancel(subscriptionId)` tore nothing down under test while
+        // doing so correctly in production. A consumer writing the obvious
+        // TestStore disconnect test got a green vacuous pass.
+        const cleanup = this._subscriptionCleanups.get(effect.id);
+        if (typeof cleanup === 'function') {
+          this._subscriptionCleanups.delete(effect.id);
+          await cleanup();
+        }
+        if (effect.cancelOnly) {
+          // A bare `Effect.cancel(id)` must also abort an in-flight cancellable
+          // registered under that id, not only tear down a subscription.
+          this._inFlightEffects.get(effect.id)?.abort();
+          this._inFlightEffects.delete(effect.id);
+          break;
+        }
+
+        // Supersession, which TestStore used to not model at all. It ran
+        // `effect.execute(dispatch)` with no controller, no registry and no
+        // gating — so re-registering an id did not cancel the effect already
+        // running under it, and both dispatched. A reducer using a fixed
+        // cancellation id to make a second request supersede the first (the
+        // session logout does; so does the login flow) behaved one way in
+        // production and another under test, and the obvious supersession test
+        // passed for the wrong reason or failed for a confusing one.
+        this._inFlightEffects.get(effect.id)?.abort();
+
+        const controller = new AbortController();
+        this._inFlightEffects.set(effect.id, controller);
+
+        // Gated exactly as the real store gates it: a cancelled effect's
+        // actions are unwanted whether or not its author honoured the signal.
+        const guardedDispatch: Dispatch<Action> = action => {
+          if (controller.signal.aborted) return;
+          dispatch(action);
+        };
+
+        try {
+          await effect.execute(guardedDispatch, controller.signal);
+        } finally {
+          // Only if still ours — a superseding effect owns the slot now.
+          if (this._inFlightEffects.get(effect.id) === controller) {
+            this._inFlightEffects.delete(effect.id);
+          }
+        }
+        break;
+      }
 
       case 'AfterDelay':
         // Schedule the effect to execute after delay using setTimeout
@@ -461,11 +571,14 @@ export class TestStore<State, Action, Dependencies = any> {
         await effect.execute();
         break;
 
-      case 'Subscription':
-        // Set up subscription and store cleanup
-        const cleanup = effect.setup(dispatch);
-        this._subscriptionCleanups.set(effect.id, cleanup);
+      case 'Subscription': {
+        // Re-registering the same id replaces the previous subscription, as the
+        // real store does.
+        const previous = this._subscriptionCleanups.get(effect.id);
+        if (typeof previous === 'function') await previous();
+        this._subscriptionCleanups.set(effect.id, effect.setup(dispatch));
         break;
+      }
 
       default:
         // Exhaustiveness check

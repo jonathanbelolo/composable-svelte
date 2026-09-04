@@ -455,7 +455,7 @@ interface DrawerProps<State, Action> {
 
 ### Modal vs Sheet vs Drawer
 
-```typescript
+```svelte
 // Modal: Blocks interaction, centered, critical
 <Modal store={deleteConfirmStore}>
   <h2>Delete permanently?</h2>
@@ -1090,10 +1090,23 @@ interface RouteConfig {
 ```svelte
 <!-- ❌ BEFORE: Manual scoping and routing (verbose) -->
 <script lang="ts">
+  import type { Store } from '@composable-svelte/core';
   import { Modal, Sheet, Drawer } from '@composable-svelte/core';
   import { scopeTo } from '@composable-svelte/core/navigation';
 
-  const { store } = $props();
+  // `.into('destination')` is checked against the state type, so the store has
+  // to be typed. A bare `$props()` is `any`, the state resolves to `unknown`,
+  // and every field name is then `never`.
+  interface AppState {
+    destination:
+      | { type: 'addItem'; state: AddItemState }
+      | { type: 'editItem'; state: EditItemState }
+      | { type: 'filter'; state: FilterState }
+      | { type: 'detail'; state: DetailState }
+      | null;
+  }
+
+  const { store }: { store: Store<AppState, AppAction> } = $props();
 
   const addItemStore = scopeTo(store).into('destination').case('addItem');
   const editItemStore = scopeTo(store).into('destination').case('editItem');
@@ -1455,7 +1468,7 @@ All components include proper ARIA attributes:
 </Modal>
 
 <!-- Focus returns to trigger on dismiss -->
-<script>
+<script lang="ts">
   let buttonElement: HTMLElement;
 </script>
 
@@ -1673,7 +1686,7 @@ describe('Modal Accessibility', () => {
 
 - **[Tree-Based Navigation](./tree-based.md)** - State-driven navigation patterns
 - **[Dismiss Dependency](./dismiss.md)** - Child self-dismissal patterns
-- **[Animation Integration](./animation.md)** - Advanced animation techniques
+- **[Animation Integration](../animation/animated-navigation.md)** - Advanced animation techniques
 - **[Store and Reducers](../core-concepts/store-and-reducers.md)** - Core state management
 
 ## Related Documentation

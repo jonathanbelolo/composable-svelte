@@ -183,29 +183,13 @@ describe('chartReducer', () => {
     });
   });
 
-  describe('updateSpec', () => {
-    it('updates plot specification', () => {
-      const initialState = createInitialChartState({
-        spec: { width: 600, height: 400 }
-      });
+  // `updateSpec` is gone, and the describe that was here pinned it: it asserted
+  // the action merged into `state.spec`, which is exactly the field nothing
+  // rendered. Every plot builder constructs its spec from `config` plus
+  // `state.{filteredData,dimensions,transform,selection}` and never destructures
+  // `spec`, so a consumer could dispatch `updateSpec` forever and see no change.
+  // `<ChartPrimitive plotBuilder={…}>` is the customisation path that works.
 
-      const [newState] = chartReducer(
-        initialState,
-        {
-          type: 'updateSpec',
-          spec: { marginLeft: 60, marginBottom: 40 }
-        },
-        {}
-      );
-
-      expect(newState.spec).toEqual({
-        width: 600,
-        height: 400,
-        marginLeft: 60,
-        marginBottom: 40
-      });
-    });
-  });
 });
 
 describe('createInitialChartState', () => {

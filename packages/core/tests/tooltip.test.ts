@@ -60,8 +60,10 @@ describe('Tooltip Reducer', () => {
 			// Delay effect fires delayCompleted
 			await store.receive({ type: 'delayCompleted' }, (state) => {
 				expect(state.isWaitingToShow).toBe(false);
-				expect(state.presentation.status).toBe('presenting');
-				expect(state.presentation.content).toBe('Save file');
+				expect(state.presentation).toMatchObject({
+					status: 'presenting',
+					content: 'Save file'
+				});
 			});
 		});
 
@@ -118,8 +120,10 @@ describe('Tooltip Reducer', () => {
 				type: 'presentation',
 				event: { type: 'presentationCompleted' }
 			}, (state) => {
-				expect(state.presentation.status).toBe('presented');
-				expect(state.presentation.content).toBe('Delete item');
+				expect(state.presentation).toMatchObject({
+					status: 'presented',
+					content: 'Delete item'
+				});
 			});
 		});
 	});
@@ -143,8 +147,10 @@ describe('Tooltip Reducer', () => {
 
 			// Now hover ends
 			await store.send({ type: 'hoverEnded' }, (state) => {
-				expect(state.presentation.status).toBe('dismissing');
-				expect(state.presentation.content).toBe('Refresh page');
+				expect(state.presentation).toMatchObject({
+					status: 'dismissing',
+					content: 'Refresh page'
+				});
 			});
 		});
 

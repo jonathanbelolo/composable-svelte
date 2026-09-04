@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { createStore } from '@composable-svelte/core';
 	import {
 		collaborativeReducer,
@@ -9,8 +10,11 @@
 		PresenceList,
 		TypingIndicator,
 		TypingUsersList,
+		CursorOverlay,
 		getTypingUsers,
 		getActiveUsers,
+		getCursorPositions,
+		useCursorTracking,
 		type CollaborativeUser,
 		type UserPresence,
 		type CollaborativeAction,
@@ -27,16 +31,7 @@
 		presence: 'active',
 		typing: null,
 		cursor: null,
-		permissions: {
-			canSendMessages: true,
-			canEditMessages: true,
-			canDeleteMessages: true,
-			canSeePresence: true,
-			canSeeTyping: true,
-			isAdmin: false
-		},
-		lastSeen: Date.now(),
-		lastHeartbeat: Date.now()
+		lastSeen: Date.now()
 	};
 
 	// Mock other users
@@ -49,16 +44,7 @@
 			presence: 'active',
 			typing: null,
 			cursor: null,
-			permissions: {
-				canSendMessages: true,
-				canEditMessages: true,
-				canDeleteMessages: true,
-				canSeePresence: true,
-				canSeeTyping: true,
-				isAdmin: false
-			},
-			lastSeen: Date.now(),
-			lastHeartbeat: Date.now()
+			lastSeen: Date.now()
 		},
 		{
 			id: 'user-3',
@@ -67,16 +53,7 @@
 			presence: 'idle',
 			typing: null,
 			cursor: null,
-			permissions: {
-				canSendMessages: true,
-				canEditMessages: true,
-				canDeleteMessages: true,
-				canSeePresence: true,
-				canSeeTyping: true,
-				isAdmin: false
-			},
-			lastSeen: Date.now() - 120000,
-			lastHeartbeat: Date.now() - 120000
+			lastSeen: Date.now() - 120000
 		},
 		{
 			id: 'user-4',
@@ -86,16 +63,7 @@
 			presence: 'away',
 			typing: null,
 			cursor: null,
-			permissions: {
-				canSendMessages: true,
-				canEditMessages: true,
-				canDeleteMessages: true,
-				canSeePresence: true,
-				canSeeTyping: true,
-				isAdmin: false
-			},
-			lastSeen: Date.now() - 300000,
-			lastHeartbeat: Date.now() - 300000
+			lastSeen: Date.now() - 300000
 		}
 	];
 
@@ -109,9 +77,7 @@
 		sendWebSocketMessage: async (message) => {
 			console.log('[Mock] Sending message:', message);
 		},
-		generateId: () => crypto.randomUUID(),
-		getTimestamp: () => Date.now(),
-		generateUserColor: generateRandomUserColor
+		getTimestamp: () => Date.now()
 	};
 
 	// Create collaborative store
@@ -121,31 +87,82 @@
 		dependencies: mockDeps
 	});
 
-	// Simulate users joining
-	$effect(() => {
-		// Add current user
+	/**
+	 * Seed the room, once.
+	 *
+	 * This was an `$effect`, and it froze the page. `store.dispatch` reads the
+	 * store's state, so an effect that dispatches depends on the state it just
+	 * changed: every dispatch re-ran the whole block, which dispatched again.
+	 * Now that the socket subscription tears down for real, each pass also
+	 * closed and reopened the connection — 54,000 console lines in eight
+	 * seconds, and no demo. `onMount` is the primitive for setup that happens
+	 * once; nothing here needs to react to anything.
+	 */
+	onMount(() => {
 		store.dispatch({ type: 'userJoined', user: currentUser });
 
-		// Add mock users
 		for (const user of mockUsers) {
 			store.dispatch({ type: 'userJoined', user });
 		}
 
-		// Simulate connection
 		store.dispatch({
 			type: 'connectToConversation',
 			conversationId: 'demo-conversation',
 			userId: currentUserId
 		});
+
+		// The showcase swaps demos in and out of one slot, so this component
+		// unmounts. `connectToConversation` registers a subscription whose cleanup
+		// runs on `Effect.cancel` or `destroy()` and nothing else — without this
+		// the socket outlives the page. `onMount`'s return value is the hook for
+		// it, and it was going unused.
+		return () => store.destroy();
 	});
 
 	// Get derived state
 	const users = $derived($store.users);
 	const activeUsers = $derived(getActiveUsers(users, currentUserId));
 	const typingUsers = $derived(getTypingUsers(users, currentUserId, 'message'));
+	const cursors = $derived(getCursorPositions(users, currentUserId));
+	const myCursor = $derived(users.get(currentUserId)?.cursor ?? null);
+
+	// Live cursors
+	let draft = $state('Put your caret anywhere in this line.');
+	let inputElement = $state<HTMLInputElement | undefined>(undefined);
+
+	// `useCursorTracking` hands back its own teardown, which is exactly what an
+	// effect wants returned. It dispatches `updateCursor` on click, keyup, focus
+	// and selection change, throttled.
+	$effect(() => {
+		if (!inputElement) return;
+		return useCursorTracking(store, inputElement);
+	});
 
 	// Demo controls
 	let selectedUserId = $state('user-2');
+
+	/**
+	 * Put the selected collaborator's cursor wherever *your* caret is.
+	 *
+	 * There is no server here, so this stands in for the `cursor_moved` frame a
+	 * real one would push. Select a range first and the marker gets a selection
+	 * highlight too.
+	 */
+	function placeCursor() {
+		if (!inputElement) return;
+		const position = inputElement.selectionStart ?? 0;
+		const selectionLength = (inputElement.selectionEnd ?? 0) - position;
+
+		store.dispatch({
+			type: 'userCursorMoved',
+			userId: selectedUserId,
+			cursor: { position, selectionLength, lastUpdate: Date.now() }
+		});
+	}
+
+	function clearCursor() {
+		store.dispatch({ type: 'userCursorCleared', userId: selectedUserId });
+	}
 
 	function toggleTyping() {
 		const user = users.get(selectedUserId);
@@ -172,7 +189,7 @@
 
 		const presenceOrder: UserPresence[] = ['active', 'idle', 'away', 'offline'];
 		const currentIndex = presenceOrder.indexOf(user.presence);
-		const nextPresence = presenceOrder[(currentIndex + 1) % presenceOrder.length];
+		const nextPresence = presenceOrder[(currentIndex + 1) % presenceOrder.length]!;
 
 		store.dispatch({
 			type: 'userPresenceChanged',
@@ -184,7 +201,7 @@
 
 <div class="page">
 	<header class="page-header">
-		<h1>Collaborative Chat Demo</h1>
+		<h2>Collaborative Chat Demo</h2>
 		<p class="subtitle">
 			Real-time presence tracking, typing indicators, and live cursors for multi-user chat.
 		</p>
@@ -193,12 +210,12 @@
 	<div class="demo-container">
 		<!-- Presence Tracking -->
 		<section class="demo-section">
-			<h2>Presence Tracking</h2>
+			<h3>Presence Tracking</h3>
 			<p>Shows who's online with real-time status updates.</p>
 
 			<div class="demo-variants">
 				<div class="variant">
-					<h3>Presence Badge</h3>
+					<h4>Presence Badge</h4>
 					<div class="badge-examples">
 						<PresenceBadge presence="active" showText />
 						<PresenceBadge presence="idle" showText />
@@ -208,25 +225,25 @@
 				</div>
 
 				<div class="variant">
-					<h3>Avatar Stack</h3>
+					<h4>Avatar Stack</h4>
 					<PresenceAvatarStack users={activeUsers} maxVisible={5} />
 				</div>
 			</div>
 
 			<div class="variant full-width">
-				<h3>User List</h3>
+				<h4>User List</h4>
 				<PresenceList users={activeUsers} groupByPresence={true} />
 			</div>
 		</section>
 
 		<!-- Typing Indicators -->
 		<section class="demo-section">
-			<h2>Typing Indicators</h2>
+			<h3>Typing Indicators</h3>
 			<p>Shows who's typing with animated dots.</p>
 
 			<div class="demo-variants">
 				<div class="variant">
-					<h3>Simple Indicator</h3>
+					<h4>Simple Indicator</h4>
 					<TypingIndicator users={typingUsers} />
 					{#if typingUsers.length === 0}
 						<p class="empty-state">No one is typing</p>
@@ -234,7 +251,7 @@
 				</div>
 
 				<div class="variant">
-					<h3>Detailed List</h3>
+					<h4>Detailed List</h4>
 					<TypingUsersList users={typingUsers} />
 					{#if typingUsers.length === 0}
 						<p class="empty-state">No one is typing</p>
@@ -243,9 +260,46 @@
 			</div>
 		</section>
 
+		<!-- Live Cursors -->
+		<section class="demo-section">
+			<h3>Live Cursors</h3>
+			<p>
+				Type below: <code>useCursorTracking</code> dispatches your caret to the store on every
+				move. To see someone else's, pick a user in Demo Controls and press
+				<strong>Place Cursor</strong> — their flag appears where your caret is. Select a range
+				first and they get the highlight too.
+			</p>
+
+			<div class="cursor-field">
+				<input
+					type="text"
+					bind:this={inputElement}
+					bind:value={draft}
+					aria-label="Shared draft"
+				/>
+				{#if inputElement}
+					<CursorOverlay {inputElement} {cursors} text={draft} />
+				{/if}
+			</div>
+
+			<p class="cursor-readout">
+				<strong>Your cursor:</strong>
+				{#if myCursor}
+					offset {myCursor.position}{myCursor.selectionLength > 0
+						? `, ${myCursor.selectionLength} selected`
+						: ''}
+				{:else}
+					not in the field
+				{/if}
+				&nbsp;·&nbsp;
+				<strong>Others:</strong>
+				{cursors.length}
+			</p>
+		</section>
+
 		<!-- Demo Controls -->
 		<section class="demo-section">
-			<h2>Demo Controls</h2>
+			<h3>Demo Controls</h3>
 			<p>Simulate user actions to see real-time updates.</p>
 
 			<div class="controls">
@@ -263,6 +317,8 @@
 						{users.get(selectedUserId)?.typing ? 'Stop Typing' : 'Start Typing'}
 					</button>
 					<button onclick={cyclePresence}> Cycle Presence </button>
+					<button onclick={placeCursor}> Place Cursor </button>
+					<button onclick={clearCursor}> Clear Cursor </button>
 				</div>
 			</div>
 
@@ -275,21 +331,21 @@
 
 		<!-- Implementation Notes -->
 		<section class="demo-section">
-			<h2>Implementation Notes</h2>
+			<h3>Implementation Notes</h3>
 			<div class="info-card">
-				<h3>Features</h3>
+				<h4>Features</h4>
 				<ul>
 					<li>✅ Real-time presence tracking (active, idle, away, offline)</li>
 					<li>✅ Typing indicators with smart aggregation</li>
 					<li>✅ WebSocket state machine with reconnection</li>
-					<li>✅ Optimistic updates with rollback</li>
 					<li>✅ Single source of truth state management</li>
 					<li>✅ Composable primitives for custom UIs</li>
-					<li>⏳ Live cursors (coming soon)</li>
-					<li>⏳ CRDT integration for conflict resolution</li>
+					<li>✅ Live cursors, tracked from a real field and drawn over it</li>
+					<li>❌ Optimistic updates — removed; the queues could never be written to</li>
+					<li>❌ CRDT — removed, along with the yjs dependency it never used</li>
 				</ul>
 
-				<h3>Usage Example</h3>
+				<h4>Usage Example</h4>
 				<pre class="code-block"><code>{`import { createStore } from '@composable-svelte/core';
 import {
   collaborativeReducer,
@@ -298,7 +354,7 @@ import {
   TypingIndicator,
   getActiveUsers,
   getTypingUsers
-} from '@composable-svelte/code';
+} from '@composable-svelte/chat';
 
 const store = createStore({
   initialState: createInitialCollaborativeState(),
@@ -336,7 +392,7 @@ const typingUsers = getTypingUsers($store.users, currentUserId);
 		margin-bottom: 48px;
 	}
 
-	.page-header h1 {
+	.page-header h2 {
 		font-size: 32px;
 		font-weight: 700;
 		margin: 0 0 8px 0;
@@ -361,13 +417,13 @@ const typingUsers = getTypingUsers($store.users, currentUserId);
 		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 	}
 
-	.demo-section h2 {
+	.demo-section h3 {
 		font-size: 24px;
 		font-weight: 600;
 		margin: 0 0 8px 0;
 	}
 
-	.demo-section h3 {
+	.demo-section h4 {
 		font-size: 16px;
 		font-weight: 600;
 		margin: 0 0 12px 0;
@@ -437,6 +493,7 @@ const typingUsers = getTypingUsers($store.users, currentUserId);
 
 	.control-actions {
 		display: flex;
+		flex-wrap: wrap;
 		gap: 12px;
 	}
 
@@ -448,11 +505,29 @@ const typingUsers = getTypingUsers($store.users, currentUserId);
 		border-radius: 6px;
 		font-weight: 500;
 		cursor: pointer;
-		transition: background 0.2s;
 	}
 
 	.control-actions button:hover {
 		background: #0056b3;
+	}
+
+	.cursor-field {
+		/* The overlay is `position: fixed` and measures the field itself, so this
+		   only needs to give the input room — not to contain the overlay. */
+		padding: 24px 0 8px;
+	}
+
+	.cursor-field input {
+		width: 100%;
+		padding: 8px 12px;
+		border: 1px solid #d0d0d0;
+		border-radius: 6px;
+		font-size: 14px;
+	}
+
+	.cursor-readout {
+		margin: 0;
+		font-size: 14px;
 	}
 
 	.status-info {
@@ -504,8 +579,8 @@ const typingUsers = getTypingUsers($store.users, currentUserId);
 			background: #2a2a2a;
 		}
 
-		.demo-section h2,
-		.demo-section h3 {
+		.demo-section h3,
+		.demo-section h4 {
 			color: #e0e0e0;
 		}
 
@@ -521,7 +596,8 @@ const typingUsers = getTypingUsers($store.users, currentUserId);
 			background: #1e1e1e;
 		}
 
-		.control-group select {
+		.control-group select,
+		.cursor-field input {
 			background: #2a2a2a;
 			color: #e0e0e0;
 			border-color: #444;

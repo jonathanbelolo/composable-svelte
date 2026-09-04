@@ -134,3 +134,18 @@ export { default as PopoverPrimitive } from './navigation-components/primitives/
 export { default as AlertPrimitive } from './navigation-components/primitives/AlertPrimitive.svelte';
 export { default as TabsPrimitive } from './navigation-components/primitives/TabsPrimitive.svelte';
 export { default as NavigationStackPrimitive } from './navigation-components/primitives/NavigationStackPrimitive.svelte';
+
+// ============================================================================
+// Component types, reducers and state factories
+// ============================================================================
+//
+// The explicit lists above name component *values* only, so every prop type,
+// reducer and state factory a component needs stayed unreachable from the
+// package root — 75 names across 11 root-exported components. `Collapsible`
+// could not be used at all: its required store type, its reducer and its state
+// factory were all outside. `components/ui/index.ts` fixed exactly this one
+// level down and it was never propagated up.
+//
+// A star export is safe here: an explicit local export shadows it for the names
+// above, and this is the only star in the file.
+export * from './components/ui/index.js';

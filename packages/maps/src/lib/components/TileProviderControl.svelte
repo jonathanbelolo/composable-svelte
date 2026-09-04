@@ -4,8 +4,8 @@
  */
 
 import type { Store } from '@composable-svelte/core';
-import type { MapState, MapAction, TileProvider } from '../types/map.types';
-import { getAvailableTileProviders, type TileProviderConfig } from '../utils/tile-providers';
+import type { MapState, MapAction, TileProvider } from '../types/map.types.js';
+import { getAvailableTileProviders, type TileProviderConfig } from '../utils/tile-providers.js';
 
 // Props
 let {
@@ -14,8 +14,8 @@ let {
   class: className = ''
 }: {
   store: Store<MapState, MapAction>;
-  position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
-  class?: string;
+  position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | undefined;
+  class?: string | undefined;
 } = $props();
 
 // Available providers
@@ -66,7 +66,7 @@ const positionClass = $derived({
   .tile-provider-control {
     position: absolute;
     z-index: 10;
-    background: white;
+    background: hsl(var(--background, 0 0% 100%));
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     padding: 8px 12px;
@@ -78,28 +78,27 @@ const positionClass = $derived({
   .tile-provider-label {
     font-size: 11px;
     font-weight: 600;
-    color: #666;
+    color: hsl(var(--muted-foreground, 0 0% 40%));
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
 
   .tile-provider-select {
     padding: 6px 8px;
-    border: 1px solid #ddd;
+    border: 1px solid hsl(var(--border, 0 0% 86.7%));
     border-radius: 4px;
-    background: white;
+    background: hsl(var(--background, 0 0% 100%));
     font-size: 13px;
     cursor: pointer;
-    transition: border-color 0.2s;
   }
 
   .tile-provider-select:hover {
-    border-color: #999;
+    border-color: hsl(var(--muted-foreground, 0 0% 60%));
   }
 
   .tile-provider-select:focus {
     outline: none;
-    border-color: #0080ff;
-    box-shadow: 0 0 0 2px rgba(0, 128, 255, 0.1);
+    border-color: hsl(var(--primary, 209.9 100% 50%));
+    box-shadow: 0 0 0 2px hsl(var(--primary, 209.9 100% 50%) / 0.1);
   }
 </style>

@@ -17,6 +17,26 @@
       "svelte": "./dist/subject/index.js",
       "default": "./dist/subject/index.js"
     },
+    "./errors": {
+      "types": "./dist/errors/index.d.ts",
+      "svelte": "./dist/errors/index.js",
+      "default": "./dist/errors/index.js"
+    },
+    "./flows": {
+      "types": "./dist/flows/index.d.ts",
+      "svelte": "./dist/flows/index.js",
+      "default": "./dist/flows/index.js"
+    },
+    "./http": {
+      "types": "./dist/http/index.d.ts",
+      "svelte": "./dist/http/index.js",
+      "default": "./dist/http/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "svelte": "./dist/testing/index.js",
+      "default": "./dist/testing/index.js"
+    },
     "./session": {
       "types": "./dist/session/index.d.ts",
       "svelte": "./dist/session/index.js",
@@ -33,16 +53,18 @@
   "files": [
     "dist",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "scripts": {
     "build": "svelte-package -o dist",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "check": "svelte-check --tsconfig ./tsconfig.test.json --fail-on-warnings",
+    "test": "vitest run && vitest run --config vitest.ssr.config.ts",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
-    "prepublishOnly": "pnpm run build && pnpm run typecheck",
+    "prepublishOnly": "pnpm run build && pnpm run typecheck && pnpm run check && SILENT_TESTS=true pnpm test",
     "prepack": "pnpm run build"
   },
   "keywords": [
@@ -69,7 +91,7 @@
     "url": "https://github.com/jbelolo/composable-svelte/issues"
   },
   "peerDependencies": {
-    "@composable-svelte/core": "^0.5.0 || ^0.6.0",
+    "@composable-svelte/core": "^0.11.0",
     "svelte": "^5.0.0"
   },
   "devDependencies": {
@@ -82,11 +104,18 @@
     "@vitest/ui": "^4.0.7",
     "playwright": "^1.56.1",
     "svelte": "^5.0.0",
+    "svelte-check": "^4.3.3",
     "typescript": "^5.5.4",
     "vite": "^6.4.1",
     "vitest": "^4.0.7"
   },
   "publishConfig": {
     "access": "public"
+  },
+  "dependencies": {
+    "zod": "^4.1.12"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

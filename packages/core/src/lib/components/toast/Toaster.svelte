@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { cn } from '../../utils.js';
-	import { createStore } from '../../store.svelte.js';
-	import { toastReducer } from './toast.reducer.js';
-	import { createInitialToastState, type Toast, type ToastDependencies } from './toast.types.js';
+	import type { Store } from '../../types.js';
+	import type { ToastState, ToastAction } from './toast.types.js';
 	import ToastComponent from './Toast.svelte';
 
 	/**
@@ -10,80 +9,56 @@
 	 *
 	 * Manages toast notifications with queue management and auto-dismiss.
 	 *
+	 * Own the store to dispatch into it — that is what makes `dependencies`
+	 * and every toast action reachable. Omit it for a self-contained container.
+	 *
 	 * @example
 	 * ```typescript
-	 * import { Toaster, createStore, createInitialToastState, toastReducer } from '@composable-svelte/core';
+	 * import { Toaster, createToastStore } from '@composable-svelte/core/components/toast';
 	 *
-	 * const store = createStore({
-	 *   initialState: createInitialToastState(),
-	 *   reducer: toastReducer
-	 * });
-	 *
-	 * // Add toast
-	 * store.dispatch({
+	 * const toasts = createToastStore({ position: 'top-right' });
+	 * toasts.dispatch({
 	 *   type: 'toastAdded',
 	 *   toast: { variant: 'success', description: 'Saved!' }
 	 * });
+	 * ```
+	 * ```svelte
+	 * <Toaster store={toasts} />
 	 * ```
 	 */
 
 	interface ToasterProps {
 		/**
-		 * Optional external toasts to display.
-		 * If not provided, uses internal store.
+		 * The toast store. Build it with `createToastStore(config)` and dispatch
+		 * `toastAdded` into it.
+		 *
+		 * Required. An internal fallback store was kept here at first, along with
+		 * `maxToasts` / `defaultDuration` / `position` props to seed it — but
+		 * nothing could dispatch into that store (no context, no export, no
+		 * bindable), so the container rendered `<!---->` forever and those three
+		 * props were unreachable by exactly the argument used to remove
+		 * `dependencies`. Measured, not assumed.
 		 */
-		toasts?: Toast[];
+		store: Store<ToastState, ToastAction>;
 
-		/**
-		 * Maximum number of toasts to show at once.
-		 * Default: 3
-		 */
-		maxToasts?: number;
-
-		/**
-		 * Default auto-dismiss duration in milliseconds.
-		 * Default: 5000 (5 seconds)
-		 */
-		defaultDuration?: number;
-
-		/**
-		 * Position of the toaster on screen.
-		 * Default: 'bottom-right'
-		 */
-		position?: 'top-left' | 'top-center' | 'top-right' | 'bottom-left' | 'bottom-center' | 'bottom-right';
-
-		/**
-		 * Additional CSS classes.
-		 */
-		class?: string;
-
-		/**
-		 * Dependencies for toast reducer.
-		 */
-		dependencies?: ToastDependencies;
+		/** Additional CSS classes. */
+		class?: string | undefined;
 	}
 
-	let {
-		toasts: externalToasts,
-		maxToasts = 3,
-		defaultDuration = 5000,
-		position = 'bottom-right',
-		class: className,
-		dependencies
-	}: ToasterProps = $props();
+	let { store, class: className }: ToasterProps = $props();
 
-	// Create internal store
-	const store = createStore({
-		initialState: createInitialToastState({ maxToasts, defaultDuration, position }),
-		reducer: toastReducer,
-		dependencies
-	});
-
-	// Use external toasts if provided, otherwise use store state
-	const activeToasts = $derived(externalToasts ?? $store.toasts);
+	// `toasts`, `dependencies` and the three config props are all gone. Each was
+	// unreachable for the same reason: they configured or fed an internal store
+	// no consumer could dispatch into. `createToastStore(config)` owns all of
+	// it now, and this component is purely presentational.
+	const activeToasts = $derived($store.toasts);
 
 	function handleDismiss(id: string) {
 		store.dispatch({ type: 'toastDismissed', id });
+	}
+
+	function handleAction(id: string) {
+		store.dispatch({ type: 'toastActionClicked', id });
 	}
 
 	const positionClasses = {
@@ -98,7 +73,7 @@
 	const containerClasses = $derived(
 		cn(
 			'fixed z-[100] flex max-h-screen w-full flex-col-reverse gap-2 p-4 sm:flex-col md:max-w-[420px]',
-			positionClasses[position],
+			positionClasses[$store.position],
 			className
 		)
 	);
@@ -107,7 +82,7 @@
 {#if activeToasts.length > 0}
 	<div class={containerClasses}>
 		{#each activeToasts as toast (toast.id)}
-			<ToastComponent {toast} onDismiss={handleDismiss} />
+			<ToastComponent {toast} onDismiss={handleDismiss} onAction={handleAction} />
 		{/each}
 	</div>
 {/if}

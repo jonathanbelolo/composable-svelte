@@ -327,7 +327,7 @@
 	<!-- Live Demo Section -->
 	<section class="space-y-6">
 		<div>
-			<h3 class="text-xl font-semibold mb-2">Interactive Comparison</h3>
+			<h2 class="text-xl font-semibold mb-2">Interactive Comparison</h2>
 			<p class="text-muted-foreground text-sm">
 				Compare the simple NavigationStack (left) with AnimatedNavigationStack (right)
 			</p>
@@ -338,7 +338,7 @@
 			<!-- Simple NavigationStack -->
 			<div class="space-y-4">
 				<div class="flex items-center gap-2">
-					<h4 class="font-semibold">NavigationStack</h4>
+					<h3 class="font-semibold">NavigationStack</h3>
 					<span class="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100 rounded">Simple</span>
 				</div>
 				<div class="text-sm text-muted-foreground">
@@ -369,15 +369,17 @@
 						<NavigationStack store={simpleStore} stack={simpleStack} onBack={popSimpleScreen}>
 							{#snippet children({ currentScreen })}
 								{#if currentScreen}
-									<div class="h-full {currentScreen.color} p-6 space-y-4">
+									<!-- NavigationStack types its props as <unknown, unknown>. -->
+									{@const screen = currentScreen as ScreenState}
+									<div class="h-full {screen.color} p-6 space-y-4">
 										<div class="space-y-1">
-											<h2 class="text-2xl font-bold">{currentScreen.title}</h2>
-											<p class="text-sm text-muted-foreground">{currentScreen.content}</p>
+											<h2 class="text-2xl font-bold">{screen.title}</h2>
+											<p class="text-sm text-muted-foreground">{screen.content}</p>
 										</div>
 
 										<div class="space-y-3">
 											<div class="p-3 bg-background/50 rounded border text-xs">
-												<p><strong>Screen ID:</strong> {currentScreen.id}</p>
+												<p><strong>Screen ID:</strong> {screen.id}</p>
 												<p><strong>Stack Depth:</strong> {simpleStack.length}</p>
 											</div>
 
@@ -409,7 +411,7 @@
 			<!-- Animated NavigationStack -->
 			<div class="space-y-4">
 				<div class="flex items-center gap-2">
-					<h4 class="font-semibold">AnimatedNavigationStack</h4>
+					<h3 class="font-semibold">AnimatedNavigationStack</h3>
 					<span class="text-xs px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-900 dark:text-purple-100 rounded">Animated</span>
 				</div>
 				<div class="text-sm text-muted-foreground">
@@ -447,15 +449,17 @@
 						>
 							{#snippet children({ currentScreen })}
 								{#if currentScreen}
-									<div class="h-full {currentScreen.color} p-6 space-y-4">
+									<!-- NavigationStack types its props as <unknown, unknown>. -->
+									{@const screen = currentScreen as ScreenState}
+									<div class="h-full {screen.color} p-6 space-y-4">
 										<div class="space-y-1">
-											<h2 class="text-2xl font-bold">{currentScreen.title}</h2>
-											<p class="text-sm text-muted-foreground">{currentScreen.content}</p>
+											<h2 class="text-2xl font-bold">{screen.title}</h2>
+											<p class="text-sm text-muted-foreground">{screen.content}</p>
 										</div>
 
 										<div class="space-y-3">
 											<div class="p-3 bg-background/50 rounded border text-xs">
-												<p><strong>Screen ID:</strong> {currentScreen.id}</p>
+												<p><strong>Screen ID:</strong> {screen.id}</p>
 												<p><strong>Stack Depth:</strong> {animatedStack.length}</p>
 												<p><strong>Animation:</strong> {$demoStore.presentation.status}</p>
 											</div>
@@ -495,7 +499,7 @@
 	<!-- Comparison Table -->
 	<section class="space-y-6">
 		<div>
-			<h3 class="text-xl font-semibold mb-2">Feature Comparison</h3>
+			<h2 class="text-xl font-semibold mb-2">Feature Comparison</h2>
 		</div>
 
 		<div class="rounded-lg border overflow-hidden">
@@ -545,13 +549,13 @@
 
 	<!-- Description -->
 	<section class="space-y-4">
-		<h3 class="text-xl font-semibold">When to Use Each Variant</h3>
+		<h2 class="text-xl font-semibold">When to Use Each Variant</h2>
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 			<div class="rounded-lg border bg-card p-6 space-y-3">
-				<h4 class="font-semibold flex items-center gap-2">
+				<h3 class="font-semibold flex items-center gap-2">
 					<span class="text-2xl">⚡</span>
 					NavigationStack (Simple)
-				</h4>
+				</h3>
 				<ul class="text-sm space-y-2 text-muted-foreground list-disc list-inside">
 					<li>Admin panels and utility screens</li>
 					<li>Performance-critical applications</li>
@@ -562,10 +566,10 @@
 			</div>
 
 			<div class="rounded-lg border bg-card p-6 space-y-3">
-				<h4 class="font-semibold flex items-center gap-2">
+				<h3 class="font-semibold flex items-center gap-2">
 					<span class="text-2xl">✨</span>
 					AnimatedNavigationStack
-				</h4>
+				</h3>
 				<ul class="text-sm space-y-2 text-muted-foreground list-disc list-inside">
 					<li>User-facing consumer applications</li>
 					<li>Mobile-first web experiences</li>
@@ -580,11 +584,11 @@
 	<!-- Implementation Details -->
 	<section class="space-y-6">
 		<div>
-			<h3 class="text-xl font-semibold mb-2">Animation Details</h3>
+			<h2 class="text-xl font-semibold mb-2">Animation Details</h2>
 		</div>
 
 		<div class="rounded-lg border bg-card p-6 space-y-4">
-			<h4 class="font-semibold">How AnimatedNavigationStack Works</h4>
+			<h3 class="font-semibold">How AnimatedNavigationStack Works</h3>
 			<ul class="list-disc list-inside text-sm space-y-2 text-muted-foreground">
 				<li>
 					<strong>Dual-Screen Rendering:</strong> Both current and previous screens are rendered during animations using absolute positioning
@@ -611,7 +615,7 @@
 		</div>
 
 		<div class="rounded-lg border bg-card p-6 space-y-4">
-			<h4 class="font-semibold">Customizing Animations</h4>
+			<h3 class="font-semibold">Customizing Animations</h3>
 			<p class="text-sm text-muted-foreground">
 				AnimatedNavigationStack accepts a <code class="text-xs bg-muted px-1 py-0.5 rounded">springConfig</code> prop to customize timing:
 			</p>
@@ -625,12 +629,12 @@
 	<!-- Best Practices -->
 	<section class="space-y-6">
 		<div>
-			<h3 class="text-xl font-semibold mb-2">Best Practices</h3>
+			<h2 class="text-xl font-semibold mb-2">Best Practices</h2>
 		</div>
 
 		<div class="space-y-4">
 			<div class="rounded-lg border bg-card p-6">
-				<h4 class="font-semibold mb-3">Navigation Stack Guidelines</h4>
+				<h3 class="font-semibold mb-3">Navigation Stack Guidelines</h3>
 				<ul class="list-disc list-inside text-sm space-y-2 text-muted-foreground">
 					<li>Keep stack depth reasonable (4-6 screens max) to avoid deep hierarchies</li>
 					<li>Provide clear screen titles so users understand their location</li>
@@ -641,7 +645,7 @@
 			</div>
 
 			<div class="rounded-lg border bg-card p-6">
-				<h4 class="font-semibold mb-3">Animation Best Practices</h4>
+				<h3 class="font-semibold mb-3">Animation Best Practices</h3>
 				<ul class="list-disc list-inside text-sm space-y-2 text-muted-foreground">
 					<li>Guard against rapid push/pop during animations to prevent state conflicts</li>
 					<li>Disable navigation buttons during transitions for better UX</li>

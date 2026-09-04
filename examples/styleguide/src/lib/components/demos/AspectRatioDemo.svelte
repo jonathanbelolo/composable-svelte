@@ -7,7 +7,7 @@
   <!-- Common Ratios -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Common Aspect Ratios</h3>
+      <h2 class="text-xl font-semibold mb-2">Common Aspect Ratios</h2>
       <p class="text-muted-foreground text-sm">
         Standard aspect ratios for media content
       </p>
@@ -79,7 +79,7 @@
   <!-- Social Media Ratios -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Social Media Ratios</h3>
+      <h2 class="text-xl font-semibold mb-2">Social Media Ratios</h2>
       <p class="text-muted-foreground text-sm">
         Optimized for different platforms
       </p>
@@ -133,7 +133,7 @@
   <!-- With Images -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Image Containers</h3>
+      <h2 class="text-xl font-semibold mb-2">Image Containers</h2>
       <p class="text-muted-foreground text-sm">
         Maintain consistent aspect ratios for images
       </p>
@@ -168,7 +168,7 @@
   <!-- Video Embeds -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Video Embed Containers</h3>
+      <h2 class="text-xl font-semibold mb-2">Video Embed Containers</h2>
       <p class="text-muted-foreground text-sm">
         Perfect for embedding responsive videos
       </p>
@@ -216,7 +216,7 @@
   <!-- Product Images -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Product Gallery</h3>
+      <h2 class="text-xl font-semibold mb-2">Product Gallery</h2>
       <p class="text-muted-foreground text-sm">
         Consistent sizing for product images
       </p>
@@ -249,7 +249,7 @@
   <!-- Custom Ratios -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Custom Aspect Ratios</h3>
+      <h2 class="text-xl font-semibold mb-2">Custom Aspect Ratios</h2>
       <p class="text-muted-foreground text-sm">
         Create any aspect ratio you need
       </p>
@@ -306,7 +306,7 @@
   <!-- Responsive Grid -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Responsive Image Grid</h3>
+      <h2 class="text-xl font-semibold mb-2">Responsive Image Grid</h2>
       <p class="text-muted-foreground text-sm">
         AspectRatio ensures consistent height across different image sizes
       </p>
@@ -337,7 +337,7 @@
   <!-- With Overlay -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">With Overlays</h3>
+      <h2 class="text-xl font-semibold mb-2">With Overlays</h2>
       <p class="text-muted-foreground text-sm">
         Add content overlays while maintaining aspect ratio
       </p>
@@ -349,7 +349,7 @@
           <AspectRatio ratio={16/9}>
             <div class="relative w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg overflow-hidden">
               <div class="absolute inset-0 flex flex-col items-center justify-center text-white p-6">
-                <h3 class="text-2xl font-bold mb-2">Featured Content</h3>
+                <h2 class="text-2xl font-bold mb-2">Featured Content</h2>
                 <p class="text-sm opacity-90 text-center">
                   This overlay maintains position regardless of container width
                 </p>
@@ -364,7 +364,7 @@
           <AspectRatio ratio={1}>
             <div class="relative w-full h-full bg-gradient-to-br from-teal-500 to-cyan-600 rounded-lg overflow-hidden">
               <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 text-white">
-                <h4 class="font-semibold mb-1">Card Title</h4>
+                <h3 class="font-semibold mb-1">Card Title</h3>
                 <p class="text-xs opacity-90">Bottom overlay with gradient</p>
               </div>
             </div>

@@ -75,13 +75,17 @@
 	];
 
 	// Create store for minimal player (single track)
+	// The sample data is a non-empty literal, but noUncheckedIndexedAccess
+	// widens every index access to `| undefined`.
+	const firstTrack = sampleTracks[0]!;
+
 	const minimalStore = createStore({
 		initialState: {
 			...createInitialAudioPlayerState(),
-			playlist: [sampleTracks[0]],
-			currentTrack: sampleTracks[0],
+			playlist: [firstTrack],
+			currentTrack: firstTrack,
 			currentTrackIndex: 0,
-			duration: sampleTracks[0].duration!
+			duration: firstTrack.duration!
 		},
 		reducer: audioPlayerReducer,
 		dependencies: {
@@ -109,9 +113,9 @@
 		initialState: {
 			...createInitialAudioPlayerState(),
 			playlist: sampleTracks,
-			currentTrack: sampleTracks[0],
+			currentTrack: firstTrack,
 			currentTrackIndex: 0,
-			duration: sampleTracks[0].duration!
+			duration: firstTrack.duration!
 		},
 		reducer: audioPlayerReducer,
 		dependencies: {
@@ -142,6 +146,19 @@
 
 	// Derived state for modal
 	const isExpanded = $derived($fullStore.isExpanded);
+
+	// Modal takes a scoped destination store (null = hidden), not isOpen/onClose.
+	// Same wrapper shape as ModalDemo.
+	const expandedStore = $derived(
+		isExpanded
+			? {
+					...fullStore,
+					state: $fullStore,
+					dispatch: fullStore.dispatch,
+					dismiss: () => fullStore.dispatch({ type: 'setExpanded', expanded: false })
+				}
+			: null
+	);
 
 	// Demo controls
 	let activeTab = $state<'minimal' | 'full' | 'playlist'>('minimal');
@@ -390,18 +407,15 @@ const store = createStore({
 </div>
 
 <!-- Modal for expanded view -->
-{#if isExpanded}
-	<Modal
-		isOpen={true}
-		onClose={() => fullStore.dispatch({ type: 'setExpanded', expanded: false })}
-		title="Audio Player"
-	>
+<Modal store={expandedStore}>
+	{#snippet children()}
+		<h2 class="text-xl font-semibold mb-4">Audio Player</h2>
 		<FullAudioPlayer store={fullStore} id="full-modal" showExpandButton={false} />
 		<div style="margin-top: 1rem;">
 			<PlaylistView store={fullStore} />
 		</div>
-	</Modal>
-{/if}
+	{/snippet}
+</Modal>
 
 <style>
 	.demo-container {
@@ -439,7 +453,6 @@ const store = createStore({
 		font-size: 1rem;
 		font-weight: 600;
 		color: #6c757d;
-		transition: all 0.2s;
 	}
 
 	.tab:hover {
@@ -491,7 +504,6 @@ const store = createStore({
 		font-size: 0.9rem;
 		font-weight: 600;
 		cursor: pointer;
-		transition: background 0.2s;
 	}
 
 	.control-button:hover {

@@ -5,7 +5,7 @@
  * Automatically updates element bounds when they move, resize, or scroll.
  */
 
-import type { ElementBounds } from './overlay-types';
+import type { ElementBounds } from './overlay-types.js';
 
 /**
  * Position update callback
@@ -33,8 +33,18 @@ export class PositionTracker {
 	 */
 	constructor(root: HTMLElement | null = null) {
 		this.root = root;
-		this.initializeObservers();
-		this.initializeScrollTracking();
+		// Unwound here rather than by the caller. `initializeObservers` builds
+		// the `IntersectionObserver` first and the `ResizeObserver` second, so
+		// an environment providing only the first left one live and observing
+		// when the second threw — and the overlay's own teardown list cannot
+		// help, because it does not have the instance until this returns.
+		try {
+			this.initializeObservers();
+			this.initializeScrollTracking();
+		} catch (error) {
+			this.destroy();
+			throw error;
+		}
 	}
 
 	/**

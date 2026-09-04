@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 	import { cn } from '../../utils.js';
-	import type { FieldState } from './form.types.js';
+	import type { FieldRenderState } from './form.types.js';
 	import Spinner from '../ui/spinner/Spinner.svelte';
 
 	/**
@@ -23,11 +23,11 @@
 		/**
 		 * Optional class name
 		 */
-		class?: string;
+		class?: string | undefined;
 		/**
 		 * Optional custom message (overrides field error)
 		 */
-		children?: import('svelte').Snippet;
+		children?: import('svelte').Snippet | undefined;
 	}
 
 	let { class: className, children }: Props = $props();
@@ -35,7 +35,7 @@
 	// Get field info from context. fieldState is a holder with a getter so
 	// reads of .current re-evaluate the parent's $derived reactively.
 	const fieldName = getContext<string>('fieldName');
-	const fieldStateCtx = getContext<{ current: FieldState }>('fieldState');
+	const fieldStateCtx = getContext<{ current: FieldRenderState }>('fieldState');
 
 	const errorId = $derived(fieldName ? `${fieldName}-error` : undefined);
 	const hasError = $derived(!!fieldStateCtx?.current?.error);

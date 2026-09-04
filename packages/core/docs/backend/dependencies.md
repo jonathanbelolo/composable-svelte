@@ -89,6 +89,10 @@ const myReducer = (state: State, action: Action, deps: typeof dependencies) => {
 // 4. Mock in tests
 const testDeps = {
   clock: createMockClock(0),
+  // `createMockStorage()` is an in-memory `SyncStorage`: writes read back, and
+  // `simulateSetItem` fires `subscribe` the way another tab would.
+  // `createNoopStorage()` is still the right choice for modelling storage being
+  // unavailable — it discards writes and reads back `null`.
   storage: createMockStorage(),
   api: createMockAPI({ ... }),
   websocket: createMockWebSocket()
@@ -280,8 +284,8 @@ const unsubscribe = storage.subscribe((event) => {
 ### More Information
 
 For comprehensive documentation on Storage dependencies, see:
-- [packages/core/src/dependencies/README.md](/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/dependencies/README.md) - Complete API reference, examples, and patterns
-- [SECURITY.md](/Users/jonathanbelolo/dev/claude/code/composable-svelte/SECURITY.md) - Security guidelines for storage
+- [Storage README](../../src/lib/dependencies/README.md) - Complete API reference, examples, and patterns
+- [Security guidelines](../../src/lib/dependencies/SECURITY.md) - Security guidelines for storage
 
 ## API Client
 
@@ -336,8 +340,13 @@ import { createLiveWebSocket } from '@composable-svelte/core';
 
 const websocket = createLiveWebSocket({
   reconnect: {
+    // `ReconnectConfig` has no optional members — all six are required.
     enabled: true,
-    maxAttempts: 5
+    maxAttempts: 5,
+    initialDelay: 1000,
+    maxDelay: 30_000,
+    backoffMultiplier: 2,
+    jitter: true
   }
 });
 
@@ -469,10 +478,10 @@ Mock all dependencies for deterministic testing.
 ### Full Test Setup
 
 ```typescript
+import { TestStore } from '@composable-svelte/core/test';
 import {
-  TestStore,
   createMockClock,
-  createMockStorage,
+  createNoopStorage,
   createMockAPI,
   createMockWebSocket
 } from '@composable-svelte/core';
@@ -481,7 +490,7 @@ describe('App Reducer', () => {
   it('should handle user actions', async () => {
     // Setup mocks
     const clock = createMockClock(1000);
-    const storage = createMockStorage<User>();
+    const storage = createNoopStorage<User>();
     const api = createMockAPI({
       'GET /api/user': { id: 1, name: 'Alice' }
     });
@@ -613,7 +622,7 @@ function logout() {
 ### More Information
 
 For comprehensive security guidelines, see:
-- [SECURITY.md](/Users/jonathanbelolo/dev/claude/code/composable-svelte/SECURITY.md) - Complete security guide
+- [Security guidelines](../../src/lib/dependencies/SECURITY.md) - Complete security guide
 
 ## Best Practices
 
@@ -655,7 +664,7 @@ export function createProductionDependencies(): AppDependencies {
 export function createTestDependencies(): AppDependencies {
   return {
     clock: createMockClock(0),
-    storage: createMockStorage(),
+    storage: createNoopStorage(),
     api: createMockAPI({}),
     websocket: createMockWebSocket()
   };
@@ -877,6 +886,6 @@ case 'init':
 For more information, see:
 - [API Client Documentation](./api-client.md)
 - [WebSocket Documentation](./websocket.md)
-- [Storage README](../../../src/dependencies/README.md)
-- [Security Guidelines](../../../SECURITY.md)
-- [Testing Guide](../testing/unit-testing.md)
+- [Storage README](../../src/lib/dependencies/README.md)
+- [Security guidelines](../../src/lib/dependencies/SECURITY.md)
+- [Testing Guide](../core-concepts/testing.md)

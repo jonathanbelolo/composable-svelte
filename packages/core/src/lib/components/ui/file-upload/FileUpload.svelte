@@ -2,20 +2,7 @@
   import { createStore } from '../../../store.svelte.js';
   import { fileUploadReducer } from './file-upload.reducer.js';
   import { createInitialFileUploadState, formatFileSize } from './file-upload.types.js';
-  import type { FileValidationConfig } from './file-upload.types.js';
-
-  interface Props {
-    accept?: string;
-    multiple?: boolean;
-    showPreviews?: boolean;
-    maxSize?: number;
-    maxFiles?: number;
-    dropzoneText?: string;
-    onFilesChange?: (files: import('./file-upload.types.js').UploadedFile[]) => void;
-    onUpload?: (file: File) => Promise<void>;
-    class?: string;
-    disabled?: boolean;
-  }
+  import type { FileUploadProps, FileValidationConfig } from './file-upload.types.js';
 
   let {
     accept = '',
@@ -27,8 +14,9 @@
     onFilesChange,
     onUpload,
     class: className = '',
-    disabled = false
-  }: Props = $props();
+    disabled = false,
+    headingLevel = 3
+  }: FileUploadProps = $props();
 
   // Build validation config from props
   const validation = $derived<FileValidationConfig>({
@@ -41,10 +29,21 @@
   const store = createStore({
     initialState: createInitialFileUploadState(),
     reducer: fileUploadReducer,
+    // Getters, not values: `createStore` re-reads `config.dependencies` on
+    // every dispatch, but a plain object literal freezes what these resolve to
+    // at setup. Changing `maxSize` / `accept` / `maxFiles` after mount left the
+    // store validating against the original config, and swapping `onUpload`
+    // left it calling the original handler.
     dependencies: {
-      onFilesChange,
-      onUpload,
-      validation
+      get onFilesChange() {
+        return onFilesChange;
+      },
+      get onUpload() {
+        return onUpload;
+      },
+      get validation() {
+        return validation;
+      }
     }
   });
 
@@ -245,9 +244,9 @@
   {#if $store.files.length > 0}
     <div class="mt-4">
       <div class="flex items-center justify-between mb-3">
-        <h3 class="text-sm font-medium text-gray-700">
+        <svelte:element this={`h${headingLevel}`} class="text-sm font-medium text-gray-700">
           Files ({$store.files.length})
-        </h3>
+        </svelte:element>
         <button
           onclick={handleClearAll}
           class="text-sm text-red-600 hover:text-red-700"
@@ -289,7 +288,19 @@
 
               <!-- Progress Bar (for uploading files) -->
               {#if file.status === 'uploading'}
-                <div class="mt-2 w-full bg-gray-200 rounded-full h-1.5">
+                <!--
+                  `role="progressbar"` + `aria-valuenow` so the value is
+                  announced and assertable. Asserting the inline width would
+                  test the style attribute; this tests what is reported.
+                -->
+                <div
+                  class="mt-2 w-full bg-gray-200 rounded-full h-1.5"
+                  role="progressbar"
+                  aria-valuenow={file.progress}
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  aria-label={`Uploading ${file.file.name}`}
+                >
                   <div
                     class="bg-blue-500 h-1.5 rounded-full"
                     style:width={`${file.progress}%`}

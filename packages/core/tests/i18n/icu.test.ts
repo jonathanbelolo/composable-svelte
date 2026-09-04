@@ -3,6 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { expectConsole } from '../helpers/console.js';
 import {
   isICUMessage,
   compileICU,
@@ -231,20 +232,26 @@ describe('compileICU', () => {
 
   describe('Error Handling', () => {
     it('should handle invalid ICU syntax gracefully', () => {
+      expectConsole('error');
       const format = compileICU('{count, plural, one {# item}', 'en'); // Missing closing brace
       expect(format({ count: 1 })).toBe('{count, plural, one {# item}'); // Returns original message
     });
 
     it('should handle missing parameters', () => {
+      expectConsole('error');
       const format = compileICU('{count, plural, one {# item} other {# items}}', 'en');
-      const result = format({});
-      expect(result).toBeTruthy(); // Should not crash
+      // A missing variable is a formatting error: the fallback is the raw
+      // message, and the failure is reported once.
+      expect(format({})).toBe('{count, plural, one {# item} other {# items}}');
     });
 
     it('should handle formatting errors gracefully', () => {
-      const format = compileICU('{price, number, ::currency/USD}', 'en-US');
-      const result = format({ price: 'not-a-number' });
-      expect(result).toBeTruthy(); // Should not crash
+      expectConsole('error');
+      // `{price, number}` with a non-number formats to "$NaN" without throwing,
+      // so it never reached the fallback this test is named for. A date
+      // argument with an invalid value does throw (RangeError).
+      const format = compileICU('{d, date, short}', 'en-US');
+      expect(format({ d: 'not-a-date' })).toBe('{d, date, short}');
     });
   });
 

@@ -3,6 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
+import { expectConsole } from '../helpers/console.js';
 import {
   initI18nOnServer,
   generateAlternateLinks,
@@ -139,6 +140,7 @@ describe('initI18nOnServer', () => {
   });
 
   it('should handle missing namespace gracefully', async () => {
+    expectConsole('warn');
     const request = new Request('http://localhost:3000/');
 
     const result = await initI18nOnServer({

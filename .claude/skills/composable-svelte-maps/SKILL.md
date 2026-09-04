@@ -5,7 +5,7 @@ description: Interactive maps and geospatial visualizations for Composable Svelt
 
 # Composable Svelte Maps
 
-Interactive maps and geospatial data visualization with Maplibre GL and Mapbox GL.
+Interactive maps and geospatial data visualization with Maplibre GL, and an optional Mapbox GL adapter.
 
 ---
 
@@ -17,14 +17,14 @@ Interactive maps and geospatial data visualization with Maplibre GL and Mapbox G
 
 **Technology Stack**:
 - **Maplibre GL**: Open-source WebGL-based maps (primary)
-- **Mapbox GL**: Optional premium provider (requires API key)
+- **Injectable adapters**: `MapAdapter` is the contract. MapLibre is the default; `MapboxAdapter` comes from `@composable-svelte/maps/mapbox` and needs the optional `mapbox-gl` peer installed. Never import that entry from code that must work without it.
 
 **Core Features**:
 - Interactive maps with zoom/pan
 - Markers with popups
 - GeoJSON layers (polygons, lines, points)
 - Heatmap visualization
-- Multiple tile providers (OSM, CartoDB, Stamen, etc.)
+- Multiple tile providers (OpenStreetMap, Stadia, MapTiler, CARTO, custom)
 - Viewport animations (flyTo, fitBounds)
 - Feature interactions (hover, click)
 
@@ -35,22 +35,23 @@ All map state managed via pure reducers following Composable Architecture patter
 
 ## QUICK START
 
-```typescript
-import { createStore } from '@composable-svelte/core';
-import { Map, mapReducer, createInitialMapState } from '@composable-svelte/maps';
+```svelte
+<script lang="ts">
+  import { createStore } from '@composable-svelte/core';
+  import { Map, mapReducer, createInitialMapState } from '@composable-svelte/maps';
 
-// Create map store
-const mapStore = createStore({
-  initialState: createInitialMapState({
-    center: [-74.006, 40.7128],  // NYC
-    zoom: 12,
-    tileProvider: 'osm'
-  }),
-  reducer: mapReducer,
-  dependencies: {}
-});
+  // Create map store
+  const mapStore = createStore({
+    initialState: createInitialMapState({
+      center: [-74.006, 40.7128],  // NYC
+      zoom: 12,
+      tileProvider: 'osm'
+    }),
+    reducer: mapReducer,
+    dependencies: {}
+  });
+</script>
 
-// Render map
 <Map
   store={mapStore}
   width="100%"
@@ -74,7 +75,7 @@ const mapStore = createStore({
 
 ### Usage
 
-```typescript
+```svelte
 <Map
   store={mapStore}
   width="100%"
@@ -86,7 +87,7 @@ const mapStore = createStore({
 ### Lifecycle
 
 1. Creates container element
-2. Initializes Maplibre/Mapbox
+2. Initializes the injected adapter (MapLibre unless one is passed)
 3. Sets up manual subscription for state sync
 4. Dispatches `mapLoaded` when ready
 5. Syncs viewport, markers, layers, popups
@@ -100,9 +101,10 @@ const mapStore = createStore({
 
 ```typescript
 interface MapState {
-  // Provider
-  provider: 'maplibre' | 'mapbox';
-  accessToken?: string;  // Mapbox only
+  // API key for the tile provider (maptiler), or the Mapbox access token when
+  // using MapboxAdapter. There is no `provider` field: the engine is supplied
+  // as the `adapter` prop, not named in state.
+  accessToken?: string;
 
   // Tile provider
   tileProvider: TileProvider;
@@ -557,13 +559,19 @@ mapStore.dispatch({ type: 'closeAllPopups' });
 
 ### Available Providers
 
-- `'osm'` - OpenStreetMap (default, free)
-- `'carto-light'` - CartoDB Light (free)
-- `'carto-dark'` - CartoDB Dark (free)
-- `'stamen-terrain'` - Stamen Terrain (free)
-- `'stamen-toner'` - Stamen Toner (free)
-- `'satellite'` - Satellite imagery (requires Mapbox)
-- `'custom'` - Custom tile URL
+Taken from `TILE_PROVIDERS` in `src/lib/utils/tile-providers.ts`, which is the
+only place these are defined:
+
+- `'openstreetmap'` - MapLibre demo tiles (default, free)
+- `'stadia'` - Stadia Maps OSM Bright (free)
+- `'maptiler'` - MapTiler Streets (needs an API key, passed as `accessToken`)
+- `'carto-light'` - CARTO Positron (free)
+- `'carto-dark'` - CARTO Dark Matter (free)
+- `'custom'` - your own style URL via `customTileURL`
+
+`'mapbox'` was removed: its style URL used the `mapbox://` scheme, which MapLibre
+cannot resolve, so selecting it produced a broken map rather than an unstyled
+one. Mapbox styles need `MapboxAdapter`.
 
 ### Changing Tile Provider
 
@@ -586,10 +594,11 @@ mapStore.dispatch({
 ### Style Presets
 
 ```typescript
-// Change map style (Mapbox only)
+// Any style URL the active adapter can load. Under MapLibre that means an
+// http(s) URL; `mapbox://` styles work only with MapboxAdapter.
 mapStore.dispatch({
   type: 'changeStyle',
-  style: 'mapbox://styles/mapbox/streets-v11'
+  style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json'
 });
 ```
 
@@ -645,7 +654,7 @@ interface FeatureReference<TData = unknown> {
 
 ### Basic Map with Markers
 
-```typescript
+```svelte
 <script lang="ts">
 import { createStore } from '@composable-svelte/core';
 import { Map, mapReducer, createInitialMapState } from '@composable-svelte/maps';
@@ -688,7 +697,7 @@ cities.forEach(city => {
 
 ### GeoJSON Visualization
 
-```typescript
+```svelte
 <script lang="ts">
 import { createStore } from '@composable-svelte/core';
 import { Map, mapReducer, createInitialMapState } from '@composable-svelte/maps';
@@ -751,7 +760,7 @@ $effect(() => {
 
 ### Heatmap with Controls
 
-```typescript
+```svelte
 <script lang="ts">
 import { createStore } from '@composable-svelte/core';
 import { Map, mapReducer, createInitialMapState } from '@composable-svelte/maps';
@@ -890,7 +899,7 @@ $effect(() => {
 
 ### Layer Toggle
 
-```typescript
+```svelte
 let showLayer = $state(true);
 
 $effect(() => {
@@ -1132,5 +1141,5 @@ await store.send({
 **When to Use Each Package**:
 - **maps**: Geospatial data, interactive maps, markers, GeoJSON
 - **charts**: 2D data visualization (see composable-svelte-charts)
-- **graphics**: 3D scenes, WebGPU/WebGL (see composable-svelte-graphics)
+- **graphics**: 3D scenes, WebGL (see composable-svelte-graphics)
 - **code**: Code editors, media players (see composable-svelte-code)

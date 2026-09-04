@@ -1,60 +1,62 @@
 <script lang="ts">
-  import { TreeView, type TreeNode } from '@composable-svelte/core';
+  import { TreeView } from '@composable-svelte/core';
+  // TreeNode is not re-exported from the package root, though TreeView is. The
+  // /components/ui subpath is the supported route and what the styleguide's own
+  // TreeViewDemo uses.
+  import type { TreeNode } from '@composable-svelte/core/components/ui';
 
   // Sample file system structure
-  const fileNodes: TreeNode<{ type: 'file' | 'folder'; size?: string }>[] = [
+  // `data` is a string: TreeView is not generic (its `<script>` carries no
+  // `generics=` attribute), so TreeViewProps<T> stays at its `T = string`
+  // default and a richer payload cannot be expressed. This example only ever
+  // read the size — the `type` field it used to carry was never read, since the
+  // emoji in each label already says which it is.
+  const fileNodes: TreeNode[] = [
     {
       id: 'root',
       label: '📁 My Documents',
-      data: { type: 'folder' },
-      children: [
+            children: [
         {
           id: 'projects',
           label: '📁 Projects',
-          data: { type: 'folder' },
-          children: [
+                    children: [
             {
               id: 'svelte-app',
               label: '📁 svelte-app',
-              data: { type: 'folder' },
-              children: [
+                            children: [
                 {
                   id: 'src',
                   label: '📁 src',
-                  data: { type: 'folder' },
-                  children: [
-                    { id: 'app-svelte', label: '📄 App.svelte', data: { type: 'file', size: '2.3 KB' } },
-                    { id: 'main-ts', label: '📄 main.ts', data: { type: 'file', size: '0.5 KB' } }
+                                    children: [
+                    { id: 'app-svelte', label: '📄 App.svelte', data: '2.3 KB' },
+                    { id: 'main-ts', label: '📄 main.ts', data: '0.5 KB' }
                   ]
                 },
-                { id: 'package-json', label: '📄 package.json', data: { type: 'file', size: '1.2 KB' } },
-                { id: 'vite-config', label: '📄 vite.config.ts', data: { type: 'file', size: '0.4 KB' } }
+                { id: 'package-json', label: '📄 package.json', data: '1.2 KB' },
+                { id: 'vite-config', label: '📄 vite.config.ts', data: '0.4 KB' }
               ]
             },
             {
               id: 'composable-svelte',
               label: '📁 composable-svelte',
-              data: { type: 'folder' },
-              lazy: true
+                            lazy: true
             }
           ]
         },
         {
           id: 'photos',
           label: '📁 Photos',
-          data: { type: 'folder' },
-          children: [
-            { id: 'vacation-jpg', label: '🖼️ vacation.jpg', data: { type: 'file', size: '2.5 MB' } },
-            { id: 'family-jpg', label: '🖼️ family.jpg', data: { type: 'file', size: '1.8 MB' } }
+                    children: [
+            { id: 'vacation-jpg', label: '🖼️ vacation.jpg', data: '2.5 MB' },
+            { id: 'family-jpg', label: '🖼️ family.jpg', data: '1.8 MB' }
           ]
         },
         {
           id: 'documents',
           label: '📁 Documents',
-          data: { type: 'folder' },
-          children: [
-            { id: 'resume-pdf', label: '📄 resume.pdf', data: { type: 'file', size: '125 KB' } },
-            { id: 'cover-letter', label: '📄 cover_letter.docx', data: { type: 'file', size: '45 KB' } }
+                    children: [
+            { id: 'resume-pdf', label: '📄 resume.pdf', data: '125 KB' },
+            { id: 'cover-letter', label: '📄 cover_letter.docx', data: '45 KB' }
           ]
         }
       ]
@@ -65,25 +67,25 @@
   let selectedSize = $state<string | null>(null);
   let log = $state<string[]>([]);
 
-  function handleSelect(nodeId: string, node: TreeNode<{ type: 'file' | 'folder'; size?: string }>) {
+  function handleSelect(_nodeId: string, node: TreeNode) {
     selectedFile = node.label;
-    selectedSize = node.data?.size ?? null;
+    selectedSize = node.data ?? null;
     log = [`Selected: ${node.label}`, ...log].slice(0, 5);
   }
 
-  function handleExpand(nodeId: string, node: TreeNode<{ type: 'file' | 'folder'; size?: string }>) {
+  function handleExpand(_nodeId: string, node: TreeNode) {
     log = [`Expanded: ${node.label}`, ...log].slice(0, 5);
   }
 
-  function handleCollapse(nodeId: string, node: TreeNode<{ type: 'file' | 'folder'; size?: string }>) {
+  function handleCollapse(_nodeId: string, node: TreeNode) {
     log = [`Collapsed: ${node.label}`, ...log].slice(0, 5);
   }
 
   // Simulate lazy loading
   async function loadChildren(
     nodeId: string,
-    node: TreeNode<{ type: 'file' | 'folder'; size?: string }>
-  ): Promise<TreeNode<{ type: 'file' | 'folder'; size?: string }>[]> {
+    _node: TreeNode
+  ): Promise<TreeNode[]> {
     // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -92,13 +94,12 @@
         {
           id: 'cs-src',
           label: '📁 src',
-          data: { type: 'folder' },
-          children: [
-            { id: 'cs-store', label: '📄 store.svelte.ts', data: { type: 'file', size: '4.5 KB' } },
-            { id: 'cs-reducer', label: '📄 reducer.ts', data: { type: 'file', size: '2.1 KB' } }
+                    children: [
+            { id: 'cs-store', label: '📄 store.svelte.ts', data: '4.5 KB' },
+            { id: 'cs-reducer', label: '📄 reducer.ts', data: '2.1 KB' }
           ]
         },
-        { id: 'cs-readme', label: '📄 README.md', data: { type: 'file', size: '3.2 KB' } }
+        { id: 'cs-readme', label: '📄 README.md', data: '3.2 KB' }
       ];
     }
 

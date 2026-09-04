@@ -50,12 +50,10 @@ export interface CodeEditorState {
 	// UI State
 	theme: 'light' | 'dark' | 'auto';
 	showLineNumbers: boolean;
-	showGutter: boolean;
 	readOnly: boolean;
 
 	// Features
 	enableAutocomplete: boolean;
-	enableLinting: boolean;
 	enableFolding: boolean;
 	tabSize: number;
 
@@ -101,6 +99,14 @@ export type CodeEditorAction =
 	| { type: 'themeChanged'; theme: 'light' | 'dark' | 'auto' }
 	| { type: 'toggleLineNumbers' }
 	| { type: 'toggleAutocomplete' }
+	| { type: 'toggleFolding' }
+	/** Reported by the editor when the undo/redo availability changes. */
+	| { type: 'historyChanged'; canUndo: boolean; canRedo: boolean }
+	/** Focus/blur the editor. Commands: performed by the view, no state change. */
+	| { type: 'focus' }
+	| { type: 'blur' }
+	/** Reported when a language's dynamic import fails (e.g. a stale chunk). */
+	| { type: 'languageLoadFailed'; language: SupportedLanguage; error: string }
 	| { type: 'setReadOnly'; readOnly: boolean }
 	| { type: 'tabSizeChanged'; size: number }
 
@@ -150,6 +156,7 @@ export function createInitialState(config: {
 	language?: SupportedLanguage;
 	theme?: 'light' | 'dark' | 'auto';
 	showLineNumbers?: boolean;
+	enableFolding?: boolean;
 	readOnly?: boolean;
 	enableAutocomplete?: boolean;
 	tabSize?: number;
@@ -166,13 +173,11 @@ export function createInitialState(config: {
 		// UI State
 		theme: config.theme || 'dark',
 		showLineNumbers: config.showLineNumbers !== undefined ? config.showLineNumbers : true,
-		showGutter: true,
 		readOnly: config.readOnly || false,
 
 		// Features
 		enableAutocomplete: config.enableAutocomplete !== undefined ? config.enableAutocomplete : true,
-		enableLinting: false,
-		enableFolding: true,
+		enableFolding: config.enableFolding ?? true,
 		tabSize: config.tabSize || 2,
 
 		// Editor Status

@@ -22,7 +22,7 @@
 	 * ```
 	 */
 
-	interface HeadingProps extends Omit<HTMLAttributes<HTMLHeadingElement>, 'class'> {
+	interface HeadingProps extends Omit<HTMLAttributes<HTMLHeadingElement>, 'class' | 'children'> {
 		/**
 		 * Heading level (1-6).
 		 */
@@ -31,12 +31,12 @@
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Heading content.
 		 */
-		children?: import('svelte').Snippet;
+		children?: import('svelte').Snippet | undefined;
 	}
 
 	let { level, class: className, children, ...restProps }: HeadingProps = $props();

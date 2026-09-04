@@ -79,7 +79,6 @@
     background: white;
     border: 1px solid #ddd;
     border-radius: 4px;
-    transition: all 0.2s ease;
     white-space: nowrap;
   }
 

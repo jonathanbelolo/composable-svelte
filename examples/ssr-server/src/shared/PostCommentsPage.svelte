@@ -21,7 +21,7 @@
   function navigateToList() {
     store.dispatch({
       type: 'navigate',
-      destination: { type: 'list' }
+      destination: { type: 'list', state: {} }
     });
   }
 
@@ -99,7 +99,6 @@
   .breadcrumb a {
     color: #1976d2;
     text-decoration: none;
-    transition: color 0.2s;
   }
 
   .breadcrumb a:hover {
@@ -185,7 +184,6 @@
     color: #1976d2;
     text-decoration: none;
     font-weight: 500;
-    transition: color 0.2s;
   }
 
   .back-link:hover {

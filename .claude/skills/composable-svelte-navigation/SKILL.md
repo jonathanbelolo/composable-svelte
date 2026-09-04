@@ -269,13 +269,14 @@ case 'destination': {
 
 ### scopeToDestination Pattern
 
-```typescript
-import { scopeToDestination } from '@composable-svelte/core';
+```svelte
+<script lang="ts">
+  import { scopeToDestination } from '@composable-svelte/core';
 
-// In component
-const addItemStore = $derived(
-  scopeToDestination(store, 'destination', 'addItem')
-);
+  const addItemStore = $derived(
+    scopeToDestination(store, ['destination'], 'addItem', 'destination')
+  );
+</script>
 
 {#if addItemStore}
   <Modal store={addItemStore}>
@@ -416,7 +417,11 @@ const modalReducer: Reducer<ModalState, ModalAction> = (state, action) => {
   }
 };
 
-// Component
+```
+
+The component:
+
+```svelte
 <script lang="ts">
   import { animate } from 'motion';
 
@@ -579,9 +584,22 @@ URL routing is state synchronization, not a separate navigation system. Use the 
 
 ```typescript
 import { syncBrowserHistory } from '@composable-svelte/core/routing';
+import type { Store } from '@composable-svelte/core';
 
-// In client hydration
-syncBrowserHistory(store, {
+// The destination type is inferred from `getDestination`'s return, which needs
+// a typed store to infer *from*. Without one, `dest` in `destinationToAction`
+// arrives as `{}` and `dest.state` does not compile.
+interface BlogState {
+  selectedPostId: string | null;
+}
+declare const store: Store<BlogState, AppAction>;
+
+type PostDestination = { type: 'post'; state: { postId: string } };
+
+// In client hydration. The destination type is given explicitly: TypeScript
+// cannot unify it from `getDestination`'s return and `destinationToAction`'s
+// parameter at the same time, and falls back to `{}`.
+syncBrowserHistory<BlogState, AppAction, PostDestination>(store, {
   serializers: serializerConfig.serializers,
   parsers: parserConfig.parsers,
   // Map state → destination for URL serialization
@@ -686,7 +704,7 @@ These components are from the shadcn-svelte component library. See **composable-
   import { Modal } from '@composable-svelte/core/navigation-components';
   import { scopeToDestination } from '@composable-svelte/core';
 
-  const modalStore = $derived(scopeToDestination(store, 'destination', 'addItem'));
+  const modalStore = $derived(scopeToDestination(store, ['destination'], 'addItem', 'destination'));
 </script>
 
 {#if modalStore}
@@ -706,7 +724,7 @@ These components are from the shadcn-svelte component library. See **composable-
 <script lang="ts">
   import { Sheet } from '@composable-svelte/core/navigation-components';
 
-  const sheetStore = $derived(scopeToDestination(store, 'destination', 'filters'));
+  const sheetStore = $derived(scopeToDestination(store, ['destination'], 'filters', 'destination'));
 </script>
 
 {#if sheetStore}
@@ -726,7 +744,7 @@ These components are from the shadcn-svelte component library. See **composable-
 <script lang="ts">
   import { Drawer } from '@composable-svelte/core/navigation-components';
 
-  const drawerStore = $derived(scopeToDestination(store, 'destination', 'menu'));
+  const drawerStore = $derived(scopeToDestination(store, ['destination'], 'menu', 'destination'));
 </script>
 
 {#if drawerStore}
@@ -751,7 +769,7 @@ These components are from the shadcn-svelte component library. See **composable-
   import { Alert } from '@composable-svelte/core/navigation-components';
   import { Button } from '@composable-svelte/core/components/ui';
 
-  const confirmStore = $derived(scopeToDestination(store, 'destination', 'confirmDelete'));
+  const confirmStore = $derived(scopeToDestination(store, ['destination'], 'confirmDelete', 'destination'));
 </script>
 
 {#if confirmStore}
@@ -782,7 +800,7 @@ These components are from the shadcn-svelte component library. See **composable-
   import { Popover } from '@composable-svelte/core/navigation-components';
   import { Button } from '@composable-svelte/core/components/ui';
 
-  const menuStore = $derived(scopeToDestination(store, 'destination', 'menu'));
+  const menuStore = $derived(scopeToDestination(store, ['destination'], 'menu', 'destination'));
 </script>
 
 <div class="relative">
@@ -892,13 +910,18 @@ case 'destination': {
   return [newState, effect];
 }
 
-// Component
+```
+
+The component:
+
+```svelte
 <script lang="ts">
-  import { Modal, Button } from '@composable-svelte/core/navigation-components';
+  import { Modal } from '@composable-svelte/core/navigation-components';
+  import { Button } from '@composable-svelte/core/components/ui';
   import { scopeToDestination } from '@composable-svelte/core';
 
   const editProfileStore = $derived(
-    scopeToDestination(store, 'editProfile')
+    scopeToDestination(store, ['destination'], 'editProfile', 'destination')
   );
 </script>
 
@@ -973,7 +996,11 @@ case 'presentation':
   }
   return [state, Effect.none()];
 
-// Component with animation
+```
+
+The component, with the animation:
+
+```svelte
 <script lang="ts">
   import { Sheet } from '@composable-svelte/core/navigation-components';
   import { animateSheetIn, animateSheetOut } from '@composable-svelte/core/animation';
@@ -1000,7 +1027,7 @@ case 'presentation':
     }
   });
 
-  const filterStore = $derived(scopeToDestination(store, 'filters'));
+  const filterStore = $derived(scopeToDestination(store, ['destination'], 'filters', 'destination'));
 </script>
 
 {#if filterStore}
@@ -1206,12 +1233,16 @@ case 'destination': {
   return [newState, effect];
 }
 
-// App.svelte
+```
+
+`App.svelte`:
+
+```svelte
 <script lang="ts">
   import { Modal } from '@composable-svelte/core/navigation-components';
   import { scopeToDestination } from '@composable-svelte/core';
 
-  const addItemStore = $derived(scopeToDestination(store, 'destination'));
+  const addItemStore = $derived(scopeToDestination(store, ['destination'], 'addItem', 'destination'));
 </script>
 
 <Button onclick={() => store.dispatch({ type: 'addButtonTapped' })}>
@@ -1248,11 +1279,21 @@ const [newStack, effect] = pop(state.stack);
 // Pop to root
 const [newStack, effect] = popToRoot(state.stack);
 
-// Replace entire path
-const [newStack, effect] = setPath(state.stack, [screen1, screen2]);
+// Replace entire path. `setPath` takes the *new* path — it replaces rather
+// than appends, so the current stack is not an argument.
+const [newStack, effect] = setPath([screen1, screen2]);
 
-// Handle actions dispatched from screens
-const [newState, effect] = handleStackAction(state, action, screenReducer, deps);
+// Handle actions dispatched from screens. Six arguments: the deps come before
+// the reducer, and the last two are how the stack is read from and written back
+// into the parent state.
+const [newState, effect] = handleStackAction(
+  state,
+  action,
+  deps,
+  screenReducer,
+  (s) => s.stack,
+  (s, stack) => ({ ...s, stack })
+);
 
 // Query helpers
 const current = topScreen(state.stack);     // Last screen
@@ -1314,11 +1355,14 @@ const destinationReducer = createDestinationReducer({
   confirmDelete: confirmDeleteReducer
 });
 
-// Shorthand for creating destination + reducer + types together
-const { reducer, types } = createDestination({
+// The DSL: one object carrying the routing reducer and the matcher API.
+// Members are `reducer`, `initial`, `extract`, `is`, `matchCase` and `match`.
+const Destination = createDestination({
   addItem: addItemReducer,
   editItem: editItemReducer
 });
+
+const [next, effect] = Destination.reducer(state.destination, action, deps);
 
 // Type guards
 if (isDestinationType(state.destination, 'addItem')) {
@@ -1343,20 +1387,27 @@ if (isActionAtPath(action, 'addItem.saveButtonTapped')) {
   // Action is addItem's saveButtonTapped
 }
 
-// Match and extract
-const result = matchPresentationAction(action, state, 'editItem.saveButtonTapped');
+// Match and extract. These take the action and the path — the *action* carries
+// the child payload, so no state argument is involved.
+const result = matchPresentationAction(action, 'editItem.saveButtonTapped');
 if (result) {
-  // result is the EditItemState
+  // result is the child action at that path
 }
 
-// Multi-case matching
-const matched = matchPaths(action, state, {
-  'addItem.saveButtonTapped': (addState) => ({ type: 'add', item: addState }),
-  'editItem.saveButtonTapped': (editState) => ({ type: 'edit', item: editState })
+// Multi-case matching: (action, handlers)
+const matched = matchPaths(action, {
+  'addItem.saveButtonTapped': (addAction) => ({ type: 'add', action: addAction }),
+  'editItem.saveButtonTapped': (editAction) => ({ type: 'edit', action: editAction })
 });
 
-// Extract destination state when a specific action fires
-const destState = extractDestinationOnAction(action, state, 'confirmDelete.confirmButtonTapped');
+// Extracting *state* does need the state, and a way to reach the destination
+// within it: (action, state, path, getDestination).
+const destState = extractDestinationOnAction(
+  action,
+  state,
+  'confirmDelete.confirmButtonTapped',
+  (s) => s.destination
+);
 ```
 
 ---
@@ -1365,24 +1416,48 @@ const destState = extractDestinationOnAction(action, state, 'confirmDelete.confi
 
 Children can dismiss themselves via an injectable dependency. Use for simple close/cancel; prefer parent observation when the parent needs to react.
 
+The first argument is the parent's **dispatch**, not the store, and the second
+is a function wrapping a `PresentationAction` into a parent action (or, for the
+`dismissDependency` shorthand, the action field name). The effect dispatches
+through that captured dispatch rather than through the effect stream, so `ifLet`
+cannot wrap the dismiss a second time.
+
+Build it where the store is built — a reducer is `(state, action, dependencies)`
+and has no `dispatch` in scope — capturing the dispatch lazily.
+
 ```typescript
 import { createDismissDependency, createDismissDependencyWithCleanup, dismissDependency } from '@composable-svelte/core/navigation';
 
-// Create dismiss function for a child
-const dismiss = createDismissDependency(parentStore, 'destination');
+let dispatch: Dispatch<ParentAction> = () => {};
 
-// With cleanup callback
-const dismiss = createDismissDependencyWithCleanup(parentStore, 'destination', () => {
-  console.log('child dismissed');
+const store = createStore({
+  initialState,
+  reducer: parentReducer,
+  dependencies: {
+    // Full form: supply the wrapper yourself.
+    dismiss: createDismissDependency(
+      (action) => dispatch(action),
+      (pa) => ({ type: 'destination', action: pa })
+    )
+
+    // Shorthand for that exact shape:
+    // dismiss: dismissDependency((action) => dispatch(action), 'destination')
+
+    // With a cleanup callback, awaited before the dismiss lands:
+    // dismiss: createDismissDependencyWithCleanup(
+    //   (action) => dispatch(action),
+    //   (pa) => ({ type: 'destination', action: pa }),
+    //   async () => { await analytics.track('child_dismissed'); }
+    // )
+  }
 });
 
-// Shorthand helper
-const deps = { dismiss: dismissDependency(parentStore, 'destination') };
+dispatch = (action) => store.dispatch(action);
 
-// Child reducer uses it
+// Child reducer uses it. `deps.dismiss()` IS the effect — RETURN it.
+// Calling it and returning `Effect.none()` discards the dismiss entirely.
 case 'closeButtonTapped':
-  deps.dismiss();  // OK for simple close
-  return [state, Effect.none()];
+  return [state, deps.dismiss()];
 ```
 
 ---
@@ -1395,11 +1470,14 @@ Scope a store to a specific element in a list (for forEach/forEachElement patter
 import { scopeToElement } from '@composable-svelte/core/navigation';
 
 // Create a scoped store for a specific list item
-const itemStore = scopeToElement(parentStore, {
-  getArray: (s) => s.items,
-  id: item.id,
-  actionWrapper: (id, action) => ({ type: 'item', id, action })
-});
+// Positional: (parentStore, actionType, getArray, id). The action type is the
+// wrapper's `type`; the store builds `{ type, id, action }` itself.
+const itemStore = scopeToElement(
+  parentStore,
+  'item',
+  (s) => s.items,
+  item.id
+);
 ```
 
 ---
@@ -1410,6 +1488,19 @@ Fluent APIs for reducer composition and store scoping.
 
 ```typescript
 import { integrate, scopeTo } from '@composable-svelte/core/navigation';
+import type { Reducer, Store } from '@composable-svelte/core';
+
+// `.with(field, ...)` and `.into(field)` are both checked against the state
+// type, so both need one: with an untyped reducer or store every field name
+// resolves to `never`.
+interface AppState {
+  counter: CounterState;
+  todos: TodosState;
+  destination: { type: 'addItem'; state: AddItemState } | null;
+}
+
+declare const baseReducer: Reducer<AppState, AppAction>;
+declare const store: Store<AppState, AppAction>;
 
 // Fluent reducer integration
 const appReducer = integrate(baseReducer)

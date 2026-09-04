@@ -12,7 +12,7 @@
  *   voiceInputReducer,
  *   createInitialVoiceInputState,
  *   getAudioManager
- * } from '@composable-svelte/code';
+ * } from '@composable-svelte/media';
  *
  * const voiceStore = createStore({
  *   initialState: createInitialVoiceInputState(),

@@ -11,7 +11,8 @@ import type {
 	ImageGalleryState,
 	ImageGalleryAction,
 	ImageGalleryDependencies,
-	ImageGalleryConfig
+	ImageGalleryConfig,
+	GalleryImage
 } from './image-gallery.types.js';
 
 /**
@@ -57,6 +58,31 @@ export function createInitialImageGalleryState(
 		errors: {},
 		prefersReducedMotion: false
 	};
+}
+
+/**
+ * Whether two image lists are equivalent.
+ *
+ * `ImageGallery.svelte` dispatches `imagesUpdated` from an effect whose only
+ * guard is the mode flag, so in simple mode it fires on every pass. `dispatch`
+ * reads store state inside that effect's tracking scope, so returning a fresh
+ * state object each time re-triggers it forever. Comparison is by value:
+ * `images={[...]}` inline is a new array on every render.
+ */
+function sameImages(a: GalleryImage[], b: GalleryImage[]): boolean {
+	if (a === b) return true;
+	if (a.length !== b.length) return false;
+	return a.every((image, i) => {
+		const other = b[i]!;
+		return (
+			image.id === other.id &&
+			image.url === other.url &&
+			image.alt === other.alt &&
+			image.caption === other.caption &&
+			image.srcset === other.srcset &&
+			image.sizes === other.sizes
+		);
+	});
 }
 
 /**
@@ -496,7 +522,11 @@ export const imageGalleryReducer: Reducer<
 			return [{ ...state, columns }, EffectBuilder.none()];
 		}
 
-		case 'imagesUpdated':
+		case 'imagesUpdated': {
+			if (sameImages(state.images, action.images)) {
+				return [state, EffectBuilder.none()];
+			}
+
 			return [
 				{
 					...state,
@@ -512,6 +542,7 @@ export const imageGalleryReducer: Reducer<
 				},
 				EffectBuilder.none()
 			];
+		}
 
 		case 'motionPreferenceChanged':
 			return [{ ...state, prefersReducedMotion: action.prefersReduced }, EffectBuilder.none()];

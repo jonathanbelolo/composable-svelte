@@ -27,6 +27,9 @@ describe('createStore', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    // restoreAllMocks does not undo useFakeTimers; without this the fake clock
+    // leaks into whichever file the worker runs next.
+    vi.useRealTimers();
   });
 
   it('creates store with initial state', () => {
@@ -211,16 +214,25 @@ describe('createStore', () => {
     expect(executionOrder.sort()).toEqual([1, 2, 3]);
   });
 
-  it('manages Cancellable effects by ID', async () => {
-    // Test that cancellable effects use the same ID mechanism
-    // (actual cancellation testing is complex with fake timers,
-    // so we just verify the effect is created correctly)
+  it('a second Cancellable with the same id aborts the first and drops its dispatches', async () => {
+    // The previous form asserted construction and dispatch only, and said so.
+    // This one exercises what the id is for: the first executor is parked on
+    // a promise, the second supersedes it, and only the second's action lands.
+    const signals: AbortSignal[] = [];
+    let release!: () => void;
+    const parked = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let issued = 0;
     const reducer: Reducer<TestState, TestAction> = (state, action) => {
       if (action.type === 'startLoading') {
+        const n = ++issued;
         return [
           state,
-          Effect.cancellable('load', async (dispatch) => {
-            dispatch({ type: 'loadComplete', value: 42 });
+          Effect.cancellable('load', async (dispatch, signal) => {
+            signals.push(signal!);
+            if (n === 1) await parked;
+            dispatch({ type: 'loadComplete', value: n });
           })
         ];
       }
@@ -232,12 +244,22 @@ describe('createStore', () => {
     store.subscribeToActions!((action) => actions.push(action));
 
     store.dispatch({ type: 'startLoading' });
+    store.dispatch({ type: 'startLoading' });
 
     await vi.waitFor(() => {
-      expect(actions.filter(a => a.type === 'loadComplete').length).toBeGreaterThanOrEqual(1);
+      expect(actions.filter((a) => a.type === 'loadComplete')).toHaveLength(1);
     });
+    expect(signals).toHaveLength(2);
+    expect(signals[0]!.aborted).toBe(true);
+    expect(signals[1]!.aborted).toBe(false);
 
-    expect(actions.filter(a => a.type === 'loadComplete')).toHaveLength(1);
+    // The superseded executor finishes late; its dispatch is gated off.
+    release();
+    await parked;
+    await Promise.resolve();
+    await Promise.resolve();
+    const completed = actions.filter((a) => a.type === 'loadComplete') as Array<{ value: number }>;
+    expect(completed.map((a) => a.value)).toEqual([2]);
   });
 
   it('debounces Debounced effects', async () => {
@@ -388,20 +410,98 @@ describe('createStore', () => {
     expect(newCount).toBe(1);
   });
 
-  it('cleans up on destroy', () => {
-    const reducer: Reducer<TestState, TestAction> = (state) => [state, Effect.none()];
+  it('destroy() aborts the in-flight cancellable, runs subscription cleanups and clears timers', () => {
+    // The old form asserted only that a state subscriber stopped being called.
+    // Everything destroy() claims to do — abort, cleanup, timers — went
+    // unasserted, and the audit's mutation M2 (delete the abort loop) survived.
+    let signal: AbortSignal | undefined;
+    const cleanup = vi.fn();
+    const debounced = vi.fn();
+    const throttled = vi.fn();
+    const reducer: Reducer<TestState, TestAction> = (state, action) => {
+      switch (action.type) {
+        case 'startLoading':
+          return [
+            state,
+            Effect.batch(
+              Effect.cancellable('job', (_dispatch, s) => {
+                signal = s;
+                return new Promise(() => {}); // stays in flight
+              }),
+              Effect.subscription('sub', () => cleanup),
+              Effect.debounced('deb', 100, () => {
+                debounced();
+              })
+            )
+          ];
+        case 'increment':
+          return [
+            state,
+            Effect.throttled('thr', 100, () => {
+              throttled();
+            })
+          ];
+        default:
+          return [state, Effect.none()];
+      }
+    };
     const store = createStore({ initialState, reducer });
-
     const listener = vi.fn();
     store.subscribe(listener);
-    store.subscribeToActions!(vi.fn());
+    const actionListener = vi.fn();
+    store.subscribeToActions!(actionListener);
+
+    store.dispatch({ type: 'startLoading' });
+    store.dispatch({ type: 'increment' }); // leading edge runs now
+    store.dispatch({ type: 'increment' }); // schedules the trailing run
+    expect(throttled).toHaveBeenCalledTimes(1);
+    expect(signal?.aborted).toBe(false);
+    expect(cleanup).not.toHaveBeenCalled();
 
     store.destroy();
 
-    // Subscribers should be cleared
-    store.dispatch({ type: 'increment' });
+    expect(signal?.aborted).toBe(true);
+    expect(cleanup).toHaveBeenCalledTimes(1);
 
-    // Only the initial call from subscribe
-    expect(listener).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(1000);
+    expect(debounced).not.toHaveBeenCalled();
+    expect(throttled).toHaveBeenCalledTimes(1);
+
+    // Subscribers are cleared: a later dispatch reaches neither.
+    store.dispatch({ type: 'setCount', value: 1 });
+    expect(listener).toHaveBeenCalledTimes(1); // the immediate call from subscribe()
+    expect(actionListener).not.toHaveBeenCalledWith({ type: 'setCount', value: 1 }, expect.anything());
+  });
+
+  it('N7 (pinned defect): an AfterDelay scheduled before destroy() still fires into the destroyed store', () => {
+    // Pinned, not fixed: destroy() tracks cancellables, subscriptions, debounce
+    // and throttle timers, but not AfterDelay timers or in-flight Run
+    // executors, and dispatch() stays live after destroy(). This test asserts
+    // the defective behaviour so it fails the moment R1.8 fixes it, and must be
+    // removed in that commit. AUDIT-2026-09-03-FINDINGS.md N7.
+    const late = vi.fn();
+    const reducer: Reducer<TestState, TestAction> = (state, action) => {
+      if (action.type === 'startLoading') {
+        return [
+          state,
+          Effect.afterDelay(100, (dispatch) => {
+            dispatch({ type: 'loadComplete', value: 1 });
+          })
+        ];
+      }
+      if (action.type === 'loadComplete') {
+        late();
+        return [{ ...state, count: action.value }, Effect.none()];
+      }
+      return [state, Effect.none()];
+    };
+    const store = createStore({ initialState, reducer });
+    store.dispatch({ type: 'startLoading' });
+    store.destroy();
+
+    vi.advanceTimersByTime(100);
+
+    expect(late).toHaveBeenCalledTimes(1);
+    expect(store.state.count).toBe(1);
   });
 });

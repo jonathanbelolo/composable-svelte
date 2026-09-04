@@ -1,6 +1,5 @@
 <script lang="ts">
   import { createStore } from '@composable-svelte/core';
-  import { scopeTo } from '@composable-svelte/core/navigation';
   import {
     Form,
     FormField

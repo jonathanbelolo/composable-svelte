@@ -20,7 +20,7 @@ This repository contains **Composable Svelte**, a Composable Architecture librar
   - **API Client**: HTTP/REST with effects, interceptors, retries, caching (162 tests)
   - **WebSocket**: Real-time communication, reconnection, channels, heartbeat (140 tests)
   - **Dependencies**: Clock (MockClock), Storage (localStorage/cookies) (118 tests)
-- ✅ **Phase 17**: Internationalization (i18n) & Server-Side Rendering (1900+ total tests)
+- ✅ **Phase 17**: Internationalization (i18n) & Server-Side Rendering
   - **i18n**: ICU MessageFormat, locale detection, framework formatters (dates, numbers, currency)
   - **SSR**: Server-side rendering with Fastify, state hydration, security hardening
   - **SSG**: Static site generation, multi-locale support, dynamic route enumeration (22 tests)
@@ -72,7 +72,14 @@ The store uses `$state.raw()` internally (in `store.svelte.ts`), making `store.s
 ```
 composable-svelte/
 ├── packages/
-│   └── core/                        # @composable-svelte/core package
+│   ├── auth/                        # Sessions, sign-in flows, guards
+│   ├── charts/                      # Observable Plot / D3 charts
+│   ├── chat/                        # Streaming + collaborative chat
+│   ├── code/                        # CodeMirror, Prism, SvelteFlow wrappers
+│   ├── graphics/                    # WebGL overlay, Babylon adapter
+│   ├── maps/                        # MapLibre GL (in development)
+│   ├── media/                       # Audio player, VideoEmbed, voice input
+│   └── core/                        # @composable-svelte/core package — expanded
 │       ├── src/
 │       │   ├── animation/           # Animation integration (Phase 4)
 │       │   ├── api/                 # HTTP/REST client (Phase 6)
@@ -345,14 +352,14 @@ if (result.matched) {
 ```
 
 ### Timeout Fallbacks
-Always include timeout fallbacks for critical animations:
 
-```typescript
-Effect.batch(
-  Effect.afterDelay(300, (d) => d({ type: 'presentationCompleted' })),
-  Effect.afterDelay(600, (d) => d({ type: 'presentationTimeout' }))  // 2x expected duration
-)
-```
+Only where they are reachable. Motion One's `.finished` never rejects and hangs
+forever when an animation is interrupted, so a `.catch()` is not recovery — but
+the `(status, content)` guard means the live promise always matches the live
+status, which makes a hung promise harmless in the components here. Add a
+fallback when that correspondence breaks (two effects on one element, an element
+re-keyed mid-flight), not by default. `guides/ANIMATION-GUIDELINES.md` has the
+rule and the evidence; `tests/animation-interruption.test.ts` pins it.
 
 ### Blocked Actions During Animation
 Disable UI elements when animations are in progress:
@@ -443,7 +450,18 @@ This library is heavily inspired by TCA for Swift but adapted for Svelte/TypeScr
 - ✅ **Vitest + jsdom**: Fast, Vite-native testing
 - ✅ **TestStore API**: Exhaustive action testing with send/receive
 - ✅ **Mock Implementations**: MockClock, MockCookieStorage, MockWebSocket, MockAPI
-- ✅ **1900+ Tests**: Across every package, run by `pnpm -r test`
+- ✅ **4,641 Tests**: 4,441 across the eight packages plus 200 in the examples —
+  including a 93-test integration suite in `examples/auth-server` that drives
+  `@composable-svelte/auth`'s HTTP adapter against a real Fastify backend rather
+  than a `fetch` stub. Its 6 Playwright tests (the cookie and the OAuth
+  redirect, in a real browser) run separately via `pnpm --filter
+  @composable-svelte/example-auth-server test:e2e`, which CI runs as its own
+  step.
+  Run them with `pnpm test`, which passes `--workspace-concurrency=1`: five of
+  the eight packages — core, auth, chat, code and media — drive a real Chromium
+  through Vitest browser mode, and running workspaces in parallel makes suites
+  fail on scheduling rather than on code. (charts, graphics and maps use jsdom.)
+  See `guides/VERIFICATION-PROTOCOL.md`.
 
 ### Examples & Documentation
 - ✅ **Styleguide**: Component showcase with interactive examples
@@ -616,10 +634,46 @@ case 'show': {
 }
 ```
 
-**CSS Animations (EXCEPTIONS ONLY)**:
-- ✅ **Allowed**: Infinite loops (Spinner, Skeleton shimmer effects, Progress indicators)
-- ❌ **Prohibited**: Hover states, Focus states, Click/Active states
-- ❌ **Prohibited**: Any lifecycle animations (appearing, disappearing, expanding, collapsing)
+**CSS Animations**: classify by what *drives* the change, never by what it looks
+like. `guides/ANIMATION-GUIDELINES.md` is the authority and
+`packages/core/tests/repo/animation-policy.test.ts` enforces it.
+
+- ✅ **Allowed**: animations that repeat forever with no state input — they must
+  carry `infinite` (Spinner, Skeleton shimmer). A **one-shot `@keyframes` is a
+  lifecycle animation and is prohibited**; the `infinite` keyword is the test,
+  not the `@keyframes` syntax.
+- ❌ **Prohibited**: transitions driven by a CSS pseudo-class — `:hover`,
+  `:focus`, `:focus-visible`, `:active`. Keep the end-state style; the change is
+  instant.
+- ❌ **Prohibited**: any lifecycle animation (appearing, disappearing, expanding,
+  collapsing) done in CSS. These use Motion One.
+- ❌ **Prohibited**: one declaration serving both a pseudo-class and a
+  state-driven class. Split it.
+- ⚠️ **By exception only**: a continuous external numeric source (audio level,
+  playback position) may use a CSS transition **if it is listed in the Exception
+  Register** in `guides/ANIMATION-GUIDELINES.md`.
+
+**Which state-driven mechanism** — two questions, in order:
+1. Must anything in the store react to this animation *finishing* (sequencing,
+   cancellation, a guard, a reducer test)?
+2. Must the element outlive the state that renders it — animate *out* before
+   unmounting?
+
+Yes to either → the lifecycle belongs in the store (`PresentationState`, or a
+domain flag with a store-owned duration, as Toast does). No to both → a plain
+boolean plus Motion One in a guarded `$effect`, which is deliberately
+fire-and-forget: observable, but not coordinatable.
+
+**Reduced motion is mandatory.** Every animation must be skippable, and skipping
+it must still dispatch the completion event — otherwise a skipped animation is a
+deadlocked state machine. Three helpers in `animate.ts` honour it —
+`animateFadeIn`, `animateFadeOut`, `animateListItemIn` — along with
+`createScrollFollower`. The other 28 do not.
+
+**Atomic (Pattern A) components do not animate their own interaction or value
+states.** The list lives in `guides/ANIMATION-GUIDELINES.md` and is not repeated
+here — duplicating it across two files is how it went out of sync in the first
+place, with one file saying `Switch` animates and the other saying it must not.
 
 **Why This Approach**:
 - ✅ Predictable: State-driven animations are fully controlled by reducers
@@ -634,6 +688,10 @@ case 'show': {
 
 - **Specs Location**: All specs in `specs/frontend/`
 - **Implementation Plan**: `plans/implementation-plan.md`
+- **Verification Protocol**: `guides/VERIFICATION-PROTOCOL.md` — how a change is
+  checked before it is believed. Mutation-verify every fix; a test that cannot
+  fail is not a guard. Read it before adding one.
+- **Open defect backlog**: `plans/hardening/README.md`
 - **TCA Documentation**: https://github.com/pointfreeco/swift-composable-architecture
 - **Svelte 5 Runes**: https://svelte.dev/docs/svelte/what-are-runes
 

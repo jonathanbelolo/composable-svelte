@@ -7,6 +7,7 @@
 	@component
 -->
 <script lang="ts">
+	import { getCommandContext } from './Command.svelte';
 	import type { Store } from '../../types.js';
 	import type { CommandState, CommandAction, CommandItem as CommandItemData } from './command.types.js';
 
@@ -14,7 +15,12 @@
 		/**
 		 * Store managing command state.
 		 */
-		store: Store<CommandState, CommandAction>;
+		/**
+		 * The palette store. Optional: inside `<Command>` it comes from
+		 * context. Pass it explicitly only for standalone (non-modal) use
+		 * with a store you own.
+		 */
+		store?: Store<CommandState, CommandAction> | undefined;
 
 		/**
 		 * Command data.
@@ -29,10 +35,15 @@
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 	}
 
-	let { store, command, index, class: className = '' }: CommandItemProps = $props();
+	let { store: storeProp, command, index, class: className = '' }: CommandItemProps = $props();
+
+	// Falls back to the palette's context. This used to be a REQUIRED prop, so a
+	// consumer had to build a second store — and everything `<Command>` was
+	// configured with fed the internal one that nothing rendered.
+	const store = $derived(storeProp ?? getCommandContext());
 
 	const isSelected = $derived($store.selectedIndex === index);
 	const isDisabled = $derived(command.disabled ?? false);
@@ -71,7 +82,7 @@
 				{command.icon}
 			{:else}
 				<!-- Component icon -->
-				<svelte:component this={command.icon} />
+				<command.icon />
 			{/if}
 		</span>
 	{/if}
@@ -109,7 +120,6 @@
 		border-radius: 0.375rem;
 		cursor: pointer;
 		text-align: left;
-		transition: all 0.15s;
 	}
 
 	.command-item:hover:not(:disabled) {

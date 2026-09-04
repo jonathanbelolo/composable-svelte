@@ -328,7 +328,7 @@
                             onblur={() => send({ type: 'fieldBlurred', field: 'state' })}
                             class="w-full"
                             placeholder="CA"
-                            maxlength="2"
+                            maxlength={2}
                           />
                           {#if field.error && field.touched}
                             <p class="text-sm text-red-600 mt-1" data-testid="state-error">{field.error}</p>
@@ -352,7 +352,7 @@
                             onblur={() => send({ type: 'fieldBlurred', field: 'zipCode' })}
                             class="w-full"
                             placeholder="94102"
-                            maxlength="5"
+                            maxlength={5}
                           />
                           {#if field.error && field.touched}
                             <p class="text-sm text-red-600 mt-1" data-testid="zipCode-error">{field.error}</p>

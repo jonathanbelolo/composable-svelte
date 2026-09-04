@@ -15,12 +15,12 @@
 		/**
 		 * Available page size options (default: [10, 20, 50, 100]).
 		 */
-		pageSizeOptions?: number[];
+		pageSizeOptions?: number[] | undefined;
 
 		/**
 		 * Additional CSS classes for the container.
 		 */
-		class?: string;
+		class?: string | undefined;
 	}
 
 	let {

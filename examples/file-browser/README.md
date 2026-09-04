@@ -112,4 +112,5 @@ Try extending this example:
 />
 ```
 
-See the [TreeView documentation](../../packages/core/src/components/ui/tree-view/README.md) for full API details.
+See the [TreeView prop types](../../packages/core/src/lib/components/ui/tree-view/tree-view.types.ts)
+for the full API. There is no prose guide for it yet.

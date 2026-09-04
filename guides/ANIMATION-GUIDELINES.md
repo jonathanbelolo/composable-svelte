@@ -1,396 +1,461 @@
 # Animation Guidelines for Composable Svelte
 
-This document defines when and how to use animations in Composable Svelte components.
-
-## Core Principle
-
-**State-Driven Animation Requirement**: Any component with lifecycle animations (appearing, disappearing, expanding, collapsing) MUST use state-driven animations via our animation system. This enables animation choreography and maintains state consistency.
-
-## When to Use Motion One (State-Driven)
-
-### REQUIRED: Component Lifecycle Animations
-
-Use Motion One with PresentationState for:
-
-1. **Modal/Dialog Animations**
-   - Fade in/out
-   - Scale animations
-   - Backdrop animations
-   - Example: Modal, Sheet, Drawer, AlertDialog
-
-2. **Dropdown/Popup Animations**
-   - Appear/disappear
-   - Slide/scale transitions
-   - Example: DropdownMenu, Select, Combobox, Popover, Tooltip
-
-3. **Expand/Collapse Animations**
-   - Height transitions
-   - Accordion items
-   - Collapsible sections
-   - Example: Accordion, Collapsible, TreeView
-
-4. **Toast/Alert Animations**
-   - Slide in from edge
-   - Fade animations
-   - Stacked toast coordination
-   - Example: Toast, Alert
-
-5. **Navigation Animations**
-   - Page transitions
-   - Stack push/pop
-   - Example: NavigationStack
-
-### Pattern: PresentationState Lifecycle
-
-```typescript
-// State includes presentation tracking
-interface ComponentState {
-  content: ContentType | null;
-  presentation: PresentationState<ContentType>;
-}
-
-// Actions include presentation events
-type ComponentAction =
-  | { type: 'show'; content: ContentType }
-  | { type: 'hide' }
-  | { type: 'presentation'; event: PresentationEvent };
-
-// Reducer manages lifecycle
-case 'show': {
-  return [
-    {
-      ...state,
-      content,
-      presentation: {
-        status: 'presenting',
-        content,
-        duration: 0.3
-      }
-    },
-    Effect.run(async (dispatch) => {
-      await new Promise(r => setTimeout(r, 300));
-      dispatch({
-        type: 'presentation',
-        event: { type: 'presentationCompleted' }
-      });
-    })
-  ];
-}
-
-// Component uses Motion One
-$effect(() => {
-  if (!element) return;
-
-  if (store.state.presentation.status === 'presenting') {
-    animateIn(element).then(() => {
-      store.dispatch({
-        type: 'presentation',
-        event: { type: 'presentationCompleted' }
-      });
-    });
-  }
-});
-```
-
-## When to Use CSS Animations (Exceptions)
-
-### ALLOWED: Pure CSS Animations
-
-CSS animations are acceptable for:
-
-1. **Infinite Loop Animations**
-   - Spinners
-   - Progress indicators
-   - Loading states
-   - Example: Spinner component (@keyframes spin)
-
-2. **Decorative Animations**
-   - Skeleton shimmer effects
-   - Background patterns
-   - Non-interactive visual effects
-   - Example: Skeleton component (@keyframes shimmer)
-
-3. **Performance-Critical Transitions** (Case-by-Case)
-   - High-frequency updates
-   - 60fps requirements
-   - GPU-accelerated transforms
-   - Example: Carousel slides (UNDER REVIEW)
-
-### Pattern: CSS Animation (Exceptions Only)
-
-```css
-/* ✅ GOOD: Infinite spinner animation */
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.spinner {
-  animation: spin 1s linear infinite;
-}
-
-/* ✅ GOOD: Skeleton shimmer */
-@keyframes shimmer {
-  0% { background-position: -100% 0; }
-  100% { background-position: 200% 0; }
-}
-
-.skeleton {
-  animation: shimmer 2s ease-in-out infinite;
-}
-```
-
-## When to AVOID CSS Transitions
-
-### PROHIBITED: Hover/Interaction Transitions
-
-**DO NOT** use CSS transitions for:
-
-1. **Hover States**
-   - Color changes
-   - Background changes
-   - Border changes
-
-2. **Focus States**
-   - Outline animations
-   - Glow effects
-
-3. **Click/Active States**
-   - Button press feedback
-   - Scale effects
-
-### Rationale
-
-These transitions:
-- Cannot be coordinated with other animations
-- Are not tracked in component state
-- Violate the state-driven principle
-- Make testing animation sequences impossible
-
-### Examples
-
-```css
-/* ❌ BAD: CSS transitions removed */
-.button {
-  /* transition: background-color 0.2s; */ /* REMOVED */
-}
-
-.button:hover {
-  background: #blue;
-  /* Instant change - no transition */
-}
-
-/* ❌ BAD: Tailwind transition classes removed */
-/* <div class="transition-colors duration-200"> */ /* REMOVED */
-<div class="hover:bg-gray-100">
-```
-
-## Atomic Components (No Animation)
-
-**Pattern A** components have ZERO animation:
-
-- Badge
-- Button
-- Card
-- Checkbox
-- Input
-- Label
-- Radio
-- Separator
-- Slider
-- Switch
-- Textarea
-
-These components are pure presentational and should provide instant visual feedback.
-
-## Animation Choreography
-
-### Why State-Driven Matters
-
-State-driven animations enable parent components to coordinate multiple child animations:
-
-```typescript
-// Parent can sequence animations
-case 'showAll': {
-  return [
-    {
-      ...state,
-      modalPresentation: { status: 'presenting', content, duration: 0.3 },
-      formPresentation: { status: 'idle' } // Wait
-    },
-    Effect.run(async (dispatch) => {
-      // Wait for modal to complete
-      await new Promise(r => setTimeout(r, 300));
-
-      // Then start form animation
-      dispatch({ type: 'showForm' });
-    })
-  ];
-}
-```
-
-Without state-driven animations, this coordination is impossible.
-
-## Available Animation Functions
-
-### Motion One Helpers
-
-Located in `packages/core/src/animation/animate.ts`:
-
-- `animateModalIn/Out(element)` - Modal/dialog animations
-- `animateBackdropIn/Out(element)` - Backdrop fade
-- `animateSheetIn/Out(element)` - Sheet slide from edge
-- `animateDrawerIn/Out(element)` - Drawer slide
-- `animateAlertIn/Out(element)` - Alert animations
-- `animateTooltipIn/Out(element)` - Tooltip fade/scale
-- `animateToastIn/Out(element)` - Toast slide from edge
-- `animateDropdownIn/Out(element)` - Dropdown fade/scale
-- `animateAccordionExpand/Collapse(element)` - Height transitions
-
-### Adding New Animations
-
-1. Add function to `animate.ts`
-2. Use Motion One's `animate()` function
-3. Return the animation promise
-4. Example:
-
-```typescript
-export async function animateCustomIn(element: HTMLElement): Promise<void> {
-  await animate(
-    element,
-    { opacity: [0, 1], scale: [0.95, 1] },
-    { duration: 0.2, easing: 'ease-out' }
-  ).finished;
-}
-```
-
-## Decision Tree
-
-```
-Does component have animation?
-├─ NO → Pattern A (Atomic) - No animation system needed
-└─ YES → What kind of animation?
-    ├─ Infinite loop (spinner, shimmer)
-    │   └─ Use CSS @keyframes
-    ├─ Hover/focus/click
-    │   └─ NO TRANSITION - Instant feedback
-    └─ Lifecycle (appear/disappear/expand/collapse)
-        └─ Use Motion One + PresentationState
-```
-
-## Testing
-
-### Testing State-Driven Animations
-
-```typescript
-// Test presentation lifecycle
-await store.send({ type: 'show', content: data }, (state) => {
-  expect(state.presentation.status).toBe('presenting');
-});
-
-await store.receive({
-  type: 'presentation',
-  event: { type: 'presentationCompleted' }
-}, (state) => {
-  expect(state.presentation.status).toBe('presented');
-});
-```
-
-### Testing CSS Animations
-
-CSS animations (spinners, skeletons) don't require state testing - they're purely visual.
-
-## Migration Guide
-
-### Removing CSS Transitions
-
-If you find a component with CSS transitions:
-
-1. **Identify the transition type**
-   - Lifecycle? → Add PresentationState
-   - Hover/focus? → Remove transition entirely
-
-2. **For lifecycle transitions**
-   - Add `presentation` field to state
-   - Add `presentation` action to reducer
-   - Implement lifecycle in reducer (presenting → presented → dismissing → idle)
-   - Add Motion One animation in component $effect
-   - Remove CSS transitions/animations
-
-3. **For hover/focus/click**
-   - Simply remove the transition
-   - Keep the hover/focus styles
-   - Visual change happens instantly
-
-### Example: Calendar Fix
-
-**Before** (Calendar.svelte):
-```css
-.calendar-day {
-  transition: all 0.2s; /* REMOVED */
-}
-
-.calendar-day:hover {
-  background: #f3f4f6;
-}
-```
-
-**After**:
-```css
-.calendar-day {
-  /* No transition */
-}
-
-.calendar-day:hover {
-  background: #f3f4f6; /* Instant change */
-}
-```
-
-## Documented Exceptions
-
-### Current Exceptions
-
-1. **Spinner** (Pattern A)
-   - Uses: `@keyframes spin`
-   - Rationale: Infinite loop, pure CSS acceptable
-
-2. **Skeleton** (Pattern A)
-   - Uses: `@keyframes shimmer`
-   - Rationale: Infinite loop, pure CSS acceptable
-
-3. **Progress** (Pattern A)
-   - Uses: CSS for bar fills
-   - Rationale: Pure visual, no lifecycle
-
-### Approved Exceptions
-
-1. **Carousel** (Pattern B)
-   - Uses: CSS `transition-transform` for slide animations
-   - Rationale:
-     - **Performance**: 60fps transforms require GPU acceleration
-     - **State-Driven**: `currentIndex` is managed via reducer (compliant)
-     - **CSS Transform**: Using `transform: translateX()` which is GPU-accelerated
-     - **Simplicity**: CSS transitions are more performant than JavaScript for this use case
-   - Note: The animation is still state-driven (currentIndex in reducer), only the visual transition uses CSS for performance
-   - Exception type: Performance-critical continuous transforms
-
-## Summary
-
-| Animation Type | Approach | Example |
-|---------------|----------|---------|
-| Lifecycle (Modal/Dialog) | Motion One + PresentationState | Modal, Sheet, Drawer |
-| Lifecycle (Dropdown) | Motion One + PresentationState | DropdownMenu, Select |
-| Lifecycle (Expand/Collapse) | Motion One + PresentationState | Accordion, Collapsible |
-| Infinite Loop | CSS @keyframes | Spinner, Skeleton |
-| Hover/Focus/Click | No transition (instant) | Button, Calendar, FileUpload |
-
-## Questions?
-
-When in doubt:
-- **Does it appear/disappear/expand/collapse?** → Use Motion One + PresentationState
-- **Is it an infinite loop?** → CSS @keyframes is OK
-- **Is it hover/focus/click?** → No transition needed
+This document is the **authority** on when and how Composable Svelte animates.
+
+It **supersedes** `specs/frontend/animation-integration-spec.md` §Overview, §1.3,
+§5.1–5.2 and §9.1(2), and the transition examples in
+`specs/frontend/navigation-spec.md`. Those describe a Svelte-built-in-transitions
+design that was never shipped — there is not one `transition:` / `in:` / `out:` /
+`animate:` directive anywhere in `packages/*/src`. Read the specs for design
+rationale, not for animation instructions.
+
+**What is mechanically enforced, and what is not.** `animation-policy.test.ts`
+enforces exactly one rule family: the ban on CSS-authored animation (§The one
+rule). Everything else here — the invariants, Pattern A, the choice of
+mechanism, reduced motion — is reviewed by people, not by the suite. A green
+suite is not compliance. Live proof that the gap is real: `Toast.svelte:85` is an
+unguarded `$effect` calling `animateToastIn`, a plain violation of invariant 1,
+and the test reports it clean.
+
+## Core principle
+
+Animation is **state-driven**. What is on screen is a function of state, and a
+transition between two screens is a function of a state *change*.
+
+CSS transitions break that, and in this codebase they break it twice over. They
+are invisible to the store, so nothing can sequence or cancel them — and they are
+invisible to the *tests*, because Tailwind is not compiled in the browser test
+environment. Measured: a class-driven `rotate-180` has no CSS behind it and
+`getComputedStyle(el).transform` reads `none` at every point of the change. A
+utility-class animation is not merely uncoordinated; it is unobservable to every
+test in this repo. Motion One writes inline styles, so it is testable without a
+build step. That, more than taste, is why this document exists.
+
+## The one rule
+
+**Classify by what *drives* the change, never by what the change looks like.**
+
+Read the element. Ask what makes it change.
+
+| What drives the change | Mechanism |
+|---|---|
+| A CSS pseudo-class — `:hover`, `:focus`, `:focus-visible`, `:active` | **No transition.** Keep the end-state style; the change is instant. |
+| Component or reducer state | **Motion One**, in a guarded `$effect` |
+| Nothing — it repeats forever | **CSS `@keyframes`**, and it must carry `infinite` |
+| A continuous external numeric source | **Register entry required** |
+| A browser-native animation not written as `transition`/`animation` — `scroll-behavior: smooth`, `startViewTransition`, Svelte's `transition:` / `in:` / `out:` / `animate:` | **Prohibited**, for the same reason as CSS transitions: the store cannot see it. Use Motion One, or an explicit scroll helper. |
+
+This table covers the mechanisms present in this repo. It is not a proof that no
+sixth exists — if you find one, add a row rather than forcing it into an
+ill-fitting one.
+
+Three consequences worth stating, because all three were being violated:
+
+- **A one-shot `@keyframes` is a lifecycle animation.** `animation: slideIn 0.2s
+  ease-out` on mount is exactly what Motion One is for. The `infinite` keyword is
+  the test, not the `@keyframes` syntax.
+- **A single declaration may not serve two masters.** One `transition-colors`
+  covering both a `hover:` class and a state-driven class must be split: the
+  hover half goes, the state half becomes Motion One.
+- **`scroll-behavior: smooth` is an animation.** Four sites in `chat/` used to
+  set `scrollTop = scrollHeight` and let the browser animate it — a state-driven
+  lifecycle animation in CSS, unguarded for reduced motion. It was also breaking
+  the feature it belonged to: the browser fires a scroll event per intermediate
+  frame, and the listener that decides "has the user scrolled away?" could not
+  tell those from a real one, so auto-scroll latched *off* mid-response. Use
+  `createScrollFollower` from `@composable-svelte/core/animation`, which eases
+  toward a target that keeps moving, distinguishes its own frames from the
+  user's, and honours reduced motion.
+
+### Why pseudo-class transitions go
+
+- They cannot be coordinated. A chevron on a 200ms `ease-out` beside a dropdown
+  on a spring is one gesture on two timelines, and the two curves do not match.
+- They fire on class changes that have nothing to do with hovering.
+- They are unobservable under test, per the Core Principle above.
+
+Instant hover feedback is not a downgrade; it is the platform default.
+
+## Reduced motion — mandatory
+
+**Every animation this library runs must be skippable, and skipping it must not
+change what the store believes.**
+
+This is not optional polish. The library animates by default, and today **3 of
+the 31 helpers in `animate.ts` consult the user's preference** — `animateFadeIn`,
+`animateFadeOut` and `animateListItemIn`, all written after this rule was.
+Modal, sheet, drawer, alert, tooltip, toast, dropdown, popover, sidebar, stack,
+accordion and chevron still run at full amplitude regardless. Outside that file,
+`createScrollFollower` honours it too, and `ImageGallery.svelte:197` reads it
+into the store so its reducer can branch. The rest of the honouring that exists
+is five CSS `@media (prefers-reduced-motion: reduce)` blocks in `media/`, and two
+of those guard one-shot `@keyframes` that the rule above orders converted — no
+longer blocked, now that a compliant fade exists to convert them to.
+
+Note the asymmetry the three compliant helpers encode, because it is the part
+that is easy to get wrong: an entrance may return early only when the element's
+resting state is already the end state. `animateFadeOut` has to *write*
+`opacity: 0` under the preference — skipping the animation must never skip the
+outcome.
+
+So the migration has a trap in it, and it must be stated: **converting a CSS
+animation that sits under a reduced-motion block, without carrying the preference
+across, removes accessibility support.** Do not do that.
+
+The shape to follow already exists, in `ImageGallery.svelte:197`: read the
+preference once, put it in the store, and let the component branch on it.
+`ImageLightbox.svelte:174` then skips the animation **and dispatches the
+completion event immediately**.
+
+That last part is the whole game. A skipped animation that does not dispatch its
+completion is invariant 2's deadlock with extra steps — the element never leaves
+`presenting`, and every later dismiss is refused. **Reduced motion must
+short-circuit the animation, never the state machine.**
+
+## Choosing a mechanism for a state-driven animation
+
+Two questions, in order:
+
+1. **Must anything in the store react to this animation finishing?** Sequencing a
+   second animation after it, cancelling it, guarding an action on it, or
+   asserting on it in a reducer test.
+2. **Must the element outlive the state that renders it** — i.e. animate out
+   before unmounting?
+
+**Yes to either → the lifecycle belongs in the store.** Then choose:
+
+- `PresentationState` (`idle → presenting → presented → dismissing → idle`) for
+  anything overlay-shaped. Reference: `SheetPrimitive.svelte:131-178`.
+- A domain flag plus a store-owned duration, where a full lifecycle is
+  overweight. Reference: `Toast` — `toast.reducer.ts:115` sets `dismissing: true`
+  and defers removal with `Effect.afterDelay(state.exitDurationMs, …)`. This is a
+  legitimate shape, not a lesser one; the duration lives in state where a test
+  can reach it.
+
+**No to both → a plain boolean plus Motion One in a guarded `$effect`.**
+Reference: `Switch.svelte:60-86`.
+
+### Be honest about what the boolean pattern gives up
+
+It is **fire-and-forget**. It dispatches nothing, so the store never learns the
+animation finished. It is *observable* (Motion writes inline styles a test can
+sample) but not *coordinatable* — a parent cannot sequence against it, and rapid
+toggling starts overlapping runs with no cancellation.
+
+That is an acceptable trade for decoration — a chevron, a thumb. It is the wrong
+trade the moment question 1 is a yes. `Carousel` is the cautionary example: its
+track never unmounts, so the naive reading says "boolean", but its reducer owns
+`isTransitioning` and needs `transitionCompleted` — and the component currently
+hand-rolls that with a bare `setTimeout` running against a duration it also feeds
+to CSS. Two clocks, no cancellation, no fallback. That is what question 1 exists
+to catch.
+
+## Completion, and what happens when it never arrives
+
+A store-owned lifecycle is a promise that a completion event will be dispatched.
+If that promise is broken the machine sticks, because the reducer guards
+(`status !== 'presented'` and friends) then refuse every later transition.
+
+**Motion One's `.finished` can break it, and in a specific way worth knowing.**
+Verified in `motion@12.23.24`: `motion-dom`'s `WithPromise` builds
+`new Promise((resolve) => …)` and captures **no `reject`**. `notifyFinished()` is
+called only from `finish()`; `cancel()` and `stop()` go straight to `teardown()`.
+And `MotionValue.start()` stops the previous animation before starting a new one.
+
+So an **interrupted animation's promise never settles** — not resolved, not
+rejected, pending for the life of the page. Two consequences:
+
+- The `try/catch` in every helper in `animate.ts` is **dead code for that path**.
+  There is nothing to catch. Do not reach for `.catch()` as your recovery.
+- A `.then()` that dispatches completion will simply never run.
+
+**Why the components here survive that**, and it is structural rather than luck:
+the `(status, content)` guard starts a new animation only when the status has
+actually changed, so the *live* promise always matches the *live* status. A hung
+promise is therefore always a superseded one — and the reducer's own status guard
+would have rejected its dispatch anyway. `tests/animation-interruption.test.ts`
+pins both halves.
+
+**When you do need a timeout fallback:** when that correspondence breaks. Two
+effects animating the same element, an element re-keyed mid-flight, or any design
+where the live status can have no live promise. Then dispatch a timeout event at
+2–3× the expected duration and guard the completion cases so whichever arrives
+second returns the identical state.
+
+Do **not** add a fallback where the correspondence holds. A recovery path with no
+reachable trigger is unreachable code, and this codebase is being cleaned of
+exactly that.
+
+## Invariants for the guarded `$effect`
+
+Every one was learned by shipping the bug.
+
+1. **The guard is a plain `let`, never `$state`.** The effect reads and writes it,
+   so a reactive guard re-triggers the effect it lives in —
+   `effect_update_depth_exceeded`. Eleven guards had this defect in 0.6.0.
+2. **Key the guard on the `(status, content)` pair**, not on "have I animated
+   anything yet". Those diverge when a component mounts already `presented` — SSR
+   hydration of a page rendered with an overlay open, or any persistent sidebar —
+   and the difference is a permanent deadlock. Seven files had this.
+3. **`idle` resets the guard** and returns early.
+4. **Fire completion callbacks inside `queueMicrotask`**, so the dispatch lands
+   outside effect context.
+5. **The element must still contain its content while it animates.** An `{#if}`
+   *inside* the element you `bind:this` empties it during the DOM update, before
+   the effect runs — so a collapse measuring `scrollHeight` measures zero and
+   animates 0→0. Keep the content mounted for the duration, or measure first.
+6. **One property, one author.** If Motion One animates a property, nothing else
+   may write it — no utility class, no reactive `style={…}` attribute. Svelte
+   rewrites the whole `style` attribute on any re-render, so a second author does
+   not merely duplicate, it clobbers mid-flight. The Switch thumb had three
+   authors for its transform and looked fine, which is not an ownership rule.
+7. **On first run, place — do not animate.** Seed the guard from the current
+   value and set the end state directly. A switch that mounts already on has not
+   just been switched on. This applies to booleans exactly as much as to
+   `(status, content)`; three components in this repo hand-rolled three
+   incompatible versions of it before it was written down.
+
+### The guard is not state
+
+Invariant 1 gives a mechanical reason; here is the principled one. The guard is a
+record of **what this component last told the DOM**, not a fact about the domain.
+The DOM is an external mutable resource, and this codebase already has that
+boundary: `CodeEditor.svelte:31` holds its CodeMirror `EditorView` in a plain
+`let`, outside the store, for the same reason.
+
+The cost, which must be disclosed: rendering becomes a function of state *and
+mount order*, not of state alone. Two components bound to the same store, mounted
+either side of a change, can render it differently. That is acceptable for
+decoration and unacceptable for anything the store sequences against — which is
+question 1 again.
+
+## Pattern A — atomic components
+
+An atomic component **does not animate its own interaction or value states**: no
+transition on hover, focus, press, checked, disabled, or on the value it
+displays.
+
+Badge · Button · Card · Checkbox · Input · Label · Radio · Separator · Slider ·
+Textarea
+
+**`Switch` is deliberately not on that list**, and `CLAUDE.md` defers to this
+list rather than repeating it. A switch thumb travelling between two positions is
+a genuine state transition — start, end, distance — so it belongs in Motion One.
+Its *track colour* changes instantly, because that part is decoration. (Its
+animation was already Motion One before this rewrite, but it was also carrying a
+CSS transition, a reactive inline `style` and an unguarded effect, so the code
+was not blameless either.)
+
+**A composed child may animate on its own terms — but it must itself satisfy the
+rule above.** A loading spinner inside a Button is an `infinite` keyframe
+animation, legal in its own right, and does not make the Button a violation. The
+test is the child's own legitimacy, not the fact of nesting; otherwise every
+component escapes Pattern A by extracting a wrapper.
+
+## Exception Register
+
+An entry grants a **named set of properties** on a named file. Nothing outside
+this table may animate in CSS. (There was a temporary backlog; see below.)
+
+To be admitted, a site must be:
+- driven by a continuous external numeric source — audio level, playback
+  position, a countdown — that changes faster than a spring could settle; **and**
+- free of any mount/unmount lifecycle; **and**
+- animating one named property, not `all`.
+
+There is deliberately no "it would be slower otherwise" limb. It cannot be
+applied without a benchmark nobody runs, and it is refuted by the mechanics
+anyway: Motion One drives `transform` and `opacity` through the Web Animations
+API, so for exactly the properties people reach for, there is no per-frame JS
+call to be slower than.
+
+| Site | Property | Rationale |
+|---|---|---|
+| `voice-input/components/AudioVisualizer.svelte` — bars, pulse | `height`, `transform` | Live microphone level, sampled faster than a spring settles. The 0.1s ease smooths *between* analyser samples; without it the meter steps. |
+| `audio-player/FullAudioPlayer.svelte` — progress, buffered | `width` | Playback position from `timeupdate`; buffered uses 0.3s because the source is chunky. |
+| `audio-player/MinimalAudioPlayer.svelte` — progress | `width` | As above. |
+| `voice-input/components/ConversationModePanel.svelte` — silence countdown | `width` | VAD countdown; a linear tween is the countdown's semantics. |
+| `components/ui/progress/Progress.svelte` — bar fill | `width` | Determinate progress from an external count — bytes transferred, steps done. Not the user's own input, so the feedback-is-instant rule does not reach it. |
+
+**`Carousel` is not an exception.** Its slide track is state-driven
+(`currentIndex`), which is row 2 of the one rule, not row 4, and it is converted:
+`animateCarouselTrack` drives it and dispatches `transitionCompleted`.
+
+`Progress` was refused alongside it while its bar was `transition-all` — a
+blanket grant the old guide gave as "CSS for bar fills". Narrowed to
+`transition-[width]` and driven by an external count rather than by the user's
+own input, it meets row 4 and is in the table above. Granting properties rather
+than files is what makes that difference expressible.
+
+**Refused, despite fitting the shape:** `Slider`'s fill. The number comes from the
+user's own drag, so a transition makes the fill lag the thumb they are holding. A
+transition that delays feedback on direct manipulation is a defect.
+
+### Animate both halves of a gesture, or neither
+
+An indicator may only animate if the thing it indicates does. `TreeView`'s twisty
+is the worked example: its branch has no wrapper element and its children appear
+instantly, so rotating the twisty on a spring would render one gesture on two
+timelines — the same defect as a CSS chevron beside a Motion One dropdown, just
+inverted. It rotates instantly, and that is correct rather than a shortcut.
+
+Note what this rules *out*: reaching for Motion One because the rule table says
+"state". If nothing animates, there is no animation to route anywhere, and a
+state-driven static style is always fine.
+
+### That refusal generalises: feedback is instant
+
+Anything that tracks the user's **current input position** is feedback, not a
+transition, and must not animate at all — not in CSS and not in Motion One. A
+slider fill following a drag, a list highlight following ArrowDown, the current
+page, the active tab, a carousel's position dot.
+
+The test is *is the user still moving?* If yes, the change is a readout of where
+they are, and delaying it is the defect. If no — they acted and are now waiting
+for the result — it is a transition and may animate.
+
+This resolves a genuine conflict between the rule table above and this Register.
+A list highlight is reducer state, so the table alone says Motion One; but it is
+also direct manipulation, so this section says instant. Instant wins, and the
+practical reason is decisive: `background-color` is not composited, so Motion One
+drives it on a JS ticker and the highlight visibly trails a held arrow key. The
+guidance would have made the library worse.
+
+Note how small the visible change usually is. `Combobox` and `Select` dispatch
+`highlightChanged` on `onmouseenter`, so their hover class and their highlight
+class paint the same colour on the same element — with the transition gone, the
+two are indistinguishable.
+
+## The backlog — there isn't one
+
+`animation-policy.test.ts` carried a `BACKLOG` of files not yet converted.
+**The Register grants properties; the backlog granted time.** It reached empty
+and was deleted, along with the two ratchet arms that held it honest — an arm
+iterating an empty set passes trivially, and a guard that cannot fail is not a
+guard.
+
+Every file under `packages/*/src` and `examples/*/src` is now adjudicated: it
+either complies or it is in the Register above.
+
+If a file ever needs time again, restore the set **and** both arms together. The
+important one is "no stale entries": a listed file that has become *clean* must
+fail, so an excuse cannot outlive its defect. A backlog without it is a permanent
+exemption list wearing a ratchet's name.
+
+## Available animation helpers
+
+`packages/core/src/lib/animation/animate.ts`, re-exported from
+`@composable-svelte/core/animation`. All 31 `animate*` helpers are `async`, return
+`Promise<void>`, and never reject — a failure is logged and the end state set
+inline. Most also restore the end state inline on failure — `animateBackdropIn`/
+`Out` and `animateTooltipOut` do not, which is a gap, not a pattern to copy.
+
+**Never rejecting is not the same as always resolving.** An interrupted Motion
+One `.finished` never settles, so a helper whose animation is superseded returns
+a promise that stays pending for the life of the page. Call sites that can be
+interrupted use `void`, never `await`, and nothing sequences on one.
+
+The module additionally re-exports Motion One's own `animate` (`animate.ts:15`).
+That one is **not** async, returns `AnimationPlaybackControls`, and swallows
+nothing — it is what `Switch.svelte` uses for a one-property tween.
+
+Three of the 31 read `prefers-reduced-motion` themselves, marked ♿ below. The
+rest do not; see the rule above.
+
+| Helper | Notes |
+|---|---|
+| `animateFadeIn` / `animateFadeOut` | ♿ generic opacity; takes `FadeOptions` (`duration`, seconds), not a spring. `duration: 0` shows instantly *through* a running fade, which an inline `style.opacity` cannot |
+| `animateListItemIn` | ♿ an item appearing in a list; owns its start values so the resting state is visible |
+| `animateModalIn` / `animateModalOut` | |
+| `animateBackdropIn` / `animateBackdropOut` | no `springConfig` |
+| `animateSheetIn` / `animateSheetOut` | takes `side` |
+| `animateDrawerIn` / `animateDrawerOut` | takes `side` |
+| `animateAlertIn` / `animateAlertOut` | |
+| `animateTooltipIn` / `animateTooltipOut` | `Out` has no `springConfig` |
+| `animateToastIn` / `animateToastOut` | |
+| `animateDropdownIn` / `animateDropdownOut` | no `springConfig` |
+| `animatePopoverIn` / `animatePopoverOut` | takes `positionTransform` |
+| `animateSidebarExpand(el, targetWidth, …)` / `animateSidebarCollapse(el, currentWidth, …)` | note the differing second parameter |
+| `animateStackPushIn` / `animateStackPushOut` / `animateStackPopIn` / `animateStackPopOut` | |
+| `animateAccordionExpand` / `animateAccordionCollapse` | duration-based, not springs; both measure `scrollHeight` — see invariant 5 |
+| `animateChevron(el, expanded, springConfig?)` | accepts `SVGElement`; rotates 180° |
+
+Springs come from `springPresets` in `spring-config.ts` — `modal`, `sheet`,
+`drawer`, `alert`, `toast`, `dropdown`, `popover`, `tooltip`, `button`,
+`listItem`, `collapse` — each `{ visualDuration, bounce }`, `visualDuration` in
+**seconds**. Merge with `mergeSpringConfig(preset, override)`; per-field `??`, so
+an explicit `0` wins.
+
+### Adding a helper
+
+Follow the existing shape: optional `springConfig`, resolve against a preset,
+`await motionAnimate(...).finished`, and `catch` by setting the end state inline
+so a failed animation still leaves the element correct. Export from
+`animation/index.ts`.
+
+Two deliberate departures, where the existing shape is the wrong one:
+
+- **A duration, not a spring**, when the helper replaces a CSS transition whose
+  feel is a duration — the accordion pair and the fades. `FadeOptions` is the
+  only options object in the file for that reason; a spring preset would be a
+  knob whose units do not match what it replaced.
+- **Read `prefersReducedMotion()`**, and be careful which side needs the write.
+  An entrance whose end state is the element's resting state may return early;
+  an exit may not, because returning early leaves it visible. Skipping the
+  animation must never skip the outcome.
+
+## Testing an animation
+
+Three grades, ascending in what they prove:
+
+1. **State machine** — `waitForState(store, s => s.presentation.status ===
+   'presented')`. Proves the lifecycle advances; passes against a component that
+   ignores it entirely.
+2. **Mid-flight computed style** — sample `getComputedStyle` a few frames in and
+   assert the property sits *between* its endpoints.
+3. **Paired discriminator** — assert what should move *and* what should not.
+   `sidebar-animation.test.ts:76-91` asserts `margin-left` travels while width
+   stays constant, which fails both against no animation and against the CSS
+   transition it replaced. Aim here.
+
+Assert the **transition**, not the state: a test that only checks "the spinner is
+there" passes against a spinner that never leaves.
+
+Remember that Tailwind is not compiled under test, so grade 2 is impossible for
+anything a utility class drives — another reason those conversions are not
+optional.
+
+### `document.getAnimations()` is a trap
+
+Measured twice in this repo, wrong both times: it returns **0** for a Motion One
+spring on a non-composited property (`margin`, `width`, `height`, colour), which
+Motion drives with its own JS ticker; and a **stale non-zero** elsewhere, because
+a finished entry animation is still attached. Use it only for opacity/transform
+animations, and only against a control run.
+
+## Migration recipes
+
+**Pseudo-class transition** → delete the `transition-*` class or `transition:`
+declaration. Keep the `:hover` / `:focus` / `:active` styles.
+
+**State-driven, element stays mounted, nothing sequences on it** → give the
+element a ref (`bind:this`, or a `use:` action inside a repeated snippet), add a
+guarded `$effect` honouring invariants 1, 6 and 7, call the helper.
+
+**State-driven, something sequences on it, or it must animate out** → put the
+lifecycle in the store: `PresentationState`, or a domain flag with a store-owned
+duration. Keep any boolean that backs `aria-expanded` flipping immediately; gate
+the markup on the lifecycle instead. Reference: `dropdown-menu.reducer.ts`, whose
+event type is `DropdownMenuPresentationEvent` — deliberately its own type, not
+the canonical `PresentationEvent`.
+
+**One-shot `@keyframes`** → one of the two above; delete the `@keyframes` block.
+**If it sits under a `prefers-reduced-motion` block, carry the preference across
+first.**
 
 ---
 
-*Last Updated: Phase 6 Architecture Review (2025)*
+*Rewritten after an audit found 135 CSS animation sites the previous version
+could not adjudicate, then revised again after a hostile review found this one
+inert in places — the Register excused by the backlog, reduced motion missing,
+and the sanctioned pattern overselling what it delivers.*

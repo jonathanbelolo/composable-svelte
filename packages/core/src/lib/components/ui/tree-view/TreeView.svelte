@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import { createStore } from '../../../store.svelte.js';
 	import { treeViewReducer } from './tree-view.reducer.js';
 	import { createInitialTreeViewState } from './tree-view.types.js';
@@ -39,37 +40,61 @@
 		/**
 		 * Enable multi-select mode (default: false).
 		 */
-		multiSelect?: boolean;
+		multiSelect?: boolean | undefined;
 
 		/**
 		 * Initially expanded node IDs.
 		 */
-		initialExpandedIds?: string[];
+		initialExpandedIds?: string[] | undefined;
 
 		/**
 		 * Callback when a node is selected.
 		 */
-		onSelect?: (nodeId: string, node: TreeNode<T>) => void;
+		onSelect?: ((nodeId: string, node: TreeNode<T>) => void) | undefined;
 
 		/**
 		 * Callback when a node is expanded.
 		 */
-		onExpand?: (nodeId: string, node: TreeNode<T>) => void;
+		onExpand?: ((nodeId: string, node: TreeNode<T>) => void) | undefined;
 
 		/**
 		 * Callback when a node is collapsed.
 		 */
-		onCollapse?: (nodeId: string, node: TreeNode<T>) => void;
+		onCollapse?: ((nodeId: string, node: TreeNode<T>) => void) | undefined;
 
 		/**
 		 * Async function to load children for lazy-loaded nodes.
 		 */
-		loadChildren?: (nodeId: string, node: TreeNode<T>) => Promise<TreeNode<T>[]>;
+		loadChildren?: ((nodeId: string, node: TreeNode<T>) => Promise<TreeNode<T>[]>) | undefined;
 
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
+
+		/**
+		 * Toolbar rendered above the tree, receiving the bulk operations.
+		 *
+		 * This is how `expandAll` / `collapseAll` / `allNodesDeselected` are
+		 * reached. They cannot be exposed through a `store` prop instead: the
+		 * state is `Set<string>` (`expandedIds`, `selectedIds`, `loadingIds`),
+		 * which is not JSON-serialisable, so hoisting it into a consumer's store
+		 * would break SSR hydration.
+		 *
+		 * The counts come with them because a toolbar that cannot see the
+		 * selection renders a "Deselect all" that does nothing.
+		 */
+		controls?: Snippet<
+			[
+				{
+					expandAll: () => void;
+					collapseAll: () => void;
+					deselectAll: () => void;
+					expandedCount: number;
+					selectedCount: number;
+				}
+			]
+		> | undefined;
 	}
 
 	let {
@@ -80,7 +105,8 @@
 		onExpand,
 		onCollapse,
 		loadChildren,
-		class: className
+		class: className,
+		controls
 	}: TreeViewProps = $props();
 
 	// Create tree view store with reducer
@@ -93,11 +119,23 @@
 			return state;
 		})(),
 		reducer: treeViewReducer,
+		// Getters, not values: `createStore` re-reads `config.dependencies` on
+		// every dispatch, but a plain object literal freezes what these resolve
+		// to at setup, so swapping a callback prop left the store calling the
+		// original. Mirrors `ui/file-upload/FileUpload.svelte:43-59`.
 		dependencies: {
-			onSelect,
-			onExpand,
-			onCollapse,
-			loadChildren
+			get onSelect() {
+				return onSelect;
+			},
+			get onExpand() {
+				return onExpand;
+			},
+			get onCollapse() {
+				return onCollapse;
+			},
+			get loadChildren() {
+				return loadChildren;
+			}
 		}
 	});
 
@@ -157,11 +195,6 @@
 		store.dispatch({ type: 'highlightChanged', nodeId });
 	}
 
-	// Recursive component for rendering tree nodes
-	interface TreeNodeItemProps {
-		node: TreeNode;
-		level: number;
-	}
 </script>
 
 <!-- Recursive TreeNode component -->
@@ -175,6 +208,10 @@
 	{@const hasChildren = node.children && node.children.length > 0}
 	{@const canExpand = hasChildren || node.lazy}
 
+	<!-- Keyboard input is handled once on the `role="tree"` container below,
+	     with roving tabindex on the items — the WAI-ARIA tree pattern. A
+	     per-item keydown handler would double-handle every keystroke. -->
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<div
 		role="treeitem"
 		aria-expanded={canExpand ? isExpanded : undefined}
@@ -184,7 +221,6 @@
 		tabindex={isHighlighted ? 0 : -1}
 		class={cn(
 			'flex items-center gap-1 px-2 py-1.5 rounded-sm cursor-pointer select-none',
-			'transition-colors',
 			isHighlighted && 'bg-accent text-accent-foreground',
 			isSelected && 'font-medium',
 			node.disabled && 'opacity-50 cursor-not-allowed pointer-events-none'
@@ -200,7 +236,6 @@
 				class={cn(
 					'flex-shrink-0 w-4 h-4 flex items-center justify-center',
 					'hover:bg-accent hover:text-accent-foreground rounded-sm',
-					'transition-transform',
 					isExpanded && 'rotate-90'
 				)}
 				onclick={(e) => handleExpandClick(node.id, e)}
@@ -266,6 +301,16 @@
 		{/each}
 	{/if}
 {/snippet}
+
+{#if controls}
+	{@render controls({
+		expandAll: () => store.dispatch({ type: 'expandAll' }),
+		collapseAll: () => store.dispatch({ type: 'collapseAll' }),
+		deselectAll: () => store.dispatch({ type: 'allNodesDeselected' }),
+		expandedCount: $store.expandedIds.size,
+		selectedCount: $store.selectedIds.size
+	})}
+{/if}
 
 <!-- Main tree container -->
 <div

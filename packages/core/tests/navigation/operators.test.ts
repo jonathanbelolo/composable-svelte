@@ -3,12 +3,13 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { expectConsole } from '../helpers/console.js';
 import { Effect } from '../../src/lib/effect.js';
 import {
   ifLet,
   ifLetPresentation,
   createDestinationReducer,
-  createDestination,
+  destinationState,
   isDestinationType,
   extractDestinationState,
   matchPresentationAction,
@@ -284,7 +285,17 @@ describe('ifLetPresentation()', () => {
       action: { type: 'presented', action: { type: 'increment' } }
     };
 
-    const reducer = ifLetPresentation<ParentState, ParentAction, ChildState, ChildAction, null>(
+    // `ifLetPresentation`'s fifth type parameter is `ActionType extends string`,
+    // not `Dependencies`. These calls used to be one position out, pinning
+    // `null` against a `string` constraint.
+    const reducer = ifLetPresentation<
+      ParentState,
+      ParentAction,
+      ChildState,
+      ChildAction,
+      'child',
+      null
+    >(
       (s) => s.child,
       (s, c) => ({ ...s, child: c }),
       'child',
@@ -308,7 +319,14 @@ describe('ifLetPresentation()', () => {
       action: { type: 'dismiss' }
     };
 
-    const reducer = ifLetPresentation<ParentState, ParentAction, ChildState, ChildAction, null>(
+    const reducer = ifLetPresentation<
+      ParentState,
+      ParentAction,
+      ChildState,
+      ChildAction,
+      'child',
+      null
+    >(
       (s) => s.child,
       (s, c) => ({ ...s, child: c }),
       'child',
@@ -329,7 +347,14 @@ describe('ifLetPresentation()', () => {
     };
     const action: ParentAction = { type: 'incrementParent' };
 
-    const reducer = ifLetPresentation<ParentState, ParentAction, ChildState, ChildAction, null>(
+    const reducer = ifLetPresentation<
+      ParentState,
+      ParentAction,
+      ChildState,
+      ChildAction,
+      'child',
+      null
+    >(
       (s) => s.child,
       (s, c) => ({ ...s, child: c }),
       'child',
@@ -350,7 +375,14 @@ describe('ifLetPresentation()', () => {
       action: { type: 'presented', action: { type: 'increment' } }
     };
 
-    const reducer = ifLetPresentation<ParentState, ParentAction, ChildState, ChildAction, null>(
+    const reducer = ifLetPresentation<
+      ParentState,
+      ParentAction,
+      ChildState,
+      ChildAction,
+      'child',
+      null
+    >(
       (s) => s.child,
       (s, c) => ({ ...s, child: c }),
       'child',
@@ -391,7 +423,14 @@ describe('ifLetPresentation()', () => {
       action: { type: 'presented', action: { type: 'increment' } }
     };
 
-    const reducer = ifLetPresentation<ParentState, ParentAction, ChildState, ChildAction, null>(
+    const reducer = ifLetPresentation<
+      ParentState,
+      ParentAction,
+      ChildState,
+      ChildAction,
+      'child',
+      null
+    >(
       (s) => s.child,
       (s, c) => ({ ...s, child: c }),
       'child',
@@ -470,6 +509,7 @@ describe('createDestinationReducer()', () => {
   });
 
   it('returns unchanged destination for unknown destination type', () => {
+    expectConsole('warn');
     const reducer = createDestinationReducer<Destination, DestinationAction, null>({
       addItem: addItemReducer,
       editItem: editItemReducer
@@ -515,16 +555,16 @@ describe('createDestinationReducer()', () => {
 // Destination Helper Tests
 // ============================================================================
 
-describe('createDestination()', () => {
+describe('destinationState()', () => {
   it('creates destination with type and state', () => {
-    const dest = createDestination('addItem', { item: 'apple', quantity: 1 });
+    const dest = destinationState('addItem', { item: 'apple', quantity: 1 });
 
     expect(dest.type).toBe('addItem');
     expect(dest.state).toEqual({ item: 'apple', quantity: 1 });
   });
 
   it('includes optional metadata', () => {
-    const dest = createDestination(
+    const dest = destinationState(
       'editItem',
       { id: '123', item: 'banana', quantity: 2 },
       { timestamp: 123456 }
@@ -552,7 +592,7 @@ describe('isDestinationType()', () => {
       state: { item: 'apple', quantity: 1 }
     };
 
-    expect(isDestinationType(dest, 'editItem')).toBe(false);
+    expect(isDestinationType<Destination, 'editItem'>(dest, 'editItem')).toBe(false);
   });
 
   it('returns false for null destination', () => {
@@ -590,7 +630,7 @@ describe('extractDestinationState()', () => {
       state: { item: 'apple', quantity: 1 }
     };
 
-    const state = extractDestinationState(dest, 'editItem');
+    const state = extractDestinationState<Destination, 'editItem'>(dest, 'editItem');
 
     expect(state).toBeNull();
   });
@@ -654,6 +694,20 @@ describe('matchPresentationAction()', () => {
     const matched = matchPresentationAction<ChildAction>(action, 'child.increment');
 
     expect(matched).toBeNull();
+  });
+
+  it('returns null when the wrapper is not a presented action', () => {
+    // The 'presented' check in matchPresentationAction. The dismiss test above
+    // passes for a different reason — a dismiss carries no nested action, so
+    // the walk stops before the check — and the audit's mutation M4 (delete
+    // the check) survived the whole suite. A wrapper of any other type with a
+    // nested action must not be walked into.
+    const action = {
+      type: 'child',
+      action: { type: 'other', action: { type: 'increment' } }
+    } as unknown as ParentAction;
+
+    expect(matchPresentationAction<ChildAction>(action, 'child.increment')).toBeNull();
   });
 
   it('handles deep nested paths', () => {

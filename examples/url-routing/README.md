@@ -220,5 +220,5 @@ Action → State → URL update (with metadata flag)
 ## Learn More
 
 - [Phase 7 Plan](../../plans/phase-7/PHASE-7-PLAN.md)
-- [Routing API Documentation](../../packages/core/src/routing/README.md)
+- [URL Routing Guide](../../packages/core/docs/routing/url-sync.md)
 - [Composable Svelte Specs](../../specs/)

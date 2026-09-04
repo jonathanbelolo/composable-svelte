@@ -6,8 +6,8 @@
 	 */
 	interface Props {
 		audioLevel: number; // 0-100
-		variant?: 'bars' | 'waveform' | 'pulse';
-		color?: string;
+		variant?: 'bars' | 'waveform' | 'pulse' | undefined;
+		color?: string | undefined;
 	}
 
 	const { audioLevel, variant = 'bars', color = '#007AFF' }: Props = $props();
@@ -78,12 +78,14 @@
 		flex: 1;
 		min-width: 2px;
 		max-width: 6px;
-		background: var(--color, #007aff);
+		background: var(--color, hsl(var(--primary, 211.3 100% 50%)));
 		border-radius: 2px;
 		height: var(--height, 10%);
-		transition:
-			height 0.1s ease-out,
-			opacity 0.2s ease;
+		/* height only. `barPulse` below already owns opacity, and a transition on
+		   the same property made two authors for one value — invariant 6. The
+		   infinite keyframe is the legitimate owner; the 0.2s fade was not
+		   granted by the Exception Register either. */
+		transition: height 0.1s ease-out;
 		animation: barPulse 1s ease-in-out infinite;
 		animation-delay: var(--delay, 0s);
 	}
@@ -107,7 +109,7 @@
 		width: 40px;
 		height: 40px;
 		border-radius: 50%;
-		background: var(--color, #007aff);
+		background: var(--color, hsl(var(--primary, 211.3 100% 50%)));
 		opacity: 0.6;
 		transform: scale(var(--scale, 1));
 		transition: transform 0.1s ease-out;

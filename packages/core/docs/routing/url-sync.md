@@ -119,6 +119,7 @@ import {
   parseDestination,
   matchPath
 } from '@composable-svelte/core/routing';
+import type { SerializerConfig, ParserConfig } from '@composable-svelte/core/routing';
 
 // 1. Define your state
 interface AppState {
@@ -138,8 +139,12 @@ type AppAction =
   | { type: 'addTapped' }
   | { type: 'closeDestination' };
 
-// 2. Configure serialization
-const serializerConfig = {
+// 2. Configure serialization.
+//
+// The annotation is what gives each serializer its `state` type — as a bare
+// object literal, `state` is inferred as `{}` and `state.itemId` does not
+// compile.
+const serializerConfig: SerializerConfig<AppDestination> = {
   basePath: '/inventory',
   serializers: {
     detail: (state) => `/inventory/item-${state.itemId}`,
@@ -149,7 +154,7 @@ const serializerConfig = {
 };
 
 // 3. Configure parsing
-const parserConfig = {
+const parserConfig: ParserConfig<AppDestination> = {
   basePath: '/inventory',
   parsers: [
     // Order matters! Most specific patterns first
@@ -658,19 +663,24 @@ import {
   parseQueryParamsWithSchema,
   string,
   number,
+  object,
   optional,
   enumSchema,
   array
 } from '@composable-svelte/core/routing';
 
-// Define schema
-const querySchema = {
+// Define schema.
+//
+// `parseQueryParamsWithSchema` takes **one** `Schema<T>`, so the per-field
+// schemas are wrapped in `object(...)` — a bare map of schemas is not itself a
+// schema and has no `parse`.
+const querySchema = object({
   search: optional(string({ minLength: 1, maxLength: 100 })),
   page: optional(number({ min: 1, integer: true })),
   perPage: optional(number({ min: 10, max: 100, integer: true })),
   sortBy: optional(enumSchema(['name', 'date', 'price'] as const)),
   tags: optional(array(string()))
-};
+});
 
 // Parse with validation
 try {
@@ -1318,11 +1328,19 @@ case 'addButtonTapped': {
   };
   return [newState, urlSyncEffect(newState)];
 }
+```
 
-// Svelte component
-<script>
+The component:
+
+```svelte
+<script lang="ts">
   import { Modal } from '@composable-svelte/core';
   import { scopeTo } from '@composable-svelte/core/navigation';
+  import type { Store } from '@composable-svelte/core';
+
+  // `.into('destination')` is checked against the state type, so the store has
+  // to carry one — an untyped store makes every field name `never`.
+  const { store }: { store: Store<AppState, AppAction> } = $props();
 
   // Scope to addItem destination
   const addItemStore = scopeTo(store)
@@ -2074,4 +2092,4 @@ const config = {
 
 - [Navigation System](/packages/core/docs/navigation/) - State-driven navigation components
 - [DSL Guide](/packages/core/docs/dsl/) - Fluent API for reducer composition
-- [Testing Guide](/packages/core/docs/backend/testing.md) - Testing strategies for routing
+- [Testing Guide](/packages/core/docs/core-concepts/testing.md) - TestStore patterns

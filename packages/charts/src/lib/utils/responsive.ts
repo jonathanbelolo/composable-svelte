@@ -4,7 +4,7 @@
  */
 
 import type { Dispatch } from '@composable-svelte/core';
-import type { ChartAction } from '../types/chart.types';
+import type { ChartAction } from '../types/chart.types.js';
 
 /**
  * Create a ResizeObserver to watch container size changes

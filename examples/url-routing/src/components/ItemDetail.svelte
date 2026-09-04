@@ -8,9 +8,15 @@
 	}
 
 	let { item, onClose, onDelete }: Props = $props();
+
+	function handleWindowKeydown(event: KeyboardEvent) {
+		if (event.key === 'Escape') onClose();
+	}
 </script>
 
-<div class="backdrop" onclick={onClose}></div>
+<svelte:window onkeydown={handleWindowKeydown} />
+
+<div class="backdrop" onclick={onClose} aria-hidden="true"></div>
 <div class="modal">
 	<div class="modal-header">
 		<h2>{item.name}</h2>
@@ -90,7 +96,6 @@
 		width: 32px;
 		height: 32px;
 		border-radius: 4px;
-		transition: all 0.2s;
 	}
 
 	.close-button:hover {
@@ -143,7 +148,6 @@
 		border-radius: 8px;
 		font-size: 1rem;
 		cursor: pointer;
-		transition: background 0.2s;
 	}
 
 	.delete-button:hover {
@@ -158,7 +162,6 @@
 		border-radius: 8px;
 		font-size: 1rem;
 		cursor: pointer;
-		transition: background 0.2s;
 	}
 
 	.close-button-footer:hover {

@@ -99,7 +99,7 @@
           role="tab"
           aria-selected={viewMode === mode.id}
           onclick={() => onViewModeChange(mode.id)}
-          class="flex items-center gap-3 px-8 py-4 font-semibold transition-all border-b-4 {viewMode ===
+          class="flex items-center gap-3 px-8 py-4 font-semibold border-b-4 {viewMode ===
           mode.id
             ? 'border-primary text-primary bg-background/50'
             : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-background/30'}"
@@ -136,7 +136,7 @@
 
           {#if selectedCategories.length > 0}
             {#snippet actions()}
-              <Button variant="outline" size="default" onclick={() => onViewModeChange('grid')}>
+              <Button variant="outline" onclick={() => onViewModeChange('grid')}>
                 Clear Filters
               </Button>
             {/snippet}

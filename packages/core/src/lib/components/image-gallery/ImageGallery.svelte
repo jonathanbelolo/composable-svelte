@@ -29,25 +29,25 @@
 		images: GalleryImage[];
 
 		// Optional configuration
-		columns?: number;
-		gap?: number;
-		aspectRatio?: 'auto' | 'square' | '16:9' | '4:3';
+		columns?: number | undefined;
+		gap?: number | undefined;
+		aspectRatio?: 'auto' | 'square' | '16:9' | '4:3' | undefined;
 
 		// Callbacks
-		onImageClick?: (image: GalleryImage, index: number) => void;
-		onImageLoad?: (imageId: string) => void;
-		onImageError?: (imageId: string, error: string) => void;
+		onImageClick?: ((image: GalleryImage, index: number) => void) | undefined;
+		onImageLoad?: ((imageId: string) => void) | undefined;
+		onImageError?: ((imageId: string, error: string) => void) | undefined;
 
 		// Styling
-		class?: string;
-		thumbnailClass?: string;
+		class?: string | undefined;
+		thumbnailClass?: string | undefined;
 
 		// Features
-		enableLightbox?: boolean; // Default: true
-		enableLazyLoad?: boolean; // Default: true
+		enableLightbox?: boolean | undefined; // Default: true
+		enableLazyLoad?: boolean | undefined; // Default: true
 
 		// Advanced mode not used
-		store?: never;
+		store?: undefined;
 	}
 
 	interface AdvancedProps {
@@ -55,19 +55,19 @@
 		store: Store<ImageGalleryState, ImageGalleryAction>;
 
 		// Styling
-		class?: string;
-		thumbnailClass?: string;
+		class?: string | undefined;
+		thumbnailClass?: string | undefined;
 
 		// Simple mode props not used
-		images?: never;
-		columns?: never;
-		gap?: never;
-		aspectRatio?: never;
-		onImageClick?: never;
-		onImageLoad?: never;
-		onImageError?: never;
-		enableLightbox?: never;
-		enableLazyLoad?: never;
+		images?: undefined;
+		columns?: undefined;
+		gap?: undefined;
+		aspectRatio?: undefined;
+		onImageClick?: undefined;
+		onImageLoad?: undefined;
+		onImageError?: undefined;
+		enableLightbox?: undefined;
+		enableLazyLoad?: undefined;
 	}
 
 	type Props = SimpleProps | AdvancedProps;
@@ -82,10 +82,21 @@
 
 	if (!isAdvancedMode) {
 		const simpleProps = props as SimpleProps;
+		// Getters, not values: `createStore` re-reads `config.dependencies` on
+		// every dispatch, but a plain object literal freezes what these resolve
+		// to at setup. `simpleProps` is `$props()`' rest object, which is a live
+		// proxy, so reading through it inside a getter yields the current prop.
+		// Mirrors `ui/file-upload/FileUpload.svelte:43-59`.
 		const dependencies: ImageGalleryDependencies = {
-			onImageClick: simpleProps.onImageClick,
-			onImageLoad: simpleProps.onImageLoad,
-			onImageError: simpleProps.onImageError
+			get onImageClick() {
+				return simpleProps.onImageClick;
+			},
+			get onImageLoad() {
+				return simpleProps.onImageLoad;
+			},
+			get onImageError() {
+				return simpleProps.onImageError;
+			}
 		};
 
 		internalStore = createStore({
@@ -306,7 +317,6 @@
 		cursor: pointer;
 		overflow: hidden;
 		display: block;
-		transition: transform 0.2s ease;
 	}
 
 	.image-gallery__button:hover {

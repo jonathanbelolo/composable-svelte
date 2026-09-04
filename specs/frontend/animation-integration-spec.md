@@ -2,7 +2,22 @@
 
 **Version:** 1.0.0
 **Date:** 2025-10-25
-**Status:** Draft
+**Status:** Draft — **partially superseded**
+
+> **Superseded where it describes the animation driver.**
+> `guides/ANIMATION-GUIDELINES.md` is the authority, and it supersedes §Overview
+> ("Animation Driver Implementation"), §1.3, §5.1–5.2 and §9.1(2) of this
+> document. Those prescribe Svelte's built-in transitions with Motion One as an
+> optional extra, and §9.1(2) recommends raw CSS transitions as an optimisation.
+> None of that shipped: there is not one `transition:` / `in:` / `out:` /
+> `animate:` directive anywhere in `packages/*/src`, Motion One is the only
+> driver, and CSS-authored animation is now prohibited and mechanically enforced
+> by `packages/core/tests/repo/animation-policy.test.ts`.
+>
+> The state-machine design in the rest of this document — `PresentationState`,
+> the lifecycle events, the dual `destination` + `presentation` fields, timeout
+> fallbacks — is current and correct. Read this for that; read the guide for how
+> to animate.
 
 ## Overview
 

@@ -213,7 +213,10 @@ describe('Contact Form - Integrated Mode', () => {
       expect(submissionItems.length).toBeGreaterThan(0);
 
       // Check the submission contains the right data
-      const firstSubmission = submissionItems[0];
+      // `!` rather than `?.`: the length assertion two lines up already proves
+      // this is there, and `?.` would move the failure from "no submission" to a
+      // confusing mismatch on `undefined`.
+      const firstSubmission = submissionItems[0]!;
       expect(firstSubmission.textContent).toContain('Jane Smith');
       expect(firstSubmission.textContent).toContain('jane@example.com');
     });

@@ -14,20 +14,25 @@ import type { OverlayError } from '../utils/overlay-error.js';
  * - image: Static or animated images
  * - video: Video elements (with frame extraction)
  * - canvas: Canvas elements (2D or WebGL)
- * - text: Text elements (via html2canvas)
- * - html: Complex HTML elements (via html2canvas)
+ *
+ * There were `text` and `html` members, backed by html2canvas — which was never
+ * a dependency, so that path could not have run. Both are gone; this comment
+ * outlived them by two commits.
  */
-export type ElementType = 'image' | 'video' | 'canvas' | 'text' | 'html';
+export type ElementType = 'image' | 'video' | 'canvas';
 
 /**
  * Update strategies for texture updates
  *
  * - static: Never update after initial creation (default for images)
- * - frame: Update every animation frame (for videos)
+ * - frame: Update every animation frame (default for videos)
  * - manual: Update only when explicitly triggered via updateElement()
- * - reactive: Update when Svelte detects changes (via $effect)
+ *   (default for canvas elements)
+ *
+ * There was a `reactive` strategy, assigned only to the `text` and `html`
+ * element types, and it went with them.
  */
-export type UpdateStrategy = 'static' | 'frame' | 'manual' | 'reactive';
+export type UpdateStrategy = 'static' | 'frame' | 'manual';
 
 /**
  * Shader effect type
@@ -112,14 +117,18 @@ export interface ElementRegistration {
 	texture?: WebGLTexture;
 
 	/**
-	 * Last update timestamp (for frame limiting)
+	 * Dimensions of the texture actually created, in pixels
+	 *
+	 * Not the element's dimensions: an oversize image is scaled down to
+	 * `maxTextureSize`, and these report what was uploaded. The memory
+	 * accounting deallocates against them on unregister.
+	 *
+	 * These were written as `textureWidth`/`textureHeight` through an `any`
+	 * cast, so an exported interface carried two properties it did not declare
+	 * and `getElement()` handed them out untyped.
 	 */
-	lastUpdate?: number;
-
-	/**
-	 * Whether this element's texture needs updating
-	 */
-	needsUpdate?: boolean;
+	width?: number | undefined;
+	height?: number | undefined;
 
 	/**
 	 * Animation frame ID (for video elements)
@@ -137,19 +146,22 @@ export interface ElementRegistration {
  */
 export interface OverlayOptions {
 	/**
-	 * Canvas element to render to
-	 * If not provided, creates a new canvas
-	 */
-	canvas?: HTMLCanvasElement;
-
-	/**
 	 * Target FPS for render loop
 	 * Default: 60 (desktop), 30 (mobile)
 	 */
 	targetFPS?: number;
 
 	/**
-	 * Maximum texture size (auto-detected if not provided)
+	 * A ceiling on texture dimensions, in pixels. Defaults to the driver's own.
+	 *
+	 * It **downscales** rather than refuses, and it can only narrow: a value
+	 * above the driver maximum is clamped to it. Must be a whole number of at
+	 * least 1 — anything else is reported on the console and **ignored**, which
+	 * leaves the driver limit in force rather than failing the registration.
+	 *
+	 * If the driver reports nothing usable, the ceiling falls back to 2048
+	 * rather than becoming unlimited. That can be well below the real device
+	 * maximum, and is reported too.
 	 */
 	maxTextureSize?: number;
 
@@ -188,6 +200,22 @@ export interface OverlayOptions {
 }
 
 /**
+ * What `createOverlay` needs, as opposed to what a consumer can configure.
+ *
+ * `canvas` used to sit on `OverlayOptions`, documented as "render into an
+ * existing canvas instead of the component's own" — and it could never do that.
+ * `WebGLOverlay.svelte` calls `createOverlay({ ...options, canvas })` with its
+ * own `bind:this` canvas spread *last*, so a consumer's value was always
+ * overwritten; and `createOverlay` — the one path that honours it — is not
+ * exported. It was a field on a public type that no reachable call could act
+ * on, so it belongs on the internal init shape instead.
+ */
+export interface OverlayInit extends OverlayOptions {
+	/** Canvas element to render to. One is created if absent. */
+	canvas?: HTMLCanvasElement | undefined;
+}
+
+/**
  * Overlay context API
  *
  * The main API surface returned by createOverlay().
@@ -208,7 +236,17 @@ export interface OverlayContextAPI {
 		options: {
 			type: ElementType;
 			shader: ShaderEffect;
-			updateStrategy?: UpdateStrategy;
+			updateStrategy?: UpdateStrategy | undefined;
+			/**
+			 * Called once the element's texture actually exists.
+			 *
+			 * Only the overlay knows when the async creation settled, so the
+			 * callback lives here. `WebGLOverlay.svelte` used to fire its own copy
+			 * from a fixed 100ms timer, which reported success on CORS rejection,
+			 * on an oversize texture and on an unloaded image. Failures go to
+			 * `OverlayOptions.onError`.
+			 */
+			onTextureLoaded?: (() => void) | undefined;
 		}
 	): ElementRegistration | OverlayError;
 
@@ -245,6 +283,21 @@ export interface OverlayContextAPI {
 	 * @param shader - New shader effect
 	 */
 	setShader(id: string, shader: ShaderEffect): void;
+
+	/**
+	 * Re-read an element's bounds
+	 *
+	 * Position is tracked automatically; this is for the case tracking cannot
+	 * see — a CSS transform that moves the element without a scroll or resize.
+	 *
+	 * Declared here because it exists on the implementation and always has.
+	 * `WebGLOverlay.svelte` reached it through a `@ts-expect-error` whose
+	 * comment said "exists in implementation but not in interface", which is a
+	 * description of the drift rather than a reason for it.
+	 *
+	 * @param id - Element identifier
+	 */
+	updateElementPosition(id: string): void;
 
 	/**
 	 * Start the render loop
@@ -300,30 +353,11 @@ export interface OverlayContextAPI {
  * Internal texture creation options
  */
 export interface TextureCreationOptions {
-	/**
-	 * Element to create texture from
-	 */
+	/** The DOM element to read pixels from. */
 	element: HTMLElement;
 
-	/**
-	 * Element type
-	 */
+	/** Which of the three supported element kinds it is. */
 	type: ElementType;
-
-	/**
-	 * WebGL context
-	 */
-	gl: WebGLRenderingContext;
-
-	/**
-	 * Maximum texture size
-	 */
-	maxTextureSize: number;
-
-	/**
-	 * Whether to apply CORS workaround (Safari)
-	 */
-	needsCORSWorkaround: boolean;
 }
 
 /**
@@ -351,27 +385,3 @@ export interface TextureCreationResult {
 	error?: OverlayError;
 }
 
-/**
- * Shader program cache entry
- */
-export interface ShaderProgramEntry {
-	/**
-	 * Compiled WebGL program
-	 */
-	program: WebGLProgram;
-
-	/**
-	 * Uniform locations cache
-	 */
-	uniforms: Map<string, WebGLUniformLocation>;
-
-	/**
-	 * Attribute locations cache
-	 */
-	attributes: Map<string, number>;
-
-	/**
-	 * Reference count (for cleanup)
-	 */
-	refCount: number;
-}

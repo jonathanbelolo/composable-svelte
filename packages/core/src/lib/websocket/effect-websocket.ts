@@ -233,7 +233,7 @@ export function subscribeToEvents<Action>(
 
 // Extend Effect namespace with websocket helpers
 declare module '../effect.js' {
-  interface EffectNamespace {
+  interface EffectExtensions {
     websocket: {
       connect: typeof connect;
       disconnect: typeof disconnect;

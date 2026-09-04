@@ -1,0 +1,19 @@
+{
+	"extends": "../../tsconfig.json",
+	"compilerOptions": {
+		// This project genuinely runs on Node — it is a Fastify server — so unlike
+		// the browser-only examples it keeps `types`. The root sets `types: []`.
+		"types": ["node"],
+		// The server is Node-resolved, not bundled: `moduleResolution: 'bundler'`
+		// from the root would let a `.js`-less relative import typecheck here and
+		// then fail at runtime under tsx.
+		"module": "NodeNext",
+		"moduleResolution": "nodenext",
+		"lib": ["ES2022", "DOM", "DOM.Iterable"],
+		"noEmit": true,
+		"declaration": false,
+		"declarationMap": false
+	},
+	"include": ["src/**/*.ts", "tests/**/*.ts", "app/src/**/*.ts", "app/src/**/*.svelte"],
+	"exclude": ["node_modules", "dist"]
+}

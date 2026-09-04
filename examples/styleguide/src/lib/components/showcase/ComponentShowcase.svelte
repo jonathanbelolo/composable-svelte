@@ -7,6 +7,7 @@
   import DrawerDemo from '../demos/DrawerDemo.svelte';
   import SidebarDemo from '../demos/SidebarDemo.svelte';
   import AlertDemo from '../demos/AlertDemo.svelte';
+  import AlertDialogDemo from '../demos/AlertDialogDemo.svelte';
   import PopoverDemo from '../demos/PopoverDemo.svelte';
   import DropdownMenuDemo from '../demos/DropdownMenuDemo.svelte';
   import TabsDemo from '../demos/TabsDemo.svelte';
@@ -24,8 +25,17 @@
   import FormDemo from '../demos/FormDemo.svelte';
   // Form Components - Advanced
   import ComboboxDemo from '../demos/ComboboxDemo.svelte';
+  import CommandDemo from '../demos/CommandDemo.svelte';
   import CalendarDemo from '../demos/CalendarDemo.svelte';
   import FileUploadDemo from '../demos/FileUploadDemo.svelte';
+  import LoginFormDemo from '../demos/LoginFormDemo.svelte';
+  import SignupFormDemo from '../demos/SignupFormDemo.svelte';
+  import EmailVerificationDemo from '../demos/EmailVerificationDemo.svelte';
+  import PasswordRecoveryDemo from '../demos/PasswordRecoveryDemo.svelte';
+  import MfaDemo from '../demos/MfaDemo.svelte';
+  import OAuthDemo from '../demos/OAuthDemo.svelte';
+  import MagicLinkDemo from '../demos/MagicLinkDemo.svelte';
+  import AccountDemo from '../demos/AccountDemo.svelte';
   // Foundational Components
   import CardDemo from '../demos/CardDemo.svelte';
   import SeparatorDemo from '../demos/SeparatorDemo.svelte';
@@ -86,6 +96,7 @@
     'drawer': DrawerDemo,
     'sidebar': SidebarDemo,
     'alert': AlertDemo,
+    'alert-dialog': AlertDialogDemo,
     'popover': PopoverDemo,
     'dropdown-menu': DropdownMenuDemo,
     'tabs': TabsDemo,
@@ -103,8 +114,17 @@
     'form': FormDemo,
     // Form Components - Advanced
     'combobox': ComboboxDemo,
+    'command': CommandDemo,
     'calendar': CalendarDemo,
     'file-upload': FileUploadDemo,
+    'login-form': LoginFormDemo,
+    'signup-form': SignupFormDemo,
+    'email-verification': EmailVerificationDemo,
+    'password-recovery': PasswordRecoveryDemo,
+    'mfa': MfaDemo,
+    'oauth': OAuthDemo,
+    'magic-link': MagicLinkDemo,
+    'account': AccountDemo,
     // Foundational Components
     'card': CardDemo,
     'separator': SeparatorDemo,
@@ -161,7 +181,7 @@
       <div class="flex items-center gap-4">
         <button
           onclick={onBack}
-          class="w-10 h-10 rounded-lg hover:bg-accent flex items-center justify-center transition-colors"
+          class="w-10 h-10 rounded-lg hover:bg-accent flex items-center justify-center"
           aria-label="Back to home"
         >
           ←

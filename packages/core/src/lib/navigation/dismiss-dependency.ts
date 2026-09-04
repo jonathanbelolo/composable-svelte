@@ -68,24 +68,28 @@ export type DismissDependency = {
  * @param actionWrapper - Function to wrap PresentationAction in parent action
  * @returns A dismiss dependency
  *
+ * Build it where the store is built, not inside a reducer: a reducer is
+ * `(state, action, dependencies)` and has no `dispatch` in scope. Because the
+ * dependency needs the store's dispatch and the store needs the dependencies,
+ * take the reference lazily.
+ *
  * @example
  * ```typescript
- * // In parent reducer, when presenting child:
- * case 'addButtonTapped': {
- *   const childDeps: AddItemDeps = {
+ * let dispatch: Dispatch<ParentAction> = () => {};
+ *
+ * const store = createStore({
+ *   initialState,
+ *   reducer: parentReducer,
+ *   dependencies: {
  *     ...deps,
  *     dismiss: createDismissDependency(
- *       dispatch,
+ *       (action) => dispatch(action),
  *       (pa) => ({ type: 'destination', action: pa })
  *     )
- *   };
+ *   }
+ * });
  *
- *   // Present child with dismiss capability
- *   return [
- *     { ...state, destination: { type: 'addItem', state: initialState } },
- *     Effect.none()
- *   ];
- * }
+ * dispatch = (action) => store.dispatch(action);
  * ```
  */
 export function createDismissDependency<ParentAction>(
@@ -93,11 +97,22 @@ export function createDismissDependency<ParentAction>(
   actionWrapper: (action: PresentationAction<any>) => ParentAction
 ): DismissDependency {
   return () => {
-    return Effect.run<ParentAction>((d) => {
-      const dismissAction = actionWrapper({
-        type: 'dismiss' as const
-      });
-      d(dismissAction);
+    // Dispatch through the *captured* parent dispatch, not the one this effect
+    // is executed with. A child's effects go through `ifLet`, which maps them
+    // with `fromChildAction`; since `actionWrapper` already produces a parent
+    // action, dispatching through `d` would wrap it a second time and the
+    // parent would receive an action it cannot route.
+    //
+    // `fireAndForget` rather than `run` for exactly that reason: this effect
+    // dispatches nothing into the child's action stream, so it takes no
+    // dispatch and `Effect.map` passes it through untouched. `run<ParentAction>`
+    // claimed the opposite, which is the misconception the bug came from.
+    return Effect.fireAndForget(() => {
+      dispatch(
+        actionWrapper({
+          type: 'dismiss' as const
+        })
+      );
     });
   };
 }
@@ -115,8 +130,10 @@ export function createDismissDependency<ParentAction>(
  *
  * @example
  * ```typescript
+ * // `dispatch` is the parent store's, captured lazily — see
+ * // `createDismissDependency` above for why.
  * const dismiss = createDismissDependencyWithCleanup(
- *   dispatch,
+ *   (action) => dispatch(action),
  *   (pa) => ({ type: 'destination', action: pa }),
  *   async () => {
  *     // Track analytics
@@ -131,17 +148,20 @@ export function createDismissDependencyWithCleanup<ParentAction>(
   cleanup?: () => void | Promise<void>
 ): DismissDependency {
   return () => {
-    return Effect.run<ParentAction>(async (d) => {
+    // As above: the captured parent dispatch, so `ifLet`'s mapping cannot
+    // double-wrap the dismiss action, and no dispatch is taken.
+    return Effect.fireAndForget(async () => {
       // Run cleanup if provided
       if (cleanup) {
         await cleanup();
       }
 
       // Dispatch dismiss action
-      const dismissAction = actionWrapper({
-        type: 'dismiss' as const
-      });
-      d(dismissAction);
+      dispatch(
+        actionWrapper({
+          type: 'dismiss' as const
+        })
+      );
     });
   };
 }
@@ -158,15 +178,16 @@ export function createDismissDependencyWithCleanup<ParentAction>(
  *
  * @example
  * ```typescript
- * // Simpler API for common case:
- * const childDeps = {
+ * // Simpler API for common case. As above, this goes where the store is
+ * // built and captures its dispatch lazily.
+ * const dependencies = {
  *   ...deps,
- *   dismiss: dismissDependency(dispatch, 'destination')
+ *   dismiss: dismissDependency((action) => dispatch(action), 'destination')
  * };
  *
  * // Equivalent to:
  * createDismissDependency(
- *   dispatch,
+ *   (action) => dispatch(action),
  *   (pa) => ({ type: 'destination', action: pa })
  * )
  * ```

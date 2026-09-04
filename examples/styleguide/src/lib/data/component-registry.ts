@@ -32,6 +32,7 @@ export const COMPONENT_REGISTRY: ComponentInfo[] = [
   { id: 'drawer', name: 'Drawer', category: 'Navigation Components', description: 'Permanent side navigation' },
   { id: 'sidebar', name: 'Sidebar', category: 'Navigation Components', description: 'Collapsible side panel' },
   { id: 'alert', name: 'Alert', category: 'Navigation Components', description: 'Action confirmation dialogs' },
+  { id: 'alert-dialog', name: 'Alert Dialog', category: 'Navigation Components', description: 'A titled, described confirmation over Alert - named by its own title, so a screen reader announces the question rather than the component' },
   { id: 'popover', name: 'Popover', category: 'Navigation Components', description: 'Floating context panels' },
   { id: 'dropdown-menu', name: 'Dropdown Menu', category: 'Navigation Components', description: 'Context menus' },
   { id: 'tabs', name: 'Tabs', category: 'Navigation Components', description: 'Tabbed content panels' },
@@ -65,6 +66,14 @@ export const COMPONENT_REGISTRY: ComponentInfo[] = [
   { id: 'combobox', name: 'Combobox', category: 'Form Components - Advanced', description: 'Searchable select with async loading' },
   { id: 'calendar', name: 'Calendar', category: 'Form Components - Advanced', description: 'Date and range picker calendar' },
   { id: 'file-upload', name: 'File Upload', category: 'Form Components - Advanced', description: 'Drag & drop file upload with progress tracking' },
+  { id: 'login-form', name: 'Login Form', category: 'Form Components - Advanced', description: 'Password sign-in with a structured failure the surface can branch on - from @composable-svelte/auth' },
+  { id: 'signup-form', name: 'Signup Form', category: 'Form Components - Advanced', description: 'Account creation with two terminal states, a derived password checklist, and a branchable email-taken failure - from @composable-svelte/auth' },
+  { id: 'email-verification', name: 'Email Verification', category: 'Form Components - Advanced', description: 'The page a confirmation link lands on - no form, work starts on mount, and a single-use token exchanged exactly once - from @composable-svelte/auth' },
+  { id: 'password-recovery', name: 'Password Recovery', category: 'Form Components - Advanced', description: 'Asking for a reset link and using one - the first half deliberately tells you nothing about whether the account exists - from @composable-svelte/auth' },
+  { id: 'mfa', name: 'Multi-Factor Auth', category: 'Form Components - Advanced', description: 'The second-factor challenge reached from sign-in, and the enrolment that makes it reachable - one code field, no QR dependency - from @composable-svelte/auth' },
+  { id: 'oauth', name: 'OAuth Sign-In', category: 'Form Components - Advanced', description: 'The redirect out and the callback back - the nonce stored before leaving, and a mismatch that never reaches the backend - from @composable-svelte/auth' },
+  { id: 'magic-link', name: 'Magic Link', category: 'Form Components - Advanced', description: 'Passwordless email sign-in where the token is spent on a press, not on mount - so a mail scanner following the link cannot kill it - from @composable-svelte/auth' },
+  { id: 'account', name: 'Account', category: 'Form Components - Advanced', description: 'The first surface for someone already signed in - a read model the session does not carry, and a password panel that never asks for the current one - from @composable-svelte/auth' },
 
   // Visual Feedback
   { id: 'toast', name: 'Toast', category: 'Visual Feedback', description: 'Temporary notifications' },
@@ -84,7 +93,7 @@ export const COMPONENT_REGISTRY: ComponentInfo[] = [
   { id: 'line-chart', name: 'Line Chart', category: 'Data Visualization', description: 'Time series line chart with hover interactions - state-driven visualization' },
   { id: 'bar-chart', name: 'Bar Chart', category: 'Data Visualization', description: 'Categorical bar chart with selection support - built with Composable Architecture' },
   { id: 'map', name: 'Map', category: 'Data Visualization', description: 'Interactive maps with markers, layers, and popups - powered by Maplibre GL with state-driven architecture' },
-  { id: 'scene', name: '3D Scene', category: 'Data Visualization', description: 'State-driven 3D scene with WebGPU/WebGL rendering - powered by Babylon.js with declarative Svelte components' },
+  { id: 'scene', name: '3D Scene', category: 'Data Visualization', description: 'State-driven 3D scene with WebGL rendering - powered by Babylon.js with declarative Svelte components' },
 
   // Code Components
   { id: 'code-highlight', name: 'Code Highlight', category: 'Code Components', description: 'Syntax highlighting for code snippets with Prism.js' },

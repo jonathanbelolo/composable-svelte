@@ -26,7 +26,7 @@
 	 * ```
 	 */
 
-	interface PanelProps extends Omit<HTMLAttributes<HTMLDivElement>, 'class'> {
+	interface PanelProps extends Omit<HTMLAttributes<HTMLDivElement>, 'class' | 'children'> {
 		/**
 		 * Visual variant of the panel.
 		 * - default: Standard background with subtle border
@@ -34,17 +34,17 @@
 		 * - elevated: Shadow elevation
 		 * - flat: No border or shadow
 		 */
-		variant?: 'default' | 'bordered' | 'elevated' | 'flat';
+		variant?: 'default' | 'bordered' | 'elevated' | 'flat' | undefined;
 
 		/**
 		 * Additional CSS classes for the panel.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Panel content.
 		 */
-		children?: import('svelte').Snippet;
+		children?: import('svelte').Snippet | undefined;
 	}
 
 	let {

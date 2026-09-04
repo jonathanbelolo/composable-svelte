@@ -29,7 +29,7 @@
   function handleSingleFileChange(files: UploadedFile[]) {
     singleFile = files;
     if (files.length > 0) {
-      logEvent(`Single: ${files[0].file.name} selected`);
+      logEvent(`Single: ${files[0]!.file.name} selected`);
     } else {
       logEvent('Single: File cleared');
     }
@@ -65,7 +65,7 @@
   <!-- Basic File Upload -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Basic File Upload</h3>
+      <h2 class="text-xl font-semibold mb-2">Basic File Upload</h2>
       <p class="text-muted-foreground text-sm">
         Simple drag & drop file upload with multiple files support
       </p>
@@ -96,7 +96,7 @@
   <!-- Image Upload with Previews -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Image Upload with Previews</h3>
+      <h2 class="text-xl font-semibold mb-2">Image Upload with Previews</h2>
       <p class="text-muted-foreground text-sm">
         Upload images with preview thumbnails
       </p>
@@ -116,7 +116,7 @@
       {#if imageFiles.length > 0}
         <div class="text-sm space-y-2">
           <div class="flex items-center gap-2">
-            <Badge variant="primary">
+            <Badge variant="default">
               {imageFiles.length} image{imageFiles.length === 1 ? '' : 's'} selected
             </Badge>
             <span class="text-muted-foreground">•</span>
@@ -132,7 +132,7 @@
   <!-- Single File Upload -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Single File Upload</h3>
+      <h2 class="text-xl font-semibold mb-2">Single File Upload</h2>
       <p class="text-muted-foreground text-sm">
         Upload only one file at a time
       </p>
@@ -152,9 +152,9 @@
         <div class="p-4 bg-muted rounded-lg">
           <p class="text-sm font-medium mb-2">Selected Document:</p>
           <div class="space-y-1">
-            <p class="text-sm">{singleFile[0].file.name}</p>
+            <p class="text-sm">{singleFile[0]!.file.name}</p>
             <p class="text-xs text-muted-foreground">
-              {formatBytes(singleFile[0].file.size)} • {singleFile[0].file.type || 'Unknown type'}
+              {formatBytes(singleFile[0]!.file.size)} • {singleFile[0]!.file.type || 'Unknown type'}
             </p>
           </div>
         </div>
@@ -165,7 +165,7 @@
   <!-- Upload with Progress Simulation -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Upload with Progress Tracking</h3>
+      <h2 class="text-xl font-semibold mb-2">Upload with Progress Tracking</h2>
       <p class="text-muted-foreground text-sm">
         File upload with simulated progress and error handling
       </p>
@@ -203,7 +203,7 @@
   <!-- File Size Constraints -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">File Size Constraints</h3>
+      <h2 class="text-xl font-semibold mb-2">File Size Constraints</h2>
       <p class="text-muted-foreground text-sm">
         Upload with strict file size limits (max 1MB)
       </p>
@@ -219,7 +219,7 @@
   <!-- Event Callbacks -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Event Callbacks</h3>
+      <h2 class="text-xl font-semibold mb-2">Event Callbacks</h2>
       <p class="text-muted-foreground text-sm">
         File upload with event logging
       </p>
@@ -255,7 +255,7 @@
   <!-- Disabled State -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Disabled State</h3>
+      <h2 class="text-xl font-semibold mb-2">Disabled State</h2>
       <p class="text-muted-foreground text-sm">
         File upload in disabled state
       </p>
@@ -270,7 +270,7 @@
   <!-- Use Cases -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Common Use Cases</h3>
+      <h2 class="text-xl font-semibold mb-2">Common Use Cases</h2>
       <p class="text-muted-foreground text-sm">
         File upload component applications
       </p>

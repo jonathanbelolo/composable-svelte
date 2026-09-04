@@ -8,7 +8,6 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     include: ['tests/**/*.test.ts'],
-    exclude: ['tests/visual/**/*.visual.test.ts'], // Exclude Playwright visual tests
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
@@ -16,6 +15,10 @@ export default defineConfig({
     }
   },
   resolve: {
+    // Svelte 5 resolves to its server build under Vitest unless the browser
+    // condition is forced, and `mount()` throws there. Component tests need it.
+    // Same line maps carries for the same reason.
+    conditions: ['browser'],
     alias: {
       '$lib': resolve(__dirname, 'src/lib')
     }

@@ -5,7 +5,7 @@
 
 	interface BreadcrumbPageProps extends HTMLAttributes<HTMLSpanElement> {
 		children: Snippet;
-		class?: string;
+		class?: string | undefined;
 	}
 
 	let { children, class: className, ...restProps }: BreadcrumbPageProps = $props();

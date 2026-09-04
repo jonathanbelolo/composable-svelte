@@ -29,17 +29,17 @@
 		/**
 		 * ID of the associated form element.
 		 */
-		for?: string;
+		for?: string | undefined;
 
 		/**
 		 * Error state (changes styling to destructive color).
 		 */
-		error?: boolean;
+		error?: boolean | undefined;
 
 		/**
 		 * Required field indicator (shows red asterisk).
 		 */
-		required?: boolean;
+		required?: boolean | undefined;
 
 		/**
 		 * Additional CSS classes.

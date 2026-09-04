@@ -37,12 +37,6 @@ export interface RenderOptions {
 	canvasHeight?: number;
 
 	/**
-	 * Opacity (alpha blending)
-	 * Default: 1.0 (fully opaque)
-	 */
-	opacity?: number;
-
-	/**
 	 * Custom uniforms to pass to shader
 	 */
 	uniforms?: Record<string, number | number[]>;
@@ -69,6 +63,24 @@ export class RenderPipeline {
 	private quadBuffer: WebGLBuffer | null = null;
 	private texCoordBuffer: WebGLBuffer | null = null;
 	private initialized = false;
+	/** So an unusable pipeline says so once rather than on every frame. */
+	private reportedUninitialized = false;
+
+	/**
+	 * Report that this pipeline cannot draw — at most once, from wherever it is
+	 * noticed.
+	 *
+	 * A method rather than the same three lines at each entry point, because the
+	 * first attempt at this suppressed the message in `render()` and left
+	 * `renderBatch()` shouting on every call. Both are per-frame entry points;
+	 * one guarded and one not is not a fix, it is a smaller version of the same
+	 * defect. Measured before this: 61 console errors for 60 batches.
+	 */
+	private refuseUninitialized(): void {
+		if (this.reportedUninitialized) return;
+		this.reportedUninitialized = true;
+		console.error('[RenderPipeline] Pipeline not initialized');
+	}
 
 	constructor(
 		private gl: WebGLRenderingContext,
@@ -140,6 +152,32 @@ export class RenderPipeline {
 			gl.bufferData(gl.ARRAY_BUFFER, texCoords, gl.STATIC_DRAW);
 		}
 
+		// A pipeline with no geometry cannot draw anything.
+		//
+		// `initialized = true` used to be unconditional, so a failed allocation
+		// produced a pipeline that reported itself ready and then ran the whole
+		// of `render()` — bind the program, set the uniforms, `drawArrays` with
+		// no vertex buffer bound — drawing nothing, every frame, in silence. The
+		// two `if (buffer)` guards above read as careful handling and were
+		// actually the mechanism: they skipped the upload and let the caller
+		// carry on regardless.
+		//
+		// `createBuffer` returns `null` when the context is lost or the driver is
+		// out of memory, so this is an ordinary failure, not a theoretical one.
+		if (!this.quadBuffer || !this.texCoordBuffer) {
+			// Whichever one succeeded is of no use alone, and holding it would
+			// leak a GL handle for the life of the pipeline.
+			if (this.quadBuffer) gl.deleteBuffer(this.quadBuffer);
+			if (this.texCoordBuffer) gl.deleteBuffer(this.texCoordBuffer);
+			this.quadBuffer = null;
+			this.texCoordBuffer = null;
+
+			console.error(
+				'[RenderPipeline] Could not allocate the quad buffers — the pipeline cannot draw'
+			);
+			return;
+		}
+
 		// Enable blending for transparency
 		gl.enable(gl.BLEND);
 		gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -158,7 +196,7 @@ export class RenderPipeline {
 	 */
 	render(program: CompiledProgram, texture: WebGLTexture, options: RenderOptions = {}): void {
 		if (!this.initialized) {
-			console.error('[RenderPipeline] Pipeline not initialized');
+			this.refuseUninitialized();
 			return;
 		}
 
@@ -252,10 +290,9 @@ export class RenderPipeline {
 	 * @param options - Render options
 	 */
 	private setUniforms(program: CompiledProgram, options: RenderOptions): void {
-		// Set opacity if program supports it
-		if (options.opacity !== undefined && program.uniforms.has('uOpacity')) {
-			this.programManager.setUniform(program, 'uOpacity', options.opacity);
-		}
+		// `opacity` used to be read here, gated on a `uOpacity` uniform that no
+		// shipped shader declares — and `renderElement` never passed it anyway.
+		// A consumer-facing option that could not affect a pixel.
 
 		// Set custom uniforms
 		if (options.uniforms) {
@@ -333,14 +370,16 @@ export class RenderPipeline {
 		}>
 	): void {
 		if (!this.initialized) {
-			console.error('[RenderPipeline] Pipeline not initialized');
+			this.refuseUninitialized();
 			return;
 		}
 
-		// Clear once at the beginning
-		if (items.length > 0 && items[0].options?.clear) {
-			const color = items[0].options.clearColor || [0, 0, 0, 0];
-			this.clear(color);
+		// Clear once at the beginning. Bound to a local: the second read was
+		// `items[0].options.clearColor` without the `?.` the line above used, so
+		// an item with no `options` would have thrown here.
+		const first = items[0];
+		if (first?.options?.clear) {
+			this.clear(first.options.clearColor || [0, 0, 0, 0]);
 		}
 
 		// Render each item

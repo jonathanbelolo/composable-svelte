@@ -37,20 +37,20 @@ const parseURL = (path: string): TestDestination | null => {
 	if (editFieldMatch) {
 		return {
 			type: 'edit',
-			state: { id: editFieldMatch[1], field: editFieldMatch[2] }
+			state: { id: editFieldMatch[1]!, field: editFieldMatch[2]! }
 		};
 	}
 
 	// Edit without field
 	const editMatch = path.match(/^\/inventory\/item-([^/]+)\/edit$/);
 	if (editMatch) {
-		return { type: 'edit', state: { id: editMatch[1] } };
+		return { type: 'edit', state: { id: editMatch[1]! } };
 	}
 
 	// Detail
 	const detailMatch = path.match(/^\/inventory\/item-([^/]+)$/);
 	if (detailMatch) {
-		return { type: 'detail', state: { id: detailMatch[1] } };
+		return { type: 'detail', state: { id: detailMatch[1]! } };
 	}
 
 	return null;

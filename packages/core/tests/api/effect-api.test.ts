@@ -5,8 +5,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { Effect } from '../../src/lib/effect.js';
 import { api, apiFireAndForget, apiAll } from '../../src/lib/api/effect-api.js';
-import { createMockAPI } from '../../src/lib/api/testing/mock-client.js';
+import { createMockAPI, type MockHandler } from '../../src/lib/api/testing/mock-client.js';
 import { APIError } from '../../src/lib/api/errors.js';
+import { Request } from '../../src/lib/api/types.js';
 
 describe('Effect.api()', () => {
   describe('Successful API Calls', () => {
@@ -71,7 +72,16 @@ describe('Effect.api()', () => {
 
     it('handles POST requests with body', async () => {
       const mockAPI = createMockAPI({
-        'POST /api/products': (config) => ({ id: '2', ...config.body })
+        // `MockRoutes` is `Record<string, MockResponse<any>>`, and a union
+        // containing `any` *is* `any`, so an inline handler is never
+        // contextually typed. `satisfies MockHandler` supplies the shape.
+        'POST /api/products': ((config) => ({
+          id: '2',
+          // `RequestConfig.body` is `unknown` — it has to be, it carries whatever
+          // the caller sends. This test sends an object and asserts it is
+          // echoed back.
+          ...(config.body as Record<string, unknown>)
+        })) satisfies MockHandler
       });
 
       const effect = api(
@@ -191,7 +201,12 @@ describe('Effect.api()', () => {
 
       const effect = api(
         mockAPI,
-        { method: 'GET', url: '/api/products' } as const,
+        // `APIRequest` carries its response type in a phantom `_response`
+        // property, so a plain object literal cannot supply one and
+        // `InferResponse` yields `unknown`. `Request.get<T>` is what makes the
+        // inference this test is named for actually happen — with the literal
+        // the assertion below was vacuous.
+        Request.get<Product[]>('/api/products'),
         (response) => {
           // Type should be inferred as Product[]
           const products: Product[] = response.data;
@@ -312,8 +327,8 @@ describe('Effect.apiAll()', () => {
       ],
       ([productsRes, categoriesRes]) => ({
         type: 'dataLoaded',
-        products: productsRes.data,
-        categories: categoriesRes.data
+        products: productsRes!.data,
+        categories: categoriesRes!.data
       }),
       (error) => ({ type: 'dataLoadFailed', error: error.message })
     );
@@ -422,7 +437,7 @@ describe('Effect.apiAll()', () => {
 
     // Both requests should start at roughly the same time
     if (startTimes.length === 2) {
-      const timeDiff = Math.abs(startTimes[1] - startTimes[0]);
+      const timeDiff = Math.abs(startTimes[1]! - startTimes[0]!);
       expect(timeDiff).toBeLessThan(10); // Started within 10ms of each other
     }
   });
@@ -523,12 +538,12 @@ describe('Real-world Usage Examples', () => {
   it('handles authentication flow', async () => {
     const mockAPI = createMockAPI({
       'POST /api/login': { token: 'abc123', user: { id: 'u1', name: 'John' } },
-      'GET /api/profile': (config) => {
+      'GET /api/profile': ((config) => {
         if (config.headers?.['Authorization'] !== 'Bearer abc123') {
           throw new APIError('Unauthorized', 401, null, {}, false);
         }
         return { id: 'u1', name: 'John', email: 'john@example.com' };
-      }
+      }) satisfies MockHandler
     });
 
     // Login
@@ -588,9 +603,9 @@ describe('Real-world Usage Examples', () => {
       ],
       ([productsRes, categoriesRes, statsRes]) => ({
         type: 'dashboardLoaded',
-        products: productsRes.data,
-        categories: categoriesRes.data,
-        stats: statsRes.data
+        products: productsRes!.data,
+        categories: categoriesRes!.data,
+        stats: statsRes!.data
       }),
       (error) => ({ type: 'dashboardFailed', error: error.message })
     );

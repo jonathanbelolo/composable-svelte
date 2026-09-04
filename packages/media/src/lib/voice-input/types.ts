@@ -18,9 +18,6 @@ export interface VoiceInputState {
 	/** Current audio level (0-100) for visualization */
 	audioLevel: number;
 
-	/** Live transcription text (conversation mode) */
-	liveTranscript: string;
-
 	/** Recording start time (for duration display) */
 	recordingStartTime: number | null;
 
@@ -71,14 +68,11 @@ export type VoiceInputAction =
 
 	// Audio processing
 	| { type: 'audioLevelUpdated'; level: number }
-	| { type: 'liveTranscriptUpdated'; text: string }
-	| { type: 'audioProcessingComplete'; audioBlob: Blob; transcript: string }
+	// No `transcript` here: it was written by both dispatch sites and read by
+	// none, because this case does the transcribing.
+	| { type: 'audioProcessingComplete'; audioBlob: Blob }
 	| { type: 'audioProcessingFailed'; error: string }
-	| { type: 'transcriptionCompleted'; transcript: string }
-
-	// Cleanup
-	| { type: 'cleanupAudioResources' };
-
+	| { type: 'transcriptionCompleted'; transcript: string };
 /**
  * Voice Input Dependencies
  *
@@ -101,22 +95,17 @@ export interface VoiceInputDependencies {
 	getAudioManager: (id: string) => AudioManager | undefined;
 
 	/**
-	 * Optional: Streaming transcription for conversation mode.
+	 * Create the audio manager that will own the microphone.
 	 *
-	 * Opens WebSocket/SSE connection to backend for real-time transcription.
-	 *
-	 * @param audioBlob - Audio chunk to transcribe
-	 * @returns Async iterator yielding transcript updates
+	 * Injectable because acquiring a microphone is a side effect on a real
+	 * device, and the permission path is the one path a test most needs to drive.
+	 * The reducer used to import `createAudioManager` from the registry and call
+	 * it inside the effect — so the *reading* side of the audio manager was
+	 * injectable via `getAudioManager` while the *creating* side was hard-wired,
+	 * and no test could reach `microphonePermissionGranted` without a real
+	 * microphone. Defaults to the registry.
 	 */
-	streamTranscription?: (audioBlob: Blob) => AsyncIterator<string>;
-
-	/**
-	 * Optional: Text-to-speech for assistant responses.
-	 *
-	 * @param text - Text to synthesize
-	 * @returns Audio buffer to play
-	 */
-	synthesizeSpeech?: (text: string) => Promise<AudioBuffer>;
+	createAudioManager?: (id: string) => AudioManager;
 }
 
 /**
@@ -129,7 +118,6 @@ export function createInitialVoiceInputState(): VoiceInputState {
 		status: 'idle',
 		permission: null,
 		audioLevel: 0,
-		liveTranscript: '',
 		recordingStartTime: null,
 		vadState: null,
 		errorMessage: null,

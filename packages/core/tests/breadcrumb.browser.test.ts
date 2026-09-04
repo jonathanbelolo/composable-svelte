@@ -6,6 +6,7 @@
 
 import { expect, test, describe } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import type { Snippet } from 'svelte';
 import {
 	Breadcrumb,
 	BreadcrumbList,
@@ -16,16 +17,26 @@ import {
 	BreadcrumbEllipsis
 } from '../src/lib/components/ui/breadcrumb/index.js';
 
+/**
+ * `children` is a required `Snippet` on most breadcrumb parts, rendered
+ * unconditionally with `{@render children()}`, so these tests have to pass
+ * one. They assert on the wrapper element rather than on child content, so
+ * what they want is a snippet that renders *nothing* — which
+ * `createRawSnippet` cannot express, since it must return markup, and for
+ * `BreadcrumbSeparator` any markup at all would suppress the default chevron
+ * the test below checks for. A no-op function is precisely that snippet at
+ * runtime; the cast supplies only the brand on `Snippet`, and is erased.
+ */
+const emptyChildren = (() => {}) as unknown as Snippet;
+
 // Helper to wait for DOM updates
 const waitForUpdates = () => new Promise(resolve => setTimeout(resolve, 50));
 
 describe('Breadcrumb', () => {
 	test('renders nav element with aria-label', async () => {
 		const { container } = render(Breadcrumb, {
-			props: {
-				children: () => {}
-			}
-		});
+				children: emptyChildren
+			});
 		await waitForUpdates();
 
 		const nav = container.querySelector('nav');
@@ -35,12 +46,10 @@ describe('Breadcrumb', () => {
 
 	test('renders nav element with custom attributes', async () => {
 		const { container } = render(Breadcrumb, {
-			props: {
-				children: () => {},
+				children: emptyChildren,
 				class: 'custom-breadcrumb',
 				'data-testid': 'test-breadcrumb'
-			}
-		});
+			});
 		await waitForUpdates();
 
 		const nav = container.querySelector('nav');
@@ -52,10 +61,8 @@ describe('Breadcrumb', () => {
 describe('BreadcrumbList', () => {
 	test('renders ordered list with correct classes', async () => {
 		const { container } = render(BreadcrumbList, {
-			props: {
-				children: () => {}
-			}
-		});
+				children: emptyChildren
+			});
 		await waitForUpdates();
 
 		const ol = container.querySelector('ol');
@@ -68,11 +75,9 @@ describe('BreadcrumbList', () => {
 
 	test('applies custom class name', async () => {
 		const { container } = render(BreadcrumbList, {
-			props: {
-				children: () => {},
+				children: emptyChildren,
 				class: 'custom-list'
-			}
-		});
+			});
 		await waitForUpdates();
 
 		const ol = container.querySelector('ol');
@@ -83,10 +88,8 @@ describe('BreadcrumbList', () => {
 describe('BreadcrumbItem', () => {
 	test('renders list item with correct classes', async () => {
 		const { container } = render(BreadcrumbItem, {
-			props: {
-				children: () => {}
-			}
-		});
+				children: emptyChildren
+			});
 		await waitForUpdates();
 
 		const li = container.querySelector('li');
@@ -97,11 +100,9 @@ describe('BreadcrumbItem', () => {
 
 	test('applies custom class name', async () => {
 		const { container } = render(BreadcrumbItem, {
-			props: {
-				children: () => {},
+				children: emptyChildren,
 				class: 'custom-item'
-			}
-		});
+			});
 		await waitForUpdates();
 
 		const li = container.querySelector('li');
@@ -112,26 +113,26 @@ describe('BreadcrumbItem', () => {
 describe('BreadcrumbLink', () => {
 	test('renders anchor element with default href', async () => {
 		const { container } = render(BreadcrumbLink, {
-			props: {
-				children: () => {}
-			}
-		});
+				children: emptyChildren
+			});
 		await waitForUpdates();
 
 		const link = container.querySelector('a');
 		expect(link).toBeTruthy();
 		expect(link?.getAttribute('href')).toBe('#');
-		expect(link?.className).toContain('transition-colors');
+		// The hover *style* is kept; the transition is not. This assertion used to
+		// require `transition-colors` to be present — a test pinning the thing
+		// `guides/ANIMATION-GUIDELINES.md` prohibits, which would have made the
+		// policy sweep look like a regression.
 		expect(link?.className).toContain('hover:text-foreground');
+		expect(link?.className, 'hover colour changes instantly now').not.toContain('transition');
 	});
 
 	test('renders anchor element with custom href', async () => {
 		const { container } = render(BreadcrumbLink, {
-			props: {
 				href: '/home',
-				children: () => {}
-			}
-		});
+				children: emptyChildren
+			});
 		await waitForUpdates();
 
 		const link = container.querySelector('a');
@@ -140,11 +141,9 @@ describe('BreadcrumbLink', () => {
 
 	test('applies custom class name', async () => {
 		const { container } = render(BreadcrumbLink, {
-			props: {
-				children: () => {},
+				children: emptyChildren,
 				class: 'custom-link'
-			}
-		});
+			});
 		await waitForUpdates();
 
 		const link = container.querySelector('a');
@@ -155,10 +154,8 @@ describe('BreadcrumbLink', () => {
 describe('BreadcrumbPage', () => {
 	test('renders span with aria attributes for current page', async () => {
 		const { container } = render(BreadcrumbPage, {
-			props: {
-				children: () => {}
-			}
-		});
+				children: emptyChildren
+			});
 		await waitForUpdates();
 
 		const span = container.querySelector('span');
@@ -172,11 +169,9 @@ describe('BreadcrumbPage', () => {
 
 	test('applies custom class name', async () => {
 		const { container } = render(BreadcrumbPage, {
-			props: {
-				children: () => {},
+				children: emptyChildren,
 				class: 'custom-page'
-			}
-		});
+			});
 		await waitForUpdates();
 
 		const span = container.querySelector('span');
@@ -186,9 +181,7 @@ describe('BreadcrumbPage', () => {
 
 describe('BreadcrumbSeparator', () => {
 	test('renders list item with aria attributes', async () => {
-		const { container } = render(BreadcrumbSeparator, {
-			props: {}
-		});
+		const { container } = render(BreadcrumbSeparator, {});
 		await waitForUpdates();
 
 		const li = container.querySelector('li');
@@ -198,9 +191,7 @@ describe('BreadcrumbSeparator', () => {
 	});
 
 	test('renders default chevron icon when no children provided', async () => {
-		const { container } = render(BreadcrumbSeparator, {
-			props: {}
-		});
+		const { container } = render(BreadcrumbSeparator, {});
 		await waitForUpdates();
 
 		const svg = container.querySelector('svg');
@@ -215,9 +206,7 @@ describe('BreadcrumbSeparator', () => {
 	// The component correctly renders children when provided, as shown in the demo
 	// This test verifies the default behavior when no children are provided
 	test('renders default icon when no children provided (verified via demo)', async () => {
-		const { container } = render(BreadcrumbSeparator, {
-			props: {}
-		});
+		const { container } = render(BreadcrumbSeparator, {});
 		await waitForUpdates();
 
 		const li = container.querySelector('li');
@@ -235,9 +224,7 @@ describe('BreadcrumbSeparator', () => {
 
 describe('BreadcrumbEllipsis', () => {
 	test('renders span with aria attributes', async () => {
-		const { container } = render(BreadcrumbEllipsis, {
-			props: {}
-		});
+		const { container } = render(BreadcrumbEllipsis, {});
 		await waitForUpdates();
 
 		const span = container.querySelector('span[role="presentation"]');
@@ -253,9 +240,7 @@ describe('BreadcrumbEllipsis', () => {
 	});
 
 	test('renders ellipsis icon', async () => {
-		const { container } = render(BreadcrumbEllipsis, {
-			props: {}
-		});
+		const { container } = render(BreadcrumbEllipsis, {});
 		await waitForUpdates();
 
 		const svg = container.querySelector('svg');
@@ -272,9 +257,7 @@ describe('BreadcrumbEllipsis', () => {
 	});
 
 	test('renders screen reader text', async () => {
-		const { container } = render(BreadcrumbEllipsis, {
-			props: {}
-		});
+		const { container } = render(BreadcrumbEllipsis, {});
 		await waitForUpdates();
 
 		const srText = container.querySelector('.sr-only');
@@ -284,10 +267,8 @@ describe('BreadcrumbEllipsis', () => {
 
 	test('applies custom class name', async () => {
 		const { container } = render(BreadcrumbEllipsis, {
-			props: {
 				class: 'custom-ellipsis'
-			}
-		});
+			});
 		await waitForUpdates();
 
 		const span = container.querySelector('span[role="presentation"]');

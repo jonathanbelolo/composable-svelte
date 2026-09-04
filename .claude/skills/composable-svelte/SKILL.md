@@ -58,7 +58,7 @@ const count = $derived(store.state.count);
 | Charts and data visualization | `@composable-svelte/charts` | `composable-svelte-charts` |
 | Streaming chat, LLM interfaces | `@composable-svelte/chat` | `composable-svelte-chat` |
 | Code editor, syntax highlighting | `@composable-svelte/code` | `composable-svelte-code` |
-| 3D graphics, WebGL/WebGPU | `@composable-svelte/graphics` | `composable-svelte-graphics` |
+| 3D graphics, WebGL | `@composable-svelte/graphics` | `composable-svelte-graphics` |
 | Interactive maps, GeoJSON | `@composable-svelte/maps` | `composable-svelte-maps` |
 | Audio, video, voice input | `@composable-svelte/media` | `composable-svelte-media` |
 | Sessions, auth guards, role gating | `@composable-svelte/auth` | — (see its README) |

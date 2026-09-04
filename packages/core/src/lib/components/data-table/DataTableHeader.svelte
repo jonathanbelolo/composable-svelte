@@ -20,12 +20,12 @@
 		/**
 		 * Whether this column is sortable (default: true).
 		 */
-		sortable?: boolean;
+		sortable?: boolean | undefined;
 
 		/**
 		 * Custom CSS classes for the header cell.
 		 */
-		class?: string;
+		class?: string | undefined;
 	}
 
 	interface DataTableHeaderProps<T> {
@@ -42,7 +42,7 @@
 		/**
 		 * Additional CSS classes for the header row.
 		 */
-		class?: string;
+		class?: string | undefined;
 	}
 
 	let { store, columns, class: className }: DataTableHeaderProps<T> = $props();
@@ -75,7 +75,7 @@
 	}
 </script>
 
-<tr class={cn('border-b transition-colors hover:bg-muted/50', className)}>
+<tr class={cn('border-b hover:bg-muted/50', className)}>
 	{#each columns as col}
 		<th
 			class={cn(

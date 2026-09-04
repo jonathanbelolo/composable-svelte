@@ -12,11 +12,51 @@
 
 	@component
 -->
+<script lang="ts" module>
+	import { setContext, getContext } from 'svelte';
+	import type { Store as CommandStore } from '../../types.js';
+	import type { CommandState as CmdState, CommandAction as CmdAction } from './command.types.js';
+
+	const COMMAND_CONTEXT_KEY = Symbol('command');
+
+	/**
+	 * Shares the palette's own store with `CommandInput` / `CommandList` /
+	 * `CommandItem`.
+	 *
+	 * Without it those components each required a `store` prop, so a consumer
+	 * built a SECOND store — and everything `<Command>` was configured with
+	 * (`commands`, `filterFunction`, `maxResults`, `caseSensitive`, `groups`)
+	 * fed the internal one that nothing rendered. Mirrors the pattern in
+	 * `ui/accordion/Accordion.svelte`.
+	 */
+	export function setCommandContext(store: CommandStore<CmdState, CmdAction>) {
+		setContext(COMMAND_CONTEXT_KEY, store);
+	}
+
+	export function getCommandContext(): CommandStore<CmdState, CmdAction> {
+		const store = getContext<CommandStore<CmdState, CmdAction>>(COMMAND_CONTEXT_KEY);
+		if (!store) {
+			throw new Error(
+				'Command context not found. Use CommandInput, CommandList and CommandItem ' +
+					'inside <Command>, or pass them a `store` prop explicitly for standalone use.'
+			);
+		}
+		return store;
+	}
+</script>
+
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { createStore } from '../../store.svelte.js';
 	import { commandReducer } from './command.reducer.js';
-	import type { CommandState, CommandItem, CommandDependencies } from './command.types.js';
+	import type {
+		CommandState,
+		CommandAction,
+		CommandItem,
+		CommandGroup,
+		CommandDependencies
+	} from './command.types.js';
+	import type { Store } from '../../types.js';
 	import { createInitialCommandState } from './command.types.js';
 	import { animateModalIn, animateModalOut, animateBackdropIn, animateBackdropOut } from '../../animation/animate.js';
 
@@ -35,27 +75,42 @@
 		/**
 		 * Callback when a command is executed.
 		 */
-		onCommandExecute?: (command: CommandItem) => void;
+		onCommandExecute?: ((command: CommandItem) => void) | undefined;
 
 		/**
 		 * Optional custom filter function.
 		 */
-		filterFunction?: (commands: CommandItem[], query: string) => CommandItem[];
+		filterFunction?: ((commands: CommandItem[], query: string) => CommandItem[]) | undefined;
 
 		/**
 		 * Maximum number of results to show.
 		 */
-		maxResults?: number;
+		maxResults?: number | undefined;
+
+		/**
+		 * Group definitions: display labels and the order groups appear in.
+		 * Membership comes from each command's own `group` id.
+		 */
+		groups?: CommandGroup[] | undefined;
+
+		/** Whether the built-in filter matches case. Default: false. */
+		caseSensitive?: boolean | undefined;
 
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
-		 * Default content snippet.
+		 * Palette content. Receives the palette's own store, so a consumer can
+		 * drive it without rebuilding one — though `CommandInput` / `CommandList`
+		 * / `CommandItem` read it from context and need nothing passed.
+		 *
+		 * Widening the payload is non-breaking: `Snippet` is a call-signature
+		 * interface, so an existing zero-argument `{#snippet children()}` stays
+		 * assignable under TypeScript's fewer-parameters rule.
 		 */
-		children?: Snippet;
+		children?: Snippet<[{ store: Store<CommandState, CommandAction> }]> | undefined;
 	}
 
 	let {
@@ -64,42 +119,96 @@
 		onCommandExecute,
 		filterFunction,
 		maxResults,
+		groups,
+		caseSensitive,
 		class: className = '',
 		children
 	}: CommandProps = $props();
 
 	// Create dependencies
+	// Getters, not values: `createStore` re-reads `config.dependencies` on every
+	// dispatch, but a plain object literal freezes what these resolve to at
+	// setup. Note the ternary was frozen too, not just the callback it wrapped —
+	// a palette mounted without `onCommandExecute` kept `undefined` forever even
+	// after the prop arrived. Mirrors `ui/file-upload/FileUpload.svelte:43-59`.
 	const dependencies: CommandDependencies = {
-		onCommandExecute: onCommandExecute
-			? (command, dispatch) => {
-					onCommandExecute(command);
-				}
-			: undefined,
-		filterFunction
+		get onCommandExecute() {
+			return onCommandExecute
+				? (command: CommandItem) => {
+						onCommandExecute?.(command);
+					}
+				: undefined;
+		},
+		get filterFunction() {
+			return filterFunction;
+		}
 	};
 
 	// Create store
 	const store = createStore({
-		initialState: createInitialCommandState({ commands, isOpen: open, maxResults }),
+		initialState: createInitialCommandState({
+			commands,
+			isOpen: open,
+			maxResults,
+			groups,
+			caseSensitive,
+			filterFunction
+		}),
 		reducer: commandReducer,
 		dependencies
 	});
 
-	// Sync open prop to store
+	/**
+	 * Last value the prop and the store agreed on.
+	 *
+	 * Not $state: read and written by the effect below, and a reactive guard
+	 * re-triggers the effect it lives in.
+	 */
+	let lastSyncedOpen = open;
+
+	/**
+	 * One effect owns the two-way binding, because two cannot.
+	 *
+	 * This used to be a pair — "prop -> store" and "store -> prop" — and they
+	 * fought. After a dismissal completed and set `isOpen: false`, the first
+	 * effect ran before the second had written `open = false`, saw
+	 * `$store.isOpen (false) !== open (true)`, and re-dispatched `opened`. The
+	 * palette reopened itself: Escape, a backdrop click and `open={false}` were
+	 * all unable to close it.
+	 *
+	 * The missing information is *which side changed*, which neither effect
+	 * could know on its own. `lastSyncedOpen` supplies it: if the prop differs
+	 * from it the consumer moved, otherwise the store did.
+	 */
 	$effect(() => {
-		if ($store.isOpen !== open) {
-			store.dispatch({ type: open ? 'opened' : 'closed' });
+		const storeOpen = $store.isOpen;
+		const propOpen = open;
+
+		if (propOpen !== lastSyncedOpen) {
+			// The consumer changed the prop.
+			lastSyncedOpen = propOpen;
+			if (storeOpen !== propOpen) {
+				store.dispatch({ type: propOpen ? 'opened' : 'closed' });
+			}
+		} else if (storeOpen !== lastSyncedOpen) {
+			// The store changed on its own (Escape, backdrop, command executed).
+			lastSyncedOpen = storeOpen;
+			open = storeOpen;
 		}
 	});
 
-	// Sync store to open prop
-	$effect(() => {
-		open = $store.isOpen;
-	});
+	setCommandContext(store);
 
-	// Sync commands prop to store
+	// Sync commands AND groups in one effect, deliberately.
+	//
+	// This effect dispatches while reading store state, which is the shape that
+	// has produced `effect_update_depth_exceeded` here before. It converges
+	// because `sameCommands` compares by value and returns the identical state
+	// when nothing changed — adding a SECOND effect for `groups` would give that
+	// guard nothing to hold, so `groups` folds in here and `sameCommands` was
+	// extended to compare it.
 	$effect(() => {
-		store.dispatch({ type: 'commandsUpdated', commands });
+		store.dispatch({ type: 'commandsUpdated', commands, groups });
 	});
 
 	// Handle keyboard events
@@ -136,18 +245,30 @@
 	let backdropElement: HTMLElement | undefined = $state();
 	// Not $state: the effect below reads and writes this. A reactive guard
 	// re-triggers the effect it lives in (effect_update_depth_exceeded).
-	let lastAnimatedContent: any = null;
+	//
+	// Keyed on the (status, content) pair, matching the six overlay primitives.
+	// A palette mounted open starts at `presented`, which the pair records
+	// without animating — so the dismissal that follows is allowed through. The
+	// three earlier spellings of this guard each got that case wrong in a
+	// different way.
+	let lastAnimated: { status: string; content: unknown } | null = null;
 
 	// Watch presentation status and trigger animations
 	$effect(() => {
 		if (!$store.presentation || !contentElement || !backdropElement) return;
 
 		const presentation = $store.presentation;
-		// `content` exists on every status except `idle`.
-		const currentContent = presentation.status === 'idle' ? null : presentation.content;
 
-		if (presentation.status === 'presenting' && lastAnimatedContent !== currentContent) {
-			lastAnimatedContent = currentContent;
+		if (presentation.status === 'idle') {
+			lastAnimated = null;
+			return;
+		}
+
+		const { status, content } = presentation;
+		if (lastAnimated?.status === status && lastAnimated.content === content) return;
+		lastAnimated = { status, content };
+
+		if (status === 'presenting') {
 			// Animate in: content + backdrop in parallel
 			Promise.all([
 				animateModalIn(contentElement),
@@ -160,8 +281,7 @@
 			});
 		}
 
-		if (presentation.status === 'dismissing' && lastAnimatedContent === currentContent) {
-			lastAnimatedContent = null;
+		if (status === 'dismissing') {
 			// Animate out: content + backdrop in parallel
 			Promise.all([
 				animateModalOut(contentElement),
@@ -192,12 +312,13 @@
 			bind:this={contentElement}
 			class="command-dialog {className}"
 			role="dialog"
+			tabindex="-1"
 			aria-modal="true"
 			aria-label="Command palette"
 			onkeydown={handleKeyDown}
 		>
 			{#if children}
-				{@render children()}
+				{@render children({ store })}
 			{/if}
 		</div>
 	</div>

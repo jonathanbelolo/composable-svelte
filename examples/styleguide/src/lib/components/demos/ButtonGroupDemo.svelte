@@ -12,7 +12,7 @@
   <!-- Basic Button Group -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Basic Button Group</h3>
+      <h2 class="text-xl font-semibold mb-2">Basic Button Group</h2>
       <p class="text-muted-foreground text-sm">
         Group related buttons together with connected styling
       </p>
@@ -37,7 +37,7 @@
   <!-- View Switcher -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">View Switcher</h3>
+      <h2 class="text-xl font-semibold mb-2">View Switcher</h2>
       <p class="text-muted-foreground text-sm">
         Toggle between different view modes
       </p>
@@ -74,7 +74,7 @@
   <!-- Text Alignment -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Text Alignment Toolbar</h3>
+      <h2 class="text-xl font-semibold mb-2">Text Alignment Toolbar</h2>
       <p class="text-muted-foreground text-sm">
         Common toolbar pattern for text editors
       </p>
@@ -86,8 +86,9 @@
           variant={selectedAlign === 'left' ? 'default' : 'outline'}
           size="sm"
           onclick={() => selectedAlign = 'left'}
+          aria-label="Align left"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="3" y1="6" x2="21" y2="6"></line>
             <line x1="3" y1="12" x2="15" y2="12"></line>
             <line x1="3" y1="18" x2="21" y2="18"></line>
@@ -97,8 +98,9 @@
           variant={selectedAlign === 'center' ? 'default' : 'outline'}
           size="sm"
           onclick={() => selectedAlign = 'center'}
+          aria-label="Align centre"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="3" y1="6" x2="21" y2="6"></line>
             <line x1="6" y1="12" x2="18" y2="12"></line>
             <line x1="3" y1="18" x2="21" y2="18"></line>
@@ -108,8 +110,9 @@
           variant={selectedAlign === 'right' ? 'default' : 'outline'}
           size="sm"
           onclick={() => selectedAlign = 'right'}
+          aria-label="Align right"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="3" y1="6" x2="21" y2="6"></line>
             <line x1="9" y1="12" x2="21" y2="12"></line>
             <line x1="3" y1="18" x2="21" y2="18"></line>
@@ -126,7 +129,7 @@
   <!-- Vertical Orientation -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Vertical Button Group</h3>
+      <h2 class="text-xl font-semibold mb-2">Vertical Button Group</h2>
       <p class="text-muted-foreground text-sm">
         Stack buttons vertically
       </p>
@@ -151,7 +154,7 @@
   <!-- Different Variants -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Different Variants</h3>
+      <h2 class="text-xl font-semibold mb-2">Different Variants</h2>
       <p class="text-muted-foreground text-sm">
         Button groups work with any button variant
       </p>
@@ -193,7 +196,7 @@
   <!-- Different Sizes -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Different Sizes</h3>
+      <h2 class="text-xl font-semibold mb-2">Different Sizes</h2>
       <p class="text-muted-foreground text-sm">
         Button groups adapt to button sizes
       </p>
@@ -235,7 +238,7 @@
   <!-- With Icons -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">With Icons</h3>
+      <h2 class="text-xl font-semibold mb-2">With Icons</h2>
       <p class="text-muted-foreground text-sm">
         Icon-only or icon + text combinations
       </p>
@@ -246,21 +249,21 @@
       <div class="space-y-2">
         <p class="text-sm font-medium">Icon Only</p>
         <ButtonGroup>
-          <Button variant="outline" size="sm">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <Button variant="outline" size="sm" aria-label="Download">
+            <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
               <polyline points="7 10 12 15 17 10"></polyline>
               <line x1="12" y1="15" x2="12" y2="3"></line>
             </svg>
           </Button>
-          <Button variant="outline" size="sm">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <Button variant="outline" size="sm" aria-label="Upload">
+            <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z"></path>
               <polyline points="8.5 9 12 4 15.5 9"></polyline>
             </svg>
           </Button>
-          <Button variant="outline" size="sm">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <Button variant="outline" size="sm" aria-label="Search">
+            <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="11" cy="11" r="8"></circle>
               <path d="m21 21-4.3-4.3"></path>
             </svg>
@@ -273,20 +276,20 @@
         <p class="text-sm font-medium">Icon + Text</p>
         <ButtonGroup>
           <Button variant="outline">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mr-2">
+            <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mr-2">
               <path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z"></path>
               <polyline points="8.5 9 12 4 15.5 9"></polyline>
             </svg>
             Inbox
           </Button>
           <Button variant="outline">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mr-2">
+            <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mr-2">
               <path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3zm-8.27 4a2 2 0 0 1-3.46 0"></path>
             </svg>
             Alerts
           </Button>
           <Button variant="outline">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mr-2">
+            <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mr-2">
               <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
             </svg>
             Activity
@@ -299,7 +302,7 @@
   <!-- Pagination Style -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Pagination Style</h3>
+      <h2 class="text-xl font-semibold mb-2">Pagination Style</h2>
       <p class="text-muted-foreground text-sm">
         Alternative pagination controls
       </p>
@@ -307,7 +310,7 @@
 
     <ButtonGroup>
       <Button variant="outline">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="15 18 9 12 15 6"></polyline>
         </svg>
         Previous
@@ -319,7 +322,7 @@
       <Button variant="outline">5</Button>
       <Button variant="outline">
         Next
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="ml-2">
+        <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="ml-2">
           <polyline points="9 18 15 12 9 6"></polyline>
         </svg>
       </Button>
@@ -329,7 +332,7 @@
   <!-- With Badges -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">With Badges</h3>
+      <h2 class="text-xl font-semibold mb-2">With Badges</h2>
       <p class="text-muted-foreground text-sm">
         Combine with badges for notification counts
       </p>
@@ -359,7 +362,7 @@
   <!-- Disabled State -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Disabled Buttons</h3>
+      <h2 class="text-xl font-semibold mb-2">Disabled Buttons</h2>
       <p class="text-muted-foreground text-sm">
         Individual buttons can be disabled within a group
       </p>

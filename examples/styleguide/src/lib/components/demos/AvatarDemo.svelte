@@ -8,7 +8,7 @@
   <!-- Sizes -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Avatar Sizes</h3>
+      <h2 class="text-xl font-semibold mb-2">Avatar Sizes</h2>
       <p class="text-muted-foreground text-sm">
         Avatars come in four different sizes
       </p>
@@ -41,7 +41,7 @@
   <!-- Fallback Initials -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Fallback Initials</h3>
+      <h2 class="text-xl font-semibold mb-2">Fallback Initials</h2>
       <p class="text-muted-foreground text-sm">
         When no image is provided, initials are displayed
       </p>
@@ -66,7 +66,7 @@
   <!-- Custom Styling -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Custom Styling</h3>
+      <h2 class="text-xl font-semibold mb-2">Custom Styling</h2>
       <p class="text-muted-foreground text-sm">
         Avatars can be customized with rings, borders, and colors
       </p>
@@ -91,7 +91,7 @@
   <!-- Avatar Groups -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Avatar Groups</h3>
+      <h2 class="text-xl font-semibold mb-2">Avatar Groups</h2>
       <p class="text-muted-foreground text-sm">
         Stacked avatars for showing groups or teams
       </p>
@@ -136,7 +136,7 @@
   <!-- With Status Indicators -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">With Status Indicators</h3>
+      <h2 class="text-xl font-semibold mb-2">With Status Indicators</h2>
       <p class="text-muted-foreground text-sm">
         Combine avatars with status badges
       </p>
@@ -182,7 +182,7 @@
   <!-- User Lists -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">User Lists</h3>
+      <h2 class="text-xl font-semibold mb-2">User Lists</h2>
       <p class="text-muted-foreground text-sm">
         Avatars in list layouts with additional information
       </p>
@@ -201,7 +201,7 @@
             { initials: 'CW', name: 'Carol White', status: 'offline', role: 'Designer' },
             { initials: 'DB', name: 'David Brown', status: 'online', role: 'Manager' }
           ] as contact}
-            <div class="flex items-center gap-3 p-2 rounded hover:bg-accent transition-colors">
+            <div class="flex items-center gap-3 p-2 rounded hover:bg-accent">
               <div class="relative">
                 <Avatar fallback={contact.initials} size="sm" />
                 <span class="absolute bottom-0 right-0 h-2 w-2 rounded-full ring-1 ring-background {
@@ -234,7 +234,7 @@
             { initials: 'IJ', name: 'Iris Jackson', email: 'iris@example.com' },
             { initials: 'KL', name: 'Kyle Lopez', email: 'kyle@example.com' }
           ] as member}
-            <div class="flex items-center gap-3 p-2 rounded hover:bg-accent transition-colors cursor-pointer">
+            <div class="flex items-center gap-3 p-2 rounded hover:bg-accent cursor-pointer">
               <Avatar fallback={member.initials} />
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium">{member.name}</p>
@@ -250,7 +250,7 @@
   <!-- Complex Example -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Profile Card</h3>
+      <h2 class="text-xl font-semibold mb-2">Profile Card</h2>
       <p class="text-muted-foreground text-sm">
         Complete user profile with avatar
       </p>
@@ -263,7 +263,7 @@
           <Avatar fallback="JD" size="xl" class="ring-4 ring-background" />
           <div class="flex-1 pb-2">
             <div class="flex items-center gap-2">
-              <h3 class="font-semibold text-lg">John Doe</h3>
+              <h2 class="font-semibold text-lg">John Doe</h2>
               <Badge variant="success" class="text-[10px]">
                 <span class="mr-1">✓</span> Verified
               </Badge>
@@ -305,7 +305,7 @@
   <!-- Grid Layout -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Grid Layout</h3>
+      <h2 class="text-xl font-semibold mb-2">Grid Layout</h2>
       <p class="text-muted-foreground text-sm">
         Team members in a grid view
       </p>
@@ -332,7 +332,7 @@
             { initials: 'KW', name: 'Kate Wilson' },
             { initials: 'LX', name: 'Leo Xavier' }
           ] as member}
-            <div class="flex flex-col items-center text-center gap-2 p-3 rounded hover:bg-accent transition-colors cursor-pointer">
+            <div class="flex flex-col items-center text-center gap-2 p-3 rounded hover:bg-accent cursor-pointer">
               <Avatar fallback={member.initials} size="lg" />
               <p class="text-xs font-medium truncate w-full">{member.name}</p>
             </div>

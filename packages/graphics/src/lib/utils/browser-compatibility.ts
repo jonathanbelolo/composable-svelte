@@ -9,7 +9,7 @@
  * - Edge: Chromium-based but some differences
  */
 
-import { debugLog } from './debug.js';
+import { noDebug, type DebugLog } from './debug.js';
 
 export type BrowserType = 'chrome' | 'firefox' | 'safari' | 'edge' | 'unknown';
 
@@ -24,7 +24,7 @@ export class BrowserCompatibility {
 	readonly browser: BrowserType;
 	readonly version: number;
 
-	constructor() {
+	constructor(private log: DebugLog = noDebug) {
 		const ua = navigator.userAgent;
 
 		// Detect browser type and version
@@ -52,7 +52,7 @@ export class BrowserCompatibility {
 	 * Log browser information to console
 	 */
 	logBrowserInfo(): void {
-		debugLog('[WebGLOverlay] Browser:', {
+		this.log('[WebGLOverlay] Browser:', {
 			browser: this.browser,
 			version: this.version,
 			needsCORSWorkaround: this.needsCORSWorkaround(),
@@ -85,32 +85,6 @@ export class BrowserCompatibility {
 	}
 
 	/**
-	 * Get texture filtering hint for this browser
-	 *
-	 * Safari benefits from anisotropic filtering extension.
-	 *
-	 * @returns Extension constant or null
-	 */
-	getTextureFilteringHint(): number | null {
-		if (this.browser === 'safari') {
-			// WEBKIT_TEXTURE_FILTER_ANISOTROPIC_EXT
-			return 0x84fe;
-		}
-		return null;
-	}
-
-	/**
-	 * Check if browser supports WebGL extensions
-	 *
-	 * @param gl - WebGL context
-	 * @param extension - Extension name
-	 * @returns true if extension is supported
-	 */
-	supportsExtension(gl: WebGLRenderingContext, extension: string): boolean {
-		return gl.getExtension(extension) !== null;
-	}
-
-	/**
 	 * Get list of supported WebGL extensions
 	 *
 	 * @param gl - WebGL context
@@ -118,49 +92,6 @@ export class BrowserCompatibility {
 	 */
 	getSupportedExtensions(gl: WebGLRenderingContext): string[] {
 		return gl.getSupportedExtensions() || [];
-	}
-
-	/**
-	 * Check if browser has known WebGL issues
-	 *
-	 * @returns true if known issues exist
-	 */
-	hasKnownIssues(): boolean {
-		// Safari versions < 14 had WebGL stability issues
-		if (this.browser === 'safari' && this.version < 14) {
-			return true;
-		}
-
-		// Old Firefox versions had performance issues
-		if (this.browser === 'firefox' && this.version < 80) {
-			return true;
-		}
-
-		return false;
-	}
-
-	/**
-	 * Get recommended workarounds for this browser
-	 *
-	 * @returns Array of workaround descriptions
-	 */
-	getRecommendedWorkarounds(): string[] {
-		const workarounds: string[] = [];
-
-		if (this.browser === 'safari') {
-			workarounds.push('Ensure all images have crossOrigin="anonymous" attribute');
-			workarounds.push('Use anisotropic filtering extension for better texture quality');
-		}
-
-		if (this.browser === 'firefox' && this.version < 90) {
-			workarounds.push('Reduce texture updates for better performance');
-		}
-
-		if (this.hasKnownIssues()) {
-			workarounds.push('Consider recommending users upgrade their browser');
-		}
-
-		return workarounds;
 	}
 
 	/**
@@ -179,14 +110,4 @@ export class BrowserCompatibility {
 		};
 	}
 
-	/**
-	 * Check if browser is Chromium-based
-	 *
-	 * Chrome and Edge share Chromium codebase
-	 *
-	 * @returns true if Chromium-based
-	 */
-	isChromiumBased(): boolean {
-		return this.browser === 'chrome' || this.browser === 'edge';
-	}
 }

@@ -4,7 +4,6 @@
  * Based on Phase 11 plan: Interactive Charts & Visualizations
  */
 
-import type { Plot } from '@observablehq/plot';
 
 /**
  * Chart state manages data, visualization config, and interactivity
@@ -15,11 +14,24 @@ export interface ChartState<T = unknown> {
   filteredData: T[];
 
   // Visualization config
-  spec: PlotSpec;
   dimensions: { width: number; height: number };
 
   // Interactivity state
   selection: SelectionState<T>;
+
+  /**
+   * The data point a keyboard user is currently on, indexed into
+   * `filteredData` — the same basis as `selection.selectedIndices`.
+   *
+   * Focus is not selection. It is a cursor: moving it announces a point and
+   * draws a ring around it, and nothing else. `selectFocused` is what turns the
+   * focused point into a selection, which is what fires `onSelectionChange`.
+   *
+   * `null` means the chart has no cursor yet — the state a chart mounts in, and
+   * the state it returns to whenever the data underneath changes, since an index
+   * that outlives its row silently points at a different datum.
+   */
+  focusedIndex: number | null;
 
   // Zoom/pan state
   transform: ZoomTransform;
@@ -39,7 +51,6 @@ export interface SelectionState<T = unknown> {
   type: 'none' | 'point' | 'range' | 'brush';
   selectedData: T[];
   selectedIndices: number[];
-  brushExtent?: [[number, number], [number, number]]; // For 2D brush
   range?: [number, number]; // For 1D range selection
 }
 
@@ -55,24 +66,6 @@ export interface ZoomTransform {
 // Note: TooltipState removed - Observable Plot handles tooltips natively
 
 /**
- * Observable Plot specification
- * This will be passed to Plot.plot()
- */
-export interface PlotSpec {
-  marks?: any[]; // Plot marks (dot, line, bar, etc.)
-  width?: number;
-  height?: number;
-  marginLeft?: number;
-  marginRight?: number;
-  marginTop?: number;
-  marginBottom?: number;
-  x?: any; // Scale config
-  y?: any; // Scale config
-  color?: any; // Color scale config
-  [key: string]: any; // Allow other Plot options
-}
-
-/**
  * Chart actions
  */
 export type ChartAction<T = unknown> =
@@ -84,10 +77,29 @@ export type ChartAction<T = unknown> =
   // Selection actions
   | { type: 'selectPoint'; data: T; index: number }
   | { type: 'selectRange'; range: [number, number] }
-  | { type: 'brushStart'; position: [number, number] }
-  | { type: 'brushMove'; extent: [[number, number], [number, number]] }
-  | { type: 'brushEnd' }
+  /**
+   * Select exactly these rows, in no particular arrangement.
+   *
+   * What a brush actually produces. `selectRange` describes a *contiguous*
+   * span, so reporting a brush through it meant a gesture that caught the first
+   * and last points of a scattered cloud selected every point between them as
+   * well. An empty list is a cleared selection.
+   */
+  | { type: 'selectPoints'; indices: number[] }
+  | { type: 'brushStart' }
   | { type: 'clearSelection' }
+
+  // Keyboard focus actions — a cursor over `filteredData`, see `focusedIndex`.
+  // Every one of these is reachable from the keyboard via `Chart.svelte`, and
+  // every one is dispatchable directly, so the same navigation can be driven
+  // from a button or a test without synthesising key events.
+  | { type: 'focusPoint'; index: number }
+  | { type: 'focusNext' }
+  | { type: 'focusPrevious' }
+  | { type: 'focusFirst' }
+  | { type: 'focusLast' }
+  | { type: 'clearFocus' }
+  | { type: 'selectFocused' }
 
   // Zoom/pan actions
   | { type: 'zoom'; transform: ZoomTransform }
@@ -95,37 +107,42 @@ export type ChartAction<T = unknown> =
   | { type: 'zoomProgress'; transform: ZoomTransform }
   | { type: 'zoomComplete' }
   | { type: 'resetZoom' }
+  // Step the scale by a fixed factor, clamped to the same [0.5, 10] extent
+  // `ChartPrimitive`'s d3-zoom behaviour enforces for the wheel. These exist so
+  // `+`/`-` have something to dispatch that is not a hand-computed transform.
+  | { type: 'zoomIn' }
+  | { type: 'zoomOut' }
 
   // Tooltip actions - Handled by Observable Plot (no actions needed)
 
   // Dimension actions
   | { type: 'resize'; dimensions: { width: number; height: number } }
 
-  // Spec updates
-  | { type: 'updateSpec'; spec: Partial<PlotSpec> };
+  // Spec updates;
 
 /**
  * Chart configuration
  */
 export interface ChartConfig {
   // Data accessors
-  x?: string | ((d: any) => any);
-  y?: string | ((d: any) => any);
-  color?: string | ((d: any) => any);
-  size?: string | ((d: any) => any);
+  x?: string | ((d: any) => any) | undefined;
+  y?: string | ((d: any) => any) | undefined;
+  color?: string | ((d: any) => any) | undefined;
+  // Dot radius in px. Not an accessor like x/y/color: plot-builder destructures
+  // it with `size = 5` and passes it straight to Plot's `r`.
+  size?: number | undefined;
 
   // Domain overrides
-  xDomain?: [number, number] | 'auto';
-  yDomain?: [number, number] | 'auto';
+  xDomain?: [number, number] | 'auto' | undefined;
+  yDomain?: [number, number] | 'auto' | undefined;
 
   // Interaction flags
-  enableZoom?: boolean;
-  enableBrush?: boolean;
-  enableTooltip?: boolean;
+  enableZoom?: boolean | undefined;
+  enableBrush?: boolean | undefined;
+  enableTooltip?: boolean | undefined;
 
   // Animation
-  enableAnimations?: boolean;
-  transitionDuration?: number;
+  enableAnimations?: boolean | undefined;
 }
 
 /**

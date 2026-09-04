@@ -9,10 +9,18 @@ export type {
 	FormState,
 	FormConfig,
 	FormAction,
-	FormDependencies,
+	FormStore,
 	FieldState,
-	ValidationMode
+	FieldRenderState,
+	ValidationMode,
+	FormProps,
+	FormFieldProps,
+	FieldRenderProps
 } from './form.types.js';
+
+// Field paths — how a form addresses a value below the top level.
+export type { FieldPath, FieldValue, FormFields, AsyncValidators } from './field-path.js';
+export { toFieldPath, fieldStateAt } from './field-path.js';
 
 // Reducer
 export { createFormReducer, createInitialFormState } from './form.reducer.js';

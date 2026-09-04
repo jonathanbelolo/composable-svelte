@@ -433,7 +433,10 @@ export type PresentationState<T> =
  * - `dismissalTimeout`: Animation-out exceeded timeout → force cleanup
  *
  * Components dispatch these events via Motion One animation completion handlers.
- * Timeout events are dispatched by Effect.animated() fallbacks to prevent stuck states.
+ * Timeout events are a recovery path for a lifecycle whose completion can go
+ * missing. They are not needed by default — see the completion section of
+ * `guides/ANIMATION-GUIDELINES.md` for when the correspondence between the live
+ * status and the live animation breaks, which is the case they exist for.
  *
  * @example
  * ```typescript

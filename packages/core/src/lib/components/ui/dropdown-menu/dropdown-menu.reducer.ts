@@ -77,22 +77,39 @@ export const dropdownMenuReducer: Reducer<
 > = (state, action, deps) => {
 	switch (action.type) {
 		case 'opened': {
+			// Only refuse a redundant open. Reopening while an exit is still in
+			// flight is allowed: blocking it would make the menu ignore a click for
+			// the length of the animation, and the effect's (status, content) guard
+			// re-runs the entry animation from wherever the element currently is.
+			if (state.isOpen) {
+				return [state, Effect.none()];
+			}
+
 			return [
 				{
 					...state,
 					isOpen: true,
-					highlightedIndex: -1 // Reset highlight when opening
+					highlightedIndex: -1,
+					presentation: { status: 'presenting' as const, content: true }
 				},
 				Effect.none()
 			];
 		}
 
 		case 'closed': {
+			if (!state.isOpen) {
+				return [state, Effect.none()];
+			}
+
 			return [
 				{
 					...state,
+					// `isOpen` flips immediately — it is what `aria-expanded` reports, and
+					// a menu on its way out is not expanded. The markup keeps the element
+					// mounted for the exit animation via `presentation.status` instead.
 					isOpen: false,
-					highlightedIndex: -1
+					highlightedIndex: -1,
+					presentation: { status: 'dismissing' as const, content: true }
 				},
 				Effect.none()
 			];
@@ -100,26 +117,29 @@ export const dropdownMenuReducer: Reducer<
 
 		case 'toggled': {
 			if (state.isOpen) {
-				// Closing
 				return [
-					{
-						...state,
-						isOpen: false,
-						highlightedIndex: -1
-					},
-					Effect.none()
-				];
-			} else {
-				// Opening
-				return [
-					{
-						...state,
-						isOpen: true,
-						highlightedIndex: -1
-					},
+				{
+					...state,
+					// `isOpen` flips immediately — it is what `aria-expanded` reports, and
+					// a menu on its way out is not expanded. The markup keeps the element
+					// mounted for the exit animation via `presentation.status` instead.
+					isOpen: false,
+					highlightedIndex: -1,
+					presentation: { status: 'dismissing' as const, content: true }
+				},
 					Effect.none()
 				];
 			}
+
+			return [
+				{
+					...state,
+					isOpen: true,
+					highlightedIndex: -1,
+					presentation: { status: 'presenting' as const, content: true }
+				},
+				Effect.none()
+			];
 		}
 
 		case 'itemHighlighted': {
@@ -146,11 +166,13 @@ export const dropdownMenuReducer: Reducer<
 				return [state, Effect.none()];
 			}
 
-			// Close menu after selection
+			// Begin dismissing after selection. `isOpen` flips now; the markup keeps
+			// the element mounted through `presentation.status` for the animation.
 			const newState: DropdownMenuState = {
 				...state,
 				isOpen: false,
-				highlightedIndex: -1
+				highlightedIndex: -1,
+				presentation: { status: 'dismissing' as const, content: true }
 			};
 
 			// Call onSelect callback if provided
@@ -275,7 +297,8 @@ export const dropdownMenuReducer: Reducer<
 				{
 					...state,
 					isOpen: false,
-					highlightedIndex: -1
+					highlightedIndex: -1,
+					presentation: { status: 'dismissing' as const, content: true }
 				},
 				Effect.none()
 			];

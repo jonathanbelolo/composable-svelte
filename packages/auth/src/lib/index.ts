@@ -17,6 +17,7 @@ export {
 	anonymousSubject,
 	subjectFromSession,
 	subjectRoles,
+	subjectDisplayName,
 	hasRole,
 	hasAnyRole,
 	type Subject,
@@ -25,6 +26,29 @@ export {
 	type SessionSnapshot
 } from './subject/index.js';
 
+// Errors — the structured failure union every flow branches on
+export {
+	toAuthError,
+	isAuthError,
+	isMfaRequired,
+	isReauthenticationRequired,
+	retryDelaySeconds,
+	type AuthError,
+	type AuthErrorCode,
+	type InvalidCredentialsError,
+	type MfaRequiredError,
+	type EmailUnverifiedError,
+	type EmailTakenError,
+	type AccountLockedError,
+	type RateLimitedError,
+	type TokenExpiredError,
+	type OAuthDeniedError,
+	type OAuthStateMismatchError,
+	type ReauthenticationRequiredError,
+	type NetworkError,
+	type UnknownAuthError
+} from './errors/index.js';
+
 // Session — reducer, store factory, HTTP deps
 export {
 	sessionReducer,
@@ -32,11 +56,287 @@ export {
 	createSessionStore,
 	createHttpSessionDeps,
 	MalformedSessionError,
+	createUnauthorizedHandler,
+	type UnauthorizedHandler,
+	type SessionStoreSlice,
 	type SessionState,
 	type SessionStatus,
 	type SessionAction,
 	type SessionDependencies
 } from './session/index.js';
 
+// Flows — headless sign-in, signup and the rest: reducer, types, schema
+export {
+	loginReducer,
+	createInitialLoginState,
+	createLoginStore,
+	loginFormConfig,
+	loginSchema,
+	emptyLoginFields,
+	type LoginFields,
+	type LoginState,
+	type LoginAction,
+	type LoginStatus,
+	type LoginDependencies
+} from './flows/index.js';
+
+export {
+	signupReducer,
+	createInitialSignupState,
+	createSignupStore,
+	signupFormConfig,
+	signupSchema,
+	emptySignupFields,
+	passwordCriteria,
+	evaluatePasswordCriteria,
+	meetsPasswordCriteria,
+	passwordField,
+	PASSWORD_MIN_LENGTH,
+	PASSWORD_MAX_LENGTH,
+	type SignupFields,
+	type PasswordCriterion,
+	type SignupState,
+	type SignupAction,
+	type SignupStatus,
+	type SignupDependencies
+} from './flows/index.js';
+
+export {
+	mfaChallengeReducer,
+	createInitialMfaChallengeState,
+	createMfaChallengeStore,
+	mfaChallengeFormConfig,
+	mfaCodeSchema,
+	emptyMfaCodeFields,
+	type MfaCodeFields,
+	type MfaChallengeState,
+	type MfaChallengeAction,
+	type MfaChallengeStatus,
+	type MfaChallengeDependencies,
+	mfaEnrolmentReducer,
+	createInitialMfaEnrolmentState,
+	createMfaEnrolmentStore,
+	mfaEnrolmentFormConfig,
+	type MfaEnrolmentState,
+	type MfaEnrolmentAction,
+	type MfaEnrolmentStatus,
+	type MfaEnrolmentDependencies
+} from './flows/index.js';
+
+export {
+	forgotPasswordReducer,
+	createInitialForgotPasswordState,
+	createForgotPasswordStore,
+	forgotPasswordFormConfig,
+	forgotPasswordSchema,
+	emptyForgotPasswordFields,
+	type ForgotPasswordFields,
+	type ForgotPasswordState,
+	type ForgotPasswordAction,
+	type ForgotPasswordStatus,
+	type ForgotPasswordDependencies,
+	resetPasswordReducer,
+	createInitialResetPasswordState,
+	createResetPasswordStore,
+	resetPasswordFormConfig,
+	resetPasswordSchema,
+	emptyResetPasswordFields,
+	type ResetPasswordFields,
+	type ResetPasswordState,
+	type ResetPasswordAction,
+	type ResetPasswordStatus,
+	type ResetPasswordDependencies
+} from './flows/index.js';
+
+export {
+	emailVerificationReducer,
+	createInitialEmailVerificationState,
+	createEmailVerificationStore,
+	tokenFromUrl,
+	type EmailVerificationState,
+	type EmailVerificationAction,
+	type EmailVerificationStatus,
+	type EmailVerificationDependencies,
+	type ResendStatus
+} from './flows/index.js';
+
+export {
+	accountReducer,
+	createInitialAccountState,
+	createAccountStore,
+	changePasswordReducer,
+	createInitialChangePasswordState,
+	createChangePasswordStore,
+	changePasswordFormConfig,
+	changePasswordSchema,
+	emptyChangePasswordFields,
+	mfaManagementReducer,
+	createInitialMfaManagementState,
+	createMfaManagementStore,
+	connectedAccountsReducer,
+	createInitialConnectedAccountsState,
+	createConnectedAccountsStore,
+	changeEmailReducer,
+	createInitialChangeEmailState,
+	createChangeEmailStore,
+	changeEmailFormConfig,
+	changeEmailSchema,
+	emptyChangeEmailFields,
+	changeEmailConfirmReducer,
+	createInitialChangeEmailConfirmState,
+	createChangeEmailConfirmStore,
+	deleteAccountReducer,
+	createInitialDeleteAccountState,
+	createDeleteAccountStore,
+	sessionRefreshReducer,
+	createInitialSessionRefreshState,
+	createSessionRefreshStore,
+	DEFAULT_LEAD_MS,
+	DEFAULT_TICK_MS
+} from './flows/index.js';
+
+export type {
+	AccountState,
+	AccountAction,
+	AccountStatus,
+	AccountDependencies,
+	ChangePasswordFields,
+	ChangePasswordState,
+	ChangePasswordAction,
+	ChangePasswordStatus,
+	ChangePasswordDependencies,
+	ChangeEmailFields,
+	ChangeEmailState,
+	ChangeEmailAction,
+	ChangeEmailStatus,
+	ChangeEmailResendStatus,
+	ChangeEmailDependencies,
+	ChangeEmailConfirmState,
+	ChangeEmailConfirmAction,
+	ChangeEmailConfirmStatus,
+	ChangeEmailConfirmDependencies,
+	DeleteAccountState,
+	DeleteAccountAction,
+	DeleteAccountStatus,
+	DeleteAccountDependencies,
+	SessionRefreshState,
+	SessionRefreshAction,
+	SessionRefreshStatus,
+	SessionRefreshDependencies,
+	MfaManagementState,
+	MfaManagementAction,
+	MfaManagementStatus,
+	MfaManagementDependencies,
+	MfaOperation,
+	ConnectedAccountsState,
+	ConnectedAccountsAction,
+	ConnectedAccountsStatus,
+	ConnectedAccountsDependencies
+} from './flows/index.js';
+
+export {
+	magicLinkRequestReducer,
+	createInitialMagicLinkRequestState,
+	createMagicLinkRequestStore,
+	magicLinkRequestFormConfig,
+	magicLinkSchema,
+	emptyMagicLinkFields,
+	magicLinkSignInReducer,
+	createInitialMagicLinkSignInState,
+	createMagicLinkSignInStore
+} from './flows/index.js';
+
+export type {
+	MagicLinkFields,
+	MagicLinkRequestState,
+	MagicLinkRequestAction,
+	MagicLinkRequestStatus,
+	MagicLinkRequestDependencies,
+	MagicLinkSignInState,
+	MagicLinkSignInAction,
+	MagicLinkSignInStatus,
+	MagicLinkSignInDependencies
+} from './flows/index.js';
+
+export {
+	createPendingOAuthStorage,
+	createMemoryPendingOAuthStorage,
+	normaliseReturnTo,
+	createBrowserRedirect,
+	oauthStartReducer,
+	createInitialOAuthStartState,
+	createOAuthStartStore,
+	oauthCallbackReducer,
+	createInitialOAuthCallbackState,
+	createOAuthCallbackStore,
+	oauthParamsFromUrl
+} from './flows/index.js';
+
+export type {
+	OAuthIntent,
+	OAuthProvider,
+	PendingOAuth,
+	PendingOAuthStorage,
+	Redirect,
+	OAuthStartState,
+	OAuthStartAction,
+	OAuthStartStatus,
+	OAuthStartDependencies,
+	OAuthCallbackState,
+	OAuthCallbackAction,
+	OAuthCallbackStatus,
+	OAuthCallbackParams,
+	OAuthCallbackDependencies
+} from './flows/index.js';
+
+// Dependencies — the injected auth I/O every flow runs over
+export type {
+	AuthDependencies,
+	LoginCredentials,
+	SignupCredentials,
+	SignupOutcome,
+	MfaMethod,
+	MfaEnrolmentStart,
+	AccountSnapshot,
+	MfaEnrolmentResult,
+	OAuthStart,
+	SessionLifetime,
+	AuthErrorBody
+} from './deps.js';
+
+// HTTP — the Composable Rust adapter, beside `createHttpSessionDeps` above
+export { createHttpAuthDeps, authErrorFromResponse } from './http/index.js';
+
 // Components — thin store consumers (zero async)
-export { AuthGuard, RoleGate } from './components/index.js';
+export {
+	AuthGuard,
+	RoleGate,
+	LoginForm,
+	SignupForm,
+	EmailVerification,
+	ForgotPasswordForm,
+	ResetPasswordForm,
+	MfaChallengeForm,
+	MfaEnrolment,
+	MfaManagementPanel,
+	RecoveryCodes,
+	OneTimeCodeInput,
+	ChangePasswordForm,
+	SignOutButton,
+	MagicLinkRequestForm,
+	MagicLinkSignIn,
+	OAuthSignIn,
+	OAuthCallback,
+	ConnectedAccountsPanel,
+	ChangeEmailForm,
+	EmailChangeConfirmation,
+	DeleteAccountPanel,
+	SessionRefresh,
+	PasswordInput,
+	PasswordCriteria
+} from './components/index.js';
+
+// Testing — a backend-shaped fake, so a demo or a test needs no server
+export { createMockAuthDeps, type MockAuthOptions } from './testing/index.js';
+
+export { emailField } from './flows/index.js';

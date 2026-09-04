@@ -16,9 +16,9 @@ describe('Spy WebSocket Client', () => {
       await spyClient.connect('wss://example.com', ['protocol1']);
 
       expect(spyClient.connections).toHaveLength(1);
-      expect(spyClient.connections[0].url).toBe('wss://example.com');
-      expect(spyClient.connections[0].protocols).toEqual(['protocol1']);
-      expect(spyClient.connections[0].timestamp).toBeGreaterThan(0);
+      expect(spyClient.connections[0]!.url).toBe('wss://example.com');
+      expect(spyClient.connections[0]!.protocols).toEqual(['protocol1']);
+      expect(spyClient.connections[0]!.timestamp).toBeGreaterThan(0);
     });
 
     it('should record multiple connection attempts', async () => {
@@ -30,8 +30,8 @@ describe('Spy WebSocket Client', () => {
       await spyClient.connect('wss://other.com');
 
       expect(spyClient.connections).toHaveLength(2);
-      expect(spyClient.connections[0].url).toBe('wss://example.com');
-      expect(spyClient.connections[1].url).toBe('wss://other.com');
+      expect(spyClient.connections[0]!.url).toBe('wss://example.com');
+      expect(spyClient.connections[1]!.url).toBe('wss://other.com');
     });
 
     it('should count connections to specific URL', async () => {
@@ -59,9 +59,9 @@ describe('Spy WebSocket Client', () => {
       await spyClient.disconnect(1000, 'Normal closure');
 
       expect(spyClient.disconnections).toHaveLength(1);
-      expect(spyClient.disconnections[0].code).toBe(1000);
-      expect(spyClient.disconnections[0].reason).toBe('Normal closure');
-      expect(spyClient.disconnections[0].timestamp).toBeGreaterThan(0);
+      expect(spyClient.disconnections[0]!.code).toBe(1000);
+      expect(spyClient.disconnections[0]!.reason).toBe('Normal closure');
+      expect(spyClient.disconnections[0]!.timestamp).toBeGreaterThan(0);
     });
 
     it('should record multiple disconnections', async () => {
@@ -75,8 +75,8 @@ describe('Spy WebSocket Client', () => {
       await spyClient.disconnect(1001, 'Second');
 
       expect(spyClient.disconnections).toHaveLength(2);
-      expect(spyClient.disconnections[0].reason).toBe('First');
-      expect(spyClient.disconnections[1].reason).toBe('Second');
+      expect(spyClient.disconnections[0]!.reason).toBe('First');
+      expect(spyClient.disconnections[1]!.reason).toBe('Second');
     });
   });
 
@@ -93,7 +93,9 @@ describe('Spy WebSocket Client', () => {
     });
 
     it('should record multiple sent messages', async () => {
-      const mockClient = createMockWebSocket();
+      // Typed, so `sentMessages` is `Msg[]` rather than `unknown[]` — the
+      // message type is what makes the recorded messages inspectable at all.
+      const mockClient = createMockWebSocket<{ type: string }>();
       const spyClient = createSpyWebSocket(mockClient);
 
       await spyClient.connect('wss://example.com');
@@ -102,7 +104,7 @@ describe('Spy WebSocket Client', () => {
       await spyClient.send({ type: 'msg3' });
 
       expect(spyClient.sentMessages).toHaveLength(3);
-      expect(spyClient.sentMessages.map(m => m.type)).toEqual(['msg1', 'msg2', 'msg3']);
+      expect(spyClient.sentMessages.map((m) => m.type)).toEqual(['msg1', 'msg2', 'msg3']);
     });
 
     it('should delegate send to real client', async () => {
@@ -131,11 +133,11 @@ describe('Spy WebSocket Client', () => {
       mockClient.simulateMessage({ type: 'test', data: 'hello' });
 
       expect(spyClient.receivedMessages).toHaveLength(1);
-      expect(spyClient.receivedMessages[0].data).toEqual({ type: 'test', data: 'hello' });
+      expect(spyClient.receivedMessages[0]!.data).toEqual({ type: 'test', data: 'hello' });
     });
 
     it('should record multiple received messages', async () => {
-      const mockClient = createMockWebSocket();
+      const mockClient = createMockWebSocket<{ type: string }>();
       const spyClient = createSpyWebSocket(mockClient);
 
       await spyClient.connect('wss://example.com');
@@ -146,7 +148,7 @@ describe('Spy WebSocket Client', () => {
       mockClient.simulateMessage({ type: 'msg3' });
 
       expect(spyClient.receivedMessages).toHaveLength(3);
-      expect(spyClient.receivedMessages.map(m => m.data.type)).toEqual(['msg1', 'msg2', 'msg3']);
+      expect(spyClient.receivedMessages.map((m) => m.data.type)).toEqual(['msg1', 'msg2', 'msg3']);
     });
 
     it('should notify original listeners', async () => {
@@ -161,7 +163,7 @@ describe('Spy WebSocket Client', () => {
       mockClient.simulateMessage({ type: 'test' });
 
       expect(messages).toHaveLength(1);
-      expect(messages[0].data.type).toBe('test');
+      expect(messages[0]!.data.type).toBe('test');
     });
   });
 
@@ -292,8 +294,8 @@ describe('Spy WebSocket Client', () => {
       await spyClient.connect('wss://example.com');
       await spyClient.send({ type: 'chat', user: 'Alice', text: 'Hello' });
 
-      expect(spyClient.sentMessages[0].user).toBe('Alice');
-      expect(spyClient.sentMessages[0].text).toBe('Hello');
+      expect(spyClient.sentMessages[0]!.user).toBe('Alice');
+      expect(spyClient.sentMessages[0]!.text).toBe('Hello');
     });
 
     it('should preserve message types through reception', async () => {
@@ -311,8 +313,8 @@ describe('Spy WebSocket Client', () => {
 
       mockClient.simulateMessage({ type: 'chat', user: 'Bob', text: 'Hi' });
 
-      expect(spyClient.receivedMessages[0].data.user).toBe('Bob');
-      expect(spyClient.receivedMessages[0].data.text).toBe('Hi');
+      expect(spyClient.receivedMessages[0]!.data.user).toBe('Bob');
+      expect(spyClient.receivedMessages[0]!.data.text).toBe('Hi');
     });
   });
 
@@ -336,18 +338,18 @@ describe('Spy WebSocket Client', () => {
 
       // Verify spy recorded everything
       expect(spyClient.connections).toHaveLength(1);
-      expect(spyClient.connections[0].url).toBe('wss://example.com');
-      expect(spyClient.connections[0].protocols).toEqual(['proto1']);
+      expect(spyClient.connections[0]!.url).toBe('wss://example.com');
+      expect(spyClient.connections[0]!.protocols).toEqual(['proto1']);
 
       expect(spyClient.sentMessages).toHaveLength(1);
       expect(spyClient.sentMessages[0]).toEqual({ type: 'ping' });
 
       expect(spyClient.receivedMessages).toHaveLength(1);
-      expect(spyClient.receivedMessages[0].data).toEqual({ type: 'pong' });
+      expect(spyClient.receivedMessages[0]!.data).toEqual({ type: 'pong' });
 
       expect(spyClient.disconnections).toHaveLength(1);
-      expect(spyClient.disconnections[0].code).toBe(1000);
-      expect(spyClient.disconnections[0].reason).toBe('Done');
+      expect(spyClient.disconnections[0]!.code).toBe(1000);
+      expect(spyClient.disconnections[0]!.reason).toBe('Done');
 
       // Verify mock client state
       expect(mockClient.state.status).toBe('disconnected');

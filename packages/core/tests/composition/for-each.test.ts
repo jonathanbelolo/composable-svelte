@@ -69,8 +69,8 @@ describe('forEach', () => {
 
     const [newState] = reducer(initialState, { type: 'counter', id: 'a', action: { type: 'increment' } }, {});
 
-    expect(newState.items[0].state.count).toBe(1);
-    expect(newState.items[1].state.count).toBe(10); // Unchanged
+    expect(newState.items[0]!.state.count).toBe(1);
+    expect(newState.items[1]!.state.count).toBe(10); // Unchanged
   });
 
   it('returns unchanged state when action does not match', () => {
@@ -189,7 +189,7 @@ describe('forEach', () => {
     // New item object
     expect(newState.items[0]).not.toBe(initialState.items[0]);
     // Same ID
-    expect(newState.items[0].id).toBe('a');
+    expect(newState.items[0]!.id).toBe('a');
   });
 
   it('supports numeric IDs', () => {
@@ -216,8 +216,8 @@ describe('forEach', () => {
 
     const [newState] = reducer(initialState, { type: 'counter', id: 2, action: { type: 'increment' } }, {});
 
-    expect(newState.items[0].state.count).toBe(0); // Unchanged
-    expect(newState.items[1].state.count).toBe(6); // Incremented
+    expect(newState.items[0]!.state.count).toBe(0); // Unchanged
+    expect(newState.items[1]!.state.count).toBe(6); // Incremented
   });
 });
 
@@ -240,7 +240,7 @@ describe('forEachElement', () => {
 
     const [newState] = reducer(initialState, { type: 'counter', id: 'a', action: { type: 'increment' } }, {});
 
-    expect(newState.items[0].state.count).toBe(1);
+    expect(newState.items[0]!.state.count).toBe(1);
   });
 
   it('ignores actions with different type', () => {
@@ -280,15 +280,15 @@ describe('forEachElement', () => {
 
     // Increment item 'b'
     [state] = reducer(state, { type: 'counter', id: 'b', action: { type: 'increment' } }, {});
-    expect(state.items[0].state.count).toBe(0);
-    expect(state.items[1].state.count).toBe(2);
-    expect(state.items[2].state.count).toBe(2);
+    expect(state.items[0]!.state.count).toBe(0);
+    expect(state.items[1]!.state.count).toBe(2);
+    expect(state.items[2]!.state.count).toBe(2);
 
     // Decrement item 'a'
     [state] = reducer(state, { type: 'counter', id: 'a', action: { type: 'decrement' } }, {});
-    expect(state.items[0].state.count).toBe(-1);
-    expect(state.items[1].state.count).toBe(2);
-    expect(state.items[2].state.count).toBe(2);
+    expect(state.items[0]!.state.count).toBe(-1);
+    expect(state.items[1]!.state.count).toBe(2);
+    expect(state.items[2]!.state.count).toBe(2);
   });
 });
 
@@ -375,7 +375,7 @@ describe('forEach integration', () => {
     // Add item
     [state] = composedReducer(state, { type: 'addItem' }, {});
     expect(state.items).toHaveLength(1);
-    expect(state.items[0].id).toBe('item-0');
+    expect(state.items[0]!.id).toBe('item-0');
 
     // Add another
     [state] = composedReducer(state, { type: 'addItem' }, {});
@@ -383,17 +383,17 @@ describe('forEach integration', () => {
 
     // Increment first item
     [state] = composedReducer(state, { type: 'counter', id: 'item-0', action: { type: 'increment' } }, {});
-    expect(state.items[0].state.count).toBe(1);
-    expect(state.items[1].state.count).toBe(0);
+    expect(state.items[0]!.state.count).toBe(1);
+    expect(state.items[1]!.state.count).toBe(0);
 
     // Remove first item
     [state] = composedReducer(state, { type: 'removeItem', id: 'item-0' }, {});
     expect(state.items).toHaveLength(1);
-    expect(state.items[0].id).toBe('item-1');
+    expect(state.items[0]!.id).toBe('item-1');
 
     // Increment remaining item
     [state] = composedReducer(state, { type: 'counter', id: 'item-1', action: { type: 'increment' } }, {});
-    expect(state.items[0].state.count).toBe(1);
+    expect(state.items[0]!.state.count).toBe(1);
   });
 
   it('passes dependencies to child reducer', () => {
@@ -421,7 +421,7 @@ describe('forEach integration', () => {
 
     const [newState] = reducer(initialState, { type: 'counter', id: 'a', action: { type: 'increment' } }, { multiplier: 5 });
 
-    expect(newState.items[0].state.count).toBe(15); // 10 + 5
+    expect(newState.items[0]!.state.count).toBe(15); // 10 + 5
   });
 });
 

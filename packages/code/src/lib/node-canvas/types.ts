@@ -142,8 +142,15 @@ export type NodeCanvasAction<
   // Batch operations
   | { type: 'importGraph'; nodes: Node<NodeData>[]; edges: Edge<EdgeData>[] }
   | { type: 'clearCanvas' }
-  | { type: 'undo' }
-  | { type: 'redo' };
+  /** Reposition nodes using the `autoLayout` dependency, if one is supplied. */
+  | { type: 'autoLayout' };
+
+// `undo` / `redo` were removed. They were `console.warn` placeholders, and a
+// history that only snapshots this reducer's own actions would silently
+// mis-restore state a parent reducer also writes — which is the documented
+// embedded usage (`liftAction`). Half a history is a data-loss bug, not a
+// missing feature. Wrap `nodeCanvasReducer` in a history higher-order reducer
+// at whatever level owns the whole state instead.
 
 // ============================================================================
 // Node Types & Validation
@@ -247,11 +254,6 @@ export interface NodeCanvasDependencies {
    * Validates if a connection between two ports is allowed.
    */
   validateConnection?: ConnectionValidator;
-
-  /**
-   * Node type registry for validation and rendering.
-   */
-  nodeTypes?: Record<string, NodeTypeDefinition>;
 
   /**
    * Generate unique IDs for new nodes/edges.

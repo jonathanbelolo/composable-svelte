@@ -3,34 +3,24 @@
 	 * Typing Indicator
 	 *
 	 * Animated dots showing someone is typing.
-	 * Shows formatted text like "Alice is typing..." or "3 people are typing...".
+	 * Shows formatted text like "Alice is typing" or "3 people are typing",
+	 * beside the dots that supply the ellipsis.
 	 */
+	import { formatTypingIndicator } from '../collaborative-hooks.js';
 
 	interface Props {
 		/** Array of user names currently typing */
-		users: Array<{ id: string; name: string; color: string }>;
+		users: Array<{ name: string }>;
 		/** Custom class */
-		class?: string;
+		class?: string | undefined;
 	}
 
 	let { users, class: className = '' }: Props = $props();
 
-	// Format typing text
-	const typingText = $derived(() => {
-		if (users.length === 0) {
-			return '';
-		}
-
-		if (users.length === 1) {
-			return `${users[0].name} is typing`;
-		}
-
-		if (users.length === 2) {
-			return `${users[0].name} and ${users[1].name} are typing`;
-		}
-
-		return `${users.length} people are typing`;
-	});
+	// Shared with `formatTypingIndicator`, which is exported for consumers
+	// building their own indicator. This component used to carry a second copy of
+	// the same logic, and the two had drifted on punctuation.
+	const typingText = $derived(formatTypingIndicator(users));
 </script>
 
 {#if users.length > 0}
@@ -40,7 +30,7 @@
 			<span class="dot"></span>
 			<span class="dot"></span>
 		</div>
-		<span class="typing-text">{typingText()}</span>
+		<span class="typing-text">{typingText}</span>
 	</div>
 {/if}
 
@@ -51,9 +41,9 @@
 		gap: 8px;
 		padding: 8px 12px;
 		border-radius: 16px;
-		background-color: #f1f5f9;
+		background-color: hsl(var(--muted, 210 40% 96.1%));
 		font-size: 13px;
-		color: #64748b;
+		color: hsl(var(--muted-foreground, 215.4 16.3% 46.9%));
 	}
 
 	.typing-dots {
@@ -66,7 +56,7 @@
 		width: 6px;
 		height: 6px;
 		border-radius: 50%;
-		background-color: #64748b;
+		background-color: hsl(var(--muted, 215.4 16.3% 46.9%));
 		animation: typing-pulse 1.4s ease-in-out infinite;
 	}
 
@@ -101,12 +91,12 @@
 
 	@media (prefers-color-scheme: dark) {
 		.typing-indicator {
-			background-color: #1e293b;
-			color: #94a3b8;
+			background-color: hsl(var(--card, 217.2 32.6% 17.5%));
+			color: hsl(var(--muted-foreground, 215 20.2% 65.1%));
 		}
 
 		.dot {
-			background-color: #94a3b8;
+			background-color: hsl(var(--muted, 215 20.2% 65.1%));
 		}
 	}
 </style>

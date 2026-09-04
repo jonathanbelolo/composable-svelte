@@ -9,7 +9,8 @@ import { Effect, type EffectType } from '@composable-svelte/core';
 import type {
 	AudioPlayerState,
 	AudioPlayerAction,
-	AudioPlayerDependencies
+	AudioPlayerDependencies,
+	AudioTrack
 } from './types.js';
 import {
 	clamp,
@@ -20,8 +21,60 @@ import {
 import { createMockPlaybackEffect, cancelMockPlaybackEffect } from './mock-playback.js';
 
 /**
+ * Report a track skip alongside whatever the delegated transition returned.
+ *
+ * `trackSkip` is about skipping to another *track* — the shipped consumer logs
+ * "Track skipped: {title}" and its declared type takes an `AudioTrack` — not
+ * about seeking within one, which is what I first wired it to. Both `next` and
+ * `previous` delegate to `trackSelected`, so this wraps their result rather than
+ * duplicating that case.
+ */
+function withSkipTracking(
+	result: [AudioPlayerState, EffectType<AudioPlayerAction>],
+	track: AudioTrack | undefined,
+	deps: AudioPlayerDependencies
+): [AudioPlayerState, EffectType<AudioPlayerAction>] {
+	if (!deps.trackSkip || !track) return result;
+
+	return [
+		result[0],
+		Effect.batch(
+			result[1],
+			Effect.fireAndForget<AudioPlayerAction>(async () => {
+				deps.trackSkip!(track);
+			})
+		)
+	];
+}
+
+/**
  * Audio player reducer.
  */
+/** Playback-rate bounds. Shared so the restore path cannot drift from `speedChanged`. */
+const MIN_SPEED = 0.25;
+const MAX_SPEED = 2.0;
+
+/**
+ * Call a preference loader without letting it break the other one.
+ *
+ * Returns `undefined` both when the loader is absent and when it throws, which
+ * are the same thing downstream: leave the default alone.
+ */
+function read(load: (() => number | undefined) | undefined): number | undefined {
+	if (!load) return undefined;
+	try {
+		return load();
+	} catch {
+		return undefined;
+	}
+}
+
+/** Clamp a restored preference, treating a missing or non-finite value as absent. */
+function sanitise(value: number | undefined, fallback: number, min: number, max: number): number {
+	if (value === undefined || !Number.isFinite(value)) return fallback;
+	return clamp(value, min, max);
+}
+
 export function audioPlayerReducer(
 	state: AudioPlayerState,
 	action: AudioPlayerAction,
@@ -39,11 +92,11 @@ export function audioPlayerReducer(
 				{
 					...state,
 					isPlaying: true,
-					isPaused: false,
-					isStopped: false,
+
+					
 					error: null
 				},
-				createMockPlaybackEffect({ ...state, isPlaying: true, isPaused: false, isStopped: false, error: null }, deps)
+				createMockPlaybackEffect({ ...state, isPlaying: true, error: null }, deps)
 			];
 		}
 
@@ -56,7 +109,6 @@ export function audioPlayerReducer(
 				{
 					...state,
 					isPlaying: false,
-					isPaused: true
 				},
 				cancelMockPlaybackEffect()
 			];
@@ -75,8 +127,8 @@ export function audioPlayerReducer(
 				{
 					...state,
 					isPlaying: false,
-					isPaused: false,
-					isStopped: true,
+
+					
 					currentTime: 0,
 					seekPosition: null
 				},
@@ -97,7 +149,11 @@ export function audioPlayerReducer(
 				return [state, Effect.none()];
 			}
 
-			return audioPlayerReducer(state, { type: 'trackSelected', index: nextIndex }, deps);
+			return withSkipTracking(
+				audioPlayerReducer(state, { type: 'trackSelected', index: nextIndex }, deps),
+				state.playlist[nextIndex],
+				deps
+			);
 		}
 
 		case 'previous': {
@@ -124,7 +180,11 @@ export function audioPlayerReducer(
 				return [state, Effect.none()];
 			}
 
-			return audioPlayerReducer(state, { type: 'trackSelected', index: prevIndex }, deps);
+			return withSkipTracking(
+				audioPlayerReducer(state, { type: 'trackSelected', index: prevIndex }, deps),
+				state.playlist[prevIndex],
+				deps
+			);
 		}
 
 		case 'skipForward': {
@@ -213,6 +273,62 @@ export function audioPlayerReducer(
 
 		// ==================== Volume ====================
 
+		case 'restorePreferences': {
+			if (!deps.loadVolume && !deps.loadSpeed) {
+				return [state, Effect.none()];
+			}
+
+			return [
+				state,
+				Effect.run<AudioPlayerAction>(async (dispatch) => {
+					// Each loader is guarded on its own. `localStorage.getItem` throws
+					// `SecurityError` in a sandboxed iframe and under Safari's stricter
+					// privacy modes — the environment the styleguide demo runs in — and
+					// with one shared `try` a throwing `loadVolume` meant `loadSpeed`
+					// was never even called, so neither preference came back.
+					const volume = read(deps.loadVolume);
+					const speed = read(deps.loadSpeed);
+					dispatch({
+						type: 'preferencesRestored',
+						...(volume === undefined ? {} : { volume }),
+						...(speed === undefined ? {} : { speed })
+					});
+				})
+			];
+		}
+
+		case 'preferencesRestored': {
+			// Both are optional: a consumer may persist one and not the other, and a
+			// missing value must leave the default alone rather than reset it.
+			//
+			// Everything here is clamped, because this comes back from storage the
+			// user can edit. `speed` used to be exempt from that despite the comment
+			// claiming otherwise: a stored `50` reached `setPlaybackSpeed`, and
+			// `HTMLMediaElement.playbackRate` throws `NotSupportedError` out of
+			// range. `NaN` needs its own guard — `Math.min(Math.max(NaN, …))` is
+			// `NaN`, and `audio.volume = NaN` throws a `TypeError` inside the sync
+			// effect that also drives loading, play/pause and seeking, so one corrupt
+			// key bricked the player for the session. A shipped consumer reaches it
+			// with a plain `parseFloat` on a missing key.
+			const volume = sanitise(action.volume, state.volume, 0, 1);
+			const speed = sanitise(action.speed, state.playbackSpeed, MIN_SPEED, MAX_SPEED);
+
+			return [
+				{
+					...state,
+					volume,
+					// Matches `volumeChanged`: `previousVolume` is what un-muting
+					// restores, so a restored 0 must not overwrite it with 0.
+					previousVolume: volume > 0 ? volume : state.previousVolume,
+					// A restored 0 means muted. Leaving `isMuted` false desynced the
+					// speaker button — the first click "muted" an already-silent player.
+					isMuted: volume === 0,
+					playbackSpeed: speed
+				},
+				Effect.none()
+			];
+		}
+
 		case 'volumeChanged': {
 			const volume = clamp(action.volume, 0, 1);
 
@@ -269,7 +385,7 @@ export function audioPlayerReducer(
 		// ==================== Speed ====================
 
 		case 'speedChanged': {
-			const speed = clamp(action.speed, 0.25, 2.0);
+			const speed = clamp(action.speed, MIN_SPEED, MAX_SPEED);
 
 			const effect = deps.saveSpeed
 				? Effect.fireAndForget<AudioPlayerAction>(async () => {
@@ -342,8 +458,7 @@ export function audioPlayerReducer(
 					buffered: 0,
 					seekPosition: null,
 					isPlaying: wasPlaying,
-					isPaused: !wasPlaying && !state.isStopped,
-					isStopped: false,
+
 					isLoading: true,
 					error: null
 				},
@@ -362,8 +477,7 @@ export function audioPlayerReducer(
 										buffered: 0,
 										seekPosition: null,
 										isPlaying: wasPlaying,
-										isPaused: !wasPlaying && !state.isStopped,
-										isStopped: false,
+
 										isLoading: true,
 										error: null
 									},
@@ -421,8 +535,8 @@ export function audioPlayerReducer(
 							currentTrack: null,
 							currentTrackIndex: -1,
 							isPlaying: false,
-							isPaused: false,
-							isStopped: true,
+
+							
 							currentTime: 0,
 							duration: 0,
 							buffered: 0
@@ -474,8 +588,8 @@ export function audioPlayerReducer(
 					currentTrack: null,
 					currentTrackIndex: -1,
 					isPlaying: false,
-					isPaused: false,
-					isStopped: true,
+
+					
 					currentTime: 0,
 					duration: 0,
 					buffered: 0,
@@ -535,7 +649,7 @@ export function audioPlayerReducer(
 					seekPosition: null,
 					shuffleOrder,
 					isLoading: track ? true : false,
-					isStopped: !track,
+
 					error: null
 				},
 				Effect.none()
@@ -634,8 +748,7 @@ export function audioPlayerReducer(
 				{
 					...state,
 					isPlaying: false,
-					isPaused: false,
-					isStopped: true
+
 				},
 				Effect.none()
 			];
@@ -670,8 +783,7 @@ export function audioPlayerReducer(
 					isLoading: false,
 					isBuffering: false,
 					isPlaying: false,
-					isPaused: false,
-					isStopped: true
+
 				},
 				Effect.none()
 			];

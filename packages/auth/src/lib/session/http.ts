@@ -20,13 +20,24 @@
 
 import type { SessionSnapshot } from '../subject/types.js';
 import type { SessionDependencies } from './types.js';
+import { authErrorFromResponse } from '../http/errors.js';
+import { send } from '../http/transport.js';
 
 /**
  * A 2xx auth response carried a body that is not a valid session snapshot.
  * Treated exactly like a request failure by the session reducer (fail-closed
  * to anonymous on resolve; login surfaces the error).
+ *
+ * **Also an `AuthError`.** `isAuthError` is structural — a `code` string and a
+ * `message` string — so carrying `code` makes this satisfy the contract
+ * `AuthDependencies` states for every member, while `instanceof` keeps working
+ * for the consumers that branch on it. `unknown` rather than an arm of its own
+ * because that is what it is: a backend that answered 200 with something else
+ * is misconfigured, and there is nothing a user can do about it.
  */
 export class MalformedSessionError extends Error {
+	readonly code = 'unknown' as const;
+
 	constructor(detail: string) {
 		super(`Malformed session payload: ${detail}`);
 		this.name = 'MalformedSessionError';
@@ -38,6 +49,23 @@ export class MalformedSessionError extends Error {
  * `subject_id` MUST be a string; `roles`, when present, MUST be an array
  * (`subjectFromSession` defaults an absent `roles` to `[]`).
  */
+export async function decodeSessionSnapshot(response: Response): Promise<SessionSnapshot> {
+	// The decode belongs inside the guarantee, not before it. `await
+	// response.json()` used to sit at the call sites, so a 200 carrying a
+	// non-JSON body — an HTML proxy error page, an SPA index.html fallback:
+	// the canonical reason to validate a 2xx at all — threw a raw `SyntaxError`
+	// rather than the documented `MalformedSessionError`. A consumer branching
+	// on `instanceof MalformedSessionError`, which is why it is exported,
+	// silently missed exactly that case.
+	let payload: unknown;
+	try {
+		payload = await response.json();
+	} catch {
+		throw new MalformedSessionError('body is not JSON');
+	}
+	return parseSessionSnapshot(payload);
+}
+
 function parseSessionSnapshot(payload: unknown): SessionSnapshot {
 	if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
 		throw new MalformedSessionError('body is not a JSON object');
@@ -48,6 +76,11 @@ function parseSessionSnapshot(payload: unknown): SessionSnapshot {
 	}
 	if (record['roles'] !== undefined && !Array.isArray(record['roles'])) {
 		throw new MalformedSessionError('roles is present but not an array');
+	}
+	// Advisory, so absent is fine — a backend that says nothing about expiry is
+	// not malformed. A present-but-wrong value is refused, like `roles`.
+	if (record['expires_at'] !== undefined && typeof record['expires_at'] !== 'string') {
+		throw new MalformedSessionError('expires_at is present but not a string');
 	}
 	return payload as SessionSnapshot;
 }
@@ -68,42 +101,51 @@ export function createHttpSessionDeps(baseUrl: string = ''): SessionDependencies
 	const url = (path: string): string => `${base}${path}`;
 
 	return {
-		async fetchLogin(seededUserId: string): Promise<SessionSnapshot> {
-			const response = await fetch(url('/auth/login'), {
+		async fetchLogin(seededUserId: string, signal?: AbortSignal): Promise<SessionSnapshot> {
+			const response = await send(url('/auth/login'), {
 				method: 'POST',
 				credentials: 'include',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ user_id: seededUserId })
+				body: JSON.stringify({ user_id: seededUserId }),
+				...(signal !== undefined && { signal })
 			});
 			if (!response.ok) {
-				throw new Error(`Login failed (${response.status})`);
+				// Through the same reader every other endpoint uses. These three
+				// used to throw `new Error('Login failed (401)')`, which is the exact
+				// defect `http/errors.ts` was written to fix — a status in a sentence,
+				// with the body discarded — and the fix reached the flow surface and
+				// stopped there. A 401 here is `invalid_credentials`, which is the
+				// whole point of the union.
+				throw await authErrorFromResponse(response, 'Sign-in failed.');
 			}
-			return parseSessionSnapshot(await response.json());
+			return decodeSessionSnapshot(response);
 		},
 
-		async fetchLogout(): Promise<void> {
-			const response = await fetch(url('/auth/logout'), {
+		async fetchLogout(signal?: AbortSignal): Promise<void> {
+			const response = await send(url('/auth/logout'), {
 				method: 'POST',
-				credentials: 'include'
+				credentials: 'include',
+				...(signal !== undefined && { signal })
 			});
 			if (!response.ok) {
-				throw new Error(`Logout failed (${response.status})`);
+				throw await authErrorFromResponse(response, 'Sign-out failed.');
 			}
 		},
 
-		async fetchSession(): Promise<SessionSnapshot | null> {
-			const response = await fetch(url('/auth/session'), {
+		async fetchSession(signal?: AbortSignal): Promise<SessionSnapshot | null> {
+			const response = await send(url('/auth/session'), {
 				method: 'GET',
-				credentials: 'include'
+				credentials: 'include',
+				...(signal !== undefined && { signal })
 			});
 			// 401 = no/expired session; 204 = explicit empty — both anonymous.
 			if (response.status === 401 || response.status === 204) {
 				return null;
 			}
 			if (!response.ok) {
-				throw new Error(`Session resolve failed (${response.status})`);
+				throw await authErrorFromResponse(response, 'Could not check your session.');
 			}
-			return parseSessionSnapshot(await response.json());
+			return decodeSessionSnapshot(response);
 		}
 	};
 }

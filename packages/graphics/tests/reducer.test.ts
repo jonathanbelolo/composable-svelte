@@ -33,8 +33,8 @@ describe('Graphics Reducer', () => {
         },
         (state) => {
           expect(state.meshes).toHaveLength(1);
-          expect(state.meshes[0].id).toBe('cube-1');
-          expect(state.meshes[0].geometry.type).toBe('box');
+          expect(state.meshes[0]!.id).toBe('cube-1');
+          expect(state.meshes[0]!.geometry.type).toBe('box');
         }
       );
     });
@@ -212,15 +212,16 @@ describe('Graphics Reducer', () => {
         {
           type: 'addLight',
           light: {
+            id: 'key',
             type: 'directional',
-            position: [1, 1, 1],
+            direction: [1, 1, 1],
             intensity: 0.8,
             color: '#ffffff'
           }
         },
         (state) => {
           expect(state.lights).toHaveLength(2); // Initial ambient + new directional
-          const directional = state.lights[1];
+          const directional = state.lights[1]!;
           expect(directional.type).toBe('directional');
           expect(directional.intensity).toBe(0.8);
         }
@@ -234,7 +235,7 @@ describe('Graphics Reducer', () => {
         dependencies: {}
       });
 
-      await store.send({ type: 'removeLight', index: 0 }, (state) => {
+      await store.send({ type: 'removeLight', id: 'ambient-default' }, (state) => {
         expect(state.lights).toHaveLength(0);
       });
     });
@@ -273,7 +274,7 @@ describe('Graphics Reducer', () => {
         }
       ];
       initialState.lights = [
-        { type: 'directional', position: [1, 1, 1], intensity: 1, color: '#ffffff' }
+        { id: 'key', type: 'directional', direction: [1, 1, 1], intensity: 1, color: '#ffffff' }
       ];
 
       const store = new TestStore({
@@ -301,16 +302,15 @@ describe('Graphics Reducer', () => {
       await store.send(
         {
           type: 'rendererInitialized',
-          renderer: 'webgpu',
+          renderer: 'webgl',
           capabilities: {
-            supportsWebGPU: true,
             supportsWebGL: true,
             maxTextureSize: 16384,
             maxVertexAttributes: 16
           }
         },
         (state) => {
-          expect(state.renderer.activeRenderer).toBe('webgpu');
+          expect(state.renderer.activeRenderer).toBe('webgl');
           expect(state.renderer.isInitialized).toBe(true);
           expect(state.renderer.error).toBe(null);
           expect(state.isLoading).toBe(false);

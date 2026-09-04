@@ -121,6 +121,18 @@ export interface ConnectionStats {
   readonly reconnects: number;
   readonly errors: number;
   readonly uptime: number; // milliseconds
+  /**
+   * Messages held by a queuing wrapper, waiting for the connection.
+   *
+   * `0` for a client that does not queue. **Required rather than optional**:
+   * under `exactOptionalPropertyTypes` an optional field would force
+   * `stats.messagesQueued ?? 0` at every read, which is worse for the one use
+   * case this exists to serve — showing a pending count.
+   *
+   * There is deliberately no `websocket.queue`. A handle invites reaching into
+   * a structure that belongs to reconnection; a read-only number does not.
+   */
+  readonly messagesQueued: number;
 }
 
 // ============================================================================

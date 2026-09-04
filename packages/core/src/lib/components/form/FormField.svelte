@@ -1,7 +1,6 @@
 <script lang="ts" generics="T extends Record<string, any>">
 	import { getContext, setContext } from 'svelte';
-	import type { Store } from '../../types.js';
-	import type { FormState, FormAction, FieldState, FormFieldProps } from './form.types.js';
+	import type { FormAction, FieldRenderState, FormFieldProps, FormStore } from './form.types.js';
 
 	/**
 	 * FormField component - Connects a form field to the form store.
@@ -24,20 +23,23 @@
 	let { name, class: className, children }: FormFieldProps<T> = $props();
 
 	// Get form store from context
-	const store = getContext<Store<FormState<T>, FormAction<T>>>('formStore');
+	const store = getContext<FormStore<T>>('formStore');
 
 	if (!store) {
 		throw new Error('FormField must be used within a Form component');
 	}
 
 	// Derive field state from store
-	const fieldState = $derived<FieldState>({
+	const fieldState = $derived<FieldRenderState>({
 		value: $store.data[name],
 		error: $store.fields[name]?.error ?? null,
 		touched: $store.fields[name]?.touched ?? false,
 		dirty: $store.fields[name]?.dirty ?? false,
 		isValidating: $store.fields[name]?.isValidating ?? false,
-		warnings: $store.fields[name]?.warnings ?? []
+		warnings: $store.fields[name]?.warnings ?? [],
+		// Read off the form-level `focusedField` rather than a per-field flag, so
+		// there is one source of truth for "which field has focus".
+		focused: $store.focusedField === name
 	});
 
 	// Provide send function for dispatching actions

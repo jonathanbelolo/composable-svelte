@@ -13,8 +13,7 @@ packages/charts/
 ├── src/lib/
 │   ├── components/
 │   │   ├── Chart.svelte              # High-level wrapper
-│   │   ├── ChartPrimitive.svelte     # Low-level Plot renderer
-│   │   └── ChartTooltip.svelte       # Interactive tooltips
+│   │   └── ChartPrimitive.svelte     # Low-level Plot renderer
 │   ├── reducers/
 │   │   └── chart.reducer.ts          # State management (14 tests ✓)
 │   ├── types/
@@ -50,7 +49,7 @@ packages/charts/
 - Data: `setData`, `filterData`, `clearFilters`
 - Selection: `selectPoint`, `selectRange`, `brushStart/Move/End`, `clearSelection`
 - Zoom: `zoom`, `resetZoom`
-- Tooltip: `showTooltip`, `hideTooltip`
+- Tooltip: none — Observable Plot draws tooltips itself, gated by the `enableTooltip` prop
 - Layout: `resize`, `updateSpec`
 
 **Test Coverage:**
@@ -159,13 +158,11 @@ All chart state lives in the reducer:
 interface ChartState<T> {
   data: T[];
   filteredData: T[];
-  spec: PlotSpec;
   dimensions: { width; height };
   selection: SelectionState<T>;
   transform: ZoomTransform;
-  tooltip: TooltipState<T>;
   isAnimating: boolean;
-  transitionDuration: number;
+  transitionDuration: number; // milliseconds
 }
 ```
 
@@ -244,8 +241,9 @@ onMount(() => {
 **Planned Features:**
 - [ ] Zoom/pan behavior implementation
 - [ ] Brush selection behavior
-- [ ] Keyboard navigation
-- [ ] ARIA labels and accessibility
+- [x] Keyboard navigation
+- [x] ARIA labels and accessibility (no formal WCAG 2.1 AA audit — see the
+      README's Accessibility section for what is and is not covered)
 - [ ] Advanced chart types (heatmap, network, hierarchy)
 - [ ] Animation system for data transitions
 - [ ] Export to PNG/SVG

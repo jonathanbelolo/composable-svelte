@@ -17,8 +17,7 @@ import {
 import type {
 	FormState,
 	FormConfig,
-	FormAction,
-	FormDependencies
+	FormAction
 } from '../src/lib/components/form/form.types.js';
 
 // ================================================================
@@ -62,14 +61,17 @@ describe('createInitialFormState', () => {
 		const state = createInitialFormState(config);
 
 		expect(state.data).toEqual({ name: '', email: '', message: '' });
+		// The stored record holds only what the reducer maintains. `value` lives in
+		// `state.data` and `focused` in `state.focusedField`; both used to be
+		// duplicated here and written exactly once, so both went stale.
 		expect(state.fields.name).toEqual({
-			value: '',
 			touched: false,
 			dirty: false,
 			error: null,
 			isValidating: false,
 			warnings: []
 		});
+		expect(state.focusedField).toBe(null);
 		expect(state.isValidating).toBe(false);
 		expect(state.isSubmitting).toBe(false);
 		expect(state.submitCount).toBe(0);
@@ -108,8 +110,8 @@ describe('Field Changes', () => {
 	it('updates field value and marks as dirty', async () => {
 		await store.send({ type: 'fieldChanged', field: 'name', value: 'John' }, (state) => {
 			expect(state.data.name).toBe('John');
-			expect(state.fields.name.dirty).toBe(true);
-			expect(state.fields.name.error).toBe(null); // Cleared on change
+			expect(state.fields.name?.dirty).toBe(true);
+			expect(state.fields.name?.error).toBe(null); // Cleared on change
 		});
 	});
 
@@ -124,8 +126,8 @@ describe('Field Changes', () => {
 		await store.receive(
 			{ type: 'fieldValidationCompleted', field: 'name', error: 'Name must be at least 2 characters' },
 			(state) => {
-				expect(state.fields.name.isValidating).toBe(false);
-				expect(state.fields.name.error).toBe('Name must be at least 2 characters');
+				expect(state.fields.name?.isValidating).toBe(false);
+				expect(state.fields.name?.error).toBe('Name must be at least 2 characters');
 			}
 		);
 	});
@@ -169,7 +171,7 @@ describe('Field Blur', () => {
 
 	it('marks field as touched', async () => {
 		await store.send({ type: 'fieldBlurred', field: 'email' }, (state) => {
-			expect(state.fields.email.touched).toBe(true);
+			expect(state.fields.email?.touched).toBe(true);
 		});
 	});
 
@@ -181,7 +183,7 @@ describe('Field Blur', () => {
 
 		// Blur should trigger validation
 		await store.send({ type: 'fieldBlurred', field: 'email' }, (state) => {
-			expect(state.fields.email.touched).toBe(true);
+			expect(state.fields.email?.touched).toBe(true);
 		});
 
 		await store.receive({ type: 'fieldValidationStarted', field: 'email' });
@@ -189,7 +191,7 @@ describe('Field Blur', () => {
 		await store.receive(
 			{ type: 'fieldValidationCompleted', field: 'email', error: 'Invalid email address' },
 			(state) => {
-				expect(state.fields.email.error).toBe('Invalid email address');
+				expect(state.fields.email?.error).toBe('Invalid email address');
 			}
 		);
 	});
@@ -246,7 +248,7 @@ describe('Debounced Validation', () => {
 			{ type: 'fieldValidationCompleted', field: 'name', error: null },
 			(state) => {
 				expect(state.data.name).toBe('John');
-				expect(state.fields.name.error).toBe(null);
+				expect(state.fields.name?.error).toBe(null);
 			}
 		);
 	});
@@ -290,7 +292,7 @@ describe('Async Validation', () => {
 		await store.receive(
 			{ type: 'fieldValidationCompleted', field: 'email', error: 'Email already registered' },
 			(state) => {
-				expect(state.fields.email.error).toBe('Email already registered');
+				expect(state.fields.email?.error).toBe('Email already registered');
 				expect(checkEmailAvailability).toHaveBeenCalledWith('taken@test.com');
 			}
 		);
@@ -324,7 +326,7 @@ describe('Async Validation', () => {
 		await store.receive(
 			{ type: 'fieldValidationCompleted', field: 'email', error: 'Invalid email address' },
 			(state) => {
-				expect(state.fields.email.error).toBe('Invalid email address');
+				expect(state.fields.email?.error).toBe('Invalid email address');
 				expect(checkEmailAvailability).not.toHaveBeenCalled(); // Zod failed first
 			}
 		);
@@ -358,9 +360,9 @@ describe('Form Submission', () => {
 
 		// Check final state - validation errors should be present
 		expect(store.state.isValidating).toBe(false);
-		expect(store.state.fields.name.error).toBe('Name must be at least 2 characters');
-		expect(store.state.fields.email.error).toBe('Invalid email address');
-		expect(store.state.fields.message.error).toBe('Message must be at least 10 characters');
+		expect(store.state.fields.name?.error).toBe('Name must be at least 2 characters');
+		expect(store.state.fields.email?.error).toBe('Invalid email address');
+		expect(store.state.fields.message?.error).toBe('Message must be at least 10 characters');
 		expect(store.state.submitCount).toBe(1); // Incremented even on validation failure
 
 		// Should not proceed to submission
@@ -492,7 +494,7 @@ describe('Form Submission', () => {
 
 		// Check callback was called
 		expect(onSubmitError).toHaveBeenCalledWith(expect.any(Error));
-		expect(onSubmitError.mock.calls[0][0].message).toBe('Server error');
+		expect(onSubmitError.mock.calls[0]![0].message).toBe('Server error');
 	});
 });
 
@@ -524,9 +526,9 @@ describe('Form Reset', () => {
 		// Reset
 		await store.send({ type: 'formReset' }, (state) => {
 			expect(state.data).toEqual({ name: '', email: '', message: '' });
-			expect(state.fields.name.dirty).toBe(false);
-			expect(state.fields.name.touched).toBe(false);
-			expect(state.fields.name.error).toBe(null);
+			expect(state.fields.name?.dirty).toBe(false);
+			expect(state.fields.name?.touched).toBe(false);
+			expect(state.fields.name?.error).toBe(null);
 		});
 	});
 
@@ -535,8 +537,8 @@ describe('Form Reset', () => {
 
 		await store.send({ type: 'formReset', data: resetData }, (state) => {
 			expect(state.data).toEqual(resetData);
-			expect(state.fields.name.dirty).toBe(false);
-			expect(state.fields.name.touched).toBe(false);
+			expect(state.fields.name?.dirty).toBe(false);
+			expect(state.fields.name?.touched).toBe(false);
 		});
 	});
 });
@@ -563,13 +565,13 @@ describe('Programmatic Field Updates', () => {
 	it('sets field value programmatically', async () => {
 		await store.send({ type: 'setFieldValue', field: 'email', value: 'test@example.com' }, (state) => {
 			expect(state.data.email).toBe('test@example.com');
-			expect(state.fields.email.dirty).toBe(true);
+			expect(state.fields.email?.dirty).toBe(true);
 		});
 	});
 
 	it('sets field error programmatically', async () => {
 		await store.send({ type: 'setFieldError', field: 'name', error: 'Custom error' }, (state) => {
-			expect(state.fields.name.error).toBe('Custom error');
+			expect(state.fields.name?.error).toBe('Custom error');
 		});
 	});
 
@@ -579,7 +581,7 @@ describe('Programmatic Field Updates', () => {
 
 		// Clear it
 		await store.send({ type: 'clearFieldError', field: 'name' }, (state) => {
-			expect(state.fields.name.error).toBe(null);
+			expect(state.fields.name?.error).toBe(null);
 		});
 	});
 });
@@ -627,6 +629,181 @@ describe('Cross-Field Validation', () => {
 		// Check form-level error
 		expect(store.state.formErrors).toEqual(['Passwords do not match']);
 	});
+
+	// ============================================================
+	// The empty cell in the matrix.
+	//
+	// The test above avoids this defect on every axis at once: `path: []`, so
+	// field routing is never exercised; `mode: 'onSubmit'`, so per-field
+	// validation never runs; pre-populated data, so `fieldChanged` never fires;
+	// and one submit with one assertion, so nothing checks that a fixed error
+	// clears. Cross-field rules were therefore live only at submit, and nothing
+	// said so.
+	//
+	// These use `path: ['confirmPassword']` and a per-field mode, which is what
+	// `examples/registration-form` ships.
+	// ============================================================
+
+	const matchSchema = z
+		.object({
+			password: z.string().min(8, 'Password must be at least 8 characters'),
+			confirmPassword: z.string()
+		})
+		.refine((data) => data.password === data.confirmPassword, {
+			message: 'Passwords do not match',
+			path: ['confirmPassword']
+		});
+
+	type MatchData = z.infer<typeof matchSchema>;
+
+	const matchConfig = (mode: 'all' | 'onBlur'): FormConfig<MatchData> => ({
+		schema: matchSchema,
+		initialData: { password: '', confirmPassword: '' },
+		mode,
+		debounceMs: 0,
+		onSubmit: vi.fn(async () => {})
+	});
+
+	function matchStore(data: MatchData, mode: 'all' | 'onBlur' = 'all') {
+		const config = matchConfig(mode);
+		return createTestStore({
+			initialState: createInitialFormState(config, data),
+			reducer: createFormReducer(config),
+			dependencies: {}
+		});
+	}
+
+	it('runs a cross-field rule on blur, not only on submit', async () => {
+		// Per-field validation used to parse `schema.shape[field]` against that
+		// one value. A `.refine()` lives in the parent object's checks, so
+		// `shape.confirmPassword.safeParse('mismatch')` returns success and the
+		// rule was invisible outside `onSubmit`.
+		const store = matchStore({ password: 'longenough', confirmPassword: 'nope' });
+
+		await store.send({ type: 'fieldBlurred', field: 'confirmPassword' });
+		await store.receive({ type: 'fieldValidationStarted', field: 'confirmPassword' });
+		await store.receive(
+			{ type: 'fieldValidationCompleted', field: 'confirmPassword', error: 'Passwords do not match' },
+			(state) => {
+				expect(state.fields.confirmPassword?.error).toBe('Passwords do not match');
+			}
+		);
+
+		store.assertNoPendingActions();
+	});
+
+	it('re-checks on edit rather than clearing blindly', async () => {
+		// `fieldChanged` clears the error for immediate feedback, which is right.
+		// What was wrong is that nothing could put it back: with the rule
+		// invisible per-field, a mismatch could only reappear at the next submit.
+		const store = matchStore({ password: 'longenough', confirmPassword: 'nope' });
+
+		// No assertion on the intermediate cleared state: `debounceMs: 0` means the
+		// whole validation completes before `send`'s callback runs. What matters is
+		// that the verdict comes back at all.
+		await store.send({ type: 'fieldChanged', field: 'confirmPassword', value: 'nopr' });
+		await store.receive({ type: 'fieldValidationStarted', field: 'confirmPassword' });
+		await store.receive(
+			{ type: 'fieldValidationCompleted', field: 'confirmPassword', error: 'Passwords do not match' },
+			(state) => {
+				expect(state.fields.confirmPassword?.error, 'the rule never came back').toBe(
+					'Passwords do not match'
+				);
+			}
+		);
+
+		store.assertNoPendingActions();
+	});
+
+	it('clears a now-false error from the field the user is not editing', async () => {
+		// The worst of the four, because the message was actively lying. Fix
+		// `password` so the two match and `confirmPassword` went on saying
+		// "Passwords do not match" until it was touched or the form resubmitted.
+		// Both values are long enough on their own, so the only rule in play is the
+		// cross-field one — otherwise this would also be asserting `min(8)`.
+		const store = matchStore({ password: 'longenough', confirmPassword: 'different' });
+
+		await store.send({ type: 'fieldBlurred', field: 'confirmPassword' });
+		await store.receive({ type: 'fieldValidationStarted', field: 'confirmPassword' });
+		await store.receive({
+			type: 'fieldValidationCompleted',
+			field: 'confirmPassword',
+			error: 'Passwords do not match'
+		});
+
+		// Now make them match by editing the OTHER field.
+		await store.send({ type: 'fieldChanged', field: 'password', value: 'different' });
+		await store.receive({ type: 'fieldValidationStarted', field: 'password' });
+		await store.receive({ type: 'fieldValidationCompleted', field: 'password', error: null });
+		await store.receive(
+			{ type: 'fieldValidationCompleted', field: 'confirmPassword', error: null },
+			(state) => {
+				expect(state.fields.confirmPassword?.error, 'a stale, false error survived').toBe(null);
+			}
+		);
+
+		store.assertNoPendingActions();
+	});
+
+	it('never flags a field the user has not reached', async () => {
+		// The arm that makes the clause above safe. A per-field pass parses the
+		// whole schema, so it *knows* `password` is too short — and must not say
+		// so while the user is somewhere else entirely.
+		// They match, so the cross-field rule passes and `password` fails on its
+		// own `min(8)` — which the parse sees and must decline to report here.
+		const store = matchStore({ password: 'short', confirmPassword: 'short' });
+
+		await store.send({ type: 'fieldBlurred', field: 'confirmPassword' });
+		await store.receive({ type: 'fieldValidationStarted', field: 'confirmPassword' });
+		await store.receive(
+			{ type: 'fieldValidationCompleted', field: 'confirmPassword', error: null },
+			(state) => {
+				expect(state.fields.password?.error, 'flagged an untouched field').toBe(null);
+			}
+		);
+
+		store.assertNoPendingActions();
+	});
+
+	it('clears form-level errors once validation succeeds', async () => {
+		// `formErrors` was written only on failure and cleared only by
+		// `formReset`, so a form-level message outlived the validation that
+		// disproved it and stayed for the life of the form.
+		const config: FormConfig<MatchData> = {
+			schema: z
+				.object({ password: z.string(), confirmPassword: z.string() })
+				.refine((data) => data.password === data.confirmPassword, {
+					message: 'Passwords do not match',
+					path: []
+				}) as unknown as FormConfig<MatchData>['schema'],
+			initialData: { password: '', confirmPassword: '' },
+			mode: 'onSubmit',
+			onSubmit: vi.fn(async () => {})
+		};
+		const store = createTestStore({
+			initialState: createInitialFormState(config, { password: 'a', confirmPassword: 'b' }),
+			reducer: createFormReducer(config),
+			dependencies: {}
+		});
+
+		await store.send({ type: 'submitTriggered' });
+		await store.receive({ type: 'formValidationStarted' });
+		await store.receive({ type: 'formValidationCompleted' }, (state) => {
+			expect(state.formErrors).toEqual(['Passwords do not match']);
+		});
+
+		// Correct it and submit again.
+		await store.send({ type: 'fieldChanged', field: 'confirmPassword', value: 'a' });
+		await store.send({ type: 'submitTriggered' });
+		await store.receive({ type: 'formValidationStarted' });
+		await store.receive({ type: 'formValidationCompleted' }, (state) => {
+			expect(state.formErrors, 'a disproved form error survived').toEqual([]);
+		});
+
+		await store.receive({ type: 'submissionStarted' });
+		await store.receive({ type: 'submissionSucceeded' });
+		store.assertNoPendingActions();
+	});
 });
 
 // ================================================================
@@ -657,9 +834,9 @@ describe('Validation Modes', () => {
 		await store.receive({ type: 'formValidationCompleted' });
 
 		// Check final state - all field errors should be present
-		expect(store.state.fields.name.error).toBe('Name must be at least 2 characters');
-		expect(store.state.fields.email.error).toBe('Invalid email address');
-		expect(store.state.fields.message.error).toBe('Message must be at least 10 characters');
+		expect(store.state.fields.name?.error).toBe('Name must be at least 2 characters');
+		expect(store.state.fields.email?.error).toBe('Invalid email address');
+		expect(store.state.fields.message?.error).toBe('Message must be at least 10 characters');
 		expect(store.state.formErrors).toEqual([]);
 	});
 
@@ -689,5 +866,136 @@ describe('Validation Modes', () => {
 			field: 'name',
 			error: 'Name must be at least 2 characters'
 		});
+
+		// And nothing else: 'all' is change and blur, not change, blur and more.
+		await store.finish();
+	});
+});
+
+// ============================================================
+// The schema's output is what the form holds
+// ============================================================
+
+describe('a schema transform reaches the data', () => {
+	const trimmed = z.object({
+		email: z.string().trim().min(1, 'Email is required').email('Enter a valid email address'),
+		// Also trimmed, and that matters: the scoping test below types into this
+		// field, and a field with no transform could not detect a write-back.
+		note: z.string().trim()
+	});
+
+	type Trimmed = z.infer<typeof trimmed>;
+
+	function trimStore(mode: 'onSubmit' | 'onChange', onSubmit = vi.fn(async () => {})) {
+		const config: FormConfig<Trimmed> = {
+			schema: trimmed,
+			initialData: { email: '', note: '' },
+			mode,
+			onSubmit
+		};
+		return {
+			onSubmit,
+			store: createTestStore({
+				initialState: createInitialFormState(config),
+				reducer: createFormReducer(config)
+			})
+		};
+	}
+
+	it('submits a pasted value and hands on the trimmed one', async () => {
+		// Until this, `state.data` held raw input while `FormState<T>` declared
+		// `T` — the schema's *output* type. A `.trim()` decided only whether
+		// all-whitespace was rejected; what got sent had to be trimmed again by
+		// whoever built the request, and forgetting that failed silently.
+		const { store, onSubmit } = trimStore('onSubmit');
+
+		await store.send({
+			type: 'fieldChanged',
+			field: 'email',
+			value: '  ada@example.com  '
+		});
+		expect(store.state.data.email, 'typing must not be rewritten').toBe('  ada@example.com  ');
+
+		await store.send({ type: 'submitTriggered' });
+		await store.receive({ type: 'formValidationStarted' });
+		await store.receive({ type: 'formValidationCompleted' }, (state) => {
+			expect(state.data.email, 'the parsed result was thrown away').toBe('ada@example.com');
+		});
+		await store.receive({ type: 'submissionStarted' });
+		await store.receive({ type: 'submissionSucceeded' });
+
+		expect(onSubmit).toHaveBeenCalledWith({ email: 'ada@example.com', note: '' });
+	});
+
+	it('does not rewrite a field while it is being typed', async () => {
+		// The scoping arm, and the reason the write-back is not in per-field
+		// validation: that path runs on every keystroke in `onChange` mode, so
+		// writing back would eat the space the moment it was typed and the field
+		// would fight the user mid-word.
+		const { store } = trimStore('onChange');
+
+		// The rest of the form has to be *valid* first, or a parse that fails
+		// writes nothing back and the test passes for the wrong reason — which is
+		// exactly how the first version of this test passed against a reducer that
+		// did rewrite every keystroke.
+		await store.send({ type: 'fieldChanged', field: 'email', value: 'ada@example.com' });
+		await store.receive({ type: 'fieldValidationStarted' });
+		await store.receive({ type: 'fieldValidationCompleted' });
+
+		await store.send({ type: 'fieldChanged', field: 'note', value: 'John ' });
+		await store.receive({ type: 'fieldValidationStarted' });
+		await store.receive({ type: 'fieldValidationCompleted' });
+
+		expect(store.state.data.note, 'a keystroke was rewritten mid-word').toBe('John ');
+	});
+
+	it('keeps data the schema does not declare', async () => {
+		// Zod object schemas strip keys they do not declare, so a write-back that
+		// *replaced* `data` would delete anything a consumer kept beside the
+		// validated fields — at the moment of submitting, which is the worst time
+		// to lose it. The parsed values are merged over the existing data instead.
+		const onSubmit = vi.fn(async () => {});
+		const config: FormConfig<Trimmed> = {
+			schema: trimmed,
+			// A key the schema knows nothing about. Cast, because the type says it
+			// cannot happen — and the type is exactly what would stop anyone
+			// noticing that it does.
+			initialData: { email: '', note: '', draftId: 'kept' } as unknown as Trimmed,
+			mode: 'onSubmit',
+			onSubmit
+		};
+		const store = createTestStore({
+			initialState: createInitialFormState(config),
+			reducer: createFormReducer(config)
+		});
+
+		await store.send({ type: 'fieldChanged', field: 'email', value: '  ada@example.com  ' });
+		await store.send({ type: 'submitTriggered' });
+		await store.receive({ type: 'formValidationStarted' });
+		await store.receive({ type: 'formValidationCompleted' }, (state) => {
+			expect(
+				(state.data as unknown as { draftId?: string }).draftId,
+				'the schema stripped a key the form was holding'
+			).toBe('kept');
+			expect(state.data.email, 'the transform stopped being applied').toBe('ada@example.com');
+		});
+		await store.receive({ type: 'submissionStarted' });
+		await store.receive({ type: 'submissionSucceeded' });
+	});
+
+	it('keeps exactly what was typed when validation fails', async () => {
+		// A form that did not validate has nothing to write back, and rewriting
+		// on failure would move the cursor under someone correcting a typo.
+		const { store, onSubmit } = trimStore('onSubmit');
+
+		await store.send({ type: 'fieldChanged', field: 'email', value: '  not-an-email  ' });
+		await store.send({ type: 'submitTriggered' });
+		await store.receive({ type: 'formValidationStarted' });
+		await store.receive({ type: 'formValidationCompleted' }, (state) => {
+			expect(state.data.email).toBe('  not-an-email  ');
+			expect(state.fields.email?.error).toBe('Enter a valid email address');
+		});
+
+		expect(onSubmit).not.toHaveBeenCalled();
 	});
 });

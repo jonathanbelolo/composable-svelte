@@ -93,9 +93,14 @@ function calculateBackoff(attempt: number, config: Required<RetryConfig>): numbe
  * Parse Retry-After header from response.
  * Supports both delay-seconds (number) and HTTP-date (ISO string).
  *
- * @returns Delay in milliseconds, or null if header is missing/invalid
+ * Exported because it is the only correct implementation of this in the
+ * repository and a second one would drift. `@composable-svelte/auth` reads it
+ * to fill `RateLimitedError.retryAfterSeconds` — note the units differ, so the
+ * caller converts.
+ *
+ * @returns Delay in **milliseconds**, or null if header is missing/invalid
  */
-function parseRetryAfter(headers: Record<string, string>): number | null {
+export function parseRetryAfter(headers: Record<string, string>): number | null {
   const retryAfter = headers['retry-after'] || headers['Retry-After'];
 
   if (!retryAfter) {

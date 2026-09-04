@@ -6,6 +6,7 @@
 	 * Features play/pause, seek, volume, fullscreen, picture-in-picture.
 	 */
 	import { onMount } from 'svelte';
+	import { animateFadeIn, animateFadeOut } from '@composable-svelte/core/animation';
 	import type { MessageAttachment } from '../types.js';
 	import { formatFileSize } from '../utils.js';
 
@@ -13,9 +14,9 @@
 		/** Video attachment to play */
 		attachment: MessageAttachment;
 		/** Optional class name */
-		class?: string;
+		class?: string | undefined;
 		/** Auto-play (default: false) */
-		autoplay?: boolean;
+		autoplay?: boolean | undefined;
 	}
 
 	let { attachment, class: className = '', autoplay = false }: Props = $props();
@@ -34,18 +35,122 @@
 	let isSeeking = $state(false);
 	let isLoading = $state(true);
 	let error = $state<string | null>(null);
+	/**
+	 * A transient playback complaint, distinct from `error`.
+	 *
+	 * `error` means the source is unusable and latches the whole player behind
+	 * `{#if !error}`. This one means "that attempt did not start" and clears
+	 * itself the moment one does.
+	 */
+	let playbackNotice = $state<string | null>(null);
 	let isFullscreen = $state(false);
 	let showControls = $state(true);
 	let controlsTimeout: number | undefined;
+	let controlsRef: HTMLDivElement | undefined = $state();
+
+	/** The source the playback state below currently describes. A plain `let`. */
+	let sourceUrl: string | undefined;
+
+	/**
+	 * A new `attachment` is a new video, and `error` never unset itself.
+	 *
+	 * `error` gates the entire control bar and the play overlay behind
+	 * `{#if !error}`, and nothing cleared it — so a failed load turned the
+	 * component into a permanently broken player, and handing it a perfectly
+	 * good second video left the ⚠️ card up with no controls.
+	 * `AttachmentPreviewModal` renders `<VideoPlayer {attachment} />` unkeyed, so
+	 * it reuses one instance; the identical defect in `ImagePreview` was fixed
+	 * and this one was missed.
+	 */
+	$effect(() => {
+		const url = attachment.url;
+		if (sourceUrl === url) return;
+
+		const isFirstRun = sourceUrl === undefined;
+		sourceUrl = url;
+		if (isFirstRun) return;
+
+		error = null;
+		// Or the complaint about the *previous* source is painted over the new one
+		// — the same latch this reset exists to break, one variable along.
+		playbackNotice = null;
+		isLoading = true;
+		isPlaying = false;
+		currentTime = 0;
+		duration = 0;
+		// Not cosmetic. `showControls` also drives the `.visible` class, which is
+		// the only thing restoring `pointer-events`. Leaving it `false` across a
+		// swap rebuilds the bar at its resting CSS opacity — fully visible — and
+		// unclickable, which reads as a broken player rather than a hidden one.
+		showControls = true;
+	});
+
+	/**
+	 * What the controls were last animated to. A plain `let`, not `$state`: the
+	 * effect below writes it, and a rune would make that a self-trigger.
+	 *
+	 * A boolean is enough, and an earlier `{ element, shown }` pair was not the
+	 * improvement its comment claimed. The bar can be replaced — it lives inside
+	 * `{#if !error}` and `error` now clears on a new source — but the same reset
+	 * puts `showControls` back to `true`, and "visible" is the resting state in
+	 * CSS. So a replacement never needs placing.
+	 */
+	let controlsShown: boolean | undefined;
+
+	/**
+	 * Was `transition: opacity 0.2s` between `.video-controls` and
+	 * `.video-controls.visible` — a state-driven lifecycle in CSS, which the
+	 * policy prohibits because the store can neither sequence on it nor cancel it.
+	 *
+	 * Not, as an earlier version of this comment claimed, because the resting
+	 * `opacity: 0` hid server-rendered controls: `showControls` starts `true`, so
+	 * the server emits the `visible` class and they were visible. That claim is
+	 * true of `ImagePreview`, whose `.loaded` class only a client handler adds,
+	 * and it was copied here without being checked.
+	 *
+	 * Deliberately asymmetric. Showing is instant: the user is moving the mouse
+	 * right now, and 0.2s of fade before the controls answer is latency, not
+	 * polish. Hiding fades, because that one happens *to* the user after three
+	 * idle seconds rather than in reply to them.
+	 *
+	 * The instant show still goes through Motion rather than an inline style: a
+	 * fade-out already in flight is a Web Animation, and a Web Animation outranks
+	 * inline style, so assigning `opacity` would let it finish and hide the
+	 * controls the user just asked for.
+	 */
+	$effect(() => {
+		const element = controlsRef;
+		const shown = showControls;
+
+		if (!element || controlsShown === shown) return;
+
+		const isFirstRun = controlsShown === undefined;
+		controlsShown = shown;
+
+		// On the first run, place — and placing here means writing nothing at all.
+		// The controls' resting state in CSS *is* visible, which is the whole
+		// point of moving the fade out of CSS, so an opening inline `opacity: 1`
+		// would only paper over a regression back to `opacity: 0`.
+		if (isFirstRun) return;
+
+		void (shown ? animateFadeIn(element, { duration: 0 }) : animateFadeOut(element));
+	});
 
 	onMount(() => {
+		// Read *from* the element rather than writing to it. Both assignments used
+		// to go the other way, setting `volume` and `playbackRate` to the values
+		// the element already had — two statements that could not change anything,
+		// and a silent trap if either initial value were ever edited. Seeding the
+		// state from the element makes the element the authority for where
+		// playback starts, which is what the controls then follow.
 		if (videoRef) {
-			videoRef.volume = volume;
-			videoRef.playbackRate = playbackRate;
-
-			// Handle fullscreen change
-			document.addEventListener('fullscreenchange', handleFullscreenChange);
+			volume = videoRef.volume;
+			playbackRate = videoRef.playbackRate;
 		}
+
+		// Outside the `if`: the teardown below removes this unconditionally, so
+		// registering it conditionally is an asymmetry waiting to bite.
+		document.addEventListener('fullscreenchange', handleFullscreenChange);
 
 		return () => {
 			document.removeEventListener('fullscreenchange', handleFullscreenChange);
@@ -60,7 +165,17 @@
 			videoRef.pause();
 		} else {
 			videoRef.play().catch((err) => {
-				error = 'Failed to play video';
+				// Deliberately not `error`. Everything below — the whole control
+				// bar and the play overlay — renders behind `{#if !error}`, so one
+				// rejected `play()` used to remove the player permanently. A
+				// rejection here is transient (an interrupted play, an autoplay
+				// policy); a source that genuinely cannot load fires `onerror`,
+				// which still latches.
+				//
+				// It is not silent either: dropping the assignment altogether
+				// traded a permanent dead-end for an invisible one — a click that
+				// does nothing, with only a console line to show for it.
+				playbackNotice = 'Could not start playback. Try again.';
 				console.error('Video playback error:', err);
 			});
 		}
@@ -79,6 +194,8 @@
 
 	function handlePlay() {
 		isPlaying = true;
+		// Whatever the last attempt could not do, this one did.
+		playbackNotice = null;
 	}
 
 	function handlePause() {
@@ -193,6 +310,9 @@
 	bind:this={containerRef}
 	class="video-player {className}"
 	class:fullscreen={isFullscreen}
+	role="group"
+	aria-label="Video player"
+	onfocusin={handleMouseMove}
 	onmousemove={handleMouseMove}
 	onmouseleave={() => isPlaying && (showControls = false)}
 >
@@ -224,7 +344,18 @@
 			onerror={handleError}
 			preload="metadata"
 			onclick={togglePlay}
-		></video>
+		>
+			<!-- Rendered unconditionally: the a11y check looks for a literal
+			     <track> child and an {#if}-wrapped one does not satisfy it. With no
+			     captions in metadata the element carries no src, so the browser
+			     creates an empty disabled TextTrack and makes no request. -->
+			<track
+				kind="captions"
+				src={attachment.metadata?.captions?.src}
+				srclang={attachment.metadata?.captions?.srclang}
+				label={attachment.metadata?.captions?.label}
+			/>
+		</video>
 
 		<!-- Loading Overlay -->
 		{#if isLoading}
@@ -241,6 +372,12 @@
 			</div>
 		{/if}
 
+		<!-- Transient playback complaint. `role="status"` rather than an alert:
+		     it is feedback on the click just made, not an interruption. -->
+		{#if playbackNotice && !error}
+			<p class="video-playback-notice" role="status">{playbackNotice}</p>
+		{/if}
+
 		<!-- Play Button Overlay -->
 		{#if !isPlaying && !isLoading && !error}
 			<button class="video-play-overlay" onclick={togglePlay} aria-label="Play video">
@@ -253,7 +390,7 @@
 
 		<!-- Controls -->
 		{#if !error}
-			<div class="video-controls" class:visible={showControls}>
+			<div bind:this={controlsRef} class="video-controls" class:visible={showControls}>
 				<!-- Progress Bar -->
 				<div class="video-progress-container">
 					<input
@@ -366,7 +503,7 @@
 	.video-player {
 		display: flex;
 		flex-direction: column;
-		background: black;
+		background: hsl(var(--foreground, 0 0% 0%));
 		border-radius: 0.5rem;
 		overflow: hidden;
 		max-width: 800px;
@@ -379,8 +516,8 @@
 
 	.video-player-header {
 		padding: 0.75rem 1rem;
-		background: #f9fafb;
-		border-bottom: 1px solid #e5e7eb;
+		background: hsl(var(--muted, 210 20% 98%));
+		border-bottom: 1px solid hsl(var(--border, 220 13% 91%));
 	}
 
 	.video-player-title {
@@ -405,7 +542,7 @@
 	.video-filename {
 		font-size: 0.875rem;
 		font-weight: 500;
-		color: #111827;
+		color: hsl(var(--foreground, 220.9 39.3% 11%));
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
@@ -413,12 +550,12 @@
 
 	.video-filesize {
 		font-size: 0.75rem;
-		color: #6b7280;
+		color: hsl(var(--muted-foreground, 220 8.9% 46.1%));
 	}
 
 	.video-container {
 		position: relative;
-		background: black;
+		background: hsl(var(--foreground, 0 0% 0%));
 		aspect-ratio: 16 / 9;
 	}
 
@@ -446,7 +583,7 @@
 		justify-content: center;
 		gap: 1rem;
 		background: rgba(0, 0, 0, 0.8);
-		color: white;
+		color: hsl(var(--background, 0 0% 100%));
 		pointer-events: none;
 	}
 
@@ -454,7 +591,7 @@
 		width: 3rem;
 		height: 3rem;
 		border: 4px solid rgba(255, 255, 255, 0.3);
-		border-top-color: white;
+		border-top-color: hsl(var(--background, 0 0% 100%));
 		border-radius: 50%;
 		animation: spin 0.6s linear infinite;
 	}
@@ -478,6 +615,20 @@
 		font-size: 1rem;
 	}
 
+	.video-playback-notice {
+		position: absolute;
+		left: 50%;
+		bottom: 5rem;
+		transform: translateX(-50%);
+		margin: 0;
+		padding: 0.375rem 0.75rem;
+		border-radius: 0.375rem;
+		background: rgba(0, 0, 0, 0.75);
+		color: hsl(var(--background, 0 0% 100%));
+		font-size: 0.8125rem;
+		z-index: 3;
+	}
+
 	.video-play-overlay {
 		position: absolute;
 		top: 50%;
@@ -485,9 +636,8 @@
 		transform: translate(-50%, -50%);
 		background: none;
 		border: none;
-		color: white;
+		color: hsl(var(--background, 0 0% 100%));
 		cursor: pointer;
-		transition: opacity 0.2s, transform 0.2s;
 	}
 
 	.video-play-overlay:hover {
@@ -501,13 +651,12 @@
 		right: 0;
 		background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
 		padding: 2rem 1rem 1rem;
-		opacity: 0;
-		transition: opacity 0.2s;
+		/* No `opacity` here on purpose: the fade belongs to Motion One, and one
+		   property may have only one author. */
 		pointer-events: none;
 	}
 
 	.video-controls.visible {
-		opacity: 1;
 		pointer-events: all;
 	}
 
@@ -528,8 +677,8 @@
 		height: 0.25rem;
 		background: linear-gradient(
 			to right,
-			#3b82f6 0%,
-			#3b82f6 var(--progress),
+			hsl(var(--primary, 217.2 91.2% 59.8%)) 0%,
+			hsl(var(--primary, 217.2 91.2% 59.8%)) var(--progress),
 			rgba(255, 255, 255, 0.3) var(--progress),
 			rgba(255, 255, 255, 0.3) 100%
 		);
@@ -540,7 +689,7 @@
 		appearance: none;
 		width: 0.875rem;
 		height: 0.875rem;
-		background: #3b82f6;
+		background: hsl(var(--primary, 217.2 91.2% 59.8%));
 		border-radius: 50%;
 		margin-top: -0.3125rem;
 	}
@@ -554,14 +703,14 @@
 
 	.video-progress::-moz-range-progress {
 		height: 0.25rem;
-		background: #3b82f6;
+		background: hsl(var(--primary, 217.2 91.2% 59.8%));
 		border-radius: 0.125rem;
 	}
 
 	.video-progress::-moz-range-thumb {
 		width: 0.875rem;
 		height: 0.875rem;
-		background: #3b82f6;
+		background: hsl(var(--primary, 217.2 91.2% 59.8%));
 		border: none;
 		border-radius: 50%;
 	}
@@ -580,9 +729,8 @@
 		height: 2rem;
 		background: none;
 		border: none;
-		color: white;
+		color: hsl(var(--background, 0 0% 100%));
 		cursor: pointer;
-		transition: opacity 0.15s;
 		flex-shrink: 0;
 	}
 
@@ -592,7 +740,7 @@
 
 	.video-time {
 		font-size: 0.875rem;
-		color: white;
+		color: hsl(var(--background, 0 0% 100%));
 		font-variant-numeric: tabular-nums;
 		white-space: nowrap;
 	}
@@ -620,14 +768,14 @@
 		appearance: none;
 		width: 0.75rem;
 		height: 0.75rem;
-		background: white;
+		background: hsl(var(--background, 0 0% 100%));
 		border-radius: 50%;
 	}
 
 	.video-volume-slider::-moz-range-thumb {
 		width: 0.75rem;
 		height: 0.75rem;
-		background: white;
+		background: hsl(var(--background, 0 0% 100%));
 		border: none;
 		border-radius: 50%;
 	}
@@ -635,7 +783,7 @@
 	.video-speed {
 		padding: 0.25rem 0.5rem;
 		font-size: 0.75rem;
-		color: white;
+		color: hsl(var(--background, 0 0% 100%));
 		background: rgba(255, 255, 255, 0.1);
 		border: 1px solid rgba(255, 255, 255, 0.2);
 		border-radius: 0.25rem;

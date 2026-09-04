@@ -49,12 +49,10 @@ describe('NavigationStack Component', () => {
     );
 
     render(NavigationStack, {
-      props: {
         store: scopedStore,
         stack: [{ id: '1', title: 'Screen 1' }],
         onBack: () => {}
-      }
-    });
+      });
 
     const nav = page.getByRole('navigation');
     await expect.element(nav).toBeInTheDocument();
@@ -62,12 +60,10 @@ describe('NavigationStack Component', () => {
 
   it('hides when store is null', async () => {
     render(NavigationStack, {
-      props: {
         store: null,
         stack: [],
         onBack: () => {}
-      }
-    });
+      });
 
     // Check that no navigation exists
     const navs = page.getByRole('navigation').elements();
@@ -93,12 +89,10 @@ describe('NavigationStack Component', () => {
     );
 
     render(NavigationStack, {
-      props: {
         store: scopedStore,
         stack: [],
         onBack: () => {}
-      }
-    });
+      });
 
     // Check that no navigation exists
     const navs = page.getByRole('navigation').elements();
@@ -129,15 +123,13 @@ describe('NavigationStack Component', () => {
     );
 
     render(NavigationStack, {
-      props: {
         store: scopedStore,
         stack: [
           { id: '1', title: 'Screen 1' },
           { id: '2', title: 'Screen 2' }
         ],
         onBack: () => {}
-      }
-    });
+      });
 
     const backButton = page.getByRole('button', { name: 'Go back' });
     await expect.element(backButton).toBeInTheDocument();
@@ -164,12 +156,10 @@ describe('NavigationStack Component', () => {
     );
 
     render(NavigationStack, {
-      props: {
         store: scopedStore,
         stack: [{ id: '1', title: 'Screen 1' }],
         onBack: () => {}
-      }
-    });
+      });
 
     const backButtons = page.getByRole('button', { name: 'Go back' }).elements();
     expect(backButtons.length).toBe(0);
@@ -201,7 +191,6 @@ describe('NavigationStack Component', () => {
     );
 
     render(NavigationStack, {
-      props: {
         store: scopedStore,
         stack: [
           { id: '1', title: 'Screen 1' },
@@ -210,8 +199,7 @@ describe('NavigationStack Component', () => {
         onBack: () => {
           backCalled = true;
         }
-      }
-    });
+      });
 
     const backButton = page.getByRole('button', { name: 'Go back' });
     await userEvent.click(backButton);
@@ -243,7 +231,6 @@ describe('NavigationStack Component', () => {
     );
 
     render(NavigationStack, {
-      props: {
         store: scopedStore,
         stack: [
           { id: '1', title: 'Screen 1' },
@@ -251,8 +238,7 @@ describe('NavigationStack Component', () => {
         ],
         onBack: () => {},
         showBackButton: false
-      }
-    });
+      });
 
     const backButtons = page.getByRole('button', { name: 'Go back' }).elements();
     expect(backButtons.length).toBe(0);
@@ -279,13 +265,11 @@ describe('NavigationStack Component', () => {
     );
 
     render(NavigationStack, {
-      props: {
         store: scopedStore,
         stack: [{ id: '1', title: 'Screen 1' }],
         onBack: () => {},
         class: 'custom-stack'
-      }
-    });
+      });
 
     const nav = page.getByRole('navigation');
     await expect.element(nav).toHaveClass(/custom-stack/);
@@ -312,13 +296,11 @@ describe('NavigationStack Component', () => {
     );
 
     render(NavigationStack, {
-      props: {
         store: scopedStore,
         stack: [{ id: '1', title: 'Screen 1' }],
         onBack: () => {},
         unstyled: true
-      }
-    });
+      });
 
     const nav = page.getByRole('navigation');
     const className = nav.element().className;
@@ -349,12 +331,10 @@ describe('NavigationStack Component', () => {
     );
 
     render(NavigationStack, {
-      props: {
         store: scopedStore,
         stack: [{ id: '1', title: 'Screen 1' }],
         onBack: () => {}
-      }
-    });
+      });
 
     // Check body overflow is NOT set to hidden (stack doesn't lock scroll)
     const bodyStyle = document.body.style.overflow;

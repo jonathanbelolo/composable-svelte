@@ -2,6 +2,7 @@
 	import { animate } from 'motion';
 	import type { Store } from '../../types.js';
 	import type { ImageGalleryState, ImageGalleryAction } from './image-gallery.types.js';
+	import { Spinner } from '../ui/spinner/index.js';
 
 	/**
 	 * Image Lightbox Component
@@ -15,17 +16,17 @@
 		store: Store<ImageGalleryState, ImageGalleryAction>;
 
 		// Optional configuration
-		showCaptions?: boolean;
-		showCounter?: boolean;
-		enableKeyboard?: boolean;
-		enableSwipe?: boolean;
+		showCaptions?: boolean | undefined;
+		showCounter?: boolean | undefined;
+		enableKeyboard?: boolean | undefined;
+		enableSwipe?: boolean | undefined;
 
 		// Callbacks
-		onClose?: () => void;
-		onImageChange?: (index: number) => void;
+		onClose?: (() => void) | undefined;
+		onImageChange?: ((index: number) => void) | undefined;
 
 		// Styling
-		class?: string;
+		class?: string | undefined;
 	}
 
 	const {
@@ -376,6 +377,13 @@
 						</button>
 					</div>
 				{:else if currentImage}
+					<!-- Sits over the image rather than replacing it, so navigating
+					     between loaded images does not blank the frame. -->
+					{#if storeState.lightbox.isImageLoading}
+						<div class="image-lightbox__loading">
+							<Spinner size="lg" />
+						</div>
+					{/if}
 					{#key storeState.lightbox.currentIndex}
 					<img
 						bind:this={imageElement}
@@ -494,7 +502,6 @@
 		border-radius: 50%;
 		color: white;
 		cursor: pointer;
-		transition: background 0.2s ease;
 		z-index: 10;
 	}
 
@@ -563,6 +570,17 @@
 		}
 	}
 
+	/* Loading state */
+	.image-lightbox__loading {
+		position: absolute;
+		inset: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		pointer-events: none;
+		color: white;
+	}
+
 	/* Error state */
 	.image-lightbox__error {
 		display: flex;
@@ -593,7 +611,6 @@
 		font-size: 14px;
 		font-weight: 500;
 		cursor: pointer;
-		transition: background 0.2s ease;
 	}
 
 	.image-lightbox__retry:hover {
@@ -636,7 +653,6 @@
 		border-radius: 50%;
 		color: white;
 		cursor: pointer;
-		transition: background 0.2s ease;
 		z-index: 10;
 	}
 

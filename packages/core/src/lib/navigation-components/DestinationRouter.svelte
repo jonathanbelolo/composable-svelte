@@ -70,8 +70,17 @@
 	const scopedStores = $derived.by(() => {
 		const result: Record<string, any> = {};
 
-		// Early return if no destination
+		// No destination: every route is explicitly `null`, not absent.
+		//
+		// This used to `return result` while it was still `{}`, so each route's
+		// store came out `undefined` — and `Modal`, `Sheet` and `Drawer` all
+		// declare `store: ScopedDestinationStore | null`. `undefined` is not
+		// `null` under exactOptionalPropertyTypes, and at runtime it threw
+		// `Cannot read properties of undefined (reading 'state')`. A router
+		// rendered with nothing presented — which is its resting state, most of
+		// the time — crashed.
 		if (!destinationValue) {
+			for (const key of Object.keys(routes)) result[key] = null;
 			return result;
 		}
 

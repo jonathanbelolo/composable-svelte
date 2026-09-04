@@ -44,18 +44,14 @@ describe('Popover Component', () => {
       'destination'
     );
 
-    render(Popover, {
-      props: { store: scopedStore }
-    });
+    render(Popover, { store: scopedStore });
 
     const popover = page.getByRole('dialog');
     await expect.element(popover).toBeInTheDocument();
   });
 
   it('hides when store is null', async () => {
-    render(Popover, {
-      props: { store: null }
-    });
+    render(Popover, { store: null });
 
     // Check that no dialog exists
     const popovers = page.getByRole('dialog').elements();
@@ -88,9 +84,7 @@ describe('Popover Component', () => {
       'destination'
     );
 
-    render(Popover, {
-      props: { store: scopedStore }
-    });
+    render(Popover, { store: scopedStore });
 
     // Popover should be visible
     const popover = page.getByRole('dialog');
@@ -132,9 +126,7 @@ describe('Popover Component', () => {
       'destination'
     );
 
-    render(Popover, {
-      props: { store: scopedStore }
-    });
+    render(Popover, { store: scopedStore });
 
     // Popover should be visible
     const popover = page.getByRole('dialog');
@@ -178,9 +170,7 @@ describe('Popover Component', () => {
       'destination'
     );
 
-    render(Popover, {
-      props: { store: scopedStore, disableEscapeKey: true }
-    });
+    render(Popover, { store: scopedStore, disableEscapeKey: true });
 
     // Press Escape
     await userEvent.keyboard('{Escape}');
@@ -216,9 +206,7 @@ describe('Popover Component', () => {
       'destination'
     );
 
-    render(Popover, {
-      props: { store: scopedStore, disableClickOutside: true }
-    });
+    render(Popover, { store: scopedStore, disableClickOutside: true });
 
     // Trigger pointerdown event on document
     const pointerEvent = new PointerEvent('pointerdown', {
@@ -252,9 +240,7 @@ describe('Popover Component', () => {
       'destination'
     );
 
-    render(Popover, {
-      props: { store: scopedStore, style: 'top: 100px; left: 200px;' }
-    });
+    render(Popover, { store: scopedStore, style: 'top: 100px; left: 200px;' });
 
     const popover = page.getByRole('dialog');
     const style = popover.element().getAttribute('style');
@@ -278,11 +264,9 @@ describe('Popover Component', () => {
     );
 
     render(Popover, {
-      props: {
         store: scopedStore,
         class: 'custom-popover-content'
-      }
-    });
+      });
 
     const popover = page.getByRole('dialog');
     await expect.element(popover).toHaveClass(/custom-popover-content/);
@@ -303,9 +287,7 @@ describe('Popover Component', () => {
       'destination'
     );
 
-    render(Popover, {
-      props: { store: scopedStore, unstyled: true }
-    });
+    render(Popover, { store: scopedStore, unstyled: true });
 
     const popover = page.getByRole('dialog');
     const className = popover.element().className;
@@ -330,9 +312,7 @@ describe('Popover Component', () => {
       'destination'
     );
 
-    render(Popover, {
-      props: { store: scopedStore }
-    });
+    render(Popover, { store: scopedStore });
 
     // Check body overflow is NOT set to hidden (popovers don't lock scroll)
     const bodyStyle = document.body.style.overflow;
@@ -354,9 +334,7 @@ describe('Popover Component', () => {
       'destination'
     );
 
-    render(Popover, {
-      props: { store: scopedStore }
-    });
+    render(Popover, { store: scopedStore });
 
     const popover = page.getByRole('dialog');
     const ariaModal = popover.element().getAttribute('aria-modal');

@@ -16,13 +16,13 @@
 		/** Array of attachments to display */
 		attachments: MessageAttachment[];
 		/** Optional class name */
-		class?: string;
+		class?: string | undefined;
 		/** Layout mode: 'grid' or 'list' (default: 'grid') */
-		layout?: 'grid' | 'list';
+		layout?: 'grid' | 'list' | undefined;
 		/** Max columns for grid layout (default: 2) */
-		maxColumns?: number;
+		maxColumns?: number | undefined;
 		/** Show attachment count header (default: true) */
-		showCount?: boolean;
+		showCount?: boolean | undefined;
 	}
 
 	let {
@@ -67,6 +67,31 @@
 		>
 			{#each categorizedAttachments as { attachment, category }, index (attachment.id || `${attachment.filename}-${index}`)}
 				<div class="gallery-item" data-category={category}>
+					<!-- The upload's only visible output. `uploadFile` reports
+					     progress through a documented callback, the reducer records
+					     it, and until now nothing rendered it — so a consumer who
+					     implemented `onProgress` got a number that went nowhere. -->
+					{#if attachment.uploadStatus === 'uploading'}
+						<div
+							class="attachment-progress"
+							role="progressbar"
+							aria-valuemin="0"
+							aria-valuemax="100"
+							aria-valuenow={Math.round(attachment.uploadProgress ?? 0)}
+							aria-label="Uploading {attachment.filename}"
+						>
+							<div
+								class="attachment-progress-bar"
+								style="width: {attachment.uploadProgress ?? 0}%"
+							></div>
+						</div>
+					{:else if attachment.uploadStatus === 'error'}
+						<p class="attachment-upload-error" role="status">
+							Upload failed{attachment.uploadError ? `: ${attachment.uploadError}` : ''}. Only you
+							can see this file.
+						</p>
+					{/if}
+
 					{#if category === 'image'}
 						<ImagePreview {attachment} />
 					{:else if category === 'pdf'}
@@ -85,6 +110,28 @@
 </div>
 
 <style>
+	.attachment-progress {
+		height: 4px;
+		margin-bottom: 0.25rem;
+		border-radius: 2px;
+		background: hsl(var(--muted, 220 13% 91%));
+		overflow: hidden;
+	}
+
+	/* Width tracks an external byte count, not a lifecycle — the same shape the
+	   Exception Register grants elsewhere — and it is set directly rather than
+	   transitioned, so nothing here animates. */
+	.attachment-progress-bar {
+		height: 100%;
+		background: hsl(var(--primary, 217.2 91.2% 59.8%));
+	}
+
+	.attachment-upload-error {
+		margin: 0 0 0.25rem 0;
+		font-size: 0.75rem;
+		color: hsl(var(--destructive, 0 73.7% 41.8%));
+	}
+
 	.attachment-gallery {
 		display: flex;
 		flex-direction: column;
@@ -101,7 +148,7 @@
 	.attachment-count {
 		font-size: 0.875rem;
 		font-weight: 500;
-		color: #6b7280;
+		color: hsl(var(--muted-foreground, 220 8.9% 46.1%));
 	}
 
 	.gallery-empty {
@@ -110,8 +157,8 @@
 		align-items: center;
 		justify-content: center;
 		padding: 3rem 1rem;
-		background: #f9fafb;
-		border: 1px dashed #d1d5db;
+		background: hsl(var(--muted, 210 20% 98%));
+		border: 1px dashed hsl(var(--border, 216 12.2% 83.9%));
 		border-radius: 0.5rem;
 		gap: 0.75rem;
 	}
@@ -124,7 +171,7 @@
 	.empty-text {
 		margin: 0;
 		font-size: 0.875rem;
-		color: #9ca3af;
+		color: hsl(var(--muted-foreground, 217.9 10.6% 64.9%));
 	}
 
 	.gallery-content {
@@ -143,6 +190,14 @@
 
 	.gallery-item {
 		display: flex;
+		/*
+		 * A column, not a row. The upload progress bar and the failure notice are
+		 * siblings of the preview, and this container defaulted to `row` — so
+		 * during every upload the image was squeezed into half the width with a
+		 * 4px bar beside it, then snapped back when the upload landed. The failure
+		 * variant put a full-height red paragraph next to a half-width preview.
+		 */
+		flex-direction: column;
 		min-width: 0; /* Prevent grid overflow */
 	}
 

@@ -103,7 +103,7 @@ type TodoAction =
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
 
-  const store = createStore({...});
+  const store = createStore({ initialState, reducer, dependencies: {} });
 
   // ❌ Unnecessary manual subscription
   let state = $state(store.state);
@@ -213,9 +213,11 @@ const featureReducer: Reducer<FeatureState, FeatureAction, FeatureDependencies> 
       return [state, Effect.none()];
   }
 };
+```
 
-// 5. Component
-// Feature.svelte
+5. The component — `Feature.svelte`:
+
+```svelte
 <script lang="ts">
   import { createStore } from '@composable-svelte/core';
   import { featureReducer } from './reducer';
@@ -557,12 +559,16 @@ const appReducer = combineReducers<AppState, AppAction>({
 
 ```typescript
 // State
+//
+// `forEach` and `forEachElement` address items by id, so the array holds
+// `IdentifiedItem<ID, State>` — `{ id, state }` — not flat objects that happen
+// to carry an `id`. The child reducer then sees only `state`, which is what
+// keeps it independent of where the item lives.
 interface TodosState {
-  todos: TodoState[];
+  todos: Array<{ id: string; state: TodoState }>;
 }
 
 interface TodoState {
-  id: string;
   text: string;
   completed: boolean;
 }
@@ -610,11 +616,15 @@ const todosForEachFull = forEach({
 // Helper to create properly-typed element actions:
 // elementAction(type, id, action) => { type, id, action }
 const action = elementAction('todo', 'todo-1', { type: 'toggle' });
+```
 
-// Component
+The component. `elementAction` builds the wrapper the collection reducer above
+matches on, so the two stay in step:
+
+```svelte
 {#each $store.todos as todo (todo.id)}
   <Todo
-    {todo}
+    todo={todo.state}
     onToggle={() => store.dispatch(elementAction('todo', todo.id, { type: 'toggle' }))}
   />
 {/each}
@@ -679,9 +689,11 @@ const fileSystemReducer: Reducer<FileSystemState, FileSystemAction> = (state, ac
       return [state, Effect.none()];
   }
 };
+```
 
-// 4. Component passes ID, not scoped store
-// Folder.svelte
+4. The component passes an id, not a scoped store — `Folder.svelte`:
+
+```svelte
 <script lang="ts">
   // Runes mode: $props(), not `export let` — mixing the two is a compile error.
   let { store, folderId }: {
@@ -1011,8 +1023,11 @@ export const featureReducer: Reducer<FeatureState, FeatureAction, FeatureDepende
       return [state, Effect.none()];
   }
 };
+```
 
-// Feature.svelte
+And `Feature.svelte`:
+
+```svelte
 <script lang="ts">
   import { createStore } from '@composable-svelte/core';
   import { featureReducer } from './reducer';

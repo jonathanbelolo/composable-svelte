@@ -5,14 +5,13 @@
  */
 
 import { onMount, untrack } from 'svelte';
-import { animate } from 'motion';
 import { zoom as d3Zoom } from 'd3-zoom';
 import { brush as d3Brush } from 'd3-brush';
 import { select } from 'd3-selection';
-import type { ChartState, ChartConfig } from '../types/chart.types';
-import type { Dispatch } from '@composable-svelte/core';
-import type { ChartAction } from '../types/chart.types';
-import { animateZoomTransition } from '../utils/animate-zoom';
+import type { ChartState, ChartConfig } from '../types/chart.types.js';
+import type { ChartAction } from '../types/chart.types.js';
+import { animateZoomTransition } from '../utils/animate-zoom.js';
+import { ZOOM_MIN, ZOOM_MAX } from '../reducers/chart.reducer.js';
 
 import type { Store } from '@composable-svelte/core';
 
@@ -27,12 +26,15 @@ let {
   store: Store<ChartState<any>, ChartAction<any>>;
   config: ChartConfig & { type?: 'scatter' | 'line' | 'bar' | 'area' | 'histogram' };
   plotBuilder: (state: ChartState<any>, config: any) => any;
-  enableZoom?: boolean;
-  enableBrush?: boolean;
+  enableZoom?: boolean | undefined;
+  enableBrush?: boolean | undefined;
 } = $props();
 
 // Container element
 let containerElement: HTMLDivElement | null = $state(null);
+// Gates the prop effect: the store subscription draws the initial state, and
+// this must not double-render alongside it at mount.
+let mounted = $state(false);
 let plotElement: HTMLElement | null = $state(null);
 let cleanupEventListeners: (() => void) | null = null;
 
@@ -41,40 +43,41 @@ let cleanupEventListeners: (() => void) | null = null;
 onMount(() => {
   if (!containerElement) return;
 
-  // Track previous values to detect actual changes
-  let prevDataLength = 0;
-  let prevFilteredLength = 0;
-  let prevSelectedCount = 0;
-  let prevTransformK = 1;
-  let prevTransformX = 0;
-  let prevTransformY = 0;
+  /**
+   * The state this component last drew. Identity, not a hand-picked set of
+   * lengths.
+   *
+   * This used to compare `data.length`, `filteredData.length`,
+   * `selection.selectedIndices.length` and the three transform scalars, and
+   * everything it missed was invisible:
+   *
+   * - `dimensions` was not in the set, and is the only thing the plot builders
+   *   read for width and height. Every resize was inert; the SVG kept whatever
+   *   size was in state at the last render, which for the responsive path is
+   *   the `createInitialChartState` default forever.
+   * - `setData` with an equal row count never redrew — a re-sort, a re-map, a
+   *   sliding window. `DataTransformsDemo`'s Sort button does exactly that.
+   * - Moving a selection from one point to another never redrew, because only
+   *   the count was compared.
+   *
+   * The store is `$state.raw` and this package's reducer is immutable, so a
+   * changed state is always a new object and an unchanged one is always the
+   * same object. Identity is the signal that was being thrown away, and it is
+   * O(1) — which matters, because a pan dispatches per frame.
+   */
+  let renderedState: ChartState<any> | null = null;
 
-  // Initial render
-  renderPlot();
+  const renderIfChanged = (state: ChartState<any>) => {
+    if (state === renderedState) return;
+    renderedState = state;
+    renderPlot();
+  };
 
-  // Manually subscribe to store updates
-  // Only rebuild when data/selection changes (not on zoom/transform changes!)
-  const unsubscribe = store.subscribe((state) => {
-    const dataChanged = state.data.length !== prevDataLength;
-    const filteredChanged = state.filteredData.length !== prevFilteredLength;
-    const selectionChanged = state.selection.selectedIndices.length !== prevSelectedCount;
-    const transformChanged = state.transform.k !== prevTransformK ||
-                            state.transform.x !== prevTransformX ||
-                            state.transform.y !== prevTransformY;
-
-    // Only re-render on data/selection changes OR transform changes
-    // Transform changes will trigger a rebuild to update the domain
-    if (dataChanged || filteredChanged || selectionChanged || transformChanged) {
-      prevDataLength = state.data.length;
-      prevFilteredLength = state.filteredData.length;
-      prevSelectedCount = state.selection.selectedIndices.length;
-      prevTransformK = state.transform.k;
-      prevTransformX = state.transform.x;
-      prevTransformY = state.transform.y;
-
-      renderPlot();
-    }
-  });
+  // `store.subscribe` invokes its listener immediately, so this draws the
+  // initial state — no separate `renderPlot()` call, which used to render the
+  // chart twice at mount.
+  const unsubscribe = store.subscribe(renderIfChanged);
+  mounted = true;
 
   return () => {
     unsubscribe();
@@ -82,6 +85,41 @@ onMount(() => {
       cleanupEventListeners();
     }
   };
+});
+
+/**
+ * Redraw when a *prop* changes.
+ *
+ * `renderPlot` reads `config`, `plotBuilder`, `enableZoom` and `enableBrush` at
+ * call time, and it was only ever called from the store subscription — so none
+ * of `type`, `x`, `y`, `color`, `size`, `xDomain`, `yDomain`, `enableZoom`,
+ * `enableBrush` or `plotBuilder` reached the canvas until an unrelated data
+ * change happened to rebuild. `ScatterChartDemo`'s Brush Mode button is the
+ * visible case: switching zoom → brush dispatches nothing, so brushing was
+ * never installed, while brush → zoom dispatches `clearSelection` and *may*
+ * redraw — which made the bug look intermittent.
+ *
+ * Deliberately reads only the props. Touching `$store` here would re-run this
+ * on every dispatch, duplicating the subscription above; and `renderPlot`
+ * mutates the DOM, which is why the store path is a manual subscription rather
+ * than an effect in the first place.
+ */
+$effect(() => {
+  // Named so the dependency is explicit rather than incidental.
+  void config;
+  void plotBuilder;
+  void enableZoom;
+  void enableBrush;
+
+  // `untrack` is load-bearing, not decoration. `renderPlot` reads *and* writes
+  // `plotElement`, which is `$state`, so calling it inside an effect makes its
+  // own writes into the effect's dependencies — the "effect → DOM manipulation
+  // → effect" loop the comment on the mount subscription above warns about. It
+  // hangs the test runner outright.
+  //
+  // (`untrack` was imported and unused before this. It is what the file needed
+  // all along.)
+  if (untrack(() => mounted)) untrack(() => renderPlot());
 });
 
 // Watch for animated zoom transitions
@@ -93,12 +131,24 @@ $effect(() => {
 
   // Only start animation if not already running
   if (state.isAnimating && state.targetTransform && !animationRunning) {
-    animationRunning = true;
-
     const from = state.transform;
     const to = state.targetTransform;
 
-    // Run spring animation
+    // `enableAnimations={false}` skips the animation, not the outcome. The
+    // reducer only records a *target*; the component is what applies it, so
+    // returning early here would leave the zoom unapplied and the store stuck
+    // in `isAnimating` forever. It was read by nothing before — including by
+    // the skill file's advice to pass `false` as a performance remedy.
+    if (config.enableAnimations === false) {
+      store.dispatch({ type: 'zoomProgress', transform: to });
+      store.dispatch({ type: 'zoomComplete' });
+      return;
+    }
+
+    animationRunning = true;
+
+    // Milliseconds, from state. `ChartState.transitionDuration` is documented
+    // and was consulted by nothing while the animator hardcoded 400.
     animateZoomTransition(
       from,
       to,
@@ -109,7 +159,8 @@ $effect(() => {
           type: 'zoomProgress',
           transform
         });
-      }
+      },
+      state.transitionDuration
     ).then(() => {
       // Animation completed
       animationRunning = false;
@@ -130,8 +181,10 @@ function renderPlot() {
   // Get current state (not reactive, just a snapshot)
   const plotState = store.state;
 
-  // Build plot
-  const plot = plotBuilder(plotState, config);
+  // Build plot. `plotBuilder` is typed `=> any`, so bind it to a real element
+  // type here rather than letting `plotElement`'s `| null` reach appendChild.
+  const plot: HTMLElement | null = plotBuilder(plotState, config);
+  if (!plot) return;
 
   // Clear previous plot
   if (plotElement) {
@@ -140,7 +193,7 @@ function renderPlot() {
 
   // Render new plot
   plotElement = plot;
-  containerElement.appendChild(plotElement);
+  containerElement.appendChild(plot);
 
   // Wait for SVG to be available before attaching behaviors
   // Observable Plot returns the SVG element directly, so we need to query from the container
@@ -198,7 +251,10 @@ function attachEventListeners(element: HTMLElement): (() => void) | void {
  */
 function attachZoomBehavior(svg: SVGSVGElement): () => void {
   const zoomBehavior = d3Zoom<SVGSVGElement, unknown>()
-    .scaleExtent([0.5, 10])  // Min and max zoom levels
+    // From the reducer, not repeated here. `zoomIn`/`zoomOut` clamp to the same
+    // pair, so the keyboard and the wheel stop at the same place — and a later
+    // change to one cannot leave the other behind.
+    .scaleExtent([ZOOM_MIN, ZOOM_MAX])
     .on('zoom', (event) => {
       // Dispatch zoom action with transform
       store.dispatch({
@@ -221,6 +277,27 @@ function attachZoomBehavior(svg: SVGSVGElement): () => void {
 }
 
 /**
+ * The circles belonging to the *data* mark, in data order.
+ *
+ * `svg.querySelectorAll('circle')` was close enough while a plot held exactly
+ * one dot mark, and the comment here said so. It no longer does: the keyboard
+ * cursor draws a ring, which is a second dot mark and a second circle. That ring
+ * happens to render last, so the old `index < filteredData.length` bound
+ * excluded it — correct by accident of ordering, which is not a property worth
+ * relying on.
+ *
+ * The data mark is the first group to contain circles, because every builder
+ * appends `focusMark` after the mark it annotates.
+ */
+function dataCircles(svg: SVGSVGElement): SVGCircleElement[] {
+  for (const group of Array.from(svg.querySelectorAll('g'))) {
+    const circles = group.querySelectorAll('circle');
+    if (circles.length > 0) return Array.from(circles) as SVGCircleElement[];
+  }
+  return [];
+}
+
+/**
  * Attach brush behavior to SVG for selection
  */
 function attachBrushBehavior(svg: SVGSVGElement): () => void {
@@ -228,62 +305,52 @@ function attachBrushBehavior(svg: SVGSVGElement): () => void {
     .on('start', () => {
       store.dispatch({ type: 'brushStart' });
     })
-    .on('brush', (event) => {
-      if (event.selection) {
-        const [[x0, y0], [x1, y1]] = event.selection as [[number, number], [number, number]];
-        store.dispatch({
-          type: 'brushMove',
-          extent: [[x0, y0], [x1, y1]]
-        });
-      }
-    })
     .on('end', (event) => {
       if (!event.selection) {
         // Brush was cleared - clear selection
         store.dispatch({ type: 'clearSelection' });
-        store.dispatch({ type: 'brushEnd' });
         return;
       }
 
       // Compute which data points are selected
       const [[x0, y0], [x1, y1]] = event.selection as [[number, number], [number, number]];
 
-      // Find all circles (data points) within the brush extent
-      const circles = svg.querySelectorAll('circle');
       const selectedIndices: number[] = [];
-      const selectedData: any[] = [];
       const currentState = store.state;
 
-      circles.forEach((circle, index) => {
+      dataCircles(svg).forEach((circle, index) => {
         const cx = parseFloat(circle.getAttribute('cx') || '0');
         const cy = parseFloat(circle.getAttribute('cy') || '0');
 
-        // Check if circle center is within brush extent
         if (cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1) {
-          selectedIndices.push(index);
-          if (index < currentState.filteredData.length) {
-            selectedData.push(currentState.filteredData[index]);
-          }
+          if (index < currentState.filteredData.length) selectedIndices.push(index);
         }
       });
 
-      // Dispatch selection with the selected data points
-      if (selectedIndices.length > 0) {
-        store.dispatch({
-          type: 'selectRange',
-          range: [Math.min(...selectedIndices), Math.max(...selectedIndices)]
-        });
-      }
-
-      store.dispatch({ type: 'brushEnd' });
+      // Report the points the brush actually caught.
+      //
+      // This used to dispatch `selectRange: [min, max]`, and `selectRange`
+      // describes a *contiguous* span — so brushing the first and last points
+      // of a scattered cloud selected every point between them too, and the
+      // user saw rows highlighted that the gesture never touched.
+      //
+      // Dispatched unconditionally, where the old code returned early on an
+      // empty result: a brush drawn over empty space left the previous
+      // selection standing, which read as the gesture having done nothing.
+      store.dispatch({ type: 'selectPoints', indices: selectedIndices });
     });
 
-  // Attach brush to SVG
-  select(svg).call(brushBehavior);
+  // d3-brush installs into a <g>, not the <svg> root: @types/d3-brush types
+  // BrushBehavior as callable only on Selection<SVGGElement, ...>. The behaviour
+  // is unchanged — with no explicit .extent(), d3 falls back to defaultExtent,
+  // which reads `this.ownerSVGElement || this`, and for this <g> that is the
+  // same <svg> it used before. Appended last, so it keeps its old z-order.
+  const brushGroup = select(svg).append('g').attr('class', 'cs-brush');
+  brushGroup.call(brushBehavior);
 
   // Return cleanup function
   return () => {
-    select(svg).on('.brush', null);
+    brushGroup.remove();
   };
 }
 </script>
@@ -305,7 +372,7 @@ function attachBrushBehavior(svg: SVGSVGElement): () => void {
   }
 
   .chart-primitive :global(text) {
-    fill: #374151;
+    fill: hsl(var(--muted-foreground, 216.9 19.1% 26.7%));
   }
 
   .chart-primitive :global(.plot-axis) {

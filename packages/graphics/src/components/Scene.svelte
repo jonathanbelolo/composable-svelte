@@ -7,8 +7,9 @@
 import { onMount } from 'svelte';
 import type { Snippet } from 'svelte';
 import type { Store } from '@composable-svelte/core';
-import type { GraphicsState, GraphicsAction } from '../core/types';
-import { BabylonAdapter } from '../adapters/babylon-adapter';
+import type { GraphicsState, GraphicsAction } from '../core/types.js';
+import { BabylonAdapter } from '../adapters/babylon-adapter.js';
+import { initialBaseline, syncScene } from '../core/scene-sync.js';
 
 // Props
 let {
@@ -18,9 +19,9 @@ let {
   children
 }: {
   store: Store<GraphicsState, GraphicsAction>;
-  width?: string | number;
-  height?: string | number;
-  children?: Snippet;
+  width?: string | number | undefined;
+  height?: string | number | undefined;
+  children?: Snippet | undefined;
 } = $props();
 
 // Canvas element
@@ -32,29 +33,40 @@ onMount(() => {
   if (!canvas) return;
 
   let unsubscribe: (() => void) | undefined;
+  /**
+   * Unmounting during `await adapter.initialize(...)` used to leave the engine
+   * running. The cleanup below ran first, against an adapter whose `engine` and
+   * `scene` were still null — so `dispose()` did nothing — and the awaited
+   * initialisation then went on to build an engine, a render loop and a resize
+   * listener that nothing owned and nothing could reach.
+   */
+  let cancelled = false;
 
   (async () => {
+    // Held locally as well as in `adapter`, because the cleanup sets that to
+    // null and this is the reference that must be disposed either way.
+    const pending = new BabylonAdapter();
+    adapter = pending;
+
     try {
-      // Create adapter
-      adapter = new BabylonAdapter();
+      const result = await pending.initialize(canvas);
 
-      // Initialize renderer (WebGPU/WebGL)
-      const result = await adapter.initialize(
-        canvas,
-        store.state.renderer.activeRenderer !== 'webgl'
-      );
+      if (cancelled) {
+        pending.dispose();
+        return;
+      }
 
-      // Dispatch initialization success
       store.dispatch({
         type: 'rendererInitialized',
         renderer: result.renderer,
         capabilities: result.capabilities
       });
 
-      // Setup manual subscription for state sync
       unsubscribe = setupSceneSync();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to initialize renderer';
+      pending.dispose();
+      if (cancelled) return;
       store.dispatch({
         type: 'rendererError',
         error: errorMessage
@@ -64,6 +76,7 @@ onMount(() => {
   })();
 
   return () => {
+    cancelled = true;
     unsubscribe?.();
     adapter?.dispose();
     adapter = null;
@@ -71,77 +84,24 @@ onMount(() => {
 });
 
 /**
- * Setup manual subscription for scene sync (same pattern as MapPrimitive)
- * Avoids infinite loops caused by effect → DOM manipulation → effect
+ * Setup manual subscription for scene sync.
+ *
+ * A manual subscription rather than an `$effect`: the callback drives a renderer,
+ * and an effect that both reads the store and mutates the scene loops.
+ *
+ * The diffing itself lives in `core/scene-sync.ts`, so it can be tested against
+ * a spy adapter — under jsdom Babylon cannot initialise, and nothing has ever
+ * mounted this component.
  */
 function setupSceneSync() {
   if (!adapter) return;
 
-  // Track previous values to detect actual changes
-  let previousCamera = { ...store.state.camera };
-  let previousMeshes: typeof $store.meshes = [];
-  let previousLights: typeof $store.lights = [];
-  let previousBackgroundColor = store.state.backgroundColor;
+  let baseline = initialBaseline();
+  const sceneAdapter = adapter;
 
-  // Manually subscribe to store updates
-  const unsubscribe = store.subscribe((state) => {
-    if (!adapter) return;
-
-    // Sync camera
-    if (JSON.stringify(previousCamera) !== JSON.stringify(state.camera)) {
-      adapter.updateCamera(state.camera);
-      previousCamera = { ...state.camera };
-    }
-
-    // Sync meshes
-    const currentMeshes = state.meshes;
-    if (JSON.stringify(previousMeshes) !== JSON.stringify(currentMeshes)) {
-      const prevMap = new Map(previousMeshes.map((m) => [m.id, m]));
-      const currMap = new Map(currentMeshes.map((m) => [m.id, m]));
-
-      // Remove deleted meshes
-      for (const [id] of prevMap) {
-        if (!currMap.has(id)) {
-          adapter.removeMesh(id);
-        }
-      }
-
-      // Add new or update changed meshes
-      for (const [id, mesh] of currMap) {
-        const prev = prevMap.get(id);
-        if (!prev) {
-          adapter.addMesh(mesh);
-        } else if (JSON.stringify(prev) !== JSON.stringify(mesh)) {
-          adapter.updateMesh(id, mesh);
-        }
-      }
-
-      previousMeshes = currentMeshes;
-    }
-
-    // Sync lights
-    const currentLights = state.lights;
-    if (JSON.stringify(previousLights) !== JSON.stringify(currentLights)) {
-      // For simplicity, just clear and re-add all lights
-      // TODO: More granular light updates
-      for (let i = previousLights.length - 1; i >= 0; i--) {
-        adapter.removeLight(i);
-      }
-      currentLights.forEach((light) => {
-        adapter!.addLight(light);
-      });
-
-      previousLights = currentLights;
-    }
-
-    // Sync background color
-    if (previousBackgroundColor !== state.backgroundColor) {
-      adapter.setBackgroundColor(state.backgroundColor);
-      previousBackgroundColor = state.backgroundColor;
-    }
+  return store.subscribe((state) => {
+    baseline = syncScene(state, baseline, sceneAdapter);
   });
-
-  return unsubscribe;
 }
 
 // Format width/height

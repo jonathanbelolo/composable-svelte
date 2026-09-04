@@ -13,6 +13,7 @@ import type {
 } from './types.js';
 import type { EffectType } from '@composable-svelte/core';
 import { Effect } from '@composable-svelte/core';
+import { nodesToArray, edgesToArray } from './types.js';
 
 /**
  * Node canvas reducer - pure function handling all state transitions.
@@ -336,34 +337,23 @@ export function nodeCanvasReducer<
       ];
     }
 
-    case 'zoomIn': {
-      const newZoom = Math.min(state.viewport.zoom * 1.2, 2);
-      return [
-        {
-          ...state,
-          viewport: { ...state.viewport, zoom: newZoom }
-        },
-        Effect.none()
-      ];
-    }
-
-    case 'zoomOut': {
-      const newZoom = Math.max(state.viewport.zoom / 1.2, 0.1);
-      return [
-        {
-          ...state,
-          viewport: { ...state.viewport, zoom: newZoom }
-        },
-        Effect.none()
-      ];
-    }
-
+    // === Viewport command markers ===
+    //
+    // These carry no state. The view (`FlowCommands`) performs them against the
+    // live canvas via `useSvelteFlow()`, and the canvas reports the resulting
+    // viewport back inward through `onmoveend` as `setViewport`. So the store
+    // still ends up holding the true viewport — it is just no longer the thing
+    // computing it.
+    //
+    // `zoomIn`/`zoomOut` used to compute a new zoom here with hardcoded clamps
+    // of 2 and 0.1, which ignored the component's `minZoom`/`maxZoom` props and
+    // wrote a value the canvas never read. Letting the flow own the clamping
+    // removes a second, disagreeing source of truth.
+    case 'zoomIn':
+    case 'zoomOut':
     case 'fitView':
-    case 'centerView': {
-      // These will be handled by SvelteFlow's built-in functions via effects
-      // Return current state, let the component handle the actual viewport change
+    case 'centerView':
       return [state, Effect.none()];
-    }
 
     // ========================================================================
     // Configuration Operations
@@ -442,6 +432,33 @@ export function nodeCanvasReducer<
       ];
     }
 
+    case 'autoLayout': {
+      // `deps.autoLayout` was declared and documented and had no call site —
+      // there was no action that could reach it.
+      const positions = deps.autoLayout?.(nodesToArray(state.nodes), edgesToArray(state.edges));
+      if (!positions) {
+        return [state, Effect.none()];
+      }
+
+      // Identity-preserving: a node that did not move is returned as-is.
+      // `$state.raw` means the component's `$derived` recomputes on every
+      // dispatch and xyflow compares by reference, so cloning everything would
+      // force a full re-adoption of the graph.
+      let moved = false;
+      const nodes = Object.fromEntries(
+        Object.entries(state.nodes).map(([id, node]) => {
+          const next = positions[id];
+          if (!next || (node.position.x === next.x && node.position.y === next.y)) {
+            return [id, node];
+          }
+          moved = true;
+          return [id, { ...node, position: { x: next.x, y: next.y } }];
+        })
+      );
+
+      return moved ? [{ ...state, nodes }, Effect.none()] : [state, Effect.none()];
+    }
+
     case 'clearCanvas': {
       return [
         {
@@ -454,14 +471,6 @@ export function nodeCanvasReducer<
         },
         Effect.none()
       ];
-    }
-
-    case 'undo':
-    case 'redo': {
-      // Undo/redo will be implemented as a higher-order reducer
-      // For now, return current state
-      console.warn(`[NodeCanvas] ${action.type} not yet implemented`);
-      return [state, Effect.none()];
     }
 
     default: {

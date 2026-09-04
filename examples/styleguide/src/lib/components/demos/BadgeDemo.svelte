@@ -7,7 +7,7 @@
   <!-- Variants -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Badge Variants</h3>
+      <h2 class="text-xl font-semibold mb-2">Badge Variants</h2>
       <p class="text-muted-foreground text-sm">
         Different badge styles for various contexts
       </p>
@@ -30,7 +30,7 @@
   <!-- Use Cases -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Common Use Cases</h3>
+      <h2 class="text-xl font-semibold mb-2">Common Use Cases</h2>
       <p class="text-muted-foreground text-sm">
         Practical examples of badge usage
       </p>
@@ -92,7 +92,7 @@
   <!-- With Icons -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Badges with Icons</h3>
+      <h2 class="text-xl font-semibold mb-2">Badges with Icons</h2>
       <p class="text-muted-foreground text-sm">
         Combine badges with icons for enhanced meaning
       </p>
@@ -127,7 +127,7 @@
   <!-- In Context -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Badges in Context</h3>
+      <h2 class="text-xl font-semibold mb-2">Badges in Context</h2>
       <p class="text-muted-foreground text-sm">
         Examples of badges used in real-world scenarios
       </p>
@@ -202,7 +202,7 @@
   <!-- Size Variations -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Custom Sizes</h3>
+      <h2 class="text-xl font-semibold mb-2">Custom Sizes</h2>
       <p class="text-muted-foreground text-sm">
         Badges can be customized with different sizes
       </p>
@@ -224,7 +224,7 @@
   <!-- Interactive Badges -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Interactive Examples</h3>
+      <h2 class="text-xl font-semibold mb-2">Interactive Examples</h2>
       <p class="text-muted-foreground text-sm">
         Badges used in interactive components
       </p>
@@ -281,7 +281,7 @@
   <!-- Combined Examples -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Complex Examples</h3>
+      <h2 class="text-xl font-semibold mb-2">Complex Examples</h2>
       <p class="text-muted-foreground text-sm">
         Real-world applications combining multiple concepts
       </p>
@@ -300,7 +300,7 @@
             { name: 'API Documentation', status: 'destructive', priority: 'Low', team: 'Backend', progress: '30%' },
             { name: 'User Analytics', status: 'outline', priority: 'Medium', team: 'Data', progress: '45%' }
           ] as project}
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg border hover:bg-accent/50 transition-colors">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg border hover:bg-accent/50">
               <div class="flex-1">
                 <p class="font-medium text-sm">{project.name}</p>
                 <div class="flex flex-wrap gap-2 mt-2">

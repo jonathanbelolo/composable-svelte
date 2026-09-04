@@ -8,7 +8,7 @@
   <!-- Basic Spinners -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Basic Spinners</h3>
+      <h2 class="text-xl font-semibold mb-2">Basic Spinners</h2>
       <p class="text-muted-foreground text-sm">
         Loading indicators in different sizes
       </p>
@@ -31,11 +31,6 @@
             <Spinner size="lg" />
             <span class="text-xs text-muted-foreground">Large</span>
           </div>
-
-          <div class="flex flex-col items-center gap-2">
-            <Spinner size="xl" />
-            <span class="text-xs text-muted-foreground">X-Large</span>
-          </div>
         </div>
       </CardContent>
     </Card>
@@ -44,7 +39,7 @@
   <!-- In Buttons -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Loading Buttons</h3>
+      <h2 class="text-xl font-semibold mb-2">Loading Buttons</h2>
       <p class="text-muted-foreground text-sm">
         Spinners integrated with button components
       </p>
@@ -58,7 +53,7 @@
             Loading...
           </Button>
 
-          <Button variant="primary" disabled>
+          <Button variant="default" disabled>
             <Spinner size="sm" class="mr-2" />
             Submitting
           </Button>
@@ -80,7 +75,7 @@
   <!-- Loading States -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Loading States</h3>
+      <h2 class="text-xl font-semibold mb-2">Loading States</h2>
       <p class="text-muted-foreground text-sm">
         Common loading state patterns
       </p>
@@ -128,7 +123,7 @@
   <!-- Full Page Loading -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Full Page Loading</h3>
+      <h2 class="text-xl font-semibold mb-2">Full Page Loading</h2>
       <p class="text-muted-foreground text-sm">
         Center spinners for full-page loading states
       </p>
@@ -138,7 +133,7 @@
       <CardContent class="pt-6">
         <div class="relative min-h-[400px] rounded-lg border-2 border-dashed flex items-center justify-center">
           <div class="text-center space-y-4">
-            <Spinner size="xl" />
+            <Spinner size="lg" />
             <div>
               <p class="font-medium">Loading Application</p>
               <p class="text-sm text-muted-foreground mt-1">Please wait while we prepare your dashboard</p>
@@ -152,7 +147,7 @@
   <!-- With Text -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">With Status Messages</h3>
+      <h2 class="text-xl font-semibold mb-2">With Status Messages</h2>
       <p class="text-muted-foreground text-sm">
         Combine spinners with descriptive text
       </p>
@@ -200,7 +195,7 @@
   <!-- Empty States with Spinner -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Empty State Loading</h3>
+      <h2 class="text-xl font-semibold mb-2">Empty State Loading</h2>
       <p class="text-muted-foreground text-sm">
         Loading indicators for initially empty content
       </p>
@@ -242,7 +237,7 @@
   <!-- Modal/Dialog Loading -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Modal Loading</h3>
+      <h2 class="text-xl font-semibold mb-2">Modal Loading</h2>
       <p class="text-muted-foreground text-sm">
         Loading states within modals and dialogs
       </p>
@@ -264,7 +259,7 @@
           </div>
 
           <div class="flex items-center gap-3 p-4 rounded-lg bg-muted/30">
-            <div class="w-4 h-4 rounded-full bg-muted" />
+            <div class="w-4 h-4 rounded-full bg-muted"></div>
             <div class="flex-1">
               <p class="text-sm font-medium text-muted-foreground">Step 2: Processing payment</p>
               <p class="text-xs text-muted-foreground mt-1">Waiting...</p>
@@ -272,7 +267,7 @@
           </div>
 
           <div class="flex items-center gap-3 p-4 rounded-lg bg-muted/30">
-            <div class="w-4 h-4 rounded-full bg-muted" />
+            <div class="w-4 h-4 rounded-full bg-muted"></div>
             <div class="flex-1">
               <p class="text-sm font-medium text-muted-foreground">Step 3: Sending confirmation</p>
               <p class="text-xs text-muted-foreground mt-1">Waiting...</p>
@@ -286,7 +281,7 @@
   <!-- Table Loading -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Table Loading</h3>
+      <h2 class="text-xl font-semibold mb-2">Table Loading</h2>
       <p class="text-muted-foreground text-sm">
         Loading states for data tables
       </p>

@@ -149,7 +149,6 @@
     border-radius: 0.5rem;
     cursor: pointer;
     font-weight: 600;
-    transition: all 0.2s;
     background: #e0e0e0;
     color: #333;
   }

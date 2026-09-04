@@ -2,9 +2,11 @@
 // Mock API Client Tests
 // ============================================================================
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createMockAPI, type MockRoutes } from '../../src/lib/api/testing/mock-client.js';
 import { APIError } from '../../src/lib/api/errors.js';
+import { clearCache } from '../../src/lib/api/cache.js';
+import type { RequestConfig } from '../../src/lib/api/types.js';
 
 describe('createMockAPI', () => {
   describe('Static Responses', () => {
@@ -88,7 +90,7 @@ describe('createMockAPI', () => {
   describe('Function Responses', () => {
     it('calls function to generate response', async () => {
       const mockAPI = createMockAPI({
-        'GET /api/products': (config) => {
+        'GET /api/products': (config: RequestConfig) => {
           return [{ id: '1', name: 'Product from function' }];
         }
       });
@@ -100,8 +102,10 @@ describe('createMockAPI', () => {
 
     it('passes config to response function', async () => {
       const mockAPI = createMockAPI({
-        'POST /api/products': (config) => {
-          return { ...config.body, id: '123' };
+        'POST /api/products': (config: RequestConfig) => {
+          // `body` is `unknown` on the public type — the mock does not know what
+          // a route was sent. The cast says what this test posts, three lines up.
+          return { ...(config.body as Record<string, unknown>), id: '123' };
         }
       });
 
@@ -112,7 +116,7 @@ describe('createMockAPI', () => {
 
     it('passes params to response function', async () => {
       const mockAPI = createMockAPI({
-        'GET /api/products/:id': (config, params) => {
+        'GET /api/products/:id': (config: RequestConfig, params: Record<string, string>) => {
           return { id: params.id, name: `Product ${params.id}` };
         }
       });
@@ -170,7 +174,10 @@ describe('createMockAPI', () => {
       const mockAPI = createMockAPI({
         'GET /api/products/:id': {
           delay: 10,
-          data: (config, params) => ({ id: params.id, name: 'Delayed Product' })
+          data: (config: RequestConfig, params: Record<string, string>) => ({
+            id: params.id,
+            name: 'Delayed Product'
+          })
         }
       });
 
@@ -205,7 +212,7 @@ describe('createMockAPI', () => {
   describe('Pattern Matching', () => {
     it('matches single path parameter', async () => {
       const mockAPI = createMockAPI({
-        'GET /api/products/:id': (config, params) => ({
+        'GET /api/products/:id': (config: RequestConfig, params: Record<string, string>) => ({
           id: params.id,
           name: `Product ${params.id}`
         })
@@ -218,7 +225,7 @@ describe('createMockAPI', () => {
 
     it('matches multiple path parameters', async () => {
       const mockAPI = createMockAPI({
-        'GET /api/users/:userId/posts/:postId': (config, params) => ({
+        'GET /api/users/:userId/posts/:postId': (config: RequestConfig, params: Record<string, string>) => ({
           userId: params.userId,
           postId: params.postId
         })
@@ -231,7 +238,7 @@ describe('createMockAPI', () => {
 
     it('matches slug parameters', async () => {
       const mockAPI = createMockAPI({
-        'GET /api/posts/:slug': (config, params) => ({
+        'GET /api/posts/:slug': (config: RequestConfig, params: Record<string, string>) => ({
           slug: params.slug,
           title: `Post: ${params.slug}`
         })
@@ -245,7 +252,7 @@ describe('createMockAPI', () => {
     it('prefers exact match over pattern match', async () => {
       const mockAPI = createMockAPI({
         'GET /api/products/new': { type: 'new-form' },
-        'GET /api/products/:id': (config, params) => ({ type: 'product', id: params.id })
+        'GET /api/products/:id': (config: RequestConfig, params: Record<string, string>) => ({ type: 'product', id: params.id })
       });
 
       const exactResponse = await mockAPI.get('/api/products/new');
@@ -269,7 +276,7 @@ describe('createMockAPI', () => {
 
     it('passes query params in config', async () => {
       const mockAPI = createMockAPI({
-        'GET /api/products': (config) => {
+        'GET /api/products': (config: RequestConfig) => {
           return {
             page: config.params?.page,
             limit: config.params?.limit
@@ -339,7 +346,7 @@ describe('createMockAPI', () => {
 
     it('handles POST request with body', async () => {
       const mockAPI = createMockAPI({
-        'POST /api/products': (config) => config.body
+        'POST /api/products': (config: RequestConfig) => config.body
       });
 
       const response = await mockAPI.request({
@@ -353,7 +360,7 @@ describe('createMockAPI', () => {
 
     it('handles path parameters in request', async () => {
       const mockAPI = createMockAPI({
-        'GET /api/products/:id': (config, params) => ({ id: params.id })
+        'GET /api/products/:id': (config: RequestConfig, params: Record<string, string>) => ({ id: params.id })
       });
 
       const response = await mockAPI.request({
@@ -376,25 +383,202 @@ describe('createMockAPI', () => {
     });
   });
 
-  describe('No-op Methods', () => {
-    it('addInterceptor returns cleanup function', () => {
-      const mockAPI = createMockAPI({});
-      const cleanup = mockAPI.addInterceptor({});
+  describe('Interceptors', () => {
+    // These three were `expect(typeof cleanup).toBe('function')` and two
+    // `not.toThrow()`s, which is what a total no-op passes. `addInterceptor`
+    // returned an empty closure and `clearCache`/`invalidateCache` did nothing,
+    // so any test exercising auth headers, response shaping or error mapping
+    // against the mock proved the opposite of what it looked like.
 
-      expect(typeof cleanup).toBe('function');
-      cleanup(); // Should not throw
+    it('runs onRequest before the route is resolved', async () => {
+      const seen: RequestConfig[] = [];
+      const mockAPI = createMockAPI({
+        'GET /api/me': (config: RequestConfig) => ({ token: config.headers?.authorization ?? null })
+      });
+
+      mockAPI.addInterceptor({
+        onRequest: (_url, config) => {
+          seen.push(config);
+          return { ...config, headers: { ...config.headers, authorization: 'Bearer t' } };
+        }
+      });
+
+      const response = await mockAPI.get<{ token: string | null }>('/api/me');
+
+      expect(seen).toHaveLength(1);
+      expect(response.data.token, 'the route never saw the injected header').toBe('Bearer t');
     });
 
-    it('clearCache does not throw', () => {
-      const mockAPI = createMockAPI({});
+    it('passes the resolved URL to onRequest', async () => {
+      const urls: string[] = [];
+      const mockAPI = createMockAPI({ 'GET /api/items': [] });
 
-      expect(() => mockAPI.clearCache()).not.toThrow();
+      mockAPI.addInterceptor({ onRequest: (url, config) => { urls.push(url); return config; } });
+      await mockAPI.get('/api/items');
+
+      expect(urls).toEqual(['/api/items']);
     });
 
-    it('invalidateCache does not throw', () => {
-      const mockAPI = createMockAPI({});
+    it('runs onResponse and lets it rewrite the response', async () => {
+      const mockAPI = createMockAPI({ 'GET /api/items': [{ id: '1' }] });
 
-      expect(() => mockAPI.invalidateCache('/api/*')).not.toThrow();
+      mockAPI.addInterceptor({
+        onResponse: (response) => ({ ...response, status: 299 })
+      });
+
+      const response = await mockAPI.get('/api/items');
+      expect(response.status).toBe(299);
+    });
+
+    it('runs onError, which may recover', async () => {
+      const mockAPI = createMockAPI({
+        'GET /api/boom': { error: new APIError('nope', 500, null, {}, false) }
+      });
+
+      mockAPI.addInterceptor({
+        onError: () => ({ status: 200, headers: {}, data: { recovered: true } })
+      });
+
+      const response = await mockAPI.get<{ recovered: boolean }>('/api/boom');
+      expect(response.data.recovered).toBe(true);
+    });
+
+    it('rethrows when no onError recovers', async () => {
+      // Registers an actual `onError` that declines by throwing. The earlier
+      // version of this test registered only an `onRequest`, so it never
+      // entered the error loop at all and could not see that the loop returned
+      // from the first hook without a try — which made a rethrowing hook
+      // surface a *different* error under the mock than under the real client.
+      const mockAPI = createMockAPI({
+        'GET /api/boom': { error: new APIError('nope', 500, null, {}, false) }
+      });
+      mockAPI.addInterceptor({
+        onError: () => {
+          throw new Error('mapped, but still an error');
+        }
+      });
+
+      await expect(mockAPI.get('/api/boom')).rejects.toThrow('nope');
+    });
+
+    it('falls through to a later onError when an earlier one declines', async () => {
+      const mockAPI = createMockAPI({
+        'GET /api/boom': { error: new APIError('nope', 500, null, {}, false) }
+      });
+
+      mockAPI.addInterceptor({
+        onError: () => {
+          throw new Error('not mine');
+        }
+      });
+      mockAPI.addInterceptor({
+        onError: () => ({ status: 200, headers: {}, data: { rescuedBySecond: true } })
+      });
+
+      const response = await mockAPI.get<{ rescuedBySecond: boolean }>('/api/boom');
+      expect(response.data.rescuedBySecond).toBe(true);
+    });
+
+    it('the returned function removes the interceptor', async () => {
+      let calls = 0;
+      const mockAPI = createMockAPI({ 'GET /api/items': [] });
+
+      const remove = mockAPI.addInterceptor({
+        onRequest: (_url, config) => {
+          calls += 1;
+          return config;
+        }
+      });
+
+      await mockAPI.get('/api/items');
+      remove();
+      await mockAPI.get('/api/items');
+
+      expect(calls, 'cleanup did not remove it').toBe(1);
+    });
+
+    it('runs interceptors in the order they were added', async () => {
+      const order: string[] = [];
+      const mockAPI = createMockAPI({ 'GET /api/items': [] });
+
+      mockAPI.addInterceptor({ onRequest: (_u, c) => { order.push('first'); return c; } });
+      mockAPI.addInterceptor({ onRequest: (_u, c) => { order.push('second'); return c; } });
+      await mockAPI.get('/api/items');
+
+      expect(order).toEqual(['first', 'second']);
+    });
+  });
+
+  describe('Cache', () => {
+    beforeEach(() => {
+      // The cache module is a singleton shared with the real client.
+      clearCache();
+    });
+
+    it('does not cache by default, matching the real client', async () => {
+      let hits = 0;
+      const mockAPI = createMockAPI({
+        'GET /api/count': () => ({ hits: (hits += 1) })
+      });
+
+      await mockAPI.get('/api/count');
+      const second = await mockAPI.get<{ hits: number }>('/api/count');
+
+      expect(second.data.hits, 'the mock cached without being asked to').toBe(2);
+    });
+
+    it('serves a cached GET when asked to cache', async () => {
+      let hits = 0;
+      const mockAPI = createMockAPI({
+        'GET /api/count': () => ({ hits: (hits += 1) })
+      });
+
+      await mockAPI.get('/api/count', { cache: true });
+      const second = await mockAPI.get<{ hits: number }>('/api/count', { cache: true });
+
+      expect(second.data.hits).toBe(1);
+      expect(second.cached).toBe(true);
+    });
+
+    it('clearCache actually clears it', async () => {
+      let hits = 0;
+      const mockAPI = createMockAPI({ 'GET /api/count': () => ({ hits: (hits += 1) }) });
+
+      await mockAPI.get('/api/count', { cache: true });
+      mockAPI.clearCache();
+      const second = await mockAPI.get<{ hits: number }>('/api/count', { cache: true });
+
+      expect(second.data.hits, 'clearCache was a no-op').toBe(2);
+    });
+
+    it('invalidateCache drops matching entries only', async () => {
+      let items = 0;
+      let others = 0;
+      const mockAPI = createMockAPI({
+        'GET /api/items': () => ({ n: (items += 1) }),
+        'GET /api/others': () => ({ n: (others += 1) })
+      });
+
+      await mockAPI.get('/api/items', { cache: true });
+      await mockAPI.get('/api/others', { cache: true });
+
+      mockAPI.invalidateCache('/api/items');
+
+      const refetchedItems = await mockAPI.get<{ n: number }>('/api/items', { cache: true });
+      const stillCachedOthers = await mockAPI.get<{ n: number }>('/api/others', { cache: true });
+
+      expect(refetchedItems.data.n).toBe(2);
+      expect(stillCachedOthers.data.n, 'invalidate took out an unrelated entry').toBe(1);
+    });
+
+    it('never caches a POST', async () => {
+      let hits = 0;
+      const mockAPI = createMockAPI({ 'POST /api/things': () => ({ n: (hits += 1) }) });
+
+      await mockAPI.post('/api/things', {}, { cache: true });
+      const second = await mockAPI.post<{ n: number }>('/api/things', {}, { cache: true });
+
+      expect(second.data.n).toBe(2);
     });
   });
 
@@ -407,16 +591,16 @@ describe('createMockAPI', () => {
 
       const mockAPI = createMockAPI({
         'GET /api/products': products,
-        'GET /api/products/:id': (config, params) => {
+        'GET /api/products/:id': (config: RequestConfig, params: Record<string, string>) => {
           return products.find(p => p.id === params.id) || null;
         },
-        'POST /api/products': (config) => ({
+        'POST /api/products': (config: RequestConfig) => ({
           id: '3',
-          ...config.body
+          ...(config.body as Record<string, unknown>)
         }),
-        'PUT /api/products/:id': (config, params) => ({
+        'PUT /api/products/:id': (config: RequestConfig, params: Record<string, string>) => ({
           id: params.id,
-          ...config.body
+          ...(config.body as Record<string, unknown>)
         }),
         'DELETE /api/products/:id': { success: true }
       });
@@ -444,7 +628,7 @@ describe('createMockAPI', () => {
 
     it('mocks API with pagination', async () => {
       const mockAPI = createMockAPI({
-        'GET /api/products': (config) => {
+        'GET /api/products': (config: RequestConfig) => {
           const page = config.params?.page || 1;
           const pageSize = config.params?.pageSize || 10;
 
@@ -471,7 +655,7 @@ describe('createMockAPI', () => {
 
     it('mocks API with authentication', async () => {
       const mockAPI = createMockAPI({
-        'GET /api/protected': (config) => {
+        'GET /api/protected': (config: RequestConfig) => {
           const token = config.headers?.['Authorization'];
 
           if (!token || token !== 'Bearer valid-token') {

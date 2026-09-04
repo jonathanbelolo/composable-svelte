@@ -5,7 +5,7 @@
  */
 
 import Prism from 'prismjs';
-import type { SupportedLanguage } from './code-highlight.types';
+import type { SupportedLanguage } from './code-highlight.types.js';
 
 // Track loaded languages to avoid re-imports
 const loadedLanguages = new Set<string>(['markup', 'css', 'clike', 'javascript']);

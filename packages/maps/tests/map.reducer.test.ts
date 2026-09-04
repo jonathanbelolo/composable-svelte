@@ -9,7 +9,6 @@ import type { MapState, MapAction } from '../src/lib/types/map.types';
 
 describe('mapReducer', () => {
   const initialState: MapState = createInitialMapState({
-    provider: 'maplibre',
     center: [0, 0],
     zoom: 2
   });
@@ -193,7 +192,7 @@ describe('mapReducer', () => {
       const [newState] = mapReducer(stateWithMarker, action, {});
 
       expect(newState.markers).toHaveLength(1);
-      expect(newState.markers[0].id).toBe('marker-2');
+      expect(newState.markers[0]!.id).toBe('marker-2');
     });
 
     it('updateMarker updates marker properties', () => {
@@ -210,7 +209,7 @@ describe('mapReducer', () => {
 
       const [newState] = mapReducer(stateWithMarker, action, {});
 
-      expect(newState.markers[0].draggable).toBe(true);
+      expect(newState.markers[0]!.draggable).toBe(true);
     });
 
     it('moveMarker updates marker position', () => {
@@ -227,7 +226,7 @@ describe('mapReducer', () => {
 
       const [newState] = mapReducer(stateWithMarker, action, {});
 
-      expect(newState.markers[0].position).toEqual([-118.2437, 34.0522]);
+      expect(newState.markers[0]!.position).toEqual([-118.2437, 34.0522]);
     });
 
     it('clearMarkers removes all markers', () => {
@@ -286,7 +285,6 @@ describe('createInitialMapState', () => {
   it('creates initial state with defaults', () => {
     const state = createInitialMapState({});
 
-    expect(state.provider).toBe('maplibre');
     expect(state.viewport.center).toEqual([0, 0]);
     expect(state.viewport.zoom).toBe(2);
     expect(state.viewport.bearing).toBe(0);
@@ -299,7 +297,6 @@ describe('createInitialMapState', () => {
 
   it('creates initial state with custom config', () => {
     const state = createInitialMapState({
-      provider: 'mapbox',
       accessToken: 'test-token',
       center: [-74.006, 40.7128],
       zoom: 12,
@@ -307,7 +304,6 @@ describe('createInitialMapState', () => {
       pitch: 30
     });
 
-    expect(state.provider).toBe('mapbox');
     expect(state.accessToken).toBe('test-token');
     expect(state.viewport.center).toEqual([-74.006, 40.7128]);
     expect(state.viewport.zoom).toBe(12);
@@ -316,14 +312,14 @@ describe('createInitialMapState', () => {
   });
 
   it('uses openstreetmap style by default', () => {
-    const state = createInitialMapState({ provider: 'maplibre' });
+    const state = createInitialMapState({});
 
     expect(state.style).toBe('https://demotiles.maplibre.org/style.json');
     expect(state.tileProvider).toBe('openstreetmap');
   });
 
   it('uses specified tile provider', () => {
-    const state = createInitialMapState({ provider: 'mapbox', tileProvider: 'carto-dark' });
+    const state = createInitialMapState({ tileProvider: 'carto-dark' });
 
     expect(state.tileProvider).toBe('carto-dark');
     expect(state.style).toBe('https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json');
@@ -332,7 +328,6 @@ describe('createInitialMapState', () => {
 
 describe('layer actions', () => {
   const initialState: MapState = createInitialMapState({
-    provider: 'maplibre',
     center: [0, 0],
     zoom: 2
   });
@@ -393,7 +388,7 @@ describe('layer actions', () => {
 
     const [newState] = mapReducer(stateWithLayer, action, {});
 
-    expect(newState.layers[0].visible).toBe(false);
+    expect(newState.layers[0]!.visible).toBe(false);
   });
 
   it('updateLayerStyle updates layer style', () => {
@@ -410,8 +405,8 @@ describe('layer actions', () => {
 
     const [newState] = mapReducer(stateWithLayer, action, {});
 
-    expect(newState.layers[0].style.fillColor).toBe('#ff0000');
-    expect(newState.layers[0].style.fillOpacity).toBe(0.8);
+    expect(newState.layers[0]!.style.fillColor).toBe('#ff0000');
+    expect(newState.layers[0]!.style.fillOpacity).toBe(0.8);
   });
 
   it('clearLayers removes all layers', () => {
@@ -432,7 +427,6 @@ describe('layer actions', () => {
 
 describe('popup actions', () => {
   const initialState: MapState = createInitialMapState({
-    provider: 'maplibre',
     center: [0, 0],
     zoom: 2
   });
@@ -472,7 +466,7 @@ describe('popup actions', () => {
     const [newState] = mapReducer(stateWithPopup, action, {});
 
     expect(newState.popups).toHaveLength(1);
-    expect(newState.popups[0].content).toBe('<h3>Updated</h3>');
+    expect(newState.popups[0]!.content).toBe('<h3>Updated</h3>');
   });
 
   it('closePopup closes a popup by id', () => {
@@ -488,7 +482,7 @@ describe('popup actions', () => {
 
     const [newState] = mapReducer(stateWithPopup, action, {});
 
-    expect(newState.popups[0].isOpen).toBe(false);
+    expect(newState.popups[0]!.isOpen).toBe(false);
   });
 
   it('closeAllPopups closes all popups', () => {
@@ -504,5 +498,39 @@ describe('popup actions', () => {
     const [newState] = mapReducer(stateWithPopups, action, {});
 
     expect(newState.popups.every(p => !p.isOpen)).toBe(true);
+  });
+});
+
+describe('changeTileProvider keeps the style derived', () => {
+  // `style` used to hold the *initial* style forever, so it stopped describing
+  // the map after the first provider change. These pin the two cases a
+  // recomputation could get wrong.
+  it('replaces an explicitly supplied initial style', () => {
+    // A caller who passes their own style and then changes provider is asking
+    // for the new provider's style. Keeping the old one would be the map
+    // silently ignoring the change.
+    const state = mapReducer(
+      createInitialMapState({ style: 'https://example.test/my-own-style.json' }),
+      { type: 'changeTileProvider', provider: 'carto-dark' },
+      {}
+    )[0];
+
+    expect(state.style).not.toContain('my-own-style');
+    expect(state.style).toContain('dark-matter');
+  });
+
+  it('uses the custom URL when the provider is custom', () => {
+    const state = mapReducer(
+      createInitialMapState({}),
+      {
+        type: 'changeTileProvider',
+        provider: 'custom',
+        customURL: 'https://example.test/custom.json'
+      },
+      {}
+    )[0];
+
+    expect(state.style).toBe('https://example.test/custom.json');
+    expect(state.customTileURL).toBe('https://example.test/custom.json');
   });
 });

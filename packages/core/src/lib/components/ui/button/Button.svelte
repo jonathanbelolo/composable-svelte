@@ -31,37 +31,37 @@
 		/**
 		 * Visual variant of the button.
 		 */
-		variant?: 'default' | 'primary' | 'secondary' | 'destructive' | 'outline' | 'ghost' | 'link';
+		variant?: 'default' | 'primary' | 'secondary' | 'destructive' | 'outline' | 'ghost' | 'link' | undefined;
 
 		/**
 		 * Size of the button.
 		 */
-		size?: 'sm' | 'md' | 'lg' | 'icon';
+		size?: 'sm' | 'md' | 'lg' | 'icon' | undefined;
 
 		/**
 		 * Disabled state.
 		 */
-		disabled?: boolean;
+		disabled?: boolean | undefined;
 
 		/**
 		 * Loading state (shows spinner, disables interaction).
 		 */
-		loading?: boolean;
+		loading?: boolean | undefined;
 
 		/**
 		 * Reducer action to dispatch on click (Composable Architecture pattern).
 		 */
-		action?: Action;
+		action?: Action | undefined;
 
 		/**
 		 * Dispatch function from store (required if action is provided).
 		 */
-		dispatch?: Dispatch<Action>;
+		dispatch?: Dispatch<Action> | undefined;
 
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Button content.
@@ -83,7 +83,7 @@
 	}: ButtonProps<Action> = $props();
 
 	const baseClasses =
-		'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50';
+		'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50';
 
 	const variantClasses = {
 		default: 'bg-primary text-primary-foreground hover:bg-primary/90',
@@ -117,8 +117,34 @@
 		onclick?.(e);
 	}
 
+	/**
+	 * Look a variant or size up, falling back rather than resolving to nothing.
+	 *
+	 * `variantClasses[variant]` is `undefined` for anything outside the union,
+	 * and `cn()` drops undefined — so an unrecognised size produced a button
+	 * with no height and no padding, and an unrecognised variant one with no
+	 * background. Invisible, not wrong-looking.
+	 *
+	 * TypeScript catches a literal. It does not catch a value arriving from a
+	 * store, a JSON payload or an untyped call site, and that is where this
+	 * actually happened: `product-gallery` passed `size="default"` — a real
+	 * shadcn size name, absent from this union — and every share button lost its
+	 * sizing. That is recorded as S4.6, and it was fixed in the example while
+	 * the component kept the behaviour that allowed it.
+	 */
+	// A function declaration, not a generic arrow: `<T extends …>` in a `.svelte`
+	// file is ambiguous with markup and the parser takes it as a tag.
+	function lookup(table: Record<string, string>, key: string, fallback: string): string {
+		return table[key] ?? table[fallback]!;
+	}
+
 	const buttonClasses = $derived(
-		cn(baseClasses, variantClasses[variant], sizeClasses[size], className)
+		cn(
+			baseClasses,
+			lookup(variantClasses, variant, 'default'),
+			lookup(sizeClasses, size, 'md'),
+			className
+		)
 	);
 </script>
 

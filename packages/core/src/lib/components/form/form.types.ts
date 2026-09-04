@@ -7,7 +7,8 @@
  */
 
 import type { ZodSchema } from 'zod';
-import type { Store } from '../../types.js';
+
+import type { AsyncValidators, FieldPath, FormFields } from './field-path.js';
 
 /**
  * Complete form state for a given data shape.
@@ -49,9 +50,7 @@ export interface FormState<T extends Record<string, any>> {
 	 * Per-field state tracking.
 	 * Each key corresponds to a field in the form data.
 	 */
-	fields: {
-		[K in keyof T]: FieldState;
-	};
+	fields: FormFields<T>;
 
 	/**
 	 * Zod schema for validation.
@@ -63,6 +62,16 @@ export interface FormState<T extends Record<string, any>> {
 	 * Form-level validation errors (cross-field validation, refinements).
 	 */
 	formErrors: string[];
+
+	/**
+	 * Which field currently has focus, or null.
+	 *
+	 * Form-level rather than per-field because only one field can hold focus.
+	 * Deliberately separate from `touched`: `touched` gates error display, so
+	 * marking a field touched on focus would fire its "required" error as the
+	 * user tabs in. `fieldBlurred` is what touches.
+	 */
+	focusedField: FieldPath<T> | null;
 
 	/**
 	 * Is entire form currently validating?
@@ -107,11 +116,6 @@ export interface FormState<T extends Record<string, any>> {
  */
 export interface FieldState {
 	/**
-	 * Current field value.
-	 */
-	value: any;
-
-	/**
 	 * Has user interacted with this field (focused/blurred)?
 	 */
 	touched: boolean;
@@ -135,6 +139,24 @@ export interface FieldState {
 	 * Non-blocking validation warnings.
 	 */
 	warnings: string[];
+}
+
+/**
+ * What `FormField` hands to `FormControl`, `FormLabel` and `FormMessage`.
+ *
+ * The stored `FieldState` plus the two things the form tracks in one place
+ * rather than per field: the value (`state.data[name]`) and focus
+ * (`state.focusedField`). Both used to sit on the stored record, where the
+ * reducer wrote them once at init and never again — `value` went stale on the
+ * first keystroke and `focused` stayed `false` forever, while the component
+ * quietly derived the right answers anyway.
+ */
+export interface FieldRenderState extends FieldState {
+	/** Current field value, from `state.data`. */
+	value: any;
+
+	/** Does this field currently have focus, from `state.focusedField`. */
+	focused: boolean;
 }
 
 /**
@@ -214,9 +236,7 @@ export interface FormConfig<T extends Record<string, any>> {
 	 * }
 	 * ```
 	 */
-	asyncValidators?: Partial<{
-		[K in keyof T]: (value: T[K]) => Promise<void>;
-	}>;
+	asyncValidators?: AsyncValidators<T>;
 
 	/**
 	 * Submission handler - called after successful validation.
@@ -242,7 +262,24 @@ export interface FormConfig<T extends Record<string, any>> {
 }
 
 /**
- * Validation mode options.
+ * When fields are validated.
+ *
+ * - `onSubmit` — only when the form is submitted. The whole schema is parsed at
+ *   once, so every rule applies, cross-field ones included.
+ * - `onBlur` — additionally when a field loses focus.
+ * - `onChange` — additionally as it is edited, debounced by `debounceMs`.
+ * - `all` — both `onBlur` and `onChange`.
+ *
+ * The three per-field modes parse the **whole schema** and take the issues for
+ * the field being validated, so a `.refine()` spanning two fields is live in
+ * all of them. They were once documented by nothing at all, and validated one
+ * sub-schema in isolation, which made every cross-field rule invisible outside
+ * `onSubmit`.
+ *
+ * One asymmetry is deliberate: a per-field pass may **clear** an error on any
+ * field the parse now exonerates, but only ever **sets** one on the field being
+ * validated. Editing `password` therefore clears a stale "passwords must match"
+ * from `confirmPassword` without flagging fields the user has not reached yet.
  */
 export type ValidationMode = 'onBlur' | 'onChange' | 'onSubmit' | 'all';
 
@@ -257,16 +294,16 @@ export type FormAction<T extends Record<string, any>> =
 	// ================================================================
 	| {
 			type: 'fieldChanged';
-			field: keyof T;
+			field: FieldPath<T>;
 			value: unknown;
 	  }
 	| {
 			type: 'fieldBlurred';
-			field: keyof T;
+			field: FieldPath<T>;
 	  }
 	| {
 			type: 'fieldFocused';
-			field: keyof T;
+			field: FieldPath<T>;
 	  }
 
 	// ================================================================
@@ -274,11 +311,11 @@ export type FormAction<T extends Record<string, any>> =
 	// ================================================================
 	| {
 			type: 'fieldValidationStarted';
-			field: keyof T;
+			field: FieldPath<T>;
 	  }
 	| {
 			type: 'fieldValidationCompleted';
-			field: keyof T;
+			field: FieldPath<T>;
 			error: string | null;
 			warnings?: string[];
 	  }
@@ -291,8 +328,20 @@ export type FormAction<T extends Record<string, any>> =
 	  }
 	| {
 			type: 'formValidationCompleted';
-			fieldErrors: Partial<Record<keyof T, string>>;
+			fieldErrors: Partial<Record<FieldPath<T>, string>>;
 			formErrors: string[];
+			/**
+			 * The schema's *output*, when validation passed.
+			 *
+			 * Present only on the success path, and written straight into
+			 * `state.data` — so a schema transform such as `.trim()` is what the
+			 * form actually holds by the time anything reads it.
+			 *
+			 * Optional so the action stays backwards compatible, and absent on
+			 * failure because there is nothing to write: a form that did not
+			 * validate must keep exactly what the user typed.
+			 */
+			data?: T;
 	  }
 
 	// ================================================================
@@ -322,33 +371,44 @@ export type FormAction<T extends Record<string, any>> =
 	  }
 	| {
 			type: 'setFieldValue';
-			field: keyof T;
+			field: FieldPath<T>;
 			value: unknown;
 	  }
 	| {
 			type: 'setFieldError';
-			field: keyof T;
+			field: FieldPath<T>;
 			error: string;
 	  }
 	| {
 			type: 'clearFieldError';
-			field: keyof T;
+			field: FieldPath<T>;
 	  };
-
-/**
- * Dependencies for form reducer.
- * Can be extended with custom dependencies if needed.
- */
-export interface FormDependencies {
-	// Currently empty - can add deps like API clients, etc.
-}
 
 /**
  * The value a `FormField` hands to its children snippet.
  */
 export interface FieldRenderProps<T extends Record<string, any>> {
-	field: FieldState;
+	field: FieldRenderState;
 	send: (action: FormAction<T>) => void;
+}
+
+/**
+ * The part of a store the form components actually consume.
+ *
+ * Narrower than `Store` on purpose. In integrated mode the caller passes a store
+ * scoped to a slice of a parent's state, and every scoping helper in this
+ * library returns `{state, dispatch, …}` — never a full `Store`. Demanding
+ * `select`, `history` and `destroy` meant the documented integrated-mode pattern
+ * could not typecheck, which is why three of the examples hand-roll this exact
+ * shape and cast around it.
+ *
+ * `subscribe` is genuinely needed, not padding: `FormField.svelte` reads
+ * `$store.data[name]`, the auto-subscription form.
+ */
+export interface FormStore<T extends Record<string, any>> {
+	readonly state: FormState<T>;
+	dispatch(action: FormAction<T>): void;
+	subscribe(listener: (state: FormState<T>) => void): () => void;
 }
 
 /**
@@ -368,7 +428,7 @@ export interface FormProps<T extends Record<string, any>> {
 	 * External store from parent reducer (integrated mode).
 	 * Mutually exclusive with `config`.
 	 */
-	store?: Store<FormState<T>, FormAction<T>> | undefined;
+	store?: FormStore<T> | undefined;
 	/**
 	 * Optional class name for the form element.
 	 */
@@ -386,7 +446,7 @@ export interface FormFieldProps<T extends Record<string, any>> {
 	/**
 	 * The name of the field in the form data.
 	 */
-	name: keyof T & string;
+	name: FieldPath<T>;
 	/**
 	 * Optional class name for the field wrapper.
 	 */

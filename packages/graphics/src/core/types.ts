@@ -4,41 +4,34 @@
  */
 
 // ============================================================================
-// Vector and Transform Types
+// Vector Types
 // ============================================================================
 
 export type Vector3 = [number, number, number];
-export type Vector2 = [number, number];
 export type Color = string; // Hex color string like '#ff6b6b'
-
-export interface Transform {
-  position: Vector3;
-  rotation: Vector3; // Euler angles in radians
-  scale: Vector3;
-}
 
 // ============================================================================
 // Renderer Configuration
 // ============================================================================
 
-export type RendererType = 'auto' | 'webgpu' | 'webgl';
-
-export interface RendererConfig {
-  type: RendererType;
-  preferWebGPU?: boolean;
-  antialiasing?: boolean;
-  adaptToDeviceRatio?: boolean;
-}
-
+/**
+ * `RendererType = 'auto' | 'webgpu' | 'webgl'` used to sit here, referenced by
+ * nothing at all. `'webgpu'` was likewise unproducible in `activeRenderer`:
+ * both branches of the adapter's "detection" built the same WebGL `Engine`, so
+ * the label was the only thing that ever varied, and it is now always `'webgl'`.
+ */
 export interface RendererState {
-  activeRenderer: 'webgpu' | 'webgl' | null;
+  activeRenderer: 'webgl' | null;
   isInitialized: boolean;
   capabilities: RendererCapabilities;
   error: string | null;
 }
 
 export interface RendererCapabilities {
-  supportsWebGPU: boolean;
+  // `supportsWebGPU: boolean` used to sit here, hardcoded to `false` in both
+  // the initial state and the adapter. It is named for a *browser capability*
+  // and was given a fixed answer, so on a WebGPU-capable browser it simply lied
+  // — and nothing in the package consults it, because nothing here uses WebGPU.
   supportsWebGL: boolean;
   maxTextureSize: number;
   maxVertexAttributes: number;
@@ -64,8 +57,6 @@ export interface CameraConfig {
 // Geometry Types
 // ============================================================================
 
-export type GeometryType = 'box' | 'sphere' | 'cylinder' | 'plane' | 'torus' | 'custom';
-
 export type GeometryConfig =
   | { type: 'box'; size: number }
   | { type: 'sphere'; radius: number; segments?: number }
@@ -87,26 +78,42 @@ export interface MaterialConfig {
   wireframe?: boolean;
 }
 
-export interface CustomShaderMaterial {
-  vertexShader: string;
-  fragmentShader: string;
-  uniforms?: Record<string, unknown>;
-}
-
 // ============================================================================
 // Light Types
 // ============================================================================
 
-export type LightType = 'directional' | 'point' | 'spot' | 'ambient';
-
+/**
+ * Every light carries an `id`, as every mesh does.
+ *
+ * Without one a light could only be named by its position in the array, and
+ * that is what made removal wrong: `<Light>` captured its index at mount and
+ * the reducer filtered by index, so with the default ambient light in slot 0,
+ * unmounting three children removed index 1, then index 2 of the already
+ * shifted array. It also forced the scene sync to clear and re-add *every*
+ * light on any change, because it had no way to say which one moved.
+ *
+ * `<Light>` supplies one automatically via `$props.id()` when you do not, so
+ * existing markup is unaffected.
+ */
 export type LightConfig =
   | {
+      id: string;
       type: 'directional';
-      position: Vector3;
+      /**
+       * The direction the light travels in.
+       *
+       * This was called `position`, and a directional light has none: the
+       * adapter passed the value straight into Babylon's `DirectionalLight`
+       * direction argument and `updateLight` assigned it to `.direction`. The
+       * name described neither the type nor the behaviour. `spot` has always
+       * spelled its own the same way.
+       */
+      direction: Vector3;
       intensity: number;
       color?: Color;
     }
   | {
+      id: string;
       type: 'point';
       position: Vector3;
       intensity: number;
@@ -114,6 +121,7 @@ export type LightConfig =
       color?: Color;
     }
   | {
+      id: string;
       type: 'spot';
       position: Vector3;
       direction: Vector3;
@@ -122,6 +130,7 @@ export type LightConfig =
       color?: Color;
     }
   | {
+      id: string;
       type: 'ambient';
       intensity: number;
       color?: Color;
@@ -134,24 +143,21 @@ export type LightConfig =
 export interface MeshConfig {
   id: string;
   geometry: GeometryConfig;
-  material: MaterialConfig | CustomShaderMaterial;
+  /**
+   * Surface appearance.
+   *
+   * This was `MaterialConfig | CustomShaderMaterial`, and the second arm was
+   * dropped in silence: the adapter narrows with `if ('color' in ...)`, a
+   * shader material has no `color`, so it fell through and rendered Babylon's
+   * default. Implementing it means `ShaderMaterial` plus uniform and attribute
+   * plumbing and a compile-error path, and the package already has a shader
+   * story in the WebGL overlay.
+   */
+  material: MaterialConfig;
   position: Vector3;
   rotation?: Vector3;
   scale?: Vector3;
   visible?: boolean;
-  castShadows?: boolean;
-  receiveShadows?: boolean;
-}
-
-// ============================================================================
-// Scene Graph
-// ============================================================================
-
-export interface SceneNode {
-  id: string;
-  children: SceneNode[];
-  transform: Transform;
-  visible: boolean;
 }
 
 // ============================================================================
@@ -181,11 +187,26 @@ export interface AnimationState {
 // ============================================================================
 
 export interface GraphicsState {
+  /**
+   * Identity for this scene, unique per store slice.
+   *
+   * Used to key the animation frame loop's cancellable effect. A cancellable
+   * id is the one part of a reducer's output that is global by construction:
+   * the store keeps a single in-flight map and `Effect.map` preserves the id
+   * through every layer of scoping. A module-level constant is therefore shared
+   * by every instance of this feature, so two composed scenes cancelled each
+   * other's frame loop — the first froze permanently while still reporting
+   * `isPlaying: true`.
+   *
+   * `createInitialGraphicsState` generates one; pass your own if you need it
+   * stable across reloads.
+   */
+  sceneId: string;
+
   // Renderer
   renderer: RendererState;
 
   // Scene
-  scene: SceneNode;
   backgroundColor: Color;
 
   // Camera
@@ -202,7 +223,6 @@ export interface GraphicsState {
 
   // Loading state
   isLoading: boolean;
-  loadingProgress: number; // 0-1
 }
 
 // ============================================================================
@@ -211,7 +231,7 @@ export interface GraphicsState {
 
 export type GraphicsAction =
   // Renderer actions
-  | { type: 'rendererInitialized'; renderer: 'webgpu' | 'webgl'; capabilities: RendererCapabilities }
+  | { type: 'rendererInitialized'; renderer: 'webgl'; capabilities: RendererCapabilities }
   | { type: 'rendererError'; error: string }
 
   // Camera actions
@@ -230,8 +250,8 @@ export type GraphicsAction =
 
   // Light actions
   | { type: 'addLight'; light: LightConfig }
-  | { type: 'removeLight'; index: number }
-  | { type: 'updateLight'; index: number; light: Partial<LightConfig> }
+  | { type: 'removeLight'; id: string }
+  | { type: 'updateLight'; id: string; light: LightConfig }
 
   // Animation actions
   | { type: 'startAnimation'; animation: AnimationConfig }

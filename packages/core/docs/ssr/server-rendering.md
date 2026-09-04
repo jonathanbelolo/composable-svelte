@@ -728,7 +728,7 @@ interface RouteConfig {
 
 ### Complete SSR Example
 
-See [examples/ssr-server](../../../examples/ssr-server/) for:
+See [examples/ssr-server](../../../../examples/ssr-server/) for:
 - Fastify server with SSR
 - Multi-locale support (en/fr/es)
 - URL routing integration
@@ -737,7 +737,7 @@ See [examples/ssr-server](../../../examples/ssr-server/) for:
 
 ### Complete SSG Example
 
-See [examples/ssr-server/src/build/ssg.ts](../../../examples/ssr-server/src/build/ssg.ts) for:
+See [examples/ssr-server/src/build/ssg.ts](../../../../examples/ssr-server/src/build/ssg.ts) for:
 - Static site generation
 - Multi-locale pages (33 HTML files)
 - Dynamic route enumeration

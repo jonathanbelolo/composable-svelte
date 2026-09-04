@@ -36,31 +36,32 @@ All components follow Composable Architecture patterns with dedicated reducers a
 
 ### Quick Start
 
-```typescript
-import { createStore } from '@composable-svelte/core';
-import { CodeEditor, codeEditorReducer, createInitialState } from '@composable-svelte/code';
+```svelte
+<script lang="ts">
+  import { createStore } from '@composable-svelte/core';
+  import { CodeEditor, codeEditorReducer, createInitialCodeEditorState } from '@composable-svelte/code';
 
-// Create editor store
-const store = createStore({
-  initialState: createInitialState({
-    value: '// Write code here',
-    language: 'typescript',
-    theme: 'dark',
-    showLineNumbers: true
-  }),
-  reducer: codeEditorReducer,
-  dependencies: {
-    onSave: async (value) => {
-      await fetch('/api/save', { method: 'POST', body: value });
-    },
-    formatter: async (code, language) => {
-      // Use prettier or similar
-      return formatCode(code, language);
+  // Create editor store
+  const store = createStore({
+    initialState: createInitialCodeEditorState({
+      value: '// Write code here',
+      language: 'typescript',
+      theme: 'dark',
+      showLineNumbers: true
+    }),
+    reducer: codeEditorReducer,
+    dependencies: {
+      onSave: async (value) => {
+        await fetch('/api/save', { method: 'POST', body: value });
+      },
+      formatter: async (code, language) => {
+        // Use prettier or similar
+        return formatCode(code, language);
+      }
     }
-  }
-});
+  });
+</script>
 
-// Render editor
 <CodeEditor {store} showToolbar={true} />
 ```
 
@@ -88,7 +89,6 @@ interface CodeEditorState {
 
   // Features
   enableAutocomplete: boolean;
-  enableLinting: boolean;
   tabSize: number;
 
   // Editor Status
@@ -149,15 +149,15 @@ interface CodeEditorDependencies {
 
 ### Complete Example
 
-```typescript
+```svelte
 <script lang="ts">
 import { createStore, Effect } from '@composable-svelte/core';
-import { CodeEditor, codeEditorReducer, createInitialState } from '@composable-svelte/code';
+import { CodeEditor, codeEditorReducer, createInitialCodeEditorState } from '@composable-svelte/code';
 import { formatCode } from './my-formatter'; // Your formatter
 
 // Create store with dependencies
 const editorStore = createStore({
-  initialState: createInitialState({
+  initialState: createInitialCodeEditorState({
     value: `function hello() {\n  console.log('Hello, World!');\n}`,
     language: 'typescript',
     theme: 'dark',
@@ -228,7 +228,7 @@ CodeMirror provides standard keyboard shortcuts:
 
 ### Quick Start
 
-```typescript
+```svelte
 import { CodeHighlight } from '@composable-svelte/code';
 
 <CodeHighlight
@@ -254,7 +254,7 @@ JavaScript, TypeScript, Python, Rust, Go, Java, C, C++, C#, PHP, Ruby, SQL, HTML
 
 ### Examples
 
-```typescript
+```svelte
 <!-- Basic highlighting -->
 <CodeHighlight
   code={`function add(a, b) {\n  return a + b;\n}`}
@@ -305,34 +305,36 @@ JavaScript, TypeScript, Python, Rust, Go, Java, C, C++, C#, PHP, Ruby, SQL, HTML
 
 ### Quick Start
 
-```typescript
-import { createStore } from '@composable-svelte/core';
-import { NodeCanvas, nodeCanvasReducer, createInitialNodeCanvasState } from '@composable-svelte/code';
+```svelte
+<script lang="ts">
+  import { createStore } from '@composable-svelte/core';
+  import { NodeCanvas, nodeCanvasReducer, createInitialNodeCanvasState } from '@composable-svelte/code';
 
-// Create node canvas store
-const canvasStore = createStore({
-  initialState: createInitialNodeCanvasState({
-    nodes: [
-      {
-        id: '1',
-        type: 'input',
-        position: { x: 100, y: 100 },
-        data: { label: 'Input Node' }
-      },
-      {
-        id: '2',
-        type: 'default',
-        position: { x: 300, y: 100 },
-        data: { label: 'Process Node' }
-      }
-    ],
-    edges: [
-      { id: 'e1-2', source: '1', target: '2' }
-    ]
-  }),
-  reducer: nodeCanvasReducer,
-  dependencies: {}
-});
+  // Create node canvas store
+  const canvasStore = createStore({
+    initialState: createInitialNodeCanvasState({
+      nodes: [
+        {
+          id: '1',
+          type: 'input',
+          position: { x: 100, y: 100 },
+          data: { label: 'Input Node' }
+        },
+        {
+          id: '2',
+          type: 'default',
+          position: { x: 300, y: 100 },
+          data: { label: 'Process Node' }
+        }
+      ],
+      edges: [
+        { id: 'e1-2', source: '1', target: '2' }
+      ]
+    }),
+    reducer: nodeCanvasReducer,
+    dependencies: {}
+  });
+</script>
 
 <NodeCanvas
   store={canvasStore}
@@ -433,7 +435,7 @@ type NodeCanvasAction =
 
 ### Complete Example
 
-```typescript
+```svelte
 <script lang="ts">
 import { createStore } from '@composable-svelte/core';
 import { NodeCanvas, nodeCanvasReducer, createInitialNodeCanvasState } from '@composable-svelte/code';
@@ -472,8 +474,13 @@ const canvasStore = createStore({
   dependencies: {}
 });
 
-// Handle node clicks
-function handleNodeClick(node: Node) {
+// Handle node clicks.
+//
+// A bare `Node` is the DOM's. The canvas holds SvelteFlow's `Node<NodeData>`,
+// which `@composable-svelte/code` does not re-export — so a handler that only
+// needs the id says so structurally, and one that needs more imports the type
+// from `@xyflow/svelte`.
+function handleNodeClick(node: { id: string }) {
   console.log('Node clicked:', node);
   canvasStore.dispatch({ type: 'selectNode', nodeId: node.id });
 }
@@ -561,7 +568,7 @@ function handleEdgeClick(edge: Edge) {
 - **code**: Code editors, syntax highlighting, visual programming
 - **media**: Audio players, video embeds, voice input
 - **chat**: Real-time chat, streaming responses
-- **graphics**: 3D scenes, WebGPU/WebGL rendering
+- **graphics**: 3D scenes, WebGL rendering
 - **charts**: 2D data visualization
 - **maps**: Geospatial data
 
@@ -588,10 +595,10 @@ function handleEdgeClick(edge: Edge) {
 
 ```typescript
 import { TestStore } from '@composable-svelte/core/test';
-import { codeEditorReducer, createInitialState } from '@composable-svelte/code';
+import { codeEditorReducer, createInitialCodeEditorState } from '@composable-svelte/code';
 
 const store = new TestStore({
-  initialState: createInitialState({ value: '' }),
+  initialState: createInitialCodeEditorState({ value: '' }),
   reducer: codeEditorReducer,
   dependencies: {
     onSave: vi.fn(),
@@ -679,23 +686,25 @@ await store.send({
 
 ### CodeHighlight
 - `CodeHighlight` — Component
-- `codeHighlightReducer`, `createInitialState()` — State management
+- `codeHighlightReducer`, `createInitialCodeHighlightState()` — State management
 - `highlightCode(code, lang)` — Highlight code string with Prism.js
 - `loadLanguage(lang)` — Dynamically load a Prism.js language grammar
 - Types: `CodeHighlightState`, `CodeHighlightAction`, `CodeHighlightDependencies`, `SupportedLanguage`
 
 ### CodeEditor
 - `CodeEditor` — Component
-- `codeEditorReducer`, `createEditorInitialState()` — State management
+- `codeEditorReducer`, `createInitialCodeEditorState()` — State management
 - `createEditorView(config)` — Create a CodeMirror EditorView
 - `loadEditorLanguage(lang)` — Load a CodeMirror language extension
 - `updateEditorValue(view, value)`, `updateEditorLanguage(view, lang)`, `updateEditorTheme(view, theme)`, `updateEditorReadOnly(view, readOnly)`, `updateTabSize(view, size)` — Programmatic editor updates
-- `focusEditor(view)`, `blurEditor(view)` — Focus management
+- Focus is driven by dispatching `{ type: 'focus' }` / `{ type: 'blur' }` —
+  the raw `focusEditor(view)` / `blurEditor(view)` helpers were removed in
+  favour of the action stream, where the other editor commands live.
 - Types: `CodeEditorState`, `CodeEditorAction`, `CodeEditorDependencies`, `EditorLanguage`, `EditorSelection`
 
 ### NodeCanvas
 - `NodeCanvas` — Component
 - `nodeCanvasReducer`, `createInitialNodeCanvasState(config)` — State management
-- `createConnectionValidator(config)`, `permissiveValidator`, `strictValidator`, `composeValidators(...validators)` — Connection validation
+- `createConnectionValidator(config)`, `permissiveValidator`, `strictValidator`, `createStrictValidator(message)`, `composeValidators(...validators)` — Connection validation. `strictValidator` is a `ConnectionValidator` constant, not a factory; use `createStrictValidator` for a custom message.
 - `nodesToArray(nodes)`, `edgesToArray(edges)` — Conversion utilities
 - Types: `NodeCanvasState`, `NodeCanvasAction`, `NodeCanvasDependencies`, `NodeTypeDefinition`, `PortDefinition`, `ConnectionValidation`, `ConnectionValidator`

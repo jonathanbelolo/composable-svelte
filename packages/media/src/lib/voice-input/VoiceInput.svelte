@@ -29,19 +29,19 @@
 		onTranscript: (transcript: string) => void;
 
 		/** Default mode on mount */
-		defaultMode?: 'push-to-talk' | 'conversation';
+		defaultMode?: 'push-to-talk' | 'conversation' | undefined;
 
 		/** Optional: Custom button variant */
-		variant?: 'icon' | 'button' | 'fab';
+		variant?: 'icon' | 'button' | 'fab' | undefined;
 
 		/** Optional: Custom button text (for 'button' variant) */
-		label?: string;
+		label?: string | undefined;
 
 		/** Optional: Disable the input */
-		disabled?: boolean;
+		disabled?: boolean | undefined;
 
 		/** Optional: Custom CSS class */
-		class?: string;
+		class?: string | undefined;
 	}
 
 	const {
@@ -86,16 +86,37 @@
 		};
 	});
 
-	// Only set default mode for conversation mode (push-to-talk doesn't need pre-activation)
+	// Keyed on a `$derived` primitive for the same reason as the effect below:
+	// reading `$store.mode` inside the effect subscribes to the whole store,
+	// which `$state.raw` replaces on every dispatch, so this re-ran on every
+	// action. Paired with a mode that briefly went null between utterances, that
+	// re-dispatched `activateConversationMode` unboundedly — a new recorder and a
+	// new level interval per utterance, and a runaway loop whenever activation
+	// failed and reset the mode. The primitive's equality check absorbs the
+	// dispatches that leave the mode alone.
+	const activeMode = $derived($store.mode);
+
 	$effect(() => {
-		if ($store.mode === null && defaultMode === 'conversation') {
+		if (activeMode === null && defaultMode === 'conversation') {
 			store.dispatch({ type: 'activateConversationMode' });
 		}
 	});
 
-	// Reset transcript history when mode changes
+	// Reset transcript history when mode changes.
+	//
+	// Keyed on a `$derived` primitive, not on `$store`. Reading `$store.mode`
+	// inside the effect tracks the whole-store subscription, which `$state.raw`
+	// replaces on every dispatch — so every action re-ran this effect and every
+	// re-run fired the teardown first. While recording, `audioLevelUpdated`
+	// arrives per animation frame, so the history was wiped continuously and the
+	// conversation panel was permanently empty. A primitive's equality check
+	// absorbs the dispatches that leave the mode alone.
+	const currentMode = $derived($store.mode);
+
 	$effect(() => {
-		const mode = $store.mode;
+		// Referenced so the effect depends on the mode and nothing else; the reset
+		// itself belongs in the teardown, which runs when the mode changes away.
+		currentMode;
 		return () => {
 			transcriptHistory = [];
 		};
@@ -110,11 +131,27 @@
 	{#if $store.status === 'recording' || $store.mode === 'conversation'}
 		<VoiceInputPanel {store} transcripts={transcriptHistory} />
 	{/if}
+
+	<!--
+		The reducer captures a reason on every failure path and nothing rendered it,
+		so the user saw a tinted icon and never learned what went wrong. `role="alert"`
+		because colour alone does not reach a screen reader, and this is the message a
+		user needs in order to act on it.
+	-->
+	{#if $store.errorMessage}
+		<div class="voice-input__error" role="alert">{$store.errorMessage}</div>
+	{/if}
 </div>
 
 <style>
 	.voice-input {
 		display: inline-block;
 		position: relative;
+	}
+
+	.voice-input__error {
+		margin-top: 0.5rem;
+		font-size: 0.8125rem;
+		color: hsl(var(--destructive, 0 60% 50%));
 	}
 </style>

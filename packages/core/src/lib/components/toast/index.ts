@@ -11,3 +11,4 @@ export { default as ToastDescription } from './ToastDescription.svelte';
 export { default as ToastAction } from './ToastAction.svelte';
 export * from './toast.types.js';
 export { toastReducer } from './toast.reducer.js';
+export { createToastStore } from './create-toast-store.js';

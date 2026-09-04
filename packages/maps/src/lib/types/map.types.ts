@@ -3,13 +3,8 @@
  * @description Type definitions for interactive map components
  */
 
-import type { TileProvider } from '../utils/tile-providers';
+import type { TileProvider } from '../utils/tile-providers.js';
 import type { GeoJSON as GeoJSONType } from 'geojson';
-
-/**
- * Map provider type
- */
-export type MapProvider = 'maplibre' | 'mapbox';
 
 // Re-export TileProvider for convenience
 export type { TileProvider };
@@ -59,14 +54,14 @@ export type GeoJSON = GeoJSONType;
  * Layer style properties
  */
 export interface LayerStyle {
-  fillColor?: string;
-  fillOpacity?: number;
-  strokeColor?: string;
-  strokeWidth?: number;
-  strokeOpacity?: number;
-  radius?: number;          // For points
-  intensity?: number;       // For heatmaps
-  colorGradient?: [number, string][]; // For heatmaps: [[0, 'blue'], [1, 'red']]
+  fillColor?: string | undefined;
+  fillOpacity?: number | undefined;
+  strokeColor?: string | undefined;
+  strokeWidth?: number | undefined;
+  strokeOpacity?: number | undefined;
+  radius?: number | undefined;          // For points
+  intensity?: number | undefined;       // For heatmaps
+  colorGradient?: [number, string][] | undefined; // For heatmaps: [[0, 'blue'], [1, 'red']]
 }
 
 /**
@@ -107,7 +102,6 @@ export interface FeatureReference<TData = unknown> {
  */
 export interface MapState {
   // Provider
-  provider: MapProvider;
   accessToken?: string;
 
   // Tile provider
@@ -219,7 +213,12 @@ export interface FlyToOptions {
 
 /**
  * Map adapter interface
- * Abstract interface for map providers (Maplibre, Mapbox)
+ * Abstract interface for a map engine.
+ *
+ * Supply an implementation to `<Map>` or `<MapPrimitive>` through the `adapter`
+ * prop. `MaplibreAdapter` is the default; `MapboxAdapter` lives behind
+ * `@composable-svelte/maps/mapbox` so this package's root never imports an
+ * optional peer.
  */
 export interface MapAdapter {
   initialize(container: HTMLElement, options: MapInitOptions): void;
@@ -254,9 +253,9 @@ export interface MapAdapter {
 export interface MapInitOptions {
   center: LngLat;
   zoom: number;
-  bearing?: number;
-  pitch?: number;
+  bearing?: number | undefined;
+  pitch?: number | undefined;
   style: string;
-  accessToken?: string;
-  interactive?: boolean;
+  accessToken?: string | undefined;
+  interactive?: boolean | undefined;
 }

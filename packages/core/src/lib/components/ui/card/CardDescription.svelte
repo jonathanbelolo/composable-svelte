@@ -10,7 +10,7 @@
 	 */
 
 	interface CardDescriptionProps extends Omit<HTMLAttributes<HTMLParagraphElement>, 'class'> {
-		class?: string;
+		class?: string | undefined;
 		children: Snippet;
 	}
 

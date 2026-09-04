@@ -554,18 +554,23 @@ case 'openModal': {
 
 You might wonder why we use `Effect.afterDelay()` instead of waiting for component animation callbacks:
 
-```typescript
-// ❌ DON'T: Rely solely on component callbacks
-// Component calls onPresentationComplete when animation finishes
-<Modal
-  onPresentationComplete={() => store.dispatch({...})}
-/>
+❌ Don't rely solely on the component callback — the component calls
+`onPresentationComplete` when the animation finishes, and nothing does so if it
+never runs:
 
-// ✅ DO: Use Effect.afterDelay() for state management
+```svelte
+<Modal
+  onPresentationComplete={() => store.dispatch({ type: 'presentationCompleted' })}
+/>
+```
+
+✅ Do drive the timing from the reducer with `Effect.afterDelay()`:
+
+```typescript
 case 'openModal': {
   return [
     state,
-    Effect.afterDelay(300, (d) => d({...}))  // Guaranteed timing
+    Effect.afterDelay(300, (d) => d({ type: 'presentationCompleted' }))
   ];
 }
 ```
@@ -849,7 +854,7 @@ Navigation components expect:
 
 ### Modal Example
 
-```typescript
+```svelte
 import { Modal } from '@composable-svelte/core/navigation-components';
 
 <Modal
@@ -1026,7 +1031,13 @@ const reducer: Reducer<AppState, AppAction> = (state, action) => {
   }
 };
 
-// Component
+```
+
+The component. `presentation` drives the animation and the two completion
+callbacks feed it back into the reducer, which is what advances the lifecycle
+past `presenting` and `dismissing`:
+
+```svelte
 <Modal
   store={addItemStore}
   presentation={state.presentation}
@@ -1052,7 +1063,7 @@ const reducer: Reducer<AppState, AppAction> = (state, action) => {
 TestStore automatically handles animation timing:
 
 ```typescript
-import { createTestStore } from '@composable-svelte/core';
+import { createTestStore } from '@composable-svelte/core/test';
 
 const store = createTestStore({
   initialState,
@@ -1317,7 +1328,7 @@ return [
 
 ### 4. Disable UI During Animation
 
-```typescript
+```svelte
 // ✅ GOOD
 <button
   disabled={state.presentation.status === 'presenting' ||
@@ -1327,7 +1338,7 @@ return [
 </button>
 
 // ❌ BAD (allows actions during animation)
-<button onclick={...}>Submit</button>
+<button onclick={() => store.dispatch({ type: 'submitTapped' })}>Submit</button>
 ```
 
 ### 5. Log State Transitions
@@ -1475,16 +1486,16 @@ case 'dismissalCompleted': {
 
 ### 4. Enabling Interactions Too Early
 
-```typescript
+```svelte
 // ❌ Problem: User can click during animation
 {#if state.destination}
-  <button onclick={...}>Submit</button>
+  <button onclick={() => store.dispatch({ type: 'submitTapped' })}>Submit</button>
 {/if}
 
 // ✅ Solution: Check presentation status
 <button
   disabled={state.presentation.status !== 'presented'}
-  onclick={...}
+  onclick={() => store.dispatch({ type: 'submitTapped' })}
 >
   Submit
 </button>

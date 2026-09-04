@@ -6,7 +6,7 @@
  */
 
 export { default as CodeEditor } from './CodeEditor.svelte';
-export { codeEditorReducer } from './code-editor.reducer';
+export { codeEditorReducer } from './code-editor.reducer.js';
 export {
 	createInitialState,
 	type CodeEditorState,
@@ -14,7 +14,7 @@ export {
 	type CodeEditorDependencies,
 	type SupportedLanguage,
 	type EditorSelection
-} from './code-editor.types';
+} from './code-editor.types.js';
 export {
 	createEditorView,
 	loadLanguage,
@@ -23,6 +23,8 @@ export {
 	updateEditorTheme,
 	updateEditorReadOnly,
 	updateTabSize,
-	focusEditor,
-	blurEditor
-} from './codemirror-wrapper';
+	updateLineNumbers,
+	updateFolding,
+	updateAutocomplete,
+	runEditorCommand,
+} from './codemirror-wrapper.js';

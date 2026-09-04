@@ -2,7 +2,14 @@
  * Animation utilities for Motion One.
  *
  * State-driven animation functions for all components.
- * All functions return Promise<void> and always resolve (even on error).
+ *
+ * All functions return `Promise<void>` and none of them ever **rejects**: a
+ * failure is logged and the end state set inline. That is not the same as always
+ * resolving. Motion One's `.finished` never settles when an animation is
+ * interrupted — measured, and relied on elsewhere in this repo — so a helper
+ * whose animation is superseded returns a promise that stays pending forever.
+ * Call sites that can be interrupted must therefore use `void`, never `await`,
+ * and nothing may sequence on one.
  *
  * @packageDocumentation
  */
@@ -10,6 +17,7 @@
 import { animate as motionAnimate } from 'motion';
 import type { SpringConfig } from './spring-config.js';
 import { springPresets, mergeSpringConfig } from './spring-config.js';
+import { prefersReducedMotion } from './reduced-motion.js';
 
 // Re-export animate for use in components
 export { motionAnimate as animate };
@@ -24,6 +32,146 @@ function getSpringConfig(
 	const result = mergeSpringConfig(preset, override);
 	// Explicit assertion to help TypeScript understand this is never undefined
 	return result as Required<SpringConfig>;
+}
+
+// ============================================================================
+// List Item Animations
+// ============================================================================
+
+/**
+ * Animate a list item entering.
+ *
+ * Replaces the `@keyframes` one-shots that chat used on message bubbles. Two
+ * things about it are deliberate:
+ *
+ * **It supplies its own start values.** `opacity: [0, 1]` sets the initial frame
+ * itself rather than relying on a CSS `opacity: 0` the element would otherwise
+ * carry. That matters for server rendering: `$effect` never runs on the server,
+ * so an element parked at `opacity: 0` awaiting an effect renders permanently
+ * invisible in server HTML and with JavaScript disabled. Owning the start value
+ * means the resting state — and therefore the server's output — is simply
+ * "visible".
+ *
+ * **It honours `prefers-reduced-motion` itself.** Skipping the animation cannot
+ * skip the outcome here, because the outcome is the element's natural state, so
+ * returning early leaves it correct. Note that this is the easy case:
+ * `animateFadeOut` has to *write* the end state under the preference, because
+ * its outcome is not the resting one. Those two and this are the only helpers in
+ * this file that consult it.
+ *
+ * Uses `springPresets.listItem`, which was defined for exactly this and had
+ * never been called.
+ */
+export async function animateListItemIn(
+	element: HTMLElement,
+	springConfig?: Partial<SpringConfig>
+): Promise<void> {
+	if (prefersReducedMotion()) return;
+
+	try {
+		const config = getSpringConfig(springPresets.listItem, springConfig);
+
+		await motionAnimate(
+			element,
+			{
+				opacity: [0, 1],
+				y: [8, 0]
+			},
+			{
+				type: 'spring',
+				visualDuration: config.visualDuration,
+				bounce: config.bounce
+			}
+		).finished;
+	} catch (error) {
+		console.error('[animateListItemIn] Animation failed:', error);
+		if (element) {
+			element.style.opacity = '1';
+			element.style.transform = 'none';
+		}
+	}
+}
+
+// ============================================================================
+// Fade Animations
+// ============================================================================
+
+/** Options shared by the generic fades. */
+export interface FadeOptions {
+	/** Seconds. Defaults to 0.2 — what the CSS transitions these replace used. */
+	duration?: number;
+}
+
+/**
+ * Fade an element in.
+ *
+ * The generic counterpart to the named entrance helpers: for something that is
+ * not a modal, a toast or a list item — an image finishing its load, a video's
+ * controls coming back.
+ *
+ * **It supplies its own start value.** `opacity: [0, 1]` means the element's
+ * resting CSS state is "visible", so server HTML and a JavaScript-less client
+ * render it rather than parking it at `opacity: 0` awaiting an effect that never
+ * runs. The trade is that interrupting a fade-out restarts from 0 rather than
+ * from wherever it had reached; pass `duration: 0` where the interruption should
+ * be invisible.
+ *
+ * **Show something instantly through here rather than through
+ * `element.style.opacity`.** A running Web Animation outranks an inline style,
+ * so assigning the style does not stop a fade-out already in flight. Starting a
+ * new animation does.
+ *
+ * Honours `prefers-reduced-motion` by jumping to the end state — which here
+ * means *setting* opacity, not returning early: a previous fade-out may have
+ * left the element at 0, and skipping the animation must not skip the outcome.
+ */
+export async function animateFadeIn(element: HTMLElement, options?: FadeOptions): Promise<void> {
+	if (prefersReducedMotion()) {
+		element.style.opacity = '1';
+		return;
+	}
+
+	try {
+		await motionAnimate(
+			element,
+			{ opacity: [0, 1] },
+			{ duration: options?.duration ?? 0.2, ease: [0.4, 0, 1, 1] }
+		).finished;
+		element.style.opacity = '1';
+	} catch (error) {
+		console.error('[animateFadeIn] Animation failed:', error);
+		element.style.opacity = '1';
+	}
+}
+
+/**
+ * Fade an element out, leaving it at `opacity: 0`.
+ *
+ * The end state is written explicitly rather than left to the animation, because
+ * these elements stay mounted — unlike a modal, nothing unmounts to make the
+ * final frame stick. Under `prefers-reduced-motion` that write *is* the whole
+ * implementation.
+ *
+ * An interrupted fade never settles, so the trailing write is not reached when a
+ * fade-in takes over. That is the intended behaviour, not an oversight.
+ */
+export async function animateFadeOut(element: HTMLElement, options?: FadeOptions): Promise<void> {
+	if (prefersReducedMotion()) {
+		element.style.opacity = '0';
+		return;
+	}
+
+	try {
+		await motionAnimate(
+			element,
+			{ opacity: [1, 0] },
+			{ duration: options?.duration ?? 0.2, ease: [0.4, 0, 1, 1] }
+		).finished;
+		element.style.opacity = '0';
+	} catch (error) {
+		console.error('[animateFadeOut] Animation failed:', error);
+		element.style.opacity = '0';
+	}
 }
 
 // ============================================================================
@@ -481,6 +629,79 @@ export async function animateToastOut(
  * @param element - The dropdown element to animate
  * @returns Promise that resolves when animation completes (or fails gracefully)
  */
+/**
+ * Slide a carousel track to a given offset.
+ *
+ * Duration-based rather than a spring, because the carousel's reducer owns
+ * `isTransitioning` and a consumer sets `transitionDuration` — the store needs
+ * to know how long this takes, which a spring's settling time does not tell it.
+ *
+ * The caller dispatches `transitionCompleted` from the returned promise. That is
+ * safe here specifically: the reducer refuses navigation and autoplay while
+ * transitioning, so this animation cannot be interrupted, and an interrupted
+ * Motion One promise never settles.
+ */
+export async function animateCarouselTrack(
+	element: HTMLElement,
+	offsetPercent: number,
+	durationMs: number
+): Promise<void> {
+	const target = `${offsetPercent}%`;
+	try {
+		await motionAnimate(
+			element,
+			{ x: target },
+			{ duration: durationMs / 1000, ease: [0.4, 0, 0.2, 1] }
+		).finished;
+	} catch (error) {
+		console.error('[animateCarouselTrack] Animation failed:', error);
+		if (element) {
+			element.style.transform = `translateX(${target})`;
+		}
+	}
+}
+
+/**
+ * Rotate a disclosure chevron to match the thing it discloses.
+ *
+ * A chevron that turns on a CSS `transition-transform` while its dropdown
+ * animates through Motion One is two uncoordinated timelines for one gesture —
+ * exactly what `guides/ANIMATION-GUIDELINES.md` says state-driven animation
+ * exists to prevent. Driving both from the same lifecycle status keeps them in
+ * step, and makes the rotation observable to a test.
+ *
+ * Uses the same preset as the dropdown itself, so the two finish together.
+ */
+export async function animateChevron(
+	// `SVGElement` too: a chevron is almost always an inline `<svg>`, and an
+	// `SVGSVGElement` is not an `HTMLElement`. Both carry `.style`, which is all
+	// the fallback path needs.
+	element: HTMLElement | SVGElement,
+	expanded: boolean,
+	springConfig?: Partial<SpringConfig>
+): Promise<void> {
+	const degrees = expanded ? 180 : 0;
+	try {
+		const config = getSpringConfig(springPresets.dropdown, springConfig);
+
+		await motionAnimate(
+			element,
+			{ rotate: degrees },
+			{
+				type: 'spring',
+				visualDuration: config.visualDuration,
+				bounce: config.bounce
+			}
+		).finished;
+	} catch (error) {
+		console.error('[animateChevron] Animation failed:', error);
+		// Land on the correct orientation even if the animation fails.
+		if (element) {
+			element.style.transform = `rotate(${degrees}deg)`;
+		}
+	}
+}
+
 export async function animateDropdownIn(element: HTMLElement): Promise<void> {
 	try {
 		const config = getSpringConfig(springPresets.tooltip); // Fast like tooltip

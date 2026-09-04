@@ -5,7 +5,6 @@
  * Avoids data duplication across multiple state fields.
  */
 
-import * as Y from 'yjs';
 import type { Message } from './types.js';
 
 /**
@@ -40,36 +39,6 @@ export interface CursorPosition {
 }
 
 /**
- * User permissions for collaborative actions.
- */
-export interface UserPermissions {
-	/** Can send messages */
-	canSendMessages: boolean;
-	/** Can edit own messages */
-	canEditMessages: boolean;
-	/** Can delete own messages */
-	canDeleteMessages: boolean;
-	/** Can see other users */
-	canSeePresence: boolean;
-	/** Can see typing indicators */
-	canSeeTyping: boolean;
-	/** Admin actions (kick, ban, etc.) */
-	isAdmin: boolean;
-}
-
-/**
- * Default permissions for a regular user.
- */
-export const DEFAULT_USER_PERMISSIONS: UserPermissions = {
-	canSendMessages: true,
-	canEditMessages: true,
-	canDeleteMessages: true,
-	canSeePresence: true,
-	canSeeTyping: true,
-	isAdmin: false
-};
-
-/**
  * Collaborative user (single source of truth).
  * All user-related data is embedded here.
  */
@@ -88,12 +57,8 @@ export interface CollaborativeUser {
 	typing: TypingInfo | null;
 	/** Cursor position (null if not focused) */
 	cursor: CursorPosition | null;
-	/** User permissions */
-	permissions: UserPermissions;
 	/** Last seen timestamp */
 	lastSeen: number;
-	/** Last heartbeat timestamp (for timeout detection) */
-	lastHeartbeat: number;
 }
 
 /**
@@ -107,68 +72,35 @@ export type WebSocketConnectionState =
 	| { status: 'failed'; reason: string; canRetry: boolean };
 
 /**
- * Optimistic update pending confirmation.
- */
-export interface PendingAction<T = unknown> {
-	/** Temporary ID for the action */
-	tempId: string;
-	/** Action type for rollback */
-	actionType: string;
-	/** Action payload */
-	action: T;
-	/** When the action was initiated */
-	timestamp: number;
-	/** Retry count */
-	retryCount: number;
-	/** Original state snapshot for rollback */
-	rollbackSnapshot: unknown;
-}
-
-/**
- * Synchronization state for optimistic updates and offline queue.
- */
-export interface SyncState {
-	/** Pending actions awaiting confirmation */
-	pendingActions: Map<string, PendingAction>;
-	/** Failed actions that couldn't be confirmed */
-	failedActions: Array<{ tempId: string; error: string; action: PendingAction }>;
-	/** Offline action queue (when disconnected) */
-	offlineQueue: Array<{ id: string; action: unknown; timestamp: number }>;
-	/** Last sequence number from server (for ordering) */
-	lastSequenceNumber: number;
-	/** Is currently syncing with server */
-	isSyncing: boolean;
-}
-
-/**
  * Collaborative streaming chat state.
  * Extends base streaming chat with collaboration features.
  */
 export interface CollaborativeStreamingChatState {
-	/** Yjs document for CRDT sync */
-	ydoc: Y.Doc;
-
 	/** All collaborative users (single source of truth) */
 	users: Map<string, CollaborativeUser>;
 
 	/** Current user's ID */
 	currentUserId: string | null;
+	/**
+	 * My own presence, held locally rather than read back out of `users`.
+	 *
+	 * `users` is populated only by inbound frames, and the server does not echo
+	 * you until after the socket is open — so there is a window, from
+	 * `connectToConversation` until the first `user_joined`, in which you are not
+	 * in your own user map. `updatePresence` used to write only into `users` and
+	 * silently did nothing during it, and `usePresenceTracking` dispatches only on
+	 * *change*, so a transition made in that window was lost until the next one
+	 * and the room could see you as `away` indefinitely.
+	 */
+	currentPresence: UserPresence;
 
 	/** WebSocket connection state */
 	connection: WebSocketConnectionState;
 
-	/** Synchronization state */
-	sync: SyncState;
 
 	/** Conversation/room ID */
 	conversationId: string | null;
 
-	/** Shared conversation metadata */
-	conversationMetadata: {
-		title: string;
-		createdAt: number;
-		lastActivity: number;
-	} | null;
 }
 
 /**
@@ -183,8 +115,16 @@ export type CollaborativeAction =
 	// User management
 	| { type: 'userJoined'; user: CollaborativeUser }
 	| { type: 'userLeft'; userId: string }
+	// Wire arrivals. Never broadcast — echoing one back is how a room-wide
+	// server turns two clients into a loop.
 	| { type: 'userPresenceChanged'; userId: string; presence: UserPresence }
 	| { type: 'heartbeatReceived'; userId: string; timestamp: number }
+	// Local intent. These are the ones that leave the browser, and they are
+	// separate action names for exactly the reason `startTyping` is separate from
+	// `userStartedTyping`: an echo of my own frame carries my own id, so a
+	// `userId === currentUserId` test cannot tell it from something I just did.
+	| { type: 'updatePresence'; presence: UserPresence }
+	| { type: 'sendHeartbeat' }
 	// Typing indicators
 	| { type: 'userStartedTyping'; userId: string; info: TypingInfo }
 	| { type: 'userStoppedTyping'; userId: string }
@@ -194,21 +134,7 @@ export type CollaborativeAction =
 	| { type: 'userCursorMoved'; userId: string; cursor: CursorPosition }
 	| { type: 'userCursorCleared'; userId: string }
 	| { type: 'updateCursor'; position: number; selectionLength: number }
-	| { type: 'clearCursor' }
-	// Optimistic updates
-	| { type: 'actionConfirmed'; tempId: string; serverId?: string }
-	| { type: 'actionFailed'; tempId: string; error: string }
-	| { type: 'retryFailedAction'; tempId: string }
-	| { type: 'discardFailedAction'; tempId: string }
-	// Sync
-	| { type: 'syncCompleted'; sequenceNumber: number }
-	| { type: 'syncFailed'; error: string }
-	| { type: 'flushOfflineQueue' }
-	// Server updates
-	| { type: 'serverStateUpdate'; update: Uint8Array }
-	| { type: 'serverMessageReceived'; message: Message; sequenceNumber: number }
-	// Permissions
-	| { type: 'userPermissionsChanged'; userId: string; permissions: UserPermissions };
+	| { type: 'clearCursor' };
 
 /**
  * Collaborative chat dependencies.
@@ -231,19 +157,10 @@ export interface CollaborativeDependencies {
 	sendWebSocketMessage: (message: unknown) => Promise<void>;
 
 	/**
-	 * Generate unique ID.
-	 */
-	generateId?: () => string;
-
-	/**
 	 * Get current timestamp.
+	 * @default Date.now()
 	 */
 	getTimestamp?: () => number;
-
-	/**
-	 * Generate user color.
-	 */
-	generateUserColor?: (userId: string) => string;
 }
 
 /**
@@ -251,19 +168,11 @@ export interface CollaborativeDependencies {
  */
 export function createInitialCollaborativeState(): CollaborativeStreamingChatState {
 	return {
-		ydoc: new Y.Doc(),
 		users: new Map(),
 		currentUserId: null,
+		currentPresence: 'active',
 		connection: { status: 'disconnected' },
-		sync: {
-			pendingActions: new Map(),
-			failedActions: [],
-			offlineQueue: [],
-			lastSequenceNumber: 0,
-			isSyncing: false
-		},
 		conversationId: null,
-		conversationMetadata: null
 	};
 }
 

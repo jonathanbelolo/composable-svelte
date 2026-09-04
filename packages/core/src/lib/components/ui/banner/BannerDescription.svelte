@@ -2,9 +2,9 @@
 	import { cn } from '../../../utils.js';
 	import type { HTMLAttributes } from 'svelte/elements';
 
-	interface BannerDescriptionProps extends Omit<HTMLAttributes<HTMLDivElement>, 'class'> {
-		class?: string;
-		children?: import('svelte').Snippet;
+	interface BannerDescriptionProps extends Omit<HTMLAttributes<HTMLDivElement>, 'class' | 'children'> {
+		class?: string | undefined;
+		children?: import('svelte').Snippet | undefined;
 	}
 
 	let { class: className, children, ...restProps }: BannerDescriptionProps = $props();

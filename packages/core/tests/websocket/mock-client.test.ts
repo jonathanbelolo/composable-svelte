@@ -73,7 +73,8 @@ describe('Mock WebSocket Client', () => {
     });
 
     it('should track multiple sent messages', async () => {
-      const client = createMockWebSocket();
+      // Typed, so `sentMessages` is inspectable rather than `unknown[]`.
+      const client = createMockWebSocket<{ type: string }>();
       await client.connect('wss://example.com');
 
       await client.send({ type: 'msg1' });
@@ -81,7 +82,7 @@ describe('Mock WebSocket Client', () => {
       await client.send({ type: 'msg3' });
 
       expect(client.sentMessages).toHaveLength(3);
-      expect(client.sentMessages.map(m => m.type)).toEqual(['msg1', 'msg2', 'msg3']);
+      expect(client.sentMessages.map((m) => m.type)).toEqual(['msg1', 'msg2', 'msg3']);
     });
 
     it('should reject send when not connected', async () => {
@@ -112,8 +113,8 @@ describe('Mock WebSocket Client', () => {
       client.simulateMessage({ type: 'test', data: 'hello' });
 
       expect(messages).toHaveLength(1);
-      expect(messages[0].data).toEqual({ type: 'test', data: 'hello' });
-      expect(messages[0].timestamp).toBeGreaterThan(0);
+      expect(messages[0]!.data).toEqual({ type: 'test', data: 'hello' });
+      expect(messages[0]!.timestamp).toBeGreaterThan(0);
     });
 
     it('should notify multiple message listeners', async () => {
@@ -166,7 +167,7 @@ describe('Mock WebSocket Client', () => {
       await client.connect('wss://example.com');
 
       expect(events).toHaveLength(1);
-      expect(events[0].type).toBe('connected');
+      expect(events[0]!.type).toBe('connected');
       expect((events[0] as any).url).toBe('wss://example.com');
     });
 
@@ -180,7 +181,7 @@ describe('Mock WebSocket Client', () => {
       await client.disconnect(1000, 'Normal closure');
 
       expect(events).toHaveLength(1);
-      expect(events[0].type).toBe('disconnected');
+      expect(events[0]!.type).toBe('disconnected');
       expect((events[0] as any).code).toBe(1000);
       expect((events[0] as any).reason).toBe('Normal closure');
     });
@@ -192,14 +193,19 @@ describe('Mock WebSocket Client', () => {
       const events: WebSocketEvent[] = [];
       client.subscribeToEvents((event) => events.push(event));
 
+      // The shape `live-client.ts:375` actually emits. This previously used a
+      // `nextDelay` field that exists nowhere and omitted two required ones, so
+      // it simulated an event the client never produces.
       client.simulateEvent({
         type: 'reconnecting',
         attempt: 1,
-        nextDelay: 1000
+        delay: 1000,
+        maxAttempts: 5,
+        timestamp: Date.now()
       });
 
       expect(events).toHaveLength(1);
-      expect(events[0].type).toBe('reconnecting');
+      expect(events[0]!.type).toBe('reconnecting');
     });
 
     it('should allow unsubscribing from events', async () => {
@@ -232,7 +238,7 @@ describe('Mock WebSocket Client', () => {
       client.simulateError(error);
 
       expect(events).toHaveLength(1);
-      expect(events[0].type).toBe('error');
+      expect(events[0]!.type).toBe('error');
       expect((events[0] as any).error).toBe(error);
       expect(client.state.lastError).toBe(error);
     });
@@ -355,8 +361,8 @@ describe('Mock WebSocket Client', () => {
 
       client.simulateMessage({ type: 'chat', user: 'Alice', text: 'Hello' });
 
-      expect(messages[0].user).toBe('Alice');
-      expect(messages[0].text).toBe('Hello');
+      expect(messages[0]!.user).toBe('Alice');
+      expect(messages[0]!.text).toBe('Hello');
     });
   });
 });

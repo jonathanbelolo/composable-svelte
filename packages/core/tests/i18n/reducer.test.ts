@@ -5,6 +5,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { expectConsole } from '../helpers/console.js';
 import {
   i18nReducer,
   createInitialI18nState,
@@ -111,7 +112,10 @@ describe('i18nReducer', () => {
         removeItem: vi.fn(),
         keys: vi.fn(() => []),
         has: vi.fn(() => false),
-        clear: vi.fn()
+        clear: vi.fn(),
+        // `Storage` also declares `size()`; the mock was one member short, so
+        // anything asking this stub how many items it held would have thrown.
+        size: vi.fn(() => 0)
       },
       dom: {
         setLanguage: vi.fn(),
@@ -123,6 +127,48 @@ describe('i18nReducer', () => {
   });
 
   describe('i18n/setLocale', () => {
+    /**
+     * `availableLocales` is the list the UI renders from — `examples/ssr-server`'s
+     * LanguageSwitcher builds its buttons from `$store.i18n.availableLocales`
+     * (`:14`). The reducer validated against
+     * `deps.localeDetector.getSupportedLocales()` instead, a DIFFERENT list, so
+     * a shipped switcher could offer a locale the reducer silently refused with
+     * a `console.warn`.
+     *
+     * Both directions are asserted: a one-sided fix that simply dropped the
+     * validation would pass the first test and fail the second.
+     */
+    it('accepts a locale in availableLocales that the detector does not list', () => {
+      mockDeps.localeDetector.getSupportedLocales = vi.fn(() => ['en']);
+
+      const [newState] = i18nReducer(
+        initialState,
+        { type: 'i18n/setLocale', locale: 'pt-BR' },
+        mockDeps
+      );
+
+      expect(
+        newState.currentLocale,
+        'the reducer refused a locale the UI offers'
+      ).toBe('pt-BR');
+    });
+
+    it('still refuses a locale that is not in availableLocales', () => {
+      expectConsole('warn');
+      mockDeps.localeDetector.getSupportedLocales = vi.fn(() => ['en', 'de']);
+
+      const [newState] = i18nReducer(
+        initialState,
+        { type: 'i18n/setLocale', locale: 'de' },
+        mockDeps
+      );
+
+      expect(
+        newState.currentLocale,
+        'validation was dropped rather than redirected'
+      ).toBe('en');
+    });
+
     it('should change locale', () => {
       const action: I18nAction = {
         type: 'i18n/setLocale',
@@ -158,15 +204,18 @@ describe('i18nReducer', () => {
     });
 
     it('should update DOM language and direction', async () => {
-      // Add 'ar' to supported locales for this test
-      mockDeps.localeDetector.getSupportedLocales = vi.fn(() => ['en', 'pt-BR', 'es', 'ar']);
+      // 'ar' is made valid by putting it in the app's OWN locale list. It used
+      // to be added to the detector's list, which is what the reducer consulted
+      // before — the detector now only *detects* a starting locale and does not
+      // authorise a switch.
+      const arabicState = createInitialI18nState('en', ['en', 'pt-BR', 'es', 'ar'], 'en');
 
       const action: I18nAction = {
         type: 'i18n/setLocale',
         locale: 'ar'
       };
 
-      const [newState, effect] = i18nReducer(initialState, action, mockDeps);
+      const [newState, effect] = i18nReducer(arabicState, action, mockDeps);
 
       // Execute effects
       if (effect._tag === 'Batch') {
@@ -182,7 +231,7 @@ describe('i18nReducer', () => {
     });
 
     it('should warn and return unchanged state for unsupported locale', () => {
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleSpy = expectConsole('warn');
 
       const action: I18nAction = {
         type: 'i18n/setLocale',
@@ -193,11 +242,10 @@ describe('i18nReducer', () => {
 
       expect(newState).toBe(initialState);
       expect(effect._tag).toBe('None');
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(consoleSpy[0]?.[0]).toEqual(
         expect.stringContaining('Unsupported locale: invalid')
       );
 
-      consoleSpy.mockRestore();
     });
 
     it('should preload namespaces when specified', () => {
@@ -314,9 +362,9 @@ describe('i18nReducer', () => {
       }
 
       expect(dispatched).toHaveLength(1);
-      expect(dispatched[0].type).toBe('i18n/namespaceLoadFailed');
-      if (dispatched[0].type === 'i18n/namespaceLoadFailed') {
-        expect(dispatched[0].error).toBe(error);
+      expect(dispatched[0]!.type).toBe('i18n/namespaceLoadFailed');
+      if (dispatched[0]!.type === 'i18n/namespaceLoadFailed') {
+        expect(dispatched[0]!.error).toBe(error);
       }
     });
   });
@@ -346,7 +394,7 @@ describe('i18nReducer', () => {
 
   describe('i18n/namespaceLoadFailed', () => {
     it('should remove loading state and log error', () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = expectConsole('error');
 
       const state: I18nState = {
         ...initialState,
@@ -365,12 +413,11 @@ describe('i18nReducer', () => {
 
       expect(newState.loadingNamespaces).not.toContain('en:common');
       expect(effect._tag).toBe('None');
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(consoleSpy[0]).toEqual([
         expect.stringContaining('Failed to load namespace common for en'),
         error
-      );
+      ]);
 
-      consoleSpy.mockRestore();
     });
   });
 

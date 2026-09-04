@@ -356,7 +356,14 @@ it('uses mock WebSocket', async () => {
   });
 
   // Simulate connection
-  mockWS.simulateOpen();
+  // There is no `simulateOpen`. Events are simulated by their shape, and a
+  // `connected` event carries the url, protocols and a timestamp.
+  mockWS.simulateEvent({
+    type: 'connected',
+    url: 'wss://example.com',
+    protocols: [],
+    timestamp: Date.now()
+  });
 
   await store.receive({ type: 'connected' }, (state) => {
     expect(state.connectionStatus).toBe('connected');

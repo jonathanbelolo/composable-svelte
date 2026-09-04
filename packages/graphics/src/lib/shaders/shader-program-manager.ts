@@ -15,6 +15,21 @@ import { OverlayError } from '../utils/overlay-error.js';
 import { DEFAULT_VERTEX_SHADER, DEFAULT_FRAGMENT_SHADER } from './default-shaders.js';
 
 /**
+ * Cache key for a source pair.
+ *
+ * The sources themselves, not a hash of them. This was a 32-bit polynomial
+ * hash, and collisions in it are constructible — `'void main(){}//aB'` and
+ * ``'void main(){}//`a'`` share one — which would have served an element the
+ * wrong program and incremented the wrong refcount. `CompiledProgram` already
+ * retains both sources, so keying on them costs no additional retention.
+ *
+ * The NUL separator keeps `(a, bc)` from colliding with `(ab, c)`; GLSL cannot
+ * contain one.
+ */
+const cacheKey = (vertexSource: string, fragmentSource: string): string =>
+	`${vertexSource}\u0000${fragmentSource}`;
+
+/**
  * Program cache entry
  */
 interface ProgramCacheEntry {
@@ -42,7 +57,6 @@ interface ProgramCacheEntry {
 export class ShaderProgramManager {
 	private compiler: ShaderCompiler;
 	private cache = new Map<string, ProgramCacheEntry>();
-	private defaultProgram: CompiledProgram | null = null;
 
 	constructor(private gl: WebGLRenderingContext) {
 		this.compiler = new ShaderCompiler(gl);
@@ -56,18 +70,11 @@ export class ShaderProgramManager {
 	 *
 	 * @param vertexSource - Vertex shader source
 	 * @param fragmentSource - Fragment shader source
-	 * @param attributeNames - Expected attribute names
-	 * @param uniformNames - Expected uniform names
 	 * @returns Compiled program or error
 	 */
-	getProgram(
-		vertexSource: string,
-		fragmentSource: string,
-		attributeNames: string[] = [],
-		uniformNames: string[] = []
-	): CompiledProgram | OverlayError {
+	getProgram(vertexSource: string, fragmentSource: string): CompiledProgram | OverlayError {
 		// Generate cache key
-		const key = this.generateCacheKey(vertexSource, fragmentSource);
+		const key = cacheKey(vertexSource, fragmentSource);
 
 		// Check cache
 		const cached = this.cache.get(key);
@@ -77,13 +84,10 @@ export class ShaderProgramManager {
 			return cached.program;
 		}
 
-		// Compile new program
-		const result = this.compiler.compileProgram(
-			vertexSource,
-			fragmentSource,
-			attributeNames,
-			uniformNames
-		);
+		// Compile new program. The compiler reads the program's own active
+		// attributes and uniforms, so there is no name list to pass and no way
+		// for a cache hit to hand back a program missing the caller's uniforms.
+		const result = this.compiler.compileProgram(vertexSource, fragmentSource);
 
 		if (result instanceof OverlayError) {
 			return result;
@@ -131,22 +135,15 @@ export class ShaderProgramManager {
 	 * @returns Default program or error
 	 */
 	getDefaultProgram(): CompiledProgram | OverlayError {
-		if (this.defaultProgram) {
-			return this.defaultProgram;
-		}
-
-		const result = this.getProgram(
-			DEFAULT_VERTEX_SHADER,
-			DEFAULT_FRAGMENT_SHADER,
-			['aPosition', 'aTexCoord'],
-			['uTexture']
-		);
-
-		if (!(result instanceof OverlayError)) {
-			this.defaultProgram = result;
-		}
-
-		return result;
+		// Straight through to the refcounted cache.
+		//
+		// This used to memoise the result in `this.defaultProgram`, which made
+		// the first call take a reference and every later call take none — and
+		// `releaseProgram` reaching zero deleted the program and dropped the
+		// cache entry without clearing the field, so the next call handed back a
+		// deleted handle. Every call takes a reference now, and every caller
+		// owes a `releaseProgram`, which is the same contract as `getProgram`.
+		return this.getProgram(DEFAULT_VERTEX_SHADER, DEFAULT_FRAGMENT_SHADER);
 	}
 
 	/**
@@ -158,10 +155,32 @@ export class ShaderProgramManager {
 	 * @param name - Uniform name
 	 * @param value - Uniform value
 	 */
+	/**
+	 * Warnings already given, so a per-frame mistake is said once.
+	 *
+	 * `setUniform` and `bindTexture` are both reached from `RenderPipeline.render`,
+	 * which the render loop calls for every element on every frame. A shader that
+	 * does not declare a uniform the caller sets — or does not declare
+	 * `uTexture` — therefore warned sixty times a second: measured at 60 warnings
+	 * over 60 frames. The message is worth saying and worth saying once; a flood
+	 * buries whatever else the console holds.
+	 *
+	 * Keyed by the message, so two different missing uniforms are still two
+	 * warnings. Not cleared: a program's declarations do not change, and a
+	 * recompile builds a fresh `CompiledProgram` anyway.
+	 */
+	private readonly warned = new Set<string>();
+
+	private warnOnce(message: string): void {
+		if (this.warned.has(message)) return;
+		this.warned.add(message);
+		console.warn(message);
+	}
+
 	setUniform(program: CompiledProgram, name: string, value: number | number[]): void {
 		const location = program.uniforms.get(name);
 		if (!location) {
-			console.warn(`[ShaderProgramManager] Uniform '${name}' not found in program`);
+			this.warnOnce(`[ShaderProgramManager] Uniform '${name}' not found in program`);
 			return;
 		}
 
@@ -191,7 +210,7 @@ export class ShaderProgramManager {
 					gl.uniformMatrix4fv(location, false, value);
 					break;
 				default:
-					console.warn(
+					this.warnOnce(
 						`[ShaderProgramManager] Unsupported uniform array length: ${value.length}`
 					);
 			}
@@ -226,7 +245,7 @@ export class ShaderProgramManager {
 	): void {
 		const location = program.uniforms.get(uniformName);
 		if (!location) {
-			console.warn(`[ShaderProgramManager] Uniform '${uniformName}' not found in program`);
+			this.warnOnce(`[ShaderProgramManager] Uniform '${uniformName}' not found in program`);
 			return;
 		}
 
@@ -324,7 +343,6 @@ export class ShaderProgramManager {
 		}
 
 		this.cache.clear();
-		this.defaultProgram = null;
 	}
 
 	/**
@@ -357,31 +375,6 @@ export class ShaderProgramManager {
 			refCount: 0,
 			cacheKey: 'not-cached'
 		};
-	}
-
-	/**
-	 * Generate cache key from shader sources
-	 *
-	 * Uses simple hash for cache lookup.
-	 *
-	 * @param vertexSource - Vertex shader source
-	 * @param fragmentSource - Fragment shader source
-	 * @returns Cache key
-	 */
-	private generateCacheKey(vertexSource: string, fragmentSource: string): string {
-		// Simple hash function for cache key
-		const hash = (str: string): number => {
-			let h = 0;
-			for (let i = 0; i < str.length; i++) {
-				h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
-			}
-			return h;
-		};
-
-		const vertexHash = hash(vertexSource);
-		const fragmentHash = hash(fragmentSource);
-
-		return `${vertexHash}_${fragmentHash}`;
 	}
 
 	/**

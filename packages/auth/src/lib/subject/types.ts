@@ -66,11 +66,31 @@ export interface SessionSnapshot {
 	 * stamps into `author_id` on events this subject causes.
 	 */
 	subject_id: string;
+	/**
+	 * When the backend says this session lapses, ISO 8601.
+	 *
+	 * Advisory and optional: a backend that says nothing is not malformed, and a
+	 * client that receives nothing falls back to reacting to a 401.
+	 *
+	 * A **string**, never a `Date`. This crosses SSR hydration through
+	 * `JSON.stringify`, which turns a `Date` into a string while the type goes
+	 * on claiming `Date` — the rule `AccountLockedError.until` already follows.
+	 */
+	expires_at?: string | undefined;
 	/** Display name of the signed-in account (present on login responses). */
 	display_name?: string;
 	/**
 	 * The session's active role-set — becomes the subject's
 	 * `attributes["roles"]`, the convention authorization gates read.
+	 *
+	 * Optional, because that is what the wire and the code already say.
+	 * `parseSessionSnapshot` deliberately admits a payload with no `roles`
+	 * (it rejects only a *present* non-array), and `subjectFromSession`
+	 * defends with `?? []`. Declaring it required made those two agree with
+	 * the runtime and disagree with the type: `fetchSession` could resolve a
+	 * value that did not satisfy its own return type, and a consumer writing
+	 * their own `SessionDependencies` was forced by the compiler to supply a
+	 * field the real implementation does not require.
 	 */
-	roles: string[];
+	roles?: string[] | undefined;
 }

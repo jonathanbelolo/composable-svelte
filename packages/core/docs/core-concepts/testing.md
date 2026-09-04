@@ -49,7 +49,7 @@ This pattern ensures you test **the entire action flow**, not just endpoints.
 ### Creating a TestStore
 
 ```typescript
-import { createTestStore } from '@composable-svelte/core';
+import { createTestStore } from '@composable-svelte/core/test';
 
 const store = createTestStore({
   initialState: {
@@ -156,7 +156,7 @@ Test actions that immediately update state without effects.
 
 ```typescript
 import { describe, it, expect } from 'vitest';
-import { createTestStore } from '@composable-svelte/core';
+import { createTestStore } from '@composable-svelte/core/test';
 import { Effect } from '@composable-svelte/core';
 
 interface CounterState {
@@ -703,7 +703,7 @@ Test parent-child reducer composition with `scope()` and `ifLet()`.
 ### Testing scope() Composition
 
 ```typescript
-import { scope } from '@composable-svelte/core';
+import { scope, type Reducer } from '@composable-svelte/core';
 
 interface ParentState {
   counter: CounterState;
@@ -722,7 +722,10 @@ type CounterAction =
   | { type: 'increment' }
   | { type: 'decrement' };
 
-const counterReducer = (state, action, deps) => {
+// Annotated: a bare arrow function's return widens to `any[]`, and `Reducer`
+// requires the tuple `readonly [State, Effect<Action>]`. The annotation also
+// gives `state` and `action` their types inside the switch.
+const counterReducer: Reducer<CounterState, CounterAction> = (state, action, deps) => {
   switch (action.type) {
     case 'increment':
       return [{ ...state, count: state.count + 1 }, Effect.none()];
@@ -784,7 +787,13 @@ Test navigation patterns with `ifLet()` and `PresentationAction`.
 ### Testing Optional Destinations
 
 ```typescript
-import { ifLet, type PresentationAction } from '@composable-svelte/core';
+import {
+  Effect,
+  ifLet,
+  type DismissDependency,
+  type PresentationAction,
+  type Reducer
+} from '@composable-svelte/core';
 
 interface ParentState {
   destination: ChildState | null;
@@ -804,21 +813,25 @@ type ChildAction =
   | { type: 'increment' }
   | { type: 'save' };
 
-const childReducer = (state, action, deps) => {
+const childReducer: Reducer<ChildState, ChildAction, { dismiss: DismissDependency }> = (
+  state,
+  action,
+  deps
+) => {
   switch (action.type) {
     case 'increment':
       return [{ ...state, count: state.count + 1 }, Effect.none()];
     case 'save':
-      // Child dismisses itself via deps.dismiss()
-      return [state, Effect.run(async (dispatch) => {
-        await deps.dismiss();
-      })];
+      // Child dismisses itself via deps.dismiss(). It returns the Effect —
+      // return it. Wrapping it in `Effect.run` and awaiting it only awaits the
+      // Effect *object*, which never executes it.
+      return [state, deps.dismiss()];
     default:
       return [state, Effect.none()];
   }
 };
 
-const parentReducer = (state, action, deps) => {
+const parentReducer: Reducer<ParentState, ParentAction> = (state, action, deps) => {
   switch (action.type) {
     case 'showDestination':
       return [
@@ -837,19 +850,21 @@ const parentReducer = (state, action, deps) => {
   }
 
   // ifLet handles destination actions
+  // `ifLet` takes five arguments and returns a reducer. Dependencies are not
+  // among them — they reach the child through the call at the end, so a
+  // `dismiss` the child can use is added to the deps passed there.
   const [newState, effect] = ifLet(
     (s) => s.destination,
     (s, d) => ({ ...s, destination: d }),
     (a) => a.type === 'destination' && a.action.type === 'presented' ? a.action.action : null,
     (ca) => ({ type: 'destination', action: { type: 'presented', action: ca } }),
-    childReducer,
-    {
-      dismiss: async () => {
-        // Dispatch dismiss action
-        deps.dispatch({ type: 'destination', action: { type: 'dismiss' } });
-      }
+    childReducer
+  )(state, action, {
+    ...deps,
+    dismiss: async () => {
+      deps.dispatch({ type: 'destination', action: { type: 'dismiss' } });
     }
-  )(state, action, deps);
+  });
 
   // Handle dismiss
   if (action.type === 'destination' && action.action.type === 'dismiss') {
@@ -998,35 +1013,36 @@ await store.send({ type: 'checkElapsed' });
 
 ### Mock Storage
 
+`createMockStorage()` is an in-memory `SyncStorage<T>`. Note that core's
+`Storage<T>` is **synchronous** — this section used to hand-roll an `async`
+one, which was a second and wrong contract for a type the library ships.
+
 ```typescript
-interface Storage<T> {
-  get(key: string): Promise<T | null>;
-  set(key: string, value: T): Promise<void>;
-  remove(key: string): Promise<void>;
+import { createMockStorage } from '@composable-svelte/core';
+import { createTestStore } from '@composable-svelte/core/test';
+
+interface UserPreferences {
+  theme: string;
 }
 
-function createMockStorage<T>(): Storage<T> {
-  const data = new Map<string, T>();
+declare const initialState: { theme: string };
+declare const reducer: never;
 
-  return {
-    get: async (key) => data.get(key) ?? null,
-    set: async (key, value) => {
-      data.set(key, value);
-    },
-    remove: async (key) => {
-      data.delete(key);
-    }
-  };
-}
+const storage = createMockStorage<UserPreferences>();
 
-// Usage in tests
-const store = createTestStore({
-  initialState,
-  reducer,
-  dependencies: {
-    storage: createMockStorage<UserPreferences>()
-  }
+// Writes read back — which `createNoopStorage()` cannot do, since it discards
+// them. Use that one to model storage being *unavailable*.
+storage.setItem('prefs', { theme: 'dark' });
+const saved: UserPreferences | null = storage.getItem('prefs');
+
+// `subscribe` fires only for changes from another browsing context, so
+// `setItem` above is deliberately silent. `simulateSetItem` is how a test
+// plays the part of the other tab.
+const stop = storage.subscribe((event) => {
+  console.log(event.key, event.newValue);
 });
+storage.simulateSetItem('prefs', { theme: 'light' });
+stop();
 ```
 
 ### Spy Dependencies

@@ -1,6 +1,6 @@
 {
   "name": "@composable-svelte/chat",
-  "version": "0.2.4",
+  "version": "0.3.0",
   "description": "Streaming chat component with collaborative features for Composable Svelte - Built for LLM interactions with transport-agnostic design",
   "type": "module",
   "main": "./dist/index.js",
@@ -11,27 +11,35 @@
       "svelte": "./dist/index.js",
       "default": "./dist/index.js"
     },
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "svelte": "./dist/*.js",
-      "default": "./dist/*.js"
+    "./package.json": "./package.json",
+    "./streaming-chat": {
+      "types": "./dist/streaming-chat/index.d.ts",
+      "svelte": "./dist/streaming-chat/index.js",
+      "default": "./dist/streaming-chat/index.js"
+    },
+    "./streaming-chat/markdown": {
+      "types": "./dist/streaming-chat/markdown.d.ts",
+      "svelte": "./dist/streaming-chat/markdown.js",
+      "default": "./dist/streaming-chat/markdown.js"
     }
   },
   "svelte": "./dist/index.js",
   "files": [
     "dist",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "svelte-package -o dist",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run && vitest run --config vitest.ssr.config.ts",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
-    "prepublishOnly": "pnpm run build && pnpm run typecheck",
-    "prepack": "pnpm run build"
+    "prepublishOnly": "pnpm run build && pnpm run typecheck && pnpm run check && SILENT_TESTS=true pnpm test",
+    "prepack": "pnpm run build",
+    "check": "svelte-check --tsconfig ./tsconfig.test.json --fail-on-warnings"
   },
   "keywords": [
     "svelte",
@@ -58,10 +66,10 @@
     "url": "https://github.com/jbelolo/composable-svelte/issues"
   },
   "peerDependencies": {
-    "@composable-svelte/core": "^0.4.1 || ^0.5.0 || ^0.6.0",
+    "@composable-svelte/core": "^0.11.0",
     "svelte": "^5.0.0",
-    "@composable-svelte/code": "^0.1.0",
-    "@composable-svelte/media": "^0.1.0",
+    "@composable-svelte/code": "^0.3.0",
+    "@composable-svelte/media": "^0.3.0",
     "prismjs": "^1.29.0",
     "pdfjs-dist": "^5.0.0"
   },
@@ -95,15 +103,20 @@
     "playwright": "^1.56.1",
     "prismjs": "^1.29.0",
     "svelte": "^5.0.0",
+    "svelte-check": "^4.3.3",
     "typescript": "^5.5.4",
     "vite": "^6.4.1",
     "vitest": "^4.0.7"
   },
   "dependencies": {
-    "marked": "^16.4.1",
-    "yjs": "^13.6.27"
+    "isomorphic-dompurify": "^2.16.0",
+    "marked": "^16.4.1"
   },
   "publishConfig": {
     "access": "public"
+  },
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
   }
 }

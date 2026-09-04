@@ -1,6 +1,31 @@
 # Phase 13A: Core Foundation - Completion Summary
 
-## Status: ✅ COMPLETED
+## Status: ✅ COMPLETED — as of November 2025, and since changed
+
+> **What this recorded has moved.** WebGPU detection and fallback were never
+> real: both branches built the same WebGL `Engine`, and the
+> `initialize(canvas, preferWebGPU)` signature and
+> `rendererInitialized: 'webgpu' | 'webgl'` action below are gone.
+>
+> `<Light>` no longer "tracks light index for removal" — that is the exact
+> defect `LightConfig.id` was introduced to fix, because removal by index took
+> out the wrong lights once the default ambient light occupied slot 0.
+> `@babylonjs/loaders` is not a dependency. There are two geometry lists and
+> they disagree: the one under "Core Features Implemented → Type System" omits
+> `torus`, and the "Mesh creation" bullet under "Babylon.js Adapter" omits
+> `torus` and `custom`. All six types exist — box, sphere, cylinder, plane,
+> torus, custom. (Both locators were wrong when this banner was first corrected:
+> they named "What Was Built", which holds only a directory tree, and treated
+> "Mesh creation" as a heading rather than the bullet it is. A banner is what a
+> reader checks the document against, so a banner that sends them to the wrong
+> section reads as stale.)
+>
+> The usage example fails to compile twice over: every child omits the required
+> `{store}` prop, and `position` on a directional light is now `direction`.
+>
+> One line below is **right and was right first** — that `TestStore` takes an
+> object rather than positional arguments. `PLAN.md` contradicted it, and the
+> README carried the positional form until this round.
 
 **Date**: November 9, 2025
 **Duration**: ~2 hours

@@ -5,7 +5,7 @@
 <div class="space-y-12">
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Heading Levels</h3>
+      <h2 class="text-xl font-semibold mb-2">Heading Levels</h2>
       <p class="text-muted-foreground text-sm">
         Semantic headings H1-H6 with consistent styling
       </p>
@@ -46,7 +46,7 @@
 
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Page Structure Example</h3>
+      <h2 class="text-xl font-semibold mb-2">Page Structure Example</h2>
       <p class="text-muted-foreground text-sm">
         Proper heading hierarchy in a document
       </p>
@@ -77,7 +77,7 @@
 
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Custom Styling</h3>
+      <h2 class="text-xl font-semibold mb-2">Custom Styling</h2>
       <p class="text-muted-foreground text-sm">
         Apply custom classes to override default styles
       </p>

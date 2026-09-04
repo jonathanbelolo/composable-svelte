@@ -15,8 +15,6 @@ describe('Motion One Basic Test', () => {
 		document.body.appendChild(div);
 
 		try {
-			console.log('Initial opacity:', window.getComputedStyle(div).opacity);
-
 			const animation = animate(
 				div,
 				{ opacity: [0, 1] },
@@ -29,11 +27,7 @@ describe('Motion One Basic Test', () => {
 			await new Promise(resolve => requestAnimationFrame(resolve));
 
 			const computedOpacity = window.getComputedStyle(div).opacity;
-			console.log('Final computed opacity:', computedOpacity);
 			expect(parseFloat(computedOpacity)).toBe(1);
-		} catch (error) {
-			console.error('Animation error:', error);
-			throw error;
 		} finally {
 			document.body.removeChild(div);
 		}
@@ -44,8 +38,6 @@ describe('Motion One Basic Test', () => {
 		document.body.appendChild(div);
 
 		try {
-			console.log('Initial opacity:', window.getComputedStyle(div).opacity);
-
 			const animation = animate(
 				div,
 				{ opacity: [0, 1], scale: [0.95, 1] },
@@ -62,11 +54,7 @@ describe('Motion One Basic Test', () => {
 			await new Promise(resolve => requestAnimationFrame(resolve));
 
 			const computedOpacity = window.getComputedStyle(div).opacity;
-			console.log('Final computed opacity:', computedOpacity);
 			expect(parseFloat(computedOpacity)).toBe(1);
-		} catch (error) {
-			console.error('Animation error:', error);
-			throw error;
 		} finally {
 			document.body.removeChild(div);
 		}

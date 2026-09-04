@@ -33,7 +33,7 @@ function rotateShapes() {
     <div>
       <h2 class="text-2xl font-bold mb-2">Live Demo</h2>
       <p class="text-muted-foreground">
-        All primitive geometries: Box, Sphere, Cylinder, Torus, and Plane with state-driven WebGPU/WebGL rendering
+        All primitive geometries: Box, Sphere, Cylinder, Torus, and Plane with state-driven WebGL rendering
       </p>
     </div>
 
@@ -62,7 +62,7 @@ function rotateShapes() {
       <Scene {store} height="500px">
         <Camera {store} position={[0, 4, 12]} lookAt={[0, 0, 0]} fov={45} />
         <Light {store} type="ambient" intensity={0.4} color="#ffffff" />
-        <Light {store} type="directional" position={[5, 10, 7.5]} intensity={1.2} color="#ffffff" />
+        <Light {store} type="directional" direction={[5, 10, 7.5]} intensity={1.2} color="#ffffff" />
 
         <!-- Row 1: Box, Sphere, Cylinder -->
         <Mesh
@@ -117,7 +117,7 @@ function rotateShapes() {
     <div class="flex gap-2">
       <button
         onclick={rotateShapes}
-        class="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+        class="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
       >
         Rotate All Shapes 45°
       </button>
@@ -128,7 +128,7 @@ function rotateShapes() {
   <section class="space-y-4">
     <div>
       <h2 class="text-2xl font-bold mb-2">Usage</h2>
-      <p class="text-muted-foreground">All supported geometry types</p>
+      <p class="text-muted-foreground">The five primitive geometry types (custom geometry takes raw vertex data)</p>
     </div>
 
     <div class="rounded-lg bg-muted p-4 overflow-x-auto">
@@ -144,7 +144,7 @@ function rotateShapes() {
     reducer: graphicsReducer,
     dependencies: {}
   });
-</script>
+<\/script>
 
 <Scene {store}>
   <Camera {store} position={[0, 4, 12]} lookAt={[0, 0, 0]} />
@@ -192,9 +192,9 @@ function rotateShapes() {
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div class="rounded-lg border p-4">
-        <h3 class="font-semibold mb-2">WebGPU First</h3>
+        <h3 class="font-semibold mb-2">Reducer-Driven Animation</h3>
         <p class="text-sm text-muted-foreground">
-          Automatically uses WebGPU on supported browsers with transparent WebGL fallback
+          Animations advance through the reducer, so they are inspectable, cancellable and testable
         </p>
       </div>
 

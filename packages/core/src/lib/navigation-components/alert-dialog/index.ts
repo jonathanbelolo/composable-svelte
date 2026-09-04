@@ -1,0 +1,14 @@
+/**
+ * A titled, described confirmation dialog, composed over `Alert`.
+ *
+ * Compound parts, following the convention `Card` and `Banner` already use.
+ * @packageDocumentation
+ */
+
+export { default as AlertDialog } from './AlertDialog.svelte';
+export { default as AlertDialogHeader } from './AlertDialogHeader.svelte';
+export { default as AlertDialogTitle } from './AlertDialogTitle.svelte';
+export { default as AlertDialogDescription } from './AlertDialogDescription.svelte';
+export { default as AlertDialogFooter } from './AlertDialogFooter.svelte';
+export { default as AlertDialogAction } from './AlertDialogAction.svelte';
+export { default as AlertDialogCancel } from './AlertDialogCancel.svelte';

@@ -1,20 +1,15 @@
 /**
  * Video Embed Module
  *
- * Provides video embedding functionality for external platforms.
- * Supports YouTube, Vimeo, Twitch, and other platforms.
+ * Provides video embedding for YouTube, Vimeo and Twitch.
  *
  * @example
  * ```svelte
  * <script>
- *   import { VideoEmbed, detectVideo } from '@composable-svelte/code/video-embed';
- *
- *   const video = detectVideo('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+ *   import { VideoEmbed } from '@composable-svelte/media/video-embed';
  * </script>
  *
- * {#if video}
- *   <VideoEmbed {video} />
- * {/if}
+ * <VideoEmbed url="https://www.youtube.com/watch?v=dQw4w9WgXcQ" />
  * ```
  */
 

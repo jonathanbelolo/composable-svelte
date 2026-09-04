@@ -96,7 +96,7 @@
 
 <div class="space-y-6">
   <div class="space-y-2">
-    <h3 class="text-lg font-semibold">Data Transforms Demo</h3>
+    <h2 class="text-lg font-semibold">Data Transforms Demo</h2>
     <p class="text-sm text-muted-foreground">
       Interactive demo showing filter, sort, and top-N transforms on chart data.
     </p>
@@ -218,7 +218,7 @@
   </div>
 
   <div class="space-y-2">
-    <h4 class="text-sm font-semibold">Available Transforms:</h4>
+    <h3 class="text-sm font-semibold">Available Transforms:</h3>
     <ul class="text-sm text-muted-foreground space-y-1 list-disc list-inside">
       <li><strong>filter():</strong> Filter data by predicate function</li>
       <li><strong>sortBy():</strong> Sort data by field (ascending or descending)</li>

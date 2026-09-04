@@ -1,5 +1,15 @@
 # DOM-Synchronized WebGL Effects
 
+**Status**: Superseded by phase 16 — `WebGLOverlay`
+
+> A design sketch that was not built. There is no `DOMSyncState`,
+> `BabylonDOMSyncAdapter` or `createBabylonAdapter(canvas, { webgpu, fallback })`
+> — the shipped answer is `<WebGLOverlay>`, one full-viewport canvas that
+> registers DOM elements and draws over them. WebGPU, listed below as a met
+> success criterion, was never implemented at all.
+>
+> `packages/graphics/README.md`'s "WebGL Overlay" section describes what exists.
+
 ## Overview
 
 This document outlines how to integrate WebGL shader effects with normal HTML content - the pattern where HTML elements remain in the document flow (maintaining layout and accessibility) but are visually enhanced with WebGL overlays.

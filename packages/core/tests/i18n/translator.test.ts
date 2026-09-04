@@ -3,6 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { expectConsole } from '../helpers/console.js';
 import {
   createTranslator,
   isNamespaceLoaded,
@@ -84,12 +85,13 @@ describe('createTranslator', () => {
     });
 
     it('should return key if not found in any locale', () => {
+      expectConsole('warn');
       const t = createTranslator(state, 'common');
       expect(t('nonexistent')).toBe('nonexistent');
     });
 
     it('should warn in dev mode when translation missing', () => {
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleSpy = expectConsole('warn');
 
       // Set DEV mode
       const originalEnv = import.meta.env.DEV;
@@ -98,13 +100,12 @@ describe('createTranslator', () => {
       const t = createTranslator(state, 'common');
       t('missing');
 
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(consoleSpy[0]?.[0]).toEqual(
         '[i18n] Translation missing: common.missing'
       );
 
       // Restore
       (import.meta.env as any).DEV = originalEnv;
-      consoleSpy.mockRestore();
     });
   });
 
@@ -149,6 +150,7 @@ describe('createTranslator', () => {
     });
 
     it('should return key when namespace not loaded', () => {
+      expectConsole('warn');
       const t = createTranslator(state, 'nonexistent');
       expect(t('someKey')).toBe('someKey');
     });

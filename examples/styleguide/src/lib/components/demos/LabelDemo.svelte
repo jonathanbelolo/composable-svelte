@@ -8,7 +8,7 @@
   <!-- Interactive Demo -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Interactive Demo</h3>
+      <h2 class="text-xl font-semibold mb-2">Interactive Demo</h2>
       <p class="text-muted-foreground text-sm">
         Labels provide accessible names for form controls
       </p>
@@ -31,7 +31,7 @@
   <!-- Label Variants -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Label Examples</h3>
+      <h2 class="text-xl font-semibold mb-2">Label Examples</h2>
       <p class="text-muted-foreground text-sm">
         Different ways to use labels
       </p>
@@ -39,7 +39,7 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">Standard Label</h4>
+        <h3 class="font-semibold">Standard Label</h3>
         <div class="space-y-2">
           <Label for="username">Username</Label>
           <Input id="username" placeholder="johndoe" />
@@ -47,7 +47,7 @@
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">With Description</h4>
+        <h3 class="font-semibold">With Description</h3>
         <div class="space-y-2">
           <Label for="bio">Bio</Label>
           <p class="text-sm text-muted-foreground">Tell us about yourself</p>
@@ -56,7 +56,7 @@
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">Required Field</h4>
+        <h3 class="font-semibold">Required Field</h3>
         <div class="space-y-2">
           <Label for="required-email">
             Email <span class="text-destructive">*</span>
@@ -66,7 +66,7 @@
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">With Checkbox</h4>
+        <h3 class="font-semibold">With Checkbox</h3>
         <div class="flex items-center space-x-2">
           <Checkbox id="notifications" />
           <Label for="notifications">Enable notifications</Label>
@@ -78,7 +78,7 @@
   <!-- Accessibility -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Accessibility Features</h3>
+      <h2 class="text-xl font-semibold mb-2">Accessibility Features</h2>
       <p class="text-muted-foreground text-sm">
         Labels are essential for accessibility
       </p>

@@ -6,16 +6,24 @@
  * @packageDocumentation
  */
 
-import { ZodError } from 'zod';
+import { ZodError, type ZodIssue } from 'zod';
 import { Effect } from '../../effect.js';
 import type {
 	FormState,
 	FormConfig,
 	FormAction,
-	FormDependencies,
 	FieldState
 } from './form.types.js';
 import type { Reducer } from '../../types.js';
+import {
+	collectFieldPaths,
+	defaultFieldState,
+	readAtPath,
+	setAtPath,
+	toFieldPath,
+	withField
+} from './field-path.js';
+import type { FieldPath, FormFields } from './field-path.js';
 
 /**
  * Create initial form state from configuration.
@@ -37,17 +45,17 @@ export function createInitialFormState<T extends Record<string, any>>(
 ): FormState<T> {
 	const formData = data ?? config.initialData;
 
-	// Create FieldState for each field
-	const fields: any = {};
-	for (const key in formData) {
-		fields[key] = {
-			value: formData[key],
-			touched: false,
-			dirty: false,
-			error: null,
-			isValidating: false,
-			warnings: []
-		} satisfies FieldState;
+	// A record for every addressable path, not just the top level.
+	//
+	// `for (const key in formData)` walked one level, which is where a nested
+	// form first lost its shape: `address.zip` had nowhere to put an error, so
+	// the error went to `address` and named a field the user cannot see.
+	//
+	// Every node is keyed, not only the leaves — a whole-object `.refine()`
+	// produces an issue at `['address']` and needs a home too.
+	const fields: FormFields<T> = {};
+	for (const path of collectFieldPaths(formData)) {
+		fields[path as FieldPath<T>] = defaultFieldState();
 	}
 
 	return {
@@ -55,6 +63,7 @@ export function createInitialFormState<T extends Record<string, any>>(
 		fields,
 		schema: config.schema,
 		formErrors: [],
+		focusedField: null,
 		isValidating: false,
 		isSubmitting: false,
 		submitCount: 0,
@@ -82,7 +91,7 @@ export function createInitialFormState<T extends Record<string, any>>(
  */
 export function createFormReducer<T extends Record<string, any>>(
 	config: FormConfig<T>
-): Reducer<FormState<T>, FormAction<T>, FormDependencies> {
+): Reducer<FormState<T>, FormAction<T>> {
 	const { schema, mode = 'all', debounceMs = 300, asyncValidators, onSubmit } = config;
 
 	return (state, action, deps) => {
@@ -95,15 +104,11 @@ export function createFormReducer<T extends Record<string, any>>(
 
 				const newState: FormState<T> = {
 					...state,
-					data: { ...state.data, [field]: value },
-					fields: {
-						...state.fields,
-						[field]: {
-							...state.fields[field],
-							dirty: true,
-							error: null // Clear error on change for immediate feedback
-						}
-					}
+					data: setAtPath(state.data, field, value),
+					fields: withField(state.fields, field, {
+						dirty: true,
+						error: null // Clear error on change for immediate feedback
+					})
 				};
 
 				// Trigger validation based on mode
@@ -133,13 +138,11 @@ export function createFormReducer<T extends Record<string, any>>(
 
 				const newState: FormState<T> = {
 					...state,
-					fields: {
-						...state.fields,
-						[field]: {
-							...state.fields[field],
-							touched: true
-						}
-					}
+					// Only if it is still the focused one. Focus can have moved on by
+					// the time a stale blur is processed, and clearing unconditionally
+					// would blank the attribute on the live field.
+					focusedField: state.focusedField === field ? null : state.focusedField,
+					fields: withField(state.fields, field, { touched: true })
 				};
 
 				// Trigger validation based on mode
@@ -159,8 +162,14 @@ export function createFormReducer<T extends Record<string, any>>(
 			// FIELD FOCUSED
 			// ================================================================
 			case 'fieldFocused': {
-				// Currently no-op, but can be extended for focus tracking
-				return [state, Effect.none()];
+				if (state.focusedField === action.field) {
+					return [state, Effect.none()];
+				}
+
+				// Note what is NOT here: `touched`. That gates error display, so
+				// touching on focus shows "required" on every field the user tabs
+				// through. `fieldBlurred` is the one that touches.
+				return [{ ...state, focusedField: action.field }, Effect.none()];
 			}
 
 			// ================================================================
@@ -171,13 +180,7 @@ export function createFormReducer<T extends Record<string, any>>(
 
 				const newState: FormState<T> = {
 					...state,
-					fields: {
-						...state.fields,
-						[field]: {
-							...state.fields[field],
-							isValidating: true
-						}
-					}
+					fields: withField(state.fields, field, { isValidating: true })
 				};
 
 				// Run Zod validation + async validators
@@ -187,28 +190,52 @@ export function createFormReducer<T extends Record<string, any>>(
 					Effect.cancellable(
 						`validate-${String(field)}`, // Cancel previous validation for this field
 						async (dispatch) => {
-							const fieldValue = state.data[field];
+							const fieldValue = readAtPath(state.data, field);
 							let error: string | null = null;
 							const warnings: string[] = [];
 
-							// 1. Zod schema validation for this field
-							// Validate just this specific field using schema.shape
+							// 1. Zod validation.
+							//
+							// The WHOLE schema against the WHOLE data, then the issues for
+							// this field. It used to be `schema.shape[field].safeParse(value)`
+							// — one sub-schema, one value — which cannot see a rule that
+							// spans two fields. A `.refine()` lives in the parent object's
+							// checks, so `schema.shape.confirmPassword.safeParse('mismatch')`
+							// returns success and "passwords must match" was invisible to
+							// every mode except `onSubmit`.
+							//
+							// Parsing the whole object is also what deletes the `as any`
+							// cast this used to need: `.shape` exists only on a ZodObject,
+							// and when it was absent — a non-object schema, or Zod 3, where
+							// `.refine()` returned a `ZodEffects` with no `.shape` — the
+							// lookup yielded `undefined`, the `if` was skipped, and every
+							// field silently validated as clean. A guard that cannot fail is
+							// worse than none.
+							let issues: readonly ZodIssue[] = [];
 							try {
-								// Access shape safely - it only exists on ZodObject
-								const fieldSchema = (schema as any).shape?.[field];
-								if (fieldSchema) {
-									const result = fieldSchema.safeParse(fieldValue);
-
-									if (!result.success) {
-										// Extract first error message from Zod (use issues, not errors)
-										const firstIssue = result.error?.issues?.[0];
-										error = firstIssue?.message || 'Validation failed';
-									}
-								}
+								const result = schema.safeParse(state.data);
+								if (!result.success) issues = result.error.issues;
 							} catch (e) {
 								// Fallback for unexpected errors
 								error = e instanceof Error ? e.message : 'Validation error';
 							}
+
+							// The FIRST issue for this exact path.
+							//
+							// `find` takes the first, and Zod emits in schema-declaration
+							// order — so `.min(1, 'Email is required').email(...)` reports
+							// "required" for whitespace, which is the actionable one. The
+							// whole-form path below assigns in a loop and used to keep the
+							// LAST, so the same input said one thing while typing and
+							// another on submit.
+							//
+							// Exact, not prefix: a prefix match would put the zip code's
+							// error on `address` as well as `address.zip`.
+							const issueFor = (name: string): string | null =>
+								issues.find((issue) => toFieldPath(issue.path) === name)?.message ??
+								null;
+
+							if (error === null) error = issueFor(field);
 
 							// 2. Async validator (if provided and Zod validation passed)
 							// CRITICAL FIX: Wrap in try/catch to handle network errors
@@ -228,6 +255,30 @@ export function createFormReducer<T extends Record<string, any>>(
 								error,
 								warnings
 							});
+
+							// 3. Refresh siblings that the full parse has just exonerated.
+							//
+							// Cross-field rules make one field's edit change another field's
+							// verdict. Fix `password` to match and `confirmPassword` was
+							// still showing "Passwords do not match" — true when it was
+							// written, false by the time it was read, and it stayed until
+							// the user touched that field or submitted again.
+							//
+							// The rule, and why this is safe: an error may DISAPPEAR from
+							// any field, but may only APPEAR on the field being validated.
+							// Nothing here flags a field the user has not touched.
+							for (const name of Object.keys(state.fields) as FieldPath<T>[]) {
+								if (name === field) continue;
+								if (state.fields[name]?.error == null) continue;
+								if (issueFor(name) !== null) continue;
+
+								dispatch({
+									type: 'fieldValidationCompleted',
+									field: name,
+									error: null,
+									warnings: []
+								});
+							}
 						}
 					)
 				];
@@ -242,15 +293,11 @@ export function createFormReducer<T extends Record<string, any>>(
 				return [
 					{
 						...state,
-						fields: {
-							...state.fields,
-							[field]: {
-								...state.fields[field],
-								isValidating: false,
-								error,
-								warnings
-							}
-						}
+						fields: withField(state.fields, field, {
+							isValidating: false,
+							error,
+							warnings
+						})
 					},
 					Effect.none()
 				];
@@ -277,31 +324,54 @@ export function createFormReducer<T extends Record<string, any>>(
 					state,
 					Effect.run(async (dispatch) => {
 						try {
-							// Validate entire form with Zod
-							schema.parse(state.data);
+							// The parsed result, not just the verdict. Zod applies a
+							// schema's transforms while validating, and until this
+							// carried `data` the output was computed and thrown away —
+							// so `state.data` held raw input while `FormState<T>`
+							// declared `T`, the schema's *output* type.
+							const parsed = schema.parse(state.data);
 
 							// No errors - proceed to submission
 							dispatch({
 								type: 'formValidationCompleted',
 								fieldErrors: {},
-								formErrors: []
+								formErrors: [],
+								data: parsed
 							});
 						} catch (e) {
 							if (e instanceof ZodError) {
 								// Map Zod errors to field errors
-								const fieldErrors: Partial<Record<keyof T, string>> = {};
+								// A Map, and the first issue per path wins.
+								//
+								// Two fixes in one loop. This used to read `issue.path[0]`,
+								// so a nested issue at ['address','zip'] was filed under
+								// `address`; and it assigned unconditionally, so the LAST
+								// issue for a field overwrote every earlier one while the
+								// per-field path above kept the FIRST. Same input, two
+								// different messages depending on how validation was
+								// triggered.
+								//
+								// `typeof path === 'string'` is gone with it: a numeric
+								// segment is falsy at index 0 and not a string, so an array
+								// element's issue fell into `formErrors`, which no component
+								// renders.
+								const seen = new Map<string, string>();
 								const formErrors: string[] = [];
 
 								for (const issue of e.issues || []) {
-									const path = issue.path[0];
-									if (path && typeof path === 'string') {
-										// Field-level error
-										fieldErrors[path as keyof T] = issue.message;
-									} else {
-										// Form-level error (refinements, etc.)
+									const path = toFieldPath(issue.path);
+									if (path === null) {
+										// Form-level: a top-level refinement, or a path this
+										// cannot address.
 										formErrors.push(issue.message);
+									} else if (!seen.has(path)) {
+										seen.set(path, issue.message);
 									}
 								}
+
+								const fieldErrors = Object.fromEntries(seen) as Partial<
+									Record<FieldPath<T>, string>
+								>;
 
 								dispatch({
 									type: 'formValidationCompleted',
@@ -331,13 +401,16 @@ export function createFormReducer<T extends Record<string, any>>(
 
 				if (hasErrors) {
 					// Update field errors and stop (don't submit)
-					const newFields = { ...state.fields };
-					for (const field in fieldErrors) {
-						newFields[field as keyof T] = {
-							...newFields[field as keyof T],
-							error: fieldErrors[field as keyof T] ?? null,
+					// `withField` bases each write on a complete default, so an error
+					// for a path with no record yet — an array element that did not
+					// exist at init — gets all five keys rather than a two-key object
+					// spread from `undefined`.
+					let newFields = state.fields;
+					for (const field of Object.keys(fieldErrors) as FieldPath<T>[]) {
+						newFields = withField(newFields, field, {
+							error: fieldErrors[field] ?? null,
 							touched: true // Mark as touched to show error
-						};
+						});
 					}
 
 					return [
@@ -352,9 +425,38 @@ export function createFormReducer<T extends Record<string, any>>(
 					];
 				}
 
-				// No errors - proceed to submission
+				// No errors - proceed to submission.
+				//
+				// `formErrors: []` is not cosmetic. Nothing else clears it but
+				// `formReset`, so a form-level error survived the validation that
+				// disproved it: fix the thing it complained about, submit again
+				// successfully, and the message was still on screen.
+				//
+				// `data` is the schema's output, and writing it back here is what
+				// makes a schema the single declaration of what a field is. A
+				// `.trim()` used to decide only whether all-whitespace was rejected;
+				// what got *sent* had to be trimmed again by whoever built the
+				// request, and forgetting that second step failed silently — the
+				// form accepted the value and the backend received the dirty one.
+				//
+				// **Here and not in per-field validation.** That path runs on every
+				// keystroke in `onChange` mode, where writing back would trim the
+				// space the user just typed and fight them mid-word. Whole-form
+				// validation runs at submit, when typing has finished.
 				return [
-					{ ...state, isValidating: false },
+					{
+						...state,
+						// Merged over the existing data, not swapped for it. Zod
+						// object schemas strip keys they do not declare, so replacing
+						// would silently delete anything a consumer kept in `data`
+						// beside the validated fields — and the form would lose it at
+						// the moment of submitting, which is the worst possible time.
+						// Merging still applies every transform and default, because
+						// the parsed values win.
+						...(action.data !== undefined && { data: { ...state.data, ...action.data } }),
+						isValidating: false,
+						formErrors: []
+					},
 					Effect.run(async (dispatch) => {
 						dispatch({ type: 'submissionStarted' });
 					})
@@ -444,14 +546,8 @@ export function createFormReducer<T extends Record<string, any>>(
 				return [
 					{
 						...state,
-						data: { ...state.data, [action.field]: action.value },
-						fields: {
-							...state.fields,
-							[action.field]: {
-								...state.fields[action.field],
-								dirty: true
-							}
-						}
+						data: setAtPath(state.data, action.field, action.value),
+						fields: withField(state.fields, action.field, { dirty: true })
 					},
 					Effect.none()
 				];
@@ -464,13 +560,7 @@ export function createFormReducer<T extends Record<string, any>>(
 				return [
 					{
 						...state,
-						fields: {
-							...state.fields,
-							[action.field]: {
-								...state.fields[action.field],
-								error: action.error
-							}
-						}
+						fields: withField(state.fields, action.field, { error: action.error })
 					},
 					Effect.none()
 				];
@@ -483,13 +573,7 @@ export function createFormReducer<T extends Record<string, any>>(
 				return [
 					{
 						...state,
-						fields: {
-							...state.fields,
-							[action.field]: {
-								...state.fields[action.field],
-								error: null
-							}
-						}
+						fields: withField(state.fields, action.field, { error: null })
 					},
 					Effect.none()
 				];

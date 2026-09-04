@@ -50,6 +50,12 @@ import App from './App.svelte';
 // 1. Read state from script tag
 const stateJSON = document.getElementById('__COMPOSABLE_SVELTE_STATE__')?.textContent;
 
+// The element may be absent — `?.textContent` is `string | undefined`, and
+// hydrating without server state is a real failure, not a type nuisance.
+if (!stateJSON) {
+  throw new Error('No serialized state found — was the page server-rendered?');
+}
+
 // 2. Hydrate with client dependencies
 const store = hydrateStore(stateJSON, {
   reducer: appReducer,
@@ -192,27 +198,44 @@ const store = hydrateStore(stateJSON, { reducer, dependencies });
 
 ### Custom Serialization (Advanced)
 
-For complex types (Date, Map, Set), provide custom serializers:
+
+
+**Without a serializer, non-JSON values are corrupted silently — not rejected.**
+`serializeState` is `JSON.stringify`, so only a `BigInt` or a cycle throws. A
+`Date` arrives on the client as a `string`, a `Map` or `Set` arrives as `{}`
+with every entry lost, and TypeScript claims the original type throughout.
 
 ```typescript
-import { serializeState, parseState } from '@composable-svelte/core/ssr';
+import { serializeState, parseState, createTaggedSerializer } from '@composable-svelte/core/ssr';
+
+interface AppState {
+  at: Date;
+  seen: Set<string>;
+}
+declare const store: { state: AppState };
+
+// The SAME object goes to both halves. A tag written by a replacer that no
+// reviver reads is worse than no tagging at all, which is why they travel
+// together rather than as two options.
+const serializer = createTaggedSerializer();
 
 // Server
-const serialized = serializeState(store.state, {
-  customSerializers: {
-    Date: (date) => ({ __type: 'Date', value: date.toISOString() }),
-    Map: (map) => ({ __type: 'Map', entries: Array.from(map.entries()) })
-  }
-});
+const serialized = serializeState(store.state, serializer);
 
 // Client
-const state = parseState(serialized, {
-  customParsers: {
-    Date: (obj) => new Date(obj.value),
-    Map: (obj) => new Map(obj.entries)
-  }
-});
+const state = parseState<AppState>(serialized, serializer);
+state.at instanceof Date;  // true
+state.seen.has('a');       // works — a Set, not `{}`
+
+// `renderToHTML` takes it as an option, and `hydrateStore` as a config key:
+//   renderToHTML(App, { store }, { serializer })
+//   hydrateStore(json, { reducer, serializer })
 ```
+
+`createTaggedSerializer` covers `Date`, `Map` and `Set`. An `undefined`
+property is still dropped, deliberately: restoring it would make the key
+*present with value `undefined`*, which under `exactOptionalPropertyTypes` is a
+different type from absent.
 
 ---
 
@@ -258,7 +281,11 @@ case 'selectPost': {
   ];
 }
 
-// Component renders meta tags
+```
+
+The component renders them:
+
+```svelte
 <svelte:head>
   <title>{$store.meta.title}</title>
   <meta name="description" content={$store.meta.description} />
@@ -423,7 +450,10 @@ function hydrate() {
     );
 
     // 3. Sync browser history with state (URL routing!)
-    syncBrowserHistory(store, {
+    // `dest` in `destinationToAction` is inferred from what `getDestination`
+    // returns, which needs a typed store to infer from — otherwise it arrives
+    // as `{}` and `dest.state` does not compile.
+    syncBrowserHistory<BlogState, AppAction, { type: 'post'; state: { postId: string } }>(store, {
       serializers: serializerConfig.serializers,
       parsers: parserConfig.parsers,
       // Map state → destination for URL serialization
@@ -845,7 +875,11 @@ interface AppState {
   meta: { title: string; description: string; ogImage?: string };
 }
 
-// Component renders meta tags
+```
+
+The component renders them:
+
+```svelte
 <svelte:head>
   <title>{$store.meta.title}</title>
   <meta name="description" content={$store.meta.description} />
@@ -1134,8 +1168,9 @@ app.register(fastifyRateLimit, { max: 100, windowMs: 60_000 });
 
 // Standalone rate limiter
 const limiter = new RateLimiter({ max: 100, windowMs: 60000 });
-if (limiter.isRateLimited(clientIP)) {
-  return res.status(429).send('Too many requests');
+const { allowed, remaining, resetTime } = limiter.check(clientIP);
+if (!allowed) {
+  return res.status(429).send(`Too many requests — retry after ${resetTime}`);
 }
 ```
 
@@ -1156,7 +1191,7 @@ import {
 const componentHTML = renderComponent(MyComponent, { props });
 
 // buildHydrationScript - generate hydration <script> tag
-const script = buildHydrationScript(store, { id: '__APP_STATE__' });
+const script = buildHydrationScript(store); // the element id is fixed
 ```
 
 ### SSG Import Path

@@ -12,7 +12,7 @@
 	interface User {
 		id: string;
 		name: string;
-		avatar?: string;
+		avatar?: string | undefined;
 		color: string;
 		presence: UserPresence;
 	}
@@ -21,11 +21,11 @@
 		/** Array of users to display */
 		users: User[];
 		/** Maximum number of avatars to show before "+X more" */
-		maxVisible?: number;
+		maxVisible?: number | undefined;
 		/** Avatar size */
-		size?: 'sm' | 'md' | 'lg';
+		size?: 'sm' | 'md' | 'lg' | undefined;
 		/** Custom class */
-		class?: string;
+		class?: string | undefined;
 	}
 
 	let { users, maxVisible = 5, size = 'md', class: className = '' }: Props = $props();
@@ -33,17 +33,9 @@
 	const visibleUsers = $derived(users.slice(0, maxVisible));
 	const hiddenCount = $derived(Math.max(0, users.length - maxVisible));
 
-	const sizePixels = {
-		sm: 32,
-		md: 40,
-		lg: 48
-	};
 
-	const sizeClasses = {
-		sm: 'w-8 h-8 text-xs',
-		md: 'w-10 h-10 text-sm',
-		lg: 'w-12 h-12 text-base'
-	};
+
+
 
 	// Generate initials from name
 	function getInitials(name: string): string {
@@ -59,7 +51,8 @@
 <div class="presence-avatar-stack {className}">
 	{#each visibleUsers as user, index (user.id)}
 		<div class="avatar-wrapper" style="z-index: {visibleUsers.length - index};">
-			<div class="avatar {sizeClasses[size]}" style="background-color: {user.color};">
+			<div class="avatar"
+					data-size={size} style="background-color: {user.color};">
 				{#if user.avatar}
 					<img src={user.avatar} alt={user.name} class="avatar-image" />
 				{:else}
@@ -73,7 +66,8 @@
 	{/each}
 
 	{#if hiddenCount > 0}
-		<div class="avatar-more {sizeClasses[size]}" title="{hiddenCount} more users">
+		<div class="avatar-more"
+				data-size={size} title="{hiddenCount} more users">
 			+{hiddenCount}
 		</div>
 	{/if}
@@ -101,13 +95,42 @@
 		align-items: center;
 		justify-content: center;
 		border-radius: 50%;
-		border: 2px solid white;
-		background-color: #e2e8f0;
-		color: white;
+		border: 2px solid hsl(var(--background, 0 0% 100%));
+		background-color: hsl(var(--muted, 214.3 31.8% 91.4%));
+		color: hsl(var(--muted-foreground, 0 0% 100%));
 		font-weight: 600;
 		overflow: hidden;
 		cursor: default;
 		position: relative;
+	}
+
+	/*
+	 * Sized here rather than by a utility class — this package has no Tailwind,
+	 * so `w-10 h-10 text-sm` and friends were inert text. `.avatar` had no
+	 * dimensions at all, which meant an initials avatar sized to its text and an
+	 * avatar with a photo collapsed to nothing: `.avatar-image` is 100% of a
+	 * parent that was 0x0. The numbers below are the ones the dead `sizePixels`
+	 * map already held.
+	 */
+	.avatar[data-size='sm'],
+	.avatar-more[data-size='sm'] {
+		width: 32px;
+		height: 32px;
+		font-size: 12px;
+	}
+
+	.avatar[data-size='md'],
+	.avatar-more[data-size='md'] {
+		width: 40px;
+		height: 40px;
+		font-size: 14px;
+	}
+
+	.avatar[data-size='lg'],
+	.avatar-more[data-size='lg'] {
+		width: 48px;
+		height: 48px;
+		font-size: 16px;
 	}
 
 	.avatar-image {
@@ -131,9 +154,9 @@
 		align-items: center;
 		justify-content: center;
 		border-radius: 50%;
-		border: 2px solid white;
-		background-color: #64748b;
-		color: white;
+		border: 2px solid hsl(var(--background, 0 0% 100%));
+		background-color: hsl(var(--muted, 215.4 16.3% 46.9%));
+		color: hsl(var(--muted-foreground, 0 0% 100%));
 		font-weight: 600;
 		margin-left: -8px;
 		cursor: default;
@@ -141,12 +164,12 @@
 
 	@media (prefers-color-scheme: dark) {
 		.avatar {
-			border-color: #1e293b;
+			border-color: hsl(var(--card, 217.2 32.6% 17.5%));
 		}
 
 		.avatar-more {
-			border-color: #1e293b;
-			background-color: #475569;
+			border-color: hsl(var(--card, 217.2 32.6% 17.5%));
+			background-color: hsl(var(--muted, 215.3 19.3% 34.5%));
 		}
 	}
 </style>

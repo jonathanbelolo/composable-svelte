@@ -3,7 +3,7 @@
 	import { comboboxReducer } from './combobox.reducer.js';
 	import { createInitialComboboxState } from './combobox.types.js';
 	import type { ComboboxOption } from './combobox.types.js';
-	import { animateDropdownIn, animateDropdownOut } from '../../../animation/animate.js';
+	import { animateChevron, animateDropdownIn, animateDropdownOut } from '../../../animation/animate.js';
 	import { Spinner } from '../spinner/index.js';
 	import { cn } from '../../../utils.js';
 
@@ -37,7 +37,7 @@
 		/**
 		 * Available options (for local/sync mode).
 		 */
-		options?: ComboboxOption<T>[];
+		options?: ComboboxOption<T>[] | undefined;
 
 		/**
 		 * Selected value.
@@ -48,39 +48,50 @@
 		/**
 		 * Placeholder text.
 		 */
-		placeholder?: string;
+		placeholder?: string | undefined;
+		/**
+		 * The accessible name for the text input.
+		 *
+		 * **Defaults to `placeholder`**, so this control is never nameless. It
+		 * renders `role="combobox"` and spreads no rest props onto the input, which
+		 * meant a consumer had no way to name it at all — a screen reader announced
+		 * "combobox" and nothing else. A placeholder is what a sighted user reads,
+		 * so it is the right default; pass this when the two should differ.
+		 */
+		ariaLabel?: string | undefined;
 
 		/**
 		 * Disabled state.
 		 */
-		disabled?: boolean;
+		disabled?: boolean | undefined;
 
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Async function to load options based on query.
 		 * If provided, enables async mode.
 		 */
-		loadOptions?: (query: string) => Promise<ComboboxOption<T>[]>;
+		loadOptions?: ((query: string) => Promise<ComboboxOption<T>[]>) | undefined;
 
 		/**
 		 * Callback when value changes.
 		 */
-		onchange?: (value: T | null) => void;
+		onchange?: ((value: T | null) => void) | undefined;
 
 		/**
 		 * Debounce delay in milliseconds for async searches (default: 300).
 		 */
-		debounceDelay?: number;
+		debounceDelay?: number | undefined;
 	}
 
 	let {
 		options = [],
 		value = $bindable(null),
 		placeholder = 'Search...',
+		ariaLabel,
 		disabled = false,
 		class: className,
 		loadOptions,
@@ -92,19 +103,32 @@
 	const store = createStore({
 		initialState: createInitialComboboxState(options, value, debounceDelay),
 		reducer: comboboxReducer,
+		// Getters, not values: `createStore` re-reads `config.dependencies` on
+		// every dispatch, but a plain object literal freezes what these resolve
+		// to at setup, so swapping a callback prop left the store calling the
+		// original. Mirrors `ui/file-upload/FileUpload.svelte:43-59`.
 		dependencies: {
+			// `onChange` is a closure over live bindings, so it is already fresh;
+			// `loadOptions` is the prop that was frozen.
 			onChange: (newValue) => {
 				value = newValue;
 				onchange?.(newValue);
 			},
-			loadOptions
+			get loadOptions() {
+				return loadOptions;
+			}
 		}
 	});
 
-	// Sync external value changes to store
+	// Sync external value changes to store.
+	//
+	// Dispatch, never assign: `store.state` is `$state.raw` behind a getter with
+	// no setter, so a direct write lands on the underlying object, notifies
+	// nobody, and skips the reducer — leaving `searchQuery` uncleared and the
+	// filtering stale. Mirrors Select.svelte:105.
 	$effect(() => {
-		if (store.state.selected !== value) {
-			store.state.selected = value;
+		if ($store.selected !== value) {
+			store.dispatch({ type: 'valueChanged', value });
 		}
 	});
 
@@ -125,6 +149,16 @@
 	let containerElement: HTMLElement | null = $state(null);
 	let inputElement: HTMLInputElement | null = $state(null);
 	let dropdownElement: HTMLElement | null = $state(null);
+	// Captured once, never reactive. The other three disclosure chevrons place
+	// themselves declaratively so the server can render them at the right angle;
+	// this one did not, which left its resting transform as `none` — correct by
+	// accident, since a combobox always mounts closed, and inconsistent enough
+	// that the shared test could not assert the same thing about all four.
+	const initialChevronTransform = $store.dropdown.status !== 'idle'
+		? 'rotate(180deg)'
+		: 'rotate(0deg)';
+
+	let chevronElement: SVGElement | null = $state(null);
 
 	// Get display value for input
 	const displayValue = $derived.by(() => {
@@ -227,12 +261,17 @@
 	$effect(() => {
 		const status = $store.dropdown.status;
 
-		if (!dropdownElement) return;
-
+		// The chevron turns on this same effect rather than on a Tailwind
+		// transition class, so the two halves of one gesture share a timeline.
+		// `guides/ANIMATION-GUIDELINES.md` routes anything that appears or
+		// disappears to Motion One precisely because a CSS transition "cannot be
+		// coordinated with other animations".
 		if (status === 'opening') {
-			animateDropdownIn(dropdownElement);
+			if (dropdownElement) animateDropdownIn(dropdownElement);
+			if (chevronElement) animateChevron(chevronElement, true);
 		} else if (status === 'closing') {
-			animateDropdownOut(dropdownElement);
+			if (dropdownElement) animateDropdownOut(dropdownElement);
+			if (chevronElement) animateChevron(chevronElement, false);
 		}
 	});
 </script>
@@ -254,6 +293,7 @@
 			{disabled}
 			value={displayValue}
 			role="combobox"
+			aria-label={ariaLabel ?? placeholder}
 			aria-expanded={$store.dropdown.status !== 'idle'}
 			aria-autocomplete="list"
 			aria-controls="combobox-dropdown"
@@ -273,10 +313,12 @@
 				<button
 					type="button"
 					class="text-muted-foreground hover:text-foreground"
+					aria-label="Clear selection"
 					onclick={handleClear}
 					tabindex="-1"
 				>
 					<svg
+						aria-hidden="true"
 						xmlns="http://www.w3.org/2000/svg"
 						width="16"
 						height="16"
@@ -292,23 +334,43 @@
 					</svg>
 				</button>
 			{/if}
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				width="16"
-				height="16"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-				class={cn(
-					'text-muted-foreground transition-transform',
-					$store.dropdown.status !== 'idle' && 'rotate-180'
-				)}
+			<!--
+				A real control, not decoration. This was a bare <svg> with no
+				handler that nevertheless rotated with `dropdown.status`, so it
+				looked like the toggle while doing nothing — sitting over the
+				exact spot users click to open a combobox. The `toggled` action
+				existed and nothing dispatched it.
+
+				`tabindex="-1"` because the input already owns keyboard access to
+				the dropdown; this is a pointer affordance.
+			-->
+			<button
+				type="button"
+				class="text-muted-foreground hover:text-foreground flex items-center"
+				aria-label="Toggle options"
+				aria-expanded={$store.dropdown.status !== 'idle'}
+				{disabled}
+				tabindex="-1"
+				onclick={() => store.dispatch({ type: 'toggled' })}
 			>
-				<polyline points="6 9 12 15 18 9"></polyline>
-			</svg>
+				<svg
+					bind:this={chevronElement}
+					data-combobox-chevron
+					style:transform={initialChevronTransform}
+					aria-hidden="true"
+					xmlns="http://www.w3.org/2000/svg"
+					width="16"
+					height="16"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				>
+					<polyline points="6 9 12 15 18 9"></polyline>
+				</svg>
+			</button>
 		</div>
 	</div>
 
@@ -334,7 +396,7 @@
 							type="button"
 							class={cn(
 								'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-left outline-none',
-								'transition-colors',
+								'',
 								$store.highlightedIndex === index
 									? 'bg-accent text-accent-foreground'
 									: 'text-foreground',

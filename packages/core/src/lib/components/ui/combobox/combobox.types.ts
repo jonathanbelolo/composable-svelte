@@ -124,7 +124,9 @@ export type ComboboxAction<T = string> =
 	| { type: 'end' }
 	| { type: 'enter' }
 	| { type: 'escape' }
-	| { type: 'cleared' };
+	| { type: 'cleared' }
+	/** External `value` prop changed. Mirrors Select's action of the same name. */
+	| { type: 'valueChanged'; value: T | null };
 
 /**
  * Combobox dependencies.

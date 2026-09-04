@@ -11,7 +11,7 @@
  * - /posts/:id/comments → Post comments page (nested route)
  */
 
-import { parseDestination, matchPath, serializeDestination } from '@composable-svelte/core/routing';
+import { createParserConfig, parseDestination, serializeDestination } from '@composable-svelte/core/routing';
 import type { ParserConfig, SerializerConfig } from '@composable-svelte/core/routing';
 import type { AppDestination } from './types';
 
@@ -23,41 +23,28 @@ import type { AppDestination } from './types';
  * - /posts/:id → post destination
  * - / → list destination
  */
-export const parserConfig: ParserConfig<AppDestination> = {
-  basePath: '/',
-  parsers: [
-    // Match posts/:id/comments (most specific first!)
-    // Note: basePath is stripped, so relative path doesn't have leading /
-    (path) => {
-      const params = matchPath('posts/:id/comments', path);
-      if (params) {
-        const postId = parseInt(params.id, 10);
-        if (!isNaN(postId)) {
-          return { type: 'comments', state: { postId } };
-        }
-      }
-      return null;
+export const parserConfig: ParserConfig<AppDestination> = createParserConfig<AppDestination>(
+  {
+    // Keys are tried in insertion order, so the most specific comes first.
+    //
+    // Patterns carry their leading slash. `parseDestination` strips `basePath`
+    // and, when that is '/', hands the parser a path with no leading slash —
+    // which is why this file used to write `posts/:id` and say so in a comment.
+    // `createParserConfig` normalises, so patterns look the same either way.
+    '/posts/:id/comments': (params) => {
+      const postId = parseInt(params.id ?? '', 10);
+      return isNaN(postId) ? null : { type: 'comments', state: { postId } };
     },
-    // Match posts/:id
-    (path) => {
-      const params = matchPath('posts/:id', path);
-      if (params) {
-        const postId = parseInt(params.id, 10);
-        if (!isNaN(postId)) {
-          return { type: 'post', state: { postId } };
-        }
-      }
-      return null;
+    '/posts/:id': (params) => {
+      const postId = parseInt(params.id ?? '', 10);
+      // Declining after the pattern matched: '/posts/abc' is not a post route,
+      // and returning null lets the next parser try.
+      return isNaN(postId) ? null : { type: 'post', state: { postId } };
     },
-    // Match / (root - list page)
-    (path) => {
-      if (path === '/' || path === '') {
-        return { type: 'list', state: {} };
-      }
-      return null;
-    }
-  ]
-};
+    '/': () => ({ type: 'list', state: {} })
+  },
+  { basePath: '/' }
+);
 
 /**
  * Serializer configuration for blog routes.

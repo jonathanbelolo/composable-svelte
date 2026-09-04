@@ -9,22 +9,24 @@
   let feature3 = $state(false);
 
   let selectAll = $state(false);
-  let items = $state([false, false, false]);
+  // A tuple, not boolean[]: noUncheckedIndexedAccess widens array indexing to
+  // `boolean | undefined`, which cannot bind to Checkbox's boolean `checked`.
+  let items = $state([{ checked: false }, { checked: false }, { checked: false }]);
 
   $effect(() => {
-    selectAll = items.every(item => item);
+    selectAll = items.every((item) => item.checked);
   });
 
   function toggleAll() {
     const newValue = !selectAll;
-    items = items.map(() => newValue);
+    items = items.map(() => ({ checked: newValue }));
   }
 </script>
 
 <div class="space-y-12">
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Interactive Demo</h3>
+      <h2 class="text-xl font-semibold mb-2">Interactive Demo</h2>
       <p class="text-muted-foreground text-sm">Binary selection with visual feedback</p>
     </div>
 
@@ -41,12 +43,12 @@
 
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Checkbox States</h3>
+      <h2 class="text-xl font-semibold mb-2">Checkbox States</h2>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">Unchecked</h4>
+        <h3 class="font-semibold">Unchecked</h3>
         <div class="flex items-center space-x-2">
           <Checkbox id="unchecked" />
           <Label for="unchecked">Unchecked checkbox</Label>
@@ -54,7 +56,7 @@
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">Checked</h4>
+        <h3 class="font-semibold">Checked</h3>
         <div class="flex items-center space-x-2">
           <Checkbox id="checked" checked />
           <Label for="checked">Checked checkbox</Label>
@@ -62,7 +64,7 @@
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">Disabled unchecked</h4>
+        <h3 class="font-semibold">Disabled unchecked</h3>
         <div class="flex items-center space-x-2">
           <Checkbox id="disabled-unchecked" disabled />
           <Label for="disabled-unchecked">Disabled unchecked</Label>
@@ -70,7 +72,7 @@
       </div>
 
       <div class="rounded-lg border bg-card p-6 space-y-4">
-        <h4 class="font-semibold">Disabled checked</h4>
+        <h3 class="font-semibold">Disabled checked</h3>
         <div class="flex items-center space-x-2">
           <Checkbox id="disabled-checked" checked disabled />
           <Label for="disabled-checked">Disabled checked</Label>
@@ -81,7 +83,7 @@
 
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Select All Pattern</h3>
+      <h2 class="text-xl font-semibold mb-2">Select All Pattern</h2>
       <p class="text-muted-foreground text-sm">
         Parent checkbox with indeterminate state
       </p>
@@ -92,15 +94,15 @@
         <Checkbox
           id="select-all"
           checked={selectAll}
-          indeterminate={items.some(i => i) && !items.every(i => i)}
+          indeterminate={items.some((i) => i.checked) && !items.every((i) => i.checked)}
           onclick={toggleAll}
         />
         <Label for="select-all">Select all items</Label>
       </div>
       <div class="ml-6 space-y-3">
-        {#each items as item, i}
+        {#each items as item, i (i)}
           <div class="flex items-center space-x-2">
-            <Checkbox id="item-{i}" bind:checked={items[i]} />
+            <Checkbox id="item-{i}" bind:checked={item.checked} />
             <Label for="item-{i}">Item {i + 1}</Label>
           </div>
         {/each}

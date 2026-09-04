@@ -55,8 +55,9 @@ import { createDismissDependency } from '@composable-svelte/core/navigation';
 // Simple child that just needs to close itself
 const childReducer = (state, action, deps) => {
   case 'closeButtonTapped':
-    deps.dismiss();  // OK when parent doesn't need to observe this
-    return [state, Effect.none()];
+    // `deps.dismiss()` IS the effect — return it. Calling it and returning
+    // `Effect.none()` discards the dismiss and nothing happens.
+    return [state, deps.dismiss()];  // OK when parent doesn't need to observe this
 }
 ```
 
@@ -287,8 +288,7 @@ const [newState, effect] = ifLetPresentation(
 ```typescript
 // ❌ WRONG when parent needs to handle the save
 case 'saveButtonTapped':
-  deps.dismiss();  // Parent never sees this action!
-  return [state, Effect.none()];
+  return [state, deps.dismiss()];  // Parent never sees this action!
 ```
 
 **Solution**: Let parent observe the action so it can handle both the save and the dismissal.
@@ -377,7 +377,7 @@ if (
 
 **Problem**: Not disabling click-outside when child presents nested modals/sheets/alerts.
 
-```typescript
+```svelte
 // ❌ WRONG: Click-outside enabled on parent modal
 <Modal store={parentStore}>
   <!-- Child can present sheets/alerts -->
@@ -387,7 +387,7 @@ if (
 
 **Solution**: Disable click-outside on parent when children can present their own UI.
 
-```typescript
+```svelte
 // ✅ CORRECT: Disable click-outside on parent
 <Modal store={parentStore} disableClickOutside>
   <!-- Child can safely present sheets/alerts -->
@@ -428,7 +428,11 @@ case 'addItem': {
   return [newState, effect];
 }
 
-// Component
+```
+
+The component:
+
+```svelte
 <Modal store={scopeToDestination(store, ['addItem'], 'addItem', 'addItem')}>
   {#snippet children({ store: childStore })}
     <AddItem store={childStore} />
@@ -472,7 +476,13 @@ case 'destination': {
   return [newState, effect];
 }
 
-// Component - IMPORTANT: disableClickOutside on parent!
+```
+
+The component. The parent sets `disableClickOutside`, so a click outside
+reaches the child that is actually presented rather than dismissing the parent
+out from under it:
+
+```svelte
 <Modal store={parentStore} disableClickOutside>
   {#snippet children({ store })}
     <ProductDetail store={store} />
@@ -696,7 +706,7 @@ const addToCartStore = scopeToDestination(
 
 **Solution**: Add `disableClickOutside` to parent modal:
 
-```typescript
+```svelte
 <Modal store={parentStore} disableClickOutside>
   <!-- Children are safe now -->
 </Modal>

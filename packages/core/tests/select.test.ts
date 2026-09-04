@@ -185,7 +185,7 @@ describe('Select', () => {
 
 			await store.send({ type: 'searchChanged', query: 'yellow' }, (state) => {
 				expect(state.filteredOptions).toHaveLength(1);
-				expect(state.filteredOptions[0].value).toBe('banana');
+				expect(state.filteredOptions[0]!.value).toBe('banana');
 			});
 
 			store.assertNoPendingActions();
@@ -510,7 +510,7 @@ describe('Select', () => {
 			// Search
 			await store.send({ type: 'searchChanged', query: 'man' }, (state) => {
 				expect(state.filteredOptions).toHaveLength(1);
-				expect(state.filteredOptions[0].value).toBe('mango');
+				expect(state.filteredOptions[0]!.value).toBe('mango');
 				expect(state.highlightedIndex).toBe(0); // Auto-highlight first
 			});
 
@@ -598,13 +598,13 @@ describe('Select', () => {
 		});
 
 		it('is a no-op when the value already matches', async () => {
-			const store = createTestStore({
-				initialState: createInitialSelectState(options, 'apple'),
-				reducer: selectReducer
-			});
+			const initial = createInitialSelectState(options, 'apple');
+			const store = createTestStore({ initialState: initial, reducer: selectReducer });
 
 			await store.send({ type: 'valueChanged', value: 'apple' });
 
+			// "No-op" is a reference claim: the same state object, and no effect.
+			expect(store.state).toBe(initial);
 			store.assertNoPendingActions();
 		});
 
@@ -625,6 +625,50 @@ describe('Select', () => {
 				expect(state.filteredOptions).toEqual([{ value: 'kiwi', label: 'Kiwi' }]);
 			});
 
+			store.assertNoPendingActions();
+		});
+	});
+
+	describe('Reducer idempotency', () => {
+		// `Select.svelte` dispatches `optionsChanged` from an unguarded `$effect`,
+		// and `dispatch` reads store state inside that effect's tracking scope.
+		// A reducer that returns a fresh object every time therefore re-triggers
+		// the effect forever — the component threw `effect_update_depth_exceeded`
+		// on mount. A reference check is not enough either: `options={[...]}`
+		// inline produces a new array each render, so the comparison is by value.
+		it('returns the same state when options are unchanged by value', async () => {
+			const initial = createInitialSelectState(options);
+			const store = createTestStore({ initialState: initial, reducer: selectReducer });
+
+			// A structurally equal but distinct array, as an inline prop would give.
+			const sameByValue = options.map((o) => ({ ...o }));
+			await store.send({ type: 'optionsChanged', options: sameByValue });
+
+			expect(store.state).toBe(initial);
+			store.assertNoPendingActions();
+		});
+
+		it('still applies genuinely changed options', async () => {
+			const initial = createInitialSelectState(options);
+			const store = createTestStore({ initialState: initial, reducer: selectReducer });
+
+			await store.send(
+				{ type: 'optionsChanged', options: [{ value: 'kiwi', label: 'Kiwi' }] },
+				(state) => {
+					expect(state.options).toEqual([{ value: 'kiwi', label: 'Kiwi' }]);
+				}
+			);
+			expect(store.state).not.toBe(initial);
+			store.assertNoPendingActions();
+		});
+
+		it('returns the same state for an equal multi-select array', async () => {
+			const initial = createInitialSelectState(options, ['apple', 'banana'], true);
+			const store = createTestStore({ initialState: initial, reducer: selectReducer });
+
+			await store.send({ type: 'valueChanged', value: ['apple', 'banana'] });
+
+			expect(store.state).toBe(initial);
 			store.assertNoPendingActions();
 		});
 	});

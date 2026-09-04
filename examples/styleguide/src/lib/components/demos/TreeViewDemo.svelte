@@ -3,6 +3,7 @@
   import type { TreeNode } from '@composable-svelte/core/components/ui';
   import { Card, CardContent, CardHeader, CardTitle } from '@composable-svelte/core/components/ui';
   import { Badge } from '@composable-svelte/core/components/ui';
+  import { Button } from '@composable-svelte/core/components/ui';
 
   // File system example
   const fileSystemNodes: TreeNode[] = [
@@ -68,29 +69,29 @@
       id: 'ceo',
       label: 'Sarah Johnson',
       icon: '👤',
-      data: { role: 'CEO' },
+      data: 'CEO',
       children: [
         {
           id: 'cto',
           label: 'Michael Chen',
           icon: '👤',
-          data: { role: 'CTO' },
+          data: 'CTO',
           children: [
             {
               id: 'eng-lead',
               label: 'Emily Rodriguez',
               icon: '👤',
-              data: { role: 'Engineering Lead' },
+              data: 'Engineering Lead',
               children: [
-                { id: 'dev-1', label: 'Alex Kim', icon: '👤', data: { role: 'Senior Developer' } },
-                { id: 'dev-2', label: 'Jordan Lee', icon: '👤', data: { role: 'Developer' } },
+                { id: 'dev-1', label: 'Alex Kim', icon: '👤', data: 'Senior Developer' },
+                { id: 'dev-2', label: 'Jordan Lee', icon: '👤', data: 'Developer' },
               ],
             },
             {
               id: 'devops-lead',
               label: 'Chris Taylor',
               icon: '👤',
-              data: { role: 'DevOps Lead' },
+              data: 'DevOps Lead',
             },
           ],
         },
@@ -98,10 +99,10 @@
           id: 'cmo',
           label: 'David Brown',
           icon: '👤',
-          data: { role: 'CMO' },
+          data: 'CMO',
           children: [
-            { id: 'marketing-1', label: 'Lisa Wang', icon: '👤', data: { role: 'Marketing Manager' } },
-            { id: 'marketing-2', label: 'Tom Anderson', icon: '👤', data: { role: 'Content Lead' } },
+            { id: 'marketing-1', label: 'Lisa Wang', icon: '👤', data: 'Marketing Manager' },
+            { id: 'marketing-2', label: 'Tom Anderson', icon: '👤', data: 'Content Lead' },
           ],
         },
       ],
@@ -246,13 +247,13 @@
   <!-- Basic Tree View -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">File System Tree</h3>
+      <h2 class="text-xl font-semibold mb-2">File System Tree</h2>
       <p class="text-muted-foreground text-sm">
         Hierarchical file browser with expand/collapse
       </p>
       {#if selectedNode}
         <div class="mt-2">
-          <Badge variant="primary">Selected: {selectedNode}</Badge>
+          <Badge variant="default">Selected: {selectedNode}</Badge>
         </div>
       {/if}
     </div>
@@ -264,7 +265,22 @@
           initialExpandedIds={['1', '1-1']}
           onSelect={handleFileSelect}
           class="border rounded-md p-2"
-        />
+        >
+          {#snippet controls({ expandAll, collapseAll, deselectAll, expandedCount, selectedCount })}
+            <div class="flex items-center gap-2 pb-3">
+              <Button variant="outline" size="sm" onclick={expandAll}>Expand all</Button>
+              <Button variant="outline" size="sm" onclick={collapseAll} disabled={expandedCount === 0}>
+                Collapse all
+              </Button>
+              <Button variant="ghost" size="sm" onclick={deselectAll} disabled={selectedCount === 0}>
+                Clear selection
+              </Button>
+              <span class="text-muted-foreground ml-auto text-xs">
+                {expandedCount} open · {selectedCount} selected
+              </span>
+            </div>
+          {/snippet}
+        </TreeView>
       </CardContent>
     </Card>
   </section>
@@ -272,7 +288,7 @@
   <!-- Organization Chart -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Organization Chart</h3>
+      <h2 class="text-xl font-semibold mb-2">Organization Chart</h2>
       <p class="text-muted-foreground text-sm">
         Company hierarchy with expandable teams
       </p>
@@ -295,7 +311,7 @@
   <!-- Product Categories -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Product Categories</h3>
+      <h2 class="text-xl font-semibold mb-2">Product Categories</h2>
       <p class="text-muted-foreground text-sm">
         E-commerce navigation with product counts
       </p>
@@ -333,7 +349,7 @@
   <!-- Multi-select Tree -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Multi-Select Mode</h3>
+      <h2 class="text-xl font-semibold mb-2">Multi-Select Mode</h2>
       <p class="text-muted-foreground text-sm">
         Select multiple items at once
       </p>
@@ -359,7 +375,7 @@
   <!-- Lazy Loading -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Lazy Loading</h3>
+      <h2 class="text-xl font-semibold mb-2">Lazy Loading</h2>
       <p class="text-muted-foreground text-sm">
         Load children on demand with loading states
       </p>
@@ -392,7 +408,7 @@
   <!-- Keyboard Navigation -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Keyboard Navigation</h3>
+      <h2 class="text-xl font-semibold mb-2">Keyboard Navigation</h2>
       <p class="text-muted-foreground text-sm">
         Full keyboard accessibility support
       </p>
@@ -444,7 +460,7 @@
   <!-- Disabled Nodes -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Disabled Nodes</h3>
+      <h2 class="text-xl font-semibold mb-2">Disabled Nodes</h2>
       <p class="text-muted-foreground text-sm">
         Some nodes can be disabled
       </p>

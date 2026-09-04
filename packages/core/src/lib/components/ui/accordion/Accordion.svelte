@@ -1,4 +1,4 @@
-<script lang="ts" context="module">
+<script lang="ts" module>
 	import { setContext, getContext } from 'svelte';
 	import type { Store } from '../../../types.js';
 	import type { AccordionState, AccordionAction } from './accordion.types.js';
@@ -45,42 +45,42 @@
 		/**
 		 * Accordion items (optional - use this for declarative mode or omit to use composition with AccordionItem children).
 		 */
-		items?: AccordionItem[];
+		items?: AccordionItem[] | undefined;
 
 		/**
 		 * Initially expanded item IDs.
 		 */
-		initialExpandedIds?: string[];
+		initialExpandedIds?: string[] | undefined;
 
 		/**
 		 * Allow multiple items expanded simultaneously.
 		 */
-		allowMultiple?: boolean;
+		allowMultiple?: boolean | undefined;
 
 		/**
 		 * Allow all items to be collapsed (no minimum expanded).
 		 */
-		collapsible?: boolean;
+		collapsible?: boolean | undefined;
 
 		/**
 		 * Callback when an item is expanded.
 		 */
-		onExpand?: (id: string) => void;
+		onExpand?: ((id: string) => void) | undefined;
 
 		/**
 		 * Callback when an item is collapsed.
 		 */
-		onCollapse?: (id: string) => void;
+		onCollapse?: ((id: string) => void) | undefined;
 
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Content snippet.
 		 */
-		children?: Snippet;
+		children?: Snippet | undefined;
 	}
 
 	let {
@@ -98,9 +98,17 @@
 	const store = createStore({
 		initialState: createInitialAccordionState(items || [], initialExpandedIds, allowMultiple, collapsible),
 		reducer: accordionReducer,
+		// Getters, not values: `createStore` re-reads `config.dependencies` on
+		// every dispatch, but a plain object literal freezes what these resolve
+		// to at setup, so swapping a callback prop left the store calling the
+		// original. Mirrors `ui/file-upload/FileUpload.svelte:43-59`.
 		dependencies: {
-			onExpand,
-			onCollapse
+			get onExpand() {
+				return onExpand;
+			},
+			get onCollapse() {
+				return onCollapse;
+			}
 		}
 	});
 

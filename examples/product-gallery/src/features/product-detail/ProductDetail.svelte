@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Store } from '@composable-svelte/core';
+  import type { ScopableStore } from '@composable-svelte/core';
   import type { ProductDetailState, ProductDetailAction } from './product-detail.types.js';
   import type { Product } from '../../models/product.js';
   import { formatPrice, getStockStatus, isInStock } from '../../models/product.js';
@@ -12,13 +12,17 @@
   import Share from '../share/Share.svelte';
   import QuickView from '../quick-view/QuickView.svelte';
   import DeleteAlert from '../delete-alert/DeleteAlert.svelte';
+  import type { AddToCartState, AddToCartAction } from '../add-to-cart/add-to-cart.types.js';
+  import type { ShareState, ShareAction } from '../share/share.types.js';
+  import type { QuickViewState, QuickViewAction } from '../quick-view/quick-view.types.js';
+  import type { DeleteAlertState, DeleteAlertAction } from '../delete-alert/delete-alert.types.js';
 
   // ============================================================================
   // Props
   // ============================================================================
 
   interface ProductDetailProps {
-    store: Store<ProductDetailState, ProductDetailAction>;
+    store: ScopableStore<ProductDetailState, ProductDetailAction>;
     product: Product;
     onBack?: () => void;
   }
@@ -30,19 +34,19 @@
   // ============================================================================
 
   const addToCartStore = $derived(
-    scopeToDestination(store, ['destination'], 'addToCart', 'destination')
+    scopeToDestination<AddToCartState, AddToCartAction>(store, ['destination'], 'addToCart', 'destination')
   );
 
   const shareStore = $derived(
-    scopeToDestination(store, ['destination'], 'share', 'destination')
+    scopeToDestination<ShareState, ShareAction>(store, ['destination'], 'share', 'destination')
   );
 
   const quickViewStore = $derived(
-    scopeToDestination(store, ['destination'], 'quickView', 'destination')
+    scopeToDestination<QuickViewState, QuickViewAction>(store, ['destination'], 'quickView', 'destination')
   );
 
   const deleteAlertStore = $derived(
-    scopeToDestination(store, ['destination'], 'deleteAlert', 'destination')
+    scopeToDestination<DeleteAlertState, DeleteAlertAction>(store, ['destination'], 'deleteAlert', 'destination')
   );
 
   const infoStore = $derived(
@@ -194,8 +198,10 @@
     store.dispatch({ type: 'presentation', event: { type: 'dismissalCompleted' } });
   }}
 >
-  {#snippet children({ store: childStore })}
-    <AddToCart store={childStore} {product} />
+  {#snippet children()}
+    {#if addToCartStore.state}
+      <AddToCart store={addToCartStore} {product} />
+    {/if}
   {/snippet}
 </Sheet>
 
@@ -210,22 +216,28 @@
     store.dispatch({ type: 'presentation', event: { type: 'dismissalCompleted' } });
   }}
 >
-  {#snippet children({ store: childStore })}
-    <Share store={childStore} {product} />
+  {#snippet children()}
+    {#if shareStore.state}
+      <Share store={shareStore} {product} />
+    {/if}
   {/snippet}
 </Sheet>
 
 <!-- QuickView Modal -->
 <Modal store={quickViewStore}>
-  {#snippet children({ store: childStore })}
-    <QuickView store={childStore} {product} />
+  {#snippet children()}
+    {#if quickViewStore.state}
+      <QuickView store={quickViewStore} {product} />
+    {/if}
   {/snippet}
 </Modal>
 
 <!-- Delete Alert -->
 <Alert store={deleteAlertStore}>
-  {#snippet children({ store: childStore })}
-    <DeleteAlert store={childStore} {product} />
+  {#snippet children()}
+    {#if deleteAlertStore.state}
+      <DeleteAlert store={deleteAlertStore} {product} />
+    {/if}
   {/snippet}
 </Alert>
 

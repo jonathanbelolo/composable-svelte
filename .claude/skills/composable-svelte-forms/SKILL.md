@@ -430,7 +430,9 @@ UI inputs from `@composable-svelte/core/components/ui`:
 ```typescript
 interface FormState<T extends Record<string, any>> {
   data: T;                                    // Current form data
-  fields: { [K in keyof T]: FieldState };     // Per-field state
+  // Keyed by field PATH — 'email', 'address.zip', 'items.0.name'. Partial: an
+  // entry exists only once its path exists in the data.
+  fields: Partial<Record<FieldPath<T>, FieldState>>;
   schema: ZodSchema<T>;                       // Zod schema
   formErrors: string[];                       // Cross-field validation errors
   isValidating: boolean;                      // Form-level validation in progress
@@ -441,7 +443,7 @@ interface FormState<T extends Record<string, any>> {
 }
 
 interface FieldState {
-  value: any;           // Current field value
+  // No `value`: it lives in `data`, and a copy here went stale immediately.
   touched: boolean;     // Has user interacted?
   dirty: boolean;       // Has value changed from initial?
   error: string | null; // Validation error
@@ -452,7 +454,7 @@ interface FieldState {
 
 ### Accessing Field Errors
 
-```typescript
+```svelte
 // Via FormMessage component (automatic — reads from context)
 <FormMessage />
 
@@ -612,7 +614,7 @@ User clicks submit button (type="submit")
 
 ```svelte
 <!-- WRONG — old prop-based API that doesn't exist -->
-<FormField field="name" send={...} state={...}>
+<FormField field="name" {send} {state}>
   <input type="text" />
 </FormField>
 
@@ -621,7 +623,7 @@ User clicks submit button (type="submit")
   {#snippet children({ field, send })}
     <FormItem>
       <FormLabel>Name</FormLabel>
-      <Input value={field.value} oninput={...} onblur={...} />
+      <Input value={field.value} oninput={field.oninput} onblur={field.onblur} />
       <FormMessage />
     </FormItem>
   {/snippet}
@@ -632,7 +634,7 @@ User clicks submit button (type="submit")
 
 ```svelte
 <!-- WRONG — onValueChange doesn't exist, child components not supported -->
-<Select value={field.value} onValueChange={(v) => send(...)}>
+<Select value={field.value} onValueChange={(v) => send({ type: 'changed', value: v })}>
   <SelectTrigger><SelectValue /></SelectTrigger>
   <SelectContent>
     <SelectItem value="a">A</SelectItem>
@@ -651,7 +653,7 @@ User clicks submit button (type="submit")
 
 ```svelte
 <!-- WRONG -->
-<Switch checked={field.value} onCheckedChange={(v) => send(...)} />
+<Switch checked={field.value} onCheckedChange={(v) => send({ type: 'toggled', value: v })} />
 <Switch bind:checked={field.value} />
 
 <!-- CORRECT -->
@@ -663,9 +665,13 @@ User clicks submit button (type="submit")
 ```svelte
 <!-- WRONG — manual form, bypasses Form component's submit handling -->
 <form onsubmit={(e) => { e.preventDefault(); formStore.dispatch({ type: 'submit' }); }}>
+  <!-- fields -->
+</form>
 
 <!-- CORRECT — Form component handles submit internally -->
 <Form store={formStore}>
+  <!-- fields -->
+</Form>
 ```
 
 ### 5. Wrong state access
@@ -674,8 +680,14 @@ User clicks submit button (type="submit")
 // WRONG — errors record doesn't exist
 formStore.state.errors.email
 
-// CORRECT — per-field state
+// WRONG — `fields` is partial, so this is a type error
 formStore.state.fields.email.error
+
+// CORRECT — per-field state, acknowledging that a field may have no record yet
+formStore.state.fields.email?.error
+
+// CORRECT — a nested field is addressed by its full path
+formStore.state.fields['address.zip']?.error
 
 // WRONG — submission.status doesn't exist
 formStore.state.submission.status === 'submitting'

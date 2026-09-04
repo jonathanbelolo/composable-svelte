@@ -24,12 +24,12 @@
 		/**
 		 * Image source URL (optional).
 		 */
-		src?: string;
+		src?: string | undefined;
 
 		/**
 		 * Alternative text for the image.
 		 */
-		alt?: string;
+		alt?: string | undefined;
 
 		/**
 		 * Fallback text to display when image fails to load or is not provided.
@@ -40,12 +40,12 @@
 		/**
 		 * Size variant of the avatar.
 		 */
-		size?: 'sm' | 'md' | 'lg' | 'xl';
+		size?: 'sm' | 'md' | 'lg' | 'xl' | undefined;
 
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 	}
 
 	let {

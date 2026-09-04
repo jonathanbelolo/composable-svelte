@@ -8,26 +8,65 @@
  * If not installed, syntax highlighting and video extraction will be disabled gracefully.
  */
 
-import { marked } from 'marked';
+import { Marked } from 'marked';
+import { sanitizeRenderedMarkdown } from './sanitize.js';
 
-// Language map for Prism
-const LANGUAGE_MAP: Record<string, string> = {
+/**
+ * This module's own renderer instance.
+ *
+ * Not the shared `marked` singleton: `simple-markdown.ts` configures its own
+ * renderer too, and both modules load at import time, so whichever landed last
+ * used to win for both — SimpleChatMessage silently acquiring Prism markup, or
+ * this one losing it.
+ */
+const marked = new Marked();
+
+/**
+ * Aliases a fenced code block may use, and the Prism language each means.
+ *
+ * Every value here must be one `@composable-svelte/code` can load — its
+ * `SupportedLanguage` union — or the alias resolves to a name Prism never has
+ * and the block renders as plain text, exactly as if the entry were absent.
+ * `rb: 'ruby'` was that: `ruby` is not in the union, so `loadLanguage('ruby')`
+ * logs "Unsupported language" and the alias could not work. Dropped rather than
+ * left in place looking supported.
+ */
+export const LANGUAGE_MAP: Record<string, string> = {
 	js: 'javascript',
 	ts: 'typescript',
 	jsx: 'javascript',
 	tsx: 'typescript',
 	py: 'python',
-	rb: 'ruby',
 	sh: 'bash',
 	yml: 'yaml'
 };
 
+/**
+ * What gets loaded up front.
+ *
+ * Derived from the map rather than listed beside it, because a hand-kept second
+ * list is how `rb` and `yml` came to point at languages nothing loaded.
+ */
+export const PRELOADED_LANGUAGES = [
+	...new Set(['javascript', 'typescript', 'python', 'bash', 'json', ...Object.values(LANGUAGE_MAP)])
+];
+
+import type { VideoEmbedData } from './types.js';
+
 // Lazy-loaded optional dependencies
 let Prism: typeof import('prismjs') | null = null;
 let loadLanguage: ((lang: string) => Promise<void>) | null = null;
-let extractVideosFromMarkdownFn:
-	| ((markdown: string) => Array<{ url: string; platform: string }>)
-	| null = null;
+let extractVideosFromMarkdownFn: ((markdown: string) => VideoEmbedData[]) | null = null;
+/**
+ * The `VideoEmbed` component itself, captured alongside the extractor.
+ *
+ * Loaded here at module scope rather than in a component's `onMount`, because
+ * `onMount` does not run on the server: a component that resolved it there
+ * could never render a video into server HTML. Module scope is evaluated once
+ * per process, so from the second request onward a server render sees it — the
+ * same reason the extractor above works on a warm server.
+ */
+let videoEmbedComponent: unknown = null;
 
 // Track if we've attempted to load optional deps
 let optionalDepsLoaded = false;
@@ -54,31 +93,58 @@ async function loadOptionalDependencies(): Promise<void> {
 
 		// Pre-load common languages if available
 		if (loadLanguage && Prism) {
-			await Promise.all([
-				loadLanguage('javascript'),
-				loadLanguage('typescript'),
-				loadLanguage('python'),
-				loadLanguage('bash'),
-				loadLanguage('json')
-			]).catch(() => {
-				// Ignore language loading errors
-			});
+			const load = loadLanguage;
+			await Promise.all(PRELOADED_LANGUAGES.map((language) => load(language))).catch(
+				() => {
+					// Ignore language loading errors
+				}
+			);
 		}
 	} catch {
 		// @composable-svelte/code not installed
 	}
 
-	// Try to load @composable-svelte/media for video extraction
+	// Try to load @composable-svelte/media for video extraction.
+	//
+	// The `catch` is not the only path that matters, and under this repo's own
+	// bundler it is not even the usual one: Vite resolves an absent optional peer
+	// to a stub `{}` rather than throwing, so both assignments below land as
+	// `undefined` and the catch never fires. Callers must therefore treat a
+	// missing value as normal — `extractVideosFromMarkdown` null-checks, and the
+	// components gate on `VideoEmbed` being truthy. The catch covers bundlers
+	// that do hard-fail the dynamic import.
 	try {
 		const mediaModule = await import('@composable-svelte/media');
 		extractVideosFromMarkdownFn = mediaModule.extractVideosFromMarkdown;
+		videoEmbedComponent = mediaModule.VideoEmbed;
 	} catch {
 		// @composable-svelte/media not installed
 	}
 }
 
-// Start loading optional dependencies (non-blocking)
-loadOptionalDependencies();
+/**
+ * Resolves once the optional dependencies have been attempted.
+ *
+ * The load is kicked off eagerly and does not block, so `renderMarkdown` and
+ * `extractVideosFromMarkdown` degrade to un-highlighted output and an empty
+ * video list until it settles. Nothing could previously observe that moment —
+ * the promise was fired and discarded — so a component that rendered once,
+ * early, and was never invalidated again would silently show no videos and no
+ * syntax highlighting, forever. Await this before reading either.
+ */
+export const optionalDependenciesReady: Promise<void> = loadOptionalDependencies();
+
+/**
+ * `VideoEmbed` from the optional media peer, or `null` if it is absent or has
+ * not finished loading.
+ *
+ * Read synchronously so a server render can use it; awaiting
+ * `optionalDependenciesReady` first is what makes it deterministic on the
+ * client.
+ */
+export function getVideoEmbedComponent(): unknown {
+	return videoEmbedComponent;
+}
 
 /**
  * Configure marked with Prism syntax highlighting (if available)
@@ -133,6 +199,7 @@ function escapeHtml(text: string): string {
 	return text.replace(/[&<>"']/g, (char) => map[char]!);
 }
 
+
 /**
  * Render markdown to HTML
  *
@@ -153,7 +220,7 @@ export function renderMarkdown(markdown: string, isStreaming = false): string {
 		}
 
 		const html = marked.parse(processedMarkdown, { async: false }) as string;
-		return html;
+		return sanitizeRenderedMarkdown(html);
 	} catch (error) {
 		console.error('Error rendering markdown:', error);
 		// Fallback to escaped plain text
@@ -179,28 +246,6 @@ function fixPartialMarkdown(markdown: string): string {
 	}
 
 	return fixed;
-}
-
-/**
- * Check if text contains markdown syntax
- */
-export function hasMarkdownSyntax(text: string): boolean {
-	if (!text) return false;
-
-	// Check for common markdown patterns
-	const patterns = [
-		/^#{1,6}\s/, // Headers
-		/\*\*.*\*\*/, // Bold
-		/\*.*\*/, // Italic
-		/`.*`/, // Code
-		/```/, // Code blocks
-		/^\s*[-*+]\s/, // Unordered lists
-		/^\s*\d+\.\s/, // Ordered lists
-		/\[.*\]\(.*\)/, // Links
-		/^\s*>/ // Blockquotes
-	];
-
-	return patterns.some((pattern) => pattern.test(text));
 }
 
 /**
@@ -257,9 +302,7 @@ export function extractImagesFromMarkdown(markdown: string): Array<{
  * Requires @composable-svelte/media to be installed.
  * Returns empty array if the dependency is not available.
  */
-export function extractVideosFromMarkdown(
-	markdown: string
-): Array<{ url: string; platform: string }> {
+export function extractVideosFromMarkdown(markdown: string): VideoEmbedData[] {
 	if (!extractVideosFromMarkdownFn) {
 		return [];
 	}

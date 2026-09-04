@@ -51,8 +51,10 @@ export type {
 export {
 	createLocalStorage,
 	createSessionStorage,
-	createNoopStorage
+	createNoopStorage,
+	createMockStorage
 } from './local-storage.js';
+export type { MockStorage } from './local-storage.js';
 
 // Cookie Storage
 export {

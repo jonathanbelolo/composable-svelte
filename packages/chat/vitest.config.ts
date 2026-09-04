@@ -21,6 +21,11 @@ export default defineConfig({
 		// Test file patterns
 		include: ['tests/**/*.{test,spec}.{js,ts}'],
 
+		// Server renders cannot run in browser mode — `svelte/server`'s `render`
+		// throws `effect_orphan` there. They have their own config:
+		// vitest.ssr.config.ts, run as the second half of the `test` script.
+		exclude: ['tests/ssr/**'],
+
 		// Suppress console output during tests (for CI/prepublish)
 		silent: process.env.CI === 'true' || process.env.SILENT_TESTS === 'true',
 

@@ -51,32 +51,34 @@
 		/**
 		 * Minimum selectable date.
 		 */
-		minDate?: Date | null;
+		minDate?: Date | null | undefined;
 
 		/**
 		 * Maximum selectable date.
 		 */
-		maxDate?: Date | null;
+		maxDate?: Date | null | undefined;
 
 		/**
 		 * Callback when date is selected (single mode).
 		 */
-		onDateSelect?: (date: Date) => void;
+		onDateSelect?: ((date: Date) => void) | undefined;
 
 		/**
 		 * Callback when range is selected (range mode).
 		 */
-		onRangeSelect?: (range: DateRange) => void;
+		onRangeSelect?: ((range: DateRange) => void) | undefined;
 
 		/**
 		 * Additional CSS classes.
 		 */
-		class?: string;
+		class?: string | undefined;
 
 		/**
 		 * Custom header snippet (month/year display).
 		 */
-		header?: Snippet<[{ month: Date; prevMonth: () => void; nextMonth: () => void }]>;
+		header?: Snippet<
+			[{ month: Date; prevMonth: () => void; nextMonth: () => void; setMonth: (date: Date) => void }]
+		> | undefined;
 
 		/**
 		 * Custom day cell snippet.
@@ -92,7 +94,7 @@
 					select: () => void;
 				}
 			]
-		>;
+		> | undefined;
 	}
 
 	let {
@@ -127,41 +129,60 @@
 		dependencies
 	});
 
-	// Sync external props to store.
-	// `store.state` is a getter with no setter, so the assignments these effects
-	// used to perform threw a TypeError in strict mode the moment a consumer
-	// changed one of these props after mount.
+	// Sync external props to the store.
+	//
+	// Keyed on each prop's own previous value, held in plain `let`s — never on a
+	// comparison against store state. An effect that compares the two reads both,
+	// so it re-runs when *either* moves and cannot tell which did: an internal
+	// change looks exactly like a prop that must be restored.
+	//
+	// That is not hypothetical. It made range mode unusable. `dateSelected` calls
+	// `deps.onDateSelect`, which writes the `selectedDate` prop, so single mode
+	// converged by accident; `rangeStarted` notifies nobody, so the first click
+	// set `selectedRange.from` in the store, the effect saw a difference, and
+	// `propsChanged` put the stale prop back. `rangeCompleted` was unreachable
+	// because it needs a `from` that could never survive.
+	//
+	// Not `$state`: these are read and written by the effects that depend on
+	// them, and a reactive guard re-triggers the effect it lives in
+	// (`effect_update_depth_exceeded`).
+	let lastMode = mode;
+	let lastSelectedDate = selectedDate;
+	let lastRange = selectedRange;
+	let lastMinDate = minDate;
+	let lastMaxDate = maxDate;
+
 	$effect(() => {
-		if (store.state.mode !== mode) {
-			store.dispatch({ type: 'propsChanged', props: { mode } });
-		}
+		if (mode === lastMode) return;
+		lastMode = mode;
+		store.dispatch({ type: 'propsChanged', props: { mode } });
 	});
 
 	$effect(() => {
-		if (store.state.selectedDate !== selectedDate) {
-			store.dispatch({ type: 'propsChanged', props: { selectedDate } });
-		}
+		if (selectedDate === lastSelectedDate) return;
+		lastSelectedDate = selectedDate;
+		store.dispatch({ type: 'propsChanged', props: { selectedDate } });
 	});
 
 	$effect(() => {
-		if (
-			store.state.selectedRange.from !== selectedRange.from ||
-			store.state.selectedRange.to !== selectedRange.to
-		) {
-			store.dispatch({ type: 'propsChanged', props: { selectedRange } });
-		}
+		// By endpoint, not by object identity: `bind:` hands back a fresh object
+		// every time the range advances, and re-dispatching an unchanged range
+		// would restart the cycle this guard exists to end.
+		if (selectedRange.from === lastRange.from && selectedRange.to === lastRange.to) return;
+		lastRange = selectedRange;
+		store.dispatch({ type: 'propsChanged', props: { selectedRange } });
 	});
 
 	$effect(() => {
-		if (store.state.minDate !== minDate) {
-			store.dispatch({ type: 'propsChanged', props: { minDate } });
-		}
+		if (minDate === lastMinDate) return;
+		lastMinDate = minDate;
+		store.dispatch({ type: 'propsChanged', props: { minDate } });
 	});
 
 	$effect(() => {
-		if (store.state.maxDate !== maxDate) {
-			store.dispatch({ type: 'propsChanged', props: { maxDate } });
-		}
+		if (maxDate === lastMaxDate) return;
+		lastMaxDate = maxDate;
+		store.dispatch({ type: 'propsChanged', props: { maxDate } });
 	});
 
 	// Derived values
@@ -185,8 +206,35 @@
 
 	const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-	const monthName = $derived(monthNames[currentMonthDate.getMonth()]);
 	const year = $derived(currentMonthDate.getFullYear());
+
+	// A decade either side of the displayed year, clamped to the bounds the
+	// consumer set. Not because the reducer would refuse anything — `monthSet`
+	// performs no bounds check, and the chevrons navigate freely — but because
+	// there is nothing selectable once you arrive.
+	const selectableYears = $derived.by(() => {
+		const first = $store.minDate ? $store.minDate.getFullYear() : year - 10;
+		const last = $store.maxDate ? $store.maxDate.getFullYear() : year + 10;
+		// The displayed year is always offered, even if props moved out from under
+		// it, so the select can never show a blank value.
+		const lo = Math.min(first, year);
+		const hi = Math.max(last, year);
+		return Array.from({ length: hi - lo + 1 }, (_, i) => lo + i);
+	});
+
+	// Months are offered on the same basis as years: a month whose every day
+	// falls outside `minDate`/`maxDate` has nothing to select, so it is disabled
+	// rather than silently useless. Without this the two controls disagreed —
+	// the year select was clamped while the month select offered all twelve.
+	const selectableMonths = $derived.by(() =>
+		monthNames.map((name, index) => {
+			const lastDay = new Date(year, index + 1, 0);
+			const firstDay = new Date(year, index, 1);
+			const beforeMin = $store.minDate ? lastDay < $store.minDate : false;
+			const afterMax = $store.maxDate ? firstDay > $store.maxDate : false;
+			return { name, index, disabled: beforeMin || afterMax };
+		})
+	);
 
 	// Actions
 	const prevMonth = () => {
@@ -197,6 +245,15 @@
 		store.dispatch({ type: 'monthChanged', direction: 'next' });
 	};
 
+	/**
+	 * Jump straight to a month. The `monthSet` action existed with no dispatcher
+	 * anywhere in the repo, so reaching a distant month meant clicking a chevron
+	 * once per month.
+	 */
+	const setMonth = (date: Date) => {
+		store.dispatch({ type: 'monthSet', date });
+	};
+
 	const selectDate = (date: Date) => {
 		if (mode === 'single') {
 			store.dispatch({ type: 'dateSelected', date });
@@ -205,6 +262,11 @@
 			if (!$store.selectedRange.from || $store.selectedRange.to) {
 				// Start new range
 				store.dispatch({ type: 'rangeStarted', date });
+				// `rangeStarted` has no dependency callback, so the component is what
+				// keeps the bound prop in step — `onRangeSelect` only fires on
+				// completion, and a half-built range is still worth reporting.
+				lastRange = $store.selectedRange;
+				selectedRange = lastRange;
 			} else {
 				// Complete range
 				store.dispatch({ type: 'rangeCompleted', date });
@@ -245,7 +307,7 @@
 
 <div class="calendar {className}">
 	{#if header}
-		{@render header({ month: currentMonthDate, prevMonth, nextMonth })}
+		{@render header({ month: currentMonthDate, prevMonth, nextMonth, setMonth })}
 	{:else}
 		<!-- Default header -->
 		<div class="calendar-header">
@@ -266,8 +328,31 @@
 			</button>
 
 			<div class="calendar-month-year">
-				{monthName}
-				{year}
+				<select
+					data-calendar-month
+					class="calendar-month-select"
+					aria-label="Month"
+					value={currentMonthDate.getMonth()}
+					onchange={(event) =>
+						setMonth(new Date(year, Number(event.currentTarget.value), 1))}
+				>
+					{#each selectableMonths as month}
+						<option value={month.index} disabled={month.disabled}>{month.name}</option>
+					{/each}
+				</select>
+
+				<select
+					data-calendar-year
+					class="calendar-year-select"
+					aria-label="Year"
+					value={year}
+					onchange={(event) =>
+						setMonth(new Date(Number(event.currentTarget.value), currentMonthDate.getMonth(), 1))}
+				>
+					{#each selectableYears as selectableYear}
+						<option value={selectableYear}>{selectableYear}</option>
+					{/each}
+				</select>
 			</div>
 
 			<button type="button" class="calendar-nav-button" onclick={nextMonth} aria-label="Next month">
@@ -386,6 +471,21 @@
 		color: #111827;
 		min-width: 8rem;
 		text-align: center;
+	}
+
+	.calendar-month-select,
+	.calendar-year-select {
+		font: inherit;
+		color: inherit;
+		background: transparent;
+		border: none;
+		border-radius: 0.375rem;
+		padding: 0.125rem 0.25rem;
+		cursor: pointer;
+	}
+	.calendar-month-select:hover,
+	.calendar-year-select:hover {
+		background: #f3f4f6;
 	}
 
 	.calendar-day-names {

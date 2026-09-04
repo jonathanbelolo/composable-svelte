@@ -10,7 +10,8 @@
  * - Slower GPUs and less memory
  */
 
-import { debugLog } from './debug.js';
+import { noDebug, type DebugLog } from './debug.js';
+import { usableLimit, FALLBACK_MAX_TEXTURE_SIZE } from './texture-validator.js';
 
 export interface DeviceInfo {
 	isMobile: boolean;
@@ -33,7 +34,7 @@ export class DeviceCapabilities {
 	readonly recommendedMaxElements: number;
 	readonly supportsWebGL2: boolean;
 
-	constructor(gl: WebGLRenderingContext) {
+	constructor(gl: WebGLRenderingContext, private log: DebugLog = noDebug) {
 		const ua = navigator.userAgent;
 
 		// Detect platform
@@ -49,8 +50,13 @@ export class DeviceCapabilities {
 			this.platform = 'Desktop';
 		}
 
-		// Get device max texture size
-		const deviceMaxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+		// Get device max texture size.
+		//
+		// Through the same guard `TextureValidator` uses, and for the same
+		// reason: a driver that answers `undefined` or a nonsense value must not
+		// silently become "no limit" — or, on the mobile branch below, `NaN`.
+		const deviceMaxTextureSize =
+			usableLimit(gl.getParameter(gl.MAX_TEXTURE_SIZE)) ?? FALLBACK_MAX_TEXTURE_SIZE;
 
 		// Check WebGL2 support
 		const testCanvas = document.createElement('canvas');
@@ -75,7 +81,7 @@ export class DeviceCapabilities {
 	 * Log device capabilities to console
 	 */
 	private logCapabilities(): void {
-		debugLog('[WebGLOverlay] Device capabilities:', {
+		this.log('[WebGLOverlay] Device capabilities:', {
 			isMobile: this.isMobile,
 			platform: this.platform,
 			maxTextureSize: this.maxTextureSize,
@@ -83,54 +89,6 @@ export class DeviceCapabilities {
 			recommendedMaxElements: this.recommendedMaxElements,
 			webGL2: this.supportsWebGL2
 		});
-	}
-
-	/**
-	 * Check if quality should be reduced for this device
-	 *
-	 * Returns true for mobile devices, indicating that shaders
-	 * should use simpler algorithms and fewer texture updates.
-	 *
-	 * @returns true if quality should be reduced
-	 */
-	shouldReduceQuality(): boolean {
-		return this.isMobile;
-	}
-
-	/**
-	 * Get texture scale factor for this device
-	 *
-	 * Returns a multiplier for texture dimensions.
-	 * Mobile devices get 0.75 to reduce memory usage.
-	 *
-	 * @returns Scale factor (0.75 for mobile, 1.0 for desktop)
-	 */
-	getTextureScaleFactor(): number {
-		return this.isMobile ? 0.75 : 1.0;
-	}
-
-	/**
-	 * Get recommended update frequency for this device
-	 *
-	 * Returns how often textures should be updated per second.
-	 * Lower on mobile to save battery.
-	 *
-	 * @returns Updates per second
-	 */
-	getRecommendedUpdateFrequency(): number {
-		return this.isMobile ? 15 : 30; // Half of target FPS
-	}
-
-	/**
-	 * Check if device is a high-DPI display
-	 *
-	 * Returns true if devicePixelRatio > 1.5
-	 * (Retina displays, high-DPI monitors)
-	 *
-	 * @returns true if high-DPI
-	 */
-	isHighDPI(): boolean {
-		return window.devicePixelRatio >= 1.5;
 	}
 
 	/**

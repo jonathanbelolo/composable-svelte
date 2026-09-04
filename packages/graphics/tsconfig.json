@@ -1,24 +1,10 @@
 {
+  "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "ESNext",
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "allowJs": true,
-    "checkJs": true,
-    "isolatedModules": true,
-    "declaration": true,
-    "declarationMap": true,
-    "emitDeclarationOnly": true,
     "outDir": "./dist",
     "rootDir": "./src",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "types": ["vite/client", "vitest/globals", "node"]
+    "types": ["svelte"]
   },
-  "include": ["src/**/*.ts", "src/**/*.svelte"],
-  "exclude": ["node_modules", "dist", "**/*.spec.ts"]
+  "include": ["src/**/*"],
+  "exclude": ["dist", "node_modules", "**/*.test.ts", "**/*.spec.ts"]
 }

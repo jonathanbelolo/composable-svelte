@@ -1,9 +1,10 @@
 <script lang="ts">
-	import type { Message } from '../types.js';
-	import type { Snippet } from 'svelte';
-	import { renderMarkdown, attachCopyButtons, extractImagesFromMarkdown, extractVideosFromMarkdown } from '../markdown.js';
+	import { animateListItemIn } from '@composable-svelte/core/animation';
+	import type { Message, VideoEmbedData } from '../types.js';
+	import type { Snippet, Component } from 'svelte';
+	import { onMount } from 'svelte';
+	import { renderMarkdown, attachCopyButtons, extractImagesFromMarkdown, extractVideosFromMarkdown, optionalDependenciesReady, getVideoEmbedComponent } from '../markdown.js';
 	import { ImageGallery } from '@composable-svelte/core/components/image-gallery';
-	import { VideoEmbed } from '@composable-svelte/media';
 	import AttachmentGallery from '../attachment-components/AttachmentGallery.svelte';
 	import MessageReactions from './MessageReactions.svelte';
 
@@ -14,28 +15,88 @@
 	 */
 	interface Props {
 		message: Message;
-		isStreaming?: boolean;
-		headerActions?: Snippet;
+		isStreaming?: boolean | undefined;
+		/** Animate this message in. The list decides; see `lastAppendedId`. */
+		animateIn?: boolean | undefined;
+		headerActions?: Snippet | undefined;
 		/** Optional reaction click handler */
-		onReactionClick?: (emoji: string) => void;
+		onReactionClick?: ((emoji: string) => void) | undefined;
 		/** Optional add reaction handler */
-		onAddReaction?: () => void;
+		onAddReaction?: (() => void) | undefined;
 		/** Custom label for user messages (default: "You") */
-		userLabel?: string;
+		userLabel?: string | undefined;
 		/** Custom label for assistant messages (default: "Assistant") */
-		assistantLabel?: string;
+		assistantLabel?: string | undefined;
 		/** Avatar URL for user messages */
-		userAvatarUrl?: string;
+		userAvatarUrl?: string | undefined;
 		/** Avatar URL for assistant messages */
-		assistantAvatarUrl?: string;
+		assistantAvatarUrl?: string | undefined;
 	}
 
-	const { message, isStreaming = false, headerActions, onReactionClick, onAddReaction, userLabel = 'You', assistantLabel = 'Assistant', userAvatarUrl, assistantAvatarUrl }: Props = $props();
+	const { message, isStreaming = false, animateIn = false, headerActions, onReactionClick, onAddReaction, userLabel = 'You', assistantLabel = 'Assistant', userAvatarUrl, assistantAvatarUrl }: Props = $props();
+
+	let rootElement: HTMLElement | undefined = $state();
+
+	// Animate in only if this message is the one the user has just sent.
+	//
+	// A keyed `{#each}` gives this component exactly one run, so the usual
+	// first-run guard would suppress every animation forever — invariant 7 does
+	// not transplant onto a list item, because newness is a property of the
+	// list's diff rather than of the item's own lifecycle. The store records it.
+	//
+	// The guard is a plain `let`, never `$state`: the effect reads and writes it,
+	// and a reactive guard re-triggers the effect it lives in.
+	let hasEntered = false;
+
+	$effect(() => {
+		if (hasEntered || !rootElement) return;
+		hasEntered = true;
+		if (animateIn) animateListItemIn(rootElement);
+	});
+
+	// `@composable-svelte/media` is an OPTIONAL peer, so it cannot be imported
+	// statically — a consumer who installs chat without it would get a hard
+	// bundler resolution failure on a component the root barrel re-exports.
+	// Loaded the way markdown.ts already loads this same package: a dynamic
+	// import in a try/catch, held in state, with the markup gated on it. Videos
+	// simply do not render when media is absent, which is the documented
+	// contract for an optional peer.
+	// Read synchronously at init so a *server* render can use it. `onMount` does
+	// not run on the server, so resolving it there alone meant videos could never
+	// appear in server HTML — a regression against the previous static import,
+	// which this initialiser restores. markdown.ts loads the module once per
+	// process, so a warm server has it.
+	let VideoEmbed = $state<Component<{ video: VideoEmbedData }> | null>(
+		getVideoEmbedComponent() as Component<{ video: VideoEmbedData }> | null
+	);
+
+	onMount(async () => {
+		// Cold start on the client: wait for the same load markdown.ts kicked off,
+		// then re-read. Awaiting it (rather than importing media directly) matters
+		// because the component's own import resolves first — the extractor still
+		// returns [] at that moment, and this is the one invalidation the block
+		// gets.
+		await optionalDependenciesReady;
+		VideoEmbed = getVideoEmbedComponent() as Component<{ video: VideoEmbedData }> | null;
+	});
 
 	// Get the appropriate avatar URL based on message role
 	const avatarUrl = $derived(message.role === 'user' ? userAvatarUrl : assistantAvatarUrl);
 	const defaultLabel = $derived(message.role === 'user' ? userLabel : assistantLabel);
 	const avatarLabel = $derived(message.senderName ?? defaultLabel);
+
+	/**
+	 * Several pictures read better side by side; anything else stacks.
+	 *
+	 * Both call sites hard-coded `layout="list"`, so `AttachmentGallery`'s grid —
+	 * its `maxColumns` prop, its `gridColumns` derivation and its
+	 * `[data-layout='grid']` rules — was unreachable. The component is not
+	 * exported from any barrel and `.svelte` files cannot be deep-imported here,
+	 * so no consumer could reach it either.
+	 */
+	const attachmentLayout = $derived(
+		(message.attachments ?? []).filter((a) => a.type === 'image').length > 1 ? 'grid' : 'list'
+	);
 
 	let contentElement: HTMLDivElement | undefined = $state();
 
@@ -71,14 +132,12 @@
 
 	// Attach copy buttons to code blocks after content is rendered
 	$effect(() => {
-		if (contentElement && message.role === 'assistant' && !isStreaming) {
-			const cleanup = attachCopyButtons(contentElement);
-			return cleanup;
-		}
+		if (!contentElement || message.role !== 'assistant' || isStreaming) return;
+		return attachCopyButtons(contentElement);
 	});
 </script>
 
-<div class="chat-message" data-role={message.role} data-streaming={isStreaming}>
+<div class="chat-message" data-role={message.role} data-streaming={isStreaming} bind:this={rootElement}>
 	<div class="chat-message__header">
 		<div class="chat-message__header-left">
 			{#if avatarUrl}
@@ -112,7 +171,7 @@
 			<!-- Message attachments -->
 			{#if message.attachments && message.attachments.length > 0}
 				<div class="chat-message__attachments">
-					<AttachmentGallery attachments={message.attachments} layout="list" />
+					<AttachmentGallery attachments={message.attachments} layout={attachmentLayout} />
 				</div>
 			{/if}
 
@@ -129,7 +188,7 @@
 			{/if}
 
 			<!-- Video embeds for detected videos -->
-			{#if videos().length > 0}
+			{#if videos().length > 0 && VideoEmbed}
 				<div class="chat-message__videos">
 					{#each videos() as video (video.url)}
 						<VideoEmbed {video} />
@@ -142,7 +201,7 @@
 			<!-- Message attachments for user messages -->
 			{#if message.attachments && message.attachments.length > 0}
 				<div class="chat-message__attachments">
-					<AttachmentGallery attachments={message.attachments} layout="list" />
+					<AttachmentGallery attachments={message.attachments} layout={attachmentLayout} />
 				</div>
 			{/if}
 		{/if}
@@ -168,36 +227,25 @@
 		margin: 8px 0;
 		border-radius: 8px;
 		max-width: 85%;
-		animation: slideIn 0.2s ease-out;
 	}
 
-	@keyframes slideIn {
-		from {
-			opacity: 0;
-			transform: translateY(8px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
 
 	.chat-message[data-role='user'] {
-		background: #007aff;
-		color: white;
+		background: hsl(var(--primary, 211.3 100% 50%));
+		color: hsl(var(--primary-foreground, 0 0% 100%));
 		margin-left: auto;
 		align-self: flex-end;
 	}
 
 	.chat-message[data-role='assistant'] {
-		background: #f0f0f0;
-		color: #1a1a1a;
+		background: hsl(var(--muted, 0 0% 94.1%));
+		color: hsl(var(--foreground, 0 0% 10.2%));
 		margin-right: auto;
 		align-self: flex-start;
 	}
 
 	.chat-message[data-role='assistant'][data-streaming='true'] {
-		background: #e8e8e8;
+		background: hsl(var(--muted, 0 0% 91%));
 	}
 
 	.chat-message__header {
@@ -242,7 +290,7 @@
 
 	.chat-message__avatar-placeholder[data-role='user'] {
 		background: rgba(255, 255, 255, 0.25);
-		color: white;
+		color: hsl(var(--background, 0 0% 100%));
 	}
 
 	.chat-message__avatar-placeholder[data-role='assistant'] {
@@ -391,7 +439,6 @@
 		padding: 6px;
 		cursor: pointer;
 		opacity: 0;
-		transition: opacity 0.2s ease, background 0.2s ease;
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -553,13 +600,12 @@
 		font-weight: 500;
 		color: rgba(0, 0, 0, 0.7);
 		cursor: pointer;
-		transition: background 0.2s, border-color 0.2s, transform 0.1s;
 	}
 
 	.chat-message__add-reaction:hover {
-		background: rgba(0, 122, 255, 0.1);
-		border-color: rgba(0, 122, 255, 0.3);
-		color: rgba(0, 122, 255, 0.9);
+		background: hsl(var(--primary, 211.3 100% 50%) / 0.1);
+		border-color: hsl(var(--primary, 211.3 100% 50%) / 0.3);
+		color: hsl(var(--primary, 211.3 100% 50%) / 0.9);
 		transform: scale(1.02);
 	}
 
@@ -572,58 +618,4 @@
 		line-height: 1;
 		font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji',
 			sans-serif;
-	}
-
-	/* Dark mode support */
-	:global(.dark) .chat-message__avatar-placeholder[data-role='assistant'] {
-		background: rgba(255, 255, 255, 0.1);
-		color: rgba(255, 255, 255, 0.6);
-	}
-
-	:global(.dark) .chat-message[data-role='assistant'] {
-		background: #2a2a2a;
-		color: #e0e0e0;
-	}
-
-	:global(.dark) .chat-message[data-role='assistant'][data-streaming='true'] {
-		background: #333333;
-	}
-
-	:global(.dark) .chat-message[data-role='user'] {
-		background: #0066cc;
-	}
-
-	:global(.dark) .chat-message__content :global(blockquote) {
-		border-left-color: rgba(255, 255, 255, 0.2);
-		background: rgba(255, 255, 255, 0.05);
-	}
-
-	:global(.dark) .chat-message__content :global(.inline-code) {
-		background: rgba(255, 255, 255, 0.1);
-	}
-
-	:global(.dark) .chat-message__content :global(th),
-	:global(.dark) .chat-message__content :global(td) {
-		border-color: rgba(255, 255, 255, 0.2);
-	}
-
-	:global(.dark) .chat-message__content :global(th) {
-		background: rgba(255, 255, 255, 0.05);
-	}
-
-	:global(.dark) .chat-message__content :global(hr) {
-		border-top-color: rgba(255, 255, 255, 0.2);
-	}
-
-	:global(.dark) .chat-message__add-reaction {
-		background: rgba(255, 255, 255, 0.05);
-		border-color: rgba(255, 255, 255, 0.1);
-		color: rgba(255, 255, 255, 0.7);
-	}
-
-	:global(.dark) .chat-message__add-reaction:hover {
-		background: rgba(0, 102, 204, 0.2);
-		border-color: rgba(0, 102, 204, 0.4);
-		color: rgba(0, 122, 255, 1);
-	}
-</style>
+	}</style>

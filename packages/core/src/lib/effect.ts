@@ -7,12 +7,31 @@
  * Key principle: Effects describe WHAT to do, not HOW or WHEN.
  */
 
-import type { Effect as EffectType, EffectExecutor, Dispatch } from './types.js';
+import type { Effect as EffectType, EffectOfTag, EffectExecutor, Dispatch } from './types.js';
+
+/**
+ * Extensions other modules attach to the `Effect` namespace at import time.
+ *
+ * Empty here on purpose: `api/effect-api.ts` and `websocket/effect-websocket.ts`
+ * fill it by declaration merging, and they are the modules that also perform the
+ * runtime attachment. Keeping the seam here is what makes `Effect.api(…)` and
+ * `Effect.websocket.connect(…)` typecheck at all.
+ *
+ * They did not, until now. Both modules augmented a name that has no declaration
+ * to merge with — one wrote `interface Effect`, the other `interface
+ * EffectNamespace` — while `Effect` below is a `const`. Merging an interface
+ * contributes nothing to a const of the same name, so both augmentations were
+ * inert and the runtime attachments were cast through `any`. The result was a
+ * documented public namespace (`docs/backend/api-client.md`,
+ * `docs/backend/websocket.md`) that a consumer could not use without a type
+ * error, and nothing noticed because core's test typecheck resolved no files.
+ */
+export interface EffectExtensions {}
 
 /**
  * Effect namespace containing all effect constructors.
  */
-export const Effect = {
+const EffectImpl = {
   /**
    * No side effects.
    *
@@ -22,7 +41,7 @@ export const Effect = {
    *   return [initialState, Effect.none()];
    * ```
    */
-  none<A>(): EffectType<A> {
+  none<A>(): EffectOfTag<A, 'None'> {
     return { _tag: 'None' };
   },
 
@@ -42,7 +61,7 @@ export const Effect = {
    * })
    * ```
    */
-  run<A>(execute: EffectExecutor<A>): EffectType<A> {
+  run<A>(execute: EffectExecutor<A>): EffectOfTag<A, 'Run'> {
     return { _tag: 'Run', execute };
   },
 
@@ -62,7 +81,7 @@ export const Effect = {
    * })
    * ```
    */
-  fireAndForget<A>(execute: () => void | Promise<void>): EffectType<A> {
+  fireAndForget<A>(execute: () => void | Promise<void>): EffectOfTag<A, 'FireAndForget'> {
     return { _tag: 'FireAndForget', execute };
   },
 
@@ -123,7 +142,7 @@ export const Effect = {
    * })
    * ```
    */
-  cancellable<A>(id: string, execute: EffectExecutor<A>): EffectType<A> {
+  cancellable<A>(id: string, execute: EffectExecutor<A>): EffectOfTag<A, 'Cancellable'> {
     return { _tag: 'Cancellable', id, execute };
   },
 
@@ -147,7 +166,7 @@ export const Effect = {
    * })
    * ```
    */
-  debounced<A>(id: string, ms: number, execute: EffectExecutor<A>): EffectType<A> {
+  debounced<A>(id: string, ms: number, execute: EffectExecutor<A>): EffectOfTag<A, 'Debounced'> {
     if (ms < 0) {
       throw new TypeError(`debounced: ms must be non-negative, got ${ms}`);
     }
@@ -172,7 +191,7 @@ export const Effect = {
    * })
    * ```
    */
-  throttled<A>(id: string, ms: number, execute: EffectExecutor<A>): EffectType<A> {
+  throttled<A>(id: string, ms: number, execute: EffectExecutor<A>): EffectOfTag<A, 'Throttled'> {
     if (ms < 0) {
       throw new TypeError(`throttled: ms must be non-negative, got ${ms}`);
     }
@@ -194,7 +213,7 @@ export const Effect = {
    * })
    * ```
    */
-  afterDelay<A>(ms: number, create: EffectExecutor<A>): EffectType<A> {
+  afterDelay<A>(ms: number, create: EffectExecutor<A>): EffectOfTag<A, 'AfterDelay'> {
     if (ms < 0) {
       throw new TypeError(`afterDelay: ms must be non-negative, got ${ms}`);
     }
@@ -261,7 +280,7 @@ export const Effect = {
    *   ];
    * ```
    */
-  subscription<A>(id: string, setup: (dispatch: Dispatch<A>) => (() => void | Promise<void>)): EffectType<A> {
+  subscription<A>(id: string, setup: (dispatch: Dispatch<A>) => (() => void | Promise<void>)): EffectOfTag<A, 'Subscription'> {
     return { _tag: 'Subscription', id, setup };
   },
 
@@ -290,193 +309,11 @@ export const Effect = {
    *   ];
    * ```
    */
-  cancel<A>(id: string): EffectType<A> {
-    return { _tag: 'Cancellable', id, execute: () => {} };
+  cancel<A>(id: string): EffectOfTag<A, 'Cancellable'> {
+    return { _tag: 'Cancellable', id, execute: () => {}, cancelOnly: true };
   },
 
-  /**
-   * Create an effect that coordinates with animation lifecycle.
-   * Automatically dispatches completion events after the specified duration.
-   *
-   * This is a convenience wrapper around `Effect.afterDelay()` specifically
-   * for animation use cases. It provides a cleaner API for common patterns
-   * where you need to dispatch an action after an animation completes.
-   *
-   * **Use this when:**
-   * - You have a fixed-duration animation (e.g., CSS transition, Svelte transition)
-   * - You need to transition presentation state after animation completes
-   * - You want a concise, declarative way to express "do X after Y milliseconds"
-   *
-   * **Don't use this when:**
-   * - Animation duration is variable (use callback from animation library)
-   * - You need to cancel the animation mid-flight (use cancellable effects)
-   *
-   * @param config - Animation configuration
-   * @param config.duration - Animation duration in milliseconds (must be non-negative)
-   * @param config.onComplete - Action to dispatch when animation completes
-   * @throws {TypeError} If duration is negative
-   *
-   * @example
-   * ```typescript
-   * // Simple presentation completion
-   * case 'addButtonTapped': {
-   *   return [
-   *     {
-   *       ...state,
-   *       presentation: { status: 'presenting', content: destination }
-   *     },
-   *     Effect.animated({
-   *       duration: 300,
-   *       onComplete: {
-   *         type: 'presentation',
-   *         event: { type: 'presentationCompleted' }
-   *       }
-   *     })
-   *   ];
-   * }
-   * ```
-   *
-   * @example
-   * ```typescript
-   * // With timeout fallback
-   * case 'addButtonTapped': {
-   *   return [
-   *     {
-   *       ...state,
-   *       presentation: { status: 'presenting', content: destination }
-   *     },
-   *     Effect.batch(
-   *       Effect.animated({
-   *         duration: 300,
-   *         onComplete: {
-   *           type: 'presentation',
-   *           event: { type: 'presentationCompleted' }
-   *         }
-   *       }),
-   *       Effect.animated({
-   *         duration: 600,  // 2x expected duration
-   *         onComplete: {
-   *           type: 'presentation',
-   *           event: { type: 'presentationTimeout' }
-   *         }
-   *       })
-   *     )
-   *   ];
-   * }
-   * ```
-   */
-  animated<A>(config: { duration: number; onComplete: A }): EffectType<A> {
-    if (config.duration < 0) {
-      throw new TypeError(`animated: duration must be non-negative, got ${config.duration}`);
-    }
-    return Effect.afterDelay(config.duration, (dispatch) => {
-      dispatch(config.onComplete);
-    });
-  },
 
-  /**
-   * Create a presentation effect with automatic lifecycle management.
-   *
-   * This helper generates both `present` and `dismiss` effects for a complete
-   * animation lifecycle. It's designed for the common pattern where you have:
-   * - A presentation animation (animate IN)
-   * - A dismissal animation (animate OUT)
-   * - Both dispatch events to transition presentation state
-   *
-   * **Benefits:**
-   * - DRY: Define animation durations once, reuse for present/dismiss
-   * - Type-safe: Action creator ensures correct event structure
-   * - Consistent: Both animations use same pattern
-   *
-   * **Use this when:**
-   * - You have symmetric present/dismiss animations (e.g., modal, sheet, drawer)
-   * - Both animations dispatch to the same action type
-   * - You want to avoid repeating duration/event configuration
-   *
-   * **Don't use this when:**
-   * - Animations are asymmetric (different action types, complex coordination)
-   * - You need fine-grained control over timing
-   * - You're not using the presentation lifecycle pattern
-   *
-   * @param config - Transition configuration
-   * @param config.presentDuration - Duration for presentation animation (default: 300ms)
-   * @param config.dismissDuration - Duration for dismissal animation (default: 200ms)
-   * @param config.createPresentationEvent - Function to create action from event
-   * @throws {TypeError} If duration is negative
-   *
-   * @example
-   * ```typescript
-   * // Define transition once
-   * const transition = Effect.transition({
-   *   presentDuration: 300,
-   *   dismissDuration: 200,
-   *   createPresentationEvent: (event) => ({
-   *     type: 'presentation',
-   *     event
-   *   })
-   * });
-   *
-   * // Use in reducer
-   * case 'addButtonTapped':
-   *   return [
-   *     { ...state, presentation: { status: 'presenting', content: destination } },
-   *     transition.present
-   *   ];
-   *
-   * case 'closeButtonTapped':
-   *   return [
-   *     { ...state, presentation: { status: 'dismissing', content: state.presentation.content } },
-   *     transition.dismiss
-   *   ];
-   * ```
-   *
-   * @example
-   * ```typescript
-   * // Nested presentation (child within parent)
-   * const parentTransition = Effect.transition({
-   *   createPresentationEvent: (event) => ({
-   *     type: 'parentPresentation',
-   *     event
-   *   })
-   * });
-   *
-   * const childTransition = Effect.transition({
-   *   createPresentationEvent: (event) => ({
-   *     type: 'childPresentation',
-   *     event
-   *   })
-   * });
-   * ```
-   */
-  transition<A>(config: {
-    presentDuration?: number;
-    dismissDuration?: number;
-    createPresentationEvent: (event: { type: 'presentationCompleted' | 'dismissalCompleted' }) => A;
-  }): {
-    present: EffectType<A>;
-    dismiss: EffectType<A>;
-  } {
-    const presentDuration = config.presentDuration ?? 300;
-    const dismissDuration = config.dismissDuration ?? 200;
-
-    if (presentDuration < 0) {
-      throw new TypeError(`transition: presentDuration must be non-negative, got ${presentDuration}`);
-    }
-    if (dismissDuration < 0) {
-      throw new TypeError(`transition: dismissDuration must be non-negative, got ${dismissDuration}`);
-    }
-
-    return {
-      present: Effect.animated({
-        duration: presentDuration,
-        onComplete: config.createPresentationEvent({ type: 'presentationCompleted' })
-      }),
-      dismiss: Effect.animated({
-        duration: dismissDuration,
-        onComplete: config.createPresentationEvent({ type: 'dismissalCompleted' })
-      })
-    };
-  },
 
   /**
    * Map effect actions to parent actions (for composition).
@@ -514,6 +351,11 @@ export const Effect = {
         return Effect.batch(...effect.effects.map(e => Effect.map(e, f)));
 
       case 'Cancellable':
+        // `Effect.cancel(id)` is a Cancellable carrying no work. Mapping it
+        // through `Effect.cancellable` would drop the marker, so a cancel
+        // returned by a scoped child reducer came out the other side looking like
+        // real work and registered a phantom AbortController under that id.
+        if (effect.cancelOnly) return Effect.cancel(effect.id);
         return Effect.cancellable(effect.id, async (dispatch) => {
           await effect.execute((a) => dispatch(f(a)));
         });
@@ -534,7 +376,7 @@ export const Effect = {
         });
 
       case 'Subscription':
-        return Effect.subscription(effect.id, (dispatch) => {
+        return EffectImpl.subscription(effect.id, (dispatch) => {
           const cleanup = effect.setup((a) => dispatch(f(a)));
           return cleanup;
         });
@@ -546,3 +388,39 @@ export const Effect = {
     }
   }
 };
+
+/**
+ * The namespace as consumers see it: the constructors above, plus whatever the
+ * extension modules have attached.
+ *
+ * The assertion is doing real work rather than papering over a mismatch — the
+ * members in `EffectExtensions` genuinely are on this object at runtime, put
+ * there by the modules that declare them. It cannot be an annotation instead,
+ * because those modules import `Effect` from here and assigning an object that
+ * does not yet have their members would not typecheck.
+ */
+export const Effect = EffectImpl as typeof EffectImpl & EffectExtensions;
+
+/**
+ * The effect type, under the name every consumer reaches for.
+ *
+ * A value and a type may share a name when they are declared in the **same
+ * module** — and only then. `index.ts` carried a comment saying the type had to
+ * be aliased "to avoid name conflict with Effect namespace", which is true of
+ * the shape it tried: two `export … from` statements naming `Effect` from two
+ * different modules is `TS2300: Duplicate identifier`. Declaring both here and
+ * re-exporting once is not, and it carries both meanings through the barrel.
+ *
+ * That alias was not a cosmetic problem. `Effect<Action>` is what the
+ * documentation has always written — roughly fifty times across ten live
+ * documents including the repo README, the core README and the getting-started
+ * tutorial — and every one of them was `TS2749: 'Effect' refers to a value, but
+ * is being used as a type here`. The library's own first example did not
+ * compile. Renaming the export is the one-line fix for all of them; bending
+ * fifty documents to an awkward API would have been the other way round.
+ *
+ * `EffectType` remains exported and is not deprecated: it is what the reducers
+ * in this repo and in `examples/` already import, and it is still the clearer
+ * name inside a file that also uses the `Effect` constructors.
+ */
+export type Effect<Action> = EffectType<Action>;

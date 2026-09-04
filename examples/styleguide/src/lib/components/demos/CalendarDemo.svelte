@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Calendar } from '@composable-svelte/core/components/ui';
   import { Badge } from '@composable-svelte/core/components/ui';
+  import { Button } from '@composable-svelte/core/components/ui';
   import type { DateRange } from '@composable-svelte/core/components/ui';
 
   // State for different calendar demos
@@ -42,7 +43,7 @@
   <!-- Basic Single Date Selection -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Basic Date Picker</h3>
+      <h2 class="text-xl font-semibold mb-2">Basic Date Picker</h2>
       <p class="text-muted-foreground text-sm">
         Simple single date selection
       </p>
@@ -57,7 +58,7 @@
 
       <div class="text-sm">
         {#if singleDate}
-          <Badge variant="primary">
+          <Badge variant="default">
             Selected: {singleDate.toLocaleDateString('en-US', {
               weekday: 'long',
               year: 'numeric',
@@ -75,7 +76,7 @@
   <!-- Date Range Selection -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Date Range Picker</h3>
+      <h2 class="text-xl font-semibold mb-2">Date Range Picker</h2>
       <p class="text-muted-foreground text-sm">
         Select a start and end date
       </p>
@@ -111,7 +112,7 @@
   <!-- Pre-selected Date -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Pre-selected Date</h3>
+      <h2 class="text-xl font-semibold mb-2">Pre-selected Date</h2>
       <p class="text-muted-foreground text-sm">
         Calendar with initial value
       </p>
@@ -125,7 +126,7 @@
 
       <div class="text-sm">
         {#if birthdayDate}
-          <Badge variant="primary">
+          <Badge variant="default">
             Birthday: {birthdayDate.toLocaleDateString('en-US', {
               month: 'long',
               day: 'numeric',
@@ -140,7 +141,7 @@
   <!-- Pre-selected Range -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Vacation Planner</h3>
+      <h2 class="text-xl font-semibold mb-2">Vacation Planner</h2>
       <p class="text-muted-foreground text-sm">
         Range picker with initial selection
       </p>
@@ -177,7 +178,7 @@
   <!-- Date Constraints -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Date Constraints</h3>
+      <h2 class="text-xl font-semibold mb-2">Date Constraints</h2>
       <p class="text-muted-foreground text-sm">
         Min/max date restrictions (next 12 months only)
       </p>
@@ -199,7 +200,7 @@
           <Badge variant="secondary">{maxDate.toLocaleDateString()}</Badge>
         </div>
         {#if constrainedDate}
-          <Badge variant="primary">
+          <Badge variant="default">
             Selected: {constrainedDate.toLocaleDateString()}
           </Badge>
         {:else}
@@ -212,7 +213,7 @@
   <!-- Event Callbacks -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Event Callbacks</h3>
+      <h2 class="text-xl font-semibold mb-2">Event Callbacks</h2>
       <p class="text-muted-foreground text-sm">
         Calendar with selection event logging
       </p>
@@ -246,7 +247,7 @@
   <!-- Styled Calendar -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Custom Styling</h3>
+      <h2 class="text-xl font-semibold mb-2">Custom Styling</h2>
       <p class="text-muted-foreground text-sm">
         Calendar with custom CSS classes
       </p>
@@ -258,10 +259,36 @@
     />
   </section>
 
+  <!-- Custom Header -->
+  <section class="space-y-6">
+    <div>
+      <h2 class="text-xl font-semibold mb-2">Custom Header</h2>
+      <p class="text-muted-foreground text-sm">
+        The <code>header</code> snippet receives <code>setMonth</code>, so a custom header can jump
+        to any month rather than stepping one at a time.
+      </p>
+    </div>
+
+    <Calendar mode="single">
+      {#snippet header({ month, prevMonth, nextMonth, setMonth })}
+        <div class="flex items-center justify-between gap-2 pb-3">
+          <Button variant="outline" size="sm" onclick={prevMonth}>‹</Button>
+          <span class="font-medium">
+            {month.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+          </span>
+          <div class="flex gap-2">
+            <Button variant="ghost" size="sm" onclick={() => setMonth(new Date())}>Today</Button>
+            <Button variant="outline" size="sm" onclick={nextMonth}>›</Button>
+          </div>
+        </div>
+      {/snippet}
+    </Calendar>
+  </section>
+
   <!-- Use Cases -->
   <section class="space-y-6">
     <div>
-      <h3 class="text-xl font-semibold mb-2">Common Use Cases</h3>
+      <h2 class="text-xl font-semibold mb-2">Common Use Cases</h2>
       <p class="text-muted-foreground text-sm">
         Calendar component applications
       </p>

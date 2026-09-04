@@ -877,7 +877,7 @@ import { createDismissDependencyWithCleanup } from '@composable-svelte/core/navi
 
 const dismiss = createDismissDependencyWithCleanup(
   (action) => store.dispatch(action),
-  'destination',
+  (presentationAction) => ({ type: 'destination', action: presentationAction }),
   async () => {
     // Cleanup before dismissing
     await analytics.track('modal_dismissed');
@@ -917,26 +917,55 @@ const store = createStore({
 
 ### URL Pattern Matching
 
-```typescript
-import { parseDestination, createParserConfig } from '@composable-svelte/core/routing';
+`createParserConfig` takes a pattern-to-handler map:
 
+```typescript
+import { createParserConfig, parseDestination } from '@composable-svelte/core/routing';
+
+type DestinationState =
+  | { type: 'editItem'; state: { itemId: string; name: string; quantity: number } }
+  | { type: 'detailItem'; state: { itemId: string } }
+  | { type: 'addItem'; state: { name: string; quantity: number } };
+
+// Order matters, and the map form hides that: keys are tried in insertion
+// order, so a more specific pattern must come before a more general one or the
+// general one swallows it.
 const parserConfig = createParserConfig<DestinationState>({
-  '/item/:id': (params) => ({
-    type: 'detailItem',
-    state: { itemId: params.id }
-  }),
   '/item/:id/edit': (params) => ({
     type: 'editItem',
-    state: { itemId: params.id, name: '', quantity: 0 },
-    itemId: params.id
+    state: { itemId: params.id ?? '', name: '', quantity: 0 }
   }),
-  '/add': () => ({
-    type: 'addItem',
-    state: { name: '', quantity: 0 }
-  })
+  '/item/:id': (params) => ({ type: 'detailItem', state: { itemId: params.id ?? '' } }),
+  '/add': () => ({ type: 'addItem', state: { name: '', quantity: 0 } })
 });
 
 const destination = parseDestination(window.location.pathname, parserConfig);
+```
+
+A handler may return `null` to decline *after* its pattern matched, so a route
+can reject a value it does not like and let the next one try.
+
+The underlying `ParserConfig` is still a plain object holding a **list of parser
+functions**, and that form remains for routes that are not a single `matchPath`
+pattern — a custom regular expression, or one parser drawing on two patterns.
+The two mix, because the config is an ordinary object:
+
+```typescript
+import { createParserConfig, matchPath } from '@composable-svelte/core/routing';
+import type { ParserConfig } from '@composable-svelte/core/routing';
+
+type Dest = { type: 'detailItem'; state: { itemId: string } };
+
+const base = createParserConfig<Dest>({
+  '/item/:id': (params) => ({ type: 'detailItem', state: { itemId: params.id ?? '' } })
+});
+
+const custom = (path: string): Dest | null =>
+  /^\/legacy-\d+$/.test(path)
+    ? { type: 'detailItem', state: { itemId: path.slice(8) } }
+    : null;
+
+const withFallback: ParserConfig<Dest> = { ...base, parsers: [...base.parsers, custom] };
 ```
 
 ### Query Parameters
@@ -980,11 +1009,14 @@ Use `TestStore` to test navigation flows.
 ### Testing Presentation
 
 ```typescript
-import { createTestStore } from '@composable-svelte/core';
+import { createTestStore } from '@composable-svelte/core/test';
 
 describe('Inventory Navigation', () => {
   it('should present add item modal', async () => {
-    const store = createTestStore({
+    // `destination: null` on its own gives the field the type `null`, so
+    // `state.destination?.type` has nothing to read. Naming the state type is
+    // what makes the assertions below compile.
+    const store = createTestStore<InventoryState, InventoryAction>({
       initialState: { items: [], destination: null },
       reducer: inventoryReducer,
       dependencies: {}
@@ -1166,11 +1198,20 @@ case 'destination':
 ### 4. Inject Dismiss Dependency
 
 ```typescript
-// ✅ Child can dismiss itself
-const childDeps = {
-  ...deps,
-  dismiss: dismissDependency(dispatch, 'destination')
-};
+// ✅ Child can dismiss itself. Built where the store is built — a reducer has
+// no `dispatch` in scope — capturing the store's dispatch lazily.
+let dispatch: Dispatch<ParentAction> = () => {};
+
+const store = createStore({
+  initialState,
+  reducer: parentReducer,
+  dependencies: {
+    ...deps,
+    dismiss: dismissDependency((action) => dispatch(action), 'destination')
+  }
+});
+
+dispatch = (action) => store.dispatch(action);
 ```
 
 ### 5. Test Navigation Flows
@@ -1283,8 +1324,11 @@ interface ChildState {
   data: Data;
   destination: GrandchildState | null;  // Nested!
 }
+```
 
-// Components nest naturally
+Components nest naturally:
+
+```svelte
 <Modal store={childStore}>
   {#snippet children({ store })}
     <ChildComponent {store} />
@@ -1361,10 +1405,10 @@ function parseDestination(path: string): DestinationState | null {
 
 ## Next Steps
 
-- **[Animation Integration](./animation.md)** - Animated presentations with lifecycle
+- **[Animation Integration](../animation/animated-navigation.md)** - Animated presentations with lifecycle
 - **[Store and Reducers](../core-concepts/store-and-reducers.md)** - Core state management
 - **[Testing](../core-concepts/testing.md)** - Comprehensive testing guide
-- **[API Reference](../api/navigation.md)** - Complete navigation API
+- **[API Reference](../api/reference.md#navigation)** - Complete navigation API
 
 ## Related Documentation
 

@@ -8,13 +8,41 @@
 export enum OverlayErrorCode {
 	WEBGL_NOT_SUPPORTED = 'WEBGL_NOT_SUPPORTED',
 	CONTEXT_LOST = 'CONTEXT_LOST',
-	TEXTURE_TOO_LARGE = 'TEXTURE_TOO_LARGE',
+	/**
+	 * `TEXTURE_TOO_LARGE` used to live here.
+	 *
+	 * `maxTextureSize` does not reject any more — every creation path and the
+	 * update path scale an oversize source down to the cap, which is what the
+	 * image path always did and what the other three were changed to match. So
+	 * `validateSize` never reports a size failure without also supplying the
+	 * dimensions to scale to, and nothing could construct this code. An enum
+	 * member a consumer can switch on and never receive is the exact thing this
+	 * package has spent three rounds removing.
+	 *
+	 * Two things still refuse. `MEMORY_BUDGET_EXCEEDED`, and a source with no
+	 * pixels — which reports `TEXTURE_CREATION_FAILED`, on the update path as
+	 * well as at creation, and for all three element types since the image and
+	 * video paths stopped calling that case an `INVALID_ELEMENT_TYPE`.
+	 *
+	 * Neither is necessarily final: an element refused at creation retries on the
+	 * next update.
+	 */
 	SHADER_COMPILATION_FAILED = 'SHADER_COMPILATION_FAILED',
 	CORS_TAINTED_CANVAS = 'CORS_TAINTED_CANVAS',
 	MEMORY_BUDGET_EXCEEDED = 'MEMORY_BUDGET_EXCEEDED',
 	INVALID_ELEMENT_TYPE = 'INVALID_ELEMENT_TYPE',
 	ELEMENT_NOT_FOUND = 'ELEMENT_NOT_FOUND',
-	TEXTURE_CREATION_FAILED = 'TEXTURE_CREATION_FAILED'
+	TEXTURE_CREATION_FAILED = 'TEXTURE_CREATION_FAILED',
+	/**
+	 * The overlay could not be constructed for a reason that is not WebGL
+	 * support — a missing `ResizeObserver`, say.
+	 *
+	 * Every constructor failure used to arrive as `WEBGL_NOT_SUPPORTED`, with
+	 * recovery text telling the consumer to try a modern browser and visit
+	 * get.webgl.org. That is the "wrong code, misleading recovery" defect this
+	 * package spent a commit removing from `TEXTURE_TOO_LARGE`.
+	 */
+	INITIALIZATION_FAILED = 'INITIALIZATION_FAILED'
 }
 
 export class OverlayError extends Error {
@@ -27,10 +55,16 @@ export class OverlayError extends Error {
 		super(message);
 		this.name = 'OverlayError';
 
-		// Maintains proper stack trace for where error was thrown (V8 only)
-		if (Error.captureStackTrace) {
-			Error.captureStackTrace(this, OverlayError);
-		}
+		// Maintains proper stack trace for where error was thrown (V8 only).
+		// Typed locally rather than by pulling @types/node into a browser
+		// package's type environment: this is the only symbol graphics wanted
+		// from it, and the cost of the rest is that `setTimeout` starts
+		// returning NodeJS.Timeout and `Buffer`/`process` begin to typecheck in
+		// code that would crash in a browser.
+		const V8Error = Error as ErrorConstructor & {
+			captureStackTrace?(target: object, constructorOpt?: Function): void;
+		};
+		V8Error.captureStackTrace?.(this, OverlayError);
 	}
 
 	/**
@@ -58,20 +92,14 @@ export class OverlayError extends Error {
 	}
 
 	/**
-	 * Texture dimensions exceed device maximum
+	 * The overlay could not be built, for a reason other than WebGL support
 	 */
-	static textureTooLarge(
-		elementId: string,
-		width: number,
-		height: number,
-		maxSize: number,
-		reason?: string
-	): OverlayError {
+	static initializationFailed(reason: string): OverlayError {
 		return new OverlayError(
-			OverlayErrorCode.TEXTURE_TOO_LARGE,
-			`Texture size ${width}x${height} exceeds device maximum ${maxSize}x${maxSize} (element: ${elementId})${reason ? ': ' + reason : ''}`,
-			{ elementId, width, height, maxSize, reason },
-			'Reduce image size or enable auto-scaling. Consider using lower resolution images on mobile devices.'
+			OverlayErrorCode.INITIALIZATION_FAILED,
+			`Overlay initialization failed: ${reason}`,
+			{ reason },
+			'This is not a WebGL support problem — the context was available. Check that the environment provides IntersectionObserver and ResizeObserver, and that the canvas is attached.'
 		);
 	}
 
@@ -101,6 +129,12 @@ export class OverlayError extends Error {
 
 	/**
 	 * Texture memory budget exceeded
+	 *
+	 * The recovery line used to advise calling `setMemoryBudget()` — a method on
+	 * `TextureValidator`, which is a private field of `TextureFactory`, which no
+	 * consumer can reach. It told people to call something they could not call.
+	 * `memoryBudget` in `OverlayOptions` is the reachable lever, and it now
+	 * actually bounds anything.
 	 */
 	static memoryBudgetExceeded(
 		currentUsage: number,
@@ -111,7 +145,7 @@ export class OverlayError extends Error {
 			OverlayErrorCode.MEMORY_BUDGET_EXCEEDED,
 			`Texture memory budget exceeded: ${currentUsage}/${budget} bytes (requested: ${requestedSize} bytes)`,
 			{ currentUsage, budget, requestedSize },
-			'Reduce number of overlay elements, use smaller textures, or increase memory budget with setMemoryBudget(). Consider implementing texture pooling to reuse memory.'
+			'Reduce the number of overlay elements or use smaller textures. To raise the ceiling, pass a larger `memoryBudget` in OverlayOptions.'
 		);
 	}
 
@@ -131,11 +165,15 @@ export class OverlayError extends Error {
 	 * Element not found in DOM
 	 */
 	static elementNotFound(elementId: string): OverlayError {
+		// About the overlay's registry, not the DOM. Every producer fires when
+		// a method is handed an id the overlay has no registration for — a
+		// queued update racing an unregister, most often — and the old text
+		// sent the reader to look at their markup.
 		return new OverlayError(
 			OverlayErrorCode.ELEMENT_NOT_FOUND,
-			`Element not found: ${elementId}`,
+			`No element is registered as '${elementId}'`,
 			{ elementId },
-			'Ensure the element exists in the DOM before registering it with the overlay. Check element ID and timing.'
+			'Register the element before addressing it, and check for an unregisterElement() that ran first — a queued update can outlive the element it names.'
 		);
 	}
 

@@ -35,15 +35,45 @@ function svelteRuneModules(): Plugin {
 export default defineConfig({
   plugins: [svelteRuneModules()],
   test: {
+    setupFiles: ['./tests/setup.ts'],
     globals: true,
     environment: 'node',
     include: [
       'tests/ssr/ssg.test.ts',
+      'tests/ssr/render.test.ts',
+      'tests/ssr/serializer.test.ts',
+      'tests/ssr/animated-initial-state.test.ts',
+      'tests/ssr/content-initial-state.test.ts',
       'tests/ssr/middleware.test.ts',
       'tests/ssr/entry-graph.test.ts',
+      'tests/repo/check-coverage.test.ts',
+      'tests/repo/component-coverage.test.ts',
+      'tests/repo/typecheck-coverage.test.ts',
+      'tests/repo/side-effects.test.ts',
+      'tests/repo/animation-policy.test.ts',
+      'tests/repo/dist-freshness.test.ts',
+      'tests/repo/peer-ranges.test.ts',
+      'tests/repo/published-files.test.ts',
+      'tests/repo/export-surface.test.ts',
+      'tests/repo/doc-examples.test.ts',
+      'tests/repo/walk.test.ts',
+      'tests/repo/guard-integrity.test.ts',
+      'tests/repo/intentionally-unused.test.ts',
+      'tests/repo/doc-typecheck.test.ts',
+      'tests/repo/front-door.test.ts',
+			'tests/repo/demo-headings.test.ts',
+      'tests/repo/flat-barrel.test.ts',
+      'tests/repo/skill-examples.test.ts',
+      'tests/repo/dist-import.test.ts',
+      'tests/repo/bundle-probe.test.ts',
+			'tests/repo/optional-props.test.ts',
+			'tests/repo/satellite-theming.test.ts',
+			'tests/repo/changelog-shape.test.ts',
       'tests/styles/**/*.test.ts',
-      'tests/i18n/ssr.test.ts'
+      'tests/i18n/ssr.test.ts',
+      // The console guard's own positive controls; browser mode collects it by glob.
+      'tests/setup.test.ts'
     ],
-    silent: process.env.CI === 'true' || process.env.SILENT_TESTS === 'true'
+    silent: process.env.SILENT_TESTS === 'true'
   }
 });

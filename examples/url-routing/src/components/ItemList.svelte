@@ -61,7 +61,6 @@
 		border-radius: 12px;
 		padding: 1.5rem;
 		cursor: pointer;
-		transition: all 0.2s;
 		text-align: left;
 		width: 100%;
 	}
