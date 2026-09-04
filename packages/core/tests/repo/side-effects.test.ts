@@ -354,14 +354,18 @@ describe('side-effect imports survive tree-shaking', () => {
 	it("P1 (pinned defect): core's Effect.api registration chain is uncovered", () => {
 		// Pinned, not fixed: `dist/api/effect-api.js` assigns `Effect.api` at
 		// import and is reached from `dist/index.js` and `dist/api/index.js` by
-		// binding re-export, neither of which `sideEffects` lists. This asserts
-		// the gap IS reported, so it fails the moment R1.2 lists them, and must
-		// be removed in that commit. AUDIT-2026-09-03-FINDINGS P1.
+		// binding re-export, none of which `sideEffects` lists. This asserts
+		// the chain to it IS reported — whichever link is the unprotected one,
+		// so a partial listing still reads as uncovered; the first form named
+		// the barrel and went red when the barrel alone was listed, which does
+		// not fix the bundle. It fails the moment R1.2 lists the whole chain,
+		// and must be removed in that commit together with core's exclusion
+		// from the arm above. AUDIT-2026-09-03-FINDINGS P1.
 		const pkgDir = join(packagesDir, 'core');
 		const pkg = JSON.parse(readFileSync(join(pkgDir, 'package.json'), 'utf8'));
 		const problems = uncoveredChains(pkgDir, pkg.sideEffects, entryFiles(pkgDir, pkg));
 
-		expect(problems.some((p) => p.includes('dist/api/effect-api.js') && p.includes('dist/api/index.js'))).toBe(true);
+		expect(problems.some((p) => p.includes('dist/api/effect-api.js'))).toBe(true);
 		// And nothing else in core is uncovered: the websocket chain is listed.
 		expect(problems.filter((p) => !p.includes('dist/api/'))).toEqual([]);
 	});
