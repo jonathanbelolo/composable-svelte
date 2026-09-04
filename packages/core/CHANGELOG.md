@@ -68,6 +68,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Security-header options merge over the defaults, and the rate limiter
+  refuses a bad `max` or `windowMs`.** `createSecurityHeaders` and
+  `fastifySecurityHeaders` used the defaults only when the argument was
+  absent, and Fastify passes `{}` to a plugin registered without options, so
+  the documented one-liner set two headers and no policy. Every field merges
+  over `defaultSecurityHeaders` now; `false` drops a header.
+  `app.register(fastifyRateLimit)` with no options reached `check()` with
+  `NaN` and every request was a 500 — `max` and `windowMs` are validated at
+  construction and a wrong value throws a `TypeError` naming it. Both
+  plugins are `async` now (Fastify's promise form, so `ready()` reports the
+  error; a synchronous throw inside a plugin escapes as an uncaught
+  exception): called directly they return a promise, with the hooks already
+  installed. (AUDIT-2026-09-03-FINDINGS SS3)
+
 - **`app.register(fastifySecurityHeaders)` and `app.register(fastifyRateLimit, …)`
   install on the registering instance.** Fastify runs a registered plugin on
   an encapsulated child, so the documented form installed no headers and no

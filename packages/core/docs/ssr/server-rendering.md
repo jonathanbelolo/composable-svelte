@@ -511,6 +511,10 @@ fastify.register(fastifyRateLimit, {
 });
 ```
 
+`max` and `windowMs` are required and must be positive finite numbers;
+anything else throws at registration, naming the field, rather than turning
+every request into a 500.
+
 ### Security Headers
 
 ```typescript
@@ -523,6 +527,14 @@ fastify.register(fastifySecurityHeaders, {
   referrerPolicy: 'strict-origin-when-cross-origin',
   hsts: { maxAge: 31536000, includeSubDomains: true }
 });
+```
+
+Those are the defaults: options merge over them, so `register(fastifySecurityHeaders)`
+with nothing is the same policy, and naming one field changes only that one.
+Set a field to `false` to drop its header.
+
+```typescript
+fastify.register(fastifySecurityHeaders, { frameOptions: 'SAMEORIGIN', hsts: false });
 ```
 
 ## Performance Optimization

@@ -17,6 +17,11 @@ const SKIP_OVERRIDE = Symbol.for('skip-override');
 /**
  * Mark a plugin so `app.register()` installs it on the registering instance.
  * Calling the plugin directly with an instance is unaffected.
+ *
+ * The plugins are `async` (Fastify's promise form): their hooks are added
+ * synchronously inside the body, and a bad config rejects the promise, which
+ * `ready()` reports. A synchronous throw inside a plugin escapes avvio as an
+ * uncaught exception instead — measured, not assumed.
  */
 export function installsOnParent<F extends (...args: never[]) => unknown>(plugin: F): F {
   Object.defineProperty(plugin, SKIP_OVERRIDE, { value: true });

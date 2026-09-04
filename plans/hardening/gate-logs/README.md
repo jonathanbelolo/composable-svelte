@@ -88,3 +88,4 @@ before the fix is kept as `red-R1.x.y.log`, and the gate as `gate-R1.x.y.log`.
 | gate-R1.5.log | R1.5 | core gate: 2248 browser + 583 node, 0 skipped, check clean |
 | red-R1.6.a.log | R1.6.a | the new real-Fastify suite before the skip-override marker: the three `register` tests fail (no header, no 429 on a root route), the direct-call control passes |
 | gate-R1.6.a.log | R1.6.a | core gate: 2248 browser + 587 node (the new `tests/ssr/middleware-fastify.test.ts`), 0 skipped, check clean |
+| gate-R1.6.b.log | R1.6.b | core gate: 2248 browser + 596 node, 0 skipped, check clean (a first run failed the optional-props ratchet, 305 → 297, and two test typings against Fastify's `register` overloads; fixed, re-run) |

@@ -7,20 +7,35 @@
 import { installsOnParent } from './plugin.js';
 
 export interface RateLimitConfig {
-  /** Maximum requests per window */
+  /** Maximum requests per window. A positive finite number, or the limiter throws. */
   max: number;
 
-  /** Time window in milliseconds */
+  /** Time window in milliseconds. A positive finite number, or the limiter throws. */
   windowMs: number;
 
   /** Key generator function (default: IP address) */
-  keyGenerator?: (request: any) => string;
+  keyGenerator?: ((request: any) => string) | undefined;
 
   /** Custom error message */
-  message?: string;
+  message?: string | undefined;
 
   /** HTTP status code for rate limit exceeded */
-  statusCode?: number;
+  statusCode?: number | undefined;
+}
+
+/**
+ * `max` and `windowMs` are what `check()` divides and compares by; a missing
+ * or non-numeric value made every request a 500 with no message at
+ * registration (`app.register(fastifyRateLimit)` with no options —
+ * AUDIT-2026-09-03-FINDINGS SS3). A wrong value throws here, naming it.
+ */
+function positiveFinite(name: 'max' | 'windowMs', value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+    throw new TypeError(
+      `RateLimitConfig.${name} must be a positive finite number, got ${String(value)}`
+    );
+  }
+  return value;
 }
 
 /**
@@ -31,6 +46,8 @@ export class RateLimiter {
   private cleanupInterval: NodeJS.Timeout | undefined;
 
   constructor(private config: RateLimitConfig) {
+    positiveFinite('max', config?.max);
+    positiveFinite('windowMs', config?.windowMs);
     // Clean up expired entries every minute
     this.cleanupInterval = setInterval(() => this.cleanup(), 60000);
   }
@@ -108,12 +125,14 @@ export class RateLimiter {
  *
  * `app.register(fastifyRateLimit, config)` installs the limiter on the
  * registering instance's routes (the plugin carries Fastify's skip-override
- * marker); `fastifyRateLimit(app, config)` does the same directly.
+ * marker); `fastifyRateLimit(app, config)` does the same directly — the hooks
+ * are added before the returned promise settles. A bad `max` or `windowMs`
+ * rejects the promise, so `app.ready()` reports it.
  */
-export const fastifyRateLimit = installsOnParent(function fastifyRateLimit(
+export const fastifyRateLimit = installsOnParent(async function fastifyRateLimit(
   fastify: any,
   config: RateLimitConfig
-): void {
+): Promise<void> {
   const limiter = new RateLimiter(config);
   const keyGen = config.keyGenerator || ((req: any) => req.ip);
 

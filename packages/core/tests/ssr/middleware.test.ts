@@ -72,6 +72,18 @@ describe('security headers', () => {
 		expect(headers['X-XSS-Protection']).toBe('1; mode=block');
 	});
 
+	it('merges over the defaults, so an empty config is the defaults', () => {
+		expect(createSecurityHeaders({})).toEqual(createSecurityHeaders());
+		expect(createSecurityHeaders({})['X-Frame-Options']).toBe('DENY');
+	});
+
+	it('a field set to false drops that header, and the rest stay', () => {
+		const headers = createSecurityHeaders({ frameOptions: false, hsts: false });
+		expect(headers).not.toHaveProperty('X-Frame-Options');
+		expect(headers).not.toHaveProperty('Strict-Transport-Security');
+		expect(headers['Content-Security-Policy']).toBe(defaultSecurityHeaders.contentSecurityPolicy);
+	});
+
 	it('applies the documented defaults', () => {
 		const headers = createSecurityHeaders();
 		expect(headers['X-Frame-Options']).toBe('DENY');
@@ -171,6 +183,12 @@ describe('rate limiting', () => {
 		// process open.
 		while (limiters.length) limiters.pop()!.destroy();
 		vi.useRealTimers();
+	});
+
+	it('refuses a max or windowMs that is not a positive finite number', () => {
+		expect(() => new RateLimiter({ max: NaN, windowMs: 1000 })).toThrow(/RateLimitConfig\.max/);
+		expect(() => new RateLimiter({ max: 1, windowMs: 0 })).toThrow(/RateLimitConfig\.windowMs/);
+		expect(() => new RateLimiter(undefined as never)).toThrow(/max.*got undefined/);
 	});
 
 	it('allows requests under the limit and counts down remaining', () => {
