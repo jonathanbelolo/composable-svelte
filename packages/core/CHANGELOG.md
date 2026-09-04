@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`handleStackAction` takes an options object as its seventh argument**:
+  `actionType` names the parent action type a mapped screen effect is
+  dispatched under (it was hard-coded to `'stack'`, AUDIT-2026-09-03-FINDINGS
+  N11), and `screenId` gives screens an identity so a screen effect that
+  settles after the stack changed is dropped instead of landing on the screen
+  now at that index (N8). `StackAction`'s `screen` variant gains an optional
+  `screenId`. Both are optional; existing calls are unchanged.
+
 - **`AlertDialog`** and its parts — `AlertDialogHeader`, `AlertDialogTitle`,
   `AlertDialogDescription`, `AlertDialogFooter`, `AlertDialogAction`,
   `AlertDialogCancel`. A titled, described confirmation composed over `Alert`,
@@ -42,6 +50,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   exemptions. Function types must be parenthesised first:
   `(() => void) | undefined`, never `() => void | undefined`, which is a
   function *returning* `void | undefined` and forwards nothing.
+
+### Deprecated
+
+- **`createDestinationReducer` and `DestinationReducerMap`.** The helper routes
+  by the *current* destination's type, hands every case one shared action
+  type, and returns the child's effect untagged, so a result that arrives
+  after the destination changed is applied to whichever case is open then
+  (AUDIT-2026-09-03-FINDINGS N8). `createDestination()` routes by the action's
+  case and maps each child's effect back into it. Kept for existing callers.
 
 ### Fixed
 

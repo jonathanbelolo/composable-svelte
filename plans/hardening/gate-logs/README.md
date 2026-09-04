@@ -64,3 +64,4 @@ before the fix is kept as `red-R1.x.y.log`, and the gate as `gate-R1.x.y.log`.
 |---|---|---|
 | red-R1.1.b.log | R1.1.b (with c) | `tests/navigation/dsl-end-to-end.test.ts` at `6cd4801`: five of six red — a child dispatched through `scopeTo().case()` throws on `undefined.type`, `.dismiss()` leaves the field set; the `.optional()` control passes |
 | gate-R1.1.b.log | R1.1.b (with c) | core gate at that tree: 2200 browser + 583 node, 0 skipped, check clean. The first run failed `dist-freshness` for five satellites because switching to the old main and back had rewritten their sources; `pnpm -r build` and a re-run, both logged |
+| gate-R1.1.d.log | R1.1.d | core gate: 2204 browser + 583 node, 0 skipped, check clean |

@@ -29,6 +29,11 @@ export type DestinationState = {
 
 /**
  * Map of destination type to reducer.
+ *
+ * @deprecated Use `createDestination()` from `./destination.js`. This map
+ * shares one action type across every case and gives the reducer no way to
+ * tag a child's effect with the case it was produced for; see
+ * `createDestinationReducer`.
  */
 export type DestinationReducerMap<
   Destination extends DestinationState,
@@ -77,6 +82,14 @@ export type DestinationReducerMap<
  *   return [{ ...state, destination: newDest }, effect];
  * }
  * ```
+ *
+ * @deprecated Use `createDestination()`. This helper routes by the *current*
+ * destination's type, hands every case the same action, and returns the
+ * child's effect untagged — so a result that arrives after the destination has
+ * changed is applied to whichever case is open then
+ * (AUDIT-2026-09-03-FINDINGS N8). `createDestination().reducer` routes by the
+ * action's case and maps each child's effect back into that case, which is
+ * what drops a stale result. Kept for existing callers; no fix is planned.
  */
 export function createDestinationReducer<
   Destination extends DestinationState,

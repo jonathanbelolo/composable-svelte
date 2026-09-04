@@ -131,6 +131,9 @@ case 'destination':
 
 ### Enum Destinations
 
+`createDestinationReducer` is deprecated; `createDestination` (below) routes
+by the action's case and maps effects back into it. The older helper:
+
 ```typescript
 import { createDestinationReducer } from '@composable-svelte/core';
 

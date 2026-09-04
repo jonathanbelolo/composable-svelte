@@ -600,6 +600,102 @@ describe('handleStackAction()', () => {
     });
   });
 
+  it('maps to the configured parent action type', () => {
+    // `'stack'` was hard-coded; a parent whose field is named otherwise got
+    // actions nothing handled (N11).
+    const state: ParentState = { stack: [{ step: 1, data: 'first' }], history: [] };
+    const action: StackAction<ScreenAction> = {
+      type: 'screen',
+      index: 0,
+      action: { type: 'presented', action: { type: 'next' } }
+    };
+
+    const [, effect] = handleStackAction<ParentState, { type: string }, ScreenState, ScreenAction, null>(
+      state,
+      action,
+      null,
+      screenReducer,
+      (s) => s.stack,
+      (s, stack) => ({ ...s, stack }),
+      { actionType: 'wizard' }
+    );
+
+    const dispatched: { type: string }[] = [];
+    if (effect._tag === 'Run') effect.execute((a) => dispatched.push(a));
+    expect(dispatched[0]?.type).toBe('wizard');
+  });
+
+  describe('screen identity (N8)', () => {
+    const run = (state: ParentState, action: StackAction<ScreenAction>) =>
+      handleStackAction<ParentState, ParentAction, ScreenState, ScreenAction, null>(
+        state,
+        action,
+        null,
+        screenReducer,
+        (s) => s.stack,
+        (s, stack) => ({ ...s, stack }),
+        { screenId: (screen) => screen.step }
+      );
+
+    it('drops an effect whose screen is gone', () => {
+      const state: ParentState = {
+        stack: [{ step: 1, data: 'first' }, { step: 2, data: 'second' }],
+        history: []
+      };
+      const [, effect] = run(state, {
+        type: 'screen',
+        index: 1,
+        action: { type: 'presented', action: { type: 'next' } }
+      });
+
+      const dispatched: ParentAction[] = [];
+      if (effect._tag === 'Run') effect.execute((a) => dispatched.push(a));
+      expect(dispatched).toHaveLength(1);
+      const result = dispatched[0]!;
+      expect(result.type).toBe('stack');
+      const screenAction = (result as { action: StackAction<ScreenAction> }).action;
+      expect(screenAction).toMatchObject({ type: 'screen', index: 1, screenId: 2 });
+
+      // Screen 2 left and screen 3 took its index before the result arrived.
+      const changed: ParentState = {
+        stack: [{ step: 1, data: 'first' }, { step: 3, data: 'third' }],
+        history: []
+      };
+      const [after, afterEffect] = run(changed, screenAction);
+      expect(after.stack[1]).toEqual({ step: 3, data: 'third' });
+      expect(afterEffect._tag).toBe('None');
+
+      // Positive control: against the stack it was produced for, it lands.
+      const [same] = run(state, screenAction);
+      expect(same.stack[1]).toEqual({ step: 2, data: 'second-next' });
+    });
+
+    it('drops a stale dismiss the same way', () => {
+      const changed: ParentState = {
+        stack: [{ step: 1, data: 'first' }, { step: 3, data: 'third' }],
+        history: []
+      };
+      const [after] = run(changed, { type: 'screen', index: 1, screenId: 2, action: { type: 'dismiss' } });
+      expect(after.stack).toHaveLength(2);
+    });
+
+    it('without screenId, routing is by index', () => {
+      const changed: ParentState = {
+        stack: [{ step: 1, data: 'first' }, { step: 3, data: 'third' }],
+        history: []
+      };
+      const [after] = handleStackAction<ParentState, ParentAction, ScreenState, ScreenAction, null>(
+        changed,
+        { type: 'screen', index: 1, screenId: 2, action: { type: 'presented', action: { type: 'updateData', value: 'x' } } },
+        null,
+        screenReducer,
+        (s) => s.stack,
+        (s, stack) => ({ ...s, stack })
+      );
+      expect(after.stack[1]).toEqual({ step: 3, data: 'x' });
+    });
+  });
+
   it('updates screen at index 0 correctly', () => {
     const state: ParentState = {
       stack: [

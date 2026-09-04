@@ -228,7 +228,7 @@ testStore.receive(action, assertion)
 ```typescript
 // Operators
 ifLet(/* lenses */)(state, action, deps)
-createDestinationReducer({ addItem, editItem })
+createDestination({ addItem, editItem }).reducer   // createDestinationReducer is deprecated
 ```
 
 Components, each taking a scoped `store` prop: `<Modal>`, `<Sheet>`, `<Drawer>`,

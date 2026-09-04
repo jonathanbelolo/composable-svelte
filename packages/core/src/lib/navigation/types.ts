@@ -128,7 +128,13 @@ export type StackAction<T> =
   | { readonly type: 'pop' }
   | { readonly type: 'popToRoot' }
   | { readonly type: 'setPath'; readonly path: readonly unknown[] }
-  | { readonly type: 'screen'; readonly index: number; readonly action: PresentationAction<T> };
+  | {
+      readonly type: 'screen';
+      readonly index: number;
+      /** Set by `handleStackAction` on a mapped effect when `options.screenId` is given. */
+      readonly screenId?: string | number | undefined;
+      readonly action: PresentationAction<T>;
+    };
 
 /**
  * Helper namespace for creating StackAction instances.
