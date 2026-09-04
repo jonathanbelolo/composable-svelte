@@ -13,6 +13,7 @@ drawing tools and routing are not implemented. See the README.
 
 ### Changed
 
+- Requires `@composable-svelte/core` `^0.12.0` (peer range): core 0.12.0 is a minor release with breaking changes to the navigation DSL's action shape, the API client's dedup/cache, the WebSocket config, `renderToHTML` and `TestStore`; see core's changelog.
 - **Components follow core's theme.** Colours in `TileProviderControl` and
   `MapPrimitive` now read `hsl(var(--token, <the colour they were>))`, so the
   fallback keeps today's appearance for an app that does not import core's

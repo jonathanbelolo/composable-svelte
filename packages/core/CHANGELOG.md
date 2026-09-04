@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-09-05
+
 ### Added
 
 - `RateLimitConfig.maxKeys` — the keys a limiter holds before the oldest is
