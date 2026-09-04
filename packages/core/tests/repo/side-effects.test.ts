@@ -29,7 +29,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { kindOf, walkFiles, listDirs } from './walk.js';
 import { fileURLToPath } from 'node:url';
 import { join, relative } from 'node:path';
@@ -40,8 +41,50 @@ const packagesDir = join(repoRoot, 'packages');
 /** Bare `import 'x';` — no bindings, so it is kept only for its side effect. */
 const BARE_IMPORT = /^[ \t]*import[ \t]+['"]([^'"]+)['"][ \t]*;?[ \t]*$/gm;
 
-function walk(dir: string): string[] {
-	return walkFiles(dir, { keep: (name) => /\.(js|svelte)$/.test(name) }).files;
+/**
+ * A top-level assignment into an imported binding — `Effect.api = api;`.
+ *
+ * The second way a module exists only for its side effect, and the one the
+ * first version of this guard could not see: `dist/api/effect-api.js` attaches
+ * `Effect.api` at import time exactly as `effect-websocket.js` attaches
+ * `Effect.websocket`, but it is reached through a *binding* re-export
+ * (`export { api } from './effect-api.js'`) rather than a bare import. An unused
+ * binding re-export out of a side-effect-free module is dropped before the
+ * assignment ever runs, and `Effect.api` was `undefined` in every bundled
+ * consumer while this guard was green (AUDIT-2026-09-03-FINDINGS P1).
+ *
+ * Column 0 on purpose: an assignment inside a function body is not an
+ * import-time side effect, and a JSDoc example is not code.
+ */
+const IMPORTED_MUTATION = /^([A-Za-z_$][\w$]*)(?:\.[\w$]+)+\s*=(?!=)/gm;
+
+/** The local names a module's `import` statements bind. */
+export function importBindings(source: string): Set<string> {
+	const out = new Set<string>();
+	const re = /^import\s+(?:([A-Za-z_$][\w$]*)\s*,?\s*)?(?:\*\s+as\s+([A-Za-z_$][\w$]*)|\{([^}]*)\})?\s*from\s*['"]/gm;
+	for (const m of source.matchAll(re)) {
+		if (m[1]) out.add(m[1]);
+		if (m[2]) out.add(m[2]);
+		if (m[3]) {
+			for (const part of m[3].split(',')) {
+				const name = part.trim().split(/\s+as\s+/).pop()?.trim();
+				if (name) out.add(name);
+			}
+		}
+	}
+	return out;
+}
+
+/** Source with block comments removed, so a commented-out assignment is not a marker. */
+function withoutBlockComments(source: string): string {
+	return source.replace(/\/\*[\s\S]*?\*\//g, '');
+}
+
+/** The imported bindings a module assigns into at its top level. */
+export function mutatedImports(source: string): string[] {
+	const bindings = importBindings(source);
+	const roots = [...withoutBlockComments(source).matchAll(IMPORTED_MUTATION)].map((m) => m[1]!);
+	return [...new Set(roots.filter((root) => bindings.has(root)))];
 }
 
 /** Translate one `sideEffects` glob into a regex. Supports `*` and `**`. */
@@ -259,59 +302,162 @@ describe('side-effect imports survive tree-shaking', () => {
 		).toEqual([]);
 	});
 
-	it.each(packages)('%s declares every bare import it relies on', (name) => {
-		const pkgDir = join(packagesDir, name);
+	it.each(packages.filter((name) => name !== 'core'))(
+		'%s declares every side-effect module it relies on',
+		(name) => {
+			const pkgDir = join(packagesDir, name);
+			const pkg = JSON.parse(readFileSync(join(pkgDir, 'package.json'), 'utf8'));
+
+			expect(
+				uncoveredChains(pkgDir, pkg.sideEffects, entryFiles(pkgDir, pkg)),
+				`${name}: a side-effect module is reachable only through a module marked ` +
+					`side-effect-free, so a bundler may drop the edge before it ever consults ` +
+					`the target's flag. Every module on the chain from the entry must be ` +
+					`listed in "sideEffects", not only the one holding the import or assignment.`
+			).toEqual([]);
+		}
+	);
+
+	it("P1 (pinned defect): core's Effect.api registration chain is uncovered", () => {
+		// Pinned, not fixed: `dist/api/effect-api.js` assigns `Effect.api` at
+		// import and is reached from `dist/index.js` and `dist/api/index.js` by
+		// binding re-export, neither of which `sideEffects` lists. This asserts
+		// the gap IS reported, so it fails the moment R1.2 lists them, and must
+		// be removed in that commit. AUDIT-2026-09-03-FINDINGS P1.
+		const pkgDir = join(packagesDir, 'core');
 		const pkg = JSON.parse(readFileSync(join(pkgDir, 'package.json'), 'utf8'));
-		const { sideEffects } = pkg;
+		const problems = uncoveredChains(pkgDir, pkg.sideEffects, entryFiles(pkgDir, pkg));
 
-		const problems: string[] = [];
-		const seen = new Set<string>();
+		expect(problems.some((p) => p.includes('dist/api/effect-api.js') && p.includes('dist/api/index.js'))).toBe(true);
+		// And nothing else in core is uncovered: the websocket chain is listed.
+		expect(problems.filter((p) => !p.includes('dist/api/'))).toEqual([]);
+	});
+});
 
-		// Walk down from every entry, carrying the path. When a module with a bare
-		// import is reached, every module on that path must be covered — any
-		// side-effect-free link in the chain can delete the edge above it.
-		const visit = (file: string, path: string[]) => {
-			if (seen.has(file)) return;
-			seen.add(file);
+/**
+ * Walk down from every entry, carrying the path. When a side-effect module is
+ * reached — a bare import, or an assignment into an imported binding — every
+ * module on the chain to it must be covered, because any side-effect-free link
+ * lets a bundler delete the edge above it. Exported for the positive controls.
+ */
+export function uncoveredChains(pkgDir: string, sideEffects: unknown, entries: string[]): string[] {
+	const problems: string[] = [];
+	const seen = new Set<string>();
 
-			const source = readFileSync(file, 'utf8');
-			const chain = [...path, file];
-			// CSS is exempt, and that is measured rather than assumed: a real Vite
-			// build keeps `import 'maplibre-gl/dist/maplibre-gl.css'` in a retained
-			// component even under `sideEffects: false`, because the CSS pipeline
-			// treats it as a side effect independently of the flag. A bare *JS*
-			// import gets no such treatment — that is the one that vanished.
-			const bare = [...source.matchAll(BARE_IMPORT)]
-				.map((m) => m[1]!)
-				.filter((spec) => !/\.(css|scss|sass|less)$/.test(spec));
+	const visit = (file: string, path: string[]) => {
+		if (seen.has(file)) return;
+		seen.add(file);
 
-			if (bare.length > 0) {
-				const gap = chain.find((m) => !covered(sideEffects, relative(pkgDir, m)));
-				if (gap) {
-					problems.push(
-						`${relative(pkgDir, file)} (bare: ${bare.join(', ')}) — ` +
-							`unprotected link: ${relative(pkgDir, gap)}`
-					);
-				}
+		const source = readFileSync(file, 'utf8');
+		const chain = [...path, file];
+		// CSS is exempt, and that is measured rather than assumed: a real Vite
+		// build keeps `import 'maplibre-gl/dist/maplibre-gl.css'` in a retained
+		// component even under `sideEffects: false`, because the CSS pipeline
+		// treats it as a side effect independently of the flag. A bare *JS*
+		// import gets no such treatment — that is the one that vanished.
+		const bare = [...source.matchAll(BARE_IMPORT)]
+			.map((m) => m[1]!)
+			.filter((spec) => !/\.(css|scss|sass|less)$/.test(spec));
+		const mutated = mutatedImports(source);
+
+		if (bare.length > 0 || mutated.length > 0) {
+			const gap = chain.find((m) => !covered(sideEffects, relative(pkgDir, m)));
+			if (gap) {
+				const what = [
+					bare.length > 0 ? `bare: ${bare.join(', ')}` : '',
+					mutated.length > 0 ? `assigns into: ${mutated.join(', ')}` : ''
+				]
+					.filter(Boolean)
+					.join('; ');
+				problems.push(`${relative(pkgDir, file)} (${what}) — unprotected link: ${relative(pkgDir, gap)}`);
 			}
-
-			for (const spec of relativeDeps(source)) {
-				const next = resolveFrom(file, spec);
-				if (next) visit(next, chain);
-			}
-		};
-
-		for (const entry of entryFiles(pkgDir, pkg)) {
-			if (existsSync(entry)) visit(entry, []);
 		}
 
-		expect(
-			problems,
-			`${name}: a bare side-effect import is reachable only through a module ` +
-				`marked side-effect-free, so a bundler may drop the edge before it ever ` +
-				`consults the target's flag. Every module on the chain from the entry ` +
-				`must be listed in "sideEffects", not only the one holding the import.`
-		).toEqual([]);
+		for (const spec of relativeDeps(source)) {
+			const next = resolveFrom(file, spec);
+			if (next) visit(next, chain);
+		}
+	};
+
+	for (const entry of entries) {
+		if (existsSync(entry)) visit(entry, []);
+	}
+
+	return problems;
+}
+
+describe('the chain walk itself', () => {
+	// Positive controls, through the real walk, on a package built in a temp
+	// directory: the arms above are `filter`s over regexes and a regex that
+	// matches nothing passes exactly like a clean tree.
+	function scratchPackage(files: Record<string, string>): string {
+		const dir = mkdtempSync(join(tmpdir(), 'side-effects-'));
+		for (const [rel, content] of Object.entries(files)) {
+			mkdirSync(join(dir, rel, '..'), { recursive: true });
+			writeFileSync(join(dir, rel), content);
+		}
+		return dir;
+	}
+
+	const attachingPackage = () =>
+		scratchPackage({
+			'dist/index.js': "export { api } from './api.js';\n",
+			'dist/api.js': "import { Effect } from './effect.js';\nexport const api = 1;\nEffect.api = api;\n",
+			'dist/effect.js': 'export const Effect = {};\n'
+		});
+
+	it('reads the local names an import binds', () => {
+		expect([...importBindings("import D, { a, b as c } from 'x';\nimport * as ns from 'y';\n")]).toEqual([
+			'D',
+			'a',
+			'c',
+			'ns'
+		]);
+	});
+
+	it('sees an assignment into an import, and not one in a comment or a function', () => {
+		expect(mutatedImports("import { Effect } from './e.js';\nEffect.api = 1;\n")).toEqual(['Effect']);
+		expect(mutatedImports("import { Effect } from './e.js';\n/* Effect.api = 1; */\n")).toEqual([]);
+		expect(mutatedImports("import { Effect } from './e.js';\nfunction f() {\n  Effect.api = 1;\n}\n")).toEqual([]);
+		expect(mutatedImports("import { Effect } from './e.js';\nEffect.api === 1;\n")).toEqual([]);
+		expect(mutatedImports("const Local = {};\nLocal.x = 1;\n")).toEqual([]);
+	});
+
+	it('reports an assignment reached only through an unlisted re-export', () => {
+		const dir = attachingPackage();
+		try {
+			const problems = uncoveredChains(dir, ['dist/index.js'], [join(dir, 'dist/index.js')]);
+			expect(problems).toHaveLength(1);
+			expect(problems[0]).toContain('dist/api.js');
+			expect(problems[0]).toContain('assigns into: Effect');
+			expect(problems[0]).toContain('unprotected link: dist/api.js');
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it('reports a bare import the same way', () => {
+		const dir = scratchPackage({
+			'dist/index.js': "export { x } from './mid.js';\n",
+			'dist/mid.js': "import './register.js';\nexport const x = 1;\n",
+			'dist/register.js': 'globalThis.registered = true;\n'
+		});
+		try {
+			const problems = uncoveredChains(dir, ['dist/index.js', 'dist/register.js'], [join(dir, 'dist/index.js')]);
+			expect(problems).toHaveLength(1);
+			expect(problems[0]).toContain('unprotected link: dist/mid.js');
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it('is satisfied once every link on the chain is listed', () => {
+		const dir = attachingPackage();
+		try {
+			expect(uncoveredChains(dir, ['dist/index.js', 'dist/api.js'], [join(dir, 'dist/index.js')])).toEqual([]);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
 	});
 });
 
