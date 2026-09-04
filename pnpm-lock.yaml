@@ -886,6 +886,9 @@ importers:
       autoprefixer:
         specifier: ^10.4.16
         version: 10.4.21(postcss@8.5.6)
+      esbuild:
+        specifier: 0.25.12
+        version: 0.25.12
       isomorphic-dompurify:
         specifier: ^2.16.0
         version: 2.31.0

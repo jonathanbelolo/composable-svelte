@@ -73,6 +73,8 @@ export default defineConfig({
       'tests/repo/skill-examples.test.ts',
       // Spawns a child Node process; same reason.
       'tests/repo/dist-import.test.ts',
+      // Runs esbuild against dist; same reason.
+      'tests/repo/bundle-probe.test.ts',
       // Needs the Cookie request header, which the browser Request API refuses
       // to expose; runs under vitest.node.config.ts instead.
       'tests/i18n/ssr.test.ts'
