@@ -168,3 +168,24 @@ describe('a serializer reaches every site on the round trip', () => {
 		expect(back.note).toBe('</script><img src=x>');
 	});
 });
+
+describe('renderToHTML fails closed on a state it cannot serialize (SS7)', () => {
+	// The first form logged and embedded `{}`, so the client hydrated a blank
+	// store; buildHydrationScript threw for the same state.
+	function storeOf(state: unknown) {
+		return createStore<unknown, Action>({ initialState: state as never, reducer: ((s: unknown) => [s, Effect.none()]) as never });
+	}
+
+	it('a BigInt in the state throws, and produces no page', () => {
+		const store = storeOf({ big: 10n });
+		expect(() => renderToHTML({} as never, { store })).toThrow(/not serializable/);
+		expect(() => buildHydrationScript(store)).toThrow(/not serializable/);
+	});
+
+	it('a root with no JSON form throws a typed error, not a TypeError from the escape', () => {
+		const store = storeOf(() => 1);
+		expect(() => renderToHTML({} as never, { store })).toThrow(/no JSON form/);
+		expect(() => buildHydrationScript(store)).toThrow(/no JSON form/);
+	});
+});
+

@@ -382,6 +382,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **BREAKING: `renderToHTML` fails closed on a state it cannot serialize.** It
+  logged and embedded `{}`, so the client hydrated a blank store while
+  `buildHydrationScript` threw for the same state; both throw now. A root
+  with no JSON form (a function, a symbol, `undefined`) is a typed
+  `serializeStore` error rather than a `TypeError` from the script escape.
+  (AUDIT-2026-09-03-FINDINGS SS7, SS11)
+
 - **BREAKING: `WebSocketConfig` is what `createLiveWebSocket` reads.** It
   accepted `url`, `protocols`, `heartbeat` and `queueSize` and read none of
   them: the URL and protocols are `connect(url, protocols)`'s arguments, the

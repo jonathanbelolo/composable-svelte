@@ -127,17 +127,15 @@ export function renderToHTML<Props extends ComponentProps>(
   // Render component to HTML
   const result: RenderResult = svelteRender(Component, { props });
 
-  // Extract store from props if present
+  // Extract store from props if present. A state that cannot be serialized
+  // is an error, not an empty page: the first form logged and embedded `{}`,
+  // so the client hydrated a blank store while buildHydrationScript threw
+  // for the same state (AUDIT-2026-09-03-FINDINGS SS7). Fail closed.
   let stateJSON = '{}';
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   if ((props as any).store) {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      stateJSON = serializeStore((props as any).store as Store<any, any>, options.serializer);
-    } catch (error) {
-      console.error('[Composable Svelte] Failed to serialize store:', error);
-      // Continue with empty state rather than crashing
-    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    stateJSON = serializeStore((props as any).store as Store<any, any>, options.serializer);
   }
 
   // Build complete HTML

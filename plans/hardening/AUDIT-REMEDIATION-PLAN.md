@@ -326,13 +326,13 @@ dependency, not severity: R1.1 needs D1, R1.3 needs D3.
 
 ### R1.7 — Server rendering does not write or emit attacker input (`SS1`, `SS2`, `SS5`) — S
 
-- [ ] R1.7.a `pathToFilePath` resolves and rejects any target outside
+- [x] R1.7.a `pathToFilePath` resolves and rejects any target outside
       `outDir`; `/a` and `/a/` produce one file; a data path of `/404` cannot
       overwrite the real 404 (`SS1`, `SS11`).
-- [ ] R1.7.b Canonical `href` attribute-escaped (`SS2`).
-- [ ] R1.7.c `generateAlternateLinks` escapes `path`, `locale`, `baseUrl`;
+- [x] R1.7.b Canonical `href` attribute-escaped (`SS2`).
+- [x] R1.7.c `generateAlternateLinks` escapes `path`, `locale`, `baseUrl`;
       its JSDoc no longer instructs `{@html}` with the request path (`SS5`).
-- [ ] R1.7.d `renderToHTML` fails closed on a serialization error, matching
+- [x] R1.7.d `renderToHTML` fails closed on a serialization error, matching
       `buildHydrationScript` (`SS7`).
       Proof: the SSG traversal corpus writes nothing outside `outDir`; the
       canonical and alternate-link corpora parse as intended.

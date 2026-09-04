@@ -668,6 +668,16 @@ const html = renderToHTML(App, {
 });
 ```
 
+### State That Cannot Be Serialized
+
+**Problem**: `renderToHTML` throws `State is not serializable` or `State has no JSON form`.
+
+`renderToHTML` fails closed, like `buildHydrationScript`: a state holding a
+`BigInt`, a `Map`, a `Date` you have not given a serializer for, or a root
+that is not a plain object produces no page rather than a page whose client
+hydrates an empty store. Keep state to plain objects, arrays and primitives,
+or pass a `serializer` (`createTaggedSerializer`) to both sides.
+
 ### Build Errors with Node.js Modules
 
 **Problem**: Cannot use `fs`, `path` in client build.

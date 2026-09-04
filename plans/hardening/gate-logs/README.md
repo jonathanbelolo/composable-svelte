@@ -92,3 +92,4 @@ before the fix is kept as `red-R1.x.y.log`, and the gate as `gate-R1.x.y.log`.
 | gate-R1.6.c.log | R1.6.c | core gate: 2248 browser + 600 node, 0 skipped, check clean |
 | gate-R1.7.a.log | R1.7.a | core gate: 2248 browser + 607 node (seven SSG tests and the new `tests/ssr/ssg-fs.test.ts`), 0 skipped, check clean |
 | gate-R1.7.bc.log | R1.7.b+c | core gate: 2248 browser + 609 node, 0 skipped, check clean |
+| gate-R1.7.d.log | R1.7.d | core gate: 2248 browser + 611 node, 0 skipped, check clean |

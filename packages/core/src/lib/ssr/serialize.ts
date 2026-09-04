@@ -72,10 +72,11 @@ export function serializeStore<State, Action>(
     throw new TypeError('serializeStore: store is required');
   }
 
+  let json: string | undefined;
   try {
     // State should always be serializable by design
     // No need to validate - JSON.stringify will throw if not serializable
-    return JSON.stringify(store.state, serializer?.replacer);
+    json = JSON.stringify(store.state, serializer?.replacer);
   } catch (error) {
     // This should never happen if architecture is followed correctly
     throw new TypeError(
@@ -84,6 +85,16 @@ export function serializeStore<State, Action>(
       `Error: ${error instanceof Error ? error.message : String(error)}`
     );
   }
+  // JSON.stringify returns undefined, not a string, for a root that has no
+  // JSON form (a function, a symbol, undefined). The first form returned it,
+  // and the caller's escape threw a TypeError on `.replace` (SS11).
+  if (json === undefined) {
+    throw new TypeError(
+      'serializeStore: State has no JSON form (the root is undefined, a function or a symbol). ' +
+        'State should be a plain object.'
+    );
+  }
+  return json;
 }
 
 /**
