@@ -10,13 +10,12 @@
 	 * so a fence that changes in one place goes red until the other follows.
 	 *
 	 * The "Layer Toggle" fence (skill line 902) has no `<script>` tag: its runes
-	 * sit bare above the `<button>`, so the guard's extraction sees the whole
-	 * fence as markup and expects the JS and the button to appear contiguously.
-	 * No `.svelte` construct can hold JS text immediately followed by a
-	 * typechecked element, so that fence is reproduced inside an HTML comment for
-	 * the guard, and its two halves are typechecked separately — the runes in
-	 * this script, the button below. Delete the comment once the skill wraps the
-	 * runes in a `<script>`; the real button then satisfies the guard on its own.
+	 * sit bare above the `<button>`, so the guard sees the whole fence as markup
+	 * and no `.svelte` construct can hold it. It is registered in the guard's
+	 * NOT_COMPILED (DA-X2); its two halves are typechecked separately — the
+	 * runes in this script, the button below. Once the skill wraps the runes in
+	 * a `<script>`, the real button satisfies the guard on its own and the
+	 * register entry falls out.
 	 */
 	import { Map } from '../../src/lib/index.js';
 	import type { Layer, MapAction, MapState } from '../../src/lib/index.js';
@@ -90,29 +89,6 @@
   </div>
 </div>
 
-<!-- Layer Toggle (skill line 902), verbatim for the guard. Not typechecked here:
-     the fence's runes are outside any <script>, so this is the only place the
-     guard's extraction can find them next to the button. See the script comment.
-let showLayer = $state(true);
-
-$effect(() => {
-  if (showLayer) {
-    mapStore.dispatch({
-      type: 'addLayer',
-      layer: myLayer
-    });
-  } else {
-    mapStore.dispatch({
-      type: 'removeLayer',
-      id: myLayer.id
-    });
-  }
-});
-
-<button onclick={() => showLayer = !showLayer}>
-  {showLayer ? 'Hide' : 'Show'} Layer
-</button>
--->
 <!-- Layer Toggle (skill line 902): the button, typechecked. -->
 <button onclick={() => showLayer = !showLayer}>
   {showLayer ? 'Hide' : 'Show'} Layer

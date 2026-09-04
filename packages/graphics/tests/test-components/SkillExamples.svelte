@@ -9,14 +9,14 @@
 	 * `tests`. `packages/core/tests/repo/skill-examples.test.ts` fails if a fence
 	 * in the skill stops appearing here, so this is a copy that is compared.
 	 *
-	 * Two kinds of block follow. The live ones are ordinary markup and are what
-	 * this file exists for. The ones wrapped in an HTML comment are fences the
-	 * skill labels `svelte` that no compiler can read: script text with no
-	 * `<script>` tag (so the guard cannot strip it and the raw JS has to appear
-	 * here too), literal `...` placeholders in place of required props, or
-	 * "Future API" props that no component declares. They are pinned so drift is
-	 * still caught, but nothing inside a comment is typechecked. Every one is a
-	 * documentation defect recorded against the skill, not a fixture choice.
+	 * Twelve of the skill's fences are not here. They are fences the skill
+	 * labels `svelte` that a clean component cannot hold: script text with no
+	 * `<script>` tag, literal `...` placeholders in place of required props, JS
+	 * comments as markup, and "Future API" props no component declares. Each is
+	 * registered in the guard's NOT_COMPILED with its finding (DA-X2), a
+	 * documentation defect recorded against the skill, not a fixture choice. An
+	 * earlier form of this file carried them inside HTML comments, which the
+	 * guard strips, so they pinned nothing.
 	 */
 	import { Camera, Light, Mesh, Scene, WebGLOverlay } from '../../src/index.js';
 	import type { Store } from '@composable-svelte/core';
@@ -44,55 +44,6 @@
 		});
 	}
 </script>
-
-<!--
-	QUICK START. Pinned, not compiled: the fence has no `<script>` tag, so its
-	imports and store construction are part of what the guard compares.
-
-import { createStore } from '@composable-svelte/core';
-import {
-  Scene,
-  Camera,
-  Light,
-  Mesh,
-  graphicsReducer,
-  createInitialGraphicsState
-} from '@composable-svelte/graphics';
-
-// Create graphics store
-const store = createStore({
-  initialState: createInitialGraphicsState({
-    backgroundColor: '#1a1a2e'
-  }),
-  reducer: graphicsReducer,
-  dependencies: {}
-});
-
-// Track rotation for animation
-let rotation = $state(0);
-
-function rotateShapes() {
-  rotation += Math.PI / 4;
-}
-
-// Render 3D scene
-<Scene {store} height="500px">
-  <Camera {store} position={[0, 4, 12]} lookAt={[0, 0, 0]} fov={45} />
-  <Light {store} type="ambient" intensity={0.4} />
-  <Light {store} type="directional" direction={[5, 10, 7.5]} intensity={1.2} />
-
-  <Mesh
-    {store}
-    id="rotating-box"
-    geometry={{ type: 'box', size: 1.5 }}
-    material={{ color: '#ff6b6b', metallic: 0.7, roughness: 0.3 }}
-    position={[0, 1.5, 0]}
-    rotation={[0, rotation, 0]}
-  />
-</Scene>
-
-<button onclick={rotateShapes}>Rotate 45°</button>
--->
 
 <!-- SCENE COMPONENT › Usage -->
 <Scene {store} height="500px">
@@ -297,16 +248,6 @@ function rotateShapes() {
 </Scene>
 
 <button onclick={rotateShapes}>Rotate All Shapes 45°</button>
-
-<!--
-	PERFORMANCE › Draw Calls › Good. Pinned, not compiled: a JS comment where
-	markup should be, and `...` in place of the required props.
-
-// 3 meshes = 3 draw calls
-<Mesh id="obj1" ... />
-<Mesh id="obj2" ... />
-<Mesh id="obj3" ... />
--->
 
 <!--
 	PERFORMANCE › Draw Calls › Bad. Pinned, not compiled: same as above, and

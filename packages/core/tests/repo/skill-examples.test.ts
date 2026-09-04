@@ -26,33 +26,40 @@ import { join } from 'node:path';
 
 const repoRoot = fileURLToPath(new URL('../../../../', import.meta.url));
 
-/** Skills whose `svelte` fences are pinned by a typechecked fixture. */
+/**
+ * Skills whose `svelte` fences are pinned by typechecked fixtures. More than
+ * one where a single component cannot hold every fence: ssr documents two
+ * `<svelte:head>` blocks and Svelte allows one per component.
+ */
 const PINNED = [
-	{ skill: '.claude/skills/composable-svelte-auth/SKILL.md', fixture: 'packages/auth/tests/test-components/SkillExamples.svelte' },
-	{ skill: '.claude/skills/composable-svelte-charts/SKILL.md', fixture: 'packages/charts/tests/test-components/SkillExamples.svelte' },
-	{ skill: '.claude/skills/composable-svelte-chat/SKILL.md', fixture: 'packages/chat/tests/test-components/SkillExamples.svelte' },
-	{ skill: '.claude/skills/composable-svelte-code/SKILL.md', fixture: 'packages/code/tests/test-components/SkillExamples.svelte' },
-	{ skill: '.claude/skills/composable-svelte-graphics/SKILL.md', fixture: 'packages/graphics/tests/test-components/SkillExamples.svelte' },
-	{ skill: '.claude/skills/composable-svelte-maps/SKILL.md', fixture: 'packages/maps/tests/test-components/SkillExamples.svelte' },
-	{ skill: '.claude/skills/composable-svelte-media/SKILL.md', fixture: 'packages/media/tests/test-components/SkillExamples.svelte' },
+	{ skill: '.claude/skills/composable-svelte-auth/SKILL.md', fixtures: ['packages/auth/tests/test-components/SkillExamples.svelte'] },
+	{ skill: '.claude/skills/composable-svelte-charts/SKILL.md', fixtures: ['packages/charts/tests/test-components/SkillExamples.svelte'] },
+	{ skill: '.claude/skills/composable-svelte-chat/SKILL.md', fixtures: ['packages/chat/tests/test-components/SkillExamples.svelte'] },
+	{ skill: '.claude/skills/composable-svelte-code/SKILL.md', fixtures: ['packages/code/tests/test-components/SkillExamples.svelte'] },
+	{ skill: '.claude/skills/composable-svelte-graphics/SKILL.md', fixtures: ['packages/graphics/tests/test-components/SkillExamples.svelte'] },
+	{ skill: '.claude/skills/composable-svelte-maps/SKILL.md', fixtures: ['packages/maps/tests/test-components/SkillExamples.svelte'] },
+	{ skill: '.claude/skills/composable-svelte-media/SKILL.md', fixtures: ['packages/media/tests/test-components/SkillExamples.svelte'] },
 	// Skills about core, pinned by fixtures in core's own test tree.
-	{ skill: '.claude/skills/composable-svelte/SKILL.md', fixture: 'packages/core/tests/test-components/SkillExamples-umbrella.svelte' },
-	{ skill: '.claude/skills/composable-svelte-components/SKILL.md', fixture: 'packages/core/tests/test-components/SkillExamples-components.svelte' },
-	{ skill: '.claude/skills/composable-svelte-core/SKILL.md', fixture: 'packages/core/tests/test-components/SkillExamples-core.svelte' },
-	{ skill: '.claude/skills/composable-svelte-deployment/SKILL.md', fixture: 'packages/core/tests/test-components/SkillExamples-deployment.svelte' },
-	{ skill: '.claude/skills/composable-svelte-forms/SKILL.md', fixture: 'packages/core/tests/test-components/SkillExamples-forms.svelte' },
-	{ skill: '.claude/skills/composable-svelte-i18n/SKILL.md', fixture: 'packages/core/tests/test-components/SkillExamples-i18n.svelte' },
-	{ skill: '.claude/skills/composable-svelte-navigation/SKILL.md', fixture: 'packages/core/tests/test-components/SkillExamples-navigation.svelte' },
-	{ skill: '.claude/skills/composable-svelte-ssr/SKILL.md', fixture: 'packages/core/tests/test-components/SkillExamples-ssr.svelte' }
+	{ skill: '.claude/skills/composable-svelte/SKILL.md', fixtures: ['packages/core/tests/test-components/SkillExamples-umbrella.svelte'] },
+	{ skill: '.claude/skills/composable-svelte-components/SKILL.md', fixtures: ['packages/core/tests/test-components/SkillExamples-components.svelte'] },
+	{ skill: '.claude/skills/composable-svelte-core/SKILL.md', fixtures: ['packages/core/tests/test-components/SkillExamples-core.svelte'] },
+	{ skill: '.claude/skills/composable-svelte-deployment/SKILL.md', fixtures: ['packages/core/tests/test-components/SkillExamples-deployment.svelte'] },
+	{ skill: '.claude/skills/composable-svelte-forms/SKILL.md', fixtures: ['packages/core/tests/test-components/SkillExamples-forms.svelte'] },
+	{ skill: '.claude/skills/composable-svelte-i18n/SKILL.md', fixtures: ['packages/core/tests/test-components/SkillExamples-i18n.svelte'] },
+	{ skill: '.claude/skills/composable-svelte-navigation/SKILL.md', fixtures: ['packages/core/tests/test-components/SkillExamples-navigation.svelte'] },
+	{ skill: '.claude/skills/composable-svelte-ssr/SKILL.md', fixtures: ['packages/core/tests/test-components/SkillExamples-ssr.svelte', 'packages/core/tests/test-components/SkillExamples-ssr-pitfall.svelte'] }
 ];
 
 /**
- * Fence markup that is not valid Svelte and so cannot be live in a fixture:
- * literal `...` placeholder attributes, runes and imports outside any
- * `<script>`, "future API" props no component declares. Each entry is a real
- * documentation defect (AUDIT-2026-09-03-FINDINGS DA-X2). R4 fixes the skill;
- * the staleness arm below deletes the entry the day the fence is live in its
- * fixture. Keyed by skill and the first 72 normalised characters of the fence.
+ * Fence markup a clean fixture cannot hold as live markup. Some does not parse
+ * at all — runes, functions and `import` statements outside any `<script>`,
+ * JS `//` comments as markup; some parses but cannot typecheck against the
+ * real components — literal `...` placeholder attributes, "Future API" props
+ * no component declares. Each entry is a real documentation defect
+ * (AUDIT-2026-09-03-FINDINGS DA-X2). R4 fixes the skill; the staleness arm
+ * below deletes the entry the day the fence is live in its fixture. Keyed by
+ * skill and the first 72 normalised characters of the fence, so an edit
+ * beyond that prefix stays exempt until the entry is re-keyed.
  */
 const NOT_COMPILED: ReadonlyArray<{ skill: string; startsWith: string }> = [
 	{ skill: '.claude/skills/composable-svelte-charts/SKILL.md', startsWith: '<div class="chart-container"> <Chart store={chartStore} ... /> </div> <s' },
@@ -73,8 +80,11 @@ const NOT_COMPILED: ReadonlyArray<{ skill: string; startsWith: string }> = [
 	{ skill: '.claude/skills/composable-svelte-graphics/SKILL.md', startsWith: '// Future API <Mesh {store} id="animated" geometry={{ type: \'box\', size:' },
 	{ skill: '.claude/skills/composable-svelte-graphics/SKILL.md', startsWith: '// Future API <Scene {store} postProcessing={{ bloom: { enabled: true, i' },
 	{ skill: '.claude/skills/composable-svelte-maps/SKILL.md', startsWith: 'let showLayer = $state(true); $effect(() => { if (showLayer) { mapStore.' },
-	{ skill: '.claude/skills/composable-svelte-ssr/SKILL.md', startsWith: '<svelte:head> <title>{$store.meta.title}</title> <meta name="description' },
 ];
+
+/** A skill's fixtures, read as one haystack. */
+const fixtureText = (fixtures: readonly string[]): string =>
+	fixtures.map((fixture) => readFileSync(join(repoRoot, fixture), 'utf8')).join('\n');
 
 const registered = (skill: string, markup: string): boolean =>
 	NOT_COMPILED.some((e) => e.skill === skill && markup.startsWith(e.startsWith));
@@ -102,23 +112,26 @@ export function fenceMarkup(document: string): string[] {
  *
  * HTML comments are stripped from both sides: a fence copied into a fixture
  * `<!-- -->` satisfies a substring match and compiles nothing, which is how
- * nineteen fences that are not valid Svelte at all were first "pinned". Pure,
- * so the positive control drives the real comparison.
+ * the fences a fixture cannot hold were first "pinned". The fixture's own
+ * `<script>` is stripped too: a fence quoted in a JSDoc or a template literal
+ * there would satisfy the match and compile nothing, the same way. Pure, so
+ * the positive control drives the real comparison.
  */
 export function missingMarkup(skillText: string, fixtureText: string): string[] {
 	// Stripped from both sides: the skills' own fences carry comments
 	// (<!-- WRONG -->) that a fixture reproduces verbatim, so stripping the
 	// fixture alone made every such fence unmatchable.
 	const withoutComments = (text: string) => text.replace(/<!--[\s\S]*?-->/g, '');
-	const haystack = normalise(withoutComments(fixtureText));
+	const withoutScript = (text: string) => text.replace(/<script[\s\S]*?<\/script>/g, '');
+	const haystack = normalise(withoutComments(withoutScript(fixtureText)));
 	return fenceMarkup(withoutComments(skillText)).filter((markup) => !haystack.includes(markup));
 }
 
 describe('the check itself', () => {
 	it('points at files that exist', () => {
-		for (const { skill, fixture } of PINNED) {
+		for (const { skill, fixtures } of PINNED) {
 			expect(existsSync(join(repoRoot, skill)), skill).toBe(true);
-			expect(existsSync(join(repoRoot, fixture)), fixture).toBe(true);
+			for (const fixture of fixtures) expect(existsSync(join(repoRoot, fixture)), fixture).toBe(true);
 		}
 	});
 
@@ -144,6 +157,10 @@ describe('the check itself', () => {
 		const skill = '```svelte\n<Button size="lg">Go</Button>\n```';
 		expect(missingMarkup(skill, '<div>\n  <Button   size="lg">Go</Button>\n</div>')).toEqual([]);
 		expect(missingMarkup(skill, '<div><Button size="sm">Go</Button></div>')).toEqual(['<Button size="lg">Go</Button>']);
+		// Quoted inside the fixture's script: not live markup, so still missing.
+		expect(
+			missingMarkup(skill, '<script>\n// <Button size="lg">Go</Button>\n</script>\n<p />')
+		).toEqual(['<Button size="lg">Go</Button>']);
 	});
 
 	it('pins every skill that ships markup', () => {
@@ -167,11 +184,8 @@ describe('every pinned skill', () => {
 	it('has each markup example present in its fixture', () => {
 		const drifted: string[] = [];
 
-		for (const { skill, fixture } of PINNED) {
-			for (const markup of missingMarkup(
-				readFileSync(join(repoRoot, skill), 'utf8'),
-				readFileSync(join(repoRoot, fixture), 'utf8')
-			)) {
+		for (const { skill, fixtures } of PINNED) {
+			for (const markup of missingMarkup(readFileSync(join(repoRoot, skill), 'utf8'), fixtureText(fixtures))) {
 				if (registered(skill, markup)) continue;
 				drifted.push(`${skill}\n    ${markup.slice(0, 160)}`);
 			}
@@ -192,10 +206,7 @@ describe('every pinned skill', () => {
 		const stale = NOT_COMPILED.filter(({ skill, startsWith }) => {
 			const pin = PINNED.find((p) => p.skill === skill);
 			if (!pin) return true;
-			const missing = missingMarkup(
-				readFileSync(join(repoRoot, skill), 'utf8'),
-				readFileSync(join(repoRoot, pin.fixture), 'utf8')
-			);
+			const missing = missingMarkup(readFileSync(join(repoRoot, skill), 'utf8'), fixtureText(pin.fixtures));
 			return !missing.some((markup) => markup.startsWith(startsWith));
 		});
 

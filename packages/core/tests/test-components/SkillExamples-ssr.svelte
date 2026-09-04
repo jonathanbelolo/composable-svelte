@@ -7,7 +7,9 @@
 	 * markup expressions are out of its scope. This file is the markup half, and
 	 * it is typechecked because `svelte-check` reads every `.svelte` under `tests`.
 	 * `tests/repo/skill-examples.test.ts` checks that each fence's markup is still
-	 * a substring of this file.
+	 * a substring of this file or of `SkillExamples-ssr-pitfall.svelte`, which
+	 * holds the skill's second `<svelte:head>`: Svelte allows one per component
+	 * (svelte_meta_duplicate), so that fence lives in a second fixture.
 	 *
 	 * `MetaTags` is the shape the skill itself declares beside the first fence.
 	 */
@@ -40,17 +42,3 @@
     <link rel="canonical" href={$store.meta.canonical} />
   {/if}
 </svelte:head>
-
-<!--
-	Pitfall 3: forgetting to set meta tags — ✅ CORRECT.
-
-	Svelte allows one `<svelte:head>` per component (svelte_meta_duplicate), so
-	this second fence cannot be a live element in the same file as the first. It
-	is pinned here textually for the substring check; both of its expressions are
-	identical to ones the first `<svelte:head>` above typechecks.
-
-<svelte:head>
-  <title>{$store.meta.title}</title>
-  <meta name="description" content={$store.meta.description} />
-</svelte:head>
--->

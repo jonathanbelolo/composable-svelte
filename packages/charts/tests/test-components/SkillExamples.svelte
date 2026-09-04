@@ -9,12 +9,13 @@
 	 * `packages/core/tests/repo/skill-examples.test.ts` compares the two, so a
 	 * fence that changes in the skill has to change here.
 	 *
-	 * Five fences are NOT compiled — they sit inside HTML comments below, each
-	 * marked `NOT COMPILED`. They are not valid Svelte: four carry a literal
-	 * `...` placeholder attribute on `<Chart>`, which Svelte 5 parses as a prop
-	 * named `"..."` and svelte-check rejects, and one has bare `$state`/`$effect`
-	 * code outside any `<script>`. They are pinned verbatim so the guard sees
-	 * them; promote each to real markup once the skill is corrected.
+	 * Five of the skill's fences are not here: four carry a literal `...`
+	 * placeholder attribute on `<Chart>`, which Svelte 5 parses as a prop named
+	 * `"..."` and svelte-check rejects, and one has bare `$state`/`$effect` code
+	 * outside any `<script>`. They are registered in the guard's NOT_COMPILED
+	 * with their finding (DA-X2). An earlier form of this file also carried them
+	 * inside HTML comments, which the guard strips, so they pinned nothing. Add
+	 * each as real markup once the skill is corrected; the entry then falls out.
 	 */
 	import { Chart } from '../../src/lib/index.js';
 	import type { ChartAction, ChartState } from '../../src/lib/index.js';
@@ -144,20 +145,6 @@
   height={600}
 />
 
-<!-- RESPONSIVE DESIGN / Container-based Sizing — NOT COMPILED: literal `...` attribute -->
-<!--
-<div class="chart-container">
-  <Chart store={chartStore} ... />
-</div>
-
-<style>
-  .chart-container {
-    width: 100%;
-    height: 500px;
-  }
-</style>
--->
-
 <!-- RESPONSIVE DESIGN / Responsive Breakpoints — NOT COMPILED: script outside <script>, literal `...` attribute -->
 <!--
 let chartWidth = $state(800);
@@ -229,12 +216,6 @@ $effect(() => {
   yDomain={[0, 100]}
   enableAnimations={true}
 />
-
-<!-- COMMON PATTERNS / Multiple Charts with Shared Selection — NOT COMPILED: literal `...` attribute -->
-<!--
-<Chart store={chartStore1} ... onSelectionChange={syncSelection} />
-<Chart store={chartStore2} ... onSelectionChange={syncSelection} />
--->
 
 <!-- COMMON PATTERNS / Linked Zoom -->
 <Chart store={masterStore} enableZoom={true} />
