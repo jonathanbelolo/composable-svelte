@@ -90,20 +90,44 @@ interface Gap {
 	missing: string[];
 }
 
+/** A subpath and the names its declaration exports, read once. */
+interface Measured {
+	key: string;
+	declaration: string;
+	names: Set<string>;
+}
+
+/**
+ * The names each subpath exports that the root barrel does not. Pure, so the
+ * positive control can drive it with a synthetic root.
+ */
+export function gapsOf(pkg: string, root: Set<string>, subpaths: ReadonlyArray<Pick<Measured, 'key' | 'names'>>): Gap[] {
+	return subpaths
+		.map(({ key, names }) => ({
+			pkg,
+			key,
+			missing: [...names].filter((name) => !root.has(name)).sort()
+		}))
+		.filter((gap) => gap.missing.length > 0);
+}
+
 const built = FLAT_BARREL.filter((pkg) =>
 	existsSync(join(packagesDir, pkg, 'dist/index.d.ts'))
 );
 
 const measured = built.map((pkg) => {
 	const root = exportedNames(join(packagesDir, pkg, 'dist/index.d.ts'));
-	const subpaths = subpathsOf(pkg);
-	const gaps: Gap[] = subpaths
-		.map(({ key, declaration }) => ({
-			pkg,
-			key,
-			missing: [...exportedNames(declaration)].filter((name) => !root.has(name)).sort()
-		}))
-		.filter((gap) => gap.missing.length > 0);
+	// Each declaration is parsed once and its names kept. `exportedNames` builds
+	// a whole TypeScript program per call, and the vacuity arm below used to
+	// call it a second time per subpath just to read `.size` — seven redundant
+	// programs for `auth`, inside a test with a five-second budget, which is
+	// what made "read real export sets" fail under load and pass alone.
+	const subpaths: Measured[] = subpathsOf(pkg).map(({ key, declaration }) => ({
+		key,
+		declaration,
+		names: exportedNames(declaration)
+	}));
+	const gaps = gapsOf(pkg, root, subpaths);
 	return { pkg, root, subpaths, gaps };
 });
 
@@ -122,17 +146,31 @@ describe('the check itself', () => {
 		for (const { pkg, root, subpaths } of measured) {
 			expect(root.size, `${pkg} root barrel parsed as empty`).toBeGreaterThan(10);
 			expect(subpaths.length, `${pkg} declared no subpaths`).toBeGreaterThan(0);
-			for (const { key, declaration } of subpaths) {
-				expect(exportedNames(declaration).size, `${pkg} ${key} parsed as empty`).toBeGreaterThan(0);
+			for (const { key, names } of subpaths) {
+				expect(names.size, `${pkg} ${key} parsed as empty`).toBeGreaterThan(0);
 			}
 		}
 	});
 
 	it('finds a name that is genuinely absent', () => {
-		// The positive control: the root barrel does not export everything in the
-		// universe, so a name nothing declares must come back missing.
+		// The root barrel does not export everything in the universe, so a name
+		// nothing declares must come back missing.
 		for (const { pkg, root } of measured) {
 			expect(root.has('__definitelyNotExported'), pkg).toBe(false);
+		}
+	});
+
+	it('reports a subpath name the root lacks, and only that', () => {
+		// The positive control, through the real gap computation: a root that
+		// lacks one real subpath name must produce exactly that gap. The arm
+		// above only proved the root set was not universal.
+		for (const { pkg, root, subpaths } of measured) {
+			const first = subpaths[0]!;
+			const name = [...first.names][0]!;
+			const narrowed = new Set([...root].filter((n) => n !== name));
+			const gaps = gapsOf(pkg, narrowed, subpaths);
+			expect(gaps.some((g) => g.key === first.key && g.missing.includes(name)), `${pkg}: ${name} not reported`).toBe(true);
+			expect(gapsOf(pkg, root, subpaths)).toEqual([]);
 		}
 	});
 });
