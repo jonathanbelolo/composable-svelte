@@ -117,7 +117,15 @@ export function documents(): string[] {
 					keep: (name) => name.endsWith('.md') && !isRecordOfThePast(name)
 				}).files
 		)
-		.concat(existsSync(join(repoRoot, 'README.md')) ? [join(repoRoot, 'README.md')] : []);
+		.concat(
+			// The two root documents. `CLAUDE.md` is the one every session loads
+			// first, and it was the one document with no guard behind it: the
+			// audit found it naming APIs that do not exist and a skill file that
+			// never did (AUDIT-2026-09-03-FINDINGS G1, G2, G3, G8).
+			['README.md', 'CLAUDE.md']
+				.map((name) => join(repoRoot, name))
+				.filter((file) => existsSync(file))
+		);
 }
 
 /**

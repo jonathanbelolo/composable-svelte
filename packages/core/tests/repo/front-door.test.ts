@@ -254,6 +254,38 @@ export function withoutFences(source: string): string {
  * invisible. Angle-bracketed targets — `](<path with spaces>)` — are the
  * sanctioned way to write a target containing spaces, and are unwrapped here.
  */
+/**
+ * The entries drawn under a `skills/` node in a directory tree.
+ *
+ * `CLAUDE.md` names its skills in a tree inside a fence, which `withoutFences`
+ * strips before the dead-link arm looks — so a skill file that never existed
+ * sat there marked "CRITICAL patterns (ALWAYS use!)" with nothing to object.
+ * Exported for the positive control.
+ */
+export function skillsTreeEntries(source: string): string[] {
+	const lines = source.split('\n');
+	const glyph = /[├└]──\s+([\w.-]+\/?)/;
+	const out: string[] = [];
+	for (let i = 0; i < lines.length; i++) {
+		const head = lines[i]!.match(/^(.*?)[├└]──\s+skills\/\s*(#.*)?$/);
+		if (!head) continue;
+		const depth = head[1]!.length;
+		for (let j = i + 1; j < lines.length; j++) {
+			const line = lines[j]!;
+			const at = line.search(/[├└]──/);
+			if (at === -1 || at <= depth) break;
+			const m = line.match(glyph);
+			if (m) out.push(m[1]!);
+		}
+	}
+	return out;
+}
+
+/** Every `.claude/skills/<path>` written out in full, fences included. */
+export function mentionedSkillPaths(source: string): string[] {
+	return [...new Set([...source.matchAll(/\.claude\/skills\/([\w.-]+(?:\/[\w.-]+)*)/g)].map((m) => m[1]!))];
+}
+
 export function relativeLinks(source: string): string[] {
 	return [...withoutFences(source).matchAll(/\]\(\s*<([^>]+)>|\]\(\s*([^)\s]+)(?:\s+"[^"]*")?\s*\)/g)]
 		.map((match) => match[1] ?? match[2]!)
@@ -270,6 +302,17 @@ const flowsDir = join(repoRoot, 'packages/auth/src/lib/flows');
 
 const rootReadme = readFileSync(join(repoRoot, 'README.md'), 'utf8');
 const guidesReadme = readFileSync(join(repoRoot, 'guides/README.md'), 'utf8');
+const claudeMd = readFileSync(join(repoRoot, 'CLAUDE.md'), 'utf8');
+
+/**
+ * Skill paths `CLAUDE.md` names that do not exist. The staleness arm deletes
+ * an entry the day the file appears or the mention goes.
+ */
+const KNOWN_MISSING_SKILLS: string[] = [
+	// AUDIT-2026-09-03-FINDINGS G3: marked "⭐ CRITICAL patterns (ALWAYS use!)"
+	// in the repository tree; never existed. R4.4 rewrites the tree.
+	'composable-svelte-frontend.md'
+];
 
 describe('the front door', () => {
 	it('ran against a repository with packages in it', () => {
@@ -505,5 +548,50 @@ describe('the front door', () => {
 		const rowFor = (name: string) => new RegExp(`^\\|\\s*\\*\\*${name}\\*\\*\\s*\\|`, 'm');
 		expect(rowFor('code').test(authRow), 'a row-wide match would pass here').toBe(false);
 		expect(rowFor('auth').test(authRow)).toBe(true);
+	});
+});
+
+describe('CLAUDE.md names skills that exist', () => {
+	const skillsDir = join(repoRoot, '.claude/skills');
+	const named = [...new Set([...skillsTreeEntries(claudeMd), ...mentionedSkillPaths(claudeMd)])];
+
+	it('names some, so the arms below are about something', () => {
+		expect(named.length).toBeGreaterThan(0);
+	});
+
+	it('every named skill exists, or is registered as missing', () => {
+		const missing = named.filter(
+			(name) => !existsSync(join(skillsDir, name)) && !KNOWN_MISSING_SKILLS.includes(name)
+		);
+
+		expect(
+			missing,
+			'CLAUDE.md points at skill files that do not exist. Fix the tree, or register with a finding ID'
+		).toEqual([]);
+	});
+
+	it('every registered missing skill is still missing and still named', () => {
+		const stale = KNOWN_MISSING_SKILLS.filter(
+			(name) => existsSync(join(skillsDir, name)) || !named.includes(name)
+		);
+
+		expect(stale, 'KNOWN_MISSING_SKILLS has an entry that is no longer missing, or no longer named').toEqual([]);
+	});
+
+	it('reads the tree under skills/ and stops where the indent returns', () => {
+		// The positive control, through the real parser.
+		const tree = [
+			'```',
+			'└── .claude/',
+			'    ├── skills/',
+			'    │   ├── one.md  # a file',
+			'    │   └── two/    # a directory',
+			'    └── settings.local.json',
+			'```',
+			'and .claude/skills/three/SKILL.md in prose'
+		].join('\n');
+
+		expect(skillsTreeEntries(tree)).toEqual(['one.md', 'two/']);
+		expect(mentionedSkillPaths(tree)).toEqual(['three/SKILL.md']);
 	});
 });
