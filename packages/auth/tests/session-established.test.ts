@@ -129,8 +129,17 @@ describe('a flow announcing that it has started', () => {
 
 	it('bumps the epoch so an in-flight resolve cannot land on top of it', async () => {
 		// Without this, a resolve started before the flow could return anonymous
-		// after the flow has authenticated.
-		const store = makeStore(mockDeps());
+		// after the flow has authenticated. The resolve is genuinely in flight —
+		// a fetch that does not settle until the flow has announced itself.
+		// (The first form sent a synthetic `sessionResolved` while the real one
+		// sat unasserted in the queue, which TestStore now refuses.)
+		type Resolved = Awaited<ReturnType<SessionDependencies['fetchSession']>>;
+		let settle!: (value: Resolved) => void;
+		const store = makeStore(
+			mockDeps({
+				fetchSession: vi.fn(() => new Promise<Resolved>((resolve) => { settle = resolve; }))
+			})
+		);
 
 		await store.send({ type: 'resolveSession' }, (state) => {
 			expect(state.epoch).toBe(1);
@@ -139,14 +148,14 @@ describe('a flow announcing that it has started', () => {
 			expect(state.epoch).toBe(2);
 		});
 
-		// The resolve's feedback carries epoch 1 and is now stale.
-		await store.send({ type: 'sessionResolved', session: null, epoch: 1 }, (state) => {
+		// The resolve lands now. Its feedback carries epoch 1 and is stale.
+		settle(null);
+		await store.receive({ type: 'sessionResolved', epoch: 1 }, (state) => {
 			expect(state.status, 'stale resolve feedback overwrote a login in flight').toBe(
 				'loggingIn'
 			);
 		});
-
-		await store.receive({ type: 'sessionResolved' });
+		await store.finish();
 	});
 
 	it('is refused while a sign-out is in flight', async () => {

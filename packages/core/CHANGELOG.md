@@ -398,6 +398,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **BREAKING (tests): `TestStore.finish()` waits for every effect and fails
+  on what is left.** It did `advanceTime(0)` and looked at the queue, so it
+  passed with a `Run` still in flight and an `AfterDelay` still armed. Now
+  effects still running are waited for (a hung one fails with a message,
+  `finish(timeout)`), a pending `AfterDelay` fails under fake timers until
+  the clock is advanced and is waited for under real timers, and the
+  unasserted actions are listed. A rejecting executor fails the next
+  `receive()`, `send()` or `finish()` with its message — or, if nothing
+  asks, the test that owns the store — instead of escaping as an unhandled
+  rejection. (AUDIT-2026-09-03-FINDINGS N9, T6)
+
+- **BREAKING (tests): `TestStore` runs `Effect.debounced` and
+  `Effect.throttled` on the test clock.** Both executed at once, every
+  time, so `Effect.cancel(debounceId)` was untestable and three rapid calls
+  looked like three debounces. A debounce fires once after its delay (a
+  later call supersedes it), a throttle runs on the leading edge and once
+  more when the window closes, and `Effect.cancel(id)` clears both — as the
+  store does. Under `vi.useFakeTimers()` advance the clock with
+  `store.advanceTime(ms)` before receiving the action. (AUDIT-2026-09-03-FINDINGS N9, T6)
+
+- **BREAKING (tests): `TestStore.receive()` is ordered and `send()` is
+  exhaustive.** `receive()` matched an action anywhere in the queue, so a
+  test skipped past actions it never expected; `send()` ran over unasserted
+  ones. With exhaustivity on (the default), `receive()` must name the next
+  action the effects delivered — a later match fails at once naming both —
+  and `send()` refuses to run while received actions are unasserted.
+  `send()`'s assertion now runs on the state the reducer returned, before
+  the effect executes. Nested partial matches compare structurally, key
+  order ignored. `exhaustivity = 'off'` keeps the old behaviour.
+  (AUDIT-2026-09-03-FINDINGS N9, T1, T6)
+
 - `dispatch` after `destroy()` is a warned no-op (it reduced state before).
   `Effect.run` and `Effect.afterDelay` executors receive the store's lifetime
   `AbortSignal` as their optional second argument (`Effect.map` forwards it);

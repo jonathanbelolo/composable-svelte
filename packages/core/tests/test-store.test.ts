@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { TestStore, createTestStore } from '../src/lib/test/test-store';
 import { Effect } from '../src/lib/effect';
 import type { Reducer } from '../src/lib/types';
@@ -427,3 +427,248 @@ describe('TestStore models cancellation the way the store does', () => {
     expect(store.state.landed, 'a cancelled effect still dispatched').toEqual([]);
   });
 });
+
+describe('receive() and send() keep the transcript complete (N9, T1)', () => {
+	// findIndex let receive() match an action anywhere in the queue, so a test
+	// skipped past actions it never expected, and send() ran on top of
+	// unasserted ones; both hid effects the test author did not know about.
+	type State = { log: string[] };
+	type Action = { type: 'go' } | { type: 'first' } | { type: 'second' } | { type: 'done' };
+	const reducer: Reducer<State, Action> = (state, action) => {
+		if (action.type === 'go') {
+			return [
+				state,
+				Effect.run(async (dispatch) => {
+					dispatch({ type: 'first' });
+					dispatch({ type: 'second' });
+				})
+			];
+		}
+		return [{ log: [...state.log, action.type] }, Effect.none()];
+	};
+
+	it('receive() fails at once, naming both, when the match is not the next action', async () => {
+		const store = new TestStore({ initialState: { log: [] }, reducer });
+		await store.send({ type: 'go' });
+		await store.advanceTime(0);
+
+		await expect(store.receive({ type: 'second' })).rejects.toThrow(
+			/Expected to receive \{"type":"second"\} next, but the next received action was \{"type":"first"\}/
+		);
+		// Nothing was consumed by the failed receive.
+		await store.receive({ type: 'first' });
+		await store.receive({ type: 'second' });
+		await store.finish();
+	});
+
+	it('send() refuses to run over unasserted received actions', async () => {
+		const store = new TestStore({ initialState: { log: [] }, reducer });
+		await store.send({ type: 'go' });
+		await store.advanceTime(0);
+
+		await expect(store.send({ type: 'done' })).rejects.toThrow(
+			/send\("done"\) called with 2 unasserted received action\(s\)/
+		);
+		await store.receive({ type: 'first' });
+		await store.receive({ type: 'second' });
+		await store.send({ type: 'done' }, (state) => expect(state.log).toEqual(['first', 'second', 'done']));
+	});
+
+	it("exhaustivity = 'off' keeps the old behaviour: match anywhere, send over leftovers", async () => {
+		const store = new TestStore({ initialState: { log: [] }, reducer });
+		store.exhaustivity = 'off';
+		await store.send({ type: 'go' });
+		await store.advanceTime(0);
+
+		await store.receive({ type: 'second' });
+		await store.send({ type: 'done' });
+		expect(store.state.log).toEqual(['first', 'second', 'done']);
+	});
+
+	it('matches nested values structurally, whatever the key order', async () => {
+		type NestedAction = { type: 'go' } | { type: 'event'; payload: { a: number; b: number } };
+		const nested: Reducer<State, NestedAction> = (state, action) =>
+			action.type === 'go'
+				? [state, Effect.run(async (dispatch) => dispatch({ type: 'event', payload: { a: 1, b: 2 } }))]
+				: [state, Effect.none()];
+		const store = new TestStore({ initialState: { log: [] }, reducer: nested });
+		await store.send({ type: 'go' });
+		await store.receive({ type: 'event', payload: { b: 2, a: 1 } });
+		await store.finish();
+	});
+});
+
+describe("send()'s assertion sees the reducer's state, not the effect's (N9)", () => {
+	it('an effect that dispatches synchronously cannot change what the assertion sees', async () => {
+		type State = { phase: string };
+		type Action = { type: 'start' } | { type: 'finished' };
+		const reducer: Reducer<State, Action> = (state, action) => {
+			if (action.type === 'start') {
+				return [{ phase: 'started' }, Effect.run((dispatch) => { dispatch({ type: 'finished' }); })];
+			}
+			return [{ phase: 'finished' }, Effect.none()];
+		};
+		const store = new TestStore({ initialState: { phase: 'idle' }, reducer });
+
+		await store.send({ type: 'start' }, (state) => {
+			expect(state.phase).toBe('started');
+		});
+		await store.receive({ type: 'finished' }, (state) => {
+			expect(state.phase).toBe('finished');
+		});
+		await store.finish();
+	});
+});
+
+describe('Debounced and Throttled run on the test clock (N9, T6)', () => {
+	// Both executed at once, every time, so Effect.cancel(debounceId) was
+	// untestable and three rapid calls looked like three debounces.
+	type State = { fired: string[] };
+	type Action = { type: 'type'; value: string } | { type: 'cancel' } | { type: 'fired'; value: string };
+	const reducer: Reducer<State, Action> = (state, action) => {
+		switch (action.type) {
+			case 'type':
+				return [state, Effect.debounced('search', 300, (dispatch) => dispatch({ type: 'fired', value: action.value }))];
+			case 'cancel':
+				return [state, Effect.cancel('search')];
+			case 'fired':
+				return [{ fired: [...state.fired, action.value] }, Effect.none()];
+		}
+	};
+
+	it('a debounce fires once, after its delay', async () => {
+		vi.useFakeTimers();
+		try {
+			const store = new TestStore({ initialState: { fired: [] }, reducer });
+			await store.send({ type: 'type', value: 'a' });
+			await store.advanceTime(299);
+			store.assertNoPendingActions();
+			await store.advanceTime(1);
+			await store.receive({ type: 'fired', value: 'a' });
+			await store.finish();
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('a second call inside the window supersedes the first', async () => {
+		vi.useFakeTimers();
+		try {
+			const store = new TestStore({ initialState: { fired: [] }, reducer });
+			await store.send({ type: 'type', value: 'a' });
+			await store.advanceTime(100);
+			await store.send({ type: 'type', value: 'ab' });
+			await store.advanceTime(300);
+			await store.receive({ type: 'fired', value: 'ab' }, (state) => expect(state.fired).toEqual(['ab']));
+			await store.finish();
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('Effect.cancel(id) prevents a pending debounce', async () => {
+		vi.useFakeTimers();
+		try {
+			const store = new TestStore({ initialState: { fired: [] }, reducer });
+			await store.send({ type: 'type', value: 'a' });
+			await store.send({ type: 'cancel' });
+			await store.advanceTime(1000);
+			await store.finish();
+			expect(store.state.fired).toEqual([]);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('a throttle runs on the leading edge, and the first call inside the window runs when it closes', async () => {
+		vi.useFakeTimers();
+		try {
+			type TAction = { type: 'move'; x: number } | { type: 'moved'; x: number };
+			const throttled: Reducer<{ moved: number[] }, TAction> = (state, action) =>
+				action.type === 'move'
+					? [state, Effect.throttled('move', 100, (dispatch) => dispatch({ type: 'moved', x: action.x }))]
+					: [{ moved: [...state.moved, action.x] }, Effect.none()];
+			const store = new TestStore({ initialState: { moved: [] }, reducer: throttled });
+			await store.send({ type: 'move', x: 1 });
+			await store.receive({ type: 'moved', x: 1 });
+			await store.send({ type: 'move', x: 2 });
+			await store.send({ type: 'move', x: 3 });
+			// As the store does it: the first call inside the window is the one
+			// scheduled for the trailing edge; later calls in the window are dropped.
+			await store.advanceTime(100);
+			await store.receive({ type: 'moved', x: 2 }, (state) => expect(state.moved).toEqual([1, 2]));
+			await store.finish();
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+});
+
+describe('finish() waits for what is still running (N9, T6)', () => {
+	type State = { n: number };
+	type Action = { type: 'go' } | { type: 'late' };
+
+	it('a Run that dispatches late is waited for, and its action then fails finish() by name', async () => {
+		const reducer: Reducer<State, Action> = (state, action) =>
+			action.type === 'go'
+				? [state, Effect.run(async (dispatch) => { await new Promise((r) => setTimeout(r, 30)); dispatch({ type: 'late' }); })]
+				: [{ n: state.n + 1 }, Effect.none()];
+		const store = new TestStore({ initialState: { n: 0 }, reducer });
+		await store.send({ type: 'go' });
+		// advanceTime(0) alone saw nothing and the first form passed here.
+		await expect(store.finish()).rejects.toThrow(/Expected no pending actions, but found 1 unasserted action\(s\):\nTypes: \["late"\]/);
+	});
+
+	it('a Run that never settles fails finish() with a message, not a test timeout', async () => {
+		const reducer: Reducer<State, Action> = (state, action) =>
+			action.type === 'go' ? [state, Effect.run(() => new Promise<void>(() => {}))] : [state, Effect.none()];
+		const store = new TestStore({ initialState: { n: 0 }, reducer });
+		await store.send({ type: 'go' });
+		await expect(store.finish(100)).rejects.toThrow(/finish\(\): 1 effect\(s\) still running after 100ms/);
+	});
+
+	it('an AfterDelay still pending under fake timers fails finish() until the clock is advanced', async () => {
+		vi.useFakeTimers();
+		try {
+			const reducer: Reducer<State, Action> = (state, action) =>
+				action.type === 'go' ? [state, Effect.afterDelay(200, (dispatch) => dispatch({ type: 'late' }))] : [{ n: state.n + 1 }, Effect.none()];
+			const store = new TestStore({ initialState: { n: 0 }, reducer });
+			await store.send({ type: 'go' });
+			await expect(store.finish()).rejects.toThrow(/1 AfterDelay effect\(s\) still pending under fake timers/);
+			await store.advanceTime(200);
+			await store.receive({ type: 'late' });
+			await store.finish();
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('an AfterDelay under real timers is waited for', async () => {
+		const reducer: Reducer<State, Action> = (state, action) =>
+			action.type === 'go' ? [state, Effect.afterDelay(30, (dispatch) => dispatch({ type: 'late' }))] : [{ n: state.n + 1 }, Effect.none()];
+		const store = new TestStore({ initialState: { n: 0 }, reducer });
+		await store.send({ type: 'go' });
+		await expect(store.finish()).rejects.toThrow(/Types: \["late"\]/);
+	});
+});
+
+describe('a rejecting executor fails the test, not the process (N9)', () => {
+	type State = { n: number };
+	type Action = { type: 'go' };
+
+	it('finish() throws with the error\'s message', async () => {
+		const reducer: Reducer<State, Action> = (state) => [state, Effect.run(async () => { throw new Error('backend down'); })];
+		const store = new TestStore({ initialState: { n: 0 }, reducer });
+		await store.send({ type: 'go' });
+		await expect(store.finish()).rejects.toThrow(/\[TestStore\] effect rejected: backend down/);
+	});
+
+	it('receive() and send() report it too', async () => {
+		const reducer: Reducer<State, Action> = (state) => [state, Effect.run(async () => { throw new Error('backend down'); })];
+		const store = new TestStore({ initialState: { n: 0 }, reducer });
+		await store.send({ type: 'go' });
+		await store.advanceTime(0);
+		await expect(store.send({ type: 'go' })).rejects.toThrow(/effect rejected: backend down/);
+	});
+});
+

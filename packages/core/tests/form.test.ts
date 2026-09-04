@@ -232,18 +232,10 @@ describe('Debounced Validation', () => {
 			expect(state.data.name).toBe('John');
 		});
 
-		// Due to test environment, debounce doesn't fully cancel - we get all validations
-		// This is acceptable in tests; in production the cancellation works properly
-		// Receive all the validation actions that fired:
-
-		// First validation (for 'J') completes with error
-		await store.receive({ type: 'fieldValidationCompleted', field: 'name', error: 'Name must be at least 2 characters' });
-
-		// Second and third validations start
+		// One validation, for the final value: the debounce runs on the clock
+		// under TestStore now, so the two earlier ones were superseded. (The
+		// first form ran every debounce at once and received all three.)
 		await store.receive({ type: 'fieldValidationStarted', field: 'name' });
-		await store.receive({ type: 'fieldValidationStarted', field: 'name' });
-
-		// Final validation (for 'John') completes without error
 		await store.receive(
 			{ type: 'fieldValidationCompleted', field: 'name', error: null },
 			(state) => {
@@ -251,6 +243,7 @@ describe('Debounced Validation', () => {
 				expect(state.fields.name?.error).toBe(null);
 			}
 		);
+		await store.finish();
 	});
 });
 

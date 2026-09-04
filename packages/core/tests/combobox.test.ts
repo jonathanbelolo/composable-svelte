@@ -302,12 +302,15 @@ describe('Combobox', () => {
 			});
 
 			await store.send({ type: 'searchChanged', query: 'test' });
+			// Searching opens the dropdown; its opening animation completes at 150ms.
+			await store.receive({ type: 'opened' });
 
 			// Should NOT call loadOptions immediately
 			expect(loadOptions).not.toHaveBeenCalled();
 
 			// Advance time to trigger debounce
 			await store.advanceTime(300);
+			await store.receive({ type: 'openingCompleted' });
 
 			// Now should receive searchDebounced and trigger load
 			await store.receive({ type: 'searchDebounced', query: 'test' });
@@ -340,11 +343,23 @@ describe('Combobox', () => {
 
 			// First search
 			await store.send({ type: 'searchChanged', query: 'test1' });
+			await store.receive({ type: 'opened' });
 			await store.advanceTime(100);
+			await store.receive({ type: 'openingCompleted' });
 
 			// Second search before first debounce completes
 			await store.send({ type: 'searchChanged', query: 'test2' });
 			await store.advanceTime(300);
+
+			// The combobox debounces with afterDelay and a staleness guard, not
+			// Effect.debounced: the first timer still fires, and the reducer
+			// ignores it because the query has moved on. (The first form of
+			// receive() skipped past this action, which is how the test passed
+			// while naming a cancellation that does not happen.)
+			await store.receive({ type: 'searchDebounced', query: 'test1' }, (state) => {
+				expect(state.searchQuery).toBe('test2');
+				expect(state.isLoading).toBe(false);
+			});
 
 			// Should receive searchDebounced for second query
 			await store.receive({ type: 'searchDebounced', query: 'test2' });
@@ -712,6 +727,7 @@ describe('Combobox', () => {
 
 			// First search
 			await store.send({ type: 'searchChanged', query: 'old' });
+			await store.receive({ type: 'opened' });
 
 			// Change search before debounce
 			await store.send({ type: 'searchChanged', query: 'new' });

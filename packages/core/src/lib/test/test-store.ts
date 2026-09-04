@@ -44,7 +44,7 @@
  * });
  *
  * afterEach(() => {
- *   vi.restoreAllMocks();
+ *   vi.useRealTimers(); // restoreAllMocks() does not undo useFakeTimers()
  * });
  * ```
  *
@@ -156,12 +156,14 @@
  * });
  * ```
  *
- * Deep equality is performed using JSON serialization. For complex objects,
- * consider checking state directly instead.
+ * Nested values are compared structurally, key order ignored.
  *
  * ## Exhaustiveness Checking
  *
- * By default (`exhaustivity: 'on'`), TestStore ensures all received actions are asserted:
+ * By default (`exhaustivity: 'on'`), TestStore ensures all received actions are
+ * asserted, in the order the effects delivered them: `receive()` must name the
+ * next action in the queue, and `send()` refuses to run while an earlier one is
+ * still unasserted:
  *
  * ```typescript
  * await store.send({ type: 'loadData' });
@@ -177,6 +179,7 @@
  */
 
 import type { Reducer, Effect, Dispatch } from '../types.js';
+import { stableStringify } from '../utils/stable-stringify.js';
 
 /**
  * Configuration for TestStore.
@@ -243,6 +246,15 @@ export class TestStore<State, Action, Dependencies = any> {
   private _subscriptionCleanups = new Map<string, () => void | Promise<void>>();
   /** In-flight cancellables by id, so re-registering one aborts its predecessor. */
   private _inFlightEffects = new Map<string, AbortController>();
+  /**
+   * Debounce timers and throttle state by id, modelled on the store's own —
+   * both used to execute at once, every time, so `Effect.cancel(debounceId)`
+   * was untestable and a debounce test could not tell one call from three
+   * (AUDIT-2026-09-03-FINDINGS N9, T6). They run on the test clock: under
+   * `vi.useFakeTimers()` advance it with `advanceTime(ms)`.
+   */
+  private _debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private _throttleState = new Map<string, { lastRun: number; timeout?: ReturnType<typeof setTimeout> }>();
 
   /**
    * Control exhaustiveness checking for received actions.
@@ -259,6 +271,13 @@ export class TestStore<State, Action, Dependencies = any> {
   /**
    * Send an action and optionally assert state changes.
    *
+   * With exhaustivity on, every action an effect has delivered must have been
+   * asserted with `receive()` before the next `send()` — TCA's rule, and the
+   * one that makes a test's transcript complete. The assertion runs on the
+   * state the reducer returned, before the effect executes, so an effect that
+   * dispatches synchronously cannot make it see a later state
+   * (AUDIT-2026-09-03-FINDINGS N9).
+   *
    * @param action - The action to dispatch
    * @param assert - Optional state assertion
    */
@@ -266,41 +285,46 @@ export class TestStore<State, Action, Dependencies = any> {
     action: Action,
     assert?: StateAssertion<State>
   ): Promise<void> {
+    // Operands ordered unlike assertNoPendingActions()'s, which the mutation
+    // baseline (M1) anchors on by exact text.
+    if (this.receivedActions.length > 0 && this.exhaustivity === 'on') {
+      throw new Error(
+        `send(${JSON.stringify((action as { type?: unknown }).type)}) called with ` +
+        `${this.receivedActions.length} unasserted received action(s):\n` +
+        `${this._describeQueue()}\n` +
+        `Assert them with receive() first, or set store.exhaustivity = 'off'.`
+      );
+    }
+
     this.actionHistory.push(action);
 
     const [newState, effect] = this.reducer(this._state, action, this.dependencies);
     this._state = newState;
 
-    if (effect._tag !== 'None') {
-      this.pendingEffects.push(this._executeEffect(effect));
-    }
-
     if (assert) {
       await assert(this._state);
+    }
+
+    if (effect._tag !== 'None') {
+      this.pendingEffects.push(this._executeEffect(effect));
     }
   }
 
   /**
    * Wait for and assert an action was received from effects.
    *
-   * ⚠️ WARNING: Partial matching with nested objects DOES NOT work reliably in browser tests!
-   * See the file header documentation for details and recommended patterns.
+   * With exhaustivity on, the matched action must be the *next* one the
+   * effects delivered: a partial that matches a later action while an earlier
+   * one is still unasserted fails at once, naming both, so a test cannot skip
+   * past an action it did not expect. Set `exhaustivity = 'off'` to match
+   * anywhere in the queue.
    *
-   * RECOMMENDED: Use type-only matching + state assertions:
-   * ```typescript
-   * await store.receive({ type: 'actionName' });
-   * expect(store.state.someField).toBe(expectedValue);
-   * ```
-   *
-   * AVOID in browser tests:
-   * ```typescript
-   * await store.receive({ type: 'actionName', nested: { field: 'value' } }); // ❌ Fails!
-   * ```
+   * Partial matching compares nested values structurally, key order ignored.
    *
    * @param partialAction - Partial action to match (must have type field)
    * @param assert - Optional state assertion
    * @param timeout - Timeout in milliseconds (default: 1000)
-   * @throws {Error} If action not received within timeout
+   * @throws {Error} If action not received within timeout, or received out of order
    */
   async receive(
     partialAction: PartialAction<Action>,
@@ -308,6 +332,7 @@ export class TestStore<State, Action, Dependencies = any> {
     timeout: number = 1000
   ): Promise<void> {
     const { vi } = await import('vitest');
+    let outOfOrder: Error | null = null;
 
     // Use vi.waitFor to poll for the action (like store.test.ts does)
     await vi.waitFor(() => {
@@ -332,13 +357,32 @@ export class TestStore<State, Action, Dependencies = any> {
         );
       }
 
+      if (index !== 0 && this.exhaustivity === 'on') {
+        // Not a reason to keep polling: the queue already holds the answer.
+        outOfOrder = new Error(
+          `Expected to receive ${JSON.stringify(partialAction)} next, but the next ` +
+          `received action was ${JSON.stringify(this.receivedActions[0])} ` +
+          `(the match was at position ${index}).\n` +
+          `Received actions, in order:\n${this._describeQueue()}\n` +
+          `Assert them in order, or set store.exhaustivity = 'off'.`
+        );
+        return;
+      }
+
       // Remove matched action
       this.receivedActions.splice(index, 1);
     }, { timeout });
 
+    if (outOfOrder) throw outOfOrder;
+
     if (assert) {
       await assert(this._state);
     }
+  }
+
+  /** The unasserted received actions, one per line, for a message. */
+  private _describeQueue(): string {
+    return this.receivedActions.map((a, i) => `  ${i}: ${JSON.stringify(a)}`).join('\n');
   }
 
   /**
@@ -505,6 +549,8 @@ export class TestStore<State, Action, Dependencies = any> {
           this._subscriptionCleanups.delete(effect.id);
           await cleanup();
         }
+        // A debounce or throttle under this id is cancelled too, as the store does.
+        this._clearTimers(effect.id);
         if (effect.cancelOnly) {
           // A bare `Effect.cancel(id)` must also abort an in-flight cancellable
           // registered under that id, not only tear down a subscription.
@@ -557,11 +603,35 @@ export class TestStore<State, Action, Dependencies = any> {
         }, effect.ms);
         break;
 
-      case 'Debounced':
-      case 'Throttled':
-        // For now, execute immediately (proper debounce/throttle would need more complex timer management)
-        await effect.execute(dispatch);
+      case 'Debounced': {
+        const existing = this._debounceTimers.get(effect.id);
+        if (existing !== undefined) clearTimeout(existing);
+        const timer = setTimeout(() => {
+          this._debounceTimers.delete(effect.id);
+          this.pendingEffects.push(this._runLater(effect.execute, dispatch));
+        }, effect.ms);
+        this._debounceTimers.set(effect.id, timer);
         break;
+      }
+
+      case 'Throttled': {
+        const now = Date.now();
+        const throttle = this._throttleState.get(effect.id);
+        if (!throttle || now - throttle.lastRun >= effect.ms) {
+          // Leading edge: run now, drop a pending trailing call.
+          if (throttle?.timeout) clearTimeout(throttle.timeout);
+          this._throttleState.set(effect.id, { lastRun: now });
+          await effect.execute(dispatch);
+        } else if (!throttle.timeout) {
+          // Trailing edge: once, when the window closes.
+          const timeout = setTimeout(() => {
+            this._throttleState.set(effect.id, { lastRun: Date.now() });
+            this.pendingEffects.push(this._runLater(effect.execute, dispatch));
+          }, effect.ms - (now - throttle.lastRun));
+          this._throttleState.set(effect.id, { lastRun: throttle.lastRun, timeout });
+        }
+        break;
+      }
 
       case 'Batch':
         await Promise.all(effect.effects.map(e => this._executeEffect(e)));
@@ -587,9 +657,37 @@ export class TestStore<State, Action, Dependencies = any> {
     }
   }
 
+  /** Run a timer-scheduled executor, reporting a failure the way AfterDelay does. */
+  private async _runLater(
+    execute: (dispatch: Dispatch<Action>) => void | Promise<void>,
+    dispatch: Dispatch<Action>
+  ): Promise<void> {
+    try {
+      await execute(dispatch);
+    } catch (error) {
+      console.error('[TestStore] Effect error:', error);
+    }
+  }
+
+  /** Drop the debounce timer and throttle timeout registered under an id. */
+  private _clearTimers(id: string): void {
+    const timer = this._debounceTimers.get(id);
+    if (timer !== undefined) {
+      clearTimeout(timer);
+      this._debounceTimers.delete(id);
+    }
+    const throttle = this._throttleState.get(id);
+    if (throttle?.timeout) clearTimeout(throttle.timeout);
+    this._throttleState.delete(id);
+  }
+
   /**
    * Check if action matches partial action.
-   * Supports nested object matching via deep equality.
+   *
+   * Nested values are compared structurally with keys sorted, so
+   * `{ a: 1, b: 2 }` and `{ b: 2, a: 1 }` are the same value. The first form
+   * compared `JSON.stringify` output, which made key order a difference and
+   * the file header warn consumers off nested matching altogether (T6).
    */
   private _matchesPartialAction(
     action: Action,
@@ -598,9 +696,9 @@ export class TestStore<State, Action, Dependencies = any> {
     return Object.entries(partial).every(([key, value]) => {
       const actionValue = (action as any)[key];
 
-      // Deep equality for objects
+      // Structural equality for objects
       if (typeof value === 'object' && value !== null && typeof actionValue === 'object' && actionValue !== null) {
-        return JSON.stringify(actionValue) === JSON.stringify(value);
+        return stableStringify(actionValue) === stableStringify(value);
       }
 
       // Shallow equality for primitives

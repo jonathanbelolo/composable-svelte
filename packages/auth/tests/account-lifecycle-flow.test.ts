@@ -61,8 +61,11 @@ describe('change-email', () => {
 			action: { type: 'fieldChanged', field: 'email', value: 'new@example.com' }
 		});
 		await store.send({ type: 'form', action: { type: 'submitTriggered' } });
+		// The form validates, then submits; each step is an action of its own.
 		await store.receive({ type: 'form' });
 		await store.receive({ type: 'form' });
+		await store.receive({ type: 'form', action: { type: 'submissionStarted' } });
+		await store.receive({ type: 'form', action: { type: 'submissionSucceeded' } });
 		await store.receive({ type: 'changeRequestSucceeded', email: 'new@example.com' }, (s) => {
 			expect(s.pendingEmail).toBe('new@example.com');
 			// Cleared, because the panel now says "we sent a link to …" and leaving
@@ -91,6 +94,8 @@ describe('change-email', () => {
 		await store.send({ type: 'form', action: { type: 'submitTriggered' } });
 		await store.receive({ type: 'form' });
 		await store.receive({ type: 'form' });
+		await store.receive({ type: 'form', action: { type: 'submissionStarted' } });
+		await store.receive({ type: 'form', action: { type: 'submissionSucceeded' } });
 		await store.receive({ type: 'changeRequestFailed', error: taken }, (s) => {
 			expect(s.status).toBe('idle');
 			expect(s.error).toEqual(taken);
