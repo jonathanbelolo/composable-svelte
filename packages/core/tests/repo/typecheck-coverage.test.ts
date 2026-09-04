@@ -143,6 +143,11 @@ describe('every test file is inside the config its workspace checks', () => {
 
 	it.each(withTests.filter((w) => w.tsconfig !== null).map((w) => [w.dir, w] as const))(
 		'%s resolves all of its test files',
+		// Shells out to `tsc --showConfig` per workspace. Alone it takes ~3 s for all
+		// 18; beside the node-config probes that spawn a child node and run esbuild
+		// it took 11–32 s per workspace and tripped the default 5 s budget, which
+		// read as four failures with nothing wrong (VERIFICATION-PROTOCOL rule 5).
+		{ timeout: 120_000 },
 		(dir, w) => {
 			const resolved = new Set(resolvedFiles(dir, w.tsconfig!));
 			const missing = w.tests
