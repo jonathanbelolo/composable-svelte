@@ -51,18 +51,17 @@ reads 2,172 + 511 after the three were un-skipped and nothing else changed.
 `plans/hardening/PHASE-1-STATE.md` at `37afb0d` gives the whole-repository
 line, 4,641 passed with 3 skipped.
 
-**Continuous integration has not run this branch.** `.github/workflows/ci.yml`
-triggers on pushes and pull requests to `main` and `develop` only; every gate
-above is local, on macOS with Node 24, where CI is Ubuntu with Node 20. The
-branch has no upstream. Pushing it and opening a draft pull request is the
-one closing step this session could not take (the action was refused by the
-permission layer), so it is the user's:
-
-```
-git push -u origin phase-1-feature-surface
-gh pr create --draft --base main --head phase-1-feature-surface \
-  --title "Phase 1 hardening: R0 makes fixes provable (draft, for CI)"
-```
+**Continuous integration has run this branch.** `.github/workflows/ci.yml`
+triggers on pushes and pull requests to `main` and `develop` only, so every
+gate above was local (macOS, Node 24) until the branch was pushed and draft
+pull request #1 opened on 4 September:
+https://github.com/jonathanbelolo/composable-svelte/pull/1. Its first run,
+https://github.com/jonathanbelolo/composable-svelte/actions/runs/33910380963
+at `ad09f09` on Ubuntu with Node 20.20.2, passed every step: install,
+Playwright, build, typecheck, tests (4,734 passed under
+`--workspace-concurrency=1`, the same count as the local whole-repository
+gate), svelte-check, and the auth integration browser suite. Later pushes
+re-run it; the record here is that first run.
 
 ## The audit's mutations, re-run
 
@@ -181,7 +180,8 @@ Every commit in `37afb0d..HEAD`, in order.
 | R0.5.f | `a2add99` | doc-typecheck's Vite shim matches Vite; DA-X1 corrected |
 | R0.5.g | `b0a4742` | the findings register annotated, the plan and this report corrected; its message repeats the batch-gating inference this revision withdraws |
 | R0.5.h | `3760b29` | the sub-barrel extractor sees async, abstract and declare declarations |
-| R0.5.h | this commit | the record corrected after the review of the closure; the gate logs committed |
+| R0.5.h | `ad09f09` | the record corrected after the review of the closure; the gate logs committed |
+| R0.5.i | this commit | the branch pushed, draft pull request #1 opened, its first CI run recorded |
 
 ## The review, and what it changed
 
@@ -245,7 +245,7 @@ doc-typecheck. What did not hold was the record, corrected in R0.5.h:
 
 1. The plan ticked R0.5.g as done including a push and pull request that
    never happened (refused by the permission layer). → the tick names only
-   what shipped; the push is R0.5.i, the user's.
+   what shipped; the push is R0.5.i, done once the user authorised it.
 2. This report said four R0 commits carried the gate of a batch. The retained
    logs refute it; see the gate section. → corrected, logs committed.
 3. "Every R0.5 commit carries the same four lines" was false for the
@@ -283,6 +283,3 @@ Known and left as they are, each recorded where it applies:
 
 - The `Domain=` half of D6 cannot be shown on the test origin (Chromium
   refuses `Domain=localhost`); R2.5 covers it on a dotted host.
-- CI on this branch: see the gate section. Push and open the draft pull
-  request; the first run on Ubuntu and Node 20 is the last piece of evidence
-  this report cannot supply.

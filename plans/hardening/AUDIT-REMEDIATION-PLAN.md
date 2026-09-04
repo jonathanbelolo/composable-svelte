@@ -210,10 +210,11 @@ what did not. Each item below is one commit with its own core gate.
       overstated claims, DA-X2's line numbers), the gate logs committed under
       `plans/hardening/gate-logs/`, and `public-exports`' extractor widened to
       `async`/`abstract`/`declare` declarations.
-- [ ] R0.5.i (the user) Push the branch and open the draft pull request so CI
-      runs it: `git push -u origin phase-1-feature-surface`, then
-      `gh pr create --draft --base main --head phase-1-feature-surface`. Every
-      gate so far is local (macOS, Node 24); CI is Ubuntu, Node 20.
+- [x] R0.5.i The branch pushed and draft pull request #1 opened
+      (https://github.com/jonathanbelolo/composable-svelte/pull/1); its first
+      CI run, at `ad09f09` on Ubuntu with Node 20.20.2, passed every step —
+      4,734 tests, the local count. Every gate before it was local (macOS,
+      Node 24).
 
 ---
 
