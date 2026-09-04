@@ -449,6 +449,14 @@ const websocket = createLiveWebSocket({
 });
 ```
 
+### Disconnecting
+
+`disconnect()` detaches the socket before closing it and emits `disconnected`
+(`wasClean: true`) synchronously, so a handler stopping on that event stops
+at once and the old socket's own close, which arrives later, cannot touch the
+state of a connection made after it. A `connect()` still waiting on that
+socket rejects with `WS_CONNECTION_FAILED`.
+
 ### Manual Reconnection
 
 After an unexpected close `state.url` is still set, so a handler can decide

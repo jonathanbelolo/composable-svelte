@@ -123,4 +123,46 @@ describe('createLiveWebSocket over a scripted socket', () => {
 			expect(events.at(-1)).toMatchObject({ type: 'reconnecting', attempt: 1, delay: 100 });
 		});
 	});
+
+	describe('disconnect() detaches the socket (W2, W6)', () => {
+		it("the old socket's late close after disconnect() then connect() is ignored", async () => {
+			const client = createLiveWebSocket({ reconnect: { enabled: true, maxAttempts: 3, initialDelay: 100, maxDelay: 1000, backoffMultiplier: 2, jitter: false } });
+			const events: WebSocketEvent[] = [];
+			client.subscribeToEvents((event) => events.push(event));
+
+			const first = client.connect('wss://x.example');
+			ScriptedWebSocket.instances[0]!.open();
+			await first;
+
+			await client.disconnect();
+			// Synchronous, and clean: nothing else will report it now that the
+			// socket is detached.
+			expect(events.at(-1)).toMatchObject({ type: 'disconnected', code: 1000, wasClean: true });
+			expect(ScriptedWebSocket.instances[0]!.closeCalls).toEqual([{ code: 1000, reason: '' }]);
+			const eventsAfterDisconnect = events.length;
+
+			const second = client.connect('wss://x.example');
+			ScriptedWebSocket.instances[1]!.open();
+			await second;
+			expect(client.state.status).toBe('connected');
+
+			// The first socket's close arrives late, as a real socket's does.
+			ScriptedWebSocket.instances[0]!.closed(1006, false);
+			expect(client.state.status).toBe('connected');
+			expect(events.slice(eventsAfterDisconnect).map((e) => e.type)).toEqual(['connected']);
+			await vi.advanceTimersByTimeAsync(10_000);
+			expect(ScriptedWebSocket.instances).toHaveLength(2);
+		});
+
+		it('disconnect() while connecting rejects the pending connect', async () => {
+			const client = createLiveWebSocket();
+			const connecting = client.connect('wss://x.example');
+			const rejected = expect(connecting).rejects.toThrow(/before the connection opened/);
+
+			await client.disconnect();
+
+			await rejected;
+			expect(client.state.status).toBe('disconnected');
+		});
+	});
 });

@@ -62,6 +62,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The WebSocket client's `disconnect()` detaches the socket before closing
+  it, and emits `disconnected` at once.** It nulled the socket with its
+  handlers attached, so the old socket's late close ran against whatever
+  connection came next: status `reconnecting` with an open socket, a
+  reconnect that threw "Already connected", a queued wrapper that queued
+  forever, and under `Effect.websocket.connect` a replaced connection that
+  still dispatched. The handlers are removed first; a `connect()` still
+  waiting on that socket rejects; and because the detached socket can no
+  longer report it, `disconnect()` emits `disconnected` (`wasClean: true`)
+  synchronously. (AUDIT-2026-09-03-FINDINGS W2, W6)
+
 - **The WebSocket client reconnects more than once.** Every `connect()` reset
   the attempt counter, including the one the reconnect timer made, and a
   failed attempt was never rescheduled, so the first retry that failed was

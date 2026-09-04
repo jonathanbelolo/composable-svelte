@@ -103,6 +103,8 @@ export function createLiveWebSocket<T = unknown>(
   let connectionTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
   /** The delays of the current reconnect ladder, summed, for `reconnected.totalDelay`. */
   let ladderDelay = 0;
+  /** A connect() whose socket has not opened yet; rejected by disconnect(). */
+  let pendingConnect: ((error: unknown) => void) | null = null;
   /** Sockets whose failure has been handled once; a socket fails on error and again on close. */
   const failedSockets = new WeakSet<WebSocket>();
 
@@ -231,6 +233,14 @@ export function createLiveWebSocket<T = unknown>(
     const attempts = state.status === 'reconnecting' ? state.reconnectAttempts : 0;
 
     return new Promise((resolve, reject) => {
+      pendingConnect = reject;
+      const settle = <A extends unknown[]>(fn: (...args: A) => void) => (...args: A) => {
+        pendingConnect = null;
+        fn(...args);
+      };
+      resolve = settle(resolve);
+      reject = settle(reject);
+
       // Connection timeout
       connectionTimeoutTimer = setTimeout(() => {
         if (ws.readyState === WebSocket.CONNECTING) {
@@ -425,15 +435,34 @@ export function createLiveWebSocket<T = unknown>(
       connectionTimeoutTimer = null;
     }
 
-    // Close socket
+    const wasLive =
+      state.status === 'connected' || state.status === 'connecting' || state.status === 'reconnecting';
+
+    // Detach the socket before closing it: the first form nulled `socket`
+    // with its handlers attached, so its late `close` ran against the state
+    // of whatever connection came next — status 'reconnecting' with an OPEN
+    // socket, a reconnect that threw 'Already connected', a queued wrapper
+    // that queued forever (AUDIT-2026-09-03-FINDINGS W2, W6).
     if (socket) {
+      const ws = socket;
+      ws.onopen = null;
+      ws.onmessage = null;
+      ws.onerror = null;
+      ws.onclose = null;
+      socket = null;
       try {
-        socket.close(code, reason);
+        ws.close(code, reason);
       } catch (error) {
         console.warn('[WebSocket] Error closing socket:', error);
       }
-      socket = null;
     }
+
+    // A connect() still waiting on this socket can never open now.
+    const reject = pendingConnect;
+    pendingConnect = null;
+    reject?.(
+      new WebSocketError('Disconnected before the connection opened', WS_ERROR_CODES.CONNECTION_FAILED, false)
+    );
 
     updateState({
       status: 'disconnected',
@@ -442,6 +471,13 @@ export function createLiveWebSocket<T = unknown>(
       reconnectAttempts: 0,
       connectedAt: null
     });
+
+    // Detached, the socket's own close will not report it, so this does —
+    // synchronously, which is what the heartbeat, the queued wrapper and a
+    // UI stopping on 'disconnected' need.
+    if (wasLive) {
+      notifyEventListeners({ type: 'disconnected', code, reason, wasClean: true, timestamp: Date.now() });
+    }
   }
 
   function scheduleReconnect(): void {
