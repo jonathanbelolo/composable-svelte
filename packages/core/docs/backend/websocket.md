@@ -28,7 +28,7 @@ The WebSocket client provides production-ready real-time communication with:
 - **Automatic reconnection**: Exponential backoff with configurable retry
 - **Connection lifecycle**: Connect, disconnect, reconnecting, failed states
 - **Type-safe messages**: Full TypeScript inference for message types
-- **Heartbeat/ping-pong**: Keep-alive monitoring with automatic disconnect
+- **Heartbeat/ping-pong**: Keep-alive monitoring; a missed pong reconnects
 - **Channel routing**: Topic-based message routing
 - **Message queuing**: Offline message buffering
 - **Effect integration**: Declarative WebSocket operations in reducers
@@ -42,14 +42,8 @@ import { createLiveWebSocket, Effect } from '@composable-svelte/core';
 // 1. Create client
 const websocket = createLiveWebSocket({
   reconnect: {
-    // Every field is required — `ReconnectConfig` has no optional members, so
-    // there are no defaults to fall back on.
-    enabled: true,
-    maxAttempts: 5,
-    initialDelay: 1000,
-    maxDelay: 30_000,
-    backoffMultiplier: 2,
-    jitter: true
+    // Every field has a default; name only what you change.
+    maxAttempts: 5
   }
 });
 
@@ -93,9 +87,14 @@ await websocket.connect('wss://api.example.com');
 
 ### Full Configuration
 
+`createLiveWebSocket` reads three fields, each with a default. The URL and
+protocols are arguments of `connect()`; a heartbeat is a separate object
+(`createHeartbeat`, below); the offline queue is a wrapper
+(`createQueuedWebSocket`, below).
+
 ```typescript
 const websocket = createLiveWebSocket({
-  // Reconnection strategy
+  // Reconnection strategy — every field optional, defaults shown
   reconnect: {
     enabled: true,
     maxAttempts: 5,
@@ -105,23 +104,11 @@ const websocket = createLiveWebSocket({
     jitter: true
   },
 
-  // Heartbeat/ping-pong
-  heartbeat: {
-    enabled: true,
-    interval: 30000,
-    timeout: 5000,
-    pingMessage: 'PING',
-    pongMessage: 'PONG'
-  },
-
   // Message serialization
   serializer: JSONSerializer, // or custom serializer
 
-  // Connection timeout
-  connectionTimeout: 10000,
-
-  // Message queue size
-  queueSize: 100
+  // Connection timeout (ms)
+  connectionTimeout: 10000
 });
 ```
 
@@ -282,6 +269,11 @@ await websocket.send({ type: 'chat', text: 'Hello!' });
 await websocket.connect('wss://api.example.com');
 ```
 
+`send` reads the client's status at the moment of the call, so a wrapper
+created around an already-connected client sends at once, and a send while
+`connecting` or `reconnecting` is queued. `disconnect()` clears the queue:
+messages held for one connection are not delivered to the next URL.
+
 ## Receiving Messages
 
 ### Subscribe to Messages
@@ -377,9 +369,23 @@ unsubscribe();
 
 ## Reconnection
 
-Automatic reconnection with exponential backoff.
+Automatic reconnection with exponential backoff, for a connection that was
+established and then dropped.
 
-### Default Reconnection
+### What happens
+
+1. The established socket closes with a code that says the loss is
+   transient — see the table below.
+2. The client emits `disconnected`, then `reconnecting` with the attempt number
+   and the delay before it, and waits.
+3. It opens a new socket. If that fails, it emits `error`, then `reconnecting`
+   for the next attempt with a longer delay, and waits again — the attempt
+   count grows; a failed attempt is never the last one by accident.
+4. When an attempt opens, it emits `connected` and `reconnected` with the
+   number of attempts it took and the total delay waited; the count resets.
+5. After `maxAttempts` failures it settles as `failed` and emits an `error`
+   whose code is `WS_ERROR_CODES.MAX_RECONNECTS`; nothing further is tried
+   until you call `connect()` again, which starts over.
 
 ```typescript
 const websocket = createLiveWebSocket({
@@ -393,26 +399,51 @@ const websocket = createLiveWebSocket({
   }
 });
 
-// Reconnects automatically on unexpected disconnect
 await websocket.connect('wss://api.example.com');
+// A drop from here reconnects on its own.
+```
 
-// Simulate disconnect
-// WebSocket will automatically attempt reconnection
+### Which closes reconnect
+
+The close code decides, not `wasClean` — a server going away or restarting
+sends a clean close frame and should still be retried:
+
+| Code | Meaning | Reconnect |
+|---|---|---|
+| 1001, 1006, 1011, 1012, 1013, 1014 | going away, abnormal, server error, restart, try again later, bad gateway | yes |
+| 1000, 1005 | normal, or a deliberate close with no code | no |
+| 1002, 1003, 1007, 1009, 1010, 1015 | protocol, data, framing or TLS faults a retry would repeat | no |
+| 1008 | policy violation | no |
+| 3000–4999 | application codes | no, unless `shouldReconnect` says so |
+
+An `error` event on an established connection reports and leaves the status
+alone; the close that follows decides.
+
+```typescript
+const websocket = createLiveWebSocket({
+  reconnect: {
+    enabled: true,
+    // Your application's own codes: 4001 means "come back later"
+    shouldReconnect: (event) => event.code === 4001 || event.code === 1006
+  }
+});
 ```
 
 ### Reconnection Delays
 
-Delays use exponential backoff:
+The delay before attempt *n* is `min(initialDelay × backoffMultiplier^(n−1), maxDelay)`:
 
 ```
 Attempt 1: 1000ms
 Attempt 2: 2000ms
 Attempt 3: 4000ms
 Attempt 4: 8000ms
-Attempt 5: 16000ms (capped at maxDelay)
+Attempt 5: 16000ms
+Attempt 6: 30000ms (capped at maxDelay)
 ```
 
-Jitter adds randomness (±30%) to prevent thundering herd.
+With `jitter: true`, up to 30% is added to each delay (never subtracted), to
+spread a fleet's reconnects apart.
 
 ### Disable Reconnection
 
@@ -437,7 +468,20 @@ const websocket = createLiveWebSocket({
 });
 ```
 
+### Disconnecting
+
+`disconnect()` detaches the socket before closing it and emits `disconnected`
+(`wasClean: true`) synchronously, so a handler stopping on that event stops
+at once and the old socket's own close, which arrives later, cannot touch the
+state of a connection made after it. A `connect()` still waiting on that
+socket rejects with `WS_CONNECTION_FAILED`.
+
 ### Manual Reconnection
+
+`websocket.reconnect(reason)` drops the current socket and starts the ladder
+from the first attempt, keeping the URL — what the heartbeat calls on a missed
+pong. After an unexpected close `state.url` is also still set, so a handler
+can do the same by hand:
 
 ```typescript
 websocket.subscribeToEvents((event) => {
@@ -452,7 +496,9 @@ websocket.subscribeToEvents((event) => {
 
 ## Heartbeat
 
-Keep-alive monitoring with ping/pong messages.
+Keep-alive monitoring with ping/pong messages. A missed pong is a dead
+connection: the heartbeat stops itself and calls `websocket.reconnect()`, so
+the connection comes back through the reconnect ladder.
 
 ### Enable Heartbeat
 
@@ -480,31 +526,46 @@ websocket.subscribeToEvents((event) => {
 await websocket.connect('wss://api.example.com');
 ```
 
+### Framing
+
+The ping goes through the client's serializer. With the default
+`JSONSerializer` the string `'PING'` is sent as the JSON text `"PING"` — with
+the quotes — and the server's reply has to be JSON that deserialises to the
+pong: `"PONG"`, not a bare `PONG`, which the client reports as
+`WS_INVALID_MESSAGE`.
+
 ### Custom Ping/Pong
+
+An object pong is compared structurally (key order does not matter). When the
+pong carries a field that varies, say a timestamp, recognise it with `isPong`:
 
 ```typescript
 const heartbeat = createHeartbeat(websocket, {
   enabled: true,
   interval: 30000,
   timeout: 5000,
-  pingMessage: { type: 'ping', timestamp: Date.now() },
-  pongMessage: { type: 'pong', timestamp: Date.now() }
+  pingMessage: { type: 'ping' },
+  isPong: (data) => (data as { type?: string }).type === 'pong'
 });
 ```
 
 ### Heartbeat Timeout
 
-If pong not received within timeout, connection is closed:
+When no pong arrives within `timeout`, the heartbeat stops and the client
+reconnects. The `disconnected` event carries the reason, then `reconnecting`
+follows:
 
 ```typescript
 websocket.subscribeToEvents((event) => {
-  if (event.type === 'disconnected') {
-    if (event.reason === 'Heartbeat timeout') {
-      console.log('Server not responding - reconnecting...');
-    }
+  if (event.type === 'disconnected' && event.reason === 'Pong timeout') {
+    console.log('Server not responding - reconnecting…');
   }
 });
 ```
+
+`reconnect()` is public: call `websocket.reconnect('why')` yourself to drop the
+socket and start the ladder without forgetting the URL, which `disconnect()`
+does.
 
 ## Channel Routing
 
@@ -627,6 +688,10 @@ await websocket.send({ type: 'chat', text: 'Message 2' });
 // Connect - queue flushes automatically
 await websocket.connect('wss://api.example.com');
 // Both messages sent
+
+// disconnect() clears the queue; anything sent after it is held for the
+// next connect().
+await websocket.disconnect();
 ```
 
 ### Inspecting the queue

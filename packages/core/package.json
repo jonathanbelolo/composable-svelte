@@ -1,6 +1,6 @@
 {
   "name": "@composable-svelte/core",
-  "version": "0.11.2",
+  "version": "0.12.0",
   "description": "A Composable Architecture for Svelte 5 - Type-safe state management with reducers, effects, and navigation",
   "type": "module",
   "main": "./dist/index.js",
@@ -194,9 +194,9 @@
     "url": "https://github.com/jbelolo/composable-svelte/issues"
   },
   "peerDependencies": {
+    "isomorphic-dompurify": "^2.16.0",
     "svelte": "^5.0.0",
     "tailwindcss": "^3.4.0 || ^4.0.0",
-    "isomorphic-dompurify": "^2.16.0",
     "vitest": "^3.0.0 || ^4.0.0"
   },
   "peerDependenciesMeta": {
@@ -221,6 +221,7 @@
     "@vitest/ui": "^4.0.7",
     "autoprefixer": "^10.4.16",
     "esbuild": "0.25.12",
+    "fastify": "5.12.1",
     "isomorphic-dompurify": "^2.16.0",
     "playwright": "^1.56.1",
     "postcss": "^8.4.32",
@@ -247,6 +248,8 @@
   "sideEffects": [
     "**/*.css",
     "dist/index.js",
+    "dist/api/index.js",
+    "dist/api/effect-api.js",
     "dist/websocket/index.js",
     "dist/websocket/effect-websocket.js"
   ],

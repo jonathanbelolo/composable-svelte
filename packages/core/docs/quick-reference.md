@@ -131,6 +131,9 @@ case 'destination':
 
 ### Enum Destinations
 
+`createDestinationReducer` is deprecated; `createDestination` (below) routes
+by the action's case and maps effects back into it. The older helper:
+
 ```typescript
 import { createDestinationReducer } from '@composable-svelte/core';
 
@@ -316,16 +319,13 @@ Effect.run(async (dispatch) => {
 ```typescript
 import { createLiveWebSocket } from '@composable-svelte/core/websocket';
 
+// The URL is an argument of connect(), not configuration. Every reconnect
+// field has a default; name only what you change. A heartbeat is
+// createHeartbeat(ws, { interval: 30000 }), a separate object.
 const ws = createLiveWebSocket({
-  url: 'wss://api.example.com/ws',
   reconnect: {
-    enabled: true,
     maxAttempts: 5,
-    delayMs: 1000
-  },
-  heartbeat: {
-    enabled: true,
-    intervalMs: 30000
+    initialDelay: 1000
   }
 });
 

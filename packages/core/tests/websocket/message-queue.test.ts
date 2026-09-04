@@ -561,3 +561,51 @@ describe('Queued WebSocket Client', () => {
     });
   });
 });
+
+describe('Queued WebSocket Client — send by the client\'s status (W5)', () => {
+  it('a wrapper created around an already-connected client sends directly', async () => {
+    // The first form kept its own boolean from events, so a wrapper created
+    // after the connection opened queued while the socket was OPEN.
+    const baseClient = createMockWebSocket();
+    await baseClient.connect('wss://example.com');
+    const queuedClient = createQueuedWebSocket(baseClient, 100);
+
+    await queuedClient.send({ type: 'now' });
+
+    expect(baseClient.sentMessages).toEqual([{ type: 'now' }]);
+    expect(queuedClient.stats.messagesQueued).toBe(0);
+  });
+
+  it('send while connecting queues, and flushes when the connection opens', async () => {
+    const baseClient = createMockWebSocket();
+    const queuedClient = createQueuedWebSocket(baseClient, 100);
+
+    const connecting = queuedClient.connect('wss://example.com');
+    expect(baseClient.state.status).toBe('connecting');
+    await queuedClient.send({ type: 'early' });
+    expect(baseClient.sentMessages).toHaveLength(0);
+    expect(queuedClient.stats.messagesQueued).toBe(1);
+
+    await connecting;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(baseClient.sentMessages).toEqual([{ type: 'early' }]);
+  });
+
+  it('disconnect() empties the queue', async () => {
+    // Messages held for one connection flushed to whatever URL came next.
+    const baseClient = createMockWebSocket();
+    const queuedClient = createQueuedWebSocket(baseClient, 100);
+
+    await queuedClient.send({ type: 'held-1' });
+    await queuedClient.send({ type: 'held-2' });
+    expect(queuedClient.stats.messagesQueued).toBe(2);
+
+    await queuedClient.disconnect();
+    expect(queuedClient.stats.messagesQueued).toBe(0);
+
+    await queuedClient.connect('wss://other.example');
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(baseClient.sentMessages).toHaveLength(0);
+  });
+});
+

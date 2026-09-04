@@ -55,10 +55,26 @@ export function createStore<State, Action, Dependencies = any>(
   // Action subscribers (for Destination.on() in Phase 3)
   const actionSubscribers = new Set<(action: Action, state: State) => void>();
 
+  // Everything destroy() must stop that the maps above did not hold: the
+  // AfterDelay timers, the executors in flight, and dispatch itself. The
+  // first form left all three live, so a delayed action reduced state and
+  // re-armed timers in a destroyed store (AUDIT-2026-09-03-FINDINGS N7).
+  const delayTimers = new Set<ReturnType<typeof setTimeout>>();
+  const lifetime = new AbortController();
+  let destroyed = false;
+
   /**
    * Core dispatch logic (before middleware).
    */
   function dispatchCore(action: Action): void {
+    if (destroyed) {
+      console.warn(
+        '[Composable Svelte] dispatch after destroy ignored:',
+        (action as { type?: unknown } | null)?.type
+      );
+      return;
+    }
+
     // Record action (with optional size limit)
     if (config.maxHistorySize === undefined || config.maxHistorySize > 0) {
       actionHistory.push(action);
@@ -139,6 +155,26 @@ export function createStore<State, Action, Dependencies = any>(
     }
   }
 
+  /**
+   * Run an effect body without letting a synchronous throw out.
+   *
+   * `Promise.resolve(execute()).catch(…)` handles a rejection but not a body
+   * that throws before returning: that escaped `dispatch()` into the caller's
+   * event handler, skipped the rest of a `Batch`, and inside a debounce,
+   * throttle or delay timer was an uncaught exception — while the same
+   * executor mapped through `scope()` was caught, so behaviour depended on
+   * composition depth (AUDIT-2026-09-03-FINDINGS N3).
+   */
+  function guarded(run: () => void | Promise<void>): void {
+    try {
+      Promise.resolve(run()).catch(error => {
+        console.error('[Composable Svelte] Effect error:', error);
+      });
+    } catch (error) {
+      console.error('[Composable Svelte] Effect error:', error);
+    }
+  }
+
   function executeEffect(effect: Effect<Action>): void {
     // Check if we should defer effects (SSR)
     const deferEffects = config.ssr?.deferEffects ?? true; // Default to true
@@ -152,9 +188,9 @@ export function createStore<State, Action, Dependencies = any>(
         break;
 
       case 'Run':
-        Promise.resolve(effect.execute(dispatch)).catch(error => {
-          console.error('[Composable Svelte] Effect error:', error);
-        });
+        // The store's lifetime signal: aborted by destroy(), for an executor
+        // that awaits something and wants to stop.
+        guarded(() => effect.execute(dispatch, lifetime.signal));
         break;
 
       case 'Batch':
@@ -212,7 +248,13 @@ export function createStore<State, Action, Dependencies = any>(
           dispatch(action);
         };
 
-        Promise.resolve(effect.execute(guardedDispatch, controller.signal))
+        let running: Promise<void>;
+        try {
+          running = Promise.resolve(effect.execute(guardedDispatch, controller.signal));
+        } catch (error) {
+          running = Promise.reject(error);
+        }
+        running
           .catch(error => {
             // Optional chaining because a rejection is not required to be an
             // object: `throw null` or a bare `Promise.reject()` used to throw a
@@ -245,9 +287,7 @@ export function createStore<State, Action, Dependencies = any>(
         // Set new timer
         const timer = setTimeout(() => {
           debounceTimers.delete(effect.id);
-          Promise.resolve(effect.execute(dispatch)).catch(error => {
-            console.error('[Composable Svelte] Effect error:', error);
-          });
+          guarded(() => effect.execute(dispatch));
         }, effect.ms);
 
         debounceTimers.set(effect.id, timer);
@@ -264,18 +304,14 @@ export function createStore<State, Action, Dependencies = any>(
             clearTimeout(throttle.timeout);
           }
           throttleState.set(effect.id, { lastRun: now });
-          Promise.resolve(effect.execute(dispatch)).catch(error => {
-            console.error('[Composable Svelte] Effect error:', error);
-          });
+          guarded(() => effect.execute(dispatch));
         } else if (!throttle.timeout) {
           // Schedule for later
           const delay = effect.ms - (now - throttle.lastRun);
           const timeout = setTimeout(() => {
             // Clear timeout field by replacing entire object
             throttleState.set(effect.id, { lastRun: Date.now() });
-            Promise.resolve(effect.execute(dispatch)).catch(error => {
-              console.error('[Composable Svelte] Effect error:', error);
-            });
+            guarded(() => effect.execute(dispatch));
           }, delay);
 
           throttleState.set(effect.id, { lastRun: throttle.lastRun, timeout });
@@ -284,18 +320,17 @@ export function createStore<State, Action, Dependencies = any>(
         break;
       }
 
-      case 'AfterDelay':
-        setTimeout(() => {
-          Promise.resolve(effect.execute(dispatch)).catch(error => {
-            console.error('[Composable Svelte] Effect error:', error);
-          });
+      case 'AfterDelay': {
+        const timer = setTimeout(() => {
+          delayTimers.delete(timer);
+          guarded(() => effect.execute(dispatch, lifetime.signal));
         }, effect.ms);
+        delayTimers.add(timer);
         break;
+      }
 
       case 'FireAndForget':
-        Promise.resolve(effect.execute()).catch(error => {
-          console.error('[Composable Svelte] Effect error:', error);
-        });
+        guarded(() => effect.execute());
         break;
 
       case 'Subscription': {
@@ -377,9 +412,16 @@ export function createStore<State, Action, Dependencies = any>(
    * Clean up resources.
    */
   function destroy(): void {
+    destroyed = true;
+    lifetime.abort();
+
     // Cancel all in-flight effects
     inFlightEffects.forEach(controller => controller.abort());
     inFlightEffects.clear();
+
+    // Pending delays never fire
+    delayTimers.forEach(timer => clearTimeout(timer));
+    delayTimers.clear();
 
     // Call all subscription cleanups
     subscriptionCleanups.forEach(cleanup => runCleanup(cleanup));

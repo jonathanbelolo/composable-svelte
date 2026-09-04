@@ -10,7 +10,7 @@ import { describe, it, expect } from 'vitest';
 import { expectConsole } from '../helpers/console.js';
 import { createHeartbeat } from '../../src/lib/websocket/heartbeat.js';
 import { createMockWebSocket } from '../../src/lib/websocket/testing/mock-client.js';
-import type { HeartbeatConfig } from '../../src/lib/websocket/types.js';
+import type { HeartbeatConfig, WebSocketEvent } from '../../src/lib/websocket/types.js';
 
 describe('WebSocket Heartbeat - Basic', () => {
   describe('Lifecycle', () => {
@@ -160,9 +160,11 @@ describe('WebSocket Heartbeat - Basic', () => {
   });
 
   describe('Timeout Handling', () => {
-    it('should disconnect on timeout', async () => {
+    it('should reconnect on timeout', async () => {
       expectConsole('warn');
       const client = createMockWebSocket();
+      const events: WebSocketEvent[] = [];
+      client.subscribeToEvents((event) => events.push(event));
       await client.connect('wss://example.com');
 
       const config: HeartbeatConfig = {
@@ -178,7 +180,9 @@ describe('WebSocket Heartbeat - Basic', () => {
       // Wait for ping + timeout
       await new Promise(resolve => setTimeout(resolve, 60));
 
-      expect(client.state.status).toBe('disconnected');
+      // Under real timers the mock may already have reconnected; what must
+      // hold is that the timeout asked for a reconnect and the heartbeat stopped.
+      expect(events.some((e) => e.type === 'disconnected' && e.reason === 'Pong timeout')).toBe(true);
       expect(heartbeat.isRunning).toBe(false);
     });
   });

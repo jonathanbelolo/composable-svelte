@@ -1,0 +1,16 @@
+Baseline: running the seven suites unmutated…
+Baseline green.
+
+| id | mutation | suite | verdict | detail |
+|---|---|---|---|---|
+| M1 | TestStore exhaustivity | tests/test-store.test.ts | **KILLED** |  |
+| M2 | destroy() aborts in-flight cancellables | tests/store.test.ts | **KILLED** |  |
+| M4 | matchPresentationAction requires the presented wrapper | tests/navigation/operators.test.ts | **KILLED** |  |
+| M5 | scope() lifts child effects to parent actions | tests/composition.test.ts | **KILLED** |  |
+| M6 | the heartbeat's missed-pong branch | tests/websocket/heartbeat.test.ts | **KILLED** |  |
+| M7 | the ICU formatting-error fallback | tests/i18n/icu.test.ts | **KILLED** | also failed: compileICU Error Handling should handle missing parameters |
+| M9 | the query-param decode fallback | tests/routing/query-params.test.ts | **KILLED** |  |
+| R1-N2 | createDestination maps the child's effect into its case (N2) | tests/navigation/destination.test.ts | **KILLED** |  |
+
+Rebuilding core…
+exit=0

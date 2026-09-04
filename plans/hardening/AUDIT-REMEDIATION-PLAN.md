@@ -225,75 +225,75 @@ dependency, not severity: R1.1 needs D1, R1.3 needs D3.
 
 ### R1.1 — Navigation DSL composes with itself (`N1`, `N2`) — L, needs D1
 
-- [ ] R1.1.a End-to-end test first: `createDestination` → `integrate().with()`
+- [x] R1.1.a End-to-end test first: `createDestination` → `integrate().with()`
       → real store → `scopeTo().case().dispatch(child)` → child reducer sees
       `child`; `.dismiss()` clears the field; a child `Effect.run` that
       dispatches lands back in the child. All three fail on `37afb0d`.
-- [ ] R1.1.b `createDestination().reducer` takes `{ type: caseType, action: child }`
+- [x] R1.1.b `createDestination().reducer` takes `{ type: caseType, action: child }`
       and maps the child effect with `Effect.map(e, a => ({ type: caseType, action: a }))`.
-- [ ] R1.1.c `scopeTo().case().dismiss()` emits the outer `{ type: 'dismiss' }`;
+- [x] R1.1.c `scopeTo().case().dismiss()` emits the outer `{ type: 'dismiss' }`;
       `ifLetPresentation` unchanged.
-- [ ] R1.1.d `createDestinationReducer` and `handleStackAction` tag effects
+- [x] R1.1.d `createDestinationReducer` and `handleStackAction` tag effects
       with the case or screen identity they were produced under and drop
       results whose target is gone (`N8`). `handleStackAction` takes the
       parent field name instead of hardcoding `'stack'` (`N11`).
-- [ ] R1.1.e `integrate()` runs the child before core, or documents that core
+- [x] R1.1.e `integrate()` runs the child before core, or documents that core
       first means the child never sees an action core consumes (`N14`).
-- [ ] R1.1.f `scopeTo().case()` and `.optional()` return typed stores, not
+- [x] R1.1.f `scopeTo().case()` and `.optional()` return typed stores, not
       `ScopedStore<any, any>` (`P5`).
-- [ ] R1.1.g `destination.test.ts:295-323` executes the effect it asserts on.
+- [x] R1.1.g `destination.test.ts:295-323` executes the effect it asserts on.
       Proof: mutation M5 killed; the R1.1.a suite green; `specs/frontend/navigation-dsl-spec.md`
       and `docs/dsl/destinations.md` updated in the same commit.
 
 ### R1.2 — Effect.api survives bundling (`P1`) — S
 
-- [ ] R1.2.a `src/lib/index.ts` bare-imports `./api/effect-api.js` exactly as
+- [x] R1.2.a `src/lib/index.ts` bare-imports `./api/effect-api.js` exactly as
       it does for websocket; `sideEffects` lists `dist/api/index.js` and
       `dist/api/effect-api.js`.
-- [ ] R1.2.b The comment at `effect.ts:396-401` claiming the members "genuinely
+- [x] R1.2.b The comment at `effect.ts:396-401` claiming the members "genuinely
       are on this object at runtime" is corrected to say when.
       Proof: R0.3.e green; R0.2.a green.
 
 ### R1.3 — Dedup and cache cannot cross identities (`A1`, `A2`, `A7`, `A11`) — M, needs D3
 
-- [ ] R1.3.a Tests first, in R0.3.a's harness: two clients with different
+- [x] R1.3.a Tests first, in R0.3.a's harness: two clients with different
       default headers and base URLs, concurrent identical GETs → two fetches;
       client-level `deduplicate: false` honoured; a cache hit is not the stored
       reference; POST is never deduplicated by default.
-- [ ] R1.3.b Dedup map and cache move onto the client instance; key includes
+- [x] R1.3.b Dedup map and cache move onto the client instance; key includes
       the resolved full URL and the merged headers.
-- [ ] R1.3.c `deduplicate` client option wired through (`client.ts:158`).
-- [ ] R1.3.d Dedup restricted to safe methods unless opted in.
-- [ ] R1.3.e Cache returns a structured clone or frozen object; cache bounded
+- [x] R1.3.c `deduplicate` client option wired through (`client.ts:158`).
+- [x] R1.3.d Dedup restricted to safe methods unless opted in.
+- [x] R1.3.e Cache returns a structured clone or frozen object; cache bounded
       by an LRU with a documented default; custom `key` entries invalidate.
       (`A2`; the API reviewer's cache-by-reference, unbounded-cache and custom-key items are folded into `A2`.)
-- [ ] R1.3.f Shared-promise semantics: an aborting caller does not reject the
+- [x] R1.3.f Shared-promise semantics: an aborting caller does not reject the
       others (`A7`).
       Proof: every test in R1.3.a green; `docs/backend/api-client.md:575`
       rewritten.
 
 ### R1.4 — WebSocket reconnects until told to stop (`W1`, `W2`, `W3`, `W4`) — M
 
-- [ ] R1.4.a Tests first, in R0.3.b's harness: unclean drop → failed attempt →
+- [x] R1.4.a Tests first, in R0.3.b's harness: unclean drop → failed attempt →
       second attempt scheduled with backoff → `maxAttempts` reached →
       `MAX_RECONNECTS` event; server close 1001/1012/1013 reconnects; close
       1000 and 1008 do not; old socket's late `onclose` after `disconnect()` +
       `connect()` is ignored; heartbeat timeout leads to a reconnect, not a
       terminal disconnect; the documented object `pongMessage` matches.
-- [ ] R1.4.b Internal `attemptReconnect()` separate from user `connect()`, so
+- [x] R1.4.b Internal `attemptReconnect()` separate from user `connect()`, so
       the attempt counter is only reset by the user.
-- [ ] R1.4.c `onclose` reschedules on a failed attempt; the false comment at
+- [x] R1.4.c `onclose` reschedules on a failed attempt; the false comment at
       `live-client.ts:395` goes.
-- [ ] R1.4.d `disconnect()` detaches the old socket's handlers before nulling
+- [x] R1.4.d `disconnect()` detaches the old socket's handlers before nulling
       it (`W2`, `W6`).
-- [ ] R1.4.e Reconnect predicate by close code, not `wasClean`; `onerror` does
+- [x] R1.4.e Reconnect predicate by close code, not `wasClean`; `onerror` does
       not set a terminal `failed` on an established socket (`W3`, `W8`).
-- [ ] R1.4.f Heartbeat calls an internal reconnect path; pong matching by
+- [x] R1.4.f Heartbeat calls an internal reconnect path; pong matching by
       predicate or deep equality; ping and pong framing documented (`W4`).
-- [ ] R1.4.g `WebSocketConfig.url/protocols/heartbeat/queueSize` either wired
+- [x] R1.4.g `WebSocketConfig.url/protocols/heartbeat/queueSize` either wired
       or removed from the type (`W7`); `ReconnectConfig` fields optional with
       defaults (`DA-H12`).
-- [ ] R1.4.h Queued wrapper: `isConnected` from the client's state not the
+- [x] R1.4.h Queued wrapper: `isConnected` from the client's state not the
       event; queue cleared on `disconnect()`; wrapper created after connect
       does not queue (`W5`).
       Proof: R1.4.a green; mutation M6 killed; `docs/backend/websocket.md`
@@ -301,22 +301,24 @@ dependency, not severity: R1.1 needs D1, R1.3 needs D3.
 
 ### R1.5 — ICU works under plain Node (`I1`) — S
 
-- [ ] R1.5.a `icu.ts:36` → `import { IntlMessageFormat } from 'intl-messageformat'`
+- [x] R1.5.a `icu.ts:36` → `import { IntlMessageFormat } from 'intl-messageformat'`
       (named export exists in both the CJS and ESM builds — verified).
-- [ ] R1.5.b Compile failures are cached and surfaced once, not re-thrown per
+- [x] R1.5.b Compile failures are cached and surfaced once, not re-thrown per
       render (`I9`).
       Proof: R0.3.d green; the example's `tsx` dev path renders a plural.
+      (5 September: the `tsx` path cannot start — P13; the vite-built server
+      bundle under `node` rendered the plural, `gate-logs/proof-R1.5.a.log`.)
 
 ### R1.6 — Security middleware installs the documented way (`SS3`, `G5`) — S
 
-- [ ] R1.6.a Both plugins carry `Symbol.for('skip-override')` (or are wrapped
+- [x] R1.6.a Both plugins carry `Symbol.for('skip-override')` (or are wrapped
       with `fastify-plugin`) so `app.register()` reaches the parent scope.
-- [ ] R1.6.b An empty options object gets the defaults; `fastifyRateLimit`
+- [x] R1.6.b An empty options object gets the defaults; `fastifyRateLimit`
       validates `max` and refuses `NaN` (`SS3`).
-- [ ] R1.6.c Rate limiter: `onClose` clears its interval and the interval is
+- [x] R1.6.c Rate limiter: `onClose` clears its interval and the interval is
       `unref()`'d (`SS8`); key generator documented and `trustProxy` required
       for header-derived keys, with the map bounded (`SS4`).
-- [ ] R1.6.d Test through a real Fastify instance via `register`, asserting
+- [x] R1.6.d Test through a real Fastify instance via `register`, asserting
       headers on a root route and a 429 on the second request.
       Proof: the two documented snippets, run verbatim, produce headers.
       `middleware/index.ts:24-25`, the SSR skill and `docs/README.md:307`
@@ -324,23 +326,23 @@ dependency, not severity: R1.1 needs D1, R1.3 needs D3.
 
 ### R1.7 — Server rendering does not write or emit attacker input (`SS1`, `SS2`, `SS5`) — S
 
-- [ ] R1.7.a `pathToFilePath` resolves and rejects any target outside
+- [x] R1.7.a `pathToFilePath` resolves and rejects any target outside
       `outDir`; `/a` and `/a/` produce one file; a data path of `/404` cannot
       overwrite the real 404 (`SS1`, `SS11`).
-- [ ] R1.7.b Canonical `href` attribute-escaped (`SS2`).
-- [ ] R1.7.c `generateAlternateLinks` escapes `path`, `locale`, `baseUrl`;
+- [x] R1.7.b Canonical `href` attribute-escaped (`SS2`).
+- [x] R1.7.c `generateAlternateLinks` escapes `path`, `locale`, `baseUrl`;
       its JSDoc no longer instructs `{@html}` with the request path (`SS5`).
-- [ ] R1.7.d `renderToHTML` fails closed on a serialization error, matching
+- [x] R1.7.d `renderToHTML` fails closed on a serialization error, matching
       `buildHydrationScript` (`SS7`).
       Proof: the SSG traversal corpus writes nothing outside `outDir`; the
       canonical and alternate-link corpora parse as intended.
 
 ### R1.8 — Store runtime contains what the docs say it contains (`N3`, `N7`) — S
 
-- [ ] R1.8.a `Run`, `Cancellable`, `FireAndForget` executors wrapped in
+- [x] R1.8.a `Run`, `Cancellable`, `FireAndForget` executors wrapped in
       try/catch as `Subscription` already is; the timer callbacks likewise; a
       throw in one `Batch` member does not skip the rest (`N3`).
-- [ ] R1.8.b `destroy()` tracks and clears `AfterDelay` timers, sets a
+- [x] R1.8.b `destroy()` tracks and clears `AfterDelay` timers, sets a
       destroyed flag that makes `dispatch` a logged no-op, and aborts in-flight
       `Run` executors through a signal (`N7`).
       Proof: `docs/core-concepts/effects.md:851` becomes true for sync
@@ -348,14 +350,14 @@ dependency, not severity: R1.1 needs D1, R1.3 needs D3.
 
 ### R1.9 — TestStore keeps its promises (`N9`, `T1`, `T6`) — M
 
-- [ ] R1.9.a `receive()` enforces order and fails on an unexpected action when
+- [x] R1.9.a `receive()` enforces order and fails on an unexpected action when
       exhaustivity is on.
-- [ ] R1.9.b `finish()` awaits pending effects, including `AfterDelay` under
+- [x] R1.9.b `finish()` awaits pending effects, including `AfterDelay` under
       real timers, and fails with the list of unasserted actions.
-- [ ] R1.9.c `Debounced` and `Throttled` are modelled with the test clock, not
+- [x] R1.9.c `Debounced` and `Throttled` are modelled with the test clock, not
       executed immediately, so `Effect.cancel` on a debounce is testable.
-- [ ] R1.9.d A rejecting `Run` fails the test rather than the process.
-- [ ] R1.9.e `send()` assertion sees the state after the reducer, before the
+- [x] R1.9.d A rejecting `Run` fails the test rather than the process.
+- [x] R1.9.e `send()` assertion sees the state after the reducer, before the
       effect's synchronous prefix (`N9` last item).
       Proof: mutation M1 killed; the three formerly skipped tests pass;
       `.claude/skills/composable-svelte-testing/SKILL.md:16,62,486` become true.

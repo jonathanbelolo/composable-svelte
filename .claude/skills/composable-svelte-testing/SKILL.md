@@ -119,7 +119,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  vi.restoreAllMocks();
+  vi.useRealTimers(); // restoreAllMocks() does not undo useFakeTimers()
 });
 
 it('debounces search input', async () => {

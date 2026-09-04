@@ -22,7 +22,7 @@
  * slideIn twice per reply for exactly that reason.
  */
 
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { mount, unmount, flushSync } from 'svelte';
 import { createStore } from '@composable-svelte/core';
 import ChatMessage from '../src/lib/streaming-chat/primitives/ChatMessage.svelte';
@@ -133,12 +133,22 @@ describe('the entry animation reaches the DOM', () => {
 
 	it('animates a message the list marks as new', async () => {
 		const el = render({ message, animateIn: true });
-		await wait(20);
 
-		// Mid-flight: Motion One writes inline styles, so this is observable.
-		const opacity = parseFloat(getComputedStyle(el).opacity);
-		expect(opacity, `opacity was ${opacity}`).toBeLessThan(1);
-		expect(opacity).toBeGreaterThan(0);
+		// Mid-flight: Motion One writes inline styles, so this is observable. The
+		// sample polls for a frame strictly between 0 and 1 rather than reading at
+		// a fixed 20 ms: on CI's runner the spring had not produced a frame by
+		// then and opacity read 0 — main's own run at 6cd4801 failed here — while
+		// before the first frame the element rests at its natural 1
+		// (AUDIT-2026-09-03-FINDINGS T7). The spring runs for hundreds of
+		// milliseconds; a 5 ms poll cannot miss the whole flight.
+		await vi.waitFor(
+			() => {
+				const opacity = parseFloat(getComputedStyle(el).opacity);
+				expect(opacity, `opacity was ${opacity}`).toBeGreaterThan(0);
+				expect(opacity, `opacity was ${opacity}`).toBeLessThan(1);
+			},
+			{ timeout: 2000, interval: 5 }
+		);
 	});
 
 	it('places a message that is not new — the restore case', async () => {

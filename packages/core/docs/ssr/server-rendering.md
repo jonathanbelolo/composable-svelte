@@ -511,6 +511,23 @@ fastify.register(fastifyRateLimit, {
 });
 ```
 
+`max` and `windowMs` are required and must be positive finite numbers;
+anything else throws at registration, naming the field, rather than turning
+every request into a 500.
+
+The default key is `req.ip`. Behind a proxy or load balancer that is the
+proxy's address — one bucket for the whole site — unless Fastify is created
+with `trustProxy`, which also makes `req.ip` follow `X-Forwarded-For`. A key
+taken from a header is chosen by the client, so an attacker can spend a fresh
+bucket per request: `maxKeys` (default 10 000) bounds what that costs by
+dropping the oldest key. The limiter's cleanup interval is unref'd and cleared
+when the server closes.
+
+```typescript
+const app = Fastify({ trustProxy: true });
+app.register(fastifyRateLimit, { max: 100, windowMs: 60_000, maxKeys: 50_000 });
+```
+
 ### Security Headers
 
 ```typescript
@@ -523,6 +540,14 @@ fastify.register(fastifySecurityHeaders, {
   referrerPolicy: 'strict-origin-when-cross-origin',
   hsts: { maxAge: 31536000, includeSubDomains: true }
 });
+```
+
+Those are the defaults: options merge over them, so `register(fastifySecurityHeaders)`
+with nothing is the same policy, and naming one field changes only that one.
+Set a field to `false` to drop its header.
+
+```typescript
+fastify.register(fastifySecurityHeaders, { frameOptions: 'SAMEORIGIN', hsts: false });
 ```
 
 ## Performance Optimization
@@ -643,6 +668,16 @@ const html = renderToHTML(App, {
 });
 ```
 
+### State That Cannot Be Serialized
+
+**Problem**: `renderToHTML` throws `State is not serializable` or `State has no JSON form`.
+
+`renderToHTML` fails closed, like `buildHydrationScript`: a state holding a
+`BigInt`, a `Map`, a `Date` you have not given a serializer for, or a root
+that is not a plain object produces no page rather than a page whose client
+hydrates an empty store. Keep state to plain objects, arrays and primitives,
+or pass a `serializer` (`createTaggedSerializer`) to both sides.
+
 ### Build Errors with Node.js Modules
 
 **Problem**: Cannot use `fs`, `path` in client build.
@@ -713,6 +748,12 @@ generateStaticPage(
   storeConfig: StoreConfig<S, A, D>
 ): Promise<string>
 ```
+
+`generateStaticSite` returns every failure in `result.errors`, the 404 page's
+included. A path that would leave `outDir` — a `..` segment, encoded or not,
+a null byte, a malformed escape — is refused with an `SSGPathError` before
+anything is rendered or written; `generateStaticPage` throws it. `/a` and
+`/a/` are one file, and a route of `/404` does not overwrite the 404 page.
 
 ### Route Configuration
 

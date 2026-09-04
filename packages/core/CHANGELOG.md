@@ -7,7 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-09-05
+
 ### Added
+
+- `RateLimitConfig.maxKeys` — the keys a limiter holds before the oldest is
+  dropped (default 10 000); `RateLimiter.size`.
+
+- **`reconnect(reason?)` on `WebSocketClient`**: drop the socket and start the
+  reconnect ladder without forgetting the URL, which `disconnect()` does. The
+  live, mock, spy, queued and channel clients all implement it; the spy
+  records `reconnections`. **`HeartbeatConfig.isPong`** recognises a pong whose
+  fields vary; the default now compares an object pong structurally.
+
+- **`handleStackAction` takes an options object as its seventh argument**:
+  `actionType` names the parent action type a mapped screen effect is
+  dispatched under (it was hard-coded to `'stack'`, AUDIT-2026-09-03-FINDINGS
+  N11), and `screenId` gives screens an identity so a screen effect that
+  settles after the stack changed is dropped instead of landing on the screen
+  now at that index (N8). `StackAction`'s `screen` variant gains an optional
+  `screenId`. Both are optional; existing calls are unchanged.
 
 - **`AlertDialog`** and its parts — `AlertDialogHeader`, `AlertDialogTitle`,
   `AlertDialogDescription`, `AlertDialogFooter`, `AlertDialogAction`,
@@ -43,7 +62,165 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `(() => void) | undefined`, never `() => void | undefined`, which is a
   function *returning* `void | undefined` and forwards nothing.
 
+### Deprecated
+
+- **`createDestinationReducer` and `DestinationReducerMap`.** The helper routes
+  by the *current* destination's type, hands every case one shared action
+  type, and returns the child's effect untagged, so a result that arrives
+  after the destination changed is applied to whichever case is open then
+  (AUDIT-2026-09-03-FINDINGS N8). `createDestination()` routes by the action's
+  case and maps each child's effect back into it. Kept for existing callers.
+
 ### Fixed
+
+- **`destroy()` stops the store.** It tracked cancellables, subscriptions,
+  debounce and throttle timers, but not `AfterDelay` timers or the executors
+  in flight, and `dispatch` stayed live, so a delayed action reduced state
+  and re-armed timers in a destroyed store. Pending delays are cleared, a
+  store-lifetime `AbortSignal` handed to `Effect.run` and `Effect.afterDelay`
+  executors is aborted, and a dispatch after `destroy()` is ignored with one
+  `console.warn` naming the action. (AUDIT-2026-09-03-FINDINGS N7)
+
+- **A synchronous throw in an effect body is logged, not thrown.** The store
+  caught a rejection but not a body that threw before returning: it escaped
+  `dispatch()` into the caller's event handler, skipped the rest of a
+  `Batch`, and inside a debounce, throttle or delay timer was an uncaught
+  exception — while the same executor mapped through `scope()` was caught, so
+  behaviour depended on composition depth. Every executor call is guarded
+  now. (AUDIT-2026-09-03-FINDINGS N3)
+
+- **The SSG canonical link and `generateAlternateLinks` escape what they
+  interpolate.** The canonical `href` took `baseURL + path` raw, so a route
+  with `"` closed the attribute — stored XSS from a path;
+  `generateAlternateLinks` did the same with `path`, `locale` and `baseUrl`,
+  and its example fed the request path through `{@html}` — reflected XSS.
+  Attribute values are entity-escaped, the path is URI-encoded, and the
+  example hands the result to `renderToHTML`'s `head`.
+  (AUDIT-2026-09-03-FINDINGS SS2, SS5)
+
+- **SSG cannot write outside `outDir`.** `pathToFilePath` stripped one slash
+  and joined, and `join` resolves `..`, so a data-derived path of
+  `/../../etc/x` wrote there at build time. Segments are checked after
+  percent-decoding, with backslashes as separators; `..`, `.`, a null byte
+  or a malformed escape refuse the path with an `SSGPathError` (exported),
+  recorded in `result.errors` and never rendered. Also: `/a` and `/a/` are
+  one page, a route of `/404` does not overwrite the 404 page, and a failed
+  404 write is in `result.errors`. (AUDIT-2026-09-03-FINDINGS SS1, SS11)
+
+- **The rate limiter no longer holds the server open, and its key map is
+  bounded.** Its cleanup interval was never unref'd or cleared, so
+  `app.close()` hung on it; the interval is unref'd and `fastifyRateLimit`
+  clears it in an `onClose` hook. The map grew one entry per distinct key
+  without limit — a client that chooses its key, through a spoofed
+  `X-Forwarded-For`, could grow it freely; `maxKeys` (default 10 000) drops
+  the oldest. The default key, `req.ip`, and what `trustProxy` does to it are
+  documented. (AUDIT-2026-09-03-FINDINGS SS4, SS8)
+
+- **Security-header options merge over the defaults, and the rate limiter
+  refuses a bad `max` or `windowMs`.** `createSecurityHeaders` and
+  `fastifySecurityHeaders` used the defaults only when the argument was
+  absent, and Fastify passes `{}` to a plugin registered without options, so
+  the documented one-liner set two headers and no policy. Every field merges
+  over `defaultSecurityHeaders` now; `false` drops a header.
+  `app.register(fastifyRateLimit)` with no options reached `check()` with
+  `NaN` and every request was a 500 — `max` and `windowMs` are validated at
+  construction and a wrong value throws a `TypeError` naming it. Both
+  plugins are `async` now (Fastify's promise form, so `ready()` reports the
+  error; a synchronous throw inside a plugin escapes as an uncaught
+  exception): called directly they return a promise, with the hooks already
+  installed. (AUDIT-2026-09-03-FINDINGS SS3)
+
+- **`app.register(fastifySecurityHeaders)` and `app.register(fastifyRateLimit, …)`
+  install on the registering instance.** Fastify runs a registered plugin on
+  an encapsulated child, so the documented form installed no headers and no
+  limit on any root route, and `ready()` said nothing. Both plugins carry
+  Fastify's skip-override marker now (no `fastify-plugin` dependency); the
+  direct-call form is unchanged. Tested through a real Fastify. The SSR and
+  deployment skills and the production security plan named config keys that
+  do not exist (`strictTransportSecurity`, `xFrameOptions`, `hsts.preload`,
+  `noSniff`) — corrected to `hsts` and `frameOptions`.
+  (AUDIT-2026-09-03-FINDINGS SS3, SS10, G5, DA-C5)
+
+- **ICU messages format under plain Node.** `icu.ts` default-imported
+  `intl-messageformat`, whose CommonJS entry has no default export, so under
+  Node (an SSR server run with `tsx`, say) the constructor was the exports
+  object, construction threw, and every plural and select rendered as its
+  raw ICU text. The named import is used, which all three entries provide.
+  (AUDIT-2026-09-03-FINDINGS I1)
+- **A malformed ICU message is reported once.** Compilation failed on every
+  call — the raw-text fallback was never cached — so a component rendering
+  the message re-parsed and re-logged it on every render. The failure is
+  cached, cleared with `clearICUCache()`, and counted by
+  `getICUCacheStats().failures`. (AUDIT-2026-09-03-FINDINGS I9)
+
+- **`createQueuedWebSocket` sends by the client's status, and `disconnect()`
+  clears its queue.** The wrapper kept its own boolean from events, so one
+  created around an already-connected client queued while the socket was
+  open, a send right after `disconnect()` reached the closed socket and
+  rejected, and messages held for one connection flushed to whatever URL
+  came next. (AUDIT-2026-09-03-FINDINGS W5)
+
+- **A missed heartbeat pong reconnects instead of disconnecting for good.**
+  The heartbeat called `disconnect(1001, …)`, which cleared the URL so nothing
+  ever reconnected — and 1001 is a code a browser refuses from script, so the
+  real socket stayed open behind a state that said disconnected. It now stops
+  itself and calls `reconnect()`. The documented object `pongMessage` could
+  never match by `===`, so every cycle timed out; it is matched structurally.
+  The ping's framing (`"PING"` with quotes under the JSON serializer) is
+  documented. (AUDIT-2026-09-03-FINDINGS W4)
+
+- **The WebSocket client reconnects by close code, not by `wasClean`.** A
+  server going away (1001), restarting (1012) or asking for a retry (1013)
+  sends a clean close frame and was never reconnected, while a policy
+  violation (1008) was. The built-in table retries 1001, 1006, 1011, 1012,
+  1013 and 1014; `reconnect.shouldReconnect` replaces it. An `error` event
+  on an established connection no longer sets the status to `failed`, which
+  made the close that followed skip the reconnect. (AUDIT-2026-09-03-FINDINGS
+  W3, W8)
+
+- **The WebSocket client's `disconnect()` detaches the socket before closing
+  it, and emits `disconnected` at once.** It nulled the socket with its
+  handlers attached, so the old socket's late close ran against whatever
+  connection came next: status `reconnecting` with an open socket, a
+  reconnect that threw "Already connected", a queued wrapper that queued
+  forever, and under `Effect.websocket.connect` a replaced connection that
+  still dispatched. The handlers are removed first; a `connect()` still
+  waiting on that socket rejects; and because the detached socket can no
+  longer report it, `disconnect()` emits `disconnected` (`wasClean: true`)
+  synchronously. (AUDIT-2026-09-03-FINDINGS W2, W6)
+
+- **The WebSocket client reconnects more than once.** Every `connect()` reset
+  the attempt counter, including the one the reconnect timer made, and a
+  failed attempt was never rescheduled, so the first retry that failed was
+  the last: no backoff ladder, no `maxAttempts`, no `MAX_RECONNECTS` event,
+  and every `reconnecting` event said attempt 1. The timer now opens a socket
+  without touching the counter, a failed attempt schedules the next rung,
+  the ladder climbs to `maxAttempts` and then settles as `failed` with the
+  exhaustion event, and `reconnected.totalDelay` is the sum of the ladder's
+  delays rather than the last one. A failed attempt no longer logs a warning;
+  its `error` event and the next `reconnecting` event say what happened.
+  (AUDIT-2026-09-03-FINDINGS W1)
+
+- **The API client's `deduplicate` option does something.** It was
+  destructured from the client config and never read, so deduplication could
+  not be turned off per client; only the per-request flag worked. The
+  request's flag still wins. (AUDIT-2026-09-03-FINDINGS A1)
+
+- **`Effect.api`, `Effect.apiFireAndForget` and `Effect.apiAll` were `undefined`
+  in every bundled consumer.** `dist/api/effect-api.js` attaches them at
+  import time and was reached only through a binding re-export out of modules
+  that `sideEffects` did not list, so a bundler dropped the unused re-export
+  before the assignment ran; the docs teach `Effect.api(` throughout. The
+  barrels now import the module for its side effect, as they already did for
+  websocket, and `sideEffects` lists the whole chain. Measured by
+  `tests/repo/bundle-probe.test.ts` with esbuild. (AUDIT-2026-09-03-FINDINGS P1)
+
+- **`scopeTo().case()` and `.optional()` return typed stores.** Both returned
+  `ScopedStore<any, any>`, so a typo in the case name and a foreign child
+  action compiled. The state comes from the position in the state tree; the
+  child action is derived from the root action union by the same path — the
+  runtime wrapping read backwards. A root store typed `Store<S, any>` keeps
+  an untyped dispatch. (AUDIT-2026-09-03-FINDINGS P5)
 
 - **`Alert` announced itself rather than its question.** It hardcoded
   `aria-label="Alert dialog"`, so a screen-reader user heard the same three
@@ -222,6 +399,147 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   only: callers still passing `serialize` compile unchanged.
 
 ### Changed
+
+- **BREAKING (tests): `TestStore.finish()` waits for every effect and fails
+  on what is left.** It did `advanceTime(0)` and looked at the queue, so it
+  passed with a `Run` still in flight and an `AfterDelay` still armed. Now
+  effects still running are waited for (a hung one fails with a message,
+  `finish(timeout)`), a pending `AfterDelay` fails under fake timers until
+  the clock is advanced and is waited for under real timers, and the
+  unasserted actions are listed. A rejecting executor fails the next
+  `receive()`, `send()` or `finish()` with its message — or, if nothing
+  asks, the test that owns the store — instead of escaping as an unhandled
+  rejection. (AUDIT-2026-09-03-FINDINGS N9, T6)
+
+- **BREAKING (tests): `TestStore.finish()` waits for every effect and fails
+  on what is left.** It did `advanceTime(0)` and looked at the queue, so it
+  passed with a `Run` still in flight and an `AfterDelay` still armed. Now
+  effects still running are waited for (a hung one fails with a message,
+  `finish(timeout)`), a pending `AfterDelay` fails under fake timers until
+  the clock is advanced and is waited for under real timers, and the
+  unasserted actions are listed. A rejecting executor fails the next
+  `receive()`, `send()` or `finish()` with its message — or, if nothing
+  asks, the test that owns the store — instead of escaping as an unhandled
+  rejection. (AUDIT-2026-09-03-FINDINGS N9, T6)
+
+- **BREAKING (tests): `TestStore` runs `Effect.debounced` and
+  `Effect.throttled` on the test clock.** Both executed at once, every
+  time, so `Effect.cancel(debounceId)` was untestable and three rapid calls
+  looked like three debounces. A debounce fires once after its delay (a
+  later call supersedes it), a throttle runs on the leading edge and once
+  more when the window closes, and `Effect.cancel(id)` clears both — as the
+  store does. Under `vi.useFakeTimers()` advance the clock with
+  `store.advanceTime(ms)` before receiving the action. (AUDIT-2026-09-03-FINDINGS N9, T6)
+
+- **BREAKING (tests): `TestStore.receive()` is ordered and `send()` is
+  exhaustive.** `receive()` matched an action anywhere in the queue, so a
+  test skipped past actions it never expected; `send()` ran over unasserted
+  ones. With exhaustivity on (the default), `receive()` must name the next
+  action the effects delivered — a later match fails at once naming both —
+  and `send()` refuses to run while received actions are unasserted.
+  `send()`'s assertion now runs on the state the reducer returned, before
+  the effect executes. Nested partial matches compare structurally, key
+  order ignored. `exhaustivity = 'off'` keeps the old behaviour.
+  (AUDIT-2026-09-03-FINDINGS N9, T1, T6)
+
+- `dispatch` after `destroy()` is a warned no-op (it reduced state before).
+  `Effect.run` and `Effect.afterDelay` executors receive the store's lifetime
+  `AbortSignal` as their optional second argument (`Effect.map` forwards it);
+  the `Cancellable` signal is still dropped by `Effect.map` — N5, R2.1.
+
+- **BREAKING: `renderToHTML` fails closed on a state it cannot serialize.** It
+  logged and embedded `{}`, so the client hydrated a blank store while
+  `buildHydrationScript` threw for the same state; both throw now. A root
+  with no JSON form (a function, a symbol, `undefined`) is a typed
+  `serializeStore` error rather than a `TypeError` from the script escape.
+  (AUDIT-2026-09-03-FINDINGS SS7, SS11)
+
+- **BREAKING: `WebSocketConfig` is what `createLiveWebSocket` reads.** It
+  accepted `url`, `protocols`, `heartbeat` and `queueSize` and read none of
+  them: the URL and protocols are `connect(url, protocols)`'s arguments, the
+  heartbeat is `createHeartbeat(client, config)`, the queue is
+  `createQueuedWebSocket(client, size)`. The four fields are gone (a config
+  that names one is now a type error, where it was silently ignored), and
+  `createLiveWebSocket(config?: WebSocketConfig)` no longer needs `Partial`.
+  Every field of `ReconnectConfig` and `HeartbeatConfig` is optional with its
+  documented default, so the partials the docs always showed compile;
+  `createHeartbeat`'s `enabled` defaults to `true` — you constructed one.
+  (AUDIT-2026-09-03-FINDINGS W7, DA-H12)
+
+- **BREAKING: every caller of a coalesced request has its own promise, signal
+  and timeout.** One promise served every caller, so one caller's abort or
+  timeout rejected the others and a joiner's own `signal` and `timeout` were
+  ignored. A caller's abort now rejects that caller with the signal's reason
+  (an `AbortError`, not the `TimeoutError` every abort was mapped to) and
+  detaches it; `timeout` bounds the caller's whole request, retries included;
+  the shared fetch is aborted only when every caller is gone; joiners receive
+  a structured clone of the response. A signal that is already aborted makes
+  no fetch, and the abort listener is removed on settle. Error interceptors
+  no longer see a `TimeoutError`: the timeout is the caller's, not the
+  fetch's. A retry backoff sleep is not signal-aware, so after the last caller
+  leaves an attempt may wait out one backoff before it stops.
+  (AUDIT-2026-09-03-FINDINGS A7, A3)
+
+- **BREAKING: the response cache is bounded and hands out clones.** It handed
+  out the object it stored, so a caller that edited its response edited the
+  cache for everyone; it grew without bound within the TTL; and an entry
+  stored under a custom `key` could never be invalidated. Hits are structured
+  clones now, the cache holds `maxEntries` (default 100, set per client with
+  `cache: { maxEntries }`) with the least recently used dropped first,
+  invalidation matches the path a request was made with, and a response that
+  cannot be cloned is not cached and warns once. (AUDIT-2026-09-03-FINDINGS A2)
+
+- **BREAKING: POST, PUT, PATCH and DELETE are no longer deduplicated by
+  default.** Two identical concurrent mutations coalesced into one request,
+  which hid the second intent. Safe methods (GET, HEAD, OPTIONS) still
+  coalesce; a mutation coalesces only when its request sets
+  `deduplicate: true`. (AUDIT-2026-09-03-FINDINGS A11)
+
+- **BREAKING: the API client's request deduplication and response cache are
+  per client instance.** Both were module-global: two clients built for two
+  users coalesced into one fetch and both received the first user's body, and
+  a cached body was shared across hosts and headers. Each `createAPIClient()`
+  and each `createMockAPI()` now owns its map and cache, and the key is the
+  request as it will be sent — method, resolved URL, query parameters, merged
+  headers. The module-level `clearCache()`/`clearInFlightRequests()` helpers
+  (never exported from the package) are gone; use the client's `clearCache()`.
+  (AUDIT-2026-09-03-FINDINGS A1, A2)
+
+- **`integrate()` runs each child before the core reducer.** Core ran first,
+  so a parent observing `Destination.matchCase` read the child's state from
+  before the action, and a core reducer that cleared the field on an action
+  the child also handled hid that action from the child, whose effect was
+  never produced. Children now run first, in registration order, and core
+  runs on the state they produced; effects are batched children first.
+  Observable only by a core reducer that reads a child's field on the same
+  action. (AUDIT-2026-09-03-FINDINGS N14)
+
+- **BREAKING: `createDestination()` takes and returns the single-wrapped case
+  action** — `{ type: caseType, action: childAction }` — instead of expecting a
+  second `presented` wrapper inside each case. No layer above produced that
+  inner wrapper: `scopeTo().case()` wraps the case in one `presented`,
+  `ifLetPresentation` strips it, and the generated reducer read
+  `action.action.action`, which was `undefined`, so a child driven through the
+  DSL threw on its first action. `DestinationAction<Reducers>` is now
+  `{ type: K; action: ChildAction }`. Anyone who hand-built the double-wrapped
+  form (the audit found nobody) drops one level. (AUDIT-2026-09-03-FINDINGS N1)
+
+- **BREAKING: `Destination.reducer` maps the child's effect into its case.** It
+  returned the effect unmapped, so an async child's own result came back as a
+  destination action with no case and was dropped — every `Effect.run` under
+  `createDestination` was stuck. The result now routes back to the child, and
+  one that settles after the case has changed is dropped by the case check. (N2)
+
+- **BREAKING: `scopeTo().case().dismiss()` dispatches the field's
+  `{ type: 'dismiss' }`** instead of wrapping it in the case, a shape
+  `ifLetPresentation` never recognised, so the field was never cleared. The
+  case is not named; the state says which case was open. (N1)
+
+- **`Destination.is()`, `matchCase()` and `match()` look through the parent's
+  field and the `presented` wrapper**, so the parent action, `action.action`
+  and the bare case action all match. A `dismiss` no longer matches a prefix
+  path (`is(dismiss, 'addItem')` was `true`). A case may not be named
+  `presented` or `dismiss`; `createDestination` throws.
 
 - **`FormState.fields` is keyed by field path. Breaking.** It was keyed by
   top-level name, and Zod issues were routed with `issue.path[0]`, so a nested

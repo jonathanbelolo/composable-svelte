@@ -201,6 +201,7 @@ export type {
   RequestConfig,
   RetryConfig,
   CacheConfig,
+  ClientCacheConfig,
   APIRequest,
   HTTPMethod,
   SafeHTTPMethod,
@@ -252,7 +253,12 @@ export {
   type ValidationErrorField
 } from './api/index.js';
 
-// Effect integration
+// Effect integration (side effect: registers Effect.api, apiFireAndForget,
+// apiAll). The bare import is the same form websocket uses below; a binding
+// re-export alone is dropped by a bundler before the assignment runs unless
+// every module on the chain is in package.json "sideEffects", which it now
+// is (AUDIT-2026-09-03-FINDINGS P1).
+import './api/effect-api.js';
 export { api, apiFireAndForget, apiAll } from './api/index.js';
 
 // ============================================================================

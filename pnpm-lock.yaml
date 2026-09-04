@@ -889,6 +889,9 @@ importers:
       esbuild:
         specifier: 0.25.12
         version: 0.25.12
+      fastify:
+        specifier: 5.12.1
+        version: 5.12.1
       isomorphic-dompurify:
         specifier: ^2.16.0
         version: 2.31.0

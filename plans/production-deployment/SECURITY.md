@@ -87,8 +87,8 @@ if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32) {
 ### Content Security Policy (CSP)
 
 ```typescript
-// Implemented in @composable-svelte/core/ssr
-import { fastifySecurityHeaders } from '@composable-svelte/core/ssr';
+// Implemented in @composable-svelte/core/ssr/middleware
+import { fastifySecurityHeaders } from '@composable-svelte/core/ssr/middleware';
 
 fastifySecurityHeaders(app, {
   contentSecurityPolicy: [
@@ -106,18 +106,12 @@ fastifySecurityHeaders(app, {
   // X-Frame-Options
   frameOptions: 'DENY',
 
-  // X-Content-Type-Options
-  noSniff: true,
-
   // Referrer-Policy
   referrerPolicy: 'strict-origin-when-cross-origin',
 
   // HSTS
-  hsts: {
-    maxAge: 31536000,
-    includeSubDomains: true,
-    preload: true
-  }
+  // X-Content-Type-Options: nosniff is always set.
+  hsts: { maxAge: 31536000, includeSubDomains: true }
 });
 ```
 
@@ -140,7 +134,7 @@ curl -I https://your-app.fly.dev
 ### Per-IP Rate Limiting ✅
 
 ```typescript
-import { fastifyRateLimit } from '@composable-svelte/core/ssr';
+import { fastifyRateLimit } from '@composable-svelte/core/ssr/middleware';
 
 fastifyRateLimit(app, {
   max: 100,        // 100 requests

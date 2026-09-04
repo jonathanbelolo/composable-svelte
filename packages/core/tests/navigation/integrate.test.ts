@@ -7,6 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { integrate } from '../../src/lib/navigation/integrate.js';
+import { createDestination } from '../../src/lib/navigation/destination.js';
 import type { Reducer } from '../../src/lib/types.js';
 import { Effect } from '../../src/lib/effect.js';
 import type { PresentationAction } from '../../src/lib/navigation/types.js';
@@ -299,8 +300,100 @@ describe('integrate()', () => {
 
 			reducer(initialState, action, {});
 
-			// Core should run first, then child1, child2 skipped (wrong action type)
-			expect(executionOrder).toEqual(['core', 'child1']);
+			// The child first, then core; child2 is skipped (wrong action type).
+			// Core ran first once, and so observed the child's state from before
+			// the action (N14).
+			expect(executionOrder).toEqual(['child1', 'core']);
+		});
+
+		it("core observes the child's reduced state", () => {
+			interface S {
+				destination: AddItemState | null;
+				lastName: string;
+			}
+			type A = { type: 'destination'; action: PresentationAction<AddItemAction> };
+			const core: Reducer<S, A> = (state, action) =>
+				action.type === 'destination'
+					? [{ ...state, lastName: state.destination?.name ?? '' }, Effect.none()]
+					: [state, Effect.none()];
+			const reducer = integrate(core).with('destination', addItemReducer).build();
+
+			const [after] = reducer(
+				{ destination: { name: 'Test', quantity: 0 }, lastName: '' },
+				{ type: 'destination', action: { type: 'presented', action: { type: 'nameChanged', value: 'New' } } },
+				{}
+			);
+
+			// Core-first would have copied 'Test'.
+			expect(after.lastName).toBe('New');
+		});
+
+		it("the child's effect survives core clearing the field on the same action", () => {
+			interface S {
+				destination: AddItemState | null;
+			}
+			type A = { type: 'destination'; action: PresentationAction<AddItemAction> };
+			const core: Reducer<S, A> = (state, action) =>
+				action.type === 'destination' &&
+				action.action.type === 'presented' &&
+				action.action.action.type === 'saveButtonTapped'
+					? [{ ...state, destination: null }, Effect.none()]
+					: [state, Effect.none()];
+			const reducer = integrate(core).with('destination', addItemReducer).build();
+
+			const [after, effect] = reducer(
+				{ destination: { name: 'Test', quantity: 0 } },
+				{ type: 'destination', action: { type: 'presented', action: { type: 'saveButtonTapped' } } },
+				{}
+			);
+
+			// Core still clears the field, and the child still produced its save
+			// effect; core-first handed ifLetPresentation a null and the child
+			// never ran.
+			expect(after.destination).toBeNull();
+			expect(effect._tag).toBe('Run');
+		});
+	});
+
+	describe('.forEach() ordering', () => {
+		interface Item {
+			id: string;
+			state: AddItemState;
+		}
+		interface S {
+			items: Item[];
+			lastName: string;
+		}
+		type A = { type: 'items'; id: string; action: AddItemAction } | { type: 'noop' };
+		const initial: S = { items: [{ id: 'a', state: { name: 'Test', quantity: 0 } }], lastName: '' };
+
+		it("core observes the element's reduced state", () => {
+			const core: Reducer<S, A> = (state, action) =>
+				action.type === 'items'
+					? [{ ...state, lastName: state.items[0]?.state.name ?? '' }, Effect.none()]
+					: [state, Effect.none()];
+			const reducer = integrate(core)
+				.forEach('items', (s) => s.items, (s, items) => ({ ...s, items }), addItemReducer)
+				.build();
+
+			const [after] = reducer(initial, { type: 'items', id: 'a', action: { type: 'nameChanged', value: 'New' } }, {});
+
+			expect(after.lastName).toBe('New');
+		});
+
+		it("the element's effect survives core removing it on the same action", () => {
+			const core: Reducer<S, A> = (state, action) =>
+				action.type === 'items' && action.action.type === 'saveButtonTapped'
+					? [{ ...state, items: [] }, Effect.none()]
+					: [state, Effect.none()];
+			const reducer = integrate(core)
+				.forEach('items', (s) => s.items, (s, items) => ({ ...s, items }), addItemReducer)
+				.build();
+
+			const [after, effect] = reducer(initial, { type: 'items', id: 'a', action: { type: 'saveButtonTapped' } }, {});
+
+			expect(after.items).toEqual([]);
+			expect(effect._tag).toBe('Run');
 		});
 	});
 
@@ -344,56 +437,79 @@ describe('integrate()', () => {
 	});
 
 	describe('integration with createDestination', () => {
-		it('works with destination reducers', () => {
-			// Simulate a destination reducer (would come from createDestination)
-			type DestinationState =
-				| { type: 'addItem'; state: AddItemState }
-				| { type: 'alert'; state: AlertState };
+		// Against the real createDestination. The earlier form of this test
+		// declared a stub "destination reducer" that returned its state for
+		// every action and never dispatched a destination action, so it could
+		// not see that the two layers disagreed on the shape (AUDIT N1, N2).
+		const Destination = createDestination({ addItem: addItemReducer, alert: alertReducer });
+		type DestinationState = typeof Destination._types.State;
+		type DestinationAction = typeof Destination._types.Action;
 
-			type DestinationAction =
-				| { type: 'addItem'; action: PresentationAction<AddItemAction> }
-				| { type: 'alert'; action: PresentationAction<AlertAction> };
+		interface AppState {
+			items: string[];
+			destination: DestinationState | null;
+		}
 
-			const destinationReducer: Reducer<DestinationState, DestinationAction> = (
-				state,
-				action
-			) => {
-				if (action.type === state.type) {
-					// Route to correct child (simplified)
+		type AppAction =
+			| { type: 'addItem'; item: string }
+			| { type: 'destination'; action: PresentationAction<DestinationAction> };
+
+		const appCoreReducer: Reducer<AppState, AppAction> = (state, action) => {
+			switch (action.type) {
+				case 'addItem':
+					return [{ ...state, items: [...state.items, action.item] }, Effect.none()];
+				default:
 					return [state, Effect.none()];
-				}
-				return [state, Effect.none()];
-			};
-
-			interface AppState {
-				items: string[];
-				destination: DestinationState | null;
 			}
+		};
 
-			type AppAction =
-				| { type: 'addItem'; item: string }
-				| { type: 'destination'; action: PresentationAction<DestinationAction> };
+		const reducer = integrate(appCoreReducer).with('destination', Destination.reducer).build();
+		const initialState: AppState = {
+			items: [],
+			destination: Destination.initial('addItem', { name: '', quantity: 0 })
+		};
 
-			const appCoreReducer: Reducer<AppState, AppAction> = (state, action) => {
-				switch (action.type) {
-					case 'addItem':
-						return [{ ...state, items: [...state.items, action.item] }, Effect.none()];
-					default:
-						return [state, Effect.none()];
-				}
-			};
-
-			const reducer = integrate(appCoreReducer).with('destination', destinationReducer).build();
-
-			const initialState: AppState = {
-				items: [],
-				destination: { type: 'addItem', state: { name: '', quantity: 0 } }
-			};
-
+		it('leaves the destination alone for a core action', () => {
 			const [newState, effect] = reducer(initialState, { type: 'addItem', item: 'Test' }, {});
 
 			expect(newState.items).toEqual(['Test']);
+			expect(newState.destination).toBe(initialState.destination);
 			expect(effect._tag).toBe('None');
+		});
+
+		it('routes a presented case action to the child reducer', () => {
+			const [newState] = reducer(
+				initialState,
+				{
+					type: 'destination',
+					action: { type: 'presented', action: { type: 'addItem', action: { type: 'nameChanged', value: 'Milk' } } }
+				},
+				{}
+			);
+
+			expect(Destination.extract(newState.destination, 'addItem')).toEqual({ name: 'Milk', quantity: 0 });
+		});
+
+		it("wraps the child's effect back into the field, the presented wrapper and the case", async () => {
+			const [, effect] = reducer(
+				initialState,
+				{
+					type: 'destination',
+					action: { type: 'presented', action: { type: 'addItem', action: { type: 'saveButtonTapped' } } }
+				},
+				{}
+			);
+			expect(effect._tag).toBe('Run');
+
+			const dispatched: unknown[] = [];
+			await (effect as { execute: (d: (a: unknown) => void) => Promise<void> }).execute((a) => dispatched.push(a));
+
+			expect(dispatched).toEqual([
+				{
+					type: 'destination',
+					action: { type: 'presented', action: { type: 'addItem', action: { type: 'saved' } } }
+				}
+			]);
 		});
 	});
 

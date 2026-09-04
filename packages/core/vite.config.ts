@@ -36,6 +36,7 @@ export default defineConfig({
       // Node-environment tests: they read files from disk, which browser mode
       // cannot do. Run by vitest.node.config.ts instead.
       'tests/ssr/ssg.test.ts',
+      'tests/ssr/ssg-fs.test.ts',
       'tests/ssr/render.test.ts',
       'tests/ssr/serializer.test.ts',
       'tests/ssr/animated-initial-state.test.ts',
@@ -43,6 +44,8 @@ export default defineConfig({
       'tests/styles/**',
       // Reaches isomorphic-dompurify, which needs its Node (jsdom) build.
       'tests/ssr/middleware.test.ts',
+      // Drives a real Fastify instance; Node only.
+      'tests/ssr/middleware-fastify.test.ts',
       // Walks built dist from disk; browser mode cannot read files.
       'tests/ssr/entry-graph.test.ts',
       // Reads every workspace's package.json from disk; same reason.

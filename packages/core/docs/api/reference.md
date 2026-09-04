@@ -193,7 +193,7 @@ interface Store<State, Action> {
 - `select(selector)` - Select derived value from state (non-reactive)
 - `subscribe(listener)` - Subscribe to state changes, returns unsubscribe function
 - `subscribeToActions(listener)` - Subscribe to action dispatches (optional, for Destination.on())
-- `destroy()` - Clean up resources (cancels effects, clears subscriptions)
+- `destroy()` - Clean up resources: aborts in-flight effects (their signal fires), clears every pending delay, debounce and throttle, runs subscription cleanups, removes listeners. A later `dispatch` is ignored with a `console.warn`.
 
 ---
 
@@ -1157,6 +1157,11 @@ const reducer = ifLetPresentation(
 
 ### createDestinationReducer
 
+**Deprecated.** Use [`createDestination`](#createdestination): this helper
+routes by the current destination's type, hands every case one shared action
+type, and returns the child's effect untagged, so a result that arrives after
+the destination changed is applied to whichever case is open then.
+
 Create a reducer that routes actions to destination cases.
 
 ```typescript
@@ -1235,7 +1240,7 @@ const parentReducer: Reducer<ParentState, ParentAction> = (state, action, deps) 
         (s) => s.destination,
         (s, d) => ({ ...s, destination: d }),
         'destination',
-        (ca) => ({ type: 'destination', action: ca }),
+        (ca) => ({ type: 'destination', action: { type: 'presented', action: ca } }),
         Destination.reducer  // Auto-generated!
       )(state, action, deps);
   }
@@ -1410,13 +1415,22 @@ function setPath<T>(stack: T[], path: T[]): [T[], Effect<any>]
 Handle stack actions in reducer.
 
 ```typescript
-function handleStackAction<State, ScreenState, ScreenAction, Dependencies>(
-  state: State & { stack: ScreenState[] },
-  action: { type: 'stack'; action: StackAction<ScreenAction> },
-  dependencies: Dependencies,
-  screenReducer: Reducer<ScreenState, ScreenAction, Dependencies>
-): [State, Effect<any>]
+function handleStackAction<ParentState, ParentAction, ScreenState, ScreenAction, Dependencies>(
+  state: ParentState,
+  action: StackAction<ScreenAction>,
+  deps: Dependencies,
+  screenReducer: Reducer<ScreenState, ScreenAction, Dependencies>,
+  getStack: (state: ParentState) => readonly ScreenState[],
+  setStack: (state: ParentState, stack: readonly ScreenState[]) => ParentState,
+  options?: {
+    actionType?: string;                                // parent action type, default 'stack'
+    screenId?: (screen: ScreenState) => string | number; // identity; a result for a screen that left is dropped
+  }
+): readonly [ParentState, Effect<ParentAction>]
 ```
+
+The signature shown here before this revision had four parameters and never
+matched the function.
 
 ---
 

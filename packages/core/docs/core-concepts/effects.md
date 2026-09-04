@@ -848,11 +848,14 @@ console.log(store.state.data); // undefined (effect hasn't run yet)
 
 ### Error Handling
 
-The Store catches and logs effect errors. Effects never crash the app:
+The Store catches and logs effect errors. Effects never crash the app —
+whether the executor rejects or throws synchronously, in any effect kind,
+including inside a debounce, throttle or delay timer. The error is logged as
+`[Composable Svelte] Effect error:` and `dispatch()` returns normally:
 
 ```typescript
-Effect.run(async (dispatch) => {
-  throw new Error('Oops!'); // Logged to console, doesn't crash
+Effect.run((dispatch) => {
+  throw new Error('Oops!'); // Logged to console, doesn't crash, doesn't skip the rest of a Batch
 });
 ```
 

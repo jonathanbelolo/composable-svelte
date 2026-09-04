@@ -443,6 +443,11 @@ export const destinationReducer: Reducer<DestinationState, DestinationAction> = 
 
 ### 4.3 Helper: `createDestinationReducer`
 
+> Superseded. The shipped `createDestinationReducer` routes by the current
+> destination's type and returns effects untagged (audit finding N8); the DSL's
+> `createDestination()` in `navigation-dsl-spec.md` is the maintained form and
+> routes by the action's case. This section is kept as history.
+
 Since destination reducers follow a pattern, we can create a helper:
 
 ```typescript

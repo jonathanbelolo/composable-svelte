@@ -357,16 +357,12 @@ Effect.run(async (dispatch) => {
 ```typescript
 import { createLiveWebSocket } from '@composable-svelte/core/websocket';
 
+// The URL is an argument of connect(), not configuration. Every reconnect
+// field has a default; name only what you change.
 const ws = createLiveWebSocket({
-  url: 'wss://api.example.com/ws',
   reconnect: {
-    enabled: true,
     maxAttempts: 5,
-    delayMs: 1000
-  },
-  heartbeat: {
-    enabled: true,
-    intervalMs: 30000
+    initialDelay: 1000
   }
 });
 

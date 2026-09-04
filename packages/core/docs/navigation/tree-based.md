@@ -458,7 +458,34 @@ case 'editButtonTapped':
 
 ### Routing to Child Reducers
 
-Use `createDestinationReducer()` to route actions based on destination type:
+Use `createDestination()` to route actions to the case they name. Each child's
+effect comes back through the same case, and a result that arrives after the
+destination has changed is dropped rather than applied to whichever case is
+open then:
+
+```typescript
+import { createDestination, ifLetPresentation } from '@composable-svelte/core/navigation';
+
+const Destination = createDestination({
+  addItem: addItemReducer,
+  editItem: editItemReducer,
+  filter: filterReducer
+});
+
+// In parent reducer
+case 'destination':
+  return ifLetPresentation(
+    (s) => s.destination,
+    (s, d) => ({ ...s, destination: d }),
+    'destination',
+    (ca) => ({ type: 'destination', action: { type: 'presented', action: ca } }),
+    Destination.reducer
+  )(state, action, deps);
+```
+
+`createDestinationReducer()` is deprecated: it routes by the *current*
+destination's type and returns the child's effect untagged, so a late result
+lands on whatever is open. It still works for existing callers:
 
 ```typescript
 import { createDestinationReducer } from '@composable-svelte/core/navigation';
@@ -723,13 +750,18 @@ const wizardReducer: Reducer<WizardState, WizardAction, WizardDeps> = (
     }
 
     case 'stack':
+      // The optional seventh argument names the parent action type (default
+      // 'stack') and gives screens an identity, so a screen's effect that
+      // settles after the stack changed is dropped instead of landing on the
+      // screen now at that index.
       return handleStackAction(
         state,
         action.action,
         deps,
         stepReducer,
         (s) => s.stack,
-        (s, stack) => ({ ...s, stack })
+        (s, stack) => ({ ...s, stack }),
+        { actionType: 'stack', screenId: (screen) => screen.step }
       );
 
     default:

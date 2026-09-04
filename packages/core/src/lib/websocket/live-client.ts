@@ -42,7 +42,6 @@ import { WebSocketError, WS_ERROR_CODES, JSONSerializer } from './types.js';
  * @example
  * ```typescript
  * const client = createLiveWebSocket({
- *   url: 'wss://example.com',
  *   reconnect: {
  *     enabled: true,
  *     maxAttempts: 5,
@@ -56,8 +55,13 @@ import { WebSocketError, WS_ERROR_CODES, JSONSerializer } from './types.js';
  * await client.connect('wss://example.com');
  * ```
  */
+/** `ReconnectConfig` with every default applied. */
+type ResolvedReconnectConfig = {
+  [K in keyof Omit<ReconnectConfig, 'shouldReconnect'>]-?: Exclude<ReconnectConfig[K], undefined>;
+};
+
 export function createLiveWebSocket<T = unknown>(
-  config?: Partial<WebSocketConfig>
+  config?: WebSocketConfig
 ): WebSocketClient<T> {
   // State
   let socket: WebSocket | null = null;
@@ -89,7 +93,7 @@ export function createLiveWebSocket<T = unknown>(
   // Configuration with defaults
   const serializer: MessageSerializer = config?.serializer || JSONSerializer;
   const connectionTimeout = config?.connectionTimeout || 10000;
-  const reconnectConfig: ReconnectConfig = {
+  const reconnectConfig: ResolvedReconnectConfig = {
     enabled: config?.reconnect?.enabled ?? true,
     maxAttempts: config?.reconnect?.maxAttempts ?? 5,
     initialDelay: config?.reconnect?.initialDelay ?? 1000,
@@ -101,6 +105,12 @@ export function createLiveWebSocket<T = unknown>(
   // Reconnection timer
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let connectionTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
+  /** The delays of the current reconnect ladder, summed, for `reconnected.totalDelay`. */
+  let ladderDelay = 0;
+  /** A connect() whose socket has not opened yet; rejected by disconnect(). */
+  let pendingConnect: ((error: unknown) => void) | null = null;
+  /** Sockets whose failure has been handled once; a socket fails on error and again on close. */
+  const failedSockets = new WeakSet<WebSocket>();
 
   // ========================================
   // Internal Helpers
@@ -130,6 +140,32 @@ export function createLiveWebSocket<T = unknown>(
     });
   }
 
+  /**
+   * Whether a close of an established connection is worth retrying.
+   *
+   * The first form keyed on `wasClean`, which is false only for an abnormal
+   * closure: a server going away (1001), restarting (1012) or asking for a
+   * retry later (1013) sends a clean close frame and was never reconnected
+   * (AUDIT-2026-09-03-FINDINGS W3). The code says what happened; `wasClean`
+   * only says whether a frame was exchanged.
+   *
+   * - 1001 going away, 1006 abnormal, 1011 server error, 1012 restart,
+   *   1013 try again later, 1014 bad gateway: transient, retry.
+   * - 1000 normal, 1005 no status (a deliberate close with no code): the
+   *   peer meant it.
+   * - 1002 protocol, 1003 unsupported data, 1007 bad payload, 1009 too big,
+   *   1010 extension, 1015 TLS: a retry repeats the fault.
+   * - 1008 policy violation: the server refused us on purpose.
+   * - 3000–4999 application codes: only the application knows;
+   *   `reconnect.shouldReconnect` is the place to say.
+   */
+  const RETRY_CLOSE_CODES = new Set([1001, 1006, 1011, 1012, 1013, 1014]);
+  function shouldReconnect(event: { code: number; reason: string; wasClean: boolean }): boolean {
+    const override = config?.reconnect?.shouldReconnect;
+    if (override) return override(event);
+    return RETRY_CLOSE_CODES.has(event.code);
+  }
+
   function calculateReconnectDelay(attempt: number): number {
     const baseDelay = reconnectConfig.initialDelay * Math.pow(
       reconnectConfig.backoffMultiplier,
@@ -144,33 +180,67 @@ export function createLiveWebSocket<T = unknown>(
   // Connection Management
   // ========================================
 
-  async function connect(url: string, protocols: string[] = []): Promise<void> {
-    // Validate state
-    if (socket && (socket.readyState === WebSocket.CONNECTING || socket.readyState === WebSocket.OPEN)) {
-      throw new WebSocketError(
-        'Already connected or connecting',
-        WS_ERROR_CODES.CONNECTION_FAILED,
-        false
-      );
+  /**
+   * Detach a socket from this client: its handlers can no longer reach the
+   * state, and it is closed if it is not already. Used for an attempt that
+   * failed and for the connection timeout, so a socket's later `close` cannot
+   * overwrite the state of the connection that replaced it.
+   */
+  function abandonSocket(ws: WebSocket): void {
+    ws.onopen = null;
+    ws.onmessage = null;
+    ws.onerror = null;
+    ws.onclose = null;
+    if (ws.readyState !== WebSocket.CLOSED) {
+      try {
+        ws.close();
+      } catch {
+        // Already closing, or a code the browser refuses; nothing to do.
+      }
     }
+    if (socket === ws) socket = null;
+  }
 
-    // Clear any pending reconnect
-    if (reconnectTimer) {
-      clearTimeout(reconnectTimer);
-      reconnectTimer = null;
+  /**
+   * A socket that never opened has failed: once, whichever of `error`,
+   * `close` or the connection timeout reports it first. A user `connect()`
+   * settles as `failed` and rejects; a reconnect attempt schedules the next
+   * rung of the ladder. The first form ran `connect()` from the reconnect
+   * timer, which reset the attempt counter, and rescheduled only from the
+   * `onclose` of a socket that had been connected — which a failed attempt
+   * never was — so the first failed attempt was the last
+   * (AUDIT-2026-09-03-FINDINGS W1).
+   */
+  function attemptFailed(ws: WebSocket, error: WebSocketError, reject: (error: unknown) => void): void {
+    if (failedSockets.has(ws)) return;
+    failedSockets.add(ws);
+    if (connectionTimeoutTimer) {
+      clearTimeout(connectionTimeoutTimer);
+      connectionTimeoutTimer = null;
     }
+    abandonSocket(ws);
+    stats.errors++;
+    updateState({ lastError: error });
+    notifyEventListeners({ type: 'error', error, timestamp: Date.now() });
 
-    // Update state
-    updateState({
-      status: 'connecting',
-      url,
-      protocols,
-      reconnectAttempts: 0
-    });
+    if (state.status === 'reconnecting') {
+      reject(error);
+      scheduleReconnect();
+      return;
+    }
+    updateState({ status: 'failed' });
+    reject(error);
+  }
 
-    // Create new WebSocket instance
+  /**
+   * Open a socket for the current `state.url`. Shared by `connect()` and the
+   * reconnect timer; it never touches `reconnectAttempts` — only a user
+   * `connect()` and a successful open reset that.
+   */
+  function openSocket(url: string, protocols: string[]): Promise<void> {
+    let ws: WebSocket;
     try {
-      socket = new WebSocket(url, protocols);
+      ws = new WebSocket(url, protocols);
     } catch (error) {
       const wsError = new WebSocketError(
         `Failed to create WebSocket: ${error}`,
@@ -178,33 +248,45 @@ export function createLiveWebSocket<T = unknown>(
         true,
         error
       );
-      updateState({ status: 'failed', lastError: wsError });
       stats.errors++;
-      throw wsError;
+      if (state.status === 'reconnecting') {
+        updateState({ lastError: wsError });
+        notifyEventListeners({ type: 'error', error: wsError, timestamp: Date.now() });
+        scheduleReconnect();
+      } else {
+        updateState({ status: 'failed', lastError: wsError });
+      }
+      return Promise.reject(wsError);
     }
+    socket = ws;
+    // An attempt, not a user connect(): a successful open is a reconnect.
+    const attempts = state.status === 'reconnecting' ? state.reconnectAttempts : 0;
 
     return new Promise((resolve, reject) => {
+      pendingConnect = reject;
+      const settle = <A extends unknown[]>(fn: (...args: A) => void) => (...args: A) => {
+        pendingConnect = null;
+        fn(...args);
+      };
+      resolve = settle(resolve);
+      reject = settle(reject);
+
       // Connection timeout
       connectionTimeoutTimer = setTimeout(() => {
-        if (socket && socket.readyState === WebSocket.CONNECTING) {
-          socket.close();
-          const error = new WebSocketError(
-            `Connection timeout after ${connectionTimeout}ms`,
-            WS_ERROR_CODES.CONNECTION_TIMEOUT,
-            true
+        if (ws.readyState === WebSocket.CONNECTING) {
+          attemptFailed(
+            ws,
+            new WebSocketError(
+              `Connection timeout after ${connectionTimeout}ms`,
+              WS_ERROR_CODES.CONNECTION_TIMEOUT,
+              true
+            ),
+            reject
           );
-          updateState({ status: 'failed', lastError: error });
-          stats.errors++;
-          notifyEventListeners({
-            type: 'error',
-            error,
-            timestamp: Date.now()
-          });
-          reject(error);
         }
       }, connectionTimeout);
 
-      socket!.onopen = () => {
+      ws.onopen = () => {
         if (connectionTimeoutTimer) {
           clearTimeout(connectionTimeoutTimer);
           connectionTimeoutTimer = null;
@@ -224,34 +306,41 @@ export function createLiveWebSocket<T = unknown>(
           timestamp: Date.now()
         });
 
+        if (attempts > 0) {
+          stats.reconnects++;
+          notifyEventListeners({
+            type: 'reconnected',
+            attempts,
+            totalDelay: ladderDelay,
+            timestamp: Date.now()
+          });
+        }
+
         resolve();
       };
 
-      socket!.onerror = (event) => {
-        if (connectionTimeoutTimer) {
-          clearTimeout(connectionTimeoutTimer);
-          connectionTimeoutTimer = null;
-        }
-
+      ws.onerror = (event) => {
         const error = new WebSocketError(
           'Connection failed',
           WS_ERROR_CODES.CONNECTION_FAILED,
           true,
           event
         );
-        updateState({ status: 'failed', lastError: error });
+        if (ws.readyState !== WebSocket.OPEN) {
+          // Never opened: the attempt failed.
+          attemptFailed(ws, error, reject);
+          return;
+        }
+        // Established: report it and leave the status alone. The close that
+        // follows decides what happens next; setting 'failed' here made an
+        // error-then-close on a live connection skip the reconnect, and left
+        // 'failed' as a status the next close always overwrote (W3, W8).
+        updateState({ lastError: error });
         stats.errors++;
-
-        notifyEventListeners({
-          type: 'error',
-          error,
-          timestamp: Date.now()
-        });
-
-        reject(error);
+        notifyEventListeners({ type: 'error', error, timestamp: Date.now() });
       };
 
-      socket!.onmessage = (event) => {
+      ws.onmessage = (event) => {
         stats.messagesReceived++;
 
         // Calculate bytes received
@@ -289,7 +378,18 @@ export function createLiveWebSocket<T = unknown>(
         }
       };
 
-      socket!.onclose = (event) => {
+      ws.onclose = (event) => {
+        if (ws.readyState === WebSocket.CLOSED && failedSockets.has(ws)) return;
+        if (state.status === 'connecting' || state.status === 'reconnecting') {
+          // Closed before it opened, with no error event first.
+          attemptFailed(
+            ws,
+            new WebSocketError('Connection closed before it opened', WS_ERROR_CODES.CONNECTION_FAILED, true, event),
+            reject
+          );
+          return;
+        }
+
         const wasConnected = state.status === 'connected';
 
         updateState({
@@ -305,12 +405,109 @@ export function createLiveWebSocket<T = unknown>(
           timestamp: Date.now()
         });
 
-        // Attempt reconnection if enabled and was connected
-        if (wasConnected && reconnectConfig.enabled && !event.wasClean) {
+        // Reconnect by what the close code says, not by wasClean (W3).
+        if (wasConnected && reconnectConfig.enabled && state.url && shouldReconnect(event)) {
+          ladderDelay = 0;
           scheduleReconnect();
         }
       };
     });
+  }
+
+  async function connect(url: string, protocols: string[] = []): Promise<void> {
+    // Validate state
+    if (socket && (socket.readyState === WebSocket.CONNECTING || socket.readyState === WebSocket.OPEN)) {
+      throw new WebSocketError(
+        'Already connected or connecting',
+        WS_ERROR_CODES.CONNECTION_FAILED,
+        false
+      );
+    }
+
+    // Clear any pending reconnect
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+
+    // A user connect() is the one place the ladder starts over.
+    updateState({
+      status: 'connecting',
+      url,
+      protocols,
+      reconnectAttempts: 0
+    });
+    ladderDelay = 0;
+
+    return openSocket(url, protocols);
+  }
+
+  /** One rung of the ladder: open a socket without touching the attempt count. */
+  function attemptReconnect(): void {
+    if (!state.url) return;
+    openSocket(state.url, state.protocols).catch(() => {
+      // attemptFailed has already reported it and scheduled the next rung.
+    });
+  }
+
+  /**
+   * Detach the current socket before closing it, and reject a connect() still
+   * waiting on it. The first form nulled `socket` with its handlers attached,
+   * so its late `close` ran against the state of whatever connection came
+   * next — status 'reconnecting' with an OPEN socket, a reconnect that threw
+   * 'Already connected', a queued wrapper that queued forever
+   * (AUDIT-2026-09-03-FINDINGS W2, W6).
+   */
+  function releaseSocket(code: number, reason: string): void {
+    if (socket) {
+      const ws = socket;
+      ws.onopen = null;
+      ws.onmessage = null;
+      ws.onerror = null;
+      ws.onclose = null;
+      socket = null;
+      try {
+        ws.close(code, reason);
+      } catch (error) {
+        console.warn('[WebSocket] Error closing socket:', error);
+      }
+    }
+
+    // A connect() still waiting on this socket can never open now.
+    const reject = pendingConnect;
+    pendingConnect = null;
+    reject?.(
+      new WebSocketError('Disconnected before the connection opened', WS_ERROR_CODES.CONNECTION_FAILED, false)
+    );
+  }
+
+  /**
+   * Drop the socket and climb the ladder from the first rung, keeping the
+   * URL. The heartbeat called `disconnect(1001, …)` on a missed pong, which
+   * cleared the URL so nothing ever reconnected — and 1001 is a code a
+   * browser refuses from script, so the real socket stayed open behind a
+   * state that said disconnected (AUDIT-2026-09-03-FINDINGS W4). Closes
+   * with 1000, the one code every browser accepts.
+   */
+  function reconnect(reason = 'Reconnect requested'): void {
+    if (!state.url) return;
+    if (!reconnectConfig.enabled) {
+      void disconnect(1000, reason);
+      return;
+    }
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+    if (connectionTimeoutTimer) {
+      clearTimeout(connectionTimeoutTimer);
+      connectionTimeoutTimer = null;
+    }
+    releaseSocket(1000, reason);
+    updateState({ status: 'disconnected', connectedAt: null, reconnectAttempts: 0 });
+    notifyEventListeners({ type: 'disconnected', code: 1000, reason, wasClean: false, timestamp: Date.now() });
+    ladderDelay = 0;
+    scheduleReconnect();
   }
 
   async function disconnect(code = 1000, reason = ''): Promise<void> {
@@ -326,15 +523,10 @@ export function createLiveWebSocket<T = unknown>(
       connectionTimeoutTimer = null;
     }
 
-    // Close socket
-    if (socket) {
-      try {
-        socket.close(code, reason);
-      } catch (error) {
-        console.warn('[WebSocket] Error closing socket:', error);
-      }
-      socket = null;
-    }
+    const wasLive =
+      state.status === 'connected' || state.status === 'connecting' || state.status === 'reconnecting';
+
+    releaseSocket(code, reason);
 
     updateState({
       status: 'disconnected',
@@ -343,6 +535,13 @@ export function createLiveWebSocket<T = unknown>(
       reconnectAttempts: 0,
       connectedAt: null
     });
+
+    // Detached, the socket's own close will not report it, so this does —
+    // synchronously, which is what the heartbeat, the queued wrapper and a
+    // UI stopping on 'disconnected' need.
+    if (wasLive) {
+      notifyEventListeners({ type: 'disconnected', code, reason, wasClean: true, timestamp: Date.now() });
+    }
   }
 
   function scheduleReconnect(): void {
@@ -367,6 +566,7 @@ export function createLiveWebSocket<T = unknown>(
     }
 
     const delay = calculateReconnectDelay(attempt);
+    ladderDelay += delay;
 
     updateState({
       status: 'reconnecting',
@@ -381,20 +581,9 @@ export function createLiveWebSocket<T = unknown>(
       timestamp: Date.now()
     });
 
-    reconnectTimer = setTimeout(async () => {
-      try {
-        await connect(state.url!, state.protocols);
-        stats.reconnects++;
-        notifyEventListeners({
-          type: 'reconnected',
-          attempts: attempt,
-          totalDelay: delay,
-          timestamp: Date.now()
-        });
-      } catch (error) {
-        // Reconnection failed, scheduleReconnect will be called by onclose
-        console.warn(`[WebSocket] Reconnection attempt ${attempt} failed:`, error);
-      }
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
+      attemptReconnect();
     }, delay);
   }
 
@@ -462,6 +651,7 @@ export function createLiveWebSocket<T = unknown>(
   return {
     connect,
     disconnect,
+    reconnect,
     send,
     subscribe,
     subscribeToEvents,

@@ -119,10 +119,36 @@ export function setPath<ScreenState, Action>(
 }
 
 /**
+ * Options for `handleStackAction`.
+ */
+export interface StackActionOptions<ScreenState> {
+  /**
+   * The parent action type that wraps `StackAction` — the `type` a mapped
+   * screen effect is dispatched under. Defaults to `'stack'`, which the
+   * first form of this helper hard-coded (AUDIT-2026-09-03-FINDINGS N11).
+   */
+  readonly actionType?: string | undefined;
+  /**
+   * Identity for a screen. When given, a mapped screen effect carries the
+   * identity of the screen it was produced for, and a result whose index now
+   * names a different screen is dropped instead of being applied to it
+   * (AUDIT-2026-09-03-FINDINGS N8). Without it, routing is by index alone.
+   */
+  readonly screenId?: ((screen: ScreenState) => string | number) | undefined;
+}
+
+/**
  * Handle StackAction in a reducer.
  *
  * This helper processes StackAction operations (push, pop, setPath, screen actions)
  * and delegates screen-specific actions to a screen reducer.
+ *
+ * A screen's effect is mapped back to a `screen` action at the same index.
+ * Between the effect being produced and its result arriving, the stack may
+ * have changed under it — a pop and a push put a different screen at that
+ * index. Pass `options.screenId` to have the result carry the identity of the
+ * screen it belongs to; a result whose screen is gone is then dropped, the way
+ * `forEachElement` drops an element that left.
  *
  * @param state - The parent state containing the stack
  * @param action - The stack action to handle
@@ -130,6 +156,7 @@ export function setPath<ScreenState, Action>(
  * @param screenReducer - Reducer for individual screens
  * @param getStack - Extract stack from parent state
  * @param setStack - Update parent state with new stack
+ * @param options - The parent action type and the screen identity, both optional
  * @returns Updated parent state and effect
  *
  * @example
@@ -176,9 +203,12 @@ export function handleStackAction<
   deps: Dependencies,
   screenReducer: Reducer<ScreenState, ScreenAction, Dependencies>,
   getStack: (state: ParentState) => readonly ScreenState[],
-  setStack: (state: ParentState, stack: readonly ScreenState[]) => ParentState
+  setStack: (state: ParentState, stack: readonly ScreenState[]) => ParentState,
+  options: StackActionOptions<ScreenState> = {}
 ): readonly [ParentState, EffectType<ParentAction>] {
   const stack = getStack(state);
+  const actionType = options.actionType ?? 'stack';
+  const identify = options.screenId;
 
   switch (action.type) {
     case 'push': {
@@ -217,6 +247,13 @@ export function handleStackAction<
         return [state, Effect.none()];
       }
 
+      // The screen this action was produced for is gone; the index now names
+      // another. Dropped silently, before dismiss and presented alike — a
+      // stale dismiss popping a fresh screen is the same defect (N8).
+      if (identify && action.screenId !== undefined && identify(stack[index]!) !== action.screenId) {
+        return [state, Effect.none()];
+      }
+
       // Handle dismiss action
       if (presentationAction.type === 'dismiss') {
         // Dismissing a screen pops it and all screens above it
@@ -245,12 +282,14 @@ export function handleStackAction<
           ...stack.slice(index + 1)
         ];
 
-        // Map screen effects to parent actions
+        // Map screen effects to parent actions, carrying the screen's identity
+        // when the caller supplied one.
         const parentEffect = Effect.map(screenEffect, (sa) => ({
-          type: 'stack',
+          type: actionType,
           action: {
             type: 'screen' as const,
             index,
+            ...(identify ? { screenId: identify(newScreenState) } : {}),
             action: { type: 'presented' as const, action: sa }
           }
         } as ParentAction));

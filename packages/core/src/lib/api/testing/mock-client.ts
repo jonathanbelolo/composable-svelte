@@ -3,13 +3,8 @@
 // ============================================================================
 
 import { APIError } from '../errors.js';
-import {
-  getCachedResponse,
-  setCachedResponse,
-  invalidateCacheOnMutation,
-  clearCache as clearCacheStorage,
-  invalidateCache as invalidateCachePattern
-} from '../cache.js';
+import { cacheKeyFor, createResponseCache } from '../cache.js';
+import { requestKey } from '../deduplication.js';
 import type {
   APIClient,
   APIRequest,
@@ -190,11 +185,10 @@ async function resolveMockResponse<T>(
  * - Error simulation ({ error: Error })
  * - 404 for unmatched routes
  *
- * Caching delegates to the same module-level cache `createAPIClient` uses, so
- * behaviour matches production — including the fact that the cache is shared
- * process-wide. Two `createMockAPI` instances therefore see each other's cached
- * GETs, and any mutation evicts matching entries even when `cache` is `false`.
- * Call `clearCache()` between tests that opt into `cache: true`.
+ * Caching uses the same cache implementation `createAPIClient` uses, one
+ * instance per mock, as production has one per client: two `createMockAPI`
+ * instances do not see each other's cached GETs, and nothing has to be cleared
+ * between tests.
  *
  * @example
  * ```typescript
@@ -249,6 +243,9 @@ export function createMockAPI(routes: MockRoutes = {}): APIClient {
    * cache, then request interceptors, then the route, then response
    * interceptors — with error interceptors given the chance to recover.
    */
+  // This mock's own cache, as a real client has its own.
+  const cache = createResponseCache();
+
   async function execute<T>(
     method: HTTPMethod,
     url: string,
@@ -258,7 +255,13 @@ export function createMockAPI(routes: MockRoutes = {}): APIClient {
     // adding caching changes no existing mock's behaviour.
     const cacheConfig = config.cache !== undefined ? config.cache : false;
 
-    const cached = getCachedResponse<T>(method, url, config, cacheConfig);
+    const cacheKey = cacheKeyFor(
+      requestKey({ method, url, params: config.params, headers: config.headers ?? {}, body: config.body }),
+      url,
+      config,
+      cacheConfig
+    );
+    const cached = cache.get<T>(method, cacheKey, cacheConfig);
     if (cached) {
       return cached;
     }
@@ -289,9 +292,9 @@ export function createMockAPI(routes: MockRoutes = {}): APIClient {
       }
 
       if (method === 'GET') {
-        setCachedResponse(method, url, response, config, cacheConfig);
+        cache.set(method, cacheKey, url, response, cacheConfig);
       }
-      invalidateCacheOnMutation(method, url, cacheConfig);
+      cache.invalidateOnMutation(method, url, cacheConfig);
 
       return response;
     } catch (error) {
@@ -348,11 +351,11 @@ export function createMockAPI(routes: MockRoutes = {}): APIClient {
     },
 
     clearCache: () => {
-      clearCacheStorage();
+      cache.clear();
     },
 
     invalidateCache: (pattern: string) => {
-      invalidateCachePattern(pattern);
+      cache.invalidate(pattern);
     }
   };
 }

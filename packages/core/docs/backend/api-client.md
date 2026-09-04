@@ -11,13 +11,14 @@ Comprehensive guide to the HTTP API client for backend integration in Composable
 5. [Request Configuration](#request-configuration)
 6. [Interceptors](#interceptors)
 7. [Retry Logic](#retry-logic)
-8. [Caching](#caching)
-9. [Error Handling](#error-handling)
-10. [Endpoint Helpers](#endpoint-helpers)
-11. [Effect Integration](#effect-integration)
-12. [Testing](#testing)
-13. [Best Practices](#best-practices)
-14. [Advanced Patterns](#advanced-patterns)
+8. [Deduplication](#deduplication)
+9. [Caching](#caching)
+10. [Error Handling](#error-handling)
+11. [Endpoint Helpers](#endpoint-helpers)
+12. [Effect Integration](#effect-integration)
+13. [Testing](#testing)
+14. [Best Practices](#best-practices)
+15. [Advanced Patterns](#advanced-patterns)
 
 ## Overview
 
@@ -92,7 +93,7 @@ const api = createAPIClient({
   // Default timeout (milliseconds)
   timeout: 30000,
 
-  // Enable request deduplication
+  // Coalesce identical concurrent safe requests into one fetch (see Deduplication)
   deduplicate: true,
 
   // Default retry configuration
@@ -319,7 +320,8 @@ const response = await api.get('/search', {
   signal: controller.signal
 });
 
-// Later: cancel request
+// Later: cancel request — this caller rejects with the signal's reason; a
+// concurrent identical request from another caller is unaffected
 controller.abort();
 ```
 
@@ -525,9 +527,59 @@ Attempt 5: 8000 * 2^1 = 16000ms (capped at maxDelay)
 
 Jitter adds randomness (±30%) to prevent thundering herd.
 
+## Deduplication
+
+Identical concurrent requests on one client are coalesced into one fetch, and
+every caller receives the response.
+
+```typescript
+const api = createAPIClient({ baseURL: 'https://api.example.com' });
+
+// One fetch, two callers
+const [a, b] = await Promise.all([api.get('/me'), api.get('/me')]);
+```
+
+**What counts as identical.** The method, the resolved URL (`'me'` and
+`'/me'` are one request), the query parameters in a stable order, the headers
+as they will be sent — the client's defaults merged with the request's, before
+interceptors — and the body. Two clients never coalesce with each other; each
+owns its in-flight map.
+
+**Which methods.** GET, HEAD and OPTIONS, by default. A repeated POST, PUT,
+PATCH or DELETE is two intents and is sent twice; a request opts in with
+`deduplicate: true`.
+
+**Turning it off.** `createAPIClient({ deduplicate: false })` for a client,
+`{ deduplicate: false }` on a request; a request's flag wins.
+
+**Cancelling and timing out.** Every caller has its own promise. A caller's
+`signal` rejects that caller with the signal's reason and detaches it; a
+caller's `timeout` bounds that caller's whole request, retries included, and
+rejects it with `TimeoutError`. The shared fetch is aborted only when every
+caller has gone. Joiners receive their own copy of the response.
+
+```typescript
+// Coalesce a mutation that is safe to repeat
+await Promise.all([
+  api.post('/search', query, { deduplicate: true }),
+  api.post('/search', query, { deduplicate: true })
+]);
+```
+
 ## Caching
 
-In-memory response caching for GET requests.
+In-memory response caching for GET requests, per client. Each `createAPIClient()`
+owns its cache: bounded to `maxEntries` (100 by default) with the least
+recently used entry dropped first, and every hit is a structured clone, so
+editing a response never edits the cache. A response that cannot be cloned
+(a response interceptor attached a function, say) is not cached, and the
+client warns once.
+
+```typescript
+const api = createAPIClient({
+  cache: { ttl: 300000, maxEntries: 500 } // bound this client's cache
+});
+```
 
 ### Default Caching
 
@@ -573,7 +625,13 @@ const response = await api.get('/real-time-data', {
 
 ### Cache Keys
 
-Cache keys are generated from normalized URL + params:
+Each client owns its cache (and its in-flight request map); two clients never
+share an entry. Within a client, the key is the request as it will be sent:
+the method, the resolved URL (base URL joined, so `'x'` and `'/x'` are one
+key), the query parameters in a stable order, and the headers — the client's
+defaults merged with the request's, before interceptors run. A custom
+`cache.key` replaces that key; the entry still remembers the path it was
+requested with, so invalidation by path reaches it.
 
 ```typescript
 // Same cache key
@@ -583,6 +641,7 @@ api.get('/products', { params: { page: 1, sort: 'name' } }); // Same order doesn
 // Different cache keys
 api.get('/products', { params: { page: 1 } });
 api.get('/products', { params: { page: 2 } });
+api.get('/products', { headers: { Authorization: 'Bearer other-user' } }); // different headers
 ```
 
 ### Custom Cache Keys
@@ -602,7 +661,8 @@ const response = await api.get('/products', {
 ### Cache Invalidation
 
 ```typescript
-// Invalidate specific endpoint
+// Invalidate specific endpoint — patterns match the path you passed to get(),
+// including entries stored under a custom `key`
 api.invalidateCache('/products');
 
 // Invalidate pattern (prefix matching)

@@ -1132,8 +1132,8 @@ app.register(fastifySecurityHeaders);
 // Or create custom config
 const headers = createSecurityHeaders({
   contentSecurityPolicy: "default-src 'self'",
-  strictTransportSecurity: 'max-age=31536000; includeSubDomains',
-  xFrameOptions: 'DENY'
+  hsts: { maxAge: 31536000, includeSubDomains: true },
+  frameOptions: 'DENY'
 });
 
 // Default headers available as constant

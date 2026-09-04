@@ -74,7 +74,7 @@ export interface MockWebSocketClient<T = unknown> extends WebSocketClient<T> {
  * ```
  */
 export function createMockWebSocket<T = unknown>(
-  config?: Partial<WebSocketConfig>
+  config?: WebSocketConfig
 ): MockWebSocketClient<T> {
   let state: ConnectionState = {
     status: 'disconnected',
@@ -208,6 +208,27 @@ export function createMockWebSocket<T = unknown>(
     };
   }
 
+  /**
+   * What the live client does on `reconnect()`, in the same order: a
+   * `disconnected` with the reason (not clean), `reconnecting`, and after
+   * the mock's connection delay `connected` and `reconnected`.
+   */
+  function reconnect(reason = 'Reconnect requested'): void {
+    if (!state.url) return;
+    const { url, protocols } = state;
+    const attempt = state.reconnectAttempts + 1;
+    state = { ...state, status: 'reconnecting', reconnectAttempts: attempt, connectedAt: null };
+    simulateEvent({ type: 'disconnected', code: 1000, reason, wasClean: false, timestamp: Date.now() });
+    simulateEvent({ type: 'reconnecting', attempt, delay: 0, maxAttempts: 0, timestamp: Date.now() });
+    setTimeout(() => {
+      if (state.status !== 'reconnecting') return;
+      state = { ...state, status: 'connected', connectedAt: new Date(), reconnectAttempts: 0 };
+      stats.reconnects++;
+      simulateEvent({ type: 'connected', url, protocols, timestamp: Date.now() });
+      simulateEvent({ type: 'reconnected', attempts: attempt, totalDelay: 0, timestamp: Date.now() });
+    }, config?.connectionTimeout || 10);
+  }
+
   function simulateMessage(data: T): void {
     const message: WebSocketMessage<T> = {
       data,
@@ -299,6 +320,7 @@ export function createMockWebSocket<T = unknown>(
   return {
     connect,
     disconnect,
+    reconnect,
     send,
     subscribe,
     subscribeToEvents,

@@ -4,6 +4,7 @@
 
 ### Changed
 
+- Requires `@composable-svelte/core` `^0.12.0` (peer range): core 0.12.0 is a minor release with breaking changes to the navigation DSL's action shape, the API client's dedup/cache, the WebSocket config, `renderToHTML` and `TestStore`; see core's changelog.
 - **An all-whitespace email address now reports "Email is required" on submit**,
   matching what it already said while typing. Core's two validation paths used
   to disagree about which of the two issues to show; both now take the first.

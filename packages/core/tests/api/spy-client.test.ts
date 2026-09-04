@@ -6,7 +6,6 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { createSpyAPI } from '../../src/lib/api/testing/spy-client.js';
 import { createMockAPI, type MockHandler } from '../../src/lib/api/testing/mock-client.js';
 import { APIError } from '../../src/lib/api/errors.js';
-import { clearCache } from '../../src/lib/api/cache.js';
 
 describe('createSpyAPI', () => {
   describe('Call Tracking', () => {
@@ -488,7 +487,6 @@ describe('createSpyAPI', () => {
     });
 
     it('clearCache delegates to the base client', async () => {
-      clearCache();
       let hits = 0;
       const spy = createSpyAPI(createMockAPI({ 'GET /api/count': () => ({ n: (hits += 1) }) }));
 
@@ -500,7 +498,6 @@ describe('createSpyAPI', () => {
     });
 
     it('invalidateCache delegates to the base client', async () => {
-      clearCache();
       let hits = 0;
       const spy = createSpyAPI(createMockAPI({ 'GET /api/items': () => ({ n: (hits += 1) }) }));
 

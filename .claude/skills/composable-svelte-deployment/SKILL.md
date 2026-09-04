@@ -285,11 +285,7 @@ fastifySecurityHeaders(app, {
   ].join('; '),
   frameOptions: 'DENY',
   referrerPolicy: 'strict-origin-when-cross-origin',
-  hsts: {
-    maxAge: 31536000,
-    includeSubDomains: true,
-    preload: true
-  }
+  hsts: { maxAge: 31536000, includeSubDomains: true }
 });
 ```
 

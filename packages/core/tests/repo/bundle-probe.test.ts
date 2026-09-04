@@ -64,13 +64,13 @@ describe('a bundled consumer of the root entry', { timeout: 120_000 }, () => {
 			expect(ATTACHES_WEBSOCKET.test(await bundle(consumer))).toBe(true);
 		});
 
-		it('P1 (pinned defect): drops the Effect.api registration', async () => {
-			// Pinned, not fixed: dist/api/effect-api.js is reached only through a
-			// binding re-export out of modules sideEffects does not list, so an
-			// unused re-export is dropped before the assignment runs. Fails the
-			// moment R1.2 lists the chain; remove it in that commit.
-			// AUDIT-2026-09-03-FINDINGS P1.
-			expect(ATTACHES_API.test(await bundle(consumer))).toBe(false);
+		it('keeps the Effect.api registration', async () => {
+			// dist/api/effect-api.js was reached only through a binding re-export
+			// out of modules sideEffects did not list, so the unused re-export was
+			// dropped before the assignment ran and Effect.api was undefined in
+			// every bundled consumer (AUDIT-2026-09-03-FINDINGS P1). Removing
+			// dist/api/effect-api.js from sideEffects turns this red again.
+			expect(ATTACHES_API.test(await bundle(consumer))).toBe(true);
 		});
 
 		it('keeps the registration when the api binding itself is imported, so the probe can see it', async () => {

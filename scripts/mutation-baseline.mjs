@@ -3,10 +3,11 @@
  * The audit's mutation set, re-run.
  *
  * Seven source mutations survived the suite on 3 September 2026
- * (plans/hardening/AUDIT-2026-09-03-FINDINGS.md, MUTATION RESULTS). Each is
- * applied as an exact literal replacement, the named suite is run, the file
- * is restored from a backup and checked byte-for-byte, and the verdict is
- * printed. A mutation that does not change the file is an error, not a
+ * (plans/hardening/AUDIT-2026-09-03-FINDINGS.md, MUTATION RESULTS), and the
+ * hardening steps add one for each fix a later change could silently undo
+ * (R1.1: the destination effect mapping). Each is applied as an exact
+ * literal replacement, the named suite is run, the file is restored from a
+ * backup and checked byte-for-byte, and the verdict is printed. A mutation that does not change the file is an error, not a
  * verdict (guides/VERIFICATION-PROTOCOL.md rules 1 and 3).
  *
  * A verdict is KILLED only when the test named in `expect` is among the
@@ -96,11 +97,11 @@ const MUTATIONS = [
 	{
 		id: 'M6',
 		file: 'src/lib/websocket/heartbeat.ts',
-		find: "      if (!pongReceived) {\n        console.warn('[WebSocket] Heartbeat timeout - no pong received');\n        client.disconnect(1001, 'Heartbeat timeout').catch(console.error);\n        stop();\n        return;\n      }",
+		find: "      if (!pongReceived) {\n        console.warn('[WebSocket] Heartbeat timeout - no pong received');\n        stop();\n        client.reconnect('Heartbeat timeout');\n        return;\n      }",
 		replace: '      /* mutated: no-pong branch removed */',
 		config: 'browser',
 		suite: 'tests/websocket/heartbeat.test.ts',
-		expect: 'should disconnect if second ping sent without pong from first',
+		expect: 'should reconnect if second ping sent without pong from first',
 		guards: "the heartbeat's missed-pong branch"
 	},
 	{
@@ -122,6 +123,16 @@ const MUTATIONS = [
 		suite: 'tests/routing/query-params.test.ts',
 		expect: 'returns original value if decode fails',
 		guards: 'the query-param decode fallback'
+	},
+	{
+		id: 'R1-N2',
+		file: 'src/lib/navigation/destination.ts',
+		find: '\t\t\tEffectConstructors.map(\n\t\t\t\tchildEffect,\n\t\t\t\t(childResult) => ({ type: caseType, action: childResult }) as DestinationAction<Reducers>\n\t\t\t)',
+		replace: '\t\t\tchildEffect',
+		config: 'browser',
+		suite: 'tests/navigation/destination.test.ts',
+		expect: 'maps the child effect back into the case',
+		guards: "createDestination maps the child's effect into its case (N2)"
 	}
 ];
 
@@ -184,7 +195,7 @@ function runSuite(suite, config) {
 // ---------------------------------------------------------------------------
 // 1. The baseline: every suite green before anything is mutated.
 
-console.log('Baseline: running the seven suites unmutated…');
+console.log('Baseline: running every suite unmutated…');
 const suites = [...new Set(MUTATIONS.map((m) => `${m.config}:${m.suite}`))];
 const redBaseline = [];
 for (const entry of suites) {

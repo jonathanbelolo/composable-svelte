@@ -17,7 +17,9 @@ export type SafeHTTPMethod = 'GET' | 'HEAD' | 'OPTIONS' | 'PUT' | 'DELETE';
  */
 export interface RequestConfig {
   /**
-   * Request timeout in milliseconds.
+   * This caller's bound on the whole request, retries included, in
+   * milliseconds; rejects with `TimeoutError`. Another caller sharing the same
+   * in-flight request keeps its own bound.
    * @default 30000 (30 seconds)
    */
   timeout?: number;
@@ -44,9 +46,11 @@ export interface RequestConfig {
   signal?: AbortSignal;
 
   /**
-   * Enable request deduplication.
-   * If true, duplicate in-flight requests will be coalesced.
-   * @default true
+   * Coalesce this request with an identical one already in flight on this
+   * client. `true` opts in regardless of method — the only way a POST, PUT,
+   * PATCH or DELETE is coalesced; `false` opts out; unset follows the client's
+   * `deduplicate` for GET, HEAD and OPTIONS.
+   * @default the client's setting, for safe methods
    */
   deduplicate?: boolean;
 
@@ -116,8 +120,9 @@ export interface CacheConfig {
   ttl?: number;
 
   /**
-   * Custom cache key generator.
-   * If not provided, uses normalized URL + params.
+   * Custom cache key generator, replacing the request key (method, resolved
+   * URL, query parameters, merged headers). The entry still remembers the
+   * path it was requested with, so `invalidateCache('/path')` reaches it.
    */
   key?: (url: string, config: RequestConfig) => string;
 
@@ -132,6 +137,20 @@ export interface CacheConfig {
    * Supports exact matches and prefix matching (ending with *).
    */
   invalidates?: string[];
+}
+
+/**
+ * Cache configuration for a client: everything a request can set, plus the
+ * bound on the client's cache. `maxEntries` is not a per-request option, so
+ * it is not on `CacheConfig` — a request that set it would be silently
+ * ignored, and the type says so instead.
+ */
+export interface ClientCacheConfig extends CacheConfig {
+  /**
+   * Entries the client's cache holds before the least recently used is dropped.
+   * @default 100
+   */
+  maxEntries?: number | undefined;
 }
 
 /**
@@ -322,12 +341,13 @@ export interface APIClientConfig {
   retry?: boolean | RetryConfig;
 
   /**
-   * Default cache configuration.
+   * Default cache configuration, and the bound on this client's cache.
    */
-  cache?: boolean | CacheConfig;
+  cache?: boolean | ClientCacheConfig;
 
   /**
-   * Enable request deduplication by default.
+   * Coalesce identical concurrent safe requests (GET, HEAD, OPTIONS) into one
+   * fetch by default. A request's own `deduplicate` overrides this.
    * @default true
    */
   deduplicate?: boolean;

@@ -5,8 +5,8 @@
  * and creates properly-wrapped dispatch functions.
  */
 
-import { describe, it, expect, vi } from 'vitest';
-import { scopeTo } from '../../src/lib/navigation/scope.js';
+import { describe, it, expect, expectTypeOf, vi } from 'vitest';
+import { scopeTo, type ScopedStore } from '../../src/lib/navigation/scope.js';
 import type { Store } from '../../src/lib/types.js';
 import type { PresentationAction } from '../../src/lib/navigation/types.js';
 
@@ -37,8 +37,8 @@ type DestinationState =
 	| { type: 'editItem'; state: EditItemState };
 
 type DestinationAction =
-	| { type: 'addItem'; action: PresentationAction<AddItemAction> }
-	| { type: 'editItem'; action: PresentationAction<EditItemAction> };
+	| { type: 'addItem'; action: AddItemAction }
+	| { type: 'editItem'; action: EditItemAction };
 
 // Parent state and actions
 interface ParentState {
@@ -221,13 +221,10 @@ describe('scopeTo()', () => {
 			// Call dismiss
 			scopedStore?.dismiss();
 
-			// Verify dismiss action - should wrap with case type
+			// The field's PresentationAction; the case is not named (N1).
 			expect(store.dispatch).toHaveBeenCalledWith({
 				type: 'destination',
-				action: {
-					type: 'addItem',
-					action: { type: 'dismiss' }
-				}
+				action: { type: 'dismiss' }
 			});
 		});
 	});
@@ -461,7 +458,7 @@ describe('scopeTo()', () => {
 	});
 
 	describe('dismiss() behavior', () => {
-		it('wraps dismiss with case type for enum destinations', () => {
+		it('dismiss is the field\'s PresentationAction; the case is not named', () => {
 			const store = {
 				state: {
 					destination: { type: 'addItem', state: { name: 'Test' } }
@@ -474,13 +471,11 @@ describe('scopeTo()', () => {
 			expect(scopedStore).not.toBeNull();
 			scopedStore!.dismiss();
 
-			// Should wrap: { type: 'dismiss' } -> { type: 'addItem', action: dismiss } -> { type: 'destination', action: ... }
+			// { type: 'dismiss' } -> { type: 'destination', action: dismiss }; a
+			// case-wrapped dismiss is what ifLetPresentation ignores.
 			expect(store.dispatch).toHaveBeenCalledWith({
 				type: 'destination',
-				action: {
-					type: 'addItem',
-					action: { type: 'dismiss' }
-				}
+				action: { type: 'dismiss' }
 			});
 		});
 
@@ -504,7 +499,7 @@ describe('scopeTo()', () => {
 			});
 		});
 
-		it('wraps dismiss through nested paths with case type', () => {
+		it('wraps dismiss through nested paths, without the case', () => {
 			interface NestedState {
 				outer: {
 					inner: { type: 'caseA'; state: { value: string } } | null;
@@ -530,12 +525,50 @@ describe('scopeTo()', () => {
 				type: 'outer',
 				action: {
 					type: 'inner',
-					action: {
-						type: 'caseA',
-						action: { type: 'dismiss' }
-					}
+					action: { type: 'dismiss' }
 				}
 			});
 		});
 	});
 });
+
+describe('types (P5)', () => {
+	// `.case()` and `.optional()` returned `ScopedStore<any, any>`, so a typo in
+	// the case name or a foreign action compiled. The child action is now the
+	// runtime wrapping read backwards from the root action union.
+	it('case() and optional() return typed stores', () => {
+		const store = createMockStore({
+			count: 0,
+			destination: { type: 'addItem', state: { name: 'Test', quantity: 1 } },
+			modal: { name: 'm', quantity: 0 }
+		});
+
+		const addItem = scopeTo(store).into('destination').case('addItem');
+		expectTypeOf(addItem).toEqualTypeOf<ScopedStore<AddItemState, AddItemAction> | null>();
+
+		const modal = scopeTo(store).into('modal').optional();
+		expectTypeOf(modal).toEqualTypeOf<ScopedStore<AddItemState, AddItemAction> | null>();
+
+		// @ts-expect-error — not a case of the destination union
+		scopeTo(store).into('destination').case('typo');
+		// @ts-expect-error — not an AddItem action
+		addItem?.dispatch({ type: 'bogus' });
+
+		expect(addItem).not.toBeNull();
+		expect(modal).not.toBeNull();
+	});
+
+	it('a root store typed with any dispatches anything', () => {
+		const loose = createMockStore({
+			count: 0,
+			destination: { type: 'addItem', state: { name: 'Test', quantity: 1 } },
+			modal: null
+		}) as unknown as Store<ParentState, any>;
+
+		const scoped = scopeTo(loose).into('destination').case('addItem');
+		scoped?.dispatch({ type: 'anything at all' });
+
+		expect(loose.dispatch).toHaveBeenCalledTimes(1);
+	});
+});
+

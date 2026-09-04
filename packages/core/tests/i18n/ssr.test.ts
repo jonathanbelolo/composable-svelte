@@ -175,6 +175,29 @@ describe('generateAlternateLinks', () => {
     expect(links).toContain('href="https://example.com/products?lang=en"');
     expect(links).toContain('href="https://example.com/products?lang=pt-BR"');
   });
+
+  it('a hostile path, locale or base URL cannot leave its attribute (SS5)', () => {
+    // Each value interpolated raw; the JSDoc fed the request path through
+    // {@html} — reflected XSS from the URL.
+    const links = generateAlternateLinks(
+      '/p"><script>alert(1)</script>',
+      ['en" onload="alert(1)', 'pt-BR'],
+      'https://x.example"'
+    );
+
+    expect(links).not.toContain('"><script');
+    expect(links).not.toContain('" onload=');
+    // Every link parses as one element with exactly two quoted attribute
+    // values, none of which contains a raw quote or angle bracket.
+    const elements = links.split('\n');
+    expect(elements).toHaveLength(2);
+    for (const element of elements) {
+      const match = /^<link rel="alternate" hreflang="([^"<>]*)" href="([^"<>]*)" \/>$/.exec(element);
+      expect(match, element).not.toBeNull();
+    }
+    expect(elements[0]).toContain('hreflang="en&quot; onload=&quot;alert(1)"');
+    expect(elements[0]).toContain('href="https://x.example&quot;/p%22%3E%3Cscript%3Ealert(1)%3C/script%3E?lang=en%22%20onload%3D%22alert(1)"');
+  });
 });
 
 describe('extractLocaleFromPath', () => {

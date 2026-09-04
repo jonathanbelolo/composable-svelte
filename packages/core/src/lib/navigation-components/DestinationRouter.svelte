@@ -102,7 +102,9 @@
 
 		// Create scoped stores for all routes
 		for (const key of Object.keys(routes)) {
-			result[key] = scopeTo(store).into(field).case(key);
+			// String-keyed by design: the route table is a Record, so the case
+			// name cannot be checked against the union here.
+			result[key] = scopeTo(store).into(field).case(key as never);
 		}
 
 		return result;

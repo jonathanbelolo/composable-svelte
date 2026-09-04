@@ -215,7 +215,9 @@ interface ProductDetailState {
 }
 ```
 
-**Reducer Helper**:
+**Reducer Helper** (`createDestinationReducer` is deprecated in favour of
+`createDestination`, which routes by the action's case and maps each child's
+effect back into it; the older form is shown because existing code uses it):
 
 ```typescript
 import { createDestinationReducer } from '@composable-svelte/core/navigation';
@@ -308,9 +310,11 @@ const wizardReducer: Reducer<WizardState, WizardAction, WizardDeps> = (state, ac
 
     case 'stack':
       // Handle stack actions (screen dispatched action)
-      // (state, action, deps, screenReducer, getStack, setStack) — the deps come
-  // before the reducer, and the last two say how the stack is read from and
-  // written back into the parent state.
+      // (state, action, deps, screenReducer, getStack, setStack, options?) — the
+  // deps come before the reducer, the next two say how the stack is read from
+  // and written back into the parent state, and the optional last one names
+  // the parent action type (default 'stack') and a screen identity so a late
+  // effect result for a screen that left is dropped.
   return handleStackAction(
         state,
         action,

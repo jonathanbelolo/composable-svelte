@@ -8,22 +8,29 @@
  * - etc.
  */
 
+/**
+ * Every field is optional and merges over `defaultSecurityHeaders`: name only
+ * what you change. `false` (or `undefined`) for a field drops that header.
+ * `X-Content-Type-Options: nosniff` and `X-XSS-Protection` are always set.
+ */
 export interface SecurityHeadersConfig {
   /** Content Security Policy directive */
-  contentSecurityPolicy?: string | false;
+  contentSecurityPolicy?: string | false | undefined;
 
   /** X-Frame-Options value (DENY, SAMEORIGIN, or ALLOW-FROM) */
-  frameOptions?: 'DENY' | 'SAMEORIGIN' | string;
+  frameOptions?: 'DENY' | 'SAMEORIGIN' | string | false | undefined;
 
   /** Referrer policy */
-  referrerPolicy?: string;
+  referrerPolicy?: string | false | undefined;
 
   /** Enable HSTS (HTTP Strict Transport Security) */
-  hsts?: boolean | { maxAge: number; includeSubDomains?: boolean };
+  hsts?: boolean | { maxAge: number; includeSubDomains?: boolean | undefined } | undefined;
 
   /** Custom headers to add */
-  customHeaders?: Record<string, string>;
+  customHeaders?: Record<string, string> | undefined;
 }
+
+import { installsOnParent } from './plugin.js';
 
 export const defaultSecurityHeaders: SecurityHeadersConfig = {
   contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'",
@@ -35,10 +42,16 @@ export const defaultSecurityHeaders: SecurityHeadersConfig = {
 /**
  * Generate security headers object.
  * Works with any Node.js framework (Express, Fastify, etc.)
+ *
+ * The config merges over `defaultSecurityHeaders`. The first form used the
+ * defaults only when the argument was absent, so `{}` — which is what
+ * Fastify passes to a plugin registered without options — produced two
+ * headers and no CSP, frame or HSTS policy (AUDIT-2026-09-03-FINDINGS SS3).
  */
 export function createSecurityHeaders(
-  config: SecurityHeadersConfig = defaultSecurityHeaders
+  options: SecurityHeadersConfig = {}
 ): Record<string, string> {
+  const config: SecurityHeadersConfig = { ...defaultSecurityHeaders, ...options };
   const headers: Record<string, string> = {
     'X-Content-Type-Options': 'nosniff',
     'X-XSS-Protection': '1; mode=block',
@@ -73,11 +86,16 @@ export function createSecurityHeaders(
 
 /**
  * Fastify plugin for security headers.
+ *
+ * `app.register(fastifySecurityHeaders, options)` installs the headers on the
+ * registering instance's routes (the plugin carries Fastify's skip-override
+ * marker); `fastifySecurityHeaders(app, options)` does the same directly —
+ * the hook is added before the returned promise settles.
  */
-export function fastifySecurityHeaders(
+export const fastifySecurityHeaders = installsOnParent(async function fastifySecurityHeaders(
   fastify: any,
-  options: SecurityHeadersConfig = defaultSecurityHeaders
-) {
+  options: SecurityHeadersConfig = {}
+): Promise<void> {
   const headers = createSecurityHeaders(options);
 
   fastify.addHook('onRequest', async (request: any, reply: any) => {
@@ -85,4 +103,4 @@ export function fastifySecurityHeaders(
       reply.header(key, value);
     });
   });
-}
+});

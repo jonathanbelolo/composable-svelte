@@ -185,6 +185,22 @@ t('gender', { gender: 'female' }) // "She replied"
 t('gender', { gender: 'other' })  // "They replied"
 ```
 
+### Malformed messages
+
+A message that does not parse is reported once with `console.error` at
+compile time and renders as its raw text. The failure is cached with the
+compiled messages, so a component that renders it does not re-parse and
+re-report it on every render; `clearICUCache()` clears it with the rest, and
+`getICUCacheStats()` counts it under `failures`.
+
+```typescript
+import { compileICU, getICUCacheStats } from '@composable-svelte/core/i18n';
+
+const format = compileICU('{count, plural, one {# item}', 'en'); // logs once
+format({ count: 1 }); // "{count, plural, one {# item}" — the raw text
+getICUCacheStats();   // { size: 0, failures: 1 }
+```
+
 ## Locale Switching
 
 ### Add Locale Switcher

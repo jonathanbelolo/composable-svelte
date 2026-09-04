@@ -8,16 +8,14 @@
  * file, nothing in `tests/api/` imported `client.ts` at all
  * (`plans/hardening/AUDIT-2026-09-03-FINDINGS.md`, STRUCTURAL).
  *
- * Deduplication and the response cache are module-global, so `scriptFetch`
- * registers its own `onTestFinished`: it restores `fetch` and clears both, and
- * a file that forgets an `afterEach` cannot leak one test's in-flight request
- * or cached body into the next. Called twice in one test, the restores unwind
- * in reverse order, back to the native `fetch`.
+ * `scriptFetch` registers its own `onTestFinished` to restore `fetch`, so a
+ * file that forgets an `afterEach` cannot leak the scripted fetch into the
+ * next test. Called twice in one test, the restores unwind in reverse order,
+ * back to the native `fetch`. Each client owns its in-flight map and cache
+ * (R1.3), so there is nothing else to clear.
  */
 
 import { onTestFinished } from 'vitest';
-import { clearCache } from '../../src/lib/api/cache.js';
-import { clearInFlightRequests } from '../../src/lib/api/deduplication.js';
 
 export interface ScriptedRoute {
 	/** A substring of the URL, or a pattern over it. First match wins. */
@@ -84,8 +82,6 @@ export function scriptFetch(routes: ScriptedRoute[]): ScriptedFetch {
 	};
 	onTestFinished(() => {
 		scripted.restore();
-		clearInFlightRequests();
-		clearCache();
 	});
 	return scripted;
 }

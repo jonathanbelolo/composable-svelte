@@ -54,3 +54,49 @@ Times are local to the machine, 4 September 2026.
 
 The commit that adds this directory cannot carry its own log; its gate is
 recorded in its message.
+
+## R1
+
+R1's commits land test and fix together; the test's red run at the tree
+before the fix is kept as `red-R1.x.y.log`, and the gate as `gate-R1.x.y.log`.
+
+| Log | Commit | What it shows |
+|---|---|---|
+| red-R1.1.b.log | R1.1.b (with c) | `tests/navigation/dsl-end-to-end.test.ts` at `6cd4801`: five of six red — a child dispatched through `scopeTo().case()` throws on `undefined.type`, `.dismiss()` leaves the field set; the `.optional()` control passes |
+| gate-R1.1.b.log | R1.1.b (with c) | core gate at that tree: 2200 browser + 583 node, 0 skipped, check clean. The first run failed `dist-freshness` for five satellites because switching to the old main and back had rewritten their sources; `pnpm -r build` and a re-run, both logged |
+| gate-R1.1.d.log | R1.1.d | core gate: 2204 browser + 583 node, 0 skipped, check clean |
+| gate-R1.1.e.log | R1.1.e | core gate: 2208 browser + 583 node, 0 skipped, check clean; product-gallery's tests (39) and check run separately, green |
+| gate-R1.1.f.log | R1.1.f | core gate: 2210 browser + 583 node, 0 skipped, check clean; the type-level proof is svelte-check going red (3 errors in scope.test.ts) with the returns reverted to `any` |
+| baseline-R1.1.g.out | R1.1.g | `node scripts/mutation-baseline.mjs --strict` with the new `R1-N2` entry: baseline green, 8/8 KILLED by name, exit 0 |
+| gate-R1.1.g.log | R1.1.g | core gate: 2210 browser + 583 node, 0 skipped, check clean |
+| gate-R1.2.log | R1.2 | core gate: 2210 browser + 583 node, 0 skipped, check clean; the two P1 pins replaced by positive assertions, and removing `dist/api/effect-api.js` from sideEffects turns both red |
+| gate-R1.3.b.log | R1.3.b | core gate: 2212 browser + 583 node, 0 skipped, check clean. The first run failed `optional-props` on a bare optional in the new `RequestIdentity` type; fixed and re-run |
+| gate-R1.3.c.log | R1.3.c | core gate: 2213 browser + 583 node, 0 skipped, check clean |
+| gate-R1.3.d.log | R1.3.d | core gate: 2214 browser + 583 node, 0 skipped, check clean |
+| gate-R1.3.e.log | R1.3.e | core gate: 2218 browser + 583 node, 0 skipped, check clean. The first run failed svelte-check on a type in the new test's interceptor fixture; fixed and re-run |
+| gate-R1.3.f.log | R1.3.f | core gate: 2223 browser + 583 node, 0 skipped, check clean. The first run had every test green but one unhandled rejection from a test that aborted a caller before attaching its expectation; the test was reordered and the gate re-run |
+| gate-R1.4.bc.log | R1.4.b+c | core gate: 2224 browser + 583 node, 0 skipped, check clean |
+| gate-R1.4.d.log | R1.4.d | core gate: 2227 browser (125 files, the new effect-websocket suite) + 583 node, 0 skipped, check clean |
+| gate-R1.4.e.log | R1.4.e | core gate: 2239 browser + 583 node, 0 skipped, check clean (a first run failed check on the new test's untyped helper parameter; fixed, re-run) |
+| gate-R1.4.f.log | R1.4.f | core gate: 2242 browser + 583 node, 0 skipped, check clean |
+| mutation-baseline-R1.4.f.log | R1.4.f | `node scripts/mutation-baseline.mjs` after M6 was re-anchored on the reconnect: 8 of 8 KILLED (M1, M2, M4, M5, M6, M7, M9, R1-N2) |
+| red-R1.4.g.log | R1.4.g | `doc-typecheck` after the docs and types were fixed but before the four DA-H12 `REGISTER` entries were deleted: the staleness arm fails naming them |
+| gate-R1.4.g.log | R1.4.g | core gate: 2242 browser + 583 node, 0 skipped, check clean (a first run failed the optional-props ratchet, which asks for its count to follow the six bare optionals fixed; lowered 311 → 305, re-run) |
+| gate-R1.4.h.log | R1.4.h | core gate: 2246 browser + 583 node, 0 skipped, check clean |
+| red-R1.5.b.log | R1.5.b | `tests/i18n/icu.test.ts` with the two I9 tests added and the source untouched: a malformed message logged three times, not once |
+| proof-R1.5.a.log | R1.5.a | a plural rendered by core's dist under plain Node through the example's vite-built server bundle; the `tsx` dev path the plan named cannot start (P13) |
+| gate-R1.5.log | R1.5 | core gate: 2248 browser + 583 node, 0 skipped, check clean |
+| red-R1.6.a.log | R1.6.a | the new real-Fastify suite before the skip-override marker: the three `register` tests fail (no header, no 429 on a root route), the direct-call control passes |
+| gate-R1.6.a.log | R1.6.a | core gate: 2248 browser + 587 node (the new `tests/ssr/middleware-fastify.test.ts`), 0 skipped, check clean |
+| gate-R1.6.b.log | R1.6.b | core gate: 2248 browser + 596 node, 0 skipped, check clean (a first run failed the optional-props ratchet, 305 → 297, and two test typings against Fastify's `register` overloads; fixed, re-run) |
+| gate-R1.6.c.log | R1.6.c | core gate: 2248 browser + 600 node, 0 skipped, check clean |
+| gate-R1.7.a.log | R1.7.a | core gate: 2248 browser + 607 node (seven SSG tests and the new `tests/ssr/ssg-fs.test.ts`), 0 skipped, check clean |
+| gate-R1.7.bc.log | R1.7.b+c | core gate: 2248 browser + 609 node, 0 skipped, check clean |
+| gate-R1.7.d.log | R1.7.d | core gate: 2248 browser + 611 node, 0 skipped, check clean |
+| gate-R1.8.a.log | R1.8.a | core gate: 2256 browser + 611 node, 0 skipped, check clean (a first run failed check on an `it.each` fixture whose executor type inferred as unknown; typed, re-run) |
+| gate-R1.8.b.log | R1.8.b | core gate: 2258 browser + 611 node, 0 skipped, check clean (a first run was killed: an existing destroy test's dispatch-after-destroy now warns and had to declare it) |
+| red-R1.9.0.log | R1.9.0 | the shadow measurement before TestStore's semantics change: per-file counts of out-of-order receives (9), leftovers at send (7), immediate debounces (17) and send-assertions after a synchronous dispatch (27) across core and auth; nothing in flight at finish anywhere; chat and graphics clean |
+| gate-R1.9.ace.log | R1.9.a+c+e | core gate: 2267 browser + 611 node, 0 skipped, check clean; auth's suites (537 + 30) green against the rebuilt dist |
+| gate-R1.9.bd.log | R1.9.b+d | core gate: 2279 browser + 611 node, 0 skipped, check clean |
+| gate-R1-exit.log | R1 exit | whole-repository gate at `95a7a3b`: `pnpm -r build && pnpm -r typecheck && pnpm -r --workspace-concurrency=1 test && pnpm -r check` — 4,851 tests passed, 0 skipped; svelte-check clean in all 20 workspaces |
+| mutation-baseline-R1-exit.log | R1 exit | `node scripts/mutation-baseline.mjs --strict` at `95a7a3b`: 8 of 8 KILLED, exit 0 |

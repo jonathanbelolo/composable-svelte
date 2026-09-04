@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Requires `@composable-svelte/core` `^0.12.0` (peer range): core 0.12.0 is a minor release with breaking changes to the navigation DSL's action shape, the API client's dedup/cache, the WebSocket config, `renderToHTML` and `TestStore`; see core's changelog.
 - **Components follow core's theme.** The one hardcoded colour left in
   `ChartPrimitive` now reads `hsl(var(--muted-foreground, …))`, so it moves with
   the rest of the UI when a consumer overrides the token. Data-series palettes

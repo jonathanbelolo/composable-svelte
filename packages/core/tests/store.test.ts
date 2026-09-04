@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { expectConsole } from './helpers/console.js';
 import { createStore } from '../src/lib/store.svelte';
 import { Effect } from '../src/lib/effect';
-import type { Reducer } from '../src/lib/types';
+import type { Effect as EffectType, Reducer } from '../src/lib/types';
 
 interface TestState {
   count: number;
@@ -411,6 +412,8 @@ describe('createStore', () => {
   });
 
   it('destroy() aborts the in-flight cancellable, runs subscription cleanups and clears timers', () => {
+    // The dispatch after destroy() at the end is a warned no-op since R1.8.b.
+    expectConsole('warn');
     // The old form asserted only that a state subscriber stopped being called.
     // Everything destroy() claims to do — abort, cleanup, timers — went
     // unasserted, and the audit's mutation M2 (delete the abort loop) survived.
@@ -467,41 +470,133 @@ describe('createStore', () => {
     expect(debounced).not.toHaveBeenCalled();
     expect(throttled).toHaveBeenCalledTimes(1);
 
-    // Subscribers are cleared: a later dispatch reaches neither.
+    // Subscribers are cleared, and dispatch is a warned no-op: a later
+    // dispatch reaches neither.
     store.dispatch({ type: 'setCount', value: 1 });
     expect(listener).toHaveBeenCalledTimes(1); // the immediate call from subscribe()
     expect(actionListener).not.toHaveBeenCalledWith({ type: 'setCount', value: 1 }, expect.anything());
   });
 
-  it('N7 (pinned defect): an AfterDelay scheduled before destroy() still fires into the destroyed store', () => {
-    // Pinned, not fixed: destroy() tracks cancellables, subscriptions, debounce
-    // and throttle timers, but not AfterDelay timers or in-flight Run
-    // executors, and dispatch() stays live after destroy(). This test asserts
-    // the defective behaviour so it fails the moment R1.8 fixes it, and must be
-    // removed in that commit. AUDIT-2026-09-03-FINDINGS.md N7.
-    const late = vi.fn();
-    const reducer: Reducer<TestState, TestAction> = (state, action) => {
-      if (action.type === 'startLoading') {
-        return [
-          state,
-          Effect.afterDelay(100, (dispatch) => {
-            dispatch({ type: 'loadComplete', value: 1 });
-          })
-        ];
-      }
-      if (action.type === 'loadComplete') {
-        late();
-        return [{ ...state, count: action.value }, Effect.none()];
-      }
-      return [state, Effect.none()];
+  describe('destroy() stops the store (N7)', () => {
+    // destroy() tracked cancellables, subscriptions, debounce and throttle
+    // timers — not AfterDelay timers or executors in flight — and dispatch()
+    // stayed live, so a delayed action reduced state in a destroyed store.
+    it('an AfterDelay scheduled before destroy() never fires', () => {
+      const late = vi.fn();
+      const reducer: Reducer<TestState, TestAction> = (state, action) => {
+        if (action.type === 'startLoading') {
+          return [state, Effect.afterDelay(100, (dispatch) => dispatch({ type: 'loadComplete', value: 1 }))];
+        }
+        if (action.type === 'loadComplete') {
+          late();
+          return [{ ...state, count: action.value }, Effect.none()];
+        }
+        return [state, Effect.none()];
+      };
+      const store = createStore({ initialState, reducer });
+      store.dispatch({ type: 'startLoading' });
+      store.destroy();
+
+      vi.advanceTimersByTime(1000);
+      expect(late).not.toHaveBeenCalled();
+      expect(store.state.count).toBe(0);
+    });
+
+    it('dispatch after destroy() leaves the state unchanged and warns once', () => {
+      expectConsole('warn');
+      const reducer: Reducer<TestState, TestAction> = (state, action) =>
+        action.type === 'increment' ? [{ ...state, count: state.count + 1 }, Effect.none()] : [state, Effect.none()];
+      const store = createStore({ initialState, reducer });
+      store.dispatch({ type: 'increment' });
+      store.destroy();
+
+      store.dispatch({ type: 'increment' });
+      expect(store.state.count).toBe(1);
+      expect(store.history).toHaveLength(1);
+    });
+
+    it('a Run in flight sees its signal aborted by destroy()', () => {
+      let captured: AbortSignal | undefined;
+      const reducer: Reducer<TestState, TestAction> = (state, action) => {
+        if (action.type === 'startLoading') {
+          return [state, Effect.run(async (_dispatch, signal) => { captured = signal; await new Promise(() => {}); })];
+        }
+        return [state, Effect.none()];
+      };
+      const store = createStore({ initialState, reducer });
+      store.dispatch({ type: 'startLoading' });
+      expect(captured?.aborted).toBe(false);
+
+      store.destroy();
+      expect(captured?.aborted).toBe(true);
+    });
+  });
+
+  describe('a synchronous throw in an effect body is logged, never thrown (N3)', () => {
+    // Promise.resolve(execute()).catch() handles a rejection, not a body that
+    // throws before returning: that escaped dispatch() into the caller's event
+    // handler, skipped the rest of a Batch, and inside a timer was an uncaught
+    // exception — while the same executor mapped through scope() was caught.
+    const throwing = () => {
+      throw new Error('boom');
     };
-    const store = createStore({ initialState, reducer });
-    store.dispatch({ type: 'startLoading' });
-    store.destroy();
+    function storeRunning(effect: (state: TestState) => ReturnType<Reducer<TestState, TestAction>>[1]) {
+      const reducer: Reducer<TestState, TestAction> = (state, action) => {
+        if (action.type === 'startLoading') return [state, effect(state)];
+        if (action.type === 'loadComplete') return [{ ...state, count: action.value }, Effect.none()];
+        return [state, Effect.none()];
+      };
+      return createStore({ initialState, reducer });
+    }
 
-    vi.advanceTimersByTime(100);
+    it('Run: dispatch() does not throw, and the error is logged once', () => {
+      expectConsole('error');
+      const store = storeRunning(() => Effect.run(throwing));
+      expect(() => store.dispatch({ type: 'startLoading' })).not.toThrow();
+    });
 
-    expect(late).toHaveBeenCalledTimes(1);
-    expect(store.state.count).toBe(1);
+    it('Batch: a throwing first member does not skip the second', () => {
+      expectConsole('error');
+      const store = storeRunning(() =>
+        Effect.batch(
+          Effect.run(throwing),
+          Effect.run((dispatch) => dispatch({ type: 'loadComplete', value: 7 }))
+        )
+      );
+      store.dispatch({ type: 'startLoading' });
+      expect(store.state.count).toBe(7);
+    });
+
+    it('Cancellable: the throw is logged and the id is released', () => {
+      expectConsole('error');
+      const store = storeRunning(() => Effect.cancellable('x', throwing));
+      expect(() => store.dispatch({ type: 'startLoading' })).not.toThrow();
+    });
+
+    it('FireAndForget: the throw is logged, not thrown', () => {
+      expectConsole('error');
+      const store = storeRunning(() => Effect.fireAndForget(throwing));
+      expect(() => store.dispatch({ type: 'startLoading' })).not.toThrow();
+    });
+
+    it.each<[string, () => EffectType<TestAction>]>([
+      ['Debounced', () => Effect.debounced('d', 50, throwing)],
+      ['Throttled (trailing)', () => Effect.throttled('t', 50, throwing)],
+      ['AfterDelay', () => Effect.afterDelay(50, throwing)]
+    ])('%s: a throw inside the timer callback is logged, not uncaught', (_name, make) => {
+      expectConsole('error');
+      const store = storeRunning(make);
+      store.dispatch({ type: 'startLoading' });
+      // A synchronous throw inside a timer callback surfaces here, out of the
+      // fake clock, as an uncaught exception would in a browser.
+      expect(() => vi.advanceTimersByTime(60)).not.toThrow();
+    });
+
+    it('Throttled (leading): the immediate call is guarded too', () => {
+      expectConsole('error');
+      const store = storeRunning(() => Effect.throttled('lead', 50, throwing));
+      expect(() => store.dispatch({ type: 'startLoading' })).not.toThrow();
+    });
   });
 });
+
