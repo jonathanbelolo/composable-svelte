@@ -12,7 +12,7 @@ import {
 	ScriptedWebSocket,
 	installScriptedWebSocket
 } from '../helpers/scripted-websocket.js';
-import { WS_ERROR_CODES, type WebSocketEvent } from '../../src/lib/websocket/types.js';
+import { WS_ERROR_CODES, type ReconnectConfig, type WebSocketEvent } from '../../src/lib/websocket/types.js';
 
 
 beforeEach(() => {
@@ -163,6 +163,62 @@ describe('createLiveWebSocket over a scripted socket', () => {
 
 			await rejected;
 			expect(client.state.status).toBe('disconnected');
+		});
+	});
+
+	describe('which closes reconnect (W3, W8)', () => {
+		const ladder = { enabled: true, maxAttempts: 3, initialDelay: 100, maxDelay: 1000, backoffMultiplier: 2, jitter: false };
+
+		async function connectedWith(reconnect: ReconnectConfig = ladder) {
+			const client = createLiveWebSocket({ reconnect });
+			const events: WebSocketEvent[] = [];
+			client.subscribeToEvents((event) => events.push(event));
+			const connecting = client.connect('wss://x.example');
+			ScriptedWebSocket.instances[0]!.open();
+			await connecting;
+			return { client, events };
+		}
+
+		it.each([1001, 1006, 1011, 1012, 1013, 1014])('a server close with code %i reconnects, clean or not', async (code) => {
+			// Keyed on wasClean, a server going away or restarting — a clean
+			// close frame — never reconnected.
+			const { client } = await connectedWith();
+			ScriptedWebSocket.instances[0]!.closed(code, true, 'server');
+			expect(client.state.status).toBe('reconnecting');
+		});
+
+		it.each([1000, 1005, 1008, 4000])('a close with code %i does not reconnect', async (code) => {
+			const { client, events } = await connectedWith();
+			ScriptedWebSocket.instances[0]!.closed(code, true);
+			expect(client.state.status).toBe('disconnected');
+			expect(events.some((e) => e.type === 'reconnecting')).toBe(false);
+			await vi.advanceTimersByTimeAsync(10_000);
+			expect(ScriptedWebSocket.instances).toHaveLength(1);
+		});
+
+		it('shouldReconnect overrides the table', async () => {
+			const { client } = await connectedWith({ ...ladder, shouldReconnect: (e) => e.code === 4000 });
+			ScriptedWebSocket.instances[0]!.closed(4000, true);
+			expect(client.state.status).toBe('reconnecting');
+
+			const other = createLiveWebSocket({ reconnect: { ...ladder, shouldReconnect: (e) => e.code === 4000 } });
+			const connecting = other.connect('wss://y.example');
+			ScriptedWebSocket.instances.at(-1)!.open();
+			await connecting;
+			ScriptedWebSocket.instances.at(-1)!.closed(1006, false);
+			expect(other.state.status).toBe('disconnected');
+		});
+
+		it('an error on an established socket does not suppress the reconnect its close would start', async () => {
+			// onerror set status 'failed', so the close that followed found no
+			// 'connected' to reconnect from.
+			const { client, events } = await connectedWith();
+			ScriptedWebSocket.instances[0]!.error();
+			expect(client.state.status).toBe('connected');
+			expect(events.at(-1)?.type).toBe('error');
+
+			ScriptedWebSocket.instances[0]!.closed(1006, false);
+			expect(client.state.status).toBe('reconnecting');
 		});
 	});
 });

@@ -382,7 +382,8 @@ established and then dropped.
 
 ### What happens
 
-1. The established socket closes unexpectedly (`wasClean: false`).
+1. The established socket closes with a code that says the loss is
+   transient — see the table below.
 2. The client emits `disconnected`, then `reconnecting` with the attempt number
    and the delay before it, and waits.
 3. It opens a new socket. If that fails, it emits `error`, then `reconnecting`
@@ -408,6 +409,32 @@ const websocket = createLiveWebSocket({
 
 await websocket.connect('wss://api.example.com');
 // A drop from here reconnects on its own.
+```
+
+### Which closes reconnect
+
+The close code decides, not `wasClean` — a server going away or restarting
+sends a clean close frame and should still be retried:
+
+| Code | Meaning | Reconnect |
+|---|---|---|
+| 1001, 1006, 1011, 1012, 1013, 1014 | going away, abnormal, server error, restart, try again later, bad gateway | yes |
+| 1000, 1005 | normal, or a deliberate close with no code | no |
+| 1002, 1003, 1007, 1009, 1010, 1015 | protocol, data, framing or TLS faults a retry would repeat | no |
+| 1008 | policy violation | no |
+| 3000–4999 | application codes | no, unless `shouldReconnect` says so |
+
+An `error` event on an established connection reports and leaves the status
+alone; the close that follows decides.
+
+```typescript
+const websocket = createLiveWebSocket({
+  reconnect: {
+    enabled: true,
+    // Your application's own codes: 4001 means "come back later"
+    shouldReconnect: (event) => event.code === 4001 || event.code === 1006
+  }
+});
 ```
 
 ### Reconnection Delays

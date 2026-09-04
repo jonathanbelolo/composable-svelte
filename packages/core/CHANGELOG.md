@@ -62,6 +62,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The WebSocket client reconnects by close code, not by `wasClean`.** A
+  server going away (1001), restarting (1012) or asking for a retry (1013)
+  sends a clean close frame and was never reconnected, while a policy
+  violation (1008) was. The built-in table retries 1001, 1006, 1011, 1012,
+  1013 and 1014; `reconnect.shouldReconnect` replaces it. An `error` event
+  on an established connection no longer sets the status to `failed`, which
+  made the close that followed skip the reconnect. (AUDIT-2026-09-03-FINDINGS
+  W3, W8)
+
 - **The WebSocket client's `disconnect()` detaches the socket before closing
   it, and emits `disconnected` at once.** It nulled the socket with its
   handlers attached, so the old socket's late close ran against whatever

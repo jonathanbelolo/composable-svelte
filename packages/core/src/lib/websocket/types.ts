@@ -288,6 +288,14 @@ export interface ReconnectConfig {
    * @default true
    */
   readonly jitter: boolean;
+
+  /**
+   * Decide whether a close of an established connection is retried,
+   * replacing the built-in table (retry 1001, 1006, 1011, 1012, 1013 and
+   * 1014; not 1000, 1005, 1008, the protocol and data codes, or 3000–4999).
+   * The place to say what an application code means.
+   */
+  readonly shouldReconnect?: ((event: { code: number; reason: string; wasClean: boolean }) => boolean) | undefined;
 }
 
 export interface HeartbeatConfig {

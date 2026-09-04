@@ -77,3 +77,4 @@ before the fix is kept as `red-R1.x.y.log`, and the gate as `gate-R1.x.y.log`.
 | gate-R1.3.f.log | R1.3.f | core gate: 2223 browser + 583 node, 0 skipped, check clean. The first run had every test green but one unhandled rejection from a test that aborted a caller before attaching its expectation; the test was reordered and the gate re-run |
 | gate-R1.4.bc.log | R1.4.b+c | core gate: 2224 browser + 583 node, 0 skipped, check clean |
 | gate-R1.4.d.log | R1.4.d | core gate: 2227 browser (125 files, the new effect-websocket suite) + 583 node, 0 skipped, check clean |
+| gate-R1.4.e.log | R1.4.e | core gate: 2239 browser + 583 node, 0 skipped, check clean (a first run failed check on the new test's untyped helper parameter; fixed, re-run) |

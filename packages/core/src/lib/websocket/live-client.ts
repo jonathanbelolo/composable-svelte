@@ -136,6 +136,32 @@ export function createLiveWebSocket<T = unknown>(
     });
   }
 
+  /**
+   * Whether a close of an established connection is worth retrying.
+   *
+   * The first form keyed on `wasClean`, which is false only for an abnormal
+   * closure: a server going away (1001), restarting (1012) or asking for a
+   * retry later (1013) sends a clean close frame and was never reconnected
+   * (AUDIT-2026-09-03-FINDINGS W3). The code says what happened; `wasClean`
+   * only says whether a frame was exchanged.
+   *
+   * - 1001 going away, 1006 abnormal, 1011 server error, 1012 restart,
+   *   1013 try again later, 1014 bad gateway: transient, retry.
+   * - 1000 normal, 1005 no status (a deliberate close with no code): the
+   *   peer meant it.
+   * - 1002 protocol, 1003 unsupported data, 1007 bad payload, 1009 too big,
+   *   1010 extension, 1015 TLS: a retry repeats the fault.
+   * - 1008 policy violation: the server refused us on purpose.
+   * - 3000–4999 application codes: only the application knows;
+   *   `reconnect.shouldReconnect` is the place to say.
+   */
+  const RETRY_CLOSE_CODES = new Set([1001, 1006, 1011, 1012, 1013, 1014]);
+  function shouldReconnect(event: { code: number; reason: string; wasClean: boolean }): boolean {
+    const override = config?.reconnect?.shouldReconnect;
+    if (override) return override(event);
+    return RETRY_CLOSE_CODES.has(event.code);
+  }
+
   function calculateReconnectDelay(attempt: number): number {
     const baseDelay = reconnectConfig.initialDelay * Math.pow(
       reconnectConfig.backoffMultiplier,
@@ -301,13 +327,11 @@ export function createLiveWebSocket<T = unknown>(
           attemptFailed(ws, error, reject);
           return;
         }
-        // Established: report it; the close that follows decides what next.
-        // (Status is still set to `failed` here until R1.4.e.)
-        if (connectionTimeoutTimer) {
-          clearTimeout(connectionTimeoutTimer);
-          connectionTimeoutTimer = null;
-        }
-        updateState({ status: 'failed', lastError: error });
+        // Established: report it and leave the status alone. The close that
+        // follows decides what happens next; setting 'failed' here made an
+        // error-then-close on a live connection skip the reconnect, and left
+        // 'failed' as a status the next close always overwrote (W3, W8).
+        updateState({ lastError: error });
         stats.errors++;
         notifyEventListeners({ type: 'error', error, timestamp: Date.now() });
       };
@@ -377,8 +401,8 @@ export function createLiveWebSocket<T = unknown>(
           timestamp: Date.now()
         });
 
-        // Attempt reconnection if enabled and was connected
-        if (wasConnected && reconnectConfig.enabled && !event.wasClean) {
+        // Reconnect by what the close code says, not by wasClean (W3).
+        if (wasConnected && reconnectConfig.enabled && state.url && shouldReconnect(event)) {
           ladderDelay = 0;
           scheduleReconnect();
         }
