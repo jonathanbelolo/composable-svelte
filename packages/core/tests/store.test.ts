@@ -27,6 +27,9 @@ describe('createStore', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    // restoreAllMocks does not undo useFakeTimers; without this the fake clock
+    // leaks into whichever file the worker runs next.
+    vi.useRealTimers();
   });
 
   it('creates store with initial state', () => {
