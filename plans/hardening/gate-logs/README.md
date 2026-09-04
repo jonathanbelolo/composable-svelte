@@ -70,3 +70,4 @@ before the fix is kept as `red-R1.x.y.log`, and the gate as `gate-R1.x.y.log`.
 | baseline-R1.1.g.out | R1.1.g | `node scripts/mutation-baseline.mjs --strict` with the new `R1-N2` entry: baseline green, 8/8 KILLED by name, exit 0 |
 | gate-R1.1.g.log | R1.1.g | core gate: 2210 browser + 583 node, 0 skipped, check clean |
 | gate-R1.2.log | R1.2 | core gate: 2210 browser + 583 node, 0 skipped, check clean; the two P1 pins replaced by positive assertions, and removing `dist/api/effect-api.js` from sideEffects turns both red |
+| gate-R1.3.b.log | R1.3.b | core gate: 2212 browser + 583 node, 0 skipped, check clean. The first run failed `optional-props` on a bare optional in the new `RequestIdentity` type; fixed and re-run |

@@ -3,15 +3,9 @@
 // ============================================================================
 
 import { APIError, NetworkError, TimeoutError, ValidationError } from './errors.js';
-import { deduplicateRequest } from './deduplication.js';
+import { createInFlightRegistry, requestKey, type RequestIdentity } from './deduplication.js';
 import { retryRequest } from './retry.js';
-import {
-  getCachedResponse,
-  setCachedResponse,
-  invalidateCacheOnMutation,
-  clearCache as clearCacheStorage,
-  invalidateCache as invalidateCachePattern
-} from './cache.js';
+import { cacheKeyFor, createResponseCache } from './cache.js';
 import type {
   APIClient,
   APIClientConfig,
@@ -164,35 +158,44 @@ export function createAPIClient(config: APIClientConfig = {}): APIClient {
   // Interceptors state
   const interceptors: Interceptor[] = [...initialInterceptors];
 
+  // This client's in-flight requests and response cache. Both were
+  // module-global — one map for every client in the process — so two clients
+  // built for two users coalesced into one fetch and shared one cached body
+  // (AUDIT-2026-09-03-FINDINGS A1, A2).
+  const inFlight = createInFlightRegistry();
+  const cache = createResponseCache();
+
+  /**
+   * What will actually be sent: the base URL joined, the client's default
+   * headers merged with the request's, the JSON content type added. Computed
+   * once, before the dedup and cache layers, so their keys see the request as
+   * the server will — the first form keyed on the raw path and only the
+   * per-request headers.
+   */
+  function resolveRequest(method: HTTPMethod, url: string, config: RequestConfig): RequestIdentity {
+    const { headers: requestHeaders = {}, params, body } = config;
+    const headers = mergeHeaders(defaultHeaders, requestHeaders);
+    if (body && typeof body === 'object' && !headers['content-type'] && !headers['Content-Type']) {
+      headers['Content-Type'] = 'application/json';
+    }
+    return { method, url: normalizeURL(baseURL, url), params, headers, body };
+  }
+
   /**
    * Core request function that handles the actual fetch call.
    * This is the innermost layer - just fetch, no retry/cache/dedup.
    */
   async function executeFetch<T>(
     method: HTTPMethod,
-    url: string,
+    resolved: RequestIdentity,
     config: RequestConfig = {}
   ): Promise<APIResponse<T>> {
-    const {
-      headers: requestHeaders = {},
-      params,
-      body,
-      signal: externalSignal,
-      timeout = defaultTimeout
-    } = config;
+    const { signal: externalSignal, timeout = defaultTimeout } = config;
+    const { params, body } = resolved;
 
-    // Normalize URL
-    const normalizedURL = normalizeURL(baseURL, url);
     const queryString = params ? buildQueryString(params) : '';
-    const fullURL = `${normalizedURL}${queryString}`;
-
-    // Merge headers
-    let headers = mergeHeaders(defaultHeaders, requestHeaders);
-
-    // Auto-set Content-Type for JSON body
-    if (body && typeof body === 'object' && !headers['content-type'] && !headers['Content-Type']) {
-      headers['Content-Type'] = 'application/json';
-    }
+    const fullURL = `${resolved.url}${queryString}`;
+    let headers: Record<string, string> = { ...resolved.headers };
 
     // Create abort controller for timeout
     const abortController = new AbortController();
@@ -364,33 +367,30 @@ export function createAPIClient(config: APIClientConfig = {}): APIClient {
     const cacheConfig = config.cache !== undefined ? config.cache : defaultCache;
     const retryConfig = config.retry !== undefined ? config.retry : defaultRetry;
 
+    const resolved = resolveRequest(method, url, config);
+    const key = requestKey(resolved);
+    const cacheKey = cacheKeyFor(key, url, config, cacheConfig);
+
     // Layer 1: Cache (outermost - fastest exit)
-    const cached = getCachedResponse<T>(method, url, config, cacheConfig);
+    const cached = cache.get<T>(method, cacheKey, cacheConfig);
     if (cached) {
       return cached;
     }
 
-    // Layer 2: Deduplication
-    const response = await deduplicateRequest<T>(
-      method,
-      url,
-      config,
-      // Layer 3: Retry
-      () => retryRequest<T>(
-        method,
-        // Layer 4: Base fetch
-        () => executeFetch<T>(method, url, config),
-        retryConfig
-      )
-    );
+    // Layer 3 and 4, as one unit the registry can share
+    const run = () =>
+      retryRequest<T>(method, () => executeFetch<T>(method, resolved, config), retryConfig);
 
-    // Store in cache if applicable
+    // Layer 2: Deduplication
+    const response = config.deduplicate === false ? await run() : await inFlight.join(key, run);
+
+    // Store in cache if applicable; the entry remembers the path it answers
     if (method === 'GET') {
-      setCachedResponse(method, url, response, config, cacheConfig);
+      cache.set(method, cacheKey, url, response, cacheConfig);
     }
 
     // Invalidate cache on mutations
-    invalidateCacheOnMutation(method, url, cacheConfig);
+    cache.invalidateOnMutation(method, url, cacheConfig);
 
     return response;
   }
@@ -441,11 +441,11 @@ export function createAPIClient(config: APIClientConfig = {}): APIClient {
     },
 
     clearCache: () => {
-      clearCacheStorage();
+      cache.clear();
     },
 
     invalidateCache: (pattern: string) => {
-      invalidateCachePattern(pattern);
+      cache.invalidate(pattern);
     }
   };
 }

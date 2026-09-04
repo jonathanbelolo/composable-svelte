@@ -5,7 +5,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createMockAPI, type MockRoutes } from '../../src/lib/api/testing/mock-client.js';
 import { APIError } from '../../src/lib/api/errors.js';
-import { clearCache } from '../../src/lib/api/cache.js';
 import type { RequestConfig } from '../../src/lib/api/types.js';
 
 describe('createMockAPI', () => {
@@ -510,10 +509,7 @@ describe('createMockAPI', () => {
   });
 
   describe('Cache', () => {
-    beforeEach(() => {
-      // The cache module is a singleton shared with the real client.
-      clearCache();
-    });
+    // Each mock owns its cache, as each real client does; nothing to clear.
 
     it('does not cache by default, matching the real client', async () => {
       let hits = 0;

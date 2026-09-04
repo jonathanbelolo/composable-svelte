@@ -116,8 +116,9 @@ export interface CacheConfig {
   ttl?: number;
 
   /**
-   * Custom cache key generator.
-   * If not provided, uses normalized URL + params.
+   * Custom cache key generator, replacing the request key (method, resolved
+   * URL, query parameters, merged headers). The entry still remembers the
+   * path it was requested with, so `invalidateCache('/path')` reaches it.
    */
   key?: (url: string, config: RequestConfig) => string;
 

@@ -573,7 +573,13 @@ const response = await api.get('/real-time-data', {
 
 ### Cache Keys
 
-Cache keys are generated from normalized URL + params:
+Each client owns its cache (and its in-flight request map); two clients never
+share an entry. Within a client, the key is the request as it will be sent:
+the method, the resolved URL (base URL joined, so `'x'` and `'/x'` are one
+key), the query parameters in a stable order, and the headers — the client's
+defaults merged with the request's, before interceptors run. A custom
+`cache.key` replaces that key; the entry still remembers the path it was
+requested with, so invalidation by path reaches it.
 
 ```typescript
 // Same cache key
@@ -583,6 +589,7 @@ api.get('/products', { params: { page: 1, sort: 'name' } }); // Same order doesn
 // Different cache keys
 api.get('/products', { params: { page: 1 } });
 api.get('/products', { params: { page: 2 } });
+api.get('/products', { headers: { Authorization: 'Bearer other-user' } }); // different headers
 ```
 
 ### Custom Cache Keys

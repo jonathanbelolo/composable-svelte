@@ -2,189 +2,90 @@
 // Request Deduplication Layer
 // ============================================================================
 
-import type { APIResponse, HTTPMethod, RequestConfig } from './types.js';
-
-// ============================================================================
-// Stable Stringify (Order-Independent JSON Serialization)
-// ============================================================================
+import type { APIResponse, HTTPMethod } from './types.js';
+import { stableStringify } from '../utils/stable-stringify.js';
 
 /**
- * Stable stringify that produces consistent output regardless of object key order.
- * This ensures that { a: 1, b: 2 } and { b: 2, a: 1 } produce the same key.
- */
-function stableStringify(obj: unknown): string {
-  if (obj === null) {
-    return 'null';
-  }
-
-  if (obj === undefined) {
-    return 'undefined';
-  }
-
-  if (typeof obj !== 'object') {
-    return JSON.stringify(obj);
-  }
-
-  if (Array.isArray(obj)) {
-    const items: string[] = [];
-    for (let i = 0; i < obj.length; i++) {
-      items.push(stableStringify(obj[i]));
-    }
-    return '[' + items.join(',') + ']';
-  }
-
-  // Object: sort keys and stringify
-  const keys = Object.keys(obj).sort();
-  const pairs: string[] = [];
-
-  for (let i = 0; i < keys.length; i++) {
-    const key = keys[i];
-    if (key !== undefined) {
-      const value = (obj as Record<string, unknown>)[key];
-      pairs.push('"' + key + '":' + stableStringify(value));
-    }
-  }
-
-  return '{' + pairs.join(',') + '}';
-}
-
-/**
- * Generate a stable cache key from request parameters.
- * Ensures consistent key generation regardless of object property order.
- */
-function generateRequestKey(method: HTTPMethod, url: string, config?: RequestConfig): string {
-  const parts = [
-    method,
-    url,
-    config?.params ? stableStringify(config.params) : '',
-    config?.body ? stableStringify(config.body) : '',
-    config?.headers ? stableStringify(config.headers) : ''
-  ];
-
-  return parts.join('::');
-}
-
-// ============================================================================
-// Deduplication State
-// ============================================================================
-
-/**
- * In-flight request tracking.
- */
-interface InFlightRequest<T> {
-  promise: Promise<APIResponse<T>>;
-  timestamp: number;
-}
-
-/**
- * Map of in-flight requests by key.
- */
-const inFlightRequests = new Map<string, InFlightRequest<any>>();
-
-/**
- * Maximum age for in-flight request tracking (milliseconds).
- * After this time, we assume the request is stale and create a new one.
- * @default 60000 (1 minute)
- */
-const MAX_IN_FLIGHT_AGE = 60000;
-
-// ============================================================================
-// Deduplication Logic
-// ============================================================================
-
-/**
- * Clean up stale in-flight requests.
- * This prevents memory leaks from abandoned requests.
- */
-function cleanupStaleRequests(): void {
-  const now = Date.now();
-  const keysToDelete: string[] = [];
-
-  inFlightRequests.forEach((request, key) => {
-    if (now - request.timestamp > MAX_IN_FLIGHT_AGE) {
-      keysToDelete.push(key);
-    }
-  });
-
-  for (let i = 0; i < keysToDelete.length; i++) {
-    const key = keysToDelete[i];
-    if (key !== undefined) {
-      inFlightRequests.delete(key);
-    }
-  }
-}
-
-/**
- * Deduplicate a request by checking if an identical request is in-flight.
- * If so, return the existing promise. Otherwise, execute the request and track it.
+ * A request's identity for deduplication and caching.
  *
- * @param method - HTTP method
- * @param url - Request URL
- * @param config - Request configuration
- * @param executor - Function that executes the actual request
- * @returns Promise that resolves to the API response
+ * Everything that changes what the server would answer: the method, the
+ * resolved URL (base URL joined, query excluded), the query parameters, the
+ * headers as they will be sent — the client's defaults merged with the
+ * request's, before interceptors — and the body. Keys are per client (each
+ * `createAPIClient` owns its registry and cache), so the base URL and default
+ * headers in the key are defence in depth rather than the boundary.
+ *
+ * The first form keyed on the raw path with only per-request headers, in one
+ * module-global map: two clients built for two users coalesced into one fetch
+ * and both received the first user's body (AUDIT-2026-09-03-FINDINGS A1).
  */
-export async function deduplicateRequest<T>(
-  method: HTTPMethod,
-  url: string,
-  config: RequestConfig | undefined,
-  executor: () => Promise<APIResponse<T>>
-): Promise<APIResponse<T>> {
-  // Check if deduplication is disabled
-  if (config?.deduplicate === false) {
-    return executor();
-  }
+export interface RequestIdentity {
+	readonly method: HTTPMethod;
+	/** Base URL joined and normalised; no query string. */
+	readonly url: string;
+	readonly params: Record<string, string | number | boolean | null | undefined> | undefined;
+	readonly headers: Record<string, string>;
+	readonly body: unknown;
+}
 
-  // Generate stable key
-  const key = generateRequestKey(method, url, config);
-
-  // Check for in-flight request
-  const inFlight = inFlightRequests.get(key);
-  if (inFlight) {
-    // Verify request is not stale
-    if (Date.now() - inFlight.timestamp <= MAX_IN_FLIGHT_AGE) {
-      return inFlight.promise;
-    }
-  }
-
-  // Execute new request
-  const promise = executor();
-
-  // Track in-flight request
-  inFlightRequests.set(key, {
-    promise,
-    timestamp: Date.now()
-  });
-
-  // Clean up after completion (success or failure)
-  promise
-    .then(() => {
-      inFlightRequests.delete(key);
-    })
-    .catch(() => {
-      inFlightRequests.delete(key);
-    });
-
-  // Periodic cleanup of stale requests
-  if (inFlightRequests.size > 100) {
-    cleanupStaleRequests();
-  }
-
-  return promise;
+/** The key two identical requests share. */
+export function requestKey(identity: RequestIdentity): string {
+	return stableStringify([
+		identity.method,
+		identity.url,
+		identity.params ?? null,
+		identity.headers,
+		identity.body ?? null
+	]);
 }
 
 /**
- * Clear all in-flight requests.
- * Useful for testing or manual cleanup.
+ * Methods coalesced by default. A repeated safe request is one request; a
+ * repeated POST is two intents, and coalescing them hid the second (A11).
+ * `deduplicate: true` on the request opts a mutation in.
  */
-export function clearInFlightRequests(): void {
-  inFlightRequests.clear();
+export function isDeduplicableMethod(method: HTTPMethod): boolean {
+	return method === 'GET' || method === 'HEAD' || method === 'OPTIONS';
 }
 
 /**
- * Get the number of in-flight requests.
- * Useful for debugging and testing.
+ * The in-flight requests of one client.
  */
-export function getInFlightRequestCount(): number {
-  return inFlightRequests.size;
+export interface InFlightRegistry {
+	/**
+	 * Run `execute` for `key`, or join the run already in flight for it. Every
+	 * caller receives the same promise; the entry is dropped when it settles.
+	 */
+	join<T>(key: string, execute: () => Promise<APIResponse<T>>): Promise<APIResponse<T>>;
+	/** How many requests are in flight. */
+	readonly size: number;
+	/** Forget every in-flight request (their promises still settle). */
+	clear(): void;
+}
+
+/**
+ * One registry per client. The map used to be module-global, shared by every
+ * client in the process.
+ */
+export function createInFlightRegistry(): InFlightRegistry {
+	const inFlight = new Map<string, Promise<APIResponse<unknown>>>();
+
+	return {
+		join<T>(key: string, execute: () => Promise<APIResponse<T>>): Promise<APIResponse<T>> {
+			const existing = inFlight.get(key);
+			if (existing) return existing as Promise<APIResponse<T>>;
+
+			const promise = execute().finally(() => {
+				if (inFlight.get(key) === promise) inFlight.delete(key);
+			});
+			inFlight.set(key, promise);
+			return promise;
+		},
+		get size() {
+			return inFlight.size;
+		},
+		clear() {
+			inFlight.clear();
+		}
+	};
 }

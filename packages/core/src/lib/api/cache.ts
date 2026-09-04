@@ -4,304 +4,127 @@
 
 import type { APIResponse, CacheConfig, HTTPMethod, RequestConfig } from './types.js';
 
-// ============================================================================
-// Cache Entry
-// ============================================================================
-
-interface CacheEntry<T> {
-  response: APIResponse<T>;
-  timestamp: number;
-  ttl: number;
+interface CacheEntry {
+	/** The path the caller passed, for invalidation by pattern. */
+	readonly url: string;
+	readonly response: APIResponse<unknown>;
+	readonly timestamp: number;
+	readonly ttl: number;
 }
-
-// ============================================================================
-// Cache State
-// ============================================================================
-
-/**
- * In-memory cache storage.
- */
-const cache = new Map<string, CacheEntry<any>>();
 
 /**
  * Default TTL (5 minutes).
  */
 const DEFAULT_TTL = 300000;
 
-// ============================================================================
-// Cache Key Generation
-// ============================================================================
-
 /**
- * Stable stringify for cache keys (same as deduplication).
+ * The key an entry is stored under: the request key, unless the caller's
+ * `cache.key` generator says otherwise. The entry remembers the path it was
+ * stored for either way, so a custom-key entry is still reachable by
+ * `invalidateCache('/path')` (AUDIT-2026-09-03-FINDINGS A2).
  */
-function stableStringify(obj: unknown): string {
-  if (obj === null) {
-    return 'null';
-  }
-
-  if (obj === undefined) {
-    return 'undefined';
-  }
-
-  if (typeof obj !== 'object') {
-    return JSON.stringify(obj);
-  }
-
-  if (Array.isArray(obj)) {
-    const items: string[] = [];
-    for (let i = 0; i < obj.length; i++) {
-      items.push(stableStringify(obj[i]));
-    }
-    return '[' + items.join(',') + ']';
-  }
-
-  const keys = Object.keys(obj).sort();
-  const pairs: string[] = [];
-
-  for (let i = 0; i < keys.length; i++) {
-    const key = keys[i];
-    if (key !== undefined) {
-      const value = (obj as Record<string, unknown>)[key];
-      pairs.push('"' + key + '":' + stableStringify(value));
-    }
-  }
-
-  return '{' + pairs.join(',') + '}';
-}
-
-/**
- * Generate cache key from request parameters.
- */
-function generateCacheKey(
-  method: HTTPMethod,
-  url: string,
-  config?: RequestConfig,
-  cacheConfig?: CacheConfig
+export function cacheKeyFor(
+	requestKey: string,
+	url: string,
+	config: RequestConfig | undefined,
+	cacheConfig: boolean | CacheConfig | undefined
 ): string {
-  // Use custom key generator if provided
-  if (cacheConfig && typeof cacheConfig === 'object' && cacheConfig.key) {
-    return cacheConfig.key(url, config || {});
-  }
-
-  // Default: method + url + params
-  const parts = [
-    method,
-    url,
-    config?.params ? stableStringify(config.params) : ''
-  ];
-
-  return parts.join('::');
-}
-
-// ============================================================================
-// Cache Operations
-// ============================================================================
-
-/**
- * Check if cache entry is still valid (not expired).
- */
-function isCacheValid<T>(entry: CacheEntry<T>): boolean {
-  const now = Date.now();
-  return now - entry.timestamp < entry.ttl;
+	if (typeof cacheConfig === 'object' && cacheConfig.key) {
+		return cacheConfig.key(url, config ?? {});
+	}
+	return requestKey;
 }
 
 /**
- * Get cached response if available and valid.
+ * The response cache of one client.
  */
-export function getCachedResponse<T>(
-  method: HTTPMethod,
-  url: string,
-  config?: RequestConfig,
-  cacheConfig?: boolean | CacheConfig
-): APIResponse<T> | null {
-  // Only cache GET requests
-  if (method !== 'GET') {
-    return null;
-  }
-
-  // Check if caching is disabled
-  if (cacheConfig === false) {
-    return null;
-  }
-
-  // Generate cache key
-  const key = generateCacheKey(
-    method,
-    url,
-    config,
-    typeof cacheConfig === 'object' ? cacheConfig : undefined
-  );
-
-  // Check cache
-  const entry = cache.get(key);
-  if (!entry) {
-    return null;
-  }
-
-  // Check if valid
-  if (!isCacheValid(entry)) {
-    cache.delete(key);
-    return null;
-  }
-
-  // Return cached response with cached flag
-  return {
-    ...entry.response,
-    cached: true
-  };
+export interface ResponseCache {
+	/** A valid entry for `key`, flagged `cached`, or null. GET only. */
+	get<T>(method: HTTPMethod, key: string, cacheConfig: boolean | CacheConfig | undefined): APIResponse<T> | null;
+	/** Store a GET response under `key`, remembering the path it answers. */
+	set<T>(
+		method: HTTPMethod,
+		key: string,
+		url: string,
+		response: APIResponse<T>,
+		cacheConfig: boolean | CacheConfig | undefined
+	): void;
+	/**
+	 * Drop entries whose path matches: exact (`/api/users/123`) or prefix
+	 * (`/api/users/*`). Matches the path the request was made with, not the key.
+	 */
+	invalidate(pattern: string): void;
+	/** After a mutation: the configured `invalidates`, or the path's prefix. */
+	invalidateOnMutation(method: HTTPMethod, url: string, cacheConfig: boolean | CacheConfig | undefined): void;
+	clear(): void;
+	readonly size: number;
 }
 
 /**
- * Store response in cache.
+ * One cache per client. The store used to be module-global: every client in
+ * the process, and `createMockAPI`, read and wrote one map, keyed by the raw
+ * path with no headers, so two hosts or two users could share a body
+ * (AUDIT-2026-09-03-FINDINGS A2).
  */
-export function setCachedResponse<T>(
-  method: HTTPMethod,
-  url: string,
-  response: APIResponse<T>,
-  config?: RequestConfig,
-  cacheConfig?: boolean | CacheConfig
-): void {
-  // Only cache GET requests
-  if (method !== 'GET') {
-    return;
-  }
+export function createResponseCache(): ResponseCache {
+	const entries = new Map<string, CacheEntry>();
 
-  // Check if caching is disabled
-  if (cacheConfig === false) {
-    return;
-  }
+	const isValid = (entry: CacheEntry) => Date.now() - entry.timestamp < entry.ttl;
 
-  // Determine TTL
-  let ttl = DEFAULT_TTL;
-  if (typeof cacheConfig === 'object' && cacheConfig.ttl !== undefined) {
-    ttl = cacheConfig.ttl;
-  }
+	const invalidate = (pattern: string): void => {
+		const isPrefix = pattern.endsWith('*');
+		const prefix = isPrefix ? pattern.slice(0, -1) : pattern;
+		for (const [key, entry] of entries) {
+			if (isPrefix ? entry.url.startsWith(prefix) : entry.url === prefix) entries.delete(key);
+		}
+	};
 
-  // Generate cache key
-  const key = generateCacheKey(
-    method,
-    url,
-    config,
-    typeof cacheConfig === 'object' ? cacheConfig : undefined
-  );
+	return {
+		get<T>(method: HTTPMethod, key: string, cacheConfig: boolean | CacheConfig | undefined): APIResponse<T> | null {
+			if (method !== 'GET' || cacheConfig === false || cacheConfig === undefined) return null;
+			const entry = entries.get(key);
+			if (!entry) return null;
+			if (!isValid(entry)) {
+				entries.delete(key);
+				return null;
+			}
+			return { ...(entry.response as APIResponse<T>), cached: true };
+		},
 
-  // Store in cache
-  cache.set(key, {
-    response,
-    timestamp: Date.now(),
-    ttl
-  });
+		set<T>(
+			method: HTTPMethod,
+			key: string,
+			url: string,
+			response: APIResponse<T>,
+			cacheConfig: boolean | CacheConfig | undefined
+		): void {
+			if (method !== 'GET' || cacheConfig === false || cacheConfig === undefined) return;
+			const ttl = typeof cacheConfig === 'object' && cacheConfig.ttl !== undefined ? cacheConfig.ttl : DEFAULT_TTL;
+			entries.set(key, { url, response, timestamp: Date.now(), ttl });
+			if (entries.size > 1000) {
+				for (const [k, entry] of entries) if (!isValid(entry)) entries.delete(k);
+			}
+		},
 
-  // Cleanup old entries if cache is getting large
-  if (cache.size > 1000) {
-    cleanupExpiredEntries();
-  }
-}
+		invalidate,
 
-/**
- * Invalidate cache entries matching a pattern.
- *
- * Patterns:
- * - Exact match: "/api/users/123"
- * - Prefix match: "/api/users/*"
- */
-export function invalidateCache(pattern: string): void {
-  const isPrefix = pattern.endsWith('*');
-  const prefix = isPrefix ? pattern.slice(0, -1) : pattern;
+		invalidateOnMutation(method: HTTPMethod, url: string, cacheConfig: boolean | CacheConfig | undefined): void {
+			if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') return;
+			if (typeof cacheConfig === 'object' && cacheConfig.invalidateOnMutation === false) return;
+			if (typeof cacheConfig === 'object' && cacheConfig.invalidates) {
+				for (const pattern of cacheConfig.invalidates) invalidate(pattern);
+				return;
+			}
+			// Default: everything under the path. POST /api/users -> /api/users*
+			invalidate(`${url.split('?')[0]}*`);
+		},
 
-  const keysToDelete: string[] = [];
+		clear() {
+			entries.clear();
+		},
 
-  cache.forEach((_, key) => {
-    // Extract URL from cache key (format: "METHOD::URL::params")
-    const parts = key.split('::');
-    const url = parts[1] || '';
-
-    if (isPrefix) {
-      if (url.startsWith(prefix)) {
-        keysToDelete.push(key);
-      }
-    } else {
-      if (url === prefix) {
-        keysToDelete.push(key);
-      }
-    }
-  });
-
-  for (let i = 0; i < keysToDelete.length; i++) {
-    const key = keysToDelete[i];
-    if (key !== undefined) {
-      cache.delete(key);
-    }
-  }
-}
-
-/**
- * Invalidate cache based on mutation.
- * This is called after POST/PUT/PATCH/DELETE requests.
- */
-export function invalidateCacheOnMutation(
-  method: HTTPMethod,
-  url: string,
-  cacheConfig?: boolean | CacheConfig
-): void {
-  // Only invalidate for mutation methods
-  if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') {
-    return;
-  }
-
-  // Check if invalidation is disabled
-  if (typeof cacheConfig === 'object' && cacheConfig.invalidateOnMutation === false) {
-    return;
-  }
-
-  // Invalidate specific patterns if configured
-  if (typeof cacheConfig === 'object' && cacheConfig.invalidates) {
-    for (let i = 0; i < cacheConfig.invalidates.length; i++) {
-      const pattern = cacheConfig.invalidates[i];
-      if (pattern !== undefined) {
-        invalidateCache(pattern);
-      }
-    }
-    return;
-  }
-
-  // Default: invalidate all cache entries with matching URL prefix
-  // Example: POST /api/users -> invalidates /api/users/*
-  const urlWithoutQuery = url.split('?')[0];
-  invalidateCache(`${urlWithoutQuery}*`);
-}
-
-/**
- * Clear all cached responses.
- */
-export function clearCache(): void {
-  cache.clear();
-}
-
-/**
- * Remove expired cache entries.
- */
-function cleanupExpiredEntries(): void {
-  const keysToDelete: string[] = [];
-
-  cache.forEach((entry, key) => {
-    if (!isCacheValid(entry)) {
-      keysToDelete.push(key);
-    }
-  });
-
-  for (let i = 0; i < keysToDelete.length; i++) {
-    const key = keysToDelete[i];
-    if (key !== undefined) {
-      cache.delete(key);
-    }
-  }
-}
-
-/**
- * Get cache size (for debugging/testing).
- */
-export function getCacheSize(): number {
-  return cache.size;
+		get size() {
+			return entries.size;
+		}
+	};
 }

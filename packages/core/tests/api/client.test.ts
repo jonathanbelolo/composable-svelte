@@ -25,21 +25,48 @@ describe('createAPIClient over a scripted fetch', () => {
 		expect(res.data).toEqual({ ok: 1 });
 	});
 
-	it('A1 (pinned defect): two clients with different default headers share one in-flight GET', async () => {
-		// Pinned, not fixed: request deduplication is module-global and its key
-		// omits the client's base URL and default headers, so two clients built
-		// per request for two users coalesce into one fetch and both receive
-		// the first user's body. This asserts the defective behaviour and fails
-		// the moment R1.3 keys per client; remove it in that commit.
-		// AUDIT-2026-09-03-FINDINGS A1.
-		const fetched = scriptFetch([{ match: /\/me$/, body: { who: 'first' }, delayMs: 20 }]);
+	it('A1: two clients with different base URLs and default headers do not share an in-flight GET', async () => {
+		// Deduplication was module-global and keyed on the raw path with only the
+		// per-request headers, so two clients built for two users coalesced into
+		// one fetch and both received the first user's body. Each client now
+		// owns its registry, and the key carries the resolved URL and the merged
+		// headers (AUDIT-2026-09-03-FINDINGS A1).
+		const fetched = scriptFetch([
+			{ match: 'a.example/me', body: { who: 'a' }, delayMs: 20 },
+			{ match: 'b.example/me', body: { who: 'b' }, delayMs: 20 }
+		]);
 		const alice = createAPIClient({ baseURL: 'https://a.example', headers: { Authorization: 'Bearer alice' } });
-		const bob = createAPIClient({ baseURL: 'https://a.example', headers: { Authorization: 'Bearer bob' } });
+		const bob = createAPIClient({ baseURL: 'https://b.example', headers: { Authorization: 'Bearer bob' } });
 
-		const [a, b] = await Promise.all([alice.get('/me'), bob.get('/me')]);
+		const [a, b] = await Promise.all([alice.get<{ who: string }>('/me'), bob.get<{ who: string }>('/me')]);
+
+		expect(fetched.calls).toHaveLength(2);
+		expect(a.data.who).toBe('a');
+		expect(b.data.who).toBe('b');
+		const sentHeaders = fetched.calls.map((c) => (c.init?.headers as Record<string, string>).Authorization);
+		expect(new Set(sentHeaders)).toEqual(new Set(['Bearer alice', 'Bearer bob']));
+	});
+
+	it('A1: two clients with the same configuration do not share an in-flight GET either', async () => {
+		// The map is per client, not per key: with identical base URL and headers
+		// the keys are equal, and a module-global map would still coalesce them.
+		const fetched = scriptFetch([{ match: /\/me$/, body: { who: 'same' }, delayMs: 20 }]);
+		const one = createAPIClient({ baseURL: 'https://a.example' });
+		const two = createAPIClient({ baseURL: 'https://a.example' });
+
+		await Promise.all([one.get('/me'), two.get('/me')]);
+
+		expect(fetched.calls).toHaveLength(2);
+	});
+
+	it("A1: one client coalesces 'x' and '/x', which resolve to one URL", async () => {
+		// The key is the resolved URL, so two spellings of one path are one
+		// request; keyed on the raw path they were two.
+		const fetched = scriptFetch([{ match: /\/x$/, body: { ok: 1 }, delayMs: 20 }]);
+		const api = createAPIClient({ baseURL: 'https://a.example' });
+
+		await Promise.all([api.get('x'), api.get('/x')]);
 
 		expect(fetched.calls).toHaveLength(1);
-		expect(a.data).toEqual({ who: 'first' });
-		expect(b.data).toEqual({ who: 'first' });
 	});
 });

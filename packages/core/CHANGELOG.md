@@ -256,6 +256,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **BREAKING: the API client's request deduplication and response cache are
+  per client instance.** Both were module-global: two clients built for two
+  users coalesced into one fetch and both received the first user's body, and
+  a cached body was shared across hosts and headers. Each `createAPIClient()`
+  and each `createMockAPI()` now owns its map and cache, and the key is the
+  request as it will be sent — method, resolved URL, query parameters, merged
+  headers. The module-level `clearCache()`/`clearInFlightRequests()` helpers
+  (never exported from the package) are gone; use the client's `clearCache()`.
+  (AUDIT-2026-09-03-FINDINGS A1, A2)
+
 - **`integrate()` runs each child before the core reducer.** Core ran first,
   so a parent observing `Destination.matchCase` read the child's state from
   before the action, and a core reducer that cleared the field on an action
