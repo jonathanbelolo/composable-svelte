@@ -161,7 +161,9 @@ export function createAPIClient(config: APIClientConfig = {}): APIClient {
   // built for two users coalesced into one fetch and shared one cached body
   // (AUDIT-2026-09-03-FINDINGS A1, A2).
   const inFlight = createInFlightRegistry();
-  const cache = createResponseCache();
+  const cache = createResponseCache({
+    maxEntries: typeof defaultCache === 'object' ? defaultCache.maxEntries : undefined
+  });
 
   /**
    * What will actually be sent: the base URL joined, the client's default

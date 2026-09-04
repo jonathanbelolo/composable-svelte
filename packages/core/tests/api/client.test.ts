@@ -9,6 +9,7 @@
 import { describe, it, expect } from 'vitest';
 import { createAPIClient } from '../../src/lib/api/client.js';
 import { scriptFetch } from '../helpers/scripted-fetch.js';
+import { expectConsole } from '../helpers/console.js';
 
 
 describe('createAPIClient over a scripted fetch', () => {
@@ -96,5 +97,70 @@ describe('createAPIClient over a scripted fetch', () => {
 			api.post('/things', { a: 1 }, { deduplicate: true })
 		]);
 		expect(fetched.calls).toHaveLength(3);
+	});
+
+	describe('the response cache (A2)', () => {
+		it('a hit is not the stored reference, in either direction', async () => {
+			// The cache handed out the object it stored, so a caller that edited
+			// its response edited the cache for every later caller.
+			const fetched = scriptFetch([{ match: /\/n$/, body: { n: 1 } }]);
+			const api = createAPIClient({ baseURL: 'https://a.example', cache: true });
+
+			const first = await api.get<{ n: number }>('/n');
+			first.data.n = 99;
+			const second = await api.get<{ n: number }>('/n');
+			expect(second.cached).toBe(true);
+			expect(second.data.n).toBe(1);
+			expect(second.data).not.toBe(first.data);
+
+			second.data.n = 42;
+			const third = await api.get<{ n: number }>('/n');
+			expect(third.data.n).toBe(1);
+			expect(fetched.calls).toHaveLength(1);
+		});
+
+		it('is bounded by maxEntries, least recently used first', async () => {
+			const fetched = scriptFetch([{ match: /\/[abc]$/, body: { ok: 1 } }]);
+			const api = createAPIClient({ baseURL: 'https://a.example', cache: { maxEntries: 2 } });
+
+			await api.get('/a');
+			await api.get('/b');
+			await api.get('/a'); // a is now the most recently used
+			await api.get('/c'); // evicts b, the least recently used
+
+			expect((await api.get('/a')).cached).toBe(true); // still there
+			expect((await api.get('/b')).cached).toBeUndefined(); // refetched
+			expect(fetched.calls.map((c) => c.url.at(-1))).toEqual(['a', 'b', 'c', 'b']);
+		});
+
+		it('custom-key entries are reachable by path, for invalidateCache and for a mutation', async () => {
+			// Invalidation parsed the path out of the key, so an entry stored under
+			// a custom key could never be invalidated.
+			const fetched = scriptFetch([{ match: /\/products/, body: { ok: 1 } }]);
+			const api = createAPIClient({ baseURL: 'https://a.example' });
+			const opts = { cache: { key: () => 'products-all' } };
+
+			await api.get('/products', opts);
+			expect((await api.get('/products', opts)).cached).toBe(true);
+			api.invalidateCache('/products');
+			expect((await api.get('/products', opts)).cached).toBeUndefined();
+
+			await api.post('/products', { name: 'x' });
+			expect((await api.get('/products', opts)).cached).toBeUndefined();
+			expect(fetched.calls).toHaveLength(4);
+		});
+
+		it('a response that cannot be cloned is not cached, and says so once per key', async () => {
+			expectConsole('warn');
+			scriptFetch([{ match: /\/fn$/, body: { ok: 1 } }]);
+			const api = createAPIClient({
+				baseURL: 'https://a.example',
+				cache: true,
+				interceptors: [{ onResponse: async (r) => ({ ...r, data: { ...(r.data as object), call: () => 1 } as typeof r.data }) }]
+			});
+
+			await api.get('/fn');
+			expect((await api.get('/fn')).cached).toBeUndefined();
+		});
 	});
 });

@@ -138,6 +138,20 @@ export interface CacheConfig {
 }
 
 /**
+ * Cache configuration for a client: everything a request can set, plus the
+ * bound on the client's cache. `maxEntries` is not a per-request option, so
+ * it is not on `CacheConfig` — a request that set it would be silently
+ * ignored, and the type says so instead.
+ */
+export interface ClientCacheConfig extends CacheConfig {
+  /**
+   * Entries the client's cache holds before the least recently used is dropped.
+   * @default 100
+   */
+  maxEntries?: number | undefined;
+}
+
+/**
  * API request builder with type-safe response.
  */
 export interface APIRequest<Response = unknown> {
@@ -325,9 +339,9 @@ export interface APIClientConfig {
   retry?: boolean | RetryConfig;
 
   /**
-   * Default cache configuration.
+   * Default cache configuration, and the bound on this client's cache.
    */
-  cache?: boolean | CacheConfig;
+  cache?: boolean | ClientCacheConfig;
 
   /**
    * Coalesce identical concurrent safe requests (GET, HEAD, OPTIONS) into one

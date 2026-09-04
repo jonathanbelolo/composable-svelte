@@ -73,3 +73,4 @@ before the fix is kept as `red-R1.x.y.log`, and the gate as `gate-R1.x.y.log`.
 | gate-R1.3.b.log | R1.3.b | core gate: 2212 browser + 583 node, 0 skipped, check clean. The first run failed `optional-props` on a bare optional in the new `RequestIdentity` type; fixed and re-run |
 | gate-R1.3.c.log | R1.3.c | core gate: 2213 browser + 583 node, 0 skipped, check clean |
 | gate-R1.3.d.log | R1.3.d | core gate: 2214 browser + 583 node, 0 skipped, check clean |
+| gate-R1.3.e.log | R1.3.e | core gate: 2218 browser + 583 node, 0 skipped, check clean. The first run failed svelte-check on a type in the new test's interceptor fixture; fixed and re-run |

@@ -261,6 +261,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **BREAKING: the response cache is bounded and hands out clones.** It handed
+  out the object it stored, so a caller that edited its response edited the
+  cache for everyone; it grew without bound within the TTL; and an entry
+  stored under a custom `key` could never be invalidated. Hits are structured
+  clones now, the cache holds `maxEntries` (default 100, set per client with
+  `cache: { maxEntries }`) with the least recently used dropped first,
+  invalidation matches the path a request was made with, and a response that
+  cannot be cloned is not cached and warns once. (AUDIT-2026-09-03-FINDINGS A2)
+
 - **BREAKING: POST, PUT, PATCH and DELETE are no longer deduplicated by
   default.** Two identical concurrent mutations coalesced into one request,
   which hid the second intent. Safe methods (GET, HEAD, OPTIONS) still

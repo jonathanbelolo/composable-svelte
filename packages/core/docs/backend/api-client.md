@@ -561,7 +561,18 @@ await Promise.all([
 
 ## Caching
 
-In-memory response caching for GET requests.
+In-memory response caching for GET requests, per client. Each `createAPIClient()`
+owns its cache: bounded to `maxEntries` (100 by default) with the least
+recently used entry dropped first, and every hit is a structured clone, so
+editing a response never edits the cache. A response that cannot be cloned
+(a response interceptor attached a function, say) is not cached, and the
+client warns once.
+
+```typescript
+const api = createAPIClient({
+  cache: { ttl: 300000, maxEntries: 500 } // bound this client's cache
+});
+```
 
 ### Default Caching
 
@@ -643,7 +654,8 @@ const response = await api.get('/products', {
 ### Cache Invalidation
 
 ```typescript
-// Invalidate specific endpoint
+// Invalidate specific endpoint — patterns match the path you passed to get(),
+// including entries stored under a custom `key`
 api.invalidateCache('/products');
 
 // Invalidate pattern (prefix matching)

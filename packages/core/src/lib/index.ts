@@ -201,6 +201,7 @@ export type {
   RequestConfig,
   RetryConfig,
   CacheConfig,
+  ClientCacheConfig,
   APIRequest,
   HTTPMethod,
   SafeHTTPMethod,

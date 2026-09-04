@@ -21,6 +21,7 @@ export type {
   RequestConfig,
   RetryConfig,
   CacheConfig,
+  ClientCacheConfig,
   APIRequest,
   APIResponse,
   RequestInterceptor,
