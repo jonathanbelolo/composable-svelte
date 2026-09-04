@@ -19,6 +19,10 @@ tagged or version-bumped.
 | test | `pnpm --filter @composable-svelte/core test` | 2189 browser + 570 node passed, **0 skipped** |
 | check | `pnpm --filter @composable-svelte/core check` | 0 errors, 0 warnings |
 
+The whole-repository gate at the same tree (`pnpm -r build && pnpm -r typecheck
+&& pnpm -r --workspace-concurrency=1 test && pnpm -r check`): every workspace
+green, 4,720 tests passed, 0 skipped, svelte-check clean in all 20 workspaces.
+
 At the start of R0 the same gate read 2,172 browser + 511 node passed with
 **3 skipped** (`git show 37afb0d`, and the first gate log of this step).
 
