@@ -98,3 +98,5 @@ before the fix is kept as `red-R1.x.y.log`, and the gate as `gate-R1.x.y.log`.
 | red-R1.9.0.log | R1.9.0 | the shadow measurement before TestStore's semantics change: per-file counts of out-of-order receives (9), leftovers at send (7), immediate debounces (17) and send-assertions after a synchronous dispatch (27) across core and auth; nothing in flight at finish anywhere; chat and graphics clean |
 | gate-R1.9.ace.log | R1.9.a+c+e | core gate: 2267 browser + 611 node, 0 skipped, check clean; auth's suites (537 + 30) green against the rebuilt dist |
 | gate-R1.9.bd.log | R1.9.b+d | core gate: 2279 browser + 611 node, 0 skipped, check clean |
+| gate-R1-exit.log | R1 exit | whole-repository gate at `95a7a3b`: `pnpm -r build && pnpm -r typecheck && pnpm -r --workspace-concurrency=1 test && pnpm -r check` — 4,851 tests passed, 0 skipped; svelte-check clean in all 20 workspaces |
+| mutation-baseline-R1-exit.log | R1 exit | `node scripts/mutation-baseline.mjs --strict` at `95a7a3b`: 8 of 8 KILLED, exit 0 |
