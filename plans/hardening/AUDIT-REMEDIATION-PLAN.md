@@ -247,10 +247,10 @@ dependency, not severity: R1.1 needs D1, R1.3 needs D3.
 
 ### R1.2 — Effect.api survives bundling (`P1`) — S
 
-- [ ] R1.2.a `src/lib/index.ts` bare-imports `./api/effect-api.js` exactly as
+- [x] R1.2.a `src/lib/index.ts` bare-imports `./api/effect-api.js` exactly as
       it does for websocket; `sideEffects` lists `dist/api/index.js` and
       `dist/api/effect-api.js`.
-- [ ] R1.2.b The comment at `effect.ts:396-401` claiming the members "genuinely
+- [x] R1.2.b The comment at `effect.ts:396-401` claiming the members "genuinely
       are on this object at runtime" is corrected to say when.
       Proof: R0.3.e green; R0.2.a green.
 

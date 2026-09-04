@@ -62,6 +62,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`Effect.api`, `Effect.apiFireAndForget` and `Effect.apiAll` were `undefined`
+  in every bundled consumer.** `dist/api/effect-api.js` attaches them at
+  import time and was reached only through a binding re-export out of modules
+  that `sideEffects` did not list, so a bundler dropped the unused re-export
+  before the assignment ran; the docs teach `Effect.api(` throughout. The
+  barrels now import the module for its side effect, as they already did for
+  websocket, and `sideEffects` lists the whole chain. Measured by
+  `tests/repo/bundle-probe.test.ts` with esbuild. (AUDIT-2026-09-03-FINDINGS P1)
+
 - **`scopeTo().case()` and `.optional()` return typed stores.** Both returned
   `ScopedStore<any, any>`, so a typo in the case name and a foreign child
   action compiled. The state comes from the position in the state tree; the

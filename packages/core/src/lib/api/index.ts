@@ -67,5 +67,7 @@ export {
   type SearchParams
 } from './endpoints.js';
 
-// Effect integration (side-effect: augments Effect namespace)
+// Effect integration (side-effect: augments Effect namespace). Imported for
+// the side effect as well as re-exported, as websocket/index.ts does.
+import './effect-api.js';
 export { api, apiFireAndForget, apiAll } from './effect-api.js';

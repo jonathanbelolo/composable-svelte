@@ -247,6 +247,8 @@
   "sideEffects": [
     "**/*.css",
     "dist/index.js",
+    "dist/api/index.js",
+    "dist/api/effect-api.js",
     "dist/websocket/index.js",
     "dist/websocket/effect-websocket.js"
   ],

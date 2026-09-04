@@ -393,11 +393,19 @@ const EffectImpl = {
  * The namespace as consumers see it: the constructors above, plus whatever the
  * extension modules have attached.
  *
- * The assertion is doing real work rather than papering over a mismatch — the
- * members in `EffectExtensions` genuinely are on this object at runtime, put
- * there by the modules that declare them. It cannot be an annotation instead,
- * because those modules import `Effect` from here and assigning an object that
- * does not yet have their members would not typecheck.
+ * The members in `EffectExtensions` are on this object once
+ * `api/effect-api.ts` and `websocket/effect-websocket.ts` have executed. They
+ * execute for any consumer of the root entry, of `./api` or of `./websocket`:
+ * those barrels import them for that purpose, and package.json "sideEffects"
+ * lists every module on the chain, so a bundler keeps the import even when
+ * nothing uses the binding (measured by tests/repo/bundle-probe.test.ts; the
+ * api chain was unlisted and `Effect.api` was `undefined` in every bundled
+ * consumer, AUDIT-2026-09-03-FINDINGS P1). Reached by a path that imports
+ * neither module, the type says function and the runtime says `undefined`.
+ *
+ * It cannot be an annotation instead, because those modules import `Effect`
+ * from here and assigning an object that does not yet have their members
+ * would not typecheck.
  */
 export const Effect = EffectImpl as typeof EffectImpl & EffectExtensions;
 
