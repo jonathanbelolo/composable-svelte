@@ -51,7 +51,7 @@ export function declaredExports(source: string): string[] {
 		}
 	}
 	for (const [, name] of source.matchAll(
-		/^export\s+(?:const|let|function|class|type|interface|enum)\s+(\w+)/gm
+		/^export\s+(?:async\s+|abstract\s+|declare\s+)?(?:const|let|var|function|class|type|interface|enum)\s+(\w+)/gm
 	)) {
 		names.push(name!);
 	}
@@ -185,8 +185,10 @@ describe('the extractor and the private register', () => {
 describe('the extractor itself', () => {
 	it('sees a clause and a declaration made in place', () => {
 		const names = declaredExports(
-			"export const zz = 1;\nexport { a, b as c };\nexport function f() {}\nexport type T = 1;\n"
+			'export const zz = 1;\nexport { a, b as c };\nexport function f() {}\nexport type T = 1;\n' +
+				'export async function g() {}\nexport abstract class K {}\n'
 		);
-		expect(names.sort()).toEqual(['T', 'a', 'c', 'f', 'zz']);
+		// `async` and `abstract` were invisible to the first form (R0.5 review plant).
+		expect(names.sort()).toEqual(['K', 'T', 'a', 'c', 'f', 'g', 'zz']);
 	});
 });
