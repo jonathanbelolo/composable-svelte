@@ -274,26 +274,26 @@ dependency, not severity: R1.1 needs D1, R1.3 needs D3.
 
 ### R1.4 — WebSocket reconnects until told to stop (`W1`, `W2`, `W3`, `W4`) — M
 
-- [ ] R1.4.a Tests first, in R0.3.b's harness: unclean drop → failed attempt →
+- [x] R1.4.a Tests first, in R0.3.b's harness: unclean drop → failed attempt →
       second attempt scheduled with backoff → `maxAttempts` reached →
       `MAX_RECONNECTS` event; server close 1001/1012/1013 reconnects; close
       1000 and 1008 do not; old socket's late `onclose` after `disconnect()` +
       `connect()` is ignored; heartbeat timeout leads to a reconnect, not a
       terminal disconnect; the documented object `pongMessage` matches.
-- [ ] R1.4.b Internal `attemptReconnect()` separate from user `connect()`, so
+- [x] R1.4.b Internal `attemptReconnect()` separate from user `connect()`, so
       the attempt counter is only reset by the user.
-- [ ] R1.4.c `onclose` reschedules on a failed attempt; the false comment at
+- [x] R1.4.c `onclose` reschedules on a failed attempt; the false comment at
       `live-client.ts:395` goes.
-- [ ] R1.4.d `disconnect()` detaches the old socket's handlers before nulling
+- [x] R1.4.d `disconnect()` detaches the old socket's handlers before nulling
       it (`W2`, `W6`).
-- [ ] R1.4.e Reconnect predicate by close code, not `wasClean`; `onerror` does
+- [x] R1.4.e Reconnect predicate by close code, not `wasClean`; `onerror` does
       not set a terminal `failed` on an established socket (`W3`, `W8`).
-- [ ] R1.4.f Heartbeat calls an internal reconnect path; pong matching by
+- [x] R1.4.f Heartbeat calls an internal reconnect path; pong matching by
       predicate or deep equality; ping and pong framing documented (`W4`).
-- [ ] R1.4.g `WebSocketConfig.url/protocols/heartbeat/queueSize` either wired
+- [x] R1.4.g `WebSocketConfig.url/protocols/heartbeat/queueSize` either wired
       or removed from the type (`W7`); `ReconnectConfig` fields optional with
       defaults (`DA-H12`).
-- [ ] R1.4.h Queued wrapper: `isConnected` from the client's state not the
+- [x] R1.4.h Queued wrapper: `isConnected` from the client's state not the
       event; queue cleared on `disconnect()`; wrapper created after connect
       does not queue (`W5`).
       Proof: R1.4.a green; mutation M6 killed; `docs/backend/websocket.md`

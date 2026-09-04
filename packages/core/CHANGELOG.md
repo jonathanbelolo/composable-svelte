@@ -68,6 +68,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`createQueuedWebSocket` sends by the client's status, and `disconnect()`
+  clears its queue.** The wrapper kept its own boolean from events, so one
+  created around an already-connected client queued while the socket was
+  open, a send right after `disconnect()` reached the closed socket and
+  rejected, and messages held for one connection flushed to whatever URL
+  came next. (AUDIT-2026-09-03-FINDINGS W5)
+
 - **A missed heartbeat pong reconnects instead of disconnecting for good.**
   The heartbeat called `disconnect(1001, …)`, which cleared the URL so nothing
   ever reconnected — and 1001 is a code a browser refuses from script, so the

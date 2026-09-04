@@ -82,7 +82,11 @@ export function createMessageQueue<T = unknown>(maxSize = 100): MessageQueue<T> 
 /**
  * Wrap WebSocket client with automatic message queuing.
  *
- * Messages sent while disconnected are queued and sent when reconnected.
+ * `send` reads the client's status at the moment of the call: connected, the
+ * message goes straight through; otherwise it is queued and flushed on the
+ * next `connected` event, whether that is the first connection or one the
+ * reconnect ladder brought back. `disconnect()` clears the queue — messages
+ * held for one connection are not delivered to whatever URL comes next.
  *
  * @param client - WebSocket client to wrap
  * @param queueSize - Maximum queue size (default: 100)
@@ -104,33 +108,33 @@ export function createQueuedWebSocket<T = unknown>(
   queueSize = 100
 ): WebSocketClient<T> {
   const queue = createMessageQueue<T>(queueSize);
-  let isConnected = false;
 
-  // Monitor connection state
+  // Flush when a connection opens — the first, or one the ladder brought back.
   client.subscribeToEvents((event) => {
     if (event.type === 'connected') {
-      isConnected = true;
-      // Flush queued messages
-      const messages = queue.flush();
-      messages.forEach(msg => {
-        client.send(msg).catch(console.error);
-      });
-    } else if (event.type === 'disconnected') {
-      isConnected = false;
+      for (const message of queue.flush()) {
+        client.send(message).catch(console.error);
+      }
     }
   });
 
   return {
     connect: client.connect.bind(client),
-    disconnect: client.disconnect.bind(client),
+    async disconnect(code?: number, reason?: string): Promise<void> {
+      // Held for this connection, not for the next URL.
+      queue.clear();
+      return client.disconnect(code, reason);
+    },
     reconnect: client.reconnect.bind(client),
     async send(message: T): Promise<void> {
-      if (isConnected) {
+      // The client's own status, not a boolean kept from events: that boolean
+      // started false for a wrapper created around a connected client, and
+      // flipped only when the close was reported, so a send right after
+      // disconnect() rejected (AUDIT-2026-09-03-FINDINGS W5).
+      if (client.state.status === 'connected') {
         return client.send(message);
-      } else {
-        // Queue message for later
-        queue.enqueue(message);
       }
+      queue.enqueue(message);
     },
     subscribe: client.subscribe.bind(client),
     subscribeToEvents: client.subscribeToEvents.bind(client),

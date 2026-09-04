@@ -269,6 +269,11 @@ await websocket.send({ type: 'chat', text: 'Hello!' });
 await websocket.connect('wss://api.example.com');
 ```
 
+`send` reads the client's status at the moment of the call, so a wrapper
+created around an already-connected client sends at once, and a send while
+`connecting` or `reconnecting` is queued. `disconnect()` clears the queue:
+messages held for one connection are not delivered to the next URL.
+
 ## Receiving Messages
 
 ### Subscribe to Messages
@@ -683,6 +688,10 @@ await websocket.send({ type: 'chat', text: 'Message 2' });
 // Connect - queue flushes automatically
 await websocket.connect('wss://api.example.com');
 // Both messages sent
+
+// disconnect() clears the queue; anything sent after it is held for the
+// next connect().
+await websocket.disconnect();
 ```
 
 ### Inspecting the queue

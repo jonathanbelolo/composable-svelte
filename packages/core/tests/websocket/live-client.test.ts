@@ -14,6 +14,7 @@ import {
 } from '../helpers/scripted-websocket.js';
 import { WS_ERROR_CODES, type ReconnectConfig, type WebSocketEvent } from '../../src/lib/websocket/types.js';
 import { createHeartbeat } from '../../src/lib/websocket/heartbeat.js';
+import { createQueuedWebSocket } from '../../src/lib/websocket/message-queue.js';
 import { expectConsole } from '../helpers/console.js';
 
 
@@ -302,6 +303,32 @@ describe('createLiveWebSocket over a scripted socket', () => {
 			await vi.advanceTimersByTimeAsync(50);
 
 			expect(client.state.status).toBe('connected');
+		});
+	});
+
+	describe('createQueuedWebSocket over the live client (W5)', () => {
+		it('a send right after disconnect() resolves and is queued for the next connection', async () => {
+			// The wrapper's boolean flipped on the close *event*, which the first
+			// form reported a task later, so a send right after disconnect()
+			// reached the closed socket and rejected.
+			const client = createLiveWebSocket({ reconnect: { enabled: false } });
+			const queued = createQueuedWebSocket(client, 100);
+
+			const first = queued.connect('wss://x.example');
+			ScriptedWebSocket.instances[0]!.open();
+			await first;
+			await queued.send({ type: 'live' });
+			expect(ScriptedWebSocket.instances[0]!.sent).toEqual(['{"type":"live"}']);
+
+			await queued.disconnect();
+			await expect(queued.send({ type: 'after' })).resolves.toBeUndefined();
+			expect(queued.stats.messagesQueued).toBe(1);
+
+			const second = queued.connect('wss://x.example');
+			ScriptedWebSocket.instances[1]!.open();
+			await second;
+			expect(ScriptedWebSocket.instances[1]!.sent).toEqual(['{"type":"after"}']);
+			expect(queued.stats.messagesQueued).toBe(0);
 		});
 	});
 });

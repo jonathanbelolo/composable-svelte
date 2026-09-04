@@ -82,3 +82,4 @@ before the fix is kept as `red-R1.x.y.log`, and the gate as `gate-R1.x.y.log`.
 | mutation-baseline-R1.4.f.log | R1.4.f | `node scripts/mutation-baseline.mjs` after M6 was re-anchored on the reconnect: 8 of 8 KILLED (M1, M2, M4, M5, M6, M7, M9, R1-N2) |
 | red-R1.4.g.log | R1.4.g | `doc-typecheck` after the docs and types were fixed but before the four DA-H12 `REGISTER` entries were deleted: the staleness arm fails naming them |
 | gate-R1.4.g.log | R1.4.g | core gate: 2242 browser + 583 node, 0 skipped, check clean (a first run failed the optional-props ratchet, which asks for its count to follow the six bare optionals fixed; lowered 311 → 305, re-run) |
+| gate-R1.4.h.log | R1.4.h | core gate: 2246 browser + 583 node, 0 skipped, check clean |
