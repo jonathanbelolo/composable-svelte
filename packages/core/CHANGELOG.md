@@ -71,6 +71,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **SSG cannot write outside `outDir`.** `pathToFilePath` stripped one slash
+  and joined, and `join` resolves `..`, so a data-derived path of
+  `/../../etc/x` wrote there at build time. Segments are checked after
+  percent-decoding, with backslashes as separators; `..`, `.`, a null byte
+  or a malformed escape refuse the path with an `SSGPathError` (exported),
+  recorded in `result.errors` and never rendered. Also: `/a` and `/a/` are
+  one page, a route of `/404` does not overwrite the 404 page, and a failed
+  404 write is in `result.errors`. (AUDIT-2026-09-03-FINDINGS SS1, SS11)
+
 - **The rate limiter no longer holds the server open, and its key map is
   bounded.** Its cleanup interval was never unref'd or cleared, so
   `app.close()` hung on it; the interval is unref'd and `fastifyRateLimit`

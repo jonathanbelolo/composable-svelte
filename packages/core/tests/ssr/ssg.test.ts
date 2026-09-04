@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { expectConsole } from '../helpers/console.js';
-import { generateStaticSite, generateStaticPage } from '../../src/lib/ssr/ssg';
+import { generateStaticSite, generateStaticPage, SSGPathError } from '../../src/lib/ssr/ssg';
 import type { Reducer } from '../../src/lib/types';
 import { Effect } from '../../src/lib/effect';
 import * as fs from 'fs/promises';
@@ -582,4 +582,105 @@ describe('SSG (Static Site Generation)', () => {
       expect(result.generatedFiles).toContain('a/b/c/d/e/f/g/page/index.html');
     });
   });
+
+  describe('paths that would leave outDir (SS1)', () => {
+    // Each of these, through the first form's strip-one-slash-and-join, wrote
+    // a file outside outDir at build time.
+    // `/./x` is harmless on disk; it is refused because a path is a page
+    // name, not a directory operation, and it is the case the segment check
+    // catches that resolving the target would not.
+    const corpus = [
+      '/../x',
+      '/a/../../x',
+      '/%2e%2e/x',
+      '/a/%2e%2e/%2e%2e/x',
+      '/..\\x',
+      '/./x',
+      '/a\u0000b',
+      '/%zz'
+    ];
+
+    it('generateStaticPage refuses each with a typed error, before rendering or writing', async () => {
+      for (const path of corpus) {
+        await expect(
+          generateStaticPage(MockComponent, path, { initialState, reducer, dependencies: {}, outDir: './dist' })
+        ).rejects.toBeInstanceOf(SSGPathError);
+      }
+      expect(fs.writeFile).not.toHaveBeenCalled();
+      expect(fs.mkdir).not.toHaveBeenCalled();
+    });
+
+    it('generateStaticSite records each in result.errors and writes nothing outside outDir', async () => {
+      expectConsole('error', corpus.length);
+      const result = await generateStaticSite(
+        MockComponent,
+        { routes: [{ path: '/ok' }, ...corpus.map((path) => ({ path }))], outDir: './dist', generate404: false },
+        { reducer, dependencies: {}, getInitialState: async () => initialState }
+      );
+
+      expect(result.pagesGenerated).toBe(1);
+      expect(result.errors.map((e) => e.path)).toEqual(corpus);
+      for (const { error } of result.errors) expect(error).toBeInstanceOf(SSGPathError);
+
+      const outRoot = path.resolve('./dist');
+      const written = vi.mocked(fs.writeFile).mock.calls.map((call) => path.resolve(String(call[0])));
+      expect(written).toEqual([path.join(outRoot, 'ok', 'index.html')]);
+      for (const file of written) expect(file.startsWith(outRoot + path.sep)).toBe(true);
+    });
+
+    it('a data-derived path is checked the same way', async () => {
+      expectConsole('error');
+      const result = await generateStaticSite(
+        MockComponent,
+        { routes: [{ path: '/posts/:id', paths: async () => ['/posts/1', '/posts/../../escaped'] }], outDir: './dist', generate404: false },
+        { reducer, dependencies: {}, getInitialState: async () => initialState }
+      );
+      expect(result.pagesGenerated).toBe(1);
+      expect(result.errors[0]!.path).toBe('/posts/../../escaped');
+      expect(vi.mocked(fs.writeFile).mock.calls).toHaveLength(1);
+    });
+  });
+
+  describe('one file per target (SS11)', () => {
+    it('/a and /a/ are one page, rendered once', async () => {
+      const result = await generateStaticSite(
+        MockComponent,
+        { routes: [{ path: '/a' }, { path: '/a/' }], outDir: './dist', generate404: false },
+        { reducer, dependencies: {}, getInitialState: async () => initialState }
+      );
+      expect(result.pagesGenerated).toBe(1);
+      expect(result.generatedFiles).toEqual([path.join('a', 'index.html')]);
+      expect(vi.mocked(fs.writeFile).mock.calls).toHaveLength(1);
+    });
+
+    it('a data path of /404 does not overwrite the 404 page', async () => {
+      const onPageGenerated = vi.fn();
+      const result = await generateStaticSite(
+        MockComponent,
+        { routes: [{ path: '/' }, { path: '/404' }], outDir: './dist', notFoundState: { ...initialState, title: 'Not found' }, onPageGenerated },
+        { reducer, dependencies: {}, getInitialState: async () => initialState }
+      );
+      expect(result.pagesGenerated).toBe(2);
+      expect(result.generatedFiles.filter((f) => f === '404.html')).toHaveLength(1);
+      const writes = vi.mocked(fs.writeFile).mock.calls.filter((call) => String(call[0]).endsWith('404.html'));
+      expect(writes).toHaveLength(1);
+      expect(String(writes[0]![1])).toContain('Not found');
+      expect(onPageGenerated).toHaveBeenCalledTimes(1); // the route loop's page; the 404 step has no callback
+    });
+
+    it('a failed 404 write lands in result.errors', async () => {
+      expectConsole('error');
+      vi.mocked(fs.writeFile).mockImplementation(async (file) => {
+        if (String(file).endsWith('404.html')) throw new Error('disk full');
+      });
+      const result = await generateStaticSite(
+        MockComponent,
+        { routes: [{ path: '/' }], outDir: './dist' },
+        { reducer, dependencies: {}, getInitialState: async () => initialState }
+      );
+      expect(result.pagesGenerated).toBe(1);
+      expect(result.errors).toEqual([{ path: '/404', error: expect.objectContaining({ message: 'disk full' }) }]);
+    });
+  });
 });
+

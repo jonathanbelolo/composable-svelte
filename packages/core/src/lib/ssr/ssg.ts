@@ -55,7 +55,7 @@ import { createStore } from '../store.svelte.js';
 // Node.js modules - only used in Node environment (build-time SSG)
 // These are only called during build, never in browser
 import { mkdir, writeFile } from 'fs/promises';
-import { join, dirname } from 'path';
+import { dirname, join, resolve, sep } from 'path';
 
 /**
  * Svelte component type (compatible with Svelte 5).
@@ -242,6 +242,7 @@ export async function generateStaticSite<State, Action, Dependencies>(
   const outDir = config.outDir ?? './dist';
   const generatedFiles: string[] = [];
   const errors: Array<{ path: string; error: Error }> = [];
+  const generate404 = config.generate404 !== false;
 
   // Ensure output directory exists
   await mkdir(outDir, { recursive: true });
@@ -253,6 +254,12 @@ export async function generateStaticSite<State, Action, Dependencies>(
 
     // Generate each path
     for (const path of paths) {
+      // One file per target: `/a` and `/a/` were rendered and counted twice,
+      // and a data path of `/404` was overwritten by the 404 page generated
+      // after the loop (SS11). The 404 step owns 404.html.
+      const target = pathToFilePath(path);
+      if (target !== null && generatedFiles.includes(target)) continue;
+      if (target === '404.html' && generate404) continue;
       try {
         // Get initial state for this path
         let initialState: State;
@@ -307,7 +314,7 @@ export async function generateStaticSite<State, Action, Dependencies>(
   }
 
   // Generate 404 page if requested
-  if (config.generate404 !== false) {
+  if (generate404) {
     try {
       const notFoundState = config.notFoundState ?? (await options.getInitialState?.('/404')) ?? {};
       const outPath = await generateStaticPage(Component, '/404', {
@@ -319,6 +326,11 @@ export async function generateStaticSite<State, Action, Dependencies>(
       });
       generatedFiles.push(outPath);
     } catch (error) {
+      // In the result, like every other page's failure — it was only logged.
+      errors.push({
+        path: '/404',
+        error: error instanceof Error ? error : new Error(String(error))
+      });
       console.error('[SSG] Error generating 404 page:', error);
     }
   }
@@ -384,12 +396,22 @@ export async function generateStaticPage<State, Action, Dependencies>(
     dependencies: options.dependencies ?? ({} as Dependencies)
   });
 
+  // Determine output file path — before rendering, so a refused path costs
+  // nothing and cannot reach the disk.
+  const filePath = pathToFilePath(path);
+  if (filePath === null) {
+    throw new SSGPathError(path);
+  }
+  const fullPath = join(options.outDir, filePath);
+  // A second guard on the resolved target, in case a segment slipped past
+  // the first: the write must land under outDir.
+  const outRoot = resolve(options.outDir);
+  if (!resolve(fullPath).startsWith(outRoot + sep)) {
+    throw new SSGPathError(path);
+  }
+
   // Render to HTML
   const html = renderToHTML(Component, { store }, options.renderOptions);
-
-  // Determine output file path
-  const filePath = pathToFilePath(path);
-  const fullPath = join(options.outDir, filePath);
 
   // Ensure directory exists
   const dir = dirname(fullPath);
@@ -399,6 +421,19 @@ export async function generateStaticPage<State, Action, Dependencies>(
   await writeFile(fullPath, html, 'utf-8');
 
   return filePath;
+}
+
+/**
+ * A path `generateStaticPage` refused to write: it would land outside
+ * `outDir`, or could not be decoded. In `generateStaticSite` it is one entry
+ * of `result.errors`; on its own it is thrown.
+ */
+export class SSGPathError extends Error {
+  override readonly name = 'SSGPathError';
+  readonly code = 'SSG_PATH_REFUSED';
+  constructor(readonly path: string) {
+    super(`generateStaticPage: refused to write ${JSON.stringify(path)} — it would leave outDir`);
+  }
 }
 
 /**
@@ -422,31 +457,47 @@ async function resolvePaths(route: SSGRoute): Promise<string[]> {
 }
 
 /**
- * Convert a URL path to a file path.
+ * Convert a URL path to a file path, or refuse it.
  *
  * Examples:
  * - '/' → 'index.html'
- * - '/about' → 'about/index.html'
+ * - '/about', '/about/' → 'about/index.html'
  * - '/posts/1' → 'posts/1/index.html'
  * - '/404' → '404.html'
+ * - '/../x', '/%2e%2e/x', a null byte, a malformed escape → null
+ *
+ * The first form stripped one slash and joined, and `join` normalises `..`:
+ * a data-derived path of `/../../etc/x` wrote outside `outDir` at build time
+ * (AUDIT-2026-09-03-FINDINGS SS1). Segments are checked after percent-decoding
+ * and with backslashes as separators, and `..` and `.` are refused rather
+ * than resolved — the caller meant a page, not a parent directory.
  *
  * @param path - URL path
- * @returns File path relative to output directory
+ * @returns File path relative to output directory, or null if refused
  */
-function pathToFilePath(path: string): string {
-  // Remove leading slash
-  const normalized = path.startsWith('/') ? path.slice(1) : path;
+function pathToFilePath(path: string): string | null {
+  if (path.includes('\0')) return null;
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(path);
+  } catch {
+    return null;
+  }
+  if (decoded.includes('\0')) return null;
+
+  const segments = decoded.split(/[\/\\]+/).filter((segment) => segment !== '');
+  if (segments.some((segment) => segment === '..' || segment === '.')) return null;
 
   // Handle root
-  if (normalized === '' || normalized === '/') {
+  if (segments.length === 0) {
     return 'index.html';
   }
 
   // Handle 404
-  if (normalized === '404') {
+  if (segments.length === 1 && segments[0] === '404') {
     return '404.html';
   }
 
   // Handle other paths - add /index.html
-  return join(normalized, 'index.html');
+  return `${segments.join('/')}/index.html`;
 }

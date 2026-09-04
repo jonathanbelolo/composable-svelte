@@ -40,6 +40,7 @@ export default defineConfig({
     environment: 'node',
     include: [
       'tests/ssr/ssg.test.ts',
+      'tests/ssr/ssg-fs.test.ts',
       'tests/ssr/render.test.ts',
       'tests/ssr/serializer.test.ts',
       'tests/ssr/animated-initial-state.test.ts',

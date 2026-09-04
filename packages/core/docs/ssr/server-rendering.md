@@ -739,6 +739,12 @@ generateStaticPage(
 ): Promise<string>
 ```
 
+`generateStaticSite` returns every failure in `result.errors`, the 404 page's
+included. A path that would leave `outDir` — a `..` segment, encoded or not,
+a null byte, a malformed escape — is refused with an `SSGPathError` before
+anything is rendered or written; `generateStaticPage` throws it. `/a` and
+`/a/` are one file, and a route of `/404` does not overwrite the 404 page.
+
 ### Route Configuration
 
 ```typescript

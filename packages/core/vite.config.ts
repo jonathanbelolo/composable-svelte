@@ -36,6 +36,7 @@ export default defineConfig({
       // Node-environment tests: they read files from disk, which browser mode
       // cannot do. Run by vitest.node.config.ts instead.
       'tests/ssr/ssg.test.ts',
+      'tests/ssr/ssg-fs.test.ts',
       'tests/ssr/render.test.ts',
       'tests/ssr/serializer.test.ts',
       'tests/ssr/animated-initial-state.test.ts',
