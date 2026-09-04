@@ -126,16 +126,20 @@ give every later fix a way to fail.
       (`export { x } from`) as well as bare imports, and gains a positive
       control: a planted unlisted side-effect module must be reported. Proof:
       the guard fails on `37afb0d` and passes after R1.2. (`P1`, `T5`) — S
-- [x] R0.2.b `doc-typecheck.ts`: extract every `ts`/`svelte` fence, not only
-      those naming `@composable-svelte`; admit TS2322, TS2353, TS2561, TS2774.
-      Expect ~30 failures; they are R4's list. Proof: the guard fails on
+- [x] R0.2.b `doc-typecheck.ts`: admit TS2322, TS2353, TS2561, TS2774 in the
+      fences it already compiles. Widening the fence *selection* to every
+      `ts`/`svelte` fence was measured at 820 noise findings and rejected, so
+      `CLAUDE.md`'s coverage is the one fence that names the package. 49
+      findings registered (48 after the R0 review removed one the guard's own
+      Vite shim produced); they are R4's list. Proof: the guard fails on
       `37afb0d`. (`G7`, the `DA-` section's method note) — M
 - [x] R0.2.c `doc-typecheck.ts` reads `CLAUDE.md`; `front-door.test.ts` links
       from it resolve. Proof: `CLAUDE.md:140` (nonexistent skill) fails.
       (`G3`, `G8`) — S
 - [x] R0.2.d Positive controls added to `changelog-shape`, `dist-freshness`,
       `doc-examples` compile arm, `component-coverage`, `optional-props`
-      function-type rule, `animation-policy` end-to-end, `styles/public-exports`.
+      function-type rule, `styles/public-exports`. `animation-policy` already
+      ran its real scanner over its registered files and was left as it was.
       Proof: each control fails when its rule is emptied. (`T5`) — M
 - [x] R0.2.e `guard-integrity.test.ts` asserts `package.json#scripts.test`
       still runs the node config. Proof: dropping the second clause fails.
@@ -160,20 +164,48 @@ Only harnesses here; the tests arrive with each fix in R1 and R2.
 - [x] R0.3.c `tests/dependencies/cookie-storage.real.test.ts` and
       `local-storage.real.test.ts` in browser mode against the real
       `document.cookie` and `localStorage`. Proof: one round-trip each. — S
-- [x] R0.3.d `tests/ssr/dist-import.test.ts` (node config): imports every
-      `dist` subpath in plain Node and exercises one call per module. This is
-      the test that would have caught `I1`. Proof: fails on `37afb0d` for ICU.
-      — S
+- [x] R0.3.d `tests/repo/dist-import.test.ts` (node config): imports every
+      `dist` subpath in a plain Node child process and exercises one call per
+      module. This is the test that would have caught `I1`, which it pins.
+      Proof: fails on `37afb0d` for ICU. — S
 - [x] R0.3.e `tests/repo/bundle-probe.test.ts` (node config): bundles a
-      consumer with esbuild (already in `node_modules`) and asserts
-      `Effect.api`, `Effect.websocket`, `Effect.apiAll` are functions in the
-      output. Proof: fails on `37afb0d`. (`P1`) — S
+      consumer with esbuild (a core devDependency, pinned 0.25.12) and asserts
+      on the output text that `Effect.websocket` is registered and — pinned as
+      `P1` until R1.2 — that `Effect.api` is not. Proof: the pin goes red under
+      the fix. (`P1`) — S
 
 ### R0.4 — Baseline
 
 - [x] R0.4.a Re-run the audit's seven surviving mutations (`MUTATION RESULTS`)
       and record which still survive. This number must reach zero by the end
       of R2. — S
+
+### R0.5 — Closure, after the adversarial review of R0
+
+Seven reviewers (five read-only, two mutating isolated worktrees) took R0
+apart on 4 September 2026; `plans/hardening/R0-EXIT.md` records what held and
+what did not. Each item below is one commit with its own core gate.
+
+- [x] R0.5.a The three rewritten tests that still could not fail for the code
+      they name — heartbeat stop, the routing popstate guard, the Select
+      interruption — now do; each shown red under a mutation of that code.
+- [x] R0.5.b `expectConsole` expects exactly one call by default; a live-path
+      control; the scripted `fetch`/`WebSocket` harnesses restore themselves
+      via `onTestFinished`.
+- [x] R0.5.c `side-effects` sees indented and bracketed assignments and fails
+      loudly on minified dist; `guard-integrity` reads the config arrays and
+      pins the glob entries; `public-exports` sees in-place declarations;
+      `dist-freshness` has a real mtime control.
+- [x] R0.5.d The structural `P1` pin holds under a partial `sideEffects`
+      listing and goes red only on the whole chain.
+- [x] R0.5.e `scripts/mutation-baseline.mjs` runs the suites clean first and
+      kills by the named test; SUSPECT for anything else.
+- [x] R0.5.f The skill fixtures drop the commented copies the guard never read;
+      ssr's second `<svelte:head>` is pinned by a second fixture; `DA-X2` and
+      `DA-X1` corrected; the doc-typecheck Vite shim matches Vite.
+- [x] R0.5.g The findings register carries R0's status on every finding it
+      touched; this plan and `R0-EXIT.md` describe what shipped; the branch is
+      pushed and a draft pull request runs CI on it.
 
 ---
 
