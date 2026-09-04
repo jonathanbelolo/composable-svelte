@@ -377,9 +377,22 @@ unsubscribe();
 
 ## Reconnection
 
-Automatic reconnection with exponential backoff.
+Automatic reconnection with exponential backoff, for a connection that was
+established and then dropped.
 
-### Default Reconnection
+### What happens
+
+1. The established socket closes unexpectedly (`wasClean: false`).
+2. The client emits `disconnected`, then `reconnecting` with the attempt number
+   and the delay before it, and waits.
+3. It opens a new socket. If that fails, it emits `error`, then `reconnecting`
+   for the next attempt with a longer delay, and waits again — the attempt
+   count grows; a failed attempt is never the last one by accident.
+4. When an attempt opens, it emits `connected` and `reconnected` with the
+   number of attempts it took and the total delay waited; the count resets.
+5. After `maxAttempts` failures it settles as `failed` and emits an `error`
+   whose code is `WS_ERROR_CODES.MAX_RECONNECTS`; nothing further is tried
+   until you call `connect()` again, which starts over.
 
 ```typescript
 const websocket = createLiveWebSocket({
@@ -393,26 +406,25 @@ const websocket = createLiveWebSocket({
   }
 });
 
-// Reconnects automatically on unexpected disconnect
 await websocket.connect('wss://api.example.com');
-
-// Simulate disconnect
-// WebSocket will automatically attempt reconnection
+// A drop from here reconnects on its own.
 ```
 
 ### Reconnection Delays
 
-Delays use exponential backoff:
+The delay before attempt *n* is `min(initialDelay × backoffMultiplier^(n−1), maxDelay)`:
 
 ```
 Attempt 1: 1000ms
 Attempt 2: 2000ms
 Attempt 3: 4000ms
 Attempt 4: 8000ms
-Attempt 5: 16000ms (capped at maxDelay)
+Attempt 5: 16000ms
+Attempt 6: 30000ms (capped at maxDelay)
 ```
 
-Jitter adds randomness (±30%) to prevent thundering herd.
+With `jitter: true`, up to 30% is added to each delay (never subtracted), to
+spread a fleet's reconnects apart.
 
 ### Disable Reconnection
 
@@ -438,6 +450,9 @@ const websocket = createLiveWebSocket({
 ```
 
 ### Manual Reconnection
+
+After an unexpected close `state.url` is still set, so a handler can decide
+for itself:
 
 ```typescript
 websocket.subscribeToEvents((event) => {

@@ -62,6 +62,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The WebSocket client reconnects more than once.** Every `connect()` reset
+  the attempt counter, including the one the reconnect timer made, and a
+  failed attempt was never rescheduled, so the first retry that failed was
+  the last: no backoff ladder, no `maxAttempts`, no `MAX_RECONNECTS` event,
+  and every `reconnecting` event said attempt 1. The timer now opens a socket
+  without touching the counter, a failed attempt schedules the next rung,
+  the ladder climbs to `maxAttempts` and then settles as `failed` with the
+  exhaustion event, and `reconnected.totalDelay` is the sum of the ladder's
+  delays rather than the last one. A failed attempt no longer logs a warning;
+  its `error` event and the next `reconnecting` event say what happened.
+  (AUDIT-2026-09-03-FINDINGS W1)
+
 - **The API client's `deduplicate` option does something.** It was
   destructured from the client config and never read, so deduplication could
   not be turned off per client; only the per-request flag worked. The
