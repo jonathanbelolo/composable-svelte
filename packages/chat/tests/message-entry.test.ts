@@ -135,20 +135,20 @@ describe('the entry animation reaches the DOM', () => {
 		const el = render({ message, animateIn: true });
 
 		// Mid-flight: Motion One writes inline styles, so this is observable. The
-		// sample waits for the first frame rather than a fixed 20 ms: on CI's
-		// runner the spring had not produced one by then, so opacity read 0 and
-		// main's own run at 6cd4801 failed here (AUDIT-2026-09-03-FINDINGS T7).
-		// The spring runs for hundreds of milliseconds; a 5 ms poll cannot miss
-		// the whole flight.
-		let opacity = 0;
+		// sample polls for a frame strictly between 0 and 1 rather than reading at
+		// a fixed 20 ms: on CI's runner the spring had not produced a frame by
+		// then and opacity read 0 — main's own run at 6cd4801 failed here — while
+		// before the first frame the element rests at its natural 1
+		// (AUDIT-2026-09-03-FINDINGS T7). The spring runs for hundreds of
+		// milliseconds; a 5 ms poll cannot miss the whole flight.
 		await vi.waitFor(
 			() => {
-				opacity = parseFloat(getComputedStyle(el).opacity);
+				const opacity = parseFloat(getComputedStyle(el).opacity);
 				expect(opacity, `opacity was ${opacity}`).toBeGreaterThan(0);
+				expect(opacity, `opacity was ${opacity}`).toBeLessThan(1);
 			},
 			{ timeout: 2000, interval: 5 }
 		);
-		expect(opacity, `opacity was ${opacity}`).toBeLessThan(1);
 	});
 
 	it('places a message that is not new — the restore case', async () => {
