@@ -83,3 +83,6 @@ before the fix is kept as `red-R1.x.y.log`, and the gate as `gate-R1.x.y.log`.
 | red-R1.4.g.log | R1.4.g | `doc-typecheck` after the docs and types were fixed but before the four DA-H12 `REGISTER` entries were deleted: the staleness arm fails naming them |
 | gate-R1.4.g.log | R1.4.g | core gate: 2242 browser + 583 node, 0 skipped, check clean (a first run failed the optional-props ratchet, which asks for its count to follow the six bare optionals fixed; lowered 311 → 305, re-run) |
 | gate-R1.4.h.log | R1.4.h | core gate: 2246 browser + 583 node, 0 skipped, check clean |
+| red-R1.5.b.log | R1.5.b | `tests/i18n/icu.test.ts` with the two I9 tests added and the source untouched: a malformed message logged three times, not once |
+| proof-R1.5.a.log | R1.5.a | a plural rendered by core's dist under plain Node through the example's vite-built server bundle; the `tsx` dev path the plan named cannot start (P13) |
+| gate-R1.5.log | R1.5 | core gate: 2248 browser + 583 node, 0 skipped, check clean |

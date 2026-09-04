@@ -143,13 +143,13 @@ describe('dist under plain Node', { timeout: 120_000 }, () => {
 		expect(report.calls['preset']).toBe('object');
 	});
 
-	it('I1 (pinned defect): ICU returns the raw message under plain Node', () => {
-		// Pinned, not fixed: icu.ts default-imports intl-messageformat, whose
-		// CommonJS entry has no default export, so the constructor is the
-		// exports object, construction throws, and the catch returns the raw
-		// message. Fails the moment R1.5 switches to the named import; remove
-		// it in that commit. AUDIT-2026-09-03-FINDINGS I1.
-		expect(report.calls['icu']).toBe(RAW_ICU);
+	it('ICU formats under plain Node (I1)', () => {
+		// icu.ts default-imported intl-messageformat, whose CommonJS entry has
+		// no default export, so under Node the constructor was the exports
+		// object, construction threw, and every ICU message rendered as its raw
+		// text. The named import exists in all three entries.
+		// AUDIT-2026-09-03-FINDINGS I1.
+		expect(report.calls['icu']).toBe('1 item');
 	});
 
 	it('reports a subpath that does not exist, so the probe is not vacuous', () => {

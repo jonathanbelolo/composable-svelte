@@ -33,7 +33,11 @@
  * ```
  */
 
-import IntlMessageFormat from 'intl-messageformat';
+// The named export: the package's CommonJS entry has no default export, so
+// under plain Node the default import was the exports object, construction
+// threw, and every message rendered as its raw text
+// (AUDIT-2026-09-03-FINDINGS I1). All three entries export the name.
+import { IntlMessageFormat } from 'intl-messageformat';
 
 /**
  * Compiled ICU message function.
@@ -45,6 +49,13 @@ export type ICUMessageFunction = (params: Record<string, any>) => string;
  * Key format: "locale:message"
  */
 const messageCache = new Map<string, ICUMessageFunction>();
+
+/**
+ * Messages that failed to compile, by the same key. A malformed message is
+ * malformed on every render; without this, every render re-parsed and
+ * re-reported it (AUDIT-2026-09-03-FINDINGS I9).
+ */
+const failedMessages = new Map<string, ICUMessageFunction>();
 
 /**
  * Detect if a string contains ICU MessageFormat syntax.
@@ -104,8 +115,8 @@ export function isICUMessage(str: string): boolean {
 export function compileICU(message: string, locale: string): ICUMessageFunction {
   const cacheKey = `${locale}:${message}`;
 
-  // Check cache
-  let compiled = messageCache.get(cacheKey);
+  // Check cache — successes and failures alike
+  let compiled = messageCache.get(cacheKey) ?? failedMessages.get(cacheKey);
   if (compiled) {
     return compiled;
   }
@@ -129,10 +140,12 @@ export function compileICU(message: string, locale: string): ICUMessageFunction 
 
     return compiled;
   } catch (error) {
+    // Reported once, here; the cached fallback is silent.
     console.error('[i18n] ICU compilation error:', error);
 
-    // Return fallback function
-    return () => message;
+    const fallback: ICUMessageFunction = () => message;
+    failedMessages.set(cacheKey, fallback);
+    return fallback;
   }
 }
 
@@ -156,17 +169,19 @@ export function compileICU(message: string, locale: string): ICUMessageFunction 
  * ```
  */
 export function clearICUCache(locale?: string): void {
-  if (locale) {
-    // Clear messages for specific locale
-    const prefix = `${locale}:`;
-    for (const key of messageCache.keys()) {
-      if (key.startsWith(prefix)) {
-        messageCache.delete(key);
+  for (const cache of [messageCache, failedMessages]) {
+    if (locale) {
+      // Clear messages for specific locale
+      const prefix = `${locale}:`;
+      for (const key of cache.keys()) {
+        if (key.startsWith(prefix)) {
+          cache.delete(key);
+        }
       }
+    } else {
+      // Clear all messages
+      cache.clear();
     }
-  } else {
-    // Clear all messages
-    messageCache.clear();
   }
 }
 
@@ -175,11 +190,13 @@ export function clearICUCache(locale?: string): void {
  *
  * Useful for monitoring and debugging.
  *
- * @returns Object with cache size
+ * @returns `size`, the compiled messages held, and `failures`, the malformed
+ * messages held so they are not re-parsed and re-reported on every render
  */
-export function getICUCacheStats(): { size: number } {
+export function getICUCacheStats(): { size: number; failures: number } {
   return {
-    size: messageCache.size
+    size: messageCache.size,
+    failures: failedMessages.size
   };
 }
 

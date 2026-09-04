@@ -301,11 +301,13 @@ dependency, not severity: R1.1 needs D1, R1.3 needs D3.
 
 ### R1.5 — ICU works under plain Node (`I1`) — S
 
-- [ ] R1.5.a `icu.ts:36` → `import { IntlMessageFormat } from 'intl-messageformat'`
+- [x] R1.5.a `icu.ts:36` → `import { IntlMessageFormat } from 'intl-messageformat'`
       (named export exists in both the CJS and ESM builds — verified).
-- [ ] R1.5.b Compile failures are cached and surfaced once, not re-thrown per
+- [x] R1.5.b Compile failures are cached and surfaced once, not re-thrown per
       render (`I9`).
       Proof: R0.3.d green; the example's `tsx` dev path renders a plural.
+      (5 September: the `tsx` path cannot start — P13; the vite-built server
+      bundle under `node` rendered the plural, `gate-logs/proof-R1.5.a.log`.)
 
 ### R1.6 — Security middleware installs the documented way (`SS3`, `G5`) — S
 

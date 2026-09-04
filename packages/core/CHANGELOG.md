@@ -68,6 +68,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **ICU messages format under plain Node.** `icu.ts` default-imported
+  `intl-messageformat`, whose CommonJS entry has no default export, so under
+  Node (an SSR server run with `tsx`, say) the constructor was the exports
+  object, construction threw, and every plural and select rendered as its
+  raw ICU text. The named import is used, which all three entries provide.
+  (AUDIT-2026-09-03-FINDINGS I1)
+- **A malformed ICU message is reported once.** Compilation failed on every
+  call — the raw-text fallback was never cached — so a component rendering
+  the message re-parsed and re-logged it on every render. The failure is
+  cached, cleared with `clearICUCache()`, and counted by
+  `getICUCacheStats().failures`. (AUDIT-2026-09-03-FINDINGS I9)
+
 - **`createQueuedWebSocket` sends by the client's status, and `disconnect()`
   clears its queue.** The wrapper kept its own boolean from events, so one
   created around an already-connected client queued while the socket was

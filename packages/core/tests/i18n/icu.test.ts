@@ -231,6 +231,43 @@ describe('compileICU', () => {
   });
 
   describe('Error Handling', () => {
+    it('a malformed message is reported once, not on every render (I9)', () => {
+      // Compilation failed on every call — the raw message was never cached —
+      // so a component that rendered the message re-parsed and re-logged it
+      // on every render.
+      expectConsole('error');
+      clearICUCache();
+      const malformed = '{count, plural, one {# item}';
+
+      const first = compileICU(malformed, 'en');
+      const second = compileICU(malformed, 'en');
+      const third = compileICU(malformed, 'en');
+      expect(second).toBe(first);
+      expect(third).toBe(first);
+      expect(first({ count: 1 })).toBe(malformed);
+      expect(first({ count: 2 })).toBe(malformed);
+
+      expect(getICUCacheStats()).toEqual({ size: 0, failures: 1 });
+    });
+
+    it('a cached failure is cleared with the cache, by locale too', () => {
+      expectConsole('error', 3);
+      clearICUCache();
+      const malformed = '{count, plural, one {# item}';
+      compileICU(malformed, 'en');
+      compileICU(malformed, 'fr');
+      expect(getICUCacheStats()).toEqual({ size: 0, failures: 2 });
+
+      clearICUCache('en');
+      expect(getICUCacheStats()).toEqual({ size: 0, failures: 1 });
+      clearICUCache();
+      expect(getICUCacheStats()).toEqual({ size: 0, failures: 0 });
+
+      // Cleared, it is compiled — and reported — again.
+      compileICU(malformed, 'en');
+      expect(getICUCacheStats().failures).toBe(1);
+    });
+
     it('should handle invalid ICU syntax gracefully', () => {
       expectConsole('error');
       const format = compileICU('{count, plural, one {# item}', 'en'); // Missing closing brace
