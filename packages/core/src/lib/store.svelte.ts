@@ -139,6 +139,26 @@ export function createStore<State, Action, Dependencies = any>(
     }
   }
 
+  /**
+   * Run an effect body without letting a synchronous throw out.
+   *
+   * `Promise.resolve(execute()).catch(…)` handles a rejection but not a body
+   * that throws before returning: that escaped `dispatch()` into the caller's
+   * event handler, skipped the rest of a `Batch`, and inside a debounce,
+   * throttle or delay timer was an uncaught exception — while the same
+   * executor mapped through `scope()` was caught, so behaviour depended on
+   * composition depth (AUDIT-2026-09-03-FINDINGS N3).
+   */
+  function guarded(run: () => void | Promise<void>): void {
+    try {
+      Promise.resolve(run()).catch(error => {
+        console.error('[Composable Svelte] Effect error:', error);
+      });
+    } catch (error) {
+      console.error('[Composable Svelte] Effect error:', error);
+    }
+  }
+
   function executeEffect(effect: Effect<Action>): void {
     // Check if we should defer effects (SSR)
     const deferEffects = config.ssr?.deferEffects ?? true; // Default to true
@@ -152,9 +172,7 @@ export function createStore<State, Action, Dependencies = any>(
         break;
 
       case 'Run':
-        Promise.resolve(effect.execute(dispatch)).catch(error => {
-          console.error('[Composable Svelte] Effect error:', error);
-        });
+        guarded(() => effect.execute(dispatch));
         break;
 
       case 'Batch':
@@ -212,7 +230,13 @@ export function createStore<State, Action, Dependencies = any>(
           dispatch(action);
         };
 
-        Promise.resolve(effect.execute(guardedDispatch, controller.signal))
+        let running: Promise<void>;
+        try {
+          running = Promise.resolve(effect.execute(guardedDispatch, controller.signal));
+        } catch (error) {
+          running = Promise.reject(error);
+        }
+        running
           .catch(error => {
             // Optional chaining because a rejection is not required to be an
             // object: `throw null` or a bare `Promise.reject()` used to throw a
@@ -245,9 +269,7 @@ export function createStore<State, Action, Dependencies = any>(
         // Set new timer
         const timer = setTimeout(() => {
           debounceTimers.delete(effect.id);
-          Promise.resolve(effect.execute(dispatch)).catch(error => {
-            console.error('[Composable Svelte] Effect error:', error);
-          });
+          guarded(() => effect.execute(dispatch));
         }, effect.ms);
 
         debounceTimers.set(effect.id, timer);
@@ -264,18 +286,14 @@ export function createStore<State, Action, Dependencies = any>(
             clearTimeout(throttle.timeout);
           }
           throttleState.set(effect.id, { lastRun: now });
-          Promise.resolve(effect.execute(dispatch)).catch(error => {
-            console.error('[Composable Svelte] Effect error:', error);
-          });
+          guarded(() => effect.execute(dispatch));
         } else if (!throttle.timeout) {
           // Schedule for later
           const delay = effect.ms - (now - throttle.lastRun);
           const timeout = setTimeout(() => {
             // Clear timeout field by replacing entire object
             throttleState.set(effect.id, { lastRun: Date.now() });
-            Promise.resolve(effect.execute(dispatch)).catch(error => {
-              console.error('[Composable Svelte] Effect error:', error);
-            });
+            guarded(() => effect.execute(dispatch));
           }, delay);
 
           throttleState.set(effect.id, { lastRun: throttle.lastRun, timeout });
@@ -286,16 +304,12 @@ export function createStore<State, Action, Dependencies = any>(
 
       case 'AfterDelay':
         setTimeout(() => {
-          Promise.resolve(effect.execute(dispatch)).catch(error => {
-            console.error('[Composable Svelte] Effect error:', error);
-          });
+          guarded(() => effect.execute(dispatch));
         }, effect.ms);
         break;
 
       case 'FireAndForget':
-        Promise.resolve(effect.execute()).catch(error => {
-          console.error('[Composable Svelte] Effect error:', error);
-        });
+        guarded(() => effect.execute());
         break;
 
       case 'Subscription': {

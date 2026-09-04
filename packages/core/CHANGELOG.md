@@ -71,6 +71,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A synchronous throw in an effect body is logged, not thrown.** The store
+  caught a rejection but not a body that threw before returning: it escaped
+  `dispatch()` into the caller's event handler, skipped the rest of a
+  `Batch`, and inside a debounce, throttle or delay timer was an uncaught
+  exception — while the same executor mapped through `scope()` was caught, so
+  behaviour depended on composition depth. Every executor call is guarded
+  now. (AUDIT-2026-09-03-FINDINGS N3)
+
 - **The SSG canonical link and `generateAlternateLinks` escape what they
   interpolate.** The canonical `href` took `baseURL + path` raw, so a route
   with `"` closed the attribute — stored XSS from a path;

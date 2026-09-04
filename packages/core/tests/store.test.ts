@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { expectConsole } from './helpers/console.js';
 import { createStore } from '../src/lib/store.svelte';
 import { Effect } from '../src/lib/effect';
-import type { Reducer } from '../src/lib/types';
+import type { Effect as EffectType, Reducer } from '../src/lib/types';
 
 interface TestState {
   count: number;
@@ -504,4 +505,72 @@ describe('createStore', () => {
     expect(late).toHaveBeenCalledTimes(1);
     expect(store.state.count).toBe(1);
   });
+
+  describe('a synchronous throw in an effect body is logged, never thrown (N3)', () => {
+    // Promise.resolve(execute()).catch() handles a rejection, not a body that
+    // throws before returning: that escaped dispatch() into the caller's event
+    // handler, skipped the rest of a Batch, and inside a timer was an uncaught
+    // exception — while the same executor mapped through scope() was caught.
+    const throwing = () => {
+      throw new Error('boom');
+    };
+    function storeRunning(effect: (state: TestState) => ReturnType<Reducer<TestState, TestAction>>[1]) {
+      const reducer: Reducer<TestState, TestAction> = (state, action) => {
+        if (action.type === 'startLoading') return [state, effect(state)];
+        if (action.type === 'loadComplete') return [{ ...state, count: action.value }, Effect.none()];
+        return [state, Effect.none()];
+      };
+      return createStore({ initialState, reducer });
+    }
+
+    it('Run: dispatch() does not throw, and the error is logged once', () => {
+      expectConsole('error');
+      const store = storeRunning(() => Effect.run(throwing));
+      expect(() => store.dispatch({ type: 'startLoading' })).not.toThrow();
+    });
+
+    it('Batch: a throwing first member does not skip the second', () => {
+      expectConsole('error');
+      const store = storeRunning(() =>
+        Effect.batch(
+          Effect.run(throwing),
+          Effect.run((dispatch) => dispatch({ type: 'loadComplete', value: 7 }))
+        )
+      );
+      store.dispatch({ type: 'startLoading' });
+      expect(store.state.count).toBe(7);
+    });
+
+    it('Cancellable: the throw is logged and the id is released', () => {
+      expectConsole('error');
+      const store = storeRunning(() => Effect.cancellable('x', throwing));
+      expect(() => store.dispatch({ type: 'startLoading' })).not.toThrow();
+    });
+
+    it('FireAndForget: the throw is logged, not thrown', () => {
+      expectConsole('error');
+      const store = storeRunning(() => Effect.fireAndForget(throwing));
+      expect(() => store.dispatch({ type: 'startLoading' })).not.toThrow();
+    });
+
+    it.each<[string, () => EffectType<TestAction>]>([
+      ['Debounced', () => Effect.debounced('d', 50, throwing)],
+      ['Throttled (trailing)', () => Effect.throttled('t', 50, throwing)],
+      ['AfterDelay', () => Effect.afterDelay(50, throwing)]
+    ])('%s: a throw inside the timer callback is logged, not uncaught', (_name, make) => {
+      expectConsole('error');
+      const store = storeRunning(make);
+      store.dispatch({ type: 'startLoading' });
+      // A synchronous throw inside a timer callback surfaces here, out of the
+      // fake clock, as an uncaught exception would in a browser.
+      expect(() => vi.advanceTimersByTime(60)).not.toThrow();
+    });
+
+    it('Throttled (leading): the immediate call is guarded too', () => {
+      expectConsole('error');
+      const store = storeRunning(() => Effect.throttled('lead', 50, throwing));
+      expect(() => store.dispatch({ type: 'startLoading' })).not.toThrow();
+    });
+  });
 });
+
