@@ -123,6 +123,7 @@ export function createQueuedWebSocket<T = unknown>(
   return {
     connect: client.connect.bind(client),
     disconnect: client.disconnect.bind(client),
+    reconnect: client.reconnect.bind(client),
     async send(message: T): Promise<void> {
       if (isConnected) {
         return client.send(message);

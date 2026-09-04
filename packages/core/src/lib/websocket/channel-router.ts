@@ -200,6 +200,7 @@ export function createChannelWebSocket<T = unknown>(
   return {
     connect: client.connect.bind(client),
     disconnect: client.disconnect.bind(client),
+    reconnect: client.reconnect.bind(client),
     send: client.send.bind(client),
     subscribe: client.subscribe.bind(client),
     subscribeToEvents: client.subscribeToEvents.bind(client),

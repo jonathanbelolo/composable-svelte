@@ -78,3 +78,5 @@ before the fix is kept as `red-R1.x.y.log`, and the gate as `gate-R1.x.y.log`.
 | gate-R1.4.bc.log | R1.4.b+c | core gate: 2224 browser + 583 node, 0 skipped, check clean |
 | gate-R1.4.d.log | R1.4.d | core gate: 2227 browser (125 files, the new effect-websocket suite) + 583 node, 0 skipped, check clean |
 | gate-R1.4.e.log | R1.4.e | core gate: 2239 browser + 583 node, 0 skipped, check clean (a first run failed check on the new test's untyped helper parameter; fixed, re-run) |
+| gate-R1.4.f.log | R1.4.f | core gate: 2242 browser + 583 node, 0 skipped, check clean |
+| mutation-baseline-R1.4.f.log | R1.4.f | `node scripts/mutation-baseline.mjs` after M6 was re-anchored on the reconnect: 8 of 8 KILLED (M1, M2, M4, M5, M6, M7, M9, R1-N2) |

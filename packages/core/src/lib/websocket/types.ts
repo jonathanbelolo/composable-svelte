@@ -35,6 +35,14 @@ export interface WebSocketClient<T = unknown> {
   disconnect(code?: number, reason?: string): Promise<void>;
 
   /**
+   * Drop the current socket and start the reconnect ladder, keeping the URL.
+   * What the heartbeat calls on a missed pong: `disconnect()` forgets the URL
+   * and nothing reconnects after it. With reconnection disabled this is a
+   * `disconnect(1000, reason)`.
+   */
+  reconnect(reason?: string): void;
+
+  /**
    * Send a message through the WebSocket.
    * Throws if not connected.
    */
@@ -328,6 +336,14 @@ export interface HeartbeatConfig {
    * @default 'PONG'
    */
   readonly pongMessage?: unknown;
+
+  /**
+   * How a received message is recognised as the pong. The default compares
+   * it to `pongMessage` structurally (key order ignored), so an object pong
+   * matches; use this when the pong carries fields that vary, like a
+   * timestamp.
+   */
+  readonly isPong?: ((data: unknown) => boolean) | undefined;
 }
 
 export interface MessageSerializer {

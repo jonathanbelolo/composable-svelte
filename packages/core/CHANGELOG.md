@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`reconnect(reason?)` on `WebSocketClient`**: drop the socket and start the
+  reconnect ladder without forgetting the URL, which `disconnect()` does. The
+  live, mock, spy, queued and channel clients all implement it; the spy
+  records `reconnections`. **`HeartbeatConfig.isPong`** recognises a pong whose
+  fields vary; the default now compares an object pong structurally.
+
 - **`handleStackAction` takes an options object as its seventh argument**:
   `actionType` names the parent action type a mapped screen effect is
   dispatched under (it was hard-coded to `'stack'`, AUDIT-2026-09-03-FINDINGS
@@ -61,6 +67,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   case and maps each child's effect back into it. Kept for existing callers.
 
 ### Fixed
+
+- **A missed heartbeat pong reconnects instead of disconnecting for good.**
+  The heartbeat called `disconnect(1001, …)`, which cleared the URL so nothing
+  ever reconnected — and 1001 is a code a browser refuses from script, so the
+  real socket stayed open behind a state that said disconnected. It now stops
+  itself and calls `reconnect()`. The documented object `pongMessage` could
+  never match by `===`, so every cycle timed out; it is matched structurally.
+  The ping's framing (`"PING"` with quotes under the JSON serializer) is
+  documented. (AUDIT-2026-09-03-FINDINGS W4)
 
 - **The WebSocket client reconnects by close code, not by `wasClean`.** A
   server going away (1001), restarting (1012) or asking for a retry (1013)

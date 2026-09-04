@@ -486,8 +486,10 @@ socket rejects with `WS_CONNECTION_FAILED`.
 
 ### Manual Reconnection
 
-After an unexpected close `state.url` is still set, so a handler can decide
-for itself:
+`websocket.reconnect(reason)` drops the current socket and starts the ladder
+from the first attempt, keeping the URL — what the heartbeat calls on a missed
+pong. After an unexpected close `state.url` is also still set, so a handler
+can do the same by hand:
 
 ```typescript
 websocket.subscribeToEvents((event) => {
@@ -502,7 +504,9 @@ websocket.subscribeToEvents((event) => {
 
 ## Heartbeat
 
-Keep-alive monitoring with ping/pong messages.
+Keep-alive monitoring with ping/pong messages. A missed pong is a dead
+connection: the heartbeat stops itself and calls `websocket.reconnect()`, so
+the connection comes back through the reconnect ladder.
 
 ### Enable Heartbeat
 
@@ -530,31 +534,46 @@ websocket.subscribeToEvents((event) => {
 await websocket.connect('wss://api.example.com');
 ```
 
+### Framing
+
+The ping goes through the client's serializer. With the default
+`JSONSerializer` the string `'PING'` is sent as the JSON text `"PING"` — with
+the quotes — and the server's reply has to be JSON that deserialises to the
+pong: `"PONG"`, not a bare `PONG`, which the client reports as
+`WS_INVALID_MESSAGE`.
+
 ### Custom Ping/Pong
+
+An object pong is compared structurally (key order does not matter). When the
+pong carries a field that varies, say a timestamp, recognise it with `isPong`:
 
 ```typescript
 const heartbeat = createHeartbeat(websocket, {
   enabled: true,
   interval: 30000,
   timeout: 5000,
-  pingMessage: { type: 'ping', timestamp: Date.now() },
-  pongMessage: { type: 'pong', timestamp: Date.now() }
+  pingMessage: { type: 'ping' },
+  isPong: (data) => (data as { type?: string }).type === 'pong'
 });
 ```
 
 ### Heartbeat Timeout
 
-If pong not received within timeout, connection is closed:
+When no pong arrives within `timeout`, the heartbeat stops and the client
+reconnects. The `disconnected` event carries the reason, then `reconnecting`
+follows:
 
 ```typescript
 websocket.subscribeToEvents((event) => {
-  if (event.type === 'disconnected') {
-    if (event.reason === 'Heartbeat timeout') {
-      console.log('Server not responding - reconnecting...');
-    }
+  if (event.type === 'disconnected' && event.reason === 'Pong timeout') {
+    console.log('Server not responding - reconnecting…');
   }
 });
 ```
+
+`reconnect()` is public: call `websocket.reconnect('why')` yourself to drop the
+socket and start the ladder without forgetting the URL, which `disconnect()`
+does.
 
 ## Channel Routing
 

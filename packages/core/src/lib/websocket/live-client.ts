@@ -446,27 +446,15 @@ export function createLiveWebSocket<T = unknown>(
     });
   }
 
-  async function disconnect(code = 1000, reason = ''): Promise<void> {
-    // Clear reconnect timer
-    if (reconnectTimer) {
-      clearTimeout(reconnectTimer);
-      reconnectTimer = null;
-    }
-
-    // Clear connection timeout
-    if (connectionTimeoutTimer) {
-      clearTimeout(connectionTimeoutTimer);
-      connectionTimeoutTimer = null;
-    }
-
-    const wasLive =
-      state.status === 'connected' || state.status === 'connecting' || state.status === 'reconnecting';
-
-    // Detach the socket before closing it: the first form nulled `socket`
-    // with its handlers attached, so its late `close` ran against the state
-    // of whatever connection came next — status 'reconnecting' with an OPEN
-    // socket, a reconnect that threw 'Already connected', a queued wrapper
-    // that queued forever (AUDIT-2026-09-03-FINDINGS W2, W6).
+  /**
+   * Detach the current socket before closing it, and reject a connect() still
+   * waiting on it. The first form nulled `socket` with its handlers attached,
+   * so its late `close` ran against the state of whatever connection came
+   * next — status 'reconnecting' with an OPEN socket, a reconnect that threw
+   * 'Already connected', a queued wrapper that queued forever
+   * (AUDIT-2026-09-03-FINDINGS W2, W6).
+   */
+  function releaseSocket(code: number, reason: string): void {
     if (socket) {
       const ws = socket;
       ws.onopen = null;
@@ -487,6 +475,54 @@ export function createLiveWebSocket<T = unknown>(
     reject?.(
       new WebSocketError('Disconnected before the connection opened', WS_ERROR_CODES.CONNECTION_FAILED, false)
     );
+  }
+
+  /**
+   * Drop the socket and climb the ladder from the first rung, keeping the
+   * URL. The heartbeat called `disconnect(1001, …)` on a missed pong, which
+   * cleared the URL so nothing ever reconnected — and 1001 is a code a
+   * browser refuses from script, so the real socket stayed open behind a
+   * state that said disconnected (AUDIT-2026-09-03-FINDINGS W4). Closes
+   * with 1000, the one code every browser accepts.
+   */
+  function reconnect(reason = 'Reconnect requested'): void {
+    if (!state.url) return;
+    if (!reconnectConfig.enabled) {
+      void disconnect(1000, reason);
+      return;
+    }
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+    if (connectionTimeoutTimer) {
+      clearTimeout(connectionTimeoutTimer);
+      connectionTimeoutTimer = null;
+    }
+    releaseSocket(1000, reason);
+    updateState({ status: 'disconnected', connectedAt: null, reconnectAttempts: 0 });
+    notifyEventListeners({ type: 'disconnected', code: 1000, reason, wasClean: false, timestamp: Date.now() });
+    ladderDelay = 0;
+    scheduleReconnect();
+  }
+
+  async function disconnect(code = 1000, reason = ''): Promise<void> {
+    // Clear reconnect timer
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+
+    // Clear connection timeout
+    if (connectionTimeoutTimer) {
+      clearTimeout(connectionTimeoutTimer);
+      connectionTimeoutTimer = null;
+    }
+
+    const wasLive =
+      state.status === 'connected' || state.status === 'connecting' || state.status === 'reconnecting';
+
+    releaseSocket(code, reason);
 
     updateState({
       status: 'disconnected',
@@ -611,6 +647,7 @@ export function createLiveWebSocket<T = unknown>(
   return {
     connect,
     disconnect,
+    reconnect,
     send,
     subscribe,
     subscribeToEvents,

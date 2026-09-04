@@ -13,6 +13,8 @@ import {
 	installScriptedWebSocket
 } from '../helpers/scripted-websocket.js';
 import { WS_ERROR_CODES, type ReconnectConfig, type WebSocketEvent } from '../../src/lib/websocket/types.js';
+import { createHeartbeat } from '../../src/lib/websocket/heartbeat.js';
+import { expectConsole } from '../helpers/console.js';
 
 
 beforeEach(() => {
@@ -219,6 +221,87 @@ describe('createLiveWebSocket over a scripted socket', () => {
 
 			ScriptedWebSocket.instances[0]!.closed(1006, false);
 			expect(client.state.status).toBe('reconnecting');
+		});
+	});
+
+	describe('the heartbeat over the live client (W4)', () => {
+		const ladder = { enabled: true, maxAttempts: 3, initialDelay: 100, maxDelay: 1000, backoffMultiplier: 2, jitter: false };
+
+		async function withHeartbeat(config: Parameters<typeof createHeartbeat>[1]) {
+			const client = createLiveWebSocket({ reconnect: ladder });
+			const events: WebSocketEvent[] = [];
+			client.subscribeToEvents((event) => events.push(event));
+			const heartbeat = createHeartbeat(client, config);
+			client.subscribeToEvents((event) => {
+				if (event.type === 'connected') heartbeat.start();
+				else if (event.type === 'disconnected') heartbeat.stop();
+			});
+			const connecting = client.connect('wss://x.example');
+			ScriptedWebSocket.instances[0]!.open();
+			await connecting;
+			return { client, events, heartbeat };
+		}
+
+		it('a pong timeout reconnects instead of disconnecting for good', async () => {
+			// The heartbeat called disconnect(1001, …): the client forgot the URL
+			// and never reconnected, and 1001 is a code a browser refuses from
+			// script, so the real socket stayed open behind a disconnected state.
+			expectConsole('warn'); // '[WebSocket] Pong timeout'
+			const { client, events, heartbeat } = await withHeartbeat({ enabled: true, interval: 100, timeout: 50 });
+			const first = ScriptedWebSocket.instances[0]!;
+
+			await vi.advanceTimersByTimeAsync(100);
+			// The framing the docs describe: the ping goes through the serializer.
+			expect(first.sent).toEqual(['"PING"']);
+
+			await vi.advanceTimersByTimeAsync(50);
+			expect(first.closeCalls.at(-1)).toEqual({ code: 1000, reason: 'Pong timeout' });
+			expect(events.slice(-2).map((e) => e.type)).toEqual(['disconnected', 'reconnecting']);
+			expect(events.at(-2)).toMatchObject({ reason: 'Pong timeout', wasClean: false });
+			expect(heartbeat.isRunning).toBe(false);
+
+			await vi.advanceTimersByTimeAsync(100);
+			expect(ScriptedWebSocket.instances).toHaveLength(2);
+			ScriptedWebSocket.instances[1]!.open();
+			expect(client.state.status).toBe('connected');
+			expect(heartbeat.isRunning).toBe(true);
+		});
+
+		it('the documented object pong matches', async () => {
+			// `message.data === pongMessage` could never be true for an object.
+			const { client, events } = await withHeartbeat({
+				enabled: true,
+				interval: 100,
+				timeout: 50,
+				pingMessage: { type: 'ping' },
+				pongMessage: { type: 'pong' }
+			});
+			const socket = ScriptedWebSocket.instances[0]!;
+
+			await vi.advanceTimersByTimeAsync(100);
+			expect(socket.sent).toEqual(['{"type":"ping"}']);
+			socket.message('{"type":"pong"}');
+
+			await vi.advanceTimersByTimeAsync(50);
+			expect(client.state.status).toBe('connected');
+			expect(events.some((e) => e.type === 'reconnecting')).toBe(false);
+		});
+
+		it('isPong recognises a pong whose fields vary', async () => {
+			const { client } = await withHeartbeat({
+				enabled: true,
+				interval: 100,
+				timeout: 50,
+				pingMessage: { type: 'ping' },
+				isPong: (data) => (data as { type?: string })?.type === 'pong'
+			});
+			const socket = ScriptedWebSocket.instances[0]!;
+
+			await vi.advanceTimersByTimeAsync(100);
+			socket.message('{"type":"pong","timestamp":12345}');
+			await vi.advanceTimersByTimeAsync(50);
+
+			expect(client.state.status).toBe('connected');
 		});
 	});
 });

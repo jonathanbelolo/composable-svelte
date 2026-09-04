@@ -2,10 +2,18 @@
  * Heartbeat (Ping/Pong) for WebSocket connections.
  *
  * This module provides health monitoring for WebSocket connections via
- * ping/pong messages. Automatically disconnects if pong not received within timeout.
+ * ping/pong messages. A missed pong is a dead connection: the heartbeat stops
+ * itself and asks the client to reconnect.
+ *
+ * Framing: the ping goes through the client's serializer, so with the default
+ * `JSONSerializer` the string `'PING'` is sent as the JSON text `"PING"`
+ * (quoted) and the reply has to be JSON that deserialises to the pong — a bare
+ * text `PONG` is an `INVALID_MESSAGE`. An object pong is matched
+ * structurally; pass `isPong` when it carries fields that vary.
  */
 
 import type { WebSocketClient, HeartbeatConfig } from './types.js';
+import { stableStringify } from '../utils/stable-stringify.js';
 
 export interface Heartbeat {
   /**
@@ -28,7 +36,9 @@ export interface Heartbeat {
  * Create heartbeat monitor for WebSocket connection.
  *
  * Sends ping messages at regular intervals and expects pong responses.
- * Disconnects if pong not received within timeout.
+ * On a missed pong it stops and calls `client.reconnect()`, so the connection
+ * comes back through the client's reconnect ladder; `disconnect()` would
+ * forget the URL and nothing would reconnect (AUDIT-2026-09-03-FINDINGS W4).
  *
  * @param client - WebSocket client
  * @param config - Heartbeat configuration
@@ -65,6 +75,9 @@ export function createHeartbeat(
 
   const pingMessage = config.pingMessage ?? 'PING';
   const pongMessage = config.pongMessage ?? 'PONG';
+  // Structural, not `===`: the documented object pong could never match by
+  // reference, so every cycle timed out.
+  const isPong = config.isPong ?? ((data: unknown) => stableStringify(data) === stableStringify(pongMessage));
 
   function start(): void {
     if (intervalId || !config.enabled) return;
@@ -73,7 +86,7 @@ export function createHeartbeat(
 
     // Subscribe to pong messages
     unsubscribe = client.subscribe((message) => {
-      if (message.data === pongMessage) {
+      if (isPong(message.data)) {
         pongReceived = true;
         if (timeoutId) {
           clearTimeout(timeoutId);
@@ -86,8 +99,8 @@ export function createHeartbeat(
       // Check if last ping was acknowledged
       if (!pongReceived) {
         console.warn('[WebSocket] Heartbeat timeout - no pong received');
-        client.disconnect(1001, 'Heartbeat timeout').catch(console.error);
         stop();
+        client.reconnect('Heartbeat timeout');
         return;
       }
 
@@ -102,8 +115,8 @@ export function createHeartbeat(
       timeoutId = setTimeout(() => {
         if (!pongReceived) {
           console.warn('[WebSocket] Pong timeout');
-          client.disconnect(1001, 'Pong timeout').catch(console.error);
           stop();
+          client.reconnect('Pong timeout');
         }
       }, config.timeout);
 

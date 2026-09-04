@@ -39,6 +39,11 @@ export interface SpyWebSocketClient<T = unknown> extends WebSocketClient<T> {
   readonly disconnections: RecordedDisconnection[];
 
   /**
+   * All reconnect() calls, with their reason.
+   */
+  readonly reconnections: Array<{ readonly reason: string; readonly timestamp: number }>;
+
+  /**
    * All sent messages.
    */
   readonly sentMessages: T[];
@@ -82,6 +87,7 @@ export function createSpyWebSocket<T = unknown>(
 ): SpyWebSocketClient<T> {
   const connections: RecordedConnection[] = [];
   const disconnections: RecordedDisconnection[] = [];
+  const reconnections: Array<{ reason: string; timestamp: number }> = [];
   const sentMessages: T[] = [];
   const receivedMessages: WebSocketMessage<T>[] = [];
 
@@ -97,6 +103,11 @@ export function createSpyWebSocket<T = unknown>(
   async function disconnect(code = 1000, reason = ''): Promise<void> {
     disconnections.push({ code, reason, timestamp: Date.now() });
     return realClient.disconnect(code, reason);
+  }
+
+  function reconnect(reason = 'Reconnect requested'): void {
+    reconnections.push({ reason, timestamp: Date.now() });
+    realClient.reconnect(reason);
   }
 
   async function send(message: T): Promise<void> {
@@ -122,6 +133,7 @@ export function createSpyWebSocket<T = unknown>(
   function reset(): void {
     connections.length = 0;
     disconnections.length = 0;
+    reconnections.length = 0;
     sentMessages.length = 0;
     receivedMessages.length = 0;
   }
@@ -129,6 +141,7 @@ export function createSpyWebSocket<T = unknown>(
   return {
     connect,
     disconnect,
+    reconnect,
     send,
     subscribe,
     subscribeToEvents,
@@ -136,6 +149,7 @@ export function createSpyWebSocket<T = unknown>(
     get stats(): ConnectionStats { return realClient.stats; },
     connections,
     disconnections,
+    reconnections,
     sentMessages,
     receivedMessages,
     connectionsTo,

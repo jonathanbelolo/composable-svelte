@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { expectConsole } from '../helpers/console.js';
 import { createHeartbeat } from '../../src/lib/websocket/heartbeat.js';
 import { createMockWebSocket } from '../../src/lib/websocket/testing/mock-client.js';
-import type { HeartbeatConfig } from '../../src/lib/websocket/types.js';
+import type { HeartbeatConfig, WebSocketEvent } from '../../src/lib/websocket/types.js';
 
 describe('WebSocket Heartbeat', () => {
   beforeEach(() => {
@@ -262,9 +262,13 @@ describe('WebSocket Heartbeat', () => {
   });
 
   describe('Timeout Behavior', () => {
-    it('should disconnect on pong timeout', () => {
+    it('should reconnect on pong timeout', () => {
+      // A missed pong used to disconnect for good: the client forgot the URL
+      // and nothing reconnected (W4). It now asks the client to reconnect.
       expectConsole('warn');
       const client = createMockWebSocket();
+      const events: WebSocketEvent[] = [];
+      client.subscribeToEvents((event) => events.push(event));
       client.connect('wss://example.com');
       vi.advanceTimersByTime(10); // Let connection complete
 
@@ -281,13 +285,16 @@ describe('WebSocket Heartbeat', () => {
       vi.advanceTimersByTime(1000); // Ping sent
       vi.advanceTimersByTime(500);  // Timeout expires
 
-      expect(client.state.status).toBe('disconnected');
+      expect(client.state.status).toBe('reconnecting');
+      expect(events.at(-2)).toMatchObject({ type: 'disconnected', reason: 'Pong timeout', wasClean: false });
       expect(heartbeat.isRunning).toBe(false);
     });
 
-    it('should disconnect if second ping sent without pong from first', () => {
+    it('should reconnect if second ping sent without pong from first', () => {
       expectConsole('warn');
       const client = createMockWebSocket();
+      const events: WebSocketEvent[] = [];
+      client.subscribeToEvents((event) => events.push(event));
       client.connect('wss://example.com');
       vi.advanceTimersByTime(10); // Let connection complete
 
@@ -308,10 +315,11 @@ describe('WebSocket Heartbeat', () => {
       vi.advanceTimersByTime(1000);
       expect(client.sentMessages).toHaveLength(1);
 
-      // Second interval: must disconnect, not ping again
+      // Second interval: must reconnect, not ping again
       vi.advanceTimersByTime(1000);
 
-      expect(client.state.status).toBe('disconnected');
+      expect(client.state.status).toBe('reconnecting');
+      expect(events.at(-2)).toMatchObject({ type: 'disconnected', reason: 'Heartbeat timeout', wasClean: false });
       expect(heartbeat.isRunning).toBe(false);
       expect(client.sentMessages).toHaveLength(1);
     });

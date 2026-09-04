@@ -97,11 +97,11 @@ const MUTATIONS = [
 	{
 		id: 'M6',
 		file: 'src/lib/websocket/heartbeat.ts',
-		find: "      if (!pongReceived) {\n        console.warn('[WebSocket] Heartbeat timeout - no pong received');\n        client.disconnect(1001, 'Heartbeat timeout').catch(console.error);\n        stop();\n        return;\n      }",
+		find: "      if (!pongReceived) {\n        console.warn('[WebSocket] Heartbeat timeout - no pong received');\n        stop();\n        client.reconnect('Heartbeat timeout');\n        return;\n      }",
 		replace: '      /* mutated: no-pong branch removed */',
 		config: 'browser',
 		suite: 'tests/websocket/heartbeat.test.ts',
-		expect: 'should disconnect if second ping sent without pong from first',
+		expect: 'should reconnect if second ping sent without pong from first',
 		guards: "the heartbeat's missed-pong branch"
 	},
 	{
