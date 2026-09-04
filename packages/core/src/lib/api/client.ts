@@ -3,7 +3,12 @@
 // ============================================================================
 
 import { APIError, NetworkError, TimeoutError, ValidationError } from './errors.js';
-import { createInFlightRegistry, requestKey, type RequestIdentity } from './deduplication.js';
+import {
+  createInFlightRegistry,
+  isDeduplicableMethod,
+  requestKey,
+  type RequestIdentity
+} from './deduplication.js';
 import { retryRequest } from './retry.js';
 import { cacheKeyFor, createResponseCache } from './cache.js';
 import type {
@@ -103,13 +108,6 @@ async function parseResponseBody(response: Response): Promise<unknown> {
   } catch {
     return await response.text();
   }
-}
-
-/**
- * Determine if HTTP method is safe (idempotent, can retry).
- */
-function isSafeMethod(method: HTTPMethod): boolean {
-  return method === 'GET' || method === 'HEAD' || method === 'OPTIONS' || method === 'PUT' || method === 'DELETE';
 }
 
 /**
@@ -382,9 +380,14 @@ export function createAPIClient(config: APIClientConfig = {}): APIClient {
       retryRequest<T>(method, () => executeFetch<T>(method, resolved, config), retryConfig);
 
     // Layer 2: Deduplication. The request's flag wins; the client's default
-    // was destructured and never read, so it could not be turned off
-    // per client (AUDIT-2026-09-03-FINDINGS A1).
-    const coalesce = config.deduplicate ?? deduplicate;
+    // was destructured and never read, so it could not be turned off per
+    // client (AUDIT-2026-09-03-FINDINGS A1). Only safe methods coalesce by
+    // default: two identical POSTs are two intents, and a client-level `true`
+    // cannot be told from the default, so a mutation is coalesced only when
+    // its own request says `deduplicate: true` (A11).
+    const coalesce =
+      config.deduplicate === true ||
+      (config.deduplicate !== false && deduplicate && isDeduplicableMethod(method));
     const response = coalesce ? await inFlight.join(key, run) : await run();
 
     // Store in cache if applicable; the entry remembers the path it answers

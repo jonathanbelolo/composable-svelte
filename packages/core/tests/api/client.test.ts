@@ -81,4 +81,20 @@ describe('createAPIClient over a scripted fetch', () => {
 		await Promise.all([api.get('/x', { deduplicate: true }), api.get('/x', { deduplicate: true })]);
 		expect(fetched.calls).toHaveLength(3);
 	});
+
+	it('A11: identical concurrent POSTs are not coalesced unless the request opts in', async () => {
+		// Two identical POSTs are two intents; coalescing them by default hid the
+		// second. PUT, PATCH and DELETE are the same.
+		const fetched = scriptFetch([{ match: /\/things$/, body: { id: 1 }, delayMs: 20 }]);
+		const api = createAPIClient({ baseURL: 'https://a.example' });
+
+		await Promise.all([api.post('/things', { a: 1 }), api.post('/things', { a: 1 })]);
+		expect(fetched.calls).toHaveLength(2);
+
+		await Promise.all([
+			api.post('/things', { a: 1 }, { deduplicate: true }),
+			api.post('/things', { a: 1 }, { deduplicate: true })
+		]);
+		expect(fetched.calls).toHaveLength(3);
+	});
 });

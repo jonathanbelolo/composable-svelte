@@ -261,6 +261,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **BREAKING: POST, PUT, PATCH and DELETE are no longer deduplicated by
+  default.** Two identical concurrent mutations coalesced into one request,
+  which hid the second intent. Safe methods (GET, HEAD, OPTIONS) still
+  coalesce; a mutation coalesces only when its request sets
+  `deduplicate: true`. (AUDIT-2026-09-03-FINDINGS A11)
+
 - **BREAKING: the API client's request deduplication and response cache are
   per client instance.** Both were module-global: two clients built for two
   users coalesced into one fetch and both received the first user's body, and

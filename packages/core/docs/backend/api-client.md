@@ -11,13 +11,14 @@ Comprehensive guide to the HTTP API client for backend integration in Composable
 5. [Request Configuration](#request-configuration)
 6. [Interceptors](#interceptors)
 7. [Retry Logic](#retry-logic)
-8. [Caching](#caching)
-9. [Error Handling](#error-handling)
-10. [Endpoint Helpers](#endpoint-helpers)
-11. [Effect Integration](#effect-integration)
-12. [Testing](#testing)
-13. [Best Practices](#best-practices)
-14. [Advanced Patterns](#advanced-patterns)
+8. [Deduplication](#deduplication)
+9. [Caching](#caching)
+10. [Error Handling](#error-handling)
+11. [Endpoint Helpers](#endpoint-helpers)
+12. [Effect Integration](#effect-integration)
+13. [Testing](#testing)
+14. [Best Practices](#best-practices)
+15. [Advanced Patterns](#advanced-patterns)
 
 ## Overview
 
@@ -524,6 +525,39 @@ Attempt 5: 8000 * 2^1 = 16000ms (capped at maxDelay)
 ```
 
 Jitter adds randomness (±30%) to prevent thundering herd.
+
+## Deduplication
+
+Identical concurrent requests on one client are coalesced into one fetch, and
+every caller receives the response.
+
+```typescript
+const api = createAPIClient({ baseURL: 'https://api.example.com' });
+
+// One fetch, two callers
+const [a, b] = await Promise.all([api.get('/me'), api.get('/me')]);
+```
+
+**What counts as identical.** The method, the resolved URL (`'me'` and
+`'/me'` are one request), the query parameters in a stable order, the headers
+as they will be sent — the client's defaults merged with the request's, before
+interceptors — and the body. Two clients never coalesce with each other; each
+owns its in-flight map.
+
+**Which methods.** GET, HEAD and OPTIONS, by default. A repeated POST, PUT,
+PATCH or DELETE is two intents and is sent twice; a request opts in with
+`deduplicate: true`.
+
+**Turning it off.** `createAPIClient({ deduplicate: false })` for a client,
+`{ deduplicate: false }` on a request; a request's flag wins.
+
+```typescript
+// Coalesce a mutation that is safe to repeat
+await Promise.all([
+  api.post('/search', query, { deduplicate: true }),
+  api.post('/search', query, { deduplicate: true })
+]);
+```
 
 ## Caching
 

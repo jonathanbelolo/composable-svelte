@@ -44,9 +44,11 @@ export interface RequestConfig {
   signal?: AbortSignal;
 
   /**
-   * Enable request deduplication.
-   * If true, duplicate in-flight requests will be coalesced.
-   * @default true
+   * Coalesce this request with an identical one already in flight on this
+   * client. `true` opts in regardless of method — the only way a POST, PUT,
+   * PATCH or DELETE is coalesced; `false` opts out; unset follows the client's
+   * `deduplicate` for GET, HEAD and OPTIONS.
+   * @default the client's setting, for safe methods
    */
   deduplicate?: boolean;
 
