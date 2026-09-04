@@ -30,19 +30,35 @@ import { walkFiles } from './walk.js';
 
 const repoRoot = fileURLToPath(new URL('../../../../', import.meta.url));
 const guardDir = fileURLToPath(new URL('.', import.meta.url));
+const testsDir = fileURLToPath(new URL('..', import.meta.url));
 
 /** Every guard in this directory, by file name. */
 const guards = walkFiles(guardDir, { keep: (name) => name.endsWith('.test.ts') }).files
 	.map((file) => relative(guardDir, file))
 	.sort();
 
+/**
+ * Every file the walker rules read, as a `tests/`-relative path.
+ *
+ * `tests/styles/` is registered by glob in both configs, so the registration
+ * arms below do not apply to it — but its guards read the tree too, and
+ * `public-exports.test.ts` carried a raw `readdirSync` for as long as this
+ * file looked at `tests/repo/` alone.
+ */
+const scanned = [
+	...guards.map((file) => `repo/${file}`),
+	...walkFiles(join(testsDir, 'styles'), { keep: (name) => name.endsWith('.test.ts') }).files.map(
+		(file) => relative(testsDir, file)
+	)
+].sort();
+
 const coreDir = join(repoRoot, 'packages', 'core');
 const nodeConfig = readFileSync(join(coreDir, 'vitest.node.config.ts'), 'utf8');
 const browserConfig = readFileSync(join(coreDir, 'vite.config.ts'), 'utf8');
 
-/** Source with comments stripped, so a rule reads code and not commentary. */
+/** Source with comments stripped, so a rule reads code and not commentary. `file` is `tests/`-relative. */
 function code(file: string): string {
-	return readFileSync(join(guardDir, file), 'utf8')
+	return readFileSync(join(testsDir, file), 'utf8')
 		.replace(/\/\*[\s\S]*?\*\//g, '')
 		.replace(/^[ \t]*\/\/[^\n]*$/gm, '');
 }
@@ -56,6 +72,10 @@ describe('the guards are guards', () => {
 
 	it('includes this file, so the walk reaches the directory it means to', () => {
 		expect(guards).toContain('guard-integrity.test.ts');
+	});
+
+	it('the walker rules also reach tests/styles', () => {
+		expect(scanned).toContain('styles/public-exports.test.ts');
 	});
 });
 
@@ -103,6 +123,16 @@ describe('every guard actually runs', () => {
 
 		expect(missing, 'vite.config.ts excludes a guard that no longer exists').toEqual([]);
 	});
+
+	it('the package test script still runs the node config', () => {
+		// Both configs are listed correctly, and none of it runs if the second
+		// clause of the test script goes: drop it and CI is green with every
+		// guard in this directory unexecuted.
+		const pkg = JSON.parse(readFileSync(join(coreDir, 'package.json'), 'utf8')) as {
+			scripts: Record<string, string>;
+		};
+		expect(pkg.scripts.test).toContain('vitest run --config vitest.node.config.ts');
+	});
 });
 
 /**
@@ -114,10 +144,10 @@ describe('every guard actually runs', () => {
  */
 const ALLOWED = new Map([
 	[
-		'walk.test.ts',
+		'repo/walk.test.ts',
 		'its preconditions call the raw forms on purpose, to prove the two defects the helper replaces are real'
 	],
-	['guard-integrity.test.ts', 'the rules in this file quote both names as regex literals']
+	['repo/guard-integrity.test.ts', 'the rules in this file quote both names as regex literals']
 ]);
 
 const usesReaddir = (file: string) => /\breaddirSync\b/.test(code(file));
@@ -130,7 +160,7 @@ describe('no guard walks the tree itself', () => {
 	// `walk.ts` is the only place allowed to touch these, so the fix cannot be
 	// undone one copied line at a time.
 	it('none calls readdirSync', () => {
-		const offenders = guards.filter((file) => !ALLOWED.has(file) && usesReaddir(file));
+		const offenders = scanned.filter((file) => !ALLOWED.has(file) && usesReaddir(file));
 
 		expect(
 			offenders,
@@ -141,7 +171,7 @@ describe('no guard walks the tree itself', () => {
 	it('none calls statSync without suppressing the throw', () => {
 		// `throwIfNoEntry: false` is permitted: `dist-freshness` reads an mtime
 		// from a path the walk already produced, and that is not a walk.
-		const offenders = guards.filter((file) => !ALLOWED.has(file) && usesThrowingStat(file));
+		const offenders = scanned.filter((file) => !ALLOWED.has(file) && usesThrowingStat(file));
 
 		expect(
 			offenders,
@@ -154,14 +184,14 @@ describe('no guard walks the tree itself', () => {
 		// was written around. Same arm `export-surface` keeps over its own
 		// register, for the same reason.
 		const unnecessary = [...ALLOWED.keys()].filter(
-			(file) => guards.includes(file) && !usesReaddir(file) && !usesThrowingStat(file)
+			(file) => scanned.includes(file) && !usesReaddir(file) && !usesThrowingStat(file)
 		);
 
 		expect(unnecessary, 'these no longer call either — drop them from ALLOWED').toEqual([]);
 	});
 
 	it('names only guards that exist', () => {
-		const missing = [...ALLOWED.keys()].filter((file) => !guards.includes(file));
+		const missing = [...ALLOWED.keys()].filter((file) => !scanned.includes(file));
 
 		expect(missing, 'ALLOWED names a guard that is gone').toEqual([]);
 	});
@@ -169,12 +199,14 @@ describe('no guard walks the tree itself', () => {
 	it('the rules can see a violation when there is one', () => {
 		// Non-vacuity, and not optional: both arms above are `filter(...)` over a
 		// regex, and a regex that matches nothing passes exactly like a clean
-		// tree. `walk.ts` is the file that legitimately contains both, so it is
-		// the honest positive control.
-		const helper = readFileSync(join(guardDir, 'walk.ts'), 'utf8');
-
-		expect(/\breaddirSync\b/.test(helper), 'the readdirSync rule matches nothing').toBe(true);
-		expect(/\bstatSync\s*\(/.test(helper), 'the statSync rule matches nothing').toBe(true);
+		// tree. Driven through the real predicates, not a paraphrase of their
+		// regexes — the earlier form re-inlined the patterns against raw source,
+		// so the throwing-stat predicate had no true positive at all: `walk.ts`
+		// passes `throwIfNoEntry` and is correctly *not* an offender.
+		expect(usesReaddir('repo/walk.ts'), 'the readdirSync rule matches nothing').toBe(true);
+		expect(usesThrowingStat('repo/walk.ts'), 'the carve-out for throwIfNoEntry is gone').toBe(false);
+		// `walk.test.ts` calls a bare statSync on purpose, to prove the defect.
+		expect(usesThrowingStat('repo/walk.test.ts'), 'the statSync rule matches nothing').toBe(true);
 	});
 
 	it('does not mistake a mention in prose for a call', () => {
@@ -182,8 +214,8 @@ describe('no guard walks the tree itself', () => {
 		// length in their comments, which is why the rules read stripped source.
 		// Without that every guard would be an offender and the arms would fail
 		// for the wrong reason.
-		const discussed = guards.filter((file) =>
-			/readdirSync|statSync/.test(readFileSync(join(guardDir, file), 'utf8'))
+		const discussed = scanned.filter((file) =>
+			/readdirSync|statSync/.test(readFileSync(join(testsDir, file), 'utf8'))
 		);
 
 		expect(discussed.length, 'no guard mentions either name, so stripping proves nothing').toBeGreaterThan(0);

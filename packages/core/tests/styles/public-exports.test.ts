@@ -14,9 +14,10 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { readdirSync, readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
+import { listDirs } from '../repo/walk.js';
 
 const uiDir = fileURLToPath(new URL('../../src/lib/components/ui/', import.meta.url));
 /**
@@ -81,9 +82,10 @@ const INTENTIONALLY_PRIVATE = new Set([
 	'formatFileSize'
 ]);
 
-const subBarrels = readdirSync(uiDir, { withFileTypes: true })
-	.filter((e) => e.isDirectory() && existsSync(join(uiDir, e.name, 'index.ts')))
-	.map((e) => e.name);
+// `listDirs`, not `readdirSync` + `isDirectory()`: the latter is false for a
+// symlinked directory, which is the defect `walk.ts` exists to remove.
+// `guard-integrity` scans this directory for the raw call now.
+const subBarrels = listDirs(uiDir).filter((name) => existsSync(join(uiDir, name, 'index.ts')));
 
 describe('components/ui public surface', () => {
 	it('finds the sub-barrels', () => {
