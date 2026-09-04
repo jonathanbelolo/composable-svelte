@@ -28,7 +28,7 @@ The WebSocket client provides production-ready real-time communication with:
 - **Automatic reconnection**: Exponential backoff with configurable retry
 - **Connection lifecycle**: Connect, disconnect, reconnecting, failed states
 - **Type-safe messages**: Full TypeScript inference for message types
-- **Heartbeat/ping-pong**: Keep-alive monitoring with automatic disconnect
+- **Heartbeat/ping-pong**: Keep-alive monitoring; a missed pong reconnects
 - **Channel routing**: Topic-based message routing
 - **Message queuing**: Offline message buffering
 - **Effect integration**: Declarative WebSocket operations in reducers
@@ -42,14 +42,8 @@ import { createLiveWebSocket, Effect } from '@composable-svelte/core';
 // 1. Create client
 const websocket = createLiveWebSocket({
   reconnect: {
-    // Every field is required — `ReconnectConfig` has no optional members, so
-    // there are no defaults to fall back on.
-    enabled: true,
-    maxAttempts: 5,
-    initialDelay: 1000,
-    maxDelay: 30_000,
-    backoffMultiplier: 2,
-    jitter: true
+    // Every field has a default; name only what you change.
+    maxAttempts: 5
   }
 });
 
@@ -93,9 +87,14 @@ await websocket.connect('wss://api.example.com');
 
 ### Full Configuration
 
+`createLiveWebSocket` reads three fields, each with a default. The URL and
+protocols are arguments of `connect()`; a heartbeat is a separate object
+(`createHeartbeat`, below); the offline queue is a wrapper
+(`createQueuedWebSocket`, below).
+
 ```typescript
 const websocket = createLiveWebSocket({
-  // Reconnection strategy
+  // Reconnection strategy — every field optional, defaults shown
   reconnect: {
     enabled: true,
     maxAttempts: 5,
@@ -105,23 +104,11 @@ const websocket = createLiveWebSocket({
     jitter: true
   },
 
-  // Heartbeat/ping-pong
-  heartbeat: {
-    enabled: true,
-    interval: 30000,
-    timeout: 5000,
-    pingMessage: 'PING',
-    pongMessage: 'PONG'
-  },
-
   // Message serialization
   serializer: JSONSerializer, // or custom serializer
 
-  // Connection timeout
-  connectionTimeout: 10000,
-
-  // Message queue size
-  queueSize: 100
+  // Connection timeout (ms)
+  connectionTimeout: 10000
 });
 ```
 

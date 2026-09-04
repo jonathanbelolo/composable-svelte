@@ -221,81 +221,73 @@ export const WS_ERROR_CODES = {
 // Configuration
 // ============================================================================
 
+/**
+ * What `createLiveWebSocket` reads. Every field is optional and has a default.
+ *
+ * The URL and protocols are arguments of `connect(url, protocols)`, not
+ * configuration; the heartbeat is `createHeartbeat(client, config)`; the
+ * offline queue is `createQueuedWebSocket(client, size)`. The first form of
+ * this type accepted `url`, `protocols`, `heartbeat` and `queueSize` and read
+ * none of them (AUDIT-2026-09-03-FINDINGS W7).
+ */
 export interface WebSocketConfig {
-  /**
-   * WebSocket URL.
-   */
-  readonly url: string;
-
-  /**
-   * WebSocket protocols.
-   */
-  readonly protocols?: string[];
-
   /**
    * Reconnection strategy.
    */
-  readonly reconnect?: ReconnectConfig;
-
-  /**
-   * Heartbeat configuration.
-   */
-  readonly heartbeat?: HeartbeatConfig;
+  readonly reconnect?: ReconnectConfig | undefined;
 
   /**
    * Message serialization.
+   * @default JSONSerializer
    */
-  readonly serializer?: MessageSerializer;
+  readonly serializer?: MessageSerializer | undefined;
 
   /**
    * Connection timeout (ms).
    * @default 10000
    */
-  readonly connectionTimeout?: number;
-
-  /**
-   * Message queue size for offline scenarios.
-   * @default 100
-   */
-  readonly queueSize?: number;
+  readonly connectionTimeout?: number | undefined;
 }
 
+/**
+ * Every field is optional; a partial is filled from the defaults below.
+ */
 export interface ReconnectConfig {
   /**
    * Enable automatic reconnection.
    * @default true
    */
-  readonly enabled: boolean;
+  readonly enabled?: boolean | undefined;
 
   /**
    * Maximum reconnection attempts (0 = infinite).
    * @default 5
    */
-  readonly maxAttempts: number;
+  readonly maxAttempts?: number | undefined;
 
   /**
    * Initial delay between reconnection attempts (ms).
    * @default 1000
    */
-  readonly initialDelay: number;
+  readonly initialDelay?: number | undefined;
 
   /**
    * Maximum delay between attempts (ms).
    * @default 30000
    */
-  readonly maxDelay: number;
+  readonly maxDelay?: number | undefined;
 
   /**
    * Backoff multiplier.
    * @default 2
    */
-  readonly backoffMultiplier: number;
+  readonly backoffMultiplier?: number | undefined;
 
   /**
    * Add random jitter to delays.
    * @default true
    */
-  readonly jitter: boolean;
+  readonly jitter?: boolean | undefined;
 
   /**
    * Decide whether a close of an established connection is retried,
@@ -306,24 +298,28 @@ export interface ReconnectConfig {
   readonly shouldReconnect?: ((event: { code: number; reason: string; wasClean: boolean }) => boolean) | undefined;
 }
 
+/**
+ * What `createHeartbeat(client, config)` reads. Every field is optional.
+ */
 export interface HeartbeatConfig {
   /**
-   * Enable heartbeat/ping-pong.
-   * @default false
+   * Whether `start()` does anything. Off, the heartbeat is inert — useful
+   * for a flag that is decided elsewhere.
+   * @default true
    */
-  readonly enabled: boolean;
+  readonly enabled?: boolean | undefined;
 
   /**
    * Interval between pings (ms).
    * @default 30000
    */
-  readonly interval: number;
+  readonly interval?: number | undefined;
 
   /**
    * Timeout for pong response (ms).
    * @default 5000
    */
-  readonly timeout: number;
+  readonly timeout?: number | undefined;
 
   /**
    * Ping message to send.

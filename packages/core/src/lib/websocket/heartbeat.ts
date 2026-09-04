@@ -66,13 +66,16 @@ export interface Heartbeat {
  */
 export function createHeartbeat(
   client: WebSocketClient,
-  config: HeartbeatConfig
+  config: HeartbeatConfig = {}
 ): Heartbeat {
   let intervalId: ReturnType<typeof setInterval> | null = null;
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
   let unsubscribe: (() => void) | null = null;
   let pongReceived = true;
 
+  const enabled = config.enabled ?? true;
+  const interval = config.interval ?? 30000;
+  const timeout = config.timeout ?? 5000;
   const pingMessage = config.pingMessage ?? 'PING';
   const pongMessage = config.pongMessage ?? 'PONG';
   // Structural, not `===`: the documented object pong could never match by
@@ -80,7 +83,7 @@ export function createHeartbeat(
   const isPong = config.isPong ?? ((data: unknown) => stableStringify(data) === stableStringify(pongMessage));
 
   function start(): void {
-    if (intervalId || !config.enabled) return;
+    if (intervalId || !enabled) return;
 
     pongReceived = true;
 
@@ -118,9 +121,9 @@ export function createHeartbeat(
           stop();
           client.reconnect('Pong timeout');
         }
-      }, config.timeout);
+      }, timeout);
 
-    }, config.interval);
+    }, interval);
   }
 
   function stop(): void {

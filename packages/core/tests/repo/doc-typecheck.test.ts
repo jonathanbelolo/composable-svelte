@@ -60,11 +60,7 @@ const REGISTER = new Map<string, number>([
 	['.claude/skills/composable-svelte-ssr/SKILL.md :: TS2561 :: Object literal may only specify known properties, but \'serializers\' does not exist in type \'BrowserHistoryConfig<BlogState, AppAction, { type: "post"; state: { postId: string; }; }>\'. Did you mean to write \'serialize\'?', 1],
 	['.claude/skills/composable-svelte-ssr/SKILL.md :: TS2774 :: This condition will always return true since this function is always defined. Did you mean to call it instead?', 1],
 	['.claude/skills/composable-svelte-ssr/SKILL.md :: TS2353 :: Object literal may only specify known properties, and \'strictTransportSecurity\' does not exist in type \'SecurityHeadersConfig\'.', 1],
-	// DA-H12 — ReconnectConfig/HeartbeatConfig fields that do not exist.
-	['packages/core/docs/quick-reference.md :: TS2353 :: Object literal may only specify known properties, and \'delayMs\' does not exist in type \'ReconnectConfig\'.', 1],
-	['packages/core/docs/quick-reference.md :: TS2561 :: Object literal may only specify known properties, but \'intervalMs\' does not exist in type \'HeartbeatConfig\'. Did you mean to write \'interval\'?', 1],
-	['README.md :: TS2353 :: Object literal may only specify known properties, and \'delayMs\' does not exist in type \'ReconnectConfig\'.', 1],
-	['README.md :: TS2561 :: Object literal may only specify known properties, but \'intervalMs\' does not exist in type \'HeartbeatConfig\'. Did you mean to write \'interval\'?', 1],
+	// DA-H12 (four entries) cleared by R1.4.g: the fields exist, the docs use them.
 	// DA-X1 — found by the widened guard, beyond the audit's own list.
 	['packages/core/docs/navigation/components.md :: TS2353 :: Object literal may only specify known properties, and \'stiffness\' does not exist in type \'Partial<SpringConfig>\'.', 1],
 	['packages/core/docs/navigation/dismiss.md :: TS2353 :: Object literal may only specify known properties, and \'action\' does not exist in type \'PartialAction<unknown>\'.', 1],

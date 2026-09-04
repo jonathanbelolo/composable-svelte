@@ -260,10 +260,10 @@ const api = createLiveAPI({ baseURL: '...' });
 await api.get('/users', { params, headers });
 
 // WebSocket
-const ws = createLiveWebSocket({ url: 'wss://...' });
-ws.connect();
-ws.send(message);
-ws.on('message', handler);
+const ws = createLiveWebSocket();
+await ws.connect('wss://...');
+await ws.send(message);
+ws.subscribe(handler);
 
 // Dependencies
 const clock = createSystemClock();

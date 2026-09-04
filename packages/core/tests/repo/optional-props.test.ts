@@ -736,7 +736,7 @@ function bareOptionalsInTypes(): string[] {
 }
 
 /** Measured, and meant to come down. See the docstring above for why it is not swept. */
-const ALLOWED_BARE_OPTIONALS = 311;
+const ALLOWED_BARE_OPTIONALS = 305;
 
 describe('optional properties in .ts carry the same hazard', () => {
 	const bare = bareOptionalsInTypes();

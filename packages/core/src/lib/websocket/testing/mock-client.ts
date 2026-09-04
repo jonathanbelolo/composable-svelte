@@ -74,7 +74,7 @@ export interface MockWebSocketClient<T = unknown> extends WebSocketClient<T> {
  * ```
  */
 export function createMockWebSocket<T = unknown>(
-  config?: Partial<WebSocketConfig>
+  config?: WebSocketConfig
 ): MockWebSocketClient<T> {
   let state: ConnectionState = {
     status: 'disconnected',

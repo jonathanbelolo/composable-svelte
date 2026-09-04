@@ -42,7 +42,6 @@ import { WebSocketError, WS_ERROR_CODES, JSONSerializer } from './types.js';
  * @example
  * ```typescript
  * const client = createLiveWebSocket({
- *   url: 'wss://example.com',
  *   reconnect: {
  *     enabled: true,
  *     maxAttempts: 5,
@@ -56,8 +55,13 @@ import { WebSocketError, WS_ERROR_CODES, JSONSerializer } from './types.js';
  * await client.connect('wss://example.com');
  * ```
  */
+/** `ReconnectConfig` with every default applied. */
+type ResolvedReconnectConfig = {
+  [K in keyof Omit<ReconnectConfig, 'shouldReconnect'>]-?: Exclude<ReconnectConfig[K], undefined>;
+};
+
 export function createLiveWebSocket<T = unknown>(
-  config?: Partial<WebSocketConfig>
+  config?: WebSocketConfig
 ): WebSocketClient<T> {
   // State
   let socket: WebSocket | null = null;
@@ -89,7 +93,7 @@ export function createLiveWebSocket<T = unknown>(
   // Configuration with defaults
   const serializer: MessageSerializer = config?.serializer || JSONSerializer;
   const connectionTimeout = config?.connectionTimeout || 10000;
-  const reconnectConfig: ReconnectConfig = {
+  const reconnectConfig: ResolvedReconnectConfig = {
     enabled: config?.reconnect?.enabled ?? true,
     maxAttempts: config?.reconnect?.maxAttempts ?? 5,
     initialDelay: config?.reconnect?.initialDelay ?? 1000,

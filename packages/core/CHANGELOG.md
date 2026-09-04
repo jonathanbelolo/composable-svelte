@@ -308,6 +308,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **BREAKING: `WebSocketConfig` is what `createLiveWebSocket` reads.** It
+  accepted `url`, `protocols`, `heartbeat` and `queueSize` and read none of
+  them: the URL and protocols are `connect(url, protocols)`'s arguments, the
+  heartbeat is `createHeartbeat(client, config)`, the queue is
+  `createQueuedWebSocket(client, size)`. The four fields are gone (a config
+  that names one is now a type error, where it was silently ignored), and
+  `createLiveWebSocket(config?: WebSocketConfig)` no longer needs `Partial`.
+  Every field of `ReconnectConfig` and `HeartbeatConfig` is optional with its
+  documented default, so the partials the docs always showed compile;
+  `createHeartbeat`'s `enabled` defaults to `true` — you constructed one.
+  (AUDIT-2026-09-03-FINDINGS W7, DA-H12)
+
 - **BREAKING: every caller of a coalesced request has its own promise, signal
   and timeout.** One promise served every caller, so one caller's abort or
   timeout rejected the others and a joiner's own `signal` and `timeout` were
