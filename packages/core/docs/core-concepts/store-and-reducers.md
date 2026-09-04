@@ -126,11 +126,19 @@ unsubscribe();
 Cleanup store resources:
 
 ```typescript
-// Cancel all in-flight effects
+// Abort every in-flight effect (their AbortSignal fires)
+// Clear every pending delay, debounce and throttle
+// Run every subscription's cleanup
 // Remove all listeners
-// Clean up dependencies
 appStore.destroy();
+
+// Afterwards a dispatch is ignored, with one console.warn naming the action
+appStore.dispatch({ type: 'increment' }); // [Composable Svelte] dispatch after destroy ignored: increment
 ```
+
+`Effect.run` and `Effect.afterDelay` executors receive the store's lifetime
+signal as their second argument; an executor that awaits something can pass
+it to `fetch` or check `signal.aborted` after an `await`.
 
 **When to use**:
 - When unmounting a dynamically created store

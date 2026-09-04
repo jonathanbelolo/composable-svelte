@@ -339,10 +339,10 @@ dependency, not severity: R1.1 needs D1, R1.3 needs D3.
 
 ### R1.8 — Store runtime contains what the docs say it contains (`N3`, `N7`) — S
 
-- [ ] R1.8.a `Run`, `Cancellable`, `FireAndForget` executors wrapped in
+- [x] R1.8.a `Run`, `Cancellable`, `FireAndForget` executors wrapped in
       try/catch as `Subscription` already is; the timer callbacks likewise; a
       throw in one `Batch` member does not skip the rest (`N3`).
-- [ ] R1.8.b `destroy()` tracks and clears `AfterDelay` timers, sets a
+- [x] R1.8.b `destroy()` tracks and clears `AfterDelay` timers, sets a
       destroyed flag that makes `dispatch` a logged no-op, and aborts in-flight
       `Run` executors through a signal (`N7`).
       Proof: `docs/core-concepts/effects.md:851` becomes true for sync

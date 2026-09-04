@@ -55,10 +55,26 @@ export function createStore<State, Action, Dependencies = any>(
   // Action subscribers (for Destination.on() in Phase 3)
   const actionSubscribers = new Set<(action: Action, state: State) => void>();
 
+  // Everything destroy() must stop that the maps above did not hold: the
+  // AfterDelay timers, the executors in flight, and dispatch itself. The
+  // first form left all three live, so a delayed action reduced state and
+  // re-armed timers in a destroyed store (AUDIT-2026-09-03-FINDINGS N7).
+  const delayTimers = new Set<ReturnType<typeof setTimeout>>();
+  const lifetime = new AbortController();
+  let destroyed = false;
+
   /**
    * Core dispatch logic (before middleware).
    */
   function dispatchCore(action: Action): void {
+    if (destroyed) {
+      console.warn(
+        '[Composable Svelte] dispatch after destroy ignored:',
+        (action as { type?: unknown } | null)?.type
+      );
+      return;
+    }
+
     // Record action (with optional size limit)
     if (config.maxHistorySize === undefined || config.maxHistorySize > 0) {
       actionHistory.push(action);
@@ -172,7 +188,9 @@ export function createStore<State, Action, Dependencies = any>(
         break;
 
       case 'Run':
-        guarded(() => effect.execute(dispatch));
+        // The store's lifetime signal: aborted by destroy(), for an executor
+        // that awaits something and wants to stop.
+        guarded(() => effect.execute(dispatch, lifetime.signal));
         break;
 
       case 'Batch':
@@ -302,11 +320,14 @@ export function createStore<State, Action, Dependencies = any>(
         break;
       }
 
-      case 'AfterDelay':
-        setTimeout(() => {
-          guarded(() => effect.execute(dispatch));
+      case 'AfterDelay': {
+        const timer = setTimeout(() => {
+          delayTimers.delete(timer);
+          guarded(() => effect.execute(dispatch, lifetime.signal));
         }, effect.ms);
+        delayTimers.add(timer);
         break;
+      }
 
       case 'FireAndForget':
         guarded(() => effect.execute());
@@ -391,9 +412,16 @@ export function createStore<State, Action, Dependencies = any>(
    * Clean up resources.
    */
   function destroy(): void {
+    destroyed = true;
+    lifetime.abort();
+
     // Cancel all in-flight effects
     inFlightEffects.forEach(controller => controller.abort());
     inFlightEffects.clear();
+
+    // Pending delays never fire
+    delayTimers.forEach(timer => clearTimeout(timer));
+    delayTimers.clear();
 
     // Call all subscription cleanups
     subscriptionCleanups.forEach(cleanup => runCleanup(cleanup));

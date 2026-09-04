@@ -193,7 +193,7 @@ interface Store<State, Action> {
 - `select(selector)` - Select derived value from state (non-reactive)
 - `subscribe(listener)` - Subscribe to state changes, returns unsubscribe function
 - `subscribeToActions(listener)` - Subscribe to action dispatches (optional, for Destination.on())
-- `destroy()` - Clean up resources (cancels effects, clears subscriptions)
+- `destroy()` - Clean up resources: aborts in-flight effects (their signal fires), clears every pending delay, debounce and throttle, runs subscription cleanups, removes listeners. A later `dispatch` is ignored with a `console.warn`.
 
 ---
 

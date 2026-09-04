@@ -340,8 +340,8 @@ const EffectImpl = {
         return Effect.none();
 
       case 'Run':
-        return Effect.run(async (dispatch) => {
-          await effect.execute((a) => dispatch(f(a)));
+        return Effect.run(async (dispatch, signal) => {
+          await effect.execute((a) => dispatch(f(a)), signal);
         });
 
       case 'FireAndForget':
@@ -371,8 +371,8 @@ const EffectImpl = {
         });
 
       case 'AfterDelay':
-        return Effect.afterDelay(effect.ms, (dispatch) => {
-          effect.execute((a) => dispatch(f(a)));
+        return Effect.afterDelay(effect.ms, (dispatch, signal) => {
+          effect.execute((a) => dispatch(f(a)), signal);
         });
 
       case 'Subscription':

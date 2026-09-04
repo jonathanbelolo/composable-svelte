@@ -71,6 +71,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`destroy()` stops the store.** It tracked cancellables, subscriptions,
+  debounce and throttle timers, but not `AfterDelay` timers or the executors
+  in flight, and `dispatch` stayed live, so a delayed action reduced state
+  and re-armed timers in a destroyed store. Pending delays are cleared, a
+  store-lifetime `AbortSignal` handed to `Effect.run` and `Effect.afterDelay`
+  executors is aborted, and a dispatch after `destroy()` is ignored with one
+  `console.warn` naming the action. (AUDIT-2026-09-03-FINDINGS N7)
+
 - **A synchronous throw in an effect body is logged, not thrown.** The store
   caught a rejection but not a body that threw before returning: it escaped
   `dispatch()` into the caller's event handler, skipped the rest of a
@@ -389,6 +397,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   only: callers still passing `serialize` compile unchanged.
 
 ### Changed
+
+- `dispatch` after `destroy()` is a warned no-op (it reduced state before).
+  `Effect.run` and `Effect.afterDelay` executors receive the store's lifetime
+  `AbortSignal` as their optional second argument (`Effect.map` forwards it);
+  the `Cancellable` signal is still dropped by `Effect.map` — N5, R2.1.
 
 - **BREAKING: `renderToHTML` fails closed on a state it cannot serialize.** It
   logged and embedded `{}`, so the client hydrated a blank store while
