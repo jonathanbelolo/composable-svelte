@@ -166,7 +166,7 @@ describe('createDestination', () => {
 			const initialState = Destination.initial('addItem', { name: '', quantity: 0 });
 			const action = {
 				type: 'addItem' as const,
-				action: { type: 'presented' as const, action: { type: 'nameChanged' as const, value: 'New Name' } }
+				action: { type: 'nameChanged' as const, value: 'New Name' }
 			};
 
 			const [newState, effect] = Destination.reducer(initialState, action, {});
@@ -187,7 +187,7 @@ describe('createDestination', () => {
 			const initialState = Destination.initial('addItem', { name: 'Test', quantity: 5 });
 			const action = {
 				type: 'editItem' as const,
-				action: { type: 'presented' as const, action: { type: 'nameChanged' as const, value: 'New Name' } }
+				action: { type: 'nameChanged' as const, value: 'New Name' }
 			};
 
 			const [newState, effect] = Destination.reducer(initialState, action, {});
@@ -197,23 +197,12 @@ describe('createDestination', () => {
 			expect(effect._tag).toBe('None');
 		});
 
-		it('handles dismiss action', () => {
-			const Destination = createDestination({
-				addItem: addItemReducer,
-				editItem: editItemReducer
-			});
-
-			const initialState = Destination.initial('addItem', { name: 'Test', quantity: 5 });
-			const action = {
-				type: 'addItem' as const,
-				action: { type: 'dismiss' as const }
-			};
-
-			const [newState, effect] = Destination.reducer(initialState, action, {});
-
-			// State unchanged (parent should observe dismiss and clear destination)
-			expect(newState).toEqual(initialState);
-			expect(effect._tag).toBe('None');
+		it('refuses a case named after the PresentationAction wrapper', () => {
+			// The matchers look through `presented` and refuse `dismiss`; a case by
+			// either name would make every match ambiguous. Dismiss itself never
+			// reaches this reducer — ifLetPresentation nulls the field.
+			expect(() => createDestination({ presented: addItemReducer })).toThrow(/cannot be a case name/);
+			expect(() => createDestination({ dismiss: addItemReducer })).toThrow(/cannot be a case name/);
 		});
 
 		it('handles multiple action types for same case', () => {
@@ -227,14 +216,14 @@ describe('createDestination', () => {
 			// First action: change name
 			const nameAction = {
 				type: 'addItem' as const,
-				action: { type: 'presented' as const, action: { type: 'nameChanged' as const, value: 'Item 1' } }
+				action: { type: 'nameChanged' as const, value: 'Item 1' }
 			};
 			[state] = Destination.reducer(state, nameAction, {});
 
 			// Second action: change quantity
 			const quantityAction = {
 				type: 'addItem' as const,
-				action: { type: 'presented' as const, action: { type: 'quantityChanged' as const, value: 10 } }
+				action: { type: 'quantityChanged' as const, value: 10 }
 			};
 			[state] = Destination.reducer(state, quantityAction, {});
 
@@ -254,7 +243,7 @@ describe('createDestination', () => {
 			const addState = Destination.initial('addItem', { name: 'Add', quantity: 1 });
 			const addAction = {
 				type: 'addItem' as const,
-				action: { type: 'presented' as const, action: { type: 'nameChanged' as const, value: 'Updated Add' } }
+				action: { type: 'nameChanged' as const, value: 'Updated Add' }
 			};
 			const [newAddState] = Destination.reducer(addState, addAction, {});
 			expect(Destination.extract(newAddState, 'addItem')?.name).toBe('Updated Add');
@@ -263,7 +252,7 @@ describe('createDestination', () => {
 			const editState = Destination.initial('editItem', { id: '1', name: 'Edit', quantity: 2 });
 			const editAction = {
 				type: 'editItem' as const,
-				action: { type: 'presented' as const, action: { type: 'nameChanged' as const, value: 'Updated Edit' } }
+				action: { type: 'nameChanged' as const, value: 'Updated Edit' }
 			};
 			const [newEditState] = Destination.reducer(editState, editAction, {});
 			expect(Destination.extract(newEditState, 'editItem')?.name).toBe('Updated Edit');
@@ -280,7 +269,7 @@ describe('createDestination', () => {
 			// subject here, so the cast is the test, not a workaround for it.
 			const action = {
 				type: 'unknownCase',
-				action: { type: 'presented' as const, action: { type: 'someAction' as const } }
+				action: { type: 'someAction' as const }
 			} as unknown as typeof Destination._types.Action;
 
 			const [newState, effect] = Destination.reducer(initialState, action, {});
@@ -292,7 +281,10 @@ describe('createDestination', () => {
 	});
 
 	describe('effect handling', () => {
-		it('passes through effects from child reducer', () => {
+		it('maps the child effect back into the case, so its dispatch reaches the child', async () => {
+			// `_tag === 'Run'` was the whole assertion here once, and `Effect.map` of
+			// a Run is a Run, so it held with and without the mapping. Executing the
+			// effect is what tells them apart (AUDIT-2026-09-03-FINDINGS N2).
 			// Create reducer with effect
 			const reducerWithEffect: Reducer<AddItemState, AddItemAction> = (state, action) => {
 				if (action.type === 'saveButtonTapped') {
@@ -314,12 +306,24 @@ describe('createDestination', () => {
 			const initialState = Destination.initial('addItem', { name: 'Test', quantity: 5 });
 			const action = {
 				type: 'addItem' as const,
-				action: { type: 'presented' as const, action: { type: 'saveButtonTapped' as const } }
+				action: { type: 'saveButtonTapped' as const }
 			};
 
-			const [newState, effect] = Destination.reducer(initialState, action, {});
-
+			const [, effect] = Destination.reducer(initialState, action, {});
 			expect(effect._tag).toBe('Run');
+
+			const dispatched: unknown[] = [];
+			await (effect as { execute: (d: (a: unknown) => void) => Promise<void> }).execute((a) => dispatched.push(a));
+
+			// Carries the case, so the layer above routes it back here.
+			expect(dispatched).toEqual([{ type: 'addItem', action: { type: 'cancelButtonTapped' } }]);
+			const [after, afterEffect] = Destination.reducer(
+				initialState,
+				dispatched[0] as typeof Destination._types.Action,
+				{}
+			);
+			expect(after).toEqual(initialState);
+			expect(afterEffect._tag).toBe('None');
 		});
 	});
 
@@ -347,11 +351,11 @@ describe('createDestination', () => {
 			type Action = typeof Destination._types.Action;
 			const action: Action = {
 				type: 'addItem',
-				action: { type: 'presented', action: { type: 'nameChanged', value: 'Test' } }
+				action: { type: 'nameChanged', value: 'Test' }
 			};
 
 			expect(action.type).toBe('addItem');
-			expect(action.action.type).toBe('presented');
+			expect(action.action.type).toBe('nameChanged');
 		});
 	});
 
@@ -365,7 +369,7 @@ describe('createDestination', () => {
 			it('matches full path', () => {
 				const action = {
 					type: 'addItem',
-					action: { type: 'presented' as const, action: { type: 'saveButtonTapped' as const } }
+					action: { type: 'saveButtonTapped' as const }
 				};
 
 				expect(Destination.is(action, 'addItem.saveButtonTapped')).toBe(true);
@@ -376,21 +380,40 @@ describe('createDestination', () => {
 			it('matches prefix (case type only)', () => {
 				const action = {
 					type: 'addItem',
-					action: { type: 'presented' as const, action: { type: 'saveButtonTapped' as const } }
+					action: { type: 'saveButtonTapped' as const }
 				};
 
 				expect(Destination.is(action, 'addItem')).toBe(true);
 				expect(Destination.is(action, 'editItem')).toBe(false);
 			});
 
-			it('returns false for dismiss actions', () => {
-				const action = {
-					type: 'addItem',
-					action: { type: 'dismiss' as const }
-				};
+			it('returns false for a dismiss, which names no case', () => {
+				// A dismiss is the field's PresentationAction, not a case action; the
+				// earlier form let a prefix path match it.
+				expect(Destination.is({ type: 'dismiss' }, 'addItem')).toBe(false);
+				expect(Destination.is({ type: 'destination', action: { type: 'dismiss' } }, 'addItem')).toBe(false);
+				expect(Destination.is({ type: 'dismiss' }, 'addItem.saveButtonTapped')).toBe(false);
+			});
 
-				expect(Destination.is(action, 'addItem.saveButtonTapped')).toBe(false);
-				expect(Destination.is(action, 'addItem')).toBe(true); // Prefix still matches
+			it('looks through the presented wrapper and the parent field', () => {
+				const caseAction = { type: 'addItem', action: { type: 'saveButtonTapped' as const } };
+				const presented = { type: 'presented' as const, action: caseAction };
+				const parent = { type: 'destination', action: presented };
+
+				for (const shape of [caseAction, presented, parent]) {
+					expect(Destination.is(shape, 'addItem.saveButtonTapped')).toBe(true);
+					expect(Destination.is(shape, 'addItem')).toBe(true);
+					expect(Destination.is(shape, 'editItem.saveButtonTapped')).toBe(false);
+				}
+			});
+
+			it('does not look through a child action that happens to be named presented', () => {
+				// The lookthrough is bounded: one field, one wrapper, one case.
+				const nested = {
+					type: 'presented',
+					action: { type: 'presented', action: { type: 'addItem', action: { type: 'saveButtonTapped' } } }
+				};
+				expect(Destination.is(nested, 'addItem.saveButtonTapped')).toBe(false);
 			});
 
 			it('returns false for malformed actions', () => {
@@ -404,12 +427,12 @@ describe('createDestination', () => {
 			it('handles different action types', () => {
 				const nameAction = {
 					type: 'addItem',
-					action: { type: 'presented' as const, action: { type: 'nameChanged' as const, value: 'Test' } }
+					action: { type: 'nameChanged' as const, value: 'Test' }
 				};
 
 				const saveAction = {
 					type: 'addItem',
-					action: { type: 'presented' as const, action: { type: 'saveButtonTapped' as const } }
+					action: { type: 'saveButtonTapped' as const }
 				};
 
 				expect(Destination.is(nameAction, 'addItem.nameChanged')).toBe(true);
@@ -424,7 +447,7 @@ describe('createDestination', () => {
 				const state = Destination.initial('addItem', { name: 'Test', quantity: 5 });
 				const action = {
 					type: 'addItem',
-					action: { type: 'presented' as const, action: { type: 'saveButtonTapped' as const } }
+					action: { type: 'saveButtonTapped' as const }
 				};
 
 				const result = Destination.matchCase(action, state, 'addItem.saveButtonTapped');
@@ -436,7 +459,7 @@ describe('createDestination', () => {
 				const state = Destination.initial('addItem', { name: 'Test', quantity: 5 });
 				const action = {
 					type: 'addItem',
-					action: { type: 'presented' as const, action: { type: 'cancelButtonTapped' as const } }
+					action: { type: 'cancelButtonTapped' as const }
 				};
 
 				const result = Destination.matchCase(action, state, 'addItem.saveButtonTapped');
@@ -448,7 +471,7 @@ describe('createDestination', () => {
 				const state = Destination.initial('addItem', { name: 'Test', quantity: 5 });
 				const action = {
 					type: 'editItem',
-					action: { type: 'presented' as const, action: { type: 'saveButtonTapped' as const } }
+					action: { type: 'saveButtonTapped' as const }
 				};
 
 				const result = Destination.matchCase(action, state, 'editItem.saveButtonTapped');
@@ -459,7 +482,7 @@ describe('createDestination', () => {
 			it('returns null when state is null', () => {
 				const action = {
 					type: 'addItem',
-					action: { type: 'presented' as const, action: { type: 'saveButtonTapped' as const } }
+					action: { type: 'saveButtonTapped' as const }
 				};
 
 				const result = Destination.matchCase(action, null, 'addItem.saveButtonTapped');
@@ -471,7 +494,7 @@ describe('createDestination', () => {
 				const state = Destination.initial('addItem', { name: 'Test', quantity: 5 });
 				const action = {
 					type: 'addItem',
-					action: { type: 'presented' as const, action: { type: 'saveButtonTapped' as const } }
+					action: { type: 'saveButtonTapped' as const }
 				};
 
 				const result = Destination.matchCase(action, state, 'addItem');
@@ -485,7 +508,7 @@ describe('createDestination', () => {
 				const state = Destination.initial('addItem', { name: 'Test', quantity: 5 });
 				const action = {
 					type: 'addItem',
-					action: { type: 'presented' as const, action: { type: 'saveButtonTapped' as const } }
+					action: { type: 'saveButtonTapped' as const }
 				};
 
 				const result = Destination.match(action, state, {
@@ -504,7 +527,7 @@ describe('createDestination', () => {
 				const state = Destination.initial('addItem', { name: 'Test', quantity: 5 });
 				const action = {
 					type: 'addItem',
-					action: { type: 'presented' as const, action: { type: 'saveButtonTapped' as const } }
+					action: { type: 'saveButtonTapped' as const }
 				};
 
 				const result = Destination.match(action, state, {
@@ -522,7 +545,7 @@ describe('createDestination', () => {
 				const state = Destination.initial('addItem', { name: 'Test', quantity: 5 });
 				const action = {
 					type: 'addItem',
-					action: { type: 'presented' as const, action: { type: 'saveButtonTapped' as const } }
+					action: { type: 'saveButtonTapped' as const }
 				};
 
 				const result = Destination.match(action, state, {
@@ -539,12 +562,12 @@ describe('createDestination', () => {
 
 				const addAction = {
 					type: 'addItem',
-					action: { type: 'presented' as const, action: { type: 'saveButtonTapped' as const } }
+					action: { type: 'saveButtonTapped' as const }
 				};
 
 				const editAction = {
 					type: 'editItem',
-					action: { type: 'presented' as const, action: { type: 'deleteButtonTapped' as const } }
+					action: { type: 'deleteButtonTapped' as const }
 				};
 
 				const handlers = {

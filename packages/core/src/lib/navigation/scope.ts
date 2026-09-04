@@ -56,7 +56,8 @@ export interface ScopedStore<State, Action> {
 	/**
 	 * Dismiss the child feature.
 	 *
-	 * Convenience method that dispatches PresentationAction.dismiss().
+	 * Dispatches the field's `{ type: 'dismiss' }` through the same path as
+	 * `dispatch`, without the case: `{ type: 'destination', action: { type: 'dismiss' } }`.
 	 */
 	dismiss(): void;
 }
@@ -197,6 +198,7 @@ class ScopeBuilder<State, Action, Current = State> {
 	 * - Current value is { type: string; state: ChildState }
 	 * - Actions are wrapped in destination case: { type: caseType; action: ChildAction }
 	 * - Actions are wrapped in PresentationAction: { type: 'presented', action: ... }
+	 * - Dismiss is the field's `{ type: 'dismiss' }`; the case is not named
 	 *
 	 * @template T - The case type string (inferred)
 	 * @param caseType - The discriminated union case type to match
@@ -401,19 +403,14 @@ class ScopeBuilder<State, Action, Current = State> {
 		};
 
 		const dismiss = (): void => {
-			// Build dismiss action
+			// The field's own PresentationAction. The case is deliberately not
+			// named: `ifLetPresentation` nulls the field on `{ type: 'dismiss' }`
+			// and recognises nothing else, so the earlier case-wrapped form was a
+			// no-op that never cleared the destination (AUDIT-2026-09-03-FINDINGS
+			// N1). Which case was dismissed is answered by the state, not the action.
 			let wrapped: any = { type: 'dismiss' };
 
-			// Step 1: If we have a case type, wrap in the destination case structure
-			// This ensures the parent reducer knows which case is being dismissed
-			if (caseType) {
-				wrapped = {
-					type: caseType,
-					action: wrapped
-				};
-			}
-
-			// Step 2: Wrap in parent actions by following the path backwards
+			// Wrap in parent actions by following the path backwards
 			for (let i = this.path.length - 1; i >= 0; i--) {
 				const key = this.path[i];
 				wrapped = {

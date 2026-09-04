@@ -33,8 +33,8 @@ type DestinationState =
   | { type: 'editItem'; state: EditItemState };
 
 type DestinationAction =
-  | { type: 'addItem'; action: PresentationAction<AddItemAction> }
-  | { type: 'editItem'; action: PresentationAction<EditItemAction> };
+  | { type: 'addItem'; action: AddItemAction }
+  | { type: 'editItem'; action: EditItemAction };
 
 const destinationReducer = createDestinationReducer({
   addItem: (s, a, d) => addItemReducer(s.state, a, d),
@@ -104,18 +104,21 @@ This enables type-safe pattern matching throughout your application.
 
 ### Generated Destination Action
 
-Actions are similarly generated with `PresentationAction` wrappers:
+Actions are similarly generated, one case per reducer, each carrying that
+reducer's own action:
 
 ```typescript
 type DestinationAction =
-  | { type: 'addItem'; action: PresentationAction<AddItemAction> }
-  | { type: 'editItem'; action: PresentationAction<EditItemAction> }
-  | { type: 'deleteAlert'; action: PresentationAction<DeleteAlertAction> };
+  | { type: 'addItem'; action: AddItemAction }
+  | { type: 'editItem'; action: EditItemAction }
+  | { type: 'deleteAlert'; action: DeleteAlertAction };
 ```
 
-The `PresentationAction` wrapper enables parent observation of child lifecycle:
-- `{ type: 'presented', action: ChildAction }` - Child dispatched an action
-- `{ type: 'dismiss' }` - Child requested dismissal
+The `PresentationAction` wrapper sits *outside* this union, on the parent's
+field — `{ type: 'destination', action: PresentationAction<DestinationAction> }` —
+and enables parent observation of the child lifecycle:
+- `{ type: 'presented', action: DestinationAction }` - a child dispatched an action
+- `{ type: 'dismiss' }` - the child requested dismissal; `ifLetPresentation` nulls the field
 
 ### Auto-Generated Reducer
 
@@ -128,9 +131,9 @@ const [newState, effect] = Destination.reducer(state, action, deps);
 Routing logic:
 1. Extract case type from action (`action.type`)
 2. Verify state matches action's case type
-3. Unwrap `PresentationAction` to get child action
-4. Call corresponding child reducer
-5. Reconstruct destination state with new child state
+3. Call the corresponding child reducer with `action.action`
+4. Reconstruct destination state with new child state
+5. Map the child's effect back into the same case, so its result comes back through this reducer
 
 ## API Reference
 
@@ -228,12 +231,12 @@ reducer: Reducer<DestinationState<Reducers>, DestinationAction<Reducers>, any>
 **Behavior:**
 1. Extracts case type from action (`action.type`)
 2. Returns state unchanged if no reducer exists for that case type
-3. Returns state unchanged if action case type doesn't match current state's case type
-4. Handles dismiss actions by returning state unchanged (parent should observe and clear destination)
-5. Unwraps `presented` actions to extract child action
-6. Calls child reducer with unwrapped action
-7. Reconstructs destination state with new child state
-8. Returns child effect unchanged (no mapping needed - already in parent action type)
+3. Returns state unchanged if action case type doesn't match current state's case type — which is also how a child effect that settles after the case has changed is dropped
+4. Calls the child reducer with `action.action`
+5. Reconstructs destination state with new child state
+6. Maps the child's effect into the case (`{ type: caseType, action: childResult }`), so an async child's result reaches that child through the same route
+
+Dismiss never reaches this reducer: `ifLetPresentation` handles `{ type: 'dismiss' }` on the field and nulls it. A case may not be named `presented` or `dismiss`; `createDestination` throws.
 
 **Example:**
 ```typescript
@@ -250,7 +253,7 @@ const parentReducer: Reducer<ParentState, ParentAction> = (state, action, deps) 
         (s) => s.destination,
         (s, d) => ({ ...s, destination: d }),
         'destination',
-        (ca) => ({ type: 'destination', action: ca }),
+        (ca) => ({ type: 'destination', action: { type: 'presented', action: ca } }),
         Destination.reducer  // Auto-generated routing logic
       )(state, action, deps);
 
@@ -507,9 +510,10 @@ const Destination = createDestination({
   editItem: editItemReducer
 });
 
+// What the parent reducer holds when the child dispatched saveButtonTapped
 const action = {
-  type: 'addItem',
-  action: { type: 'presented', action: { type: 'saveButtonTapped' } }
+  type: 'destination',
+  action: { type: 'presented', action: { type: 'addItem', action: { type: 'saveButtonTapped' } } }
 };
 
 // Full path matching
@@ -522,18 +526,22 @@ Destination.is(action, 'addItem');   // true
 Destination.is(action, 'editItem');  // false
 ```
 
+**Accepted shapes:** `is()` looks through the parent's field and the
+`presented` wrapper, so the parent action above, its `action.action`, and the
+bare case action `{ type: 'addItem', action: { type: 'saveButtonTapped' } }`
+all match. It does not check the field name — a parent with two destination
+fields whose case names overlap should guard on `action.type` first.
+
 **Dismiss Actions:**
 ```typescript
 const dismissAction = {
-  type: 'addItem',
+  type: 'destination',
   action: { type: 'dismiss' }
 };
 
-// Full path returns false for dismiss
+// A dismiss names no case, so nothing matches it — not even a prefix
 Destination.is(dismissAction, 'addItem.saveButtonTapped');  // false
-
-// Prefix matching still works
-Destination.is(dismissAction, 'addItem');  // true
+Destination.is(dismissAction, 'addItem');                   // false
 ```
 
 **Safety with Invalid Actions:**
@@ -617,8 +625,8 @@ const Destination = createDestination({
 
 const state = Destination.initial('addItem', { name: 'Apple', quantity: 5 });
 const action = {
-  type: 'addItem',
-  action: { type: 'presented', action: { type: 'saveButtonTapped' } }
+  type: 'destination',
+  action: { type: 'presented', action: { type: 'addItem', action: { type: 'saveButtonTapped' } } }
 };
 
 // Atomic match + extract
@@ -742,8 +750,8 @@ const Destination = createDestination({
 
 const state = Destination.initial('addItem', { name: 'Apple', quantity: 5 });
 const action = {
-  type: 'addItem',
-  action: { type: 'presented', action: { type: 'saveButtonTapped' } }
+  type: 'destination',
+  action: { type: 'presented', action: { type: 'addItem', action: { type: 'saveButtonTapped' } } }
 };
 
 const result = Destination.match(action, state, {
@@ -871,14 +879,14 @@ type State = typeof Destination._types.State;
 
 **DestinationAction&lt;Reducers&gt;**
 
-Discriminated union of all destination actions with `PresentationAction` wrappers:
+Discriminated union of all destination actions, each case carrying its child's action:
 
 ```typescript
 type Action = typeof Destination._types.Action;
 // Expands to:
-// | { type: 'addItem'; action: PresentationAction<AddItemAction> }
-// | { type: 'editItem'; action: PresentationAction<EditItemAction> }
-// | { type: 'deleteAlert'; action: PresentationAction<DeleteAlertAction> }
+// | { type: 'addItem'; action: AddItemAction }
+// | { type: 'editItem'; action: EditItemAction }
+// | { type: 'deleteAlert'; action: DeleteAlertAction }
 ```
 
 ### Type Extraction
@@ -896,7 +904,7 @@ type AddState = ExtractCaseState<
 type EditAction = ExtractCaseAction<
   typeof Destination._types.Action,
   'editItem'
->;  // PresentationAction<EditItemAction>
+>;  // EditItemAction
 
 // Use in parent types
 interface ParentState {
@@ -1012,7 +1020,7 @@ const parentReducer: Reducer<ParentState, ParentAction> = (state, action, deps) 
     (s) => s.destination,
     (s, d) => ({ ...s, destination: d }),
     'destination',
-    (ca) => ({ type: 'destination', action: ca }),
+    (ca) => ({ type: 'destination', action: { type: 'presented', action: ca } }),
     Destination.reducer
   )(state, action, deps);
 };
@@ -1100,8 +1108,8 @@ type DestinationState =
 
 // 2. Define action union manually
 type DestinationAction =
-  | { type: 'addItem'; action: PresentationAction<AddItemAction> }
-  | { type: 'editItem'; action: PresentationAction<EditItemAction> };
+  | { type: 'addItem'; action: AddItemAction }
+  | { type: 'editItem'; action: EditItemAction };
 
 // 3. Write reducer manually
 const destinationReducer = createDestinationReducer({
@@ -1152,9 +1160,9 @@ type DestinationState =
 
 // 2. Update action union
 type DestinationAction =
-  | { type: 'addItem'; action: PresentationAction<AddItemAction> }
-  | { type: 'editItem'; action: PresentationAction<EditItemAction> }
-  | { type: 'deleteAlert'; action: PresentationAction<DeleteAlertAction> };  // ← Add manually
+  | { type: 'addItem'; action: AddItemAction }
+  | { type: 'editItem'; action: EditItemAction }
+  | { type: 'deleteAlert'; action: DeleteAlertAction };  // ← Add manually
 
 // 3. Update reducer
 const destinationReducer = createDestinationReducer({
@@ -1353,7 +1361,7 @@ describe('Destination', () => {
     const state = Destination.initial('addItem', { name: '', quantity: 0 });
     const action = {
       type: 'addItem' as const,
-      action: { type: 'presented' as const, action: { type: 'nameChanged' as const, value: 'Apple' } }
+      action: { type: 'nameChanged' as const, value: 'Apple' }
     };
 
     const [newState, effect] = Destination.reducer(state, action, {});
@@ -1363,8 +1371,8 @@ describe('Destination', () => {
 
   it('matchers work correctly', () => {
     const action = {
-      type: 'addItem',
-      action: { type: 'presented', action: { type: 'saveButtonTapped' } }
+      type: 'destination',
+      action: { type: 'presented', action: { type: 'addItem', action: { type: 'saveButtonTapped' } } }
     };
 
     expect(Destination.is(action, 'addItem.saveButtonTapped')).toBe(true);

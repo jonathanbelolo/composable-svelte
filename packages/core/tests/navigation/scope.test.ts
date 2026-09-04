@@ -221,13 +221,10 @@ describe('scopeTo()', () => {
 			// Call dismiss
 			scopedStore?.dismiss();
 
-			// Verify dismiss action - should wrap with case type
+			// The field's PresentationAction; the case is not named (N1).
 			expect(store.dispatch).toHaveBeenCalledWith({
 				type: 'destination',
-				action: {
-					type: 'addItem',
-					action: { type: 'dismiss' }
-				}
+				action: { type: 'dismiss' }
 			});
 		});
 	});
@@ -461,7 +458,7 @@ describe('scopeTo()', () => {
 	});
 
 	describe('dismiss() behavior', () => {
-		it('wraps dismiss with case type for enum destinations', () => {
+		it('dismiss is the field\'s PresentationAction; the case is not named', () => {
 			const store = {
 				state: {
 					destination: { type: 'addItem', state: { name: 'Test' } }
@@ -474,13 +471,11 @@ describe('scopeTo()', () => {
 			expect(scopedStore).not.toBeNull();
 			scopedStore!.dismiss();
 
-			// Should wrap: { type: 'dismiss' } -> { type: 'addItem', action: dismiss } -> { type: 'destination', action: ... }
+			// { type: 'dismiss' } -> { type: 'destination', action: dismiss }; a
+			// case-wrapped dismiss is what ifLetPresentation ignores.
 			expect(store.dispatch).toHaveBeenCalledWith({
 				type: 'destination',
-				action: {
-					type: 'addItem',
-					action: { type: 'dismiss' }
-				}
+				action: { type: 'dismiss' }
 			});
 		});
 
@@ -504,7 +499,7 @@ describe('scopeTo()', () => {
 			});
 		});
 
-		it('wraps dismiss through nested paths with case type', () => {
+		it('wraps dismiss through nested paths, without the case', () => {
 			interface NestedState {
 				outer: {
 					inner: { type: 'caseA'; state: { value: string } } | null;
@@ -530,10 +525,7 @@ describe('scopeTo()', () => {
 				type: 'outer',
 				action: {
 					type: 'inner',
-					action: {
-						type: 'caseA',
-						action: { type: 'dismiss' }
-					}
+					action: { type: 'dismiss' }
 				}
 			});
 		});

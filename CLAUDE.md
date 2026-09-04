@@ -283,7 +283,7 @@ const [state, effect] = ifLet(
 1. User action → Populate `destination` field with child state
 2. Component derives scoped store: `scopeTo(store).into('destination').case('addItem')`
 3. Modal/Sheet renders when scoped store is non-null
-4. Child actions wrapped: `{ type: 'destination', action: { type: 'presented', action: childAction } }`
+4. Child actions wrapped: `{ type: 'destination', action: { type: 'presented', action: childAction } }` — with `createDestination`, `childAction` is the case action `{ type: 'addItem', action: … }`
 5. Dismiss via `PresentationAction.dismiss` or parent setting `destination: null`
 
 ### Animation Flow

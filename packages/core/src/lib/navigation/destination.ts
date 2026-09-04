@@ -15,7 +15,6 @@
 
 import type { Reducer, Effect } from '../types.js';
 import type {
-	PresentationAction,
 	DestinationState,
 	DestinationAction,
 	DestinationCasePath,
@@ -51,7 +50,7 @@ export interface Destination<Reducers extends Record<string, Reducer<any, any, a
 	 *         (s) => s.destination,
 	 *         (s, d) => ({ ...s, destination: d }),
 	 *         'destination',
-	 *         (ca) => ({ type: 'destination', action: ca }),
+	 *         (ca) => ({ type: 'destination', action: { type: 'presented', action: ca } }),
 	 *         Destination.reducer  // Use auto-generated reducer
 	 *       )(state, action, deps);
 	 *   }
@@ -116,6 +115,12 @@ export interface Destination<Reducers extends Record<string, Reducer<any, any, a
 	 *
 	 * **Performance**: < 1µs per call (no allocations, simple string matching)
 	 *
+	 * Accepts the parent's field action, the `PresentationAction` under
+	 * `action.action`, or the bare `{ type: caseType, action: child }`; looks
+	 * through the field and the `presented` wrapper and never matches a
+	 * `dismiss`. The field name is not checked — guard on `action.type` first
+	 * when a parent has more than one destination field.
+	 *
 	 * @param action - The action to check (can be any shape)
 	 * @param casePath - The case path to match (case type or case.action)
 	 * @returns true if action matches the path
@@ -124,9 +129,10 @@ export interface Destination<Reducers extends Record<string, Reducer<any, any, a
 	 * ```typescript
 	 * const Destination = createDestination({ addItem: addItemReducer });
 	 *
+	 * // What the parent reducer holds when the child dispatched saveButtonTapped
 	 * const action = {
 	 *   type: 'destination',
-	 *   action: { type: 'presented', action: { type: 'saveButtonTapped' } }
+	 *   action: { type: 'presented', action: { type: 'addItem', action: { type: 'saveButtonTapped' } } }
 	 * };
 	 *
 	 * // Full path matching
@@ -136,6 +142,9 @@ export interface Destination<Reducers extends Record<string, Reducer<any, any, a
 	 * // Prefix matching (any addItem action)
 	 * Destination.is(action, 'addItem');  // true
 	 * Destination.is(action, 'editItem');  // false
+	 *
+	 * // The same through action.action, or the case action itself
+	 * Destination.is(action.action, 'addItem.saveButtonTapped');  // true
 	 * ```
 	 */
 	is(action: unknown, casePath: string): boolean;
@@ -273,7 +282,7 @@ export interface Destination<Reducers extends Record<string, Reducer<any, any, a
  *         (s) => s.destination,
  *         (s, d) => ({ ...s, destination: d }),
  *         'destination',
- *         (ca) => ({ type: 'destination', action: ca }),
+ *         (ca) => ({ type: 'destination', action: { type: 'presented', action: ca } }),
  *         Destination.reducer  // Auto-generated!
  *       )(state, action, deps);
  *   }
@@ -295,8 +304,8 @@ export interface Destination<Reducers extends Record<string, Reducer<any, any, a
  *
  * // Define action union manually
  * type DestinationAction =
- *   | { type: 'addItem'; action: PresentationAction<AddItemAction> }
- *   | { type: 'editItem'; action: PresentationAction<EditItemAction> };
+ *   | { type: 'addItem'; action: AddItemAction }
+ *   | { type: 'editItem'; action: EditItemAction };
  *
  * // Write reducer manually
  * const destinationReducer = createDestinationReducer({
@@ -319,6 +328,16 @@ export interface Destination<Reducers extends Record<string, Reducer<any, any, a
 export function createDestination<Reducers extends Record<string, Reducer<any, any, any>>>(
 	reducers: Reducers & Record<string, Reducer<any, any, any>>
 ): Destination<Reducers> {
+	// The matchers look through a `presented` wrapper and refuse a `dismiss`,
+	// so neither can name a case without making every match ambiguous.
+	for (const reserved of ['presented', 'dismiss']) {
+		if (reserved in reducers) {
+			throw new TypeError(
+				`createDestination: "${reserved}" cannot be a case name; it is the PresentationAction wrapper the matchers look through`
+			);
+		}
+	}
+
 	// Auto-generated reducer
 	const reducer: Reducer<DestinationState<Reducers>, DestinationAction<Reducers>, any> = (
 		state,
@@ -340,31 +359,34 @@ export function createDestination<Reducers extends Record<string, Reducer<any, a
 			return [state, EffectConstructors.none()];
 		}
 
-		// Unwrap presentation action
-		if (action.action.type === 'dismiss') {
-			// Dismiss action - parent should observe and clear destination
-			// Child reducer doesn't handle this
-			return [state, EffectConstructors.none()];
-		}
+		// `{ type: caseType, action: child }` is what `ifLetPresentation` hands
+		// down after stripping the field's `presented` wrapper. Dismiss never
+		// reaches this reducer: `ifLetPresentation` nulls the field itself.
+		const childAction = action.action;
 
-		// Action is 'presented' - pass to child reducer
-		const childAction = action.action.action;
-
-		// Call child reducer with child state
 		const [newChildState, childEffect] = childReducer(
 			(state as any).state,
 			childAction,
 			dependencies
 		);
 
-		// Reconstruct destination state with new child state
 		const newState: DestinationState<Reducers> = {
 			type: caseType,
 			state: newChildState
 		} as any;
 
-		// Child effects are already in parent action type (no mapping needed)
-		return [newState, childEffect];
+		// The child's effect is in the child's action type. It has to come back
+		// through this reducer under the same case, or the layer above wraps it
+		// as a destination action with no case and drops it — an async child
+		// never saw its own result (AUDIT-2026-09-03-FINDINGS N2). Carrying the
+		// case also lets the check above drop a result whose case is gone.
+		return [
+			newState,
+			EffectConstructors.map(
+				childEffect,
+				(childResult) => ({ type: caseType, action: childResult }) as DestinationAction<Reducers>
+			)
+		];
 	};
 
 	// Helper: Create initial destination state
@@ -389,50 +411,39 @@ export function createDestination<Reducers extends Record<string, Reducer<any, a
 		return (state as any).state;
 	};
 
+	const isRecord = (value: unknown): value is Record<string, unknown> =>
+		typeof value === 'object' && value !== null;
+	const isCaseAction = (value: unknown): value is { type: string; action?: unknown } =>
+		isRecord(value) && typeof value.type === 'string' && value.type in reducers;
+
+	/**
+	 * The `{ type: caseType, action: child }` inside whatever the caller holds.
+	 *
+	 * Three shapes are looked through, and no others: the case action itself
+	 * (what this reducer receives); the `PresentationAction` a parent finds
+	 * under `action.action`; and the parent's own field action, one level up.
+	 * The field name is not checked — a parent with two destination fields
+	 * whose case names overlap must guard on `action.type` first. A `dismiss`
+	 * at any level yields nothing: it names no case (AUDIT N1).
+	 */
+	const caseActionOf = (value: unknown): { type: string; action?: unknown } | null => {
+		if (isCaseAction(value)) return value;
+		if (!isRecord(value) || typeof value.type !== 'string') return null;
+		const presented = value.type === 'presented' ? value : isRecord(value.action) ? value.action : null;
+		if (!isRecord(presented) || presented.type !== 'presented') return null;
+		return isCaseAction(presented.action) ? presented.action : null;
+	};
+
 	// Helper: Check if action matches case path
 	const is = (action: unknown, casePath: string): boolean => {
-		// Type guard: check if action has expected shape
-		if (!action || typeof action !== 'object') {
-			return false;
-		}
+		const caseAction = caseActionOf(action);
+		if (!caseAction) return false;
 
-		const act = action as any;
-
-		// Action must have type field
-		if (!act.type || typeof act.type !== 'string') {
-			return false;
-		}
-
-		// Parse case path
 		const [caseType, actionType] = casePath.split('.');
+		if (caseAction.type !== caseType) return false;
+		if (!actionType) return true; // prefix match: any action in this case
 
-		// Check if action type matches case type
-		if (act.type !== caseType) {
-			return false;
-		}
-
-		// If no action type specified (prefix matching), we're done
-		if (!actionType) {
-			return true;
-		}
-
-		// Action must have nested action field with presentation wrapper
-		if (!act.action || typeof act.action !== 'object') {
-			return false;
-		}
-
-		// Check if it's a presented action (not dismiss)
-		if (act.action.type !== 'presented') {
-			return false;
-		}
-
-		// Check child action type
-		if (!act.action.action || typeof act.action.action !== 'object') {
-			return false;
-		}
-
-		// Match child action type
-		return act.action.action.type === actionType;
+		return isRecord(caseAction.action) && caseAction.action.type === actionType;
 	};
 
 	// Helper: Atomic match + extract

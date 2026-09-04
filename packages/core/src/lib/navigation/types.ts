@@ -248,16 +248,20 @@ export type DestinationState<Reducers extends Record<string, (s: any, a: any, d:
 }[keyof Reducers];
 
 /**
- * Extract action union from a map of reducers.
+ * The destination action union generated from a reducer map: one case per
+ * reducer, each carrying that reducer's own action.
  *
- * Given a reducer map like `{ addItem: addItemReducer, editItem: editItemReducer }`,
- * this type generates a discriminated union:
  * ```typescript
- * | { type: 'addItem'; action: PresentationAction<AddItemAction> }
- * | { type: 'editItem'; action: PresentationAction<EditItemAction> }
+ * | { type: 'addItem'; action: AddItemAction }
+ * | { type: 'editItem'; action: EditItemAction }
  * ```
  *
- * Actions are wrapped in PresentationAction to enable parent observation.
+ * This is the shape `ifLetPresentation` hands to `createDestination().reducer`
+ * after stripping the field's `presented` wrapper, and the shape the reducer
+ * maps child effects back into. The `PresentationAction` sits *outside* it, on
+ * the parent's field: `{ type: 'destination', action: PresentationAction<DestinationAction<…>> }`.
+ * An earlier form put a second `PresentationAction` inside each case, which no
+ * layer above ever produced (AUDIT-2026-09-03-FINDINGS N1).
  *
  * @template Reducers - A record mapping case types to reducer functions
  *
@@ -269,13 +273,13 @@ export type DestinationState<Reducers extends Record<string, (s: any, a: any, d:
  * };
  *
  * type Action = DestinationAction<typeof reducers>;
- * // Result: { type: 'addItem'; action: PresentationAction<AddItemAction> } | ...
+ * // Result: { type: 'addItem'; action: AddItemAction } | { type: 'editItem'; action: EditItemAction }
  * ```
  */
 export type DestinationAction<Reducers extends Record<string, (s: any, a: any, d: any) => any>> = {
   [K in keyof Reducers]: {
     readonly type: K;
-    readonly action: PresentationAction<Reducers[K] extends (s: any, a: infer A, d: any) => any ? A : never>;
+    readonly action: Reducers[K] extends (s: any, a: infer A, d: any) => any ? A : never;
   };
 }[keyof Reducers];
 

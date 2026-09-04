@@ -223,6 +223,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **BREAKING: `createDestination()` takes and returns the single-wrapped case
+  action** — `{ type: caseType, action: childAction }` — instead of expecting a
+  second `presented` wrapper inside each case. No layer above produced that
+  inner wrapper: `scopeTo().case()` wraps the case in one `presented`,
+  `ifLetPresentation` strips it, and the generated reducer read
+  `action.action.action`, which was `undefined`, so a child driven through the
+  DSL threw on its first action. `DestinationAction<Reducers>` is now
+  `{ type: K; action: ChildAction }`. Anyone who hand-built the double-wrapped
+  form (the audit found nobody) drops one level. (AUDIT-2026-09-03-FINDINGS N1)
+
+- **BREAKING: `Destination.reducer` maps the child's effect into its case.** It
+  returned the effect unmapped, so an async child's own result came back as a
+  destination action with no case and was dropped — every `Effect.run` under
+  `createDestination` was stuck. The result now routes back to the child, and
+  one that settles after the case has changed is dropped by the case check. (N2)
+
+- **BREAKING: `scopeTo().case().dismiss()` dispatches the field's
+  `{ type: 'dismiss' }`** instead of wrapping it in the case, a shape
+  `ifLetPresentation` never recognised, so the field was never cleared. The
+  case is not named; the state says which case was open. (N1)
+
+- **`Destination.is()`, `matchCase()` and `match()` look through the parent's
+  field and the `presented` wrapper**, so the parent action, `action.action`
+  and the bare case action all match. A `dismiss` no longer matches a prefix
+  path (`is(dismiss, 'addItem')` was `true`). A case may not be named
+  `presented` or `dismiss`; `createDestination` throws.
+
 - **`FormState.fields` is keyed by field path. Breaking.** It was keyed by
   top-level name, and Zod issues were routed with `issue.path[0]`, so a nested
   schema's error at `['address','zip']` landed on `address` — it could not be
