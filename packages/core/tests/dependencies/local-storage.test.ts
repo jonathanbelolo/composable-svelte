@@ -1,8 +1,9 @@
 /**
  * Tests for LocalStorage and SessionStorage dependencies
  *
- * Note: These tests use JSDOM which doesn't implement storage events or quota.
- * Browser-only features are tested with createNoopStorage mock.
+ * These exercise the mocks and the noop adapter. The real adapters against
+ * the browser's own storage are in local-storage.real.test.ts (the suite runs
+ * in Chromium, not JSDOM — an earlier note here said otherwise).
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
