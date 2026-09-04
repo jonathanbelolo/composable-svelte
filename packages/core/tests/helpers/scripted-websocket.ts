@@ -12,9 +12,12 @@
  * The test side drives events explicitly: `open()`, `message()`, `error()`,
  * `closed()`. Nothing happens on its own, so a test says exactly what the
  * network did and when.
+ *
+ * `installScriptedWebSocket` registers its own `onTestFinished`, which puts
+ * the native class back and empties `instances`; no file-level hook to forget.
  */
 
-import { afterEach } from 'vitest';
+import { onTestFinished } from 'vitest';
 
 type Handler = ((event: any) => void) | null;
 
@@ -80,16 +83,12 @@ export class ScriptedWebSocket {
 
 /** Install for the current test; returns the class so a test can read `instances`. */
 export function installScriptedWebSocket(): typeof ScriptedWebSocket {
+	const original = globalThis.WebSocket;
 	ScriptedWebSocket.instances = [];
 	(globalThis as { WebSocket: unknown }).WebSocket = ScriptedWebSocket;
-	return ScriptedWebSocket;
-}
-
-/** Call once at file scope. */
-export function scriptedWebSocketAfterEach(): void {
-	const original = globalThis.WebSocket;
-	afterEach(() => {
+	onTestFinished(() => {
 		(globalThis as { WebSocket: unknown }).WebSocket = original;
 		ScriptedWebSocket.instances = [];
 	});
+	return ScriptedWebSocket;
 }

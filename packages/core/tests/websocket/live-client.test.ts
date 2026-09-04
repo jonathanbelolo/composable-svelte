@@ -11,12 +11,10 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createLiveWebSocket } from '../../src/lib/websocket/live-client.js';
 import {
 	ScriptedWebSocket,
-	installScriptedWebSocket,
-	scriptedWebSocketAfterEach
+	installScriptedWebSocket
 } from '../helpers/scripted-websocket.js';
 import { expectConsole } from '../helpers/console.js';
 
-scriptedWebSocketAfterEach();
 
 beforeEach(() => {
 	vi.useFakeTimers();

@@ -8,13 +8,14 @@
  * file, nothing in `tests/api/` imported `client.ts` at all
  * (`plans/hardening/AUDIT-2026-09-03-FINDINGS.md`, STRUCTURAL).
  *
- * Deduplication and the response cache are module-global, so every test that
- * uses this must run under `scriptedFetchAfterEach()`, which clears both and
- * restores `fetch` — otherwise one test's in-flight request or cached body
- * answers the next test's call.
+ * Deduplication and the response cache are module-global, so `scriptFetch`
+ * registers its own `onTestFinished`: it restores `fetch` and clears both, and
+ * a file that forgets an `afterEach` cannot leak one test's in-flight request
+ * or cached body into the next. Called twice in one test, the restores unwind
+ * in reverse order, back to the native `fetch`.
  */
 
-import { afterEach } from 'vitest';
+import { onTestFinished } from 'vitest';
 import { clearCache } from '../../src/lib/api/cache.js';
 import { clearInFlightRequests } from '../../src/lib/api/deduplication.js';
 
@@ -38,8 +39,6 @@ export interface ScriptedFetch {
 	calls: RecordedFetch[];
 	restore: () => void;
 }
-
-let active: ScriptedFetch | null = null;
 
 function abortError(): Error {
 	return Object.assign(new Error('The operation was aborted'), { name: 'AbortError' });
@@ -83,16 +82,10 @@ export function scriptFetch(routes: ScriptedRoute[]): ScriptedFetch {
 			globalThis.fetch = original;
 		}
 	};
-	active = scripted;
-	return scripted;
-}
-
-/** Call once at file scope. */
-export function scriptedFetchAfterEach(): void {
-	afterEach(() => {
-		active?.restore();
-		active = null;
+	onTestFinished(() => {
+		scripted.restore();
 		clearInFlightRequests();
 		clearCache();
 	});
+	return scripted;
 }

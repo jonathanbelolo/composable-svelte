@@ -23,6 +23,11 @@
  * Why a module-level slot: `isolate` is on in both vitest configs, so this
  * module is instantiated once per test file, and the setup file and the test
  * share that instance. No `expect.getState()`, no fixtures.
+ *
+ * What it cannot see: a call made after the test's `afterEach` has put the
+ * original console back. A log fired from a timer after the test returns
+ * lands on whichever test is running by then, and is lost if none is. Await
+ * the work that logs, or the guard is reporting a neighbour's output.
  */
 
 export type Level = 'error' | 'warn';
@@ -85,12 +90,15 @@ export function reset(): void {
 /**
  * Declare that the current test expects console output at `level`.
  *
- * With no `count`, one or more calls are accepted. With a `count`, exactly
- * that many. Returns the live array of recorded calls so a test can assert on
- * the message text: `expect(calls[0]?.[0]).toContain('…')`.
+ * Exactly one call by default, so a path that starts logging twice is a
+ * change the guard reports. Pass a number for a different exact count, or
+ * `'any'` — one or more — only where the count depends on timing the test
+ * does not control, and say why beside the call. Returns the live array of
+ * recorded calls so a test can assert on the message text:
+ * `expect(calls[0]?.[0]).toContain('…')`.
  */
-export function expectConsole(level: Level, count?: number): Call[] {
-	slot.expected[level] = count ?? 'any';
+export function expectConsole(level: Level, count: number | 'any' = 1): Call[] {
+	slot.expected[level] = count;
 	return slot.calls[level];
 }
 

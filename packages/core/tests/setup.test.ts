@@ -3,10 +3,10 @@
  *
  * A guard whose job is to report zero needs a deliberately-wrong input pushed
  * through the same code path (`guides/VERIFICATION-PROTOCOL.md` rule 1).
- * `violations` is pure over a slot, so these drive the real function with
- * synthetic slots and never touch the live one — the guard installed by
- * `tests/setup.ts` is active around each of these tests too, and would
- * otherwise see the planted calls.
+ * `violations` is pure over a slot, so most of these drive the real function
+ * with synthetic slots. The last two go through the live one — the wrapper
+ * `tests/setup.ts` installs around every test, including these — and declare
+ * what they planted before the guard's own `afterEach` looks.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -52,6 +52,19 @@ describe('console guard', () => {
 	it('reports a declaration that nothing fulfilled', () => {
 		const out = violations(slotWith({ expected: { error: 'any', warn: null } }));
 		expect(out.join('\n')).toContain('never called');
+	});
+
+	it('is installed around this very test: an undeclared call is a violation of the live slot', () => {
+		// Through the wrapper, not a synthetic slot: the call lands in `slot`,
+		// `violations` names it, and only then is it declared so the check in
+		// tests/setup.ts lets this test pass. The throw itself lives in that
+		// afterEach and cannot be exercised in-process; a planted undeclared
+		// call was shown to fail its test, in both configs, in the R0 review.
+		console.error('planted live');
+		expect(violations(slot).join('\n')).toContain('planted live');
+		expect(violations(slot).join('\n')).toContain("expectConsole('error')");
+		expectConsole('error');
+		expect(violations(slot)).toEqual([]);
 	});
 
 	it('is installed around this very test: a declared call is recorded and passes', () => {

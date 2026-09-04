@@ -8,9 +8,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { createAPIClient } from '../../src/lib/api/client.js';
-import { scriptFetch, scriptedFetchAfterEach } from '../helpers/scripted-fetch.js';
+import { scriptFetch } from '../helpers/scripted-fetch.js';
 
-scriptedFetchAfterEach();
 
 describe('createAPIClient over a scripted fetch', () => {
 	it('sends a GET to the joined URL and parses a JSON response', async () => {
