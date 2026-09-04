@@ -122,8 +122,16 @@ describe('TestStore', () => {
 
       await store.send({ type: 'increment' });
 
-      // Match with full action
-      await store.receive({ type: 'loadCompleted', value: 100 });
+      // A partial with a different value does not match, even though a
+      // loadCompleted is pending — otherwise "partial" would mean "any action
+      // of this type".
+      await expect(
+        store.receive({ type: 'loadCompleted', value: 999 }, undefined, 50)
+      ).rejects.toThrow('Expected to receive action');
+
+      // A subset of the fields does match.
+      await store.receive({ type: 'loadCompleted' });
+      store.assertNoPendingActions();
     });
 
     it('throws error if action not received', async () => {

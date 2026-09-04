@@ -214,20 +214,25 @@ describe('createStore', () => {
     expect(executionOrder.sort()).toEqual([1, 2, 3]);
   });
 
-  it('manages Cancellable effects by ID', async () => {
-    // This asserts construction and dispatch only, and its previous comment said
-    // so: "actual cancellation testing is complex with fake timers, so we just
-    // verify the effect is created correctly". That excuse is why `Effect.cancel`
-    // was able to not cancel anything for the life of the package — the store
-    // created an AbortController, aborted it, and never handed the signal to
-    // anyone. Real cancellation is covered in `effect.test.ts` and
-    // `subscription-teardown.test.ts`; this one keeps the id-routing coverage.
+  it('a second Cancellable with the same id aborts the first and drops its dispatches', async () => {
+    // The previous form asserted construction and dispatch only, and said so.
+    // This one exercises what the id is for: the first executor is parked on
+    // a promise, the second supersedes it, and only the second's action lands.
+    const signals: AbortSignal[] = [];
+    let release!: () => void;
+    const parked = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let issued = 0;
     const reducer: Reducer<TestState, TestAction> = (state, action) => {
       if (action.type === 'startLoading') {
+        const n = ++issued;
         return [
           state,
-          Effect.cancellable('load', async (dispatch) => {
-            dispatch({ type: 'loadComplete', value: 42 });
+          Effect.cancellable('load', async (dispatch, signal) => {
+            signals.push(signal!);
+            if (n === 1) await parked;
+            dispatch({ type: 'loadComplete', value: n });
           })
         ];
       }
@@ -239,12 +244,22 @@ describe('createStore', () => {
     store.subscribeToActions!((action) => actions.push(action));
 
     store.dispatch({ type: 'startLoading' });
+    store.dispatch({ type: 'startLoading' });
 
     await vi.waitFor(() => {
-      expect(actions.filter(a => a.type === 'loadComplete').length).toBeGreaterThanOrEqual(1);
+      expect(actions.filter((a) => a.type === 'loadComplete')).toHaveLength(1);
     });
+    expect(signals).toHaveLength(2);
+    expect(signals[0]!.aborted).toBe(true);
+    expect(signals[1]!.aborted).toBe(false);
 
-    expect(actions.filter(a => a.type === 'loadComplete')).toHaveLength(1);
+    // The superseded executor finishes late; its dispatch is gated off.
+    release();
+    await parked;
+    await Promise.resolve();
+    await Promise.resolve();
+    const completed = actions.filter((a) => a.type === 'loadComplete') as Array<{ value: number }>;
+    expect(completed.map((a) => a.value)).toEqual([2]);
   });
 
   it('debounces Debounced effects', async () => {

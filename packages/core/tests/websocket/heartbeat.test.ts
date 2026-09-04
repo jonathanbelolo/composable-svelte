@@ -291,23 +291,29 @@ describe('WebSocket Heartbeat', () => {
       client.connect('wss://example.com');
       vi.advanceTimersByTime(10); // Let connection complete
 
+      // Timeout longer than the interval, so the interval's own "no pong yet"
+      // check is what fires first — the branch this test is named for. With
+      // timeout < interval the pong timeout disconnects first and the branch
+      // could be deleted unnoticed.
       const config: HeartbeatConfig = {
         enabled: true,
         interval: 1000,
-        timeout: 500
+        timeout: 1500
       };
       const heartbeat = createHeartbeat(client, config);
 
       heartbeat.start();
 
-      // First ping - no pong response
+      // First ping, never answered
       vi.advanceTimersByTime(1000);
+      expect(client.sentMessages).toHaveLength(1);
 
-      // Second interval - should disconnect before sending second ping
+      // Second interval: must disconnect, not ping again
       vi.advanceTimersByTime(1000);
 
       expect(client.state.status).toBe('disconnected');
       expect(heartbeat.isRunning).toBe(false);
+      expect(client.sentMessages).toHaveLength(1);
     });
 
     it('should clear timeout when pong received', () => {

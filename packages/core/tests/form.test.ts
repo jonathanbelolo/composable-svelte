@@ -866,6 +866,9 @@ describe('Validation Modes', () => {
 			field: 'name',
 			error: 'Name must be at least 2 characters'
 		});
+
+		// And nothing else: 'all' is change and blur, not change, blur and more.
+		await store.finish();
 	});
 });
 

@@ -2,7 +2,8 @@
  * Tests for WebSocket Message Queue
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { expectConsole } from '../helpers/console.js';
 import { createMessageQueue, createQueuedWebSocket } from '../../src/lib/websocket/message-queue.js';
 import { createMockWebSocket } from '../../src/lib/websocket/testing/mock-client.js';
 
@@ -460,20 +461,21 @@ describe('Queued WebSocket Client', () => {
 
   describe('Error Handling', () => {
     it('should handle flush errors gracefully', async () => {
+      const errors = expectConsole('error');
       const baseClient = createMockWebSocket();
+      // The flush's `.catch(console.error)` is the behaviour under test, so the
+      // send it flushes through has to reject. The old form never made one
+      // reject and asserted the base client's own disconnect.
+      vi.spyOn(baseClient, 'send').mockRejectedValue(new Error('send failed'));
       const queuedClient = createQueuedWebSocket(baseClient, 100);
 
-      // Queue message
       await queuedClient.send({ type: 'test' });
-
-      // Connect
       await queuedClient.connect('wss://example.com');
 
-      // Immediately disconnect before flush completes
-      await queuedClient.disconnect();
-
-      // Should not throw
-      expect(baseClient.state.status).toBe('disconnected');
+      await vi.waitFor(() => expect(errors).toHaveLength(1));
+      expect(String(errors[0]?.[0])).toContain('send failed');
+      // The client is still usable afterwards.
+      expect(baseClient.state.status).toBe('connected');
     });
   });
 

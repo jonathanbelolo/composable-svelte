@@ -541,7 +541,7 @@ describe('createSpyAPI', () => {
       expect(spy.responses[2]!.data).toEqual({ success: true });
     });
 
-    it('verifies retry behavior', async () => {
+    it('records the failed calls in errors and the success in responses', async () => {
       let callCount = 0;
       const mock = createMockAPI({
         'GET /api/flaky': () => {

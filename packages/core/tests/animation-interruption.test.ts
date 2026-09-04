@@ -152,7 +152,15 @@ describe('the components survive it anyway', () => {
 		await wait(900);
 
 		const list = s.list();
-		if (list) {
+		if (list === null) {
+			// Settled closed is a legitimate outcome of three clicks while
+			// interactions are gated during animation — but it must be a *settled*
+			// closed, so one more click has to open it. The old form asserted
+			// nothing at all on this branch.
+			s.trigger().click();
+			await wait(700);
+			expect(s.list(), 'settled closed, and a further click did not open').not.toBeNull();
+		} else {
 			expect(Number.parseFloat(getComputedStyle(list).opacity)).toBe(1);
 		}
 	});

@@ -8,7 +8,7 @@
  * @vitest-environment jsdom
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createStore } from '../../src/lib/store.svelte';
 import { Effect } from '../../src/lib/effect';
 import type { Reducer } from '../../src/lib/types';
@@ -406,6 +406,11 @@ describe('Routing Integration', () => {
 				dependencies: {}
 			});
 
+			// Installed before syncBrowserHistory, which wraps history.pushState and
+			// calls through to whatever was there — this spy. It calls through to
+			// the real method, so the URL still changes.
+			const pushes = vi.spyOn(history, 'pushState');
+
 			const cleanup = syncBrowserHistory(store, {
 				parse: (path) => parseDestination(path, parserConfig),
 				serialize: serializeState,
@@ -420,9 +425,12 @@ describe('Routing Integration', () => {
 			expect(window.location.pathname).toBe('/inventory/item-123');
 			expect(store.state.destination).toEqual({ type: 'detail', state: { itemId: '123' } });
 
-			// No loop should occur (test passes if no infinite recursion)
+			// One dispatch, one history write. A loop that ran and settled would
+			// leave the URL right and this count wrong; the old form counted nothing.
+			expect(pushes).toHaveBeenCalledTimes(1);
 
 			cleanup();
+			pushes.mockRestore();
 		});
 	});
 

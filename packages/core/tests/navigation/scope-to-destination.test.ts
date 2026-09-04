@@ -2,7 +2,7 @@
  * Tests for scopeToDestination and scopeToOptional
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, expectTypeOf } from 'vitest';
 import { createStore } from '../../src/lib/store.svelte.js';
 import { Effect } from '../../src/lib/effect.js';
 import {
@@ -769,7 +769,6 @@ describe('Scoped Store Integration', () => {
   });
 
   it('provides type-safe component integration', () => {
-    // This test verifies type safety (compile-time check)
     const initialState: ParentState = {
       destination: {
         type: 'addItem',
@@ -778,11 +777,12 @@ describe('Scoped Store Integration', () => {
       items: []
     };
 
-    const store = createStore({
-      initialState,
-      reducer: parentReducer,
-      dependencies: null
-    });
+    const dispatched: ParentAction[] = [];
+    const recording: Reducer<ParentState, ParentAction, null> = (state, action) => {
+      dispatched.push(action);
+      return parentReducer(state, action, null);
+    };
+    const store = createStore({ initialState, reducer: recording, dependencies: null });
 
     const scopedStore = scopeToDestination<AddItemState, ChildAction>(
       store,
@@ -791,23 +791,25 @@ describe('Scoped Store Integration', () => {
       'destination'
     );
 
-    // Type safety: scopedStore.state is AddItemState | null
-    if (scopedStore.state) {
-      // TypeScript knows state is AddItemState here
-      const item: string = scopedStore.state.item;
-      const quantity: number = scopedStore.state.quantity;
+    // The old form put both value assertions inside `if (scopedStore.state)`,
+    // so a scoping that returned null passed, and stated its compile-time
+    // claims in comments. The types are checked as types now.
+    expectTypeOf(scopedStore.state).toEqualTypeOf<AddItemState | null>();
+    expectTypeOf(scopedStore.state).exclude<null>().not.toHaveProperty('id');
+    expectTypeOf(scopedStore.dispatch).parameter(0).toEqualTypeOf<ChildAction>();
 
-      expect(item).toBe('apple');
-      expect(quantity).toBe(5);
+    expect(scopedStore.state).not.toBeNull();
+    expect(scopedStore.state!.item).toBe('apple');
+    expect(scopedStore.state!.quantity).toBe(5);
 
-      // This would be a compile error:
-      // const id: string = scopedStore.state.id; // Property 'id' does not exist
-    }
-
-    // Type safety: dispatch accepts ChildAction
+    // A child action reaches the parent wrapped in the case and presentation.
     scopedStore.dispatch({ type: 'updateItem', value: 'banana' });
-
-    // This would be a compile error:
-    // scopedStore.dispatch({ type: 'invalidAction' }); // Type error
+    expect(dispatched.at(-1)).toEqual({
+      type: 'destination',
+      action: {
+        type: 'presented',
+        action: { type: 'addItem', action: { type: 'updateItem', value: 'banana' } }
+      }
+    });
   });
 });

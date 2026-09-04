@@ -598,13 +598,13 @@ describe('Select', () => {
 		});
 
 		it('is a no-op when the value already matches', async () => {
-			const store = createTestStore({
-				initialState: createInitialSelectState(options, 'apple'),
-				reducer: selectReducer
-			});
+			const initial = createInitialSelectState(options, 'apple');
+			const store = createTestStore({ initialState: initial, reducer: selectReducer });
 
 			await store.send({ type: 'valueChanged', value: 'apple' });
 
+			// "No-op" is a reference claim: the same state object, and no effect.
+			expect(store.state).toBe(initial);
 			store.assertNoPendingActions();
 		});
 

@@ -5,6 +5,7 @@ import Alert from '../../src/lib/navigation-components/Alert.svelte';
 import { createStore } from '../../src/lib/store.svelte.js';
 import { scopeToDestination } from '../../src/lib/navigation/scope-to-destination.js';
 import { Effect } from '../../src/lib/effect.js';
+import { resetBodyScroll } from '../helpers/body-scroll.js';
 
 // ============================================================================
 // Test Fixtures
@@ -287,11 +288,16 @@ describe('Alert Component', () => {
       'destination'
     );
 
-    render(Alert, { store: scopedStore });
+    // Reset first: body.style is shared across every test in the worker, and
+    // a lock leaked by an earlier test made the old form pass on its own.
+    resetBodyScroll();
+    expect(document.body.style.overflow).toBe('');
 
-    // Check body overflow style directly
-    const bodyStyle = document.body.style.overflow;
-    expect(bodyStyle).toBe('hidden');
+    const screen = render(Alert, { store: scopedStore });
+    expect(document.body.style.overflow).toBe('hidden');
+
+    screen.unmount();
+    expect(document.body.style.overflow).toBe('');
   });
 
   it('uses max-w-md (smaller than modal)', async () => {
