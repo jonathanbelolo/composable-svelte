@@ -76,8 +76,9 @@ export default defineConfig({
       'tests/i18n/ssr.test.ts'
     ],
 
-    // Suppress console output during tests (for CI/prepublish)
-    silent: process.env.CI === 'true' || process.env.SILENT_TESTS === 'true',
+    // Only prepublish silences output. CI used to as well, which hid every
+    // swallowed-error log the console guard now exists to surface.
+    silent: process.env.SILENT_TESTS === 'true',
 
     // Coverage configuration
     coverage: {

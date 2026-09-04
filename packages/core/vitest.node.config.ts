@@ -72,6 +72,6 @@ export default defineConfig({
       // The console guard's own positive controls; browser mode collects it by glob.
       'tests/setup.test.ts'
     ],
-    silent: process.env.CI === 'true' || process.env.SILENT_TESTS === 'true'
+    silent: process.env.SILENT_TESTS === 'true'
   }
 });
