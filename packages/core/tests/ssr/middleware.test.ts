@@ -224,6 +224,40 @@ describe('rate limiting', () => {
 		expect(limiter.check('a').allowed).toBe(true);
 	});
 
+	it('caps the keys it holds, dropping the oldest', () => {
+		// A client that chooses its own key could grow the map without limit.
+		const limiter = track(new RateLimiter({ max: 1, windowMs: 60_000, maxKeys: 2 }));
+		expect(limiter.check('a').allowed).toBe(true);
+		expect(limiter.check('b').allowed).toBe(true);
+		expect(limiter.check('c').allowed).toBe(true); // evicts a
+		expect(limiter.size).toBe(2);
+		expect(limiter.check('a').allowed).toBe(true); // a was evicted, so it is new again
+		expect(limiter.check('c').allowed).toBe(false); // c is still held
+		expect(limiter.size).toBe(2);
+	});
+
+	it('does not hold the process open: the cleanup interval is unref\'d', () => {
+		const spy = vi.spyOn(globalThis, 'setInterval');
+		try {
+			track(new RateLimiter({ max: 1, windowMs: 1000 }));
+			const handle = spy.mock.results.at(-1)!.value as NodeJS.Timeout;
+			expect(handle.hasRef()).toBe(false);
+		} finally {
+			spy.mockRestore();
+		}
+	});
+
+	it('registers an onClose hook that destroys the limiter', async () => {
+		vi.useFakeTimers();
+		const fastify = stubFastify();
+		fastifyRateLimit(fastify, { max: 1, windowMs: 1000 });
+		expect(fastify.has('onClose')).toBe(true);
+		expect(vi.getTimerCount()).toBe(1);
+
+		await fastify.fire('onClose', undefined, undefined);
+		expect(vi.getTimerCount()).toBe(0);
+	});
+
 	it('sets rate-limit headers and 429s once exceeded', async () => {
 		const fastify = stubFastify();
 		fastifyRateLimit(fastify, { max: 1, windowMs: 1000 });
@@ -239,6 +273,7 @@ describe('rate limiting', () => {
 		expect(second.statusCode).toBe(429);
 		expect(second.headers['Retry-After']).toBeGreaterThan(0);
 		expect(second.body).toMatchObject({ error: 'Too Many Requests' });
+		await fastify.fire('onClose', undefined, undefined);
 	});
 
 	it('uses a custom key generator when given one', async () => {
@@ -259,5 +294,6 @@ describe('rate limiting', () => {
 		const c = stubReply();
 		await fastify.fire('onRequest', { headers: { 'x-api-key': 'k1' } }, c);
 		expect(c.statusCode).toBe(429);
+		await fastify.fire('onClose', undefined, undefined);
 	});
 });

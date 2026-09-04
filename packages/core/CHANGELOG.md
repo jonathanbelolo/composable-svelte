@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `RateLimitConfig.maxKeys` — the keys a limiter holds before the oldest is
+  dropped (default 10 000); `RateLimiter.size`.
+
 - **`reconnect(reason?)` on `WebSocketClient`**: drop the socket and start the
   reconnect ladder without forgetting the URL, which `disconnect()` does. The
   live, mock, spy, queued and channel clients all implement it; the spy
@@ -67,6 +70,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   case and maps each child's effect back into it. Kept for existing callers.
 
 ### Fixed
+
+- **The rate limiter no longer holds the server open, and its key map is
+  bounded.** Its cleanup interval was never unref'd or cleared, so
+  `app.close()` hung on it; the interval is unref'd and `fastifyRateLimit`
+  clears it in an `onClose` hook. The map grew one entry per distinct key
+  without limit — a client that chooses its key, through a spoofed
+  `X-Forwarded-For`, could grow it freely; `maxKeys` (default 10 000) drops
+  the oldest. The default key, `req.ip`, and what `trustProxy` does to it are
+  documented. (AUDIT-2026-09-03-FINDINGS SS4, SS8)
 
 - **Security-header options merge over the defaults, and the rate limiter
   refuses a bad `max` or `windowMs`.** `createSecurityHeaders` and

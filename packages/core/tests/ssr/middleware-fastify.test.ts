@@ -11,7 +11,7 @@
  * devDependency pinned to the version the examples use.
  */
 
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { fastifySecurityHeaders, fastifyRateLimit, type RateLimitConfig } from '../../src/lib/ssr/middleware/index.js';
 
@@ -118,3 +118,22 @@ describe('app.register(fastifyRateLimit, { max, windowMs }) — the documented f
 		expect(second.json()).toMatchObject({ error: 'Too Many Requests' });
 	});
 });
+
+describe('the limiter goes with the server', () => {
+	it('app.close() clears the cleanup interval', async () => {
+		// The interval was never cleared, so app.close() waited on it (SS8).
+		vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+		try {
+			const app = Fastify();
+			await app.register(fastifyRateLimit, { max: 1, windowMs: 60_000 });
+			await app.ready();
+			expect(vi.getTimerCount()).toBe(1);
+
+			await app.close();
+			expect(vi.getTimerCount()).toBe(0);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+});
+

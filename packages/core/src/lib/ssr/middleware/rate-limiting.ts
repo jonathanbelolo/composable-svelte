@@ -13,8 +13,22 @@ export interface RateLimitConfig {
   /** Time window in milliseconds. A positive finite number, or the limiter throws. */
   windowMs: number;
 
-  /** Key generator function (default: IP address) */
+  /**
+   * Which requests share a bucket. Default: `req.ip`.
+   *
+   * Behind a proxy or load balancer `req.ip` is the proxy's address — one
+   * bucket for the whole site — unless Fastify is created with `trustProxy`,
+   * which also makes it read `X-Forwarded-For`. A key taken from a header is
+   * chosen by the client: an attacker can spend a fresh bucket per request,
+   * so `maxKeys` bounds what that costs.
+   */
   keyGenerator?: ((request: any) => string) | undefined;
+
+  /**
+   * Keys held before the oldest is dropped.
+   * @default 10000
+   */
+  maxKeys?: number | undefined;
 
   /** Custom error message */
   message?: string | undefined;
@@ -44,12 +58,22 @@ function positiveFinite(name: 'max' | 'windowMs', value: unknown): number {
 export class RateLimiter {
   private requests = new Map<string, { count: number; resetTime: number }>();
   private cleanupInterval: NodeJS.Timeout | undefined;
+  private readonly maxKeys: number;
 
   constructor(private config: RateLimitConfig) {
     positiveFinite('max', config?.max);
     positiveFinite('windowMs', config?.windowMs);
-    // Clean up expired entries every minute
+    this.maxKeys = config.maxKeys ?? 10_000;
+    // Clean up expired entries every minute. Unref'd: a limiter must not keep
+    // the process alive by itself, and `app.close()` hung on it
+    // (AUDIT-2026-09-03-FINDINGS SS8).
     this.cleanupInterval = setInterval(() => this.cleanup(), 60000);
+    this.cleanupInterval.unref?.();
+  }
+
+  /** Keys currently held. */
+  get size(): number {
+    return this.requests.size;
   }
 
   /**
@@ -68,6 +92,7 @@ export class RateLimiter {
     // No record or expired - allow and create new
     if (!record || now > record.resetTime) {
       const resetTime = now + this.config.windowMs;
+      if (!record) this.makeRoom();
       this.requests.set(key, { count: 1, resetTime });
       return {
         allowed: true,
@@ -93,6 +118,21 @@ export class RateLimiter {
       resetTime: record.resetTime,
       retryAfter: Math.ceil((record.resetTime - now) / 1000)
     };
+  }
+
+  /**
+   * Before a new key: drop expired entries, then the oldest, until there is
+   * room. Unbounded, a client that chose its own key (a spoofed
+   * `X-Forwarded-For`) grew the map without limit (SS4).
+   */
+  private makeRoom() {
+    if (this.requests.size < this.maxKeys) return;
+    this.cleanup();
+    while (this.requests.size >= this.maxKeys) {
+      const oldest = this.requests.keys().next().value;
+      if (oldest === undefined) break;
+      this.requests.delete(oldest);
+    }
   }
 
   /**
@@ -135,6 +175,11 @@ export const fastifyRateLimit = installsOnParent(async function fastifyRateLimit
 ): Promise<void> {
   const limiter = new RateLimiter(config);
   const keyGen = config.keyGenerator || ((req: any) => req.ip);
+
+  // The limiter's interval goes with the server.
+  fastify.addHook('onClose', async () => {
+    limiter.destroy();
+  });
 
   fastify.addHook('onRequest', async (request: any, reply: any) => {
     const key = keyGen(request);

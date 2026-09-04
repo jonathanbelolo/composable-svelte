@@ -515,6 +515,19 @@ fastify.register(fastifyRateLimit, {
 anything else throws at registration, naming the field, rather than turning
 every request into a 500.
 
+The default key is `req.ip`. Behind a proxy or load balancer that is the
+proxy's address — one bucket for the whole site — unless Fastify is created
+with `trustProxy`, which also makes `req.ip` follow `X-Forwarded-For`. A key
+taken from a header is chosen by the client, so an attacker can spend a fresh
+bucket per request: `maxKeys` (default 10 000) bounds what that costs by
+dropping the oldest key. The limiter's cleanup interval is unref'd and cleared
+when the server closes.
+
+```typescript
+const app = Fastify({ trustProxy: true });
+app.register(fastifyRateLimit, { max: 100, windowMs: 60_000, maxKeys: 50_000 });
+```
+
 ### Security Headers
 
 ```typescript

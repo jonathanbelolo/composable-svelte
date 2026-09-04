@@ -311,14 +311,14 @@ dependency, not severity: R1.1 needs D1, R1.3 needs D3.
 
 ### R1.6 — Security middleware installs the documented way (`SS3`, `G5`) — S
 
-- [ ] R1.6.a Both plugins carry `Symbol.for('skip-override')` (or are wrapped
+- [x] R1.6.a Both plugins carry `Symbol.for('skip-override')` (or are wrapped
       with `fastify-plugin`) so `app.register()` reaches the parent scope.
-- [ ] R1.6.b An empty options object gets the defaults; `fastifyRateLimit`
+- [x] R1.6.b An empty options object gets the defaults; `fastifyRateLimit`
       validates `max` and refuses `NaN` (`SS3`).
-- [ ] R1.6.c Rate limiter: `onClose` clears its interval and the interval is
+- [x] R1.6.c Rate limiter: `onClose` clears its interval and the interval is
       `unref()`'d (`SS8`); key generator documented and `trustProxy` required
       for header-derived keys, with the map bounded (`SS4`).
-- [ ] R1.6.d Test through a real Fastify instance via `register`, asserting
+- [x] R1.6.d Test through a real Fastify instance via `register`, asserting
       headers on a root route and a 429 on the second request.
       Proof: the two documented snippets, run verbatim, produce headers.
       `middleware/index.ts:24-25`, the SSR skill and `docs/README.md:307`
