@@ -225,23 +225,23 @@ dependency, not severity: R1.1 needs D1, R1.3 needs D3.
 
 ### R1.1 — Navigation DSL composes with itself (`N1`, `N2`) — L, needs D1
 
-- [ ] R1.1.a End-to-end test first: `createDestination` → `integrate().with()`
+- [x] R1.1.a End-to-end test first: `createDestination` → `integrate().with()`
       → real store → `scopeTo().case().dispatch(child)` → child reducer sees
       `child`; `.dismiss()` clears the field; a child `Effect.run` that
       dispatches lands back in the child. All three fail on `37afb0d`.
-- [ ] R1.1.b `createDestination().reducer` takes `{ type: caseType, action: child }`
+- [x] R1.1.b `createDestination().reducer` takes `{ type: caseType, action: child }`
       and maps the child effect with `Effect.map(e, a => ({ type: caseType, action: a }))`.
-- [ ] R1.1.c `scopeTo().case().dismiss()` emits the outer `{ type: 'dismiss' }`;
+- [x] R1.1.c `scopeTo().case().dismiss()` emits the outer `{ type: 'dismiss' }`;
       `ifLetPresentation` unchanged.
-- [ ] R1.1.d `createDestinationReducer` and `handleStackAction` tag effects
+- [x] R1.1.d `createDestinationReducer` and `handleStackAction` tag effects
       with the case or screen identity they were produced under and drop
       results whose target is gone (`N8`). `handleStackAction` takes the
       parent field name instead of hardcoding `'stack'` (`N11`).
-- [ ] R1.1.e `integrate()` runs the child before core, or documents that core
+- [x] R1.1.e `integrate()` runs the child before core, or documents that core
       first means the child never sees an action core consumes (`N14`).
-- [ ] R1.1.f `scopeTo().case()` and `.optional()` return typed stores, not
+- [x] R1.1.f `scopeTo().case()` and `.optional()` return typed stores, not
       `ScopedStore<any, any>` (`P5`).
-- [ ] R1.1.g `destination.test.ts:295-323` executes the effect it asserts on.
+- [x] R1.1.g `destination.test.ts:295-323` executes the effect it asserts on.
       Proof: mutation M5 killed; the R1.1.a suite green; `specs/frontend/navigation-dsl-spec.md`
       and `docs/dsl/destinations.md` updated in the same commit.
 
