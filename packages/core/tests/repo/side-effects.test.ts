@@ -53,10 +53,26 @@ const BARE_IMPORT = /^[ \t]*import[ \t]+['"]([^'"]+)['"][ \t]*;?[ \t]*$/gm;
  * assignment ever runs, and `Effect.api` was `undefined` in every bundled
  * consumer while this guard was green (AUDIT-2026-09-03-FINDINGS P1).
  *
- * Column 0 on purpose: an assignment inside a function body is not an
- * import-time side effect, and a JSDoc example is not code.
+ * Leading whitespace is allowed. The first version anchored at column 0 so
+ * that an assignment inside a function body would not count, and the R0
+ * review showed the cost: the same assignment indented by two spaces — a
+ * top-level `try`, `if` or block, all of them import-time code — made the
+ * guard report core's api chain as clean. An assignment in a function body
+ * now matches too; that is a false positive the `sideEffects` list can carry
+ * (measured over every package's dist: none today), where the miss was
+ * silent. Bracket access and the logical assignments are the other spellings.
+ * A JSDoc example is still not code: block comments are stripped first.
  */
-const IMPORTED_MUTATION = /^([A-Za-z_$][\w$]*)(?:\.[\w$]+)+\s*=(?!=)/gm;
+const IMPORTED_MUTATION =
+	/^[ \t]*([A-Za-z_$][\w$]*)(?:\.[\w$]+|\[[^\]]+\])+\s*(?:\?\?|\|\||&&)?=(?!=)/gm;
+
+/**
+ * Minified module syntax — `import{Effect}from'./e.js'`, `export*from` — which
+ * none of the regexes in this file can read. Exported for its control.
+ */
+export function looksMinified(source: string): boolean {
+	return /^(?:import|export)[{'"*]/m.test(source);
+}
 
 /** The local names a module's `import` statements bind. */
 export function importBindings(source: string): Set<string> {
@@ -318,6 +334,23 @@ describe('side-effect imports survive tree-shaking', () => {
 		}
 	);
 
+	it.each(packages)('%s ships dist in the shape the markers read', (name) => {
+		// Every regex in this file — BARE_IMPORT, IMPORTED_MUTATION,
+		// importBindings, relativeDeps — assumes one statement per line with
+		// whitespace after `import` and `export`. A minified emission matches
+		// none of them, and the chain walk would go silent rather than red.
+		const dist = join(packagesDir, name, 'dist');
+		const files = walkFiles(dist, { skip: ['node_modules'], keep: (f) => f.endsWith('.js') }).files;
+		const minified = files.filter((file) => looksMinified(readFileSync(file, 'utf8')));
+
+		expect(
+			minified.map((f) => relative(dist, f)),
+			`${name}: minified module syntax, which the side-effect markers cannot read`
+		).toEqual([]);
+		// And the shape they do read is present, so the arm is about something.
+		expect(files.some((file) => /^import\s/m.test(readFileSync(file, 'utf8')))).toBe(true);
+	});
+
 	it("P1 (pinned defect): core's Effect.api registration chain is uncovered", () => {
 		// Pinned, not fixed: `dist/api/effect-api.js` assigns `Effect.api` at
 		// import and is reached from `dist/index.js` and `dist/api/index.js` by
@@ -415,12 +448,24 @@ describe('the chain walk itself', () => {
 		]);
 	});
 
-	it('sees an assignment into an import, and not one in a comment or a function', () => {
+	it('sees an assignment into an import wherever it sits, and not one in a comment', () => {
 		expect(mutatedImports("import { Effect } from './e.js';\nEffect.api = 1;\n")).toEqual(['Effect']);
 		expect(mutatedImports("import { Effect } from './e.js';\n/* Effect.api = 1; */\n")).toEqual([]);
-		expect(mutatedImports("import { Effect } from './e.js';\nfunction f() {\n  Effect.api = 1;\n}\n")).toEqual([]);
+		// Indented: a top-level block, the shape that evaded the column-0 form.
+		expect(mutatedImports("import { Effect } from './e.js';\ntry {\n  Effect.api = 1;\n} catch {}\n")).toEqual(['Effect']);
+		// A function body matches too — accepted; see IMPORTED_MUTATION.
+		expect(mutatedImports("import { Effect } from './e.js';\nfunction f() {\n  Effect.api = 1;\n}\n")).toEqual(['Effect']);
+		expect(mutatedImports("import { Effect } from './e.js';\nEffect['api'] = 1;\n")).toEqual(['Effect']);
+		expect(mutatedImports("import { Effect } from './e.js';\nEffect.api ??= 1;\n")).toEqual(['Effect']);
 		expect(mutatedImports("import { Effect } from './e.js';\nEffect.api === 1;\n")).toEqual([]);
+		expect(mutatedImports("import { Effect } from './e.js';\nEffect.api == 1;\n")).toEqual([]);
 		expect(mutatedImports("const Local = {};\nLocal.x = 1;\n")).toEqual([]);
+	});
+
+	it('tells minified module syntax from the shape the markers read', () => {
+		expect(looksMinified("import{Effect}from'./e.js';Effect.api=1;")).toBe(true);
+		expect(looksMinified("export*from'./x.js';")).toBe(true);
+		expect(looksMinified("import { Effect } from './e.js';\nexport * from './x.js';\n")).toBe(false);
 	});
 
 	it('reports an assignment reached only through an unlisted re-export', () => {

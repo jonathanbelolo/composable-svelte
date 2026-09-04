@@ -18,7 +18,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { existsSync, statSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, statSync, mkdtempSync, rmSync, writeFileSync, utimesSync } from 'node:fs';
+import { basename } from 'node:path';
 import { tmpdir } from 'node:os';
 import { walkFiles, listDirs } from './walk.js';
 import { fileURLToPath } from 'node:url';
@@ -56,20 +57,30 @@ describe('built output is not stale', () => {
 		expect(packages.length).toBeGreaterThan(1);
 	});
 
-	it('newest() reads a real mtime and returns null for an empty directory', () => {
-		// The positive control for the comparison: a `newest` that always
-		// returned null fails the not-null floors, but one that returned the
-		// same constant for both sides would pass the comparison forever.
-		const src = newest(join(packagesDir, 'core', 'src'));
-		expect(src).not.toBeNull();
-		expect(src!.at).toBeGreaterThan(0);
-		expect(src!.file.startsWith(join(packagesDir, 'core', 'src'))).toBe(true);
-
-		const empty = mkdtempSync(join(tmpdir(), 'dist-freshness-'));
+	it('newest() follows mtimes: the later-touched file wins', () => {
+		// The positive control for the comparison. The first form asserted only
+		// "non-null and positive", which a `newest` returning the same constant
+		// for both sides satisfies while the dist >= src comparison passes
+		// forever. Two files with set mtimes cannot be satisfied that way.
+		const dir = mkdtempSync(join(tmpdir(), 'dist-freshness-'));
 		try {
-			expect(newest(empty)).toBeNull();
+			const a = join(dir, 'a.txt');
+			const b = join(dir, 'b.txt');
+			writeFileSync(a, 'a');
+			writeFileSync(b, 'b');
+			const now = Math.floor(Date.now() / 1000);
+			utimesSync(a, now - 100, now - 100);
+			utimesSync(b, now - 50, now - 50);
+			expect(basename(newest(dir)!.file)).toBe('b.txt');
+
+			utimesSync(a, now, now);
+			expect(basename(newest(dir)!.file)).toBe('a.txt');
+
+			rmSync(a);
+			rmSync(b);
+			expect(newest(dir)).toBeNull();
 		} finally {
-			rmSync(empty, { recursive: true, force: true });
+			rmSync(dir, { recursive: true, force: true });
 		}
 	});
 

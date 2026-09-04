@@ -56,6 +56,28 @@ const coreDir = join(repoRoot, 'packages', 'core');
 const nodeConfig = readFileSync(join(coreDir, 'vitest.node.config.ts'), 'utf8');
 const browserConfig = readFileSync(join(coreDir, 'vite.config.ts'), 'utf8');
 
+/**
+ * The string entries of the first `key: [ … ]` array literal in a config
+ * source, comments removed.
+ *
+ * The first form of the arms below was `config.includes('tests/repo/x')` over
+ * the whole file, which a guard named in a comment, or placed in the other
+ * array, satisfied. Exported for its control.
+ */
+export function configArray(source: string, key: 'include' | 'exclude'): string[] {
+	// The `test: { … }` block's array, not the first one in the file: vite.config.ts
+	// has a build-time `exclude` before it.
+	const from = source.search(/\btest:\s*\{/);
+	const scope = from >= 0 ? source.slice(from) : source;
+	const match = scope.match(new RegExp(`\\b${key}:\\s*\\[([^\\]]*)\\]`));
+	if (!match) return [];
+	const body = match[1]!.replace(/\/\/[^\n]*/g, '');
+	return [...body.matchAll(/'([^']+)'/g)].map((m) => m[1]!);
+}
+
+const nodeInclude = configArray(nodeConfig, 'include');
+const browserExclude = configArray(browserConfig, 'exclude');
+
 /** Source with comments stripped, so a rule reads code and not commentary. `file` is `tests/`-relative. */
 function code(file: string): string {
 	return readFileSync(join(testsDir, file), 'utf8')
@@ -83,7 +105,7 @@ describe('every guard actually runs', () => {
 	it('is named in the node config, which lists files rather than globbing', () => {
 		// A guard missing from this list is not a weak test, it is no test. The
 		// config's `include` is explicit, so nothing else would say so.
-		const unlisted = guards.filter((file) => !nodeConfig.includes(`tests/repo/${file}`));
+		const unlisted = guards.filter((file) => !nodeInclude.includes(`tests/repo/${file}`));
 
 		expect(
 			unlisted,
@@ -94,7 +116,7 @@ describe('every guard actually runs', () => {
 	it('the config names no guard that is gone', () => {
 		// The other direction: a stale entry is a config that lies about its
 		// coverage, and vitest does not complain about one that matches nothing.
-		const listed = [...nodeConfig.matchAll(/'tests\/repo\/([^']+)'/g)].map((m) => m[1]!);
+		const listed = nodeInclude.filter((e) => e.startsWith('tests/repo/')).map((e) => e.slice('tests/repo/'.length));
 		const missing = listed.filter((file) => !guards.includes(file));
 
 		expect(missing, 'the node config lists a guard that no longer exists').toEqual([]);
@@ -107,9 +129,7 @@ describe('every guard actually runs', () => {
 		// and fails there — which is how it went: two files failed to collect
 		// while every test passed, and the per-package summary showed only the
 		// passing count.
-		const unexcluded = guards.filter(
-			(file) => !browserConfig.includes(`tests/repo/${file}`)
-		);
+		const unexcluded = guards.filter((file) => !browserExclude.includes(`tests/repo/${file}`));
 
 		expect(
 			unexcluded,
@@ -118,10 +138,36 @@ describe('every guard actually runs', () => {
 	});
 
 	it('the browser exclude names no guard that is gone', () => {
-		const excluded = [...browserConfig.matchAll(/'tests\/repo\/([^']+)'/g)].map((m) => m[1]!);
+		const excluded = browserExclude.filter((e) => e.startsWith('tests/repo/')).map((e) => e.slice('tests/repo/'.length));
 		const missing = excluded.filter((file) => !guards.includes(file));
 
 		expect(missing, 'vite.config.ts excludes a guard that no longer exists').toEqual([]);
+	});
+
+	it('the glob entries and the setup control are still registered', () => {
+		// `tests/styles/` registers by glob, and `tests/setup.test.ts` by name;
+		// the arms above are about `tests/repo/` and would not notice either
+		// entry going — which silently un-runs the theming guards and the console
+		// guard's own controls.
+		expect(nodeInclude).toContain('tests/styles/**/*.test.ts');
+		expect(browserExclude).toContain('tests/styles/**');
+		expect(nodeInclude).toContain('tests/setup.test.ts');
+	});
+
+	it('reads the array, not the file', () => {
+		const synthetic = [
+			"// 'tests/repo/ghost.test.ts' is mentioned here only",
+			"  build: { exclude: ['src/**/*.test.ts'] },",
+			'  test: {',
+			'  include: [',
+			"    'tests/repo/real.test.ts', // 'tests/repo/commented.test.ts'",
+			"    'tests/styles/**/*.test.ts'",
+			'  ],',
+			"  exclude: ['tests/repo/other.test.ts']"
+		].join('\n');
+		expect(configArray(synthetic, 'include')).toEqual(['tests/repo/real.test.ts', 'tests/styles/**/*.test.ts']);
+		expect(configArray(synthetic, 'exclude')).toEqual(['tests/repo/other.test.ts']);
+		expect(configArray('nothing here', 'include')).toEqual([]);
 	});
 
 	it('the package test script still runs the node config', () => {
@@ -150,9 +196,10 @@ const ALLOWED = new Map([
 	['repo/guard-integrity.test.ts', 'the rules in this file quote both names as regex literals']
 ]);
 
-const usesReaddir = (file: string) => /\breaddirSync\b/.test(code(file));
+// The promise and opendir forms too: a walk is a walk whichever call spells it.
+const usesReaddir = (file: string) => /\b(?:readdirSync|readdir|opendirSync|opendir)\b/.test(code(file));
 const usesThrowingStat = (file: string) =>
-	[...code(file).matchAll(/\bstatSync\s*\(([^)]*)\)/g)].some(
+	[...code(file).matchAll(/\b[lf]?statSync\s*\(([^)]*)\)/g)].some(
 		(m) => !m[1]!.includes('throwIfNoEntry')
 	);
 

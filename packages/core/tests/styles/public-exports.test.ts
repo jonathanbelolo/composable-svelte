@@ -35,19 +35,36 @@ const barrelSource = readFileSync(join(uiDir, 'index.ts'), 'utf8');
 /** Comments name some of these symbols to explain their absence — scan code only. */
 const barrel = barrelSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
 
-/** Named exports declared by a sub-barrel's own `index.ts`. */
-export function subBarrelExports(dir: string): string[] {
-	const file = join(uiDir, dir, 'index.ts');
-	if (!existsSync(file)) return [];
-	const source = readFileSync(file, 'utf8');
+/**
+ * The names a module's own text exports: `export { a, b as c }` clauses and
+ * declarations made in place (`export const x`, `export function f`). The
+ * first form read clauses only, so a symbol declared in a sub-barrel's index
+ * was invisible to the reachability arm — the R0 review planted one and the
+ * guard stayed green. Exported for its control.
+ */
+export function declaredExports(source: string): string[] {
 	const names: string[] = [];
-
 	for (const [, clause] of source.matchAll(/export\s+(?:type\s+)?\{([^}]+)\}/g)) {
 		for (const entry of clause!.split(',')) {
 			const name = entry.trim().split(/\s+as\s+/).pop()?.trim();
 			if (name && name !== 'default') names.push(name);
 		}
 	}
+	for (const [, name] of source.matchAll(
+		/^export\s+(?:const|let|function|class|type|interface|enum)\s+(\w+)/gm
+	)) {
+		names.push(name!);
+	}
+	return names;
+}
+
+/** Named exports declared by a sub-barrel's own `index.ts`. */
+export function subBarrelExports(dir: string): string[] {
+	const file = join(uiDir, dir, 'index.ts');
+	if (!existsSync(file)) return [];
+	const source = readFileSync(file, 'utf8');
+	const names: string[] = declaredExports(source);
+
 	// `export * from './x.types.js'` — pull the names out of the target file.
 	for (const [, target] of source.matchAll(/export\s+\*\s+from\s+'\.\/([\w.-]+)\.js'/g)) {
 		const tsFile = join(uiDir, dir, `${target}.ts`);
@@ -162,5 +179,14 @@ describe('the extractor and the private register', () => {
 			new RegExp(`\\b(?:function|const|let|class)\\s+${name}\\b`).test(readFileSync(file, 'utf8'))
 		);
 		expect(declared, `${name} is no longer declared — drop it from INTENTIONALLY_PRIVATE`).toBe(true);
+	});
+});
+
+describe('the extractor itself', () => {
+	it('sees a clause and a declaration made in place', () => {
+		const names = declaredExports(
+			"export const zz = 1;\nexport { a, b as c };\nexport function f() {}\nexport type T = 1;\n"
+		);
+		expect(names.sort()).toEqual(['T', 'a', 'c', 'f', 'zz']);
 	});
 });
