@@ -45,6 +45,7 @@ export default defineConfig({
       'tests/ssr/animated-initial-state.test.ts',
       'tests/ssr/content-initial-state.test.ts',
       'tests/ssr/middleware.test.ts',
+      'tests/ssr/middleware-fastify.test.ts',
       'tests/ssr/entry-graph.test.ts',
       'tests/repo/check-coverage.test.ts',
       'tests/repo/component-coverage.test.ts',

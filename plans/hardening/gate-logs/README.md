@@ -86,3 +86,5 @@ before the fix is kept as `red-R1.x.y.log`, and the gate as `gate-R1.x.y.log`.
 | red-R1.5.b.log | R1.5.b | `tests/i18n/icu.test.ts` with the two I9 tests added and the source untouched: a malformed message logged three times, not once |
 | proof-R1.5.a.log | R1.5.a | a plural rendered by core's dist under plain Node through the example's vite-built server bundle; the `tsx` dev path the plan named cannot start (P13) |
 | gate-R1.5.log | R1.5 | core gate: 2248 browser + 583 node, 0 skipped, check clean |
+| red-R1.6.a.log | R1.6.a | the new real-Fastify suite before the skip-override marker: the three `register` tests fail (no header, no 429 on a root route), the direct-call control passes |
+| gate-R1.6.a.log | R1.6.a | core gate: 2248 browser + 587 node (the new `tests/ssr/middleware-fastify.test.ts`), 0 skipped, check clean |

@@ -25,6 +25,8 @@ export interface SecurityHeadersConfig {
   customHeaders?: Record<string, string>;
 }
 
+import { installsOnParent } from './plugin.js';
+
 export const defaultSecurityHeaders: SecurityHeadersConfig = {
   contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'",
   frameOptions: 'DENY',
@@ -73,11 +75,15 @@ export function createSecurityHeaders(
 
 /**
  * Fastify plugin for security headers.
+ *
+ * `app.register(fastifySecurityHeaders, options)` installs the headers on the
+ * registering instance's routes (the plugin carries Fastify's skip-override
+ * marker); `fastifySecurityHeaders(app, options)` does the same directly.
  */
-export function fastifySecurityHeaders(
+export const fastifySecurityHeaders = installsOnParent(function fastifySecurityHeaders(
   fastify: any,
   options: SecurityHeadersConfig = defaultSecurityHeaders
-) {
+): void {
   const headers = createSecurityHeaders(options);
 
   fastify.addHook('onRequest', async (request: any, reply: any) => {
@@ -85,4 +91,4 @@ export function fastifySecurityHeaders(
       reply.header(key, value);
     });
   });
-}
+});

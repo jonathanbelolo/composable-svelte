@@ -68,6 +68,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`app.register(fastifySecurityHeaders)` and `app.register(fastifyRateLimit, …)`
+  install on the registering instance.** Fastify runs a registered plugin on
+  an encapsulated child, so the documented form installed no headers and no
+  limit on any root route, and `ready()` said nothing. Both plugins carry
+  Fastify's skip-override marker now (no `fastify-plugin` dependency); the
+  direct-call form is unchanged. Tested through a real Fastify. The SSR and
+  deployment skills and the production security plan named config keys that
+  do not exist (`strictTransportSecurity`, `xFrameOptions`, `hsts.preload`,
+  `noSniff`) — corrected to `hsts` and `frameOptions`.
+  (AUDIT-2026-09-03-FINDINGS SS3, SS10, G5, DA-C5)
+
 - **ICU messages format under plain Node.** `icu.ts` default-imported
   `intl-messageformat`, whose CommonJS entry has no default export, so under
   Node (an SSR server run with `tsx`, say) the constructor was the exports

@@ -11,7 +11,9 @@
  * were re-exported here, importing this barrel for rate limiting alone would
  * eagerly load it.
  *
- * Both `fastify*` functions take the Fastify instance as a plain argument —
+ * Both `fastify*` functions carry Fastify's skip-override marker, so
+ * `app.register()` installs them on the registering instance rather than on
+ * an encapsulated child; they also take the instance as a plain argument —
  * core does not depend on fastify.
  *
  * @example

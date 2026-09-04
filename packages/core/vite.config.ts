@@ -43,6 +43,8 @@ export default defineConfig({
       'tests/styles/**',
       // Reaches isomorphic-dompurify, which needs its Node (jsdom) build.
       'tests/ssr/middleware.test.ts',
+      // Drives a real Fastify instance; Node only.
+      'tests/ssr/middleware-fastify.test.ts',
       // Walks built dist from disk; browser mode cannot read files.
       'tests/ssr/entry-graph.test.ts',
       // Reads every workspace's package.json from disk; same reason.

@@ -4,6 +4,8 @@
  * Protects against DoS attacks and abuse.
  */
 
+import { installsOnParent } from './plugin.js';
+
 export interface RateLimitConfig {
   /** Maximum requests per window */
   max: number;
@@ -103,11 +105,15 @@ export class RateLimiter {
 
 /**
  * Fastify plugin for rate limiting.
+ *
+ * `app.register(fastifyRateLimit, config)` installs the limiter on the
+ * registering instance's routes (the plugin carries Fastify's skip-override
+ * marker); `fastifyRateLimit(app, config)` does the same directly.
  */
-export function fastifyRateLimit(
+export const fastifyRateLimit = installsOnParent(function fastifyRateLimit(
   fastify: any,
   config: RateLimitConfig
-) {
+): void {
   const limiter = new RateLimiter(config);
   const keyGen = config.keyGenerator || ((req: any) => req.ip);
 
@@ -129,4 +135,4 @@ export function fastifyRateLimit(
       });
     }
   });
-}
+});
