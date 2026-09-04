@@ -300,8 +300,100 @@ describe('integrate()', () => {
 
 			reducer(initialState, action, {});
 
-			// Core should run first, then child1, child2 skipped (wrong action type)
-			expect(executionOrder).toEqual(['core', 'child1']);
+			// The child first, then core; child2 is skipped (wrong action type).
+			// Core ran first once, and so observed the child's state from before
+			// the action (N14).
+			expect(executionOrder).toEqual(['child1', 'core']);
+		});
+
+		it("core observes the child's reduced state", () => {
+			interface S {
+				destination: AddItemState | null;
+				lastName: string;
+			}
+			type A = { type: 'destination'; action: PresentationAction<AddItemAction> };
+			const core: Reducer<S, A> = (state, action) =>
+				action.type === 'destination'
+					? [{ ...state, lastName: state.destination?.name ?? '' }, Effect.none()]
+					: [state, Effect.none()];
+			const reducer = integrate(core).with('destination', addItemReducer).build();
+
+			const [after] = reducer(
+				{ destination: { name: 'Test', quantity: 0 }, lastName: '' },
+				{ type: 'destination', action: { type: 'presented', action: { type: 'nameChanged', value: 'New' } } },
+				{}
+			);
+
+			// Core-first would have copied 'Test'.
+			expect(after.lastName).toBe('New');
+		});
+
+		it("the child's effect survives core clearing the field on the same action", () => {
+			interface S {
+				destination: AddItemState | null;
+			}
+			type A = { type: 'destination'; action: PresentationAction<AddItemAction> };
+			const core: Reducer<S, A> = (state, action) =>
+				action.type === 'destination' &&
+				action.action.type === 'presented' &&
+				action.action.action.type === 'saveButtonTapped'
+					? [{ ...state, destination: null }, Effect.none()]
+					: [state, Effect.none()];
+			const reducer = integrate(core).with('destination', addItemReducer).build();
+
+			const [after, effect] = reducer(
+				{ destination: { name: 'Test', quantity: 0 } },
+				{ type: 'destination', action: { type: 'presented', action: { type: 'saveButtonTapped' } } },
+				{}
+			);
+
+			// Core still clears the field, and the child still produced its save
+			// effect; core-first handed ifLetPresentation a null and the child
+			// never ran.
+			expect(after.destination).toBeNull();
+			expect(effect._tag).toBe('Run');
+		});
+	});
+
+	describe('.forEach() ordering', () => {
+		interface Item {
+			id: string;
+			state: AddItemState;
+		}
+		interface S {
+			items: Item[];
+			lastName: string;
+		}
+		type A = { type: 'items'; id: string; action: AddItemAction } | { type: 'noop' };
+		const initial: S = { items: [{ id: 'a', state: { name: 'Test', quantity: 0 } }], lastName: '' };
+
+		it("core observes the element's reduced state", () => {
+			const core: Reducer<S, A> = (state, action) =>
+				action.type === 'items'
+					? [{ ...state, lastName: state.items[0]?.state.name ?? '' }, Effect.none()]
+					: [state, Effect.none()];
+			const reducer = integrate(core)
+				.forEach('items', (s) => s.items, (s, items) => ({ ...s, items }), addItemReducer)
+				.build();
+
+			const [after] = reducer(initial, { type: 'items', id: 'a', action: { type: 'nameChanged', value: 'New' } }, {});
+
+			expect(after.lastName).toBe('New');
+		});
+
+		it("the element's effect survives core removing it on the same action", () => {
+			const core: Reducer<S, A> = (state, action) =>
+				action.type === 'items' && action.action.type === 'saveButtonTapped'
+					? [{ ...state, items: [] }, Effect.none()]
+					: [state, Effect.none()];
+			const reducer = integrate(core)
+				.forEach('items', (s) => s.items, (s, items) => ({ ...s, items }), addItemReducer)
+				.build();
+
+			const [after, effect] = reducer(initial, { type: 'items', id: 'a', action: { type: 'saveButtonTapped' } }, {});
+
+			expect(after.items).toEqual([]);
+			expect(effect._tag).toBe('Run');
 		});
 	});
 

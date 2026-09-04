@@ -182,7 +182,10 @@ const integratedReducer = integrate(coreReducer)
   .with('productDetail', productDetailReducer)
   .build();
 
-// Wrap integrated reducer to handle dismiss animations
+// Wrap integrated reducer to handle dismiss animations. `.with()`'s dismiss
+// nulls the field regardless of `presentation.status`, so the dismissing
+// animation has to start before the integrated reducer sees the action; this
+// is independent of the order children and core run in.
 export const appReducer: Reducer<AppState, AppAction, AppDependencies> = (state, action, deps) => {
   // Check if this is a dismiss action
   if (

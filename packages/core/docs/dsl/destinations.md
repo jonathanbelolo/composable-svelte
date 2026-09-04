@@ -271,6 +271,12 @@ const parentReducer = integrate(coreReducer)
   .build();
 ```
 
+Children run before the core reducer, so `coreReducer` observes the
+destination's state as of the action it is handling — `Destination.matchCase`
+inside it reads the child's *reduced* state — and a core reducer that clears
+the field on an action the child also handles does not hide that action from
+the child.
+
 ### Destination.initial()
 
 Creates initial destination state for a specific case type.

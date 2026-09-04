@@ -29,7 +29,11 @@ import { forEachElement, type IdentifiedItem } from '../composition/for-each.js'
  * - Wraps core reducer logic
  * - Provides fluent `.with(field, childReducer)` API
  * - Automatically handles PresentationAction unwrapping
- * - Batches effects from core + all child reducers
+ * - Runs each child before the core reducer, so core observes the child's
+ *   state as of the action it is handling, and a core reducer that clears
+ *   the field on an action the child also handles does not hide that action
+ *   from the child (AUDIT-2026-09-03-FINDINGS N14)
+ * - Batches effects from all child reducers + core
  * - Type-safe field access via keyof
  *
  * **Performance:**
@@ -176,11 +180,13 @@ class IntegrationBuilder<State, Action extends { type: string }, Dependencies = 
 		// Add integration function to the chain
 		this.integrations.push((parentReducer) => {
 			return (state, action, deps) => {
-				// 1. Run parent reducer first
-				const [stateAfterParent, parentEffect] = parentReducer(state, action, deps);
-
-				// 2. Integrate child reducer using ifLetPresentation
-				const [finalState, childEffect] = ifLetPresentation<
+				// 1. The child first, on the incoming state. Core ran first once, and
+				// two things followed: a parent observing `Destination.matchCase`
+				// read the child's state from *before* the action, and a core reducer
+				// that nulled the field on an action the child also handled left
+				// ifLetPresentation a null to skip — the child never saw the action
+				// or produced its effect (N14).
+				const [stateAfterChild, childEffect] = ifLetPresentation<
 					State,
 					Action,
 					NonNullable<State[K]>,
@@ -202,10 +208,13 @@ class IntegrationBuilder<State, Action extends { type: string }, Dependencies = 
 						}) as any,
 					// Child reducer
 					childReducer
-				)(stateAfterParent, action, deps);
+				)(state, action, deps);
 
-				// 3. Batch effects from parent and child
-				return [finalState, Effect.batch(parentEffect, childEffect)];
+				// 2. Then the parent (core, and any child registered before this one).
+				const [finalState, parentEffect] = parentReducer(stateAfterChild, action, deps);
+
+				// 3. Batch effects, child first
+				return [finalState, Effect.batch(childEffect, parentEffect)];
 			};
 		});
 
@@ -330,14 +339,12 @@ class IntegrationBuilder<State, Action extends { type: string }, Dependencies = 
 			);
 
 			return (state, action, deps) => {
-				// 1. Run parent reducer first
-				const [stateAfterParent, parentEffect] = parentReducer(state, action, deps);
+				// The elements first, then the parent — same order and same reason
+				// as `.with()`.
+				const [stateAfterChildren, childEffect] = forEachReducer(state, action, deps);
+				const [finalState, parentEffect] = parentReducer(stateAfterChildren, action, deps);
 
-				// 2. Try forEach integration
-				const [finalState, childEffect] = forEachReducer(stateAfterParent, action, deps);
-
-				// 3. Batch effects from parent and child
-				return [finalState, Effect.batch(parentEffect, childEffect)];
+				return [finalState, Effect.batch(childEffect, parentEffect)];
 			};
 		});
 
@@ -348,21 +355,25 @@ class IntegrationBuilder<State, Action extends { type: string }, Dependencies = 
 	 * Build the final integrated reducer.
 	 *
 	 * This method composes all child integrations added via `.with()` and `.forEach()` into
-	 * a single reducer function. The integrations are applied left-to-right
-	 * (first `.with()` or `.forEach()` integrates first).
+	 * a single reducer function.
 	 *
 	 * **Execution order:**
-	 * 1. Core reducer runs first (if set via constructor or .reduce())
-	 * 2. Each child integration runs in order
-	 * 3. Effects from all stages are batched
+	 * 1. Each child integration runs first, in registration order (first
+	 *    `.with()` or `.forEach()` first); each sees the state the previous one
+	 *    produced. Which child handles an action is decided by the action's
+	 *    type, so the order among children is observable only through shared
+	 *    dependencies.
+	 * 2. The core reducer runs last (if set via constructor or .reduce()), on
+	 *    the state the children produced.
+	 * 3. Effects from all stages are batched, children first.
 	 *
 	 * @returns The final composed reducer
 	 *
 	 * @example
 	 * ```typescript
-	 * const reducer = integrate(coreReducer)
-	 *   .with('destination', destinationReducer)  // Runs second
-	 *   .forEach('items', s => s.items, (s, i) => ({ ...s, items: i }), itemReducer)  // Runs third
+	 * const reducer = integrate(coreReducer)  // Runs last
+	 *   .with('destination', destinationReducer)  // Runs first
+	 *   .forEach('items', s => s.items, (s, i) => ({ ...s, items: i }), itemReducer)  // Runs second
 	 *   .build();
 	 * ```
 	 */
@@ -370,8 +381,9 @@ class IntegrationBuilder<State, Action extends { type: string }, Dependencies = 
 		// Use a default core reducer if none was provided
 		const baseReducer = this.coreReducer || ((state: State) => [state, Effect.none()]);
 
-		// Compose all integrations left-to-right
-		return this.integrations.reduce(
+		// Each integration runs its child and then whatever it wraps, so the
+		// first registered must be the outermost: fold from the right.
+		return this.integrations.reduceRight(
 			(reducer, integration) => integration(reducer),
 			baseReducer as Reducer<State, Action, Dependencies>
 		);

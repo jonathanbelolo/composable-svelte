@@ -645,9 +645,10 @@ class IntegrationBuilder<State, Action> {
   ): this {
     this.integrations.push((parentReducer) => {
       return (state, action, deps) => {
-        const [stateAfterParent, parentEffect] = parentReducer(state, action, deps);
-
-        const [finalState, childEffect] = ifLet(
+        // The child first, then the parent: the parent observes the child's
+        // state as of this action, and a parent that clears the field on an
+        // action the child also handles does not hide it from the child.
+        const [stateAfterChild, childEffect] = ifLet(
           (s: State) => s[field] as any,
           (s: State, child: any) => ({ ...s, [field]: child }),
           (a: Action) => {
@@ -661,9 +662,11 @@ class IntegrationBuilder<State, Action> {
             action: childAction
           } as any),
           childReducer
-        )(stateAfterParent, action, deps);
+        )(state, action, deps);
 
-        return [finalState, Effect.batch(parentEffect, childEffect)];
+        const [finalState, parentEffect] = parentReducer(stateAfterChild, action, deps);
+
+        return [finalState, Effect.batch(childEffect, parentEffect)];
       };
     });
 
@@ -671,10 +674,11 @@ class IntegrationBuilder<State, Action> {
   }
 
   /**
-   * Build the final integrated reducer.
+   * Build the final integrated reducer. Folded from the right so the first
+   * registered child is the outermost and runs first; the core runs last.
    */
   build(): Reducer<State, Action> {
-    return this.integrations.reduce(
+    return this.integrations.reduceRight(
       (reducer, integration) => integration(reducer),
       this.coreReducer
     );

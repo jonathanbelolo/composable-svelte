@@ -240,6 +240,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`integrate()` runs each child before the core reducer.** Core ran first,
+  so a parent observing `Destination.matchCase` read the child's state from
+  before the action, and a core reducer that cleared the field on an action
+  the child also handled hid that action from the child, whose effect was
+  never produced. Children now run first, in registration order, and core
+  runs on the state they produced; effects are batched children first.
+  Observable only by a core reducer that reads a child's field on the same
+  action. (AUDIT-2026-09-03-FINDINGS N14)
+
 - **BREAKING: `createDestination()` takes and returns the single-wrapped case
   action** — `{ type: caseType, action: childAction }` — instead of expecting a
   second `presented` wrapper inside each case. No layer above produced that
