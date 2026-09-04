@@ -256,18 +256,18 @@ dependency, not severity: R1.1 needs D1, R1.3 needs D3.
 
 ### R1.3 — Dedup and cache cannot cross identities (`A1`, `A2`, `A7`, `A11`) — M, needs D3
 
-- [ ] R1.3.a Tests first, in R0.3.a's harness: two clients with different
+- [x] R1.3.a Tests first, in R0.3.a's harness: two clients with different
       default headers and base URLs, concurrent identical GETs → two fetches;
       client-level `deduplicate: false` honoured; a cache hit is not the stored
       reference; POST is never deduplicated by default.
-- [ ] R1.3.b Dedup map and cache move onto the client instance; key includes
+- [x] R1.3.b Dedup map and cache move onto the client instance; key includes
       the resolved full URL and the merged headers.
-- [ ] R1.3.c `deduplicate` client option wired through (`client.ts:158`).
-- [ ] R1.3.d Dedup restricted to safe methods unless opted in.
-- [ ] R1.3.e Cache returns a structured clone or frozen object; cache bounded
+- [x] R1.3.c `deduplicate` client option wired through (`client.ts:158`).
+- [x] R1.3.d Dedup restricted to safe methods unless opted in.
+- [x] R1.3.e Cache returns a structured clone or frozen object; cache bounded
       by an LRU with a documented default; custom `key` entries invalidate.
       (`A2`; the API reviewer's cache-by-reference, unbounded-cache and custom-key items are folded into `A2`.)
-- [ ] R1.3.f Shared-promise semantics: an aborting caller does not reject the
+- [x] R1.3.f Shared-promise semantics: an aborting caller does not reject the
       others (`A7`).
       Proof: every test in R1.3.a green; `docs/backend/api-client.md:575`
       rewritten.

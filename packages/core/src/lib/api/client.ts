@@ -2,7 +2,7 @@
 // Base API Client Implementation
 // ============================================================================
 
-import { APIError, NetworkError, TimeoutError, ValidationError } from './errors.js';
+import { APIError, NetworkError, ValidationError } from './errors.js';
 import {
   createInFlightRegistry,
   isDeduplicableMethod,
@@ -188,23 +188,18 @@ export function createAPIClient(config: APIClientConfig = {}): APIClient {
   async function executeFetch<T>(
     method: HTTPMethod,
     resolved: RequestIdentity,
-    config: RequestConfig = {}
+    config: RequestConfig,
+    signal: AbortSignal
   ): Promise<APIResponse<T>> {
-    const { signal: externalSignal, timeout = defaultTimeout } = config;
+    // The signal is the shared attempt's, owned by the in-flight registry: it
+    // aborts when every caller has detached. Each caller's own signal and
+    // timeout settle that caller's promise there, not here — a single timer
+    // and a single listener per fetch used to abort it for everyone (A7, A3).
     const { params, body } = resolved;
 
     const queryString = params ? buildQueryString(params) : '';
     const fullURL = `${resolved.url}${queryString}`;
     let headers: Record<string, string> = { ...resolved.headers };
-
-    // Create abort controller for timeout
-    const abortController = new AbortController();
-    const timeoutId = setTimeout(() => abortController.abort(), timeout);
-
-    // Combine external signal with timeout signal
-    if (externalSignal) {
-      externalSignal.addEventListener('abort', () => abortController.abort());
-    }
 
     try {
       // Run request interceptors
@@ -221,7 +216,7 @@ export function createAPIClient(config: APIClientConfig = {}): APIClient {
       const init: RequestInit = {
         method,
         headers,
-        signal: abortController.signal
+        signal
       };
 
       // Add body for non-GET/HEAD requests
@@ -305,23 +300,12 @@ export function createAPIClient(config: APIClientConfig = {}): APIClient {
       return apiResponse;
 
     } catch (error: unknown) {
-      // Timeout error
+      // The attempt was abandoned: every caller detached (aborted or timed
+      // out on its own terms). Nobody is listening, and the retry layer must
+      // not send it again, so this is a non-retryable APIError rather than
+      // the retryable TimeoutError the first form mapped every abort to.
       if (error instanceof Error && error.name === 'AbortError') {
-        const timeoutError = new TimeoutError(timeout);
-
-        // Run error interceptors
-        for (let i = 0; i < interceptors.length; i++) {
-          const interceptor = interceptors[i];
-          if (interceptor && interceptor.onError) {
-            try {
-              return await interceptor.onError(timeoutError) as APIResponse<T>;
-            } catch (e) {
-              // Interceptor didn't handle it, continue
-            }
-          }
-        }
-
-        throw timeoutError;
+        throw new APIError('Request cancelled', null, null, {}, false);
       }
 
       // Network error
@@ -348,9 +332,6 @@ export function createAPIClient(config: APIClientConfig = {}): APIClient {
 
       // Re-throw API errors
       throw error;
-
-    } finally {
-      clearTimeout(timeoutId);
     }
   }
 
@@ -378,8 +359,8 @@ export function createAPIClient(config: APIClientConfig = {}): APIClient {
     }
 
     // Layer 3 and 4, as one unit the registry can share
-    const run = () =>
-      retryRequest<T>(method, () => executeFetch<T>(method, resolved, config), retryConfig);
+    const run = (signal: AbortSignal) =>
+      retryRequest<T>(method, () => executeFetch<T>(method, resolved, config, signal), retryConfig);
 
     // Layer 2: Deduplication. The request's flag wins; the client's default
     // was destructured and never read, so it could not be turned off per
@@ -390,7 +371,12 @@ export function createAPIClient(config: APIClientConfig = {}): APIClient {
     const coalesce =
       config.deduplicate === true ||
       (config.deduplicate !== false && deduplicate && isDeduplicableMethod(method));
-    const response = coalesce ? await inFlight.join(key, run) : await run();
+    // Every caller gets its own promise, bounded by its own signal and
+    // timeout; the shared fetch is aborted only when every caller is gone.
+    const response = await inFlight.join(coalesce ? key : null, run, {
+      signal: config.signal,
+      timeout: config.timeout ?? defaultTimeout
+    });
 
     // Store in cache if applicable; the entry remembers the path it answers
     if (method === 'GET') {

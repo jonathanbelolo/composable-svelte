@@ -17,7 +17,9 @@ export type SafeHTTPMethod = 'GET' | 'HEAD' | 'OPTIONS' | 'PUT' | 'DELETE';
  */
 export interface RequestConfig {
   /**
-   * Request timeout in milliseconds.
+   * This caller's bound on the whole request, retries included, in
+   * milliseconds; rejects with `TimeoutError`. Another caller sharing the same
+   * in-flight request keeps its own bound.
    * @default 30000 (30 seconds)
    */
   timeout?: number;

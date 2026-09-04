@@ -10,6 +10,7 @@ import { describe, it, expect } from 'vitest';
 import { createAPIClient } from '../../src/lib/api/client.js';
 import { scriptFetch } from '../helpers/scripted-fetch.js';
 import { expectConsole } from '../helpers/console.js';
+import { TimeoutError } from '../../src/lib/api/errors.js';
 
 
 describe('createAPIClient over a scripted fetch', () => {
@@ -161,6 +162,85 @@ describe('createAPIClient over a scripted fetch', () => {
 
 			await api.get('/fn');
 			expect((await api.get('/fn')).cached).toBeUndefined();
+		});
+	});
+
+	describe('shared attempts (A7, A3)', () => {
+		const tick = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+		it('an aborting caller does not reject the others', async () => {
+			// One promise served every caller, so caller A's abort rejected caller
+			// B, and B's own signal was never wired to anything.
+			const fetched = scriptFetch([{ match: /\/slow$/, body: { ok: 1 }, delayMs: 80 }]);
+			const api = createAPIClient({ baseURL: 'https://a.example' });
+			const ac = new AbortController();
+
+			const a = api.get('/slow', { signal: ac.signal });
+			const b = api.get<{ ok: number }>('/slow');
+			// The expectation is attached before the abort, so the rejection is
+			// never unhandled between the two.
+			const aRejected = expect(a).rejects.toMatchObject({ name: 'AbortError' });
+			await tick(10);
+			ac.abort();
+
+			await aRejected;
+			const resolved = await b;
+			expect(resolved.data).toEqual({ ok: 1 });
+			expect(fetched.calls).toHaveLength(1);
+			expect(fetched.calls[0]!.init?.signal?.aborted).toBe(false);
+		});
+
+		it('the fetch is aborted only when every caller has aborted', async () => {
+			const fetched = scriptFetch([{ match: /\/slow$/, body: { ok: 1 }, delayMs: 80 }]);
+			const api = createAPIClient({ baseURL: 'https://a.example' });
+			const first = new AbortController();
+			const second = new AbortController();
+
+			const a = api.get('/slow', { signal: first.signal });
+			const b = api.get('/slow', { signal: second.signal });
+			const aRejected = expect(a).rejects.toMatchObject({ name: 'AbortError' });
+			const bRejected = expect(b).rejects.toMatchObject({ name: 'AbortError' });
+			await tick(10);
+			first.abort();
+			await tick(10);
+			expect(fetched.calls[0]!.init?.signal?.aborted).toBe(false);
+			second.abort();
+
+			await aRejected;
+			await bRejected;
+			expect(fetched.calls[0]!.init?.signal?.aborted).toBe(true);
+		});
+
+		it('each caller has its own timeout', async () => {
+			const fetched = scriptFetch([{ match: /\/slow$/, body: { ok: 1 }, delayMs: 80 }]);
+			const api = createAPIClient({ baseURL: 'https://a.example' });
+
+			const patient = api.get<{ ok: number }>('/slow', { timeout: 5000 });
+			const hasty = api.get('/slow', { timeout: 10 });
+
+			await expect(hasty).rejects.toBeInstanceOf(TimeoutError);
+			expect((await patient).data).toEqual({ ok: 1 });
+			expect(fetched.calls).toHaveLength(1);
+		});
+
+		it('joiners receive their own copy of the response', async () => {
+			scriptFetch([{ match: /\/slow$/, body: { n: 1 }, delayMs: 30 }]);
+			const api = createAPIClient({ baseURL: 'https://a.example' });
+
+			const [a, b] = await Promise.all([api.get<{ n: number }>('/slow'), api.get<{ n: number }>('/slow')]);
+
+			expect(a.data).toEqual(b.data);
+			expect(a.data).not.toBe(b.data);
+		});
+
+		it('a signal that is already aborted makes no fetch', async () => {
+			const fetched = scriptFetch([{ match: /\/x$/, body: { ok: 1 } }]);
+			const api = createAPIClient({ baseURL: 'https://a.example' });
+			const ac = new AbortController();
+			ac.abort(new Error('gone'));
+
+			await expect(api.get('/x', { signal: ac.signal })).rejects.toThrow('gone');
+			expect(fetched.calls).toHaveLength(0);
 		});
 	});
 });

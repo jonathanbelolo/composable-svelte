@@ -261,6 +261,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **BREAKING: every caller of a coalesced request has its own promise, signal
+  and timeout.** One promise served every caller, so one caller's abort or
+  timeout rejected the others and a joiner's own `signal` and `timeout` were
+  ignored. A caller's abort now rejects that caller with the signal's reason
+  (an `AbortError`, not the `TimeoutError` every abort was mapped to) and
+  detaches it; `timeout` bounds the caller's whole request, retries included;
+  the shared fetch is aborted only when every caller is gone; joiners receive
+  a structured clone of the response. A signal that is already aborted makes
+  no fetch, and the abort listener is removed on settle. Error interceptors
+  no longer see a `TimeoutError`: the timeout is the caller's, not the
+  fetch's. A retry backoff sleep is not signal-aware, so after the last caller
+  leaves an attempt may wait out one backoff before it stops.
+  (AUDIT-2026-09-03-FINDINGS A7, A3)
+
 - **BREAKING: the response cache is bounded and hands out clones.** It handed
   out the object it stored, so a caller that edited its response edited the
   cache for everyone; it grew without bound within the TTL; and an entry

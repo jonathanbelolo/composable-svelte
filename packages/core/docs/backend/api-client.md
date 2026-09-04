@@ -320,7 +320,8 @@ const response = await api.get('/search', {
   signal: controller.signal
 });
 
-// Later: cancel request
+// Later: cancel request — this caller rejects with the signal's reason; a
+// concurrent identical request from another caller is unaffected
 controller.abort();
 ```
 
@@ -550,6 +551,12 @@ PATCH or DELETE is two intents and is sent twice; a request opts in with
 
 **Turning it off.** `createAPIClient({ deduplicate: false })` for a client,
 `{ deduplicate: false }` on a request; a request's flag wins.
+
+**Cancelling and timing out.** Every caller has its own promise. A caller's
+`signal` rejects that caller with the signal's reason and detaches it; a
+caller's `timeout` bounds that caller's whole request, retries included, and
+rejects it with `TimeoutError`. The shared fetch is aborted only when every
+caller has gone. Joiners receive their own copy of the response.
 
 ```typescript
 // Coalesce a mutation that is safe to repeat
