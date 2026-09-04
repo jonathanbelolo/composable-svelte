@@ -696,6 +696,20 @@ describe('matchPresentationAction()', () => {
     expect(matched).toBeNull();
   });
 
+  it('returns null when the wrapper is not a presented action', () => {
+    // The 'presented' check in matchPresentationAction. The dismiss test above
+    // passes for a different reason — a dismiss carries no nested action, so
+    // the walk stops before the check — and the audit's mutation M4 (delete
+    // the check) survived the whole suite. A wrapper of any other type with a
+    // nested action must not be walked into.
+    const action = {
+      type: 'child',
+      action: { type: 'other', action: { type: 'increment' } }
+    } as unknown as ParentAction;
+
+    expect(matchPresentationAction<ChildAction>(action, 'child.increment')).toBeNull();
+  });
+
   it('handles deep nested paths', () => {
     type DeepAction = {
       type: 'level1';

@@ -104,46 +104,46 @@ give every later fix a way to fail.
 
 ### R0.1 — Tests that cannot fail
 
-- [ ] R0.1.a `tests/test-store.test.ts`: import `vi`; the three `skipIf` tests
+- [x] R0.1.a `tests/test-store.test.ts`: import `vi`; the three `skipIf` tests
       run. Expect at least one to fail; that failure is `N9` and is fixed in
       R1.9. Proof: 0 skipped in the gate. (`T1`) — S
-- [ ] R0.1.b `tests/setup.ts` wired into both vitest configs: a `console.error`
+- [x] R0.1.b `tests/setup.ts` wired into both vitest configs: a `console.error`
       spy that fails a test on an unexpected call, with explicit opt-out for
       the six suites that spy locally. Proof: the setup file's own test plants
       a `console.error` and fails. (`T2`) — S
-- [ ] R0.1.c `silent:` gated on `SILENT_TESTS` only, never on `CI`. Proof: CI
+- [x] R0.1.c `silent:` gated on `SILENT_TESTS` only, never on `CI`. Proof: CI
       log shows a planted `console.warn`. (`T2`) — S
-- [ ] R0.1.d Each vacuous test in `T4` rewritten to assert the behaviour it is
+- [x] R0.1.d Each vacuous test in `T4` rewritten to assert the behaviour it is
       named for, or deleted with the name recorded here. Proof: the matching
       mutation from the register is killed. — M
-- [ ] R0.1.e `tests/store.test.ts:395` asserts `destroy()` aborts a live
+- [x] R0.1.e `tests/store.test.ts:395` asserts `destroy()` aborts a live
       cancellable, runs subscription cleanups, and clears debounce and
       throttle timers. Proof: mutation M2 killed. — S
 
 ### R0.2 — Guards that report zero for the wrong reason
 
-- [ ] R0.2.a `side-effects.test.ts` walks binding re-exports
+- [x] R0.2.a `side-effects.test.ts` walks binding re-exports
       (`export { x } from`) as well as bare imports, and gains a positive
       control: a planted unlisted side-effect module must be reported. Proof:
       the guard fails on `37afb0d` and passes after R1.2. (`P1`, `T5`) — S
-- [ ] R0.2.b `doc-typecheck.ts`: extract every `ts`/`svelte` fence, not only
+- [x] R0.2.b `doc-typecheck.ts`: extract every `ts`/`svelte` fence, not only
       those naming `@composable-svelte`; admit TS2322, TS2353, TS2561, TS2774.
       Expect ~30 failures; they are R4's list. Proof: the guard fails on
       `37afb0d`. (`G7`, the `DA-` section's method note) — M
-- [ ] R0.2.c `doc-typecheck.ts` reads `CLAUDE.md`; `front-door.test.ts` links
+- [x] R0.2.c `doc-typecheck.ts` reads `CLAUDE.md`; `front-door.test.ts` links
       from it resolve. Proof: `CLAUDE.md:140` (nonexistent skill) fails.
       (`G3`, `G8`) — S
-- [ ] R0.2.d Positive controls added to `changelog-shape`, `dist-freshness`,
+- [x] R0.2.d Positive controls added to `changelog-shape`, `dist-freshness`,
       `doc-examples` compile arm, `component-coverage`, `optional-props`
       function-type rule, `animation-policy` end-to-end, `styles/public-exports`.
       Proof: each control fails when its rule is emptied. (`T5`) — M
-- [ ] R0.2.e `guard-integrity.test.ts` asserts `package.json#scripts.test`
+- [x] R0.2.e `guard-integrity.test.ts` asserts `package.json#scripts.test`
       still runs the node config. Proof: dropping the second clause fails.
       (`T5`) — S
-- [ ] R0.2.f `flat-barrel.test.ts > read real export sets` builds its programs
+- [x] R0.2.f `flat-barrel.test.ts > read real export sets` builds its programs
       at module scope or carries an explicit timeout; the known load-sensitive
       failure stops. Proof: full node-config run green three times. (`T5`) — S
-- [ ] R0.2.g `skill-examples.test.ts` `PINNED` covers every skill with a
+- [x] R0.2.g `skill-examples.test.ts` `PINNED` covers every skill with a
       `svelte` fence, not one. Proof: a planted missing-prop fence fails.
       (`G9`) — M
 
@@ -151,27 +151,27 @@ give every later fix a way to fail.
 
 Only harnesses here; the tests arrive with each fix in R1 and R2.
 
-- [ ] R0.3.a `tests/api/client.test.ts` scaffold with a scripted
+- [x] R0.3.a `tests/api/client.test.ts` scaffold with a scripted
       `globalThis.fetch` (delays, aborts, non-JSON bodies). Proof: one smoke
       test through `createAPIClient` passes. — S
-- [ ] R0.3.b `tests/websocket/live-client.test.ts` scaffold with a scripted
+- [x] R0.3.b `tests/websocket/live-client.test.ts` scaffold with a scripted
       `WebSocket` class and virtual timers. Proof: one open/close smoke test.
       — S
-- [ ] R0.3.c `tests/dependencies/cookie-storage.real.test.ts` and
+- [x] R0.3.c `tests/dependencies/cookie-storage.real.test.ts` and
       `local-storage.real.test.ts` in browser mode against the real
       `document.cookie` and `localStorage`. Proof: one round-trip each. — S
-- [ ] R0.3.d `tests/ssr/dist-import.test.ts` (node config): imports every
+- [x] R0.3.d `tests/ssr/dist-import.test.ts` (node config): imports every
       `dist` subpath in plain Node and exercises one call per module. This is
       the test that would have caught `I1`. Proof: fails on `37afb0d` for ICU.
       — S
-- [ ] R0.3.e `tests/repo/bundle-probe.test.ts` (node config): bundles a
+- [x] R0.3.e `tests/repo/bundle-probe.test.ts` (node config): bundles a
       consumer with esbuild (already in `node_modules`) and asserts
       `Effect.api`, `Effect.websocket`, `Effect.apiAll` are functions in the
       output. Proof: fails on `37afb0d`. (`P1`) — S
 
 ### R0.4 — Baseline
 
-- [ ] R0.4.a Re-run the audit's seven surviving mutations (`MUTATION RESULTS`)
+- [x] R0.4.a Re-run the audit's seven surviving mutations (`MUTATION RESULTS`)
       and record which still survive. This number must reach zero by the end
       of R2. — S
 
