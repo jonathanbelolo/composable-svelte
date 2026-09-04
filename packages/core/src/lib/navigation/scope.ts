@@ -22,6 +22,52 @@ import type { Store } from '../types.js';
 import type { PresentationAction } from './types.js';
 import { isDev } from '../dependencies/utils.js';
 
+// ---------------------------------------------------------------------------
+// The child action type is the runtime wrapping read backwards: one
+// `{ type: key, action }` per path segment, one `presented` innermost, one
+// case for `.case()`. `createScopedStore` below does the wrapping; these
+// types undo it, so the two cannot drift apart without a compile error in
+// scope.test.ts. Before this, `.case()` and `.optional()` returned
+// `ScopedStore<any, any>` (AUDIT-2026-09-03-FINDINGS P5).
+
+/** `any` needs its own branch: a conditional over `any` yields both arms. */
+type IsAny<T> = 0 extends 1 & T ? true : false;
+
+/** The action nested under `{ type: K; action: … }` — one path segment. */
+type StepAction<A, K extends PropertyKey> = IsAny<A> extends true
+	? any
+	: A extends { type: K; action: infer Inner }
+		? Inner
+		: never;
+
+/** What a `presented` wrapper carries. */
+type Presented<A> = IsAny<A> extends true
+	? any
+	: A extends { type: 'presented'; action: infer Inner }
+		? Inner
+		: never;
+
+/** The case names of a discriminated union at the current position. */
+type CaseTypeOf<Current> = IsAny<Current> extends true
+	? string
+	: NonNullable<Current> extends { type: infer T }
+		? Extract<T, string>
+		: never;
+
+/** The `state` of one case. */
+type CaseStateOf<Current, T> = IsAny<Current> extends true
+	? any
+	: Extract<NonNullable<Current>, { type: T }> extends { state: infer S }
+		? S
+		: never;
+
+/** The child action of one case: the case action's `action`. */
+type CaseActionOf<A, T> = IsAny<A> extends true
+	? any
+	: Extract<Presented<A>, { type: T }> extends { action: infer Inner }
+		? Inner
+		: never;
+
 /**
  * Scoped store interface.
  *
@@ -137,8 +183,10 @@ export function scopeTo<State, Action>(
  * @template State - The root state type
  * @template Action - The root action type
  * @template Current - The current position in the state tree
+ * @template CurrentAction - The action wrapper at the current position, derived
+ *   from `Action` by the same path
  */
-class ScopeBuilder<State, Action, Current = State> {
+class ScopeBuilder<State, Action, Current = State, CurrentAction = Action> {
 	constructor(
 		private store: Store<State, Action>,
 		private path: Array<string | number>
@@ -180,8 +228,18 @@ class ScopeBuilder<State, Action, Current = State> {
 	// carries the nullability forward into the result instead.
 	into<K extends keyof NonNullable<Current>>(
 		key: K
-	): ScopeBuilder<State, Action, NonNullable<Current>[K] | Extract<Current, null | undefined>> {
-		return new ScopeBuilder(this.store, [...this.path, String(key)]);
+	): ScopeBuilder<
+		State,
+		Action,
+		NonNullable<Current>[K] | Extract<Current, null | undefined>,
+		StepAction<CurrentAction, K>
+	> {
+		return new ScopeBuilder<
+			State,
+			Action,
+			NonNullable<Current>[K] | Extract<Current, null | undefined>,
+			StepAction<CurrentAction, K>
+		>(this.store, [...this.path, String(key)]);
 	}
 
 	/**
@@ -224,7 +282,9 @@ class ScopeBuilder<State, Action, Current = State> {
 	 * {/if}
 	 * ```
 	 */
-	case<T extends string>(caseType: T): ScopedStore<any, any> | null {
+	case<T extends CaseTypeOf<Current>>(
+		caseType: T
+	): ScopedStore<CaseStateOf<Current, T>, CaseActionOf<CurrentAction, T>> | null {
 		const value = this.getValue();
 
 		// Early return if no value
@@ -312,7 +372,7 @@ class ScopeBuilder<State, Action, Current = State> {
 	 * {/if}
 	 * ```
 	 */
-	optional(): ScopedStore<any, any> | null {
+	optional(): ScopedStore<NonNullable<Current>, Presented<CurrentAction>> | null {
 		const value = this.getValue();
 
 		if (value == null) {

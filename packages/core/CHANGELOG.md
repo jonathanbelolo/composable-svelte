@@ -62,6 +62,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`scopeTo().case()` and `.optional()` return typed stores.** Both returned
+  `ScopedStore<any, any>`, so a typo in the case name and a foreign child
+  action compiled. The state comes from the position in the state tree; the
+  child action is derived from the root action union by the same path — the
+  runtime wrapping read backwards. A root store typed `Store<S, any>` keeps
+  an untyped dispatch. (AUDIT-2026-09-03-FINDINGS P5)
+
 - **`Alert` announced itself rather than its question.** It hardcoded
   `aria-label="Alert dialog"`, so a screen-reader user heard the same three
   words whether they were being asked to delete an account or discard a draft.
