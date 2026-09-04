@@ -328,7 +328,8 @@ export interface APIClientConfig {
   cache?: boolean | CacheConfig;
 
   /**
-   * Enable request deduplication by default.
+   * Coalesce identical concurrent safe requests (GET, HEAD, OPTIONS) into one
+   * fetch by default. A request's own `deduplicate` overrides this.
    * @default true
    */
   deduplicate?: boolean;

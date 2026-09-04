@@ -381,8 +381,11 @@ export function createAPIClient(config: APIClientConfig = {}): APIClient {
     const run = () =>
       retryRequest<T>(method, () => executeFetch<T>(method, resolved, config), retryConfig);
 
-    // Layer 2: Deduplication
-    const response = config.deduplicate === false ? await run() : await inFlight.join(key, run);
+    // Layer 2: Deduplication. The request's flag wins; the client's default
+    // was destructured and never read, so it could not be turned off
+    // per client (AUDIT-2026-09-03-FINDINGS A1).
+    const coalesce = config.deduplicate ?? deduplicate;
+    const response = coalesce ? await inFlight.join(key, run) : await run();
 
     // Store in cache if applicable; the entry remembers the path it answers
     if (method === 'GET') {

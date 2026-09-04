@@ -62,6 +62,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The API client's `deduplicate` option does something.** It was
+  destructured from the client config and never read, so deduplication could
+  not be turned off per client; only the per-request flag worked. The
+  request's flag still wins. (AUDIT-2026-09-03-FINDINGS A1)
+
 - **`Effect.api`, `Effect.apiFireAndForget` and `Effect.apiAll` were `undefined`
   in every bundled consumer.** `dist/api/effect-api.js` attaches them at
   import time and was reached only through a binding re-export out of modules

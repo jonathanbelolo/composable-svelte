@@ -92,7 +92,7 @@ const api = createAPIClient({
   // Default timeout (milliseconds)
   timeout: 30000,
 
-  // Enable request deduplication
+  // Coalesce identical concurrent safe requests into one fetch (see Deduplication)
   deduplicate: true,
 
   // Default retry configuration

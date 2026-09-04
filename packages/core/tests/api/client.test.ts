@@ -69,4 +69,16 @@ describe('createAPIClient over a scripted fetch', () => {
 
 		expect(fetched.calls).toHaveLength(1);
 	});
+
+	it("A1: the client's deduplicate option is honoured, and a request can override it", async () => {
+		// `deduplicate` was destructured from the client config and never read.
+		const fetched = scriptFetch([{ match: /\/x$/, body: { ok: 1 }, delayMs: 20 }]);
+		const api = createAPIClient({ baseURL: 'https://a.example', deduplicate: false });
+
+		await Promise.all([api.get('/x'), api.get('/x')]);
+		expect(fetched.calls).toHaveLength(2);
+
+		await Promise.all([api.get('/x', { deduplicate: true }), api.get('/x', { deduplicate: true })]);
+		expect(fetched.calls).toHaveLength(3);
+	});
 });
