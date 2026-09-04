@@ -1,5 +1,10 @@
 # Hardening — defect register
 
+> **4 September 2026.** The "0 open" rows below predate the adversarial audit of
+> `packages/core`. Its 164 findings are in `AUDIT-2026-09-03-FINDINGS.md` and
+> the work to close them in `AUDIT-REMEDIATION-PLAN.md`; those two files are
+> the open register for core until the plan reaches R6.
+
 **An index of what is still open.** It used to be 2,088 lines, and about
 two-thirds of that was narrative: round-by-round write-ups, and a running list of
 corrections to its own earlier claims. All of it duplicated commit messages,
