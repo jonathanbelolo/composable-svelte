@@ -141,28 +141,28 @@ describe('the components survive it anyway', () => {
 		).toBe(!settled);
 	});
 
-	it('Select is never left invisible-but-open', async () => {
-		// The specific shape a stuck `presenting` would take: `style:opacity` gates
-		// on that status, so a lifecycle stuck there renders a listbox at opacity 0
-		// — present in the a11y tree, invisible on screen.
+	it('Select still toggles after three immediate clicks', async () => {
+		// The earlier form asserted that a listbox left open was not at opacity 0,
+		// the shape it imagined a stuck `presenting` would take. That shape is
+		// unreachable: Motion leaves the element at the animation's final frame,
+		// so a lifecycle stuck at `presenting` shows a fully visible list, and the
+		// assertion held with the completion dispatch deleted. A stuck lifecycle
+		// changes whether the *next* click still works, so that is asserted, on
+		// both settle outcomes rather than something different on each branch.
 		const s = mountSelect();
 		s.trigger().click();
 		s.trigger().click();
 		s.trigger().click();
 		await wait(900);
 
-		const list = s.list();
-		if (list === null) {
-			// Settled closed is a legitimate outcome of three clicks while
-			// interactions are gated during animation — but it must be a *settled*
-			// closed, so one more click has to open it. The old form asserted
-			// nothing at all on this branch.
-			s.trigger().click();
-			await wait(700);
-			expect(s.list(), 'settled closed, and a further click did not open').not.toBeNull();
-		} else {
-			expect(Number.parseFloat(getComputedStyle(list).opacity)).toBe(1);
-		}
+		const settledOpen = s.list() !== null;
+		s.trigger().click();
+		await wait(700);
+
+		expect(
+			s.list() !== null,
+			`settled ${settledOpen ? 'open' : 'closed'} and a further click changed nothing`
+		).toBe(!settledOpen);
 	});
 
 	it('Collapsible unmounts its content after interrupted collapses', async () => {

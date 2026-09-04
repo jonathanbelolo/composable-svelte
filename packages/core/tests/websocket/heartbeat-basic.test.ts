@@ -228,40 +228,33 @@ describe('WebSocket Heartbeat - Basic', () => {
 
   describe('Cleanup', () => {
     it('should stop sending pings after stop', async () => {
-      expectConsole('warn');
       const client = createMockWebSocket();
       await client.connect('wss://example.com');
 
-      const config: HeartbeatConfig = {
-        enabled: true,
-        interval: 30,
-        timeout: 15
-      };
+      // A pong for every ping, pumped from outside, so that nothing but stop()
+      // can end the heartbeat. The mock's send() notifies no subscriber, so
+      // the earlier form's echo (subscribe, answer PING with PONG) never fired:
+      // the pong timeout stopped the pings before stop() was called, and the
+      // assertion held with the public stop() made a no-op. The timeout is
+      // longer than the test for the same reason.
+      const pump = setInterval(() => client.simulateMessage('PONG'), 5);
+      const pings = () => client.sentMessages.filter((msg) => msg === 'PING').length;
+
+      const config: HeartbeatConfig = { enabled: true, interval: 30, timeout: 10_000 };
       const heartbeat = createHeartbeat(client, config);
-
-      // Subscribe to simulate pong responses
-      client.subscribe((msg) => {
-        if (msg.data === 'PING') {
-          client.simulateMessage('PONG');
-        }
-      });
-
       heartbeat.start();
 
-      // Wait for first ping
-      await new Promise(resolve => setTimeout(resolve, 40));
-
-      const countBeforeStop = client.sentMessages.filter(msg => msg === 'PING').length;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      const countBeforeStop = pings();
+      expect(countBeforeStop, 'no ping was sent, so stopping proves nothing').toBeGreaterThan(0);
 
       heartbeat.stop();
 
-      // Wait same duration
-      await new Promise(resolve => setTimeout(resolve, 40));
+      // Two more intervals' worth.
+      await new Promise((resolve) => setTimeout(resolve, 70));
+      clearInterval(pump);
 
-      const countAfterStop = client.sentMessages.filter(msg => msg === 'PING').length;
-
-      // Should not have sent more pings
-      expect(countAfterStop).toBe(countBeforeStop);
+      expect(pings()).toBe(countBeforeStop);
     });
   });
 });

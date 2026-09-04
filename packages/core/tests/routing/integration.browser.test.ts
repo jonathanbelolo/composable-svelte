@@ -393,21 +393,27 @@ describe('Routing Integration', () => {
 			cleanup();
 		});
 
-		it('prevents infinite loops', async () => {
-			const defaultState: InventoryState = {
-				destination: null,
-				items: [],
-				searchQuery: ''
+		it('ignores the popstate that follows its own pushState', async () => {
+			// The guard under test is the popstate handler in browser-history.ts: a
+			// popstate carrying our own metadata within 50 ms of our pushState is
+			// ours, and dispatching for it would loop. A pushState never fires
+			// popstate by itself, so the earlier form of this test — dispatch, wait,
+			// count history writes — never reached that branch and passed with the
+			// guard deleted. The popstate is now fired by hand: once inside the
+			// window, once outside it.
+			const seen: InventoryAction[] = [];
+			const recording: Reducer<InventoryState, InventoryAction, {}> = (state, action, deps) => {
+				seen.push(action);
+				return inventoryReducer(state, action, deps);
 			};
-
 			const store = createStore({
-				initialState: defaultState,
-				reducer: inventoryReducer,
+				initialState: { destination: null, items: [], searchQuery: '' } as InventoryState,
+				reducer: recording,
 				dependencies: {}
 			});
 
 			// Installed before syncBrowserHistory, which wraps history.pushState and
-			// calls through to whatever was there — this spy. It calls through to
+			// calls through to whatever was there — this spy, which calls through to
 			// the real method, so the URL still changes.
 			const pushes = vi.spyOn(history, 'pushState');
 
@@ -417,17 +423,25 @@ describe('Routing Integration', () => {
 				destinationToAction
 			});
 
-			// Dispatch action (will trigger URL update with metadata flag)
 			store.dispatch({ type: 'itemSelected', itemId: '123' });
-			await new Promise((resolve) => setTimeout(resolve, 50));
+			await new Promise((resolve) => setTimeout(resolve, 10));
 
-			// URL was updated, but popstate handler should ignore it (metadata flag)
 			expect(window.location.pathname).toBe('/inventory/item-123');
-			expect(store.state.destination).toEqual({ type: 'detail', state: { itemId: '123' } });
-
-			// One dispatch, one history write. A loop that ran and settled would
-			// leave the URL right and this count wrong; the old form counted nothing.
 			expect(pushes).toHaveBeenCalledTimes(1);
+			expect(seen).toHaveLength(1);
+
+			// Inside the window: ours, so ignored.
+			window.dispatchEvent(new PopStateEvent('popstate', { state: { composableSvelteSync: true } }));
+			await new Promise((resolve) => setTimeout(resolve, 10));
+			expect(seen, 'the popstate after our own pushState was dispatched for').toHaveLength(1);
+
+			// Outside the window: a real navigation to the same URL, handled. Without
+			// this the arm above passes against a handler that never dispatches.
+			await new Promise((resolve) => setTimeout(resolve, 60));
+			window.dispatchEvent(new PopStateEvent('popstate', { state: { composableSvelteSync: true } }));
+			await new Promise((resolve) => setTimeout(resolve, 10));
+			expect(seen).toHaveLength(2);
+			expect(seen[1]).toEqual({ type: 'itemSelected', itemId: '123' });
 
 			cleanup();
 			pushes.mockRestore();
