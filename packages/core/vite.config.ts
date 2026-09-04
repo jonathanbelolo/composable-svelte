@@ -71,6 +71,8 @@ export default defineConfig({
 			'tests/repo/demo-headings.test.ts',
       'tests/repo/flat-barrel.test.ts',
       'tests/repo/skill-examples.test.ts',
+      // Spawns a child Node process; same reason.
+      'tests/repo/dist-import.test.ts',
       // Needs the Cookie request header, which the browser Request API refuses
       // to expose; runs under vitest.node.config.ts instead.
       'tests/i18n/ssr.test.ts'
