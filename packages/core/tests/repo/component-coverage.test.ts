@@ -193,6 +193,11 @@ const scans = new Map(PACKAGES.map((pkg) => [pkg, scan(pkg)]));
 
 const nameOf = (file: string) => file.slice(file.lastIndexOf('/') + 1, -'.svelte'.length);
 
+/** The components a scan did not reach. Exported for the positive control. */
+export function offendersOf(scan: Pick<Scan, 'components' | 'reached'>): string[] {
+	return scan.components.filter((c) => !scan.reached.has(c)).map(nameOf).sort();
+}
+
 describe('the barrel narrowing actually narrows', () => {
 	// The failure mode of the narrowing is silent and permissive: if `importsOf`
 	// stops extracting names, `names` is empty, an empty list is treated as
@@ -256,14 +261,22 @@ describe('every component is executed by some test', () => {
 		// the list reached empty and went, along with the arm that consulted it —
 		// the shape `NOT_YET_GATED` took once every workspace was gated. A new
 		// component with no test now fails here on the day it is added.
-		const { components, reached } = scans.get(pkg)!;
-
-		const offenders = components.filter((c) => !reached.has(c)).map(nameOf);
+		const offenders = offendersOf(scans.get(pkg)!);
 
 		expect(
-			offenders.sort(),
+			offenders,
 			`no test imports these ${pkg} components, directly or through anything it renders`
 		).toEqual([]);
 	});
 });
 
+describe('an unreached component is reported', () => {
+	// The arms above are satisfied by an empty offender list, and an empty
+	// list is what a scan that reached nothing *and* found no components would
+	// produce. Plant one component the tests cannot have imported.
+	it('names the planted component and nothing else', () => {
+		const real = scans.get('core')!;
+		const ghost = join(packagesDir, 'core', 'src', 'lib', 'components', 'ui', 'ghost', 'Ghost.svelte');
+		expect(offendersOf({ components: [...real.components, ghost], reached: real.reached })).toEqual(['Ghost']);
+	});
+});

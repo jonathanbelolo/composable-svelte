@@ -235,3 +235,13 @@ describe('the check itself', () => {
 		expect(newestRelease('## [Unreleased]\n')).toBeNull();
 	});
 });
+
+describe('the rollup register is current', () => {
+	// Every other register in this directory has a staleness arm; this one did
+	// not. A rollup heading that no changelog carries any more is a permanent,
+	// invisible licence for an undated release under that exact text.
+	it.each(ROLLUPS)('$pkg still carries "$heading"', ({ pkg, heading }) => {
+		const changelog = packages().find((p) => p.name === pkg)?.changelog ?? '';
+		expect(changelog.includes(heading), `${pkg}/CHANGELOG.md no longer has this heading — drop it from ROLLUPS`).toBe(true);
+	});
+});

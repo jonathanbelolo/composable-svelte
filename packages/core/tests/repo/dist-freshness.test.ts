@@ -18,7 +18,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { existsSync, statSync } from 'node:fs';
+import { existsSync, statSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { walkFiles, listDirs } from './walk.js';
 import { fileURLToPath } from 'node:url';
 import { join, relative } from 'node:path';
@@ -27,7 +28,7 @@ const repoRoot = fileURLToPath(new URL('../../../../', import.meta.url));
 const packagesDir = join(repoRoot, 'packages');
 
 /** Newest mtime under `dir`, and the file it belongs to. */
-function newest(dir: string): { at: number; file: string } | null {
+export function newest(dir: string): { at: number; file: string } | null {
 	// `worktrees`: see the note in doc-examples.test.ts.
 	const { files } = walkFiles(dir, { skip: ['node_modules', 'worktrees'], keep: () => true });
 
@@ -49,6 +50,29 @@ const packages = listDirs(packagesDir).filter((name) =>
 );
 
 describe('built output is not stale', () => {
+	it('found packages, so the arm below is about something', () => {
+		// `it.each([])` registers no tests and passes; a `listDirs` that returned
+		// nothing would have made this file decorative.
+		expect(packages.length).toBeGreaterThan(1);
+	});
+
+	it('newest() reads a real mtime and returns null for an empty directory', () => {
+		// The positive control for the comparison: a `newest` that always
+		// returned null fails the not-null floors, but one that returned the
+		// same constant for both sides would pass the comparison forever.
+		const src = newest(join(packagesDir, 'core', 'src'));
+		expect(src).not.toBeNull();
+		expect(src!.at).toBeGreaterThan(0);
+		expect(src!.file.startsWith(join(packagesDir, 'core', 'src'))).toBe(true);
+
+		const empty = mkdtempSync(join(tmpdir(), 'dist-freshness-'));
+		try {
+			expect(newest(empty)).toBeNull();
+		} finally {
+			rmSync(empty, { recursive: true, force: true });
+		}
+	});
+
 	it.each(packages)('%s was built after its sources were last edited', (name) => {
 		const pkgDir = join(packagesDir, name);
 		const src = newest(join(pkgDir, 'src'));

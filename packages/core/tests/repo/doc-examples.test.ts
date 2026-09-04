@@ -388,7 +388,7 @@ const RUNES = new Set(['state', 'derived', 'effect', 'props', 'bindable', 'inspe
  *    corrupting it left the suite green. Those leading lines are lifted into the
  *    `<script>` where the prose plainly means them to be.
  */
-function withDeclaredStores(body: string): string {
+export function withDeclaredStores(body: string): string {
 	const lines = body.split('\n');
 	// Markup starts at the first line opening a tag or a Svelte block.
 	const markupAt = lines.findIndex((line) => /^\s*[<{]/.test(line));
@@ -434,7 +434,7 @@ function withDeclaredStores(body: string): string {
  * second `$props()` call is itself a compile error. A bare binding is all the
  * auto-subscription needs to resolve.
  */
-function withDeclaredStoresInScript(body: string): string {
+export function withDeclaredStoresInScript(body: string): string {
 	const tag = /<script[^>]*>/.exec(body);
 	if (!tag) return body;
 
@@ -493,7 +493,7 @@ function withDeclaredStoresInScript(body: string): string {
  * carries 18 ```typescript and 29 ```svelte today. A number that describes a
  * fixed defect belongs in the past tense, or it becomes a claim about now.
  */
-function looksLikeSvelte(body: string): boolean {
+export function looksLikeSvelte(body: string): boolean {
 	return (
 		// A component tag, including the dotted form this repo uses throughout
 		// (`<Card.Header>`) — which an `[A-Z][A-Za-z0-9]*` pattern alone misses.
@@ -532,7 +532,7 @@ function looksLikeSvelte(body: string): boolean {
  * `<Modal>` hid it completely and this arm passed. Comments cannot contain the
  * markup being looked for, so dropping them first costs nothing and closes it.
  */
-const outsideTemplateLiterals = (body: string): string =>
+export const outsideTemplateLiterals = (body: string): string =>
 	body
 		// `(?<!:)` so a `https://` URL does not eat the rest of its line.
 		.replace(/(?<!:)\/\/[^\n]*/g, '')
@@ -886,5 +886,47 @@ describe('runes are written the way Svelte declares them', () => {
 				'  let { store }: { store: Store<S, A> } = $props();\n' +
 				offenders.join('\n')
 		).toEqual([]);
+	});
+});
+
+describe('the helpers themselves', () => {
+	// Positive controls. The four helpers below decide what the compile arm
+	// sees, and this file's own comments record two past silent passes — a
+	// template literal read as markup, and a backtick in a comment blanking a
+	// component tag — that were found by reading, not by a test.
+	it('recognises Svelte markup and only Svelte markup', () => {
+		expect(looksLikeSvelte('<svelte:head><title>x</title></svelte:head>')).toBe(true);
+		expect(looksLikeSvelte('<Card.Header>x</Card.Header>')).toBe(true);
+		expect(looksLikeSvelte('{#if open}\n  <p>x</p>\n{/if}')).toBe(true);
+		expect(looksLikeSvelte('const a = 1;\nexport const b = a + 1;')).toBe(false);
+	});
+
+	it('does not read a template literal or a comment as markup', () => {
+		// The SSR skill writes an error page into innerHTML as a backtick string;
+		// its <div> starts a line.
+		const literal = 'const html = `\n<div class="error">x</div>\n`;';
+		expect(looksLikeSvelte(literal)).toBe(true);
+		expect(looksLikeSvelte(outsideTemplateLiterals(literal))).toBe(false);
+		// A backtick in a comment must not pair with the next real one and blank
+		// the tag between them.
+		const commented = '// the `store` prop\n<Modal />\n// and `another`';
+		expect(outsideTemplateLiterals(commented)).toContain('<Modal />');
+	});
+
+	it('declares the stores a script-less excerpt subscribes to, and compiles', () => {
+		const source = withDeclaredStores('<p>{$store.count}</p>');
+		expect(source).toContain('let { store } = $props();');
+		expect(() => compile(source, { generate: 'client' })).not.toThrow();
+	});
+
+	it('declares the stores an excerpt with a script still never introduces, once', () => {
+		const source = withDeclaredStoresInScript(
+			'<script lang="ts">\n  let { store } = $props();\n</script>\n<p>{$store.a} {$other.b}</p>'
+		);
+		expect(source).toContain('let other');
+		// The existing binding and its reference; no second declaration.
+		expect((source.match(/\bstore\b/g) ?? []).length).toBe(2);
+		expect(source).not.toMatch(/\blet store\b/);
+		expect(() => compile(source, { generate: 'client' })).not.toThrow();
 	});
 });

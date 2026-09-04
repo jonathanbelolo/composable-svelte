@@ -185,7 +185,7 @@ function blockBody(source: string, open: number): string {
  * with another (`CodeEditor.svelte` declares its whole props type on one line)
  * and truncated any type containing a `;` inside a string literal.
  */
-function splitMembers(body: string): string[] {
+export function splitMembers(body: string): string[] {
 	const members: string[] = [];
 	let depth = 0;
 	let quote = '';
@@ -235,7 +235,7 @@ function splitMembers(body: string): string[] {
 }
 
 /** Whether an `=>` appears outside every bracket. */
-function hasTopLevelArrow(type: string): boolean {
+export function hasTopLevelArrow(type: string): boolean {
 	let depth = 0;
 	for (let i = 0; i < type.length; i += 1) {
 		const ch = type[i]!;
@@ -252,7 +252,7 @@ function hasTopLevelArrow(type: string): boolean {
  * `store: … | null` and callbacks of its own — the word can appear nested while
  * the prop itself refuses `undefined` and cannot be forwarded.
  */
-function acceptsUndefined(type: string): boolean {
+export function acceptsUndefined(type: string): boolean {
 	// A top-level `=>` means this is a function type, and a trailing
 	// `| undefined` binds to its RETURN — `() => void | undefined` is a function
 	// returning `void | undefined`, which accepts no `undefined` itself. Only
@@ -748,5 +748,29 @@ describe('optional properties in .ts carry the same hazard', () => {
 				? `bare optional properties: ${bare.length}\n${bare.slice(0, 40).join('\n')}`
 				: `${ALLOWED_BARE_OPTIONALS - bare.length} have been fixed — lower ALLOWED_BARE_OPTIONALS to ${bare.length}`
 		).toBe(ALLOWED_BARE_OPTIONALS);
+	});
+});
+
+describe('the matchers themselves', () => {
+	it('reads a trailing | undefined on a function type as the return type', () => {
+		// The rule this guard exists for, and the one no arm above drives on
+		// purpose: a bare optional callback cannot be forwarded from a wrapper.
+		expect(acceptsUndefined('() => void | undefined')).toBe(false);
+		expect(acceptsUndefined('(() => void) | undefined')).toBe(true);
+		expect(hasTopLevelArrow('() => void | undefined')).toBe(true);
+		expect(hasTopLevelArrow('(() => void) | undefined')).toBe(false);
+	});
+
+	it('accepts undefined only as a top-level alternative', () => {
+		expect(acceptsUndefined('string | undefined')).toBe(true);
+		expect(acceptsUndefined('string')).toBe(false);
+		// Nested, not top level: the prop itself refuses undefined.
+		expect(acceptsUndefined('{ store: Store | undefined }')).toBe(false);
+	});
+
+	it('splits members at depth zero, through quotes and comments', () => {
+		expect(splitMembers('a?: string; b?: number')).toHaveLength(2);
+		expect(splitMembers('a?: string; /* x; y */ b?: number')).toHaveLength(2);
+		expect(splitMembers("a?: 'x;y'; b?: () => { c: 1; d: 2 }")).toHaveLength(2);
 	});
 });

@@ -17,7 +17,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
-import { listDirs } from '../repo/walk.js';
+import { listDirs, walkFiles } from '../repo/walk.js';
 
 const uiDir = fileURLToPath(new URL('../../src/lib/components/ui/', import.meta.url));
 /**
@@ -36,7 +36,7 @@ const barrelSource = readFileSync(join(uiDir, 'index.ts'), 'utf8');
 const barrel = barrelSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
 
 /** Named exports declared by a sub-barrel's own `index.ts`. */
-function subBarrelExports(dir: string): string[] {
+export function subBarrelExports(dir: string): string[] {
 	const file = join(uiDir, dir, 'index.ts');
 	if (!existsSync(file)) return [];
 	const source = readFileSync(file, 'utf8');
@@ -94,7 +94,9 @@ describe('components/ui public surface', () => {
 
 	it.each(subBarrels)('re-exports everything from %s', (dir) => {
 		const declared = subBarrelExports(dir);
-		if (declared.length === 0) return;
+		// A floor, not a silent `return`: an extractor that stopped matching made
+		// every per-directory arm pass with nothing checked.
+		expect(declared.length, `${dir}/index.ts declares nothing the extractor can see`).toBeGreaterThan(0);
 
 		if (barrel.includes(`export * from './${dir}/index.js'`)) return;
 
@@ -144,5 +146,21 @@ describe('package root public surface', () => {
 			'components-exports.ts must star-export components/ui, or every prop type, ' +
 				'reducer and state factory becomes unreachable from the package root'
 		).toBe(true);
+	});
+});
+
+describe('the extractor and the private register', () => {
+	it('reads a real sub-barrel', () => {
+		// The positive control, on the same barrel component-coverage pins.
+		expect(subBarrelExports('breadcrumb')).toContain('Breadcrumb');
+	});
+
+	it.each([...INTENTIONALLY_PRIVATE])('%s is still declared somewhere under components/ui', (name) => {
+		// A private helper that was deleted leaves a permanent, invisible licence
+		// in the register. Same arm every other register in tests/repo keeps.
+		const declared = walkFiles(uiDir, { keep: (n) => n.endsWith('.ts') }).files.some((file) =>
+			new RegExp(`\\b(?:function|const|let|class)\\s+${name}\\b`).test(readFileSync(file, 'utf8'))
+		);
+		expect(declared, `${name} is no longer declared — drop it from INTENTIONALLY_PRIVATE`).toBe(true);
 	});
 });

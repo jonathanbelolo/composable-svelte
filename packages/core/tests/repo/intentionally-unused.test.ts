@@ -179,7 +179,7 @@ const sources = walkFiles(graphicsSrc, { keep: (name) => name.endsWith('.ts') })
  * recognised. That costs little, because the arm this register exists for — the
  * member is still declared — does not depend on it.
  */
-function couldBe(receiver: string, entry: Entry, path: string): boolean {
+export function couldBe(receiver: string, entry: Entry, path: string): boolean {
 	if (receiver === 'this') return path === entry.file;
 
 	const last = receiver.replace(/\?$/, '').split('.').pop() ?? '';
@@ -255,5 +255,29 @@ describe('the intentionally-unused register', () => {
 			'call sites moved. If a real caller appeared, the member is no longer unused — ' +
 				'remove its entry. If a line moved, update it:\n' + changed.join('\n\n')
 		).toEqual([]);
+	});
+});
+
+describe('the receiver heuristic', () => {
+	// The documented failure mode, driven rather than described: a member
+	// name shared with an unrelated object (`gl.clear()`) must not count as a
+	// call site, and `this.` counts only inside the declaring file.
+	const entry: Entry = {
+		cls: 'RenderPipeline',
+		member: 'clear',
+		file: 'lib/shaders/render-pipeline.ts',
+		callSites: [],
+		why: 'control'
+	};
+
+	it('rejects a lookalike receiver and accepts a typed one', () => {
+		expect(couldBe('gl', entry, 'lib/x.ts')).toBe(false);
+		expect(couldBe('this.renderPipeline', entry, 'lib/x.ts')).toBe(true);
+		expect(couldBe('this.renderPipeline?', entry, 'lib/x.ts')).toBe(true);
+	});
+
+	it('counts this. only in the declaring file', () => {
+		expect(couldBe('this', entry, 'lib/shaders/render-pipeline.ts')).toBe(true);
+		expect(couldBe('this', entry, 'lib/other.ts')).toBe(false);
 	});
 });
