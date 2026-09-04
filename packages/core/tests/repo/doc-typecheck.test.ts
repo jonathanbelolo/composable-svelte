@@ -28,11 +28,63 @@ import { checkBlocks, checkDocs, keyOf, type DocBlock, type Finding } from './do
  * the 87th could have arrived while it was in progress.
  */
 const REGISTER = new Map<string, number>([
-	// Empty, and meant to stay that way. It held 84 when this guard landed —
-	// every one a false claim the documentation made about this library's API.
-	// The `no unregistered error` arm is what keeps the next one from arriving
-	// unnoticed; this map exists so the burn-down could not be outpaced while it
-	// was in progress.
+	// Registered by R0.2.b (4 September 2026), when SURFACE_CODES admitted
+	// TS2322/2353/2561/2774. Every entry is a real false claim about an API,
+	// tagged with its finding in plans/hardening/AUDIT-2026-09-03-FINDINGS.md.
+	// R4 empties this; the staleness arm below fails on the day an entry is fixed.
+	//
+	// G6 — the 24 skill fences the audit compiled against dist.
+	['.claude/skills/composable-svelte-auth/SKILL.md :: TS2322 :: Type \'(signal: AbortSignal | undefined) => Promise<{ email: string; emailVerified: true; hasPassword: true; mfaEnabled: false; providers: never[]; }>\' is not assignable to type \'(signal?: AbortSignal | undefined) => Promise<AccountSnapshot>\'.   Type \'Promise<{ email: string; emailVerified: true; hasPassword: true; mfaEnabled: false; providers: never[]; }>\' is not assignable to type \'Promise<AccountSnapshot>\'.     Property \'pendingEmail\' is missing in type \'{ email: string; emailVerified: true; hasPassword: true; mfaEnabled: false; providers: never[]; }\' but required in type \'AccountSnapshot\'.', 1],
+	['.claude/skills/composable-svelte-chat/SKILL.md :: TS2353 :: Object literal may only specify known properties, and \'generateUserColor\' does not exist in type \'CollaborativeDependencies\'.', 1],
+	['.claude/skills/composable-svelte-code/SKILL.md :: TS2322 :: Type \'never[]\' is not assignable to type \'Record<string, Node<Record<string, unknown>>>\'.   Index signature for type \'string\' is missing in type \'never[]\'.', 1],
+	['.claude/skills/composable-svelte-code/SKILL.md :: TS2322 :: Type \'never[]\' is not assignable to type \'Record<string, Edge<Record<string, unknown>>>\'.   Index signature for type \'string\' is missing in type \'never[]\'.', 1],
+	['.claude/skills/composable-svelte-code/SKILL.md :: TS2322 :: Type \'<NodeData extends Record<string, unknown> = Record<string, unknown>, EdgeData extends Record<string, unknown> = Record<string, unknown>>(state: NodeCanvasState<NodeData, EdgeData>, action: NodeCanvasAction<...>, deps?: NodeCanvasDependencies | undefined) => [...]\' is not assignable to type \'Reducer<NodeCanvasState<Record<string, unknown>, Record<string, unknown>>, unknown, {}>\'.   Types of parameters \'action\' and \'action\' are incompatible.     Type \'unknown\' is not assignable to type \'NodeCanvasAction<Record<string, unknown>, Record<string, unknown>>\'.', 3],
+	['.claude/skills/composable-svelte-code/SKILL.md :: TS2322 :: Type \'{ id: string; type: string; position: { x: number; y: number; }; data: { label: string; }; }[]\' is not assignable to type \'Record<string, Node<Record<string, unknown>>>\'.   Index signature for type \'string\' is missing in type \'{ id: string; type: string; position: { x: number; y: number; }; data: { label: string; }; }[]\'.', 1],
+	['.claude/skills/composable-svelte-code/SKILL.md :: TS2322 :: Type \'{ id: string; source: string; target: string; }[]\' is not assignable to type \'Record<string, Edge<Record<string, unknown>>>\'.   Index signature for type \'string\' is missing in type \'{ id: string; source: string; target: string; }[]\'.', 2],
+	['.claude/skills/composable-svelte-code/SKILL.md :: TS2322 :: Type \'({ id: string; type: string; position: { x: number; y: number; }; data: { label: string; value: number; }; } | { id: string; type: string; position: { x: number; y: number; }; data: { label: string; operation: string; value: number; }; } | { ...; })[]\' is not assignable to type \'Record<string, Node<Record<string, unknown>>>\'.   Index signature for type \'string\' is missing in type \'({ id: string; type: string; position: { x: number; y: number; }; data: { label: string; value: number; }; } | { id: string; type: string; position: { x: number; y: number; }; data: { label: string; operation: string; value: number; }; } | { ...; })[]\'.', 1],
+	['.claude/skills/composable-svelte-core/SKILL.md :: TS2322 :: Type \'any\' is not assignable to type \'never\'.', 1],
+	['.claude/skills/composable-svelte-deployment/SKILL.md :: TS2353 :: Object literal may only specify known properties, and \'preload\' does not exist in type \'{ maxAge: number; includeSubDomains?: boolean | undefined; }\'.', 1],
+	['.claude/skills/composable-svelte-forms/SKILL.md :: TS2322 :: Type \'(state: AppState, action: AppAction) => [any, { readonly _tag: "AfterDelay"; readonly ms: number; readonly execute: EffectExecutor<AppAction>; }] | [AppState, { readonly _tag: "None"; }] | undefined\' is not assignable to type \'Reducer<AppState, AppAction>\'.   Type \'[any, { readonly _tag: "AfterDelay"; readonly ms: number; readonly execute: EffectExecutor<AppAction>; }] | [AppState, { readonly _tag: "None"; }] | undefined\' is not assignable to type \'readonly [AppState, Effect<AppAction>]\'.     Type \'undefined\' is not assignable to type \'readonly [AppState, Effect<AppAction>]\'.', 1],
+	['.claude/skills/composable-svelte-i18n/SKILL.md :: TS2353 :: Object literal may only specify known properties, and \'namespace\' does not exist in type \'PartialAction<unknown>\'.', 1],
+	['.claude/skills/composable-svelte-maps/SKILL.md :: TS2322 :: Type \'"osm"\' is not assignable to type \'TileProvider | undefined\'.', 3],
+	['.claude/skills/composable-svelte-maps/SKILL.md :: TS2322 :: Type \'number[]\' is not assignable to type \'LngLat\'.   Target requires 2 element(s) but source may have fewer.', 1],
+	['.claude/skills/composable-svelte-media/SKILL.md :: TS2353 :: Object literal may only specify known properties, and \'tracks\' does not exist in type \'{ volume?: number | undefined; playbackSpeed?: number | undefined; loopMode?: LoopMode | undefined; isShuffled?: boolean | undefined; }\'.', 3],
+	['.claude/skills/composable-svelte-media/SKILL.md :: TS2322 :: Type \'"nextTrack"\' is not assignable to type \'"error" | "ended" | "pause" | "play" | "togglePlayPause" | "stop" | "next" | "previous" | "skipForward" | "skipBackward" | "seekStarted" | "seekUpdated" | "seekEnded" | "seekTo" | ... 21 more ... | "buffering"\'.', 1],
+	['.claude/skills/composable-svelte-media/SKILL.md :: TS2353 :: Object literal may only specify known properties, and \'onAudioData\' does not exist in type \'VoiceInputDependencies\'.', 3],
+	['.claude/skills/composable-svelte-media/SKILL.md :: TS2322 :: Type \'"startRecording"\' is not assignable to type \'"activatePushToTalk" | "activateConversationMode" | "deactivateVoiceInput" | "startPushToTalkRecording" | "stopPushToTalkRecording" | "cancelPushToTalkRecording" | "conversationModeToggled" | ... 10 more ... | "transcriptionCompleted"\'.', 1],
+	['.claude/skills/composable-svelte-media/SKILL.md :: TS2322 :: Type \'"recordingStarted"\' is not assignable to type \'"activatePushToTalk" | "activateConversationMode" | "deactivateVoiceInput" | "startPushToTalkRecording" | "stopPushToTalkRecording" | "cancelPushToTalkRecording" | "conversationModeToggled" | ... 10 more ... | "transcriptionCompleted"\'.', 1],
+	['.claude/skills/composable-svelte-media/SKILL.md :: TS2353 :: Object literal may only specify known properties, and \'albumArt\' does not exist in type \'AudioTrack\'.', 2],
+	['.claude/skills/composable-svelte-media/SKILL.md :: TS2322 :: Type \'"addTrack"\' is not assignable to type \'"error" | "ended" | "pause" | "play" | "togglePlayPause" | "stop" | "next" | "previous" | "skipForward" | "skipBackward" | "seekStarted" | "seekUpdated" | "seekEnded" | "seekTo" | ... 21 more ... | "buffering"\'.', 1],
+	['.claude/skills/composable-svelte-media/SKILL.md :: TS2322 :: Type \'"setMode"\' is not assignable to type \'"activatePushToTalk" | "activateConversationMode" | "deactivateVoiceInput" | "startPushToTalkRecording" | "stopPushToTalkRecording" | "cancelPushToTalkRecording" | "conversationModeToggled" | ... 10 more ... | "transcriptionCompleted"\'.', 1],
+	['.claude/skills/composable-svelte-navigation/SKILL.md :: TS2561 :: Object literal may only specify known properties, but \'serializers\' does not exist in type \'BrowserHistoryConfig<BlogState, AppAction, PostDestination>\'. Did you mean to write \'serialize\'?', 1],
+	['.claude/skills/composable-svelte-ssr/SKILL.md :: TS2561 :: Object literal may only specify known properties, but \'serializers\' does not exist in type \'BrowserHistoryConfig<BlogState, AppAction, { type: "post"; state: { postId: string; }; }>\'. Did you mean to write \'serialize\'?', 1],
+	['.claude/skills/composable-svelte-ssr/SKILL.md :: TS2774 :: This condition will always return true since this function is always defined. Did you mean to call it instead?', 1],
+	['.claude/skills/composable-svelte-ssr/SKILL.md :: TS2353 :: Object literal may only specify known properties, and \'strictTransportSecurity\' does not exist in type \'SecurityHeadersConfig\'.', 1],
+	// DA-H12 — ReconnectConfig/HeartbeatConfig fields that do not exist.
+	['packages/core/docs/quick-reference.md :: TS2353 :: Object literal may only specify known properties, and \'delayMs\' does not exist in type \'ReconnectConfig\'.', 1],
+	['packages/core/docs/quick-reference.md :: TS2561 :: Object literal may only specify known properties, but \'intervalMs\' does not exist in type \'HeartbeatConfig\'. Did you mean to write \'interval\'?', 1],
+	['README.md :: TS2353 :: Object literal may only specify known properties, and \'delayMs\' does not exist in type \'ReconnectConfig\'.', 1],
+	['README.md :: TS2561 :: Object literal may only specify known properties, but \'intervalMs\' does not exist in type \'HeartbeatConfig\'. Did you mean to write \'interval\'?', 1],
+	// DA-X1 — found by the widened guard, beyond the audit's own list.
+	['packages/core/docs/navigation/components.md :: TS2353 :: Object literal may only specify known properties, and \'stiffness\' does not exist in type \'Partial<SpringConfig>\'.', 1],
+	['packages/core/docs/navigation/dismiss.md :: TS2353 :: Object literal may only specify known properties, and \'action\' does not exist in type \'PartialAction<unknown>\'.', 1],
+	['packages/core/docs/quick-reference.md :: TS2322 :: Type \'(state: { count: number; }, action: unknown, deps: {}) => [{ count: number; }, { readonly _tag: "None"; }] | undefined\' is not assignable to type \'Reducer<{ count: number; }, unknown, {}>\'.   Type \'[{ count: number; }, { readonly _tag: "None"; }] | undefined\' is not assignable to type \'readonly [{ count: number; }, Effect<unknown>]\'.     Type \'undefined\' is not assignable to type \'readonly [{ count: number; }, Effect<unknown>]\'.', 1],
+	['packages/code/README.md :: TS2322 :: Type \'"highlightCompleted"\' is not assignable to type \'"init" | "codeChanged" | "languageChanged" | "themeChanged" | "copyCode" | "copyCompleted" | "copyFailed" | "resetCopyStatus" | "toggleLineNumbers" | "highlightLinesChanged" | "highlighted" | "highlightFailed"\'.', 1],
+	['packages/code/README.md :: TS2353 :: Object literal may only specify known properties, and \'code\' does not exist in type \'{ value?: string | undefined; language?: SupportedLanguage | undefined; theme?: "dark" | "light" | "auto" | undefined; showLineNumbers?: boolean | undefined; enableFolding?: boolean | undefined; readOnly?: boolean | undefined; enableAutocomplete?: boolean | undefined; tabSize?: number | undefined; }\'.', 1],
+	['packages/code/README.md :: TS2322 :: Type \'{ id: string; type: string; position: { x: number; y: number; }; data: { label: string; }; }[]\' is not assignable to type \'Record<string, Node<Record<string, unknown>>>\'.   Index signature for type \'string\' is missing in type \'{ id: string; type: string; position: { x: number; y: number; }; data: { label: string; }; }[]\'.', 1],
+	['packages/code/README.md :: TS2322 :: Type \'{ id: string; source: string; target: string; }[]\' is not assignable to type \'Record<string, Edge<Record<string, unknown>>>\'.   Index signature for type \'string\' is missing in type \'{ id: string; source: string; target: string; }[]\'.', 1],
+	['packages/code/README.md :: TS2322 :: Type \'<NodeData extends Record<string, unknown> = Record<string, unknown>, EdgeData extends Record<string, unknown> = Record<string, unknown>>(state: NodeCanvasState<NodeData, EdgeData>, action: NodeCanvasAction<...>, deps?: NodeCanvasDependencies | undefined) => [...]\' is not assignable to type \'Reducer<NodeCanvasState<Record<string, unknown>, Record<string, unknown>>, unknown, {}>\'.   Types of parameters \'action\' and \'action\' are incompatible.     Type \'unknown\' is not assignable to type \'NodeCanvasAction<Record<string, unknown>, Record<string, unknown>>\'.', 1],
+	['packages/maps/README.md :: TS2353 :: Object literal may only specify known properties, and \'provider\' does not exist in type \'{ accessToken?: string | undefined; tileProvider?: TileProvider | undefined; center?: LngLat | undefined; zoom?: number | undefined; bearing?: number | undefined; pitch?: number | undefined; style?: string | undefined; markers?: any[] | undefined; }\'.', 1],
+	['packages/maps/README.md :: TS2322 :: Type \'string | boolean | undefined\' is not assignable to type \'string | undefined\'.   Type \'boolean\' is not assignable to type \'string\'.', 1],
+	['packages/media/README.md :: TS2353 :: Object literal may only specify known properties, and \'tracks\' does not exist in type \'{ volume?: number | undefined; playbackSpeed?: number | undefined; loopMode?: LoopMode | undefined; isShuffled?: boolean | undefined; }\'.', 1],
+	['packages/media/README.md :: TS2322 :: Type \'"nextTrack"\' is not assignable to type \'"error" | "ended" | "pause" | "play" | "togglePlayPause" | "stop" | "next" | "previous" | "skipForward" | "skipBackward" | "seekStarted" | "seekUpdated" | "seekEnded" | "seekTo" | ... 21 more ... | "buffering"\'.', 1],
+	['packages/code/src/lib/node-canvas/README.md :: TS2322 :: Type \'<NodeData extends Record<string, unknown> = Record<string, unknown>, EdgeData extends Record<string, unknown> = Record<string, unknown>>(state: NodeCanvasState<NodeData, EdgeData>, action: NodeCanvasAction<...>, deps?: NodeCanvasDependencies | undefined) => [...]\' is not assignable to type \'Reducer<NodeCanvasState<Record<string, unknown>, Record<string, unknown>>, unknown, any>\'.   Types of parameters \'action\' and \'action\' are incompatible.     Type \'unknown\' is not assignable to type \'NodeCanvasAction<Record<string, unknown>, Record<string, unknown>>\'.', 1],
+	['packages/core/docs/animation/animated-navigation.md :: TS2353 :: Object literal may only specify known properties, and \'event\' does not exist in type \'PartialAction<unknown>\'.', 2],
+	['packages/core/docs/backend/dependencies.md :: TS2322 :: Type \'(state: State, action: Action, deps: typeof dependencies) => void\' is not assignable to type \'Reducer<State, Action, { clock: Clock; storage: SyncStorage<UserData>; api: APIClient; websocket: WebSocketClient<unknown>; }>\'.   Type \'void\' is not assignable to type \'readonly [State, Effect<Action>]\'.', 1],
+	['packages/core/docs/backend/dependencies.md :: TS2353 :: Object literal may only specify known properties, and \'title\' does not exist in type \'FormData\'.', 1],
+	['packages/core/docs/core-concepts/composition.md :: TS2322 :: Type \'string\' is not assignable to type \'"counter" | "setUser"\'.', 1],
+	['packages/core/docs/core-concepts/testing.md :: TS2322 :: Type \'(state: any, action: any, deps: any) => any[]\' is not assignable to type \'Reducer<{ count: number; }, any, any>\'.   Type \'any[]\' is not assignable to type \'readonly [{ count: number; }, Effect<any>]\'.     Target requires 2 element(s) but source may have fewer.', 3],
+	['packages/core/docs/core-concepts/testing.md :: TS2322 :: Type \'(state: ParentState, action: ParentAction, deps: any) => [any, { readonly _tag: "None"; }] | [unknown, Effect<unknown>]\' is not assignable to type \'Reducer<ParentState, ParentAction>\'.   Type \'[any, { readonly _tag: "None"; }] | [unknown, Effect<unknown>]\' is not assignable to type \'readonly [ParentState, Effect<ParentAction>]\'.     Type \'[unknown, Effect<unknown>]\' is not assignable to type \'readonly [ParentState, Effect<ParentAction>]\'.       Type at position 0 in source is not compatible with type at position 0 in target.         Type \'unknown\' is not assignable to type \'ParentState\'.', 1],
 ]);
 
 const result = checkDocs();
@@ -106,6 +158,34 @@ describe('the check itself', () => {
 			codes,
 			'the checker no longer reports a name the library does not export — it is not measuring anything'
 		).toContain(2724);
+	});
+
+	it('still reports a documented option that the type does not have', () => {
+		// The two codes R0.2.b admitted, each through the same path. `prefx` is
+		// one letter off `prefix`, so TypeScript suggests the correction (2561);
+		// `bogus` is not near anything (2353).
+		const block = (source: string): DocBlock => ({
+			file: '<positive-control>',
+			line: 1,
+			kind: 'ts',
+			name: '',
+			counterExample: false,
+			source
+		});
+		const codes = (source: string) => checkBlocks([block(source)]).findings.map((f) => f.code);
+
+		expect(
+			codes(
+				"import { createCookieStorage } from '@composable-svelte/core';\n" +
+					'export const s = createCookieStorage({ bogus: 1 });\n'
+			)
+		).toContain(2353);
+		expect(
+			codes(
+				"import { createCookieStorage } from '@composable-svelte/core';\n" +
+					"export const s = createCookieStorage({ prefx: 'x' });\n"
+			)
+		).toContain(2561);
 	});
 
 	it('reports far less than it sees, which is the point', () => {

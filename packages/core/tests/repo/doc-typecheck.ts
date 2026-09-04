@@ -53,7 +53,14 @@ const SURFACE_CODES = new Set([
 	2345, // argument type not assignable to parameter
 	2739, // missing properties from type
 	2740, // type missing several properties
-	2741 // property missing in type
+	2741, // property missing in type
+	// The four the 3 September 2026 audit found ~30 genuine failures behind, in
+	// fences this guard was already compiling (AUDIT-2026-09-03-FINDINGS G7).
+	// Each needs a real declaration to fire against, like the ten above.
+	2322, // type not assignable — a documented value of the wrong shape
+	2353, // object literal names a property the type does not have
+	2561, // ...and here is the closest one it does have
+	2774 // a function used as a condition without being called
 ]);
 
 /**
@@ -307,6 +314,14 @@ export function checkBlocks(blocks: DocBlock[]): CheckResult {
 	return { blocks, findings, unbuilt: missing, total: all.length };
 }
 
-/** The key a finding is registered under: line-independent, so edits do not churn it. */
+/**
+ * The key a finding is registered under: line-independent, so edits do not
+ * churn it — and machine- and index-independent, because a message can embed
+ * the absolute path of a declaration file or the `/documented/N.ts` name of
+ * the virtual block, and a register keyed on either breaks on the next clone
+ * or the next edit to a document earlier in the walk.
+ */
 export const keyOf = (finding: Pick<Finding, 'file' | 'code' | 'message'>): string =>
-	`${finding.file} :: TS${finding.code} :: ${finding.message}`;
+	`${finding.file} :: TS${finding.code} :: ${finding.message
+		.replaceAll(repoRoot, '<repo>/')
+		.replace(/\/documented\/\d+\.ts/g, '<block>')}`;
