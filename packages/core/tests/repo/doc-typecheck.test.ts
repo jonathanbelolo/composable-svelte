@@ -34,7 +34,7 @@ const REGISTER = new Map<string, number>([
 	// section at the end is a real false claim about an API. R4 empties this;
 	// the staleness arm below fails on the day an entry is fixed.
 	//
-	// G6 — the audit's 24 skill fences, 25 keys here.
+	// G6 — the audit's 24 skill fences, 23 keys here (re-counted by the R1 closure's C9).
 	['.claude/skills/composable-svelte-auth/SKILL.md :: TS2322 :: Type \'(signal: AbortSignal | undefined) => Promise<{ email: string; emailVerified: true; hasPassword: true; mfaEnabled: false; providers: never[]; }>\' is not assignable to type \'(signal?: AbortSignal | undefined) => Promise<AccountSnapshot>\'.   Type \'Promise<{ email: string; emailVerified: true; hasPassword: true; mfaEnabled: false; providers: never[]; }>\' is not assignable to type \'Promise<AccountSnapshot>\'.     Property \'pendingEmail\' is missing in type \'{ email: string; emailVerified: true; hasPassword: true; mfaEnabled: false; providers: never[]; }\' but required in type \'AccountSnapshot\'.', 1],
 	['.claude/skills/composable-svelte-chat/SKILL.md :: TS2353 :: Object literal may only specify known properties, and \'generateUserColor\' does not exist in type \'CollaborativeDependencies\'.', 1],
 	['.claude/skills/composable-svelte-code/SKILL.md :: TS2322 :: Type \'never[]\' is not assignable to type \'Record<string, Node<Record<string, unknown>>>\'.   Index signature for type \'string\' is missing in type \'never[]\'.', 1],

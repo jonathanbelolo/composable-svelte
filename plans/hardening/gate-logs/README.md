@@ -1,10 +1,18 @@
-# Gate logs for R0 and its closure
+# Gate logs for R0, R1 and their closures
 
-The raw outputs of the core gate (`pnpm --filter @composable-svelte/core build
-&& … typecheck && … test && … check`) as it was run before each commit of R0
-and R0.5, retained from the session that made them and committed on
-4 September 2026 after the review of the closure. ANSI colour codes are
-stripped; nothing else is edited. Each log's original modification time is
+What the core gate's script prints (`pnpm --filter @composable-svelte/core
+build && … typecheck && … test && … check`): the exit line of each step, the
+test summaries, and — from the R1 closure on — the porcelain block naming
+the files the gate saw. The R0 logs were retained from the session that made
+them and committed on 4 September 2026 after the review of the closure. ANSI
+colour codes are stripped; nothing else is edited. They are not raw: each is
+the filtered summary of one run.
+
+**Which runs are logged.** An R1 row that describes a first failed run has
+one log — the passing run — and the failure is described in the row and in
+the commit message. From C1 of the R1 closure on, every *completed* run is
+logged (`gate-C5.first.log`, `gate-C5.second.log`, …), and a run stopped
+before it finished is said in its row to have no log. Each log's original modification time is
 the moment its last step finished; the gate's steps ran in sequence, and the
 whole gate measures under a minute on the machine that ran it (Vitest runs
 files in parallel: browser 13–24 s wall clock, node 4–11 s, build about 10 s,
@@ -128,3 +136,4 @@ before the fix is kept as `red-R1.x.y.log`, and the gate as `gate-R1.x.y.log`.
 | gate-C6b.log | C6b | core gate, second completed run: 2475 browser + 623 node, 0 skipped, typecheck and check clean; porcelain = the files committed. A run started before the typecheck fix was complete was stopped at once and left no log |
 | loop-C8.log | C8 | the four helper mutations (MC8-1 survived and its redundant branch was removed; MC8-2..4 killed), then every rewritten animation file ten times — core 101 tests × 10, chat 31 × 10, the helper file 18 × 10 after its last edit — all green. The red case for this step is the review's own runner failure of `select-animation.test.ts` (R1-REVIEW 2.1), not a local log |
 | gate-C8.log | C8 | core gate, one run: 2493 browser + 623 node, 0 skipped, check clean; porcelain = the files committed |
+| gate-C9.log | C9 | core gate, one run over the records revision (the doc-typecheck comment recount, the corrected 0.12.0 changelog section): 2493 browser + 623 node, 0 skipped, check clean; porcelain = the files committed |

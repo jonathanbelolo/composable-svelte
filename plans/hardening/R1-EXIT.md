@@ -1,4 +1,11 @@
-# R1 — exit report, 5 September 2026
+# R1 — exit report, 5 September 2026 (revised 5 September after the review)
+
+> **Revised.** The adversarial review of R1 (`R1-REVIEW.md`, 5 September)
+> found this report's accounting wrong in eight places and the branch
+> carrying a duplicated test block; every correction is made in place below
+> and marked *(corrected)*, and the section "The review, and what it changed"
+> at the end records what the closure (`hardening/r1-closure`, core 0.12.1)
+> did about each finding.
 
 **What R1 was.** Step R1 of `AUDIT-REMEDIATION-PLAN.md`: the eight critical
 findings of the 3 September audit — N1/N2 (the navigation DSL could not
@@ -31,23 +38,29 @@ records both. The core package goes from 0.11.2 to 0.12.0.
 | test | `pnpm --filter @composable-svelte/core test` | 2,279 browser + 611 node passed, **0 skipped** |
 | check | `pnpm --filter @composable-svelte/core check` | 0 errors, 0 warnings |
 
-R0 left the core gate at 2,190 browser + 583 node. R1 adds 89
+R0 left the core gate at 2,190 browser + 583 node. R1 adds 83
 browser tests and 28 node tests and deletes the six pinned-defect
-tests it fixed.
+tests it fixed *(corrected: the first form said 89; six of the 2,279 were
+the block `59809be` appended a second time — see 2.2 in the review and C0 in
+the closure — so the tree at `95a7a3b` did hold 2,279, of which six were
+duplicates)*.
 
 The whole-repository gate (`pnpm -r build && pnpm -r typecheck && pnpm -r
 --workspace-concurrency=1 test && pnpm -r check`), run at `95a7a3b`
-(`gate-logs/gate-R1-exit.log`): every workspace green — build and typecheck exit 0; 4,851 tests passed across the 18 workspaces that have tests (core 2,279 browser + 611 node; auth 537 + 30; charts 191; chat 81; code 482; graphics 106; maps 94; media 93; the nine examples 235 + 5 + 39 + 25 + 18 + 13 + 8 + 4), **0 skipped**; svelte-check 0 errors and 0 warnings in all 20 workspaces. R0's exit read 4,734 passed.
+(`gate-logs/gate-R1-exit.log`): every workspace green — build and typecheck exit 0; 4,851 tests passed across the 15 workspaces that have tests (core 2,279 browser + 611 node; auth 537 + 30; charts 191; code 81; graphics 482; maps 106; media 94; chat 235 + 5; the seven examples with tests 93 + 39 + 25 + 18 + 13 + 8 + 4), **0 skipped**; svelte-check 0 errors and 0 warnings in all 20 workspaces. R0's exit read 4,734 passed. *(corrected: the first form attributed five of these counts to the wrong workspaces — 81 to chat, 482 to code, 106 to graphics, 94 to maps, 93 to media — and counted "18 workspaces" and "nine examples"; the six duplicate tests are inside the 2,279 and the 4,851.)*
 
 Every gate log is in `plans/hardening/gate-logs/` with a row in that
-directory's README (36 R1 rows: 24 core gates, the mutation baseline after
-R1.4.f, the R1.9.0 measurement, four red runs, one proof). Four gates were
-run twice: R1.4.e, R1.6.b and R1.8.a failed `check` on a test typing the first
-time; R1.4.g and R1.6.b failed the optional-props ratchet, which asks for its
-constant to follow when bare optionals are typed (311 → 305 → 297). Two more
-were killed mid-run and restarted after a test had to declare a console
-call the fix introduced (R1.7.b+c once for an import placed inside a
-comment; R1.8.b). Each README row says so.
+directory's README (38 R1 rows: 28 core gates, the two baseline outputs —
+after R1.1.g and after R1.4.f — the R1.9.0 measurement, four red runs, one
+proof, and the two exit logs) *(corrected: the first form said 36 rows and
+24 gates)*. Eight gates were run twice — R1.1.b (dist-freshness after a
+branch switch), R1.3.b and R1.4.g and R1.6.b (the optional-props ratchet,
+311 → 305 → 297), R1.3.e and R1.4.e and R1.8.a (`check` on a test typing),
+R1.3.f (an unhandled rejection in a test) — and R1.8.b was killed mid-run
+and restarted after a test had to declare a console call the fix introduced
+*(corrected: the first form named four, and R1.7.b+c's restart was not a
+gate run)*. Each README row describes the first run; only the passing run
+has a log. From the closure on, every completed run is logged.
 
 **Continuous integration.** Draft pull request #2
 (https://github.com/jonathanbelolo/composable-svelte/pull/2), opened at
@@ -72,7 +85,7 @@ branch; its own run is the one the merge waits for.
 ## The audit's mutations, re-run
 
 `node scripts/mutation-baseline.mjs --strict` at `95a7a3b`
-(`gate-logs/mutation-baseline-R1-exit.log`): 8 of 8 KILLED — M1, M2, M4, M5, M6, M7, M9 and R1-N2 — exit 0. M1 and M7 each list a second test that also fails under the mutation (a finish() test and the missing-parameters test), which the script reports as detail; a verdict is KILLED when the named test is among the failures. Since R1.4.f the M6
+(`gate-logs/mutation-baseline-R1-exit.log`): 8 of 8 KILLED — M1, M2, M4, M5, M6, M7, M9 and R1-N2 — exit 0. M1 lists further tests that also fail under it (the `finish()` tests, each twice at that tree because of the duplicated block) and M7 one (the missing-parameters test), which the script reports as detail; a verdict is KILLED when the named test is among the failures *(corrected: "each list a second test")*. That log ends at "Rebuilding core…" with no exit line; the review's re-run gave exit 0 and an identical table, and the closure's exit regenerates it. Since R1.4.f the M6
 entry anchors on the heartbeat's `client.reconnect(...)` call and expects the
 renamed test; since R1.1.g the script carries R1-N2 (`createDestination` maps
 the child's effect into its case). M1's anchor — `assertNoPendingActions()`'s
@@ -81,11 +94,12 @@ predicate with its operands reversed so the anchor stays unique.
 
 Beyond the baseline, every fix in R1 was mutation-verified in place: the
 fix reverted or mutated, the named test watched fail, the source restored —
-60-odd mutations, each recorded in its commit message with the tests it
-killed. Two are recorded as surviving on purpose: the SSG path check's second
-guard (the resolved target under `outDir`) cannot be reached past the first
-on POSIX and is there for a Windows drive-letter segment and as depth on a
-file write; the pair removed together is killed by four tests (R1.7.a).
+about 73 mutations by the review's count *(corrected: "60-odd")*, each
+recorded in its commit message with the tests it killed. One is recorded as
+surviving on purpose *(corrected: "two")*: the SSG path check's second guard
+(the resolved target under `outDir`) cannot be reached past the first on
+POSIX and is there for a Windows drive-letter segment and as depth on a file
+write; the pair removed together is killed by four tests (R1.7.a).
 
 ## Pinned defects
 
@@ -106,7 +120,7 @@ with core's exclusion (R1.2); W1 by the ladder tests (R1.4.b+c).
 
 | Register | Where | Entries at `6cd4801` | At `95a7a3b` | Staleness arm |
 |---|---|---|---|---|
-| `REGISTER` | `tests/repo/doc-typecheck.test.ts` | 48 | 42: G6 23, DA-X1 17, EXCERPT 2 | yes — run red before each deletion (`red-R1.4.g.log`; R1.6.a's message) |
+| `REGISTER` | `tests/repo/doc-typecheck.test.ts` | 48 | 42: G6 23, DA-X1 17, EXCERPT 2 | yes — run red before the DA-H12 deletion (`red-R1.4.g.log`); R1.6.a's G5 deletion has no red log *(corrected: "before each deletion")* |
 | `KNOWN_MISSING_SKILLS` | `tests/repo/front-door.test.ts` | 1 | 1 | yes |
 | `NOT_COMPILED` | `tests/repo/skill-examples.test.ts` | 18 | 18 | yes |
 
@@ -213,8 +227,8 @@ Every commit in `6cd4801..95a7a3b`, in order.
 | R1.9.b+d | `59809be` | finish() waits for every effect; a rejecting executor fails the test (N9, T6); R1.9 records |
 | D7 | `95a7a3b` | the R1 changes, and the siblings' peer ranges follow |
 | — | `0bc106b` | this exit report, first form |
-| T7 | `db87c84` | the chat entry-animation sample polls instead of reading at 20 ms — first form, failed locally, pushed by mistake |
-| T7 | `0c106c9` | the sample polls for a frame strictly mid-flight; CI green |
+| T8 (the commits say T7) | `db87c84` | the chat entry-animation sample polls instead of reading at 20 ms — first form, failed locally, pushed by mistake |
+| T8 (the commits say T7) | `0c106c9` | the sample polls for a frame strictly mid-flight; CI green *(corrected: the register already had a `T7` meta line, so the finding is `T8`)* |
 | — | (this commit) | the report records CI and the two commits above |
 
 ## What R1 did not do
@@ -224,12 +238,53 @@ Every commit in `6cd4801..95a7a3b`, in order.
 - **The dev script.** P13 is registered, not fixed; `examples/ssr-server`
   runs from its build.
 - **The Cancellable signal through `Effect.map`.** N5, R2.1's: R1.8.b threads
-  the store's lifetime signal for `Run` and `AfterDelay` and says so.
+  the store's lifetime signal for `Run` and `AfterDelay` and says so. *(The
+  closure's C4 forwards the signal through every arm of `Effect.map` and
+  hands Debounced and Throttled executors the lifetime signal; C6 gives a
+  grouped effect its own.)*
 - **Redundant guards as tested behaviour.** The SSG containment check is
   kept as depth and documented as surviving its own mutation on POSIX.
 - **`fastify-plugin`.** Core sets `Symbol.for('skip-override')` itself; if
   Fastify changes the marker, `tests/ssr/middleware-fastify.test.ts` is the
-  guard.
+  guard. *(The marker was defined non-writable and `fastify-plugin` could
+  not wrap the plugins — review 1.3, closed by C3, which pins `fp()`.)*
 - **A per-request `timeout` that also bounds a retry sleep.** `retry.ts`'s
   backoff is not signal-aware; a caller that detaches during the sleep waits
-  it out before the abort is seen (R1.3.f).
+  it out before the abort is seen (R1.3.f). *(Closed by C2b: the backoff
+  sleep ends when the last caller detaches.)*
+
+## The review, and what it changed
+
+`R1-REVIEW.md` (5 September 2026) is the adversarial review of the branch
+above; its closure is `hardening/r1-closure`, core 0.12.1, one commit per
+closure line, every fix with a red log, a mutation and a gate under the same
+protocol, with the porcelain rule added (the files a commit contains are the
+files its gate saw). The review's findings and where each closed:
+
+| Review | Finding | Closed by |
+|---|---|---|
+| 1.1 CRITICAL | an error on a live WebSocket ended `failed` with no `disconnected` and no reconnect — browsers set `readyState = CLOSED` before firing `error` | C1 (`9299eed`): "never opened" is remembered per socket; the harness fires in the browser's order |
+| 1.2 HIGH | a caller repeating a request in the window after the last caller's abort joined the dead attempt | C2b (`8aafea5`): the attempt leaves the registry in the step that aborts it |
+| 1.3 MEDIUM | the skip-override marker was non-writable, so `fastify-plugin` threw | C3 (`a297d98`) |
+| 1.4 MEDIUM | the direct-call plugin form failed open on a bad config | C3: it throws synchronously; registered, `ready()` rejects |
+| 1.5 MEDIUM | TestStore handed executors no lifetime signal | C4 (`67c4200`), C5 (`e0bf9cd`) |
+| 1.6 MEDIUM | `receive()`/`finish()` moved the fake clock through `vi.waitFor`; an armed debounce passed `finish()`; rejections reported late or to the wrong test | C5: waits on the real clock, one timer registry, `destroy()`, `receive([...])`, the hook registered while the owning test is current |
+| 1.7 MEDIUM | dedup and cache keys collided for non-plain bodies; interceptor-added identity was outside the key | C2a (`43048c2`), C2b: `isPlainData`, the pipeline keys after the interceptors |
+| 1.8 MEDIUM | N8 closed on the case name only | C6a (`036b50d`), C6b (`3bb547b`): cancellation groups; the operators cancel on dismiss, a parent null, a case change, a pop and a shrinking `setPath` |
+| 1.9 LOW | the smaller code findings | C1, C2b, C3, C4, C5, C6b, C7 (`27d4371`), each named in its commit |
+| 2.1 HIGH | sixteen frame-sampling animation tests | C8: `src/lib/test/animation.ts` and every site rewritten; ten local runs each |
+| 2.2 HIGH | `2e58327` shipped six tests its tree could not pass; HEAD carried them twice | C0 (`f5459da`): the block and the duplicated changelog entry removed; the cause recorded there and here |
+| 2.3 MEDIUM | tests proving less than their names | C2b (the A1 key test isolates headers; PUT/PATCH/DELETE and HEAD/OPTIONS asserted), C5 (the combobox cancel test), C6b (the integrate order test) |
+| 3 | this report's numbers, the gate-log README, the register's two `T7`s, the plan's proof lines, the changelog | C9 (this revision) |
+| 4 | the documents the commits claimed to have corrected | C1–C8 in their own commits, C10 for the front doors |
+
+**The ungated commit, recorded plainly.** `2e58327` (R1.9.a+c+e) contains
+the `finish()` and rejection test blocks while its `finish()` is still the
+old shorthand; its gate log (2,267) predates them. Cause: a "dry run" of the
+R1.9.b+d edit script against the live tree neutralised one write and not
+the append, two files changed between the gate and the commit, and the two
+dirty files were seen and dismissed. `59809be` then appended the same block
+again, so `tests/test-store.test.ts` held it twice and the changelog its
+entry twice. The closure removed the duplicates first (C0), and its rule is
+that no edit script is dry-run against the live tree and that the commit's
+porcelain must equal the gate's.

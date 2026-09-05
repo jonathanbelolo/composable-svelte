@@ -229,12 +229,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.12.0] - 2026-09-05
 
+> **Corrected on 5 September 2026, after the R1 review, before any
+> publication** (the registry holds 0.5.2; 0.12.0 was never released): the
+> duplicated "finish() waits for every effect" entry removed; `reconnect()`
+> marked BREAKING (a required interface method); `shouldReconnect`,
+> `StackActionOptions` and `ClientCacheConfig` named under Added; and four
+> additions that shipped under Fixed moved to Added. Nothing else changed.
+
 ### Added
 
 - `RateLimitConfig.maxKeys` — the keys a limiter holds before the oldest is
   dropped (default 10 000); `RateLimiter.size`.
 
-- **`reconnect(reason?)` on `WebSocketClient`**: drop the socket and start the
+- **`ReconnectConfig.shouldReconnect`** (replaces the `wasClean` predicate),
+  **`StackActionOptions`** (the seventh argument of `handleStackAction`,
+  named and exported), **`ClientCacheConfig`** (the client's cache
+  configuration: a `CacheConfig` plus `maxEntries`).
+
+- **BREAKING (interface): `reconnect(reason?)` on `WebSocketClient`** — a
+  required method, so a hand-written `WebSocketClient` must add it. Drop the socket and start the
   reconnect ladder without forgetting the URL, which `disconnect()` does. The
   live, mock, spy, queued and channel clients all implement it; the spy
   records `reconnections`. **`HeartbeatConfig.isPong`** recognises a pong whose
@@ -275,6 +288,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   private to `api/retry.ts`; `@composable-svelte/auth` needs it and a second
   implementation would drift. Returns milliseconds.
 
+
+- **`createParserConfig(routes, options?)`** — builds a `ParserConfig` from a
+  pattern-to-handler map, so a route stops being four lines of
+  `const p = matchPath(pattern, path); return p ? {...} : null`. Additive:
+  `ParserConfig` and `parseDestination` are untouched, and the `parsers` list
+  form stays for routes that are not a single pattern — a custom regular
+  expression, or one parser drawing on two. The two mix, because the config is
+  a plain object.
+
+  It also restores the symmetry with `SerializerConfig`, whose half has always
+  been a keyed map.
+
+  Keys are tried in insertion order, and the map form hides that, so a more
+  specific pattern must come first. A handler may return `null` to decline
+  *after* its pattern matched, which is what lets a route reject a value it
+  does not like without claiming it.
+
+- **Custom serializers for SSR state** — `createTaggedSerializer()` and the
+  `StateSerializer` type, accepted by `serializeState`, `serializeStore`,
+  `buildHydrationScript`, `renderToHTML` (as `options.serializer`), `parseState`
+  and `hydrateStore` (as `config.serializer`).
+
+  The documentation claimed `serializeState` **throws** on a `Date` or a `Map`.
+  It does not, and that was the dangerous half of the claim, because a throw is
+  loud. What actually happened: a `Date` arrived on the client as a `string`, a
+  `Map` or `Set` arrived as `{}` with every entry lost, and TypeScript asserted
+  the original type on both sides. Only a `BigInt` or a cycle ever threw.
+
+  The replacer and reviver travel as **one object**, because a tag written by a
+  replacer that no reviver reads is worse than no tagging at all — the state
+  arrives as a visible wrapper instead of a value. Passing one object to both
+  halves is what makes that hard to get wrong.
+
+- **`ConnectionStats.messagesQueued`** — how many messages a queuing wrapper is
+  holding for the connection. `0` for a client that does not queue.
+
+  The register had declined queue inspection outright, on the grounds that the
+  queue is an implementation detail of reconnection and exposing it invites
+  reaching into it. That reasoning holds for a *handle* and there is still no
+  `websocket.queue`; but the need behind the request was a pending count, and a
+  read-only number on `stats` cannot be reached into.
+
+  Required rather than optional: under `exactOptionalPropertyTypes` an optional
+  field would force `stats.messagesQueued ?? 0` at every read, which is worse
+  for the one thing it exists to do. Additive for readers of `stats`, breaking
+  for anyone implementing `WebSocketClient` with a hand-written `stats` object.
+
+- **`createMockStorage()`** — an in-memory `SyncStorage<T>` for tests, the
+  counterpart to `createMockCookieStorage` that the localStorage/sessionStorage
+  pair never had. `createNoopStorage()` discards writes and reads back `null`,
+  which models "storage unavailable" and cannot express a round trip, so callers
+  hand-rolled their own: core's own storage test built one and used it 48 times.
+  It now imports this instead.
+
+  Values are held as **JSON strings**, not live objects, so a `Date` put in
+  comes back as a string exactly as it would through real storage — a
+  `Map<string, T>` double hides that, and hiding it is how a test passes where
+  production does not. `prefix`, `validator` and `debug` all behave as they do
+  in `createLocalStorage`, which makes "a stored value the validator rejects
+  reads back as `null`" testable for the first time.
+
+  **`setItem` does not fire `subscribe`, deliberately.** That contract is
+  cross-context only, and no browser delivers a `storage` event to the tab that
+  caused the write. `simulateSetItem` / `simulateRemoveItem` play the part of
+  the other tab — which is the first time `SyncStorage.subscribe` has been
+  exercisable at all.
 
 - `tests/repo/optional-props.test.ts` — a repo-wide guard requiring
   `| undefined` on every optional prop, with a register for the `$bindable`
@@ -457,73 +536,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Still hardcoded, and deliberately: the `aria-label` on `NavigationStack`,
   `Sidebar` and `Tabs`. Those are landmark and tablist roles, where naming the
   region after the component is a reasonable default rather than a dead end.
-
-- **`createParserConfig(routes, options?)`** — builds a `ParserConfig` from a
-  pattern-to-handler map, so a route stops being four lines of
-  `const p = matchPath(pattern, path); return p ? {...} : null`. Additive:
-  `ParserConfig` and `parseDestination` are untouched, and the `parsers` list
-  form stays for routes that are not a single pattern — a custom regular
-  expression, or one parser drawing on two. The two mix, because the config is
-  a plain object.
-
-  It also restores the symmetry with `SerializerConfig`, whose half has always
-  been a keyed map.
-
-  Keys are tried in insertion order, and the map form hides that, so a more
-  specific pattern must come first. A handler may return `null` to decline
-  *after* its pattern matched, which is what lets a route reject a value it
-  does not like without claiming it.
-
-- **Custom serializers for SSR state** — `createTaggedSerializer()` and the
-  `StateSerializer` type, accepted by `serializeState`, `serializeStore`,
-  `buildHydrationScript`, `renderToHTML` (as `options.serializer`), `parseState`
-  and `hydrateStore` (as `config.serializer`).
-
-  The documentation claimed `serializeState` **throws** on a `Date` or a `Map`.
-  It does not, and that was the dangerous half of the claim, because a throw is
-  loud. What actually happened: a `Date` arrived on the client as a `string`, a
-  `Map` or `Set` arrived as `{}` with every entry lost, and TypeScript asserted
-  the original type on both sides. Only a `BigInt` or a cycle ever threw.
-
-  The replacer and reviver travel as **one object**, because a tag written by a
-  replacer that no reviver reads is worse than no tagging at all — the state
-  arrives as a visible wrapper instead of a value. Passing one object to both
-  halves is what makes that hard to get wrong.
-
-- **`ConnectionStats.messagesQueued`** — how many messages a queuing wrapper is
-  holding for the connection. `0` for a client that does not queue.
-
-  The register had declined queue inspection outright, on the grounds that the
-  queue is an implementation detail of reconnection and exposing it invites
-  reaching into it. That reasoning holds for a *handle* and there is still no
-  `websocket.queue`; but the need behind the request was a pending count, and a
-  read-only number on `stats` cannot be reached into.
-
-  Required rather than optional: under `exactOptionalPropertyTypes` an optional
-  field would force `stats.messagesQueued ?? 0` at every read, which is worse
-  for the one thing it exists to do. Additive for readers of `stats`, breaking
-  for anyone implementing `WebSocketClient` with a hand-written `stats` object.
-
-- **`createMockStorage()`** — an in-memory `SyncStorage<T>` for tests, the
-  counterpart to `createMockCookieStorage` that the localStorage/sessionStorage
-  pair never had. `createNoopStorage()` discards writes and reads back `null`,
-  which models "storage unavailable" and cannot express a round trip, so callers
-  hand-rolled their own: core's own storage test built one and used it 48 times.
-  It now imports this instead.
-
-  Values are held as **JSON strings**, not live objects, so a `Date` put in
-  comes back as a string exactly as it would through real storage — a
-  `Map<string, T>` double hides that, and hiding it is how a test passes where
-  production does not. `prefix`, `validator` and `debug` all behave as they do
-  in `createLocalStorage`, which makes "a stored value the validator rejects
-  reads back as `null`" testable for the first time.
-
-  **`setItem` does not fire `subscribe`, deliberately.** That contract is
-  cross-context only, and no browser delivers a `storage` event to the tab that
-  caused the write. `simulateSetItem` / `simulateRemoveItem` play the part of
-  the other tab — which is the first time `SyncStorage.subscribe` has been
-  exercisable at all.
-
 
 - **The two validation paths disagreed about which message to show.** Per-field
   validation took the *first* Zod issue (`issues.find`), whole-form took the
