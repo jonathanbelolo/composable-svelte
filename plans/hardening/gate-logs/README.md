@@ -103,3 +103,5 @@ before the fix is kept as `red-R1.x.y.log`, and the gate as `gate-R1.x.y.log`.
 | gate-C0.log | C0 (R1 closure) | core gate, one run: 2273 browser (the six duplicate tests gone) + 611 node, 0 skipped, check clean; porcelain = the two files committed |
 | red-C1.log | C1 | `tests/websocket/live-client.test.ts` with only the harness change (`error()` sets `readyState = CLOSED` first, the browser's order): the R1.4.e test for an error on an established socket fails — `expected 'failed' to be 'connected'` |
 | gate-C1.log | C1 | core gate, one run: 2290 browser + 611 node, 0 skipped, check clean; porcelain = the files committed |
+| red-C3.log | C3 | the middleware suites with the new tests and the sources restored: `fp(plugin)` throws `Cannot assign to read only property`, the direct call with a bad config does not throw, first-seen eviction drops the long-lived client (4 fail) |
+| gate-C3.log | C3 | core gate, one run: 2290 browser + 616 node, 0 skipped, check clean; porcelain = the files committed |

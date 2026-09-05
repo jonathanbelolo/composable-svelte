@@ -13,6 +13,7 @@
 
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
+import fp from 'fastify-plugin';
 import { fastifySecurityHeaders, fastifyRateLimit, type RateLimitConfig } from '../../src/lib/ssr/middleware/index.js';
 
 const apps: FastifyInstance[] = [];
@@ -134,6 +135,40 @@ describe('the limiter goes with the server', () => {
 		} finally {
 			vi.useRealTimers();
 		}
+	});
+});
+
+describe('the plugins compose with fastify-plugin (R1-REVIEW 1.3)', () => {
+	it('fp(plugin) wraps without throwing and still installs on the root', async () => {
+		// The marker was defined non-writable; fastify-plugin assigns it in
+		// strict mode and threw "Cannot assign to read only property".
+		const app = createApp();
+		await app.register(fp(fastifySecurityHeaders));
+		app.get('/', async () => 'ok');
+		expect((await app.inject('/')).headers['x-frame-options']).toBe('DENY');
+	});
+
+	it('fp(plugin, { encapsulate: true }) is honoured: the hook stays in the child', async () => {
+		const app = createApp();
+		await app.register(fp(fastifyRateLimit, { encapsulate: true }), { max: 1, windowMs: 60_000 });
+		app.get('/', async () => 'ok');
+		await app.inject('/');
+		expect((await app.inject('/')).statusCode).toBe(200);
+	});
+});
+
+describe('the direct-call form fails closed (R1-REVIEW 1.4)', () => {
+	it('a bad config throws synchronously when the plugin is called directly', () => {
+		const app = createApp();
+		expect(() => fastifyRateLimit(app, {} as RateLimitConfig)).toThrow(/RateLimitConfig\.max/);
+	});
+
+	it('the direct call installs synchronously and returns an already-resolved promise', async () => {
+		const app = createApp();
+		const returned = fastifySecurityHeaders(app, { frameOptions: 'SAMEORIGIN' });
+		app.get('/', async () => 'ok');
+		await returned;
+		expect((await app.inject('/')).headers['x-frame-options']).toBe('SAMEORIGIN');
 	});
 });
 

@@ -512,8 +512,12 @@ fastify.register(fastifyRateLimit, {
 ```
 
 `max` and `windowMs` are required and must be positive finite numbers;
-anything else throws at registration, naming the field, rather than turning
-every request into a 500.
+anything else names the field and fails closed either way: a direct call
+`fastifyRateLimit(app, config)` throws synchronously, and
+`app.register(fastifyRateLimit, config)` rejects `ready()`. Both plugins
+install their hooks synchronously and return an already-resolved promise, so
+the direct call needs no `await`; wrapping one with `fastify-plugin`
+(`fp(plugin, { encapsulate: true })`) is honoured.
 
 The default key is `req.ip`. Behind a proxy or load balancer that is the
 proxy's address — one bucket for the whole site — unless Fastify is created

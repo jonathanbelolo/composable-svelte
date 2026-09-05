@@ -90,9 +90,9 @@ export function createSecurityHeaders(
  * `app.register(fastifySecurityHeaders, options)` installs the headers on the
  * registering instance's routes (the plugin carries Fastify's skip-override
  * marker); `fastifySecurityHeaders(app, options)` does the same directly —
- * the hook is added before the returned promise settles.
+ * the hook is added synchronously; the returned promise is already resolved.
  */
-export const fastifySecurityHeaders = installsOnParent(async function fastifySecurityHeaders(
+export const fastifySecurityHeaders = installsOnParent(function fastifySecurityHeaders(
   fastify: any,
   options: SecurityHeadersConfig = {}
 ): Promise<void> {
@@ -103,4 +103,5 @@ export const fastifySecurityHeaders = installsOnParent(async function fastifySec
       reply.header(key, value);
     });
   });
+  return Promise.resolve();
 });

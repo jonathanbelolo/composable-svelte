@@ -16,6 +16,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`fastify-plugin` can wrap the security plugins.** The skip-override
+  marker was defined non-writable, and `fastify-plugin` assigns it in strict
+  mode, so `fp(fastifySecurityHeaders)` threw; it is writable and
+  configurable, and `fp(plugin, { encapsulate: true })` is honoured.
+  (R1-REVIEW 1.3)
+- **The direct-call plugin form fails closed.** Both plugins had become
+  `async`, so an unawaited `fastifyRateLimit(app, badConfig)` rejected a
+  promise nobody held — under a process that logs unhandled rejections, a
+  server with no limiter. They are plain functions again: hooks installed
+  synchronously, an already-resolved promise returned, a bad config thrown
+  synchronously when called directly and rejected — reported by `ready()` —
+  when registered. (R1-REVIEW 1.4)
+- **The rate limiter evicts the least recently seen key, not the first seen**,
+  and sweeps expired entries at most once a second at capacity, so a
+  long-lived client is no longer dropped ahead of fresh spoofed keys and a
+  flood no longer pays a full scan per request. (R1-REVIEW 1.9)
+
 - **An error on a live WebSocket connection no longer ends it `failed` with
   nothing reported.** A browser sets `readyState` to `CLOSED` before it
   fires `error`, so the client's "never opened" test — `readyState !== OPEN`

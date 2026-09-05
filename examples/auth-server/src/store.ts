@@ -8,9 +8,9 @@
  *
  * **Nothing here uses `setInterval`.** Everything expiring expires lazily, when
  * it is read. A timer would keep Node's event loop alive after `app.close()`
- * and hang the test run — which is exactly the defect in core's own
- * `RateLimiter`, whose interval is never `unref()`'d and whose `destroy()` its
- * Fastify plugin never exposes.
+ * and hang the test run — the defect core's own `RateLimiter` had until its
+ * interval was `unref()`'d and its Fastify plugin destroyed it on `onClose`
+ * (R1.6.c).
  */
 
 import { hashPassword, id, recoveryCodes } from './crypto.js';
