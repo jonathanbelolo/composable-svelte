@@ -19,8 +19,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   R1 reported the condition as a bare `APIError('Request cancelled')`.
   (R1-REVIEW 1.9)
 
+### Changed
+
+- **BREAKING: header names are lower-cased everywhere the API client handles
+  them.** HTTP header names are case-insensitive, and the merge compared them
+  case-sensitively, so `Content-Type` and `content-type` were both sent and
+  `Authorization`/`authorization` never merged. A request may still write
+  `Authorization`; interceptors and mock handlers now read
+  `config.headers.authorization`. (R1-REVIEW 1.9, A10)
+- **BREAKING: `createMockAPI` runs the real request pipeline.** Identical
+  concurrent safe requests share one handler call (`deduplicate: false` opts
+  out); request interceptors run before the key and the cache lookup, not
+  after the lookup; a caller's `signal` and `timeout` are honoured, with no
+  default timeout; a body with no JSON form never coalesces. A test that
+  counted two handler calls for two concurrent identical GETs now counts one.
+  (R1-REVIEW 1.9)
+- **The request pipeline runs once per caller, in one order:** resolve →
+  request interceptors → finalize and key → cache → the shared attempt (retry,
+  then response interceptors once) → cache. Request interceptors ran inside
+  every retry attempt and after the key; only their `headers` were read back
+  (A8). A header an interceptor adds is now part of the request's identity
+  (R1-REVIEW 1.7), and so is the resolved retry policy (R1-REVIEW 1.9).
+- `shouldRetry` is consulted once per retryable failure, with the attempt
+  just made; it was called twice, first with attempt 0 (A12, this half).
+- Error interceptors are offered a failure once, after any retries, and
+  never a caller's own cancellation; they ran inside every attempt.
+
 ### Fixed
 
+- **A caller no longer joins a dead attempt.** An aborted attempt stayed in
+  the in-flight map until its rejection settled, so a request repeated in
+  that window — synchronously after the abort, or during a retry backoff —
+  joined it and was rejected "Request cancelled". The attempt leaves the map
+  in the step that aborts it, and a backoff sleep ends when the last caller
+  detaches (the R1.3.f remainder). (R1-REVIEW 1.2)
+- **A body with no JSON form is sent as given and never coalesced or
+  cached.** `FormData`, `Blob`, `ArrayBuffer`, typed arrays,
+  `URLSearchParams` and streams reach `fetch` untouched with no content type
+  added (the browser sets one); they were JSON-stringified to `{}` under
+  `application/json`, and every `FormData` keyed as `{}`, so two uploads were
+  one request. (A6, R1-REVIEW 1.7)
+- **A throwing request interceptor rejects the caller with what it threw**
+  — no fetch, no retry — where it was wrapped as a retryable `NetworkError`
+  and retried with backoff; an interceptor's `AbortError` keeps its message.
+  An interceptor can change `body` and `params`, not only `headers`. (A8)
+- **A body that cannot be serialised (a cycle) is the caller's `TypeError`
+  with no fetch and no retry**; it overflowed the stack in the key. (A15)
+- **`timeout` is validated: `Infinity` sets no bound; `0`, a negative or
+  `NaN` is a `TypeError`.** `timeout: 0` rejected every request at once and
+  there was no value meaning none. `cache.ttl` (positive finite) and
+  `cache.maxEntries` (positive integer) are validated the same way. (A10)
+- **Cache invalidation matches the normalised path**: `'products'`,
+  `'/products'` and `'/products?page=2'` name one path, for
+  `invalidateCache` and for a mutation's default invalidation; entries were
+  filed under the raw path. (R1-REVIEW 1.9)
+- **The cache's warn-once sets are bounded by `maxEntries` and emptied by
+  `clearCache()`**, keyed by path; a class instance in a shared or cached
+  response — which a structured clone flattens — is warned about the same
+  way. (R1-REVIEW 1.7, 1.9)
+- **A non-Error abort reason is kept as the rejection's `cause`.**
+  (R1-REVIEW 1.9)
 - **TestStore partial matching and API request keys have JSON semantics.**
   The shared serialiser walked `Object.keys` only, so a `Date` — or any
   object with `toJSON` — rendered as `{}`: two instants matched each other in

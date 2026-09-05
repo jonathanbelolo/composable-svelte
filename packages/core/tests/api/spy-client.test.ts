@@ -568,7 +568,7 @@ describe('createSpyAPI', () => {
       const mock = createMockAPI({
         'POST /api/login': { token: 'abc123' },
         'GET /api/profile': ((config) => {
-          const auth = config.headers?.['Authorization'];
+          const auth = config.headers?.['authorization'];
           if (!auth) throw new APIError('Unauthorized', 401, null, {}, false);
           return { name: 'John Doe' };
         }) satisfies MockHandler

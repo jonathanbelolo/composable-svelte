@@ -539,7 +539,7 @@ describe('Real-world Usage Examples', () => {
     const mockAPI = createMockAPI({
       'POST /api/login': { token: 'abc123', user: { id: 'u1', name: 'John' } },
       'GET /api/profile': ((config) => {
-        if (config.headers?.['Authorization'] !== 'Bearer abc123') {
+        if (config.headers?.['authorization'] !== 'Bearer abc123') {
           throw new APIError('Unauthorized', 401, null, {}, false);
         }
         return { id: 'u1', name: 'John', email: 'john@example.com' };

@@ -2,20 +2,26 @@
 // Retry Logic with Exponential Backoff
 // ============================================================================
 
-import { APIError } from './errors.js';
+import { APIError, CancelledError } from './errors.js';
 import type { APIResponse, HTTPMethod, RetryConfig } from './types.js';
 
 // ============================================================================
 // Default Configuration
 // ============================================================================
 
-const DEFAULT_RETRY_CONFIG: Required<RetryConfig> = {
+/** A retry policy with every field filled in. */
+export type ResolvedRetryConfig = Required<RetryConfig>;
+
+/** The predicate a policy has when none is given; the identity layer keys it as 0. */
+export const DEFAULT_SHOULD_RETRY: ResolvedRetryConfig['shouldRetry'] = () => true;
+
+const DEFAULT_RETRY_CONFIG: ResolvedRetryConfig = {
   maxAttempts: 3,
   initialDelay: 1000,
   maxDelay: 30000,
   backoffMultiplier: 2,
   retryableStatusCodes: [408, 429, 500, 502, 503, 504],
-  shouldRetry: () => true
+  shouldRetry: DEFAULT_SHOULD_RETRY
 };
 
 // ============================================================================
@@ -33,14 +39,40 @@ function isSafeMethod(method: HTTPMethod): boolean {
 }
 
 /**
- * Determine if an error is retryable.
+ * The policy a request runs under, or null when it does not retry: `false`
+ * never retries; `undefined` retries GET, HEAD, OPTIONS, PUT and DELETE
+ * under the defaults and never retries POST or PATCH; `true` or a partial
+ * policy retries **any** method under the defaults merged with it. Resolved
+ * once per caller, before the request joins an attempt, so the policy is
+ * part of the request's identity (R1-REVIEW 1.9).
+ *
+ * `createAPIClient` passes its own `retry` (default `false`) when the request
+ * sets none, so `undefined` reaches here only from a caller of this function
+ * — AUDIT-2026-09-03-FINDINGS A5, open for R3.1.
  */
-function isRetryableError(error: unknown, config: Required<RetryConfig>): boolean {
-  // Use custom predicate if provided
-  if (config.shouldRetry && !config.shouldRetry(error, 0)) {
-    return false;
-  }
+export function resolveRetryConfig(
+  method: HTTPMethod,
+  config: boolean | RetryConfig | undefined
+): ResolvedRetryConfig | null {
+  if (config === false) return null;
+  if (config === undefined) return isSafeMethod(method) ? { ...DEFAULT_RETRY_CONFIG } : null;
+  const overrides = config === true ? {} : config;
+  return {
+    maxAttempts: overrides.maxAttempts ?? DEFAULT_RETRY_CONFIG.maxAttempts,
+    initialDelay: overrides.initialDelay ?? DEFAULT_RETRY_CONFIG.initialDelay,
+    maxDelay: overrides.maxDelay ?? DEFAULT_RETRY_CONFIG.maxDelay,
+    backoffMultiplier: overrides.backoffMultiplier ?? DEFAULT_RETRY_CONFIG.backoffMultiplier,
+    retryableStatusCodes: overrides.retryableStatusCodes ?? DEFAULT_RETRY_CONFIG.retryableStatusCodes,
+    shouldRetry: overrides.shouldRetry ?? DEFAULT_RETRY_CONFIG.shouldRetry
+  };
+}
 
+/**
+ * Determine if an error is retryable by its kind and status. The policy's
+ * `shouldRetry` is consulted once per failure, by the loop, with the attempt
+ * number — the first form also called it here with attempt 0 (A12).
+ */
+function isRetryableError(error: unknown, config: ResolvedRetryConfig): boolean {
   // API errors: check status code
   if (error instanceof APIError) {
     // Network errors and timeouts are always retryable
@@ -74,7 +106,7 @@ function isRetryableError(error: unknown, config: Required<RetryConfig>): boolea
  *
  * Jitter prevents thundering herd problem when multiple clients retry simultaneously.
  */
-function calculateBackoff(attempt: number, config: Required<RetryConfig>): number {
+function calculateBackoff(attempt: number, config: ResolvedRetryConfig): number {
   const { initialDelay, maxDelay, backoffMultiplier } = config;
 
   // Exponential backoff
@@ -126,10 +158,23 @@ export function parseRetryAfter(headers: Record<string, string>): number | null 
 }
 
 /**
- * Delay execution for a specified duration.
+ * Sleep for the backoff, ending early when the attempt is abandoned: the
+ * signal is the shared attempt's, aborted when its last caller has detached,
+ * and a sleep that outlived every caller kept the attempt — and its timer —
+ * alive for up to `maxDelay` (the R1.3.f remainder, R1-REVIEW 1.9).
  */
-function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+function delay(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(new CancelledError('Request cancelled', signal.reason));
+    };
+    const timer = setTimeout(() => {
+      signal.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    signal.addEventListener('abort', onAbort, { once: true });
+  });
 }
 
 // ============================================================================
@@ -137,93 +182,62 @@ function delay(ms: number): Promise<void> {
 // ============================================================================
 
 /**
- * Execute a request with retry logic.
+ * Execute a request under a resolved policy: exponential backoff with
+ * jitter, `Retry-After` honoured (capped at `maxDelay`), `shouldRetry`
+ * consulted once per failure with the attempt number. A null policy runs the
+ * executor once.
  *
- * Features:
- * - Exponential backoff with jitter
- * - Respects Retry-After header
- * - Configurable retry conditions
- * - Safe method detection (no retry for POST/PATCH by default)
- *
- * @param method - HTTP method
- * @param executor - Function that executes the request
- * @param config - Retry configuration (optional)
- * @returns Promise that resolves to the API response
+ * @param executor - Function that executes one attempt
+ * @param config - The policy from `resolveRetryConfig`, or null
+ * @param signal - The attempt's signal; an abort ends a backoff sleep at once
  */
 export async function retryRequest<T>(
-  method: HTTPMethod,
   executor: () => Promise<APIResponse<T>>,
-  config?: boolean | RetryConfig
+  config: ResolvedRetryConfig | null,
+  signal: AbortSignal
 ): Promise<APIResponse<T>> {
-  // Check if retry is disabled
-  if (config === false) {
+  if (config === null) {
     return executor();
   }
 
-  // For unsafe methods (POST, PATCH), disable retry by default
-  if (!isSafeMethod(method) && config === undefined) {
-    return executor();
-  }
-
-  // If retry is explicitly enabled (true) but no config, use defaults
-  if (config === true) {
-    config = {};
-  }
-
-  // Merge with defaults
-  const retryConfig: Required<RetryConfig> = {
-    maxAttempts: config?.maxAttempts ?? DEFAULT_RETRY_CONFIG.maxAttempts,
-    initialDelay: config?.initialDelay ?? DEFAULT_RETRY_CONFIG.initialDelay,
-    maxDelay: config?.maxDelay ?? DEFAULT_RETRY_CONFIG.maxDelay,
-    backoffMultiplier: config?.backoffMultiplier ?? DEFAULT_RETRY_CONFIG.backoffMultiplier,
-    retryableStatusCodes: config?.retryableStatusCodes ?? DEFAULT_RETRY_CONFIG.retryableStatusCodes,
-    shouldRetry: config?.shouldRetry ?? DEFAULT_RETRY_CONFIG.shouldRetry
-  };
-
-  let lastError: unknown;
   let attempt = 0;
 
-  while (attempt < retryConfig.maxAttempts) {
+  for (;;) {
     attempt++;
 
     try {
-      const response = await executor();
-      return response;
+      return await executor();
     } catch (error: unknown) {
-      lastError = error;
-
-      // Check if we should retry
-      if (!isRetryableError(error, retryConfig)) {
+      if (!isRetryableError(error, config)) {
         throw error;
       }
 
-      // Check custom shouldRetry predicate
-      if (retryConfig.shouldRetry && !retryConfig.shouldRetry(error, attempt)) {
+      if (!config.shouldRetry(error, attempt)) {
         throw error;
       }
 
-      // If this was the last attempt, throw
-      if (attempt >= retryConfig.maxAttempts) {
+      if (attempt >= config.maxAttempts) {
         throw error;
+      }
+
+      if (signal.aborted) {
+        throw new CancelledError('Request cancelled', signal.reason);
       }
 
       // Calculate backoff delay
-      let backoffDelay = calculateBackoff(attempt, retryConfig);
+      let backoffDelay = calculateBackoff(attempt, config);
 
       // Check for Retry-After header (takes precedence)
       if (error instanceof APIError && error.headers) {
         const retryAfter = parseRetryAfter(error.headers);
         if (retryAfter !== null) {
           // Cap Retry-After at maxDelay to prevent indefinite waiting
-          backoffDelay = Math.min(retryAfter, retryConfig.maxDelay);
+          backoffDelay = Math.min(retryAfter, config.maxDelay);
         }
       }
 
       // Wait before retrying
-      await delay(backoffDelay);
+      await delay(backoffDelay, signal);
     }
   }
-
-  // This should never be reached, but TypeScript needs it
-  throw lastError;
 }

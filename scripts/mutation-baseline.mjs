@@ -133,6 +133,46 @@ const MUTATIONS = [
 		suite: 'tests/navigation/destination.test.ts',
 		expect: 'maps the child effect back into the case',
 		guards: "createDestination maps the child's effect into its case (N2)"
+	},
+	{
+		id: 'R1C-A7',
+		file: 'src/lib/api/deduplication.ts',
+		find: '\t\t\t\t\tif (entry.subscribers === 0 && !entry.settled) {\n\t\t\t\t\t\tentry.controller.abort();\n\t\t\t\t\t\tif (key !== null && inFlight.get(key) === entry) inFlight.delete(key);\n\t\t\t\t\t}',
+		replace: '\t\t\t\t\tif (entry.subscribers === 0 && !entry.settled) entry.controller.abort();',
+		config: 'browser',
+		suite: 'tests/api/deduplication.test.ts',
+		expect: 'the attempt leaves the registry when its last caller aborts, synchronously',
+		guards: 'an aborted attempt leaves the in-flight map with its last caller (R1-REVIEW 1.2)'
+	},
+	{
+		id: 'R1C-A8',
+		file: 'src/lib/api/client.ts',
+		find: '      const key = requestKey(prepared.identity);',
+		replace: '      const key = requestKey(finalizeRequest(method, resolvedURL, { ...config, headers: mergeHeaders(defaultHeaders, config.headers) }, retry).identity);',
+		config: 'browser',
+		suite: 'tests/api/client.test.ts',
+		expect: 'a header added by a request interceptor is part of the identity',
+		guards: 'the request key is computed after the request interceptors (R1-REVIEW 1.7)'
+	},
+	{
+		id: 'R1C-A6',
+		file: 'src/lib/api/pipeline.ts',
+		find: '\t\t(typeof FormData !== \'undefined\' && body instanceof FormData) ||',
+		replace: '\t\tfalse ||',
+		config: 'browser',
+		suite: 'tests/api/client.test.ts',
+		expect: 'a FormData body reaches fetch untouched',
+		guards: 'a FormData body is passed to fetch untouched (A6)'
+	},
+	{
+		id: 'R1C-A10',
+		file: 'src/lib/api/pipeline.ts',
+		find: '\t\tif (value !== undefined) folded[name.toLowerCase()] = value;',
+		replace: '\t\tif (value !== undefined) folded[name] = value;',
+		config: 'browser',
+		suite: 'tests/api/client.test.ts',
+		expect: 'header names are case-insensitive',
+		guards: 'header names are folded to lower case (A10)'
 	}
 ];
 
