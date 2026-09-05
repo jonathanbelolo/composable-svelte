@@ -2001,9 +2001,18 @@ class TestStore<State, Action, Dependencies = any> {
   constructor(config: TestStoreConfig<State, Action, Dependencies>);
 
   send(action: Action, assert?: StateAssertion<State>): Promise<void>;
-  receive(partialAction: PartialAction<Action>, assert?: StateAssertion<State>, timeout?: number): Promise<void>;
+  // One partial: the next action must match. An array: the next N actions
+  // must match the N partials, in any order. `timeout` is real time.
+  receive(partialAction: PartialAction<Action> | PartialAction<Action>[], assert?: StateAssertion<State>, timeout?: number): Promise<void>;
   assertNoPendingActions(): void;
-  finish(): Promise<void>;
+  // Waits up to `timeout` (real time) for every effect; fails naming a hung
+  // effect by kind and id, an armed timer under fake timers, a rejected
+  // executor, or an unasserted action.
+  finish(timeout?: number): Promise<void>;
+  // Aborts every executor's signal, disarms every timer, runs subscription
+  // cleanups; the owning test's finish hook calls it. Idempotent.
+  destroy(): void;
+  dispatch(action: Action): void;
   getState(): State;
   getHistory(): ReadonlyArray<Action>;
   advanceTime(ms: number): Promise<void>;
@@ -2079,7 +2088,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  vi.restoreAllMocks();
+  vi.useRealTimers(); // restoreAllMocks() does not undo useFakeTimers()
 });
 ```
 
@@ -2157,15 +2166,18 @@ Partial action matcher for receive assertions.
 type PartialAction<Action> = Partial<Action> & { type: string }
 ```
 
-**Note:** Partial matching with nested objects works best with type-only matching. For complex nested structures, prefer state assertions:
+**Note:** Top-level keys are partial; a nested value is compared structurally,
+as a whole, with JSON semantics (key order ignored, a `Date` by its instant,
+`undefined` properties omitted). So `nested: { field: 'value' }` matches an
+action whose `nested` is exactly `{ field: 'value' }`, and not one carrying a
+second field:
 
 ```typescript
-// Recommended
-await store.receive({ type: 'actionName' });
-expect(store.getState().someField).toBe(expectedValue);
-
-// Avoid (may not work reliably in browser tests)
 await store.receive({ type: 'actionName', nested: { field: 'value' } });
+
+// When only one nested field matters, assert on state instead
+await store.receive({ type: 'actionName' });
+expect(store.state.someField).toBe(expectedValue);
 ```
 
 ---

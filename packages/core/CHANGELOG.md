@@ -18,6 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   interceptors, `isNetworkError()` false, the signal's reason as `cause`.
   R1 reported the condition as a bare `APIError('Request cancelled')`.
   (R1-REVIEW 1.9)
+- `TestStore.receive([a, b, …])`: with exhaustivity on, the next N queued
+  actions must be the N partials in any order; an interleaved action fails at
+  once, naming it; the assertion runs once after all are consumed.
+- `TestStore.destroy()`: aborts the lifetime signal every `Run`, `AfterDelay`,
+  `Debounced` and `Throttled` executor now receives (as in the store), aborts
+  in-flight cancellables, disarms every timer, runs subscription cleanups,
+  drops later dispatches; `send`/`receive`/`finish`/`advanceTime` throw after
+  it. The owning test's finish hook calls it. (R1-REVIEW 1.5)
 
 ### Changed
 
@@ -49,6 +57,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `run` and `afterDelay` do, and `Effect.map` forwards it; the
   `EffectExecutor` documentation said only `cancellable` received one.
   (R1-REVIEW 1.9)
+- **BREAKING: `TestStore.receive()` and `finish()` never move the fake
+  clock.** They wait on the real clock, notified as actions arrive and effects
+  settle. `vi.waitFor` advanced the fake clock by its interval on every check,
+  so a debounce or delay fired without the test advancing it — a test that
+  omitted `advanceTime(ms)` passed, and one that advanced too little passed
+  too. Such a test now fails, naming the timer and its due time.
+  (R1-REVIEW 1.6)
+- **BREAKING: the test module refuses to load while timers are faked.** It
+  binds the real clock at import; `vi.useFakeTimers()` belongs in a test or a
+  `beforeEach`, not at the top level of a setup file. (R1-REVIEW 1.6)
+- **BREAKING: `TestStore.finish()` fails on any armed timer under fake
+  timers** — AfterDelay, Debounced or Throttled, named with its id and due
+  time — and names a hung effect by kind and id; an aborted cancellable
+  (superseded, or `Effect.cancel(id)`) is not waited for. It tracked
+  AfterDelay only, so an armed debounce passed `finish()` and fired into the
+  next test. (R1-REVIEW 1.6)
+- With exhaustivity on, a `receive()` whose partial does not match the next
+  queued action fails at once whether or not a later action matches; it
+  waited for its timeout when none did. (R1-REVIEW 1.6)
 - A dispatch after `destroy()` warns once per store, then is dropped
   silently; every one warned. (R1-REVIEW 1.9)
 
@@ -58,6 +85,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `afterDelay` reached through `scope()` or any other lift is logged by the
   store and fails `TestStore.finish()` instead of being an unhandled
   rejection. (R1-REVIEW 1.5)
+- **A `TestStore` rejection is reported at once** by a waiting `receive()` or
+  `finish()`, not at their timeout; and the finish hook that reports a
+  rejection nothing asked about is registered by the first `send()`,
+  `receive()` or `finish()` while the owning test is current, not at
+  rejection time — which bound it to whichever test happened to be current
+  then. Outside a test the rejection is rethrown. (R1-REVIEW 1.6)
 - **A caller no longer joins a dead attempt.** An aborted attempt stayed in
   the in-flight map until its rejection settled, so a request repeated in
   that window — synchronously after the abort, or during a retry backoff —

@@ -121,7 +121,8 @@ Convenience method that flushes pending effects and asserts no actions remain.
 ```typescript
 await store.send({ type: 'saveData' });
 await store.receive({ type: 'dataSaved' });
-await store.finish(); // Equivalent to: await advanceTime(0); assertNoPendingActions();
+await store.finish(); // Waits for every effect; fails on an armed timer under fake timers,
+                      // on a rejected executor, and on an unasserted action
 ```
 
 #### `getState()`
@@ -294,7 +295,11 @@ describe('Form Guards', () => {
   });
 
   it('prevents duplicate submissions', async () => {
-    const submitMock = vi.fn();
+    // The API settles only when the test says so: with exhaustivity on, a
+    // second send() is refused while the first submit's success is queued
+    // and unasserted, so the response must not arrive between the two.
+    let resolveSubmit!: () => void;
+    const submitMock = vi.fn(() => new Promise<void>((resolve) => { resolveSubmit = resolve; }));
     const store = createTestStore({
       initialState: { value: 'test', isSubmitting: false },
       reducer: formReducer,
@@ -304,8 +309,9 @@ describe('Form Guards', () => {
     });
 
     await store.send({ type: 'submit' });
-    await store.send({ type: 'submit' }); // Second submit (should be ignored)
+    await store.send({ type: 'submit' }); // Second submit (ignored while submitting)
 
+    resolveSubmit();
     await store.receive({ type: 'submitSuccess' });
 
     // API should only be called once
@@ -525,7 +531,7 @@ describe('Time-based effects', () => {
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.useRealTimers(); // restoreAllMocks() does not undo useFakeTimers()
   });
 
   // Tests go here
@@ -602,7 +608,7 @@ describe('Tooltip with Hover Delay', () => {
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.useRealTimers(); // restoreAllMocks() does not undo useFakeTimers()
   });
 
   it('shows tooltip after delay', async () => {
@@ -1165,9 +1171,11 @@ await store.receive({
 });
 ```
 
-This matches any action where:
-- `action.type === 'presentation'`
-- `action.event.type === 'presentationCompleted'`
+Top-level keys are partial: any action whose `type` is `'presentation'` and
+whose `event` **equals** `{ type: 'presentationCompleted' }` matches. A nested
+value is compared structurally, as a whole, with JSON semantics — key order
+ignored, a `Date` by its instant, `undefined` properties omitted — so an
+`event` carrying one more field does not match this partial.
 
 **Recommended**: Use type-only matching + state assertions for clarity:
 
@@ -1301,9 +1309,9 @@ describe('Batch Effects', () => {
 
     await store.send({ type: 'saveAll' });
 
-    // Order doesn't matter for parallel effects
-    await store.receive({ type: 'userSaved' });
-    await store.receive({ type: 'settingsSaved' });
+    // With exhaustivity on, receive() names the next action in the queue;
+    // when two parallel effects may land in either order, take both at once
+    await store.receive([{ type: 'userSaved' }, { type: 'settingsSaved' }]);
 
     await store.finish();
   });

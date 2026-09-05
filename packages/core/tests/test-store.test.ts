@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { TestStore, createTestStore } from '../src/lib/test/test-store';
 import { Effect } from '../src/lib/effect';
 import type { Reducer } from '../src/lib/types';
+import { sleep } from '../src/lib/test/real-timers';
 
 interface CounterState {
   count: number;
@@ -124,10 +125,11 @@ describe('TestStore', () => {
 
       // A partial with a different value does not match, even though a
       // loadCompleted is pending — otherwise "partial" would mean "any action
-      // of this type".
+      // of this type". With exhaustivity on the mismatch fails at once, naming
+      // the action at the head of the queue.
       await expect(
-        store.receive({ type: 'loadCompleted', value: 999 }, undefined, 50)
-      ).rejects.toThrow('Expected to receive action');
+        store.receive({ type: 'loadCompleted', value: 999 }, undefined, 5000)
+      ).rejects.toThrow(/Expected to receive \{"type":"loadCompleted","value":999\} next, but the next received action was/);
 
       // A subset of the fields does match.
       await store.receive({ type: 'loadCompleted' });
@@ -634,7 +636,7 @@ describe('finish() waits for what is still running (N9, T6)', () => {
 				action.type === 'go' ? [state, Effect.afterDelay(200, (dispatch) => dispatch({ type: 'late' }))] : [{ n: state.n + 1 }, Effect.none()];
 			const store = new TestStore({ initialState: { n: 0 }, reducer });
 			await store.send({ type: 'go' });
-			await expect(store.finish()).rejects.toThrow(/1 AfterDelay effect\(s\) still pending under fake timers/);
+			await expect(store.finish()).rejects.toThrow(/1 timer\(s\) still pending under fake timers:\n {2}AfterDelay due in 200 ms/);
 			await store.advanceTime(200);
 			await store.receive({ type: 'late' });
 			await store.finish();
@@ -693,3 +695,432 @@ describe('a rejecting executor fails the test, not the process (N9)', () => {
 	});
 });
 
+describe('the lifetime signal and destroy() (R1-REVIEW 1.5)', () => {
+	type State = { n: number };
+	type Action = { type: 'go' } | { type: 'late' };
+
+	it('Run, AfterDelay, Debounced and Throttled executors receive a signal that destroy() aborts', async () => {
+		vi.useFakeTimers();
+		try {
+			const seen: (AbortSignal | undefined)[] = [];
+			const see = (_dispatch: unknown, signal?: AbortSignal) => {
+				seen.push(signal);
+			};
+			const reducer: Reducer<State, Action> = (state) => [
+				state,
+				Effect.batch(
+					Effect.run(see),
+					Effect.afterDelay(10, see),
+					Effect.debounced('d', 10, see),
+					Effect.throttled('t', 10, see)
+				)
+			];
+			const store = new TestStore({ initialState: { n: 0 }, reducer });
+			await store.send({ type: 'go' });
+			await store.advanceTime(10);
+
+			expect(seen).toHaveLength(4);
+			expect(seen.every((s) => s instanceof AbortSignal && !s.aborted)).toBe(true);
+			store.destroy();
+			expect(seen.every((s) => s?.aborted)).toBe(true);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('destroy() disarms every timer, so nothing fires into the next test', async () => {
+		vi.useFakeTimers();
+		try {
+			const reducer: Reducer<State, Action> = (state, action) =>
+				action.type === 'go'
+					? [
+							state,
+							Effect.batch(
+								Effect.afterDelay(100, (dispatch) => dispatch({ type: 'late' })),
+								Effect.debounced('d', 100, (dispatch) => dispatch({ type: 'late' }))
+							)
+						]
+					: [{ n: state.n + 1 }, Effect.none()];
+			const store = new TestStore({ initialState: { n: 0 }, reducer });
+			await store.send({ type: 'go' });
+			expect(vi.getTimerCount()).toBe(2);
+
+			store.destroy();
+			expect(vi.getTimerCount()).toBe(0);
+			vi.advanceTimersByTime(1000);
+			expect(store.state.n).toBe(0);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('destroy() is idempotent, drops a late dispatch, and the store refuses further use', async () => {
+		const reducer: Reducer<State, Action> = (state, action) =>
+			action.type === 'late' ? [{ n: state.n + 1 }, Effect.none()] : [state, Effect.none()];
+		const store = new TestStore({ initialState: { n: 0 }, reducer });
+		await store.send({ type: 'go' });
+
+		store.destroy();
+		store.destroy();
+		store.dispatch({ type: 'late' });
+		expect(store.state.n).toBe(0);
+
+		await expect(store.send({ type: 'go' })).rejects.toThrow('[TestStore] send() used after destroy()');
+		await expect(store.receive({ type: 'late' })).rejects.toThrow('[TestStore] receive() used after destroy()');
+		await expect(store.finish()).rejects.toThrow('[TestStore] finish() used after destroy()');
+		await expect(store.advanceTime(0)).rejects.toThrow('[TestStore] advanceTime() used after destroy()');
+	});
+
+	it('destroy() aborts an in-flight cancellable and runs subscription cleanups', async () => {
+		let signal: AbortSignal | undefined;
+		const cleanup = vi.fn();
+		const reducer: Reducer<State, Action> = (state) => [
+			state,
+			Effect.batch(
+				Effect.cancellable('work', (_dispatch, s) => {
+					signal = s;
+					return new Promise<void>(() => {});
+				}),
+				Effect.subscription('sub', () => cleanup)
+			)
+		];
+		const store = new TestStore({ initialState: { n: 0 }, reducer });
+		await store.send({ type: 'go' });
+		expect(signal?.aborted).toBe(false);
+
+		store.destroy();
+		expect(signal?.aborted).toBe(true);
+		expect(cleanup).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe("the owning test's hook stops the store when the test ends", () => {
+	// The hook registered by the first send() destroys the store; the next
+	// test observes what the previous one left.
+	let previous: TestStore<{ n: number }, { type: 'go' }> | undefined;
+
+	it('a store used by send() is left running here', async () => {
+		previous = new TestStore({ initialState: { n: 0 }, reducer: (state) => [state, Effect.none()] });
+		await previous.send({ type: 'go' });
+	});
+
+	it('and is destroyed by the time the next test runs', async () => {
+		expect(previous).toBeDefined();
+		await expect(previous!.send({ type: 'go' })).rejects.toThrow('used after destroy()');
+	});
+});
+
+describe('receive() and finish() never move the fake clock (R1-REVIEW 1.6)', () => {
+	type State = { fired: string[] };
+	type Action = { type: 'go' } | { type: 'type'; value: string } | { type: 'fired'; value: string } | { type: 'a' } | { type: 'b' };
+
+	it('receive() waits on the real clock without advancing fake timers', async () => {
+		vi.useFakeTimers();
+		try {
+			const reducer: Reducer<State, Action> = (state, action) =>
+				action.type === 'go'
+					? [
+							state,
+							Effect.run(async (dispatch) => {
+								await sleep(30);
+								dispatch({ type: 'fired', value: 'real' });
+							})
+						]
+					: [state, Effect.none()];
+			const store = new TestStore({ initialState: { fired: [] }, reducer });
+			await store.send({ type: 'go' });
+
+			const before = Date.now();
+			await store.receive({ type: 'fired', value: 'real' });
+			// vi.waitFor advanced the fake clock by its interval on every check.
+			expect(Date.now() - before).toBe(0);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('a debounce test that omits advanceTime() fails, naming the timer and its due time', async () => {
+		vi.useFakeTimers();
+		try {
+			const reducer: Reducer<State, Action> = (state, action) =>
+				action.type === 'type'
+					? [state, Effect.debounced('search', 300, (dispatch) => dispatch({ type: 'fired', value: action.value }))]
+					: [state, Effect.none()];
+			const store = new TestStore({ initialState: { fired: [] }, reducer });
+			await store.send({ type: 'type', value: 'a' });
+
+			await expect(store.receive({ type: 'fired' }, undefined, 200)).rejects.toThrow(
+				/Expected to receive action matching[\s\S]*Timers pending on the test clock — advance it with advanceTime\(ms\):\n {2}Debounced 'search' due in 300 ms/
+			);
+			store.assertNoPendingActions();
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('a head mismatch fails at once, however long the timeout', async () => {
+		const reducer: Reducer<State, Action> = (state, action) =>
+			action.type === 'go' ? [state, Effect.run((dispatch) => dispatch({ type: 'a' }))] : [state, Effect.none()];
+		const store = new TestStore({ initialState: { fired: [] }, reducer });
+		await store.send({ type: 'go' });
+
+		const started = Date.now();
+		await expect(store.receive({ type: 'b' }, undefined, 5000)).rejects.toThrow(
+			/Expected to receive \{"type":"b"\} next, but the next received action was \{"type":"a"\} \(no later action matches either\)/
+		);
+		expect(Date.now() - started).toBeLessThan(500);
+		await store.receive({ type: 'a' });
+		await store.finish();
+	});
+});
+
+describe('one timer registry (R1-REVIEW 1.6)', () => {
+	type State = { fired: string[] };
+	type Action = { type: 'go' } | { type: 'cancel' } | { type: 'fired'; value: string };
+
+	it('an armed debounce fails finish() under fake timers, naming it and its due time', async () => {
+		vi.useFakeTimers();
+		try {
+			const reducer: Reducer<State, Action> = (state, action) =>
+				action.type === 'go'
+					? [state, Effect.debounced('search', 300, (dispatch) => dispatch({ type: 'fired', value: 'x' }))]
+					: [state, Effect.none()];
+			const store = new TestStore({ initialState: { fired: [] }, reducer });
+			await store.send({ type: 'go' });
+
+			await expect(store.finish()).rejects.toThrow(/1 timer\(s\) still pending under fake timers:\n {2}Debounced 'search' due in 300 ms/);
+			await store.advanceTime(300);
+			await store.receive({ type: 'fired' });
+			await store.finish();
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('an armed throttle (trailing edge) fails finish() under fake timers too', async () => {
+		vi.useFakeTimers();
+		try {
+			const reducer: Reducer<State, Action> = (state, action) =>
+				action.type === 'go'
+					? [state, Effect.throttled('move', 100, (dispatch) => dispatch({ type: 'fired', value: 'x' }))]
+					: action.type === 'fired'
+						? [{ fired: [...state.fired, action.value] }, Effect.none()]
+						: [state, Effect.none()];
+			const store = new TestStore({ initialState: { fired: [] }, reducer });
+			await store.send({ type: 'go' });
+			await store.receive({ type: 'fired' });
+			await store.send({ type: 'go' }); // inside the window: scheduled for the trailing edge
+
+			await expect(store.finish()).rejects.toThrow(/Throttled 'move' due in 100 ms/);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('under real timers an armed debounce is waited for', async () => {
+		const reducer: Reducer<State, Action> = (state, action) =>
+			action.type === 'go'
+				? [state, Effect.debounced('search', 30, (dispatch) => dispatch({ type: 'fired', value: 'x' }))]
+				: [state, Effect.none()];
+		const store = new TestStore({ initialState: { fired: [] }, reducer });
+		await store.send({ type: 'go' });
+
+		// It fired, and the action it delivered is what finish() then reports.
+		await expect(store.finish()).rejects.toThrow(/Types: \["fired"\]/);
+	});
+
+	it('Effect.cancel(id) disarms a debounce, so finish() passes without advancing', async () => {
+		vi.useFakeTimers();
+		try {
+			const reducer: Reducer<State, Action> = (state, action) =>
+				action.type === 'go'
+					? [state, Effect.debounced('search', 300, (dispatch) => dispatch({ type: 'fired', value: 'x' }))]
+					: action.type === 'cancel'
+						? [state, Effect.cancel('search')]
+						: [state, Effect.none()];
+			const store = new TestStore({ initialState: { fired: [] }, reducer });
+			await store.send({ type: 'go' });
+			await store.send({ type: 'cancel' });
+			expect(vi.getTimerCount()).toBe(0);
+			await store.finish();
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('a running cancellable is named by id in the finish() failure', async () => {
+		const reducer: Reducer<State, Action> = (state) => [state, Effect.cancellable('search', () => new Promise<void>(() => {}))];
+		const store = new TestStore({ initialState: { fired: [] }, reducer });
+		await store.send({ type: 'go' });
+
+		await expect(store.finish(100)).rejects.toThrow(
+			/finish\(\): 1 effect\(s\) still running after 100ms: Cancellable 'search'\. Cancel it \(Effect\.cancel\(id\) for a cancellable\), or call store\.destroy\(\) instead\./
+		);
+		store.destroy();
+	});
+
+	it('an aborted cancellable does not hold finish(), and its late rejection is nobody\'s', async () => {
+		let reject!: (error: Error) => void;
+		const reducer: Reducer<State, Action> = (state, action) =>
+			action.type === 'go'
+				? [
+						state,
+						Effect.cancellable(
+							'search',
+							() =>
+								new Promise<void>((_resolve, rej) => {
+									reject = rej;
+								})
+						)
+					]
+				: action.type === 'cancel'
+					? [state, Effect.cancel('search')]
+					: [state, Effect.none()];
+		const store = new TestStore({ initialState: { fired: [] }, reducer });
+		await store.send({ type: 'go' });
+		await store.send({ type: 'cancel' });
+
+		await store.finish();
+		reject(new Error('too late'));
+		await store.advanceTime(0);
+		await store.finish();
+	});
+});
+
+describe('rejections (R1-REVIEW 1.6)', () => {
+	type State = { n: number };
+	type Action = { type: 'go' } | { type: 'never' };
+
+	it('receive() reports a rejection at once, not at its timeout', async () => {
+		const reducer: Reducer<State, Action> = (state) => [
+			state,
+			Effect.run(async () => {
+				await sleep(20);
+				throw new Error('boom');
+			})
+		];
+		const store = new TestStore({ initialState: { n: 0 }, reducer });
+		await store.send({ type: 'go' });
+
+		const started = Date.now();
+		await expect(store.receive({ type: 'never' }, undefined, 5000)).rejects.toThrow(/\[TestStore\] effect rejected: boom/);
+		expect(Date.now() - started).toBeLessThan(1000);
+	});
+
+	it('finish() reports a rejection at once too', async () => {
+		const reducer: Reducer<State, Action> = (state) => [
+			state,
+			Effect.batch(
+				Effect.run(() => new Promise<void>(() => {})),
+				Effect.run(async () => {
+					await sleep(20);
+					throw new Error('boom');
+				})
+			)
+		];
+		const store = new TestStore({ initialState: { n: 0 }, reducer });
+		await store.send({ type: 'go' });
+
+		const started = Date.now();
+		await expect(store.finish(5000)).rejects.toThrow(/effect rejected: boom/);
+		expect(Date.now() - started).toBeLessThan(1000);
+		store.destroy();
+	});
+});
+
+describe('receive([...]) takes the next N actions in any order', () => {
+	type State = { got: string[] };
+	type Action = { type: 'go' } | { type: 'userSaved' } | { type: 'settingsSaved' } | { type: 'other' };
+	const reducer =
+		(order: Action[]): Reducer<State, Action> =>
+		(state, action) =>
+			action.type === 'go'
+				? [
+						state,
+						Effect.run((dispatch) => {
+							for (const a of order) dispatch(a);
+						})
+					]
+				: [{ got: [...state.got, action.type] }, Effect.none()];
+
+	it('accepts either order, and runs the assertion once after both are consumed', async () => {
+		for (const order of [
+			[{ type: 'userSaved' }, { type: 'settingsSaved' }],
+			[{ type: 'settingsSaved' }, { type: 'userSaved' }]
+		] as Action[][]) {
+			const store = new TestStore({ initialState: { got: [] }, reducer: reducer(order) });
+			await store.send({ type: 'go' });
+			const assertion = vi.fn((state: State) => {
+				expect(state.got).toHaveLength(2);
+			});
+			await store.receive([{ type: 'userSaved' }, { type: 'settingsSaved' }], assertion);
+			expect(assertion).toHaveBeenCalledTimes(1);
+			await store.finish();
+		}
+	});
+
+	it('an interleaved action that matches none of the partials fails at once, naming it', async () => {
+		const store = new TestStore({
+			initialState: { got: [] },
+			reducer: reducer([{ type: 'userSaved' }, { type: 'other' }, { type: 'settingsSaved' }])
+		});
+		await store.send({ type: 'go' });
+
+		await expect(store.receive([{ type: 'userSaved' }, { type: 'settingsSaved' }], undefined, 5000)).rejects.toThrow(
+			/Expected to receive one of \[\{"type":"settingsSaved"\}\] next, but the received action at position 1 was \{"type":"other"\}/
+		);
+		store.exhaustivity = 'off';
+	});
+
+	it('waits while fewer than N are queued, and claims duplicates', async () => {
+		const store = new TestStore({
+			initialState: { got: [] },
+			reducer: reducer([{ type: 'userSaved' }, { type: 'userSaved' }])
+		});
+		await store.send({ type: 'go' });
+		await store.receive([{ type: 'userSaved' }, { type: 'userSaved' }]);
+		await store.finish();
+
+		const waiting = new TestStore({ initialState: { got: [] }, reducer: reducer([{ type: 'userSaved' }]) });
+		await waiting.send({ type: 'go' });
+		await expect(waiting.receive([{ type: 'userSaved' }, { type: 'settingsSaved' }], undefined, 100)).rejects.toThrow(
+			/Expected to receive actions matching/
+		);
+		waiting.exhaustivity = 'off';
+	});
+
+	it('with exhaustivity off, claims anywhere in the queue', async () => {
+		const store = new TestStore({
+			initialState: { got: [] },
+			reducer: reducer([{ type: 'other' }, { type: 'settingsSaved' }, { type: 'userSaved' }])
+		});
+		store.exhaustivity = 'off';
+		await store.send({ type: 'go' });
+		await store.receive([{ type: 'userSaved' }, { type: 'settingsSaved' }]);
+		await store.receive({ type: 'other' });
+		await store.finish();
+	});
+
+	it('an empty array is a TypeError', async () => {
+		const store = new TestStore({ initialState: { got: [] }, reducer: reducer([]) });
+		await expect(store.receive([])).rejects.toThrow(TypeError);
+	});
+});
+
+describe('matching has JSON semantics (R1-REVIEW 1.6)', () => {
+	type State = { n: number };
+	type Action = { type: 'go' } | { type: 'at'; when: Date; meta?: { a?: number | undefined } };
+
+	it('a Date partial matches only the same instant, and an undefined property is no difference', async () => {
+		const reducer: Reducer<State, Action> = (state, action) =>
+			action.type === 'go'
+				? [state, Effect.run((dispatch) => dispatch({ type: 'at', when: new Date(5), meta: { a: undefined } }))]
+				: [state, Effect.none()];
+		const store = new TestStore({ initialState: { n: 0 }, reducer });
+		store.exhaustivity = 'off';
+		await store.send({ type: 'go' });
+
+		await expect(store.receive({ type: 'at', when: new Date(6) }, undefined, 100)).rejects.toThrow(/Expected to receive/);
+		await store.receive({ type: 'at', when: new Date(5), meta: {} });
+	});
+});

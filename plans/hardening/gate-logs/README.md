@@ -115,3 +115,7 @@ before the fix is kept as `red-R1.x.y.log`, and the gate as `gate-R1.x.y.log`.
 | gate-C2b.log | C2b | core gate, second run after that test's fix: 2398 browser + 623 node, 0 skipped, check clean; porcelain = the files committed |
 | red-C4.log | C4 | the new Effect.map, store and TestStore tests against the restored sources: 8 fail — the AfterDelay arm returns nothing (its rejection unhandled, finish() passing), Debounced and Throttled executors see no signal, every dispatch after destroy() warns |
 | gate-C4.log | C4 | core gate, one run: 2403 browser + 623 node, 0 skipped, check clean; porcelain = the files committed |
+| red-C5.log | C5 | the new TestStore tests against the old implementation with only `real-timers.ts` in place: 22 fail — `receive()` moving the fake clock, an armed debounce passing `finish()`, no signal to four executor kinds, no `destroy()`, rejections reported only at the timeout, no array form, the import guard absent |
+| gate-C5.first.log | C5 | core gate, first run: 2428 browser green, 2 node failures (the doc-typecheck register's staleness arm: `receive()`'s new signature changed five registered messages), svelte-check 2 errors in the new tests |
+| gate-C5.second.log | C5 | core gate, second run: tests green, svelte-check 14 errors — a register line pasted with the assertion's trailing text |
+| gate-C5.log | C5 | core gate, third run: 2428 browser + 623 node, 0 skipped, check clean; porcelain = the files committed |
