@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-09-05
+
+The closure of the R1 adversarial review (`plans/hardening/R1-REVIEW.md`):
+every finding of that review, in the entries below. Never published, as
+0.12.0 was not; the registry holds 0.5.2.
+
 ### Added
 
 - `WebSocketClient.reconnect(reason?, cause?)`: a `cause` is reported as an

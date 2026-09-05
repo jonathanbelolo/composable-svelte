@@ -336,3 +336,25 @@ LOW: the spec reference sketches (`navigation-dsl-spec.md:471-552, 640-663`,
    one docs commit with the doc-typecheck and skill guards run.
 6. Re-run the whole-repository gate and CI, and revise `R1-EXIT.md` the way
    `R0-EXIT.md` carries its review.
+
+## 7. Closure
+
+Each finding above and the commit on `hardening/r1-closure` (core 0.12.1)
+that closed it; the same table, with the commit hashes, is in `R1-EXIT.md`
+under "The review, and what it changed".
+
+| Finding | Closed by |
+|---|---|
+| 1.1 | C1 — "never opened" remembered per socket; the harness fires in the browser's order |
+| 1.2 | C2b — the attempt leaves the registry in the step that aborts it |
+| 1.3, 1.4 | C3 — a writable marker; a direct call throws, a registration rejects `ready()` |
+| 1.5 | C4, C5 — every executor kind receives a signal in the store and in TestStore |
+| 1.6 | C5 — waits on the real clock, one timer registry, `destroy()`, rejections at once, `receive([...])` |
+| 1.7 | C2a, C2b — `isPlainData`, keys after the interceptors, JSON-semantics serialiser |
+| 1.8 | C6a, C6b — cancellation groups; the operators cancel on dismiss, a parent null, a case change, a pop, a shrinking `setPath` |
+| 1.9 | C1, C2b, C3, C4, C5, C6b, C7, each item named in its commit |
+| 2.1 | C8 — `src/lib/test/animation.ts`; sixteen sites rewritten; ten local runs each |
+| 2.2 | C0 — the duplicates removed; the cause recorded in `R1-EXIT.md` |
+| 2.3 | C2b, C5, C6b |
+| 3 | C9 |
+| 4 | C1–C8 in their own commits; C10 the front doors; C11 the counts |

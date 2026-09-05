@@ -24,7 +24,7 @@ Inspired by [The Composable Architecture (TCA)](https://github.com/pointfreeco/s
 - ✅ **Complete Backend**: API client, WebSocket, Storage, Clock dependencies
 - ✅ **Component library**: shadcn-svelte integration with reducer-driven patterns — browse the full set in [the styleguide](../../examples/styleguide)
 - ✅ **URL Routing**: Browser history sync with pattern matching
-- ✅ **500+ Tests**: Comprehensive test coverage across all modules
+- ✅ **3,116 tests**: browser and node suites, measured at the R1 closure's exit (2026-09-05)
 
 ## Installation
 

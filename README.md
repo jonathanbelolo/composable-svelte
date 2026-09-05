@@ -472,8 +472,9 @@ pnpm dev
 - ✅ Phase 7: URL Routing
 - ✅ Phase 8: Backend Integration (API, WebSocket, Dependencies)
 
-**Test Coverage**: 4,271 tests, all passing — measured by running `pnpm test`
-on 2026-09-01, not carried over from a previous edit. Two figures used to live
+**Test Coverage**: 5,077 tests, all passing — measured by running `pnpm test`
+on 2026-09-05 at the exit of the R1 closure (`plans/hardening/R1-EXIT.md`),
+not carried over from a previous edit. Two figures used to live
 in this file and they disagreed with each other; a count is the one claim here
 that changes on every commit, so it is stated once and dated.
 Run with `pnpm test`; it serialises the workspaces, because most of them drive a

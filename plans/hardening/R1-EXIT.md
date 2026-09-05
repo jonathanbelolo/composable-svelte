@@ -231,6 +231,21 @@ Every commit in `6cd4801..95a7a3b`, in order.
 | T8 (the commits say T7) | `0c106c9` | the sample polls for a frame strictly mid-flight; CI green *(corrected: the register already had a `T7` meta line, so the finding is `T8`)* |
 | — | (this commit) | the report records CI and the two commits above |
 
+## The closure's exit
+
+The tree at the end of `hardening/r1-closure`, core 0.12.1.
+
+| Step | Result |
+|---|---|
+| strict mutation baseline (`node scripts/mutation-baseline.mjs --strict`) | 13 of 13 KILLED — M1, M2, M4, M5, M6, M7, M9, R1-N2, R1C-W3, R1C-A7, R1C-A8, R1C-A6, R1C-A10 — exit 0, `gate-logs/mutation-baseline-R1-closure.log` (a first run found M6 and R1-N2 with anchors that no longer matched, moved by C1 and C6b; both re-anchored on the live source) |
+| whole-repository gate (`pnpm -r build && pnpm -r typecheck && pnpm -r --workspace-concurrency=1 test && pnpm -r check`) | build and typecheck exit 0; 5,077 tests passed across the 15 workspaces that have tests (core 2,493 browser + 623 node; the eight packages 4,864, the seven examples with tests 213), 0 skipped; svelte-check 0 errors and 0 warnings in every workspace — `gate-logs/gate-R1-closure-exit.log` |
+| the front doors | README.md, CLAUDE.md and packages/core/README.md carry these counts, dated |
+
+The whole-repository gate measured the tree before this section and the
+counts above were written (documents only); the core gate in
+`gate-logs/gate-C11.log` covers the committed tree, porcelain equal.
+Continuous integration and the merge are recorded below once run.
+
 ## What R1 did not do
 
 - **R2's findings.** Everything the plan lists under R2.1–R2.7 is untouched,
