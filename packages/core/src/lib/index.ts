@@ -247,6 +247,7 @@ export {
 // Error classes
 export {
   APIError,
+  CancelledError,
   NetworkError,
   TimeoutError,
   ValidationError,

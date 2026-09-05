@@ -351,3 +351,56 @@ export class ValidationError extends APIError {
     };
   }
 }
+
+// ============================================================================
+// Cancelled Error
+// ============================================================================
+
+/**
+ * The attempt was abandoned: every caller that shared it detached (aborted
+ * or timed out on its own terms), or the caller cancelled a request that ran
+ * alone. Never retried, never offered to error interceptors, not a network
+ * error. A caller's own abort rejects that caller with its signal's reason,
+ * not with this — this is what the abandoned fetch itself reports.
+ *
+ * R1 reported the same condition as a bare `APIError('Request cancelled')`,
+ * indistinguishable by class from an HTTP failure (R1-REVIEW 1.9).
+ */
+export class CancelledError extends APIError {
+  /**
+   * The signal's reason, when there was one.
+   */
+  readonly cause?: unknown;
+
+  constructor(message = 'Request cancelled', cause?: unknown) {
+    super(
+      message,
+      null, // No status: nothing was received
+      null,
+      {},
+      false // Nobody is listening; never retried
+    );
+    this.name = 'CancelledError';
+    if (cause !== undefined) {
+      this.cause = cause;
+    }
+
+    if ('captureStackTrace' in Error) {
+      (Error as any).captureStackTrace(this, CancelledError);
+    }
+  }
+
+  /**
+   * A cancellation is not a network failure, although it has no status.
+   */
+  override isNetworkError(): boolean {
+    return false;
+  }
+
+  toJSON(): Record<string, unknown> {
+    return {
+      ...super.toJSON(),
+      cause: this.cause instanceof Error ? this.cause.message : this.cause
+    };
+  }
+}

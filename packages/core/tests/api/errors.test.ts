@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   APIError,
+  CancelledError,
   NetworkError,
   TimeoutError,
   ValidationError,
@@ -481,5 +482,39 @@ describe('Error inheritance', () => {
     expect(apiError instanceof NetworkError).toBe(false);
     expect(apiError instanceof TimeoutError).toBe(false);
     expect(apiError instanceof ValidationError).toBe(false);
+  });
+});
+
+// ============================================================================
+// CancelledError Tests
+// ============================================================================
+
+describe('CancelledError', () => {
+  it('is an APIError with no status, never retryable, and not a network error', () => {
+    const error = new CancelledError();
+
+    expect(error).toBeInstanceOf(APIError);
+    expect(error).toBeInstanceOf(CancelledError);
+    expect(error).not.toBeInstanceOf(NetworkError);
+    expect(error.name).toBe('CancelledError');
+    expect(error.message).toBe('Request cancelled');
+    expect(error.status).toBeNull();
+    expect(error.isRetryable).toBe(false);
+    // An APIError with a null status reports itself as a network error;
+    // a cancellation has no status either, and is not one.
+    expect(error.isNetworkError()).toBe(false);
+  });
+
+  it('keeps the reason as cause and reports it in toJSON', () => {
+    const reason = new Error('user navigated away');
+    const error = new CancelledError('Request cancelled', reason);
+
+    expect(error.cause).toBe(reason);
+    expect(error.toJSON()).toMatchObject({ name: 'CancelledError', status: null, cause: 'user navigated away' });
+
+    const plain = new CancelledError('gone', 'a string reason');
+    expect(plain.cause).toBe('a string reason');
+    expect(plain.toJSON().cause).toBe('a string reason');
+    expect(new CancelledError().toJSON().cause).toBeUndefined();
   });
 });

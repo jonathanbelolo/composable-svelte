@@ -686,7 +686,7 @@ The API client throws specific error types for different failure scenarios.
 ### Error Types
 
 ```typescript
-import { APIError, NetworkError, TimeoutError, ValidationError } from '@composable-svelte/core';
+import { APIError, CancelledError, NetworkError, TimeoutError, ValidationError } from '@composable-svelte/core';
 ```
 
 #### APIError
@@ -732,7 +732,7 @@ try {
   await api.get('/slow-endpoint', { timeout: 5000 });
 } catch (error) {
   if (error instanceof TimeoutError) {
-    console.log(error.message); // "Request timeout after 5000ms"
+    console.log(error.message); // "Request timed out after 5000ms"
     console.log(error.timeout); // 5000
   }
 }
@@ -750,6 +750,25 @@ try {
     console.log(error.message); // "Network request failed"
     console.log(error.cause); // Original error
   }
+}
+```
+
+#### CancelledError
+
+What an abandoned attempt reports: every caller that shared it aborted or
+timed out on its own terms, so the fetch — or the backoff sleep before a
+retry — was aborted with nobody listening. It is never retried and never
+offered to error interceptors. A caller does not normally see it: a caller's
+own `signal` rejects that caller with the signal's reason (an `AbortError`
+when there is none), and its `timeout` with `TimeoutError`. It is exported so
+a custom `shouldRetry` or an error interceptor can recognise it by class.
+
+```typescript
+if (error instanceof CancelledError) {
+  console.log(error.status); // null
+  console.log(error.isRetryable); // false
+  console.log(error.isNetworkError()); // false — no status, but not a network failure
+  console.log(error.cause); // the signal's reason, if any
 }
 ```
 

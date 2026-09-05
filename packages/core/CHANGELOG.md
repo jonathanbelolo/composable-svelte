@@ -13,8 +13,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `error` event before the socket is dropped. The heartbeat passes a
   `HEARTBEAT_TIMEOUT` error, and a close with code 1002, 1003 or 1007 is
   reported as `PROTOCOL_ERROR` — both codes existed and were never emitted.
+- `CancelledError` (API client): what an abandoned attempt reports — every
+  caller that shared it detached — never retried, never offered to error
+  interceptors, `isNetworkError()` false, the signal's reason as `cause`.
+  R1 reported the condition as a bare `APIError('Request cancelled')`.
+  (R1-REVIEW 1.9)
 
 ### Fixed
+
+- **TestStore partial matching and API request keys have JSON semantics.**
+  The shared serialiser walked `Object.keys` only, so a `Date` — or any
+  object with `toJSON` — rendered as `{}`: two instants matched each other in
+  `receive()`, and two requests differing only by a `Date` body were one
+  key. An `undefined` property made `{ a: undefined }` differ from `{}`; now,
+  as in `JSON.stringify`, it is omitted, and inside an array it is `null`.
+  (R1-REVIEW 1.6, 1.7)
 
 - **SSG refuses a path before its data loaders run, follows symlinks when
   containing a write, and refuses `.html` segments.** A refused path still
