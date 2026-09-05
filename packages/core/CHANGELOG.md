@@ -30,6 +30,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   these groups themselves in the following change — the audit's N8, which
   R1 closed on the case name only (R1-REVIEW 1.8). `EffectGroups` is
   exported.
+- **Animation test helpers** in `@composable-svelte/core/test`:
+  `assertMotionAllowed`, `waitUntil`, `waitForStyle`, `waitForAnimations`,
+  `scrubAnimations`, `settleAnimations`, `midFlight`, `settleValue`,
+  `nextFrame`. A running Web Animation is scrubbed to a chosen point and a
+  ticker-driven value is polled for a point strictly between its endpoints,
+  so a mid-flight assertion no longer depends on what the scheduler reached
+  at a fixed delay; every helper refuses fake timers. The sixteen sites in
+  this package's and chat's suites that sampled at a fixed delay are
+  rewritten on them (R1-REVIEW 2.1).
 - `TestStore.receive([a, b, …])`: with exhaustivity on, the next N queued
   actions must be the N partials in any order; an interleaved action fails at
   once, naming it; the assertion runs once after all are consumed.

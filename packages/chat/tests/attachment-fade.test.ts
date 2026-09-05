@@ -18,8 +18,9 @@
  * These are the first tests of either component's visibility.
  */
 
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeAll } from 'vitest';
 import { mount, unmount, flushSync } from 'svelte';
+import { assertMotionAllowed, nextFrame, scrubAnimations, settleAnimations, waitForAnimations, waitForStyle } from '@composable-svelte/core/test';
 import ImagePreview from '../src/lib/streaming-chat/attachment-components/ImagePreview.svelte';
 import VideoPlayer from '../src/lib/streaming-chat/attachment-components/VideoPlayer.svelte';
 import type { MessageAttachment } from '../src/lib/streaming-chat/types.js';
@@ -57,14 +58,21 @@ function render(Component: unknown, props: Record<string, unknown>) {
 	return target;
 }
 
-const frames = (n: number) =>
-	new Promise((resolve) => {
-		let left = n;
-		const tick = () => (left-- <= 0 ? resolve(undefined) : requestAnimationFrame(tick));
-		requestAnimationFrame(tick);
-	});
+// Mid-flight samples scrub the fade to its midpoint (`scrubAnimations`, the
+// shared form of the `opacityAt` this file used to carry); the settled
+// assertions wait for the fade to finish rather than count frames
+// (R1-REVIEW 2.1).
+beforeAll(() => assertMotionAllowed());
 
 const opacity = (el: Element) => parseFloat(getComputedStyle(el).opacity);
+
+/** The opacity at `fraction` of the element's running fade. */
+function opacityAt(el: Element, fraction: number): number {
+	const restore = scrubAnimations(el, fraction);
+	const value = opacity(el);
+	restore();
+	return value;
+}
 
 /** Poll rather than guess a frame count for something driven by a media event. */
 async function waitFor<T>(read: () => T | null, what: string, tries = 60): Promise<T> {
@@ -77,23 +85,6 @@ async function waitFor<T>(read: () => T | null, what: string, tries = 60): Promi
 	throw new Error(`timed out waiting for ${what}`);
 }
 
-/**
- * Drive the element's running animation to `fraction` of its length and read the
- * opacity there.
- *
- * Deterministic on purpose. Sampling after a fixed number of frames races the
- * animation: measured through a real 0.2s fade, frame 2 lands at opacity 0.088,
- * so `> 0` has under a hundredth of margin and `< 1` breaks below ~15fps. Motion
- * One drives these through the Web Animations API, so the animation is
- * addressable and its clock can simply be moved.
- */
-function opacityAt(el: Element, fraction: number): number {
-	const [animation] = el.getAnimations();
-	if (!animation) throw new Error('nothing is animating');
-	const total = animation.effect!.getComputedTiming().activeDuration as number;
-	animation.currentTime = total * fraction;
-	return opacity(el);
-}
 
 /** A 1×1 transparent GIF — loads synchronously enough to fire `load`. */
 const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
@@ -141,14 +132,15 @@ describe('ImagePreview', () => {
 		// no-op. Waiting for the real one would leave the sample below racing it.
 		img.dispatchEvent(new Event('load'));
 		flushSync();
-		await frames(1);
+		await waitForAnimations(img);
 
 		const mid = opacityAt(img, 0.5);
 		// Paired, so neither an instant appearance nor a stuck one passes.
 		expect(mid, `mid-fade opacity was ${mid}`).toBeGreaterThan(0);
 		expect(mid).toBeLessThan(1);
 
-		await frames(20);
+		await settleAnimations(img);
+		await waitForStyle(img, 'opacity', (v) => v === '1');
 		expect(opacity(img)).toBe(1);
 	});
 
@@ -165,8 +157,9 @@ describe('ImagePreview', () => {
 
 		img().dispatchEvent(new Event('load'));
 		flushSync();
-		await frames(20);
-		expect(opacity(img())).toBe(1);
+		await waitForAnimations(img());
+		await settleAnimations(img());
+		await waitForStyle(img(), 'opacity', (v) => v === '1');
 
 		props.attachment = { ...image, id: 'a3', url: OTHER_PIXEL };
 		flushSync();
@@ -185,11 +178,10 @@ describe('ImagePreview', () => {
 		expect(opacity(img()), 'blinked the outgoing image out').toBe(1);
 
 		// And the incoming one does get its entrance, on its own load.
-		await frames(2);
-		expect(img().getAnimations(), 'the incoming image never faded in').toHaveLength(1);
+		await waitForAnimations(img(), { what: 'the incoming image never faded in' });
 
-		await frames(25);
-		expect(opacity(img())).toBe(1);
+		await settleAnimations(img());
+		await waitForStyle(img(), 'opacity', (v) => v === '1');
 	});
 
 	it('does not re-fade when the same image is handed over again', async () => {
@@ -203,12 +195,13 @@ describe('ImagePreview', () => {
 
 		img().dispatchEvent(new Event('load'));
 		flushSync();
-		await frames(20);
-		expect(opacity(img())).toBe(1);
+		await waitForAnimations(img());
+		await settleAnimations(img());
+		await waitForStyle(img(), 'opacity', (v) => v === '1');
 
 		props.attachment = { ...image };
 		flushSync();
-		await frames(1);
+		await nextFrame(1); // a deliberate one-frame negative
 
 		expect(img().getAnimations(), 'the same image faded again').toHaveLength(0);
 		expect(opacity(img())).toBe(1);
@@ -225,7 +218,8 @@ describe('ImagePreview', () => {
 
 		img().dispatchEvent(new Event('load'));
 		flushSync();
-		await frames(20);
+		await waitForAnimations(img());
+		await settleAnimations(img());
 
 		// B, and never let it load — `flushSync` does not yield to the task queue,
 		// so no load event can fire between here and the swap back. No stalling
@@ -237,9 +231,8 @@ describe('ImagePreview', () => {
 		flushSync();
 		img().dispatchEvent(new Event('load'));
 		flushSync();
-		await frames(2);
 
-		expect(img().getAnimations(), 'the returning image skipped its entrance').toHaveLength(1);
+		await waitForAnimations(img(), { what: 'the returning image skipped its entrance' });
 	});
 
 	it('does not leave an enabled, empty fullscreen button behind the error card', () => {
@@ -263,7 +256,7 @@ describe('ImagePreview', () => {
 
 		img().dispatchEvent(new Event('load'));
 		flushSync();
-		await frames(2);
+		await nextFrame(2);
 		const first = target.textContent ?? '';
 
 		props.attachment = { ...image, id: 'a4', url: OTHER_PIXEL, filename: 'other.png' };
@@ -335,7 +328,7 @@ describe('VideoPlayer controls', () => {
 		// the removal of the effect's first-run return: `animateFadeIn(el, {
 		// duration: 0 })` writes its inline `opacity` asynchronously, so reading
 		// immediately after mount sees `''` either way.
-		await frames(2);
+		await nextFrame(2);
 		expect(controls.style.opacity, 'the first run animated instead of placing').toBe('');
 	});
 
@@ -346,7 +339,7 @@ describe('VideoPlayer controls', () => {
 
 		target.querySelector('.video-player')!.dispatchEvent(new MouseEvent('mouseleave'));
 		flushSync();
-		await frames(1);
+		await waitForAnimations(controls);
 
 		const mid = opacityAt(controls, 0.5);
 		// Paired: neither an instant hide nor no change at all passes.
@@ -459,8 +452,8 @@ describe('VideoPlayer controls', () => {
 
 		player.dispatchEvent(new MouseEvent('mouseleave'));
 		flushSync();
-		await frames(3);
-		expect(opacity(controls), 'the fade-out never started').toBeLessThan(1);
+		await waitForAnimations(controls);
+		expect(opacityAt(controls, 0.5), 'the fade-out never started').toBeLessThan(1);
 
 		// `bubbles: true` matters: Svelte 5 delegates `mousemove` to a single root
 		// listener, so a non-bubbling synthetic event never reaches the handler.
@@ -468,7 +461,8 @@ describe('VideoPlayer controls', () => {
 		// directly.
 		player.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
 		flushSync();
-		await frames(4);
+		await settleAnimations(controls);
+		await waitForStyle(controls, 'opacity', (v) => v === '1');
 
 		expect(opacity(controls), 'the cancelled fade-out kept hiding them').toBe(1);
 	});

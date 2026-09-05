@@ -13,12 +13,15 @@
  * fast one settles sooner. A relative comparison, never an absolute duration.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import SidebarTest from './test-components/SidebarTest.svelte';
 import type { SpringConfig } from '../../src/lib/animation/spring-config.js';
+import { assertMotionAllowed, midFlight, settleValue, waitUntil } from '../../src/lib/test/animation.js';
 
-const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+// `margin-left` runs on Motion's ticker: the mid-flight sample polls for a
+// margin between the endpoints rather than six reads at 30 ms (R1-REVIEW 2.1).
+beforeAll(() => assertMotionAllowed());
 
 function waitForState<State>(
 	store: { subscribe: (listener: (state: State) => void) => () => void },
@@ -71,25 +74,17 @@ describe('Sidebar animation lifecycle', () => {
 		// ticker rather than the Web Animations API. That assertion failed against a
 		// working implementation.
 		const { container } = render(SidebarTest);
-		const wrapper = () => container.querySelector('[data-sidebar-wrapper]') as HTMLElement;
+		const wrapper = () => container.querySelector('[data-sidebar-wrapper]') as HTMLElement | null;
+		const marginLeft = () => Number.parseFloat(getComputedStyle(wrapper()!).marginLeft);
 		container.querySelector<HTMLButtonElement>('[data-testid="open-sidebar"]')!.click();
+		await waitUntil(wrapper, (w) => w !== null, { what: 'the sidebar wrapper to mount' });
 
-		const widths = new Set<string>();
-		const margins: number[] = [];
-		for (let i = 0; i < 6; i += 1) {
-			await wait(30);
-			const style = getComputedStyle(wrapper());
-			widths.add(style.width);
-			margins.push(Number.parseFloat(style.marginLeft));
-		}
+		const mid = await midFlight(marginLeft, { from: -240, to: 0, what: 'margin-left' });
+		expect(mid, 'margin-left never travelled').toBeLessThan(0);
+		expect(getComputedStyle(wrapper()!).width, 'width animated — that is the CSS transition, not Motion One').toBe('240px');
 
-		expect([...widths], 'width animated — that is the CSS transition, not Motion One').toEqual([
-			'240px'
-		]);
-		expect(
-			margins.some((m) => m < -1 && m > -239),
-			`margin-left never travelled: ${margins.join(', ')}`
-		).toBe(true);
+		await settleValue(marginLeft, { what: 'margin-left' });
+		expect(getComputedStyle(wrapper()!).width).toBe('240px');
 	});
 
 	it('stays mounted while dismissing, then unmounts', async () => {
@@ -100,11 +95,11 @@ describe('Sidebar animation lifecycle', () => {
 		});
 
 		store().dispatch({ type: 'dismissSidebar' });
-		await wait(40);
-		expect(
-			container.querySelector('[data-testid="presentation-status"]')!.textContent,
-			'should be animating out, not gone'
-		).toBe('dismissing');
+		await waitUntil(
+			() => container.querySelector('[data-testid="presentation-status"]')!.textContent,
+			(t) => t === 'dismissing',
+			{ what: 'the sidebar to be animating out, not gone' }
+		);
 
 		await waitForState(store(), (s: any) => s.presentation.status === 'idle', {
 			description: 'idle'

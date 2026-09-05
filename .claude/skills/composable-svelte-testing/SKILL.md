@@ -280,6 +280,34 @@ it('animates modal presentation', async () => {
 
 ---
 
+### 6. Animation tests
+
+Never sample a running animation at a fixed delay — it passes on a fast
+machine and fails on a loaded one. `@composable-svelte/core/test` has the
+deterministic forms:
+
+```typescript
+import { assertMotionAllowed, midFlight, scrubAnimations, settleAnimations, settleValue, waitForAnimations, waitForStyle, waitUntil } from '@composable-svelte/core/test';
+
+beforeAll(() => assertMotionAllowed()); // fails under prefers-reduced-motion, by name
+
+// Opacity / transform (Web Animations): scrub to the midpoint
+await waitForAnimations(el);
+const restore = scrubAnimations(el, 0.5);
+expect(parseFloat(getComputedStyle(el).opacity)).toBeLessThan(1);
+restore();
+await settleAnimations(el);
+await waitForStyle(el, 'opacity', (v) => v === '1');
+
+// x / rotate / height / margin (Motion's own ticker): poll between the endpoints
+const mid = await midFlight(() => translateX(thumb), { from: 0, to: 100, what: 'the thumb' });
+expect(await settleValue(() => translateX(thumb))).toBe(100);
+```
+
+Every helper refuses `vi.useFakeTimers()`; animation tests run on real
+timers. `guides/ANIMATION-GUIDELINES.md` ("Testing an animation") has the
+rule and which primitive fits which property.
+
 ## MOCK DEPENDENCIES
 
 ### MockClock

@@ -23,6 +23,7 @@
  */
 
 import { describe, it, expect, afterEach, vi } from 'vitest';
+import { nextFrame, settleValue, waitUntil } from '@composable-svelte/core/test';
 import { mount, unmount, flushSync } from 'svelte';
 import { createStore } from '@composable-svelte/core';
 import ChatMessage from '../src/lib/streaming-chat/primitives/ChatMessage.svelte';
@@ -141,30 +142,29 @@ describe('the entry animation reaches the DOM', () => {
 		// before the first frame the element rests at its natural 1
 		// (AUDIT-2026-09-03-FINDINGS T7). The spring runs for hundreds of
 		// milliseconds; a 5 ms poll cannot miss the whole flight.
-		await vi.waitFor(
-			() => {
-				const opacity = parseFloat(getComputedStyle(el).opacity);
-				expect(opacity, `opacity was ${opacity}`).toBeGreaterThan(0);
-				expect(opacity, `opacity was ${opacity}`).toBeLessThan(1);
-			},
-			{ timeout: 2000, interval: 5 }
+		const mid = await waitUntil(
+			() => parseFloat(getComputedStyle(el).opacity),
+			(opacity) => opacity > 0 && opacity < 1,
+			{ interval: 5, what: 'a mid-flight opacity (the element rests at 1 before the first frame)' }
 		);
+		expect(mid).toBeGreaterThan(0);
+		expect(mid).toBeLessThan(1);
 	});
 
 	it('places a message that is not new — the restore case', async () => {
 		// A paired discriminator with the test above. Fifty restored messages must
 		// appear instantly; asserting only "eventually 1" would pass either way.
 		const el = render({ message, animateIn: false });
-		await wait(20);
+		await nextFrame(2); // a deliberate two-frame negative
 
 		expect(parseFloat(getComputedStyle(el).opacity), 'a restored message animated').toBe(1);
 	});
 
 	it('settles fully visible', async () => {
 		const el = render({ message, animateIn: true });
-		await wait(600);
+		const settled = await settleValue(() => parseFloat(getComputedStyle(el).opacity), { what: 'the message opacity' });
 
-		expect(parseFloat(getComputedStyle(el).opacity)).toBeCloseTo(1, 1);
+		expect(settled).toBeCloseTo(1, 1);
 	});
 
 });

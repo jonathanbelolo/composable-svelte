@@ -26,11 +26,15 @@
  * the component before this one.
  */
 
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeAll } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import Select from '../src/lib/components/ui/select/Select.svelte';
+import { assertMotionAllowed, midFlight, nextFrame, scrubAnimations, settleAnimations, settleValue, waitForAnimations, waitForStyle, waitUntil } from '../src/lib/test/animation.js';
 
-const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+// Mid-flight samples below are scrubbed, not timed: the R1 review reproduced
+// this file failing on a loaded runner when a fixed 20 ms landed after the
+// fade had finished (R1-REVIEW 2.1).
+beforeAll(() => assertMotionAllowed());
 
 let cleanup: Array<() => void> = [];
 afterEach(() => {
@@ -55,15 +59,38 @@ function mount(props: Record<string, unknown> = {}) {
 	};
 }
 
+type Mounted = ReturnType<typeof mount>;
+
+/** Open the dropdown and let its entrance settle. */
+async function open(s: Mounted): Promise<HTMLElement> {
+	s.trigger().click();
+	const el = await waitUntil(() => s.list(), (l) => l !== null, { what: 'the listbox to mount' });
+	await waitForAnimations(el!);
+	await settleAnimations(el!);
+	await waitForStyle(el!, 'opacity', (v) => v === '1');
+	return el!;
+}
+
+/** After a close path: still mounted while the exit runs, then gone. */
+async function expectAnimatedOut(s: Mounted, what: string): Promise<void> {
+	const el = s.list();
+	expect(el, `${what}: the dropdown vanished instead of animating out`).not.toBeNull();
+	await waitForAnimations(el!, { what: `${what}: the exit animation` });
+	expect(s.list(), `${what}: the dropdown vanished instead of animating out`).not.toBeNull();
+	await settleAnimations(el!);
+	await waitUntil(() => s.list(), (l) => l === null, { what: `${what}: the dropdown to unmount` });
+}
+
 describe('the select dropdown', () => {
 	it('fades in rather than appearing instantly', async () => {
 		const s = mount();
 		s.trigger().click();
-		await wait(20);
 
-		const el = s.list();
-		expect(el, 'the dropdown did not open').not.toBeNull();
+		const el = await waitUntil(() => s.list(), (l) => l !== null, { what: 'the listbox to mount' });
+		await waitForAnimations(el!);
+		const restore = scrubAnimations(el!, 0.5);
 		const opacity = Number.parseFloat(getComputedStyle(el!).opacity);
+		restore();
 
 		// Paired, and it has to be. `style:opacity` hard-sets 0 for the whole
 		// `presenting` phase, so `< 1` alone is satisfied by the *gate* rather than
@@ -77,51 +104,33 @@ describe('the select dropdown', () => {
 
 	it('settles fully opaque', async () => {
 		const s = mount();
-		s.trigger().click();
-		await wait(400);
+		const el = await open(s);
 
-		expect(Number.parseFloat(getComputedStyle(s.list()!).opacity)).toBe(1);
+		expect(Number.parseFloat(getComputedStyle(el).opacity)).toBe(1);
 	});
 
 	it('stays mounted while dismissing, then unmounts', async () => {
 		const s = mount();
-		s.trigger().click();
-		await wait(400);
+		await open(s);
 
 		s.trigger().click();
-		await wait(20);
-		expect(s.list(), 'the dropdown vanished instead of animating out').not.toBeNull();
-
-		await wait(500);
-		expect(s.list(), 'the dropdown never finished dismissing').toBeNull();
+		await expectAnimatedOut(s, 'toggle');
 	});
 
 	it('closes on Escape', async () => {
 		const s = mount();
-		s.trigger().click();
-		await wait(400);
+		await open(s);
 
-		s.trigger().dispatchEvent(
-			new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
-		);
-		await wait(20);
-		expect(s.list(), 'escape should animate out, not cut').not.toBeNull();
-
-		await wait(500);
-		expect(s.list()).toBeNull();
+		s.trigger().dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+		await expectAnimatedOut(s, 'escape');
 	});
 
 	it('closes when an option is chosen', async () => {
 		const s = mount();
-		s.trigger().click();
-		await wait(400);
+		await open(s);
 
 		s.optionEls()[1]!.click();
-		await wait(20);
-		expect(s.list(), 'selecting should animate out, not cut').not.toBeNull();
-
-		await wait(500);
-		expect(s.list()).toBeNull();
+		await expectAnimatedOut(s, 'selecting');
 		expect(s.trigger().textContent).toContain('Banana');
 	});
 
@@ -129,45 +138,32 @@ describe('the select dropdown', () => {
 		// The click-outside path (`closed`). `select.test.ts` sends this action to a
 		// TestStore and asserts `isOpen` only, so the lifecycle half was untested.
 		const s = mount();
-		s.trigger().click();
-		await wait(400);
+		await open(s);
 
 		document.body.click();
-		await wait(20);
-		expect(s.list(), 'an outside click should animate out, not cut').not.toBeNull();
-
-		await wait(500);
-		expect(s.list()).toBeNull();
+		await expectAnimatedOut(s, 'an outside click');
 	});
 
 	it('closes on Enter over a highlighted option', async () => {
 		// The `enter` path — a separate reducer case from `optionSelected`, and the
 		// one the commit's enumeration missed entirely.
 		const s = mount();
-		s.trigger().click();
-		await wait(400);
+		await open(s);
 
 		const key = (k: string) =>
 			s.trigger().dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true }));
 		key('ArrowDown');
-		await wait(20);
 		key('Enter');
-		await wait(20);
-
-		expect(s.list(), 'Enter should animate out, not cut').not.toBeNull();
-		await wait(500);
-		expect(s.list()).toBeNull();
+		await expectAnimatedOut(s, 'Enter');
 	});
 
 	it('reopens after a full close', async () => {
 		const s = mount();
+		await open(s);
 		s.trigger().click();
-		await wait(400);
-		s.trigger().click();
-		await wait(500);
+		await expectAnimatedOut(s, 'toggle');
 
-		s.trigger().click();
-		await wait(400);
+		await open(s);
 		expect(s.list(), 'the dropdown could not be reopened').not.toBeNull();
 	});
 });

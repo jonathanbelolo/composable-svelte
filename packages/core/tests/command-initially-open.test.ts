@@ -27,6 +27,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import Command from '../src/lib/components/command/Command.svelte';
+import { settleAnimations, waitForAnimations, waitUntil } from '../src/lib/test/animation.js';
 import { createInitialCommandState } from '../src/lib/components/command/command.types.js';
 
 const settle = (ms = 150) => new Promise((r) => setTimeout(r, ms));
@@ -146,15 +147,23 @@ describe('<Command /> can be dismissed', () => {
 			const r = render(Command, { open: initiallyOpen, commands: [{ id: 'a', label: 'Alpha' }] });
 			if (!initiallyOpen) {
 				await r.rerender({ open: true });
-				await settle(600);
 			}
+			await waitUntil(() => dialogVisible(), (v) => v, { what: 'the palette to open' });
+			await settleAnimations(document);
+			// A bounded endpoint wait, not a mid-flight sample: the reducer marks the
+			// palette `presented` on its own `animationDuration` timer (measured: the
+			// dismissal is refused for ~150 ms after the entry animation is finished),
+			// and nothing in the DOM reflects that state.
 			await settle(400);
 			expect(dialogVisible(), 'precondition: open').toBe(true);
 
 			await r.rerender({ open: false });
-			await settle(60);
-			const count = document.getAnimations().length;
-			await settle(800);
+			// Counted when it is running, not 60 ms in (R1-REVIEW 2.1); a control
+			// that never animates times out here with a message rather than
+			// returning 0 by luck of timing.
+			const count = (await waitForAnimations(document, { what: 'the dismissal animation', timeout: 1500 }).catch(() => [])).length;
+			await settleAnimations(document);
+			await waitUntil(() => dialogVisible(), (v) => v === false, { what: 'the palette to close' });
 			return count;
 		};
 

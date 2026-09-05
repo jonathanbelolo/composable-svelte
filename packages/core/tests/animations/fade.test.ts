@@ -17,8 +17,14 @@
  *    would leave a fade-out in flight to finish and hide the element anyway.
  */
 
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeAll } from 'vitest';
 import { animateFadeIn, animateFadeOut } from '../../src/lib/animation/animate';
+import { assertMotionAllowed, nextFrame, scrubAnimations, waitForAnimations } from '../../src/lib/test/animation.js';
+
+// Fades are Web Animations, so a mid-flight sample scrubs the animation to
+// its midpoint instead of reading two frames in — measured through a real
+// 0.2 s fade, frame 2 landed at 0.088 (R1-REVIEW 2.1).
+beforeAll(() => assertMotionAllowed());
 
 let cleanup: Array<() => void> = [];
 afterEach(() => {
@@ -35,13 +41,6 @@ function box() {
 }
 
 const opacity = (el: HTMLElement) => parseFloat(getComputedStyle(el).opacity);
-
-const frames = (n: number) =>
-	new Promise((resolve) => {
-		let left = n;
-		const tick = () => (left-- <= 0 ? resolve(undefined) : requestAnimationFrame(tick));
-		requestAnimationFrame(tick);
-	});
 
 /** Answer the media query as if the user had asked for reduced motion. */
 async function underReducedMotion(fn: () => Promise<void>) {
@@ -67,9 +66,11 @@ describe('animateFadeIn', () => {
 	it('eases rather than jumping', async () => {
 		const el = box();
 		const done = animateFadeIn(el);
-		await frames(2);
+		await waitForAnimations(el);
 
+		const restore = scrubAnimations(el, 0.5);
 		const mid = opacity(el);
+		restore();
 		// Paired, so neither an instant jump nor doing nothing passes.
 		expect(mid, `mid-flight opacity was ${mid}`).toBeGreaterThan(0);
 		expect(mid).toBeLessThan(1);
@@ -96,11 +97,13 @@ describe('animateFadeIn', () => {
 		// running. Assigning `style.opacity` here would lose to the animation.
 		const el = box();
 		void animateFadeOut(el);
-		await frames(2);
+		await waitForAnimations(el);
+		const restore = scrubAnimations(el, 0.5);
 		expect(opacity(el), 'the fade-out never started').toBeLessThan(1);
+		restore();
 
 		await animateFadeIn(el, { duration: 0 });
-		await frames(4);
+		await nextFrame(4);
 
 		expect(opacity(el), 'the cancelled fade-out kept running').toBe(1);
 	});
