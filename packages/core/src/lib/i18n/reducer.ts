@@ -221,6 +221,15 @@ export function createInitialI18nState(
   availableLocales: string[],
   defaultLocale: string = 'en'
 ): I18nState {
+  // A locale outside the list — an Accept-Language passed through unchecked —
+  // compiled every ICU message under it into a cached failure with one
+  // console.error each (R1-REVIEW 1.9). The default is used, with one warn.
+  if (!availableLocales.includes(locale)) {
+    console.warn(
+      `[i18n] Locale ${JSON.stringify(locale)} is not in availableLocales ${JSON.stringify(availableLocales)}; using the default ${JSON.stringify(defaultLocale)}`
+    );
+    locale = defaultLocale;
+  }
   return {
     currentLocale: locale,
     defaultLocale,

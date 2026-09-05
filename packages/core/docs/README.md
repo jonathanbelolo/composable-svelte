@@ -300,7 +300,7 @@ hydrateStore(serializedState, { reducer, dependencies })
 
 // SSG
 generateStaticSite(App, { routes, outDir }, { reducer, dependencies })
-generateStaticPage(App, path, outDir, storeConfig)
+generateStaticPage(App, path, { initialState, reducer, outDir })
 
 // Security — from '@composable-svelte/core/ssr/middleware'
 //   (sanitizeHTML lives at '@composable-svelte/core/ssr/sanitize')

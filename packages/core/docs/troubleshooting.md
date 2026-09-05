@@ -338,7 +338,7 @@ Effect.run(async (dispatch) => {
 })
 
 // ✅ GOOD: Use cancellable effect with cleanup
-Effect.cancel(
+Effect.cancellable(
   'websocket-connection',
   Effect.run(async (dispatch, signal) => {
     const ws = new WebSocket('ws://...');

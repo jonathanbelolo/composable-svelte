@@ -54,9 +54,9 @@ import { createStore } from '../store.svelte.js';
 
 // Node.js modules - only used in Node environment (build-time SSG)
 // These are only called during build, never in browser
-import { mkdir, writeFile } from 'fs/promises';
+import { mkdir, realpath, stat, writeFile } from 'fs/promises';
 import { dirname, join, resolve, sep } from 'path';
-import { escapeAttribute } from './utils.js';
+import { encodePath, escapeAttribute } from './utils.js';
 
 /**
  * Svelte component type (compatible with Svelte 5).
@@ -259,7 +259,14 @@ export async function generateStaticSite<State, Action, Dependencies>(
       // and a data path of `/404` was overwritten by the 404 page generated
       // after the loop (SS11). The 404 step owns 404.html.
       const target = pathToFilePath(path);
-      if (target !== null && generatedFiles.includes(target)) continue;
+      if (target instanceof SSGPathError) {
+        // Refused here, before the data loaders see it: a hostile path used
+        // to reach getInitialState and getServerProps first (R1-REVIEW 1.9).
+        errors.push({ path, error: target });
+        console.error(`[SSG] Error generating ${path}:`, target);
+        continue;
+      }
+      if (generatedFiles.includes(target)) continue;
       if (target === '404.html' && generate404) continue;
       try {
         // Get initial state for this path
@@ -294,7 +301,7 @@ export async function generateStaticSite<State, Action, Dependencies>(
             // Attribute-escaped: a path with `"` closed the attribute and the
             // rest was markup — stored XSS from a route (SS2).
             ...(config.baseURL && {
-              head: `${options.renderOptions?.head || ''}\n<link rel="canonical" href="${escapeAttribute(`${config.baseURL}${path}`)}">`
+              head: `${options.renderOptions?.head || ''}\n<link rel="canonical" href="${escapeAttribute(`${config.baseURL}${encodePath(path)}`)}">`
             })
           },
           outDir
@@ -402,16 +409,10 @@ export async function generateStaticPage<State, Action, Dependencies>(
   // Determine output file path — before rendering, so a refused path costs
   // nothing and cannot reach the disk.
   const filePath = pathToFilePath(path);
-  if (filePath === null) {
-    throw new SSGPathError(path);
+  if (filePath instanceof SSGPathError) {
+    throw filePath;
   }
-  const fullPath = join(options.outDir, filePath);
-  // A second guard on the resolved target, in case a segment slipped past
-  // the first: the write must land under outDir.
-  const outRoot = resolve(options.outDir);
-  if (!resolve(fullPath).startsWith(outRoot + sep)) {
-    throw new SSGPathError(path);
-  }
+  const fullPath = await containedPath(options.outDir, filePath, path);
 
   // Render to HTML
   const html = renderToHTML(Component, { store }, options.renderOptions);
@@ -428,14 +429,64 @@ export async function generateStaticPage<State, Action, Dependencies>(
 
 /**
  * A path `generateStaticPage` refused to write: it would land outside
- * `outDir`, or could not be decoded. In `generateStaticSite` it is one entry
- * of `result.errors`; on its own it is thrown.
+ * `outDir` (by its segments, or through a symlink inside `outDir`), could not
+ * be decoded, or names a file where the generator makes a directory. In
+ * `generateStaticSite` it is one entry of `result.errors`; on its own it is
+ * thrown.
  */
 export class SSGPathError extends Error {
   override readonly name = 'SSGPathError';
   readonly code = 'SSG_PATH_REFUSED';
-  constructor(readonly path: string) {
-    super(`generateStaticPage: refused to write ${JSON.stringify(path)} — it would leave outDir`);
+  constructor(readonly path: string, readonly reason: string = 'it would leave outDir') {
+    super(`generateStaticPage: refused to write ${JSON.stringify(path)} — ${reason}`);
+  }
+}
+
+/**
+ * The absolute file to write, or a refusal. Two guards on the segments'
+ * result, then one on the disk: the lexical target must sit under
+ * `outDir`, and the nearest *existing* directory under `outDir` on the way to
+ * it must resolve, symlinks followed, under the real `outDir` — a symlink
+ * inside `outDir` routed a lexically contained write elsewhere
+ * (R1-REVIEW 1.9). Directories that do not exist yet cannot be links.
+ */
+async function containedPath(outDir: string, filePath: string, path: string): Promise<string> {
+  const fullPath = join(outDir, filePath);
+  const outRoot = resolve(outDir);
+  const target = resolve(fullPath);
+  if (!target.startsWith(outRoot + sep)) {
+    throw new SSGPathError(path);
+  }
+
+  const realRoot = await realpathOrSelf(outRoot);
+  let ancestor = dirname(target);
+  while (ancestor !== outRoot && ancestor.startsWith(outRoot + sep)) {
+    if (await exists(ancestor)) {
+      const real = await realpathOrSelf(ancestor);
+      if (real !== realRoot && !real.startsWith(realRoot + sep)) {
+        throw new SSGPathError(path, 'a directory on the way is a link to outside outDir');
+      }
+      break;
+    }
+    ancestor = dirname(ancestor);
+  }
+  return fullPath;
+}
+
+async function exists(dir: string): Promise<boolean> {
+  try {
+    await stat(dir);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function realpathOrSelf(dir: string): Promise<string> {
+  try {
+    return await realpath(dir);
+  } catch {
+    return dir;
   }
 }
 
@@ -476,20 +527,26 @@ async function resolvePaths(route: SSGRoute): Promise<string[]> {
  * than resolved — the caller meant a page, not a parent directory.
  *
  * @param path - URL path
- * @returns File path relative to output directory, or null if refused
+ * @returns File path relative to output directory, or the refusal
  */
-function pathToFilePath(path: string): string | null {
-  if (path.includes('\0')) return null;
+function pathToFilePath(path: string): string | SSGPathError {
+  if (path.includes('\0')) return new SSGPathError(path);
   let decoded: string;
   try {
     decoded = decodeURIComponent(path);
   } catch {
-    return null;
+    return new SSGPathError(path, 'it is not valid percent-encoding');
   }
-  if (decoded.includes('\0')) return null;
+  if (decoded.includes('\0')) return new SSGPathError(path);
 
   const segments = decoded.split(/[\/\\]+/).filter((segment) => segment !== '');
-  if (segments.some((segment) => segment === '..' || segment === '.')) return null;
+  if (segments.some((segment) => segment === '..' || segment === '.')) return new SSGPathError(path);
+  // The generator makes a directory per path and writes index.html into it;
+  // a segment that names an .html file cannot be served at that URL, and
+  // `/404.html` made a directory the 404 step then failed to write into.
+  if (segments.some((segment) => /\.html$/i.test(segment))) {
+    return new SSGPathError(path, 'a segment names an .html file; paths map to directories with an index.html');
+  }
 
   // Handle root
   if (segments.length === 0) {

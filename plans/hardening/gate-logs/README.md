@@ -105,3 +105,6 @@ before the fix is kept as `red-R1.x.y.log`, and the gate as `gate-R1.x.y.log`.
 | gate-C1.log | C1 | core gate, one run: 2290 browser + 611 node, 0 skipped, check clean; porcelain = the files committed |
 | red-C3.log | C3 | the middleware suites with the new tests and the sources restored: `fp(plugin)` throws `Cannot assign to read only property`, the direct call with a bad config does not throw, first-seen eviction drops the long-lived client (4 fail) |
 | gate-C3.log | C3 | core gate, one run: 2290 browser + 616 node, 0 skipped, check clean; porcelain = the files committed |
+| red-C7-node.log | C7 | the SSR, SSG and i18n node suites with the new tests and the sources restored: 9 fail — the SSG path refused after the loaders ran, the `.html` segments accepted, the symlink write allowed, the canonical and alternate links unencoded, `serializeState` returning `undefined` |
+| red-C7-browser.log | C7 | `tests/i18n/icu.test.ts` and `tests/i18n/reducer.test.ts` with the sources restored: 2 fail — the failure cache unbounded, the locale outside `availableLocales` accepted |
+| gate-C7.log | C7 | core gate, one run after a two-error svelte-check fix in the new SSG test (untyped mock parameters), whose first run is not logged: 2292 browser + 623 node, 0 skipped, check clean; porcelain = the files committed |

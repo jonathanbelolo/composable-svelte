@@ -176,6 +176,14 @@ describe('generateAlternateLinks', () => {
     expect(links).toContain('href="https://example.com/products?lang=pt-BR"');
   });
 
+  it('encodes the path segment by segment, idempotently, and keeps ? and # in the path', () => {
+    // encodeURI double-encoded an already-encoded path and let `?lang=` land
+    // in a fragment after a `#`.
+    expect(generateAlternateLinks('/a%20b', ['en'])).toContain('href="/a%20b?lang=en"');
+    expect(generateAlternateLinks('/a b', ['en'])).toContain('href="/a%20b?lang=en"');
+    expect(generateAlternateLinks('/a?x#y', ['en'])).toContain('href="/a%3Fx%23y?lang=en"');
+  });
+
   it('a hostile path, locale or base URL cannot leave its attribute (SS5)', () => {
     // Each value interpolated raw; the JSDoc fed the request path through
     // {@html} — reflected XSS from the URL.
@@ -196,6 +204,7 @@ describe('generateAlternateLinks', () => {
       expect(match, element).not.toBeNull();
     }
     expect(elements[0]).toContain('hreflang="en&quot; onload=&quot;alert(1)"');
+    // The `/` inside `</script>` is a path separator in the input, so it stays one.
     expect(elements[0]).toContain('href="https://x.example&quot;/p%22%3E%3Cscript%3Ealert(1)%3C/script%3E?lang=en%22%20onload%3D%22alert(1)"');
   });
 });

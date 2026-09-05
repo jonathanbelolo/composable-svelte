@@ -16,6 +16,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **SSG refuses a path before its data loaders run, follows symlinks when
+  containing a write, and refuses `.html` segments.** A refused path still
+  reached `getInitialState` and `getServerProps`; a symlink inside `outDir`
+  routed a lexically contained write outside it; `/404.html` made a
+  directory the 404 step then failed to write into. `SSGPathError` carries a
+  `reason`. (R1-REVIEW 1.9)
+- **`generateAlternateLinks` and the SSG canonical link encode the path
+  segment by segment, idempotently.** `encodeURI` double-encoded an
+  already-encoded path and let `?lang=` land in a fragment after a `#`; the
+  canonical link was not encoded at all. (R1-REVIEW 1.9)
+- **`serializeState` throws for a root with no JSON form**, as
+  `serializeStore` has since R1.7.d. (R1-REVIEW 1.9)
+- **The ICU failure cache is bounded (100, oldest dropped) and
+  `createInitialI18nState` falls back to the default for a locale outside
+  `availableLocales`**, with one warning — an `Accept-Language` passed through
+  unchecked grew the cache and logged an error per message. (R1-REVIEW 1.9)
+
 - **`fastify-plugin` can wrap the security plugins.** The skip-override
   marker was defined non-writable, and `fastify-plugin` assigns it in strict
   mode, so `fp(fastifySecurityHeaders)` threw; it is writable and

@@ -663,13 +663,12 @@ const store = createStore({
 
 **Problem**: `document.getElementById('__COMPOSABLE_SVELTE_STATE__')` returns null.
 
-**Solution**: Ensure `renderToHTML` includes state:
+**Solution**: `renderToHTML` always embeds the state script when the props
+carry a `store`; check that the store is passed under that name and that the
+client reads the same element id:
 
 ```typescript
-const html = renderToHTML(App, {
-  store,
-  includeState: true // Default: true
-});
+const html = renderToHTML(App, { store }); // the state script is embedded
 ```
 
 ### State That Cannot Be Serialized
@@ -708,11 +707,13 @@ renderToHTML(
   component: SvelteComponent,
   props: { store: Store<S, A> },
   options?: {
-    includeState?: boolean;      // Default: true
+    title?: string;               // <title>; default 'Composable Svelte App'
     head?: string;                // Additional <head> content
-    clientScript?: string;        // Path to client JS
+    clientScript?: string;        // Path to client JS; default '/app.js'
+    bodyScripts?: string;         // Markup appended to <body>
+    serializer?: StateSerializer; // createTaggedSerializer(), for Dates/Maps
   }
-): string
+): string // throws if the state cannot be serialized (fails closed)
 
 // Hydrate store on client
 hydrateStore<S, A, D>(
@@ -732,25 +733,32 @@ generateStaticSite(
   component: SvelteComponent,
   config: {
     routes: RouteConfig[];
-    outDir: string;
-    baseURL?: string;
+    outDir?: string;             // default './dist'
+    baseURL?: string;            // adds a canonical link per page
+    generate404?: boolean;       // default true
+    notFoundState?: S;
     onPageGenerated?: (path: string, outPath: string) => void;
-    renderOptions?: RenderOptions;
   },
-  storeConfig: {
+  options: {
     reducer: Reducer<S, A, D>;
-    dependencies: D;
-    getInitialState?: (path: string) => S;
+    dependencies?: D;
+    getInitialState?: (path: string) => S | Promise<S>;
+    renderOptions?: RenderOptions;
   }
-): Promise<{ pagesGenerated: number; duration: number }>
+): Promise<{ pagesGenerated: number; generatedFiles: string[]; errors: Array<{ path: string; error: Error }>; duration: number }>
 
 // Generate single page
 generateStaticPage(
   component: SvelteComponent,
   path: string,
-  outDir: string,
-  storeConfig: StoreConfig<S, A, D>
-): Promise<string>
+  options: {
+    initialState: S;
+    reducer: Reducer<S, A, D>;
+    dependencies?: D;
+    renderOptions?: RenderOptions;
+    outDir: string;
+  }
+): Promise<string> // the file written, relative to outDir; throws SSGPathError for a refused path
 ```
 
 `generateStaticSite` returns every failure in `result.errors`, the 404 page's

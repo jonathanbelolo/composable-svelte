@@ -21,6 +21,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { renderToHTML, buildHydrationScript } from '../../src/lib/ssr/render';
+import { serializeState } from '../../src/lib/ssr/serialize';
 import { hydrateStore, parseState } from '../../src/lib/ssr/hydrate';
 import { createTaggedSerializer } from '../../src/lib/ssr/serializer';
 import { createStore } from '../../src/lib/store.svelte';
@@ -186,6 +187,11 @@ describe('renderToHTML fails closed on a state it cannot serialize (SS7)', () =>
 		const store = storeOf(() => 1);
 		expect(() => renderToHTML({} as never, { store })).toThrow(/no JSON form/);
 		expect(() => buildHydrationScript(store)).toThrow(/no JSON form/);
+	});
+
+	it('serializeState throws the same typed error for a root with no JSON form', () => {
+		expect(() => serializeState(() => 1)).toThrow(/no JSON form/);
+		expect(() => serializeState(Symbol('s'))).toThrow(/no JSON form/);
 	});
 });
 
