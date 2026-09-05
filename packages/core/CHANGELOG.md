@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `WebSocketClient.reconnect(reason?, cause?)`: a `cause` is reported as an
+  `error` event before the socket is dropped. The heartbeat passes a
+  `HEARTBEAT_TIMEOUT` error, and a close with code 1002, 1003 or 1007 is
+  reported as `PROTOCOL_ERROR` — both codes existed and were never emitted.
+
+### Fixed
+
+- **An error on a live WebSocket connection no longer ends it `failed` with
+  nothing reported.** A browser sets `readyState` to `CLOSED` before it
+  fires `error`, so the client's "never opened" test — `readyState !== OPEN`
+  — took every error on an established connection for a failed handshake:
+  status `failed`, the close handler nulled, no `disconnected` event, no
+  reconnect. Whether a socket opened is remembered per socket now; the
+  error is reported and the close that follows decides. The test harness's
+  `error()` follows the browser's order. (R1-REVIEW 1.1; W3, W8)
+- **WebSocket edges.** `disconnect(code)` refuses a close code the browser
+  would refuse (anything but 1000 or 3000–4999) with a `TypeError` before
+  detaching, instead of leaving the socket open behind a `disconnected`
+  state; `reconnect()` and `disconnect()` while reconnecting emit no second
+  `disconnected`; a `connected` listener that disconnects no longer rejects
+  the `connect()` that succeeded; a `WebSocket` constructor that throws is
+  reported as an `error` event; `disconnect()` clears `lastError`;
+  `connectionTimeout: 0` is zero. The mock's `reconnect()` disconnects when
+  reconnection is disabled, restarts at attempt 1, and its `disconnect()`
+  while connecting reports the loss — as the live client. (R1-REVIEW 1.9)
+
 ## [0.12.0] - 2026-09-05
 
 ### Added

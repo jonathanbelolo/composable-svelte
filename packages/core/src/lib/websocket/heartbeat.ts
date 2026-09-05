@@ -14,6 +14,7 @@
 
 import type { WebSocketClient, HeartbeatConfig } from './types.js';
 import { stableStringify } from '../utils/stable-stringify.js';
+import { WebSocketError, WS_ERROR_CODES } from './types.js';
 
 export interface Heartbeat {
   /**
@@ -103,7 +104,10 @@ export function createHeartbeat(
       if (!pongReceived) {
         console.warn('[WebSocket] Heartbeat timeout - no pong received');
         stop();
-        client.reconnect('Heartbeat timeout');
+        client.reconnect(
+          'Heartbeat timeout',
+          new WebSocketError(`Heartbeat timeout: no pong within ${interval}ms`, WS_ERROR_CODES.HEARTBEAT_TIMEOUT, true)
+        );
         return;
       }
 
@@ -119,7 +123,10 @@ export function createHeartbeat(
         if (!pongReceived) {
           console.warn('[WebSocket] Pong timeout');
           stop();
-          client.reconnect('Pong timeout');
+          client.reconnect(
+            'Pong timeout',
+            new WebSocketError(`Pong timeout: no pong within ${timeout}ms`, WS_ERROR_CODES.HEARTBEAT_TIMEOUT, true)
+          );
         }
       }, timeout);
 

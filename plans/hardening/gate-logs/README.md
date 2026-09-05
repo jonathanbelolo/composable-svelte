@@ -101,3 +101,5 @@ before the fix is kept as `red-R1.x.y.log`, and the gate as `gate-R1.x.y.log`.
 | gate-R1-exit.log | R1 exit | whole-repository gate at `95a7a3b`: `pnpm -r build && pnpm -r typecheck && pnpm -r --workspace-concurrency=1 test && pnpm -r check` — 4,851 tests passed, 0 skipped; svelte-check clean in all 20 workspaces |
 | mutation-baseline-R1-exit.log | R1 exit | `node scripts/mutation-baseline.mjs --strict` at `95a7a3b`: 8 of 8 KILLED, exit 0 |
 | gate-C0.log | C0 (R1 closure) | core gate, one run: 2273 browser (the six duplicate tests gone) + 611 node, 0 skipped, check clean; porcelain = the two files committed |
+| red-C1.log | C1 | `tests/websocket/live-client.test.ts` with only the harness change (`error()` sets `readyState = CLOSED` first, the browser's order): the R1.4.e test for an error on an established socket fails — `expected 'failed' to be 'connected'` |
+| gate-C1.log | C1 | core gate, one run: 2290 browser + 611 node, 0 skipped, check clean; porcelain = the files committed |

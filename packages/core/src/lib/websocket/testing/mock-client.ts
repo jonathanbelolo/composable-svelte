@@ -147,7 +147,9 @@ export function createMockWebSocket<T = unknown>(
   }
 
   async function disconnect(code = 1000, reason = ''): Promise<void> {
-    const wasConnected = state.status === 'connected';
+    // As the live client: a live connection (connected or connecting) reports
+    // its loss; one already 'reconnecting' has.
+    const wasConnected = state.status === 'connected' || state.status === 'connecting';
 
     state = {
       status: 'disconnected',
@@ -213,12 +215,26 @@ export function createMockWebSocket<T = unknown>(
    * `disconnected` with the reason (not clean), `reconnecting`, and after
    * the mock's connection delay `connected` and `reconnected`.
    */
-  function reconnect(reason = 'Reconnect requested'): void {
-    if (!state.url) return;
-    const { url, protocols } = state;
-    const attempt = state.reconnectAttempts + 1;
+  function reconnect(reason = 'Reconnect requested', cause?: WebSocketError): void {
+    const url = state.url;
+    if (!url) return;
+    if (cause) {
+      stats.errors++;
+      state = { ...state, lastError: cause };
+      simulateEvent({ type: 'error', error: cause, timestamp: Date.now() });
+    }
+    if (config?.reconnect?.enabled === false) {
+      void disconnect(1000, reason);
+      return;
+    }
+    const { protocols } = state;
+    // The ladder restarts at its first rung, as the live client's does.
+    const attempt = 1;
+    const wasLive = state.status === 'connected' || state.status === 'connecting';
     state = { ...state, status: 'reconnecting', reconnectAttempts: attempt, connectedAt: null };
-    simulateEvent({ type: 'disconnected', code: 1000, reason, wasClean: false, timestamp: Date.now() });
+    if (wasLive) {
+      simulateEvent({ type: 'disconnected', code: 1000, reason, wasClean: false, timestamp: Date.now() });
+    }
     simulateEvent({ type: 'reconnecting', attempt, delay: 0, maxAttempts: 0, timestamp: Date.now() });
     setTimeout(() => {
       if (state.status !== 'reconnecting') return;

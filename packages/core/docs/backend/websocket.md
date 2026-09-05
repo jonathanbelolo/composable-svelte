@@ -416,8 +416,13 @@ sends a clean close frame and should still be retried:
 | 1008 | policy violation | no |
 | 3000–4999 | application codes | no, unless `shouldReconnect` says so |
 
-An `error` event on an established connection reports and leaves the status
-alone; the close that follows decides.
+An `error` event on an established connection reports it (`lastError`, an
+`error` event) and leaves the status alone; the `close` that follows decides.
+A browser fires the two in one task — `readyState` set to `CLOSED`, then
+`error`, then `close` — so the client tells a failed handshake from a failed
+connection by whether the socket ever opened, never by `readyState`. A close
+with a protocol code (1002, 1003, 1007) is reported as a `PROTOCOL_ERROR`
+error event before the `disconnected`; it is not retried.
 
 ```typescript
 const websocket = createLiveWebSocket({
@@ -470,29 +475,32 @@ const websocket = createLiveWebSocket({
 
 ### Disconnecting
 
-`disconnect()` detaches the socket before closing it and emits `disconnected`
-(`wasClean: true`) synchronously, so a handler stopping on that event stops
+`disconnect(code?, reason?)` — `code` must be 1000 (the default) or 3000–4999,
+the codes a browser accepts from script; any other is a `TypeError` before
+anything is touched — detaches the socket before closing it and emits
+`disconnected` (`wasClean: true`) synchronously, so a handler stopping on that event stops
 at once and the old socket's own close, which arrives later, cannot touch the
 state of a connection made after it. A `connect()` still waiting on that
 socket rejects with `WS_CONNECTION_FAILED`.
 
 ### Manual Reconnection
 
-`websocket.reconnect(reason)` drops the current socket and starts the ladder
-from the first attempt, keeping the URL — what the heartbeat calls on a missed
-pong. After an unexpected close `state.url` is also still set, so a handler
-can do the same by hand:
+`websocket.reconnect(reason, cause?)` drops the current socket and starts the
+ladder from the first attempt, keeping the URL — what the heartbeat calls on
+a missed pong, passing the `HEARTBEAT_TIMEOUT` error as the cause, which is
+reported as an `error` event first. With reconnection disabled it
+disconnects instead.
 
 ```typescript
-websocket.subscribeToEvents((event) => {
-  if (event.type === 'disconnected' && !event.wasClean) {
-    // Custom reconnection logic
-    setTimeout(() => {
-      websocket.connect(websocket.state.url!);
-    }, 5000);
-  }
-});
+// A health check of your own decided the connection is dead:
+websocket.reconnect('Stale after resume');
 ```
+
+Do not hand-roll the retry with `connect()` from a `disconnected` handler:
+with reconnection enabled (the default) the ladder has already scheduled the
+next attempt, and a `connect()` while one is in flight rejects with "Already
+connected or connecting". A hand-rolled loop belongs only with
+`reconnect: { enabled: false }`.
 
 ## Heartbeat
 
@@ -764,8 +772,8 @@ WS_ERROR_CODES.CONNECTION_TIMEOUT;   // Connection timeout
 WS_ERROR_CODES.SEND_FAILED;          // Send failed
 WS_ERROR_CODES.INVALID_MESSAGE;      // Invalid message format
 WS_ERROR_CODES.MAX_RECONNECTS;       // Max reconnect attempts exceeded
-WS_ERROR_CODES.PROTOCOL_ERROR;       // Protocol error
-WS_ERROR_CODES.HEARTBEAT_TIMEOUT;    // Heartbeat timeout
+WS_ERROR_CODES.PROTOCOL_ERROR;       // A close with code 1002, 1003 or 1007: reported before the disconnected
+WS_ERROR_CODES.HEARTBEAT_TIMEOUT;    // The heartbeat missed a pong: reported before reconnect() drops the socket
 ```
 
 ### Handle Connection Errors

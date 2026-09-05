@@ -92,7 +92,7 @@ export function createLiveWebSocket<T = unknown>(
 
   // Configuration with defaults
   const serializer: MessageSerializer = config?.serializer || JSONSerializer;
-  const connectionTimeout = config?.connectionTimeout || 10000;
+  const connectionTimeout = config?.connectionTimeout ?? 10000;
   const reconnectConfig: ResolvedReconnectConfig = {
     enabled: config?.reconnect?.enabled ?? true,
     maxAttempts: config?.reconnect?.maxAttempts ?? 5,
@@ -109,8 +109,21 @@ export function createLiveWebSocket<T = unknown>(
   let ladderDelay = 0;
   /** A connect() whose socket has not opened yet; rejected by disconnect(). */
   let pendingConnect: ((error: unknown) => void) | null = null;
-  /** Sockets whose failure has been handled once; a socket fails on error and again on close. */
+  /** Sockets whose failure has been handled once; a socket can fail on error and again on its timeout. */
   const failedSockets = new WeakSet<WebSocket>();
+  /**
+   * Sockets that reached `onopen`. Whether an error belongs to a handshake or
+   * to an established connection is decided by this, never by `readyState`:
+   * a browser sets `readyState = CLOSED` in the same task before it fires
+   * `error`, so inside `onerror` a socket is never OPEN, and the first form
+   * treated every error on a live connection as a failed handshake — status
+   * `failed`, the close handler nulled, no `disconnected`, no reconnect
+   * (R1-REVIEW 1.1; W3, W8).
+   */
+  const openedSockets = new WeakSet<WebSocket>();
+  /** Close codes a browser refuses from script: everything but 1000 and 3000–4999. */
+  const isValidCloseCode = (code: number): boolean =>
+    Number.isInteger(code) && (code === 1000 || (code >= 3000 && code <= 4999));
 
   // ========================================
   // Internal Helpers
@@ -160,6 +173,8 @@ export function createLiveWebSocket<T = unknown>(
    *   `reconnect.shouldReconnect` is the place to say.
    */
   const RETRY_CLOSE_CODES = new Set([1001, 1006, 1011, 1012, 1013, 1014]);
+  /** Closes that name a fault in what we sent: reported as `PROTOCOL_ERROR` before `disconnected`. */
+  const PROTOCOL_CLOSE_CODES = new Set([1002, 1003, 1007]);
   function shouldReconnect(event: { code: number; reason: string; wasClean: boolean }): boolean {
     const override = config?.reconnect?.shouldReconnect;
     if (override) return override(event);
@@ -249,12 +264,12 @@ export function createLiveWebSocket<T = unknown>(
         error
       );
       stats.errors++;
+      updateState({ lastError: wsError });
+      notifyEventListeners({ type: 'error', error: wsError, timestamp: Date.now() });
       if (state.status === 'reconnecting') {
-        updateState({ lastError: wsError });
-        notifyEventListeners({ type: 'error', error: wsError, timestamp: Date.now() });
         scheduleReconnect();
       } else {
-        updateState({ status: 'failed', lastError: wsError });
+        updateState({ status: 'failed' });
       }
       return Promise.reject(wsError);
     }
@@ -287,6 +302,10 @@ export function createLiveWebSocket<T = unknown>(
       }, connectionTimeout);
 
       ws.onopen = () => {
+        openedSockets.add(ws);
+        // Settled before any listener runs: a `connected` listener that calls
+        // disconnect() must not reject the connect() that just succeeded.
+        pendingConnect = null;
         if (connectionTimeoutTimer) {
           clearTimeout(connectionTimeoutTimer);
           connectionTimeoutTimer = null;
@@ -326,15 +345,13 @@ export function createLiveWebSocket<T = unknown>(
           true,
           event
         );
-        if (ws.readyState !== WebSocket.OPEN) {
+        if (!openedSockets.has(ws)) {
           // Never opened: the attempt failed.
           attemptFailed(ws, error, reject);
           return;
         }
-        // Established: report it and leave the status alone. The close that
-        // follows decides what happens next; setting 'failed' here made an
-        // error-then-close on a live connection skip the reconnect, and left
-        // 'failed' as a status the next close always overwrote (W3, W8).
+        // Established: report it and leave the status and the handlers alone.
+        // The close that follows decides what happens next.
         updateState({ lastError: error });
         stats.errors++;
         notifyEventListeners({ type: 'error', error, timestamp: Date.now() });
@@ -379,8 +396,7 @@ export function createLiveWebSocket<T = unknown>(
       };
 
       ws.onclose = (event) => {
-        if (ws.readyState === WebSocket.CLOSED && failedSockets.has(ws)) return;
-        if (state.status === 'connecting' || state.status === 'reconnecting') {
+        if (!openedSockets.has(ws)) {
           // Closed before it opened, with no error event first.
           attemptFailed(
             ws,
@@ -391,6 +407,19 @@ export function createLiveWebSocket<T = unknown>(
         }
 
         const wasConnected = state.status === 'connected';
+
+        // A close the peer means as a fault of ours is reported as one.
+        if (PROTOCOL_CLOSE_CODES.has(event.code)) {
+          const fault = new WebSocketError(
+            `Protocol fault reported by the peer (close code ${event.code}${event.reason ? `: ${event.reason}` : ''})`,
+            WS_ERROR_CODES.PROTOCOL_ERROR,
+            false,
+            event
+          );
+          stats.errors++;
+          updateState({ lastError: fault });
+          notifyEventListeners({ type: 'error', error: fault, timestamp: Date.now() });
+        }
 
         updateState({
           status: 'disconnected',
@@ -489,8 +518,15 @@ export function createLiveWebSocket<T = unknown>(
    * state that said disconnected (AUDIT-2026-09-03-FINDINGS W4). Closes
    * with 1000, the one code every browser accepts.
    */
-  function reconnect(reason = 'Reconnect requested'): void {
+  function reconnect(reason = 'Reconnect requested', cause?: WebSocketError): void {
     if (!state.url) return;
+    if (cause) {
+      // What the caller found out — a missed pong, say — reported as an error
+      // event before the connection is dropped, so a UI sees the cause.
+      stats.errors++;
+      updateState({ lastError: cause });
+      notifyEventListeners({ type: 'error', error: cause, timestamp: Date.now() });
+    }
     if (!reconnectConfig.enabled) {
       void disconnect(1000, reason);
       return;
@@ -503,14 +539,27 @@ export function createLiveWebSocket<T = unknown>(
       clearTimeout(connectionTimeoutTimer);
       connectionTimeoutTimer = null;
     }
+    // A connection that is not live has already reported its loss (or never
+    // connected); only a live one gets a `disconnected` here.
+    const wasLive = state.status === 'connected' || state.status === 'connecting';
     releaseSocket(1000, reason);
     updateState({ status: 'disconnected', connectedAt: null, reconnectAttempts: 0 });
-    notifyEventListeners({ type: 'disconnected', code: 1000, reason, wasClean: false, timestamp: Date.now() });
+    if (wasLive) {
+      notifyEventListeners({ type: 'disconnected', code: 1000, reason, wasClean: false, timestamp: Date.now() });
+    }
     ladderDelay = 0;
     scheduleReconnect();
   }
 
   async function disconnect(code = 1000, reason = ''): Promise<void> {
+    // A code the browser refuses would throw inside close() after the socket
+    // had been detached, leaving it open behind a 'disconnected' state.
+    if (!isValidCloseCode(code)) {
+      throw new TypeError(
+        `disconnect(): close code ${code} is not allowed from script — use 1000 or 3000–4999`
+      );
+    }
+
     // Clear reconnect timer
     if (reconnectTimer) {
       clearTimeout(reconnectTimer);
@@ -523,8 +572,9 @@ export function createLiveWebSocket<T = unknown>(
       connectionTimeoutTimer = null;
     }
 
-    const wasLive =
-      state.status === 'connected' || state.status === 'connecting' || state.status === 'reconnecting';
+    // While 'reconnecting' the loss was already reported; only a live
+    // connection gets a `disconnected` here.
+    const wasLive = state.status === 'connected' || state.status === 'connecting';
 
     releaseSocket(code, reason);
 
@@ -533,6 +583,7 @@ export function createLiveWebSocket<T = unknown>(
       url: null,
       protocols: [],
       reconnectAttempts: 0,
+      lastError: null,
       connectedAt: null
     });
 

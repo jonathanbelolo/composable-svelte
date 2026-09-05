@@ -71,7 +71,15 @@ export class ScriptedWebSocket {
 		this.onmessage?.({ data });
 	}
 
+	/**
+	 * In a browser the task that fires `error` first sets `readyState` to
+	 * CLOSED ("feedback from the protocol": readyState, then error, then close),
+	 * so a handler never sees an OPEN socket in `onerror`. The first form left
+	 * `readyState` untouched, an order no browser produces, and the live
+	 * client's "never opened" test passed against it (R1-REVIEW 1.1).
+	 */
 	error(): void {
+		this.readyState = ScriptedWebSocket.CLOSED;
 		this.onerror?.({ type: 'error' });
 	}
 

@@ -32,6 +32,11 @@ export interface WebSocketClient<T = unknown> {
    * Disconnect from the WebSocket server.
    * Cleans up WebSocket instance.
    */
+  /**
+   * Close the connection and forget the URL. `code` must be 1000 (the
+   * default) or 3000–4999 — the codes a browser accepts from script; any
+   * other is a `TypeError` before anything is touched.
+   */
   disconnect(code?: number, reason?: string): Promise<void>;
 
   /**
@@ -40,7 +45,7 @@ export interface WebSocketClient<T = unknown> {
    * and nothing reconnects after it. With reconnection disabled this is a
    * `disconnect(1000, reason)`.
    */
-  reconnect(reason?: string): void;
+  reconnect(reason?: string, cause?: WebSocketError): void;
 
   /**
    * Send a message through the WebSocket.
