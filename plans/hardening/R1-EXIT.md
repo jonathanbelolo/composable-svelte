@@ -244,7 +244,19 @@ The tree at the end of `hardening/r1-closure`, core 0.12.1.
 The whole-repository gate measured the tree before this section and the
 counts above were written (documents only); the core gate in
 `gate-logs/gate-C11.log` covers the committed tree, porcelain equal.
-Continuous integration and the merge are recorded below once run.
+
+**Continuous integration.** Draft pull request #3
+(https://github.com/jonathanbelolo/composable-svelte/pull/3), opened at the
+first push (`2658e5e`, after C8). Every push's run passed every step on
+Ubuntu with Node 20 — install, Playwright, build, typecheck, the tests under
+`--workspace-concurrency=1`, svelte-check, and the auth integration browser
+suite: the first push,
+https://github.com/jonathanbelolo/composable-svelte/actions/runs/33971813808;
+C11 (`1c97f3b`),
+https://github.com/jonathanbelolo/composable-svelte/actions/runs/33972624101.
+This closing commit's own run is the one the merge waits for; the merge is a
+merge commit (`gh pr ready 3 && gh pr merge 3 --merge`), because the records
+above cite hashes.
 
 ## What R1 did not do
 
