@@ -23,6 +23,7 @@ export type {
   Dispatch,
   Selector,
   EffectExecutor,
+  EffectGroups,
   Store,
   StoreConfig
   // Middleware and MiddlewareAPI deferred to Phase 5

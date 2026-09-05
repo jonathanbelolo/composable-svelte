@@ -284,6 +284,7 @@ What kind of side effect do you need?
 ├─ Fire-and-forget (analytics, logging) → Effect.fireAndForget()
 ├─ Multiple parallel effects → Effect.batch()
 ├─ Cancel previous effect → Effect.cancel() + Effect.cancellable()
+├─ Cancel a presentation's effects → the navigation operators do it (cancellation groups); by hand: Effect.inGroup() + Effect.cancelGroup()
 ├─ Delay user input (search-as-you-type) → Effect.debounced()
 ├─ Limit frequency (scroll events) → Effect.throttled()
 ├─ Wait before dispatching → Effect.afterDelay()

@@ -18,6 +18,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   interceptors, `isNetworkError()` false, the signal's reason as `cause`.
   R1 reported the condition as a bare `APIError('Request cancelled')`.
   (R1-REVIEW 1.9)
+- **Cancellation groups.** Every executor-bearing effect can carry
+  path-shaped `groups`; `Effect.cancelGroup(name)` disposes every member —
+  aborts a `run`/`afterDelay`/`debounced`/`throttled` executor's own signal
+  and drops its later dispatches, disarms its timer, aborts a `cancellable`
+  as `Effect.cancel(id)` would, runs a `subscription`'s cleanup once.
+  `Effect.inGroup(effect, name)` joins one; `Effect.prefixGroups` nests a
+  child's beneath a name; `Effect.map` carries them; `destroy()` disposes
+  every member; TestStore models all of it (an aborted grouped executor
+  leaves its in-flight count). The navigation operators set and cancel
+  these groups themselves in the following change — the audit's N8, which
+  R1 closed on the case name only (R1-REVIEW 1.8). `EffectGroups` is
+  exported.
 - `TestStore.receive([a, b, …])`: with exhaustivity on, the next N queued
   actions must be the N partials in any order; an interleaved action fails at
   once, naming it; the assertion runs once after all are consumed.

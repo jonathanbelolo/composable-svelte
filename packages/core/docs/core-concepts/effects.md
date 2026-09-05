@@ -653,6 +653,58 @@ case 'reset':
 - Cleanup on reset
 - Manual cancellation
 
+### `Effect.cancelGroup()`
+
+Cancel every effect in a *group*. A group is a path-shaped name that the
+navigation operators put on a presentation's effects — the field
+(`'destination'`), the case beneath it (`'destination/addItem'`), a screen of
+a stack (`'stack/2'`) — and cancel themselves on dismiss, on a parent nulling
+the field, on a case change, on a pop and on a shrinking `setPath`. So a
+child's in-flight effect cannot land after the child is gone, and a
+reopened child does not receive the previous one's result. Ids are untouched:
+`Effect.cancellable('search')` under a presentation is still cancelled by
+`Effect.cancel('search')`, and by its groups.
+
+```typescript
+Effect.cancelGroup<Action>(group: string): Effect<Action>
+Effect.inGroup<Action>(effect: Effect<Action>, group: string): Effect<Action>
+Effect.prefixGroups<Action>(effect: Effect<Action>, prefix: string): Effect<Action>
+```
+
+**Example: a group by hand**
+
+```typescript
+case 'searchChanged':
+  return [
+    { ...state, query: action.query },
+    Effect.inGroup(
+      Effect.run(async (dispatch, signal) => {
+        const results = await api.search(action.query, { signal });
+        dispatch({ type: 'resultsLoaded', results });
+      }),
+      'search'
+    )
+  ];
+
+case 'leaveSearch':
+  return [{ ...state, query: '' }, Effect.cancelGroup('search')];
+```
+
+**What gets cancelled** — every executor-bearing member of the group:
+- `Effect.run()`, `Effect.afterDelay()`, `Effect.debounced()`, `Effect.throttled()`
+  → the executor's own signal is aborted and its later dispatches dropped; an
+  armed timer never fires
+- `Effect.cancellable()` → aborted, as `Effect.cancel(id)` would
+- `Effect.subscription()` → its cleanup runs, once
+
+`Effect.inGroup` adds a group to every executor-bearing member of an effect
+(a batch included); `Effect.fireAndForget()`, `Effect.cancel()` and
+`Effect.cancelGroup()` are left as they are. `Effect.prefixGroups` puts a
+child's groups beneath a name (`'g'` → `'destination/g'`), which is how the
+lifts nest them; `Effect.map` carries groups through. An effect with a group
+receives its own signal rather than the store's lifetime signal (see
+`Effect.cancellable()` above).
+
 ### `Effect.animated()`
 
 Convenience wrapper for animation lifecycle. Dispatches an action after a delay.

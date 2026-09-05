@@ -230,7 +230,11 @@ interface PendingTimer {
   readonly id: string | undefined;
   readonly due: number;
   readonly handle: ReturnType<typeof setTimeout>;
+  /** Leaves the timer's cancellation groups; set when it belongs to any. */
+  leave: () => void;
 }
+
+type Disposer = () => void;
 
 /** The real-clock poll between notifications, in milliseconds. */
 const SAFETY_TICK_MS = 10;
@@ -304,6 +308,12 @@ export class TestStore<State, Action, Dependencies = any> {
    */
   private _lifetime = new AbortController();
   private _destroyed = false;
+  /**
+   * Cancellation groups, as the store keeps them (`types.ts` `EffectGroups`):
+   * every disposer leaves its groups first, then acts. A cancelled member
+   * leaves the in-flight count and the timer registry at once.
+   */
+  private _groupMembers = new Map<string, Set<Disposer>>();
   /** Waiters notified whenever something they might be waiting for happened. */
   private _waiters = new Set<() => void>();
   /** The test finish hook: unregistered, being registered, armed, or unavailable (no test context). */
@@ -656,6 +666,74 @@ export class TestStore<State, Action, Dependencies = any> {
     this._track(label, result);
   }
 
+  private _joinGroups(groups: readonly string[] | undefined, dispose: Disposer): () => void {
+    if (!groups || groups.length === 0) return () => {};
+    for (const group of groups) {
+      let members = this._groupMembers.get(group);
+      if (!members) {
+        members = new Set();
+        this._groupMembers.set(group, members);
+      }
+      members.add(dispose);
+    }
+    return () => {
+      for (const group of groups) {
+        const members = this._groupMembers.get(group);
+        if (!members) continue;
+        members.delete(dispose);
+        if (members.size === 0) this._groupMembers.delete(group);
+      }
+    };
+  }
+
+  private _cancelGroup(group: string): void {
+    const members = this._groupMembers.get(group);
+    if (!members) return;
+    this._groupMembers.delete(group);
+    for (const dispose of [...members]) dispose();
+    this._notify();
+  }
+
+  /**
+   * Run an executor under its own controller when it belongs to a group —
+   * the group's disposer aborts it, its dispatches are gated, and an aborted
+   * one leaves the in-flight count at once, as an aborted cancellable does —
+   * and under the lifetime signal otherwise.
+   */
+  private _runExecutor(label: string, groups: readonly string[] | undefined, execute: (dispatch: Dispatch<Action>, signal: AbortSignal) => void | Promise<void>): void {
+    const dispatch: Dispatch<Action> = (action: Action) => this.dispatch(action);
+    if (!groups || groups.length === 0) {
+      this._run(label, () => execute(dispatch, this._lifetime.signal));
+      return;
+    }
+    const controller = new AbortController();
+    const gatedDispatch: Dispatch<Action> = (action) => {
+      if (controller.signal.aborted) return;
+      dispatch(action);
+    };
+    let leave = (): void => {};
+    leave = this._joinGroups(groups, () => {
+      leave();
+      controller.abort();
+    });
+    let execution: Promise<void>;
+    try {
+      execution = Promise.resolve(execute(gatedDispatch, controller.signal));
+    } catch (error) {
+      execution = Promise.reject(error);
+    }
+    execution = execution.finally(() => leave());
+    const settledOrAborted = new Promise<void>((resolve, reject) => {
+      controller.signal.addEventListener('abort', () => resolve(), { once: true });
+      execution.then(resolve, (error: unknown) => {
+        if (controller.signal.aborted) resolve();
+        else reject(error);
+      });
+    });
+    execution.catch(() => {});
+    this._track(label, settledOrAborted);
+  }
+
   /** The unasserted received actions, one per line, for a message. */
   private _describeQueue(): string {
     return this.receivedActions.map((a, i) => `  ${i}: ${JSON.stringify(a)}`).join('\n');
@@ -809,6 +887,8 @@ export class TestStore<State, Action, Dependencies = any> {
     this._destroyed = true;
     this._lifetime.abort();
 
+    for (const group of [...this._groupMembers.keys()]) this._cancelGroup(group);
+
     this._inFlightEffects.forEach((controller) => controller.abort());
     this._inFlightEffects.clear();
 
@@ -890,27 +970,43 @@ export class TestStore<State, Action, Dependencies = any> {
     await Promise.resolve(); // Double flush to handle nested promises
   }
 
-  /** Arm a timer on the test clock, registered so `finish()` and `destroy()` see it. */
-  private _arm(kind: PendingTimer['kind'], id: string | undefined, ms: number, fire: () => void): PendingTimer {
+  /**
+   * Arm a timer on the test clock, registered so `finish()` and `destroy()`
+   * see it; in a group, the group's disposer disarms it.
+   */
+  private _arm(
+    kind: PendingTimer['kind'],
+    id: string | undefined,
+    ms: number,
+    groups: readonly string[] | undefined,
+    fire: () => void
+  ): PendingTimer {
     const timer: PendingTimer = {
       kind,
       id,
       due: Date.now() + ms,
       handle: setTimeout(() => {
         this._timers.delete(timer);
+        timer.leave();
         fire();
         this._notify();
-      }, ms)
+      }, ms),
+      leave: () => {}
     };
+    timer.leave = this._joinGroups(groups, () => {
+      timer.leave();
+      this._disarm(timer);
+    });
     this._timers.add(timer);
     this._notify();
     return timer;
   }
 
-  /** Disarm a timer; it leaves the registry and never fires. */
+  /** Disarm a timer; it leaves the registry and its groups, and never fires. */
   private _disarm(timer: PendingTimer): void {
     clearTimeout(timer.handle);
     this._timers.delete(timer);
+    timer.leave();
     this._notify();
   }
 
@@ -927,7 +1023,11 @@ export class TestStore<State, Action, Dependencies = any> {
         break;
 
       case 'Run':
-        this._run('Run', () => effect.execute(dispatch, signal));
+        this._runExecutor('Run', effect.groups, effect.execute);
+        break;
+
+      case 'CancelGroup':
+        this._cancelGroup(effect.group);
         break;
 
       case 'Cancellable': {
@@ -963,6 +1063,12 @@ export class TestStore<State, Action, Dependencies = any> {
 
         const controller = new AbortController();
         this._inFlightEffects.set(effect.id, controller);
+        // Its groups' disposer aborts the same controller Effect.cancel(id) would.
+        let leaveGroups = (): void => {};
+        leaveGroups = this._joinGroups(effect.groups, () => {
+          leaveGroups();
+          controller.abort();
+        });
 
         // Gated exactly as the real store gates it: a cancelled effect's
         // actions are unwanted whether or not its author honoured the signal.
@@ -978,6 +1084,7 @@ export class TestStore<State, Action, Dependencies = any> {
           execution = Promise.reject(error);
         }
         execution = execution.finally(() => {
+          leaveGroups();
           // Only if still ours — a superseding effect owns the slot now.
           if (this._inFlightEffects.get(effect.id) === controller) {
             this._inFlightEffects.delete(effect.id);
@@ -1002,8 +1109,8 @@ export class TestStore<State, Action, Dependencies = any> {
 
       case 'AfterDelay': {
         // Fires on the clock — fake or real; finish() knows it is pending.
-        this._arm('AfterDelay', undefined, effect.ms, () => {
-          this._run('AfterDelay', () => effect.execute(dispatch, signal));
+        this._arm('AfterDelay', undefined, effect.ms, effect.groups, () => {
+          this._runExecutor('AfterDelay', effect.groups, effect.execute);
         });
         break;
       }
@@ -1011,9 +1118,9 @@ export class TestStore<State, Action, Dependencies = any> {
       case 'Debounced': {
         const existing = this._debounceTimers.get(effect.id);
         if (existing !== undefined) this._disarm(existing);
-        const timer = this._arm('Debounced', effect.id, effect.ms, () => {
+        const timer = this._arm('Debounced', effect.id, effect.ms, effect.groups, () => {
           this._debounceTimers.delete(effect.id);
-          this._run(`Debounced '${effect.id}'`, () => effect.execute(dispatch, signal));
+          this._runExecutor(`Debounced '${effect.id}'`, effect.groups, effect.execute);
         });
         this._debounceTimers.set(effect.id, timer);
         break;
@@ -1026,12 +1133,12 @@ export class TestStore<State, Action, Dependencies = any> {
           // Leading edge: run now, drop a pending trailing call.
           if (throttle?.timer) this._disarm(throttle.timer);
           this._throttleState.set(effect.id, { lastRun: now });
-          this._run(`Throttled '${effect.id}'`, () => effect.execute(dispatch, signal));
+          this._runExecutor(`Throttled '${effect.id}'`, effect.groups, effect.execute);
         } else if (!throttle.timer) {
           // Trailing edge: once, when the window closes.
-          const timer = this._arm('Throttled', effect.id, effect.ms - (now - throttle.lastRun), () => {
+          const timer = this._arm('Throttled', effect.id, effect.ms - (now - throttle.lastRun), effect.groups, () => {
             this._throttleState.set(effect.id, { lastRun: Date.now() });
-            this._run(`Throttled '${effect.id}'`, () => effect.execute(dispatch, signal));
+            this._runExecutor(`Throttled '${effect.id}'`, effect.groups, effect.execute);
           });
           this._throttleState.set(effect.id, { lastRun: throttle.lastRun, timer });
         }
@@ -1055,7 +1162,21 @@ export class TestStore<State, Action, Dependencies = any> {
           this._run(`Subscription '${effect.id}' cleanup`, previous);
         }
         this._run(`Subscription '${effect.id}' setup`, () => {
-          this._subscriptionCleanups.set(effect.id, effect.setup(dispatch));
+          const cleanup = effect.setup(dispatch);
+          let leave = (): void => {};
+          const teardown = () => {
+            leave();
+            return cleanup();
+          };
+          this._subscriptionCleanups.set(effect.id, teardown);
+          // The group's disposer tears it down once, if it is still the live one.
+          leave = this._joinGroups(effect.groups, () => {
+            leave();
+            if (this._subscriptionCleanups.get(effect.id) === teardown) {
+              this._subscriptionCleanups.delete(effect.id);
+              this._run(`Subscription '${effect.id}' cleanup`, teardown);
+            }
+          });
         });
         break;
       }

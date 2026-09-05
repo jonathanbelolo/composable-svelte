@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { Effect } from '../src/lib/effect';
+import { Effect, nestGroups } from '../src/lib/effect';
 import { createStore } from '../src/lib/store.svelte';
 import type { Effect as EffectType, EffectOfTag } from '../src/lib/types';
 
@@ -334,5 +334,72 @@ describe('Effect', () => {
 
       await expect(mapped.execute(() => {})).rejects.toThrow('late');
     });
+  });
+});
+
+describe('cancellation groups (C6)', () => {
+  const groupsOf = (effect: unknown) => (effect as { groups?: readonly string[] }).groups;
+
+  it('cancelGroup names a group and carries no action', () => {
+    expect(Effect.cancelGroup('g')).toEqual({ _tag: 'CancelGroup', group: 'g' });
+  });
+
+  it('inGroup adds a group to every executor-bearing member, once, and leaves the rest as they are', () => {
+    const run = Effect.run<number>(() => {});
+    const ff = Effect.fireAndForget<number>(() => {});
+    const cancel = Effect.cancel<number>('id');
+    const cg = Effect.cancelGroup<number>('x');
+    const batch = Effect.batch<number>(
+      run,
+      ff,
+      cancel,
+      cg,
+      Effect.cancellable('c', () => {}),
+      Effect.debounced('d', 1, () => {}),
+      Effect.throttled('t', 1, () => {}),
+      Effect.afterDelay(1, () => {}),
+      Effect.subscription('s', () => () => {})
+    );
+    const grouped = narrow(Effect.inGroup(batch, 'g'), 'Batch');
+
+    expect(grouped.effects.map(groupsOf)).toEqual([['g'], undefined, undefined, undefined, ['g'], ['g'], ['g'], ['g'], ['g']]);
+    expect(grouped.effects[1]).toBe(ff);
+    expect(grouped.effects[2]).toBe(cancel);
+    expect(grouped.effects[3]).toBe(cg);
+    // Already a member: the same reference, all the way up.
+    expect(Effect.inGroup(grouped, 'g')).toBe(grouped);
+    expect(Effect.inGroup(Effect.none<number>(), 'g')).toEqual(Effect.none());
+  });
+
+  it('prefixGroups prefixes every group and a CancelGroup, and returns an ungrouped effect as it is', () => {
+    const run = Effect.run<number>(() => {});
+    expect(Effect.prefixGroups(run, 'p')).toBe(run);
+    expect(groupsOf(Effect.prefixGroups(Effect.inGroup(run, 'g'), 'p'))).toEqual(['p/g']);
+    expect(Effect.prefixGroups(Effect.cancelGroup<number>('g'), 'p')).toEqual({ _tag: 'CancelGroup', group: 'p/g' });
+  });
+
+  it("nestGroups prefixes the child's groups and joins the name, so the subtree and one branch are both cancellable", () => {
+    const inner = Effect.inGroup(Effect.run<number>(() => {}), 'addItem');
+    expect(groupsOf(nestGroups(inner, 'destination'))).toEqual(['destination/addItem', 'destination']);
+    expect(groupsOf(nestGroups(Effect.run<number>(() => {}), 'destination'))).toEqual(['destination']);
+    expect(nestGroups(Effect.cancelGroup<number>('addItem'), 'destination')).toEqual({ _tag: 'CancelGroup', group: 'destination/addItem' });
+  });
+
+  it('map carries groups on every executor-bearing kind and passes a CancelGroup through', () => {
+    const makers: (() => EffectType<number>)[] = [
+      () => Effect.run(() => {}),
+      () => Effect.cancellable('c', () => {}),
+      () => Effect.debounced('d', 1, () => {}),
+      () => Effect.throttled('t', 1, () => {}),
+      () => Effect.afterDelay(1, () => {}),
+      () => Effect.subscription('s', () => () => {})
+    ];
+    for (const make of makers) {
+      expect(groupsOf(Effect.map(Effect.inGroup(make(), 'g'), String))).toEqual(['g']);
+      expect(groupsOf(Effect.map(make(), String))).toBeUndefined();
+    }
+    const cg = Effect.cancelGroup<number>('g');
+    expect(Effect.map(cg, String)).toBe(cg);
+    expect(Effect.map(Effect.cancel<number>('id'), String)).toMatchObject({ _tag: 'Cancellable', id: 'id', cancelOnly: true });
   });
 });

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { TestStore, createTestStore } from '../src/lib/test/test-store';
 import { Effect } from '../src/lib/effect';
-import type { Reducer } from '../src/lib/types';
+import type { Effect as EffectType, Reducer } from '../src/lib/types';
 import { sleep } from '../src/lib/test/real-timers';
 
 interface CounterState {
@@ -1122,5 +1122,90 @@ describe('matching has JSON semantics (R1-REVIEW 1.6)', () => {
 
 		await expect(store.receive({ type: 'at', when: new Date(6) }, undefined, 100)).rejects.toThrow(/Expected to receive/);
 		await store.receive({ type: 'at', when: new Date(5), meta: {} });
+	});
+});
+
+describe('cancellation groups, as the store models them (C6)', () => {
+	type State = { landed: string[] };
+	type Action = { type: 'start' } | { type: 'cancelGroup'; group: string } | { type: 'landed'; label: string };
+	const make = (effects: () => EffectType<Action>) =>
+		new TestStore<State, Action>({
+			initialState: { landed: [] },
+			reducer: (state, action) => {
+				switch (action.type) {
+					case 'start':
+						return [state, effects()];
+					case 'cancelGroup':
+						return [state, Effect.cancelGroup(action.group)];
+					case 'landed':
+						return [{ landed: [...state.landed, action.label] }, Effect.none()];
+				}
+			}
+		});
+
+	it('a grouped Run aborted by its group leaves the in-flight count, and its later dispatch is dropped', async () => {
+		let resolve!: () => void;
+		let seen: AbortSignal | undefined;
+		const store = make(() =>
+			Effect.inGroup(
+				Effect.run(async (dispatch, signal) => {
+					seen = signal;
+					await new Promise<void>((r) => {
+						resolve = r;
+					});
+					dispatch({ type: 'landed', label: 'run' });
+				}),
+				'g'
+			)
+		);
+		await store.send({ type: 'start' });
+		await store.send({ type: 'cancelGroup', group: 'g' });
+		expect(seen?.aborted).toBe(true);
+
+		await store.finish();
+		resolve();
+		await store.advanceTime(0);
+		expect(store.state.landed).toEqual([]);
+		await store.finish();
+	});
+
+	it('grouped timers are disarmed by their group, so finish() passes under fake timers', async () => {
+		vi.useFakeTimers();
+		try {
+			const store = make(() =>
+				Effect.inGroup(
+					Effect.batch<Action>(
+						Effect.afterDelay(100, (dispatch) => dispatch({ type: 'landed', label: 'delay' })),
+						Effect.debounced('d', 100, (dispatch) => dispatch({ type: 'landed', label: 'debounce' }))
+					),
+					'g'
+				)
+			);
+			await store.send({ type: 'start' });
+			await expect(store.finish()).rejects.toThrow(/2 timer\(s\) still pending/);
+			await store.send({ type: 'cancelGroup', group: 'g' });
+			expect(vi.getTimerCount()).toBe(0);
+			await store.finish();
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('a grouped Subscription is cleaned up once by its group', async () => {
+		const cleanup = vi.fn();
+		const store = make(() => Effect.inGroup(Effect.subscription('sub', () => cleanup), 'g'));
+		await store.send({ type: 'start' });
+		await store.send({ type: 'cancelGroup', group: 'g' });
+		expect(cleanup).toHaveBeenCalledTimes(1);
+		store.destroy();
+		expect(cleanup).toHaveBeenCalledTimes(1);
+	});
+
+	it('a grouped Cancellable is aborted by its group and does not hold finish()', async () => {
+		const store = make(() => Effect.inGroup(Effect.cancellable('work', () => new Promise<void>(() => {})), 'g'));
+		await store.send({ type: 'start' });
+		await expect(store.finish(50)).rejects.toThrow(/Cancellable 'work'/);
+		await store.send({ type: 'cancelGroup', group: 'g' });
+		await store.finish();
 	});
 });

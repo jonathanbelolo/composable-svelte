@@ -135,11 +135,13 @@ type EffectType<Action> =
   | { readonly _tag: 'Run'; readonly execute: EffectExecutor<Action> }
   | { readonly _tag: 'FireAndForget'; readonly execute: () => void | Promise<void> }
   | { readonly _tag: 'Batch'; readonly effects: readonly Effect<Action>[] }
-  | { readonly _tag: 'Cancellable'; readonly id: string; readonly execute: EffectExecutor<Action> }
+  | { readonly _tag: 'Cancellable'; readonly id: string; readonly execute: EffectExecutor<Action>; readonly groups?: EffectGroups }
   | { readonly _tag: 'Debounced'; readonly id: string; readonly ms: number; readonly execute: EffectExecutor<Action> }
   | { readonly _tag: 'Throttled'; readonly id: string; readonly ms: number; readonly execute: EffectExecutor<Action> }
   | { readonly _tag: 'AfterDelay'; readonly ms: number; readonly execute: EffectExecutor<Action> }
-  | { readonly _tag: 'Subscription'; readonly id: string; readonly setup: SubscriptionSetup<Action> }
+  | { readonly _tag: 'Subscription'; readonly id: string; readonly setup: SubscriptionSetup<Action>; readonly groups?: EffectGroups }
+  // Cancel every effect in a group (see Effect.cancelGroup)
+  | { readonly _tag: 'CancelGroup'; readonly group: string }
 ```
 
 **Note:** Most users won't need to import `EffectType` explicitly. TypeScript infers effect types from `Effect.none()`, `Effect.run()`, etc.
@@ -596,6 +598,49 @@ case 'disconnect':
     { ...state, isConnected: false },
     Effect.cancel('websocket')
   ];
+```
+
+---
+
+### Effect.cancelGroup
+
+Cancel every effect in a group: abort each member's signal, disarm its timer, run its subscription's cleanup, drop its later dispatches. A group is a path-shaped name the navigation operators put on a presentation's effects (`'destination'`, `'destination/addItem'`, `'stack/2'`) and cancel on dismiss, a parent null, a case change, a pop or a shrinking `setPath`; `Effect.inGroup` adds one by hand. Ids are untouched.
+
+```typescript
+Effect.cancelGroup<Action>(group: string): Effect<Action>
+```
+
+**Example:**
+
+```typescript
+case 'closeEverything':
+  return [{ ...state, destination: null }, Effect.cancelGroup('destination')];
+```
+
+---
+
+### Effect.inGroup
+
+The effect, a member of `group` as well. Every executor-bearing member of a batch joins; `Effect.none()`, `Effect.fireAndForget()`, `Effect.cancel()` and `Effect.cancelGroup()` are returned as they are; a group already present is not repeated. A grouped `run`, `afterDelay`, `debounced` or `throttled` receives its own signal, aborted with the group.
+
+```typescript
+Effect.inGroup<Action>(effect: Effect<Action>, group: string): Effect<Action>
+```
+
+**Example:**
+
+```typescript
+Effect.inGroup(Effect.run(load), 'search'); // later: Effect.cancelGroup('search')
+```
+
+---
+
+### Effect.prefixGroups
+
+Every group of the effect — and the group a `CancelGroup` names — prefixed with `prefix/`, so a child's groups sit beneath the parent's name; the lifts use it. An effect with no groups is returned as it is.
+
+```typescript
+Effect.prefixGroups<Action>(effect: Effect<Action>, prefix: string): Effect<Action>
 ```
 
 ---

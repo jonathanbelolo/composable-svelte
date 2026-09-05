@@ -119,3 +119,7 @@ before the fix is kept as `red-R1.x.y.log`, and the gate as `gate-R1.x.y.log`.
 | gate-C5.first.log | C5 | core gate, first run: 2428 browser green, 2 node failures (the doc-typecheck register's staleness arm: `receive()`'s new signature changed five registered messages), svelte-check 2 errors in the new tests |
 | gate-C5.second.log | C5 | core gate, second run: tests green, svelte-check 14 errors — a register line pasted with the assertion's trailing text |
 | gate-C5.log | C5 | core gate, third run: 2428 browser + 623 node, 0 skipped, check clean; porcelain = the files committed |
+| red-C6a-effect.log | C6a | `tests/effect.test.ts` with the new group tests against the restored sources: the file cannot import `nestGroups` |
+| red-C6a-store.log | C6a | `tests/store.test.ts` and `tests/test-store.test.ts` with the new group tests, the Effect constructors in place and the registries restored: 11 fail — no group is cancelled, timers keep firing, subscriptions keep running |
+| gate-C6a.first.log | C6a | core gate, first run: 2445 browser green, 2 node failures — the doc-typecheck staleness arm (the forms skill's registered message gained `groups?` in the AfterDelay type), check clean |
+| gate-C6a.log | C6a | core gate, second completed run after the entry was re-pinned to the printed message: 2445 browser + 623 node, 0 skipped, check clean; porcelain = the files committed. A run started on a wrong re-pin between the two was stopped before its node step and left no log |

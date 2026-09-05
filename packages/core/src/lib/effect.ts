@@ -7,7 +7,7 @@
  * Key principle: Effects describe WHAT to do, not HOW or WHEN.
  */
 
-import type { Effect as EffectType, EffectOfTag, EffectExecutor, Dispatch } from './types.js';
+import type { Effect as EffectType, EffectGroups, EffectOfTag, EffectExecutor, Dispatch } from './types.js';
 
 /**
  * Extensions other modules attach to the `Effect` namespace at import time.
@@ -313,6 +313,54 @@ const EffectImpl = {
     return { _tag: 'Cancellable', id, execute: () => {}, cancelOnly: true };
   },
 
+  /**
+   * Cancel every effect in a group: abort its signal, disarm its timer, run
+   * its subscription's cleanup, drop its later dispatches. A group is what
+   * the navigation operators set on a presentation's effects — the field
+   * (`'destination'`), the case beneath it (`'destination/addItem'`), a
+   * screen (`'stack/2'`) — and what `Effect.inGroup` adds by hand. The
+   * operators emit this themselves on dismiss, a parent null, a case change,
+   * a pop and a shrinking `setPath`; call it directly to cancel a group from
+   * elsewhere.
+   * @param group - The group to cancel
+   * @example
+   * ```typescript
+   * case 'closeEverything':
+   *   return [{ ...state, destination: null }, Effect.cancelGroup('destination')];
+   * ```
+   */
+  cancelGroup<A>(group: string): EffectOfTag<A, 'CancelGroup'> {
+    return { _tag: 'CancelGroup', group };
+  },
+
+  /**
+   * The effect, a member of `group` as well: every executor-bearing member of
+   * a batch joins; `None`, `FireAndForget`, `Effect.cancel` and
+   * `Effect.cancelGroup` are returned as they are. A group already present is
+   * not repeated.
+   * @param effect - The effect
+   * @param group - The group to join
+   * @example
+   * ```typescript
+   * Effect.inGroup(Effect.run(load), 'search')  // later: Effect.cancelGroup('search')
+   * ```
+   */
+  inGroup<A>(effect: EffectType<A>, group: string): EffectType<A> {
+    return mapGroups(effect, (groups) => (groups?.includes(group) ? groups : [...(groups ?? []), group]));
+  },
+
+  /**
+   * Every group of the effect — and the group a `CancelGroup` names —
+   * prefixed with `prefix/`, so a child's groups sit beneath the parent's
+   * name. Used by the lifts; an effect with no groups is returned as it is.
+   * @param effect - The effect
+   * @param prefix - The parent's name
+   */
+  prefixGroups<A>(effect: EffectType<A>, prefix: string): EffectType<A> {
+    if (effect._tag === 'CancelGroup') return { _tag: 'CancelGroup', group: `${prefix}/${effect.group}` };
+    return mapGroups(effect, (groups) => (groups ? groups.map((g) => `${prefix}/${g}`) : groups));
+  },
+
 
 
   /**
@@ -340,9 +388,12 @@ const EffectImpl = {
         return Effect.none();
 
       case 'Run':
-        return Effect.run(async (dispatch, signal) => {
-          await effect.execute((a) => dispatch(f(a)), signal);
-        });
+        return withGroups(
+          Effect.run<B>(async (dispatch, signal) => {
+            await effect.execute((a) => dispatch(f(a)), signal);
+          }),
+          effect.groups
+        );
 
       case 'FireAndForget':
         return Effect.fireAndForget(effect.execute);
@@ -356,35 +407,54 @@ const EffectImpl = {
         // returned by a scoped child reducer came out the other side looking like
         // real work and registered a phantom AbortController under that id.
         if (effect.cancelOnly) return Effect.cancel(effect.id);
-        return Effect.cancellable(effect.id, async (dispatch) => {
-          await effect.execute((a) => dispatch(f(a)));
-        });
+        return withGroups(
+          Effect.cancellable<B>(effect.id, async (dispatch, signal) => {
+            await effect.execute((a) => dispatch(f(a)), signal);
+          }),
+          effect.groups
+        );
 
-      // Every executor-bearing arm forwards the signal and returns the
-      // executor's promise. The AfterDelay arm used to call the executor and
-      // drop what it returned, so a delayed effect that rejected after a lift
-      // was an unhandled rejection the store's guard never saw, and TestStore
-      // never tracked (R1-REVIEW 1.5).
+      // Every executor-bearing arm forwards the signal, carries the groups,
+      // and returns the executor's promise. The AfterDelay arm used to call
+      // the executor and drop what it returned, so a delayed effect that
+      // rejected after a lift was an unhandled rejection the store's guard
+      // never saw, and TestStore never tracked (R1-REVIEW 1.5).
       case 'Debounced':
-        return Effect.debounced(effect.id, effect.ms, async (dispatch, signal) => {
-          await effect.execute((a) => dispatch(f(a)), signal);
-        });
+        return withGroups(
+          Effect.debounced<B>(effect.id, effect.ms, async (dispatch, signal) => {
+            await effect.execute((a) => dispatch(f(a)), signal);
+          }),
+          effect.groups
+        );
 
       case 'Throttled':
-        return Effect.throttled(effect.id, effect.ms, async (dispatch, signal) => {
-          await effect.execute((a) => dispatch(f(a)), signal);
-        });
+        return withGroups(
+          Effect.throttled<B>(effect.id, effect.ms, async (dispatch, signal) => {
+            await effect.execute((a) => dispatch(f(a)), signal);
+          }),
+          effect.groups
+        );
 
       case 'AfterDelay':
-        return Effect.afterDelay(effect.ms, async (dispatch, signal) => {
-          await effect.execute((a) => dispatch(f(a)), signal);
-        });
+        return withGroups(
+          Effect.afterDelay<B>(effect.ms, async (dispatch, signal) => {
+            await effect.execute((a) => dispatch(f(a)), signal);
+          }),
+          effect.groups
+        );
 
       case 'Subscription':
-        return EffectImpl.subscription(effect.id, (dispatch) => {
-          const cleanup = effect.setup((a) => dispatch(f(a)));
-          return cleanup;
-        });
+        return withGroups(
+          EffectImpl.subscription<B>(effect.id, (dispatch) => {
+            const cleanup = effect.setup((a) => dispatch(f(a)));
+            return cleanup;
+          }),
+          effect.groups
+        );
+
+      case 'CancelGroup':
+        // Names a group, carries no action: the same value in either type.
+        return effect;
 
       default:
         // Exhaustiveness check
@@ -393,6 +463,61 @@ const EffectImpl = {
     }
   }
 };
+
+/** `effect` with `groups` set, or `effect` itself when there is nothing to set. */
+function withGroups<E extends EffectType<any>>(effect: E, groups: EffectGroups): E {
+  return groups && groups.length > 0 ? { ...effect, groups } : effect;
+}
+
+/**
+ * Apply `f` to the groups of every executor-bearing member, recursively
+ * through a batch; the members it cannot cancel are returned as they are, and
+ * a member whose groups are unchanged keeps its reference. A cancel-only
+ * `Cancellable` (`Effect.cancel`) joins nothing: it is a cancellation.
+ */
+function mapGroups<A>(effect: EffectType<A>, f: (groups: EffectGroups) => EffectGroups): EffectType<A> {
+  switch (effect._tag) {
+    case 'None':
+    case 'FireAndForget':
+    case 'CancelGroup':
+      return effect;
+    case 'Batch': {
+      const members = effect.effects.map((member) => mapGroups(member, f));
+      return members.every((member, i) => member === effect.effects[i]) ? effect : { _tag: 'Batch', effects: members };
+    }
+    case 'Cancellable':
+      if (effect.cancelOnly) return effect;
+      return regroup(effect, f);
+    case 'Run':
+    case 'Debounced':
+    case 'Throttled':
+    case 'AfterDelay':
+    case 'Subscription':
+      return regroup(effect, f);
+    default: {
+      const _exhaustive: never = effect;
+      throw new Error(`Unhandled effect type: ${(_exhaustive as any)._tag}`);
+    }
+  }
+}
+
+function regroup<E extends { readonly groups?: EffectGroups }>(effect: E, f: (groups: EffectGroups) => EffectGroups): E {
+  const next = f(effect.groups);
+  if (next === effect.groups) return effect;
+  return next && next.length > 0 ? { ...effect, groups: next } : effect;
+}
+
+/**
+ * A child's effect lifted under `name`: its groups prefixed with `name/`, and
+ * `name` itself joined, so `Effect.cancelGroup(name)` cancels the whole
+ * subtree and `Effect.cancelGroup('name/case')` one branch of it. The lifts
+ * — `ifLetPresentation`, `createDestination`, `scopeAction`,
+ * `forEachElement`, `handleStackAction` — call this; it is not on the
+ * namespace because a consumer composes it from `prefixGroups` and `inGroup`.
+ */
+export function nestGroups<A>(effect: EffectType<A>, name: string): EffectType<A> {
+  return EffectImpl.inGroup(EffectImpl.prefixGroups(effect, name), name);
+}
 
 /**
  * The namespace as consumers see it: the constructors above, plus whatever the

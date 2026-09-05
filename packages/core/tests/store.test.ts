@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { expectConsole } from './helpers/console.js';
 import { createStore } from '../src/lib/store.svelte';
-import { Effect } from '../src/lib/effect';
+import { Effect, nestGroups } from '../src/lib/effect';
 import type { Effect as EffectType, Reducer } from '../src/lib/types';
 
 interface TestState {
@@ -648,3 +648,215 @@ describe('createStore', () => {
   });
 });
 
+describe('cancellation groups (C6, N8)', () => {
+  // The store keeps a registry of group members; cancelling a group disposes
+  // each member — aborts the executor's own signal, disarms the timer, runs
+  // the subscription's cleanup — and every disposer leaves its groups first,
+  // so a later cancel by id or by another group finds nothing to do.
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  type State = { landed: string[] };
+  type Action = { type: 'start' } | { type: 'cancelGroup'; group: string } | { type: 'cancelId'; id: string } | { type: 'landed'; label: string };
+  const store = (effects: () => EffectType<Action>) =>
+    createStore<State, Action>({
+      initialState: { landed: [] },
+      reducer: (state, action) => {
+        switch (action.type) {
+          case 'start':
+            return [state, effects()];
+          case 'cancelGroup':
+            return [state, Effect.cancelGroup(action.group)];
+          case 'cancelId':
+            return [state, Effect.cancel(action.id)];
+          case 'landed':
+            return [{ landed: [...state.landed, action.label] }, Effect.none()];
+        }
+      }
+    });
+  const deferred = () => {
+    let resolve!: () => void;
+    const promise = new Promise<void>((r) => {
+      resolve = r;
+    });
+    return { promise, resolve };
+  };
+
+  it('a grouped Run gets its own signal; cancelling the group aborts it and drops its later dispatch', async () => {
+    const gate = deferred();
+    let seen: AbortSignal | undefined;
+    const s = store(() =>
+      Effect.inGroup(
+        Effect.run(async (dispatch, signal) => {
+          seen = signal;
+          await gate.promise;
+          dispatch({ type: 'landed', label: 'run' });
+        }),
+        'g'
+      )
+    );
+    s.dispatch({ type: 'start' });
+    expect(seen?.aborted).toBe(false);
+
+    s.dispatch({ type: 'cancelGroup', group: 'g' });
+    expect(seen?.aborted).toBe(true);
+    gate.resolve();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(s.state.landed).toEqual([]);
+  });
+
+  it('a grouped Cancellable is aborted by its group; a later Effect.cancel(id) is a no-op, and in the other order too', async () => {
+    const gate = deferred();
+    const signals: AbortSignal[] = [];
+    const s = store(() =>
+      Effect.inGroup(
+        Effect.cancellable('work', async (dispatch, signal) => {
+          signals.push(signal!);
+          await gate.promise;
+          dispatch({ type: 'landed', label: 'work' });
+        }),
+        'g'
+      )
+    );
+    s.dispatch({ type: 'start' });
+    s.dispatch({ type: 'cancelGroup', group: 'g' });
+    expect(signals[0]!.aborted).toBe(true);
+    expect(() => s.dispatch({ type: 'cancelId', id: 'work' })).not.toThrow();
+
+    s.dispatch({ type: 'start' });
+    s.dispatch({ type: 'cancelId', id: 'work' });
+    expect(signals[1]!.aborted).toBe(true);
+    expect(() => s.dispatch({ type: 'cancelGroup', group: 'g' })).not.toThrow();
+
+    gate.resolve();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(s.state.landed).toEqual([]);
+  });
+
+  it('grouped timers are disarmed: AfterDelay, Debounced and a trailing Throttled', () => {
+    const s = store(() =>
+      Effect.inGroup(
+        Effect.batch<Action>(
+          Effect.afterDelay(100, (dispatch) => dispatch({ type: 'landed', label: 'delay' })),
+          Effect.debounced('d', 100, (dispatch) => dispatch({ type: 'landed', label: 'debounce' })),
+          Effect.throttled('t', 100, (dispatch) => dispatch({ type: 'landed', label: 'throttle' }))
+        ),
+        'g'
+      )
+    );
+    s.dispatch({ type: 'start' }); // the throttle's leading call lands now
+    s.dispatch({ type: 'start' }); // and this one arms its trailing timer
+    expect(s.state.landed).toEqual(['throttle']);
+    // Two delays, one debounce (the second replaced the first), one throttle.
+    expect(vi.getTimerCount()).toBe(4);
+
+    s.dispatch({ type: 'cancelGroup', group: 'g' });
+    expect(vi.getTimerCount()).toBe(0);
+    vi.advanceTimersByTime(1000);
+    expect(s.state.landed).toEqual(['throttle']);
+  });
+
+  it('a grouped timer that fires runs its executor under the group, so a cancel during the await still stops it', async () => {
+    const gate = deferred();
+    let seen: AbortSignal | undefined;
+    const s = store(() =>
+      Effect.inGroup(
+        Effect.afterDelay(10, async (dispatch, signal) => {
+          seen = signal;
+          await gate.promise;
+          dispatch({ type: 'landed', label: 'late' });
+        }),
+        'g'
+      )
+    );
+    s.dispatch({ type: 'start' });
+    vi.advanceTimersByTime(10);
+    expect(seen?.aborted).toBe(false);
+
+    s.dispatch({ type: 'cancelGroup', group: 'g' });
+    expect(seen?.aborted).toBe(true);
+    gate.resolve();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(s.state.landed).toEqual([]);
+  });
+
+  it('a grouped Subscription is cleaned up once by its group, and Effect.cancel(id) afterwards does not run the cleanup again', () => {
+    const cleanup = vi.fn();
+    const s = store(() => Effect.inGroup(Effect.subscription('sub', () => cleanup), 'g'));
+    s.dispatch({ type: 'start' });
+
+    s.dispatch({ type: 'cancelGroup', group: 'g' });
+    expect(cleanup).toHaveBeenCalledTimes(1);
+    s.dispatch({ type: 'cancelId', id: 'sub' });
+    expect(cleanup).toHaveBeenCalledTimes(1);
+  });
+
+  it('two grouped effects both complete when nothing cancels; a settled effect is untouched by a later cancel; an unknown group is a no-op', async () => {
+    const s = store(() =>
+      Effect.inGroup(
+        Effect.batch<Action>(
+          Effect.run(async (dispatch) => dispatch({ type: 'landed', label: 'a' })),
+          Effect.run(async (dispatch) => dispatch({ type: 'landed', label: 'b' }))
+        ),
+        'g'
+      )
+    );
+    s.dispatch({ type: 'start' });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(s.state.landed).toEqual(['a', 'b']);
+
+    expect(() => s.dispatch({ type: 'cancelGroup', group: 'g' })).not.toThrow();
+    expect(() => s.dispatch({ type: 'cancelGroup', group: 'never-seen' })).not.toThrow();
+    expect(s.state.landed).toEqual(['a', 'b']);
+  });
+
+  it('a member of a nested group is cancelled by the parent group and by its own branch', () => {
+    const seen: AbortSignal[] = [];
+    const nested = () =>
+      nestGroups(
+        Effect.inGroup(
+          Effect.run<Action>((_dispatch, signal) => {
+            seen.push(signal!);
+            return new Promise(() => {});
+          }),
+          'addItem'
+        ),
+        'destination'
+      );
+    const s = store(nested);
+    s.dispatch({ type: 'start' });
+    s.dispatch({ type: 'cancelGroup', group: 'destination' });
+    expect(seen[0]!.aborted).toBe(true);
+
+    s.dispatch({ type: 'start' });
+    s.dispatch({ type: 'cancelGroup', group: 'destination/addItem' });
+    expect(seen[1]!.aborted).toBe(true);
+  });
+
+  it('destroy() disposes every group member', () => {
+    let seen: AbortSignal | undefined;
+    const cleanup = vi.fn();
+    const s = store(() =>
+      Effect.inGroup(
+        Effect.batch<Action>(
+          Effect.run((_dispatch, signal) => {
+            seen = signal;
+            return new Promise(() => {});
+          }),
+          Effect.afterDelay(100, (dispatch) => dispatch({ type: 'landed', label: 'late' })),
+          Effect.subscription('sub', () => cleanup)
+        ),
+        'g'
+      )
+    );
+    s.dispatch({ type: 'start' });
+    s.destroy();
+    expect(seen?.aborted).toBe(true);
+    expect(cleanup).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+});
