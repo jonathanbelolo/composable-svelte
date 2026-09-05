@@ -58,7 +58,7 @@ import { forEachElement, type IdentifiedItem } from '../composition/for-each.js'
  *     (s) => s.destination,
  *     (s, d) => ({ ...s, destination: d }),
  *     'destination',
- *     (ca) => ({ type: 'destination', action: ca }),
+ *     (ca) => ({ type: 'destination', action: { type: 'presented', action: ca } }),
  *     destinationReducer
  *   )(s1, action, deps);
  *
@@ -85,6 +85,11 @@ export function integrate<State, Action extends { type: string }, Dependencies =
 	coreReducer?: Reducer<State, Action, Dependencies>
 ): IntegrationBuilder<State, Action, Dependencies> {
 	return new IntegrationBuilder(coreReducer);
+}
+
+/** The case of a destination-shaped value (`{ type }`), or undefined for a plain child. */
+function caseOf(value: { type?: unknown } | null | undefined): unknown {
+	return value !== null && typeof value === 'object' && 'type' in value ? value.type : undefined;
 }
 
 /**
@@ -131,6 +136,12 @@ class IntegrationBuilder<State, Action extends { type: string }, Dependencies = 
 	 * - State extraction and update
 	 * - Effect mapping from child to parent
 	 * - Effect batching with core reducer
+	 * - Cancellation: the child's effects belong to the group named after
+	 *   the field; a dismiss cancels it (in `ifLetPresentation`), and so does
+	 *   the core reducer nulling the field or changing its case — the cancel
+	 *   is appended last, so an effect the same action registered is
+	 *   cancelled too. A same-case replacement is not a dismissal: its
+	 *   effects run on (AUDIT N8; R1-REVIEW 1.8).
 	 *
 	 * @template K - The state field key (must be keyof State)
 	 * @template ChildAction - The child action type
@@ -213,8 +224,19 @@ class IntegrationBuilder<State, Action extends { type: string }, Dependencies = 
 				// 2. Then the parent (core, and any child registered before this one).
 				const [finalState, parentEffect] = parentReducer(stateAfterChild, action, deps);
 
-				// 3. Batch effects, child first
-				return [finalState, Effect.batch(childEffect, parentEffect)];
+				// 3. Batch effects, child first — and, when the parent stage nulled
+				// the field or changed its case, the presentation's cancel last, so
+				// an effect this very action registered is cancelled with the rest.
+				const before = stateAfterChild[field] as { type?: unknown } | null | undefined;
+				const after = finalState[field] as { type?: unknown } | null | undefined;
+				const dismissedByParent =
+					before !== null && before !== undefined && (after === null || after === undefined || caseOf(before) !== caseOf(after));
+				return [
+					finalState,
+					dismissedByParent
+						? Effect.batch(childEffect, parentEffect, Effect.cancelGroup(field as string))
+						: Effect.batch(childEffect, parentEffect)
+				];
 			};
 		});
 
@@ -269,6 +291,9 @@ class IntegrationBuilder<State, Action extends { type: string }, Dependencies = 
 	 * - Immutable array updates
 	 * - Effect mapping from child to parent
 	 * - Silent ignore for missing IDs (handles removed items gracefully)
+	 * - Cancellation: an element's effects belong to the group
+	 *   `actionType/<id>`; when the core reducer removes an element, its
+	 *   group is cancelled (appended last)
 	 *
 	 * @template ChildState - The child state type
 	 * @template ChildAction - The child action type
@@ -344,7 +369,15 @@ class IntegrationBuilder<State, Action extends { type: string }, Dependencies = 
 				const [stateAfterChildren, childEffect] = forEachReducer(state, action, deps);
 				const [finalState, parentEffect] = parentReducer(stateAfterChildren, action, deps);
 
-				return [finalState, Effect.batch(childEffect, parentEffect)];
+				// Elements the parent stage removed: their groups are cancelled, last.
+				const remaining = new Set(getArray(finalState).map((item) => item.id));
+				const left = getArray(stateAfterChildren)
+					.map((item) => item.id)
+					.filter((id) => !remaining.has(id));
+				return [
+					finalState,
+					Effect.batch(childEffect, parentEffect, ...left.map((id) => Effect.cancelGroup<Action>(`${actionType}/${id}`)))
+				];
 			};
 		});
 

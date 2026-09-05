@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { expectConsole } from './helpers/console.js';
-import { scope, combineReducers } from '../src/lib/composition';
+import { scope, scopeAction, combineReducers, forEach, forEachElement } from '../src/lib/composition';
 import { createStore } from '../src/lib/store.svelte';
 import { Effect } from '../src/lib/effect';
 import type { Reducer } from '../src/lib/types';
@@ -336,5 +336,58 @@ describe('combineReducers()', () => {
     expect(newState).toHaveProperty('todos');
     expect(newState.todos.items).toEqual(['test']);
     expect(newState.counter.count).toBe(0);
+  });
+});
+
+describe('the lifts nest cancellation groups (C6)', () => {
+  const groupsOf = (effect: unknown) => (effect as { groups?: readonly string[] }).groups;
+
+  it('scopeAction puts the child\'s effects under the action type, beneath any group the child set', () => {
+    type Child = { n: number };
+    type ChildAction = { type: 'go' } | { type: 'grouped' };
+    const child: Reducer<Child, ChildAction> = (state, action) =>
+      action.type === 'grouped'
+        ? [state, Effect.inGroup(Effect.run<ChildAction>(() => {}), 'inner')]
+        : [state, Effect.run<ChildAction>(() => {})];
+    type Parent = { counter: Child };
+    type ParentAction = { type: 'counter'; action: ChildAction };
+    const reducer = scopeAction<Parent, ParentAction, Child, ChildAction>(
+      (s) => s.counter,
+      (s, c) => ({ ...s, counter: c }),
+      'counter',
+      child
+    );
+    const [, plain] = reducer({ counter: { n: 0 } }, { type: 'counter', action: { type: 'go' } }, undefined);
+    expect(groupsOf(plain)).toEqual(['counter']);
+    const [, nested] = reducer({ counter: { n: 0 } }, { type: 'counter', action: { type: 'grouped' } }, undefined);
+    expect(groupsOf(nested)).toEqual(['counter/inner', 'counter']);
+  });
+
+  it('forEachElement puts an element\'s effects under actionType/<id>; forEach(config) passes groups through', () => {
+    type Child = { n: number };
+    type ChildAction = { type: 'go' };
+    const child: Reducer<Child, ChildAction> = (state) => [state, Effect.run<ChildAction>(() => {})];
+    type Parent = { items: Array<{ id: string; state: Child }> };
+    type ParentAction = { type: 'item'; id: string; action: ChildAction };
+    const state: Parent = { items: [{ id: 'a', state: { n: 0 } }] };
+
+    const byElement = forEachElement<Parent, ParentAction, Child, ChildAction, string, undefined>(
+      'item',
+      (s) => s.items,
+      (s, items) => ({ ...s, items }),
+      child
+    );
+    const [, grouped] = byElement(state, { type: 'item', id: 'a', action: { type: 'go' } }, undefined);
+    expect(groupsOf(grouped)).toEqual(['item/a']);
+
+    const plain = forEach<Parent, ParentAction, Child, ChildAction, string, undefined>({
+      getArray: (s) => s.items,
+      setArray: (s, items) => ({ ...s, items }),
+      extractChild: (a) => (a.type === 'item' ? { id: a.id, action: a.action } : null),
+      wrapChild: (id, action) => ({ type: 'item', id, action }),
+      childReducer: child
+    });
+    const [, ungrouped] = plain(state, { type: 'item', id: 'a', action: { type: 'go' } }, undefined);
+    expect(groupsOf(ungrouped)).toBeUndefined();
   });
 });

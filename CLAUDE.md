@@ -168,6 +168,7 @@ Effect<Action> = Run | FireAndForget | None | Batch | Merge | Cancel
 - **createDestinationReducer**: Route actions to enum-based destination reducers
 - **Navigation Components**: Modal, Sheet, Drawer, NavigationStack, Alert
 - **Dismiss Dependency**: Children can dismiss themselves via `deps.dismiss()`
+- **Cancellation**: a presentation's effects belong to a cancellation group named after its field (and case, and screen); dismiss, a parent null, a case change, a pop and a shrinking `setPath` cancel it, so a child's in-flight effect never lands after the child is gone
 - **SvelteKit Integration**: URL synchronization, browser back/forward handling
 
 **State Pattern**:
@@ -199,7 +200,7 @@ type DestinationState =
 - **Destination.extract()**: Extract child state by case type
 - **Destination.matchCase()**: Match action + extract state atomically
 - **Destination.match()**: Multi-case handler matching
-- **Destination.on()**: Reactive subscriptions (requires `store.subscribeToActions()`)
+- **Destination.on()**: specified in `navigation-matcher-spec.md` §2.5, **not implemented** — subscribe with `store.subscribeToActions()` and call `Destination.is()` yourself
 
 **Usage**:
 ```typescript
@@ -332,7 +333,7 @@ case 'closeButtonTapped': {
 ```
 
 ### Store.subscribeToActions()
-The matcher API's `Destination.on()` requires stores to implement `subscribeToActions(listener)`. This is **optional** but recommended for reactive effects. The implementation should notify subscribers **after** state updates.
+The store implements `subscribeToActions(listener)`, notifying subscribers **after** state updates. The matcher spec's `Destination.on()` was to be built on it and is not implemented; subscribe directly and match with `Destination.is()`.
 
 ## Common Patterns
 

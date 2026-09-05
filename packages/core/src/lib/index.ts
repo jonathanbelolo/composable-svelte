@@ -94,6 +94,7 @@ export type {
   DestinationReducerMap,
   CasePath,
   StackResult,
+  StackActionOptions,
   ScopedDestinationStore,
   ScopableStore,
   ScopedStore,

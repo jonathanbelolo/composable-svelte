@@ -8,7 +8,7 @@
  * 4. Lifting child effects to parent actions
  */
 
-import { Effect } from '../effect.js';
+import { Effect, nestGroups } from '../effect.js';
 import type { Reducer } from '../types.js';
 
 /**
@@ -128,11 +128,18 @@ export function scopeAction<
   actionType: string,
   childReducer: Reducer<ChildState, ChildAction, Dependencies>
 ): Reducer<ParentState, ParentAction, Dependencies> {
-  return scope(
+  const scoped = scope<ParentState, ParentAction, ChildState, ChildAction, Dependencies>(
     toChildState,
     fromChildState,
     (action) => (action.type === actionType && 'action' in action ? (action as any).action : null),
     (childAction) => ({ type: actionType, action: childAction } as any),
     childReducer
   );
+  // The child's effects under the child's name, so `Effect.cancelGroup(actionType)`
+  // cancels them and a nested child's groups sit beneath it.
+  const nested: Reducer<ParentState, ParentAction, Dependencies> = (state, action, deps) => {
+    const [next, effect] = scoped(state, action, deps);
+    return [next, nestGroups(effect, actionType)];
+  };
+  return nested;
 }

@@ -12,7 +12,7 @@
  * @packageDocumentation
  */
 
-import { Effect } from '../effect.js';
+import { Effect, nestGroups } from '../effect.js';
 import type { Reducer } from '../types.js';
 import type { StateLens, StateUpdater, ActionPrism, ActionEmbedder } from '../composition/index.js';
 
@@ -112,6 +112,14 @@ export function ifLet<ParentState, ParentAction, ChildState, ChildAction, Depend
  * 1. Unwraps PresentationAction.presented to extract child action
  * 2. Wraps child effects back in PresentationAction.presented via fromChildAction
  * 3. Handles PresentationAction.dismiss by setting state to null
+ * 4. Owns the presentation's cancellation group, named `actionType`: every
+ *    effect the child produces belongs to it (the child's own groups nested
+ *    beneath it), and a dismiss — or a child that returns null — cancels it,
+ *    so an in-flight effect cannot land after the child is gone and a
+ *    reopened child does not receive the previous one's result. A parent
+ *    that nulls the field or changes its case itself goes through
+ *    `integrate().with()`, which cancels the group for it, or returns
+ *    `Effect.cancelGroup(actionType)` alongside (AUDIT N8; R1-REVIEW 1.8).
  *
  * @param toChildState - Extract optional child state from parent state
  * @param fromChildState - Update parent with new child state (or null to dismiss)
@@ -171,9 +179,10 @@ export function ifLetPresentation<
 
     const presentationAction = action.action as { type: string; action?: unknown };
 
-    // Handle dismiss action
+    // Handle dismiss action: the field is nulled and the presentation's
+    // effects cancelled.
     if (presentationAction.type === 'dismiss') {
-      return [fromChildState(parentState, null), Effect.none()];
+      return [fromChildState(parentState, null), Effect.cancelGroup(actionType)];
     }
 
     // Handle presented action
@@ -192,8 +201,14 @@ export function ifLetPresentation<
       // Update parent state
       const newParentState = fromChildState(parentState, newChildState);
 
-      // Map child effects to parent actions
-      const parentEffect = Effect.map(childEffect, fromChildAction);
+      // Map child effects to parent actions, under the presentation's group.
+      const parentEffect = nestGroups(Effect.map(childEffect, fromChildAction), actionType);
+
+      // A child that dismissed itself: its effects — this action's included,
+      // as TCA's ifLet does — are cancelled after they are registered.
+      if (newChildState === null) {
+        return [newParentState, Effect.batch(parentEffect, Effect.cancelGroup(actionType))];
+      }
 
       return [newParentState, parentEffect];
     }

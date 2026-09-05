@@ -49,20 +49,24 @@ Problems with manual matching:
 The Matcher API provides type-safe helpers that handle the complexity:
 
 ```typescript
-// Clean, type-safe, autocomplete-friendly!
-const saveAction = matchPresentationAction(action, 'destination.saveButtonTapped');
+// Clean and readable
+const saveAction = matchPresentationAction<SaveButtonTappedAction>(action, 'destination.saveButtonTapped');
 if (saveAction) {
-  // TypeScript knows saveAction is SaveButtonTappedAction
+  // saveAction is the type argument you passed; the path is a plain string
   // Handle the save
 }
 ```
 
 Benefits:
-- Type-safe with full inference
-- Template literal types for autocomplete
-- Compile-time typo detection
+- One call instead of nested property access
+- The matched action typed by the type argument you pass
 - Clean, readable code
 - Zero runtime overhead
+
+What it does not do: `CasePath` is `string`, so the path is not checked at
+compile time and there is no autocomplete at the call — a typo is a `null`
+at runtime. Declare a union of your paths (below) and annotate with it where
+you want the check.
 
 ## Core Concepts
 
@@ -110,15 +114,16 @@ Case paths are dot-separated strings that describe the path to a child action:
  └── Parent action field
 ```
 
-Template literal types provide autocomplete and compile-time validation:
+The library's `CasePath` is `string`. To have paths checked, declare the
+union yourself and annotate with it:
 
 ```typescript
-type CasePath =
+type MyPaths =
   | "destination.saveButtonTapped"
   | "destination.cancelButtonTapped"
   | "destination.deleteButtonTapped";
 
-const path: CasePath = "destination.saveButonTapped";  // ✗ Typo detected!
+const path: MyPaths = "destination.saveButonTapped";  // ✗ Typo detected!
 ```
 
 ## API Reference

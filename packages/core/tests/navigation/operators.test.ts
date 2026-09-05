@@ -337,7 +337,8 @@ describe('ifLetPresentation()', () => {
     const [newState, effect] = reducer(parentState, action, null);
 
     expect(newState.child).toBeNull(); // Dismissed
-    expect(effect._tag).toBe('None');
+    // The presentation's effects are cancelled with it (N8, C6).
+    expect(effect).toEqual({ _tag: 'CancelGroup', group: 'child' });
   });
 
   it('returns unchanged state for non-matching action types', () => {
@@ -960,5 +961,41 @@ describe('extractDestinationOnAction()', () => {
     );
 
     expect(destState).toBeNull();
+  });
+});
+
+describe('ifLetPresentation() owns the presentation group (N8, C6)', () => {
+  // A child whose increment starts work, and whose decrement dismisses itself.
+  const effectful: Reducer<ChildState, ChildAction, null> = (state, action) => {
+    switch (action.type) {
+      case 'increment':
+        return [state, Effect.run<ChildAction>(() => {})];
+      case 'decrement':
+        return [null as unknown as ChildState, Effect.run<ChildAction>(() => {})];
+      default:
+        return [state, Effect.none()];
+    }
+  };
+  const reducer = ifLetPresentation<ParentState, ParentAction, ChildState, ChildAction, 'child', null>(
+    (s) => s.child,
+    (s, c) => ({ ...s, child: c }),
+    'child',
+    (ca) => ({ type: 'child', action: { type: 'presented', action: ca } }),
+    effectful
+  );
+  const presented: ParentState = { child: { count: 5, message: 'hello' }, parentCount: 0 };
+
+  it("a presented action's effect belongs to the group named after the action type", () => {
+    const [, effect] = reducer(presented, { type: 'child', action: { type: 'presented', action: { type: 'increment' } } }, null);
+    expect(effect._tag).toBe('Run');
+    expect((effect as { groups?: readonly string[] }).groups).toEqual(['child']);
+  });
+
+  it('a child that returns null has its group cancelled after its effect is registered', () => {
+    const [state, effect] = reducer(presented, { type: 'child', action: { type: 'presented', action: { type: 'decrement' } } }, null);
+    expect(state.child).toBeNull();
+    if (effect._tag !== 'Batch') throw new Error('expected a batch');
+    expect(effect.effects.map((e) => e._tag)).toEqual(['Run', 'CancelGroup']);
+    expect(effect.effects[1]).toEqual({ _tag: 'CancelGroup', group: 'child' });
   });
 });

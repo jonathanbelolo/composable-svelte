@@ -21,7 +21,7 @@ import type {
 	ExtractCaseType,
 	ExtractCaseState
 } from './types.js';
-import { Effect as EffectConstructors } from '../effect.js';
+import { Effect as EffectConstructors, nestGroups } from '../effect.js';
 
 // ============================================================================
 // createDestination() Core
@@ -380,11 +380,17 @@ export function createDestination<Reducers extends Record<string, Reducer<any, a
 		// as a destination action with no case and drops it — an async child
 		// never saw its own result (AUDIT-2026-09-03-FINDINGS N2). Carrying the
 		// case also lets the check above drop a result whose case is gone.
+		// Under the case's group as well, so the field's group (which
+		// `ifLetPresentation` adds above) holds every case and
+		// `Effect.cancelGroup('<field>/<case>')` holds one.
 		return [
 			newState,
-			EffectConstructors.map(
-				childEffect,
-				(childResult) => ({ type: caseType, action: childResult }) as DestinationAction<Reducers>
+			nestGroups(
+				EffectConstructors.map(
+					childEffect,
+					(childResult) => ({ type: caseType, action: childResult }) as DestinationAction<Reducers>
+				),
+				String(caseType)
 			)
 		];
 	};
@@ -413,8 +419,12 @@ export function createDestination<Reducers extends Record<string, Reducer<any, a
 
 	const isRecord = (value: unknown): value is Record<string, unknown> =>
 		typeof value === 'object' && value !== null;
-	const isCaseAction = (value: unknown): value is { type: string; action?: unknown } =>
-		isRecord(value) && typeof value.type === 'string' && value.type in reducers;
+	// A case action carries its child action; the case is one of *this*
+	// destination's own (`in` also found `hasOwnProperty`, R1-REVIEW 1.9).
+	const isCaseAction = (value: unknown): value is { type: string; action: unknown } =>
+		isRecord(value) && typeof value.type === 'string' && Object.hasOwn(reducers, value.type) && 'action' in value;
+	const isWrapper = (value: unknown): value is { type: 'presented' | 'dismiss'; action?: unknown } =>
+		isRecord(value) && (value.type === 'dismiss' || value.type === 'presented');
 
 	/**
 	 * The `{ type: caseType, action: child }` inside whatever the caller holds.
@@ -422,16 +432,22 @@ export function createDestination<Reducers extends Record<string, Reducer<any, a
 	 * Three shapes are looked through, and no others: the case action itself
 	 * (what this reducer receives); the `PresentationAction` a parent finds
 	 * under `action.action`; and the parent's own field action, one level up.
-	 * The field name is not checked — a parent with two destination fields
-	 * whose case names overlap must guard on `action.type` first. A `dismiss`
-	 * at any level yields nothing: it names no case (AUDIT N1).
+	 * It is the wrapper's *shape* that decides, never a name: a value whose
+	 * `action` is a `PresentationAction` is a field action whatever the field
+	 * is called, so a `dismiss` under a field named like a case yields
+	 * nothing, and a parent-level action that merely shares a case's name
+	 * and carries no child action matches no path (R1-REVIEW 1.9). A
+	 * `dismiss` at any level yields nothing: it names no case (AUDIT N1). A
+	 * child action named `presented` or `dismiss` is indistinguishable from
+	 * the wrapper; do not name one so.
 	 */
-	const caseActionOf = (value: unknown): { type: string; action?: unknown } | null => {
-		if (isCaseAction(value)) return value;
-		if (!isRecord(value) || typeof value.type !== 'string') return null;
-		const presented = value.type === 'presented' ? value : isRecord(value.action) ? value.action : null;
-		if (!isRecord(presented) || presented.type !== 'presented') return null;
-		return isCaseAction(presented.action) ? presented.action : null;
+	const caseActionOf = (value: unknown): { type: string; action: unknown } | null => {
+		if (!isRecord(value)) return null;
+		if (isWrapper(value)) return value.type === 'presented' && isCaseAction(value.action) ? value.action : null;
+		if (isWrapper(value.action)) {
+			return value.action.type === 'presented' && isCaseAction(value.action.action) ? value.action.action : null;
+		}
+		return isCaseAction(value) ? value : null;
 	};
 
 	// Helper: Check if action matches case path

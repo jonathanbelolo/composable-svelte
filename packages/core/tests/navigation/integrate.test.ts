@@ -180,7 +180,8 @@ describe('integrate()', () => {
 			const [newState, effect] = reducer(initialState, action, {});
 
 			expect(newState.destination).toBeNull();
-			expect(effect._tag).toBe('None');
+			// The presentation's effects are cancelled with it (N8, C6).
+			expect(effect).toEqual({ _tag: 'CancelGroup', group: 'destination' });
 		});
 
 		it('ignores child actions when state is null', () => {
@@ -349,9 +350,13 @@ describe('integrate()', () => {
 
 			// Core still clears the field, and the child still produced its save
 			// effect; core-first handed ifLetPresentation a null and the child
-			// never ran.
+			// never ran. The presentation's cancel follows it (N8, C6): an effect
+			// the dismissing action itself registered is cancelled with the rest,
+			// so a parent that dismisses on save performs the save itself.
 			expect(after.destination).toBeNull();
-			expect(effect._tag).toBe('Run');
+			if (effect._tag !== 'Batch') throw new Error('expected the child effect and the cancel');
+			expect(effect.effects.map((e) => e._tag)).toEqual(['Run', 'CancelGroup']);
+			expect(effect.effects[1]).toEqual({ _tag: 'CancelGroup', group: 'destination' });
 		});
 	});
 
@@ -393,7 +398,10 @@ describe('integrate()', () => {
 			const [after, effect] = reducer(initial, { type: 'items', id: 'a', action: { type: 'saveButtonTapped' } }, {});
 
 			expect(after.items).toEqual([]);
-			expect(effect._tag).toBe('Run');
+			// The element's effect, then its group's cancel (N8, C6).
+			if (effect._tag !== 'Batch') throw new Error('expected the element effect and the cancel');
+			expect(effect.effects.map((e) => e._tag)).toEqual(['Run', 'CancelGroup']);
+			expect(effect.effects[1]).toEqual({ _tag: 'CancelGroup', group: 'items/a' });
 		});
 	});
 
@@ -564,6 +572,108 @@ describe('integrate()', () => {
 					.with('sheet', childReducer)
 					.build();
 			}).not.toThrow();
+		});
+	});
+
+	describe('cancellation on dismissal (N8, C6)', () => {
+		// A child's effects belong to the presentation's group, named after
+		// the field. A dismiss cancels it in ifLetPresentation; the core
+		// reducer nulling the field or changing its case cancels it here, the
+		// cancel appended last so an effect the same action registered goes
+		// with the rest. A same-case replacement is not a dismissal.
+		const groupsOf = (effect: unknown) => (effect as { groups?: readonly string[] }).groups;
+		type Core = Reducer<ParentState, ParentAction | { type: 'closeTapped' } | { type: 'reopen' }>;
+		const closing: Core = (state, action) => {
+			switch (action.type) {
+				case 'closeTapped':
+					return [{ ...state, destination: null }, Effect.run(async () => {})];
+				case 'reopen':
+					return [{ ...state, destination: { name: 'again', quantity: 1 } }, Effect.none()];
+				default:
+					return coreReducer(state, action as ParentAction, {});
+			}
+		};
+		const reducer = integrate<ParentState, ParentAction | { type: 'closeTapped' } | { type: 'reopen' }>(closing)
+			.with('destination', addItemReducer)
+			.build();
+		const presented: ParentState = { count: 0, destination: { name: 'Test', quantity: 5 }, alert: null };
+
+		it("a child's effect belongs to the field's group", () => {
+			const [, effect] = reducer(
+				presented,
+				{ type: 'destination', action: { type: 'presented', action: { type: 'saveButtonTapped' } } },
+				{}
+			);
+			expect(effect._tag).toBe('Run');
+			expect(groupsOf(effect)).toEqual(['destination']);
+		});
+
+		it('the core reducer nulling the field cancels the group, after its own effect', () => {
+			const [state, effect] = reducer(presented, { type: 'closeTapped' }, {});
+			expect(state.destination).toBeNull();
+			expect(effect._tag).toBe('Batch');
+			if (effect._tag !== 'Batch') throw new Error('unreachable');
+			expect(effect.effects.map((e) => e._tag)).toEqual(['Run', 'CancelGroup']);
+			expect(effect.effects.at(-1)).toEqual({ _tag: 'CancelGroup', group: 'destination' });
+		});
+
+		it('a same-case replacement by the core reducer is not a dismissal', () => {
+			const [state, effect] = reducer(presented, { type: 'reopen' }, {});
+			expect(state.destination).toEqual({ name: 'again', quantity: 1 });
+			expect(effect._tag).toBe('None');
+		});
+
+		it('opening from null cancels nothing', () => {
+			const [, effect] = reducer({ ...presented, destination: null }, { type: 'addButtonTapped' }, {});
+			expect(effect._tag).toBe('None');
+		});
+
+		it('a case change by the core reducer cancels the field, and the effect carries the case beneath the field', () => {
+			const Destination = createDestination({ addItem: addItemReducer, alert: alertReducer });
+			type State = { destination: typeof Destination._types.State | null };
+			type Action =
+				| { type: 'showAlert' }
+				| { type: 'destination'; action: PresentationAction<typeof Destination._types.Action> };
+			const core: Reducer<State, Action> = (state, action) =>
+				action.type === 'showAlert'
+					? [{ destination: Destination.initial('alert', { message: 'hi' }) }, Effect.none()]
+					: [state, Effect.none()];
+			const r = integrate(core).with('destination', Destination.reducer).build();
+			const open: State = { destination: Destination.initial('addItem', { name: 'x', quantity: 1 }) };
+
+			const [, saving] = r(
+				open,
+				{ type: 'destination', action: { type: 'presented', action: { type: 'addItem', action: { type: 'saveButtonTapped' } } } },
+				{}
+			);
+			expect(groupsOf(saving)).toEqual(['destination/addItem', 'destination']);
+
+			const [changed, effect] = r(open, { type: 'showAlert' }, {});
+			expect(changed.destination?.type).toBe('alert');
+			expect(effect).toEqual({ _tag: 'CancelGroup', group: 'destination' });
+		});
+
+		it('.forEach(): an element the core reducer removes has its group cancelled, last', () => {
+			type ItemsState = { items: Array<{ id: string; state: AddItemState }> };
+			type ItemsAction = { type: 'items'; id: string; action: AddItemAction } | { type: 'remove'; id: string };
+			const r = integrate<ItemsState, ItemsAction>()
+				.forEach('items', (s) => s.items, (s, items) => ({ ...s, items }), addItemReducer)
+				.reduce((state, action) =>
+					action.type === 'remove'
+						? [{ items: state.items.filter((item) => item.id !== action.id) }, Effect.run(async () => {})]
+						: [state, Effect.none()]
+				)
+				.build();
+			const two: ItemsState = { items: [{ id: 'a', state: { name: '', quantity: 0 } }, { id: 'b', state: { name: '', quantity: 0 } }] };
+
+			const [, saving] = r(two, { type: 'items', id: 'b', action: { type: 'saveButtonTapped' } }, {});
+			expect(groupsOf(saving)).toEqual(['items/b']);
+
+			const [after, effect] = r(two, { type: 'remove', id: 'b' }, {});
+			expect(after.items.map((i) => i.id)).toEqual(['a']);
+			if (effect._tag !== 'Batch') throw new Error('expected a batch');
+			expect(effect.effects.map((e) => e._tag)).toEqual(['Run', 'CancelGroup']);
+			expect(effect.effects[1]).toEqual({ _tag: 'CancelGroup', group: 'items/b' });
 		});
 	});
 });

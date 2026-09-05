@@ -69,6 +69,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `run` and `afterDelay` do, and `Effect.map` forwards it; the
   `EffectExecutor` documentation said only `cancellable` received one.
   (R1-REVIEW 1.9)
+- **BREAKING: a presentation's effects are cancelled when it goes.**
+  `ifLetPresentation` puts every effect a child produces in the
+  cancellation group named after the field (`createDestination` adds the
+  case beneath it, `handleStackAction` the screen, `forEachElement` the
+  element, `scopeAction` the action type) and cancels the group on a
+  dismiss or when the child returns null; `integrate().with()` cancels it
+  when the core reducer nulls the field or changes its case (a same-case
+  replacement is not a dismissal); `.forEach()` cancels an element the core
+  reducer removes; `handleStackAction` cancels the screens that leave on
+  `pop`, `popToRoot`, a shrinking `setPath` (by identity with `screenId`)
+  and a screen dismiss. A dismiss's effect is `Effect.cancelGroup(field)`
+  where it was `Effect.none()`, and an effect the same action registered
+  is cancelled with the rest, as TCA's `ifLet` does. R1 closed the audit's
+  N8 on the case name only: a reopened child of the same case still
+  received the previous child's result. (R1-REVIEW 1.8)
+- **`Destination.is()` decides by the wrapper's shape, not a name**: a
+  `dismiss` under a field named like a case names no case, a parent-level
+  action that merely shares a case name and carries no child action
+  matches no path, and an inherited property (`hasOwnProperty`) is not a
+  case. (R1-REVIEW 1.9)
+- `StackActionOptions` is exported; `StackAction.screen(index, action,
+  screenId?)` carries the identity. (R1-REVIEW 1.9)
 - **BREAKING: `TestStore.receive()` and `finish()` never move the fake
   clock.** They wait on the real clock, notified as actions arrive and effects
   settle. `vi.waitFor` advanced the fake clock by its interval on every check,

@@ -98,28 +98,35 @@ case 'destination': {
     }),
     destinationReducer
   )(state, action, deps);
-
-  // Observe dismiss
-  if ('action' in action && action.action.type === 'dismiss') {
-    return [{ ...newState, destination: null }, effect];
-  }
+  // A dismiss is handled above: the field is nulled and the presentation's
+  // effects are cancelled (`effect` carries that cancel — keep it).
 
   // Observe child completion actions
   if ('action' in action &&
       action.action.type === 'presented' &&
       action.action.action.type === 'saveButtonTapped') {
-    // Child completed - dismiss and handle
+    // Child completed: dismiss, cancel what it still had in flight, and
+    // handle the save in the parent (an effect the child returned with this
+    // action would be cancelled with the rest — the parent's own is not).
     return [
       { ...newState, destination: null },
-      Effect.run(async (dispatch) => {
-        // Handle save...
-      })
+      Effect.batch(
+        effect,
+        Effect.cancelGroup('destination'),
+        Effect.run(async (dispatch) => {
+          // Handle save...
+        })
+      )
     ];
   }
 
   return [newState, effect];
 }
 ```
+
+`integrate(core).with('destination', destinationReducer)` does the same with
+less: the core reducer nulls the field or changes its case, and the builder
+appends the cancel.
 
 **Avoid for observed actions**: Don't use `deps.dismiss()` when the parent needs to react to the action.
 
@@ -314,7 +321,9 @@ const wizardReducer: Reducer<WizardState, WizardAction, WizardDeps> = (state, ac
   // deps come before the reducer, the next two say how the stack is read from
   // and written back into the parent state, and the optional last one names
   // the parent action type (default 'stack') and a screen identity so a late
-  // effect result for a screen that left is dropped.
+  // effect result for a screen that left is dropped — and the screen's
+  // effects are cancelled when it leaves (pop, popToRoot, a shrinking
+  // setPath, a screen dismiss).
   return handleStackAction(
         state,
         action,

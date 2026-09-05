@@ -13,7 +13,7 @@
  * @packageDocumentation
  */
 
-import { Effect } from '../effect.js';
+import { Effect, nestGroups } from '../effect.js';
 import type { Reducer, Effect as EffectType } from '../types.js';
 import type { StackAction, PresentationAction } from './types.js';
 
@@ -150,6 +150,17 @@ export interface StackActionOptions<ScreenState> {
  * screen it belongs to; a result whose screen is gone is then dropped, the way
  * `forEachElement` drops an element that left.
  *
+ * A screen's effects also belong to the screen's cancellation group,
+ * `<actionType>/<identity>` — the identity from `options.screenId`, else the
+ * index — and leaving the stack cancels it: `pop` cancels the top screen's,
+ * `popToRoot` every screen's but the root's, `setPath` the screens that stop
+ * existing (by identity with `screenId`, by index without), a `screen`
+ * dismiss at `i` the screens from `i` up. A push cancels nothing. So a
+ * popped screen's in-flight effect cannot land on the screen that took its
+ * index (AUDIT N8; R1-REVIEW 1.8). The standalone `pop`, `popToRoot` and
+ * `setPath` helpers know no identities and cancel nothing; route stack
+ * changes through this helper to get the cancellation.
+ *
  * @param state - The parent state containing the stack
  * @param action - The stack action to handle
  * @param deps - Dependencies for the screen reducer
@@ -209,6 +220,12 @@ export function handleStackAction<
   const stack = getStack(state);
   const actionType = options.actionType ?? 'stack';
   const identify = options.screenId;
+  const identityOf = (screen: ScreenState, index: number): string => String(identify ? identify(screen) : index);
+  const groupOf = (screen: ScreenState, index: number): string => `${actionType}/${identityOf(screen, index)}`;
+  /** Cancel the groups of the screens at `indices`, in the old stack. */
+  const cancelScreens = (indices: readonly number[]): EffectType<ParentAction> =>
+    Effect.batch<ParentAction>(...indices.map((i) => Effect.cancelGroup<ParentAction>(groupOf(stack[i]!, i))));
+  const range = (from: number, to: number): number[] => Array.from({ length: Math.max(0, to - from) }, (_, k) => from + k);
 
   switch (action.type) {
     case 'push': {
@@ -220,20 +237,29 @@ export function handleStackAction<
     }
 
     case 'pop': {
-      const [newStack, effect] = pop<ScreenState, ParentAction>(stack);
-      return [setStack(state, newStack), effect];
+      const [newStack] = pop<ScreenState, ParentAction>(stack);
+      // The top screen's group, when there was one to pop.
+      return [setStack(state, newStack), cancelScreens(range(newStack.length, stack.length))];
     }
 
     case 'popToRoot': {
-      const [newStack, effect] = popToRoot<ScreenState, ParentAction>(stack);
-      return [setStack(state, newStack), effect];
+      const [newStack] = popToRoot<ScreenState, ParentAction>(stack);
+      return [setStack(state, newStack), cancelScreens(range(newStack.length, stack.length))];
     }
 
     case 'setPath': {
-      const [newStack, effect] = setPath<ScreenState, ParentAction>(
+      const [newStack] = setPath<ScreenState, ParentAction>(
         action.path as readonly ScreenState[]
       );
-      return [setStack(state, newStack), effect];
+      // The screens that stop existing: by identity with `screenId`, so a
+      // survivor that moved keeps its effects; by index without.
+      const gone = identify
+        ? (() => {
+            const kept = new Set(newStack.map((screen, i) => identityOf(screen, i)));
+            return range(0, stack.length).filter((i) => !kept.has(identityOf(stack[i]!, i)));
+          })()
+        : range(newStack.length, stack.length);
+      return [setStack(state, newStack), cancelScreens(gone)];
     }
 
     case 'screen': {
@@ -256,11 +282,12 @@ export function handleStackAction<
 
       // Handle dismiss action
       if (presentationAction.type === 'dismiss') {
-        // Dismissing a screen pops it and all screens above it
-        const [newStack, effect] = setPath<ScreenState, ParentAction>(
+        // Dismissing a screen pops it and all screens above it, and cancels
+        // their groups.
+        const [newStack] = setPath<ScreenState, ParentAction>(
           stack.slice(0, index)
         );
-        return [setStack(state, newStack), effect];
+        return [setStack(state, newStack), cancelScreens(range(index, stack.length))];
       }
 
       // Handle presented action
@@ -283,16 +310,19 @@ export function handleStackAction<
         ];
 
         // Map screen effects to parent actions, carrying the screen's identity
-        // when the caller supplied one.
-        const parentEffect = Effect.map(screenEffect, (sa) => ({
-          type: actionType,
-          action: {
-            type: 'screen' as const,
-            index,
-            ...(identify ? { screenId: identify(newScreenState) } : {}),
-            action: { type: 'presented' as const, action: sa }
-          }
-        } as ParentAction));
+        // when the caller supplied one, under the screen's group.
+        const parentEffect = nestGroups(
+          Effect.map(screenEffect, (sa) => ({
+            type: actionType,
+            action: {
+              type: 'screen' as const,
+              index,
+              ...(identify ? { screenId: identify(newScreenState) } : {}),
+              action: { type: 'presented' as const, action: sa }
+            }
+          } as ParentAction)),
+          groupOf(newScreenState, index)
+        );
 
         return [setStack(state, newStack), parentEffect];
       }

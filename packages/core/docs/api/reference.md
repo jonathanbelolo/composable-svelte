@@ -1092,7 +1092,15 @@ const reducer: Reducer<WizardState, WizardAction> = (state, action, deps) => {
       return pop(state.stack);
 
     case 'stack':
-      return handleStackAction(state, action, deps, screenReducer);
+      return handleStackAction(
+        state,
+        action.action,
+        deps,
+        screenReducer,
+        (s) => s.stack,
+        (s, stack) => ({ ...s, stack }),
+        { screenId: (screen) => screen.id } // optional: identity, so a result for a screen that left is dropped
+      );
   }
 };
 ```
@@ -1702,10 +1710,12 @@ type DestinationState<Reducers extends Record<string, (s: any, a: any, d: any) =
 Extract action union from a map of reducers.
 
 ```typescript
+// The case action: the child's own action under its case. The parent's field
+// wraps it in a PresentationAction — { type: 'destination', action: { type: 'presented', action: caseAction } }.
 type DestinationAction<Reducers extends Record<string, (s: any, a: any, d: any) => any>> = {
   [K in keyof Reducers]: {
     readonly type: K;
-    readonly action: PresentationAction<Reducers[K] extends (s: any, a: infer A, d: any) => any ? A : never>;
+    readonly action: Reducers[K] extends (s: any, a: infer A, d: any) => any ? A : never;
   };
 }[keyof Reducers]
 ```
