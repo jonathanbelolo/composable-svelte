@@ -48,9 +48,9 @@ pnpm add @composable-svelte/core
 ```
 
 > **Note on versions.** `@composable-svelte/core` **is** on npm, but the latest
-> published version is **0.5.2** while this repository is at **0.11.2** — so
-> `npm install` gets you an API six minor versions older than the one documented
-> here, and the sibling packages pin `@composable-svelte/core ^0.11.0`, which the
+> published version is **0.5.2** while this repository is at **0.12.1** — so
+> `npm install` gets you an API seven minor versions older than the one documented
+> here, and the sibling packages pin `@composable-svelte/core ^0.12.0`, which the
 > registry cannot satisfy. Until a release is cut, clone the repo.
 >
 > (This note previously said the package was "not yet published to npm", while
@@ -368,10 +368,11 @@ const ws = createLiveWebSocket({
 
 // In reducer
 Effect.run(async (dispatch) => {
-  // `subscribe` takes a message listener and returns an unsubscribe function;
-  // lifecycle events come from `subscribeToEvents`.
-  ws.subscribe((data) => {
-    dispatch({ type: 'messageReceived', data });
+  // `subscribe` takes a message listener — it receives the `WebSocketMessage`
+  // envelope, whose `data` is the payload — and returns an unsubscribe
+  // function; lifecycle events come from `subscribeToEvents`.
+  ws.subscribe((message) => {
+    dispatch({ type: 'messageReceived', data: message.data });
   });
   await ws.connect('wss://api.example.com');
 });
