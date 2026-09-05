@@ -27,15 +27,18 @@ export type Selector<State, Value> = (state: State) => Value;
 /**
  * Function that executes an effect and may dispatch actions.
  *
- * `signal` is provided for `Effect.cancellable` only, because that is the one
- * kind the store holds a controller for. It is `undefined` for `run`,
- * `debounced`, `throttled` and `afterDelay` — and since `fetch` accepts an
- * `undefined` signal without complaint, passing it there fails silently rather
- * than loudly. Check before relying on it.
+ * Every executor receives a `signal`. For `Effect.cancellable` it is the
+ * effect's own, aborted by `Effect.cancel(id)`, by a newer effect under the
+ * same id, or by `destroy()`. For `run`, `debounced`, `throttled` and
+ * `afterDelay` it is the store's lifetime signal, aborted by `destroy()`
+ * only — none of those can be cancelled individually, but an executor that
+ * awaits something can still stop when the store goes away. `Effect.map`
+ * forwards it. It is typed optional so an executor written without it still
+ * typechecks; the store always passes one, TestStore too.
  *
- * Observing it is optional: dispatches from a cancelled effect are dropped
- * regardless, so cancellation is correct without cooperation. Using the signal
- * additionally stops the work in flight.
+ * Observing it is optional: dispatches from a cancelled effect and from a
+ * destroyed store are dropped regardless, so cancellation is correct without
+ * cooperation. Using the signal additionally stops the work in flight.
  *
  * @template Action - The action type
  */
@@ -284,8 +287,11 @@ export interface Store<State, Action> {
   readonly history: ReadonlyArray<Action>;
 
   /**
-   * Clean up resources.
-   * Cancels all in-flight effects and clears subscriptions.
+   * Clean up resources: aborts every in-flight cancellable and the store's
+   * lifetime signal (every other executor kind sees it), clears pending
+   * delays, debounces and throttles so none fires, runs subscription
+   * cleanups, and removes listeners. A later `dispatch` is dropped; the first
+   * is warned about once per store.
    */
   destroy(): void;
 }

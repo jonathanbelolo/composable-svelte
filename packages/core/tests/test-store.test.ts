@@ -670,5 +670,26 @@ describe('a rejecting executor fails the test, not the process (N9)', () => {
 		await store.advanceTime(0);
 		await expect(store.send({ type: 'go' })).rejects.toThrow(/effect rejected: backend down/);
 	});
+
+	it('a rejecting afterDelay reached through a lift fails finish() too', async () => {
+		// Effect.map's AfterDelay arm dropped the executor's promise, so the
+		// rejection was never tracked (R1-REVIEW 1.5).
+		type Parent = { child: State };
+		type ParentAction = { type: 'child'; action: Action };
+		const child: Reducer<State, Action> = (state) => [
+			state,
+			Effect.afterDelay(10, async () => {
+				throw new Error('late');
+			})
+		];
+		const parent: Reducer<Parent, ParentAction> = (state, action) => {
+			const [childState, effect] = child(state.child, action.action, undefined);
+			return [{ ...state, child: childState }, Effect.map(effect, (a) => ({ type: 'child', action: a }) as ParentAction)];
+		};
+		const store = new TestStore({ initialState: { child: { n: 0 } }, reducer: parent });
+		await store.send({ type: 'child', action: { type: 'go' } });
+		await store.advanceTime(10);
+		await expect(store.finish()).rejects.toThrow(/effect rejected: late/);
+	});
 });
 

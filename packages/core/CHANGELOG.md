@@ -45,8 +45,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Error interceptors are offered a failure once, after any retries, and
   never a caller's own cancellation; they ran inside every attempt.
 
+- Debounced and throttled executors receive the store's lifetime signal, as
+  `run` and `afterDelay` do, and `Effect.map` forwards it; the
+  `EffectExecutor` documentation said only `cancellable` received one.
+  (R1-REVIEW 1.9)
+- A dispatch after `destroy()` warns once per store, then is dropped
+  silently; every one warned. (R1-REVIEW 1.9)
+
 ### Fixed
 
+- **`Effect.map` returns the delayed executor's promise**, so a rejecting
+  `afterDelay` reached through `scope()` or any other lift is logged by the
+  store and fails `TestStore.finish()` instead of being an unhandled
+  rejection. (R1-REVIEW 1.5)
 - **A caller no longer joins a dead attempt.** An aborted attempt stayed in
   the in-flight map until its rejection settled, so a request repeated in
   that window — synchronously after the abort, or during a retry backoff —

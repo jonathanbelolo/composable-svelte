@@ -62,16 +62,21 @@ export function createStore<State, Action, Dependencies = any>(
   const delayTimers = new Set<ReturnType<typeof setTimeout>>();
   const lifetime = new AbortController();
   let destroyed = false;
+  /** One warning per destroyed store; a later dispatch is silently dropped. */
+  let warnedAfterDestroy = false;
 
   /**
    * Core dispatch logic (before middleware).
    */
   function dispatchCore(action: Action): void {
     if (destroyed) {
-      console.warn(
-        '[Composable Svelte] dispatch after destroy ignored:',
-        (action as { type?: unknown } | null)?.type
-      );
+      if (!warnedAfterDestroy) {
+        warnedAfterDestroy = true;
+        console.warn(
+          '[Composable Svelte] dispatch after destroy ignored:',
+          (action as { type?: unknown } | null)?.type
+        );
+      }
       return;
     }
 
@@ -284,10 +289,11 @@ export function createStore<State, Action, Dependencies = any>(
           clearTimeout(existingTimer);
         }
 
-        // Set new timer
+        // Set new timer. The executor gets the store's lifetime signal, as a
+        // Run or an AfterDelay does (R1-REVIEW 1.9).
         const timer = setTimeout(() => {
           debounceTimers.delete(effect.id);
-          guarded(() => effect.execute(dispatch));
+          guarded(() => effect.execute(dispatch, lifetime.signal));
         }, effect.ms);
 
         debounceTimers.set(effect.id, timer);
@@ -304,14 +310,14 @@ export function createStore<State, Action, Dependencies = any>(
             clearTimeout(throttle.timeout);
           }
           throttleState.set(effect.id, { lastRun: now });
-          guarded(() => effect.execute(dispatch));
+          guarded(() => effect.execute(dispatch, lifetime.signal));
         } else if (!throttle.timeout) {
           // Schedule for later
           const delay = effect.ms - (now - throttle.lastRun);
           const timeout = setTimeout(() => {
             // Clear timeout field by replacing entire object
             throttleState.set(effect.id, { lastRun: Date.now() });
-            guarded(() => effect.execute(dispatch));
+            guarded(() => effect.execute(dispatch, lifetime.signal));
           }, delay);
 
           throttleState.set(effect.id, { lastRun: throttle.lastRun, timeout });

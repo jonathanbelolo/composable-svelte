@@ -265,42 +265,74 @@ describe('Effect', () => {
       expect(actions).toEqual(['num:42']);
     });
 
-    it('maps Debounced effect preserving ID and delay', async () => {
+    it('maps Debounced effect preserving ID and delay, and forwards the signal', async () => {
       const actions: string[] = [];
-      const effect = Effect.debounced<number>('my-id', 300, (d) => d(42));
+      let seen: AbortSignal | undefined;
+      const effect = Effect.debounced<number>('my-id', 300, (d, signal) => {
+        seen = signal;
+        d(42);
+      });
       const mapped = narrow(Effect.map(effect, (n) => `num:${n}`), 'Debounced');
 
       expect(mapped._tag).toBe('Debounced');
       expect(mapped.id).toBe('my-id');
       expect(mapped.ms).toBe(300);
 
-      await mapped.execute((s) => actions.push(s));
+      const signal = new AbortController().signal;
+      await mapped.execute((s) => actions.push(s), signal);
       expect(actions).toEqual(['num:42']);
+      expect(seen).toBe(signal);
     });
 
-    it('maps Throttled effect preserving ID and interval', async () => {
+    it('maps Throttled effect preserving ID and interval, and forwards the signal', async () => {
       const actions: string[] = [];
-      const effect = Effect.throttled<number>('my-id', 100, (d) => d(42));
+      let seen: AbortSignal | undefined;
+      const effect = Effect.throttled<number>('my-id', 100, (d, signal) => {
+        seen = signal;
+        d(42);
+      });
       const mapped = narrow(Effect.map(effect, (n) => `num:${n}`), 'Throttled');
 
       expect(mapped._tag).toBe('Throttled');
       expect(mapped.id).toBe('my-id');
       expect(mapped.ms).toBe(100);
 
-      await mapped.execute((s) => actions.push(s));
+      const signal = new AbortController().signal;
+      await mapped.execute((s) => actions.push(s), signal);
       expect(actions).toEqual(['num:42']);
+      expect(seen).toBe(signal);
     });
 
-    it('maps AfterDelay effect preserving delay', async () => {
+    it("maps AfterDelay effect preserving delay, forwards the signal, and returns the executor's promise", async () => {
       const actions: string[] = [];
-      const effect = Effect.afterDelay<number>(500, (d) => d(42));
+      let seen: AbortSignal | undefined;
+      const effect = Effect.afterDelay<number>(500, (d, signal) => {
+        seen = signal;
+        d(42);
+      });
       const mapped = narrow(Effect.map(effect, (n) => `num:${n}`), 'AfterDelay');
 
       expect(mapped._tag).toBe('AfterDelay');
       expect(mapped.ms).toBe(500);
 
-      await mapped.execute((s) => actions.push(s));
+      const signal = new AbortController().signal;
+      const result = mapped.execute((s) => actions.push(s), signal);
+      expect(result).toBeInstanceOf(Promise);
+      await result;
       expect(actions).toEqual(['num:42']);
+      expect(seen).toBe(signal);
+    });
+
+    it('a rejecting AfterDelay executor rejects through map, rather than being unhandled', async () => {
+      // The AfterDelay arm called the executor and dropped its promise, so a
+      // delayed effect that rejected after a lift was an unhandled rejection
+      // the store's guard never saw (R1-REVIEW 1.5).
+      const effect = Effect.afterDelay<number>(5, async () => {
+        throw new Error('late');
+      });
+      const mapped = narrow(Effect.map(effect, (n) => `num:${n}`), 'AfterDelay');
+
+      await expect(mapped.execute(() => {})).rejects.toThrow('late');
     });
   });
 });

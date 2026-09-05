@@ -108,7 +108,8 @@ Function that executes an effect and may dispatch actions.
 ```typescript
 type EffectExecutor<Action> = (
   dispatch: Dispatch<Action>,
-  // Provided for Effect.cancellable only; undefined elsewhere.
+  // The effect's own for Effect.cancellable; the store's lifetime signal
+  // (aborted by destroy()) for run, debounced, throttled and afterDelay.
   signal?: AbortSignal
 ) => void | Promise<void>
 ```

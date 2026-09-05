@@ -511,8 +511,39 @@ describe('createStore', () => {
       store.destroy();
 
       store.dispatch({ type: 'increment' });
+      store.dispatch({ type: 'increment' }); // the second is silent: one warning per store
       expect(store.state.count).toBe(1);
       expect(store.history).toHaveLength(1);
+    });
+
+    it('Debounced and Throttled executors receive the lifetime signal, aborted by destroy()', () => {
+      // Only Run, AfterDelay and Cancellable executors received a signal;
+      // the docs said every kind but Cancellable got none (R1-REVIEW 1.9).
+      const seen: (AbortSignal | undefined)[] = [];
+      const reducer: Reducer<TestState, TestAction> = (state, action) => {
+        if (action.type === 'startLoading') {
+          return [
+            state,
+            Effect.batch(
+              Effect.debounced('d', 10, (_dispatch, signal) => {
+                seen.push(signal);
+              }),
+              Effect.throttled('t', 10, (_dispatch, signal) => {
+                seen.push(signal);
+              })
+            )
+          ];
+        }
+        return [state, Effect.none()];
+      };
+      const store = createStore({ initialState, reducer });
+      store.dispatch({ type: 'startLoading' });
+      vi.advanceTimersByTime(10);
+
+      expect(seen).toHaveLength(2);
+      expect(seen.every((s) => s instanceof AbortSignal && !s.aborted)).toBe(true);
+      store.destroy();
+      expect(seen.every((s) => s?.aborted)).toBe(true);
     });
 
     it('a Run in flight sees its signal aborted by destroy()', () => {
@@ -596,6 +627,23 @@ describe('createStore', () => {
       expectConsole('error');
       const store = storeRunning(() => Effect.throttled('lead', 50, throwing));
       expect(() => store.dispatch({ type: 'startLoading' })).not.toThrow();
+    });
+
+    it("a reducer that throws when reached through an effect's dispatch is logged as an effect error", () => {
+      // The throw escapes the executor's synchronous dispatch and the guard
+      // logs it; the outer dispatch() returns normally and the state stands.
+      expectConsole('error');
+      const reducer: Reducer<TestState, TestAction> = (state, action) => {
+        if (action.type === 'startLoading') {
+          return [state, Effect.run((dispatch) => dispatch({ type: 'loadComplete', value: 1 }))];
+        }
+        if (action.type === 'loadComplete') throw new Error('reducer boom');
+        return [state, Effect.none()];
+      };
+      const store = createStore({ initialState, reducer });
+
+      expect(() => store.dispatch({ type: 'startLoading' })).not.toThrow();
+      expect(store.state.count).toBe(0);
     });
   });
 });

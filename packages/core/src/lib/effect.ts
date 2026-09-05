@@ -360,19 +360,24 @@ const EffectImpl = {
           await effect.execute((a) => dispatch(f(a)));
         });
 
+      // Every executor-bearing arm forwards the signal and returns the
+      // executor's promise. The AfterDelay arm used to call the executor and
+      // drop what it returned, so a delayed effect that rejected after a lift
+      // was an unhandled rejection the store's guard never saw, and TestStore
+      // never tracked (R1-REVIEW 1.5).
       case 'Debounced':
-        return Effect.debounced(effect.id, effect.ms, async (dispatch) => {
-          await effect.execute((a) => dispatch(f(a)));
+        return Effect.debounced(effect.id, effect.ms, async (dispatch, signal) => {
+          await effect.execute((a) => dispatch(f(a)), signal);
         });
 
       case 'Throttled':
-        return Effect.throttled(effect.id, effect.ms, async (dispatch) => {
-          await effect.execute((a) => dispatch(f(a)));
+        return Effect.throttled(effect.id, effect.ms, async (dispatch, signal) => {
+          await effect.execute((a) => dispatch(f(a)), signal);
         });
 
       case 'AfterDelay':
-        return Effect.afterDelay(effect.ms, (dispatch, signal) => {
-          effect.execute((a) => dispatch(f(a)), signal);
+        return Effect.afterDelay(effect.ms, async (dispatch, signal) => {
+          await effect.execute((a) => dispatch(f(a)), signal);
         });
 
       case 'Subscription':

@@ -336,9 +336,12 @@ Cooperating is optional. Dispatches from a cancelled effect are dropped whether
 or not the executor observes the signal, so cancellation is correct either way —
 using the signal additionally stops the work.
 
-The signal is provided for `Effect.cancellable` only; it is `undefined` for
-`run`, `debounced`, `throttled` and `afterDelay`, none of which the store can
-cancel individually.
+Every executor receives a signal. For `Effect.cancellable` it is the effect's
+own, aborted by `Effect.cancel(id)`, by a newer effect under the same id, or by
+`destroy()`. For `run`, `debounced`, `throttled` and `afterDelay` it is the
+store's lifetime signal, aborted by `destroy()` only — none of those can be
+cancelled individually, but an executor that awaits something can still stop
+when the store goes away. `Effect.map` forwards it.
 
 **When to use**:
 - Search-as-you-type
@@ -858,6 +861,13 @@ Effect.run((dispatch) => {
   throw new Error('Oops!'); // Logged to console, doesn't crash, doesn't skip the rest of a Batch
 });
 ```
+
+A reducer that throws when reached through an effect's `dispatch` — an
+executor dispatching synchronously into a reducer that throws — is the same
+case: the throw escapes the executor, the store logs it as an effect error, the
+state is unchanged, and the outer `dispatch()` returns normally. A delayed
+effect reached through `scope()` or any other lift is guarded the same way;
+`Effect.map` returns the executor's promise.
 
 **Best practice**: Handle errors in effects explicitly:
 

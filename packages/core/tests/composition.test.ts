@@ -1,5 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+import { expectConsole } from './helpers/console.js';
 import { scope, combineReducers } from '../src/lib/composition';
+import { createStore } from '../src/lib/store.svelte';
 import { Effect } from '../src/lib/effect';
 import type { Reducer } from '../src/lib/types';
 
@@ -125,6 +127,39 @@ describe('scope()', () => {
       dispatched.push(a);
     });
     expect(dispatched).toEqual([{ type: 'counter', action: { type: 'decrement' } }]);
+  });
+
+  it('a scoped afterDelay whose executor rejects is logged by the store once, not unhandled', async () => {
+    // Effect.map's AfterDelay arm dropped the executor's promise, so the
+    // rejection of a delayed effect reached through scope() was unhandled —
+    // the store's guard never saw it (R1-REVIEW 1.5).
+    vi.useFakeTimers();
+    try {
+      expectConsole('error');
+      const rejecting: Reducer<CounterState, CounterAction> = (state, action) =>
+        action.type === 'increment'
+          ? [
+              state,
+              Effect.afterDelay(10, async () => {
+                throw new Error('late');
+              })
+            ]
+          : [state, Effect.none()];
+      const parentReducer = scope(
+        (s: ParentState) => s.counter,
+        (s, c) => ({ ...s, counter: c }),
+        (a: ParentAction) => (a.type === 'counter' ? a.action : null),
+        (ca) => ({ type: 'counter', action: ca }) as ParentAction,
+        rejecting
+      );
+      const store = createStore({ initialState: { counter: { count: 0 }, other: '' }, reducer: parentReducer });
+
+      store.dispatch({ type: 'counter', action: { type: 'increment' } });
+      await vi.advanceTimersByTimeAsync(10);
+      store.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
