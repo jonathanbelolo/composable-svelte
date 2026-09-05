@@ -512,8 +512,12 @@ fastify.register(fastifyRateLimit, {
 ```
 
 `max` and `windowMs` are required and must be positive finite numbers;
-anything else throws at registration, naming the field, rather than turning
-every request into a 500.
+anything else names the field and fails closed either way: a direct call
+`fastifyRateLimit(app, config)` throws synchronously, and
+`app.register(fastifyRateLimit, config)` rejects `ready()`. Both plugins
+install their hooks synchronously and return an already-resolved promise, so
+the direct call needs no `await`; wrapping one with `fastify-plugin`
+(`fp(plugin, { encapsulate: true })`) is honoured.
 
 The default key is `req.ip`. Behind a proxy or load balancer that is the
 proxy's address — one bucket for the whole site — unless Fastify is created
@@ -659,13 +663,12 @@ const store = createStore({
 
 **Problem**: `document.getElementById('__COMPOSABLE_SVELTE_STATE__')` returns null.
 
-**Solution**: Ensure `renderToHTML` includes state:
+**Solution**: `renderToHTML` always embeds the state script when the props
+carry a `store`; check that the store is passed under that name and that the
+client reads the same element id:
 
 ```typescript
-const html = renderToHTML(App, {
-  store,
-  includeState: true // Default: true
-});
+const html = renderToHTML(App, { store }); // the state script is embedded
 ```
 
 ### State That Cannot Be Serialized
@@ -704,11 +707,13 @@ renderToHTML(
   component: SvelteComponent,
   props: { store: Store<S, A> },
   options?: {
-    includeState?: boolean;      // Default: true
+    title?: string;               // <title>; default 'Composable Svelte App'
     head?: string;                // Additional <head> content
-    clientScript?: string;        // Path to client JS
+    clientScript?: string;        // Path to client JS; default '/app.js'
+    bodyScripts?: string;         // Markup appended to <body>
+    serializer?: StateSerializer; // createTaggedSerializer(), for Dates/Maps
   }
-): string
+): string // throws if the state cannot be serialized (fails closed)
 
 // Hydrate store on client
 hydrateStore<S, A, D>(
@@ -728,25 +733,32 @@ generateStaticSite(
   component: SvelteComponent,
   config: {
     routes: RouteConfig[];
-    outDir: string;
-    baseURL?: string;
+    outDir?: string;             // default './dist'
+    baseURL?: string;            // adds a canonical link per page
+    generate404?: boolean;       // default true
+    notFoundState?: S;
     onPageGenerated?: (path: string, outPath: string) => void;
-    renderOptions?: RenderOptions;
   },
-  storeConfig: {
+  options: {
     reducer: Reducer<S, A, D>;
-    dependencies: D;
-    getInitialState?: (path: string) => S;
+    dependencies?: D;
+    getInitialState?: (path: string) => S | Promise<S>;
+    renderOptions?: RenderOptions;
   }
-): Promise<{ pagesGenerated: number; duration: number }>
+): Promise<{ pagesGenerated: number; generatedFiles: string[]; errors: Array<{ path: string; error: Error }>; duration: number }>
 
 // Generate single page
 generateStaticPage(
   component: SvelteComponent,
   path: string,
-  outDir: string,
-  storeConfig: StoreConfig<S, A, D>
-): Promise<string>
+  options: {
+    initialState: S;
+    reducer: Reducer<S, A, D>;
+    dependencies?: D;
+    renderOptions?: RenderOptions;
+    outDir: string;
+  }
+): Promise<string> // the file written, relative to outDir; throws SSGPathError for a refused path
 ```
 
 `generateStaticSite` returns every failure in `result.errors`, the 404 page's

@@ -411,10 +411,35 @@ Three grades, ascending in what they prove:
 1. **State machine** — `waitForState(store, s => s.presentation.status ===
    'presented')`. Proves the lifecycle advances; passes against a component that
    ignores it entirely.
-2. **Mid-flight computed style** — sample `getComputedStyle` a few frames in and
-   assert the property sits *between* its endpoints.
+2. **Mid-flight value** — read the property *between* its endpoints, at a
+   point you chose, never at a fixed delay. **Never sample at a fixed delay**:
+   `await wait(20)` then "opacity is between 0 and 1" passes on a fast machine
+   and fails on a loaded one — the R1 review reproduced exactly that in the
+   runner, across sixteen sites (R1-REVIEW 2.1). The helpers in
+   `@composable-svelte/core/test` (`src/lib/test/animation.ts`) give two
+   primitives, and which one depends on what drives the property:
+   - **Scrub** (`waitForAnimations` then `scrubAnimations(el, 0.5)`): Motion
+     drives `opacity`, `transform`, `clipPath` and `filter` through the Web
+     Animations API, so the animation is addressable and its clock can be
+     moved to the midpoint. Read there, `restore()`, assert.
+   - **Poll** (`midFlight(read, { from, to })`): `x`, `rotate`, `scale`,
+     `height`, `margin-left`, a scroll position — Motion drives these on its
+     own JavaScript ticker, invisible to `getAnimations()`. `midFlight` polls
+     the reader on a real 5 ms timer for a value strictly between the
+     endpoints, and its timeout message says whether nothing moved, it
+     jumped to the end, or it overshot.
+   For the settled state use `settleAnimations` + `waitForStyle` (Web
+   Animations) or `settleValue` (the ticker); for "it is gone" use
+   `waitUntil`. `nextFrame(n)` is for a deliberate one-frame negative — "it
+   did not animate" — and a fixed `wait(900)` stays only for a bounded
+   negative whose promise can never settle, with a comment saying so.
+   Every helper refuses `vi.useFakeTimers()` (Motion's ticker is on
+   `requestAnimationFrame`, which the fake clock holds), and a file that
+   samples mid-flight calls `assertMotionAllowed()` in `beforeAll`, so
+   `prefers-reduced-motion: reduce` fails with a message about the
+   environment rather than about the component.
 3. **Paired discriminator** — assert what should move *and* what should not.
-   `sidebar-animation.test.ts:76-91` asserts `margin-left` travels while width
+   `sidebar-animation.test.ts` asserts `margin-left` travels while width
    stays constant, which fails both against no animation and against the CSS
    transition it replaced. Aim here.
 
@@ -430,8 +455,10 @@ optional.
 Measured twice in this repo, wrong both times: it returns **0** for a Motion One
 spring on a non-composited property (`margin`, `width`, `height`, colour), which
 Motion drives with its own JS ticker; and a **stale non-zero** elsewhere, because
-a finished entry animation is still attached. Use it only for opacity/transform
-animations, and only against a control run.
+a finished entry animation is still attached. `waitForAnimations` and
+`scrubAnimations` are the safe form: they ignore finished and infinite
+animations, and their timeout message says what the list cannot see. Use the
+raw call only for opacity/transform animations, and only against a control run.
 
 ## Migration recipes
 

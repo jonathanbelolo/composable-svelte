@@ -311,6 +311,8 @@ describe('createDestination', () => {
 
 			const [, effect] = Destination.reducer(initialState, action, {});
 			expect(effect._tag).toBe('Run');
+			// Under the case's group (C6): the field's group is added one level up.
+			expect((effect as { groups?: readonly string[] }).groups).toEqual(['addItem']);
 
 			const dispatched: unknown[] = [];
 			await (effect as { execute: (d: (a: unknown) => void) => Promise<void> }).execute((a) => dispatched.push(a));
@@ -439,6 +441,28 @@ describe('createDestination', () => {
 				expect(Destination.is(nameAction, 'addItem.saveButtonTapped')).toBe(false);
 				expect(Destination.is(saveAction, 'addItem.saveButtonTapped')).toBe(true);
 				expect(Destination.is(saveAction, 'addItem.nameChanged')).toBe(false);
+			});
+		});
+
+		describe('is() decides by the wrapper shape, not by a name (R1-REVIEW 1.9)', () => {
+			it('a dismiss under a field named like a case names no case', () => {
+				expect(Destination.is({ type: 'addItem', action: { type: 'dismiss' } }, 'addItem')).toBe(false);
+				expect(Destination.is({ type: 'addItem', action: { type: 'dismiss' } }, 'addItem.saveButtonTapped')).toBe(false);
+			});
+
+			it('a presented wrapper under a field named like a case is looked through', () => {
+				const shape = { type: 'addItem', action: { type: 'presented', action: { type: 'editItem', action: { type: 'saveButtonTapped' } } } };
+				expect(Destination.is(shape, 'editItem.saveButtonTapped')).toBe(true);
+				expect(Destination.is(shape, 'addItem')).toBe(false);
+			});
+
+			it('a parent-level action that merely shares a case name, carrying no child action, matches no path', () => {
+				expect(Destination.is({ type: 'addItem', value: 1 }, 'addItem')).toBe(false);
+			});
+
+			it('an inherited property is not a case', () => {
+				expect(Destination.is({ type: 'hasOwnProperty', action: { type: 'x' } }, 'hasOwnProperty')).toBe(false);
+				expect(Destination.is({ type: 'constructor', action: { type: 'x' } }, 'constructor')).toBe(false);
 			});
 		});
 

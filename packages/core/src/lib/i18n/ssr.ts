@@ -68,7 +68,7 @@ import {
 } from './types.js';
 import { Effect } from '../effect.js';
 import { createNoopStorage } from '../dependencies/local-storage.js';
-import { escapeAttribute } from '../ssr/utils.js';
+import { encodePath, escapeAttribute } from '../ssr/utils.js';
 
 /**
  * Configuration for server-side i18n initialization.
@@ -343,9 +343,11 @@ export function createI18nHandle(config: {
  * The path is URI-encoded and every attribute value is escaped, so a
  * request-derived path cannot break out of the `href` (the first form
  * interpolated raw, and its example fed the request path through `{@html}`
- * — reflected XSS; AUDIT-2026-09-03-FINDINGS SS5). Pass the raw path, not a
- * percent-encoded one. The output is head markup: hand it to `renderToHTML`'s
- * `head` option on the server.
+ * — reflected XSS; AUDIT-2026-09-03-FINDINGS SS5). Pass a path, not a URL:
+ * it is encoded segment by segment, idempotently, so an already-encoded
+ * path is not double-encoded and a `?` or `#` inside a segment stays in the
+ * path. The output is head markup: hand it to `renderToHTML`'s `head` option
+ * on the server.
  *
  * @example
  * ```typescript
@@ -361,7 +363,7 @@ export function generateAlternateLinks(
 ): string {
   return locales
     .map((locale) => {
-      const url = `${baseUrl}${encodeURI(path)}?lang=${encodeURIComponent(locale)}`;
+      const url = `${baseUrl}${encodePath(path)}?lang=${encodeURIComponent(locale)}`;
       return `<link rel="alternate" hreflang="${escapeAttribute(locale)}" href="${escapeAttribute(url)}" />`;
     })
     .join('\n');

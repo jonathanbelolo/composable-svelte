@@ -892,6 +892,9 @@ importers:
       fastify:
         specifier: 5.12.1
         version: 5.12.1
+      fastify-plugin:
+        specifier: 5.1.0
+        version: 5.1.0
       isomorphic-dompurify:
         specifier: ^2.16.0
         version: 2.31.0

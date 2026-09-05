@@ -90,6 +90,13 @@ describe('createInitialI18nState', () => {
 
     expect(state.direction).toBe('rtl');
   });
+
+  it('a locale outside availableLocales falls back to the default, with one warning', () => {
+    expectConsole('warn');
+    const state = createInitialI18nState('xx-INVALID', ['en', 'fr'], 'en');
+    expect(state.currentLocale).toBe('en');
+    expect(state.fallbackChain[0]).toBe('en');
+  });
 });
 
 describe('i18nReducer', () => {

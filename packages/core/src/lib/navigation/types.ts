@@ -116,7 +116,14 @@ export const PresentationAction = {
  *       return pop(state.stack);  // Uses stack helper
  *
  *     case 'stack':
- *       return handleStackAction(state, action, deps, screenReducer);
+ *       return handleStackAction(
+ *         state,
+ *         action.action,
+ *         deps,
+ *         screenReducer,
+ *         (s) => s.stack,
+ *         (s, stack) => ({ ...s, stack })
+ *       );
  *   }
  * };
  * ```
@@ -208,11 +215,13 @@ export const StackAction = {
    * @template T - The screen action type
    * @param index - The index of the screen in the stack
    * @param action - The presentation action from the screen
+   * @param screenId - The screen's identity, when `handleStackAction` was given `options.screenId`
    * @returns A screen action
    */
-  screen: <T>(index: number, action: PresentationAction<T>): StackAction<T> => ({
+  screen: <T>(index: number, action: PresentationAction<T>, screenId?: string | number): StackAction<T> => ({
     type: 'screen' as const,
     index,
+    ...(screenId !== undefined ? { screenId } : {}),
     action
   })
 } as const;

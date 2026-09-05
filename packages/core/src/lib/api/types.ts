@@ -18,14 +18,18 @@ export type SafeHTTPMethod = 'GET' | 'HEAD' | 'OPTIONS' | 'PUT' | 'DELETE';
 export interface RequestConfig {
   /**
    * This caller's bound on the whole request, retries included, in
-   * milliseconds; rejects with `TimeoutError`. Another caller sharing the same
-   * in-flight request keeps its own bound.
-   * @default 30000 (30 seconds)
+   * milliseconds; rejects with `TimeoutError`. `Infinity` sets no bound;
+   * `0`, a negative or `NaN` is a `TypeError`. Another caller sharing the
+   * same in-flight request keeps its own bound.
+   * @default the client's `timeout`, itself 30000 (30 seconds)
    */
   timeout?: number;
 
   /**
-   * Request headers.
+   * Request headers. Names are case-insensitive: they are lower-cased when
+   * merged with the client's defaults (a later duplicate wins), and reach
+   * interceptors, the request key and mock handlers lower-cased —
+   * `config.headers.authorization`.
    */
   headers?: Record<string, string>;
 
@@ -35,8 +39,13 @@ export interface RequestConfig {
   params?: Record<string, string | number | boolean | null | undefined>;
 
   /**
-   * Request body (for POST, PUT, PATCH).
-   * Will be JSON-stringified if object/array.
+   * Request body (for POST, PUT, PATCH). Plain data — `null`, primitives,
+   * arrays and plain objects, `toJSON` honoured — is sent as JSON with
+   * `content-type: application/json` unless a content type is set. A
+   * `BodyInit` (a string, `FormData`, `Blob`, `ArrayBuffer`, typed array,
+   * `URLSearchParams` or `ReadableStream`) is passed to `fetch` untouched,
+   * with no content type added. A body with no JSON form is never coalesced
+   * or cached; a body with no JSON form at all (a cycle) is a `TypeError`.
    */
   body?: unknown;
 
@@ -55,8 +64,12 @@ export interface RequestConfig {
   deduplicate?: boolean;
 
   /**
-   * Enable retry logic for failed requests.
-   * @default true for GET/HEAD/OPTIONS, false for POST/PUT/PATCH/DELETE
+   * This request's retry policy, replacing the client's. `true` retries
+   * under the defaults — any method; a partial policy is merged with them;
+   * `false` never retries. The resolved policy is part of the request's
+   * identity: two concurrent callers with different policies do not share
+   * an attempt.
+   * @default the client's `retry`, itself `false`
    */
   retry?: boolean | RetryConfig;
 
@@ -103,8 +116,10 @@ export interface RetryConfig {
   retryableStatusCodes?: number[];
 
   /**
-   * Predicate function to determine if error should be retried.
-   * Takes precedence over retryableStatusCodes.
+   * Consulted once per retryable failure, after the status check, with the
+   * attempt just made (1 for the first); it can veto a retry, not add one.
+   * The same function object shared by two callers is one policy; two
+   * functions are two.
    */
   shouldRetry?: (error: unknown, attempt: number) => boolean;
 }
@@ -114,15 +129,17 @@ export interface RetryConfig {
  */
 export interface CacheConfig {
   /**
-   * Time-to-live for cached responses (milliseconds).
+   * Time-to-live for cached responses (milliseconds); a positive finite
+   * number, else a `TypeError`.
    * @default 300000 (5 minutes)
    */
   ttl?: number;
 
   /**
    * Custom cache key generator, replacing the request key (method, resolved
-   * URL, query parameters, merged headers). The entry still remembers the
-   * path it was requested with, so `invalidateCache('/path')` reaches it.
+   * URL, query parameters, the headers after the request interceptors, body,
+   * retry policy). The entry still remembers the path it was requested with,
+   * so `invalidateCache('/path')` reaches it.
    */
   key?: (url: string, config: RequestConfig) => string;
 
@@ -147,7 +164,8 @@ export interface CacheConfig {
  */
 export interface ClientCacheConfig extends CacheConfig {
   /**
-   * Entries the client's cache holds before the least recently used is dropped.
+   * Entries the client's cache holds before the least recently used is
+   * dropped; a positive integer, else a `TypeError`.
    * @default 100
    */
   maxEntries?: number | undefined;
@@ -325,18 +343,25 @@ export interface APIClientConfig {
   baseURL?: string;
 
   /**
-   * Default headers for all requests.
+   * Default headers for all requests. Names are lower-cased when merged; a
+   * request's header of the same name, in any case, wins.
    */
   headers?: Record<string, string>;
 
   /**
-   * Default timeout for all requests (milliseconds).
+   * Default timeout for all requests (milliseconds); `Infinity` for none.
+   * `0`, a negative or `NaN` is a `TypeError`.
    * @default 30000 (30 seconds)
    */
   timeout?: number;
 
   /**
-   * Default retry configuration.
+   * Default retry policy. `false` never retries; `true` or a partial policy
+   * retries **any** method under the defaults merged with it — a
+   * client-level `retry: true` retries POST and PATCH too
+   * (AUDIT-2026-09-03-FINDINGS A5, open for R3.1); set `retry` per request
+   * for mutations. A request's `retry` replaces this.
+   * @default false
    */
   retry?: boolean | RetryConfig;
 

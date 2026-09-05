@@ -1,5 +1,11 @@
 # Security Hardening Guide
 
+> **Historical (marked 2026-09-05).** This document is a plan from before the
+> 3 September 2026 audit and the hardening campaign that followed
+> (`plans/hardening/`). It is kept as history and is not maintained; where it
+> and the shipped code disagree, the code and the package documentation under
+> `packages/core/docs/` are current.
+
 Security best practices for production Composable Svelte SSR deployments.
 
 ---
@@ -144,6 +150,11 @@ fastifyRateLimit(app, {
 ```
 
 ### Per-Route Rate Limiting
+
+> The per-route `config.rateLimit` below is `@fastify/rate-limit`'s
+> feature, not core's: `fastifyRateLimit` from `@composable-svelte/core/ssr`
+> limits every route with one policy and reads no route config. Use the
+> Fastify plugin for per-route limits.
 
 ```typescript
 app.get('/api/expensive', {

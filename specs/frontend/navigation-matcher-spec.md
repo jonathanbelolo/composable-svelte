@@ -205,6 +205,8 @@ if (editState) {
 
 ### 2.5 `Destination.on()` - Reactive Matching
 
+> **Not implemented (2026-09-05).** `createDestination` ships `is`, `extract`, `matchCase` and `match`; `on()` does not exist. The store's `subscribeToActions()` exists, so a consumer subscribes and calls `Destination.is()` in the listener.
+
 Create a reactive matcher that subscribes to actions (for effects).
 
 ```typescript

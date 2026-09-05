@@ -4,7 +4,7 @@
  * Protects against DoS attacks and abuse.
  */
 
-import { installsOnParent } from './plugin.js';
+import { failPlugin, installsOnParent } from './plugin.js';
 
 export interface RateLimitConfig {
   /** Maximum requests per window. A positive finite number, or the limiter throws. */
@@ -25,7 +25,9 @@ export interface RateLimitConfig {
   keyGenerator?: ((request: any) => string) | undefined;
 
   /**
-   * Keys held before the oldest is dropped.
+   * Keys held before the least recently seen is dropped. At capacity a new
+   * key costs one eviction, plus a sweep of expired entries at most once a
+   * second.
    * @default 10000
    */
   maxKeys?: number | undefined;
@@ -59,6 +61,8 @@ export class RateLimiter {
   private requests = new Map<string, { count: number; resetTime: number }>();
   private cleanupInterval: NodeJS.Timeout | undefined;
   private readonly maxKeys: number;
+  /** When `makeRoom` last swept expired entries; the sweep is a full scan. */
+  private lastSweep = 0;
 
   constructor(private config: RateLimitConfig) {
     positiveFinite('max', config?.max);
@@ -101,7 +105,12 @@ export class RateLimiter {
       };
     }
 
-    // Within window - check limit
+    // Within window - check limit. A touched key moves to the back, so
+    // eviction at capacity drops the least recently *seen* client, not the
+    // one seen first: the first form evicted long-lived clients ahead of
+    // fresh spoofed keys (R1-REVIEW 1.9).
+    this.requests.delete(key);
+    this.requests.set(key, record);
     if (record.count < this.config.max) {
       record.count++;
       return {
@@ -127,7 +136,13 @@ export class RateLimiter {
    */
   private makeRoom() {
     if (this.requests.size < this.maxKeys) return;
-    this.cleanup();
+    // The expired sweep is O(size); at capacity every new key would pay it.
+    // Once a second is enough — the eviction below keeps the bound either way.
+    const now = Date.now();
+    if (now - this.lastSweep >= 1000) {
+      this.cleanup();
+      this.lastSweep = now;
+    }
     while (this.requests.size >= this.maxKeys) {
       const oldest = this.requests.keys().next().value;
       if (oldest === undefined) break;
@@ -166,14 +181,24 @@ export class RateLimiter {
  * `app.register(fastifyRateLimit, config)` installs the limiter on the
  * registering instance's routes (the plugin carries Fastify's skip-override
  * marker); `fastifyRateLimit(app, config)` does the same directly — the hooks
- * are added before the returned promise settles. A bad `max` or `windowMs`
- * rejects the promise, so `app.ready()` reports it.
+ * are added synchronously; the returned promise is already resolved. A bad
+ * `max` or `windowMs` throws when called directly and rejects the promise
+ * when registered, so `app.ready()` reports it; the first async form made
+ * an unawaited direct call fail open (R1-REVIEW 1.4).
  */
-export const fastifyRateLimit = installsOnParent(async function fastifyRateLimit(
+export const fastifyRateLimit = installsOnParent(function fastifyRateLimit(
   fastify: any,
   config: RateLimitConfig
 ): Promise<void> {
-  const limiter = new RateLimiter(config);
+  // Fastify passes (instance, opts, done); a direct call passes two.
+  // eslint-disable-next-line prefer-rest-params
+  const registered = arguments.length >= 3;
+  let limiter: RateLimiter;
+  try {
+    limiter = new RateLimiter(config);
+  } catch (error) {
+    return failPlugin(error, registered);
+  }
   const keyGen = config.keyGenerator || ((req: any) => req.ip);
 
   // The limiter's interval goes with the server.
@@ -199,4 +224,5 @@ export const fastifyRateLimit = installsOnParent(async function fastifyRateLimit
       });
     }
   });
+  return Promise.resolve();
 });

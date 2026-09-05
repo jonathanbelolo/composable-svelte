@@ -3,8 +3,17 @@
 // ============================================================================
 
 import { APIError } from '../errors.js';
-import { cacheKeyFor, createResponseCache } from '../cache.js';
-import { requestKey } from '../deduplication.js';
+import { cacheKeyFor, createResponseCache, normalizePath, validateCacheConfig } from '../cache.js';
+import { createInFlightRegistry, isDeduplicableMethod, requestKey } from '../deduplication.js';
+import {
+  finalizeRequest,
+  mergeHeaders,
+  recoverWithErrorInterceptors,
+  runRequestInterceptors,
+  runResponseInterceptors,
+  validateTimeout
+} from '../pipeline.js';
+import { resolveRetryConfig } from '../retry.js';
 import type {
   APIClient,
   APIRequest,
@@ -185,10 +194,16 @@ async function resolveMockResponse<T>(
  * - Error simulation ({ error: Error })
  * - 404 for unmatched routes
  *
- * Caching uses the same cache implementation `createAPIClient` uses, one
- * instance per mock, as production has one per client: two `createMockAPI`
- * instances do not see each other's cached GETs, and nothing has to be cleared
- * between tests.
+ * The mock runs the real client's pipeline (`pipeline.ts`): identical
+ * concurrent safe requests share one handler call unless a request says
+ * `deduplicate: false`; request interceptors run before the key and the
+ * cache lookup; a `signal` and a `timeout` are the caller's own, with no
+ * default timeout; header names reach handlers lower-cased
+ * (`config.headers.authorization`); a body with no JSON form never
+ * coalesces. Nothing retries. Caching uses the same cache implementation
+ * `createAPIClient` uses, one instance per mock, as production has one per
+ * client: two `createMockAPI` instances do not see each other's cached
+ * GETs, and nothing has to be cleared between tests.
  *
  * @example
  * ```typescript
@@ -239,11 +254,18 @@ export function createMockAPI(routes: MockRoutes = {}): APIClient {
   };
 
   /**
-   * The one path every verb goes through, mirroring the real client's layering:
-   * cache, then request interceptors, then the route, then response
-   * interceptors — with error interceptors given the chance to recover.
+   * The one path every verb goes through: the real client's pipeline, in its
+   * order — resolve, request interceptors, finalize and key, cache lookup,
+   * the shared attempt (the route, then the response interceptors), cache
+   * set — with a failure other than this caller's own cancellation offered to
+   * the error interceptors once. A `signal` and a `timeout` are the caller's
+   * own, as in production; there is no default timeout. Nothing retries, but
+   * the policy is part of the identity, so two callers with different
+   * policies do not share a handler call, as they would not share a fetch
+   * (R1-REVIEW 1.9).
    */
-  // This mock's own cache, as a real client has its own.
+  // This mock's own registry and cache, as a real client has its own.
+  const inFlight = createInFlightRegistry();
   const cache = createResponseCache();
 
   async function execute<T>(
@@ -251,50 +273,44 @@ export function createMockAPI(routes: MockRoutes = {}): APIClient {
     url: string,
     config: RequestConfig = {}
   ): Promise<APIResponse<T>> {
+    const timeout = config.timeout === undefined ? Infinity : validateTimeout(config.timeout, 'request');
+    validateCacheConfig(config.cache, 'request');
     // `cache` defaults to false here exactly as it does in `createAPIClient`, so
     // adding caching changes no existing mock's behaviour.
     const cacheConfig = config.cache !== undefined ? config.cache : false;
-
-    const cacheKey = cacheKeyFor(
-      requestKey({ method, url, params: config.params, headers: config.headers ?? {}, body: config.body }),
-      url,
-      config,
-      cacheConfig
-    );
-    const cached = cache.get<T>(method, cacheKey, cacheConfig);
-    if (cached) {
-      return cached;
-    }
+    const retry = resolveRetryConfig(method, config.retry !== undefined ? config.retry : false);
+    const path = normalizePath(url);
+    const coalesce = config.deduplicate === true || (config.deduplicate !== false && isDeduplicableMethod(method));
 
     try {
-      let interceptedConfig: RequestConfig = config;
-      for (const interceptor of interceptors) {
-        if (interceptor.onRequest) {
-          interceptedConfig = await interceptor.onRequest(url, interceptedConfig);
+      const intercepted = await runRequestInterceptors(interceptors, url, {
+        ...config,
+        headers: mergeHeaders(config.headers)
+      });
+      const prepared = finalizeRequest(method, url, intercepted, retry);
+      const key = requestKey(prepared.identity);
+      const cacheKey = cacheKeyFor(key, url, intercepted, cacheConfig);
+
+      const cached = cache.get<T>(method, cacheKey, cacheConfig);
+      if (cached) {
+        return cached;
+      }
+
+      const run = async (): Promise<APIResponse<T>> => {
+        const route = findRoute(method, url);
+        if (!route) {
+          throw new APIError(`No mock for: ${method} ${url}`, 404, null, {}, false);
         }
-      }
+        const raw = await resolveMockResponse<T>(route.response, intercepted, route.params);
+        return runResponseInterceptors(interceptors, raw);
+      };
+      const response = await inFlight.join(coalesce && key !== null ? key : null, run, {
+        signal: config.signal,
+        timeout
+      });
 
-      const route = findRoute(method, url);
-      if (!route) {
-        throw new APIError(`No mock for: ${method} ${url}`, 404, null, {}, false);
-      }
-
-      let response = await resolveMockResponse<T>(
-        route.response,
-        interceptedConfig,
-        route.params
-      );
-
-      for (const interceptor of interceptors) {
-        if (interceptor.onResponse) {
-          response = await interceptor.onResponse(response);
-        }
-      }
-
-      if (method === 'GET') {
-        cache.set(method, cacheKey, url, response, cacheConfig);
-      }
-      cache.invalidateOnMutation(method, url, cacheConfig);
+      cache.set(method, cacheKey, path, response, cacheConfig);
+      cache.invalidateOnMutation(method, path, cacheConfig);
 
       return response;
     } catch (error) {
@@ -305,16 +321,7 @@ export function createMockAPI(routes: MockRoutes = {}): APIClient {
       // interceptor — `onError: (e) => { throw toDomainError(e) }` — surface a
       // different error under the mock than in production, which is the
       // "double that drops half the contract" problem this file exists to fix.
-      for (const interceptor of interceptors) {
-        if (interceptor.onError) {
-          try {
-            return (await interceptor.onError(error)) as APIResponse<T>;
-          } catch {
-            // This hook declined; try the next.
-          }
-        }
-      }
-      throw error;
+      return recoverWithErrorInterceptors<T>(interceptors, error);
     }
   }
 

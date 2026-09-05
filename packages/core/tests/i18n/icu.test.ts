@@ -250,6 +250,13 @@ describe('compileICU', () => {
       expect(getICUCacheStats()).toEqual({ size: 0, failures: 1 });
     });
 
+    it('the failure cache is bounded: past 100 the oldest is dropped', () => {
+      expectConsole('error', 101);
+      clearICUCache();
+      for (let i = 0; i < 101; i++) compileICU(`{n, plural, one {# item}`, `locale-${i}`);
+      expect(getICUCacheStats().failures).toBe(100);
+    });
+
     it('a cached failure is cleared with the cache, by locale too', () => {
       expectConsole('error', 3);
       clearICUCache();

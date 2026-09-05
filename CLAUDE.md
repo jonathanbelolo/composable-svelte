@@ -16,10 +16,10 @@ This repository contains **Composable Svelte**, a Composable Architecture librar
 - ✅ **Phase 4**: Animation integration (PresentationState, Motion One for lifecycle animations)
 - ✅ **Phase 6**: Component Library (77 shadcn-svelte components, Forms with Zod validation)
 - ✅ **Phase 7**: URL Routing (Browser history, pattern matching with path-to-regexp, query params)
-- ✅ **Phase 8**: Complete Backend Integration (3 major systems, 420 tests)
-  - **API Client**: HTTP/REST with effects, interceptors, retries, caching (162 tests)
-  - **WebSocket**: Real-time communication, reconnection, channels, heartbeat (140 tests)
-  - **Dependencies**: Clock (MockClock), Storage (localStorage/cookies) (118 tests)
+- ✅ **Phase 8**: Complete Backend Integration (3 major systems, 606 tests at the R1 closure's exit)
+  - **API Client**: HTTP/REST with effects, interceptors, retries, caching (283 tests)
+  - **WebSocket**: Real-time communication, reconnection, channels, heartbeat (188 tests)
+  - **Dependencies**: Clock (MockClock), Storage (localStorage/cookies) (135 tests)
 - ✅ **Phase 17**: Internationalization (i18n) & Server-Side Rendering
   - **i18n**: ICU MessageFormat, locale detection, framework formatters (dates, numbers, currency)
   - **SSR**: Server-side rendering with Fastify, state hydration, security hardening
@@ -113,12 +113,12 @@ composable-svelte/
 │       │   ├── store.svelte.ts      # Store implementation
 │       │   ├── types.ts             # Core types
 │       │   └── index.ts             # Main exports
-│       └── tests/                   # Comprehensive test suite (1900+ tests)
-│           ├── api/                 # 162 tests (HTTP client, interceptors)
-│           ├── websocket/           # 140 tests (reconnection, heartbeat)
-│           ├── dependencies/        # 118 tests (clock, storage, cookies)
-│           ├── i18n/                # 35 tests (translations, ICU, formatters)
-│           ├── ssr/                 # 45 tests (SSR, SSG, hydration)
+│       └── tests/                   # Comprehensive test suite (3,116 tests at the R1 closure's exit)
+│           ├── api/                 # 283 tests (HTTP client, interceptors)
+│           ├── websocket/           # 188 tests (reconnection, heartbeat)
+│           ├── dependencies/        # 135 tests (clock, storage, cookies)
+│           ├── i18n/                # 103 tests (translations, ICU, formatters)
+│           ├── ssr/                 # 235 tests (SSR, SSG, hydration)
 │           └── ...
 ├── examples/
 │   ├── styleguide/                  # Component showcase
@@ -168,6 +168,7 @@ Effect<Action> = Run | FireAndForget | None | Batch | Merge | Cancel
 - **createDestinationReducer**: Route actions to enum-based destination reducers
 - **Navigation Components**: Modal, Sheet, Drawer, NavigationStack, Alert
 - **Dismiss Dependency**: Children can dismiss themselves via `deps.dismiss()`
+- **Cancellation**: a presentation's effects belong to a cancellation group named after its field (and case, and screen); dismiss, a parent null, a case change, a pop and a shrinking `setPath` cancel it, so a child's in-flight effect never lands after the child is gone
 - **SvelteKit Integration**: URL synchronization, browser back/forward handling
 
 **State Pattern**:
@@ -199,7 +200,7 @@ type DestinationState =
 - **Destination.extract()**: Extract child state by case type
 - **Destination.matchCase()**: Match action + extract state atomically
 - **Destination.match()**: Multi-case handler matching
-- **Destination.on()**: Reactive subscriptions (requires `store.subscribeToActions()`)
+- **Destination.on()**: specified in `navigation-matcher-spec.md` §2.5, **not implemented** — subscribe with `store.subscribeToActions()` and call `Destination.is()` yourself
 
 **Usage**:
 ```typescript
@@ -237,11 +238,11 @@ interface FeatureState {
 - ✅ **Phase 4**: Animation integration - PresentationState, Motion One for lifecycle animations
 - ✅ **Phase 6**: Component Library - 77 shadcn-svelte components, Forms with Zod validation
 - ✅ **Phase 7**: URL Routing - Browser history, pattern matching (path-to-regexp), query params
-- ✅ **Phase 8**: Complete Backend Integration (420 tests total)
-  - **API Client**: HTTP/REST with effects, interceptors, retries, caching (162 tests)
-  - **WebSocket**: Real-time communication, reconnection, heartbeat, channels (140 tests)
-  - **Dependencies**: Clock (MockClock), Storage (localStorage/cookies) with security docs (118 tests)
-- ✅ **Phase 17**: Internationalization (i18n) & Server-Side Rendering (500+ tests total)
+- ✅ **Phase 8**: Complete Backend Integration (606 tests at the R1 closure's exit)
+  - **API Client**: HTTP/REST with effects, interceptors, retries, caching (283 tests)
+  - **WebSocket**: Real-time communication, reconnection, heartbeat, channels (188 tests)
+  - **Dependencies**: Clock (MockClock), Storage (localStorage/cookies) with security docs (135 tests)
+- ✅ **Phase 17**: Internationalization (i18n) & Server-Side Rendering (338 tests at the R1 closure's exit: i18n 103, SSR/SSG 235)
   - **i18n System**: ICU MessageFormat, translation loaders, locale detection, framework formatters
   - **SSR**: Server-side rendering with Fastify, state hydration, per-request stores, security hardening
   - **SSG**: Static site generation, multi-locale support (33 pages), dynamic route enumeration, asset copying
@@ -252,7 +253,7 @@ interface FeatureState {
 
 **Distribution**: NPM package `@composable-svelte/core` (planned)
 
-**Key Achievement**: Production-ready implementation of complete Composable Architecture with full backend integration, i18n, SSR/SSG, 1900+ tests, and comprehensive documentation.
+**Key Achievement**: Production-ready implementation of complete Composable Architecture with full backend integration, i18n, SSR/SSG, 3,116 core tests (5,077 across the repository at the R1 closure's exit), and comprehensive documentation.
 
 ## Key Concepts
 
@@ -332,7 +333,7 @@ case 'closeButtonTapped': {
 ```
 
 ### Store.subscribeToActions()
-The matcher API's `Destination.on()` requires stores to implement `subscribeToActions(listener)`. This is **optional** but recommended for reactive effects. The implementation should notify subscribers **after** state updates.
+The store implements `subscribeToActions(listener)`, notifying subscribers **after** state updates. The matcher spec's `Destination.on()` was to be built on it and is not implemented; subscribe directly and match with `Destination.is()`.
 
 ## Common Patterns
 
@@ -450,7 +451,7 @@ This library is heavily inspired by TCA for Swift but adapted for Svelte/TypeScr
 - ✅ **Vitest + jsdom**: Fast, Vite-native testing
 - ✅ **TestStore API**: Exhaustive action testing with send/receive
 - ✅ **Mock Implementations**: MockClock, MockCookieStorage, MockWebSocket, MockAPI
-- ✅ **4,641 Tests**: 4,441 across the eight packages plus 200 in the examples —
+- ✅ **5,077 Tests**: 4,864 across the eight packages plus 213 in the examples (measured at the R1 closure's exit, 2026-09-05) —
   including a 93-test integration suite in `examples/auth-server` that drives
   `@composable-svelte/auth`'s HTTP adapter against a real Fastify backend rather
   than a `fetch` stub. Its 6 Playwright tests (the cookie and the OAuth

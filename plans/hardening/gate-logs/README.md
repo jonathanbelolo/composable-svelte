@@ -1,10 +1,18 @@
-# Gate logs for R0 and its closure
+# Gate logs for R0, R1 and their closures
 
-The raw outputs of the core gate (`pnpm --filter @composable-svelte/core build
-&& … typecheck && … test && … check`) as it was run before each commit of R0
-and R0.5, retained from the session that made them and committed on
-4 September 2026 after the review of the closure. ANSI colour codes are
-stripped; nothing else is edited. Each log's original modification time is
+What the core gate's script prints (`pnpm --filter @composable-svelte/core
+build && … typecheck && … test && … check`): the exit line of each step, the
+test summaries, and — from the R1 closure on — the porcelain block naming
+the files the gate saw. The R0 logs were retained from the session that made
+them and committed on 4 September 2026 after the review of the closure. ANSI
+colour codes are stripped; nothing else is edited. They are not raw: each is
+the filtered summary of one run.
+
+**Which runs are logged.** An R1 row that describes a first failed run has
+one log — the passing run — and the failure is described in the row and in
+the commit message. From C1 of the R1 closure on, every *completed* run is
+logged (`gate-C5.first.log`, `gate-C5.second.log`, …), and a run stopped
+before it finished is said in its row to have no log. Each log's original modification time is
 the moment its last step finished; the gate's steps ran in sequence, and the
 whole gate measures under a minute on the machine that ran it (Vitest runs
 files in parallel: browser 13–24 s wall clock, node 4–11 s, build about 10 s,
@@ -100,3 +108,38 @@ before the fix is kept as `red-R1.x.y.log`, and the gate as `gate-R1.x.y.log`.
 | gate-R1.9.bd.log | R1.9.b+d | core gate: 2279 browser + 611 node, 0 skipped, check clean |
 | gate-R1-exit.log | R1 exit | whole-repository gate at `95a7a3b`: `pnpm -r build && pnpm -r typecheck && pnpm -r --workspace-concurrency=1 test && pnpm -r check` — 4,851 tests passed, 0 skipped; svelte-check clean in all 20 workspaces |
 | mutation-baseline-R1-exit.log | R1 exit | `node scripts/mutation-baseline.mjs --strict` at `95a7a3b`: 8 of 8 KILLED, exit 0 |
+| gate-C0.log | C0 (R1 closure) | core gate, one run: 2273 browser (the six duplicate tests gone) + 611 node, 0 skipped, check clean; porcelain = the two files committed |
+| red-C1.log | C1 | `tests/websocket/live-client.test.ts` with only the harness change (`error()` sets `readyState = CLOSED` first, the browser's order): the R1.4.e test for an error on an established socket fails — `expected 'failed' to be 'connected'` |
+| gate-C1.log | C1 | core gate, one run: 2290 browser + 611 node, 0 skipped, check clean; porcelain = the files committed |
+| red-C3.log | C3 | the middleware suites with the new tests and the sources restored: `fp(plugin)` throws `Cannot assign to read only property`, the direct call with a bad config does not throw, first-seen eviction drops the long-lived client (4 fail) |
+| gate-C3.log | C3 | core gate, one run: 2290 browser + 616 node, 0 skipped, check clean; porcelain = the files committed |
+| red-C7-node.log | C7 | the SSR, SSG and i18n node suites with the new tests and the sources restored: 9 fail — the SSG path refused after the loaders ran, the `.html` segments accepted, the symlink write allowed, the canonical and alternate links unencoded, `serializeState` returning `undefined` |
+| red-C7-browser.log | C7 | `tests/i18n/icu.test.ts` and `tests/i18n/reducer.test.ts` with the sources restored: 2 fail — the failure cache unbounded, the locale outside `availableLocales` accepted |
+| gate-C7.log | C7 | core gate, one run after a two-error svelte-check fix in the new SSG test (untyped mock parameters), whose first run is not logged: 2292 browser + 623 node, 0 skipped, check clean; porcelain = the files committed |
+| red-C2a.log | C2a | the new `stable-stringify`, `errors` and rewritten `client` shared-attempt tests against the restored sources and harness: 4 fail (a Date renders as `{}`, `undefined` properties kept), 2 suites cannot import `CancelledError` and `deferred` |
+| gate-C2a.log | C2a | core gate, one run: 2304 browser + 623 node, 0 skipped, check clean; porcelain = the files committed |
+| red-C2b.log | C2b | the new pipeline, registry and mock-parity tests against the restored sources: 49 fail (interceptors after the key and inside every attempt, a dead attempt joined, FormData stringified, headers case-sensitive, `timeout: 0` accepted, raw-path invalidation, no mock coalescing), and `deduplication.test.ts` cannot import `isPlainData` |
+| gate-C2b.first.log | C2b | core gate, first run: 2398 browser + 623 node green, svelte-check 1 error — a generic response interceptor wrapped in `vi.fn` in the new pipeline test lost its type parameter |
+| gate-C2b.log | C2b | core gate, second run after that test's fix: 2398 browser + 623 node, 0 skipped, check clean; porcelain = the files committed |
+| red-C4.log | C4 | the new Effect.map, store and TestStore tests against the restored sources: 8 fail — the AfterDelay arm returns nothing (its rejection unhandled, finish() passing), Debounced and Throttled executors see no signal, every dispatch after destroy() warns |
+| gate-C4.log | C4 | core gate, one run: 2403 browser + 623 node, 0 skipped, check clean; porcelain = the files committed |
+| red-C5.log | C5 | the new TestStore tests against the old implementation with only `real-timers.ts` in place: 22 fail — `receive()` moving the fake clock, an armed debounce passing `finish()`, no signal to four executor kinds, no `destroy()`, rejections reported only at the timeout, no array form, the import guard absent |
+| gate-C5.first.log | C5 | core gate, first run: 2428 browser green, 2 node failures (the doc-typecheck register's staleness arm: `receive()`'s new signature changed five registered messages), svelte-check 2 errors in the new tests |
+| gate-C5.second.log | C5 | core gate, second run: tests green, svelte-check 14 errors — a register line pasted with the assertion's trailing text |
+| gate-C5.log | C5 | core gate, third run: 2428 browser + 623 node, 0 skipped, check clean; porcelain = the files committed |
+| red-C6a-effect.log | C6a | `tests/effect.test.ts` with the new group tests against the restored sources: the file cannot import `nestGroups` |
+| red-C6a-store.log | C6a | `tests/store.test.ts` and `tests/test-store.test.ts` with the new group tests, the Effect constructors in place and the registries restored: 11 fail — no group is cancelled, timers keep firing, subscriptions keep running |
+| gate-C6a.first.log | C6a | core gate, first run: 2445 browser green, 2 node failures — the doc-typecheck staleness arm (the forms skill's registered message gained `groups?` in the AfterDelay type), check clean |
+| gate-C6a.log | C6a | core gate, second completed run after the entry was re-pinned to the printed message: 2445 browser + 623 node, 0 skipped, check clean; porcelain = the files committed. A run started on a wrong re-pin between the two was stopped before its node step and left no log |
+| red-C6b.log | C6b | the navigation and composition suites with the new cancellation tests and the operators restored: 30 fail — no dismiss, pop, setPath or parent null cancels anything, no effect carries a group, `is()` matches a dismiss under a case-named field |
+| gate-C6b.first.log | C6b | core gate, first run: 2475 browser green; typecheck 3 errors (an unannotated wrapper in `scopeAction`), svelte-check 5 errors (the same, plus two test calls missing the dependencies argument), 1 node failure (the optional-props ratchet: `groupFor?` without `\| undefined`) |
+| gate-C6b.log | C6b | core gate, second completed run: 2475 browser + 623 node, 0 skipped, typecheck and check clean; porcelain = the files committed. A run started before the typecheck fix was complete was stopped at once and left no log |
+| loop-C8.log | C8 | the four helper mutations (MC8-1 survived and its redundant branch was removed; MC8-2..4 killed), then every rewritten animation file ten times — core 101 tests × 10, chat 31 × 10, the helper file 18 × 10 after its last edit — all green. The red case for this step is the review's own runner failure of `select-animation.test.ts` (R1-REVIEW 2.1), not a local log |
+| gate-C8.log | C8 | core gate, one run: 2493 browser + 623 node, 0 skipped, check clean; porcelain = the files committed |
+| gate-C9.log | C9 | core gate, one run over the records revision (the doc-typecheck comment recount, the corrected 0.12.0 changelog section): 2493 browser + 623 node, 0 skipped, check clean; porcelain = the files committed |
+| gate-C10.log | C10 | core gate, one run over the front-door documents (the front-door and peer-ranges guards read them): 2493 browser + 623 node, 0 skipped, check clean; porcelain = the files committed |
+| mutation-baseline-R1-closure.log | C11 | `node scripts/mutation-baseline.mjs --strict` at the closure's exit: 13 of 13 KILLED (M1, M2, M4, M5, M6, M7, M9, R1-N2, R1C-W3, R1C-A7, R1C-A8, R1C-A6, R1C-A10), exit 0. A first run reported M6 and R1-N2 as anchors that no longer matched — the heartbeat's reconnect call gained its cause in C1, the destination reducer's map is nested by C6b — and both were re-anchored on the live source before this run |
+| gate-R1-closure-exit.log | C11 | the whole-repository gate at the closure's tree (version 0.12.1, the changelog heading, the R1C-W3 baseline entry; the exit report and the counts were written after it): build and typecheck exit 0; 5,077 tests passed across the 15 workspaces that have tests, 0 skipped; svelte-check 0 errors and 0 warnings in all 20 workspaces |
+| gate-C11.first.log | C11 | core gate over the version, changelog, baseline, exit sections and counts: 2493 browser + 623 node, check clean — then one more stale count was found in CLAUDE.md (the Phase 17 line), so the tree changed and the gate was run again |
+| gate-C11.log | C11 | core gate, the committed tree: 2493 browser + 623 node, 0 skipped, check clean; porcelain = the files committed. A run started before the exit report's baseline row was corrected was stopped and left no log |
+| gate-C11-close.log | C11 (closing docs commit) | core gate over the exit report's CI paragraph: 2493 browser + 623 node, 0 skipped, check clean; porcelain = the files committed |

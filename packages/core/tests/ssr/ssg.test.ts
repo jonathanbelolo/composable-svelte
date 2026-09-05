@@ -13,7 +13,12 @@ import * as path from 'path';
 // Mock fs/promises
 vi.mock('fs/promises', () => ({
   mkdir: vi.fn(),
-  writeFile: vi.fn()
+  writeFile: vi.fn(),
+  // Nothing exists on the mocked disk, and a path is its own real path.
+  stat: vi.fn(async () => {
+    throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+  }),
+  realpath: vi.fn(async (p: string) => p)
 }));
 
 // Mock Svelte server render
@@ -692,8 +697,33 @@ describe('SSG (Static Site Generation)', () => {
         { reducer, dependencies: {}, getInitialState: async () => initialState }
       );
       const html = String(vi.mocked(fs.writeFile).mock.calls[0]![1]);
-      expect(html).toContain('<link rel="canonical" href="https://x.example/a&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;">');
+      // Encoded segment by segment (as generateAlternateLinks does), then
+      // attribute-escaped: no raw quote or angle bracket can reach the page.
+      expect(html).toContain('<link rel="canonical" href="https://x.example/a%22%3E%3Cscript%3Ealert(1)%3C/script%3E">');
       expect(html).not.toContain('href="https://x.example/a"><script>');
+    });
+  });
+
+  describe('a refused path (R1-REVIEW 1.9)', () => {
+    it('never reaches getInitialState or getServerProps', async () => {
+      expectConsole('error');
+      const getInitialState = vi.fn(async (_path: string) => initialState);
+      const getServerProps = vi.fn(async (_path: string) => ({}));
+      const result = await generateStaticSite(
+        MockComponent,
+        { routes: [{ path: '/ok', getServerProps }, { path: '/../escaped', getServerProps }], outDir: './dist', generate404: false },
+        { reducer, dependencies: {}, getInitialState }
+      );
+      expect(result.errors.map((e) => e.path)).toEqual(['/../escaped']);
+      expect(getInitialState.mock.calls.map((c) => c[0])).toEqual(['/ok']);
+      expect(getServerProps.mock.calls.map((c) => c[0])).toEqual(['/ok']);
+    });
+
+    it.each(['/404.html', '/a/index.html', '/docs/page.HTML'])('%s is refused: a segment names a file where the generator makes a directory', async (path) => {
+      await expect(
+        generateStaticPage(MockComponent, path, { initialState, reducer, dependencies: {}, outDir: './dist' })
+      ).rejects.toThrow(/names an \.html file/);
+      expect(fs.writeFile).not.toHaveBeenCalled();
     });
   });
 });

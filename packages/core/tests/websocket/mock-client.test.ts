@@ -365,4 +365,49 @@ describe('Mock WebSocket Client', () => {
       expect(messages[0]!.text).toBe('Hello');
     });
   });
+
+  describe('reconnect() matches the live client (R1-REVIEW 1.9)', () => {
+    it('with reconnection disabled it disconnects instead, forgetting the URL', async () => {
+      const client = createMockWebSocket({ reconnect: { enabled: false } });
+      const events: string[] = [];
+      client.subscribeToEvents((e) => events.push(e.type));
+      await client.connect('wss://x.example');
+      client.reconnect('why');
+      expect(events).toEqual(['connected', 'disconnected']);
+      expect(client.state.status).toBe('disconnected');
+      expect(client.state.url).toBeNull();
+    });
+
+    it('while reconnecting it restarts the ladder at the first attempt without a second disconnected', async () => {
+      const client = createMockWebSocket();
+      const events: string[] = [];
+      client.subscribeToEvents((e) => events.push(e.type));
+      await client.connect('wss://x.example');
+      client.reconnect('first');
+      client.reconnect('second');
+      expect(events).toEqual(['connected', 'disconnected', 'reconnecting', 'reconnecting']);
+      expect(client.state.reconnectAttempts).toBe(1);
+    });
+
+    it('a cause is reported as an error event first', async () => {
+      const client = createMockWebSocket();
+      const events: string[] = [];
+      client.subscribeToEvents((e) => events.push(e.type));
+      await client.connect('wss://x.example');
+      client.reconnect('pong', new WebSocketError('no pong', WS_ERROR_CODES.HEARTBEAT_TIMEOUT, true));
+      expect(events).toEqual(['connected', 'error', 'disconnected', 'reconnecting']);
+      expect(client.state.lastError?.code).toBe(WS_ERROR_CODES.HEARTBEAT_TIMEOUT);
+    });
+
+    it('disconnect() while connecting reports the loss, as the live client does', async () => {
+      const client = createMockWebSocket();
+      const events: string[] = [];
+      client.subscribeToEvents((e) => events.push(e.type));
+      const connecting = client.connect('wss://x.example');
+      await client.disconnect();
+      await connecting.catch(() => {});
+      expect(events).toContain('disconnected');
+    });
+  });
 });
+

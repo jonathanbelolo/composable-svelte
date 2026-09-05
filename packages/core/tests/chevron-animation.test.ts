@@ -24,12 +24,15 @@
  * so it is visible without a build step.
  */
 
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeAll } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import Combobox from '../src/lib/components/ui/combobox/Combobox.svelte';
 import ChevronTest from './test-components/ChevronTest.svelte';
+import { assertMotionAllowed, midFlight, settleValue } from '../src/lib/test/animation.js';
 
-const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+// `rotate` runs on Motion's ticker: mid-flight samples poll for an angle
+// between the endpoints rather than reading at a fixed delay (R1-REVIEW 2.1).
+beforeAll(() => assertMotionAllowed());
 
 let cleanup: Array<() => void> = [];
 afterEach(() => {
@@ -86,29 +89,26 @@ describe('the combobox chevron', () => {
 	it('animates rather than snapping', async () => {
 		const cb = mount();
 		cb.toggle().click();
-		await wait(40);
 
-		const mid = Math.abs(rotationOf(cb.chevron()));
+		const mid = await midFlight(() => Math.abs(rotationOf(cb.chevron())), { from: 0, to: 180, what: 'the chevron' });
 		expect(mid, 'the chevron did not move').toBeGreaterThan(0);
-		expect(mid, 'the chevron snapped straight to its end state').toBeLessThan(175);
+		expect(mid, 'the chevron snapped straight to its end state').toBeLessThan(180);
 	});
 
 	it('settles pointing up', async () => {
 		const cb = mount();
 		cb.toggle().click();
-		await wait(500);
 
-		expect(Math.abs(rotationOf(cb.chevron()))).toBe(180);
+		expect(await settleValue(() => Math.abs(rotationOf(cb.chevron())), { what: 'the chevron' })).toBe(180);
 	});
 
 	it('returns when the dropdown closes', async () => {
 		const cb = mount();
 		cb.toggle().click();
-		await wait(500);
+		await settleValue(() => Math.abs(rotationOf(cb.chevron())), { what: 'the chevron' });
 		cb.toggle().click();
-		await wait(600);
 
-		expect(rotationOf(cb.chevron())).toBe(0);
+		expect(Math.abs(await settleValue(() => rotationOf(cb.chevron()), { what: 'the chevron' }))).toBe(0);
 	});
 });
 
@@ -147,18 +147,22 @@ describe('the rest of the disclosure family', () => {
 	it.each(cases)('$name animates rather than snapping', async ({ host }) => {
 		const all = mountAll();
 		all.trigger(host).click();
-		await wait(40);
 
-		const mid = Math.abs(rotationOf(all.chevron(host) as unknown as HTMLElement));
+		const mid = await midFlight(() => Math.abs(rotationOf(all.chevron(host) as unknown as HTMLElement)), {
+			from: 0,
+			to: 180,
+			what: `the ${host} chevron`
+		});
 		expect(mid, 'the chevron did not move').toBeGreaterThan(0);
-		expect(mid, 'the chevron snapped straight to its end state').toBeLessThan(175);
+		expect(mid, 'the chevron snapped straight to its end state').toBeLessThan(180);
 	});
 
 	it.each(cases)('$name settles at its open angle', async ({ host, settled }) => {
 		const all = mountAll();
 		all.trigger(host).click();
-		await wait(500);
 
-		expect(Math.abs(rotationOf(all.chevron(host) as unknown as HTMLElement))).toBe(settled);
+		expect(
+			await settleValue(() => Math.abs(rotationOf(all.chevron(host) as unknown as HTMLElement)), { what: `the ${host} chevron` })
+		).toBe(settled);
 	});
 });

@@ -344,7 +344,10 @@ describe('Combobox', () => {
 			// First search
 			await store.send({ type: 'searchChanged', query: 'test1' });
 			await store.receive({ type: 'opened' });
-			await store.advanceTime(100);
+			// The opening animation is 150 ms. This advanced 100 and passed only
+			// because receive() then moved the fake clock another 50 on its own
+			// (R1-REVIEW 1.6); waiting never advances the clock now.
+			await store.advanceTime(150);
 			await store.receive({ type: 'openingCompleted' });
 
 			// Second search before first debounce completes

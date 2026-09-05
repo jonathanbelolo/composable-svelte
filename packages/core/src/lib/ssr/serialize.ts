@@ -118,8 +118,9 @@ export function serializeState<State>(state: State, serializer?: StateReplacer):
     throw new TypeError('serializeState: state is required');
   }
 
+  let json: string | undefined;
   try {
-    return JSON.stringify(state, serializer?.replacer);
+    json = JSON.stringify(state, serializer?.replacer);
   } catch (error) {
     throw new TypeError(
       `serializeState: State is not serializable. ` +
@@ -127,4 +128,13 @@ export function serializeState<State>(state: State, serializer?: StateReplacer):
       `Error: ${error instanceof Error ? error.message : String(error)}`
     );
   }
+  // As serializeStore: a root with no JSON form is an error, not `undefined`
+  // typed as a string (R1-REVIEW 1.9).
+  if (json === undefined) {
+    throw new TypeError(
+      'serializeState: State has no JSON form (the root is a function or a symbol). ' +
+        'State should be a plain object.'
+    );
+  }
+  return json;
 }

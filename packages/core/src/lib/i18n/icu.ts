@@ -56,6 +56,8 @@ const messageCache = new Map<string, ICUMessageFunction>();
  * re-reported it (AUDIT-2026-09-03-FINDINGS I9).
  */
 const failedMessages = new Map<string, ICUMessageFunction>();
+/** Failures held; past this the oldest is dropped — a novel locale string per request must not grow it (R1-REVIEW 1.9). */
+const MAX_FAILED_MESSAGES = 100;
 
 /**
  * Detect if a string contains ICU MessageFormat syntax.
@@ -144,6 +146,10 @@ export function compileICU(message: string, locale: string): ICUMessageFunction 
     console.error('[i18n] ICU compilation error:', error);
 
     const fallback: ICUMessageFunction = () => message;
+    if (failedMessages.size >= MAX_FAILED_MESSAGES) {
+      const oldest = failedMessages.keys().next().value;
+      if (oldest !== undefined) failedMessages.delete(oldest);
+    }
     failedMessages.set(cacheKey, fallback);
     return fallback;
   }

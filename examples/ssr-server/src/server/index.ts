@@ -242,10 +242,9 @@ async function renderApp(request: any, reply: any) {
     reply.type('text/html').send(html);
   } catch (error) {
     request.log.error(error);
-    reply.status(500).send({
-      error: 'Internal Server Error',
-      message: error instanceof Error ? error.message : 'Unknown error'
-    });
+    // The message stays in the log: after R1.7.d a serialization failure
+    // names state fields, which is not for the client (R1-REVIEW 1.9).
+    reply.status(500).send({ error: 'Internal Server Error' });
   }
 }
 

@@ -1,5 +1,11 @@
 # WebSocket Integration Plan - Code Review
 
+> **Historical (marked 2026-09-05).** This document is a plan from before the
+> 3 September 2026 audit and the hardening campaign that followed
+> (`plans/hardening/`). It is kept as history and is not maintained; where it
+> and the shipped code disagree, the code and the package documentation under
+> `packages/core/docs/` are current.
+
 **Reviewer**: Claude Code
 **Date**: 2025-11-03
 **Status**: ❌ **NEEDS MAJOR REVISION**

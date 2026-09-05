@@ -267,10 +267,11 @@ Every request method accepts an optional configuration object:
 
 ```typescript
 interface RequestConfig {
-  // Request timeout (milliseconds)
+  // This caller's bound on the whole request, retries included (ms);
+  // Infinity for none — 0, a negative or NaN is a TypeError
   timeout?: number;
 
-  // Additional headers
+  // Additional headers; names are case-insensitive and sent lower-cased
   headers?: Record<string, string>;
 
   // Query parameters
@@ -285,7 +286,7 @@ interface RequestConfig {
   // Enable/disable deduplication
   deduplicate?: boolean;
 
-  // Enable/disable retry
+  // Retry policy for this request, replacing the client's
   retry?: boolean | RetryConfig;
 
   // Enable/disable caching
@@ -328,6 +329,19 @@ controller.abort();
 ## Interceptors
 
 Interceptors allow you to transform requests, responses, and errors globally.
+
+**Order and identity.** Request interceptors run once per call, in
+registration order, on the resolved request — the base URL joined, the
+client's default headers merged, names lower-cased — and *before* the request
+is keyed, so a header an interceptor adds is part of the request's identity
+for deduplication and caching. An interceptor may change `headers`, `body`
+and `params`; the URL is fixed. A throw rejects the caller with what was
+thrown: no fetch, no retry, no `NetworkError` wrapper. Response interceptors
+run once per attempt, on the response every sharing caller then receives as
+its own copy. Error interceptors are offered a failure once, after any
+retries — never a caller's own cancellation. Header names reach interceptors
+and mock handlers lower-cased: read `config.headers.authorization`, not
+`config.headers.Authorization`.
 
 ### Request Interceptors
 
@@ -372,16 +386,10 @@ api.addInterceptor({
 api.addInterceptor({
   onError: async (error) => {
     if (error instanceof APIError && error.status === 401) {
-      // Refresh token
-      const newToken = await refreshAuthToken();
-
-      // Retry request with new token
-      // (Return response to recover from error)
-      return await api.get(error.url, {
-        headers: {
-          'Authorization': `Bearer ${newToken}`
-        }
-      });
+      // Refresh the token for the requests that follow, then decline: the
+      // caller sees the 401 and decides whether to repeat its request.
+      // (Returning a response instead would recover from the error.)
+      await refreshAuthToken();
     }
 
     // Don't handle - propagate error
@@ -442,18 +450,28 @@ Automatic retry with exponential backoff for failed requests.
 
 ### Default Retry Behavior
 
+Retry is off unless configured. `retry: true` on the client, or on a
+request, retries under the defaults — **every method, POST and PATCH
+included** — and a partial policy is merged with the defaults. A request's
+`retry` replaces the client's; `retry: false` turns it off for that request.
+(A client-level `retry: true` retrying POST is AUDIT-2026-09-03-FINDINGS A5,
+open for R3.1; until then, set `retry` per request for mutations.)
+
 ```typescript
-// Enabled by default for safe methods (GET, HEAD, OPTIONS, PUT, DELETE)
-const api = createAPIClient({
-  retry: true
-});
+const api = createAPIClient({ retry: true });
 
-// Safe methods automatically retry on failure
-const response = await api.get('/products'); // Retries on failure
-
-// Unsafe methods don't retry by default
-const response = await api.post('/products', data); // No retry
+await api.get('/products'); // retried on a retryable failure
+await api.post('/products', data, { retry: false }); // not retried
 ```
+
+What is retried: a `NetworkError`, and a status in `retryableStatusCodes`
+(408, 429, 500, 502, 503, 504 by default). A caller's `TimeoutError` is the
+caller's bound on the whole request, retries included, and is never retried;
+a `CancelledError` never is either. `shouldRetry(error, attempt)` is
+consulted once per retryable failure with the attempt just made (1 for the
+first), after the status check, and can only veto. The resolved policy is
+part of the request's identity: two concurrent callers with different
+policies do not share an attempt.
 
 ### Custom Retry Configuration
 
@@ -475,17 +493,15 @@ const api = createAPIClient({
     // HTTP status codes that trigger retry
     retryableStatusCodes: [408, 429, 500, 502, 503, 504],
 
-    // Custom retry predicate
+    // Custom retry predicate: consulted once per retryable failure, after
+    // the status check; it can veto a retry, not add one
     shouldRetry: (error, attempt) => {
-      // Retry timeouts up to 3 times
-      if (error instanceof TimeoutError) {
-        return attempt < 3;
-      }
-      // Retry rate limits with longer delay
+      // Rate limits: up to 5 attempts (Retry-After sets the delay)
       if (error instanceof APIError && error.status === 429) {
         return attempt < 5;
       }
-      return false;
+      // Everything else retryable: up to maxAttempts
+      return true;
     }
   }
 });
@@ -525,7 +541,10 @@ Attempt 4: 4000 * 2^1 = 8000ms
 Attempt 5: 8000 * 2^1 = 16000ms (capped at maxDelay)
 ```
 
-Jitter adds randomness (±30%) to prevent thundering herd.
+Jitter scales each delay to between 50% and 100% of the value above, so
+clients that failed together do not retry together. A `Retry-After` header
+replaces the computed delay, capped at `maxDelay`. A caller that detaches
+during the sleep ends it; the attempt is not resent.
 
 ## Deduplication
 
@@ -541,9 +560,13 @@ const [a, b] = await Promise.all([api.get('/me'), api.get('/me')]);
 
 **What counts as identical.** The method, the resolved URL (`'me'` and
 `'/me'` are one request), the query parameters in a stable order, the headers
-as they will be sent — the client's defaults merged with the request's, before
-interceptors — and the body. Two clients never coalesce with each other; each
-owns its in-flight map.
+as they will be sent — the client's defaults merged with the request's, names
+lower-cased, *after* the request interceptors have run — the body, and the
+retry policy. A body with no identifying JSON form — `FormData`, `Blob`, an
+`ArrayBuffer` or typed array, `URLSearchParams`, a stream, a `Map`, a `Set`,
+a class instance — is never coalesced, even with `deduplicate: true`: two
+uploads are two requests. A `Date` in a body identifies by its instant. Two
+clients never coalesce with each other; each owns its in-flight map.
 
 **Which methods.** GET, HEAD and OPTIONS, by default. A repeated POST, PUT,
 PATCH or DELETE is two intents and is sent twice; a request opts in with
@@ -555,8 +578,13 @@ PATCH or DELETE is two intents and is sent twice; a request opts in with
 **Cancelling and timing out.** Every caller has its own promise. A caller's
 `signal` rejects that caller with the signal's reason and detaches it; a
 caller's `timeout` bounds that caller's whole request, retries included, and
-rejects it with `TimeoutError`. The shared fetch is aborted only when every
-caller has gone. Joiners receive their own copy of the response.
+rejects it with `TimeoutError` (`timeout: Infinity` sets no bound; `0`, a
+negative or `NaN` is a `TypeError`). The shared fetch is aborted only when
+every caller has gone — a backoff sleep before a retry ends with it — and a
+request repeated after that starts a fresh fetch. Every caller receives its
+own structured clone of the response, which is plain data: a class instance
+a response interceptor put in `data` arrives as a plain object, and the
+client warns once per path.
 
 ```typescript
 // Coalesce a mutation that is safe to repeat
@@ -573,7 +601,10 @@ owns its cache: bounded to `maxEntries` (100 by default) with the least
 recently used entry dropped first, and every hit is a structured clone, so
 editing a response never edits the cache. A response that cannot be cloned
 (a response interceptor attached a function, say) is not cached, and the
-client warns once.
+client warns once per path; the set of paths warned about is bounded by
+`maxEntries`, and `clearCache()` empties it. `ttl` must be a positive finite
+number of milliseconds and `maxEntries` a positive integer; anything else is
+a `TypeError` at `createAPIClient` or at the request.
 
 ```typescript
 const api = createAPIClient({
@@ -628,10 +659,12 @@ const response = await api.get('/real-time-data', {
 Each client owns its cache (and its in-flight request map); two clients never
 share an entry. Within a client, the key is the request as it will be sent:
 the method, the resolved URL (base URL joined, so `'x'` and `'/x'` are one
-key), the query parameters in a stable order, and the headers — the client's
-defaults merged with the request's, before interceptors run. A custom
-`cache.key` replaces that key; the entry still remembers the path it was
-requested with, so invalidation by path reaches it.
+key), the query parameters in a stable order, the headers — the client's
+defaults merged with the request's, names lower-cased, after the request
+interceptors have run — the body, and the retry policy. A request whose body
+has no JSON form (see Deduplication) is never cached. A custom `cache.key`
+replaces that key; the entry still remembers the path it was requested with,
+so invalidation by path reaches it.
 
 ```typescript
 // Same cache key
@@ -661,8 +694,10 @@ const response = await api.get('/products', {
 ### Cache Invalidation
 
 ```typescript
-// Invalidate specific endpoint — patterns match the path you passed to get(),
-// including entries stored under a custom `key`
+// Patterns name the path as passed to get(), normalised: the query and
+// fragment dropped, a leading slash added, duplicate slashes collapsed —
+// 'products', '/products' and '/products?page=2' are one path. Entries
+// stored under a custom `key` are reached too.
 api.invalidateCache('/products');
 
 // Invalidate pattern (prefix matching)
@@ -686,7 +721,7 @@ The API client throws specific error types for different failure scenarios.
 ### Error Types
 
 ```typescript
-import { APIError, NetworkError, TimeoutError, ValidationError } from '@composable-svelte/core';
+import { APIError, CancelledError, NetworkError, TimeoutError, ValidationError } from '@composable-svelte/core';
 ```
 
 #### APIError
@@ -732,7 +767,7 @@ try {
   await api.get('/slow-endpoint', { timeout: 5000 });
 } catch (error) {
   if (error instanceof TimeoutError) {
-    console.log(error.message); // "Request timeout after 5000ms"
+    console.log(error.message); // "Request timed out after 5000ms"
     console.log(error.timeout); // 5000
   }
 }
@@ -750,6 +785,25 @@ try {
     console.log(error.message); // "Network request failed"
     console.log(error.cause); // Original error
   }
+}
+```
+
+#### CancelledError
+
+What an abandoned attempt reports: every caller that shared it aborted or
+timed out on its own terms, so the fetch — or the backoff sleep before a
+retry — was aborted with nobody listening. It is never retried and never
+offered to error interceptors. A caller does not normally see it: a caller's
+own `signal` rejects that caller with the signal's reason (an `AbortError`
+when there is none), and its `timeout` with `TimeoutError`. It is exported so
+a custom `shouldRetry` or an error interceptor can recognise it by class.
+
+```typescript
+if (error instanceof CancelledError) {
+  console.log(error.status); // null
+  console.log(error.isRetryable); // false
+  console.log(error.isNetworkError()); // false — no status, but not a network failure
+  console.log(error.cause); // the signal's reason, if any
 }
 ```
 
@@ -1091,6 +1145,14 @@ const mockAPI = createMockAPI({
   'GET /api/slow': { delay: 1000, data: { ok: true } },
   'GET /api/error': { error: new APIError('Not found', 404) }
 });
+
+// The mock runs the real client's pipeline: identical concurrent safe
+// requests share one handler call (`deduplicate: false` opts out), request
+// interceptors run before the key and the cache lookup, a `signal` and a
+// `timeout` are the caller's own (there is no default timeout), header
+// names reach handlers lower-cased (`config.headers.authorization`), and a
+// body with no JSON form never coalesces. Nothing retries, but the policy
+// is part of the identity, as in production.
 
 // Use in tests
 describe('Product Reducer', () => {

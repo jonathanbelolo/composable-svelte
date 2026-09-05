@@ -236,6 +236,22 @@ describe('rate limiting', () => {
 		expect(limiter.size).toBe(2);
 	});
 
+	it('a client seen all along outlives fresh keys: eviction is by recency, not first sight', () => {
+		// Map insertion order evicted the first-seen key, so a long-lived active
+		// client was dropped (and its count reset) ahead of the spoofed keys
+		// filling the map.
+		const limiter = track(new RateLimiter({ max: 100, windowMs: 60_000, maxKeys: 3 }));
+		limiter.check('long-lived');
+		limiter.check('b');
+		limiter.check('long-lived'); // touched again: moves behind b
+		limiter.check('c');
+		limiter.check('long-lived');
+		limiter.check('spoof-1'); // at capacity: evicts b, the least recently seen
+		limiter.check('spoof-2'); // evicts c
+		expect(limiter.size).toBe(3);
+		expect(limiter.check('long-lived').remaining).toBe(100 - 4); // its fourth request, still counted (first-seen eviction reset it to 99)
+	});
+
 	it('does not hold the process open: the cleanup interval is unref\'d', () => {
 		const spy = vi.spyOn(globalThis, 'setInterval');
 		try {

@@ -108,7 +108,8 @@ Function that executes an effect and may dispatch actions.
 ```typescript
 type EffectExecutor<Action> = (
   dispatch: Dispatch<Action>,
-  // Provided for Effect.cancellable only; undefined elsewhere.
+  // The effect's own for Effect.cancellable; the store's lifetime signal
+  // (aborted by destroy()) for run, debounced, throttled and afterDelay.
   signal?: AbortSignal
 ) => void | Promise<void>
 ```
@@ -134,11 +135,13 @@ type EffectType<Action> =
   | { readonly _tag: 'Run'; readonly execute: EffectExecutor<Action> }
   | { readonly _tag: 'FireAndForget'; readonly execute: () => void | Promise<void> }
   | { readonly _tag: 'Batch'; readonly effects: readonly Effect<Action>[] }
-  | { readonly _tag: 'Cancellable'; readonly id: string; readonly execute: EffectExecutor<Action> }
+  | { readonly _tag: 'Cancellable'; readonly id: string; readonly execute: EffectExecutor<Action>; readonly groups?: EffectGroups }
   | { readonly _tag: 'Debounced'; readonly id: string; readonly ms: number; readonly execute: EffectExecutor<Action> }
   | { readonly _tag: 'Throttled'; readonly id: string; readonly ms: number; readonly execute: EffectExecutor<Action> }
   | { readonly _tag: 'AfterDelay'; readonly ms: number; readonly execute: EffectExecutor<Action> }
-  | { readonly _tag: 'Subscription'; readonly id: string; readonly setup: SubscriptionSetup<Action> }
+  | { readonly _tag: 'Subscription'; readonly id: string; readonly setup: SubscriptionSetup<Action>; readonly groups?: EffectGroups }
+  // Cancel every effect in a group (see Effect.cancelGroup)
+  | { readonly _tag: 'CancelGroup'; readonly group: string }
 ```
 
 **Note:** Most users won't need to import `EffectType` explicitly. TypeScript infers effect types from `Effect.none()`, `Effect.run()`, etc.
@@ -599,6 +602,49 @@ case 'disconnect':
 
 ---
 
+### Effect.cancelGroup
+
+Cancel every effect in a group: abort each member's signal, disarm its timer, run its subscription's cleanup, drop its later dispatches. A group is a path-shaped name the navigation operators put on a presentation's effects (`'destination'`, `'destination/addItem'`, `'stack/2'`) and cancel on dismiss, a parent null, a case change, a pop or a shrinking `setPath`; `Effect.inGroup` adds one by hand. Ids are untouched.
+
+```typescript
+Effect.cancelGroup<Action>(group: string): Effect<Action>
+```
+
+**Example:**
+
+```typescript
+case 'closeEverything':
+  return [{ ...state, destination: null }, Effect.cancelGroup('destination')];
+```
+
+---
+
+### Effect.inGroup
+
+The effect, a member of `group` as well. Every executor-bearing member of a batch joins; `Effect.none()`, `Effect.fireAndForget()`, `Effect.cancel()` and `Effect.cancelGroup()` are returned as they are; a group already present is not repeated. A grouped `run`, `afterDelay`, `debounced` or `throttled` receives its own signal, aborted with the group.
+
+```typescript
+Effect.inGroup<Action>(effect: Effect<Action>, group: string): Effect<Action>
+```
+
+**Example:**
+
+```typescript
+Effect.inGroup(Effect.run(load), 'search'); // later: Effect.cancelGroup('search')
+```
+
+---
+
+### Effect.prefixGroups
+
+Every group of the effect — and the group a `CancelGroup` names — prefixed with `prefix/`, so a child's groups sit beneath the parent's name; the lifts use it. An effect with no groups is returned as it is.
+
+```typescript
+Effect.prefixGroups<Action>(effect: Effect<Action>, prefix: string): Effect<Action>
+```
+
+---
+
 ### Effect.animated
 
 Create an effect that coordinates with animation lifecycle.
@@ -1046,7 +1092,15 @@ const reducer: Reducer<WizardState, WizardAction> = (state, action, deps) => {
       return pop(state.stack);
 
     case 'stack':
-      return handleStackAction(state, action, deps, screenReducer);
+      return handleStackAction(
+        state,
+        action.action,
+        deps,
+        screenReducer,
+        (s) => s.stack,
+        (s, stack) => ({ ...s, stack }),
+        { screenId: (screen) => screen.id } // optional: identity, so a result for a screen that left is dropped
+      );
   }
 };
 ```
@@ -1656,10 +1710,12 @@ type DestinationState<Reducers extends Record<string, (s: any, a: any, d: any) =
 Extract action union from a map of reducers.
 
 ```typescript
+// The case action: the child's own action under its case. The parent's field
+// wraps it in a PresentationAction — { type: 'destination', action: { type: 'presented', action: caseAction } }.
 type DestinationAction<Reducers extends Record<string, (s: any, a: any, d: any) => any>> = {
   [K in keyof Reducers]: {
     readonly type: K;
-    readonly action: PresentationAction<Reducers[K] extends (s: any, a: infer A, d: any) => any ? A : never>;
+    readonly action: Reducers[K] extends (s: any, a: infer A, d: any) => any ? A : never;
   };
 }[keyof Reducers]
 ```
@@ -2000,9 +2056,18 @@ class TestStore<State, Action, Dependencies = any> {
   constructor(config: TestStoreConfig<State, Action, Dependencies>);
 
   send(action: Action, assert?: StateAssertion<State>): Promise<void>;
-  receive(partialAction: PartialAction<Action>, assert?: StateAssertion<State>, timeout?: number): Promise<void>;
+  // One partial: the next action must match. An array: the next N actions
+  // must match the N partials, in any order. `timeout` is real time.
+  receive(partialAction: PartialAction<Action> | PartialAction<Action>[], assert?: StateAssertion<State>, timeout?: number): Promise<void>;
   assertNoPendingActions(): void;
-  finish(): Promise<void>;
+  // Waits up to `timeout` (real time) for every effect; fails naming a hung
+  // effect by kind and id, an armed timer under fake timers, a rejected
+  // executor, or an unasserted action.
+  finish(timeout?: number): Promise<void>;
+  // Aborts every executor's signal, disarms every timer, runs subscription
+  // cleanups; the owning test's finish hook calls it. Idempotent.
+  destroy(): void;
+  dispatch(action: Action): void;
   getState(): State;
   getHistory(): ReadonlyArray<Action>;
   advanceTime(ms: number): Promise<void>;
@@ -2078,7 +2143,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  vi.restoreAllMocks();
+  vi.useRealTimers(); // restoreAllMocks() does not undo useFakeTimers()
 });
 ```
 
@@ -2156,15 +2221,18 @@ Partial action matcher for receive assertions.
 type PartialAction<Action> = Partial<Action> & { type: string }
 ```
 
-**Note:** Partial matching with nested objects works best with type-only matching. For complex nested structures, prefer state assertions:
+**Note:** Top-level keys are partial; a nested value is compared structurally,
+as a whole, with JSON semantics (key order ignored, a `Date` by its instant,
+`undefined` properties omitted). So `nested: { field: 'value' }` matches an
+action whose `nested` is exactly `{ field: 'value' }`, and not one carrying a
+second field:
 
 ```typescript
-// Recommended
-await store.receive({ type: 'actionName' });
-expect(store.getState().someField).toBe(expectedValue);
-
-// Avoid (may not work reliably in browser tests)
 await store.receive({ type: 'actionName', nested: { field: 'value' } });
+
+// When only one nested field matters, assert on state instead
+await store.receive({ type: 'actionName' });
+expect(store.state.someField).toBe(expectedValue);
 ```
 
 ---

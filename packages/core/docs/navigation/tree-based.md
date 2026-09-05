@@ -564,7 +564,7 @@ case 'destination':
     (s) => s.destination,
     (s, d) => ({ ...s, destination: d }),
     'destination',
-    (ca) => ({ type: 'destination', action: ca }),
+    (ca) => ({ type: 'destination', action: { type: 'presented', action: ca } }),
     Destination.reducer  // Auto-generated!
   )(state, action, deps);
 

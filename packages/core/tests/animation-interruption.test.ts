@@ -40,6 +40,7 @@ import {
 	animateAccordionExpand,
 	animateAccordionCollapse
 } from '../src/lib/animation/animate.js';
+import { nextFrame, settleAnimations, waitForAnimations, waitUntil } from '../src/lib/test/animation.js';
 import Select from '../src/lib/components/ui/select/Select.svelte';
 import CollapsibleAnimationTest from './test-components/CollapsibleAnimationTest.svelte';
 
@@ -66,8 +67,10 @@ describe('the dependency: an interrupted animation never settles', () => {
 		animateDropdownIn(el).then(() => {
 			settled = true;
 		});
-		await wait(30);
+		await waitForAnimations(el); // interrupt it while it runs, not 30 ms in
 		animateDropdownOut(el); // supersedes the first
+		// A bounded negative: a promise that never settles can only be given
+		// time. 900 ms is over four times the dropdown's duration.
 		await wait(900);
 
 		expect(
@@ -83,8 +86,9 @@ describe('the dependency: an interrupted animation never settles', () => {
 		animateAccordionExpand(el).then(() => {
 			settled = true;
 		});
-		await wait(30);
+		await nextFrame(2); // mid-flight on the ticker: a deliberate frame count
 		animateAccordionCollapse(el);
+		// A bounded negative, as above.
 		await wait(900);
 
 		expect(settled).toBe(false);
@@ -98,7 +102,10 @@ describe('the dependency: an interrupted animation never settles', () => {
 		animateDropdownIn(el).then(() => {
 			settled = true;
 		});
-		await wait(900);
+		await waitForAnimations(el);
+		await settleAnimations(el);
+		// Motion resolves its promise a task or two after the animation finishes.
+		await waitUntil(() => settled, (s) => s, { what: 'the helper to resolve' }).catch(() => {});
 
 		expect(settled, 'the helper never resolves even undisturbed').toBe(true);
 	});

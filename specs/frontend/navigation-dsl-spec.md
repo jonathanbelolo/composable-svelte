@@ -438,6 +438,8 @@ const addItemStore = $derived(
 
 ### Implementation
 
+> **Superseded (2026-09-05).** The shipped `scopeTo()` types its results: `.case()` and `.optional()` return `ScopedStore<CaseState, CaseAction>`, not `ScopedStore<any, any>` (`packages/core/src/lib/navigation/scope.ts`). The sketch below is the original design.
+
 ```typescript
 // lib/composable/navigation/scope.ts
 
@@ -614,6 +616,8 @@ const reducer = integrate(coreReducer)
 ```
 
 ### Implementation
+
+> **Superseded (2026-09-05).** The shipped `integrate().with()` uses `ifLetPresentation` (the field action carries a `PresentationAction`, so a dismiss is handled), runs the child first, and cancels the presentation's cancellation group when the core reducer nulls the field or changes its case (`packages/core/src/lib/navigation/integrate.ts`). The sketch below is the original design.
 
 ```typescript
 // lib/composable/navigation/integrate.ts

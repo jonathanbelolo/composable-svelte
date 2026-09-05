@@ -83,7 +83,7 @@ export {
   stackDepth
 } from './stack.js';
 
-export type { StackResult } from './stack.js';
+export type { StackResult, StackActionOptions } from './stack.js';
 
 // ============================================================================
 // Scoped Stores (Phase 2)

@@ -15,6 +15,7 @@ import {
   rootScreen,
   canGoBack,
   stackDepth,
+  StackActionHelpers,
   type StackAction,
   type PresentationAction
 } from '../../src/lib/navigation/index.js';
@@ -316,7 +317,8 @@ describe('handleStackAction()', () => {
     expect(newState.stack).toHaveLength(2);
     expect(newState.stack[0]).toEqual({ step: 1, data: 'first' });
     expect(newState.stack[1]).toEqual({ step: 2, data: 'second' });
-    expect(effect._tag).toBe('None');
+    // The popped screen's effects are cancelled (N8, C6).
+    expect(effect).toEqual({ _tag: 'CancelGroup', group: 'stack/2' });
   });
 
   it('handles popToRoot action', () => {
@@ -350,7 +352,8 @@ describe('handleStackAction()', () => {
 
     expect(newState.stack).toHaveLength(1);
     expect(newState.stack[0]).toEqual({ step: 1, data: 'first' });
-    expect(effect._tag).toBe('None');
+    // Every screen but the root is cancelled (N8, C6).
+    expect(effect._tag).toBe('Batch');
   });
 
   it('handles setPath action', () => {
@@ -466,7 +469,8 @@ describe('handleStackAction()', () => {
 
     expect(newState.stack).toHaveLength(1);
     expect(newState.stack[0]).toEqual({ step: 1, data: 'first' });
-    expect(effect._tag).toBe('None');
+    // The dismissed screen and the one above it are cancelled (N8, C6).
+    expect(effect._tag).toBe('Batch');
   });
 
   it('validates screen index and logs warning for invalid index', () => {
@@ -937,5 +941,98 @@ describe('Stack Integration', () => {
     expect(originalStack).toHaveLength(2); // Original unchanged
     expect(afterPop).toHaveLength(2); // Previous step unchanged
     expect(afterPopToRoot).toHaveLength(1); // Result correct
+  });
+});
+
+describe('leaving the stack cancels the screen (N8, C6)', () => {
+  // A screen's effects belong to `<actionType>/<identity>` — the identity
+  // from options.screenId, else the index. pop, popToRoot, a shrinking
+  // setPath and a screen dismiss cancel the groups of the screens that leave;
+  // a push cancels nothing. So a popped screen's in-flight effect cannot land
+  // on the screen that took its index.
+  const three: ParentState = {
+    stack: [{ step: 1, data: 'first' }, { step: 2, data: 'second' }, { step: 3, data: 'third' }],
+    history: []
+  };
+  const run = (state: ParentState, action: StackAction<ScreenAction>, options?: { screenId?: (s: ScreenState) => number; actionType?: string }) =>
+    handleStackAction<ParentState, ParentAction, ScreenState, ScreenAction, null>(
+      state,
+      action,
+      null,
+      screenReducer,
+      (s) => s.stack,
+      (s, stack) => ({ ...s, stack }),
+      options ?? {}
+    );
+  const cancelsOf = (effect: unknown): string[] => {
+    const e = effect as { _tag: string; group?: string; effects?: { _tag: string; group?: string }[] };
+    if (e._tag === 'CancelGroup') return [e.group!];
+    if (e._tag === 'Batch') return e.effects!.filter((m) => m._tag === 'CancelGroup').map((m) => m.group!);
+    return [];
+  };
+
+  it('pop cancels the top screen', () => {
+    const [state, effect] = run(three, { type: 'pop' });
+    expect(state.stack).toHaveLength(2);
+    expect(effect).toEqual({ _tag: 'CancelGroup', group: 'stack/2' });
+  });
+
+  it('pop at the root cancels nothing', () => {
+    const [, effect] = run({ stack: [{ step: 1, data: 'first' }], history: [] }, { type: 'pop' });
+    expect(effect._tag).toBe('None');
+  });
+
+  it('popToRoot cancels every screen but the root', () => {
+    const [state, effect] = run(three, { type: 'popToRoot' });
+    expect(state.stack).toHaveLength(1);
+    expect(cancelsOf(effect)).toEqual(['stack/1', 'stack/2']);
+  });
+
+  it('a shrinking setPath cancels the indices that stop existing; a same-length or growing one cancels nothing', () => {
+    const [, shrunk] = run(three, { type: 'setPath', path: [{ step: 1, data: 'first' }] });
+    expect(cancelsOf(shrunk)).toEqual(['stack/1', 'stack/2']);
+    const [, same] = run(three, { type: 'setPath', path: three.stack.map((s) => ({ ...s, data: 'x' })) });
+    expect(same._tag).toBe('None');
+    const [, grown] = run(three, { type: 'setPath', path: [...three.stack, { step: 4, data: 'fourth' }] });
+    expect(grown._tag).toBe('None');
+  });
+
+  it('a screen dismiss cancels that screen and every screen above it', () => {
+    const [state, effect] = run(three, { type: 'screen', index: 1, action: { type: 'dismiss' } });
+    expect(state.stack).toHaveLength(1);
+    expect(cancelsOf(effect)).toEqual(['stack/1', 'stack/2']);
+  });
+
+  it("a presented action's effect belongs to the screen's group, under the configured action type", () => {
+    const [, effect] = run(three, { type: 'screen', index: 1, action: { type: 'presented', action: { type: 'next' } } }, { actionType: 'wizard' });
+    expect(effect._tag).toBe('Run');
+    expect((effect as { groups?: readonly string[] }).groups).toEqual(['wizard/1']);
+  });
+
+  it('push cancels nothing', () => {
+    const [, effect] = run(three, { type: 'push', state: { step: 4, data: 'fourth' } });
+    expect(effect._tag).toBe('None');
+  });
+
+  describe('with screenId, identity rather than index', () => {
+    const byStep = { screenId: (s: ScreenState) => s.step };
+
+    it('effects are grouped by identity, and pop cancels by identity', () => {
+      const [, effect] = run(three, { type: 'screen', index: 2, action: { type: 'presented', action: { type: 'next' } } }, byStep);
+      expect((effect as { groups?: readonly string[] }).groups).toEqual(['stack/3']);
+      const [, popped] = run(three, { type: 'pop' }, byStep);
+      expect(popped).toEqual({ _tag: 'CancelGroup', group: 'stack/3' });
+    });
+
+    it('setPath keeps a survivor that moved, and cancels the screens that left', () => {
+      // Screen 2 leaves; screen 3 moves from index 2 to index 1 and keeps its effects.
+      const [, effect] = run(three, { type: 'setPath', path: [three.stack[0]!, three.stack[2]!] }, byStep);
+      expect(cancelsOf(effect)).toEqual(['stack/2']);
+    });
+
+    it('StackAction.screen(index, action, screenId) carries the identity', () => {
+      expect(StackActionHelpers.screen(1, { type: 'dismiss' }, 2)).toEqual({ type: 'screen', index: 1, screenId: 2, action: { type: 'dismiss' } });
+      expect(StackActionHelpers.screen(1, { type: 'dismiss' })).toEqual({ type: 'screen', index: 1, action: { type: 'dismiss' } });
+    });
   });
 });

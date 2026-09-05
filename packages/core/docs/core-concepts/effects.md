@@ -336,9 +336,12 @@ Cooperating is optional. Dispatches from a cancelled effect are dropped whether
 or not the executor observes the signal, so cancellation is correct either way —
 using the signal additionally stops the work.
 
-The signal is provided for `Effect.cancellable` only; it is `undefined` for
-`run`, `debounced`, `throttled` and `afterDelay`, none of which the store can
-cancel individually.
+Every executor receives a signal. For `Effect.cancellable` it is the effect's
+own, aborted by `Effect.cancel(id)`, by a newer effect under the same id, or by
+`destroy()`. For `run`, `debounced`, `throttled` and `afterDelay` it is the
+store's lifetime signal, aborted by `destroy()` only — none of those can be
+cancelled individually, but an executor that awaits something can still stop
+when the store goes away. `Effect.map` forwards it.
 
 **When to use**:
 - Search-as-you-type
@@ -650,6 +653,58 @@ case 'reset':
 - Cleanup on reset
 - Manual cancellation
 
+### `Effect.cancelGroup()`
+
+Cancel every effect in a *group*. A group is a path-shaped name that the
+navigation operators put on a presentation's effects — the field
+(`'destination'`), the case beneath it (`'destination/addItem'`), a screen of
+a stack (`'stack/2'`) — and cancel themselves on dismiss, on a parent nulling
+the field, on a case change, on a pop and on a shrinking `setPath`. So a
+child's in-flight effect cannot land after the child is gone, and a
+reopened child does not receive the previous one's result. Ids are untouched:
+`Effect.cancellable('search')` under a presentation is still cancelled by
+`Effect.cancel('search')`, and by its groups.
+
+```typescript
+Effect.cancelGroup<Action>(group: string): Effect<Action>
+Effect.inGroup<Action>(effect: Effect<Action>, group: string): Effect<Action>
+Effect.prefixGroups<Action>(effect: Effect<Action>, prefix: string): Effect<Action>
+```
+
+**Example: a group by hand**
+
+```typescript
+case 'searchChanged':
+  return [
+    { ...state, query: action.query },
+    Effect.inGroup(
+      Effect.run(async (dispatch, signal) => {
+        const results = await api.search(action.query, { signal });
+        dispatch({ type: 'resultsLoaded', results });
+      }),
+      'search'
+    )
+  ];
+
+case 'leaveSearch':
+  return [{ ...state, query: '' }, Effect.cancelGroup('search')];
+```
+
+**What gets cancelled** — every executor-bearing member of the group:
+- `Effect.run()`, `Effect.afterDelay()`, `Effect.debounced()`, `Effect.throttled()`
+  → the executor's own signal is aborted and its later dispatches dropped; an
+  armed timer never fires
+- `Effect.cancellable()` → aborted, as `Effect.cancel(id)` would
+- `Effect.subscription()` → its cleanup runs, once
+
+`Effect.inGroup` adds a group to every executor-bearing member of an effect
+(a batch included); `Effect.fireAndForget()`, `Effect.cancel()` and
+`Effect.cancelGroup()` are left as they are. `Effect.prefixGroups` puts a
+child's groups beneath a name (`'g'` → `'destination/g'`), which is how the
+lifts nest them; `Effect.map` carries groups through. An effect with a group
+receives its own signal rather than the store's lifetime signal (see
+`Effect.cancellable()` above).
+
 ### `Effect.animated()`
 
 Convenience wrapper for animation lifecycle. Dispatches an action after a delay.
@@ -858,6 +913,13 @@ Effect.run((dispatch) => {
   throw new Error('Oops!'); // Logged to console, doesn't crash, doesn't skip the rest of a Batch
 });
 ```
+
+A reducer that throws when reached through an effect's `dispatch` — an
+executor dispatching synchronously into a reducer that throws — is the same
+case: the throw escapes the executor, the store logs it as an effect error, the
+state is unchanged, and the outer `dispatch()` returns normally. A delayed
+effect reached through `scope()` or any other lift is guarded the same way;
+`Effect.map` returns the executor's promise.
 
 **Best practice**: Handle errors in effects explicitly:
 

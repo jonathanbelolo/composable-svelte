@@ -2067,6 +2067,8 @@ const counterReducer: Reducer<CounterState, CounterAction, Dependencies> = (
 
 ### 10.1 TestStore Implementation
 
+> **Superseded (2026-09-05).** The shipped `TestStore` (`packages/core/src/lib/test/test-store.ts`) does not poll with `vi.waitFor` or flush a `pendingEffects` list: it waits on the real clock, notified as actions arrive and effects settle, never advancing a fake clock; a head mismatch fails at once under exhaustivity; `receive([a, b])` takes the next two in any order; `finish(timeout?)` waits for every effect and fails on an armed timer; `destroy()` exists. The sketch below is the original design.
+
 ```typescript
 // test.ts
 

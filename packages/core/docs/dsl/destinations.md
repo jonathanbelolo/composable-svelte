@@ -209,7 +209,7 @@ const parentReducer: Reducer<ParentState, ParentAction> = (state, action, deps) 
         (s) => s.destination,
         (s, d) => ({ ...s, destination: d }),
         'destination',
-        (ca) => ({ type: 'destination', action: ca }),
+        (ca) => ({ type: 'destination', action: { type: 'presented', action: ca } }),
         Destination.reducer  // Auto-generated reducer!
       )(state, action, deps);
 
@@ -236,7 +236,7 @@ reducer: Reducer<DestinationState<Reducers>, DestinationAction<Reducers>, any>
 5. Reconstructs destination state with new child state
 6. Maps the child's effect into the case (`{ type: caseType, action: childResult }`), so an async child's result reaches that child through the same route
 
-Dismiss never reaches this reducer: `ifLetPresentation` handles `{ type: 'dismiss' }` on the field and nulls it. A case may not be named `presented` or `dismiss`; `createDestination` throws.
+Dismiss never reaches this reducer: `ifLetPresentation` handles `{ type: 'dismiss' }` on the field, nulls it, and cancels the presentation's effects — every effect a case produced belongs to the cancellation group named after the field (`'destination'`), and to the case beneath it (`'destination/addItem'`). A parent that nulls the field or changes its case through `integrate().with()` gets the same cancellation; one that does so by hand returns `Effect.cancelGroup('destination')` alongside. So a save started in one presentation cannot land in the next. A case may not be named `presented` or `dismiss`; `createDestination` throws.
 
 **Example:**
 ```typescript
@@ -920,24 +920,25 @@ interface ParentState {
 
 type ParentAction =
   | { type: 'addButtonTapped' }
-  | { type: 'destination'; action: typeof Destination._types.Action };
+  | { type: 'destination'; action: PresentationAction<typeof Destination._types.Action> };
 ```
 
 ### Template Literal Types
 
-The matcher APIs use template literal types for autocomplete and compile-time validation:
+`Destination.is()`, `matchCase()` and `match()` take the path as a plain
+string: there is no autocomplete at the call, and a typo is a `false` at
+runtime. `DestinationCasePath<State>` names the valid paths of a destination
+state whose child states declare a phantom `_actions` field, for a place that
+wants them checked:
 
 ```typescript
-// Valid paths (TypeScript provides autocomplete!)
-const path1: DestinationCasePath = 'addItem.saveButtonTapped';     // ✓
-const path2: DestinationCasePath = 'addItem.cancelButtonTapped';   // ✓
-const path3: DestinationCasePath = 'editItem.deleteButtonTapped';  // ✓
-const path4: DestinationCasePath = 'addItem';                      // ✓ Prefix
+type Paths = DestinationCasePath<typeof Destination._types.State>;
 
-// Invalid paths (compile-time errors!)
-const invalid1: DestinationCasePath = 'addItem.saveButonTapped';   // ✗ Typo
-const invalid2: DestinationCasePath = 'unknownCase';               // ✗ Not a case
-const invalid3: DestinationCasePath = 'addItem.unknownAction';     // ✗ Action doesn't exist
+const path1: Paths = 'addItem.saveButtonTapped';     // ✓
+const path4: Paths = 'addItem';                      // ✓ Prefix
+
+const invalid1: Paths = 'addItem.saveButonTapped';   // ✗ Typo
+const invalid2: Paths = 'unknownCase';               // ✗ Not a case
 ```
 
 This provides excellent developer experience with IDE autocomplete and prevents runtime errors.
@@ -1149,7 +1150,7 @@ interface ParentState {
 
 type ParentAction =
   | { type: 'addButtonTapped' }
-  | { type: 'destination'; action: typeof Destination._types.Action };
+  | { type: 'destination'; action: PresentationAction<typeof Destination._types.Action> };
 ```
 
 That's it! **85% less code.**

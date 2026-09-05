@@ -233,17 +233,24 @@ dependency, not severity: R1.1 needs D1, R1.3 needs D3.
       and maps the child effect with `Effect.map(e, a => ({ type: caseType, action: a }))`.
 - [x] R1.1.c `scopeTo().case().dismiss()` emits the outer `{ type: 'dismiss' }`;
       `ifLetPresentation` unchanged.
-- [x] R1.1.d `createDestinationReducer` and `handleStackAction` tag effects
-      with the case or screen identity they were produced under and drop
-      results whose target is gone (`N8`). `handleStackAction` takes the
-      parent field name instead of hardcoding `'stack'` (`N11`).
+- [x] R1.1.d `handleStackAction` tags effects with the screen identity they
+      were produced under and drops results whose target is gone (`N8`);
+      `createDestinationReducer` was deprecated rather than changed, and
+      `createDestination` carries the case (R1.1.g). `handleStackAction`
+      takes the parent field name instead of hardcoding `'stack'` (`N11`).
+      (The first form of this line described tagging
+      `createDestinationReducer` never did — R1-REVIEW 3. The R1 closure's
+      C6 cancels a leaving screen's or presentation's effects, which is what
+      `N8` needed.)
 - [x] R1.1.e `integrate()` runs the child before core, or documents that core
       first means the child never sees an action core consumes (`N14`).
 - [x] R1.1.f `scopeTo().case()` and `.optional()` return typed stores, not
       `ScopedStore<any, any>` (`P5`).
 - [x] R1.1.g `destination.test.ts:295-323` executes the effect it asserts on.
-      Proof: mutation M5 killed; the R1.1.a suite green; `specs/frontend/navigation-dsl-spec.md`
-      and `docs/dsl/destinations.md` updated in the same commit.
+      Proof: mutation R1-N2 killed (the baseline entry R1.1.g added; the
+      first form of this line said M5 — R1-REVIEW 3); the R1.1.a suite
+      green; `specs/frontend/navigation-dsl-spec.md` and
+      `docs/dsl/destinations.md` updated in the same commit.
 
 ### R1.2 — Effect.api survives bundling (`P1`) — S
 
@@ -320,7 +327,8 @@ dependency, not severity: R1.1 needs D1, R1.3 needs D3.
       for header-derived keys, with the map bounded (`SS4`).
 - [x] R1.6.d Test through a real Fastify instance via `register`, asserting
       headers on a root route and a 429 on the second request.
-      Proof: the two documented snippets, run verbatim, produce headers.
+      Proof: the two documented snippets, run in the same shape (not
+      verbatim — R1-REVIEW 3), produce headers.
       `middleware/index.ts:24-25`, the SSR skill and `docs/README.md:307`
       corrected in the same commit (`SS10`, `DA-C5`).
 
@@ -360,7 +368,10 @@ dependency, not severity: R1.1 needs D1, R1.3 needs D3.
 - [x] R1.9.e `send()` assertion sees the state after the reducer, before the
       effect's synchronous prefix (`N9` last item).
       Proof: mutation M1 killed; the three formerly skipped tests pass;
-      `.claude/skills/composable-svelte-testing/SKILL.md:16,62,486` become true.
+      `.claude/skills/composable-svelte-testing/SKILL.md:16` becomes true
+      (the first form also cited `:62`, which described `finish()` as a
+      shorthand and was rewritten by the R1 closure's C5, and `:486`, which
+      is a brace — R1-REVIEW 3).
 
 ---
 

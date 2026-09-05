@@ -16,12 +16,16 @@
  * than on every *change* — including once on mount.
  */
 
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeAll } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import Switch from '../src/lib/components/ui/switch/Switch.svelte';
 import SwitchRerenderTest from './test-components/SwitchRerenderTest.svelte';
+import { assertMotionAllowed, midFlight, nextFrame, settleValue } from '../src/lib/test/animation.js';
 
-const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+// The spring runs on Motion's JavaScript ticker (`x` is not a Web Animation),
+// so mid-flight samples poll for a value between the endpoints rather than
+// reading at a fixed delay (R1-REVIEW 2.1).
+beforeAll(() => assertMotionAllowed());
 
 let cleanup: Array<() => void> = [];
 afterEach(() => {
@@ -62,29 +66,26 @@ describe('the switch thumb', () => {
 	it('travels rather than jumping', async () => {
 		const s = mount();
 		s.control().click();
-		await wait(40);
 
-		const mid = translateX(s.thumb());
+		const mid = await midFlight(() => translateX(s.thumb()), { from: 0, to: 100, what: 'the thumb' });
 		expect(mid, 'the thumb did not move').toBeGreaterThan(0);
-		expect(mid, 'the thumb jumped straight to the end').toBeLessThan(95);
+		expect(mid, 'the thumb jumped straight to the end').toBeLessThan(100);
 	});
 
 	it('settles at the far end', async () => {
 		const s = mount();
 		s.control().click();
-		await wait(500);
 
-		expect(Math.round(translateX(s.thumb()))).toBe(100);
+		expect(Math.round(await settleValue(() => translateX(s.thumb()), { what: 'the thumb' }))).toBe(100);
 	});
 
 	it('travels back', async () => {
 		const s = mount();
 		s.control().click();
-		await wait(500);
+		await settleValue(() => translateX(s.thumb()), { what: 'the thumb' });
 		s.control().click();
-		await wait(500);
 
-		expect(Math.round(translateX(s.thumb()))).toBe(0);
+		expect(Math.round(await settleValue(() => translateX(s.thumb()), { what: 'the thumb' }))).toBe(0);
 	});
 
 	it('is not re-asserted by an unrelated re-render', async () => {
@@ -109,13 +110,10 @@ describe('the switch thumb', () => {
 		const thumb = () => root.querySelector<HTMLElement>('[role="switch"] > div')!;
 
 		root.querySelector<HTMLButtonElement>('[role="switch"]')!.click();
-		await wait(40);
-		const before = translateX(thumb());
-		expect(before, 'precondition: mid-flight').toBeGreaterThan(0);
-		expect(before, 'precondition: mid-flight').toBeLessThan(95);
+		const before = await midFlight(() => translateX(thumb()), { from: 0, to: 100, what: 'the thumb' });
 
 		root.querySelector<HTMLButtonElement>('[data-testid="nudge"]')!.click();
-		await wait(16);
+		await nextFrame(1);
 
 		const after = translateX(thumb());
 		expect(after, `an unrelated re-render snapped the thumb from ${before}% to ${after}%`).toBeLessThan(99);
@@ -125,7 +123,7 @@ describe('the switch thumb', () => {
 		// An unguarded effect springs the thumb in from 0 on first render, which
 		// looks like the user toggled something they did not.
 		const s = mount({ checked: true });
-		await wait(16);
+		await nextFrame(1);
 
 		expect(
 			Math.round(translateX(s.thumb())),

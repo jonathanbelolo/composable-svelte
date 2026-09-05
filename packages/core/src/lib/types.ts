@@ -27,15 +27,21 @@ export type Selector<State, Value> = (state: State) => Value;
 /**
  * Function that executes an effect and may dispatch actions.
  *
- * `signal` is provided for `Effect.cancellable` only, because that is the one
- * kind the store holds a controller for. It is `undefined` for `run`,
- * `debounced`, `throttled` and `afterDelay` — and since `fetch` accepts an
- * `undefined` signal without complaint, passing it there fails silently rather
- * than loudly. Check before relying on it.
+ * Every executor receives a `signal`. For `Effect.cancellable` it is the
+ * effect's own, aborted by `Effect.cancel(id)`, by a newer effect under the
+ * same id, by a cancellation of one of its groups, or by `destroy()`. For a
+ * `run`, `debounced`, `throttled` or `afterDelay` that carries a group (an
+ * effect produced under a presentation, say) it is the effect's own, aborted
+ * with the group or by `destroy()`; for one without, it is the store's
+ * lifetime signal, aborted by `destroy()` only — such an effect cannot be
+ * cancelled individually, but an executor that awaits something can still
+ * stop when the store goes away. `Effect.map` forwards it. It is typed
+ * optional so an executor written without it still typechecks; the store
+ * always passes one, TestStore too.
  *
- * Observing it is optional: dispatches from a cancelled effect are dropped
- * regardless, so cancellation is correct without cooperation. Using the signal
- * additionally stops the work in flight.
+ * Observing it is optional: dispatches from a cancelled effect and from a
+ * destroyed store are dropped regardless, so cancellation is correct without
+ * cooperation. Using the signal additionally stops the work in flight.
  *
  * @template Action - The action type
  */
@@ -66,7 +72,7 @@ export type SubscriptionCleanup = () => void | Promise<void>;
  */
 export type Effect<Action> =
   | { readonly _tag: 'None' }
-  | { readonly _tag: 'Run'; readonly execute: EffectExecutor<Action> }
+  | { readonly _tag: 'Run'; readonly execute: EffectExecutor<Action>; readonly groups?: EffectGroups }
   | { readonly _tag: 'FireAndForget'; readonly execute: () => void | Promise<void> }
   | { readonly _tag: 'Batch'; readonly effects: readonly Effect<Action>[] }
   | {
@@ -83,11 +89,32 @@ export type Effect<Action> =
        * `{ }` because the build reformats the no-op it was matching.
        */
       readonly cancelOnly?: true;
+      readonly groups?: EffectGroups;
     }
-  | { readonly _tag: 'Debounced'; readonly id: string; readonly ms: number; readonly execute: EffectExecutor<Action> }
-  | { readonly _tag: 'Throttled'; readonly id: string; readonly ms: number; readonly execute: EffectExecutor<Action> }
-  | { readonly _tag: 'AfterDelay'; readonly ms: number; readonly execute: EffectExecutor<Action> }
-  | { readonly _tag: 'Subscription'; readonly id: string; readonly setup: SubscriptionSetup<Action> };
+  | { readonly _tag: 'Debounced'; readonly id: string; readonly ms: number; readonly execute: EffectExecutor<Action>; readonly groups?: EffectGroups }
+  | { readonly _tag: 'Throttled'; readonly id: string; readonly ms: number; readonly execute: EffectExecutor<Action>; readonly groups?: EffectGroups }
+  | { readonly _tag: 'AfterDelay'; readonly ms: number; readonly execute: EffectExecutor<Action>; readonly groups?: EffectGroups }
+  | { readonly _tag: 'Subscription'; readonly id: string; readonly setup: SubscriptionSetup<Action>; readonly groups?: EffectGroups }
+  /**
+   * Cancel every effect in a group: abort its signal, disarm its timer, run
+   * its subscription's cleanup, drop its later dispatches. Carries no action.
+   */
+  | { readonly _tag: 'CancelGroup'; readonly group: string };
+
+/**
+ * The cancellation groups an executor-bearing effect belongs to.
+ *
+ * A group is a path-shaped name. The navigation operators set it: an effect
+ * produced under a presentation belongs to that presentation's field
+ * (`'destination'`), and to its case (`'destination/addItem'`) and screen
+ * (`'stack/2'`) beneath it; a lift prefixes what the child set. A dismiss, a
+ * parent nulling the field, a case change, a pop or a shrinking `setPath`
+ * cancels the group, so a child's in-flight effect cannot land after the
+ * child is gone — the audit's N8, which R1 closed on the case *name* only
+ * (R1-REVIEW 1.8). `Effect.inGroup` adds one by hand; `Effect.cancelGroup`
+ * cancels one. Ids (`Effect.cancellable`, `Effect.cancel`) are untouched.
+ */
+export type EffectGroups = readonly string[] | undefined;
 
 /**
  * One member of the `Effect` union, by tag.
@@ -284,8 +311,11 @@ export interface Store<State, Action> {
   readonly history: ReadonlyArray<Action>;
 
   /**
-   * Clean up resources.
-   * Cancels all in-flight effects and clears subscriptions.
+   * Clean up resources: aborts every in-flight cancellable and the store's
+   * lifetime signal (every other executor kind sees it), clears pending
+   * delays, debounces and throttles so none fires, runs subscription
+   * cleanups, and removes listeners. A later `dispatch` is dropped; the first
+   * is warned about once per store.
    */
   destroy(): void;
 }

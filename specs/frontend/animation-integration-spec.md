@@ -1614,6 +1614,8 @@ describe('animation lifecycle', () => {
 
 ### 7.2 Testing with Fake Timers
 
+> **Superseded (2026-09-05).** `vi.restoreAllMocks()` does not undo `vi.useFakeTimers()`; the shipped tests restore the clock with `vi.useRealTimers()`, and the shipped `TestStore` refuses to load while the clock is faked at import time. The sketch below is the original design.
+
 ```typescript
 import { vi, beforeEach, afterEach } from 'vitest';
 

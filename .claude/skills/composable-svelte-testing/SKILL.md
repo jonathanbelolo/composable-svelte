@@ -55,11 +55,14 @@ interface TestStore<State, Action> {
   // Send an action and assert resulting state
   send(action: Action, assert: (state: State) => void): Promise<void>;
 
-  // Receive an action from effects and assert state
-  receive(action: Action, assert: (state: State) => void): Promise<void>;
+  // Receive the next action from effects (a partial: top-level keys, nested
+  // values compared structurally as a whole) and assert state. An array takes
+  // the next N actions in any order.
+  receive(partial: PartialAction<Action> | PartialAction<Action>[], assert?: (state: State) => void, timeout?: number): Promise<void>;
 
-  // Assert no more pending actions (shorthand for advanceTime(0) + assertNoPendingActions)
-  finish(): Promise<void>;
+  // Wait for every effect; fail on a hung effect (named by kind and id), an
+  // armed timer under fake timers, a rejected executor, or an unasserted action
+  finish(timeout?: number): Promise<void>;
 
   // Assert no received actions are unhandled (throws if exhaustivity is 'on')
   assertNoPendingActions(): void;
@@ -276,6 +279,34 @@ it('animates modal presentation', async () => {
 ```
 
 ---
+
+### 6. Animation tests
+
+Never sample a running animation at a fixed delay — it passes on a fast
+machine and fails on a loaded one. `@composable-svelte/core/test` has the
+deterministic forms:
+
+```typescript
+import { assertMotionAllowed, midFlight, scrubAnimations, settleAnimations, settleValue, waitForAnimations, waitForStyle, waitUntil } from '@composable-svelte/core/test';
+
+beforeAll(() => assertMotionAllowed()); // fails under prefers-reduced-motion, by name
+
+// Opacity / transform (Web Animations): scrub to the midpoint
+await waitForAnimations(el);
+const restore = scrubAnimations(el, 0.5);
+expect(parseFloat(getComputedStyle(el).opacity)).toBeLessThan(1);
+restore();
+await settleAnimations(el);
+await waitForStyle(el, 'opacity', (v) => v === '1');
+
+// x / rotate / height / margin (Motion's own ticker): poll between the endpoints
+const mid = await midFlight(() => translateX(thumb), { from: 0, to: 100, what: 'the thumb' });
+expect(await settleValue(() => translateX(thumb))).toBe(100);
+```
+
+Every helper refuses `vi.useFakeTimers()`; animation tests run on real
+timers. `guides/ANIMATION-GUIDELINES.md` ("Testing an animation") has the
+rule and which primitive fits which property.
 
 ## MOCK DEPENDENCIES
 
@@ -537,7 +568,11 @@ it('prevents double submission', async () => {
     expect(state.isSubmitting).toBe(true);
   });
 
-  // Try to submit again while submitting
+  // Try to submit again while submitting. The spy above resolves at once, so
+  // the first submission's success may already be queued — and a send() is
+  // refused while a received action is unasserted. Hold the response with a
+  // deferred promise (see the testing guide) when the second send must come
+  // before the first response.
   await store.send({ type: 'submit' }, (state) => {
     // Should still be submitting, not duplicate
     expect(state.isSubmitting).toBe(true);

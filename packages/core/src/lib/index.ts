@@ -23,6 +23,7 @@ export type {
   Dispatch,
   Selector,
   EffectExecutor,
+  EffectGroups,
   Store,
   StoreConfig
   // Middleware and MiddlewareAPI deferred to Phase 5
@@ -93,6 +94,7 @@ export type {
   DestinationReducerMap,
   CasePath,
   StackResult,
+  StackActionOptions,
   ScopedDestinationStore,
   ScopableStore,
   ScopedStore,
@@ -247,6 +249,7 @@ export {
 // Error classes
 export {
   APIError,
+  CancelledError,
   NetworkError,
   TimeoutError,
   ValidationError,

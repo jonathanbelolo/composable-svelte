@@ -20,11 +20,14 @@
  * never settles — see `tests/animation-interruption.test.ts`.
  */
 
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeAll } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import CarouselAnimationTest from './test-components/CarouselAnimationTest.svelte';
+import { assertMotionAllowed, midFlight, settleValue } from '../src/lib/test/animation.js';
 
-const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+// The track's `x` runs on Motion's ticker: samples poll rather than wait a
+// fixed delay (R1-REVIEW 2.1).
+beforeAll(() => assertMotionAllowed());
 
 let cleanup: Array<() => void> = [];
 afterEach(() => {
@@ -65,19 +68,17 @@ describe('the carousel track', () => {
 	it('travels rather than jumping', async () => {
 		const c = mount();
 		c.next().click();
-		await wait(60);
 
-		const mid = offsetPercent(c.track());
+		const mid = await midFlight(() => offsetPercent(c.track()), { from: 0, to: -100, what: 'the track' });
 		expect(mid, 'the track did not move').toBeLessThan(0);
-		expect(mid, 'the track jumped straight to the next slide').toBeGreaterThan(-99);
+		expect(mid, 'the track jumped straight to the next slide').toBeGreaterThan(-100);
 	});
 
 	it('settles exactly on the next slide', async () => {
 		const c = mount();
 		c.next().click();
-		await wait(700);
 
-		expect(Math.round(offsetPercent(c.track()))).toBe(-100);
+		expect(Math.round(await settleValue(() => offsetPercent(c.track()), { what: 'the track' }))).toBe(-100);
 	});
 
 	it('clears isTransitioning when the animation finishes, not on a parallel timer', async () => {
@@ -86,12 +87,11 @@ describe('the carousel track', () => {
 		// later navigation, because the reducer guards on `isTransitioning`.
 		const c = mount();
 		c.next().click();
-		await wait(700);
+		await settleValue(() => offsetPercent(c.track()), { what: 'the track' });
 
 		c.next().click();
-		await wait(700);
 		expect(
-			Math.round(offsetPercent(c.track())),
+			Math.round(await settleValue(() => offsetPercent(c.track()), { what: 'the track' })),
 			'a second navigation was refused — transitionCompleted never arrived'
 		).toBe(-200);
 	});
@@ -99,8 +99,7 @@ describe('the carousel track', () => {
 	it('a dot jumps to its slide', async () => {
 		const c = mount();
 		c.dots()[2]!.click();
-		await wait(700);
 
-		expect(Math.round(offsetPercent(c.track()))).toBe(-200);
+		expect(Math.round(await settleValue(() => offsetPercent(c.track()), { what: 'the track' }))).toBe(-200);
 	});
 });

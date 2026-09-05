@@ -870,6 +870,8 @@ export type StackAction<A, S = any> =
 
 ### 5.3 Stack Reducer
 
+> **Superseded (2026-09-05).** The shipped `handleStackAction` takes the parent state, the stack action, the dependencies, the screen reducer, a `getStack`/`setStack` pair and an options object (`actionType`, `screenId`), and cancels a leaving screen's effects; the three-argument sketch below is the original design.
+
 ```typescript
 // features/root/reducer.ts
 
@@ -2567,7 +2569,7 @@ case 'addButtonTapped': {
 
 ✅ **DO:**
 - Use `ifLet` for optional navigation
-- Use `createDestinationReducer` for enum navigation
+- Use `createDestination` (or `createDestinationReducer`) for enum navigation; a dismiss, a parent null, a case change, a pop and a shrinking `setPath` cancel the presentation's effects (cancellation groups, 2026-09-05)
 - Keep navigation logic in reducers, not views
 - Test navigation flows comprehensively
 

@@ -20,8 +20,14 @@
  *    "that was them", without going deaf to the user.
  */
 
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeAll } from 'vitest';
 import { createScrollFollower } from '../../src/lib/animation/scroll';
+import { assertMotionAllowed, midFlight, nextFrame, settleValue } from '../../src/lib/test/animation.js';
+
+// A requestAnimationFrame loop: the mid-flight sample polls for a scrollTop
+// between the endpoints, and "arrives" waits for the value to hold, rather
+// than counting frames (R1-REVIEW 2.1).
+beforeAll(() => assertMotionAllowed());
 
 let cleanup: Array<() => void> = [];
 afterEach(() => {
@@ -41,13 +47,6 @@ function scrollable(contentHeight = 2000, viewport = 200) {
 	return { el, inner };
 }
 
-const frames = (n: number) =>
-	new Promise((resolve) => {
-		let left = n;
-		const tick = () => (left-- <= 0 ? resolve(undefined) : requestAnimationFrame(tick));
-		requestAnimationFrame(tick);
-	});
-
 describe('createScrollFollower', () => {
 	it('eases toward the bottom rather than jumping', async () => {
 		const { el } = scrollable();
@@ -56,12 +55,11 @@ describe('createScrollFollower', () => {
 
 		const target = el.scrollHeight - el.clientHeight;
 		follower.follow();
-		await frames(2);
 
-		const mid = el.scrollTop;
-		// A paired discriminator. `> 0` alone would pass on an instant jump, and
-		// `< target` alone would pass on doing nothing at all.
-		expect(mid, `mid-flight scrollTop was ${mid}, target ${target}`).toBeGreaterThan(0);
+		// A paired discriminator: strictly between 0 and the target, so neither an
+		// instant jump nor doing nothing at all passes.
+		const mid = await midFlight(() => el.scrollTop, { from: 0, to: target, what: 'scrollTop' });
+		expect(mid).toBeGreaterThan(0);
 		expect(mid).toBeLessThan(target);
 	});
 
@@ -71,7 +69,7 @@ describe('createScrollFollower', () => {
 		cleanup.push(() => follower.stop());
 
 		follower.follow();
-		await frames(90);
+		await settleValue(() => el.scrollTop, { frames: 5, timeout: 5000, what: 'scrollTop' });
 
 		expect(el.scrollTop).toBeCloseTo(el.scrollHeight - el.clientHeight, 0);
 	});
@@ -82,10 +80,10 @@ describe('createScrollFollower', () => {
 		cleanup.push(() => follower.stop());
 
 		follower.follow();
-		await frames(3);
+		await midFlight(() => el.scrollTop, { from: 0, to: el.scrollHeight - el.clientHeight, what: 'scrollTop' });
 		inner.style.height = '4000px'; // a chunk arrives
 
-		await frames(120);
+		await settleValue(() => el.scrollTop, { frames: 5, timeout: 5000, what: 'scrollTop' });
 		expect(el.scrollTop).toBeCloseTo(el.scrollHeight - el.clientHeight, 0);
 	});
 
@@ -94,10 +92,10 @@ describe('createScrollFollower', () => {
 		const follower = createScrollFollower(el);
 
 		follower.follow();
-		await frames(2);
+		await nextFrame(2);
 		follower.stop();
 		const atStop = el.scrollTop;
-		await frames(10);
+		await nextFrame(10);
 
 		expect(el.scrollTop, 'the loop outlived stop()').toBe(atStop);
 	});
@@ -108,7 +106,7 @@ describe('createScrollFollower', () => {
 		cleanup.push(() => follower.stop());
 
 		follower.follow();
-		await frames(2);
+		await nextFrame(2);
 
 		expect(follower.isSelfScroll(), 'the follower disowned its own scroll').toBe(true);
 	});
@@ -121,7 +119,7 @@ describe('createScrollFollower', () => {
 		cleanup.push(() => follower.stop());
 
 		follower.follow();
-		await frames(2);
+		await nextFrame(2);
 		el.scrollTop = 0; // the user drags back to the top
 
 		expect(follower.isSelfScroll(), 'a user scroll was mistaken for the follower').toBe(false);

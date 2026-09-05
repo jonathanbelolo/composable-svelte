@@ -12,7 +12,8 @@ import type {
   Dispatch,
   Selector,
   MiddlewareAPI,
-  Effect
+  Effect,
+  EffectExecutor
 } from './types.js';
 import { isServer } from './ssr/utils.js';
 
@@ -63,15 +64,122 @@ export function createStore<State, Action, Dependencies = any>(
   const lifetime = new AbortController();
   let destroyed = false;
 
+  // Cancellation groups (types.ts `EffectGroups`). Every disposer leaves its
+  // groups first, then acts, so a later cancel by id or by another group
+  // finds nothing to do; a member that settles leaves on its own.
+  type Disposer = () => void;
+  const groupMembers = new Map<string, Set<Disposer>>();
+  /** What a timer leaves when it is cleared, wherever that happens. */
+  const timerLeaves = new Map<ReturnType<typeof setTimeout>, () => void>();
+
+  function joinGroups(groups: readonly string[] | undefined, dispose: Disposer): () => void {
+    if (!groups || groups.length === 0) return () => {};
+    for (const group of groups) {
+      let members = groupMembers.get(group);
+      if (!members) {
+        members = new Set();
+        groupMembers.set(group, members);
+      }
+      members.add(dispose);
+    }
+    return () => {
+      for (const group of groups) {
+        const members = groupMembers.get(group);
+        if (!members) continue;
+        members.delete(dispose);
+        if (members.size === 0) groupMembers.delete(group);
+      }
+    };
+  }
+
+  function cancelGroup(group: string): void {
+    const members = groupMembers.get(group);
+    if (!members) return;
+    groupMembers.delete(group);
+    for (const dispose of [...members]) dispose();
+  }
+
+  /** Clear a timer and let it leave its groups. */
+  function clearTimer(timer: ReturnType<typeof setTimeout>): void {
+    clearTimeout(timer);
+    timerLeaves.get(timer)?.();
+    timerLeaves.delete(timer);
+  }
+
+  /**
+   * Run an executor: with groups, under its own controller — the group's
+   * disposer aborts it and its dispatches are gated — and without, under the
+   * store's lifetime signal, as before.
+   */
+  function runExecutor(groups: readonly string[] | undefined, execute: EffectExecutor<Action>): void {
+    if (!groups || groups.length === 0) {
+      guarded(() => execute(dispatch, lifetime.signal));
+      return;
+    }
+    const controller = new AbortController();
+    const gatedDispatch: Dispatch<Action> = action => {
+      if (controller.signal.aborted) return;
+      dispatch(action);
+    };
+    let leave = (): void => {};
+    leave = joinGroups(groups, () => {
+      leave();
+      controller.abort();
+    });
+    let running: Promise<void>;
+    try {
+      running = Promise.resolve(execute(gatedDispatch, controller.signal));
+    } catch (error) {
+      running = Promise.reject(error);
+    }
+    running
+      .catch(error => {
+        if ((error as { name?: string } | null)?.name !== 'AbortError') {
+          console.error('[Composable Svelte] Effect error:', error);
+        }
+      })
+      .finally(() => leave());
+  }
+
+  /** Arm a timer that belongs to groups: cancelling one disarms it. */
+  function armTimer(
+    groups: readonly string[] | undefined,
+    ms: number,
+    fire: () => void,
+    onClear: (timer: ReturnType<typeof setTimeout>) => void
+  ): ReturnType<typeof setTimeout> {
+    const timer = setTimeout(() => {
+      timerLeaves.get(timer)?.();
+      timerLeaves.delete(timer);
+      fire();
+    }, ms);
+    if (groups && groups.length > 0) {
+      let leave = (): void => {};
+      leave = joinGroups(groups, () => {
+        leave();
+        clearTimeout(timer);
+        timerLeaves.delete(timer);
+        onClear(timer);
+      });
+      timerLeaves.set(timer, leave);
+    }
+    return timer;
+  }
+  /** One warning per destroyed store; a later dispatch is silently dropped. */
+  let warnedAfterDestroy = false;
+
   /**
    * Core dispatch logic (before middleware).
    */
   function dispatchCore(action: Action): void {
     if (destroyed) {
-      console.warn(
-        '[Composable Svelte] dispatch after destroy ignored:',
-        (action as { type?: unknown } | null)?.type
-      );
+      if (!warnedAfterDestroy) {
+        warnedAfterDestroy = true;
+        console.warn(
+          '[Composable Svelte] dispatch after destroy ignored:',
+          (action as { type?: unknown } | null)?.type
+        );
+      }
       return;
     }
 
@@ -188,9 +296,14 @@ export function createStore<State, Action, Dependencies = any>(
         break;
 
       case 'Run':
-        // The store's lifetime signal: aborted by destroy(), for an executor
-        // that awaits something and wants to stop.
-        guarded(() => effect.execute(dispatch, lifetime.signal));
+        // The store's lifetime signal — aborted by destroy() — for an executor
+        // that awaits something and wants to stop; its own when it belongs to
+        // a group.
+        runExecutor(effect.groups, effect.execute);
+        break;
+
+      case 'CancelGroup':
+        cancelGroup(effect.group);
         break;
 
       case 'Batch':
@@ -214,14 +327,14 @@ export function createStore<State, Action, Dependencies = any>(
         // Clear debounce timer with same id
         const existingTimer = debounceTimers.get(effect.id);
         if (existingTimer) {
-          clearTimeout(existingTimer);
+          clearTimer(existingTimer);
           debounceTimers.delete(effect.id);
         }
 
         // Clear throttle with same id
         const existingThrottle = throttleState.get(effect.id);
         if (existingThrottle?.timeout) {
-          clearTimeout(existingThrottle.timeout);
+          clearTimer(existingThrottle.timeout);
         }
         throttleState.delete(effect.id);
 
@@ -230,9 +343,15 @@ export function createStore<State, Action, Dependencies = any>(
           break;
         }
 
-        // Otherwise, set up new cancellable effect
+        // Otherwise, set up new cancellable effect. Its groups' disposer
+        // aborts the same controller `Effect.cancel(id)` would.
         const controller = new AbortController();
         inFlightEffects.set(effect.id, controller);
+        let leave = (): void => {};
+        leave = joinGroups(effect.groups, () => {
+          leave();
+          controller.abort();
+        });
 
         // The signal is handed to the executor so it can cooperate — pass it to
         // `fetch`, check it around an await. It used to be created, stored and
@@ -265,6 +384,7 @@ export function createStore<State, Action, Dependencies = any>(
             }
           })
           .finally(() => {
+            leave();
             // Only if this execution is still the current one. A superseded
             // effect settling later used to delete its *successor's* controller,
             // after which `Effect.cancel` for that id found nothing and the live
@@ -281,14 +401,22 @@ export function createStore<State, Action, Dependencies = any>(
         // Clear existing timer
         const existingTimer = debounceTimers.get(effect.id);
         if (existingTimer !== undefined) {
-          clearTimeout(existingTimer);
+          clearTimer(existingTimer);
         }
 
-        // Set new timer
-        const timer = setTimeout(() => {
-          debounceTimers.delete(effect.id);
-          guarded(() => effect.execute(dispatch));
-        }, effect.ms);
+        // Set new timer. The executor gets the store's lifetime signal, as a
+        // Run or an AfterDelay does (R1-REVIEW 1.9) — or its own, in a group.
+        const timer = armTimer(
+          effect.groups,
+          effect.ms,
+          () => {
+            debounceTimers.delete(effect.id);
+            runExecutor(effect.groups, effect.execute);
+          },
+          (cleared) => {
+            if (debounceTimers.get(effect.id) === cleared) debounceTimers.delete(effect.id);
+          }
+        );
 
         debounceTimers.set(effect.id, timer);
         break;
@@ -301,18 +429,26 @@ export function createStore<State, Action, Dependencies = any>(
         if (!throttle || now - throttle.lastRun >= effect.ms) {
           // Execute immediately, clear any pending timeout
           if (throttle?.timeout) {
-            clearTimeout(throttle.timeout);
+            clearTimer(throttle.timeout);
           }
           throttleState.set(effect.id, { lastRun: now });
-          guarded(() => effect.execute(dispatch));
+          runExecutor(effect.groups, effect.execute);
         } else if (!throttle.timeout) {
           // Schedule for later
           const delay = effect.ms - (now - throttle.lastRun);
-          const timeout = setTimeout(() => {
-            // Clear timeout field by replacing entire object
-            throttleState.set(effect.id, { lastRun: Date.now() });
-            guarded(() => effect.execute(dispatch));
-          }, delay);
+          const timeout = armTimer(
+            effect.groups,
+            delay,
+            () => {
+              // Clear timeout field by replacing entire object
+              throttleState.set(effect.id, { lastRun: Date.now() });
+              runExecutor(effect.groups, effect.execute);
+            },
+            (cleared) => {
+              const current = throttleState.get(effect.id);
+              if (current?.timeout === cleared) throttleState.set(effect.id, { lastRun: current.lastRun });
+            }
+          );
 
           throttleState.set(effect.id, { lastRun: throttle.lastRun, timeout });
         }
@@ -321,10 +457,15 @@ export function createStore<State, Action, Dependencies = any>(
       }
 
       case 'AfterDelay': {
-        const timer = setTimeout(() => {
-          delayTimers.delete(timer);
-          guarded(() => effect.execute(dispatch, lifetime.signal));
-        }, effect.ms);
+        const timer = armTimer(
+          effect.groups,
+          effect.ms,
+          () => {
+            delayTimers.delete(timer);
+            runExecutor(effect.groups, effect.execute);
+          },
+          (cleared) => delayTimers.delete(cleared)
+        );
         delayTimers.add(timer);
         break;
       }
@@ -355,9 +496,20 @@ export function createStore<State, Action, Dependencies = any>(
 
         try {
           const cleanup = effect.setup(gatedDispatch);
-          subscriptionCleanups.set(effect.id, () => {
+          let leave = (): void => {};
+          const teardown = () => {
+            leave();
             live = false;
             if (typeof cleanup === 'function') cleanup();
+          };
+          subscriptionCleanups.set(effect.id, teardown);
+          // The group's disposer tears it down once, if it is still the live one.
+          leave = joinGroups(effect.groups, () => {
+            leave();
+            if (subscriptionCleanups.get(effect.id) === teardown) {
+              subscriptionCleanups.delete(effect.id);
+              runCleanup(teardown);
+            }
           });
         } catch (error) {
           live = false;
@@ -415,12 +567,15 @@ export function createStore<State, Action, Dependencies = any>(
     destroyed = true;
     lifetime.abort();
 
+    // Every grouped effect: its own controller, timer or subscription.
+    for (const group of [...groupMembers.keys()]) cancelGroup(group);
+
     // Cancel all in-flight effects
     inFlightEffects.forEach(controller => controller.abort());
     inFlightEffects.clear();
 
     // Pending delays never fire
-    delayTimers.forEach(timer => clearTimeout(timer));
+    delayTimers.forEach(timer => clearTimer(timer));
     delayTimers.clear();
 
     // Call all subscription cleanups
@@ -428,11 +583,11 @@ export function createStore<State, Action, Dependencies = any>(
     subscriptionCleanups.clear();
 
     // Clear all timers
-    debounceTimers.forEach(timer => clearTimeout(timer));
+    debounceTimers.forEach(timer => clearTimer(timer));
     debounceTimers.clear();
 
     throttleState.forEach(t => {
-      if (t.timeout) clearTimeout(t.timeout);
+      if (t.timeout) clearTimer(t.timeout);
     });
     throttleState.clear();
 

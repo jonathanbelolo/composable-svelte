@@ -7,14 +7,253 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-09-05
+
+The closure of the R1 adversarial review (`plans/hardening/R1-REVIEW.md`):
+every finding of that review, in the entries below. Never published, as
+0.12.0 was not; the registry holds 0.5.2.
+
+### Added
+
+- `WebSocketClient.reconnect(reason?, cause?)`: a `cause` is reported as an
+  `error` event before the socket is dropped. The heartbeat passes a
+  `HEARTBEAT_TIMEOUT` error, and a close with code 1002, 1003 or 1007 is
+  reported as `PROTOCOL_ERROR` — both codes existed and were never emitted.
+- `CancelledError` (API client): what an abandoned attempt reports — every
+  caller that shared it detached — never retried, never offered to error
+  interceptors, `isNetworkError()` false, the signal's reason as `cause`.
+  R1 reported the condition as a bare `APIError('Request cancelled')`.
+  (R1-REVIEW 1.9)
+- **Cancellation groups.** Every executor-bearing effect can carry
+  path-shaped `groups`; `Effect.cancelGroup(name)` disposes every member —
+  aborts a `run`/`afterDelay`/`debounced`/`throttled` executor's own signal
+  and drops its later dispatches, disarms its timer, aborts a `cancellable`
+  as `Effect.cancel(id)` would, runs a `subscription`'s cleanup once.
+  `Effect.inGroup(effect, name)` joins one; `Effect.prefixGroups` nests a
+  child's beneath a name; `Effect.map` carries them; `destroy()` disposes
+  every member; TestStore models all of it (an aborted grouped executor
+  leaves its in-flight count). The navigation operators set and cancel
+  these groups themselves in the following change — the audit's N8, which
+  R1 closed on the case name only (R1-REVIEW 1.8). `EffectGroups` is
+  exported.
+- **Animation test helpers** in `@composable-svelte/core/test`:
+  `assertMotionAllowed`, `waitUntil`, `waitForStyle`, `waitForAnimations`,
+  `scrubAnimations`, `settleAnimations`, `midFlight`, `settleValue`,
+  `nextFrame`. A running Web Animation is scrubbed to a chosen point and a
+  ticker-driven value is polled for a point strictly between its endpoints,
+  so a mid-flight assertion no longer depends on what the scheduler reached
+  at a fixed delay; every helper refuses fake timers. The sixteen sites in
+  this package's and chat's suites that sampled at a fixed delay are
+  rewritten on them (R1-REVIEW 2.1).
+- `TestStore.receive([a, b, …])`: with exhaustivity on, the next N queued
+  actions must be the N partials in any order; an interleaved action fails at
+  once, naming it; the assertion runs once after all are consumed.
+- `TestStore.destroy()`: aborts the lifetime signal every `Run`, `AfterDelay`,
+  `Debounced` and `Throttled` executor now receives (as in the store), aborts
+  in-flight cancellables, disarms every timer, runs subscription cleanups,
+  drops later dispatches; `send`/`receive`/`finish`/`advanceTime` throw after
+  it. The owning test's finish hook calls it. (R1-REVIEW 1.5)
+
+### Changed
+
+- **BREAKING: header names are lower-cased everywhere the API client handles
+  them.** HTTP header names are case-insensitive, and the merge compared them
+  case-sensitively, so `Content-Type` and `content-type` were both sent and
+  `Authorization`/`authorization` never merged. A request may still write
+  `Authorization`; interceptors and mock handlers now read
+  `config.headers.authorization`. (R1-REVIEW 1.9, A10)
+- **BREAKING: `createMockAPI` runs the real request pipeline.** Identical
+  concurrent safe requests share one handler call (`deduplicate: false` opts
+  out); request interceptors run before the key and the cache lookup, not
+  after the lookup; a caller's `signal` and `timeout` are honoured, with no
+  default timeout; a body with no JSON form never coalesces. A test that
+  counted two handler calls for two concurrent identical GETs now counts one.
+  (R1-REVIEW 1.9)
+- **The request pipeline runs once per caller, in one order:** resolve →
+  request interceptors → finalize and key → cache → the shared attempt (retry,
+  then response interceptors once) → cache. Request interceptors ran inside
+  every retry attempt and after the key; only their `headers` were read back
+  (A8). A header an interceptor adds is now part of the request's identity
+  (R1-REVIEW 1.7), and so is the resolved retry policy (R1-REVIEW 1.9).
+- `shouldRetry` is consulted once per retryable failure, with the attempt
+  just made; it was called twice, first with attempt 0 (A12, this half).
+- Error interceptors are offered a failure once, after any retries, and
+  never a caller's own cancellation; they ran inside every attempt.
+
+- Debounced and throttled executors receive the store's lifetime signal, as
+  `run` and `afterDelay` do, and `Effect.map` forwards it; the
+  `EffectExecutor` documentation said only `cancellable` received one.
+  (R1-REVIEW 1.9)
+- **BREAKING: a presentation's effects are cancelled when it goes.**
+  `ifLetPresentation` puts every effect a child produces in the
+  cancellation group named after the field (`createDestination` adds the
+  case beneath it, `handleStackAction` the screen, `forEachElement` the
+  element, `scopeAction` the action type) and cancels the group on a
+  dismiss or when the child returns null; `integrate().with()` cancels it
+  when the core reducer nulls the field or changes its case (a same-case
+  replacement is not a dismissal); `.forEach()` cancels an element the core
+  reducer removes; `handleStackAction` cancels the screens that leave on
+  `pop`, `popToRoot`, a shrinking `setPath` (by identity with `screenId`)
+  and a screen dismiss. A dismiss's effect is `Effect.cancelGroup(field)`
+  where it was `Effect.none()`, and an effect the same action registered
+  is cancelled with the rest, as TCA's `ifLet` does. R1 closed the audit's
+  N8 on the case name only: a reopened child of the same case still
+  received the previous child's result. (R1-REVIEW 1.8)
+- **`Destination.is()` decides by the wrapper's shape, not a name**: a
+  `dismiss` under a field named like a case names no case, a parent-level
+  action that merely shares a case name and carries no child action
+  matches no path, and an inherited property (`hasOwnProperty`) is not a
+  case. (R1-REVIEW 1.9)
+- `StackActionOptions` is exported; `StackAction.screen(index, action,
+  screenId?)` carries the identity. (R1-REVIEW 1.9)
+- **BREAKING: `TestStore.receive()` and `finish()` never move the fake
+  clock.** They wait on the real clock, notified as actions arrive and effects
+  settle. `vi.waitFor` advanced the fake clock by its interval on every check,
+  so a debounce or delay fired without the test advancing it — a test that
+  omitted `advanceTime(ms)` passed, and one that advanced too little passed
+  too. Such a test now fails, naming the timer and its due time.
+  (R1-REVIEW 1.6)
+- **BREAKING: the test module refuses to load while timers are faked.** It
+  binds the real clock at import; `vi.useFakeTimers()` belongs in a test or a
+  `beforeEach`, not at the top level of a setup file. (R1-REVIEW 1.6)
+- **BREAKING: `TestStore.finish()` fails on any armed timer under fake
+  timers** — AfterDelay, Debounced or Throttled, named with its id and due
+  time — and names a hung effect by kind and id; an aborted cancellable
+  (superseded, or `Effect.cancel(id)`) is not waited for. It tracked
+  AfterDelay only, so an armed debounce passed `finish()` and fired into the
+  next test. (R1-REVIEW 1.6)
+- With exhaustivity on, a `receive()` whose partial does not match the next
+  queued action fails at once whether or not a later action matches; it
+  waited for its timeout when none did. (R1-REVIEW 1.6)
+- A dispatch after `destroy()` warns once per store, then is dropped
+  silently; every one warned. (R1-REVIEW 1.9)
+
+### Fixed
+
+- **`Effect.map` returns the delayed executor's promise**, so a rejecting
+  `afterDelay` reached through `scope()` or any other lift is logged by the
+  store and fails `TestStore.finish()` instead of being an unhandled
+  rejection. (R1-REVIEW 1.5)
+- **A `TestStore` rejection is reported at once** by a waiting `receive()` or
+  `finish()`, not at their timeout; and the finish hook that reports a
+  rejection nothing asked about is registered by the first `send()`,
+  `receive()` or `finish()` while the owning test is current, not at
+  rejection time — which bound it to whichever test happened to be current
+  then. Outside a test the rejection is rethrown. (R1-REVIEW 1.6)
+- **A caller no longer joins a dead attempt.** An aborted attempt stayed in
+  the in-flight map until its rejection settled, so a request repeated in
+  that window — synchronously after the abort, or during a retry backoff —
+  joined it and was rejected "Request cancelled". The attempt leaves the map
+  in the step that aborts it, and a backoff sleep ends when the last caller
+  detaches (the R1.3.f remainder). (R1-REVIEW 1.2)
+- **A body with no JSON form is sent as given and never coalesced or
+  cached.** `FormData`, `Blob`, `ArrayBuffer`, typed arrays,
+  `URLSearchParams` and streams reach `fetch` untouched with no content type
+  added (the browser sets one); they were JSON-stringified to `{}` under
+  `application/json`, and every `FormData` keyed as `{}`, so two uploads were
+  one request. (A6, R1-REVIEW 1.7)
+- **A throwing request interceptor rejects the caller with what it threw**
+  — no fetch, no retry — where it was wrapped as a retryable `NetworkError`
+  and retried with backoff; an interceptor's `AbortError` keeps its message.
+  An interceptor can change `body` and `params`, not only `headers`. (A8)
+- **A body that cannot be serialised (a cycle) is the caller's `TypeError`
+  with no fetch and no retry**; it overflowed the stack in the key. (A15)
+- **`timeout` is validated: `Infinity` sets no bound; `0`, a negative or
+  `NaN` is a `TypeError`.** `timeout: 0` rejected every request at once and
+  there was no value meaning none. `cache.ttl` (positive finite) and
+  `cache.maxEntries` (positive integer) are validated the same way. (A10)
+- **Cache invalidation matches the normalised path**: `'products'`,
+  `'/products'` and `'/products?page=2'` name one path, for
+  `invalidateCache` and for a mutation's default invalidation; entries were
+  filed under the raw path. (R1-REVIEW 1.9)
+- **The cache's warn-once sets are bounded by `maxEntries` and emptied by
+  `clearCache()`**, keyed by path; a class instance in a shared or cached
+  response — which a structured clone flattens — is warned about the same
+  way. (R1-REVIEW 1.7, 1.9)
+- **A non-Error abort reason is kept as the rejection's `cause`.**
+  (R1-REVIEW 1.9)
+- **TestStore partial matching and API request keys have JSON semantics.**
+  The shared serialiser walked `Object.keys` only, so a `Date` — or any
+  object with `toJSON` — rendered as `{}`: two instants matched each other in
+  `receive()`, and two requests differing only by a `Date` body were one
+  key. An `undefined` property made `{ a: undefined }` differ from `{}`; now,
+  as in `JSON.stringify`, it is omitted, and inside an array it is `null`.
+  (R1-REVIEW 1.6, 1.7)
+
+- **SSG refuses a path before its data loaders run, follows symlinks when
+  containing a write, and refuses `.html` segments.** A refused path still
+  reached `getInitialState` and `getServerProps`; a symlink inside `outDir`
+  routed a lexically contained write outside it; `/404.html` made a
+  directory the 404 step then failed to write into. `SSGPathError` carries a
+  `reason`. (R1-REVIEW 1.9)
+- **`generateAlternateLinks` and the SSG canonical link encode the path
+  segment by segment, idempotently.** `encodeURI` double-encoded an
+  already-encoded path and let `?lang=` land in a fragment after a `#`; the
+  canonical link was not encoded at all. (R1-REVIEW 1.9)
+- **`serializeState` throws for a root with no JSON form**, as
+  `serializeStore` has since R1.7.d. (R1-REVIEW 1.9)
+- **The ICU failure cache is bounded (100, oldest dropped) and
+  `createInitialI18nState` falls back to the default for a locale outside
+  `availableLocales`**, with one warning — an `Accept-Language` passed through
+  unchecked grew the cache and logged an error per message. (R1-REVIEW 1.9)
+
+- **`fastify-plugin` can wrap the security plugins.** The skip-override
+  marker was defined non-writable, and `fastify-plugin` assigns it in strict
+  mode, so `fp(fastifySecurityHeaders)` threw; it is writable and
+  configurable, and `fp(plugin, { encapsulate: true })` is honoured.
+  (R1-REVIEW 1.3)
+- **The direct-call plugin form fails closed.** Both plugins had become
+  `async`, so an unawaited `fastifyRateLimit(app, badConfig)` rejected a
+  promise nobody held — under a process that logs unhandled rejections, a
+  server with no limiter. They are plain functions again: hooks installed
+  synchronously, an already-resolved promise returned, a bad config thrown
+  synchronously when called directly and rejected — reported by `ready()` —
+  when registered. (R1-REVIEW 1.4)
+- **The rate limiter evicts the least recently seen key, not the first seen**,
+  and sweeps expired entries at most once a second at capacity, so a
+  long-lived client is no longer dropped ahead of fresh spoofed keys and a
+  flood no longer pays a full scan per request. (R1-REVIEW 1.9)
+
+- **An error on a live WebSocket connection no longer ends it `failed` with
+  nothing reported.** A browser sets `readyState` to `CLOSED` before it
+  fires `error`, so the client's "never opened" test — `readyState !== OPEN`
+  — took every error on an established connection for a failed handshake:
+  status `failed`, the close handler nulled, no `disconnected` event, no
+  reconnect. Whether a socket opened is remembered per socket now; the
+  error is reported and the close that follows decides. The test harness's
+  `error()` follows the browser's order. (R1-REVIEW 1.1; W3, W8)
+- **WebSocket edges.** `disconnect(code)` refuses a close code the browser
+  would refuse (anything but 1000 or 3000–4999) with a `TypeError` before
+  detaching, instead of leaving the socket open behind a `disconnected`
+  state; `reconnect()` and `disconnect()` while reconnecting emit no second
+  `disconnected`; a `connected` listener that disconnects no longer rejects
+  the `connect()` that succeeded; a `WebSocket` constructor that throws is
+  reported as an `error` event; `disconnect()` clears `lastError`;
+  `connectionTimeout: 0` is zero. The mock's `reconnect()` disconnects when
+  reconnection is disabled, restarts at attempt 1, and its `disconnect()`
+  while connecting reports the loss — as the live client. (R1-REVIEW 1.9)
+
 ## [0.12.0] - 2026-09-05
+
+> **Corrected on 5 September 2026, after the R1 review, before any
+> publication** (the registry holds 0.5.2; 0.12.0 was never released): the
+> duplicated "finish() waits for every effect" entry removed; `reconnect()`
+> marked BREAKING (a required interface method); `shouldReconnect`,
+> `StackActionOptions` and `ClientCacheConfig` named under Added; and four
+> additions that shipped under Fixed moved to Added. Nothing else changed.
 
 ### Added
 
 - `RateLimitConfig.maxKeys` — the keys a limiter holds before the oldest is
   dropped (default 10 000); `RateLimiter.size`.
 
-- **`reconnect(reason?)` on `WebSocketClient`**: drop the socket and start the
+- **`ReconnectConfig.shouldReconnect`** (replaces the `wasClean` predicate),
+  **`StackActionOptions`** (the seventh argument of `handleStackAction`,
+  named and exported), **`ClientCacheConfig`** (the client's cache
+  configuration: a `CacheConfig` plus `maxEntries`).
+
+- **BREAKING (interface): `reconnect(reason?)` on `WebSocketClient`** — a
+  required method, so a hand-written `WebSocketClient` must add it. Drop the socket and start the
   reconnect ladder without forgetting the URL, which `disconnect()` does. The
   live, mock, spy, queued and channel clients all implement it; the spy
   records `reconnections`. **`HeartbeatConfig.isPong`** recognises a pong whose
@@ -55,6 +294,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   private to `api/retry.ts`; `@composable-svelte/auth` needs it and a second
   implementation would drift. Returns milliseconds.
 
+
+- **`createParserConfig(routes, options?)`** — builds a `ParserConfig` from a
+  pattern-to-handler map, so a route stops being four lines of
+  `const p = matchPath(pattern, path); return p ? {...} : null`. Additive:
+  `ParserConfig` and `parseDestination` are untouched, and the `parsers` list
+  form stays for routes that are not a single pattern — a custom regular
+  expression, or one parser drawing on two. The two mix, because the config is
+  a plain object.
+
+  It also restores the symmetry with `SerializerConfig`, whose half has always
+  been a keyed map.
+
+  Keys are tried in insertion order, and the map form hides that, so a more
+  specific pattern must come first. A handler may return `null` to decline
+  *after* its pattern matched, which is what lets a route reject a value it
+  does not like without claiming it.
+
+- **Custom serializers for SSR state** — `createTaggedSerializer()` and the
+  `StateSerializer` type, accepted by `serializeState`, `serializeStore`,
+  `buildHydrationScript`, `renderToHTML` (as `options.serializer`), `parseState`
+  and `hydrateStore` (as `config.serializer`).
+
+  The documentation claimed `serializeState` **throws** on a `Date` or a `Map`.
+  It does not, and that was the dangerous half of the claim, because a throw is
+  loud. What actually happened: a `Date` arrived on the client as a `string`, a
+  `Map` or `Set` arrived as `{}` with every entry lost, and TypeScript asserted
+  the original type on both sides. Only a `BigInt` or a cycle ever threw.
+
+  The replacer and reviver travel as **one object**, because a tag written by a
+  replacer that no reviver reads is worse than no tagging at all — the state
+  arrives as a visible wrapper instead of a value. Passing one object to both
+  halves is what makes that hard to get wrong.
+
+- **`ConnectionStats.messagesQueued`** — how many messages a queuing wrapper is
+  holding for the connection. `0` for a client that does not queue.
+
+  The register had declined queue inspection outright, on the grounds that the
+  queue is an implementation detail of reconnection and exposing it invites
+  reaching into it. That reasoning holds for a *handle* and there is still no
+  `websocket.queue`; but the need behind the request was a pending count, and a
+  read-only number on `stats` cannot be reached into.
+
+  Required rather than optional: under `exactOptionalPropertyTypes` an optional
+  field would force `stats.messagesQueued ?? 0` at every read, which is worse
+  for the one thing it exists to do. Additive for readers of `stats`, breaking
+  for anyone implementing `WebSocketClient` with a hand-written `stats` object.
+
+- **`createMockStorage()`** — an in-memory `SyncStorage<T>` for tests, the
+  counterpart to `createMockCookieStorage` that the localStorage/sessionStorage
+  pair never had. `createNoopStorage()` discards writes and reads back `null`,
+  which models "storage unavailable" and cannot express a round trip, so callers
+  hand-rolled their own: core's own storage test built one and used it 48 times.
+  It now imports this instead.
+
+  Values are held as **JSON strings**, not live objects, so a `Date` put in
+  comes back as a string exactly as it would through real storage — a
+  `Map<string, T>` double hides that, and hiding it is how a test passes where
+  production does not. `prefix`, `validator` and `debug` all behave as they do
+  in `createLocalStorage`, which makes "a stored value the validator rejects
+  reads back as `null`" testable for the first time.
+
+  **`setItem` does not fire `subscribe`, deliberately.** That contract is
+  cross-context only, and no browser delivers a `storage` event to the tab that
+  caused the write. `simulateSetItem` / `simulateRemoveItem` play the part of
+  the other tab — which is the first time `SyncStorage.subscribe` has been
+  exercisable at all.
 
 - `tests/repo/optional-props.test.ts` — a repo-wide guard requiring
   `| undefined` on every optional prop, with a register for the `$bindable`
@@ -238,73 +543,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Sidebar` and `Tabs`. Those are landmark and tablist roles, where naming the
   region after the component is a reasonable default rather than a dead end.
 
-- **`createParserConfig(routes, options?)`** — builds a `ParserConfig` from a
-  pattern-to-handler map, so a route stops being four lines of
-  `const p = matchPath(pattern, path); return p ? {...} : null`. Additive:
-  `ParserConfig` and `parseDestination` are untouched, and the `parsers` list
-  form stays for routes that are not a single pattern — a custom regular
-  expression, or one parser drawing on two. The two mix, because the config is
-  a plain object.
-
-  It also restores the symmetry with `SerializerConfig`, whose half has always
-  been a keyed map.
-
-  Keys are tried in insertion order, and the map form hides that, so a more
-  specific pattern must come first. A handler may return `null` to decline
-  *after* its pattern matched, which is what lets a route reject a value it
-  does not like without claiming it.
-
-- **Custom serializers for SSR state** — `createTaggedSerializer()` and the
-  `StateSerializer` type, accepted by `serializeState`, `serializeStore`,
-  `buildHydrationScript`, `renderToHTML` (as `options.serializer`), `parseState`
-  and `hydrateStore` (as `config.serializer`).
-
-  The documentation claimed `serializeState` **throws** on a `Date` or a `Map`.
-  It does not, and that was the dangerous half of the claim, because a throw is
-  loud. What actually happened: a `Date` arrived on the client as a `string`, a
-  `Map` or `Set` arrived as `{}` with every entry lost, and TypeScript asserted
-  the original type on both sides. Only a `BigInt` or a cycle ever threw.
-
-  The replacer and reviver travel as **one object**, because a tag written by a
-  replacer that no reviver reads is worse than no tagging at all — the state
-  arrives as a visible wrapper instead of a value. Passing one object to both
-  halves is what makes that hard to get wrong.
-
-- **`ConnectionStats.messagesQueued`** — how many messages a queuing wrapper is
-  holding for the connection. `0` for a client that does not queue.
-
-  The register had declined queue inspection outright, on the grounds that the
-  queue is an implementation detail of reconnection and exposing it invites
-  reaching into it. That reasoning holds for a *handle* and there is still no
-  `websocket.queue`; but the need behind the request was a pending count, and a
-  read-only number on `stats` cannot be reached into.
-
-  Required rather than optional: under `exactOptionalPropertyTypes` an optional
-  field would force `stats.messagesQueued ?? 0` at every read, which is worse
-  for the one thing it exists to do. Additive for readers of `stats`, breaking
-  for anyone implementing `WebSocketClient` with a hand-written `stats` object.
-
-- **`createMockStorage()`** — an in-memory `SyncStorage<T>` for tests, the
-  counterpart to `createMockCookieStorage` that the localStorage/sessionStorage
-  pair never had. `createNoopStorage()` discards writes and reads back `null`,
-  which models "storage unavailable" and cannot express a round trip, so callers
-  hand-rolled their own: core's own storage test built one and used it 48 times.
-  It now imports this instead.
-
-  Values are held as **JSON strings**, not live objects, so a `Date` put in
-  comes back as a string exactly as it would through real storage — a
-  `Map<string, T>` double hides that, and hiding it is how a test passes where
-  production does not. `prefix`, `validator` and `debug` all behave as they do
-  in `createLocalStorage`, which makes "a stored value the validator rejects
-  reads back as `null`" testable for the first time.
-
-  **`setItem` does not fire `subscribe`, deliberately.** That contract is
-  cross-context only, and no browser delivers a `storage` event to the tab that
-  caused the write. `simulateSetItem` / `simulateRemoveItem` play the part of
-  the other tab — which is the first time `SyncStorage.subscribe` has been
-  exercisable at all.
-
-
 - **The two validation paths disagreed about which message to show.** Per-field
   validation took the *first* Zod issue (`issues.find`), whole-form took the
   *last* (assignment in a loop). So `"   "` in an email field said "Email is
@@ -399,17 +637,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   only: callers still passing `serialize` compile unchanged.
 
 ### Changed
-
-- **BREAKING (tests): `TestStore.finish()` waits for every effect and fails
-  on what is left.** It did `advanceTime(0)` and looked at the queue, so it
-  passed with a `Run` still in flight and an `AfterDelay` still armed. Now
-  effects still running are waited for (a hung one fails with a message,
-  `finish(timeout)`), a pending `AfterDelay` fails under fake timers until
-  the clock is advanced and is waited for under real timers, and the
-  unasserted actions are listed. A rejecting executor fails the next
-  `receive()`, `send()` or `finish()` with its message — or, if nothing
-  asks, the test that owns the store — instead of escaping as an unhandled
-  rejection. (AUDIT-2026-09-03-FINDINGS N9, T6)
 
 - **BREAKING (tests): `TestStore.finish()` waits for every effect and fails
   on what is left.** It did `advanceTime(0)` and looked at the queue, so it

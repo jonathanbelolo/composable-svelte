@@ -60,7 +60,11 @@ const SURFACE_CODES = new Set([
 	2322, // type not assignable — a documented value of the wrong shape
 	2353, // object literal names a property the type does not have
 	2561, // ...and here is the closest one it does have
-	2774 // a function used as a condition without being called
+	2774, // a function used as a condition without being called
+	// A call that matches no overload: the wrong argument to an overloaded
+	// method. `TestStore.receive()` is overloaded since the R1 closure (C5),
+	// and without this code a wrong partial in a document was invisible.
+	2769
 ]);
 
 /**

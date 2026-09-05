@@ -2,15 +2,22 @@
 // Base API Client Implementation
 // ============================================================================
 
-import { APIError, NetworkError, ValidationError } from './errors.js';
+import { APIError, ValidationError } from './errors.js';
+import { createInFlightRegistry, isDeduplicableMethod, requestKey } from './deduplication.js';
+import { resolveRetryConfig, retryRequest } from './retry.js';
+import { cacheKeyFor, createResponseCache, normalizePath, validateCacheConfig } from './cache.js';
 import {
-  createInFlightRegistry,
-  isDeduplicableMethod,
-  requestKey,
-  type RequestIdentity
-} from './deduplication.js';
-import { retryRequest } from './retry.js';
-import { cacheKeyFor, createResponseCache } from './cache.js';
+  classifyFetchFailure,
+  finalizeRequest,
+  isInstance,
+  mergeHeaders,
+  normalizeURL,
+  recoverWithErrorInterceptors,
+  runRequestInterceptors,
+  runResponseInterceptors,
+  validateTimeout,
+  type PreparedRequest
+} from './pipeline.js';
 import type {
   APIClient,
   APIClientConfig,
@@ -24,47 +31,6 @@ import type {
 // ============================================================================
 // Helper Functions
 // ============================================================================
-
-/**
- * Normalize URL by removing duplicate slashes and ensuring proper formatting.
- */
-function normalizeURL(baseURL: string | undefined, path: string): string {
-  if (!baseURL) {
-    return path;
-  }
-
-  // Remove trailing slash from baseURL
-  const normalizedBase = baseURL.replace(/\/$/, '');
-
-  // Ensure path starts with slash
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-
-  // Combine and normalize double slashes (but not in protocol://)
-  const url = `${normalizedBase}${normalizedPath}`;
-  return url.replace(/([^:]\/)\/+/g, '$1');
-}
-
-/**
- * Build query string from params object.
- * Handles null/undefined values by excluding them.
- */
-function buildQueryString(params: Record<string, string | number | boolean | null | undefined>): string {
-  const entries: string[] = [];
-
-  const keys = Object.keys(params);
-  for (let i = 0; i < keys.length; i++) {
-    const key = keys[i];
-    if (key !== undefined) {
-      const value = params[key];
-
-      if (value !== null && value !== undefined) {
-        entries.push(`${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`);
-      }
-    }
-  }
-
-  return entries.length > 0 ? `?${entries.join('&')}` : '';
-}
 
 /**
  * Parse response headers from Headers object to plain object.
@@ -110,29 +76,19 @@ async function parseResponseBody(response: Response): Promise<unknown> {
   }
 }
 
-/**
- * Merge headers, with later headers taking precedence.
- */
-function mergeHeaders(...headerSets: (Record<string, string> | undefined)[]): Record<string, string> {
-  const result: Record<string, string> = {};
-
-  for (let i = 0; i < headerSets.length; i++) {
-    const headers = headerSets[i];
-    if (headers) {
-      const keys = Object.keys(headers);
-      for (let j = 0; j < keys.length; j++) {
-        const key = keys[j];
-        if (key !== undefined) {
-          const value = headers[key];
-          if (value !== undefined) {
-            result[key] = value;
-          }
-        }
-      }
-    }
+/** The error for a response that is not OK; 422 is a `ValidationError`. */
+function responseError(response: Response, body: unknown, headers: Record<string, string>): APIError {
+  if (response.status === 422) {
+    return new ValidationError(response.statusText || 'Validation failed', response.status, body, headers);
   }
-
-  return result;
+  const isRetryable = response.status >= 500 || response.status === 408 || response.status === 429;
+  return new APIError(
+    response.statusText || `Request failed with status ${response.status}`,
+    response.status,
+    body,
+    headers,
+    isRetryable
+  );
 }
 
 // ============================================================================
@@ -141,17 +97,33 @@ function mergeHeaders(...headerSets: (Record<string, string> | undefined)[]): Re
 
 /**
  * Create an API client with the given configuration.
+ *
+ * Every request runs the same pipeline, once per caller: the URL is resolved
+ * and the client's headers merged (names lower-cased); the request
+ * interceptors run, in order, and may change headers, body and params; the
+ * request is finalised — a plain body serialised to JSON, a `BodyInit`
+ * passed through — and keyed; the cache is consulted; the request joins the
+ * attempt in flight for its key or starts one, whose retries fetch the same
+ * frozen request; the response interceptors run once on the attempt's
+ * response, which every caller receives as its own clone; the cache is
+ * filled. A failure, other than this caller's own cancellation, is offered
+ * to the error interceptors once, after any retries.
+ *
+ * `timeout` is a positive number of milliseconds or `Infinity`;
+ * `cache.ttl` a positive finite number; `cache.maxEntries` a positive
+ * integer — anything else is a `TypeError` here or at the request.
  */
 export function createAPIClient(config: APIClientConfig = {}): APIClient {
   const {
     baseURL,
     headers: defaultHeaders = {},
-    timeout: defaultTimeout = 30000,
     deduplicate = true,
     retry: defaultRetry = false,
     cache: defaultCache = false,
     interceptors: initialInterceptors = []
   } = config;
+  const defaultTimeout = validateTimeout(config.timeout ?? 30000, 'createAPIClient');
+  validateCacheConfig(defaultCache, 'createAPIClient');
 
   // Interceptors state
   const interceptors: Interceptor[] = [...initialInterceptors];
@@ -166,227 +138,118 @@ export function createAPIClient(config: APIClientConfig = {}): APIClient {
   });
 
   /**
-   * What will actually be sent: the base URL joined, the client's default
-   * headers merged with the request's, the JSON content type added. Computed
-   * once, before the dedup and cache layers, so their keys see the request as
-   * the server will — the first form keyed on the raw path and only the
-   * per-request headers.
+   * One attempt: fetch, parse, classify. Nothing else — the layers around it
+   * own retry, sharing, the interceptors and the cache, so nothing here runs
+   * twice for one request. The signal is the shared attempt's, owned by the
+   * in-flight registry: it aborts when every caller has detached. Each
+   * caller's own signal and timeout settle that caller's promise there, not
+   * here (A7, A3).
    */
-  function resolveRequest(method: HTTPMethod, url: string, config: RequestConfig): RequestIdentity {
-    const { headers: requestHeaders = {}, params, body } = config;
-    const headers = mergeHeaders(defaultHeaders, requestHeaders);
-    if (body && typeof body === 'object' && !headers['content-type'] && !headers['Content-Type']) {
-      headers['Content-Type'] = 'application/json';
+  async function executeFetch<T>(prepared: PreparedRequest, signal: AbortSignal): Promise<APIResponse<T>> {
+    const init: RequestInit = { method: prepared.method, headers: prepared.headers, signal };
+    if (prepared.body !== undefined && prepared.method !== 'GET' && prepared.method !== 'HEAD') {
+      init.body = prepared.body;
     }
-    return { method, url: normalizeURL(baseURL, url), params, headers, body };
-  }
 
-  /**
-   * Core request function that handles the actual fetch call.
-   * This is the innermost layer - just fetch, no retry/cache/dedup.
-   */
-  async function executeFetch<T>(
-    method: HTTPMethod,
-    resolved: RequestIdentity,
-    config: RequestConfig,
-    signal: AbortSignal
-  ): Promise<APIResponse<T>> {
-    // The signal is the shared attempt's, owned by the in-flight registry: it
-    // aborts when every caller has detached. Each caller's own signal and
-    // timeout settle that caller's promise there, not here — a single timer
-    // and a single listener per fetch used to abort it for everyone (A7, A3).
-    const { params, body } = resolved;
-
-    const queryString = params ? buildQueryString(params) : '';
-    const fullURL = `${resolved.url}${queryString}`;
-    let headers: Record<string, string> = { ...resolved.headers };
-
+    let response: Response;
+    let responseHeaders: Record<string, string>;
+    let responseBody: unknown;
     try {
-      // Run request interceptors
-      let interceptedConfig: RequestConfig = { ...config, headers };
-      for (let i = 0; i < interceptors.length; i++) {
-        const interceptor = interceptors[i];
-        if (interceptor && interceptor.onRequest) {
-          interceptedConfig = await interceptor.onRequest(fullURL, interceptedConfig);
-          headers = interceptedConfig.headers || headers;
-        }
-      }
-
-      // Prepare fetch init
-      const init: RequestInit = {
-        method,
-        headers,
-        signal
-      };
-
-      // Add body for non-GET/HEAD requests
-      if (body !== undefined && method !== 'GET' && method !== 'HEAD') {
-        init.body = typeof body === 'string' ? body : JSON.stringify(body);
-      }
-
-      // Execute fetch
-      const response = await fetch(fullURL, init);
-
-      // Parse response
-      const responseHeaders = parseHeaders(response.headers);
-      const responseBody = await parseResponseBody(response);
-
-      // Handle error responses
-      if (!response.ok) {
-        // Validation errors (422)
-        if (response.status === 422) {
-          const error = new ValidationError(
-            response.statusText || 'Validation failed',
-            response.status,
-            responseBody,
-            responseHeaders
-          );
-
-          // Run error interceptors
-          for (let i = 0; i < interceptors.length; i++) {
-            const interceptor = interceptors[i];
-            if (interceptor && interceptor.onError) {
-              try {
-                return await interceptor.onError(error) as APIResponse<T>;
-              } catch (e) {
-                // Interceptor didn't handle it, continue
-              }
-            }
-          }
-
-          throw error;
-        }
-
-        // Generic API error
-        const isRetryable = response.status >= 500 || response.status === 408 || response.status === 429;
-        const error = new APIError(
-          response.statusText || `Request failed with status ${response.status}`,
-          response.status,
-          responseBody,
-          responseHeaders,
-          isRetryable
-        );
-
-        // Run error interceptors
-        for (let i = 0; i < interceptors.length; i++) {
-          const interceptor = interceptors[i];
-          if (interceptor && interceptor.onError) {
-            try {
-              return await interceptor.onError(error) as APIResponse<T>;
-            } catch (e) {
-              // Interceptor didn't handle it, continue
-            }
-          }
-        }
-
-        throw error;
-      }
-
-      // Build successful response
-      let apiResponse: APIResponse<T> = {
-        status: response.status,
-        headers: responseHeaders,
-        data: responseBody as T
-      };
-
-      // Run response interceptors
-      for (let i = 0; i < interceptors.length; i++) {
-        const interceptor = interceptors[i];
-        if (interceptor && interceptor.onResponse) {
-          apiResponse = await interceptor.onResponse(apiResponse);
-        }
-      }
-
-      return apiResponse;
-
+      response = await fetch(prepared.url, init);
+      responseHeaders = parseHeaders(response.headers);
+      responseBody = await parseResponseBody(response);
     } catch (error: unknown) {
-      // The attempt was abandoned: every caller detached (aborted or timed
-      // out on its own terms). Nobody is listening, and the retry layer must
-      // not send it again, so this is a non-retryable APIError rather than
-      // the retryable TimeoutError the first form mapped every abort to.
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new APIError('Request cancelled', null, null, {}, false);
-      }
-
-      // Network error
-      if (error instanceof Error && !('status' in error)) {
-        const networkError = new NetworkError(
-          `Network request failed: ${error.message}`,
-          error
-        );
-
-        // Run error interceptors
-        for (let i = 0; i < interceptors.length; i++) {
-          const interceptor = interceptors[i];
-          if (interceptor && interceptor.onError) {
-            try {
-              return await interceptor.onError(networkError) as APIResponse<T>;
-            } catch (e) {
-              // Interceptor didn't handle it, continue
-            }
-          }
-        }
-
-        throw networkError;
-      }
-
-      // Re-throw API errors
-      throw error;
+      // The attempt was abandoned (every caller detached) or the network
+      // failed. An abandoned attempt is a CancelledError, which the retry
+      // layer never retries — the first form mapped every abort to the
+      // retryable TimeoutError.
+      throw classifyFetchFailure(error);
     }
+
+    if (!response.ok) {
+      throw responseError(response, responseBody, responseHeaders);
+    }
+
+    return { status: response.status, headers: responseHeaders, data: responseBody as T };
   }
 
   /**
-   * Execute request with all layers applied:
-   * Cache → Deduplication → Retry → Interceptors → Base Client
+   * The pipeline, once per caller. Order matters: the interceptors run
+   * before the key is computed, so what they add is part of the request's
+   * identity (R1 keyed first, so a token an interceptor added was not —
+   * R1-REVIEW 1.7); the body is serialised before the request joins an
+   * attempt, so a body with no JSON form is this caller's error with no
+   * fetch and no retry (A15); the response interceptors run on the shared
+   * attempt, once, so joiners see what the creator saw.
    */
   async function executeRequest<T>(
     method: HTTPMethod,
     url: string,
     config: RequestConfig = {}
   ): Promise<APIResponse<T>> {
-    // Determine cache/retry config (merge defaults with request config)
+    const timeout = config.timeout === undefined ? defaultTimeout : validateTimeout(config.timeout, 'request');
+    validateCacheConfig(config.cache, 'request');
     const cacheConfig = config.cache !== undefined ? config.cache : defaultCache;
-    const retryConfig = config.retry !== undefined ? config.retry : defaultRetry;
-
-    const resolved = resolveRequest(method, url, config);
-    const key = requestKey(resolved);
-    const cacheKey = cacheKeyFor(key, url, config, cacheConfig);
-
-    // Layer 1: Cache (outermost - fastest exit)
-    const cached = cache.get<T>(method, cacheKey, cacheConfig);
-    if (cached) {
-      return cached;
-    }
-
-    // Layer 3 and 4, as one unit the registry can share
-    const run = (signal: AbortSignal) =>
-      retryRequest<T>(method, () => executeFetch<T>(method, resolved, config, signal), retryConfig);
-
-    // Layer 2: Deduplication. The request's flag wins; the client's default
-    // was destructured and never read, so it could not be turned off per
-    // client (AUDIT-2026-09-03-FINDINGS A1). Only safe methods coalesce by
-    // default: two identical POSTs are two intents, and a client-level `true`
-    // cannot be told from the default, so a mutation is coalesced only when
-    // its own request says `deduplicate: true` (A11).
+    const retry = resolveRetryConfig(method, config.retry !== undefined ? config.retry : defaultRetry);
+    const resolvedURL = normalizeURL(baseURL, url);
+    const path = normalizePath(url);
+    // The request's flag wins; the client's default was destructured and
+    // never read, so it could not be turned off per client
+    // (AUDIT-2026-09-03-FINDINGS A1). Only safe methods coalesce by default:
+    // two identical POSTs are two intents, and a client-level `true` cannot
+    // be told from the default, so a mutation is coalesced only when its own
+    // request says `deduplicate: true` (A11).
     const coalesce =
       config.deduplicate === true ||
       (config.deduplicate !== false && deduplicate && isDeduplicableMethod(method));
-    // Every caller gets its own promise, bounded by its own signal and
-    // timeout; the shared fetch is aborted only when every caller is gone.
-    const response = await inFlight.join(coalesce ? key : null, run, {
-      signal: config.signal,
-      timeout: config.timeout ?? defaultTimeout
-    });
 
-    // Store in cache if applicable; the entry remembers the path it answers
-    if (method === 'GET') {
-      cache.set(method, cacheKey, url, response, cacheConfig);
+    try {
+      // A throwing request interceptor rejects this caller with what it
+      // threw: no fetch, no retry, no NetworkError wrapper (A8).
+      const intercepted = await runRequestInterceptors(interceptors, resolvedURL, {
+        ...config,
+        headers: mergeHeaders(defaultHeaders, config.headers)
+      });
+      const prepared = finalizeRequest(method, resolvedURL, intercepted, retry);
+      const key = requestKey(prepared.identity);
+      const cacheKey = cacheKeyFor(key, url, intercepted, cacheConfig);
+
+      // Layer 1: Cache (outermost - fastest exit)
+      const cached = cache.get<T>(method, cacheKey, cacheConfig);
+      if (cached) {
+        return cached;
+      }
+
+      // Layers 2 to 4 as one unit the registry can share: retry, response
+      // interceptors, and the warning for a response a clone would flatten.
+      const shared = coalesce && key !== null;
+      const cloned = shared || cache.stores(method, cacheKey, cacheConfig);
+      const run = async (signal: AbortSignal): Promise<APIResponse<T>> => {
+        const raw = await retryRequest<T>(() => executeFetch<T>(prepared, signal), retry, signal);
+        const response = await runResponseInterceptors(interceptors, raw);
+        if (cloned && isInstance(response.data)) {
+          cache.warnOnce(
+            `instance:${path}`,
+            `[Composable Svelte] Response for ${path} is a class instance; a shared or cached response is a plain-object clone`
+          );
+        }
+        return response;
+      };
+
+      // Every caller gets its own promise, bounded by its own signal and
+      // timeout; the shared fetch is aborted only when every caller is gone.
+      const response = await inFlight.join(shared ? key : null, run, { signal: config.signal, timeout });
+
+      // Store in cache if applicable; the entry is filed under the path.
+      cache.set(method, cacheKey, path, response, cacheConfig);
+
+      // Invalidate cache on mutations
+      cache.invalidateOnMutation(method, path, cacheConfig);
+
+      return response;
+    } catch (error: unknown) {
+      return recoverWithErrorInterceptors<T>(interceptors, error);
     }
-
-    // Invalidate cache on mutations
-    cache.invalidateOnMutation(method, url, cacheConfig);
-
-    return response;
   }
 
   // ============================================================================

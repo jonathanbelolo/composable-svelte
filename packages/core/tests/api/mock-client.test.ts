@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createMockAPI, type MockRoutes } from '../../src/lib/api/testing/mock-client.js';
-import { APIError } from '../../src/lib/api/errors.js';
+import { APIError, TimeoutError } from '../../src/lib/api/errors.js';
 import type { RequestConfig } from '../../src/lib/api/types.js';
 
 describe('createMockAPI', () => {
@@ -652,7 +652,7 @@ describe('createMockAPI', () => {
     it('mocks API with authentication', async () => {
       const mockAPI = createMockAPI({
         'GET /api/protected': (config: RequestConfig) => {
-          const token = config.headers?.['Authorization'];
+          const token = config.headers?.['authorization'];
 
           if (!token || token !== 'Bearer valid-token') {
             throw new APIError('Unauthorized', 401, null, {}, false);
@@ -673,6 +673,128 @@ describe('createMockAPI', () => {
       });
 
       expect(response.data).toEqual({ data: 'Protected data' });
+    });
+  });
+
+  describe('parity with createAPIClient (R1-REVIEW 1.9)', () => {
+    // The mock runs the same pipeline as the real client — request
+    // interceptors before the key and the cache lookup, the shared attempt
+    // per identity, a caller's own signal and timeout — so a reducer test
+    // against it sees production's coalescing and identity semantics.
+    const turn = () => new Promise<void>((r) => setTimeout(r, 0));
+
+    it('identical concurrent GETs run the handler once; a POST runs it twice unless opted in', async () => {
+      const handler = vi.fn(() => ({ ok: true }));
+      const mock = createMockAPI({ 'GET /api/x': handler, 'POST /api/x': handler });
+
+      await Promise.all([mock.get('/api/x'), mock.get('/api/x')]);
+      expect(handler).toHaveBeenCalledTimes(1);
+
+      await Promise.all([mock.post('/api/x', { a: 1 }), mock.post('/api/x', { a: 1 })]);
+      expect(handler).toHaveBeenCalledTimes(3);
+
+      await Promise.all([
+        mock.post('/api/x', { a: 1 }, { deduplicate: true }),
+        mock.post('/api/x', { a: 1 }, { deduplicate: true })
+      ]);
+      expect(handler).toHaveBeenCalledTimes(4);
+    });
+
+    it("a caller's own signal rejects that caller with the reason; the other resolves; a repeat after the abort runs again", async () => {
+      const handler = vi.fn(() => ({ ok: true }));
+      const mock = createMockAPI({ 'GET /api/slow': { delay: 20, data: handler } });
+      const ac = new AbortController();
+
+      const a = mock.get('/api/slow', { signal: ac.signal });
+      const b = mock.get<{ ok: boolean }>('/api/slow');
+      const aRejected = expect(a).rejects.toThrow('gone');
+      await turn();
+      ac.abort(new Error('gone'));
+      await aRejected;
+
+      expect((await b).data).toEqual({ ok: true });
+      expect(handler).toHaveBeenCalledTimes(1);
+
+      const only = new AbortController();
+      const c = mock.get('/api/slow', { signal: only.signal });
+      const cRejected = expect(c).rejects.toThrow('gone');
+      await turn();
+      only.abort(new Error('gone'));
+      await cRejected;
+      expect((await mock.get<{ ok: boolean }>('/api/slow')).data).toEqual({ ok: true });
+      expect(handler).toHaveBeenCalledTimes(3);
+    });
+
+    it("a caller's timeout rejects it with TimeoutError; there is no default timeout", async () => {
+      const mock = createMockAPI({ 'GET /api/slow': { delay: 50, data: { ok: true } } });
+
+      await expect(mock.get('/api/slow', { timeout: 5 })).rejects.toBeInstanceOf(TimeoutError);
+      expect((await mock.get<{ ok: boolean }>('/api/slow')).data).toEqual({ ok: true });
+    });
+
+    it('a header added by an interceptor is part of the identity, and the interceptors run before the cache lookup', async () => {
+      const handler = vi.fn((config: RequestConfig) => ({ token: config.headers?.['authorization'] }));
+      let n = 0;
+      const mock = createMockAPI({ 'GET /api/me': handler });
+      mock.addInterceptor({
+        onRequest: async (_url, config) => ({ ...config, headers: { ...config.headers, Authorization: `Bearer ${++n}` } })
+      });
+
+      const [a, b] = await Promise.all([
+        mock.get<{ token: string }>('/api/me', { cache: true }),
+        mock.get<{ token: string }>('/api/me', { cache: true })
+      ]);
+      expect([a.data.token, b.data.token]).toEqual(['Bearer 1', 'Bearer 2']);
+      expect(handler).toHaveBeenCalledTimes(2);
+
+      // The third call carries a third token: a miss, not a hit on the first.
+      const c = await mock.get<{ token: string }>('/api/me', { cache: true });
+      expect(c.cached).toBeUndefined();
+      expect(c.data.token).toBe('Bearer 3');
+    });
+
+    it('handlers receive header names lower-cased', async () => {
+      const mock = createMockAPI({
+        'GET /api/me': (config: RequestConfig) => ({ auth: config.headers?.['authorization'], upper: config.headers?.['Authorization'] })
+      });
+
+      const res = await mock.get<{ auth: string; upper: string | undefined }>('/api/me', { headers: { Authorization: 'Bearer x' } });
+
+      expect(res.data).toEqual({ auth: 'Bearer x', upper: undefined });
+    });
+
+    it('two FormData POSTs never coalesce; two bodies differing by a Date are two requests', async () => {
+      const handler = vi.fn(() => ({ ok: true }));
+      const mock = createMockAPI({ 'POST /api/up': handler });
+
+      await Promise.all([
+        mock.post('/api/up', new FormData(), { deduplicate: true }),
+        mock.post('/api/up', new FormData(), { deduplicate: true })
+      ]);
+      expect(handler).toHaveBeenCalledTimes(2);
+
+      await Promise.all([
+        mock.post('/api/up', { at: new Date(0) }, { deduplicate: true }),
+        mock.post('/api/up', { at: new Date(1) }, { deduplicate: true })
+      ]);
+      expect(handler).toHaveBeenCalledTimes(4);
+    });
+
+    it('invalidation matches the normalised path', async () => {
+      const handler = vi.fn(() => ({ ok: true }));
+      const mock = createMockAPI({ 'GET /api/products': handler });
+
+      await mock.get('/api/products', { cache: true });
+      expect((await mock.get('/api/products', { cache: true })).cached).toBe(true);
+      mock.invalidateCache('api/products?x=1');
+      expect((await mock.get('/api/products', { cache: true })).cached).toBeUndefined();
+      expect(handler).toHaveBeenCalledTimes(2);
+    });
+
+    it('timeout 0 is a TypeError, as in the real client', async () => {
+      const mock = createMockAPI({ 'GET /api/x': { ok: true } });
+
+      await expect(mock.get('/api/x', { timeout: 0 })).rejects.toBeInstanceOf(TypeError);
     });
   });
 });

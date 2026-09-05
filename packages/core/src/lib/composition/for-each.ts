@@ -14,7 +14,7 @@
  */
 
 import type { Reducer } from '../types.js';
-import { Effect } from '../effect.js';
+import { Effect, nestGroups } from '../effect.js';
 
 // ============================================================================
 // Type Definitions
@@ -79,6 +79,15 @@ export interface ForEachConfig<
    * The child reducer to run for matching actions.
    */
   childReducer: Reducer<ChildState, ChildAction, Dependencies>;
+
+  /**
+   * The cancellation group an element's effects belong to, by id. When
+   * given, a child's effect is nested under it (`Effect.cancelGroup(group)`
+   * cancels that element's effects); `forEachElement` passes
+   * `actionType/<id>`. Without it, the child's groups pass through as they
+   * are.
+   */
+  groupFor?: ((id: ID) => string) | undefined;
 }
 
 // ============================================================================
@@ -118,7 +127,7 @@ export function forEach<
     Dependencies
   >
 ): Reducer<ParentState, ParentAction, Dependencies> {
-  const { getArray, setArray, extractChild, wrapChild, childReducer } = config;
+  const { getArray, setArray, extractChild, wrapChild, childReducer, groupFor } = config;
 
   return (state, action, deps) => {
     // 1. Extract child action + ID from parent action
@@ -152,12 +161,12 @@ export function forEach<
     const newArray = [...array];
     newArray[index] = { id: item.id, state: newChildState };
 
-    // 5. Map child effect to parent action
+    // 5. Map child effect to parent action, under the element's group
     const mappedEffect = Effect.map(childEffect, (a: ChildAction) =>
       wrapChild(id, a)
     );
 
-    return [setArray(state, newArray), mappedEffect];
+    return [setArray(state, newArray), groupFor ? nestGroups(mappedEffect, groupFor(id)) : mappedEffect];
   };
 }
 
@@ -214,7 +223,8 @@ export function forEachElement<
     },
     wrapChild: (id, action) =>
       ({ type: actionType, id, action } as any as ParentAction),
-    childReducer
+    childReducer,
+    groupFor: (id) => `${actionType}/${id}`
   });
 }
 

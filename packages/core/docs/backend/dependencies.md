@@ -340,7 +340,7 @@ import { createLiveWebSocket } from '@composable-svelte/core';
 
 const websocket = createLiveWebSocket({
   reconnect: {
-    // `ReconnectConfig` has no optional members — all six are required.
+    // Every field is optional; these are the defaults.
     enabled: true,
     maxAttempts: 5,
     initialDelay: 1000,

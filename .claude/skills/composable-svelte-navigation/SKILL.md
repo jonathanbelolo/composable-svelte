@@ -227,6 +227,13 @@ case 'destination': {
       destination: { type: 'addItem', state: childState }
     };
 
+    // By hand there is no cancellation: a save still in flight when the
+    // destination is nulled below lands in the next presentation. Prefer
+    // `integrate(core).with('destination', Destination.reducer)`, which puts
+    // the child's effects in the field's cancellation group and cancels it on
+    // dismiss, on a parent null and on a case change — or add
+    // `Effect.cancelGroup('destination')` where the field is nulled and nest
+    // the child's effect with `Effect.inGroup(…, 'destination')`.
     effect = Effect.map(childEffect, (childAction): AppAction => ({
       type: 'destination',
       action: { type: 'presented', action: { type: 'addItem', action: childAction } }
@@ -1545,6 +1552,7 @@ This skill covers navigation and animation patterns for Composable Svelte:
 6. **Matchers**: matchPresentationAction, isActionAtPath for pattern matching
 7. **Parent Observation**: React to child completion/cancellation
 8. **Dismiss Dependency**: createDismissDependency for simple child self-dismissal
+8b. **Cancellation Groups**: a presentation's effects are cancelled on dismiss, a parent null, a case change, a pop and a shrinking setPath (`ifLetPresentation`, `integrate`, `handleStackAction`); by hand, `Effect.inGroup` + `Effect.cancelGroup`
 9. **PresentationState Lifecycle**: idle → presenting → presented → dismissing → idle
 10. **Motion One Integration**: 26 animation helpers for all lifecycle animations
 11. **URL Routing**: Sync browser history with state

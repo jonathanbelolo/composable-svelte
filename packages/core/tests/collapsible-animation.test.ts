@@ -19,11 +19,15 @@
  * exists — 0 → 0 *is* an animation, and it is exactly the one that looked fine.
  */
 
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeAll } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import CollapsibleAnimationTest from './test-components/CollapsibleAnimationTest.svelte';
+import { assertMotionAllowed, midFlight, settleValue, waitUntil } from '../src/lib/test/animation.js';
 
-const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+// `height` runs on Motion's ticker: the mid-flight sample polls for a height
+// between open and closed rather than sampling five times at 30 ms
+// (R1-REVIEW 2.1).
+beforeAll(() => assertMotionAllowed());
 
 let cleanup: Array<() => void> = [];
 afterEach(() => {
@@ -50,54 +54,44 @@ function mount() {
 }
 
 describe('collapsible expand/collapse', () => {
+	const settledHeight = (c: ReturnType<typeof mount>) => settleValue(() => c.height(), { what: 'the height' });
+
 	it('grows to a real height when expanding', async () => {
 		const c = mount();
 		c.toggle().click();
-		await wait(400);
 
-		expect(c.height(), 'the content never took up space').toBeGreaterThan(10);
+		expect(await settledHeight(c), 'the content never took up space').toBeGreaterThan(10);
 	});
 
 	it('collapses *through* intermediate heights, not straight to zero', async () => {
 		const c = mount();
 		c.toggle().click();
-		await wait(400);
-		const open = c.height();
+		const open = await settledHeight(c);
 		expect(open, 'precondition: it was open').toBeGreaterThan(10);
 
 		c.toggle().click();
-		const samples: number[] = [];
-		for (let i = 0; i < 5; i += 1) {
-			await wait(30);
-			samples.push(c.height());
-		}
-
-		expect(
-			samples.some((h) => h > 1 && h < open),
-			`height never travelled — it went straight to 0. samples: ${samples.join(', ')}`
-		).toBe(true);
+		const mid = await midFlight(() => c.height(), { from: open, to: 0, what: 'the height' });
+		expect(mid, 'height never travelled — it went straight to 0').toBeGreaterThan(1);
 	});
 
 	it('ends collapsed, with the content gone', async () => {
 		const c = mount();
 		c.toggle().click();
-		await wait(400);
+		await settledHeight(c);
 		c.toggle().click();
-		await wait(500);
 
-		expect(c.height()).toBeLessThan(2);
-		expect(c.region().textContent!.trim(), 'content should not linger').toBe('');
+		expect(await settledHeight(c)).toBeLessThan(2);
+		await waitUntil(() => c.region().textContent!.trim(), (t) => t === '', { what: 'the content to unmount' });
 	});
 
 	it('can be reopened after collapsing', async () => {
 		const c = mount();
 		c.toggle().click();
-		await wait(400);
+		await settledHeight(c);
 		c.toggle().click();
-		await wait(500);
+		await settledHeight(c);
 		c.toggle().click();
-		await wait(400);
 
-		expect(c.height()).toBeGreaterThan(10);
+		expect(await settledHeight(c)).toBeGreaterThan(10);
 	});
 });

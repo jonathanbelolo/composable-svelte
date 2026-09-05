@@ -228,6 +228,24 @@ describe('createLiveWebSocket over a scripted socket', () => {
 	describe('the heartbeat over the live client (W4)', () => {
 		const ladder = { enabled: true, maxAttempts: 3, initialDelay: 100, maxDelay: 1000, backoffMultiplier: 2, jitter: false };
 
+		it('a missed pong is reported as a HEARTBEAT_TIMEOUT error event before the reconnect', async () => {
+			expectConsole('warn');
+			const client = createLiveWebSocket({ reconnect: ladder });
+			const events: WebSocketEvent[] = [];
+			client.subscribeToEvents((event) => events.push(event));
+			const connecting = client.connect('wss://x.example');
+			ScriptedWebSocket.instances[0]!.open();
+			await connecting;
+			const heartbeat = createHeartbeat(client, { interval: 1000, timeout: 500 });
+			heartbeat.start();
+
+			await vi.advanceTimersByTimeAsync(1000); // ping
+			await vi.advanceTimersByTimeAsync(500); // no pong
+			expect(events.slice(1, 3).map((e) => e.type)).toEqual(['error', 'disconnected']);
+			expect((events[1] as { error: { code: string } }).error.code).toBe(WS_ERROR_CODES.HEARTBEAT_TIMEOUT);
+			expect(client.state.status).toBe('reconnecting');
+		});
+
 		async function withHeartbeat(config: Parameters<typeof createHeartbeat>[1]) {
 			const client = createLiveWebSocket({ reconnect: ladder });
 			const events: WebSocketEvent[] = [];
@@ -329,6 +347,183 @@ describe('createLiveWebSocket over a scripted socket', () => {
 			await second;
 			expect(ScriptedWebSocket.instances[1]!.sent).toEqual(['{"type":"after"}']);
 			expect(queued.stats.messagesQueued).toBe(0);
+		});
+	});
+
+	describe('an error on a live connection, in the order a browser fires it (R1-REVIEW 1.1; W3, W8)', () => {
+		// The HTML spec's "feedback from the protocol" task sets readyState to
+		// CLOSED, then fires error, then close. The first form classified the
+		// error by readyState, so every error on an established socket took the
+		// failed-handshake path: status 'failed', handlers nulled, no
+		// `disconnected`, no reconnect. The harness's error() now follows the
+		// spec order, and the socket's own history — did it reach onopen — decides.
+		const ladder = { enabled: true, maxAttempts: 3, initialDelay: 100, maxDelay: 1000, backoffMultiplier: 2, jitter: false };
+
+		async function live(reconnect: ReconnectConfig = ladder) {
+			const client = createLiveWebSocket({ reconnect });
+			const events: WebSocketEvent[] = [];
+			client.subscribeToEvents((event) => events.push(event));
+			const connecting = client.connect('wss://x.example');
+			ScriptedWebSocket.instances[0]!.open();
+			await connecting;
+			return { client, events };
+		}
+
+		it('error then close(1006): error, disconnected, reconnecting, and a second socket', async () => {
+			const { client, events } = await live();
+			const socket = ScriptedWebSocket.instances[0]!;
+			socket.error();
+			socket.closed(1006, false);
+
+			expect(events.slice(1).map((e) => e.type)).toEqual(['error', 'disconnected', 'reconnecting']);
+			expect(client.state.status).toBe('reconnecting');
+			await vi.advanceTimersByTimeAsync(100);
+			expect(ScriptedWebSocket.instances).toHaveLength(2);
+		});
+
+		it('error then close(1000): disconnected, and no reconnect', async () => {
+			const { client, events } = await live();
+			const socket = ScriptedWebSocket.instances[0]!;
+			socket.error();
+			socket.closed(1000, true);
+
+			expect(events.slice(1).map((e) => e.type)).toEqual(['error', 'disconnected']);
+			expect(client.state.status).toBe('disconnected');
+			await vi.advanceTimersByTimeAsync(10_000);
+			expect(ScriptedWebSocket.instances).toHaveLength(1);
+		});
+
+		it('an error on a socket that never opened is still a failed attempt', async () => {
+			const client = createLiveWebSocket({ reconnect: { enabled: false } });
+			const connecting = client.connect('wss://x.example');
+			const rejected = expect(connecting).rejects.toThrow(/Connection failed/);
+			ScriptedWebSocket.instances[0]!.error();
+			await rejected;
+			expect(client.state.status).toBe('failed');
+		});
+
+		it('a heartbeat over the client survives the sequence and restarts on the new socket', async () => {
+			const { client } = await live();
+			const heartbeat = createHeartbeat(client, { interval: 1000, timeout: 500 });
+			heartbeat.start();
+			client.subscribeToEvents((event) => {
+				if (event.type === 'connected') heartbeat.start();
+			});
+
+			const first = ScriptedWebSocket.instances[0]!;
+			first.error();
+			first.closed(1006, false);
+			await vi.advanceTimersByTimeAsync(100);
+			const second = ScriptedWebSocket.instances[1]!;
+			second.open();
+			await vi.advanceTimersByTimeAsync(1000);
+			expect(second.sent).toEqual(['"PING"']);
+			heartbeat.stop();
+		});
+
+		it('the queued wrapper flushes on the reconnected socket', async () => {
+			const { client } = await live();
+			const queued = createQueuedWebSocket(client, 10);
+			const first = ScriptedWebSocket.instances[0]!;
+			first.error();
+			first.closed(1006, false);
+			await queued.send({ type: 'held' });
+			expect(queued.stats.messagesQueued).toBe(1);
+
+			await vi.advanceTimersByTimeAsync(100);
+			ScriptedWebSocket.instances[1]!.open();
+			expect(ScriptedWebSocket.instances[1]!.sent).toEqual(['{"type":"held"}']);
+		});
+
+		it('a close with a protocol code reports PROTOCOL_ERROR before disconnected', async () => {
+			const { client, events } = await live();
+			ScriptedWebSocket.instances[0]!.closed(1002, true, 'protocol error');
+
+			const [error, disconnected] = events.slice(1);
+			expect(error).toMatchObject({ type: 'error', error: { code: WS_ERROR_CODES.PROTOCOL_ERROR } });
+			expect(disconnected).toMatchObject({ type: 'disconnected', code: 1002 });
+			expect(client.state.lastError?.code).toBe(WS_ERROR_CODES.PROTOCOL_ERROR);
+			expect(client.state.status).toBe('disconnected');
+		});
+	});
+
+	describe('the edges the review named (R1-REVIEW 1.9)', () => {
+		const ladder = { enabled: true, maxAttempts: 3, initialDelay: 100, maxDelay: 1000, backoffMultiplier: 2, jitter: false };
+
+		it('disconnect() refuses a close code the browser would refuse, before touching the socket', async () => {
+			const client = createLiveWebSocket({ reconnect: { enabled: false } });
+			const connecting = client.connect('wss://x.example');
+			ScriptedWebSocket.instances[0]!.open();
+			await connecting;
+
+			await expect(client.disconnect(1001)).rejects.toThrow(TypeError);
+			expect(client.state.status).toBe('connected');
+			expect(ScriptedWebSocket.instances[0]!.closeCalls).toEqual([]);
+			await client.disconnect(4000, 'app');
+			expect(ScriptedWebSocket.instances[0]!.closeCalls).toEqual([{ code: 4000, reason: 'app' }]);
+		});
+
+		it('reconnect() and disconnect() while reconnecting emit no second disconnected', async () => {
+			const client = createLiveWebSocket({ reconnect: ladder });
+			const events: WebSocketEvent[] = [];
+			client.subscribeToEvents((event) => events.push(event));
+			const connecting = client.connect('wss://x.example');
+			ScriptedWebSocket.instances[0]!.open();
+			await connecting;
+			ScriptedWebSocket.instances[0]!.closed(1006, false);
+			expect(events.map((e) => e.type)).toEqual(['connected', 'disconnected', 'reconnecting']);
+
+			client.reconnect('again');
+			expect(events.slice(3).map((e) => e.type)).toEqual(['reconnecting']);
+			await client.disconnect();
+			expect(events.slice(4)).toEqual([]);
+		});
+
+		it("a listener that disconnects on 'connected' does not reject the connect() that succeeded", async () => {
+			const client = createLiveWebSocket({ reconnect: { enabled: false } });
+			client.subscribeToEvents((event) => {
+				if (event.type === 'connected') void client.disconnect();
+			});
+			const connecting = client.connect('wss://x.example');
+			ScriptedWebSocket.instances[0]!.open();
+			await expect(connecting).resolves.toBeUndefined();
+			expect(client.state.status).toBe('disconnected');
+		});
+
+		it('a WebSocket constructor that throws is reported as an error event', async () => {
+			const client = createLiveWebSocket({ reconnect: { enabled: false } });
+			const events: WebSocketEvent[] = [];
+			client.subscribeToEvents((event) => events.push(event));
+			const original = globalThis.WebSocket;
+			(globalThis as { WebSocket: unknown }).WebSocket = function () {
+				throw new SyntaxError('bad url');
+			};
+			try {
+				await expect(client.connect('nope')).rejects.toThrow(/Failed to create WebSocket/);
+			} finally {
+				(globalThis as { WebSocket: unknown }).WebSocket = original;
+			}
+			expect(events.map((e) => e.type)).toEqual(['error']);
+			expect(client.state.status).toBe('failed');
+		});
+
+		it('disconnect() clears lastError', async () => {
+			const client = createLiveWebSocket({ reconnect: { enabled: false } });
+			const connecting = client.connect('wss://x.example');
+			ScriptedWebSocket.instances[0]!.open();
+			await connecting;
+			ScriptedWebSocket.instances[0]!.error();
+			expect(client.state.lastError).not.toBeNull();
+			await client.disconnect();
+			expect(client.state.lastError).toBeNull();
+		});
+
+		it('connectionTimeout: 0 means zero, not the default', async () => {
+			const client = createLiveWebSocket({ reconnect: { enabled: false }, connectionTimeout: 0 });
+			const connecting = client.connect('wss://x.example');
+			const rejected = expect(connecting).rejects.toThrow(/Connection timeout after 0ms/);
+			await vi.advanceTimersByTimeAsync(0);
+			await rejected;
 		});
 	});
 });

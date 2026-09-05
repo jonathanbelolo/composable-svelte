@@ -10,7 +10,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { expectConsole } from '../helpers/console.js';
-import { mkdtemp, readdir, rm } from 'fs/promises';
+import { mkdir, mkdtemp, readdir, rm, symlink } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join, relative } from 'path';
 import { generateStaticSite } from '../../src/lib/ssr/ssg';
@@ -64,4 +64,27 @@ describe('generateStaticSite on a real directory', () => {
 			join('site', 'dist', 'index.html')
 		]);
 	});
+
+	it('a symlink inside outDir cannot route a write outside it', async () => {
+		// resolve() is lexical: `dist/link/x` sat under outDir on paper while
+		// `link` pointed elsewhere, and the file was written there.
+		expectConsole('error');
+		const outDir = join(root, 'dist');
+		const elsewhere = join(root, 'elsewhere');
+		await mkdir(outDir, { recursive: true });
+		await mkdir(elsewhere, { recursive: true });
+		await symlink(elsewhere, join(outDir, 'link'));
+
+		const result = await generateStaticSite(
+			{} as never,
+			{ routes: [{ path: '/link/x' }], outDir, generate404: false },
+			{ reducer, dependencies: {}, getInitialState: async () => ({ title: 'x' }) }
+		);
+
+		expect(result.errors.map((e) => e.error.message)).toEqual([
+			expect.stringContaining('a directory on the way is a link to outside outDir')
+		]);
+		expect(await tree(elsewhere)).toEqual([]);
+	});
 });
+

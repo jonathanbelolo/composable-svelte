@@ -36,6 +36,7 @@
 
 import { describe, it, expect, afterEach } from 'vitest';
 import { mount, unmount, flushSync } from 'svelte';
+import { settleAnimations } from '@composable-svelte/core/test';
 import CursorMarker from '../src/lib/streaming-chat/collaborative-primitives/CursorMarker.svelte';
 import CursorOverlay from '../src/lib/streaming-chat/collaborative-primitives/CursorOverlay.svelte';
 
@@ -56,17 +57,6 @@ afterEach(() => {
  * did not exist a moment earlier. The first draft read the opacity between those
  * two and saw `1`, passing on the broken component.
  */
-async function settleAnimations(root: Element) {
-	for (let pass = 0; pass < 5; pass += 1) {
-		const finite = root
-			.getAnimations({ subtree: true })
-			.filter((a) => (a.effect?.getComputedTiming().iterations ?? 1) !== Infinity);
-		if (finite.length === 0) return;
-		for (const animation of finite) animation.finish();
-		await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-	}
-	throw new Error('animations never settled');
-}
 
 function render(Component: unknown, props: Record<string, unknown>) {
 	const target = document.createElement('div');

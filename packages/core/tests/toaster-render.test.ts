@@ -18,6 +18,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import Toaster from '../src/lib/components/toast/Toaster.svelte';
 import { createToastStore } from '../src/lib/components/toast/index.js';
+import { midFlight, settleAnimations, waitForStyle, waitUntil } from '../src/lib/test/animation.js';
 
 const settle = (ms = 250) => new Promise((r) => setTimeout(r, ms));
 
@@ -141,27 +142,22 @@ describe('the exit animation', () => {
 		const store = createToastStore();
 		render(Toaster, { store });
 		store.dispatch({ type: 'toastAdded', toast: { variant: 'info', description: 'x' } });
-		await settle(400);
-
-		const el = toasts()[0]! as HTMLElement;
+		const el = (await waitUntil(() => toasts()[0] as HTMLElement | undefined, (t) => t !== undefined, { what: 'the toast' }))!;
+		await settleAnimations(el);
+		await waitForStyle(el, 'opacity', (v) => v === '1');
 		expect(Number(getComputedStyle(el).opacity), 'precondition: fully visible').toBeCloseTo(1, 1);
 
 		document.querySelector<HTMLButtonElement>('[aria-label="Dismiss"]')!.click();
-		await settle(80);
 
 		// Asserted on the rendered OPACITY, which is what `animateToastOut`
-		// actually drives (`opacity: [1, 0]`, `scale: [1, 0.95]`).
-		// `getAnimations()` was useless here and I checked rather than assumed:
-		// with and without the call it reported an identical
-		// `before=1 after=["Animation:-"]`, because the animate-in animation is
-		// still attached. Counting animations proves nothing; the pixels do.
-		expect(
-			Number(getComputedStyle(el).opacity),
-			'the toast vanished with no exit animation'
-		).toBeLessThan(0.95);
+		// actually drives (`opacity: [1, 0]`, `scale: [1, 0.95]`) — polled for a
+		// value strictly between 1 and 0 rather than read 80 ms in
+		// (R1-REVIEW 2.1). Counting animations proves nothing here: the
+		// animate-in animation is still attached; the pixels do.
+		const mid = await midFlight(() => Number(getComputedStyle(el).opacity), { from: 1, to: 0, what: 'the toast opacity' });
+		expect(mid, 'the toast vanished with no exit animation').toBeLessThan(1);
 		expect(toasts(), 'it was removed before animating').toHaveLength(1);
 
-		await settle(800);
-		expect(toasts()).toHaveLength(0);
+		await waitUntil(() => toasts().length, (n) => n === 0, { what: 'the toast to be removed' });
 	});
 });

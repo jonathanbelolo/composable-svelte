@@ -8,6 +8,7 @@ export { parseRetryAfter } from './retry.js';
 // Error classes
 export {
   APIError,
+  CancelledError,
   NetworkError,
   TimeoutError,
   ValidationError,

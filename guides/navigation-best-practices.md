@@ -31,6 +31,7 @@ case 'destination': {
     (s) => s.destination,
     (s, d) => ({ ...s, destination: d }),
     'destination',
+    (ca) => ({ type: 'destination', action: { type: 'presented', action: ca } }),
     childReducer
   )(state, action, deps);
 
@@ -413,6 +414,7 @@ case 'addItem': {
     (s) => s.addItem,
     (s, item) => ({ ...s, addItem: item }),
     'addItem',
+    (ca) => ({ type: 'addItem', action: { type: 'presented', action: ca } }),
     addItemReducer
   )(state, action, {});
 
@@ -459,6 +461,7 @@ case 'destination': {
     (s) => s.destination,
     (s, d) => ({ ...s, destination: d }),
     'destination',
+    (ca) => ({ type: 'destination', action: { type: 'presented', action: ca } }),
     destinationReducer
   )(state, action, deps);
 
