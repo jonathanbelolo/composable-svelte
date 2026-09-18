@@ -1,0 +1,42 @@
+{
+  "@composable-svelte/auth": {
+    "version": "0.2.1",
+    "resolved": "https://registry.npmjs.org/@composable-svelte/auth/-/auth-0.2.1.tgz",
+    "integrity": "sha512-YWqQkdEZ7rG7+41ydmkdeBeGL29MGWx4Ouh48Yf6R3KWugwFxzkf3QDmoVFxxD0jxbs6Di4VXKlxFEhDyw3ybw=="
+  },
+  "@composable-svelte/charts": {
+    "version": "0.2.1",
+    "resolved": "https://registry.npmjs.org/@composable-svelte/charts/-/charts-0.2.1.tgz",
+    "integrity": "sha512-HPd4LNWmOCAytzPBbYSlWt2yFnA5WlXXhSAfAllP+re4rZ2aoT/Oi9IiROIAdYQOoWTjVyWmunwPyBH1sDejAw=="
+  },
+  "@composable-svelte/chat": {
+    "version": "0.4.1",
+    "resolved": "https://registry.npmjs.org/@composable-svelte/chat/-/chat-0.4.1.tgz",
+    "integrity": "sha512-dF2Kf0YeG5E9jhnppoKrOASMG3XP+Zrboxrab1fnRBsVHbgPEOvX32xUwu7Fj6I2fi5v4yzymDGvqisHYwpLsQ=="
+  },
+  "@composable-svelte/code": {
+    "version": "0.4.1",
+    "resolved": "https://registry.npmjs.org/@composable-svelte/code/-/code-0.4.1.tgz",
+    "integrity": "sha512-HvXKqyQCpD/ZDJ0bb+gY1UWJUUQ8EAGAl6KdZIoGUl3d2nOD3delRHm9FDnuDGj8vO5/hS0HYeERZEr/2NGGQg=="
+  },
+  "@composable-svelte/core": {
+    "version": "0.12.2",
+    "resolved": "https://registry.npmjs.org/@composable-svelte/core/-/core-0.12.2.tgz",
+    "integrity": "sha512-TC1ahw9+edgxos3eQGXFTEkwDyf18wbiUN8g2syEiyvBg+A/JdukZcqoWW0SUKdGGSo86jq9d+0NnHy+vSA3cA=="
+  },
+  "@composable-svelte/graphics": {
+    "version": "0.2.1",
+    "resolved": "https://registry.npmjs.org/@composable-svelte/graphics/-/graphics-0.2.1.tgz",
+    "integrity": "sha512-8aJqLXur/KgClbHx0IrYHd+8VWr3tGCV+ktBFEI0oLne6h5GqpHkeIUs3d/WFKUD1t3WuOutmH36KYwYi9Q2+A=="
+  },
+  "@composable-svelte/maps": {
+    "version": "0.2.1",
+    "resolved": "https://registry.npmjs.org/@composable-svelte/maps/-/maps-0.2.1.tgz",
+    "integrity": "sha512-xMKvB5wUk4v8dmD/e1ejfpAGwH7bYf+JmAgsBqhe6NFPh3FN/CaxMs4trNLcOLRYcKwjx7RblIcGHtDQQDZWTQ=="
+  },
+  "@composable-svelte/media": {
+    "version": "0.4.1",
+    "resolved": "https://registry.npmjs.org/@composable-svelte/media/-/media-0.4.1.tgz",
+    "integrity": "sha512-fpHp35hk4EPxTBdLz159Z3wCq4aSrOoSRkhw1tyOowfR7gguhWP8fA3HfPq94gzrQ76DJb+JJltorXmAkVp0Mg=="
+  }
+}
