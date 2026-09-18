@@ -1,0 +1,11 @@
+
+> composable-svelte@0.0.0 verify:package /Users/jonathanbelolo/dev/claude/code/composable-svelte
+> node scripts/verify-package.mjs
+
+packing…
+installing the set outside the workspace…
+resolving every declared entry point…
+
+  53 entry points resolved · 26 need a Svelte loader · 1 need an optional peer · 3 deep paths refused
+
+OK — the packaged set installs and resolves outside the workspace.

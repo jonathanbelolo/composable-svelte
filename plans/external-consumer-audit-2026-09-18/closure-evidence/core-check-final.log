@@ -1,0 +1,12 @@
+
+> @composable-svelte/core@0.12.2 check /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core
+> svelte-check --tsconfig ./tsconfig.test.json --fail-on-warnings
+
+Loading svelte-check in workspace: /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core
+Getting Svelte diagnostics...
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+Browserslist: browsers data (caniuse-lite) is 11 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+svelte-check found 0 errors and 0 warnings

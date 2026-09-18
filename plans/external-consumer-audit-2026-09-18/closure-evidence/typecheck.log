@@ -1,0 +1,41 @@
+Scope: 20 of 21 workspace projects
+packages/core typecheck$ tsc --noEmit
+packages/core typecheck: Done
+examples/counter typecheck$ tsc --noEmit
+examples/contact-form typecheck$ tsc --noEmit
+examples/file-browser typecheck$ tsc --noEmit
+examples/data-table typecheck$ tsc --noEmit
+examples/file-browser typecheck: Done
+examples/multi-step-form typecheck$ tsc --noEmit
+examples/counter typecheck: Done
+examples/product-gallery typecheck$ tsc --noEmit
+examples/data-table typecheck: Done
+examples/registration-form typecheck$ tsc --noEmit
+examples/contact-form typecheck: Done
+examples/ssr-server typecheck$ tsc --noEmit
+examples/multi-step-form typecheck: Done
+examples/url-routing typecheck$ tsc --noEmit
+examples/product-gallery typecheck: Done
+packages/auth typecheck$ tsc --noEmit
+examples/registration-form typecheck: Done
+packages/charts typecheck$ tsc --noEmit
+examples/url-routing typecheck: Done
+packages/code typecheck$ tsc --noEmit
+examples/ssr-server typecheck: Done
+packages/graphics typecheck$ tsc --noEmit
+packages/charts typecheck: Done
+packages/maps typecheck$ tsc --noEmit
+packages/auth typecheck: Done
+packages/media typecheck$ tsc --noEmit
+packages/code typecheck: Done
+packages/maps typecheck: Done
+packages/media typecheck: Done
+packages/graphics typecheck: Done
+packages/chat typecheck$ tsc --noEmit
+examples/auth-server typecheck$ tsc --noEmit
+examples/shader-gallery typecheck$ tsc --noEmit
+packages/chat typecheck: Done
+examples/shader-gallery typecheck: Done
+examples/auth-server typecheck: Done
+examples/styleguide typecheck$ tsc --noEmit
+examples/styleguide typecheck: Done

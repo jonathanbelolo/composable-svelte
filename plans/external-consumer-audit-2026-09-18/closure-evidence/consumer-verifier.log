@@ -1,0 +1,198 @@
+Consumer verification: /var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/composable-consumer-UjLrqF
+composable-svelte-core-0.12.2.tgz
+composable-svelte-auth-0.2.1.tgz
+composable-svelte-charts-0.2.1.tgz
+composable-svelte-chat-0.4.1.tgz
+composable-svelte-code-0.4.1.tgz
+composable-svelte-graphics-0.2.1.tgz
+composable-svelte-maps-0.2.1.tgz
+composable-svelte-media-0.4.1.tgz
+
+added 179 packages in 3s
+
+> check
+> svelte-check --tsconfig ./tsconfig.json --fail-on-warnings
+
+Loading svelte-check in workspace: /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/composable-consumer-UjLrqF/starter
+Getting Svelte diagnostics...
+
+svelte-check found 0 errors and 0 warnings
+
+> test
+> vitest run
+
+1:24:52 PM [vite-plugin-svelte] no Svelte config found at /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/composable-consumer-UjLrqF/starter - using default configuration.
+
+ RUN  v4.0.7 /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/composable-consumer-UjLrqF/starter
+
+ ✓ tests/counter.test.ts (2 tests) 2ms
+
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+   Start at  13:24:52
+   Duration  987ms (transform 693ms, setup 0ms, collect 910ms, tests 2ms, environment 0ms, prepare 2ms)
+
+
+> test:ssr
+> node scripts/ssr.mjs
+
+1:24:54 PM [vite-plugin-svelte] no Svelte config found at /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/composable-consumer-UjLrqF/starter - using default configuration.
+1:24:54 PM [vite] (client) Forced re-optimization of dependencies
+SSR smoke renders the expected initial state
+
+> test:browser
+> playwright test
+
+[2m[WebServer] [22m(node:68864) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m[plugin vite:resolve] Module "node:async_hooks" has been externalized for browser compatibility, imported by "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/composable-consumer-UjLrqF/starter/node_modules/svelte/src/internal/server/render-context.js". See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.
+[2m[WebServer] [22m(node:68921) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:68952) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 1 test using 1 worker
+
+(node:69006) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:69006) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 browser/app.spec.ts:2:1 › state, effects and both themes work in the production build (214ms)
+
+  1 passed (3.5s)
+Standalone core starter passed without satellite packages
+49 packed documents, 180 relative links, 21 README files verified
+
+added 428 packages in 5s
+
+> check
+> svelte-check --tsconfig ./tsconfig.json --fail-on-warnings
+
+Loading svelte-check in workspace: /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/composable-consumer-UjLrqF/app
+Getting Svelte diagnostics...
+
+svelte-check found 0 errors and 0 warnings
+49 typed entry points passed Bundler and NodeNext resolution
+
+> test
+> vitest run
+
+1:25:08 PM [vite-plugin-svelte] no Svelte config found at /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/composable-consumer-UjLrqF/app - using default configuration.
+
+ RUN  v4.0.7 /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/composable-consumer-UjLrqF/app
+
+ ✓ tests/counter.test.ts (2 tests) 2ms
+ ✓ readme-examples/media/media.test.ts (1 test) 2ms
+ ✓ readme-examples/charts/charts.test.ts (1 test) 2ms
+ ✓ readme-examples/chat/chat.test.ts (1 test) 3ms
+ ✓ readme-examples/code/code.test.ts (1 test) 2ms
+ ✓ readme-examples/graphics/graphics.test.ts (1 test) 2ms
+
+ Test Files  6 passed (6)
+      Tests  7 passed (7)
+   Start at  13:25:08
+   Duration  1.86s (transform 5.56s, setup 0ms, collect 8.88s, tests 14ms, environment 0ms, prepare 15ms)
+
+
+> test:ssr
+> node scripts/ssr.mjs
+
+1:25:10 PM [vite-plugin-svelte] no Svelte config found at /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/composable-consumer-UjLrqF/app - using default configuration.
+1:25:10 PM [vite] (client) Forced re-optimization of dependencies
+SSR smoke renders the expected initial state
+
+> test:browser
+> playwright test
+
+[2m[WebServer] [22m(node:69581) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m[plugin vite:resolve] Module "node:async_hooks" has been externalized for browser compatibility, imported by "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/composable-consumer-UjLrqF/app/node_modules/svelte/src/internal/server/render-context.js". See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.
+[2m[WebServer] [22mnode_modules/zod/v4/core/util.js (400:0): A comment
+[2m[WebServer] [22m
+[2m[WebServer] [22m"// Wrapped in a `@__PURE__` IIFE: esbuild never tree-shakes a top-level initializer that contains a member access on `Number`, so the bare object literal survived into every bundle."
+[2m[WebServer] [22m
+[2m[WebServer] [22min "node_modules/zod/v4/core/util.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+[2m[WebServer] [22mnode_modules/zod/v4/core/regexes.js (74:0): A comment
+[2m[WebServer] [22m
+[2m[WebServer] [22m"/** Anchors a pattern source. The interpolation lives here rather than at the call site because
+[2m[WebServer] [22m * esbuild will not drop a `@__PURE__` call whose own argument interpolates a variable, but it
+[2m[WebServer] [22m * will drop `anchor(dateSource)`. Keeping it inline pinned `date` into every bundle. */"
+[2m[WebServer] [22m
+[2m[WebServer] [22min "node_modules/zod/v4/core/regexes.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+[2m[WebServer] [22m
+[2m[WebServer] [22m(!) Some chunks are larger than 500 kB after minification. Consider:
+[2m[WebServer] [22m- Using dynamic import() to code-split the application
+[2m[WebServer] [22m- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+[2m[WebServer] [22m- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[2m[WebServer] [22m(node:69694) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:69725) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 2 workers
+
+(node:69782) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:69783) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:69782) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:69783) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 browser/app.spec.ts:2:1 › state, effects and both themes work in the production build (340ms)
+  ✓  2 browser/packages.spec.ts:2:1 › installed satellite examples render and accept input (357ms)
+
+  2 passed (6.7s)
+Positive control rejected: missing core store export
+Positive control rejected: obsolete editor option
+Positive control rejected: obsolete map provider
+Positive control rejected: wrong effect action
+Positive control rejected: node canvas array state
+Positive control rejected: missing node action lifting
+Positive control rejected: obsolete audio factory option
+Positive control rejected: missing packaged guide
+
+> test:browser
+> playwright test
+
+[2m[WebServer] [22m(node:70391) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m[plugin vite:resolve] Module "node:async_hooks" has been externalized for browser compatibility, imported by "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/composable-consumer-UjLrqF/app/node_modules/svelte/src/internal/server/render-context.js". See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.
+[2m[WebServer] [22mnode_modules/zod/v4/core/util.js (400:0): A comment
+[2m[WebServer] [22m
+[2m[WebServer] [22m"// Wrapped in a `@__PURE__` IIFE: esbuild never tree-shakes a top-level initializer that contains a member access on `Number`, so the bare object literal survived into every bundle."
+[2m[WebServer] [22m
+[2m[WebServer] [22min "node_modules/zod/v4/core/util.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+[2m[WebServer] [22mnode_modules/zod/v4/core/regexes.js (74:0): A comment
+[2m[WebServer] [22m
+[2m[WebServer] [22m"/** Anchors a pattern source. The interpolation lives here rather than at the call site because
+[2m[WebServer] [22m * esbuild will not drop a `@__PURE__` call whose own argument interpolates a variable, but it
+[2m[WebServer] [22m * will drop `anchor(dateSource)`. Keeping it inline pinned `date` into every bundle. */"
+[2m[WebServer] [22m
+[2m[WebServer] [22min "node_modules/zod/v4/core/regexes.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+[2m[WebServer] [22m
+[2m[WebServer] [22m(!) Some chunks are larger than 500 kB after minification. Consider:
+[2m[WebServer] [22m- Using dynamic import() to code-split the application
+[2m[WebServer] [22m- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+[2m[WebServer] [22m- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[2m[WebServer] [22m(node:70548) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:70579) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 2 workers
+
+(node:70590) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:70589) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:70589) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:70590) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  2 browser/packages.spec.ts:2:1 › installed satellite examples render and accept input (359ms)
+  ✓  1 browser/app.spec.ts:2:1 › state, effects and both themes work in the production build (368ms)
+
+  2 passed (6.7s)
+Tailwind 3 production browser check passed
+Consumer verification passed. Reproduction files retained at /var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/composable-consumer-UjLrqF/app

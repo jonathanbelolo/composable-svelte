@@ -1,0 +1,1003 @@
+Scope: 20 of 21 workspace projects
+
+> @composable-svelte/core@0.12.2 test /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core
+> vitest run && vitest run --config vitest.node.config.ts
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core
+
+Browserslist: browsers data (caniuse-lite) is 11 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+ ✓ |chromium| tests/destination-router.test.ts (5 tests) 3034ms
+     ✓ renders the edit route when the destination is edit  514ms
+     ✓ renders the create route when the destination is create  507ms
+     ✓ renders only the matching route, not every one  505ms
+     ✓ renders no route when there is no destination  504ms
+     ✓ swaps the rendered route when the destination changes  1005ms
+ ✓ |chromium| tests/toaster-render.test.ts (6 tests) 4126ms
+     ✓ renders a toast dispatched into it  509ms
+     ✓ dismisses it when the close button is clicked  954ms
+     ✓ fires the dependencies  955ms
+     ✓ follows the store, not a frozen prop  504ms
+     ✓ goes through the reducer rather than round it  954ms
+ ✓ |chromium| tests/animations/sidebar-animation.test.ts (5 tests) 3808ms
+     ✓ reaches presented, so the completion callback fires  625ms
+     ✓ slides in on margin, and never animates width  616ms
+     ✓ stays mounted while dismissing, then unmounts  1217ms
+     ✓ dismisses a sidebar that mounted already presented  616ms
+     ✓ honours springConfig  733ms
+ ✓ |chromium| tests/animations/modal-animation.test.ts (5 tests) 4692ms
+     ✓ should animate in when presenting  709ms
+     ✓ should animate out when dismissing  1198ms
+     ✓ should prevent interactions during animation  651ms
+     ✓ should handle rapid open/close transitions  1533ms
+     ✓ should animate backdrop independently  600ms
+ ✓ |chromium| tests/animations/alert-animation.test.ts (5 tests) 4692ms
+     ✓ should animate in when presenting  709ms
+     ✓ should animate out when dismissing  1198ms
+     ✓ should prevent interactions during animation  650ms
+     ✓ should handle rapid open/close transitions  1533ms
+     ✓ should animate backdrop independently  600ms
+ ✓ |chromium| tests/presentational-atoms.test.ts (79 tests) 5038ms
+ ✓ |chromium| tests/animations/drawer-animation.test.ts (6 tests) 5929ms
+     ✓ should animate in when presenting  1063ms
+     ✓ should animate out when dismissing  1299ms
+     ✓ should prevent interactions during animation  700ms
+     ✓ should handle rapid open/close transitions  1566ms
+     ✓ should animate backdrop independently  650ms
+     ✓ should animate from left edge  650ms
+ ✓ |chromium| tests/animations/sheet-animation.test.ts (6 tests) 5929ms
+     ✓ should animate in when presenting  1063ms
+     ✓ should animate out when dismissing  1298ms
+     ✓ should prevent interactions during animation  700ms
+     ✓ should handle rapid open/close transitions  1566ms
+     ✓ should animate backdrop independently  650ms
+     ✓ should animate from bottom edge  650ms
+ ✓ |chromium| tests/combobox-chevron.test.ts (4 tests) 2674ms
+     ✓ opens the dropdown  660ms
+     ✓ closes it again  1156ms
+     ✓ leaves the clear button working  605ms
+ ✓ |chromium| tests/animations/hydrated-open-dismissal.test.ts (4 tests) 2358ms
+     ✓ 'Modal' dismisses  558ms
+     ✓ 'Sheet' dismisses  616ms
+     ✓ 'Drawer' dismisses  616ms
+     ✓ 'Alert' dismisses  567ms
+ ✓ |chromium| tests/collapsible-animation.test.ts (4 tests) 2377ms
+     ✓ grows to a real height when expanding  377ms
+     ✓ collapses *through* intermediate heights, not straight to zero  406ms
+     ✓ ends collapsed, with the content gone  611ms
+     ✓ can be reopened after collapsing  983ms
+ ✓ |chromium| tests/command-composition.test.ts (12 tests) 6749ms
+     ✓ renders the configured commands  416ms
+     ✓ filters as you type  657ms
+     ✓ uses a custom filterFunction  657ms
+     ✓ bounds the list at mount and after every reset  908ms
+     ✓ is honoured when set  908ms
+     ✓ defaults to insensitive  655ms
+     ✓ renders headings in the declared order, ungrouped first  405ms
+     ✓ keeps keyboard order and visual order in agreement  528ms
+     ✓ renders interleaved groups with no `groups` prop  404ms
+     ✓ renders interleaved undeclared groups alongside declared ones  404ms
+     ✓ interleaves ungrouped commands without colliding  404ms
+     ✓ applies a custom filterFunction before the user types  403ms
+ ✓ |chromium| tests/test-store.test.ts (58 tests) 2001ms
+       ✓ throws error if action not received  1008ms
+ ✓ |chromium| tests/animation-interruption.test.ts (6 tests) 7293ms
+     ✓ holds for the WAAPI path (opacity/transform)  917ms
+     ✓ holds for the JS-ticker path (height)  911ms
+     ✓ control: an uninterrupted animation does settle  365ms
+     ✓ Select still responds after being toggled mid-animation  2171ms
+     ✓ Select still toggles after three immediate clicks  1606ms
+     ✓ Collapsible unmounts its content after interrupted collapses  1323ms
+ ✓ |chromium| tests/toast.test.ts (25 tests) 1852ms
+     ✓ auto-dismisses toast after duration  404ms
+ ✓ |chromium| tests/chevron-animation.test.ts (13 tests) 2197ms
+     ✓ settles pointing up  363ms
+     ✓ returns when the dropdown closes  700ms
+     ✓ 'accordion' settles at its open angle  363ms
+     ✓ 'collapsible' settles at its open angle  349ms
+     ✓ 'select' settles at its open angle  351ms
+ ✓ |chromium| tests/animations/scroll-follower.test.ts (8 tests) 1664ms
+     ✓ arrives  656ms
+     ✓ retargets when the content grows mid-flight, without restarting  733ms
+ ✓ |chromium| tests/component-mount.test.ts (14 tests) 1743ms
+ ✓ |chromium| tests/navigation-components/Tabs.test.ts (9 tests) 52ms
+ ✓ |chromium| tests/form-controls.test.ts (28 tests) 1664ms
+ ✓ |chromium| tests/switch-animation.test.ts (6 tests) 1564ms
+     ✓ settles at the far end  494ms
+     ✓ travels back  1000ms
+ ✓ |chromium| tests/navigation-components/AnimatedNavigationStack.test.ts (5 tests) 1616ms
+     ✓ survives a full present → dismiss cycle without a runaway effect  1607ms
+ ✓ |chromium| tests/form.test.ts (32 tests) 1524ms
+     ✓ submits form with valid data  310ms
+     ✓ does not rewrite a field while it is being typed  610ms
+ ✓ |chromium| tests/button.test.ts (24 tests) 1501ms
+ ✓ |chromium| tests/command-initially-open.test.ts (11 tests) 8780ms
+     ✓ closes on Escape  954ms
+     ✓ closes when the open prop goes false  956ms
+     ✓ reopens after being closed  1758ms
+     ✓ animates out, like a palette opened by a prop change  1136ms
+     ✓ closes when a command is executed  955ms
+     ✓ closes on a backdrop click  954ms
+     ✓ can be reopened by the prop after executing a command  1756ms
+ ✓ |chromium| tests/data-table-and-forms.test.ts (24 tests) 1323ms
+ ✓ |chromium| tests/carousel-animation.test.ts (5 tests) 1494ms
+     ✓ settles exactly on the next slide  365ms
+     ✓ clears isTransitioning when the animation finishes, not on a parallel timer  733ms
+     ✓ a dot jumps to its slide  383ms
+ ✓ |chromium| tests/routing/integration.browser.test.ts (14 tests) 1483ms
+       ✓ simulates full user workflow  308ms
+ ✓ |chromium| tests/routing/browser-history.browser.test.ts (15 tests) 1078ms
+ ✓ |chromium| tests/animations/fade.test.ts (6 tests) 921ms
+     ✓ ends visible the instant it resolves, with no flash back to hidden  433ms
+ ✓ |chromium| tests/breadcrumb.browser.test.ts (18 tests) 934ms
+ ✓ |chromium| tests/animations/motion-test.test.ts (3 tests) 770ms
+     ✓ should animate with spring type  567ms
+ ✓ |chromium| tests/test-helpers/animation.test.ts (18 tests) 757ms
+ ✓ |chromium| tests/select-animation.test.ts (8 tests) 716ms
+stderr | tests/websocket/heartbeat-basic.test.ts > WebSocket Heartbeat - Basic > Timeout Handling > should reconnect on timeout
+[WebSocket] Pong timeout
+ ✓ |chromium| tests/select-rendering.test.ts (6 tests) 533ms
+ ✓ |chromium| tests/calendar-month-sync.test.ts (8 tests) 459ms
+ ✓ |chromium| tests/tooltip-keyboard.test.ts (1 test) 457ms
+     ✓ shows on focus of the wrapped trigger  456ms
+ ✓ |chromium| tests/websocket/heartbeat-basic.test.ts (10 tests) 468ms
+ ✓ |chromium| tests/calendar-range-selection.test.ts (4 tests) 455ms
+stderr | tests/websocket/message-queue.test.ts > Queued WebSocket Client > Error Handling > should handle flush errors gracefully
+[Error: send failed]
+ ✓ |chromium| tests/command.test.ts (36 tests) 619ms
+       ✓ opens and closes through the explicit actions  305ms
+ ✓ |chromium| tests/websocket/mock-client.test.ts (32 tests) 431ms
+ ✓ |chromium| tests/tree-view-controls.test.ts (6 tests) 426ms
+ ✓ |chromium| tests/lightbox-loading.test.ts (3 tests) 335ms
+ ✓ |chromium| tests/websocket/message-queue.test.ts (41 tests) 381ms
+ ✓ |chromium| tests/dropdown-menu-animation.test.ts (5 tests) 401ms
+stderr | tests/api/client.test.ts > createAPIClient over a scripted fetch > the response cache (A2) > a response that cannot be cloned is not cached, and says so once per key
+[Composable Svelte] Response for /fn was not cached: it cannot be cloned (Failed to execute 'structuredClone' on 'Window': () => 1 could not be cloned.)
+stderr | tests/websocket/live-client.test.ts > createLiveWebSocket over a scripted socket > the heartbeat over the live client (W4) > a missed pong is reported as a HEARTBEAT_TIMEOUT error event before the reconnect
+[WebSocket] Pong timeout
+ ✓ |chromium| tests/navigation-components/Alert.test.ts (10 tests) 173ms
+ ✓ |chromium| tests/navigation-components/Drawer.test.ts (12 tests) 174ms
+stderr | tests/websocket/channel-router.test.ts > Channel Router > Error Handling > should catch and log listener errors
+[ChannelRouter] Error in listener for channel "chat": [Error: Listener error]
+ ✓ |chromium| tests/ssr/effect-deferral.test.ts (9 tests) 205ms
+stderr | tests/websocket/live-client.test.ts > createLiveWebSocket over a scripted socket > the heartbeat over the live client (W4) > a pong timeout reconnects instead of disconnecting for good
+[WebSocket] Pong timeout
+ ✓ |chromium| tests/api/mock-client.test.ts (56 tests) 191ms
+ ✓ |chromium| tests/navigation/dsl-end-to-end.test.ts (12 tests) 226ms
+stderr | tests/api/client.test.ts > createAPIClient over a scripted fetch > the request pipeline > a class instance in a shared or cached response warns once per path, and clearCache resets it
+[Composable Svelte] Response for /inst is a class instance; a shared or cached response is a plain-object clone
+stderr | tests/api/client.test.ts > createAPIClient over a scripted fetch > the request pipeline > a class instance in a shared or cached response warns once per path, and clearCache resets it
+[Composable Svelte] Response for /inst is a class instance; a shared or cached response is a plain-object clone
+stderr | tests/api/client.test.ts > createAPIClient over a scripted fetch > the request pipeline > the set of paths warned about is bounded by maxEntries
+[Composable Svelte] Response for /p1 is a class instance; a shared or cached response is a plain-object clone
+stderr | tests/api/client.test.ts > createAPIClient over a scripted fetch > the request pipeline > the set of paths warned about is bounded by maxEntries
+[Composable Svelte] Response for /p2 is a class instance; a shared or cached response is a plain-object clone
+stderr | tests/api/client.test.ts > createAPIClient over a scripted fetch > the request pipeline > the set of paths warned about is bounded by maxEntries
+[Composable Svelte] Response for /p1 is a class instance; a shared or cached response is a plain-object clone
+stderr | tests/api/client.test.ts > createAPIClient over a scripted fetch > the request pipeline > the uncloneable warning is per path and reset by clearCache
+[Composable Svelte] Response for /fn was not cached: it cannot be cloned (Failed to execute 'structuredClone' on 'Window': () => 1 could not be cloned.)
+stderr | tests/api/client.test.ts > createAPIClient over a scripted fetch > the request pipeline > the uncloneable warning is per path and reset by clearCache
+[Composable Svelte] Response for /fn was not cached: it cannot be cloned (Failed to execute 'structuredClone' on 'Window': () => 1 could not be cloned.)
+ ✓ |chromium| tests/api/client.test.ts (64 tests) 237ms
+ ✓ |chromium| tests/websocket/channel-router.test.ts (26 tests) 270ms
+ ✓ |chromium| tests/websocket/spy-client.test.ts (23 tests) 325ms
+ ✓ |chromium| tests/navigation-components/Sheet.test.ts (10 tests) 199ms
+ ✓ |chromium| tests/websocket/live-client.test.ts (34 tests) 185ms
+ ✓ |chromium| tests/navigation-components/Popover.test.ts (11 tests) 181ms
+ ✓ |chromium| tests/dependency-freshness.test.ts (13 tests) 9750ms
+     ✓ TreeView onSelect  762ms
+     ✓ Carousel onSlideChange  760ms
+     ✓ ImageGallery onImageClick  759ms
+     ✓ Combobox loadOptions  907ms
+     ✓ Command onCommandExecute, arriving after mount  908ms
+     ✓ Command filterFunction  502ms
+     ✓ Accordion onExpand  756ms
+     ✓ DropdownMenu onSelect  1209ms
+     ✓ dependencies fire, now that the store is reachable  502ms
+     ✓ FileUpload onUpload (already fixed)  911ms
+     ✓ Tooltip delay, both directions (already fixed)  1563ms
+ ✓ |chromium| tests/navigation-components/NavigationStack.test.ts (10 tests) 104ms
+ ✓ |chromium| tests/navigation-components/Sidebar.test.ts (10 tests) 111ms
+ ✓ |chromium| tests/form-integrated.test.ts (11 tests) 157ms
+ ✓ |chromium| tests/accordion.test.ts (31 tests) 29ms
+ ✓ |chromium| tests/navigation/dismiss.test.ts (21 tests) 33ms
+ ✓ |chromium| tests/api/effect-api.test.ts (23 tests) 55ms
+ ✓ |chromium| tests/lib/actions/focusTrap.test.ts (9 tests) 125ms
+ ✓ |chromium| tests/ssr/hydrate.test.ts (22 tests) 53ms
+ ✓ |chromium| tests/navigation-components/Modal.test.ts (9 tests) 166ms
+ ✓ |chromium| tests/form-focus.test.ts (7 tests) 133ms
+ ✓ |chromium| tests/command-item-icon.test.ts (2 tests) 106ms
+ ✓ |chromium| tests/test-store-import-guard.test.ts (2 tests) 17ms
+ ✓ |chromium| tests/effect.test.ts (29 tests) 106ms
+ ✓ |chromium| tests/lib/actions/clickOutside.test.ts (9 tests) 25ms
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > a malformed message is reported once, not on every render (I9)
+[i18n] ICU compilation error: [SyntaxError: MISSING_OTHER_CLAUSE]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-0]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-1]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-2]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-3]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-4]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-5]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-6]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-7]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-8]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-9]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-10]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-11]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-12]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-13]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-14]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-15]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-16]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-17]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-18]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-19]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-20]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-21]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-22]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-23]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-24]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-25]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-26]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-27]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-28]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-29]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-30]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-31]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-32]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-33]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-34]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-35]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-36]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-37]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-38]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-39]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-40]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-41]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-42]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-43]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-44]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-45]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-46]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-47]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-48]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-49]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-50]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-51]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-52]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-53]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-54]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-55]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-56]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-57]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-58]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-59]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-60]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-61]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-62]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-63]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-64]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-65]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-66]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-67]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-68]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-69]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-70]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-71]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-72]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-73]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-74]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-75]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-76]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-77]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-78]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-79]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-80]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-81]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-82]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-83]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-84]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-85]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-86]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-87]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-88]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-89]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-90]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-91]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-92]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-93]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-94]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-95]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-96]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-97]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-98]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [RangeError: Invalid language tag: locale-99]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > the failure cache is bounded: past 100 the oldest is dropped
+[i18n] ICU compilation error: [SyntaxError: MISSING_OTHER_CLAUSE]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > a cached failure is cleared with the cache, by locale too
+[i18n] ICU compilation error: [SyntaxError: MISSING_OTHER_CLAUSE]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > a cached failure is cleared with the cache, by locale too
+[i18n] ICU compilation error: [SyntaxError: MISSING_OTHER_CLAUSE]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > a cached failure is cleared with the cache, by locale too
+[i18n] ICU compilation error: [SyntaxError: MISSING_OTHER_CLAUSE]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > should handle invalid ICU syntax gracefully
+[i18n] ICU compilation error: [SyntaxError: MISSING_OTHER_CLAUSE]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > should handle missing parameters
+[i18n] ICU formatting error: [Error: The intl string context variable "count" was not provided to the string "{count, plural, one {# item} other {# items}}"]
+stderr | tests/i18n/icu.test.ts > compileICU > Error Handling > should handle formatting errors gracefully
+[i18n] ICU formatting error: [RangeError: Invalid time value]
+ ✓ |chromium| tests/i18n/icu.test.ts (34 tests) 25ms
+ ✓ |chromium| tests/collapsible.test.ts (24 tests) 15ms
+stderr | tests/subscription-teardown.test.ts > subscription teardown > survives a cleanup that throws synchronously
+[Composable Svelte] Subscription cleanup error: [Error: close failed]
+stderr | tests/subscription-teardown.test.ts > subscription teardown > still tears down everything after one cleanup fails
+[Composable Svelte] Subscription cleanup error: [Error: nope]
+stderr | tests/store.test.ts > createStore > destroy() aborts the in-flight cancellable, runs subscription cleanups and clears timers
+[Composable Svelte] dispatch after destroy ignored: setCount
+stderr | tests/store.test.ts > createStore > destroy() stops the store (N7) > dispatch after destroy() leaves the state unchanged and warns once
+[Composable Svelte] dispatch after destroy ignored: increment
+stderr | tests/store.test.ts > createStore > a synchronous throw in an effect body is logged, never thrown (N3) > Run: dispatch() does not throw, and the error is logged once
+[Composable Svelte] Effect error: [Error: boom]
+stderr | tests/store.test.ts > createStore > a synchronous throw in an effect body is logged, never thrown (N3) > Batch: a throwing first member does not skip the second
+[Composable Svelte] Effect error: [Error: boom]
+stderr | tests/store.test.ts > createStore > a synchronous throw in an effect body is logged, never thrown (N3) > Cancellable: the throw is logged and the id is released
+[Composable Svelte] Effect error: [Error: boom]
+stderr | tests/store.test.ts > createStore > a synchronous throw in an effect body is logged, never thrown (N3) > FireAndForget: the throw is logged, not thrown
+[Composable Svelte] Effect error: [Error: boom]
+stderr | tests/store.test.ts > createStore > a synchronous throw in an effect body is logged, never thrown (N3) > Debounced: a throw inside the timer callback is logged, not uncaught
+[Composable Svelte] Effect error: [Error: boom]
+stderr | tests/store.test.ts > createStore > a synchronous throw in an effect body is logged, never thrown (N3) > Throttled (trailing): a throw inside the timer callback is logged, not uncaught
+[Composable Svelte] Effect error: [Error: boom]
+stderr | tests/store.test.ts > createStore > a synchronous throw in an effect body is logged, never thrown (N3) > AfterDelay: a throw inside the timer callback is logged, not uncaught
+[Composable Svelte] Effect error: [Error: boom]
+stderr | tests/store.test.ts > createStore > a synchronous throw in an effect body is logged, never thrown (N3) > Throttled (leading): the immediate call is guarded too
+[Composable Svelte] Effect error: [Error: boom]
+stderr | tests/store.test.ts > createStore > a synchronous throw in an effect body is logged, never thrown (N3) > a reducer that throws when reached through an effect's dispatch is logged as an effect error
+[Composable Svelte] Effect error: [Error: reducer boom]
+ ✓ |chromium| tests/dependencies/clock.test.ts (26 tests) 5ms
+ ✓ |chromium| tests/file-upload.test.ts (29 tests) 14ms
+ ✓ |chromium| tests/store.test.ts (35 tests) 8ms
+ ✓ |chromium| tests/subscription-teardown.test.ts (4 tests) 13ms
+ ✓ |chromium| tests/combobox.test.ts (41 tests) 11ms
+ ✓ |chromium| tests/tooltip.test.ts (11 tests) 6ms
+ ✓ |chromium| tests/tree-view.test.ts (35 tests) 6ms
+ ✓ |chromium| tests/navigation-components/AlertDialog.test.ts (8 tests) 19ms
+ ✓ |chromium| tests/dependencies/cookie-storage.test.ts (43 tests) 9ms
+ ✓ |chromium| tests/table.test.ts (25 tests) 6ms
+ ✓ |chromium| tests/select.test.ts (36 tests) 6ms
+ ✓ |chromium| tests/carousel.test.ts (32 tests) 5ms
+ ✓ |chromium| tests/calendar.test.ts (29 tests) 5ms
+ ✓ |chromium| tests/api/spy-client.test.ts (37 tests) 5ms
+stderr | tests/websocket/heartbeat.test.ts > WebSocket Heartbeat > Timeout Behavior > should reconnect on pong timeout
+[WebSocket] Pong timeout
+stderr | tests/websocket/heartbeat.test.ts > WebSocket Heartbeat > Timeout Behavior > should reconnect if second ping sent without pong from first
+[WebSocket] Heartbeat timeout - no pong received
+stderr | tests/websocket/heartbeat.test.ts > WebSocket Heartbeat > Error Handling > should handle send errors gracefully
+[WebSocket] Failed to send ping: [WebSocketError: Not connected]
+ ✓ |chromium| tests/websocket/heartbeat.test.ts (21 tests) 4ms
+ ✓ |chromium| tests/form-nested.test.ts (10 tests) 5ms
+ ✓ |chromium| tests/dropdown-menu.test.ts (27 tests) 4ms
+ ✓ |chromium| tests/routing/sync-effect.test.ts (15 tests) 4ms
+ ✓ |chromium| tests/routing/schemas.test.ts (74 tests) 4ms
+stderr | tests/navigation/stack.test.ts > handleStackAction() > validates screen index and logs warning for invalid index
+[Composable Svelte] Invalid stack index: 5 (stack length: 2)
+stderr | tests/navigation/stack.test.ts > handleStackAction() > validates negative screen index
+[Composable Svelte] Invalid stack index: -1 (stack length: 2)
+ ✓ |chromium| tests/navigation/stack.test.ts (54 tests) 5ms
+ ✓ |chromium| tests/dependencies/local-storage.test.ts (49 tests) 4ms
+ ✓ |chromium| tests/routing/parser.test.ts (57 tests) 4ms
+stderr | tests/i18n/reducer.test.ts > createInitialI18nState > a locale outside availableLocales falls back to the default, with one warning
+[i18n] Locale "xx-INVALID" is not in availableLocales ["en","fr"]; using the default "en"
+stderr | tests/i18n/reducer.test.ts > i18nReducer > i18n/setLocale > still refuses a locale that is not in availableLocales
+Unsupported locale: de, ignoring. Current: en. Available: en, pt-BR, es. The locale detector lists it but availableLocales does not — add it to createInitialI18nState's locale list.
+stderr | tests/i18n/reducer.test.ts > i18nReducer > i18n/setLocale > should warn and return unchanged state for unsupported locale
+Unsupported locale: invalid, ignoring. Current: en. Available: en, pt-BR, es.
+stderr | tests/i18n/reducer.test.ts > i18nReducer > i18n/namespaceLoadFailed > should remove loading state and log error
+Failed to load namespace common for en: [Error: Failed to load]
+ ✓ |chromium| tests/i18n/reducer.test.ts (28 tests) 4ms
+ ✓ |chromium| tests/pagination.test.ts (23 tests) 4ms
+ ✓ |chromium| tests/api/errors.test.ts (35 tests) 3ms
+ ✓ |chromium| tests/routing/deep-link.test.ts (21 tests) 3ms
+ ✓ |chromium| tests/routing/query-params.test.ts (50 tests) 3ms
+ ✓ |chromium| tests/api/deduplication.test.ts (37 tests) 2ms
+stderr | tests/navigation/operators.test.ts > createDestinationReducer() > returns unchanged destination for unknown destination type
+[Composable Svelte] No reducer found for destination type: "unknown"
+ ✓ |chromium| tests/navigation/operators.test.ts (44 tests) 3ms
+ ✓ |chromium| tests/animations/presentation-guard.test.ts (1 test) 3ms
+ ✓ |chromium| tests/navigation/destination.test.ts (35 tests) 3ms
+ ✓ |chromium| tests/navigation/scope.test.ts (23 tests) 2ms
+ ✓ |chromium| tests/navigation/integrate.test.ts (30 tests) 3ms
+stderr | tests/composition.test.ts > scope() > a scoped afterDelay whose executor rejects is logged by the store once, not unhandled
+[Composable Svelte] Effect error: [Error: late]
+ ✓ |chromium| tests/composition.test.ts (11 tests) 3ms
+ ✓ |chromium| tests/utils/tree.test.ts (34 tests) 2ms
+ ✓ |chromium| tests/composition/for-each.test.ts (18 tests) 2ms
+ ✓ |chromium| tests/api/endpoints.test.ts (31 tests) 2ms
+ ✓ |chromium| tests/navigation/scope-to-destination.test.ts (17 tests) 2ms
+stderr | tests/routing/serializer.test.ts > serializeDestination > unknown destination type handling > warns and returns basePath for unknown type
+[Composable Svelte] No serializer found for destination type: "unknownType". Falling back to base path.
+stderr | tests/routing/serializer.test.ts > serializeDestination > unknown destination type handling > warns only once per unknown type
+[Composable Svelte] No serializer found for destination type: "anotherUnknown". Falling back to base path.
+ ✓ |chromium| tests/routing/serializer.test.ts (37 tests) 2ms
+ ✓ |chromium| tests/dependencies/cookie-storage.real.test.ts (3 tests) 3ms
+ ✓ |chromium| tests/form-field-record.test.ts (2 tests) 1ms
+stderr | tests/setup.test.ts > console guard > is installed around this very test: an undeclared call is a violation of the live slot
+planted live
+stderr | tests/setup.test.ts > console guard > is installed around this very test: a declared call is recorded and passes
+declared {
+  "detail": 1,
+}
+ ✓ |chromium| tests/setup.test.ts (7 tests) 1ms
+ ✓ |chromium| tests/form-field-path.test.ts (20 tests) 2ms
+stderr | tests/dependencies/mock-storage.test.ts > cross-tab events > lets one throwing listener not stop the others
+[MockStorage] Error in listener: [Error: listener blew up]
+ ✓ |chromium| tests/dependencies/mock-storage.test.ts (12 tests) 3ms
+stderr | tests/i18n/translator.test.ts > createTranslator > fallback chain > should return key if not found in any locale
+[i18n] Translation missing: common.nonexistent
+stderr | tests/i18n/translator.test.ts > createTranslator > fallback chain > should warn in dev mode when translation missing
+[i18n] Translation missing: common.missing
+stderr | tests/i18n/translator.test.ts > createTranslator > namespace handling > should return key when namespace not loaded
+[i18n] Translation missing: nonexistent.someKey
+ ✓ |chromium| tests/i18n/translator.test.ts (22 tests) 2ms
+ ✓ |chromium| tests/dependencies/local-storage.real.test.ts (2 tests) 2ms
+ ✓ |chromium| tests/ssr/serialize.test.ts (16 tests) 2ms
+ ✓ |chromium| tests/websocket/effect-websocket.test.ts (1 test) 2ms
+ ✓ |chromium| tests/navigation/scope-reactivity.test.ts (6 tests) 1ms
+ ✓ |chromium| tests/routing/types.test.ts (16 tests) 1ms
+ ✓ |chromium| tests/utils/stable-stringify.test.ts (10 tests) 1ms
+ ✓ |chromium| tests/store/finish-real-timers.test.ts (1 test) 1ms
+ ✓ |chromium| tests/navigation-components/DestinationRouter.test.ts (10 tests) 1ms
+ ✓ |chromium| tests/ssr/utils.test.ts (8 tests) 1ms
+ ✓ |chromium| tests/navigation/scopable-store.test.ts (5 tests) 1ms
+ ✓ |chromium| tests/effect-namespace.test.ts (3 tests) 1ms
+
+ Test Files  129 passed (129)
+      Tests  2493 passed (2493)
+   Start at  13:18:18
+   Duration  12.68s (transform 0ms, setup 2.29s, collect 11.25s, tests 112.89s, environment 0ms, prepare 1252.14s)
+
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+ ✓ tests/repo/bundle-probe.test.ts (4 tests) 134ms
+ ✓ tests/ssr/entry-graph.test.ts (26 tests) 153ms
+ ✓ tests/repo/dist-freshness.test.ts (10 tests) 144ms
+ ✓ tests/repo/animation-policy.test.ts (13 tests) 160ms
+ ✓ tests/repo/walk.test.ts (22 tests) 304ms
+ ✓ tests/ssr/middleware-fastify.test.ts (15 tests) 136ms
+ ✓ tests/ssr/content-initial-state.test.ts (6 tests) 68ms
+ ✓ tests/repo/intentionally-unused.test.ts (7 tests) 61ms
+ ✓ tests/repo/skill-examples.test.ts (7 tests) 21ms
+ ✓ tests/styles/public-exports.test.ts (52 tests) 110ms
+ ✓ tests/ssr/animated-initial-state.test.ts (9 tests) 125ms
+ ✓ tests/repo/optional-props.test.ts (20 tests) 84ms
+stderr | tests/ssr/ssg-fs.test.ts > generateStaticSite on a real directory > writes only inside outDir, whatever the paths say
+[SSG] Error generating /../escaped: SSGPathError: generateStaticPage: refused to write "/../escaped" — it would leave outDir
+    at pathToFilePath (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:543:79)
+    at Module.generateStaticSite (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:261:22)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/tests/ssr/ssg-fs.test.ts:51:18
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:753:20 {
+  path: '/../escaped',
+  reason: 'it would leave outDir',
+  code: 'SSG_PATH_REFUSED'
+}
+
+stderr | tests/ssr/ssg-fs.test.ts > generateStaticSite on a real directory > writes only inside outDir, whatever the paths say
+[SSG] Error generating /a/../../escaped2: SSGPathError: generateStaticPage: refused to write "/a/../../escaped2" — it would leave outDir
+    at pathToFilePath (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:543:79)
+    at Module.generateStaticSite (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:261:22)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/tests/ssr/ssg-fs.test.ts:51:18
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:753:20 {
+  path: '/a/../../escaped2',
+  reason: 'it would leave outDir',
+  code: 'SSG_PATH_REFUSED'
+}
+
+stderr | tests/ssr/ssg-fs.test.ts > generateStaticSite on a real directory > writes only inside outDir, whatever the paths say
+[SSG] Error generating /%2e%2e/escaped3: SSGPathError: generateStaticPage: refused to write "/%2e%2e/escaped3" — it would leave outDir
+    at pathToFilePath (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:543:79)
+    at Module.generateStaticSite (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:261:22)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/tests/ssr/ssg-fs.test.ts:51:18
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:753:20 {
+  path: '/%2e%2e/escaped3',
+  reason: 'it would leave outDir',
+  code: 'SSG_PATH_REFUSED'
+}
+
+stderr | tests/ssr/ssg-fs.test.ts > generateStaticSite on a real directory > writes only inside outDir, whatever the paths say
+[SSG] Error generating /..\escaped4: SSGPathError: generateStaticPage: refused to write "/..\\escaped4" — it would leave outDir
+    at pathToFilePath (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:543:79)
+    at Module.generateStaticSite (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:261:22)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/tests/ssr/ssg-fs.test.ts:51:18
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:753:20 {
+  path: '/..\\escaped4',
+  reason: 'it would leave outDir',
+  code: 'SSG_PATH_REFUSED'
+}
+
+stderr | tests/ssr/ssg-fs.test.ts > generateStaticSite on a real directory > writes only inside outDir, whatever the paths say
+[SSG] Error generating /a b: SSGPathError: generateStaticPage: refused to write "/a\u0000b" — it would leave outDir
+    at pathToFilePath (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:533:35)
+    at Module.generateStaticSite (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:261:22)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/tests/ssr/ssg-fs.test.ts:51:18
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:753:20 {
+  path: '/a\x00b',
+  reason: 'it would leave outDir',
+  code: 'SSG_PATH_REFUSED'
+}
+
+ ✓ tests/repo/satellite-theming.test.ts (3 tests) 23ms
+stderr | tests/ssr/ssg-fs.test.ts > generateStaticSite on a real directory > a symlink inside outDir cannot route a write outside it
+[SSG] Error generating /link/x: SSGPathError: generateStaticPage: refused to write "/link/x" — a directory on the way is a link to outside outDir
+    at containedPath (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:467:15)
+    at generateStaticPage (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:415:20)
+    at Module.generateStaticSite (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:294:25)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/tests/ssr/ssg-fs.test.ts:78:18
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:753:20 {
+  path: '/link/x',
+  reason: 'a directory on the way is a link to outside outDir',
+  code: 'SSG_PATH_REFUSED'
+}
+
+ ✓ tests/ssr/ssg-fs.test.ts (2 tests) 35ms
+ ✓ tests/repo/guard-integrity.test.ts (16 tests) 13ms
+ ✓ tests/repo/changelog-shape.test.ts (42 tests) 18ms
+ ❯ tests/repo/side-effects.test.ts (41 tests | 1 failed) 507ms
+     ✓ the glob translation is right 1ms
+     ✓ auth is built, so this guard is not vacuous 0ms
+     ✓ charts is built, so this guard is not vacuous 0ms
+     ✓ chat is built, so this guard is not vacuous 0ms
+     ✓ code is built, so this guard is not vacuous 0ms
+     ✓ core is built, so this guard is not vacuous 0ms
+     ✓ graphics is built, so this guard is not vacuous 0ms
+     ✓ maps is built, so this guard is not vacuous 0ms
+     ✓ media is built, so this guard is not vacuous 0ms
+     × every referenced subpath resolves to a file that exists 322ms
+     ✓ auth exports map points at files that exist 0ms
+     ✓ charts exports map points at files that exist 0ms
+     ✓ chat exports map points at files that exist 0ms
+     ✓ code exports map points at files that exist 0ms
+     ✓ core exports map points at files that exist 0ms
+     ✓ graphics exports map points at files that exist 0ms
+     ✓ maps exports map points at files that exist 0ms
+     ✓ media exports map points at files that exist 0ms
+     ✓ auth declares every side-effect module it relies on 16ms
+     ✓ charts declares every side-effect module it relies on 2ms
+     ✓ chat declares every side-effect module it relies on 5ms
+     ✓ code declares every side-effect module it relies on 3ms
+     ✓ core declares every side-effect module it relies on 71ms
+     ✓ graphics declares every side-effect module it relies on 11ms
+     ✓ maps declares every side-effect module it relies on 2ms
+     ✓ media declares every side-effect module it relies on 4ms
+     ✓ auth ships dist in the shape the markers read 15ms
+     ✓ charts ships dist in the shape the markers read 1ms
+     ✓ chat ships dist in the shape the markers read 4ms
+     ✓ code ships dist in the shape the markers read 2ms
+     ✓ core ships dist in the shape the markers read 27ms
+     ✓ graphics ships dist in the shape the markers read 7ms
+     ✓ maps ships dist in the shape the markers read 1ms
+     ✓ media ships dist in the shape the markers read 4ms
+     ✓ reads the local names an import binds 0ms
+     ✓ sees an assignment into an import wherever it sits, and not one in a comment 0ms
+     ✓ tells minified module syntax from the shape the markers read 0ms
+     ✓ reports an assignment reached only through an unlisted re-export 3ms
+     ✓ reports a bare import the same way 2ms
+     ✓ is satisfied once every link on the chain is listed 1ms
+     ✓ no package sources its own exports from a sibling 0ms
+ ✓ tests/styles/theme-tokens.test.ts (22 tests) 9ms
+stderr | tests/ssr/ssg.test.ts > SSG (Static Site Generation) > generateStaticSite > handles errors gracefully and continues generation
+[SSG] Error generating /error: Error: Failed to load data
+    at Object.<anonymous> (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/tests/ssr/ssg.test.ts:410:17)
+    at Object.Mock [as getInitialState] (file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+spy@4.0.7/node_modules/@vitest/spy/dist/index.js:274:34)
+    at Module.generateStaticSite (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:275:40)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/tests/ssr/ssg.test.ts:415:22
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:753:20
+
+stderr | tests/ssr/ssg.test.ts > SSG (Static Site Generation) > paths that would leave outDir (SS1) > generateStaticSite records each in result.errors and writes nothing outside outDir
+[SSG] Error generating /../x: SSGPathError: generateStaticPage: refused to write "/../x" — it would leave outDir
+    at pathToFilePath (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:543:79)
+    at Module.generateStaticSite (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:261:22)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/tests/ssr/ssg.test.ts:620:22
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:753:20 {
+  path: '/../x',
+  reason: 'it would leave outDir',
+  code: 'SSG_PATH_REFUSED'
+}
+
+stderr | tests/ssr/ssg.test.ts > SSG (Static Site Generation) > paths that would leave outDir (SS1) > generateStaticSite records each in result.errors and writes nothing outside outDir
+[SSG] Error generating /a/../../x: SSGPathError: generateStaticPage: refused to write "/a/../../x" — it would leave outDir
+    at pathToFilePath (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:543:79)
+    at Module.generateStaticSite (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:261:22)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/tests/ssr/ssg.test.ts:620:22
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:753:20 {
+  path: '/a/../../x',
+  reason: 'it would leave outDir',
+  code: 'SSG_PATH_REFUSED'
+}
+
+stderr | tests/ssr/ssg.test.ts > SSG (Static Site Generation) > paths that would leave outDir (SS1) > generateStaticSite records each in result.errors and writes nothing outside outDir
+[SSG] Error generating /%2e%2e/x: SSGPathError: generateStaticPage: refused to write "/%2e%2e/x" — it would leave outDir
+    at pathToFilePath (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:543:79)
+    at Module.generateStaticSite (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:261:22)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/tests/ssr/ssg.test.ts:620:22
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:753:20 {
+  path: '/%2e%2e/x',
+  reason: 'it would leave outDir',
+  code: 'SSG_PATH_REFUSED'
+}
+
+stderr | tests/ssr/ssg.test.ts > SSG (Static Site Generation) > paths that would leave outDir (SS1) > generateStaticSite records each in result.errors and writes nothing outside outDir
+[SSG] Error generating /a/%2e%2e/%2e%2e/x: SSGPathError: generateStaticPage: refused to write "/a/%2e%2e/%2e%2e/x" — it would leave outDir
+    at pathToFilePath (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:543:79)
+    at Module.generateStaticSite (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:261:22)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/tests/ssr/ssg.test.ts:620:22
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:753:20 {
+  path: '/a/%2e%2e/%2e%2e/x',
+  reason: 'it would leave outDir',
+  code: 'SSG_PATH_REFUSED'
+}
+
+stderr | tests/ssr/ssg.test.ts > SSG (Static Site Generation) > paths that would leave outDir (SS1) > generateStaticSite records each in result.errors and writes nothing outside outDir
+[SSG] Error generating /..\x: SSGPathError: generateStaticPage: refused to write "/..\\x" — it would leave outDir
+    at pathToFilePath (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:543:79)
+    at Module.generateStaticSite (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:261:22)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/tests/ssr/ssg.test.ts:620:22
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:753:20 {
+  path: '/..\\x',
+  reason: 'it would leave outDir',
+  code: 'SSG_PATH_REFUSED'
+}
+
+stderr | tests/ssr/ssg.test.ts > SSG (Static Site Generation) > paths that would leave outDir (SS1) > generateStaticSite records each in result.errors and writes nothing outside outDir
+[SSG] Error generating /./x: SSGPathError: generateStaticPage: refused to write "/./x" — it would leave outDir
+    at pathToFilePath (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:543:79)
+    at Module.generateStaticSite (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:261:22)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/tests/ssr/ssg.test.ts:620:22
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:753:20 {
+  path: '/./x',
+  reason: 'it would leave outDir',
+  code: 'SSG_PATH_REFUSED'
+}
+
+stderr | tests/ssr/ssg.test.ts > SSG (Static Site Generation) > paths that would leave outDir (SS1) > generateStaticSite records each in result.errors and writes nothing outside outDir
+[SSG] Error generating /a b: SSGPathError: generateStaticPage: refused to write "/a\u0000b" — it would leave outDir
+    at pathToFilePath (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:533:35)
+    at Module.generateStaticSite (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:261:22)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/tests/ssr/ssg.test.ts:620:22
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:753:20 {
+  path: '/a\x00b',
+  reason: 'it would leave outDir',
+  code: 'SSG_PATH_REFUSED'
+}
+
+stderr | tests/ssr/ssg.test.ts > SSG (Static Site Generation) > paths that would leave outDir (SS1) > generateStaticSite records each in result.errors and writes nothing outside outDir
+[SSG] Error generating /%zz: SSGPathError: generateStaticPage: refused to write "/%zz" — it is not valid percent-encoding
+    at pathToFilePath (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:538:12)
+    at Module.generateStaticSite (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:261:22)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/tests/ssr/ssg.test.ts:620:22
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:753:20 {
+  path: '/%zz',
+  reason: 'it is not valid percent-encoding',
+  code: 'SSG_PATH_REFUSED'
+}
+
+stderr | tests/ssr/ssg.test.ts > SSG (Static Site Generation) > paths that would leave outDir (SS1) > a data-derived path is checked the same way
+[SSG] Error generating /posts/../../escaped: SSGPathError: generateStaticPage: refused to write "/posts/../../escaped" — it would leave outDir
+    at pathToFilePath (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:543:79)
+    at Module.generateStaticSite (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:261:22)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/tests/ssr/ssg.test.ts:638:22
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:753:20 {
+  path: '/posts/../../escaped',
+  reason: 'it would leave outDir',
+  code: 'SSG_PATH_REFUSED'
+}
+
+stderr | tests/ssr/ssg.test.ts > SSG (Static Site Generation) > one file per target (SS11) > a failed 404 write lands in result.errors
+[SSG] Error generating 404 page: Error: disk full
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/tests/ssr/ssg.test.ts:679:54
+    at Mock (file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+spy@4.0.7/node_modules/@vitest/spy/dist/index.js:274:34)
+    at generateStaticPage (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:425:9)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at Module.generateStaticSite (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:330:23)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/tests/ssr/ssg.test.ts:681:22
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:753:20
+
+stderr | tests/ssr/ssg.test.ts > SSG (Static Site Generation) > a refused path (R1-REVIEW 1.9) > never reaches getInitialState or getServerProps
+[SSG] Error generating /../escaped: SSGPathError: generateStaticPage: refused to write "/../escaped" — it would leave outDir
+    at pathToFilePath (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:543:79)
+    at Module.generateStaticSite (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/src/lib/ssr/ssg.ts:261:22)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core/tests/ssr/ssg.test.ts:712:22
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:753:20 {
+  path: '/../escaped',
+  reason: 'it would leave outDir',
+  code: 'SSG_PATH_REFUSED'
+}
+
+ ✓ tests/ssr/ssg.test.ts (33 tests) 15ms
+ ✓ tests/repo/check-coverage.test.ts (50 tests) 7ms
+ ✓ tests/repo/export-surface.test.ts (16 tests) 6ms
+stderr | tests/i18n/ssr.test.ts > initI18nOnServer > should handle missing namespace gracefully
+[i18n] Namespace nonexistent not found for locale en
+
+ ✓ tests/i18n/ssr.test.ts (19 tests) 24ms
+stderr | tests/setup.test.ts > console guard > is installed around this very test: an undeclared call is a violation of the live slot
+planted live
+
+stderr | tests/setup.test.ts > console guard > is installed around this very test: a declared call is recorded and passes
+declared { detail: 1 }
+
+ ✓ tests/setup.test.ts (7 tests) 4ms
+npm warn Unknown env config "workspace-concurrency". This will stop working in the next major version of npm.
+npm warn Unknown env config "recursive". This will stop working in the next major version of npm.
+ ✓ tests/ssr/render.test.ts (17 tests) 6ms
+ ✓ tests/repo/front-door.test.ts (19 tests) 493ms
+ ✓ tests/repo/demo-headings.test.ts (6 tests) 3ms
+ ✓ tests/repo/peer-ranges.test.ts (15 tests) 4ms
+ ✓ tests/ssr/serializer.test.ts (11 tests) 5ms
+ ✓ tests/repo/published-files.test.ts (10 tests) 3ms
+ ✓ tests/repo/component-coverage.test.ts (15 tests) 4ms
+npm warn Unknown env config "workspace-concurrency". This will stop working in the next major version of npm.
+npm warn Unknown env config "recursive". This will stop working in the next major version of npm.
+ ❯ tests/repo/doc-examples.test.ts (22 tests | 1 failed) 310ms
+     ✓ finds some, so the rules below are not vacuous 1ms
+     ✓ never drive one with a mock that streams on a real clock 0ms
+     ✓ put the assertions inside an it(), so the hooks apply 0ms
+     ✓ finds the documented calls at all 0ms
+     ✓ passes a dispatch first, never a store 0ms
+     ✓ passes a wrapper function second, never the action field name 0ms
+     ✓ never calls the one-argument form 0ms
+     ✓ returns the dismiss effect rather than discarding it 1ms
+     ✓ finds them, so the arms below are not vacuous 0ms
+     ✓ still has every example it is supposed to have 0ms
+     ✓ reads every file it finds, so none is silently unguarded 0ms
+     ✓ names a document that exists 0ms
+     × is quoted verbatim by every document it names 11ms
+     ✓ finds a lot of them, so the arm below is not vacuous 0ms
+     ✓ every one of them compiles 288ms
+     ✓ no document hides markup behind another fence label 5ms
+     ✓ carries no TypeScript above its script tag 0ms
+     ✓ no documented example passes a type argument to $props() 0ms
+     ✓ recognises Svelte markup and only Svelte markup 0ms
+     ✓ does not read a template literal or a comment as markup 0ms
+     ✓ declares the stores a script-less excerpt subscribes to, and compiles 1ms
+     ✓ declares the stores an excerpt with a script still never introduces, once 0ms
+ ✓ tests/ssr/middleware.test.ts (26 tests) 17ms
+npm warn Unknown env config "workspace-concurrency". This will stop working in the next major version of npm.
+npm warn Unknown env config "recursive". This will stop working in the next major version of npm.
+ ✓ tests/repo/dist-import.test.ts (6 tests) 440ms
+     ✓ reports a subpath that does not exist, so the probe is not vacuous  437ms
+npm warn Unknown env config "workspace-concurrency". This will stop working in the next major version of npm.
+npm warn Unknown env config "recursive". This will stop working in the next major version of npm.
+npm warn Unknown env config "workspace-concurrency". This will stop working in the next major version of npm.
+npm warn Unknown env config "recursive". This will stop working in the next major version of npm.
+npm warn Unknown env config "workspace-concurrency". This will stop working in the next major version of npm.
+npm warn Unknown env config "recursive". This will stop working in the next major version of npm.
+npm warn Unknown env config "workspace-concurrency". This will stop working in the next major version of npm.
+npm warn Unknown env config "recursive". This will stop working in the next major version of npm.
+ ✓ tests/repo/doc-typecheck.test.ts (10 tests) 417ms
+npm warn Unknown env config "workspace-concurrency". This will stop working in the next major version of npm.
+npm warn Unknown env config "recursive". This will stop working in the next major version of npm.
+npm warn Unknown env config "workspace-concurrency". This will stop working in the next major version of npm.
+npm warn Unknown env config "recursive". This will stop working in the next major version of npm.
+ ✓ tests/repo/flat-barrel.test.ts (6 tests) 2ms
+npm warn Unknown env config "workspace-concurrency". This will stop working in the next major version of npm.
+npm warn Unknown env config "recursive". This will stop working in the next major version of npm.
+npm warn Unknown env config "workspace-concurrency". This will stop working in the next major version of npm.
+npm warn Unknown env config "recursive". This will stop working in the next major version of npm.
+npm warn Unknown env config "workspace-concurrency". This will stop working in the next major version of npm.
+npm warn Unknown env config "recursive". This will stop working in the next major version of npm.
+npm warn Unknown env config "workspace-concurrency". This will stop working in the next major version of npm.
+npm warn Unknown env config "recursive". This will stop working in the next major version of npm.
+npm warn Unknown env config "workspace-concurrency". This will stop working in the next major version of npm.
+npm warn Unknown env config "recursive". This will stop working in the next major version of npm.
+npm warn Unknown env config "workspace-concurrency". This will stop working in the next major version of npm.
+npm warn Unknown env config "recursive". This will stop working in the next major version of npm.
+ ❯ tests/repo/typecheck-coverage.test.ts (18 tests | 1 failed) 4175ms
+     ✓ finds workspaces with tests, so the arms below are not vacuous 2ms
+     ✓ every workspace with tests has a check script naming a config 0ms
+     ✓ packages/auth resolves all of its test files  660ms
+     ✓ packages/charts resolves all of its test files 286ms
+     ✓ packages/chat resolves all of its test files 267ms
+     ✓ packages/code resolves all of its test files 258ms
+     × packages/core resolves all of its test files 263ms
+     ✓ packages/graphics resolves all of its test files 246ms
+     ✓ packages/maps resolves all of its test files 247ms
+     ✓ packages/media resolves all of its test files 254ms
+     ✓ examples/auth-server resolves all of its test files 239ms
+     ✓ examples/contact-form resolves all of its test files 241ms
+     ✓ examples/data-table resolves all of its test files 232ms
+     ✓ examples/multi-step-form resolves all of its test files 243ms
+     ✓ examples/product-gallery resolves all of its test files 246ms
+     ✓ examples/registration-form resolves all of its test files 245ms
+     ✓ examples/url-routing resolves all of its test files 245ms
+     ✓ every exemption still exists, so the list cannot rot 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/repo/doc-examples.test.ts > documented examples that are compiled for real > is quoted verbatim by every document it names
+AssertionError: expected [ Array(1) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "packages/graphics/README.md no longer quotes packages/graphics/tests/doc-examples/test-store.test.ts verbatim — the file is what compiles, so the document is what is wrong",
++ ]
+
+ ❯ tests/repo/doc-examples.test.ts:758:19
+    756|   );
+    757| 
+    758|   expect(drifted).toEqual([]);
+       |                   ^
+    759|  });
+    760| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  tests/repo/side-effects.test.ts > side-effect imports survive tree-shaking > every referenced subpath resolves to a file that exists
+AssertionError: these subpaths are written down somewhere and do not resolve. Add an explicit exports entry, or stop referencing them.: expected [ Array(1) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "@composable-svelte/core/consumer — no exports entry matches",
++ ]
+
+ ❯ tests/repo/side-effects.test.ts:296:5
+    294|    'these subpaths are written down somewhere and do not resolve. Add …
+    295|     'explicit exports entry, or stop referencing them.'
+    296|   ).toEqual([]);
+       |     ^
+    297|  });
+    298| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  tests/repo/typecheck-coverage.test.ts > every test file is inside the config its workspace checks > packages/core resolves all of its test files
+AssertionError: packages/core/tsconfig.test.json does not resolve these test files, so nothing type-checks them. If `extends` is in play, remember it *replaces* `include`/`exclude` rather than merging: redefining one keeps the other, which is how core's config excluded every test it claimed to add.: expected [ 'consumer/tests/counter.test.ts' ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "consumer/tests/counter.test.ts",
++ ]
+
+ ❯ tests/repo/typecheck-coverage.test.ts:163:6
+    161|      `\`include\`/\`exclude\` rather than merging: redefining one keep…
+    162|      `other, which is how core's config excluded every test it claimed…
+    163|    ).toEqual([]);
+       |      ^
+    164|   }
+    165|  );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  3 failed | 33 passed (36)
+      Tests  3 failed | 620 passed (623)
+   Start at  13:18:31
+   Duration  4.64s (transform 2.05s, setup 709ms, collect 10.95s, tests 8.04s, environment 3ms, prepare 338ms)
+
+/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @composable-svelte/core@0.12.2 test: `vitest run && vitest run --config vitest.node.config.ts`
+Exit status 1

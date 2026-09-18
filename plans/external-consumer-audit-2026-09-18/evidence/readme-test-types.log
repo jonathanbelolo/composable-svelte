@@ -1,0 +1,7 @@
+tests/code.test.ts(13,23): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(partialAction: PartialAction<CodeHighlightAction>, assert?: StateAssertion<CodeHighlightState> | undefined, timeout?: number | undefined): Promise<...>', gave the following error.
+    Type '"highlightCompleted"' is not assignable to type '"init" | "codeChanged" | "languageChanged" | "themeChanged" | "copyCode" | "copyCompleted" | "copyFailed" | "resetCopyStatus" | "toggleLineNumbers" | "highlightLinesChanged" | "highlighted" | "highlightFailed"'.
+  Overload 2 of 2, '(partialActions: PartialAction<CodeHighlightAction>[], assert?: StateAssertion<CodeHighlightState> | undefined, timeout?: number | undefined): Promise<...>', gave the following error.
+    Object literal may only specify known properties, and 'type' does not exist in type 'PartialAction<CodeHighlightAction>[]'.
+tests/media.test.ts(7,5): error TS2353: Object literal may only specify known properties, and 'tracks' does not exist in type '{ volume?: number | undefined; playbackSpeed?: number | undefined; loopMode?: LoopMode | undefined; isShuffled?: boolean | undefined; }'.
+tests/media.test.ts(19,20): error TS2322: Type '"nextTrack"' is not assignable to type '"play" | "pause" | "togglePlayPause" | "stop" | "next" | "previous" | "skipForward" | "skipBackward" | "seekStarted" | "seekUpdated" | "seekEnded" | "seekTo" | "restorePreferences" | ... 22 more ... | "error"'.

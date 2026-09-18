@@ -1,0 +1,14 @@
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+ ✓ tests/repo/side-effects.test.ts (42 tests) 186ms
+ ✓ tests/repo/front-door.test.ts (19 tests) 162ms
+ ✓ tests/repo/doc-examples.test.ts (22 tests) 281ms
+ ✓ tests/repo/doc-typecheck.test.ts (10 tests) 422ms
+
+ Test Files  4 passed (4)
+      Tests  93 passed (93)
+   Start at  08:35:08
+   Duration  2.31s (transform 309ms, setup 96ms, collect 2.51s, tests 1.05s, environment 0ms, prepare 21ms)
+

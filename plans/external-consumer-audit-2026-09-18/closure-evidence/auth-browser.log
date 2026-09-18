@@ -1,0 +1,31 @@
+
+> @composable-svelte/example-auth-server@0.1.0 test:e2e /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/auth-server
+> playwright test
+
+[2m[WebServer] [22m(node:65647) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:65669) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:65675) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:65675) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:65676) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:65757) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 6 tests using 1 worker
+
+(node:65835) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:65835) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [chromium] › tests/e2e/browser.spec.ts:33:1 › the session survives a full page load, carried by the cookie alone (336ms)
+  ✓  2 [chromium] › tests/e2e/browser.spec.ts:45:1 › the cookie is HttpOnly, and script cannot see it (264ms)
+  ✓  3 [chromium] › tests/e2e/browser.spec.ts:59:1 › signing out drops the cookie, and a reload is anonymous (459ms)
+  ✓  4 [chromium] › tests/e2e/browser.spec.ts:71:1 › signs in through a real OAuth redirect (202ms)
+  ✓  5 [chromium] › tests/e2e/browser.spec.ts:85:1 › connects a provider without starting a second session (600ms)
+  ✓  6 [chromium] › tests/e2e/browser.spec.ts:116:1 › shows a cancelled sign-in as a branch, not a failure (203ms)
+
+  6 passed (4.7s)

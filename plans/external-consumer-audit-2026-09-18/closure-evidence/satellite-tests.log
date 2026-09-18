@@ -1,0 +1,2172 @@
+Scope: 19 of 21 workspace projects
+
+> @composable-svelte/example-contact-form@0.1.0 test /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/contact-form
+> vitest run
+
+1:19:21 PM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/contact-form - using default configuration.
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/contact-form
+
+1:19:21 PM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/contact-form - using default configuration.
+Browserslist: browsers data (caniuse-lite) is 11 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+stdout | tests/app.browser.test.ts > Contact Form - Integrated Mode > Form Submission > successfully submits valid form
+Submitting contact form: {
+  "email": "john@example.com",
+  "message": "This is a test message that is long enough to pass validation.",
+  "name": "John Doe",
+}
+stdout | tests/app.browser.test.ts > Contact Form - Integrated Mode > Form Submission > successfully submits valid form
+Contact form submitted successfully! {
+  "email": "john@example.com",
+  "message": "This is a test message that is long enough to pass validation.",
+  "name": "John Doe",
+}
+stdout | tests/app.browser.test.ts > Contact Form - Integrated Mode > Form Submission > adds submission to history
+Submitting contact form: {
+  "email": "jane@example.com",
+  "message": "Another test message for submission history.",
+  "name": "Jane Smith",
+}
+stdout | tests/app.browser.test.ts > Contact Form - Integrated Mode > Form Submission > adds submission to history
+Contact form submitted successfully! {
+  "email": "jane@example.com",
+  "message": "Another test message for submission history.",
+  "name": "Jane Smith",
+}
+stdout | tests/app.browser.test.ts > Contact Form - Integrated Mode > Form Submission > dismisses success message when clicked
+Submitting contact form: {
+  "email": "test@example.com",
+  "message": "Test message for dismissal test.",
+  "name": "Test User",
+}
+stdout | tests/app.browser.test.ts > Contact Form - Integrated Mode > Form Submission > dismisses success message when clicked
+Contact form submitted successfully! {
+  "email": "test@example.com",
+  "message": "Test message for dismissal test.",
+  "name": "Test User",
+}
+ ✓ |chromium| tests/app.browser.test.ts (13 tests) 10018ms
+       ✓ shows validation error when name is too short  320ms
+       ✓ clears validation errors when input becomes valid  465ms
+       ✓ successfully submits valid form  2051ms
+       ✓ adds submission to history  2033ms
+       ✓ dismisses success message when clicked  2184ms
+       ✓ does not submit invalid form  1017ms
+       ✓ rejects blocked email domains  783ms
+
+ Test Files  1 passed (1)
+      Tests  13 passed (13)
+   Start at  13:19:21
+   Duration  11.24s (transform 0ms, setup 0ms, collect 696ms, tests 10.02s, environment 0ms, prepare 43ms)
+
+
+> @composable-svelte/example-data-table@0.1.0 test /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/data-table
+> vitest run
+
+1:19:32 PM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/data-table - using default configuration.
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/data-table
+
+1:19:33 PM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/data-table - using default configuration.
+Browserslist: browsers data (caniuse-lite) is 11 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+ ✓ |chromium| tests/data-table.browser.test.ts (8 tests) 2168ms
+       ✓ clears filters when Clear Filters button is clicked  376ms
+       ✓ sorts products when column header is clicked  366ms
+       ✓ filter + sort + pagination work together  480ms
+
+ Test Files  1 passed (1)
+      Tests  8 passed (8)
+   Start at  13:19:32
+   Duration  3.36s (transform 0ms, setup 0ms, collect 686ms, tests 2.17s, environment 0ms, prepare 45ms)
+
+
+> @composable-svelte/example-multi-step-form@0.1.0 test /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/multi-step-form
+> vitest run
+
+1:19:36 PM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/multi-step-form - using default configuration.
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/multi-step-form
+
+1:19:36 PM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/multi-step-form - using default configuration.
+Browserslist: browsers data (caniuse-lite) is 11 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step Navigation - Next > moves to step 2 with valid data
+Personal info step completed: {
+  "email": "john@example.com",
+  "firstName": "John",
+  "lastName": "Doe",
+  "phone": "123-456-7890",
+}
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step Navigation - Next > moves to step 2 with valid data
+Personal info validated successfully
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step 2 - Address Validation > shows validation error for street too short
+Personal info step completed: {
+  "email": "john@example.com",
+  "firstName": "John",
+  "lastName": "Doe",
+  "phone": "123-456-7890",
+}
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step 2 - Address Validation > shows validation error for street too short
+Personal info validated successfully
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step 2 - Address Validation > shows validation error for invalid state format
+Personal info step completed: {
+  "email": "john@example.com",
+  "firstName": "John",
+  "lastName": "Doe",
+  "phone": "123-456-7890",
+}
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step 2 - Address Validation > shows validation error for invalid state format
+Personal info validated successfully
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step 2 - Address Validation > shows validation error for invalid zip code format
+Personal info step completed: {
+  "email": "john@example.com",
+  "firstName": "John",
+  "lastName": "Doe",
+  "phone": "123-456-7890",
+}
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step 2 - Address Validation > shows validation error for invalid zip code format
+Personal info validated successfully
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step 2 - Address Validation > shows error for invalid zip code (async validation)
+Personal info step completed: {
+  "email": "john@example.com",
+  "firstName": "John",
+  "lastName": "Doe",
+  "phone": "123-456-7890",
+}
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step 2 - Address Validation > shows error for invalid zip code (async validation)
+Personal info validated successfully
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step 2 - Address Validation > shows Previous and Next buttons on step 2
+Personal info step completed: {
+  "email": "john@example.com",
+  "firstName": "John",
+  "lastName": "Doe",
+  "phone": "123-456-7890",
+}
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step 2 - Address Validation > shows Previous and Next buttons on step 2
+Personal info validated successfully
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step Navigation - Previous > goes back to step 1 from step 2
+Personal info step completed: {
+  "email": "john@example.com",
+  "firstName": "John",
+  "lastName": "Doe",
+  "phone": "123-456-7890",
+}
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step Navigation - Previous > goes back to step 1 from step 2
+Personal info validated successfully
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step 3 - Review > displays all personal info data on review step
+Personal info step completed: {
+  "email": "jane@example.com",
+  "firstName": "Jane",
+  "lastName": "Smith",
+  "phone": "555-123-4567",
+}
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step 3 - Review > displays all personal info data on review step
+Personal info validated successfully
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step 3 - Review > displays all personal info data on review step
+Address step completed: {
+  "city": "Portland",
+  "state": "OR",
+  "street": "456 Oak Avenue",
+  "zipCode": "97201",
+}
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step 3 - Review > displays all personal info data on review step
+Address validated successfully
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step 3 - Review > displays all address data on review step
+Personal info step completed: {
+  "email": "jane@example.com",
+  "firstName": "Jane",
+  "lastName": "Smith",
+  "phone": "555-123-4567",
+}
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step 3 - Review > displays all address data on review step
+Personal info validated successfully
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step 3 - Review > displays all address data on review step
+Address step completed: {
+  "city": "Portland",
+  "state": "OR",
+  "street": "456 Oak Avenue",
+  "zipCode": "97201",
+}
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step 3 - Review > displays all address data on review step
+Address validated successfully
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step 3 - Review > shows Submit button instead of Next button
+Personal info step completed: {
+  "email": "jane@example.com",
+  "firstName": "Jane",
+  "lastName": "Smith",
+  "phone": "555-123-4567",
+}
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step 3 - Review > shows Submit button instead of Next button
+Personal info validated successfully
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step 3 - Review > shows Submit button instead of Next button
+Address step completed: {
+  "city": "Portland",
+  "state": "OR",
+  "street": "456 Oak Avenue",
+  "zipCode": "97201",
+}
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step 3 - Review > shows Submit button instead of Next button
+Address validated successfully
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step 3 - Review > allows editing personal info from review step
+Personal info step completed: {
+  "email": "jane@example.com",
+  "firstName": "Jane",
+  "lastName": "Smith",
+  "phone": "555-123-4567",
+}
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step 3 - Review > allows editing personal info from review step
+Personal info validated successfully
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step 3 - Review > allows editing personal info from review step
+Address step completed: {
+  "city": "Portland",
+  "state": "OR",
+  "street": "456 Oak Avenue",
+  "zipCode": "97201",
+}
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step 3 - Review > allows editing personal info from review step
+Address validated successfully
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step 3 - Review > allows editing address from review step
+Personal info step completed: {
+  "email": "jane@example.com",
+  "firstName": "Jane",
+  "lastName": "Smith",
+  "phone": "555-123-4567",
+}
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step 3 - Review > allows editing address from review step
+Personal info validated successfully
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step 3 - Review > allows editing address from review step
+Address step completed: {
+  "city": "Portland",
+  "state": "OR",
+  "street": "456 Oak Avenue",
+  "zipCode": "97201",
+}
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step 3 - Review > allows editing address from review step
+Address validated successfully
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Final Submission > successfully submits and shows success screen
+Personal info step completed: {
+  "email": "alice@example.com",
+  "firstName": "Alice",
+  "lastName": "Johnson",
+  "phone": "777-888-9999",
+}
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Final Submission > successfully submits and shows success screen
+Personal info validated successfully
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Final Submission > successfully submits and shows success screen
+Address step completed: {
+  "city": "Austin",
+  "state": "TX",
+  "street": "789 Maple Drive",
+  "zipCode": "73301",
+}
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Final Submission > successfully submits and shows success screen
+Address validated successfully
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Final Submission > successfully submits and shows success screen
+Onboarding submitted successfully: {
+  "address": {
+    "city": "Austin",
+    "state": "TX",
+    "street": "789 Maple Drive",
+    "zipCode": "73301",
+  },
+  "personalInfo": {
+    "email": "alice@example.com",
+    "firstName": "Alice",
+    "lastName": "Johnson",
+    "phone": "777-888-9999",
+  },
+}
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Final Submission > shows submitting state during submission
+Personal info step completed: {
+  "email": "alice@example.com",
+  "firstName": "Alice",
+  "lastName": "Johnson",
+  "phone": "777-888-9999",
+}
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Final Submission > shows submitting state during submission
+Personal info validated successfully
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Final Submission > shows submitting state during submission
+Address step completed: {
+  "city": "Austin",
+  "state": "TX",
+  "street": "789 Maple Drive",
+  "zipCode": "73301",
+}
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Final Submission > shows submitting state during submission
+Address validated successfully
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Final Submission > allows starting over from success screen
+Personal info step completed: {
+  "email": "alice@example.com",
+  "firstName": "Alice",
+  "lastName": "Johnson",
+  "phone": "777-888-9999",
+}
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Final Submission > allows starting over from success screen
+Personal info validated successfully
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Final Submission > allows starting over from success screen
+Address step completed: {
+  "city": "Austin",
+  "state": "TX",
+  "street": "789 Maple Drive",
+  "zipCode": "73301",
+}
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Final Submission > allows starting over from success screen
+Address validated successfully
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Final Submission > allows starting over from success screen
+Onboarding submitted successfully: {
+  "address": {
+    "city": "Austin",
+    "state": "TX",
+    "street": "789 Maple Drive",
+    "zipCode": "73301",
+  },
+  "personalInfo": {
+    "email": "alice@example.com",
+    "firstName": "Alice",
+    "lastName": "Johnson",
+    "phone": "777-888-9999",
+  },
+}
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Final Submission > allows starting over from success screen
+Onboarding submitted successfully: {
+  "address": {
+    "city": "Austin",
+    "state": "TX",
+    "street": "789 Maple Drive",
+    "zipCode": "73301",
+  },
+  "personalInfo": {
+    "email": "alice@example.com",
+    "firstName": "Alice",
+    "lastName": "Johnson",
+    "phone": "777-888-9999",
+  },
+}
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step Indicator Interactions > can click on completed step to navigate back
+Personal info step completed: {
+  "email": "bob@example.com",
+  "firstName": "Bob",
+  "lastName": "Williams",
+  "phone": "321-654-9870",
+}
+stdout | tests/app.browser.test.ts > Multi-Step Form - Integrated Mode > Step Indicator Interactions > can click on completed step to navigate back
+Personal info validated successfully
+ ✓ |chromium| tests/app.browser.test.ts (25 tests) 25359ms
+       ✓ shows validation error for firstName too short  337ms
+       ✓ shows error for blocked email domain  687ms
+       ✓ moves to step 2 with valid data  766ms
+       ✓ shows validation error for street too short  950ms
+       ✓ shows validation error for invalid state format  951ms
+       ✓ shows validation error for invalid zip code format  949ms
+       ✓ shows error for invalid zip code (async validation)  1353ms
+       ✓ shows Previous and Next buttons on step 2  764ms
+       ✓ goes back to step 1 from step 2  900ms
+       ✓ displays all personal info data on review step  1433ms
+       ✓ displays all address data on review step  1433ms
+       ✓ shows Submit button instead of Next button  1433ms
+       ✓ allows editing personal info from review step  1567ms
+       ✓ allows editing address from review step  1567ms
+       ✓ successfully submits and shows success screen  3268ms
+       ✓ shows submitting state during submission  1565ms
+       ✓ allows starting over from success screen  3316ms
+       ✓ can click on completed step to navigate back  900ms
+
+ Test Files  1 passed (1)
+      Tests  25 passed (25)
+   Start at  13:19:36
+   Duration  26.52s (transform 0ms, setup 0ms, collect 691ms, tests 25.36s, environment 0ms, prepare 43ms)
+
+
+> @composable-svelte/example-product-gallery@0.1.0 test /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/product-gallery
+> vitest run
+
+1:20:03 PM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/product-gallery - using default configuration.
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/product-gallery
+
+1:20:04 PM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/product-gallery - using default configuration.
+Browserslist: browsers data (caniuse-lite) is 11 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+stdout | src/features/share/__tests__/share.reducer.test.ts > Share Reducer > shareButtonTapped > returns state unchanged when method is selected - parent observes
+[Share] Sharing via email
+ ✓ |chromium| src/features/add-to-cart/__tests__/add-to-cart.reducer.test.ts (7 tests) 1ms
+ ✓ |chromium| src/features/share/__tests__/share.reducer.test.ts (8 tests) 3ms
+stdout | src/features/product-detail/__tests__/product-detail.reducer.test.ts > ProductDetail Reducer > destination - share flow > observes share completion and dismisses
+[Share] Sharing via twitter
+ ✓ |chromium| src/features/product-detail/__tests__/product-detail.reducer.test.ts (10 tests) 3ms
+stderr | tests/app.browser.test.ts > Product Gallery - User Flows > Product Detail Modal > modal displays product information
+%c[svelte] state_proxy_equality_mismatch
+%cReactive `$state(...)` proxies and the values they proxy have different identities. Because of this, comparisons with `===` will produce unexpected results
+https://svelte.dev/e/state_proxy_equality_mismatch font-weight: bold font-weight: normal
+stderr | tests/app.browser.test.ts > Product Gallery - User Flows > Add to Cart Flow > opens Add to Cart sheet when button is clicked
+%c[svelte] state_proxy_equality_mismatch
+%cReactive `$state(...)` proxies and the values they proxy have different identities. Because of this, comparisons with `===` will produce unexpected results
+https://svelte.dev/e/state_proxy_equality_mismatch font-weight: bold font-weight: normal
+stderr | tests/app.browser.test.ts > Product Gallery - User Flows > Add to Cart Flow > opens Add to Cart sheet when button is clicked
+%c[svelte] state_proxy_equality_mismatch
+%cReactive `$state(...)` proxies and the values they proxy have different identities. Because of this, comparisons with `===` will produce unexpected results
+https://svelte.dev/e/state_proxy_equality_mismatch font-weight: bold font-weight: normal
+stderr | tests/app.browser.test.ts > Product Gallery - User Flows > Add to Cart Flow > increments quantity
+%c[svelte] state_proxy_equality_mismatch
+%cReactive `$state(...)` proxies and the values they proxy have different identities. Because of this, comparisons with `===` will produce unexpected results
+https://svelte.dev/e/state_proxy_equality_mismatch font-weight: bold font-weight: normal
+stderr | tests/app.browser.test.ts > Product Gallery - User Flows > Add to Cart Flow > increments quantity
+%c[svelte] state_proxy_equality_mismatch
+%cReactive `$state(...)` proxies and the values they proxy have different identities. Because of this, comparisons with `===` will produce unexpected results
+https://svelte.dev/e/state_proxy_equality_mismatch font-weight: bold font-weight: normal
+stderr | tests/app.browser.test.ts > Product Gallery - User Flows > Add to Cart Flow > increments quantity
+%c[svelte] state_proxy_equality_mismatch
+%cReactive `$state(...)` proxies and the values they proxy have different identities. Because of this, comparisons with `===` will produce unexpected results
+https://svelte.dev/e/state_proxy_equality_mismatch font-weight: bold font-weight: normal
+stderr | tests/app.browser.test.ts > Product Gallery - User Flows > Add to Cart Flow > increments quantity
+%c[svelte] state_proxy_equality_mismatch
+%cReactive `$state(...)` proxies and the values they proxy have different identities. Because of this, comparisons with `===` will produce unexpected results
+https://svelte.dev/e/state_proxy_equality_mismatch font-weight: bold font-weight: normal
+stderr | tests/app.browser.test.ts > Product Gallery - User Flows > Share Flow > opens Share sheet when button is clicked
+%c[svelte] state_proxy_equality_mismatch
+%cReactive `$state(...)` proxies and the values they proxy have different identities. Because of this, comparisons with `===` will produce unexpected results
+https://svelte.dev/e/state_proxy_equality_mismatch font-weight: bold font-weight: normal
+stderr | tests/app.browser.test.ts > Product Gallery - User Flows > Share Flow > opens Share sheet when button is clicked
+%c[svelte] state_proxy_equality_mismatch
+%cReactive `$state(...)` proxies and the values they proxy have different identities. Because of this, comparisons with `===` will produce unexpected results
+https://svelte.dev/e/state_proxy_equality_mismatch font-weight: bold font-weight: normal
+stderr | tests/app.browser.test.ts > Product Gallery - User Flows > Quick View Flow > opens Quick View modal when button is clicked
+%c[svelte] state_proxy_equality_mismatch
+%cReactive `$state(...)` proxies and the values they proxy have different identities. Because of this, comparisons with `===` will produce unexpected results
+https://svelte.dev/e/state_proxy_equality_mismatch font-weight: bold font-weight: normal
+stderr | tests/app.browser.test.ts > Product Gallery - User Flows > Quick View Flow > opens Quick View modal when button is clicked
+%c[svelte] state_proxy_equality_mismatch
+%cReactive `$state(...)` proxies and the values they proxy have different identities. Because of this, comparisons with `===` will produce unexpected results
+https://svelte.dev/e/state_proxy_equality_mismatch font-weight: bold font-weight: normal
+stderr | tests/app.browser.test.ts > Product Gallery - User Flows > Delete Flow > shows delete confirmation alert when delete is clicked
+%c[svelte] state_proxy_equality_mismatch
+%cReactive `$state(...)` proxies and the values they proxy have different identities. Because of this, comparisons with `===` will produce unexpected results
+https://svelte.dev/e/state_proxy_equality_mismatch font-weight: bold font-weight: normal
+stderr | tests/app.browser.test.ts > Product Gallery - User Flows > Delete Flow > shows delete confirmation alert when delete is clicked
+%c[svelte] state_proxy_equality_mismatch
+%cReactive `$state(...)` proxies and the values they proxy have different identities. Because of this, comparisons with `===` will produce unexpected results
+https://svelte.dev/e/state_proxy_equality_mismatch font-weight: bold font-weight: normal
+stderr | tests/app.browser.test.ts > Product Gallery - User Flows > Delete Flow > cancels delete and returns to product detail
+%c[svelte] state_proxy_equality_mismatch
+%cReactive `$state(...)` proxies and the values they proxy have different identities. Because of this, comparisons with `===` will produce unexpected results
+https://svelte.dev/e/state_proxy_equality_mismatch font-weight: bold font-weight: normal
+stderr | tests/app.browser.test.ts > Product Gallery - User Flows > Delete Flow > cancels delete and returns to product detail
+%c[svelte] state_proxy_equality_mismatch
+%cReactive `$state(...)` proxies and the values they proxy have different identities. Because of this, comparisons with `===` will produce unexpected results
+https://svelte.dev/e/state_proxy_equality_mismatch font-weight: bold font-weight: normal
+stderr | tests/app.browser.test.ts > Product Gallery - User Flows > Delete Flow > cancels delete and returns to product detail
+%c[svelte] state_proxy_equality_mismatch
+%cReactive `$state(...)` proxies and the values they proxy have different identities. Because of this, comparisons with `===` will produce unexpected results
+https://svelte.dev/e/state_proxy_equality_mismatch font-weight: bold font-weight: normal
+stderr | tests/app.browser.test.ts > Product Gallery - User Flows > Info Popover > shows info popover when info button is clicked
+%c[svelte] state_proxy_equality_mismatch
+%cReactive `$state(...)` proxies and the values they proxy have different identities. Because of this, comparisons with `===` will produce unexpected results
+https://svelte.dev/e/state_proxy_equality_mismatch font-weight: bold font-weight: normal
+stderr | tests/app.browser.test.ts > Product Gallery - User Flows > Info Popover > shows info popover when info button is clicked
+%c[svelte] state_proxy_equality_mismatch
+%cReactive `$state(...)` proxies and the values they proxy have different identities. Because of this, comparisons with `===` will produce unexpected results
+https://svelte.dev/e/state_proxy_equality_mismatch font-weight: bold font-weight: normal
+stderr | tests/app.browser.test.ts > Product Gallery - User Flows > Complex User Journey > user journey: filter → view product → add to cart
+%c[svelte] state_proxy_equality_mismatch
+%cReactive `$state(...)` proxies and the values they proxy have different identities. Because of this, comparisons with `===` will produce unexpected results
+https://svelte.dev/e/state_proxy_equality_mismatch font-weight: bold font-weight: normal
+stderr | tests/app.browser.test.ts > Product Gallery - User Flows > Complex User Journey > user journey: filter → view product → add to cart
+%c[svelte] state_proxy_equality_mismatch
+%cReactive `$state(...)` proxies and the values they proxy have different identities. Because of this, comparisons with `===` will produce unexpected results
+https://svelte.dev/e/state_proxy_equality_mismatch font-weight: bold font-weight: normal
+stderr | tests/app.browser.test.ts > Product Gallery - User Flows > Complex User Journey > user journey: filter → view product → add to cart
+%c[svelte] state_proxy_equality_mismatch
+%cReactive `$state(...)` proxies and the values they proxy have different identities. Because of this, comparisons with `===` will produce unexpected results
+https://svelte.dev/e/state_proxy_equality_mismatch font-weight: bold font-weight: normal
+stderr | tests/app.browser.test.ts > Product Gallery - User Flows > Complex User Journey > user journey: filter → view product → add to cart
+%c[svelte] state_proxy_equality_mismatch
+%cReactive `$state(...)` proxies and the values they proxy have different identities. Because of this, comparisons with `===` will produce unexpected results
+https://svelte.dev/e/state_proxy_equality_mismatch font-weight: bold font-weight: normal
+stderr | tests/app.browser.test.ts > Product Gallery - User Flows > Complex User Journey > user journey: filter → view product → add to cart
+%c[svelte] state_proxy_equality_mismatch
+%cReactive `$state(...)` proxies and the values they proxy have different identities. Because of this, comparisons with `===` will produce unexpected results
+https://svelte.dev/e/state_proxy_equality_mismatch font-weight: bold font-weight: normal
+stderr | tests/app.browser.test.ts > Product Gallery - User Flows > Complex User Journey > user journey: filter → view product → add to cart
+%c[svelte] state_proxy_equality_mismatch
+%cReactive `$state(...)` proxies and the values they proxy have different identities. Because of this, comparisons with `===` will produce unexpected results
+https://svelte.dev/e/state_proxy_equality_mismatch font-weight: bold font-weight: normal
+ ✓ |chromium| tests/app.browser.test.ts (14 tests) 19313ms
+       ✓ renders product grid with sample products  424ms
+       ✓ renders sidebar with category filters  409ms
+       ✓ filters products when category is selected  810ms
+       ✓ clicking category again deselects it  1212ms
+       ✓ opens product detail modal when product is clicked  814ms
+       ✓ modal displays product information  813ms
+       ✓ opens Add to Cart sheet when button is clicked  1502ms
+       ✓ increments quantity  2143ms
+       ✓ opens Share sheet when button is clicked  1466ms
+       ✓ opens Quick View modal when button is clicked  1468ms
+       ✓ shows delete confirmation alert when delete is clicked  1465ms
+       ✓ cancels delete and returns to product detail  2318ms
+       ✓ shows info popover when info button is clicked  1485ms
+       ✓ user journey: filter → view product → add to cart  2983ms
+
+ Test Files  4 passed (4)
+      Tests  39 passed (39)
+   Start at  13:20:03
+   Duration  21.18s (transform 0ms, setup 0ms, collect 4.66s, tests 19.32s, environment 0ms, prepare 218ms)
+
+
+> @composable-svelte/example-registration-form@0.1.0 test /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/registration-form
+> vitest run
+
+1:20:25 PM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/registration-form - using default configuration.
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/registration-form
+
+1:20:25 PM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/registration-form - using default configuration.
+Browserslist: browsers data (caniuse-lite) is 11 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+stdout | tests/app.browser.test.ts > Registration Form - Integrated Mode > Cross-Field Validation (Password Confirmation) > submits successfully when passwords match
+Submitting registration: {
+  "confirmPassword": "Password123",
+  "email": "test2@example.com",
+  "password": "Password123",
+  "username": "testuser2",
+}
+stdout | tests/app.browser.test.ts > Registration Form - Integrated Mode > Cross-Field Validation (Password Confirmation) > submits successfully when passwords match
+Registration successful! {
+  "email": "test2@example.com",
+  "username": "testuser2",
+}
+stdout | tests/app.browser.test.ts > Registration Form - Integrated Mode > Cross-Field Validation (Password Confirmation) > submits successfully when passwords match
+Registration form submitted successfully
+stdout | tests/app.browser.test.ts > Registration Form - Integrated Mode > Form Submission > successfully submits valid form and shows success screen
+Submitting registration: {
+  "confirmPassword": "Password123",
+  "email": "newuser@example.com",
+  "password": "Password123",
+  "username": "newuser123",
+}
+stdout | tests/app.browser.test.ts > Registration Form - Integrated Mode > Form Submission > successfully submits valid form and shows success screen
+Registration successful! {
+  "email": "newuser@example.com",
+  "username": "newuser123",
+}
+stdout | tests/app.browser.test.ts > Registration Form - Integrated Mode > Form Submission > successfully submits valid form and shows success screen
+Registration form submitted successfully
+stdout | tests/app.browser.test.ts > Registration Form - Integrated Mode > Form Submission > shows "Creating Account..." button text during submission
+Submitting registration: {
+  "confirmPassword": "Password123",
+  "email": "newuser456@example.com",
+  "password": "Password123",
+  "username": "newuser456",
+}
+stdout | tests/app.browser.test.ts > Registration Form - Integrated Mode > Form Submission > does not submit invalid form
+Registration successful! {
+  "email": "newuser456@example.com",
+  "username": "newuser456",
+}
+stdout | tests/app.browser.test.ts > Registration Form - Integrated Mode > Form Submission > does not submit invalid form
+Registration form submitted successfully
+stdout | tests/app.browser.test.ts > Registration Form - Integrated Mode > Success Screen > allows resetting to register another account
+Submitting registration: {
+  "confirmPassword": "Password123",
+  "email": "testuser789@example.com",
+  "password": "Password123",
+  "username": "testuser789",
+}
+stdout | tests/app.browser.test.ts > Registration Form - Integrated Mode > Success Screen > allows resetting to register another account
+Registration successful! {
+  "email": "testuser789@example.com",
+  "username": "testuser789",
+}
+stdout | tests/app.browser.test.ts > Registration Form - Integrated Mode > Success Screen > allows resetting to register another account
+Registration form submitted successfully
+ ✓ |chromium| tests/app.browser.test.ts (18 tests) 16209ms
+       ✓ shows validation error for username too short  345ms
+       ✓ shows error for taken username  885ms
+       ✓ shows error for taken email  885ms
+       ✓ shows error when passwords do not match on submit  966ms
+       ✓ shows the mismatch before submit, and clears it when the other field is fixed  1434ms
+       ✓ submits successfully when passwords match  2183ms
+       ✓ successfully submits valid form and shows success screen  2168ms
+       ✓ shows "Creating Account..." button text during submission  981ms
+       ✓ does not submit invalid form  2170ms
+       ✓ allows resetting to register another account  2230ms
+
+ Test Files  1 passed (1)
+      Tests  18 passed (18)
+   Start at  13:20:25
+   Duration  17.36s (transform 0ms, setup 0ms, collect 671ms, tests 16.21s, environment 0ms, prepare 42ms)
+
+
+> @examples/url-routing@0.1.0 test /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/url-routing
+> vitest run
+
+1:20:43 PM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/url-routing - using default configuration.
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/url-routing
+
+ ✓ tests/modal-dismissal.test.ts (4 tests) 21ms
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  13:20:43
+   Duration  795ms (transform 253ms, setup 0ms, collect 344ms, tests 21ms, environment 348ms, prepare 4ms)
+
+
+> @composable-svelte/auth@0.2.1 test /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/auth
+> vitest run && vitest run --config vitest.ssr.config.ts
+
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/auth
+
+ ✓ |chromium| tests/logout-liveness.test.ts (3 tests) 101ms
+ ✓ |chromium| tests/mock-auth-deps.test.ts (31 tests) 16ms
+ ✓ |chromium| tests/account-lifecycle.test.ts (17 tests) 12ms
+ ✓ |chromium| tests/password-input.test.ts (12 tests) 860ms
+     ✓ starts hidden and reveals on click  701ms
+ ✓ |chromium| tests/account-management-flow.test.ts (20 tests) 6ms
+ ✓ |chromium| tests/email-verification.test.ts (11 tests) 682ms
+ ✓ |chromium| tests/account-flow.test.ts (14 tests) 7ms
+ ✓ |chromium| tests/mfa-flow.test.ts (16 tests) 5ms
+ ✓ |chromium| tests/http-signup.test.ts (31 tests) 4ms
+ ✓ |chromium| tests/magic-link.test.ts (15 tests) 842ms
+ ✓ |chromium| tests/signup-flow.test.ts (15 tests) 7ms
+ ✓ |chromium| tests/auth-guard-anonymous.test.ts (6 tests) 985ms
+     ✓ does not re-fire on dispatches that leave it anonymous  428ms
+ ✓ |chromium| tests/oauth-flow.test.ts (24 tests) 5ms
+ ✓ |chromium| tests/account.test.ts (14 tests) 993ms
+ ✓ |chromium| tests/signup-form.test.ts (14 tests) 1065ms
+     ✓ hands the session over when the backend issues one  369ms
+ ✓ |chromium| tests/account-lifecycle-flow.test.ts (17 tests) 5ms
+ ✓ |chromium| tests/oauth.test.ts (17 tests) 1288ms
+     ✓ offers one control per provider and starts the one pressed  367ms
+     ✓ every branch a user can be stuck on has something to click  417ms
+ ✓ |chromium| tests/account-management.test.ts (18 tests) 1303ms
+     ✓ turns it off, and stops claiming it is on before the account is re-read  362ms
+ ✓ |chromium| tests/login-form.test.ts (16 tests) 1620ms
+     ✓ reports each keystroke into the flow store  492ms
+ ✓ |chromium| tests/oauth-http.test.ts (27 tests) 5ms
+ ✓ |chromium| tests/password-recovery.test.ts (14 tests) 1614ms
+     ✓ says the same thing whether or not the address exists  676ms
+ ✓ |chromium| tests/session-http.test.ts (16 tests) 3ms
+ ✓ |chromium| tests/session-reducer.test.ts (15 tests) 7ms
+ ✓ |chromium| tests/password-recovery-flow.test.ts (13 tests) 4ms
+ ✓ |chromium| tests/login-flow.test.ts (8 tests) 3ms
+ ✓ |chromium| tests/email-field.test.ts (5 tests) 2ms
+ ✓ |chromium| tests/auth-error.test.ts (15 tests) 2ms
+ ✓ |chromium| tests/http-error-mapping.test.ts (24 tests) 2ms
+ ✓ |chromium| tests/malformed-2xx.test.ts (2 tests) 1ms
+ ✓ |chromium| tests/session-established.test.ts (9 tests) 3ms
+ ✓ |chromium| tests/magic-link-flow.test.ts (13 tests) 6ms
+ ✓ |chromium| tests/session-error-wording.test.ts (8 tests) 3ms
+ ✓ |chromium| tests/subject.test.ts (11 tests) 1ms
+ ✓ |chromium| tests/email-verification-flow.test.ts (17 tests) 3ms
+ ✓ |chromium| tests/gate-unresolved.test.ts (3 tests) 2ms
+ ✓ |chromium| tests/components.smoke.browser.test.ts (4 tests) 3ms
+ ✓ |chromium| tests/auth-guard-relogin.test.ts (2 tests) 1ms
+ ✓ |chromium| tests/mfa.test.ts (20 tests) 2212ms
+     ✓ hands the challenge from LoginForm to the challenge form  584ms
+
+ Test Files  38 passed (38)
+      Tests  537 passed (537)
+   Start at  13:20:44
+   Duration  4.44s (transform 0ms, setup 0ms, collect 15.83s, tests 13.68s, environment 0ms, prepare 80.73s)
+
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/auth
+
+ ✓ tests/ssr/login-form-ssr.test.ts (30 tests) 10ms
+
+ Test Files  1 passed (1)
+      Tests  30 passed (30)
+   Start at  13:20:49
+   Duration  1.19s (transform 827ms, setup 0ms, collect 1.10s, tests 10ms, environment 0ms, prepare 2ms)
+
+
+> @composable-svelte/charts@0.2.1 test /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/charts
+> vitest run
+
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/charts
+
+ ✓ tests/contrast.test.ts (10 tests) 2ms
+ ✓ tests/brush-selection.test.ts (10 tests) 3ms
+ ✓ tests/chart.reducer.test.ts (11 tests) 3ms
+ ✓ tests/focus.reducer.test.ts (33 tests) 4ms
+ ✓ tests/chart.integration.test.ts (20 tests) 5ms
+ ✓ tests/focus-mark.test.ts (15 tests) 49ms
+ ✓ tests/selection-render.test.ts (19 tests) 55ms
+ ✓ tests/pan.test.ts (6 tests) 2ms
+ ✓ tests/accessibility-markup.test.ts (5 tests) 342ms
+ ✓ tests/prop-changes.test.ts (1 test) 521ms
+     ✓ changing the y accessor redraws  520ms
+ ✓ tests/wcag-conformance.test.ts (8 tests) 665ms
+ ✓ tests/brush-install.test.ts (3 tests) 764ms
+ ✓ tests/data-table.test.ts (12 tests) 712ms
+ ✓ tests/keyboard.test.ts (14 tests) 1005ms
+ ✓ tests/render-reaches-canvas.test.ts (3 tests) 1778ms
+     ✓ a resize changes the rendered SVG size  513ms
+     ✓ re-sorting the same rows redraws  507ms
+     ✓ moving the selection redraws  757ms
+ ✓ tests/documented-options.test.ts (12 tests) 2648ms
+     ✓ animateZoomTransition honours the duration it is given  2103ms
+     ✓ enableAnimations={false} jumps straight to the target  510ms
+ ✓ tests/selection-callback.test.ts (9 tests) 6863ms
+     ✓ reports a selection  508ms
+     ✓ reports a cleared selection  761ms
+     ✓ stays silent through unrelated dispatches  788ms
+     ✓ stays silent when a selection is re-made identically  1258ms
+     ✓ stays silent when clearing an already-empty selection  1004ms
+     ✓ stays silent when a range is re-selected identically  1257ms
+     ✓ still reports a genuinely different range  767ms
+
+ Test Files  17 passed (17)
+      Tests  191 passed (191)
+   Start at  13:20:50
+   Duration  9.43s (transform 12.90s, setup 0ms, collect 26.43s, tests 15.42s, environment 8.33s, prepare 95ms)
+
+
+> @composable-svelte/code@0.4.1 test /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/code
+> vitest run
+
+1:21:00 PM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/code - using default configuration.
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/code
+
+1:21:00 PM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/code - using default configuration.
+ ✓ |chromium| tests/node-canvas-validation.test.ts (4 tests) 1ms
+ ✓ |chromium| tests/node-canvas-autolayout.test.ts (3 tests) 2ms
+stderr | tests/code-highlight.test.ts > CodeHighlight Reducer > handles highlighting errors gracefully
+[CodeHighlight] Highlighting error: [Error: Highlighting failed]
+stderr | tests/code-highlight-escaping.test.ts > CodeHighlight escapes unhighlighted source > does not execute markup after highlighting fails
+[CodeHighlight] Highlighting error: [Error: no highlighter available]
+ ✓ |chromium| tests/code-highlight.test.ts (9 tests) 49ms
+ ✓ |chromium| tests/code-highlight-escaping.test.ts (4 tests) 212ms
+ ✓ |chromium| tests/node-canvas-props.test.ts (1 test) 615ms
+     ✓ follow changes made after mount  615ms
+ ✓ |chromium| tests/code-editor-state.test.ts (6 tests) 2747ms
+     ✓ shows on the root element  644ms
+     ✓ is visible in the light theme too  330ms
+     ✓ dispatching blur blurs it  532ms
+     ✓ clears when a language is selected again  680ms
+ ✓ |chromium| tests/code-editor-commands.test.ts (10 tests) 3294ms
+     ✓ undo and redo actually move the document  784ms
+     ✓ does not dispatch on every keystroke  336ms
+     ✓ a value dispatched during mount is not undoable  429ms
+ ✓ |chromium| tests/code-editor-reconfigure.test.ts (10 tests) 3324ms
+     ✓ restyles the content area, not only the chrome  434ms
+     ✓ flips editable and readOnly on the live view  433ms
+     ✓ unrelated store activity does not reconfigure the editor  532ms
+     ✓ a store value change reaches the editor  332ms
+     ✓ reaches the editor even while read-only  330ms
+     ✓ rapid switches land on the language the user last picked  556ms
+ ✓ |chromium| tests/code-editor-toolbar.test.ts (8 tests) 4081ms
+     ✓ recovers after a failed format  360ms
+     ✓ still formats after a previous failure  832ms
+     ✓ actually shows and hides the gutter  631ms
+     ✓ shows and hides the fold gutter  632ms
+     ✓ keeps existing folds when the gutter is hidden and shown  685ms
+     ✓ turns on and off for real  633ms
+ ✓ |chromium| tests/code-highlight-gutter.test.ts (13 tests) 6030ms
+     ✓ disappears when toggled off  306ms
+     ✓ stays in place when the code scrolls horizontally  324ms
+     ✓ renders a band per requested line  304ms
+     ✓ ignores lines outside the document  304ms
+     ✓ is distinguishable from idle, and recovers  2608ms
+     ✓ re-highlights when a parent replaces the code  457ms
+     ✓ does not highlight twice for one external codeChanged  605ms
+ ✓ |chromium| tests/node-canvas-viewport.test.ts (13 tests) 15924ms
+     ✓ setViewport moves it  1020ms
+     ✓ zoomIn and zoomOut move it  1610ms
+     ✓ fitView brings the canvas back to the fitted position  1608ms
+     ✓ the store learns about canvas-driven viewport changes  1208ms
+     ✓ a programmatic viewport change does not echo forever  1308ms
+     ✓ centres without changing the zoom  1512ms
+     ✓ clamps to maxZoom  1008ms
+     ✓ is exposed on the container  906ms
+     ✓ selectNode highlights the node  1006ms
+     ✓ keeps a selected node identical across unrelated dispatches  1214ms
+     ✓ clearSelection unhighlights it  1408ms
+     ✓ stops nodes being draggable  1005ms
+     ✓ ignores a wrapping parent’s same-named actions  1111ms
+
+ Test Files  11 passed (11)
+      Tests  81 passed (81)
+   Start at  13:21:00
+   Duration  18.10s (transform 0ms, setup 0ms, collect 10.10s, tests 36.28s, environment 0ms, prepare 2.45s)
+
+
+> @composable-svelte/graphics@0.2.1 test /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics
+> vitest run
+
+1:21:19 PM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics - using default configuration.
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics
+
+stderr | tests/overlay/failed-creation-recovery.test.ts > a canvas registered before layout > is refused at first, which is the behaviour under test
+[WebGLOverlay] Failed to create texture for 'a': OverlayError: Failed to create texture for element canvas: The source has no pixels — one of its dimensions is zero
+    at OverlayError.textureCreationFailed (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:184:10)
+    at TextureFactory.noPixels (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:552:23)
+    at TextureFactory.validationError (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:564:16)
+    at TextureFactory.createCanvasTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:316:25)
+    at TextureFactory.createTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:61:18)
+    at WebGLOverlay.createElementTextureInner (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:836:32)
+    at WebGLOverlay.createElementTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:808:15)
+    at WebGLOverlay.registerElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:406:9)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/failed-creation-recovery.test.ts:73:7
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:157:11 {
+  code: 'TEXTURE_CREATION_FAILED',
+  details: {
+    elementId: 'canvas',
+    reason: 'The source has no pixels — one of its dimensions is zero'
+  },
+  recovery: 'Check element content, ensure images are loaded, and verify WebGL context is valid.'
+}
+
+stderr | tests/overlay/failed-creation-recovery.test.ts > a canvas registered before layout > recovers on the next updateElement once it has been laid out
+[WebGLOverlay] Failed to create texture for 'a': OverlayError: Failed to create texture for element canvas: The source has no pixels — one of its dimensions is zero
+    at OverlayError.textureCreationFailed (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:184:10)
+    at TextureFactory.noPixels (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:552:23)
+    at TextureFactory.validationError (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:564:16)
+    at TextureFactory.createCanvasTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:316:25)
+    at TextureFactory.createTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:61:18)
+    at WebGLOverlay.createElementTextureInner (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:836:32)
+    at WebGLOverlay.createElementTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:808:15)
+    at WebGLOverlay.registerElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:406:9)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/failed-creation-recovery.test.ts:86:7
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:157:11 {
+  code: 'TEXTURE_CREATION_FAILED',
+  details: {
+    elementId: 'canvas',
+    reason: 'The source has no pixels — one of its dimensions is zero'
+  },
+  recovery: 'Check element content, ensure images are loaded, and verify WebGL context is valid.'
+}
+
+stderr | tests/overlay/collapsed-source-update.test.ts > a canvas that collapses to no pixels > is refused rather than uploaded
+[WebGLOverlay] Failed to create texture for 'a': OverlayError: Failed to create texture for element element: The source has no pixels — one of its dimensions is zero
+    at OverlayError.textureCreationFailed (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:184:10)
+    at TextureFactory.noPixels (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:552:23)
+    at TextureFactory.validationError (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:564:16)
+    at TextureFactory.updateTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:413:17)
+    at WebGLOverlay.handleElementUpdate (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:932:38)
+    at UpdateScheduler.updateCallback (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:262:10)
+    at UpdateScheduler.notifyUpdate (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/update-scheduler.ts:317:9)
+    at UpdateScheduler.triggerUpdate (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/update-scheduler.ts:125:8)
+    at WebGLOverlay.updateElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:497:25)
+    at collapseAfterRegistering (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/collapsed-source-update.test.ts:82:6) {
+  code: 'TEXTURE_CREATION_FAILED',
+  details: {
+    elementId: 'element',
+    reason: 'The source has no pixels — one of its dimensions is zero'
+  },
+  recovery: 'Check element content, ensure images are loaded, and verify WebGL context is valid.'
+}
+
+stderr | tests/overlay/failed-creation-recovery.test.ts > a canvas registered before layout > reports the recovered dimensions, not the refused ones
+[WebGLOverlay] Failed to create texture for 'a': OverlayError: Failed to create texture for element canvas: The source has no pixels — one of its dimensions is zero
+    at OverlayError.textureCreationFailed (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:184:10)
+    at TextureFactory.noPixels (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:552:23)
+    at TextureFactory.validationError (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:564:16)
+    at TextureFactory.createCanvasTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:316:25)
+    at TextureFactory.createTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:61:18)
+    at WebGLOverlay.createElementTextureInner (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:836:32)
+    at WebGLOverlay.createElementTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:808:15)
+    at WebGLOverlay.registerElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:406:9)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/failed-creation-recovery.test.ts:110:7
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:157:11 {
+  code: 'TEXTURE_CREATION_FAILED',
+  details: {
+    elementId: 'canvas',
+    reason: 'The source has no pixels — one of its dimensions is zero'
+  },
+  recovery: 'Check element content, ensure images are loaded, and verify WebGL context is valid.'
+}
+
+stderr | tests/overlay/collapsed-source-update.test.ts > a canvas that collapses to no pixels > says the source has no pixels
+[WebGLOverlay] Failed to create texture for 'a': OverlayError: Failed to create texture for element element: The source has no pixels — one of its dimensions is zero
+    at OverlayError.textureCreationFailed (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:184:10)
+    at TextureFactory.noPixels (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:552:23)
+    at TextureFactory.validationError (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:564:16)
+    at TextureFactory.updateTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:413:17)
+    at WebGLOverlay.handleElementUpdate (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:932:38)
+    at UpdateScheduler.updateCallback (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:262:10)
+    at UpdateScheduler.notifyUpdate (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/update-scheduler.ts:317:9)
+    at UpdateScheduler.triggerUpdate (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/update-scheduler.ts:125:8)
+    at WebGLOverlay.updateElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:497:25)
+    at collapseAfterRegistering (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/collapsed-source-update.test.ts:82:6) {
+  code: 'TEXTURE_CREATION_FAILED',
+  details: {
+    elementId: 'element',
+    reason: 'The source has no pixels — one of its dimensions is zero'
+  },
+  recovery: 'Check element content, ensure images are loaded, and verify WebGL context is valid.'
+}
+
+stderr | tests/overlay/failed-creation-recovery.test.ts > a canvas registered before layout > clears the error it reported when the retry succeeds
+[WebGLOverlay] Failed to create texture for 'a': OverlayError: Failed to create texture for element canvas: The source has no pixels — one of its dimensions is zero
+    at OverlayError.textureCreationFailed (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:184:10)
+    at TextureFactory.noPixels (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:552:23)
+    at TextureFactory.validationError (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:564:16)
+    at TextureFactory.createCanvasTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:316:25)
+    at TextureFactory.createTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:61:18)
+    at WebGLOverlay.createElementTextureInner (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:836:32)
+    at WebGLOverlay.createElementTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:808:15)
+    at WebGLOverlay.registerElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:406:9)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/failed-creation-recovery.test.ts:130:7
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:157:11 {
+  code: 'TEXTURE_CREATION_FAILED',
+  details: {
+    elementId: 'canvas',
+    reason: 'The source has no pixels — one of its dimensions is zero'
+  },
+  recovery: 'Check element content, ensure images are loaded, and verify WebGL context is valid.'
+}
+
+stderr | tests/overlay/texture-accounting.test.ts > a re-upload is accounted for > leaves the budget describing the texture that now exists
+[WebGLOverlay] Failed to create texture for 'b': OverlayError: Texture memory budget exceeded: 16777216/20971520 bytes (requested: 9000000 bytes)
+    at OverlayError.memoryBudgetExceeded (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:144:10)
+    at TextureFactory.validationError (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:568:23)
+    at TextureFactory.createImageTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:132:25)
+    at TextureFactory.createTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:57:18)
+    at WebGLOverlay.createElementTextureInner (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:836:32)
+    at WebGLOverlay.createElementTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:808:15)
+    at WebGLOverlay.registerElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:406:9)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/texture-accounting.test.ts:144:7
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:753:20 {
+  code: 'MEMORY_BUDGET_EXCEEDED',
+  details: { currentUsage: 16777216, budget: 20971520, requestedSize: 9000000 },
+  recovery: 'Reduce the number of overlay elements or use smaller textures. To raise the ceiling, pass a larger `memoryBudget` in OverlayOptions.'
+}
+
+stderr | tests/overlay/failed-creation-recovery.test.ts > a canvas registered before layout > leaves a still-empty canvas refused rather than pretending
+[WebGLOverlay] Failed to create texture for 'a': OverlayError: Failed to create texture for element canvas: The source has no pixels — one of its dimensions is zero
+    at OverlayError.textureCreationFailed (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:184:10)
+    at TextureFactory.noPixels (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:552:23)
+    at TextureFactory.validationError (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:564:16)
+    at TextureFactory.createCanvasTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:316:25)
+    at TextureFactory.createTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:61:18)
+    at WebGLOverlay.createElementTextureInner (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:836:32)
+    at WebGLOverlay.createElementTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:808:15)
+    at WebGLOverlay.registerElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:406:9)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/failed-creation-recovery.test.ts:151:7
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:157:11 {
+  code: 'TEXTURE_CREATION_FAILED',
+  details: {
+    elementId: 'canvas',
+    reason: 'The source has no pixels — one of its dimensions is zero'
+  },
+  recovery: 'Check element content, ensure images are loaded, and verify WebGL context is valid.'
+}
+
+stderr | tests/overlay/collapsed-source-update.test.ts > a canvas that collapses to no pixels > is refused when only the width collapses
+[WebGLOverlay] Failed to create texture for 'a': OverlayError: Failed to create texture for element element: The source has no pixels — one of its dimensions is zero
+    at OverlayError.textureCreationFailed (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:184:10)
+    at TextureFactory.noPixels (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:552:23)
+    at TextureFactory.validationError (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:564:16)
+    at TextureFactory.updateTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:413:17)
+    at WebGLOverlay.handleElementUpdate (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:932:38)
+    at UpdateScheduler.updateCallback (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:262:10)
+    at UpdateScheduler.notifyUpdate (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/update-scheduler.ts:317:9)
+    at UpdateScheduler.triggerUpdate (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/update-scheduler.ts:125:8)
+    at WebGLOverlay.updateElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:497:25)
+    at collapseAfterRegistering (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/collapsed-source-update.test.ts:82:6) {
+  code: 'TEXTURE_CREATION_FAILED',
+  details: {
+    elementId: 'element',
+    reason: 'The source has no pixels — one of its dimensions is zero'
+  },
+  recovery: 'Check element content, ensure images are loaded, and verify WebGL context is valid.'
+}
+
+stderr | tests/overlay/failed-creation-recovery.test.ts > the callback owed to a failed creation > does not fire while the element is still refused
+[WebGLOverlay] Failed to create texture for 'a': OverlayError: Failed to create texture for element canvas: The source has no pixels — one of its dimensions is zero
+    at OverlayError.textureCreationFailed (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:184:10)
+    at TextureFactory.noPixels (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:552:23)
+    at TextureFactory.validationError (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:564:16)
+    at TextureFactory.createCanvasTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:316:25)
+    at TextureFactory.createTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:61:18)
+    at WebGLOverlay.createElementTextureInner (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:836:32)
+    at WebGLOverlay.createElementTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:808:15)
+    at WebGLOverlay.registerElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:406:9)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/failed-creation-recovery.test.ts:170:7
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:157:11 {
+  code: 'TEXTURE_CREATION_FAILED',
+  details: {
+    elementId: 'canvas',
+    reason: 'The source has no pixels — one of its dimensions is zero'
+  },
+  recovery: 'Check element content, ensure images are loaded, and verify WebGL context is valid.'
+}
+
+stderr | tests/overlay/failed-creation-recovery.test.ts > the callback owed to a failed creation > fires when a later update finally creates the texture
+[WebGLOverlay] Failed to create texture for 'a': OverlayError: Failed to create texture for element canvas: The source has no pixels — one of its dimensions is zero
+    at OverlayError.textureCreationFailed (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:184:10)
+    at TextureFactory.noPixels (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:552:23)
+    at TextureFactory.validationError (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:564:16)
+    at TextureFactory.createCanvasTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:316:25)
+    at TextureFactory.createTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:61:18)
+    at WebGLOverlay.createElementTextureInner (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:836:32)
+    at WebGLOverlay.createElementTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:808:15)
+    at WebGLOverlay.registerElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:406:9)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/failed-creation-recovery.test.ts:189:7
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:157:11 {
+  code: 'TEXTURE_CREATION_FAILED',
+  details: {
+    elementId: 'canvas',
+    reason: 'The source has no pixels — one of its dimensions is zero'
+  },
+  recovery: 'Check element content, ensure images are loaded, and verify WebGL context is valid.'
+}
+
+stderr | tests/overlay/collapsed-source-update.test.ts > a canvas that collapses to no pixels > keeps the dimensions it last had rather than reporting none
+[WebGLOverlay] Failed to create texture for 'a': OverlayError: Failed to create texture for element element: The source has no pixels — one of its dimensions is zero
+    at OverlayError.textureCreationFailed (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:184:10)
+    at TextureFactory.noPixels (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:552:23)
+    at TextureFactory.validationError (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:564:16)
+    at TextureFactory.updateTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:413:17)
+    at WebGLOverlay.handleElementUpdate (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:932:38)
+    at UpdateScheduler.updateCallback (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:262:10)
+    at UpdateScheduler.notifyUpdate (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/update-scheduler.ts:317:9)
+    at UpdateScheduler.triggerUpdate (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/update-scheduler.ts:125:8)
+    at WebGLOverlay.updateElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:497:25)
+    at collapseAfterRegistering (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/collapsed-source-update.test.ts:82:6) {
+  code: 'TEXTURE_CREATION_FAILED',
+  details: {
+    elementId: 'element',
+    reason: 'The source has no pixels — one of its dimensions is zero'
+  },
+  recovery: 'Check element content, ensure images are loaded, and verify WebGL context is valid.'
+}
+
+stderr | tests/overlay/collapsed-source-update.test.ts > a canvas that collapses to no pixels > recovers when the source gets its pixels back
+[WebGLOverlay] Failed to create texture for 'a': OverlayError: Failed to create texture for element element: The source has no pixels — one of its dimensions is zero
+    at OverlayError.textureCreationFailed (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:184:10)
+    at TextureFactory.noPixels (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:552:23)
+    at TextureFactory.validationError (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:564:16)
+    at TextureFactory.updateTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:413:17)
+    at WebGLOverlay.handleElementUpdate (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:932:38)
+    at UpdateScheduler.updateCallback (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:262:10)
+    at UpdateScheduler.notifyUpdate (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/update-scheduler.ts:317:9)
+    at UpdateScheduler.triggerUpdate (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/update-scheduler.ts:125:8)
+    at WebGLOverlay.updateElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:497:25)
+    at collapseAfterRegistering (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/collapsed-source-update.test.ts:82:6) {
+  code: 'TEXTURE_CREATION_FAILED',
+  details: {
+    elementId: 'element',
+    reason: 'The source has no pixels — one of its dimensions is zero'
+  },
+  recovery: 'Check element content, ensure images are loaded, and verify WebGL context is valid.'
+}
+
+stderr | tests/overlay/failed-creation-recovery.test.ts > the callback owed to a failed creation > fires once, not on every subsequent update
+[WebGLOverlay] Failed to create texture for 'a': OverlayError: Failed to create texture for element canvas: The source has no pixels — one of its dimensions is zero
+    at OverlayError.textureCreationFailed (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:184:10)
+    at TextureFactory.noPixels (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:552:23)
+    at TextureFactory.validationError (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:564:16)
+    at TextureFactory.createCanvasTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:316:25)
+    at TextureFactory.createTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:61:18)
+    at WebGLOverlay.createElementTextureInner (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:836:32)
+    at WebGLOverlay.createElementTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:808:15)
+    at WebGLOverlay.registerElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:406:9)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/failed-creation-recovery.test.ts:213:7
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:157:11 {
+  code: 'TEXTURE_CREATION_FAILED',
+  details: {
+    elementId: 'canvas',
+    reason: 'The source has no pixels — one of its dimensions is zero'
+  },
+  recovery: 'Check element content, ensure images are loaded, and verify WebGL context is valid.'
+}
+
+stderr | tests/overlay/retry-reaches-every-type.test.ts > a video recovers on its own, while it is playing > retries per frame and loads once the first frame arrives
+[WebGLOverlay] Failed to create texture for 'a': OverlayError: Failed to create texture for element video: The source has no pixels — the video has no frame yet
+    at OverlayError.textureCreationFailed (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:184:10)
+    at TextureFactory.noPixels (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:552:23)
+    at TextureFactory.createVideoTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:227:25)
+    at TextureFactory.createTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:59:18)
+    at WebGLOverlay.createElementTextureInner (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:836:32)
+    at WebGLOverlay.createElementTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:808:15)
+    at WebGLOverlay.registerElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:406:9)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/retry-reaches-every-type.test.ts:225:7
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:157:11
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:753:26 {
+  code: 'TEXTURE_CREATION_FAILED',
+  details: {
+    elementId: 'video',
+    reason: 'The source has no pixels — the video has no frame yet'
+  },
+  recovery: 'Check element content, ensure images are loaded, and verify WebGL context is valid.'
+}
+
+stderr | tests/overlay/texture-accounting.test.ts > a failed upload is not charged for > leaves the budget where it was when the upload throws
+[WebGLOverlay] Memory usage at 100.0% (8.0 MB/8.0 MB)
+
+stderr | tests/overlay/collapsed-source-update.test.ts > a collapse that persists is reported once > does not re-report an unchanged refusal on every update
+[WebGLOverlay] Failed to create texture for 'a': OverlayError: Failed to create texture for element element: The source has no pixels — one of its dimensions is zero
+    at OverlayError.textureCreationFailed (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:184:10)
+    at TextureFactory.noPixels (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:552:23)
+    at TextureFactory.validationError (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:564:16)
+    at TextureFactory.updateTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:413:17)
+    at WebGLOverlay.handleElementUpdate (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:932:38)
+    at UpdateScheduler.updateCallback (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:262:10)
+    at UpdateScheduler.notifyUpdate (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/update-scheduler.ts:317:9)
+    at UpdateScheduler.triggerUpdate (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/update-scheduler.ts:125:8)
+    at WebGLOverlay.updateElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:497:25)
+    at collapseAfterRegistering (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/collapsed-source-update.test.ts:82:6) {
+  code: 'TEXTURE_CREATION_FAILED',
+  details: {
+    elementId: 'element',
+    reason: 'The source has no pixels — one of its dimensions is zero'
+  },
+  recovery: 'Check element content, ensure images are loaded, and verify WebGL context is valid.'
+}
+
+stderr | tests/overlay/texture-accounting.test.ts > a failed upload is not charged for > still charges for one that succeeds
+[WebGLOverlay] Failed to create texture for 'b': OverlayError: Texture memory budget exceeded: 5760000/8388608 bytes (requested: 4194304 bytes)
+    at OverlayError.memoryBudgetExceeded (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:144:10)
+    at TextureFactory.validationError (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:568:23)
+    at TextureFactory.createImageTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:132:25)
+    at TextureFactory.createTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:57:18)
+    at WebGLOverlay.createElementTextureInner (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:836:32)
+    at WebGLOverlay.createElementTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:808:15)
+    at WebGLOverlay.registerElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:406:9)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/texture-accounting.test.ts:292:7
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:753:20 {
+  code: 'MEMORY_BUDGET_EXCEEDED',
+  details: { currentUsage: 5760000, budget: 8388608, requestedSize: 4194304 },
+  recovery: 'Reduce the number of overlay elements or use smaller textures. To raise the ceiling, pass a larger `memoryBudget` in OverlayOptions.'
+}
+
+stderr | tests/overlay/failed-creation-recovery.test.ts > a refusal that keeps repeating is reported once > does not re-report an identical refusal on every update
+[WebGLOverlay] Failed to create texture for 'a': OverlayError: Failed to create texture for element canvas: The source has no pixels — one of its dimensions is zero
+    at OverlayError.textureCreationFailed (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:184:10)
+    at TextureFactory.noPixels (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:552:23)
+    at TextureFactory.validationError (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:564:16)
+    at TextureFactory.createCanvasTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:316:25)
+    at TextureFactory.createTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:61:18)
+    at WebGLOverlay.createElementTextureInner (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:836:32)
+    at WebGLOverlay.createElementTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:808:15)
+    at WebGLOverlay.registerElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:406:9)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/failed-creation-recovery.test.ts:258:7
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:157:11 {
+  code: 'TEXTURE_CREATION_FAILED',
+  details: {
+    elementId: 'canvas',
+    reason: 'The source has no pixels — one of its dimensions is zero'
+  },
+  recovery: 'Check element content, ensure images are loaded, and verify WebGL context is valid.'
+}
+
+stderr | tests/overlay/collapsed-source-update.test.ts > a collapse that persists is reported once > reports again once the fault changes
+[WebGLOverlay] Failed to create texture for 'a': OverlayError: Failed to create texture for element element: The source has no pixels — one of its dimensions is zero
+    at OverlayError.textureCreationFailed (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:184:10)
+    at TextureFactory.noPixels (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:552:23)
+    at TextureFactory.validationError (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:564:16)
+    at TextureFactory.updateTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:413:17)
+    at WebGLOverlay.handleElementUpdate (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:932:38)
+    at UpdateScheduler.updateCallback (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:262:10)
+    at UpdateScheduler.notifyUpdate (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/update-scheduler.ts:317:9)
+    at UpdateScheduler.triggerUpdate (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/update-scheduler.ts:125:8)
+    at WebGLOverlay.updateElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:497:25)
+    at collapseAfterRegistering (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/collapsed-source-update.test.ts:82:6) {
+  code: 'TEXTURE_CREATION_FAILED',
+  details: {
+    elementId: 'element',
+    reason: 'The source has no pixels — one of its dimensions is zero'
+  },
+  recovery: 'Check element content, ensure images are loaded, and verify WebGL context is valid.'
+}
+
+stderr | tests/overlay/failed-creation-recovery.test.ts > a refusal that keeps repeating is reported once > still reports a refusal that changes
+[WebGLOverlay] Failed to create texture for 'a': OverlayError: Failed to create texture for element canvas: The source has no pixels — one of its dimensions is zero
+    at OverlayError.textureCreationFailed (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:184:10)
+    at TextureFactory.noPixels (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:552:23)
+    at TextureFactory.validationError (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:564:16)
+    at TextureFactory.createCanvasTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:316:25)
+    at TextureFactory.createTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:61:18)
+    at WebGLOverlay.createElementTextureInner (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:836:32)
+    at WebGLOverlay.createElementTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:808:15)
+    at WebGLOverlay.registerElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:406:9)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/failed-creation-recovery.test.ts:287:7
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:157:11 {
+  code: 'TEXTURE_CREATION_FAILED',
+  details: {
+    elementId: 'canvas',
+    reason: 'The source has no pixels — one of its dimensions is zero'
+  },
+  recovery: 'Check element content, ensure images are loaded, and verify WebGL context is valid.'
+}
+
+stderr | tests/overlay/failed-creation-recovery.test.ts > a refusal that keeps repeating is reported once > still reports a refusal that changes
+[WebGLOverlay] Failed to create texture for 'a': OverlayError: Texture memory budget exceeded: 0/4096 bytes (requested: 1048576 bytes)
+    at OverlayError.memoryBudgetExceeded (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:144:10)
+    at TextureFactory.validationError (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:568:23)
+    at TextureFactory.createCanvasTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:316:25)
+    at TextureFactory.createTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:61:18)
+    at WebGLOverlay.createElementTextureInner (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:836:32)
+    at WebGLOverlay.createElementTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:808:15)
+    at WebGLOverlay.handleElementUpdate (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:926:14)
+    at UpdateScheduler.updateCallback (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:262:10)
+    at UpdateScheduler.notifyUpdate (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/update-scheduler.ts:317:9)
+    at UpdateScheduler.triggerUpdate (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/update-scheduler.ts:125:8) {
+  code: 'MEMORY_BUDGET_EXCEEDED',
+  details: { currentUsage: 0, budget: 4096, requestedSize: 1048576 },
+  recovery: 'Reduce the number of overlay elements or use smaller textures. To raise the ceiling, pass a larger `memoryBudget` in OverlayOptions.'
+}
+
+stderr | tests/overlay/collapsed-source-update.test.ts > a collapse that persists is reported once > reports again once the fault changes
+[WebGLOverlay] Failed to create texture for 'a': OverlayError: Texture memory budget exceeded: 0/400000 bytes (requested: 1048576 bytes)
+    at OverlayError.memoryBudgetExceeded (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:144:10)
+    at TextureFactory.validationError (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:568:23)
+    at TextureFactory.updateTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:437:13)
+    at WebGLOverlay.handleElementUpdate (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:932:38)
+    at UpdateScheduler.updateCallback (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:262:10)
+    at UpdateScheduler.notifyUpdate (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/update-scheduler.ts:317:9)
+    at UpdateScheduler.triggerUpdate (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/update-scheduler.ts:125:8)
+    at WebGLOverlay.updateElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:497:25)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/collapsed-source-update.test.ts:211:7
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:753:20 {
+  code: 'MEMORY_BUDGET_EXCEEDED',
+  details: { currentUsage: 0, budget: 400000, requestedSize: 1048576 },
+  recovery: 'Reduce the number of overlay elements or use smaller textures. To raise the ceiling, pass a larger `memoryBudget` in OverlayOptions.'
+}
+
+stderr | tests/overlay/failed-creation-recovery.test.ts > retrying does not stack creations > creates one texture for several updates in the same tick
+[WebGLOverlay] Failed to create texture for 'a': OverlayError: Failed to create texture for element canvas: The source has no pixels — one of its dimensions is zero
+    at OverlayError.textureCreationFailed (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:184:10)
+    at TextureFactory.noPixels (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:552:23)
+    at TextureFactory.validationError (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:564:16)
+    at TextureFactory.createCanvasTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:316:25)
+    at TextureFactory.createTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:61:18)
+    at WebGLOverlay.createElementTextureInner (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:836:32)
+    at WebGLOverlay.createElementTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:808:15)
+    at WebGLOverlay.registerElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:406:9)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/failed-creation-recovery.test.ts:322:7
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:157:11 {
+  code: 'TEXTURE_CREATION_FAILED',
+  details: {
+    elementId: 'canvas',
+    reason: 'The source has no pixels — one of its dimensions is zero'
+  },
+  recovery: 'Check element content, ensure images are loaded, and verify WebGL context is valid.'
+}
+
+stderr | tests/overlay/texture-accounting.test.ts > the budget survives register and unregister > credits back the size the element grew to, not the one it started at
+[WebGLOverlay] Memory usage at 83.3% (20.0 MB/24.0 MB)
+
+ ✓ tests/overlay/collapsed-source-update.test.ts (8 tests) 51ms
+stderr | tests/overlay/failed-creation-recovery.test.ts > retrying does not stack creations > leaves nothing behind on destroy
+[WebGLOverlay] Failed to create texture for 'a': OverlayError: Failed to create texture for element canvas: The source has no pixels — one of its dimensions is zero
+    at OverlayError.textureCreationFailed (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:184:10)
+    at TextureFactory.noPixels (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:552:23)
+    at TextureFactory.validationError (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:564:16)
+    at TextureFactory.createCanvasTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:316:25)
+    at TextureFactory.createTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:61:18)
+    at WebGLOverlay.createElementTextureInner (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:836:32)
+    at WebGLOverlay.createElementTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:808:15)
+    at WebGLOverlay.registerElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:406:9)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/failed-creation-recovery.test.ts:346:7
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:157:11 {
+  code: 'TEXTURE_CREATION_FAILED',
+  details: {
+    elementId: 'canvas',
+    reason: 'The source has no pixels — one of its dimensions is zero'
+  },
+  recovery: 'Check element content, ensure images are loaded, and verify WebGL context is valid.'
+}
+
+ ✓ tests/overlay/no-pixels-refusal.test.ts (19 tests) 56ms
+stderr | tests/overlay/failed-creation-recovery.test.ts > retrying does not stack creations > still retries after an attempt finishes
+[WebGLOverlay] Failed to create texture for 'a': OverlayError: Failed to create texture for element canvas: The source has no pixels — one of its dimensions is zero
+    at OverlayError.textureCreationFailed (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:184:10)
+    at TextureFactory.noPixels (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:552:23)
+    at TextureFactory.validationError (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:564:16)
+    at TextureFactory.createCanvasTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:316:25)
+    at TextureFactory.createTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:61:18)
+    at WebGLOverlay.createElementTextureInner (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:836:32)
+    at WebGLOverlay.createElementTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:808:15)
+    at WebGLOverlay.registerElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:406:9)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/failed-creation-recovery.test.ts:373:7
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:157:11 {
+  code: 'TEXTURE_CREATION_FAILED',
+  details: {
+    elementId: 'canvas',
+    reason: 'The source has no pixels — one of its dimensions is zero'
+  },
+  recovery: 'Check element content, ensure images are loaded, and verify WebGL context is valid.'
+}
+
+ ✓ tests/overlay/failed-creation-recovery.test.ts (14 tests) 66ms
+ ✓ tests/overlay/texture-accounting.test.ts (26 tests) 82ms
+ ✓ tests/overlay/console-quiet.test.ts (3 tests) 253ms
+ ✓ tests/overlay/retry-reaches-every-type.test.ts (10 tests) 289ms
+stderr | tests/overlay/texture-loaded.test.ts > onTextureLoaded > does not fire when the texture fails
+[WebGLOverlay] Failed to create texture for 'a': OverlayError: Failed to create texture for element image: The source has no pixels — the image decoded to nothing
+    at OverlayError.textureCreationFailed (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:184:10)
+    at TextureFactory.noPixels (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:552:23)
+    at TextureFactory.createImageTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:106:25)
+    at TextureFactory.createTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:57:18)
+    at WebGLOverlay.createElementTextureInner (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:836:32)
+    at WebGLOverlay.createElementTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:808:15)
+    at WebGLOverlay.registerElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:406:9)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/texture-loaded.test.ts:81:7
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:157:11
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:753:26 {
+  code: 'TEXTURE_CREATION_FAILED',
+  details: {
+    elementId: 'image',
+    reason: 'The source has no pixels — the image decoded to nothing'
+  },
+  recovery: 'Check element content, ensure images are loaded, and verify WebGL context is valid.'
+}
+
+stderr | tests/overlay/error-reporting.test.ts > the budget and the size limit report themselves > scales rather than refusing when only the size limit is exceeded
+[TextureFactory] canvas exceeds the texture size limit; scaling to 512x512
+
+stderr | tests/overlay/error-reporting.test.ts > the budget and the size limit report themselves > scales an oversize video the same way
+[TextureFactory] video exceeds the texture size limit; scaling to 512x512
+
+stderr | tests/overlay/error-reporting.test.ts > CONTEXT_LOST > reports a registration made while the context is gone
+[WebGLOverlay] Context lost - will attempt to restore
+[WebGLOverlay] WebGL context lost
+[WebGLOverlay] WebGL context was lost
+
+stderr | tests/overlay/error-reporting.test.ts > CONTEXT_LOST > builds it when the context comes back
+[WebGLOverlay] Context lost - will attempt to restore
+[WebGLOverlay] WebGL context lost
+[WebGLOverlay] WebGL context was lost
+
+stderr | tests/overlay/error-reporting.test.ts > ELEMENT_NOT_FOUND > reports every method called with an id that is not registered
+[WebGLOverlay] No element is registered as 'nope'
+[WebGLOverlay] No element is registered as 'nope'
+[WebGLOverlay] No element is registered as 'nope'
+[WebGLOverlay] No element is registered as 'nope'
+
+stderr | tests/overlay/error-reporting.test.ts > a deferred registration delivers everything an immediate one does > fires onTextureLoaded, once, after the restore
+[WebGLOverlay] Context lost - will attempt to restore
+[WebGLOverlay] WebGL context lost
+[WebGLOverlay] WebGL context was lost
+
+stderr | tests/overlay/error-reporting.test.ts > a deferred registration delivers everything an immediate one does > does not fire it again on a second restore
+[WebGLOverlay] Context lost - will attempt to restore
+[WebGLOverlay] WebGL context lost
+[WebGLOverlay] WebGL context was lost
+
+stderr | tests/overlay/error-reporting.test.ts > a deferred registration delivers everything an immediate one does > does not fire it again on a second restore
+[WebGLOverlay] Context lost - will attempt to restore
+[WebGLOverlay] WebGL context lost
+
+stderr | tests/overlay/error-reporting.test.ts > a deferred registration delivers everything an immediate one does > keeps uniforms set during the loss
+[WebGLOverlay] Context lost - will attempt to restore
+[WebGLOverlay] WebGL context lost
+[WebGLOverlay] WebGL context was lost
+
+stderr | tests/overlay/error-reporting.test.ts > a deferred registration delivers everything an immediate one does > leaves no orphaned texture when two restores arrive together
+[WebGLOverlay] Context lost - will attempt to restore
+[WebGLOverlay] WebGL context lost
+[WebGLOverlay] WebGL context was lost
+
+stderr | tests/overlay/error-reporting.test.ts > a deferred registration delivers everything an immediate one does > still owes the callback when a rebuild is superseded before it delivers
+[WebGLOverlay] Context lost - will attempt to restore
+[WebGLOverlay] WebGL context lost
+[WebGLOverlay] WebGL context was lost
+
+stderr | tests/overlay/error-reporting.test.ts > a deferred registration delivers everything an immediate one does > still owes the callback when a rebuild fails to deliver
+[WebGLOverlay] Context lost - will attempt to restore
+[WebGLOverlay] WebGL context lost
+[WebGLOverlay] WebGL context was lost
+
+stderr | tests/overlay/error-reporting.test.ts > a deferred registration delivers everything an immediate one does > still owes the callback when a rebuild fails to deliver
+[WebGLOverlay] Failed to create texture for 'a': OverlayError: Failed to create texture for element image: Failed to create WebGL texture
+    at OverlayError.textureCreationFailed (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:184:10)
+    at TextureFactory.createImageTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:139:25)
+    at TextureFactory.createTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:57:18)
+    at WebGLOverlay.createElementTextureInner (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:836:32)
+    at WebGLOverlay.createElementTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:808:15)
+    at WebGLOverlay.recreateResources (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:1246:9)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:209:11
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/webgl-context-manager.ts:123:51
+    at Array.forEach (<anonymous>)
+    at WebGLContextManager.notifyContextRestored (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/webgl-context-manager.ts:123:35) {
+  code: 'TEXTURE_CREATION_FAILED',
+  details: { elementId: 'image', reason: 'Failed to create WebGL texture' },
+  recovery: 'Check element content, ensure images are loaded, and verify WebGL context is valid.'
+}
+
+stderr | tests/overlay/error-reporting.test.ts > a deferred registration delivers everything an immediate one does > does not credit the memory budget when a rebuild is superseded
+[WebGLOverlay] Context lost - will attempt to restore
+[WebGLOverlay] WebGL context lost
+[WebGLOverlay] WebGL context was lost
+
+stderr | tests/overlay/error-reporting.test.ts > a deferred registration delivers everything an immediate one does > does not credit the memory budget when a rebuild is superseded
+[WebGLOverlay] Failed to create texture for 'b': OverlayError: Texture memory budget exceeded: 4000000/5242880 bytes (requested: 4000000 bytes)
+    at OverlayError.memoryBudgetExceeded (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:144:10)
+    at TextureFactory.validationError (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:568:23)
+    at TextureFactory.createCanvasTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:316:25)
+    at TextureFactory.createTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:61:18)
+    at WebGLOverlay.createElementTextureInner (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:836:32)
+    at WebGLOverlay.createElementTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:808:15)
+    at WebGLOverlay.registerElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:406:9)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/error-reporting.test.ts:561:7
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:753:20 {
+  code: 'MEMORY_BUDGET_EXCEEDED',
+  details: { currentUsage: 4000000, budget: 5242880, requestedSize: 4000000 },
+  recovery: 'Reduce the number of overlay elements or use smaller textures. To raise the ceiling, pass a larger `memoryBudget` in OverlayOptions.'
+}
+
+stderr | tests/overlay/error-reporting.test.ts > a deferred registration delivers everything an immediate one does > refuses instead of deferring when automatic recovery is off
+[WebGLOverlay] Context lost - will attempt to restore
+[WebGLOverlay] WebGL context lost
+[WebGLOverlay] WebGL context was lost
+
+stderr | tests/overlay/error-reporting.test.ts > a deferred registration delivers everything an immediate one does > reports updateElementPosition for an id that is not registered
+[WebGLOverlay] No element is registered as 'nope'
+
+stderr | tests/overlay/texture-loaded-debt.test.ts > a debt does not outlive its element > is not paid to a departed consumer when the id recovers
+[WebGLOverlay] Failed to create texture for 'a': OverlayError: Failed to create texture for element canvas: The source has no pixels — one of its dimensions is zero
+    at OverlayError.textureCreationFailed (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:184:10)
+    at TextureFactory.noPixels (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:552:23)
+    at TextureFactory.validationError (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:564:16)
+    at TextureFactory.createCanvasTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:316:25)
+    at TextureFactory.createTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:61:18)
+    at WebGLOverlay.createElementTextureInner (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:836:32)
+    at WebGLOverlay.createElementTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:808:15)
+    at WebGLOverlay.registerElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:406:9)
+    at strandedDebt (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/texture-loaded-debt.test.ts:90:6)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/texture-loaded-debt.test.ts:115:38 {
+  code: 'TEXTURE_CREATION_FAILED',
+  details: {
+    elementId: 'canvas',
+    reason: 'The source has no pixels — one of its dimensions is zero'
+  },
+  recovery: 'Check element content, ensure images are loaded, and verify WebGL context is valid.'
+}
+
+stderr | tests/overlay/texture-loaded-debt.test.ts > a debt does not outlive its element > is not paid to a departed consumer when the id recovers
+[WebGLOverlay] Failed to create texture for 'a': OverlayError: Failed to create texture for element canvas: The source has no pixels — one of its dimensions is zero
+    at OverlayError.textureCreationFailed (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:184:10)
+    at TextureFactory.noPixels (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:552:23)
+    at TextureFactory.validationError (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:564:16)
+    at TextureFactory.createCanvasTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:316:25)
+    at TextureFactory.createTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:61:18)
+    at WebGLOverlay.createElementTextureInner (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:836:32)
+    at WebGLOverlay.createElementTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:808:15)
+    at WebGLOverlay.registerElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:406:9)
+    at strandedDebt (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/texture-loaded-debt.test.ts:102:6)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/texture-loaded-debt.test.ts:115:32 {
+  code: 'TEXTURE_CREATION_FAILED',
+  details: {
+    elementId: 'canvas',
+    reason: 'The source has no pixels — one of its dimensions is zero'
+  },
+  recovery: 'Check element content, ensure images are loaded, and verify WebGL context is valid.'
+}
+
+ ✓ tests/overlay/error-reporting.test.ts (24 tests) 73ms
+stderr | tests/overlay/texture-loaded-debt.test.ts > a debt does not outlive its element > is not paid to a departed consumer after a context restore
+[WebGLOverlay] Failed to create texture for 'a': OverlayError: Failed to create texture for element canvas: The source has no pixels — one of its dimensions is zero
+    at OverlayError.textureCreationFailed (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:184:10)
+    at TextureFactory.noPixels (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:552:23)
+    at TextureFactory.validationError (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:564:16)
+    at TextureFactory.createCanvasTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:316:25)
+    at TextureFactory.createTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:61:18)
+    at WebGLOverlay.createElementTextureInner (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:836:32)
+    at WebGLOverlay.createElementTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:808:15)
+    at WebGLOverlay.registerElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:406:9)
+    at strandedDebt (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/texture-loaded-debt.test.ts:90:6)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/texture-loaded-debt.test.ts:136:38 {
+  code: 'TEXTURE_CREATION_FAILED',
+  details: {
+    elementId: 'canvas',
+    reason: 'The source has no pixels — one of its dimensions is zero'
+  },
+  recovery: 'Check element content, ensure images are loaded, and verify WebGL context is valid.'
+}
+
+stderr | tests/overlay/component-api.test.ts > updateUniforms reaches the shader > changes the values the element carries
+[WebGLOverlay] Failed to compile shader for 'a': OverlayError: Failed to compile fragment shader
+    at OverlayError.shaderCompilationFailed (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:110:10)
+    at ShaderCompiler.compileShader (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/shaders/shader-compiler.ts:113:25)
+    at ShaderCompiler.compileProgram (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/shaders/shader-compiler.ts:220:31)
+    at ShaderProgramManager.getProgram (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/shaders/shader-program-manager.ts:90:32)
+    at WebGLOverlay.compileElementShader (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:1160:38)
+    at WebGLOverlay.registerElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:409:9)
+    at Object.registerElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/WebGLOverlay.svelte:151:26)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/component-api.test.ts:165:7
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:753:20 {
+  code: 'SHADER_COMPILATION_FAILED',
+  details: {
+    shaderType: 'fragment',
+    log: 'Shader missing precision qualifier (e.g., precision mediump float;), Fragment shader must set gl_FragColor'
+  },
+  recovery: 'Check shader GLSL syntax and uniform declarations. Review shader compilation log for specific errors.'
+}
+
+stderr | tests/overlay/texture-loaded-debt.test.ts > a debt does not outlive its element > is not paid to a departed consumer after a context restore
+[WebGLOverlay] Failed to create texture for 'a': OverlayError: Failed to create texture for element canvas: The source has no pixels — one of its dimensions is zero
+    at OverlayError.textureCreationFailed (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:184:10)
+    at TextureFactory.noPixels (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:552:23)
+    at TextureFactory.validationError (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:564:16)
+    at TextureFactory.createCanvasTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:316:25)
+    at TextureFactory.createTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:61:18)
+    at WebGLOverlay.createElementTextureInner (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:836:32)
+    at WebGLOverlay.createElementTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:808:15)
+    at WebGLOverlay.registerElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:406:9)
+    at strandedDebt (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/texture-loaded-debt.test.ts:102:6)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/texture-loaded-debt.test.ts:136:32 {
+  code: 'TEXTURE_CREATION_FAILED',
+  details: {
+    elementId: 'canvas',
+    reason: 'The source has no pixels — one of its dimensions is zero'
+  },
+  recovery: 'Check element content, ensure images are loaded, and verify WebGL context is valid.'
+}
+
+stderr | tests/overlay/texture-loaded-debt.test.ts > a debt does not outlive its element > is not paid to a departed consumer after a context restore
+[WebGLOverlay] Context lost - will attempt to restore
+[WebGLOverlay] WebGL context lost
+
+stderr | tests/overlay/lost-context.test.ts > while the context is lost > every create* returns null, as a driver does
+[WebGLOverlay] Context lost - will attempt to restore
+[WebGLOverlay] WebGL context lost
+
+stderr | tests/overlay/lost-context.test.ts > while the context is lost > the context agrees with itself
+[WebGLOverlay] Context lost - will attempt to restore
+[WebGLOverlay] WebGL context lost
+
+stderr | tests/overlay/component-api.test.ts > updateUniforms reaches the shader > leaves the uniforms it was not given alone
+[WebGLOverlay] Failed to compile shader for 'a': OverlayError: Failed to compile fragment shader
+    at OverlayError.shaderCompilationFailed (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:110:10)
+    at ShaderCompiler.compileShader (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/shaders/shader-compiler.ts:113:25)
+    at ShaderCompiler.compileProgram (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/shaders/shader-compiler.ts:220:31)
+    at ShaderProgramManager.getProgram (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/shaders/shader-program-manager.ts:90:32)
+    at WebGLOverlay.compileElementShader (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:1160:38)
+    at WebGLOverlay.registerElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:409:9)
+    at Object.registerElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/WebGLOverlay.svelte:151:26)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/component-api.test.ts:181:7
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:753:20 {
+  code: 'SHADER_COMPILATION_FAILED',
+  details: {
+    shaderType: 'fragment',
+    log: 'Shader missing precision qualifier (e.g., precision mediump float;), Fragment shader must set gl_FragColor'
+  },
+  recovery: 'Check shader GLSL syntax and uniform declarations. Review shader compilation log for specific errors.'
+}
+
+stderr | tests/overlay/texture-loaded-debt.test.ts > the writes that hide the strand > a replacement with its own callback overwrites the entry
+[WebGLOverlay] Failed to create texture for 'a': OverlayError: Failed to create texture for element canvas: The source has no pixels — one of its dimensions is zero
+    at OverlayError.textureCreationFailed (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:184:10)
+    at TextureFactory.noPixels (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:552:23)
+    at TextureFactory.validationError (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:564:16)
+    at TextureFactory.createCanvasTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:316:25)
+    at TextureFactory.createTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:61:18)
+    at WebGLOverlay.createElementTextureInner (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:836:32)
+    at WebGLOverlay.createElementTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:808:15)
+    at WebGLOverlay.registerElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:406:9)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/texture-loaded-debt.test.ts:160:7
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:157:11 {
+  code: 'TEXTURE_CREATION_FAILED',
+  details: {
+    elementId: 'canvas',
+    reason: 'The source has no pixels — one of its dimensions is zero'
+  },
+  recovery: 'Check element content, ensure images are loaded, and verify WebGL context is valid.'
+}
+
+stderr | tests/overlay/lost-context.test.ts > while the context is lost > a shader cannot be compiled, and says so
+[WebGLOverlay] Context lost - will attempt to restore
+[WebGLOverlay] WebGL context lost
+
+stderr | tests/overlay/lost-context.test.ts > while the context is lost > a program cannot be linked, and says so
+[WebGLOverlay] Context lost - will attempt to restore
+[WebGLOverlay] WebGL context lost
+
+stderr | tests/overlay/lost-context.test.ts > when the context comes back > allocation works again
+[WebGLOverlay] Context lost - will attempt to restore
+[WebGLOverlay] WebGL context lost
+
+stderr | tests/overlay/texture-loaded-debt.test.ts > destroy > does not pay a pending debt on the way out
+[WebGLOverlay] Failed to create texture for 'a': OverlayError: Failed to create texture for element canvas: The source has no pixels — one of its dimensions is zero
+    at OverlayError.textureCreationFailed (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:184:10)
+    at TextureFactory.noPixels (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:552:23)
+    at TextureFactory.validationError (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:564:16)
+    at TextureFactory.createCanvasTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:316:25)
+    at TextureFactory.createTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:61:18)
+    at WebGLOverlay.createElementTextureInner (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:836:32)
+    at WebGLOverlay.createElementTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:808:15)
+    at WebGLOverlay.registerElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:406:9)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/texture-loaded-debt.test.ts:199:7
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:157:11 {
+  code: 'TEXTURE_CREATION_FAILED',
+  details: {
+    elementId: 'canvas',
+    reason: 'The source has no pixels — one of its dimensions is zero'
+  },
+  recovery: 'Check element content, ensure images are loaded, and verify WebGL context is valid.'
+}
+
+ ✓ tests/overlay/texture-loaded-debt.test.ts (6 tests) 36ms
+stderr | tests/overlay/component-api.test.ts > updateUniforms reaches the shader > does not leak between elements handed the same shader object
+[WebGLOverlay] Failed to compile shader for 'a': OverlayError: Failed to compile fragment shader
+    at OverlayError.shaderCompilationFailed (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:110:10)
+    at ShaderCompiler.compileShader (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/shaders/shader-compiler.ts:113:25)
+    at ShaderCompiler.compileProgram (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/shaders/shader-compiler.ts:220:31)
+    at ShaderProgramManager.getProgram (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/shaders/shader-program-manager.ts:90:32)
+    at WebGLOverlay.compileElementShader (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:1160:38)
+    at WebGLOverlay.registerElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:409:9)
+    at Object.registerElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/WebGLOverlay.svelte:151:26)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/component-api.test.ts:256:7
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:753:20 {
+  code: 'SHADER_COMPILATION_FAILED',
+  details: {
+    shaderType: 'fragment',
+    log: 'Shader missing precision qualifier (e.g., precision mediump float;), Fragment shader must set gl_FragColor'
+  },
+  recovery: 'Check shader GLSL syntax and uniform declarations. Review shader compilation log for specific errors.'
+}
+[WebGLOverlay] Failed to compile shader for 'b': OverlayError: Failed to compile fragment shader
+    at OverlayError.shaderCompilationFailed (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:110:10)
+    at ShaderCompiler.compileShader (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/shaders/shader-compiler.ts:113:25)
+    at ShaderCompiler.compileProgram (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/shaders/shader-compiler.ts:220:31)
+    at ShaderProgramManager.getProgram (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/shaders/shader-program-manager.ts:90:32)
+    at WebGLOverlay.compileElementShader (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:1160:38)
+    at WebGLOverlay.registerElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:409:9)
+    at Object.registerElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/WebGLOverlay.svelte:151:26)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/component-api.test.ts:257:7
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:753:20 {
+  code: 'SHADER_COMPILATION_FAILED',
+  details: {
+    shaderType: 'fragment',
+    log: 'Shader missing precision qualifier (e.g., precision mediump float;), Fragment shader must set gl_FragColor'
+  },
+  recovery: 'Check shader GLSL syntax and uniform declarations. Review shader compilation log for specific errors.'
+}
+
+stdout | tests/babylon-adapter.test.ts > materials are not leaked > does not accumulate a material per updateMesh
+BJS - [13:21:20]: Babylon.js v8.36.1 - Null engine
+
+ ✓ tests/overlay/lost-context.test.ts (14 tests) 36ms
+stdout | tests/babylon-adapter.test.ts > materials are not leaked > disposes the mesh material when the mesh goes
+BJS - [13:21:20]: Babylon.js v8.36.1 - Null engine
+
+stdout | tests/babylon-adapter.test.ts > materials are not leaked > does not accumulate materials across geometry rebuilds
+BJS - [13:21:20]: Babylon.js v8.36.1 - Null engine
+
+stdout | tests/babylon-adapter.test.ts > roughness reaches the pixels > leaves a non-metallic surface a highlight to sharpen
+BJS - [13:21:20]: Babylon.js v8.36.1 - Null engine
+
+stdout | tests/babylon-adapter.test.ts > roughness reaches the pixels > separates a rough non-metal from a smooth one
+BJS - [13:21:20]: Babylon.js v8.36.1 - Null engine
+
+stdout | tests/babylon-adapter.test.ts > lights are updated, not reconstructed > keeps the same Babylon light across an intensity change
+BJS - [13:21:20]: Babylon.js v8.36.1 - Null engine
+
+stdout | tests/babylon-adapter.test.ts > lights are updated, not reconstructed > rebuilds when the type changes, because that is a different class
+BJS - [13:21:20]: Babylon.js v8.36.1 - Null engine
+
+stdout | tests/babylon-adapter.test.ts > lights are updated, not reconstructed > gives a directional light the direction it was configured with
+BJS - [13:21:20]: Babylon.js v8.36.1 - Null engine
+
+stdout | tests/babylon-adapter.test.ts > lights are updated, not reconstructed > moves an existing directional light rather than ignoring the change
+BJS - [13:21:20]: Babylon.js v8.36.1 - Null engine
+
+stdout | tests/babylon-adapter.test.ts > lights are updated, not reconstructed > updates a spot light in place when only its angle changed
+BJS - [13:21:20]: Babylon.js v8.36.1 - Null engine
+
+stdout | tests/babylon-adapter.test.ts > the camera tracks the viewport > applies orthographic bounds at all
+BJS - [13:21:20]: Babylon.js v8.36.1 - Null engine
+
+stdout | tests/babylon-adapter.test.ts > the camera tracks the viewport > recomputes orthographic bounds when the viewport changes shape
+BJS - [13:21:20]: Babylon.js v8.36.1 - Null engine
+
+stdout | tests/babylon-adapter.test.ts > the material is a function of the config, not of history > clears a field that the config stopped setting
+BJS - [13:21:20]: Babylon.js v8.36.1 - Null engine
+
+stdout | tests/babylon-adapter.test.ts > resize recomputes only what the viewport decides > leaves a camera the user has moved where they put it
+BJS - [13:21:20]: Babylon.js v8.36.1 - Null engine
+
+stdout | tests/babylon-adapter.test.ts > a light is the same whether it was added or updated > gives radius: 0 the same meaning on both paths
+BJS - [13:21:20]: Babylon.js v8.36.1 - Null engine
+
+stdout | tests/babylon-adapter.test.ts > a light is the same whether it was added or updated > rebuilds a spot light back into a point light
+BJS - [13:21:20]: Babylon.js v8.36.1 - Null engine
+
+stdout | tests/babylon-adapter.test.ts > the adapter says something when it cannot do what was asked > warns once, not per frame, for a colour it cannot parse
+BJS - [13:21:20]: Babylon.js v8.36.1 - Null engine
+
+stdout | tests/babylon-adapter.test.ts > the adapter says something when it cannot do what was asked > still warns for a different unparseable colour
+BJS - [13:21:20]: Babylon.js v8.36.1 - Null engine
+
+stderr | tests/overlay/render.test.ts > a lost context stops the work > draws nothing while the context is gone
+[WebGLOverlay] Context lost - will attempt to restore
+[WebGLOverlay] WebGL context lost
+
+stdout | tests/babylon-adapter.test.ts > the adapter says something when it cannot do what was asked > refuses to silently rebind to a different engine
+BJS - [13:21:20]: Babylon.js v8.36.1 - Null engine
+
+stdout | tests/babylon-adapter.test.ts > the adapter says something when it cannot do what was asked > refuses to silently rebind to a different engine
+BJS - [13:21:20]: Babylon.js v8.36.1 - Null engine
+
+stdout | tests/babylon-adapter.test.ts > the adapter says something when it cannot do what was asked > says nothing when re-attached to the engine it already has
+BJS - [13:21:20]: Babylon.js v8.36.1 - Null engine
+
+stdout | tests/babylon-adapter.test.ts > an adapter is initialized once > does not start a second render loop, and says why
+BJS - [13:21:20]: Babylon.js v8.36.1 - Null engine
+
+stdout | tests/babylon-adapter.test.ts > the unparseable-colour warning is bounded > stops after the cap, with one notice
+BJS - [13:21:20]: Babylon.js v8.36.1 - Null engine
+
+stderr | tests/overlay/render.test.ts > a lost context stops the work > draws again once the context comes back
+[WebGLOverlay] Context lost - will attempt to restore
+[WebGLOverlay] WebGL context lost
+
+stderr | tests/overlay/component-api.test.ts > the guards on registration > refuses a second registration under an id already in use
+[WebGLOverlay] Invalid element 'a': Element with ID 'a' already registered
+
+ ✓ tests/overlay/render.test.ts (14 tests) 56ms
+stdout | tests/babylon-adapter.test.ts > the unparseable-colour warning is bounded > is not confused by a colour that looks like its own bookkeeping
+BJS - [13:21:20]: Babylon.js v8.36.1 - Null engine
+
+ ✓ tests/babylon-adapter.test.ts (23 tests) 49ms
+ ✓ tests/overlay/component-api.test.ts (19 tests) 183ms
+ ✓ tests/overlay/memory-pressure-warning.test.ts (4 tests) 30ms
+ ✓ tests/overlay/texture-loaded.test.ts (5 tests) 442ms
+stderr | tests/overlay/options.test.ts > the options reach the validator the overlay builds > scales a registration down to the maxTextureSize the consumer set
+[TextureFactory] image exceeds the texture size limit; scaling to 512x512
+
+stderr | tests/overlay/options.test.ts > the options reach the validator the overlay builds > refuses a registration over the memoryBudget the consumer set
+[WebGLOverlay] Failed to create texture for 'a': OverlayError: Texture memory budget exceeded: 0/1048576 bytes (requested: 4194304 bytes)
+    at OverlayError.memoryBudgetExceeded (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:144:10)
+    at TextureFactory.validationError (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:568:23)
+    at TextureFactory.createImageTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:132:25)
+    at TextureFactory.createTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:57:18)
+    at WebGLOverlay.createElementTextureInner (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:836:32)
+    at WebGLOverlay.createElementTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:808:15)
+    at WebGLOverlay.registerElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:406:9)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/options.test.ts:137:7
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:157:11
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:753:26 {
+  code: 'MEMORY_BUDGET_EXCEEDED',
+  details: { currentUsage: 0, budget: 1048576, requestedSize: 4194304 },
+  recovery: 'Reduce the number of overlay elements or use smaller textures. To raise the ceiling, pass a larger `memoryBudget` in OverlayOptions.'
+}
+
+stderr | tests/overlay/options.test.ts > onError > reports a texture that could not be created
+[WebGLOverlay] Failed to create texture for 'a': OverlayError: Failed to create texture for element image: The source has no pixels — the image decoded to nothing
+    at OverlayError.textureCreationFailed (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/utils/overlay-error.ts:184:10)
+    at TextureFactory.noPixels (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:552:23)
+    at TextureFactory.createImageTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:106:25)
+    at TextureFactory.createTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/texture-factory.ts:57:18)
+    at WebGLOverlay.createElementTextureInner (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:836:32)
+    at WebGLOverlay.createElementTexture (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:808:15)
+    at WebGLOverlay.registerElement (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/lib/overlay/webgl-overlay.ts:406:9)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/tests/overlay/options.test.ts:194:7
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:157:11
+    at file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@vitest+runner@4.0.7/node_modules/@vitest/runner/dist/index.js:753:26 {
+  code: 'TEXTURE_CREATION_FAILED',
+  details: {
+    elementId: 'image',
+    reason: 'The source has no pixels — the image decoded to nothing'
+  },
+  recovery: 'Check element content, ensure images are loaded, and verify WebGL context is valid.'
+}
+
+stderr | tests/overlay/options.test.ts > handleContextLoss > still reports a loss to the consumer when recovery is disabled
+[WebGLOverlay] Context lost - will attempt to restore
+[WebGLOverlay] WebGL context lost
+
+stderr | tests/overlay/options.test.ts > handleContextLoss > does not recover on its own when recovery is disabled
+[WebGLOverlay] Context lost - will attempt to restore
+[WebGLOverlay] WebGL context lost
+
+stderr | tests/overlay/options.test.ts > handleContextLoss > does recover when left at its default
+[WebGLOverlay] Context lost - will attempt to restore
+[WebGLOverlay] WebGL context lost
+
+ ✓ tests/overlay/options.test.ts (15 tests) 28ms
+stdout | tests/overlay/debug-option.test.ts > debug belongs to one overlay > does not leak into an overlay that is live alongside it
+[WebGLOverlay] Browser: {
+  browser: 'unknown',
+  version: 0,
+  needsCORSWorkaround: false,
+  supportsRequestVideoFrameCallback: false
+}
+[WebGLOverlay] Device capabilities: {
+  isMobile: false,
+  platform: 'Desktop',
+  maxTextureSize: 4096,
+  recommendedFPS: 60,
+  recommendedMaxElements: 50,
+  webGL2: false
+}
+[WebGLOverlay] Max texture size: 4096x4096
+[WebGLOverlay] Initialized {
+  device: {
+    isMobile: false,
+    isIOS: false,
+    isAndroid: false,
+    platform: 'Desktop',
+    maxTextureSize: 4096,
+    recommendedFPS: 60,
+    recommendedMaxElements: 50,
+    supportsWebGL2: false
+  },
+  browser: {
+    browser: 'unknown',
+    version: 0,
+    needsCORSWorkaround: false,
+    supportsRequestVideoFrameCallback: false
+  },
+  targetFPS: 60,
+  maxTextureSize: 4096,
+  memoryBudget: '200MB'
+}
+
+stderr | tests/overlay/debug-option.test.ts > debug belongs to one overlay > does not leak into an overlay that is live alongside it
+[WebGLOverlay] Context lost - will attempt to restore
+[WebGLOverlay] WebGL context lost
+[WebGLOverlay] Context lost - will attempt to restore
+[WebGLOverlay] WebGL context lost
+[WebGLOverlay] Context lost - will attempt to restore
+[WebGLOverlay] WebGL context lost
+
+ ✓ tests/overlay/debug-option.test.ts (5 tests) 8ms
+ ✓ tests/overlay/resource-lifetime.test.ts (9 tests) 16ms
+ ✓ tests/overlay/lifetime.test.ts (8 tests) 15ms
+ ✓ tests/shaders/presets.test.ts (8 tests) 3ms
+stderr | tests/overlay/destroy-reentrancy.test.ts > destroy() does not re-enter the consumer > still calls onContextLost for a real loss while alive
+[WebGLOverlay] Context lost - will attempt to restore
+[WebGLOverlay] WebGL context lost
+
+ ✓ tests/overlay/destroy-reentrancy.test.ts (4 tests) 6ms
+ ✓ tests/helpers/fake-gl.test.ts (28 tests) 5ms
+stderr | tests/overlay/pipeline-allocation.test.ts > when the buffers allocate > and it draws
+[ShaderProgramManager] Uniform 'uTexture' not found in program
+
+ ✓ tests/overlay/pipeline-allocation.test.ts (9 tests) 4ms
+stderr | tests/overlay/context-restore.test.ts > context restore > releases the render pipeline it replaces
+[WebGLOverlay] Context lost - will attempt to restore
+[WebGLOverlay] WebGL context lost
+
+stderr | tests/overlay/context-restore.test.ts > context restore > still rebuilds — the release must not cost the restore
+[WebGLOverlay] Context lost - will attempt to restore
+[WebGLOverlay] WebGL context lost
+
+ ✓ tests/overlay/context-restore.test.ts (2 tests) 5ms
+stdout | tests/custom-geometry.test.ts > the adapter builds a custom mesh > puts the vertices and indices on the scene
+BJS - [13:21:22]: Babylon.js v8.36.1 - Null engine
+
+stdout | tests/custom-geometry.test.ts > the adapter builds a custom mesh > computes normals when none are given
+BJS - [13:21:22]: Babylon.js v8.36.1 - Null engine
+
+stdout | tests/custom-geometry.test.ts > the adapter builds a custom mesh > keeps the normals it is given
+BJS - [13:21:22]: Babylon.js v8.36.1 - Null engine
+
+ ✓ tests/babylon-mapping.test.ts (18 tests) 4ms
+stdout | tests/custom-geometry.test.ts > the adapter builds a custom mesh > registers it, so removing it works
+BJS - [13:21:22]: Babylon.js v8.36.1 - Null engine
+
+stdout | tests/custom-geometry.test.ts > the adapter builds a custom mesh > refuses geometry it cannot build
+BJS - [13:21:22]: Babylon.js v8.36.1 - Null engine
+
+ ✓ tests/mesh-rename.test.ts (6 tests) 30ms
+ ✓ tests/mesh-identity.test.ts (5 tests) 25ms
+ ✓ tests/custom-geometry.test.ts (26 tests) 43ms
+ ✓ tests/overlay/update-scheduler.test.ts (5 tests) 4ms
+ ✓ tests/camera-config.test.ts (9 tests) 15ms
+ ✓ tests/reducer-identity.test.ts (12 tests) 17ms
+ ✓ tests/light-reactivity.test.ts (16 tests) 39ms
+ ✓ tests/animation-lifetime.test.ts (17 tests) 172ms
+ ✓ tests/component-mount.test.ts (6 tests) 252ms
+ ✓ tests/composition.test.ts (6 tests) 11ms
+stderr | tests/scene-sync.test.ts > startAnimation > rejects an animation whose target does not exist
+[graphics] startAnimation: no mesh with id "no-such-mesh"
+
+ ✓ tests/scene-sync.test.ts (19 tests) 6ms
+ ✓ tests/reducer.test.ts (13 tests) 5ms
+ ✓ tests/overlay/uniform-warnings.test.ts (6 tests) 3ms
+ ✓ tests/overlay/low-fps-warning.test.ts (5 tests) 2ms
+ ✓ tests/shaders/program-manager.test.ts (4 tests) 3ms
+ ✓ tests/shaders/glsl-utils.test.ts (16 tests) 3ms
+ ✓ tests/utils/coordinate-converter.test.ts (9 tests) 2ms
+ ✓ tests/overlay/lifecycle-leaks.test.ts (3 tests) 3ms
+Error: Not implemented: HTMLCanvasElement.prototype.getContext (without installing the canvas npm package)
+    at module.exports (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/jsdom@25.0.1/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at HTMLCanvasElementImpl.getContext (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/jsdom@25.0.1/node_modules/jsdom/lib/jsdom/living/nodes/HTMLCanvasElement-impl.js:42:5)
+    at HTMLCanvasElement.getContext (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/jsdom@25.0.1/node_modules/jsdom/lib/jsdom/living/generated/HTMLCanvasElement.js:131:58)
+    at new ThinEngine (file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@babylonjs+core@8.36.1/node_modules/@babylonjs/core/Engines/thinEngine.js:213:40)
+    at new Engine (file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@babylonjs+core@8.36.1/node_modules/@babylonjs/core/Engines/engine.js:98:9)
+    at BabylonAdapter.initialize (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/adapters/babylon-adapter.ts:92:21)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/components/Scene.svelte:52:36
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/components/Scene.svelte:76:4
+    at untrack (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/svelte@5.43.3/node_modules/svelte/src/internal/client/runtime.js:748:10)
+    at $effect (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/svelte@5.43.3/node_modules/svelte/src/index-client.js:100:27) undefined
+Error: Not implemented: HTMLCanvasElement.prototype.getContext (without installing the canvas npm package)
+    at module.exports (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/jsdom@25.0.1/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at HTMLCanvasElementImpl.getContext (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/jsdom@25.0.1/node_modules/jsdom/lib/jsdom/living/nodes/HTMLCanvasElement-impl.js:42:5)
+    at HTMLCanvasElement.getContext (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/jsdom@25.0.1/node_modules/jsdom/lib/jsdom/living/generated/HTMLCanvasElement.js:131:58)
+    at new ThinEngine (file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@babylonjs+core@8.36.1/node_modules/@babylonjs/core/Engines/thinEngine.js:213:80)
+    at new Engine (file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@babylonjs+core@8.36.1/node_modules/@babylonjs/core/Engines/engine.js:98:9)
+    at BabylonAdapter.initialize (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/adapters/babylon-adapter.ts:92:21)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/components/Scene.svelte:52:36
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/components/Scene.svelte:76:4
+    at untrack (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/svelte@5.43.3/node_modules/svelte/src/internal/client/runtime.js:748:10)
+    at $effect (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/svelte@5.43.3/node_modules/svelte/src/index-client.js:100:27) undefined
+Error: Not implemented: HTMLCanvasElement.prototype.getContext (without installing the canvas npm package)
+    at module.exports (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/jsdom@25.0.1/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at HTMLCanvasElementImpl.getContext (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/jsdom@25.0.1/node_modules/jsdom/lib/jsdom/living/nodes/HTMLCanvasElement-impl.js:42:5)
+    at HTMLCanvasElement.getContext (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/jsdom@25.0.1/node_modules/jsdom/lib/jsdom/living/generated/HTMLCanvasElement.js:131:58)
+    at new ThinEngine (file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@babylonjs+core@8.36.1/node_modules/@babylonjs/core/Engines/thinEngine.js:233:40)
+    at new Engine (file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@babylonjs+core@8.36.1/node_modules/@babylonjs/core/Engines/engine.js:98:9)
+    at BabylonAdapter.initialize (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/adapters/babylon-adapter.ts:92:21)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/components/Scene.svelte:52:36
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/components/Scene.svelte:76:4
+    at untrack (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/svelte@5.43.3/node_modules/svelte/src/internal/client/runtime.js:748:10)
+    at $effect (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/svelte@5.43.3/node_modules/svelte/src/index-client.js:100:27) undefined
+Error: Not implemented: HTMLCanvasElement.prototype.getContext (without installing the canvas npm package)
+    at module.exports (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/jsdom@25.0.1/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at HTMLCanvasElementImpl.getContext (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/jsdom@25.0.1/node_modules/jsdom/lib/jsdom/living/nodes/HTMLCanvasElement-impl.js:42:5)
+    at HTMLCanvasElement.getContext (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/jsdom@25.0.1/node_modules/jsdom/lib/jsdom/living/generated/HTMLCanvasElement.js:131:58)
+    at new ThinEngine (file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@babylonjs+core@8.36.1/node_modules/@babylonjs/core/Engines/thinEngine.js:233:79)
+    at new Engine (file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@babylonjs+core@8.36.1/node_modules/@babylonjs/core/Engines/engine.js:98:9)
+    at BabylonAdapter.initialize (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/adapters/babylon-adapter.ts:92:21)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/components/Scene.svelte:52:36
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/components/Scene.svelte:76:4
+    at untrack (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/svelte@5.43.3/node_modules/svelte/src/internal/client/runtime.js:748:10)
+    at $effect (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/svelte@5.43.3/node_modules/svelte/src/index-client.js:100:27) undefined
+Error: Not implemented: HTMLCanvasElement.prototype.getContext (without installing the canvas npm package)
+    at module.exports (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/jsdom@25.0.1/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at HTMLCanvasElementImpl.getContext (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/jsdom@25.0.1/node_modules/jsdom/lib/jsdom/living/nodes/HTMLCanvasElement-impl.js:42:5)
+    at HTMLCanvasElement.getContext (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/jsdom@25.0.1/node_modules/jsdom/lib/jsdom/living/generated/HTMLCanvasElement.js:131:58)
+    at new ThinEngine (file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@babylonjs+core@8.36.1/node_modules/@babylonjs/core/Engines/thinEngine.js:213:40)
+    at new Engine (file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@babylonjs+core@8.36.1/node_modules/@babylonjs/core/Engines/engine.js:98:9)
+    at BabylonAdapter.initialize (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/adapters/babylon-adapter.ts:92:21)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/components/Scene.svelte:52:36
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/components/Scene.svelte:76:4
+    at untrack (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/svelte@5.43.3/node_modules/svelte/src/internal/client/runtime.js:748:10)
+    at $effect (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/svelte@5.43.3/node_modules/svelte/src/index-client.js:100:27) undefined
+Error: Not implemented: HTMLCanvasElement.prototype.getContext (without installing the canvas npm package)
+    at module.exports (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/jsdom@25.0.1/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at HTMLCanvasElementImpl.getContext (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/jsdom@25.0.1/node_modules/jsdom/lib/jsdom/living/nodes/HTMLCanvasElement-impl.js:42:5)
+    at HTMLCanvasElement.getContext (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/jsdom@25.0.1/node_modules/jsdom/lib/jsdom/living/generated/HTMLCanvasElement.js:131:58)
+    at new ThinEngine (file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@babylonjs+core@8.36.1/node_modules/@babylonjs/core/Engines/thinEngine.js:213:80)
+    at new Engine (file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@babylonjs+core@8.36.1/node_modules/@babylonjs/core/Engines/engine.js:98:9)
+    at BabylonAdapter.initialize (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/adapters/babylon-adapter.ts:92:21)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/components/Scene.svelte:52:36
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/components/Scene.svelte:76:4
+    at untrack (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/svelte@5.43.3/node_modules/svelte/src/internal/client/runtime.js:748:10)
+    at $effect (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/svelte@5.43.3/node_modules/svelte/src/index-client.js:100:27) undefined
+Error: Not implemented: HTMLCanvasElement.prototype.getContext (without installing the canvas npm package)
+    at module.exports (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/jsdom@25.0.1/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at HTMLCanvasElementImpl.getContext (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/jsdom@25.0.1/node_modules/jsdom/lib/jsdom/living/nodes/HTMLCanvasElement-impl.js:42:5)
+    at HTMLCanvasElement.getContext (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/jsdom@25.0.1/node_modules/jsdom/lib/jsdom/living/generated/HTMLCanvasElement.js:131:58)
+    at new ThinEngine (file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@babylonjs+core@8.36.1/node_modules/@babylonjs/core/Engines/thinEngine.js:233:40)
+    at new Engine (file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@babylonjs+core@8.36.1/node_modules/@babylonjs/core/Engines/engine.js:98:9)
+    at BabylonAdapter.initialize (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/adapters/babylon-adapter.ts:92:21)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/components/Scene.svelte:52:36
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/components/Scene.svelte:76:4
+    at untrack (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/svelte@5.43.3/node_modules/svelte/src/internal/client/runtime.js:748:10)
+    at $effect (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/svelte@5.43.3/node_modules/svelte/src/index-client.js:100:27) undefined
+Error: Not implemented: HTMLCanvasElement.prototype.getContext (without installing the canvas npm package)
+    at module.exports (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/jsdom@25.0.1/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at HTMLCanvasElementImpl.getContext (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/jsdom@25.0.1/node_modules/jsdom/lib/jsdom/living/nodes/HTMLCanvasElement-impl.js:42:5)
+    at HTMLCanvasElement.getContext (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/jsdom@25.0.1/node_modules/jsdom/lib/jsdom/living/generated/HTMLCanvasElement.js:131:58)
+    at new ThinEngine (file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@babylonjs+core@8.36.1/node_modules/@babylonjs/core/Engines/thinEngine.js:233:79)
+    at new Engine (file:///Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/@babylonjs+core@8.36.1/node_modules/@babylonjs/core/Engines/engine.js:98:9)
+    at BabylonAdapter.initialize (/Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/adapters/babylon-adapter.ts:92:21)
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/components/Scene.svelte:52:36
+    at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics/src/components/Scene.svelte:76:4
+    at untrack (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/svelte@5.43.3/node_modules/svelte/src/internal/client/runtime.js:748:10)
+    at $effect (/Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/svelte@5.43.3/node_modules/svelte/src/index-client.js:100:27) undefined
+stdout | tests/scene-lifecycle.test.ts > Scene initialisation > disposes an engine that finished building after it was unmounted
+BJS - [13:21:23]: Babylon.js v8.36.1 - Null engine
+
+ ✓ tests/scene-lifecycle.test.ts (3 tests) 175ms
+ ✓ tests/doc-examples/test-store.test.ts (1 test) 2ms
+
+ Test Files  44 passed (44)
+      Tests  482 passed (482)
+   Start at  13:21:19
+   Duration  4.19s (transform 9.16s, setup 0ms, collect 25.61s, tests 2.61s, environment 18.43s, prepare 289ms)
+
+
+> @composable-svelte/maps@0.2.1 test /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/maps
+> vitest run
+
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/maps
+
+ ✓ tests/optional-peer-isolation.test.ts (5 tests) 2ms
+ ✓ tests/layer-spec.test.ts (21 tests) 3ms
+ ✓ tests/tile-providers.test.ts (11 tests) 3ms
+ ✓ tests/mapbox-adapter.test.ts (10 tests) 4ms
+ ✓ tests/map.reducer.test.ts (34 tests) 4ms
+ ✓ tests/tile-provider-control.test.ts (10 tests) 25ms
+ ✓ tests/component-mount.test.ts (4 tests) 248ms
+ ✓ tests/map-primitive.test.ts (11 tests) 604ms
+
+ Test Files  8 passed (8)
+      Tests  106 passed (106)
+   Start at  13:21:23
+   Duration  2.43s (transform 3.85s, setup 0ms, collect 5.56s, tests 893ms, environment 2.77s, prepare 41ms)
+
+
+> @composable-svelte/media@0.4.1 test /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/media
+> vitest run
+
+1:21:26 PM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/media - using default configuration.
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/media
+
+1:21:26 PM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/media - using default configuration.
+ ✓ |chromium| tests/video-detection.test.ts (21 tests) 4ms
+ ✓ |chromium| tests/video-embed.test.ts (16 tests) 15ms
+ ✓ |chromium| tests/voice-input-button-toggle.test.ts (2 tests) 10ms
+ ✓ |chromium| tests/voice-input-error-message.test.ts (6 tests) 14ms
+ ✓ |chromium| tests/audio-player-keyboard.test.ts (10 tests) 20ms
+ ✓ |chromium| tests/voice-input-transcription-once.test.ts (4 tests) 328ms
+ ✓ |chromium| tests/voice-input-conversation-start.test.ts (4 tests) 489ms
+     ✓ starts the VAD loop once permission arrives  302ms
+ ✓ |chromium| tests/audio-player-dependencies.test.ts (12 tests) 391ms
+ ✓ |chromium| tests/voice-input-panel-entrance.test.ts (4 tests) 456ms
+ ✓ |chromium| tests/voice-input-transcript-history.test.ts (5 tests) 2335ms
+     ✓ survives an unrelated dispatch  366ms
+     ✓ accumulates across several transcripts and frames  854ms
+     ✓ still clears when the mode genuinely changes  490ms
+     ✓ keeps history when a deactivate is immediately undone  368ms
+ ✓ |chromium| tests/voice-input-vad-lifecycle.test.ts (6 tests) 2868ms
+     ✓ runs while conversation mode is active  354ms
+     ✓ stops when voice input is deactivated  653ms
+     ✓ stops when the store is destroyed  652ms
+     ✓ installs nothing when the recorder refuses to start  303ms
+     ✓ stops after a processing failure, rather than looping on it  653ms
+ ✓ |chromium| tests/voice-input-conversation-continues.test.ts (4 tests) 8613ms
+     ✓ stays in conversation mode and keeps recording  2004ms
+     ✓ CONTROL: the window is long enough to reach auto-send at all  2002ms
+     ✓ resets the silence counter after sending, so the threshold is a real interval  2003ms
+     ✓ stops everything when the user finally ends it  2604ms
+
+ Test Files  12 passed (12)
+      Tests  94 passed (94)
+   Start at  13:21:26
+   Duration  10.75s (transform 0ms, setup 0ms, collect 8.90s, tests 15.54s, environment 0ms, prepare 2.88s)
+
+
+> @composable-svelte/example-auth-server@0.1.0 test /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/auth-server
+> vitest run
+
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/auth-server
+
+ ✓ tests/totp.test.ts (3 tests) 3ms
+ ✓ tests/session.test.ts (7 tests) 197ms
+ ✓ tests/errors.test.ts (13 tests) 207ms
+ ✓ tests/credentials.test.ts (9 tests) 267ms
+ ✓ tests/oauth.test.ts (15 tests) 344ms
+ ✓ tests/mfa.test.ts (8 tests) 365ms
+ ✓ tests/session-lifetime.test.ts (8 tests) 370ms
+ ✓ tests/account.test.ts (10 tests) 406ms
+ ✓ tests/account-lifecycle.test.ts (20 tests) 658ms
+
+ Test Files  9 passed (9)
+      Tests  93 passed (93)
+   Start at  13:21:37
+   Duration  985ms (transform 1.03s, setup 0ms, collect 1.89s, tests 2.82s, environment 1ms, prepare 25ms)
+
+
+> @composable-svelte/chat@0.4.1 test /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/chat
+> vitest run && vitest run --config vitest.ssr.config.ts
+
+1:21:39 PM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/chat - using default configuration.
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/chat
+
+1:21:39 PM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/chat - using default configuration.
+ ✓ |chromium| tests/cleanup-tracker.test.ts (6 tests) 105ms
+ ✓ |chromium| tests/pdf-render.test.ts (2 tests) 111ms
+stderr | tests/attachment-fade.test.ts > VideoPlayer controls > says so when playback will not start
+Video playback error: [NotAllowedError: no]
+ ✓ |chromium| tests/attachment-fade.test.ts (17 tests) 510ms
+stderr | tests/attachment-upload.test.ts > uploading on send > ignores a progress report that arrives after the upload finished
+[Composable Svelte] dispatch after destroy ignored: streamComplete
+stderr | tests/attachment-upload.test.ts > uploading on send > ignores a progress report that arrives after the upload finished
+[Composable Svelte] dispatch after destroy ignored: streamComplete
+stderr | tests/message-entry.test.ts > lastAppendedId > does not mark a completed assistant reply
+[Composable Svelte] dispatch after destroy ignored: streamComplete
+stderr | tests/message-entry.test.ts > lastAppendedId > does not mark a completed assistant reply
+[Composable Svelte] dispatch after destroy ignored: streamComplete
+stderr | tests/attachment-upload.test.ts > uploading on send > reports progress into the state, clamped
+[Composable Svelte] dispatch after destroy ignored: streamComplete
+ ✓ |chromium| tests/markdown-sanitize.test.ts (21 tests) 19ms
+ ✓ |chromium| tests/attachment-a11y.test.ts (8 tests) 23ms
+ ✓ |chromium| tests/message-labels.test.ts (6 tests) 29ms
+ ✓ |chromium| tests/video-embed-lazy.test.ts (4 tests) 848ms
+     ✓ loads, so the extractor returns real video data  801ms
+ ✓ |chromium| tests/presence-sizing.test.ts (9 tests) 13ms
+ ✓ |chromium| tests/cursor-visibility.test.ts (7 tests) 5ms
+ ✓ |chromium| tests/message-editing.test.ts (14 tests) 706ms
+ ✓ |chromium| tests/collaborative-connection.test.ts (16 tests) 461ms
+ ✓ |chromium| tests/attachment-upload.test.ts (12 tests) 470ms
+ ✓ |chromium| tests/message-entry.test.ts (7 tests) 369ms
+stderr | tests/attachment-wiring.test.ts
+[Composable Svelte] dispatch after destroy ignored: streamComplete
+ ✓ |chromium| tests/attachment-wiring.test.ts (4 tests) 325ms
+ ✓ |chromium| tests/reaction-picker-lifecycle.test.ts (15 tests) 12ms
+ ✓ |chromium| tests/collaborative-presence.test.ts (19 tests) 10ms
+ ✓ |chromium| tests/collaborative-selectors.test.ts (10 tests) 1ms
+ ✓ |chromium| tests/streaming-chat-attachments.test.ts (32 tests) 8ms
+ ✓ |chromium| tests/media-type-conformance.test.ts (3 tests) 0ms
+ ✓ |chromium| tests/markdown-languages.test.ts (3 tests) 1ms
+ ✓ |chromium| tests/teststore-example.test.ts (1 test) 2ms
+ ✓ |chromium| tests/reactions.test.ts (7 tests) 2ms
+ ✓ |chromium| tests/attachment-preview-lifecycle.test.ts (10 tests) 970ms
+     ✓ a modal hydrated already presented can still be dismissed  906ms
+ ✓ |chromium| tests/auto-scroll.test.ts (2 tests) 1917ms
+     ✓ keeps following while its own animation runs  1350ms
+     ✓ still lets the user scroll away mid-stream  566ms
+
+ Test Files  24 passed (24)
+      Tests  235 passed (235)
+   Start at  13:21:39
+   Duration  4.10s (transform 0ms, setup 534ms, collect 10.00s, tests 6.91s, environment 0ms, prepare 29.54s)
+
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/chat
+
+ ✓ tests/ssr/message-entry-ssr.test.ts (2 tests) 13ms
+ ✓ tests/ssr/video-embed-ssr.test.ts (3 tests) 800ms
+     ✓ renders the embed once the process is warm  794ms
+
+ Test Files  2 passed (2)
+      Tests  5 passed (5)
+   Start at  13:21:43
+   Duration  1.57s (transform 1.34s, setup 0ms, collect 1.37s, tests 813ms, environment 0ms, prepare 5ms)
+
+
+> @composable-svelte/example-styleguide@0.1.0 test /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/styleguide
+> vitest run --passWithNoTests
+
+1:21:45 PM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/styleguide - using default configuration.
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+
+ RUN  v4.0.7 /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/styleguide
+
+No test files found, exiting with code 0
+
+
+|chromium| 
+
+include: src/**/*.{test,spec}.{js,ts}, tests/**/*.{test,spec}.{js,ts}
+exclude:  **/node_modules/**, **/.git/**
+

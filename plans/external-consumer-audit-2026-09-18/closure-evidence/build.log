@@ -1,0 +1,245 @@
+Scope: 20 of 21 workspace projects
+packages/core build$ svelte-package -o dist
+packages/core build: [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+packages/core build: Browserslist: browsers data (caniuse-lite) is 11 months old. Please run:
+packages/core build:   npx update-browserslist-db@latest
+packages/core build:   Why you should do it regularly: https://github.com/browserslist/update-db#readme
+packages/core build: src/lib -> dist
+packages/core build: @sveltejs/package found the following issues while packaging your library:
+packages/core build: Avoid usage of `import.meta.env` in your code. It only works in apps bundled with Vite. Consider using packages like `esm-env` instead which works with all bundlers or without bundling.
+packages/core build: Done
+examples/contact-form build$ vite build
+examples/data-table build$ vite build
+examples/counter build$ vite build
+examples/file-browser build$ vite build
+examples/counter build: 8:17:40 AM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/counter - using default configuration.
+examples/file-browser build: 8:17:40 AM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/file-browser - using default configuration.
+examples/counter build: vite v6.4.1 building for production...
+examples/file-browser build: vite v6.4.1 building for production...
+examples/contact-form build: 8:17:40 AM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/contact-form - using default configuration.
+examples/data-table build: 8:17:40 AM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/data-table - using default configuration.
+examples/contact-form build: vite v6.4.1 building for production...
+examples/data-table build: vite v6.4.1 building for production...
+examples/file-browser build: transforming...
+examples/counter build: transforming...
+examples/data-table build: [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+examples/contact-form build: [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+examples/data-table build: transforming...
+examples/contact-form build: transforming...
+examples/contact-form build: Browserslist: browsers data (caniuse-lite) is 11 months old. Please run:
+examples/contact-form build:   npx update-browserslist-db@latest
+examples/contact-form build:   Why you should do it regularly: https://github.com/browserslist/update-db#readme
+examples/data-table build: Browserslist: browsers data (caniuse-lite) is 11 months old. Please run:
+examples/data-table build:   npx update-browserslist-db@latest
+examples/data-table build:   Why you should do it regularly: https://github.com/browserslist/update-db#readme
+examples/counter build: ✓ 574 modules transformed.
+examples/counter build: rendering chunks...
+examples/counter build: computing gzip size...
+examples/counter build: dist/index.html                  0.40 kB │ gzip:  0.28 kB
+examples/counter build: dist/assets/index-DubjC2EK.css   2.18 kB │ gzip:  0.77 kB
+examples/counter build: dist/assets/index-BJKmxWSg.js   38.95 kB │ gzip: 14.21 kB
+examples/counter build: ✓ built in 822ms
+examples/file-browser build: ✓ 573 modules transformed.
+examples/counter build: Done
+examples/multi-step-form build$ vite build
+examples/file-browser build: rendering chunks...
+examples/file-browser build: computing gzip size...
+examples/file-browser build: dist/index.html                  0.42 kB │ gzip:  0.28 kB
+examples/file-browser build: dist/assets/index--2xl-VD4.css   2.54 kB │ gzip:  0.85 kB
+examples/file-browser build: dist/assets/index-BIK2aX79.js   89.58 kB │ gzip: 30.94 kB
+examples/file-browser build: ✓ built in 885ms
+examples/file-browser build: Done
+examples/product-gallery build$ vite build
+examples/multi-step-form build: 8:17:41 AM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/multi-step-form - using default configuration.
+examples/multi-step-form build: vite v6.4.1 building for production...
+examples/product-gallery build: 8:17:41 AM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/product-gallery - using default configuration.
+examples/product-gallery build: vite v6.4.1 building for production...
+examples/multi-step-form build: [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+examples/product-gallery build: [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+examples/multi-step-form build: transforming...
+examples/multi-step-form build: Browserslist: browsers data (caniuse-lite) is 11 months old. Please run:
+examples/multi-step-form build:   npx update-browserslist-db@latest
+examples/multi-step-form build:   Why you should do it regularly: https://github.com/browserslist/update-db#readme
+examples/product-gallery build: transforming...
+examples/data-table build: ✓ 579 modules transformed.
+examples/data-table build: rendering chunks...
+examples/data-table build: computing gzip size...
+examples/product-gallery build: Browserslist: browsers data (caniuse-lite) is 11 months old. Please run:
+examples/product-gallery build:   npx update-browserslist-db@latest
+examples/product-gallery build:   Why you should do it regularly: https://github.com/browserslist/update-db#readme
+examples/data-table build: dist/index.html                  0.42 kB │ gzip:  0.29 kB
+examples/data-table build: dist/assets/index-Dfsatb4i.css  42.00 kB │ gzip:  7.42 kB
+examples/data-table build: dist/assets/index-_7LgBI0N.js   94.30 kB │ gzip: 32.29 kB
+examples/data-table build: ✓ built in 1.39s
+examples/data-table build: Done
+examples/registration-form build$ vite build
+examples/contact-form build: ✓ 658 modules transformed.
+examples/contact-form build: rendering chunks...
+examples/contact-form build: computing gzip size...
+examples/contact-form build: dist/index.html                   0.42 kB │ gzip:  0.29 kB
+examples/contact-form build: dist/assets/index-DMNGGJsz.css   41.72 kB │ gzip:  7.32 kB
+examples/contact-form build: dist/assets/index-OUnQRPVP.js   140.26 kB │ gzip: 44.88 kB
+examples/contact-form build: ✓ built in 1.50s
+examples/contact-form build: Done
+examples/ssr-server build$ vite build && vite build --ssr
+examples/registration-form build: 8:17:42 AM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/registration-form - using default configuration.
+examples/registration-form build: vite v6.4.1 building for production...
+examples/ssr-server build: 8:17:42 AM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/ssr-server - using default configuration.
+examples/ssr-server build: vite v6.4.1 building for production...
+examples/ssr-server build: transforming...
+examples/registration-form build: [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+examples/registration-form build: transforming...
+examples/registration-form build: Browserslist: browsers data (caniuse-lite) is 11 months old. Please run:
+examples/registration-form build:   npx update-browserslist-db@latest
+examples/registration-form build:   Why you should do it regularly: https://github.com/browserslist/update-db#readme
+examples/multi-step-form build: ✓ 660 modules transformed.
+examples/product-gallery build: ✓ 620 modules transformed.
+examples/multi-step-form build: rendering chunks...
+examples/multi-step-form build: computing gzip size...
+examples/multi-step-form build: dist/index.html                   0.49 kB │ gzip:  0.32 kB
+examples/multi-step-form build: dist/assets/index-DWN-c3fP.css   42.61 kB │ gzip:  7.45 kB
+examples/multi-step-form build: dist/assets/index-41ROj5pc.js   155.04 kB │ gzip: 48.13 kB
+examples/multi-step-form build: ✓ built in 1.47s
+examples/multi-step-form build: Done
+examples/url-routing build$ vite build
+examples/ssr-server build: ✓ 623 modules transformed.
+examples/product-gallery build: rendering chunks...
+examples/product-gallery build: computing gzip size...
+examples/product-gallery build: dist/index.html                   0.43 kB │ gzip:  0.30 kB
+examples/product-gallery build: dist/assets/index-9BMaDBKe.css   51.71 kB │ gzip:  8.61 kB
+examples/product-gallery build: dist/assets/index-qH4UFBUX.js   215.82 kB │ gzip: 69.16 kB
+examples/product-gallery build: ✓ built in 1.50s
+examples/ssr-server build: rendering chunks...
+examples/ssr-server build: computing gzip size...
+examples/ssr-server build: dist/client/index.css    5.94 kB │ gzip:  1.43 kB
+examples/ssr-server build: dist/client/index.js   114.57 kB │ gzip: 38.20 kB
+examples/ssr-server build: ✓ built in 934ms
+examples/product-gallery build: Done
+packages/auth build$ svelte-package -o dist
+examples/url-routing build: 8:17:43 AM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/url-routing - using default configuration.
+examples/url-routing build: vite v6.4.1 building for production...
+examples/url-routing build: transforming...
+examples/ssr-server build: 8:17:43 AM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/ssr-server - using default configuration.
+examples/ssr-server build: vite v6.4.1 building SSR bundle for production...
+examples/ssr-server build: transforming...
+examples/registration-form build: ✓ 658 modules transformed.
+examples/registration-form build: rendering chunks...
+examples/registration-form build: computing gzip size...
+examples/registration-form build: dist/index.html                   0.48 kB │ gzip:  0.31 kB
+examples/registration-form build: dist/assets/index-DaM0QJUu.css   41.50 kB │ gzip:  7.32 kB
+examples/registration-form build: dist/assets/index-BPp-2N7V.js   138.85 kB │ gzip: 43.84 kB
+examples/registration-form build: ✓ built in 1.46s
+examples/registration-form build: Done
+packages/charts build$ svelte-package -o dist
+examples/url-routing build: ✓ 593 modules transformed.
+examples/url-routing build: rendering chunks...
+examples/url-routing build: computing gzip size...
+examples/url-routing build: dist/index.html                  0.41 kB │ gzip:  0.29 kB
+examples/url-routing build: dist/assets/index-CnO0WD0D.css   5.95 kB │ gzip:  1.39 kB
+examples/url-routing build: dist/assets/index-DMLq49Bm.js   61.63 kB │ gzip: 22.13 kB
+examples/url-routing build: ✓ built in 839ms
+examples/ssr-server build: ✓ 632 modules transformed.
+examples/url-routing build: Done
+packages/code build$ svelte-package -o dist
+examples/ssr-server build: rendering chunks...
+examples/ssr-server build: dist/server/index.js                    11.91 kB
+examples/ssr-server build: dist/server/ssg.js                      12.19 kB
+examples/ssr-server build: dist/server/assets/common-B9DD6Coe.js  199.21 kB
+examples/ssr-server build: ✓ built in 827ms
+examples/ssr-server build: Done
+packages/graphics build$ svelte-package -i src -o dist
+packages/charts build: src/lib -> dist
+packages/charts build: Done
+packages/maps build$ svelte-package -o dist
+packages/auth build: src/lib -> dist
+packages/auth build: Done
+packages/media build$ svelte-package -o dist
+packages/code build: src/lib -> dist
+packages/code build: Done
+packages/maps build: src/lib -> dist
+packages/maps build: Done
+packages/media build: src/lib -> dist
+packages/media build: Done
+packages/graphics build: src -> dist
+packages/graphics build: Done
+examples/shader-gallery build$ vite build
+packages/chat build$ svelte-package -o dist
+examples/auth-server build$ vite build
+examples/shader-gallery build: 8:17:46 AM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/shader-gallery - using default configuration.
+examples/auth-server build: 8:17:46 AM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/auth-server/app - using default configuration.
+examples/shader-gallery build: vite v6.4.1 building for production...
+examples/auth-server build: vite v6.4.1 building for production...
+examples/shader-gallery build: transforming...
+examples/auth-server build: transforming...
+packages/chat build: src/lib -> dist
+packages/chat build: Done
+examples/auth-server build: ✓ 781 modules transformed.
+examples/auth-server build: rendering chunks...
+examples/auth-server build: computing gzip size...
+examples/auth-server build: ../dist-app/index.html                   0.39 kB │ gzip:  0.27 kB
+examples/auth-server build: ../dist-app/assets/index-n5u_UAYL.css   44.00 kB │ gzip:  4.09 kB
+examples/auth-server build: ../dist-app/assets/index-8BIHK2mK.js   238.47 kB │ gzip: 64.58 kB
+examples/auth-server build: ✓ built in 1.35s
+examples/auth-server build: Done
+examples/shader-gallery build: ✓ 2720 modules transformed.
+examples/shader-gallery build: rendering chunks...
+examples/shader-gallery build: computing gzip size...
+examples/shader-gallery build: dist/index.html                   0.42 kB │ gzip:  0.29 kB
+examples/shader-gallery build: dist/assets/index-C8TWyJHt.css    2.52 kB │ gzip:  1.02 kB
+examples/shader-gallery build: dist/assets/index-DT4KjJ-t.js   166.01 kB │ gzip: 54.15 kB
+examples/shader-gallery build: ✓ built in 2.59s
+examples/shader-gallery build: Done
+examples/styleguide build$ vite build
+examples/styleguide build: 8:17:49 AM [vite-plugin-svelte] no Svelte config found at /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/styleguide - using default configuration.
+examples/styleguide build: vite v6.4.1 building for production...
+examples/styleguide build: [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+examples/styleguide build: transforming...
+examples/styleguide build: Browserslist: browsers data (caniuse-lite) is 11 months old. Please run:
+examples/styleguide build:   npx update-browserslist-db@latest
+examples/styleguide build:   Why you should do it regularly: https://github.com/browserslist/update-db#readme
+examples/styleguide build: ✓ 7585 modules transformed.
+examples/styleguide build: rendering chunks...
+examples/styleguide build: [plugin vite:reporter] 
+examples/styleguide build: (!)  /Users/jonathanbelolo/dev/claude/code/composable-svelte/node_modules/.pnpm/prismjs@1.30.0/node_modules/prismjs/prism.js?commonjs-es-import is dynamically imported by /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/chat/dist/streaming-chat/markdown.js but also statically imported by /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/code/dist/code-highlight/prism-wrapper.js, dynamic import will not move module into another chunk.
+examples/styleguide build: [plugin vite:reporter] 
+examples/styleguide build: (!) /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/code/dist/index.js is dynamically imported by /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/chat/dist/streaming-chat/markdown.js but also statically imported by /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/styleguide/src/lib/components/demos/CodeEditorDemo.svelte, /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/styleguide/src/lib/components/demos/CodeHighlightDemo.svelte, /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/styleguide/src/lib/components/demos/NodeCanvasDemo.svelte, dynamic import will not move module into another chunk.
+examples/styleguide build: computing gzip size...
+examples/styleguide build: dist/index.html                                            0.42 kB │ gzip:     0.29 kB
+examples/styleguide build: dist/assets/index-lLqlzhzK.css                             0.71 kB │ gzip:     0.37 kB
+examples/styleguide build: dist/assets/index-y9dCBKwV.css                           305.46 kB │ gzip:    42.33 kB
+examples/styleguide build: dist/assets/tgaTextureLoader-AUlS9sfA.js                   0.31 kB │ gzip:     0.26 kB
+examples/styleguide build: dist/assets/prism-json-xwnKirkR.js                         0.45 kB │ gzip:     0.27 kB
+examples/styleguide build: dist/assets/hdrTextureLoader-BC7Q_Z6t.js                   0.53 kB │ gzip:     0.38 kB
+examples/styleguide build: dist/assets/envTextureLoader-6SHFy6HY.js                   0.57 kB │ gzip:     0.37 kB
+examples/styleguide build: dist/assets/mesh.vertexData.functions-ayNlGC5K.js          0.96 kB │ gzip:     0.49 kB
+examples/styleguide build: dist/assets/basisTextureLoader-B9rr-nYu.js                 1.19 kB │ gzip:     0.57 kB
+examples/styleguide build: dist/assets/ddsTextureLoader-Dh31-jzp.js                   1.22 kB │ gzip:     0.59 kB
+examples/styleguide build: dist/assets/ktxTextureLoader-ScC3DAb5.js                   1.38 kB │ gzip:     0.71 kB
+examples/styleguide build: dist/assets/screenSpaceCurvature.fragment-C0pmpktA.js      1.60 kB │ gzip:     0.65 kB
+examples/styleguide build: dist/assets/prism-typescript-Cn6lWHMk.js                   1.80 kB │ gzip:     0.88 kB
+examples/styleguide build: dist/assets/prism-yaml-Chm5ZdEN.js                         1.94 kB │ gzip:     0.86 kB
+examples/styleguide build: dist/assets/index-fZ58iN04.js                              2.01 kB │ gzip:     1.25 kB
+examples/styleguide build: dist/assets/prism-python-KyLfswJE.js                       2.61 kB │ gzip:     1.38 kB
+examples/styleguide build: dist/assets/iesTextureLoader-B1pfZDxm.js                   2.70 kB │ gzip:     1.16 kB
+examples/styleguide build: dist/assets/prism-rust-Bi-W2UWI.js                         2.99 kB │ gzip:     1.46 kB
+examples/styleguide build: dist/assets/prism-sql-AgAyy5H_.js                          3.26 kB │ gzip:     1.81 kB
+examples/styleguide build: dist/assets/prism-javascript-2LMHe_9g.js                   4.72 kB │ gzip:     1.65 kB
+examples/styleguide build: dist/assets/prism-markdown-4MKFcK2x.js                     5.24 kB │ gzip:     2.00 kB
+examples/styleguide build: dist/assets/index-BOyQ9icb.js                              5.33 kB │ gzip:     2.22 kB
+examples/styleguide build: dist/assets/prism-bash-DTkDXsAh.js                         6.15 kB │ gzip:     2.96 kB
+examples/styleguide build: dist/assets/index-DD8g__hc.js                             13.99 kB │ gzip:     6.00 kB
+examples/styleguide build: dist/assets/index-DtYIO6gB.js                             25.83 kB │ gzip:    11.35 kB
+examples/styleguide build: dist/assets/index-roAkwr4W.js                             26.32 kB │ gzip:     8.79 kB
+examples/styleguide build: dist/assets/index-ChLM_o2W.js                             28.66 kB │ gzip:    11.38 kB
+examples/styleguide build: dist/assets/index-D5YtlyBo.js                             44.05 kB │ gzip:    15.27 kB
+examples/styleguide build: dist/assets/index-BJhYd41C.js                             45.10 kB │ gzip:    18.65 kB
+examples/styleguide build: dist/assets/index-BV4dEFsH.js                             70.81 kB │ gzip:    25.08 kB
+examples/styleguide build: dist/assets/index-Bd_8jDdc.js                             84.30 kB │ gzip:    32.56 kB
+examples/styleguide build: dist/assets/pdf-DvU2puER.js                              446.07 kB │ gzip:   130.29 kB
+examples/styleguide build: dist/assets/index-D85D6qBx.js                          8,801.96 kB │ gzip: 2,107.03 kB
+examples/styleguide build: (!) Some chunks are larger than 500 kB after minification. Consider:
+examples/styleguide build: - Using dynamic import() to code-split the application
+examples/styleguide build: - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+examples/styleguide build: - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+examples/styleguide build: ✓ built in 13.21s
+examples/styleguide build: Done

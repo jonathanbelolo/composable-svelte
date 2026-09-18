@@ -1,0 +1,53 @@
+
+ RUN  v4.0.7 /private/tmp/composable-external-audit
+
+ ✓ tests/chat.test.ts (1 test) 3ms
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/code.test.ts [ tests/code.test.ts ]
+Error: Expected to receive {"type":"highlightCompleted"} next, but the next received action was {"type":"highlighted","html":"<span>const x = 5;</span>"} (no later action matches either).
+Received actions, in order:
+  0: {"type":"highlighted","html":"<span>const x = 5;</span>"}
+Assert them in order, or set store.exhaustivity = 'off'.
+ ❯ TestStore._claimOne node_modules/@composable-svelte/core/dist/test/test-store.js:357:19
+    355|             // The queue already holds the answer: not a reason to kee…
+    356|             const later = this.receivedActions.findIndex((action) => t…
+    357|             throw new Error(`Expected to receive ${json(partial)} next…
+       |                   ^
+    358|                 (later === -1 ? '(no later action matches either).\n' …
+    359|                 `Received actions, in order:\n${this._describeQueue()}…
+ ❯ node_modules/@composable-svelte/core/dist/test/test-store.js:338:42
+ ❯ TestStore._until node_modules/@composable-svelte/core/dist/test/test-store.js:412:23
+ ❯ TestStore.receive node_modules/@composable-svelte/core/dist/test/test-store.js:338:24
+ ❯ tests/code.test.ts:13:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/media.test.ts [ tests/media.test.ts ]
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/media.test.ts:16:27
+     14| 
+     15| await store.send({ type: 'play' }, (state) => {
+     16|   expect(state.isPlaying).toBe(true);
+       |                           ^
+     17| });
+     18| 
+ ❯ TestStore.send node_modules/@composable-svelte/core/dist/test/test-store.js:321:19
+ ❯ tests/media.test.ts:15:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed | 1 passed (3)
+      Tests  1 passed (1)
+   Start at  08:02:08
+   Duration  1.69s (transform 2.94s, setup 0ms, collect 1.34s, tests 3ms, environment 0ms, prepare 7ms)
+

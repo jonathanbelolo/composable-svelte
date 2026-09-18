@@ -1,0 +1,50 @@
+vite v7.3.6 building client environment for production...
+transforming...
+[plugin vite:resolve] Module "node:async_hooks" has been externalized for browser compatibility, imported by "/private/tmp/composable-external-audit/node_modules/svelte/src/internal/server/render-context.js". See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.
+node_modules/zod/v4/core/util.js (400:0): A comment
+
+"// Wrapped in a `@__PURE__` IIFE: esbuild never tree-shakes a top-level initializer that contains a member access on `Number`, so the bare object literal survived into every bundle."
+
+in "node_modules/zod/v4/core/util.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+node_modules/zod/v4/core/regexes.js (74:0): A comment
+
+"/** Anchors a pattern source. The interpolation lives here rather than at the call site because
+ * esbuild will not drop a `@__PURE__` call whose own argument interpolates a variable, but it
+ * will drop `anchor(dateSource)`. Keeping it inline pinned `date` into every bundle. */"
+
+in "node_modules/zod/v4/core/regexes.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+✓ 1849 modules transformed.
+rendering chunks...
+computing gzip size...
+dist-v3/index.html                               0.25 kB │ gzip:   0.19 kB
+dist-v3/assets/index-quA-yRdF.css               16.98 kB │ gzip:   2.92 kB
+dist-v3/assets/index-XoEsSMMT.css               19.19 kB │ gzip:   3.82 kB
+dist-v3/assets/index-DVHCxvhe.css              107.29 kB │ gzip:  16.59 kB
+dist-v3/assets/chat_false-DnSfa4Af.js            0.12 kB │ gzip:   0.13 kB
+dist-v3/assets/prism-json-xwnKirkR.js            0.45 kB │ gzip:   0.27 kB
+dist-v3/assets/prism-typescript-CNrsv0lU.js      1.79 kB │ gzip:   0.87 kB
+dist-v3/assets/prism-yaml-Chm5ZdEN.js            1.94 kB │ gzip:   0.86 kB
+dist-v3/assets/index-B9B795zV.js                 2.01 kB │ gzip:   1.24 kB
+dist-v3/assets/prism-python-CcB_TqiR.js          2.61 kB │ gzip:   1.38 kB
+dist-v3/assets/prism-rust-BywXuADb.js            2.99 kB │ gzip:   1.46 kB
+dist-v3/assets/prism-sql-AgAyy5H_.js             3.26 kB │ gzip:   1.81 kB
+dist-v3/assets/prism-javascript-2LMHe_9g.js      4.72 kB │ gzip:   1.65 kB
+dist-v3/assets/prism-markdown-4MKFcK2x.js        5.24 kB │ gzip:   2.00 kB
+dist-v3/assets/prism-bash-DTkDXsAh.js            6.15 kB │ gzip:   2.96 kB
+dist-v3/assets/index-GEI05hAZ.js                13.97 kB │ gzip:   5.99 kB
+dist-v3/assets/index-CO1ejOrr.js                26.52 kB │ gzip:   8.82 kB
+dist-v3/assets/index-BcCd7YUK.js                28.22 kB │ gzip:  12.43 kB
+dist-v3/assets/index-BDsxR1hU.js                28.73 kB │ gzip:  11.41 kB
+dist-v3/assets/index-Cgd03joB.js                44.34 kB │ gzip:  15.36 kB
+dist-v3/assets/index-QyCx1TrS.js                44.88 kB │ gzip:  13.83 kB
+dist-v3/assets/index-CFN8vlUF.js                45.10 kB │ gzip:  18.65 kB
+dist-v3/assets/index-CMetBMM1.js                70.81 kB │ gzip:  25.08 kB
+dist-v3/assets/index-4Gw1SReZ.js                84.62 kB │ gzip:  32.64 kB
+dist-v3/assets/index-bbnUb9Qa.js               133.27 kB │ gzip:  42.98 kB
+dist-v3/assets/index-CUzRnZcm.js             1,190.21 kB │ gzip: 385.92 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 3.74s

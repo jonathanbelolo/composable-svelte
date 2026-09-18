@@ -1,0 +1,105 @@
+Scope: 20 of 21 workspace projects
+packages/core check$ svelte-check --tsconfig ./tsconfig.test.json --fail-on-warnings
+packages/core check: Loading svelte-check in workspace: /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/core
+packages/core check: Getting Svelte diagnostics...
+packages/core check: [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+packages/core check: Browserslist: browsers data (caniuse-lite) is 11 months old. Please run:
+packages/core check:   npx update-browserslist-db@latest
+packages/core check:   Why you should do it regularly: https://github.com/browserslist/update-db#readme
+packages/core check: svelte-check found 0 errors and 0 warnings
+packages/core check: Done
+examples/file-browser check$ svelte-check --tsconfig ./tsconfig.json --fail-on-warnings
+examples/data-table check$ svelte-check --tsconfig ./tsconfig.json --fail-on-warnings
+examples/counter check$ svelte-check --tsconfig ./tsconfig.json --fail-on-warnings
+examples/contact-form check$ svelte-check --tsconfig ./tsconfig.test.json --fail-on-warnings
+examples/data-table check: Loading svelte-check in workspace: /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/data-table
+examples/data-table check: Getting Svelte diagnostics...
+examples/contact-form check: Loading svelte-check in workspace: /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/contact-form
+examples/contact-form check: Getting Svelte diagnostics...
+examples/counter check: Loading svelte-check in workspace: /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/counter
+examples/counter check: Getting Svelte diagnostics...
+examples/file-browser check: Loading svelte-check in workspace: /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/file-browser
+examples/file-browser check: Getting Svelte diagnostics...
+examples/counter check: svelte-check found 0 errors and 0 warnings
+examples/file-browser check: svelte-check found 0 errors and 0 warnings
+examples/counter check: Done
+examples/multi-step-form check$ svelte-check --tsconfig ./tsconfig.test.json --fail-on-warnings
+examples/file-browser check: Done
+examples/product-gallery check$ svelte-check --tsconfig ./tsconfig.json --fail-on-warnings
+examples/data-table check: svelte-check found 0 errors and 0 warnings
+examples/data-table check: Done
+examples/registration-form check$ svelte-check --tsconfig ./tsconfig.test.json --fail-on-warnings
+examples/contact-form check: svelte-check found 0 errors and 0 warnings
+examples/contact-form check: Done
+examples/ssr-server check$ svelte-check --tsconfig ./tsconfig.json --fail-on-warnings
+examples/multi-step-form check: Loading svelte-check in workspace: /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/multi-step-form
+examples/multi-step-form check: Getting Svelte diagnostics...
+examples/product-gallery check: Loading svelte-check in workspace: /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/product-gallery
+examples/product-gallery check: Getting Svelte diagnostics...
+examples/registration-form check: Loading svelte-check in workspace: /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/registration-form
+examples/registration-form check: Getting Svelte diagnostics...
+examples/ssr-server check: Loading svelte-check in workspace: /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/ssr-server
+examples/ssr-server check: Getting Svelte diagnostics...
+examples/registration-form check: svelte-check found 0 errors and 0 warnings
+examples/registration-form check: Done
+examples/url-routing check$ svelte-check --tsconfig ./tsconfig.test.json --fail-on-warnings
+examples/multi-step-form check: svelte-check found 0 errors and 0 warnings
+examples/product-gallery check: svelte-check found 0 errors and 0 warnings
+examples/multi-step-form check: Done
+packages/auth check$ svelte-check --tsconfig ./tsconfig.test.json --fail-on-warnings
+examples/product-gallery check: Done
+packages/charts check$ svelte-check --tsconfig ./tsconfig.test.json --fail-on-warnings
+examples/url-routing check: Loading svelte-check in workspace: /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/url-routing
+examples/url-routing check: Getting Svelte diagnostics...
+packages/auth check: Loading svelte-check in workspace: /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/auth
+packages/auth check: Getting Svelte diagnostics...
+packages/charts check: Loading svelte-check in workspace: /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/charts
+packages/charts check: Getting Svelte diagnostics...
+examples/ssr-server check: svelte-check found 0 errors and 0 warnings
+examples/ssr-server check: Done
+packages/code check$ svelte-check --tsconfig ./tsconfig.test.json --fail-on-warnings
+packages/code check: Loading svelte-check in workspace: /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/code
+packages/code check: Getting Svelte diagnostics...
+examples/url-routing check: svelte-check found 0 errors and 0 warnings
+examples/url-routing check: Done
+packages/graphics check$ svelte-check --tsconfig ./tsconfig.test.json --fail-on-warnings
+packages/graphics check: Loading svelte-check in workspace: /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/graphics
+packages/graphics check: Getting Svelte diagnostics...
+packages/charts check: svelte-check found 0 errors and 0 warnings
+packages/charts check: Done
+packages/maps check$ svelte-check --tsconfig ./tsconfig.test.json --fail-on-warnings
+packages/maps check: Loading svelte-check in workspace: /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/maps
+packages/maps check: Getting Svelte diagnostics...
+packages/code check: svelte-check found 0 errors and 0 warnings
+packages/code check: Done
+packages/media check$ svelte-check --tsconfig ./tsconfig.test.json --fail-on-warnings
+packages/media check: Loading svelte-check in workspace: /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/media
+packages/media check: Getting Svelte diagnostics...
+packages/auth check: svelte-check found 0 errors and 0 warnings
+packages/auth check: Done
+packages/maps check: svelte-check found 0 errors and 0 warnings
+packages/maps check: Done
+packages/media check: svelte-check found 0 errors and 0 warnings
+packages/media check: Done
+packages/graphics check: svelte-check found 0 errors and 0 warnings
+packages/graphics check: Done
+examples/auth-server check$ svelte-check --tsconfig ./tsconfig.json --fail-on-warnings
+examples/shader-gallery check$ svelte-check --tsconfig ./tsconfig.json --fail-on-warnings
+packages/chat check$ svelte-check --tsconfig ./tsconfig.test.json --fail-on-warnings
+examples/auth-server check: Loading svelte-check in workspace: /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/auth-server
+examples/auth-server check: Getting Svelte diagnostics...
+examples/shader-gallery check: Loading svelte-check in workspace: /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/shader-gallery
+examples/shader-gallery check: Getting Svelte diagnostics...
+packages/chat check: Loading svelte-check in workspace: /Users/jonathanbelolo/dev/claude/code/composable-svelte/packages/chat
+packages/chat check: Getting Svelte diagnostics...
+examples/shader-gallery check: svelte-check found 0 errors and 0 warnings
+examples/shader-gallery check: Done
+examples/auth-server check: svelte-check found 0 errors and 0 warnings
+examples/auth-server check: Done
+packages/chat check: svelte-check found 0 errors and 0 warnings
+packages/chat check: Done
+examples/styleguide check$ svelte-check --tsconfig ./tsconfig.json --fail-on-warnings
+examples/styleguide check: Loading svelte-check in workspace: /Users/jonathanbelolo/dev/claude/code/composable-svelte/examples/styleguide
+examples/styleguide check: Getting Svelte diagnostics...
+examples/styleguide check: svelte-check found 0 errors and 0 warnings
+examples/styleguide check: Done

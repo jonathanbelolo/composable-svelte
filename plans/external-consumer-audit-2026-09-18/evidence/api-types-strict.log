@@ -1,0 +1,2 @@
+node_modules/@xyflow/svelte/dist/lib/store/initial-store.svelte.d.ts(67,22): error TS2304: Cannot find name 'PromiseWithResolvers'.
+node_modules/framer-motion/dist/dom.d.ts(298,14): error TS2552: Cannot find name 'HTMLWebViewElement'. Did you mean 'HTMLVideoElement'?

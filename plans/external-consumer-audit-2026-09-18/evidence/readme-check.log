@@ -1,0 +1,56 @@
+Loading svelte-check in workspace: /private/tmp/composable-external-audit
+Getting Svelte diagnostics...
+
+/private/tmp/composable-external-audit/src/Core.svelte:2:12
+Error: Module '"./counter-store"' declares 'store' locally, but it is not exported. (ts)
+<script lang="ts">
+  import { store } from './counter-store';
+</script>
+
+/private/tmp/composable-external-audit/src/Maps.svelte:7:5
+Error: Object literal may only specify known properties, and 'provider' does not exist in type '{ accessToken?: string; tileProvider?: TileProvider; center?: LngLat; zoom?: number; bearing?: number; pitch?: number; style?: string; markers?: any[]; }'. (ts)
+  initialState: createInitialMapState({
+    provider: 'maplibre',
+    center: [-74.006, 40.7128],  // NYC
+
+/private/tmp/composable-external-audit/src/code-4.svelte:11:7
+Error: Object literal may only specify known properties, and 'code' does not exist in type '{ value?: string; language?: SupportedLanguage; theme?: "auto" | "light" | "dark"; showLineNumbers?: boolean; enableFolding?: boolean; readOnly?: boolean; enableAutocomplete?: boolean; tabSize?: number; }'. (ts)
+    initialState: createInitialCodeEditorState({
+      code: 'function hello() {\n  console.log("Hello!");\n}',
+      language: 'javascript'
+
+/private/tmp/composable-external-audit/src/code-6.svelte:11:7
+Error: Type '{ id: string; type: string; position: { x: number; y: number; }; data: { label: string; }; }[]' is not assignable to type 'Record<string, Node<Record<string, unknown>>>'.
+  Index signature for type 'string' is missing in type '{ id: string; type: string; position: { x: number; y: number; }; data: { label: string; }; }[]'. (ts)
+    initialState: createInitialNodeCanvasState({
+      nodes: [
+        { id: '1', type: 'input', position: { x: 0, y: 0 }, data: { label: 'Start' } },
+
+/private/tmp/composable-external-audit/src/code-6.svelte:15:7
+Error: Type '{ id: string; source: string; target: string; }[]' is not assignable to type 'Record<string, Edge<Record<string, unknown>>>'.
+  Index signature for type 'string' is missing in type '{ id: string; source: string; target: string; }[]'. (ts)
+      ],
+      edges: [
+        { id: 'e1-2', source: '1', target: '2' }
+
+/private/tmp/composable-external-audit/src/code-6.svelte:19:5
+Error: Type '<NodeData extends Record<string, unknown> = Record<string, unknown>, EdgeData extends Record<string, unknown> = Record<string, unknown>>(state: NodeCanvasState<NodeData, EdgeData>, action: NodeCanvasAction<...>, deps?: NodeCanvasDependencies | undefined) => [...]' is not assignable to type 'Reducer<NodeCanvasState<Record<string, unknown>, Record<string, unknown>>, unknown, {}>'.
+  Types of parameters 'action' and 'action' are incompatible.
+    Type 'unknown' is not assignable to type 'NodeCanvasAction<Record<string, unknown>, Record<string, unknown>>'. (ts)
+    }),
+    reducer: nodeCanvasReducer,
+    dependencies: {}
+
+/private/tmp/composable-external-audit/src/code-6.svelte:24:2
+Error: Property 'liftAction' is missing in type '{ store: Store<NodeCanvasState<Record<string, unknown>, Record<string, unknown>>, unknown>; }' but required in type 'NodeCanvasProps<Record<string, unknown>, Record<string, unknown>, unknown>'. (ts)
+
+<NodeCanvas {store} />
+
+/private/tmp/composable-external-audit/src/media-9.svelte:14:47
+Error: Cannot find name 'sendToSpeechToText'. (ts)
+    dependencies: {
+      transcribeAudio: async (audio: Blob) => sendToSpeechToText(audio),
+      getAudioManager: getVoiceInputAudioManager
+
+====================================
+svelte-check found 8 errors and 0 warnings in 5 files

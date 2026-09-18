@@ -1,0 +1,41 @@
+
+> test
+> vitest run readme-examples/core/navigation-review.test.ts
+
+8:29:24 AM [vite-plugin-svelte] no Svelte config found at /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/composable-consumer-UjLrqF/app - using default configuration.
+
+ RUN  v4.0.7 /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/composable-consumer-UjLrqF/app
+
+ ❯ readme-examples/core/navigation-review.test.ts (4 tests | 1 failed) 6ms
+     ✓ shows destination 1ms
+     ✓ hides destination 0ms
+     ✓ routes actions to destination 0ms
+     × handles child dismissal via deps.dismiss() 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  readme-examples/core/navigation-review.test.ts > Navigation with ifLet > handles child dismissal via deps.dismiss()
+Error: Expected to receive {"type":"destination","action":{"type":"dismiss"}} next, but the next received action was {"type":"destination","action":{"type":"presented","action":{"type":"destination","action":{"type":"dismiss"}}}} (no later action matches either).
+Received actions, in order:
+  0: {"type":"destination","action":{"type":"presented","action":{"type":"destination","action":{"type":"dismiss"}}}}
+Assert them in order, or set store.exhaustivity = 'off'.
+ ❯ TestStore._claimOne node_modules/@composable-svelte/core/dist/test/test-store.js:357:19
+    355|             // The queue already holds the answer: not a reason to kee…
+    356|             const later = this.receivedActions.findIndex((action) => t…
+    357|             throw new Error(`Expected to receive ${json(partial)} next…
+       |                   ^
+    358|                 (later === -1 ? '(no later action matches either).\n' …
+    359|                 `Received actions, in order:\n${this._describeQueue()}…
+ ❯ node_modules/@composable-svelte/core/dist/test/test-store.js:338:42
+ ❯ TestStore._until node_modules/@composable-svelte/core/dist/test/test-store.js:412:23
+ ❯ TestStore.receive node_modules/@composable-svelte/core/dist/test/test-store.js:338:24
+ ❯ readme-examples/core/navigation-review.test.ts:142:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 passed (4)
+   Start at  08:29:24
+   Duration  865ms (transform 594ms, setup 0ms, collect 787ms, tests 6ms, environment 0ms, prepare 2ms)
+
