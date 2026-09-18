@@ -1,6 +1,6 @@
 {
   "name": "@composable-svelte/auth",
-  "version": "0.1.1",
+  "version": "0.2.1",
   "description": "Session store, subject helpers, and auth guard components for Composable Svelte - Client half of the DDD identity substrate",
   "type": "module",
   "main": "./dist/index.js",
@@ -54,7 +54,8 @@
     "dist",
     "README.md",
     "CHANGELOG.md",
-    "LICENSE"
+    "LICENSE",
+    "docs"
   ],
   "scripts": {
     "build": "svelte-package -o dist",
@@ -83,12 +84,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/jbelolo/composable-svelte.git",
+    "url": "https://github.com/jonathanbelolo/composable-svelte.git",
     "directory": "packages/auth"
   },
-  "homepage": "https://github.com/jbelolo/composable-svelte#readme",
+  "homepage": "https://github.com/jonathanbelolo/composable-svelte/tree/main/packages/auth#readme",
   "bugs": {
-    "url": "https://github.com/jbelolo/composable-svelte/issues"
+    "url": "https://github.com/jonathanbelolo/composable-svelte/issues"
   },
   "peerDependencies": {
     "@composable-svelte/core": "^0.12.0",

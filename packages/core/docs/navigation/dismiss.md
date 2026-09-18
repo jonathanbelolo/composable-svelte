@@ -697,7 +697,21 @@ describe('AddItem reducer dismiss logic', () => {
 
 ```typescript
 import { createTestStore } from '@composable-svelte/core/test';
-import { dismissDependency } from '@composable-svelte/core/navigation';
+import { Effect, type Reducer } from '@composable-svelte/core';
+import { describe, it, expect, vi } from 'vitest';
+
+type InventoryState = { destination: {type:'addItem';state:{name:string;quantity:number}} | null };
+type InventoryAction = {type:'destination';action:{type:'dismiss'} | {type:'presented';action:{type:'saveButtonTapped'}}};
+type InventoryDeps = {api?:{saveItem:(item:{name:string;quantity:number})=>Promise<{id:string}>}};
+const inventoryReducer: Reducer<InventoryState,InventoryAction,InventoryDeps> = (state,action,deps)=>{
+  if (action.action.type === 'dismiss') return [{...state,destination:null},Effect.none()];
+  const item=state.destination?.state;
+  if (!item || !deps.api) return [state,Effect.none()];
+  return [state,Effect.run(async dispatch=>{
+    await deps.api!.saveItem(item);
+    dispatch({type:'destination',action:{type:'dismiss'}});
+  })];
+};
 
 describe('AddItem dismiss integration', () => {
   it('dismisses modal on cancel', async () => {

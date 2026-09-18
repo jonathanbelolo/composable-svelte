@@ -5,7 +5,7 @@ A concise reference for @composable-svelte/core. For detailed documentation, see
 ## Installation
 
 ```bash
-npm install @composable-svelte/core svelte@^5.0.0 motion@^11.0.0
+npm install @composable-svelte/core svelte@^5.0.0
 ```
 
 ## Core Patterns
@@ -17,7 +17,7 @@ import { createStore, Effect } from '@composable-svelte/core';
 
 const store = createStore({
   initialState: { count: 0 },
-  reducer: (state, action, deps) => {
+  reducer: (state, action: { type: 'increment' }, deps) => {
     switch (action.type) {
       case 'increment':
         return [{ ...state, count: state.count + 1 }, Effect.none()];
@@ -788,5 +788,5 @@ if (typeof window !== 'undefined') {
 
 - **[Full Documentation](./README.md)**
 - **[API Reference](./api/reference.md)**
-- **[Examples](../../../examples/)**
+- **[Examples](https://github.com/jonathanbelolo/composable-svelte/tree/main/examples)**
 - **[GitHub](https://github.com/jonathanbelolo/composable-svelte)**

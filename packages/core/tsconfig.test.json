@@ -6,8 +6,32 @@
     "declaration": false,
     "declarationMap": false,
     "composite": false,
-    "types": ["svelte", "node", "vitest/globals"]
+    "types": [
+      "svelte",
+      "node",
+      "vitest/globals"
+    ],
+    "paths": {
+      "@composable-svelte/core": [
+        "./dist/index.d.ts"
+      ],
+      "@composable-svelte/core/test": [
+        "./dist/test/index.d.ts"
+      ],
+      "@composable-svelte/core/components/ui": [
+        "./dist/components/ui/index.d.ts"
+      ]
+    }
   },
-  "include": ["src/**/*", "tests/**/*"],
-  "exclude": ["dist", "node_modules"]
+  "include": [
+    "src/**/*",
+    "tests/**/*",
+    "consumer/src/**/*",
+    "consumer/tests/**/*",
+    "consumer/browser/**/*"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules"
+  ]
 }

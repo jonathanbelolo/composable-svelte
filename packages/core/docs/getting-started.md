@@ -15,7 +15,7 @@ Composable Svelte helps you build predictable, testable, and maintainable Svelte
 
 ## Prerequisites
 
-- Node.js 18+ or Bun
+- Node.js 20.19+ or 22.12+ for the tested Vite 7 starter (core itself requires Node >=20)
 - Svelte 5 (with runes)
 - TypeScript 5.0+
 - Basic understanding of Svelte and TypeScript
@@ -30,7 +30,7 @@ pnpm add @composable-svelte/core
 bun add @composable-svelte/core
 ```
 
-> **Note**: The package is not yet published to npm. Clone the repository to use it in development.
+> Published on npm. Start from the [packaged consumer starter](../consumer/README.md); no clone is required.
 
 ### Peer Dependencies
 
@@ -38,15 +38,14 @@ Composable Svelte requires:
 
 ```json
 {
-  "svelte": "^5.0.0",
-  "motion": "^11.0.0"
+  "svelte": "^5.0.0"
 }
 ```
 
 Install them if not already present:
 
 ```bash
-npm install svelte@^5.0.0 motion@^11.0.0
+npm install svelte@^5.0.0
 ```
 
 ## Your First App: Counter
@@ -312,9 +311,9 @@ Now that you understand the basics, explore:
 
 Check out complete working examples:
 
-- **[Product Gallery](../../../examples/product-gallery/)** - Full-featured e-commerce app
-- **[Styleguide](../../../examples/styleguide/)** - Component showcase with 73+ components
-- **[URL Routing](../../../examples/url-routing/)** - Browser history integration
+- **[Product Gallery](https://github.com/jonathanbelolo/composable-svelte/tree/main/examples/product-gallery)** - Full-featured e-commerce app
+- **[Styleguide](https://github.com/jonathanbelolo/composable-svelte/tree/main/examples/styleguide)** - Component showcase with 73+ components
+- **[URL Routing](https://github.com/jonathanbelolo/composable-svelte/tree/main/examples/url-routing)** - Browser history integration
 
 ## Getting Help
 

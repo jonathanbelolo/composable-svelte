@@ -21,26 +21,32 @@ pnpm add @composable-svelte/code @composable-svelte/core @xyflow/svelte
 
 ## Quick Start
 
+Put the store in `store.ts`:
+
 ```typescript
 import { createStore } from '@composable-svelte/core';
 import {
   NodeCanvas,
   nodeCanvasReducer,
   createInitialNodeCanvasState,
+  type NodeCanvasState,
+  type NodeCanvasDependencies,
   type NodeCanvasAction
 } from '@composable-svelte/code';
 
 // Create store
-const store = createStore({
+export const store = createStore<NodeCanvasState, NodeCanvasAction, NodeCanvasDependencies>({
   initialState: createInitialNodeCanvasState(),
-  reducer: nodeCanvasReducer
+  reducer: nodeCanvasReducer,
+  dependencies: {}
 });
 ```
 
 ```svelte
-<script>
-  import { NodeCanvas } from '@composable-svelte/code';
-  const liftAction = (action) => action; // Identity function for simple case
+<script lang="ts">
+  import { NodeCanvas, type NodeCanvasAction } from '@composable-svelte/code';
+  import { store } from './store';
+  const liftAction = (action: NodeCanvasAction) => action; // Identity function for simple case
 </script>
 
 <div style="width: 100%; height: 600px;">
@@ -50,7 +56,7 @@ const store = createStore({
 
 ## Documentation
 
-See the [NodeCanvas section of the package README](../../../README.md#nodecanvas)
+See the [NodeCanvas section of the package README](https://www.npmjs.com/package/@composable-svelte/code#nodecanvas)
 for a worked example with:
 - Type-safe connection validation
 - Testing patterns

@@ -31,6 +31,7 @@ pnpm add @composable-svelte/core svelte
 
 Read-only syntax highlighting for displaying code snippets. Powered by Prism.js.
 
+<!-- consumer-file: Highlight.svelte -->
 ```svelte
 <script lang="ts">
   import { createStore } from '@composable-svelte/core';
@@ -80,6 +81,7 @@ interface CodeHighlightState {
 
 Interactive code editor with full editing capabilities. Powered by CodeMirror 6.
 
+<!-- consumer-file: Editor.svelte -->
 ```svelte
 <script lang="ts">
   import { createStore } from '@composable-svelte/core';
@@ -91,7 +93,7 @@ Interactive code editor with full editing capabilities. Powered by CodeMirror 6.
 
   const store = createStore({
     initialState: createInitialCodeEditorState({
-      code: 'function hello() {\n  console.log("Hello!");\n}',
+      value: 'function hello() {\n  console.log("Hello!");\n}',
       language: 'javascript'
     }),
     reducer: codeEditorReducer,
@@ -156,31 +158,33 @@ const state: CodeEditorState = {
 
 Visual node-based programming canvas for building flow graphs, pipelines, or visual scripts. Powered by SvelteFlow (@xyflow/svelte).
 
+<!-- consumer-file: Canvas.svelte -->
 ```svelte
 <script lang="ts">
   import { createStore } from '@composable-svelte/core';
   import {
     NodeCanvas,
+    type NodeCanvasState, type NodeCanvasAction, type NodeCanvasDependencies,
     nodeCanvasReducer,
     createInitialNodeCanvasState
   } from '@composable-svelte/code';
 
-  const store = createStore({
+  const store = createStore<NodeCanvasState, NodeCanvasAction, NodeCanvasDependencies>({
     initialState: createInitialNodeCanvasState({
-      nodes: [
-        { id: '1', type: 'input', position: { x: 0, y: 0 }, data: { label: 'Start' } },
-        { id: '2', type: 'default', position: { x: 200, y: 100 }, data: { label: 'Process' } }
-      ],
-      edges: [
-        { id: 'e1-2', source: '1', target: '2' }
-      ]
+      nodes: {
+        '1': { id: '1', type: 'input', position: { x: 0, y: 0 }, data: { label: 'Start' } },
+        '2': { id: '2', type: 'default', position: { x: 200, y: 100 }, data: { label: 'Process' } }
+      },
+      edges: {
+        'e1-2': { id: 'e1-2', source: '1', target: '2' }
+      }
     }),
     reducer: nodeCanvasReducer,
     dependencies: {}
   });
 </script>
 
-<NodeCanvas {store} />
+<NodeCanvas {store} liftAction={(action) => action} />
 ```
 
 **Features:**
@@ -209,21 +213,24 @@ const validator = composeValidators(strictValidator, customValidator);
 
 All components have dedicated reducers testable via `TestStore`:
 
+<!-- consumer-file: code.test.ts -->
 ```typescript
+import { it, expect } from 'vitest';
 import { createTestStore } from '@composable-svelte/core/test';
 import { codeHighlightReducer, createInitialCodeHighlightState } from '@composable-svelte/code';
 
-const store = createTestStore({
-  initialState: createInitialCodeHighlightState({ code: 'const x = 5;' }),
-  reducer: codeHighlightReducer,
-  dependencies: { highlightCode: async (code) => `<span>${code}</span>` }
-});
-
-await store.send({ type: 'init' });
-
-await store.receive({ type: 'highlightCompleted' }, (state) => {
-  expect(state.highlightedCode).toContain('<span>');
-  expect(state.isHighlighting).toBe(false);
+it('highlights through the injected dependency', async () => {
+  const store = createTestStore({
+    initialState: createInitialCodeHighlightState({ code: 'const x = 5;' }),
+    reducer: codeHighlightReducer,
+    dependencies: { highlightCode: async (code) => `<span>${code}</span>` }
+  });
+  await store.send({ type: 'init' });
+  await store.receive({ type: 'highlighted' }, state => {
+    expect(state.highlightedCode).toContain('<span>');
+    expect(state.isHighlighting).toBe(false);
+  });
+  await store.finish();
 });
 ```
 

@@ -1,6 +1,6 @@
 {
   "name": "@composable-svelte/code",
-  "version": "0.3.0",
+  "version": "0.4.1",
   "description": "Code editor, syntax highlighting, and node-based canvas components for Composable Svelte - Built with Prism.js, CodeMirror, and SvelteFlow",
   "type": "module",
   "main": "./dist/index.js",
@@ -65,12 +65,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/jbelolo/composable-svelte.git",
+    "url": "https://github.com/jonathanbelolo/composable-svelte.git",
     "directory": "packages/code"
   },
-  "homepage": "https://github.com/jbelolo/composable-svelte#readme",
+  "homepage": "https://github.com/jonathanbelolo/composable-svelte/tree/main/packages/code#readme",
   "bugs": {
-    "url": "https://github.com/jbelolo/composable-svelte/issues"
+    "url": "https://github.com/jonathanbelolo/composable-svelte/issues"
   },
   "peerDependencies": {
     "@composable-svelte/core": "^0.12.0",

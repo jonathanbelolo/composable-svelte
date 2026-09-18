@@ -18,6 +18,7 @@ pnpm add @composable-svelte/graphics @composable-svelte/core svelte
 
 ## Quick Start
 
+<!-- consumer-file: Scene.svelte -->
 ```svelte
 <script lang="ts">
   import { createStore } from '@composable-svelte/core';
@@ -284,7 +285,9 @@ type GraphicsAction =
 
 ## Testing
 
+<!-- consumer-file: graphics.test.ts -->
 ```typescript
+import { describe, it, expect } from 'vitest';
 import { TestStore } from '@composable-svelte/core/test';
 import { graphicsReducer, createInitialGraphicsState } from '@composable-svelte/graphics';
 
@@ -311,6 +314,7 @@ describe('Graphics Reducer', () => {
         expect(state.meshes[0]?.id).toBe('cube-1');
       }
     );
+    await store.finish();
   });
 });
 ```

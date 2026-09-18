@@ -1,0 +1,15 @@
+{
+  "counter": "42",
+  "light": {
+    "bg": "rgb(15, 23, 42)",
+    "color": "rgb(248, 250, 252)"
+  },
+  "dark": {
+    "bg": "rgb(248, 250, 252)",
+    "color": "rgb(15, 23, 42)"
+  },
+  "editor": "const externalConsumer = true;",
+  "chartSvg": 4,
+  "passwordInput": 1,
+  "errors": []
+}

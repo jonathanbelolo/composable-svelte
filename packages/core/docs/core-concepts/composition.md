@@ -78,7 +78,7 @@ function scope<ParentState, ParentAction, ChildState, ChildAction, Dependencies>
 
 4. **`fromChildAction`** - Wrap child action into parent action
    - Type: `(child: ChildAction) => ParentAction`
-   - Example: `(ca) => ({ type: 'counter', action: ca })`
+   - Example: `(ca): AppAction => ({ type: 'counter', action: ca })`
 
 5. **`childReducer`** - The child reducer to compose
    - Type: `Reducer<ChildState, ChildAction, Dependencies>`
@@ -171,7 +171,7 @@ const counterInApp = scope(
   (a: AppAction) => (a.type === 'counter' ? a.action : null),
 
   // 4. Wrap counter action
-  (ca) => ({ type: 'counter', action: ca }),
+  (ca): AppAction => ({ type: 'counter', action: ca }),
 
   // 5. The child reducer
   counterReducer
@@ -226,7 +226,7 @@ const counterInApp = scope(
   (s: AppState) => s.counter,
   (s, c) => ({ ...s, counter: c }),
   (a: AppAction) => (a.type === 'counter' ? a.action : null),
-  (ca) => ({ type: 'counter', action: ca }), // Effect will dispatch parent action!
+  (ca): AppAction => ({ type: 'counter', action: ca }), // Effect will dispatch parent action!
   asyncCounterReducer
 );
 
@@ -257,7 +257,7 @@ const counterInApp = scope(
   (s: AppState) => s.counter,
   (s, c) => ({ ...s, counter: c }),
   (a: AppAction) => (a.type === 'counter' ? a.action : null),
-  (ca) => ({ type: 'counter', action: ca }),
+  (ca): AppAction => ({ type: 'counter', action: ca }),
   counterReducer
 );
 

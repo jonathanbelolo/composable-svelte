@@ -1060,74 +1060,110 @@ past `presenting` and `dismissing`:
 
 ### TestStore Support
 
-TestStore automatically handles animation timing:
+These three tests belong in one `animation.test.ts` file. They use a small
+lifecycle reducer to demonstrate timing, guards and fallback events; production
+navigation also handles interruption and cancellation as described above.
 
+<!-- consumer-file: animation.test.ts -->
 ```typescript
 import { createTestStore } from '@composable-svelte/core/test';
+import { Effect, type Reducer } from '@composable-svelte/core';
+import { it, expect } from 'vitest';
 
-const store = createTestStore({
-  initialState,
-  reducer
-});
+type State = {
+  destination: { id: string } | null;
+  presentation: { status: 'idle' | 'presenting' | 'presented' | 'dismissing' };
+};
+type Action =
+  | { type: 'openModal' }
+  | { type: 'closeModal' }
+  | { type: 'presentation'; event: {
+      type: 'presentationCompleted' | 'dismissalCompleted' | 'presentationTimeout'
+    } };
+type Dependencies = { completeAutomatically: boolean };
+const reducer: Reducer<State, Action, Dependencies> = (state, action, deps) => {
+  if (action.type === 'openModal') {
+    if (state.presentation.status !== 'idle') return [state, Effect.none()];
+    return [
+      { destination: { id: 'modal' }, presentation: { status: 'presenting' } },
+      Effect.afterDelay(10, async dispatch => dispatch({
+        type: 'presentation',
+        event: { type: deps.completeAutomatically ? 'presentationCompleted' : 'presentationTimeout' }
+      }))
+    ];
+  }
+  if (action.type === 'closeModal') {
+    if (state.presentation.status !== 'presented') return [state, Effect.none()];
+    return [
+      { ...state, presentation: { status: 'dismissing' } },
+      Effect.afterDelay(10, async dispatch => dispatch({
+        type: 'presentation', event: { type: 'dismissalCompleted' }
+      }))
+    ];
+  }
+  if (state.presentation.status === 'presenting' && action.event.type !== 'dismissalCompleted') {
+    return [{ ...state, presentation: { status: 'presented' } }, Effect.none()];
+  }
+  if (state.presentation.status === 'dismissing' && action.event.type === 'dismissalCompleted') {
+    return [{ destination: null, presentation: { status: 'idle' } }, Effect.none()];
+  }
+  return [state, Effect.none()];
+};
+function makeStore(completeAutomatically = true) {
+  const initialState: State = { destination: null, presentation: { status: 'idle' } };
+  return createTestStore({ initialState, reducer, dependencies: { completeAutomatically } });
+}
 
-// Test presentation lifecycle
-await store.send({ type: 'openModal' }, (state) => {
-  expect(state.presentation.status).toBe('presenting');
-  expect(state.destination).toBeDefined();
-});
-
-// TestStore automatically processes Effect.afterDelay
-await store.receive({
-  type: 'presentation',
-  event: { type: 'presentationCompleted' }
-}, (state) => {
-  expect(state.presentation.status).toBe('presented');
-});
-
-// Test dismissal
-await store.send({ type: 'closeModal' }, (state) => {
-  expect(state.presentation.status).toBe('dismissing');
-});
-
-await store.receive({
-  type: 'presentation',
-  event: { type: 'dismissalCompleted' }
-}, (state) => {
-  expect(state.presentation.status).toBe('idle');
-  expect(state.destination).toBeNull();
+it('completes presentation and dismissal', async () => {
+  const store = makeStore();
+  await store.send({ type: 'openModal' }, state => {
+    expect(state.presentation.status).toBe('presenting');
+    expect(state.destination).toBeDefined();
+  });
+  await store.receive({ type: 'presentation', event: { type: 'presentationCompleted' } }, state => {
+    expect(state.presentation.status).toBe('presented');
+  });
+  await store.send({ type: 'closeModal' }, state => {
+    expect(state.presentation.status).toBe('dismissing');
+  });
+  await store.receive({ type: 'presentation', event: { type: 'dismissalCompleted' } }, state => {
+    expect(state.presentation.status).toBe('idle');
+    expect(state.destination).toBeNull();
+  });
+  await store.finish();
 });
 ```
 
 ### Guard Testing
 
+<!-- consumer-file: animation.test.ts -->
 ```typescript
-// Test guard prevents invalid transition
-await store.send({ type: 'closeModal' }, (state) => {
-  // State unchanged (guard blocked it)
-  expect(state.presentation.status).toBe('idle');
-});
-
-await store.send({ type: 'openModal' });
-await store.receive({ type: 'presentation', event: { type: 'presentationCompleted' }});
-
-// Now guard allows it
-await store.send({ type: 'closeModal' }, (state) => {
-  expect(state.presentation.status).toBe('dismissing');
+it('ignores closing an idle presentation', async () => {
+  const store = makeStore();
+  await store.send({ type: 'closeModal' }, state => {
+    expect(state.presentation.status).toBe('idle');
+  });
+  await store.send({ type: 'openModal' });
+  await store.receive({ type: 'presentation', event: { type: 'presentationCompleted' } });
+  await store.send({ type: 'closeModal' }, state => {
+    expect(state.presentation.status).toBe('dismissing');
+  });
+  await store.receive({ type: 'presentation', event: { type: 'dismissalCompleted' } });
+  await store.finish();
 });
 ```
 
 ### Timeout Testing
 
+<!-- consumer-file: animation.test.ts -->
 ```typescript
-// Test timeout fallback
-await store.send({ type: 'openModal' });
-
-// Skip to timeout event
-await store.receive({
-  type: 'presentation',
-  event: { type: 'presentationTimeout' }
-}, (state) => {
-  expect(state.presentation.status).toBe('presented');
+it('uses the fallback when completion does not arrive', async () => {
+  const store = makeStore(false);
+  await store.send({ type: 'openModal' });
+  await store.receive({ type: 'presentation', event: { type: 'presentationTimeout' } }, state => {
+    expect(state.presentation.status).toBe('presented');
+  });
+  await store.finish();
 });
 ```
 

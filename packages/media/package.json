@@ -1,6 +1,6 @@
 {
   "name": "@composable-svelte/media",
-  "version": "0.3.0",
+  "version": "0.4.1",
   "description": "Audio player, video embed, and voice input components for Composable Svelte - Built with Web Audio API and MediaRecorder",
   "type": "module",
   "main": "./dist/index.js",
@@ -63,12 +63,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/jbelolo/composable-svelte.git",
+    "url": "https://github.com/jonathanbelolo/composable-svelte.git",
     "directory": "packages/media"
   },
-  "homepage": "https://github.com/jbelolo/composable-svelte#readme",
+  "homepage": "https://github.com/jonathanbelolo/composable-svelte/tree/main/packages/media#readme",
   "bugs": {
-    "url": "https://github.com/jbelolo/composable-svelte/issues"
+    "url": "https://github.com/jonathanbelolo/composable-svelte/issues"
   },
   "peerDependencies": {
     "@composable-svelte/core": "^0.12.0",

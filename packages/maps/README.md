@@ -33,13 +33,13 @@ pnpm add @composable-svelte/maps
 
 ## Quick Start
 
+<!-- consumer-file: stores.ts -->
 ```typescript
 import { Map, createInitialMapState, mapReducer } from '@composable-svelte/maps';
 import { createStore } from '@composable-svelte/core';
 
-const store = createStore({
+export const store = createStore({
   initialState: createInitialMapState({
-    provider: 'maplibre',
     center: [-74.006, 40.7128],  // NYC
     zoom: 12,
     markers: [
@@ -58,7 +58,12 @@ const store = createStore({
 });
 ```
 
+<!-- consumer-file: Map.svelte -->
 ```svelte
+<script lang="ts">
+  import { Map } from "@composable-svelte/maps";
+  import { store } from "./stores";
+</script>
 <Map
   {store}
   width="100%"
@@ -75,7 +80,6 @@ Free and open source. No API key required.
 ```typescript
 const store = createStore({
   initialState: createInitialMapState({
-    provider: 'maplibre',
     center: [-74.006, 40.7128],
     zoom: 12
   }),
@@ -133,7 +137,6 @@ Switch between different map styles on the fly.
 ```typescript
 const store = createStore({
   initialState: createInitialMapState({
-    provider: 'maplibre',
     tileProvider: 'carto-dark',  // 'openstreetmap', 'stadia', 'carto-light', 'carto-dark', 'maptiler'
     center: [-74.006, 40.7128],
     zoom: 12
@@ -156,17 +159,23 @@ const store = createStore({
 
 ### Custom Tile Provider
 
+<!-- consumer-file: custom.ts -->
 ```typescript
+import { createStore } from '@composable-svelte/core';
+import { createInitialMapState, mapReducer } from '@composable-svelte/maps';
+
 const store = createStore({
-  initialState: createInitialMapState({
-    provider: 'maplibre',
-    tileProvider: 'custom',
-    customTileURL: 'https://your-tiles.com/style.json',
-    customAttribution: '© Your Maps'
-  }),
+  initialState: createInitialMapState({}),
   reducer: mapReducer
 });
+store.dispatch({
+  type: 'changeTileProvider',
+  provider: 'custom',
+  customURL: 'https://your-tiles.com/style.json',
+  customAttribution: '© Your Maps'
+});
 ```
+
 
 ## API
 
@@ -236,7 +245,7 @@ const mapReducer: Reducer<MapState, MapAction, {}>
 
 ## Development Status
 
-**Phase 12B Complete, Phase 12C in progress!** See the [Phase 12 Plan](../../plans/phase-12/PHASE-12-PLAN.md) for detailed roadmap.
+**Phase 12B Complete, Phase 12C in progress!** See the [Phase 12 Plan](https://github.com/jonathanbelolo/composable-svelte/blob/main/plans/phase-12/PHASE-12-PLAN.md) for detailed roadmap.
 
 ## Dependencies
 
@@ -251,11 +260,11 @@ MIT © Jonathan Belolo
 
 ## Related Packages
 
-- [`@composable-svelte/core`](../core) - Core Composable Architecture
-- [`@composable-svelte/charts`](../charts) - Data visualization components
+- [`@composable-svelte/core`](https://www.npmjs.com/package/@composable-svelte/core) - Core Composable Architecture
+- [`@composable-svelte/charts`](https://www.npmjs.com/package/@composable-svelte/charts) - Data visualization components
 
 ## Resources
 
 - [Maplibre GL Documentation](https://maplibre.org/maplibre-gl-js/docs/)
 - [Mapbox GL Documentation](https://docs.mapbox.com/mapbox-gl-js/api/)
-- [Phase 12 Plan](../../plans/phase-12/PHASE-12-PLAN.md)
+- [Phase 12 Plan](https://github.com/jonathanbelolo/composable-svelte/blob/main/plans/phase-12/PHASE-12-PLAN.md)

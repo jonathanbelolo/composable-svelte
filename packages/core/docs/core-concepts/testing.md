@@ -158,7 +158,7 @@ Test actions that immediately update state without effects.
 ```typescript
 import { describe, it, expect } from 'vitest';
 import { createTestStore } from '@composable-svelte/core/test';
-import { Effect } from '@composable-svelte/core';
+import { Effect, type Reducer } from '@composable-svelte/core';
 
 interface CounterState {
   count: number;
@@ -169,7 +169,7 @@ type CounterAction =
   | { type: 'decrement' }
   | { type: 'add'; amount: number };
 
-const counterReducer = (state, action, deps) => {
+const counterReducer: Reducer<CounterState, CounterAction> = (state, action, deps) => {
   switch (action.type) {
     case 'increment':
       return [{ ...state, count: state.count + 1 }, Effect.none()];
@@ -792,10 +792,14 @@ Test navigation patterns with `ifLet()` and `PresentationAction`.
 
 ### Testing Optional Destinations
 
+<!-- consumer-file: navigation.test.ts -->
 ```typescript
+import { describe, it, expect } from 'vitest';
+import { createTestStore } from '@composable-svelte/core/test';
 import {
   Effect,
   ifLet,
+  createDismissDependency,
   type DismissDependency,
   type PresentationAction,
   type Reducer
@@ -837,7 +841,9 @@ const childReducer: Reducer<ChildState, ChildAction, { dismiss: DismissDependenc
   }
 };
 
-const parentReducer: Reducer<ParentState, ParentAction> = (state, action, deps) => {
+type Dependencies = { dismiss: DismissDependency };
+
+const parentReducer: Reducer<ParentState, ParentAction, Dependencies> = (state, action, deps) => {
   switch (action.type) {
     case 'showDestination':
       return [
@@ -855,22 +861,15 @@ const parentReducer: Reducer<ParentState, ParentAction> = (state, action, deps) 
       break;
   }
 
-  // ifLet handles destination actions
-  // `ifLet` takes five arguments and returns a reducer. Dependencies are not
-  // among them — they reach the child through the call at the end, so a
-  // `dismiss` the child can use is added to the deps passed there.
-  const [newState, effect] = ifLet(
+  // The child returns the injected dismiss effect. Its captured dispatch
+  // already targets the parent; it must not enter the child action stream.
+  const [newState, effect] = ifLet<ParentState, ParentAction, ChildState, ChildAction, Dependencies>(
     (s) => s.destination,
     (s, d) => ({ ...s, destination: d }),
     (a) => a.type === 'destination' && a.action.type === 'presented' ? a.action.action : null,
     (ca) => ({ type: 'destination', action: { type: 'presented', action: ca } }),
     childReducer
-  )(state, action, {
-    ...deps,
-    dismiss: async () => {
-      deps.dispatch({ type: 'destination', action: { type: 'dismiss' } });
-    }
-  });
+  )(state, action, deps);
 
   // Handle dismiss
   if (action.type === 'destination' && action.action.type === 'dismiss') {
@@ -883,34 +882,43 @@ const parentReducer: Reducer<ParentState, ParentAction> = (state, action, deps) 
   return [newState, effect];
 };
 
+function makeStore(initialState: ParentState) {
+  let dispatch: (action: ParentAction) => void;
+  const store = createTestStore({
+    initialState,
+    reducer: parentReducer,
+    dependencies: {
+      dismiss: createDismissDependency<ParentAction>(
+        action => dispatch(action),
+        action => ({ type: 'destination', action })
+      )
+    }
+  });
+  dispatch = action => store.dispatch(action);
+  return store;
+}
+
 describe('Navigation with ifLet', () => {
   it('shows destination', async () => {
-    const store = createTestStore({
-      initialState: { destination: null, items: [] },
-      reducer: parentReducer
-    });
+    const store = makeStore({ destination: null, items: [] });
 
     await store.send({ type: 'showDestination' }, (state) => {
       expect(state.destination).toEqual({ count: 0 });
     });
+    await store.finish();
   });
 
   it('hides destination', async () => {
-    const store = createTestStore({
-      initialState: { destination: { count: 5 }, items: [] },
-      reducer: parentReducer
-    });
+    const store = makeStore({ destination: { count: 5 }, items: [] });
 
     await store.send({ type: 'hideDestination' }, (state) => {
       expect(state.destination).toBe(null);
     });
+    await store.finish();
   });
 
   it('routes actions to destination', async () => {
-    const store = createTestStore({
-      initialState: { destination: { count: 0 }, items: [] },
-      reducer: parentReducer
-    });
+    const store = makeStore({ destination: { count: 0 }, items: [] });
 
     await store.send({
       type: 'destination',
@@ -918,13 +926,11 @@ describe('Navigation with ifLet', () => {
     }, (state) => {
       expect(state.destination?.count).toBe(1);
     });
+    await store.finish();
   });
 
   it('handles child dismissal via deps.dismiss()', async () => {
-    const store = createTestStore({
-      initialState: { destination: { count: 0 }, items: [] },
-      reducer: parentReducer
-    });
+    const store = makeStore({ destination: { count: 0 }, items: [] });
 
     await store.send({
       type: 'destination',
@@ -938,6 +944,7 @@ describe('Navigation with ifLet', () => {
     }, (state) => {
       expect(state.destination).toBe(null);
     });
+    await store.finish();
   });
 });
 ```

@@ -9,6 +9,30 @@
 
 Inspired by [The Composable Architecture (TCA)](https://github.com/pointfreeco/swift-composable-architecture) from Swift/iOS, adapted for Svelte 5 and TypeScript.
 
+## Start here
+
+Read the [consumer guide](./docs/consumer.md) for a tested toolchain, lifecycle
+rules, server boundaries and guidance for coding agents. A runnable
+[Vite starter](./consumer/README.md) ships in this package: copy it out of
+`node_modules`, install its dependencies, and run its checks. No repository
+checkout or contributor skills are needed.
+
+## Packages
+
+| Package | Use for | Limits |
+|---|---|---|
+| [core](https://www.npmjs.com/package/@composable-svelte/core) | State, effects, navigation, UI, forms, networking, i18n, SSR | No built-in persistence or devtools |
+| [auth](https://www.npmjs.com/package/@composable-svelte/auth) | Sessions and account flows | One HTTP contract; other backends need adapters |
+| [charts](https://www.npmjs.com/package/@composable-svelte/charts) | Scatter, line, bar, area, histogram | Other chart types are deferred |
+| [chat](https://www.npmjs.com/package/@composable-svelte/chat) | Streaming chat, presence, typing, cursors | No CRDT document collaboration |
+| [code](https://www.npmjs.com/package/@composable-svelte/code) | CodeMirror, Prism, SvelteFlow | Wrappers around those engines |
+| [media](https://www.npmjs.com/package/@composable-svelte/media) | Audio, video embeds, voice input | Transcription is application-provided; no streaming video player |
+| [graphics](https://www.npmjs.com/package/@composable-svelte/graphics) | Babylon scenes and WebGL overlays | Real WebGPU is not implemented |
+| [maps](https://www.npmjs.com/package/@composable-svelte/maps) | MapLibre maps and optional Mapbox adapter | Clustering, geocoding, drawing and routing remain unbuilt |
+
+Install the packages you need; their manifests declare compatible peers.
+See the [component catalog](./docs/components.md) for public import paths.
+
 ## Features
 
 - ✅ **Pure Reducers**: Predictable state management with `(state, action, deps) => [newState, effect]`
@@ -22,7 +46,7 @@ Inspired by [The Composable Architecture (TCA)](https://github.com/pointfreeco/s
 - ✅ **Svelte 5 Runes**: Full integration with Svelte's reactivity system (\`$state\`, \`$derived\`)
 - ✅ **TestStore**: Exhaustive action testing with send/receive pattern
 - ✅ **Complete Backend**: API client, WebSocket, Storage, Clock dependencies
-- ✅ **Component library**: shadcn-svelte integration with reducer-driven patterns — browse the full set in [the styleguide](../../examples/styleguide)
+- ✅ **Component library**: shadcn-svelte integration with reducer-driven patterns — browse the full set in [the styleguide](https://github.com/jonathanbelolo/composable-svelte/tree/main/examples/styleguide)
 - ✅ **URL Routing**: Browser history sync with pattern matching
 - ✅ **3,116 tests**: browser and node suites, measured at the R1 closure's exit (2026-09-05)
 
@@ -167,8 +191,13 @@ overrides to the unprefixed names.
 
 ## Quick Start
 
+The four snippets form one browser-only demonstration. For reusable components
+and SSR, use the packaged starter's per-owner stores and cleanup; do not share
+a module-level store between server requests.
+
 ### 1. Define Your State and Actions
 
+<!-- consumer-file: counter-store.ts -->
 ```typescript
 import { createStore, Effect } from '@composable-svelte/core';
 
@@ -186,6 +215,7 @@ type CounterAction =
 
 ### 2. Create a Reducer
 
+<!-- consumer-file: counter-store.ts -->
 ```typescript
 const counterReducer = (
   state: CounterState,
@@ -219,8 +249,9 @@ const counterReducer = (
 
 ### 3. Create the Store
 
+<!-- consumer-file: counter-store.ts -->
 ```typescript
-const store = createStore({
+export const store = createStore({
   initialState: { count: 0, isLoading: false },
   reducer: counterReducer,
   dependencies: {}
@@ -229,6 +260,7 @@ const store = createStore({
 
 ### 4. Use in Svelte Component
 
+<!-- consumer-file: Core.svelte -->
 ```svelte
 <script lang="ts">
   import { store } from './counter-store';
@@ -256,13 +288,13 @@ const store = createStore({
 Comprehensive documentation is available in the \`docs/\` directory:
 
 - **[Getting Started](./docs/getting-started.md)** - First app tutorial
-- **[Core Concepts](./docs/core-concepts/)** - Store, reducers, effects, composition, testing
-- **[Navigation](./docs/navigation/)** - Tree-based navigation, components, dismiss patterns
-- **[DSL](./docs/dsl/)** - Destinations, matchers, scope helpers
-- **[Animation](./docs/animation/)** - Motion One integration
-- **[Backend](./docs/backend/)** - API client, WebSocket, dependencies
-- **[Routing](./docs/routing/)** - URL synchronization
-- **[API Reference](./docs/api/)** - Complete API documentation
+- **[Core Concepts](./docs/core-concepts/store-and-reducers.md)** - Store, reducers, effects, composition, testing
+- **[Navigation](./docs/navigation/tree-based.md)** - Tree-based navigation, components, dismiss patterns
+- **[DSL](./docs/dsl/destinations.md)** - Destinations, matchers, scope helpers
+- **[Animation](./docs/animation/animated-navigation.md)** - Motion One integration
+- **[Backend](./docs/backend/api-client.md)** - API client, WebSocket, dependencies
+- **[Routing](./docs/routing/url-sync.md)** - URL synchronization
+- **[API Reference](./docs/api/reference.md)** - Complete API documentation
 - **[Troubleshooting](./docs/troubleshooting.md)** - Common issues and solutions
 - **[Migration](./docs/migration.md)** - From Redux, TCA, MobX, Svelte stores
 
@@ -270,13 +302,13 @@ Comprehensive documentation is available in the \`docs/\` directory:
 
 See the \`examples/\` directory for working examples:
 
-- **[Styleguide](../../examples/styleguide)** - Component showcase
-- **[Product Gallery](../../examples/product-gallery)** - Full-featured product browsing app
-- **[URL Routing](../../examples/url-routing)** - Browser history integration examples
+- **[Styleguide](https://github.com/jonathanbelolo/composable-svelte/tree/main/examples/styleguide)** - Component showcase
+- **[Product Gallery](https://github.com/jonathanbelolo/composable-svelte/tree/main/examples/product-gallery)** - Full-featured product browsing app
+- **[URL Routing](https://github.com/jonathanbelolo/composable-svelte/tree/main/examples/url-routing)** - Browser history integration examples
 
 ## Contributing
 
-Contributions are welcome! This project follows a specification-first approach. See [CLAUDE.md](../../CLAUDE.md) for contributor guidelines.
+Contributions are welcome! This project follows a specification-first approach. See [CLAUDE.md](https://github.com/jonathanbelolo/composable-svelte/blob/main/CLAUDE.md) for contributor guidelines.
 
 ## License
 
@@ -288,7 +320,7 @@ Heavily inspired by [The Composable Architecture](https://github.com/pointfreeco
 
 ## Links
 
-- [Documentation](./docs/)
-- [GitHub Repository](https://github.com/jbelolo/composable-svelte)
-- [Issue Tracker](https://github.com/jbelolo/composable-svelte/issues)
+- [Documentation](./docs/README.md)
+- [GitHub Repository](https://github.com/jonathanbelolo/composable-svelte)
+- [Issue Tracker](https://github.com/jonathanbelolo/composable-svelte/issues)
 - [Changelog](./CHANGELOG.md)

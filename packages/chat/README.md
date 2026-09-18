@@ -39,6 +39,7 @@ pnpm add pdfjs-dist                # PDF attachment previews
 
 ## Quick Start
 
+<!-- consumer-file: Chat.svelte -->
 ```svelte
 <script lang="ts">
   import { createStore } from '@composable-svelte/core';
@@ -59,13 +60,30 @@ pnpm add pdfjs-dist                # PDF attachment previews
           try {
             const response = await fetch('/api/chat', {
               method: 'POST',
+              headers: { 'content-type': 'application/json' },
               body: JSON.stringify({ message, attachments }),
               signal: controller.signal
             });
-            // Read response.body and call onChunk(text) per chunk...
+            if (!response.ok || !response.body) {
+              throw new Error(`Chat request failed (${response.status})`);
+            }
+            // This example's endpoint streams plain UTF-8 text, not SSE frames.
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            try {
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                onChunk(decoder.decode(value, { stream: true }));
+              }
+              const tail = decoder.decode();
+              if (tail) onChunk(tail);
+            } finally {
+              reader.releaseLock();
+            }
             onComplete();
           } catch (e) {
-            onError(String(e));
+            if (!controller.signal.aborted) onError(String(e));
           }
         })();
 
@@ -77,6 +95,10 @@ pnpm add pdfjs-dist                # PDF attachment previews
 
 <FullStreamingChat {store} />
 ```
+
+The application supplies `POST /api/chat`: this example sends JSON and expects a
+plain UTF-8 streaming response. For SSE or another protocol, decode its frames in
+`streamMessage` before calling `onChunk`. Non-success HTTP responses become errors.
 
 ## Chat Variants
 
@@ -358,6 +380,7 @@ image/video fades are fire-and-forget.
 
 ## Testing
 
+<!-- consumer-file: chat.test.ts -->
 ```typescript
 import { describe, it, expect } from 'vitest';
 import { createTestStore } from '@composable-svelte/core/test';

@@ -34,6 +34,7 @@ Full-featured audio player with playlist support. Two variants available.
 
 Compact player with play/pause, seek, and volume:
 
+<!-- consumer-file: Audio.svelte -->
 ```svelte
 <script lang="ts">
   import { createStore } from '@composable-svelte/core';
@@ -162,6 +163,7 @@ the wrong class — a worse failure than a name that does not resolve.
 Responsive video embedding for YouTube, Vimeo and Twitch — the three platforms
 `getSupportedPlatforms()` returns.
 
+<!-- consumer-file: Video.svelte -->
 ```svelte
 <script lang="ts">
   import { VideoEmbed, detectVideo } from '@composable-svelte/media';
@@ -186,7 +188,7 @@ Responsive video embedding for YouTube, Vimeo and Twitch — the three platforms
 {/if}
 ```
 
-This block is [`tests/doc-examples/video-embed.svelte`](tests/doc-examples/video-embed.svelte),
+This block is [`tests/doc-examples/video-embed.svelte`](https://github.com/jonathanbelolo/composable-svelte/blob/main/packages/media/tests/doc-examples/video-embed.svelte),
 quoted verbatim. The file is typechecked by `svelte-check` in the repo gate and a
 test asserts this README still matches it — so a prop that does not exist is a
 build failure rather than something a reader discovers by pasting.
@@ -227,6 +229,7 @@ const videos = extractVideosFromMarkdown(markdownText);
 
 Voice recording component with push-to-talk and continuous conversation modes. Built on the MediaRecorder API.
 
+<!-- consumer-file: Voice.svelte -->
 ```svelte
 <script lang="ts">
   import { createStore } from '@composable-svelte/core';
@@ -241,7 +244,12 @@ Voice recording component with push-to-talk and continuous conversation modes. B
     initialState: createInitialVoiceInputState(),
     reducer: voiceInputReducer,
     dependencies: {
-      transcribeAudio: async (audio: Blob) => sendToSpeechToText(audio),
+      transcribeAudio: async (audio: Blob) => {
+        // Your application supplies this endpoint and its authentication.
+        const response = await fetch('/api/transcribe', { method: 'POST', body: audio });
+        if (!response.ok) throw new Error('Transcription failed');
+        return response.text();
+      },
       getAudioManager: getVoiceInputAudioManager
     }
   });
@@ -291,26 +299,28 @@ The previous list named `startRecording`, `stopRecording`,
 
 ## Testing
 
+<!-- consumer-file: media.test.ts -->
 ```typescript
+import { it, expect } from 'vitest';
 import { createTestStore } from '@composable-svelte/core/test';
 import { audioPlayerReducer, createInitialAudioPlayerState } from '@composable-svelte/media';
 
-const store = createTestStore({
-  initialState: createInitialAudioPlayerState({
-    tracks: [
-      { id: '1', title: 'Test', src: '/test.mp3' }
-    ]
-  }),
-  reducer: audioPlayerReducer,
-  dependencies: {}
-});
-
-await store.send({ type: 'play' }, (state) => {
-  expect(state.isPlaying).toBe(true);
-});
-
-await store.send({ type: 'nextTrack' }, (state) => {
-  expect(state.currentTrackIndex).toBe(0); // Wraps around with 1 track
+it('loads a playlist and plays its first track', async () => {
+  const store = createTestStore({
+    initialState: createInitialAudioPlayerState(),
+    reducer: audioPlayerReducer,
+    dependencies: {}
+  });
+  await store.send({ type: 'loadPlaylist', tracks: [
+    { id: '1', title: 'Test', url: '/test.mp3' }
+  ] });
+  await store.send({ type: 'play' }, state => {
+    expect(state.isPlaying).toBe(true);
+  });
+  await store.send({ type: 'next' }, state => {
+    expect(state.currentTrackIndex).toBe(0);
+  });
+  await store.finish();
 });
 ```
 

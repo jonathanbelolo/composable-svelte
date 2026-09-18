@@ -47,15 +47,10 @@ npm install @composable-svelte/core
 pnpm add @composable-svelte/core
 ```
 
-> **Note on versions.** `@composable-svelte/core` **is** on npm, but the latest
-> published version is **0.5.2** while this repository is at **0.12.1** — so
-> `npm install` gets you an API seven minor versions older than the one documented
-> here, and the sibling packages pin `@composable-svelte/core ^0.12.0`, which the
-> registry cannot satisfy. Until a release is cut, clone the repo.
->
-> (This note previously said the package was "not yet published to npm", while
-> `packages/core/README.md` carried an npm version badge and an install command
-> one screen apart. Both cannot be true.)
+> **Published release (18 September 2026):** core **0.12.2**; auth, charts,
+> graphics and maps **0.2.1**; chat, code and media **0.4.1**. All eight packages
+> are available on npm with compatible workspace peer ranges. These releases
+> include breaking changes; review each package’s changelog when upgrading.
 
 ### Versioning
 

@@ -1,6 +1,6 @@
 {
   "name": "@composable-svelte/graphics",
-  "version": "0.1.2",
+  "version": "0.2.1",
   "description": "State-driven WebGL graphics package for Composable Svelte",
   "type": "module",
   "scripts": {
@@ -58,12 +58,12 @@
   "author": "Jonathan Belolo",
   "repository": {
     "type": "git",
-    "url": "https://github.com/jbelolo/composable-svelte.git",
+    "url": "https://github.com/jonathanbelolo/composable-svelte.git",
     "directory": "packages/graphics"
   },
-  "homepage": "https://github.com/jbelolo/composable-svelte#readme",
+  "homepage": "https://github.com/jonathanbelolo/composable-svelte/tree/main/packages/graphics#readme",
   "bugs": {
-    "url": "https://github.com/jbelolo/composable-svelte/issues"
+    "url": "https://github.com/jonathanbelolo/composable-svelte/issues"
   },
   "keywords": [
     "svelte",

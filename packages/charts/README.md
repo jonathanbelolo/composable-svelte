@@ -37,6 +37,7 @@ pnpm add @composable-svelte/charts
 Nothing below switches keyboard navigation on, because there is no switch —
 every chart is operable from the keyboard as soon as it renders.
 
+<!-- consumer-file: Chart.svelte -->
 ```svelte
 <script lang="ts">
   import { createStore } from '@composable-svelte/core';
@@ -74,7 +75,7 @@ every chart is operable from the keyboard as soon as it renders.
 />
 ```
 
-This block is [`tests/doc-examples/keyboard-chart.svelte`](tests/doc-examples/keyboard-chart.svelte),
+This block is [`tests/doc-examples/keyboard-chart.svelte`](https://github.com/jonathanbelolo/composable-svelte/blob/main/packages/charts/tests/doc-examples/keyboard-chart.svelte),
 quoted verbatim. The file is typechecked by `svelte-check` in the repo gate and
 a test asserts this README still matches it, so the quickstart cannot go stale
 without something failing.
@@ -241,22 +242,25 @@ See `examples/styleguide/` for full examples:
 
 All state transitions are testable via `TestStore`:
 
+<!-- consumer-file: charts.test.ts -->
 ```typescript
+import { it, expect } from 'vitest';
 import { createTestStore } from '@composable-svelte/core/test';
 import { chartReducer, createInitialChartState } from '@composable-svelte/charts';
 
-const store = createTestStore({
-  initialState: createInitialChartState({ data }),
-  reducer: chartReducer
-});
-
-await store.send(
-  { type: 'selectPoint', data: data[0], index: 0 },
-  (state) => {
+it('selects a chart point', async () => {
+  const data = [{x:1, y:2}];
+  const store = createTestStore({
+    initialState: createInitialChartState({ data }),
+    reducer: chartReducer
+  });
+  await store.send({type:'selectPoint', data:data[0], index:0}, state => {
     expect(state.selection.selectedIndices).toEqual([0]);
-  }
-);
+  });
+  await store.finish();
+});
 ```
+
 
 ## Performance
 
@@ -380,7 +384,7 @@ application's to meet.
 
 ## Development Status
 
-**Phase 11C Complete!** See the [Phase 11 Plan](../../plans/phase-11/PHASE-11-PLAN.md) for detailed roadmap.
+**Phase 11C Complete!** See the [Phase 11 Plan](https://github.com/jonathanbelolo/composable-svelte/blob/main/plans/phase-11/PHASE-11-PLAN.md) for detailed roadmap.
 
 ### Completed Features
 - ✅ Core types and interfaces
@@ -413,11 +417,11 @@ MIT © Jonathan Belolo
 
 ## Related Packages
 
-- [`@composable-svelte/core`](../core) - Core Composable Architecture
-- [`@composable-svelte/code`](../code) - Code editor components
+- [`@composable-svelte/core`](https://www.npmjs.com/package/@composable-svelte/core) - Core Composable Architecture
+- [`@composable-svelte/code`](https://www.npmjs.com/package/@composable-svelte/code) - Code editor components
 
 ## Resources
 
 - [Observable Plot Documentation](https://observablehq.com/plot/)
 - [D3 Gallery](https://observablehq.com/@d3/gallery)
-- [Phase 11 Plan](../../plans/phase-11/PHASE-11-PLAN.md)
+- [Phase 11 Plan](https://github.com/jonathanbelolo/composable-svelte/blob/main/plans/phase-11/PHASE-11-PLAN.md)

@@ -1,0 +1,12 @@
+import {chromium} from '@playwright/test';
+import {writeFileSync} from 'node:fs';
+const browser=await chromium.launch({headless:true});const page=await browser.newPage({viewport:{width:1440,height:1000}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+await page.goto('http://127.0.0.1:4178');await page.getByRole('heading',{name:'External consumer',exact:true}).waitFor();
+await page.getByRole('button',{name:'Increment',exact:true}).click();await page.waitForFunction(()=>document.querySelector('[data-testid=count]')?.textContent==='1');
+await page.getByRole('button',{name:'Load',exact:true}).click();await page.waitForFunction(()=>document.querySelector('[data-testid=count]')?.textContent==='42');
+const button=page.getByRole('button',{name:'Increment',exact:true});const light=await button.evaluate(el=>({bg:getComputedStyle(el).backgroundColor,color:getComputedStyle(el).color}));
+await page.getByRole('button',{name:'Theme',exact:true}).click();const dark=await button.evaluate(el=>({bg:getComputedStyle(el).backgroundColor,color:getComputedStyle(el).color}));
+const editor=page.locator('.cm-content');await editor.fill('const externalConsumer = true;');
+const result={counter:await page.getByTestId('count').textContent(),light,dark,editor:await editor.innerText(),chartSvg:await page.locator('svg').count(),passwordInput:await page.locator('input[type=password]').count(),errors};
+await page.screenshot({path:'consumer.png',fullPage:true});writeFileSync('browser-result.json',JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));await browser.close();
+if(errors.length)process.exitCode=1;

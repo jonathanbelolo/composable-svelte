@@ -40,6 +40,8 @@ thin guard components.
   is a courtesy, not a security boundary — enforcement is the backend's
   authorization gates, which re-check every request against the session.
 
+Read the shipped [HTTP contract](./docs/http-contract.md) for all 27 routes, request and response shapes, error mapping and backend responsibilities.
+
 ## Installation
 
 ```bash
@@ -52,7 +54,7 @@ pnpm add @composable-svelte/auth
 styled with scoped CSS over core's theme tokens, so they follow a consumer's
 theme when core's stylesheet is loaded and fall back to sane defaults when it is
 not — no Tailwind wiring needed for this package specifically. See the
-["Styling & Theming"](../core/README.md#styling--theming) section of core's
+["Styling & Theming"](https://github.com/jonathanbelolo/composable-svelte/blob/main/packages/core/README.md#styling--theming) section of core's
 README for the wider setup.
 
 ## Usage
@@ -85,6 +87,11 @@ back. They are separate because `SessionStatus` already has seven values that
 `mfaRequired`/`pendingVerification`/`passwordResetSent` into it would mean every
 consumer's guard branches change each time a flow is added.
 
+These two snippets assume a client-only application. For SSR, create session
+and flow stores per request and pass them through props or context; do not share
+these module-level stores between users.
+
+<!-- consumer-file: stores.ts -->
 ```typescript
 import { createSessionStore, createLoginStore } from '@composable-svelte/auth';
 import { createHttpAuthDeps } from '@composable-svelte/auth/http';
@@ -92,10 +99,11 @@ import { createHttpAuthDeps } from '@composable-svelte/auth/http';
 // One dependency object drives both: the session calls and the flow calls.
 const deps = createHttpAuthDeps();
 
-const session = createSessionStore(deps);
-const login = createLoginStore(deps);
+export const session = createSessionStore(deps);
+export const login = createLoginStore(deps);
 ```
 
+<!-- consumer-file: Auth.svelte -->
 ```svelte
 <script lang="ts">
   import { LoginForm } from '@composable-svelte/auth';
@@ -212,7 +220,7 @@ resolve → logout → resolve, or slow login A → logout → login B).
 
 The three session calls are below. The other nineteen — everything
 `createHttpAuthDeps` adds — are specified, and implemented, in
-[`examples/auth-server`](../../examples/auth-server): a Fastify reference
+[`examples/auth-server`](https://github.com/jonathanbelolo/composable-svelte/tree/main/examples/auth-server): a Fastify reference
 backend this package's integration suite runs against. Its README is the
 endpoint table for the full surface, including which statuses mean what and the
 four traps that fail silently.
@@ -275,7 +283,7 @@ Recovery**, **Multi-Factor Auth**, **OAuth Sign-In**, **Magic Link** or
 
 Those demos run on `createMockAuthDeps`. For every flow wired to a **real
 backend** — a real session cookie, a real OAuth redirect — see
-[`examples/auth-server`](../../examples/auth-server), whose `pnpm dev` serves a
+[`examples/auth-server`](https://github.com/jonathanbelolo/composable-svelte/tree/main/examples/auth-server), whose `pnpm dev` serves a
 reference client against a reference server. The **Account** demo is
 the signed-in half: the read model, changing a password, MFA management and
 connected accounts, each with its re-authentication branch reachable from a
@@ -283,11 +291,11 @@ scenario picker.
 
 ## Related Packages
 
-- [`@composable-svelte/core`](../core) - Core Composable Architecture, and the
+- [`@composable-svelte/core`](https://www.npmjs.com/package/@composable-svelte/core) - Core Composable Architecture, and the
   form system these flows are built on
 
 ## Resources
 
-- [Architecture & tutorial guide](../../guides/README.md)
+- [Architecture & tutorial guide](https://github.com/jonathanbelolo/composable-svelte/blob/main/guides/README.md)
 - [CHANGELOG](./CHANGELOG.md)
-- [Contributing](../../CLAUDE.md)
+- [Contributing](https://github.com/jonathanbelolo/composable-svelte/blob/main/CLAUDE.md)

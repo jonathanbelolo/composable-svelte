@@ -67,7 +67,7 @@ jobs:
       # chased as one more than once. `guides/VERIFICATION-PROTOCOL.md` rule 5
       # says run them sequentially; this is that rule, enforced where it counts.
       - name: Run tests
-        run: pnpm -r --workspace-concurrency=1 test
+        run: TZ=UTC pnpm -r --workspace-concurrency=1 test
 
       # `tsc` never reads .svelte, which is how a broken `spring.js` import, 21
       # components with an undeclared `children` prop, and a <button> nested in a
@@ -89,3 +89,6 @@ jobs:
       # that is all the install step above provides.
       - name: Auth integration (browser)
         run: pnpm --filter @composable-svelte/example-auth-server test:e2e
+
+      - name: Packed external consumer
+        run: pnpm verify:consumer

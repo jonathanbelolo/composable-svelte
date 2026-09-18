@@ -1,0 +1,29 @@
+{
+  "versions": {
+    "maps": "0.2.1",
+    "core": "0.12.2",
+    "chat": "0.4.1",
+    "auth": "0.2.1",
+    "code": "0.4.1",
+    "charts": "0.2.1",
+    "graphics": "0.2.1",
+    "media": "0.4.1"
+  },
+  "workspaceTests": 5078,
+  "coreBrowserTests": 2493,
+  "coreNodeTests": 624,
+  "otherWorkspaceTests": 1961,
+  "authBrowserTests": 6,
+  "packedDocuments": 49,
+  "packedRelativeLinks": 180,
+  "readmeFiles": 21,
+  "publicEntries": 53,
+  "typedEntries": 49,
+  "consumerReducerTests": 7,
+  "consumerBrowserTests": 4,
+  "regressionControls": 8,
+  "consumerDirectory": "/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/composable-consumer-UjLrqF/app",
+  "published": false,
+  "standaloneStarterReducerTests": 2,
+  "standaloneStarterBrowserTests": 1
+}

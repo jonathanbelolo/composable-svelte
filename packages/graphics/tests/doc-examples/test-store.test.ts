@@ -7,6 +7,7 @@
 //
 // This file is the authority. `svelte-check` compiles it as part of
 // `pnpm -r check`; `doc-examples.test.ts` fails if the document drifts from it.
+import { describe, it, expect } from 'vitest';
 import { TestStore } from '@composable-svelte/core/test';
 import { graphicsReducer, createInitialGraphicsState } from '@composable-svelte/graphics';
 
@@ -33,5 +34,6 @@ describe('Graphics Reducer', () => {
         expect(state.meshes[0]?.id).toBe('cube-1');
       }
     );
+    await store.finish();
   });
 });

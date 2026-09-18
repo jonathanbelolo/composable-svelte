@@ -21,7 +21,7 @@ fail on scheduling rather than on code.
 ```bash
 pnpm -r build
 pnpm -r typecheck
-pnpm -r --workspace-concurrency=1 test
+TZ=UTC pnpm -r --workspace-concurrency=1 test
 pnpm -r check                     # svelte-check --fail-on-warnings
 pnpm --filter @composable-svelte/example-auth-server test:e2e
 ```
@@ -35,28 +35,42 @@ pnpm --filter @composable-svelte/example-auth-server test:e2e
 `packages/core/tests/repo/` do that work. Several of those guards exist because
 a conventional gate turned out to be measuring nothing.
 
+The clock/date fixtures use UTC day boundaries; set `TZ=UTC` for the test run,
+as CI does. The external consumer verifier sets it itself.
+
 ## Verifying the packages as a consumer
 
 ```bash
 pnpm -r build
 pnpm verify:package
+pnpm verify:consumer
 ```
 
 `scripts/verify-package.mjs` packs real tarballs, installs all eight **together**
 in a temporary directory outside the workspace, and asks Node to resolve every
-declared entry point. **Nothing contacts a registry**; it is safe to run any
-time.
+declared entry point. The local tarballs supply the workspace packages; npm
+may contact the registry to install their external dependencies. Nothing is published.
 
 It matters because every other gate runs *inside* the workspace, where pnpm
 links `src/` and the exports map is never consulted — so a broken `exports`
 entry is invisible until somebody installs the package. Installing the set
 together is also the point: installing one alone makes npm resolve its peers
-from the registry, which is what makes the currently-published `chat`
-uninstallable.
+from the registry, which may not yet contain the versions being prepared.
 
 Two results are expected and not failures: entries that re-export `.svelte` need
 a Svelte loader Node does not have (resolution is the check that matters), and
 `@composable-svelte/maps/mapbox` needs the optional `mapbox-gl` peer.
+
+`verify:consumer` also copies the starter from the core tarball, extracts marked
+README and selected guide code blocks verbatim, and installs all eight tarballs in a separate app.
+It checks shipped guide links, all typed exports with Bundler and NodeNext,
+Svelte examples, reducer tests, server rendering, and a production browser with
+Tailwind 4 and 3. Deliberate regression mutations must fail for the expected
+reason. The temporary directory is printed and retained for diagnosis.
+Install Chromium first (`pnpm --filter @composable-svelte/core exec playwright install chromium`).
+This gate runs in CI. When adding a runnable documentation block, use a
+`consumer-file` marker and update the explicit inventory in the script; fragments
+that depend on surrounding application code should say so in the prose.
 
 ## Before you believe a change
 
@@ -101,8 +115,8 @@ and its seven peers change in a single commit.
 ### chat, code and media go together
 
 `chat` peers on `@composable-svelte/code` and `@composable-svelte/media` as well
-as core. Publishing chat without them leaves its peers unsatisfiable, which is
-the state the registry is in today.
+as core. Publish compatible code and media versions before chat so its peers
+are satisfiable when it becomes available.
 
 ### Order
 

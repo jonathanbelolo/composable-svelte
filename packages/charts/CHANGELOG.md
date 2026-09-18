@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-09-18
+
+### Fixed
+
+- Correct public repository and documentation links for external consumers.
+- Make the selection test self-contained and executable.
+- Verify packaged README examples in an isolated npm consumer before release.
+
+
+## [0.2.0] - 2026-09-18
+
 ### Changed
 
 - Requires `@composable-svelte/core` `^0.12.0` (peer range): core 0.12.0 is a minor release with breaking changes to the navigation DSL's action shape, the API client's dedup/cache, the WebSocket config, `renderToHTML` and `TestStore`; see core's changelog.

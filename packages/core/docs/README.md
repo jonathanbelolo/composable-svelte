@@ -5,6 +5,9 @@ Welcome to the complete documentation for **@composable-svelte/core** - a Compos
 ## 📚 Documentation Index
 
 ### Getting Started
+- **[Consumer guide](./consumer.md)** - Supported toolchain, lifecycle and integration boundaries
+- **[Import catalog](./components.md)** - All public package entry points
+- **[Runnable starter](../consumer/README.md)** - An application you can copy from npm
 - **[Getting Started](./getting-started.md)** - Installation, first app, and core concepts
 
 ### Core Concepts
@@ -167,7 +170,7 @@ packages/core/docs/
 
 Learn by example! Check out these complete applications:
 
-### [Product Gallery](../../../examples/product-gallery/)
+### [Product Gallery](https://github.com/jonathanbelolo/composable-svelte/tree/main/examples/product-gallery)
 Full-featured e-commerce app with:
 - Product browsing and filtering
 - Add to cart functionality
@@ -175,21 +178,21 @@ Full-featured e-commerce app with:
 - API integration
 - URL routing
 
-### [Styleguide](../../../examples/styleguide/)
+### [Styleguide](https://github.com/jonathanbelolo/composable-svelte/tree/main/examples/styleguide)
 Component showcase with:
 - 73+ shadcn-svelte components
 - All navigation patterns
 - Animation examples
 - Form validation with Zod
 
-### [URL Routing](../../../examples/url-routing/)
+### [URL Routing](https://github.com/jonathanbelolo/composable-svelte/tree/main/examples/url-routing)
 Browser history integration with:
 - Pattern matching (path-to-regexp)
 - Query parameters
 - Deep linking
 - Back/forward navigation
 
-### [SSR Server](../../../examples/ssr-server/)
+### [SSR Server](https://github.com/jonathanbelolo/composable-svelte/tree/main/examples/ssr-server)
 Server-side rendering and static generation with:
 - Multi-locale support (en/fr/es)
 - SSR with Fastify
@@ -322,13 +325,13 @@ Common issues? Check [Troubleshooting](./troubleshooting.md):
 
 Ready to deploy? See:
 
-- **[Build Configuration](#)** - Vite/SvelteKit setup
-- **[Bundle Optimization](#)** - Tree-shaking and code splitting
-- **[Production Checklist](#)** - Pre-deployment verification
+- **[Runnable Vite starter](../consumer/README.md)** - Build and browser verification
+- **[SSR and SSG](./ssr/server-rendering.md)** - Server-rendering setup
+- **[Integration boundaries](./consumer.md#server-and-integration-boundaries)** - Application responsibilities before deployment
 
 ## 📝 Contributing
 
-Want to improve the docs? See [Contributing Guidelines](../../../CLAUDE.md).
+Want to improve the docs? See [Contributing Guidelines](https://github.com/jonathanbelolo/composable-svelte/blob/main/CLAUDE.md).
 
 ## 📜 License
 

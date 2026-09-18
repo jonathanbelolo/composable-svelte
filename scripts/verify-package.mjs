@@ -16,7 +16,7 @@
  *
  *   node scripts/verify-package.mjs
  *
- * Requires `pnpm -r build` first. Nothing here contacts a registry.
+ * Requires `pnpm -r build` first. Installing external dependencies contacts npm; nothing is published.
  */
 
 import { execFileSync } from 'node:child_process';

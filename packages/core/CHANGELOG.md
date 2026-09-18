@@ -7,11 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.2] - 2026-09-18
+
+### Fixed
+
+- Correct public repository and documentation links for external consumers.
+- Correct quickstart exports, obsolete setup instructions, and type errors in the published guides.
+- Execute navigation and animation guide tests from the tarball; fix parent dismissal routing and lifecycle guards/fallback examples.
+- Align storage guidance with server-issued HttpOnly auth sessions and keep browser cookie examples non-sensitive.
+- Verify packaged README examples in an isolated npm consumer before release.
+
+### Added
+
+- Ship the documentation, public package/import catalogs and a runnable Vite/Tailwind starter in the npm package.
+- Gate releases on installed-package examples, public types, SSR, browser behavior and both supported Tailwind versions.
+
+
 ## [0.12.1] - 2026-09-05
 
 The closure of the R1 adversarial review (`plans/hardening/R1-REVIEW.md`):
-every finding of that review, in the entries below. Never published, as
-0.12.0 was not; the registry holds 0.5.2.
+every finding of that review, in the entries below. Published on 18 September 2026. Version 0.12.0 was not published.
 
 ### Added
 

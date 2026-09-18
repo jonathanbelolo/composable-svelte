@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-09-18
+
+### Fixed
+
+- Correct public repository and documentation links for external consumers.
+- Export the stores used by the login form example and verify it in an installed application.
+
+### Added
+
+- Ship the complete default HTTP adapter contract: 27 routes, payloads, status/error semantics and backend responsibilities.
+
+
+## [0.2.0] - 2026-09-18
+
 ### Changed
 
 - Requires `@composable-svelte/core` `^0.12.0` (peer range): core 0.12.0 is a minor release with breaking changes to the navigation DSL's action shape, the API client's dedup/cache, the WebSocket config, `renderToHTML` and `TestStore`; see core's changelog.

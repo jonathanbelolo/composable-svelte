@@ -1353,9 +1353,8 @@ const reducer: Reducer<FeatureState, FeatureAction, FeatureDeps> = (
 import type { SpringConfig } from '@composable-svelte/core/animation';
 
 const customSpring: Partial<SpringConfig> = {
-  stiffness: 400,
-  damping: 30,
-  mass: 1
+  visualDuration: 0.3,
+  bounce: 0.25
 };
 ```
 

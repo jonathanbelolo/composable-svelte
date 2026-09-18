@@ -1,0 +1,79 @@
+{
+  "core": {
+    "missingRelativeLinks": [
+      "../../examples/styleguide",
+      "./docs/getting-started.md",
+      "./docs/core-concepts/",
+      "./docs/navigation/",
+      "./docs/dsl/",
+      "./docs/animation/",
+      "./docs/backend/",
+      "./docs/routing/",
+      "./docs/api/",
+      "./docs/troubleshooting.md",
+      "./docs/migration.md",
+      "../../examples/styleguide",
+      "../../examples/product-gallery",
+      "../../examples/url-routing",
+      "../../CLAUDE.md",
+      "./docs/"
+    ],
+    "missingLinkCount": 16,
+    "readmeMatchesRegistry": true
+  },
+  "auth": {
+    "missingRelativeLinks": [
+      "../core/README.md#styling--theming",
+      "../../examples/auth-server",
+      "../../examples/auth-server",
+      "../core",
+      "../../guides/README.md",
+      "../../CLAUDE.md"
+    ],
+    "missingLinkCount": 6,
+    "readmeMatchesRegistry": true
+  },
+  "charts": {
+    "missingRelativeLinks": [
+      "tests/doc-examples/keyboard-chart.svelte",
+      "../../plans/phase-11/PHASE-11-PLAN.md",
+      "../core",
+      "../code",
+      "../../plans/phase-11/PHASE-11-PLAN.md"
+    ],
+    "missingLinkCount": 5,
+    "readmeMatchesRegistry": true
+  },
+  "graphics": {
+    "missingRelativeLinks": [],
+    "missingLinkCount": 0,
+    "readmeMatchesRegistry": true
+  },
+  "maps": {
+    "missingRelativeLinks": [
+      "../../plans/phase-12/PHASE-12-PLAN.md",
+      "../core",
+      "../charts",
+      "../../plans/phase-12/PHASE-12-PLAN.md"
+    ],
+    "missingLinkCount": 4,
+    "readmeMatchesRegistry": true
+  },
+  "chat": {
+    "missingRelativeLinks": [],
+    "missingLinkCount": 0,
+    "readmeMatchesRegistry": true
+  },
+  "code": {
+    "missingRelativeLinks": [],
+    "missingLinkCount": 0,
+    "readmeMatchesRegistry": true
+  },
+  "media": {
+    "missingRelativeLinks": [
+      "tests/doc-examples/video-embed.svelte"
+    ],
+    "missingLinkCount": 1,
+    "readmeMatchesRegistry": true
+  }
+}

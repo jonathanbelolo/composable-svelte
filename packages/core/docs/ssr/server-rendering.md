@@ -781,7 +781,7 @@ interface RouteConfig {
 
 ### Complete SSR Example
 
-See [examples/ssr-server](../../../../examples/ssr-server/) for:
+See [examples/ssr-server](https://github.com/jonathanbelolo/composable-svelte/tree/main/examples/ssr-server) for:
 - Fastify server with SSR
 - Multi-locale support (en/fr/es)
 - URL routing integration
@@ -790,7 +790,7 @@ See [examples/ssr-server](../../../../examples/ssr-server/) for:
 
 ### Complete SSG Example
 
-See [examples/ssr-server/src/build/ssg.ts](../../../../examples/ssr-server/src/build/ssg.ts) for:
+See [examples/ssr-server/src/build/ssg.ts](https://github.com/jonathanbelolo/composable-svelte/blob/main/examples/ssr-server/src/build/ssg.ts) for:
 - Static site generation
 - Multi-locale pages (33 HTML files)
 - Dynamic route enumeration
@@ -801,7 +801,7 @@ See [examples/ssr-server/src/build/ssg.ts](../../../../examples/ssr-server/src/b
 - **[Internationalization](../i18n/internationalization.md)** - Multi-locale SSR/SSG
 - **[URL Routing](../routing/url-sync.md)** - Browser history sync
 - **[Testing SSR](../core-concepts/testing.md#testing-ssr)** - Test server rendering
-- **[Deployment](#)** - Deploy SSR/SSG apps
+- **[Consumer integration boundaries](../consumer.md#server-and-integration-boundaries)** - Server and application responsibilities
 
 ## Resources
 

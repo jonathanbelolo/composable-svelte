@@ -1,6 +1,6 @@
 {
   "name": "@composable-svelte/core",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "description": "A Composable Architecture for Svelte 5 - Type-safe state management with reducers, effects, and navigation",
   "type": "module",
   "main": "./dist/index.js",
@@ -146,7 +146,9 @@
     "dist",
     "README.md",
     "LICENSE",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "docs",
+    "consumer"
   ],
   "scripts": {
     "build": "svelte-package -o dist",
@@ -186,12 +188,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/jbelolo/composable-svelte.git",
+    "url": "https://github.com/jonathanbelolo/composable-svelte.git",
     "directory": "packages/core"
   },
-  "homepage": "https://github.com/jbelolo/composable-svelte#readme",
+  "homepage": "https://github.com/jonathanbelolo/composable-svelte/tree/main/packages/core#readme",
   "bugs": {
-    "url": "https://github.com/jbelolo/composable-svelte/issues"
+    "url": "https://github.com/jonathanbelolo/composable-svelte/issues"
   },
   "peerDependencies": {
     "isomorphic-dompurify": "^2.16.0",

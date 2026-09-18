@@ -80,10 +80,12 @@ const store = createStore({
 });
 
 // 3. Access in reducer
-const myReducer = (state: State, action: Action, deps: typeof dependencies) => {
+const myReducer = (state: State, action: Action, deps: typeof dependencies): [State, Effect<Action>] => {
   const now = deps.clock.now();
-  deps.storage.setItem('lastAction', now);
-  // ...
+  return [state, Effect.fireAndForget(() => {
+    // Persist application data here using the injected storage.
+    console.log('Action time', now);
+  })];
 };
 
 // 4. Mock in tests
@@ -217,7 +219,7 @@ Session-only storage (cleared on tab close):
 ```typescript
 import { createSessionStorage } from '@composable-svelte/core';
 
-const storage = createSessionStorage<FormData>({
+const storage = createSessionStorage<{ title: string; content: string }>({
   prefix: 'form:'
 });
 
@@ -226,7 +228,8 @@ storage.setItem('draft', { title: 'My Post', content: '...' });
 
 ### Cookie Storage
 
-Secure cookie storage for authentication:
+Use cookie storage for non-sensitive preferences. Authentication session cookies
+are issued and cleared by the server; this browser adapter cannot create HttpOnly cookies:
 
 ```typescript
 import { createCookieStorage } from '@composable-svelte/core';
@@ -237,7 +240,7 @@ const cookies = createCookieStorage<string>({
   maxAge: 3600 // 1 hour
 });
 
-cookies.setItem('sessionToken', 'jwt_token', {
+cookies.setItem('theme', 'dark', {
   path: '/app',
   secure: true
 });
@@ -284,8 +287,8 @@ const unsubscribe = storage.subscribe((event) => {
 ### More Information
 
 For comprehensive documentation on Storage dependencies, see:
-- [Storage README](../../src/lib/dependencies/README.md) - Complete API reference, examples, and patterns
-- [Security guidelines](../../src/lib/dependencies/SECURITY.md) - Security guidelines for storage
+- [Storage README](./storage.md) - Complete API reference, examples, and patterns
+- [Security guidelines](./storage-security.md) - Security guidelines for storage
 
 ## API Client
 
@@ -592,7 +595,7 @@ Browser storage is **NOT secure storage**. See the comprehensive security guide 
 
 1. **NEVER** store sensitive data (passwords, credit cards, API keys, SSNs)
 2. **ALWAYS** use `secure: true` for cookies in production
-3. **ALWAYS** use `sameSite: 'Strict'` for authentication cookies
+3. Let the server choose the authentication cookie's SameSite policy; the auth adapter's reference backend uses Lax
 4. **ALWAYS** validate retrieved data with schema validators
 5. **ALWAYS** set expiration times for sensitive data
 6. **ALWAYS** clear storage on logout
@@ -604,17 +607,17 @@ Browser storage is **NOT secure storage**. See the comprehensive security guide 
 const storage = createLocalStorage();
 storage.setItem('password', 'secret123'); // NEVER!
 
-// Good - secure cookies
+// Good - a non-sensitive preference
 const cookies = createCookieStorage<string>({
   secure: true,
   sameSite: 'Strict',
   maxAge: 3600
 });
-cookies.setItem('sessionToken', 'jwt_token');
+cookies.setItem('theme', 'dark');
 
-// Clear on logout
-function logout() {
-  cookies.removeItem('sessionToken');
+// Clear local preferences (this does not invalidate a server session)
+function clearPreferences() {
+  cookies.removeItem('theme');
   storage.clear();
 }
 ```
@@ -622,7 +625,7 @@ function logout() {
 ### More Information
 
 For comprehensive security guidelines, see:
-- [Security guidelines](../../src/lib/dependencies/SECURITY.md) - Complete security guide
+- [Security guidelines](./storage-security.md) - Complete security guide
 
 ## Best Practices
 
@@ -643,7 +646,8 @@ const reducer = (
   action: AppAction,
   deps: AppDependencies
 ): [AppState, Effect<AppAction>] => {
-  // Type-safe access to dependencies
+  // Add action-specific state transitions and effects here.
+  return [state, Effect.none()];
 };
 ```
 
@@ -773,43 +777,23 @@ onDestroy(() => {
 
 ### Authentication with Cookies
 
+Install `@composable-svelte/auth` and use its HTTP dependencies or inject an
+adapter matching your backend. The server creates the HttpOnly session cookie
+and invalidates it on logout. `createCookieStorage` is for non-sensitive
+JavaScript-readable values; removing a local preference is not a logout.
+
 ```typescript
-interface AuthDependencies {
-  clock: Clock;
-  cookies: CookieStorage<string>;
-  api: APIClient;
-}
+import { createHttpAuthDeps } from '@composable-svelte/auth/http';
 
-case 'login':
-  return [
-    { ...state, loading: true },
-    Effect.api(
-      deps.api,
-      Request.post('/auth/login', {
-        username: action.username,
-        password: action.password
-      }),
-      (response) => {
-        // Store session token in secure cookie
-        deps.cookies.setItem('sessionToken', response.data.token, {
-          secure: true,
-          sameSite: 'Strict',
-          maxAge: 3600
-        });
-
-        return { type: 'loginSuccess', user: response.data.user };
-      },
-      (error) => ({ type: 'loginFailed', error: error.message })
-    )
-  ];
-
-case 'logout':
-  deps.cookies.removeItem('sessionToken');
-  return [
-    { ...state, user: null },
-    Effect.none()
-  ];
+const auth = createHttpAuthDeps();
+// credentials come from the application's login form.
+const credentials = { email: 'user@example.com', password: 'form-input' };
+const session = await auth.login(credentials);
+// Later, explicitly end the server session:
+await auth.fetchLogout();
 ```
+
+See auth's shipped `docs/http-contract.md` for request and response shapes.
 
 ### Form Draft Persistence
 
@@ -886,6 +870,6 @@ case 'init':
 For more information, see:
 - [API Client Documentation](./api-client.md)
 - [WebSocket Documentation](./websocket.md)
-- [Storage README](../../src/lib/dependencies/README.md)
-- [Security guidelines](../../src/lib/dependencies/SECURITY.md)
+- [Storage README](./storage.md)
+- [Security guidelines](./storage-security.md)
 - [Testing Guide](../core-concepts/testing.md)

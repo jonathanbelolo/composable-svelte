@@ -2090,6 +2090,6 @@ const config = {
 
 ## Next Steps
 
-- [Navigation System](/packages/core/docs/navigation/) - State-driven navigation components
-- [DSL Guide](/packages/core/docs/dsl/) - Fluent API for reducer composition
-- [Testing Guide](/packages/core/docs/core-concepts/testing.md) - TestStore patterns
+- [Navigation System](../navigation/tree-based.md) - State-driven navigation components
+- [DSL Guide](../dsl/destinations.md) - Fluent API for reducer composition
+- [Testing Guide](../core-concepts/testing.md) - TestStore patterns

@@ -237,7 +237,18 @@ const packages = listDirs(packagesDir).filter((name) =>
 	existsSync(join(packagesDir, name, 'package.json'))
 );
 
+function isInstalledFilePath(source: string, index: number): boolean {
+	return source.slice(0, index).endsWith('node_modules/');
+}
+
 describe('side-effect imports survive tree-shaking', () => {
+	it('distinguishes copied installed files from import specifiers', () => {
+		const copied = 'cp node_modules/@scope/pkg/consumer app';
+		const imported = "import '@scope/pkg/consumer'";
+		expect(isInstalledFilePath(copied, copied.indexOf('@scope'))).toBe(true);
+		expect(isInstalledFilePath(imported, imported.indexOf('@scope'))).toBe(false);
+	});
+
 	it('the glob translation is right', () => {
 		expect(globToRegExp('**/*.css').test('dist/styles/globals.css')).toBe(true);
 		expect(globToRegExp('dist/index.js').test('dist/index.js')).toBe(true);
@@ -277,7 +288,7 @@ describe('side-effect imports survive tree-shaking', () => {
 				const [full, pkg, subpath] = match as unknown as [string, string, string];
 				// `…/dist/…` in prose is a file path being described, not a specifier
 				// anyone imports — the exports map deliberately does not expose it.
-				if (!packages.includes(pkg) || subpath.startsWith('dist') || seen.has(full)) continue;
+				if (isInstalledFilePath(source, match.index!) || !packages.includes(pkg) || subpath.startsWith('dist') || seen.has(full)) continue;
 				seen.add(full);
 
 				const target = resolveSubpath(join(packagesDir, pkg), `./${subpath}`);

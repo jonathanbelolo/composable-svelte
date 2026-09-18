@@ -1018,14 +1018,14 @@ case 'save':
 
 For migration assistance:
 
-1. Review [examples](/examples) showing common patterns
-2. Check [troubleshooting guide](/packages/core/docs/troubleshooting.md)
+1. Review [examples](https://github.com/jonathanbelolo/composable-svelte/tree/main/examples) showing common patterns
+2. Check [troubleshooting guide](troubleshooting.md)
 3. Join community discussions
 4. File issues with "migration" label
 
 ## Additional Resources
 
-- [Core Concepts](/packages/core/docs/core-concepts)
-- [API Reference](/packages/core/docs/api)
-- [Testing Guide](/packages/core/docs/core-concepts/testing.md)
-- [Examples](/examples)
+- [Core Concepts](core-concepts/store-and-reducers.md)
+- [API Reference](api/reference.md)
+- [Testing Guide](core-concepts/testing.md)
+- [Examples](https://github.com/jonathanbelolo/composable-svelte/tree/main/examples)
