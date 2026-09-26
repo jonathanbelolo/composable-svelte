@@ -1,6 +1,6 @@
 {
   "archive": "/private/tmp/composable-final-checker/opus-final-review/final-archive/composable-svelte-architecture-0.13.1.tgz",
-  "sha256": "cd12784eb9288aa510b2f980eb3d0ef57efce8c3d8d8318ab72cee32ce67e51a",
+  "sha256": "6095ae2fa24d7fe895db616d9cdc82b6380950cd2945ab9dc22f5fb85b3ff304",
   "files": [
     {
       "path": "package.json",
@@ -9,8 +9,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "f986d23a61fa435906662d595abb8781ef7fbc069d2e61e30533b8c63788e33f",
-      "bytes": 9213
+      "sha256": "5903232d68f865c693a92b79c9fa12bb1ac6b866e3e3b56716dab69109ec746e",
+      "bytes": 9686
     },
     {
       "path": "LICENSE",
@@ -19,8 +19,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "be7d8954cf50d414cec2d31facf439a05b815cd3b2c6f8e70f452e3cd5298ec6",
-      "bytes": 2313
+      "sha256": "a59ef81466128ee413833bc79747b1617394a8239a93131f1277e109abbc5534",
+      "bytes": 2926
     },
     {
       "path": "bin/composable-svelte-architecture.mjs",
@@ -139,13 +139,13 @@
     },
     {
       "path": "src/semantic-context.mjs",
-      "sha256": "8cdcdef380ad18e17c48517f0869168c7a0e4e761fdb8acf7740a45cd2fe03aa",
-      "bytes": 6360
+      "sha256": "f231bc6974bd35dd3fe9661711486fd63988ca1257e5b7bb7e41f98ad051a432",
+      "bytes": 6944
     },
     {
       "path": "src/semantic-flow.mjs",
-      "sha256": "b58997fb0af0e7fe8a5cfb96497a1c9031ed3294f283f3bb1121e9cfa7d11e7b",
-      "bytes": 71504
+      "sha256": "64118c57457afaf195f615745c69b2ffb1cf50561a46ced3598309ce3434cb57",
+      "bytes": 73380
     },
     {
       "path": "src/semantic-origins.mjs",

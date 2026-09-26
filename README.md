@@ -12,7 +12,7 @@ see the table below before you depend on one.
 | package | state | what is not there |
 |---|---|---|
 | **core** | production-ready | no store middleware, no devtools integration, no persistence or time-travel (there *is* an action `history` and `subscribeToActions`, so you can build a logger yourself) |
-| **architecture** | development-only CLI | five bounded rule families; passing analysis does not replace independent architectural review |
+| **architecture** | development-only CLI | completely optional; use discouraged; practical reliability unestablished; never architectural approval |
 | **chat** | usable | "collaborative" means presence, typing and cursors — **there is no CRDT layer**, so concurrent document editing is not supported |
 | **media** | usable | audio player, `VideoEmbed` (YouTube/Vimeo/Twitch), voice input — no video *player*, no streaming formats |
 | **code** | usable, thin | three wrappers: CodeMirror, Prism, SvelteFlow |

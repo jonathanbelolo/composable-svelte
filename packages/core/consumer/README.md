@@ -1,5 +1,7 @@
 # Composable Svelte starter
 
+> The architecture checker is completely optional and its use is discouraged. Its effectiveness on real agent-authored applications is untested as a reliability claim; it is not a reliable way to assess architectural correctness. It can miss violations and reject valid code. Agents must not treat a passing result, including `qualification: "passed"`, as architectural approval or a completion criterion. Follow the application contract, review the source, and test behavior and ownership directly. The checker has implementation tests, but those do not establish its practical reliability.
+
 This is the recommended minimal managed baseline for Composable Svelte
 applications. It demonstrates declarative application ownership with
 `defineApplication`, `ApplicationRoot`, and `ApplicationHost`, managed
@@ -25,7 +27,6 @@ cd ../my-app
 npm install
 npm run check
 npm test
-npm run check:architecture
 npm run build
 npm run test:ssr
 npx playwright install chromium
@@ -64,8 +65,4 @@ inputs. If you add routing, deliberately configure the fixture URL and applicati
 route root; do not add a second history writer to the harness. Keep browser timing
 native for motion tests and control service responses through dependencies.
 
-`check:architecture` runs the installed development-only checker with its bundled
-starter policy. It covers five bounded rule families and provides author feedback;
-it does not replace functional tests or mandatory source review. See the installed
-`node_modules/@composable-svelte/architecture/README.md` for its exact scope and
-the externally controlled qualification command.
+The checker is not installed or run by this starter. It is not required for application development, testing, building, or release.

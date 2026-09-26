@@ -1,5 +1,7 @@
 # Changelog
 
+Release guidance: the architecture checker is completely optional, its use is discouraged, and its practical reliability is unestablished. It is not an acceptance or release requirement. The Core starter no longer installs or runs it by default.
+
 All notable changes to `@composable-svelte/core` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),

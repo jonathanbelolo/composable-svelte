@@ -3,15 +3,15 @@
     "id": "@composable-svelte/architecture@0.13.1",
     "name": "@composable-svelte/architecture",
     "version": "0.13.1",
-    "size": 99447,
-    "unpackedSize": 408197,
-    "shasum": "aaf5f0f916cc73b8593034aa3c3fdfe04254301d",
-    "integrity": "sha512-LAm/0jRDaTNRUs+DIaRjp6J1RdUF/BPU/3qN+87tT5DifvxlAeWmtRj2Am91YsvAbkW1qs6IzwSRtcN/aeNpvw==",
+    "size": 100301,
+    "unpackedSize": 411743,
+    "shasum": "52d597621757b37c4d26ff8da587a2065806608d",
+    "integrity": "sha512-kHetoCXaLxIDL/I5JPjOn4MyzGmEQbHKDBQo6HLVpI51g9NwU9/eMC6WTzYnrX22MKwJclp/KMHrsNxCAKQfFA==",
     "filename": "composable-svelte-architecture-0.13.1.tgz",
     "files": [
       {
         "path": "CHANGELOG.md",
-        "size": 2313,
+        "size": 2926,
         "mode": 420
       },
       {
@@ -21,7 +21,7 @@
       },
       {
         "path": "README.md",
-        "size": 9213,
+        "size": 9686,
         "mode": 420
       },
       {
@@ -146,12 +146,12 @@
       },
       {
         "path": "src/semantic-context.mjs",
-        "size": 6360,
+        "size": 6944,
         "mode": 420
       },
       {
         "path": "src/semantic-flow.mjs",
-        "size": 71504,
+        "size": 73380,
         "mode": 420
       },
       {

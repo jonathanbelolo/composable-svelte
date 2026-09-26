@@ -1,0 +1,79 @@
+diff --color -r -x node_modules REVIEWED-SOURCE-HANDOFF/packages/architecture/CHANGELOG.md packages/architecture/CHANGELOG.md
+13a14
+> - Values bound by `{#each}` items, `{@const}` and `{:then}` are analyzed like the equivalent script bindings, so authority reaching a template through them is reported. Earlier releases did not model these values. `{:catch}` values stay unmodeled, like script `catch` bindings.
+18a20
+> - Computed keys in the same template binding patterns are now reported as unsupported (`template-binding-computed-key`). Earlier releases skipped the key expression without analysis.
+diff --color -r -x node_modules REVIEWED-SOURCE-HANDOFF/packages/architecture/README.md packages/architecture/README.md
+122a123,128
+> - Computed keys in the same template binding patterns (`{#each rows as {[key]: value}}`)
+>   are unsupported and reported as `template-binding-computed-key`. Use a literal key or
+>   destructure in script.
+> - Values bound by `{#each}` items, `{@const}` and `{:then}` are analyzed like the script
+>   bindings `for (const item of items)`, `const x = value` and `const x = await promise`.
+>   Values bound by `{:catch}` are not modeled, like values reaching a script `catch` binding.
+Only in packages/architecture: package-lock.json
+diff --color -r -x node_modules REVIEWED-SOURCE-HANDOFF/packages/architecture/src/semantic-context.mjs packages/architecture/src/semantic-context.mjs
+63a64,68
+>       // A computed key in such a pattern is a runtime expression that is likewise never evaluated.
+>       if (unit.kind === 'binding' && ts.isComputedPropertyName(node) && node.parent && ts.isBindingElement(node.parent) && node.parent.propertyName === node) {
+>         errors.push({code: 'unsupported-construct', construct: 'template-binding-computed-key', path: module.path, span: unit.nodeSpan(node),
+>           message: 'Computed keys in snippet parameters and in {#each}, {@const} and {#await} destructuring are not analyzed; use a literal key or destructure in script.'});
+>       }
+diff --color -r -x node_modules REVIEWED-SOURCE-HANDOFF/packages/architecture/src/semantic-flow.mjs packages/architecture/src/semantic-flow.mjs
+1194a1195,1215
+>   // Template bindings reuse the script binding flow: `{#each xs as p}` binds like `for (const p of xs)`, `{@const p = v}`
+>   // like `const p = v`, and `{:then p}` like `const p = await promise`. Catch values stay unmodeled, like catch bindings.
+>   function templateBindingError(module, marker, message) {
+>     const key = `${module.path}:${marker.span?.start?.offset ?? 0}:template-binding-correlation:${message}`;
+>     if (errorKeys.has(key)) return;
+>     errorKeys.add(key);
+>     errors.push({code: 'unsupported-construct', construct: 'template-binding-correlation', path: module.path, span: marker.span ?? ZERO_SPAN, message});
+>   }
+>   function seedTemplateBinding(module, marker) {
+>     const unitAt = (kind, node) => node ? module.units.find((unit) => unit.kind === kind && unit.start === node.start && unit.end === node.end) : null;
+>     const bind = (pattern, source, project) => {
+>       const declaration = unitAt('binding', pattern)?.sourceFile.statements[0]?.declarationList?.declarations[0];
+>       const root = unitAt('template', source)?.sourceFile.statements[0]?.expression;
+>       if (!declaration || !root) { templateBindingError(module, marker, 'Template binding has no inspectable source value.'); return; }
+>       bindPattern(declaration.name, project(value(root), root), declaration);
+>     };
+>     if (marker.kind === 'each-block' && marker.context) bind(marker.context, marker.expression, (items, root) => readMember(items, '*', root));
+>     else if (marker.kind === 'const-tag') for (const declaration of marker.node.declaration?.declarations ?? []) bind(declaration.id, declaration.init, (item) => item);
+>     else if (marker.kind === 'await-block' && marker.value) bind(marker.value, marker.expression, (promise) => awaitValue(promise));
+>   }
+> 
+1211a1233
+>       for (const module of context.modules) for (const marker of module.markers ?? []) seedTemplateBinding(module, marker);
+diff --color -r -x node_modules REVIEWED-SOURCE-HANDOFF/packages/architecture/src/template-binding-default.test.mjs packages/architecture/src/template-binding-default.test.mjs
+79a80,109
+> 
+> test('computed keys in template binding patterns are refused; literal keys and computed names in types are not', (t) => {
+>   const store = `import {createStore, Effect} from '@composable-svelte/core';\nconst store = createStore({initialState: {}, reducer: (s: any) => [s, Effect.none()]});`;
+>   const refused = [
+>     app(``, `{#each [{}] as {[(window.location.href = '/x')]: f}}<p>{f}</p>{/each}`),
+>     app(``, `{#each [{}] as {[String(history.pushState(null, '', '/x'))]: f}}<p>{f}</p>{/each}`),
+>     app(store, `{#each [{}] as {[String(store.subscribe(() => {}))]: f}}<p>{f}</p>{/each}`),
+>     app(resolver, `{#each [{}] as {[String(fire({ok: 1}))]: f}}<p>{f}</p>{/each}`),
+>     app(`const obj: any = {};`, `{#if true}{@const {[(window.location.href = '/x')]: f} = obj}<p>{f}</p>{/if}`),
+>     app(`const q = Promise.resolve({});`, `{#await q then {[(window.location.href = '/x')]: f}}<p>{f}</p>{/await}`),
+>     app(`const q = Promise.resolve({});`, `{#await q}{:catch {[(window.location.href = '/x')]: f}}<p>{f}</p>{/await}`),
+>     app(``, `{#snippet s({[(window.location.href = '/x')]: f}: any)}<p>{f}</p>{/snippet}\n{@render s({})}`)
+>   ];
+>   for (const files of refused) {
+>     const result = analyze(t, files);
+>     assert.equal(result.complete, false, files['App.svelte']);
+>     assert.ok(result.errors.includes('template-binding-computed-key'), `${files['App.svelte']}\n${JSON.stringify(result)}`);
+>   }
+>   // The same effects written as template expressions are still reported, and literal keys and type-level computed names stay clean.
+>   const direct = analyze(t, app(``, `<p>{String(history.pushState(null, '', '/x'))}</p>`));
+>   assert.ok(direct.findings.includes('history-write'), JSON.stringify(direct));
+>   for (const files of [
+>     app(`const rows = [{a: 1}];`, `{#each rows as {'a': v, a: w}}<p>{v}{w}</p>{/each}`),
+>     app(``, `{#snippet s(x: {[Symbol.iterator]: () => any; ['a']: number})}<p>{x.a}</p>{/snippet}\n{@render s({a: 1} as any)}`)
+>   ]) {
+>     const result = analyze(t, files);
+>     assert.equal(result.complete, true, JSON.stringify(result.errors));
+>     assert.deepEqual(result.errors, []);
+>   }
+> });
+Only in packages/architecture/src: template-binding-values.test.mjs

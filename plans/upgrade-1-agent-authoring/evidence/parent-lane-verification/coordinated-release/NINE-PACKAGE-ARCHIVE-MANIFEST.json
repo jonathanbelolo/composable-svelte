@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-09-26T14:24:57.901545+00:00",
-  "releaseCandidate": "candidate-r6-2026-09-26",
+  "generatedAt": "2026-09-26T16:30:03.667096+00:00",
+  "releaseCandidate": "production-optional-checker-2026-09-26",
   "packTool": {
     "name": "pnpm",
     "version": "9.15.9",
@@ -13,17 +13,17 @@
     "archives-r2",
     "archives-r3"
   ],
-  "releaseFinal": false,
+  "releaseFinal": true,
   "packages": [
     {
       "name": "@composable-svelte/core",
       "version": "0.13.1",
       "filename": "composable-svelte-core-0.13.1.tgz",
-      "path": "/private/tmp/companion-runtime-release/archives-r6/composable-svelte-core-0.13.1.tgz",
-      "bytes": 995838,
-      "sha256": "729ca89f1850e56bde5db23c9f8560090eed07a0dc4126374dd5e33fd11a8e0d",
+      "path": "/private/tmp/companion-runtime-release/archives-r8-production/composable-svelte-core-0.13.1.tgz",
+      "bytes": 996444,
+      "sha256": "9e76c7a0b939cdc5b7d5a05202761a14b4186f4408837f1668fdf2b3869b0c51",
       "sha512": "9eff094feac11bf4413ca0820d0c244eee8fca4076eccedd014c35b203deffb86b99495215b33b352156b41c70585866f9708061e8f05a7154e5aa91c67257c7",
-      "integrity": "sha512-nv8JT+rBG/RBPKCCDQwkTu6PykB27M7dAUw1sgPe/7hrmUlSFbM7NSFWtBxwWFhm+XCAYejwWnFU5aqRxnJXxw==",
+      "integrity": "sha512-CDEer8YWiDuUJlNXtjPHpu3mObUSxFCbQK0D96VjYvE89GfHgJvVe1YjOZ61dsmpmVBhEkWdbspNjNkW+y+Wuw==",
       "fileCount": 1258,
       "devDependencySiblings": {},
       "peerDependencies": {
@@ -49,7 +49,7 @@
       "candidateSourceDriftSinceR3Pack": [
         "consumer/package.json"
       ],
-      "status": "independently reviewed source; exact packed contents verified; installed qualification pending",
+      "status": "user-authorized optional-checker documentation-only revision; all other entries identical",
       "changedFromR4": [
         "package/CHANGELOG.md",
         "package/dist/navigation/managed-integration.d.ts",
@@ -267,13 +267,13 @@
     {
       "name": "@composable-svelte/architecture",
       "version": "0.13.1",
-      "path": "/private/tmp/composable-final-checker/opus-final-review/final-archive/composable-svelte-architecture-0.13.1.tgz",
+      "path": "/private/tmp/companion-runtime-release/archives-r8-production/composable-svelte-architecture-0.13.1.tgz",
       "filename": "composable-svelte-architecture-0.13.1.tgz",
-      "sha256": "cd12784eb9288aa510b2f980eb3d0ef57efce8c3d8d8318ab72cee32ce67e51a",
-      "integrity": "sha512-LAm/0jRDaTNRUs+DIaRjp6J1RdUF/BPU/3qN+87tT5DifvxlAeWmtRj2Am91YsvAbkW1qs6IzwSRtcN/aeNpvw==",
-      "bytes": 99447,
-      "fileCount": 40
+      "bytes": 100594,
+      "sha256": "a11fc234b1638d45e709eec22c1a27cd96ded433cdae2aa4dc8545ef8d0949f3",
+      "integrity": "sha512-hudB2YvyTaE2g7bUsDpUQEZMYmjk1gPn7owvyfVoWzjD9qN7m/bmYqupSaWrNoINcSqR2ng770F04k+I7dHByA==",
+      "fileCount": 40,
+      "status": "user-authorized optional-checker documentation-only revision; all other entries identical"
     }
-  ],
-  "status": "Candidate only: checker release acceptance blocked pending template-binding scope closure; runtime R6 qualification remains complete"
+  ]
 }

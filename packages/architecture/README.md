@@ -1,5 +1,7 @@
 # @composable-svelte/architecture
 
+> The architecture checker is completely optional and its use is discouraged. Its effectiveness on real agent-authored applications is untested as a reliability claim; it is not a reliable way to assess architectural correctness. It can miss violations and reject valid code. Agents must not treat a passing result, including `qualification: "passed"`, as architectural approval or a completion criterion. Follow the application contract, review the source, and test behavior and ownership directly. The checker has implementation tests, but those do not establish its practical reliability.
+
 Development tooling for applications using Composable Svelte. Keep it in
 `devDependencies`; do not import it into application code or browser bundles.
 
@@ -120,6 +122,12 @@ unsupported otherwise:
   `{@const}` destructuring and `{:then}`/`{:catch}` destructuring. They are reported as `template-binding-default`.
   Pass the value explicitly or apply the default in script. The same patterns without
   defaults are supported.
+- Computed keys in the same template binding patterns (`{#each rows as {[key]: value}}`)
+  are unsupported and reported as `template-binding-computed-key`. Use a literal key or
+  destructure in script.
+- Values bound by `{#each}` items, `{@const}` and `{:then}` are analyzed like the script
+  bindings `for (const item of items)`, `const x = value` and `const x = await promise`.
+  Values bound by `{:catch}` are not modeled, like values reaching a script `catch` binding.
 
 Independent source review and functional tests remain required. The result always
 includes `manualReviewRequired: true` and the bounded qualification scope. Preserve

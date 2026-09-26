@@ -1,0 +1,16 @@
+{
+  "status": "independent-focused-review-CLEAR",
+  "review": "/private/tmp/composable-final-checker/opus-final-review/FOCUSED-B2-REREVIEW.md addendum",
+  "files": [
+    {
+      "path": "packages/architecture/CHANGELOG.md",
+      "before": "b4f2d12f490987d623ca68545322f1c8282588a99f15354c0763fec6d9048c1e",
+      "after": "a59ef81466128ee413833bc79747b1617394a8239a93131f1277e109abbc5534"
+    },
+    {
+      "path": "packages/architecture/src/template-binding-values.test.mjs",
+      "before": "4dabc1dec4ae19e50715224c52b0fb00df75a49d621ba88aba54badf41a942a0",
+      "after": "e6908b5192b43ce57e96410d638e0f7e734867308301cc72fb3f93b6a8a6a465"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+O1 each ext array                  {"complete":true,"errors":[],"findings":[]}
+O1s for-of ext array               {"complete":false,"errors":["computed-authority-access@4","unknown-authority-member@4"],"findings":[]}
+O2 each ext call                   {"complete":true,"errors":[],"findings":[]}
+O2s for-of ext call                {"complete":true,"errors":[],"findings":[]}
+O3 each qSA                        {"complete":true,"errors":[],"findings":[]}
+O3s for-of qSA                     {"complete":true,"errors":[],"findings":[]}
+O4 then ext                        {"complete":true,"errors":[],"findings":[]}
+O4s await ext                      {"complete":true,"errors":[],"findings":[]}
+O5 const ext                       {"complete":true,"errors":[],"findings":[]}
+O6 each store state                {"complete":true,"errors":[],"findings":[]}
+O7 const store state               {"complete":true,"errors":[],"findings":[]}
+O8 each $store                     {"complete":true,"errors":[],"findings":[]}

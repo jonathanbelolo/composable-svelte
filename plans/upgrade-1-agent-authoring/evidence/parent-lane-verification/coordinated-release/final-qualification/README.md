@@ -1,6 +1,6 @@
 # Release qualification evidence
 
-Status at curation: candidate cd12784e passes all scoped gates, but independent release acceptance is blocked pending the parent decision on B1/B2 in `checker/OPUS-FINAL-PROFILE-REVIEW.md` §3a. This bundle is evidence, not a final CLEAR claim.
+Final candidate: checker SHA256 `6095ae2fa24d7fe895db616d9cdc82b6380950cd2945ab9dc22f5fb85b3ff304`. B1/B2 and then-binding corrections have independent focused CLEAR review; the final installed phase gates pass. This is scoped checker/profile/app qualification evidence; the parent aggregates runtime, microphone, CI and publication gates. Historical superseded candidates are labeled and are not final acceptance evidence.
 
 This curated bundle retains the reviewed application and profile-consumer sources, exact identities, independent reviews and bounded command results. It intentionally excludes dependencies, generated builds, screenshots/video and raw agent conversation streams. The parent release record retains runtime matrix and microphone evidence separately.
 

@@ -1,5 +1,7 @@
 # @composable-svelte/core
 
+> The architecture checker is completely optional and its use is discouraged. Its effectiveness on real agent-authored applications is untested as a reliability claim; it is not a reliable way to assess architectural correctness. It can miss violations and reject valid code. Agents must not treat a passing result, including `qualification: "passed"`, as architectural approval or a completion criterion. Follow the application contract, review the source, and test behavior and ownership directly. The checker has implementation tests, but those do not establish its practical reliability.
+
 > A Composable Architecture for Svelte 5 - Type-safe state management with reducers, effects, and navigation
 
 [![npm version](https://img.shields.io/npm/v/@composable-svelte/core.svg)](https://www.npmjs.com/package/@composable-svelte/core)
@@ -45,10 +47,7 @@ ship with the installed version and cover factoring, ownership and async correct
 Install the packages you need; their manifests declare compatible peers.
 See the [component catalog](./docs/components.md) for public import paths.
 
-The development-only `@composable-svelte/architecture` checker pairs with
-core 0.13.x. Install it in `devDependencies` with
-`npm install --save-dev @composable-svelte/architecture@0.13.1`, the version the
-bundled starter pins.
+The architecture checker is completely optional and use is discouraged. The starter does not install it. Do not use its results as architectural approval.
 The runtime companion packages listed above declare `@composable-svelte/core ^0.13.1`
 in their coordinated releases. `@composable-svelte/code` requires Svelte `^5.30.0`,
 so an application that includes it needs Svelte 5.30 or newer.

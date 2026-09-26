@@ -1,0 +1,252 @@
+--- REVIEWED-SOURCE-HANDOFF/./CHANGELOG.md
++++ live/./CHANGELOG.md
+@@ -11,11 +11,13 @@
+ - Bundled `maps`, `graphics`, `charts` and `auth` developer-feedback profiles with exact core 0.13.1, companion 0.3.0 and Svelte 5.55.3 approvals.
+ - TypeScript instantiation expressions such as `chartReducer<Row>` are analyzed as their underlying value, like other erased type syntax, instead of being reported as unsupported.
+ - Object-literal getters that only return a local binding, and `new Promise` with one local synchronous executor, are analyzed. Promise settle functions must stay in local bindings and must not reach templates, components, DOM handlers or packages. Resolved values, rejected values and values thrown by `throw` statements reachable while the executor runs must be plain data. Other getters, `Promise` combinators, `.then` chains and async executors are still reported as unsupported.
++- Values bound by `{#each}` items, `{@const}` and `{:then}` are analyzed like the equivalent script bindings, so authority reaching a template through them is reported. Earlier releases did not model these values. `{:catch}` values stay unmodeled, like script `catch` bindings. These bindings can now report the same unsupported constructs as their script equivalents, for example iterating a value exported by an opaque package.
+ 
+ ### Changed
+ 
+ - The starter policy approves exactly core 0.13.1; its supported range is a pairing bound, not an approval.
+ - Default values in snippet parameters and in `{#each}`, `{@const}`, `{:then}` and `{:catch}` destructuring are now reported as unsupported (`template-binding-default`). Earlier releases skipped them without analysis. Patterns without defaults are unaffected.
++- Computed keys in the same template binding patterns are now reported as unsupported (`template-binding-computed-key`). Earlier releases skipped the key expression without analysis.
+ 
+ ## [0.13.0] - 2026-09-24
+ 
+--- REVIEWED-SOURCE-HANDOFF/./README.md
++++ live/./README.md
+@@ -120,6 +120,12 @@
+   `{@const}` destructuring and `{:then}`/`{:catch}` destructuring. They are reported as `template-binding-default`.
+   Pass the value explicitly or apply the default in script. The same patterns without
+   defaults are supported.
++- Computed keys in the same template binding patterns (`{#each rows as {[key]: value}}`)
++  are unsupported and reported as `template-binding-computed-key`. Use a literal key or
++  destructure in script.
++- Values bound by `{#each}` items, `{@const}` and `{:then}` are analyzed like the script
++  bindings `for (const item of items)`, `const x = value` and `const x = await promise`.
++  Values bound by `{:catch}` are not modeled, like values reaching a script `catch` binding.
+ 
+ Independent source review and functional tests remain required. The result always
+ includes `manualReviewRequired: true` and the bounded qualification scope. Preserve
+--- REVIEWED-SOURCE-HANDOFF/./src/semantic-context.mjs
++++ live/./src/semantic-context.mjs
+@@ -61,6 +61,11 @@
+         errors.push({code: 'unsupported-construct', construct: 'template-binding-default', path: module.path, span: unit.nodeSpan(node),
+           message: 'Defaults in snippet parameters and in {#each}, {@const} and {#await} destructuring are not analyzed; pass the value explicitly or apply the default in script.'});
+       }
++      // A computed key in such a pattern is a runtime expression that is likewise never evaluated.
++      if (unit.kind === 'binding' && ts.isComputedPropertyName(node) && node.parent && ts.isBindingElement(node.parent) && node.parent.propertyName === node) {
++        errors.push({code: 'unsupported-construct', construct: 'template-binding-computed-key', path: module.path, span: unit.nodeSpan(node),
++          message: 'Computed keys in snippet parameters and in {#each}, {@const} and {#await} destructuring are not analyzed; use a literal key or destructure in script.'});
++      }
+       const record = {node, unit, module, function: fn, class: cls, snippet:snippetFor(unit), runtime, id: id(module, unit, node)};
+       info.set(node, record);
+       nodes.push(record);
+--- REVIEWED-SOURCE-HANDOFF/./src/semantic-flow.mjs
++++ live/./src/semantic-flow.mjs
+@@ -1190,6 +1190,27 @@
+         if (val.size) domain.write(instance, propertyNameKey(member.name), val);
+       }
+     }
++  }
++
++  // Template bindings reuse the script binding flow: `{#each xs as p}` binds like `for (const p of xs)`, `{@const p = v}`
++  // like `const p = v`, and `{:then p}` like `const p = await promise`. Catch values stay unmodeled, like catch bindings.
++  function templateBindingError(module, marker, message) {
++    const key = `${module.path}:${marker.span?.start?.offset ?? 0}:template-binding-correlation:${message}`;
++    if (errorKeys.has(key)) return;
++    errorKeys.add(key);
++    errors.push({code: 'unsupported-construct', construct: 'template-binding-correlation', path: module.path, span: marker.span ?? ZERO_SPAN, message});
++  }
++  function seedTemplateBinding(module, marker) {
++    const unitAt = (kind, node) => node ? module.units.find((unit) => unit.kind === kind && unit.start === node.start && unit.end === node.end) : null;
++    const bind = (pattern, source, project) => {
++      const declaration = unitAt('binding', pattern)?.sourceFile.statements[0]?.declarationList?.declarations[0];
++      const root = unitAt('template', source)?.sourceFile.statements[0]?.expression;
++      if (!declaration || !root) { templateBindingError(module, marker, 'Template binding has no inspectable source value.'); return; }
++      bindPattern(declaration.name, project(value(root), root), declaration);
++    };
++    if (marker.kind === 'each-block' && marker.context) bind(marker.context, marker.expression, (items, root) => readMember(items, '*', root));
++    else if (marker.kind === 'const-tag') for (const declaration of marker.node.declaration?.declarations ?? []) bind(declaration.id, declaration.init, (item) => item);
++    else if (marker.kind === 'await-block' && marker.value) bind(marker.value, marker.expression, (promise) => awaitValue(promise));
+   }
+ 
+   const api = {domain, authority, seedBinding, seedNode, invokeLocal, callableTargets, isActiveNode, reportUnsupported: addError, property, member: readMember, bindingValue, value};
+@@ -1209,6 +1230,7 @@
+       }
+       for (const [classId, record] of context.classes) seedClass(classId, record);
+       for (const declaration of declarations) seedDeclaration(declaration);
++      for (const module of context.modules) for (const marker of module.markers ?? []) seedTemplateBinding(module, marker);
+       for (const {node,runtime} of context.nodes) if (runtime && (ts.isForOfStatement(node) || ts.isForInStatement(node))) {
+         const item = ts.isForOfStatement(node) ? readMember(value(node.expression),'*',node) : empty();
+         if (ts.isVariableDeclarationList(node.initializer)) for (const declaration of node.initializer.declarations) bindPattern(declaration.name,item,declaration);
+--- REVIEWED-SOURCE-HANDOFF/./src/template-binding-default.test.mjs
++++ live/./src/template-binding-default.test.mjs
+@@ -77,3 +77,33 @@
+   assert.equal(script.complete, true, JSON.stringify(script.errors));
+   assert.ok(script.findings.includes('location-write'), JSON.stringify(script));
+ });
++
++test('computed keys in template binding patterns are refused; literal keys and computed names in types are not', (t) => {
++  const store = `import {createStore, Effect} from '@composable-svelte/core';\nconst store = createStore({initialState: {}, reducer: (s: any) => [s, Effect.none()]});`;
++  const refused = [
++    app(``, `{#each [{}] as {[(window.location.href = '/x')]: f}}<p>{f}</p>{/each}`),
++    app(``, `{#each [{}] as {[String(history.pushState(null, '', '/x'))]: f}}<p>{f}</p>{/each}`),
++    app(store, `{#each [{}] as {[String(store.subscribe(() => {}))]: f}}<p>{f}</p>{/each}`),
++    app(resolver, `{#each [{}] as {[String(fire({ok: 1}))]: f}}<p>{f}</p>{/each}`),
++    app(`const obj: any = {};`, `{#if true}{@const {[(window.location.href = '/x')]: f} = obj}<p>{f}</p>{/if}`),
++    app(`const q = Promise.resolve({});`, `{#await q then {[(window.location.href = '/x')]: f}}<p>{f}</p>{/await}`),
++    app(`const q = Promise.resolve({});`, `{#await q}{:catch {[(window.location.href = '/x')]: f}}<p>{f}</p>{/await}`),
++    app(``, `{#snippet s({[(window.location.href = '/x')]: f}: any)}<p>{f}</p>{/snippet}\n{@render s({})}`)
++  ];
++  for (const files of refused) {
++    const result = analyze(t, files);
++    assert.equal(result.complete, false, files['App.svelte']);
++    assert.ok(result.errors.includes('template-binding-computed-key'), `${files['App.svelte']}\n${JSON.stringify(result)}`);
++  }
++  // The same effects written as template expressions are still reported, and literal keys and type-level computed names stay clean.
++  const direct = analyze(t, app(``, `<p>{String(history.pushState(null, '', '/x'))}</p>`));
++  assert.ok(direct.findings.includes('history-write'), JSON.stringify(direct));
++  for (const files of [
++    app(`const rows = [{a: 1}];`, `{#each rows as {'a': v, a: w}}<p>{v}{w}</p>{/each}`),
++    app(``, `{#snippet s(x: {[Symbol.iterator]: () => any; ['a']: number})}<p>{x.a}</p>{/snippet}\n{@render s({a: 1} as any)}`)
++  ]) {
++    const result = analyze(t, files);
++    assert.equal(result.complete, true, JSON.stringify(result.errors));
++    assert.deepEqual(result.errors, []);
++  }
++});
+--- REVIEWED-SOURCE-HANDOFF/./src/template-binding-values.test.mjs (absent)
++++ live/./src/template-binding-values.test.mjs
+@@ -0,0 +1,130 @@
++import {test} from 'node:test';
++import assert from 'node:assert/strict';
++import {mkdtempSync, mkdirSync, writeFileSync, rmSync} from 'node:fs';
++import {tmpdir} from 'node:os';
++import {dirname, join} from 'node:path';
++import {buildGraph} from './graph.mjs';
++import {analyzeSemantics} from './semantics.mjs';
++import {buildSemanticContext} from './semantic-context.mjs';
++import {buildValueFlow} from './semantic-flow.mjs';
++
++// `{#each xs as p}`, `{@const p = v}` and `{:then p}` bind values exactly like their script forms (`for (const p of xs)`,
++// `const p = v`, `const p = await promise`). Catch values stay unmodeled, like script catch bindings.
++const PACKAGES = {
++  '@composable-svelte/core': {version: '0.13.0-next.1', exports: {'.': './index.js', './application': './application.js'}},
++  svelte: {version: '5.57.0', exports: {'.': './index.js'}}
++};
++function project(t, files) {
++  const root = mkdtempSync(join(tmpdir(), 'template-binding-values-'));
++  t.after(() => rmSync(root, {recursive: true, force: true}));
++  const all = {
++    'package.json': JSON.stringify({name: 'fixture', dependencies: Object.fromEntries(Object.entries(PACKAGES).map(([name, {version}]) => [name, version]))}),
++    'tsconfig.json': '{}',
++    ...Object.fromEntries(Object.entries(PACKAGES).map(([name, {version, exports}]) => [`node_modules/${name}/package.json`, JSON.stringify({name, version, exports})])),
++    ...files
++  };
++  for (const [name, text] of Object.entries(all)) {
++    mkdirSync(dirname(join(root, name)), {recursive: true});
++    writeFileSync(join(root, name), text);
++  }
++  const graph = buildGraph({projectRoot: root, roots: [Object.keys(files)[0]], tsconfig: 'tsconfig.json',
++    opaquePackages: Object.entries(PACKAGES).map(([name, {version}]) => ({name, version, provenance: 'registry'}))});
++  assert.deepEqual(graph.errors, []);
++  return {root, graph};
++}
++function analyze(t, files) {
++  const {root, graph} = project(t, files);
++  const result = analyzeSemantics({projectRoot: root, graph});
++  return {complete: result.complete, errors: result.errors.map((error) => error.construct ?? error.code), findings: result.findings.map((finding) => finding.detector).sort()};
++}
++const app = (script, template) => ({'App.svelte': `<script lang="ts">\n${script}\n</script>\n${template}\n`});
++const store = `import {createStore, Effect} from '@composable-svelte/core';\nconst store = createStore({initialState: {}, reducer: (s: any) => [s, Effect.none()]});`;
++const write = `<button onclick={() => { (f as any).href = '/x'; }}>x</button>`;
++const back = `<button onclick={() => { (h as any).pushState({}, '', '/x'); }}>x</button>`;
++
++function assertParity(t, scriptForm, templateForm, detector) {
++  const control = analyze(t, scriptForm);
++  assert.equal(control.complete, true, JSON.stringify(control.errors));
++  assert.ok(control.findings.includes(detector), `script control must report ${detector}: ${JSON.stringify(control)}`);
++  const result = analyze(t, templateForm);
++  assert.equal(result.complete, true, JSON.stringify(result.errors));
++  assert.ok(result.findings.includes(detector), `template form must report ${detector}: ${JSON.stringify(result)}`);
++}
++
++test('{#each} items carry authority exactly like script for-of bindings', (t) => {
++  assertParity(t, app(`const rows: any[] = [window.location];\nfunction go() { for (const f of rows) f.href = '/x'; }`, `<button onclick={go}>x</button>`),
++    app(`const rows: any[] = [window.location];`, `{#each rows as f}${write}{/each}`), 'location-write');
++  assertParity(t, app(`const rows: any[] = [{f: window.location}];\nfunction go() { for (const {f} of rows) f.href = '/x'; }`, `<button onclick={go}>x</button>`),
++    app(`const rows: any[] = [{f: window.location}];`, `{#each rows as {f}, i (i)}${write}{/each}`), 'location-write');
++  assertParity(t, app(`const rows: any[] = [history];\nfunction go() { for (const h of rows) h.pushState({}, '', '/x'); }`, `<button onclick={go}>x</button>`),
++    app(`const rows: any[] = [history];`, `{#each rows as h}${back}{/each}`), 'history-write');
++  assertParity(t, app(`${store}\nconst rows: any[] = [store];\nfor (const st of rows) st.subscribe(() => {});`, `<p>x</p>`),
++    app(`${store}\nconst rows: any[] = [store];`, `{#each rows as st}<p>{String(st.subscribe(() => {}))}</p>{/each}`), 'view-subscribe');
++});
++
++test('{@const} and {:then} values carry authority exactly like const and await bindings', (t) => {
++  assertParity(t, app(`function go() { const f: any = window.location; f.href = '/x'; }`, `<button onclick={go}>x</button>`),
++    app(``, `{#if true}{@const f = window.location}${write}{/if}`), 'location-write');
++  assertParity(t, app(`${store}\nconst st = store;\nst.subscribe(() => {});`, `<p>x</p>`),
++    app(store, `{#if true}{@const st = store}<p>{String(st.subscribe(() => {}))}</p>{/if}`), 'view-subscribe');
++  assertParity(t, app(`async function load(): Promise<any> { return window.location; }\nasync function go() { const f = await load(); f.href = '/x'; }`, `<button onclick={go}>x</button>`),
++    app(`async function load(): Promise<any> { return window.location; }`, `{#await load() then f}${write}{/await}`), 'location-write');
++  assertParity(t, app(`async function load(): Promise<any> { return {h: history}; }\nasync function go() { const {h} = await load(); h.pushState({}, '', '/x'); }`, `<button onclick={go}>x</button>`),
++    app(`async function load(): Promise<any> { return {h: history}; }`, `{#await load() then {h}}${back}{/await}`), 'history-write');
++});
++
++test('nested {#each} and chained {@const} bindings converge', (t) => {
++  const nested = analyze(t, app(`const rows: any[] = [{xs: [{ys: [window.location]}]}];`,
++    `{#each rows as r}{#each r.xs as x}{#each x.ys as f}${write}{/each}{/each}{/each}`));
++  assert.equal(nested.complete, true, JSON.stringify(nested.errors));
++  assert.ok(nested.findings.includes('location-write'), JSON.stringify(nested));
++  const chained = analyze(t, app(`const o: any = {a: {b: {l: window.location}}};`,
++    `{#if true}{@const a = o.a}{@const b = a.b}{#each [b] as item}{@const f = item.l}${write}{/each}{/if}`));
++  assert.equal(chained.complete, true, JSON.stringify(chained.errors));
++  assert.ok(chained.findings.includes('location-write'), JSON.stringify(chained));
++});
++
++test('ordinary data bindings stay supported and clean; resolvers and catch values keep their existing treatment', (t) => {
++  for (const files of [
++    app(`const rows = [{id: 1, n: 'a', meta: {k: 2}}];`, `{#each rows as {id, n, meta: {k}}, i (id)}<p>{i}{n}{k}</p>{/each}`),
++    app(`let s = $state({items: [{n: 1}]});`, `{#each s.items as it}<p>{it.n}</p>{/each}\n{#each s.items}<p>x</p>{/each}`),
++    app(`const o = {a: {b: 1}};`, `{#if true}{@const {a} = o}{@const b = a.b}<p>{b}</p>{/if}`),
++    app(`async function load() { return {n: 1}; }`, `{#await load() then {n}}<p>{n}</p>{:catch error}<p>{String(error)}</p>{/await}`)
++  ]) {
++    const result = analyze(t, files);
++    assert.equal(result.complete, true, JSON.stringify(result.errors));
++    assert.deepEqual(result.errors, []);
++    assert.deepEqual(result.findings, []);
++  }
++  // A Promise resolver bound by {#each} still cannot reach a template.
++  const resolver = analyze(t, app(`let fire: any; const p = new Promise(r => { fire = r; }); const rows: any[] = [fire];`, `{#each rows as f}<button onclick={f}>x</button>{/each}`));
++  assert.equal(resolver.complete, false);
++  assert.ok(resolver.errors.includes('promise-settle-escape'), JSON.stringify(resolver));
++  // Documented limitation, unchanged: values reaching a catch binding are not modeled, in script and in {:catch}.
++  const script = analyze(t, app(`function go() { try { throw window.location; } catch (e: any) { e.href = '/x'; } }`, `<button onclick={go}>x</button>`));
++  const template = analyze(t, app(`async function load(): Promise<any> { throw window.location; }`, `{#await load() catch e}<button onclick={() => { (e as any).href = '/x'; }}>x</button>{/await}`));
++  assert.deepEqual([script.complete, script.findings], [true, []]);
++  assert.deepEqual([template.complete, template.findings], [true, []]);
++});
++
++test('a template binding whose source value cannot be correlated is refused, not skipped', (t) => {
++  const {root, graph} = project(t, app(`const rows: any[] = [window.location];`, `{#each rows as f}${write}{/each}\n{#if true}{@const g = rows}<p>{g.length}</p>{/if}`));
++  const context = buildSemanticContext({projectRoot: root, graph});
++  const module = context.modules.find((candidate) => candidate.path.endsWith('App.svelte'));
++  const each = module.markers.find((marker) => marker.kind === 'each-block');
++  // Drop the unit holding the each expression, as if the parser had not produced it.
++  module.units.splice(module.units.findIndex((unit) => unit.kind === 'template' && unit.start === each.expression.start && unit.end === each.expression.end), 1);
++  const flow = buildValueFlow(context);
++  assert.equal(flow.complete, false);
++  assert.ok(flow.errors.some((error) => error.construct === 'template-binding-correlation'), JSON.stringify(flow.errors));
++  // Correlation is exact: a unit that merely contains the pattern is not accepted either.
++  const other = project(t, app(`const rows: any[] = [window.location];`, `{#each rows as f}${write}{/each}`));
++  const widened = buildSemanticContext({projectRoot: other.root, graph: other.graph});
++  const widenedModule = widened.modules.find((candidate) => candidate.path.endsWith('App.svelte'));
++  const widenedEach = widenedModule.markers.find((marker) => marker.kind === 'each-block');
++  const binding = widenedModule.units.find((unit) => unit.kind === 'binding' && unit.start === widenedEach.context.start && unit.end === widenedEach.context.end);
++  binding.start -= 1;
++  const widenedFlow = buildValueFlow(widened);
++  assert.equal(widenedFlow.complete, false);
++  assert.ok(widenedFlow.errors.some((error) => error.construct === 'template-binding-correlation'), JSON.stringify(widenedFlow.errors));
++});

@@ -1192,6 +1192,27 @@ export function buildValueFlow(context, {maxPasses = 100, onInvoke, onProperty} 
     }
   }
 
+  // Template bindings reuse the script binding flow: `{#each xs as p}` binds like `for (const p of xs)`, `{@const p = v}`
+  // like `const p = v`, and `{:then p}` like `const p = await promise`. Catch values stay unmodeled, like catch bindings.
+  function templateBindingError(module, marker, message) {
+    const key = `${module.path}:${marker.span?.start?.offset ?? 0}:template-binding-correlation:${message}`;
+    if (errorKeys.has(key)) return;
+    errorKeys.add(key);
+    errors.push({code: 'unsupported-construct', construct: 'template-binding-correlation', path: module.path, span: marker.span ?? ZERO_SPAN, message});
+  }
+  function seedTemplateBinding(module, marker) {
+    const unitAt = (kind, node) => node ? module.units.find((unit) => unit.kind === kind && unit.start === node.start && unit.end === node.end) : null;
+    const bind = (pattern, source, project) => {
+      const declaration = unitAt('binding', pattern)?.sourceFile.statements[0]?.declarationList?.declarations[0];
+      const root = unitAt('template', source)?.sourceFile.statements[0]?.expression;
+      if (!declaration || !root) { templateBindingError(module, marker, 'Template binding has no inspectable source value.'); return; }
+      bindPattern(declaration.name, project(value(root), root), declaration);
+    };
+    if (marker.kind === 'each-block' && marker.context) bind(marker.context, marker.expression, (items, root) => readMember(items, '*', root));
+    else if (marker.kind === 'const-tag') for (const declaration of marker.node.declaration?.declarations ?? []) bind(declaration.id, declaration.init, (item) => item);
+    else if (marker.kind === 'await-block' && marker.value) bind(marker.value, marker.expression, (promise) => awaitValue(promise));
+  }
+
   const api = {domain, authority, seedBinding, seedNode, invokeLocal, callableTargets, isActiveNode, reportUnsupported: addError, property, member: readMember, bindingValue, value};
 
   function solve() {
@@ -1209,6 +1230,7 @@ export function buildValueFlow(context, {maxPasses = 100, onInvoke, onProperty} 
       }
       for (const [classId, record] of context.classes) seedClass(classId, record);
       for (const declaration of declarations) seedDeclaration(declaration);
+      for (const module of context.modules) for (const marker of module.markers ?? []) seedTemplateBinding(module, marker);
       for (const {node,runtime} of context.nodes) if (runtime && (ts.isForOfStatement(node) || ts.isForInStatement(node))) {
         const item = ts.isForOfStatement(node) ? readMember(value(node.expression),'*',node) : empty();
         if (ts.isVariableDeclarationList(node.initializer)) for (const declaration of node.initializer.declarations) bindPattern(declaration.name,item,declaration);

@@ -903,16 +903,13 @@ function runNodeCanvasActionControls(targetDir) {
   }));
 }
 
-export function runCoreStarterRecipe({scratchDir, unpackedRoot, candidateMap, sveltePins, svelteCheckpoint = 'newer', skipBrowser, checker}) {
+export function runCoreStarterRecipe({scratchDir, unpackedRoot, candidateMap, sveltePins, svelteCheckpoint = 'newer', skipBrowser}) {
   const recipeName = 'core-starter';
   const commands = [];
   const starterDir = join(scratchDir, 'core-starter');
 
   const corePkg = candidateMap.get('@composable-svelte/core');
   assert.ok(corePkg, 'Core package is required for core-starter recipe');
-  // The shipped starter declares the checker and a check:architecture script. Without a candidate
-  // checker archive npm would fetch unverified registry bytes and the script could not be run.
-  assert.ok(checker, 'core-starter requires checkerArchive: the shipped starter declares @composable-svelte/architecture');
 
   const unpackedCore = join(unpackedRoot, 'core');
   const recipeSource = findRecipeDirectory(unpackedCore, 'consumer', 'core');
@@ -928,23 +925,17 @@ export function runCoreStarterRecipe({scratchDir, unpackedRoot, candidateMap, sv
   // The starter pins exact identities; the candidates must be those identities, not substitutes.
   const shippedPins = {core: manifest.dependencies?.['@composable-svelte/core'], checker: manifest.devDependencies?.['@composable-svelte/architecture'], svelte: manifest.dependencies?.svelte};
   assert.equal(shippedPins.core, corePkg.version, `Shipped starter pins core ${shippedPins.core}, candidate core is ${corePkg.version}`);
-  assert.equal(shippedPins.checker, checker.version, `Shipped starter pins checker ${shippedPins.checker}, candidate checker is ${checker.version}`);
   assert.equal(shippedPins.svelte, sveltePin, `Shipped starter pins Svelte ${shippedPins.svelte}, starter checkpoint is ${sveltePin}`);
 
   manifest.dependencies = manifest.dependencies || {};
   manifest.dependencies['@composable-svelte/core'] = `file:${corePkg.frozenPath || corePkg.path}`;
   manifest.dependencies['svelte'] = sveltePin;
 
-  if (checker) {
-    manifest.devDependencies = manifest.devDependencies || {};
-    manifest.devDependencies['@composable-svelte/architecture'] = `file:${checker.frozenPath || checker.path}`;
-  }
 
   writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
 
-  // Materialize candidate core (and architecture if present)
+  // Materialize candidate core; the starter does not require the optional checker.
   const pkgsToInstall = [corePkg];
-  if (checker) pkgsToInstall.push(checker);
   const transport = materializeCandidatePackages(starterDir, pkgsToInstall, {unpackedRoot});
 
   // Run npm install for external dependencies (svelte, vite, etc.)
@@ -956,9 +947,6 @@ export function runCoreStarterRecipe({scratchDir, unpackedRoot, candidateMap, sv
 
   // Restore exact public registry-shaped SemVer in package.json
   manifest.dependencies['@composable-svelte/core'] = corePkg.version;
-  if (checker) {
-    manifest.devDependencies['@composable-svelte/architecture'] = checker.version;
-  }
   writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
 
   // Post-install verification of EVERY candidate package
@@ -997,13 +985,6 @@ export function runCoreStarterRecipe({scratchDir, unpackedRoot, candidateMap, sv
     }
   }
 
-  // The shipped starter's own development check (bundled profile), always run.
-  const archCmd = runCommand('npm', ['run', 'check:architecture'], {cwd: starterDir});
-  commands.push(archCmd);
-  if (archCmd.exitCode !== 0) {
-    throw new RecipeExecutionError(recipeName, archCmd.command, archCmd.exitCode, archCmd.stderr, archCmd.stdout);
-  }
-
   return {
     name: recipeName,
     status: skipBrowser ? 'partial-browser-skipped' : 'passed',
@@ -1028,7 +1009,7 @@ export function runCoreStarterRecipe({scratchDir, unpackedRoot, candidateMap, sv
       matchedFiles: v.matchedFiles,
       verifiedMatched: v.verifiedMatched
     })),
-    architectureCheck: {command: archCmd.command, exitCode: archCmd.exitCode, kind: 'shipped-bundled-profile-development-check'},
+    architectureCheck: null,
     commands: commands.map(c => ({
       command: c.command,
       exitCode: c.exitCode,
@@ -2521,9 +2502,9 @@ async function _runVerification(rawManifest, options, progress) {
 
     // Step 5: Architecture Checker Qualification
     let archQualification = null;
-    if ((mode === 'all' || mode === 'qualification') && frozenChecker && manifest.policy && candidateMap.has('@composable-svelte/core')) {
+    if (mode === 'qualification' && frozenChecker && manifest.policy && candidateMap.has('@composable-svelte/core')) {
       console.log('[qualification-harness] Step 4/5: Running architecture checker qualification on actual materialized app...');
-      const targetProjectDir = coreStarterResult?.projectDir || null;
+      const targetProjectDir = null; // Explicit opt-in analysis gets its own checker installation.
       archQualification = runArchitectureQualification({
         projectDir: targetProjectDir,
         scratchDir,
@@ -2545,8 +2526,8 @@ async function _runVerification(rawManifest, options, progress) {
       negativeControls = runNegativeControls({
         scratchDir,
         validatedManifest: manifest,
-        checker: frozenChecker,
-        policy: manifest.policy,
+        checker: mode === 'negative-controls' ? frozenChecker : null,
+        policy: mode === 'negative-controls' ? manifest.policy : null,
         corePkg: candidateMap.get('@composable-svelte/core')
       });
       progress.negativeControls = negativeControls;
@@ -2587,14 +2568,10 @@ async function _runVerification(rawManifest, options, progress) {
         incompleteReasons.push('Checker, external policy or core omitted: policy-pin, core-pin and incomplete-analysis controls were not executed');
       }
     } else if (mode === 'all') {
-      const hasCheckerAndPolicy = Boolean(frozenChecker && manifest.policy && archQualification);
       const allRecipesRan = recipesNotRun.length === 0;
 
       if (skipBrowser) {
         incompleteReasons.push('Browser tests were skipped (--skip-browser); full qualification requires browser verification');
-      }
-      if (!hasCheckerAndPolicy) {
-        incompleteReasons.push('Checker archive or external policy omitted from manifest; architecture qualification pending');
       }
       if (!allRecipesRan) {
         incompleteReasons.push(`Recipes not executed: ${recipesNotRun.join(', ')}`);
@@ -2606,16 +2583,14 @@ async function _runVerification(rawManifest, options, progress) {
       if (incompleteReasons.length === 0) {
         verdict = 'PASSED';
         status = 'PASSED';
-        fullQualificationClaimed = true;
+        // Runtime recipes and archive controls are not a complete release authority.
+        fullQualificationClaimed = false;
       } else {
         status = 'PARTIAL';
         fullQualificationClaimed = false;
-        if (skipBrowser && !hasCheckerAndPolicy) {
-          verdict = 'PARTIAL_BROWSER_SKIPPED_AND_POLICY_PENDING';
-        } else if (skipBrowser) {
+        if (skipBrowser) {
           verdict = 'PARTIAL_BROWSER_SKIPPED';
-        } else if (!hasCheckerAndPolicy) {
-          verdict = 'PARTIAL_POLICY_OR_CHECKER_PENDING';
+
         } else {
           verdict = 'PARTIAL_RECIPES_SUBSET';
         }
@@ -2715,7 +2690,8 @@ function printUsage() {
   console.log(`
 Usage: node scripts/verify-release-archives.mjs --manifest <path> [options]
 
-Final immutable release archive qualification harness for Composable Svelte.
+Immutable archive and runtime recipe verification for Composable Svelte.
+Checker analysis is optional, discouraged, and never release authority; it runs only in explicit qualification mode.
 
 Options:
   -m, --manifest <path>       Path to JSON manifest file (required)

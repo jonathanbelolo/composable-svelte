@@ -1,0 +1,14 @@
+
+> test:ssr
+> vite build --ssr tests/ssr-entry.ts --outDir ssr && node tests/ssr.mjs
+
+vite v7.3.6 building ssr environment for production...
+transforming...
+✓ 600 modules transformed.
+rendering chunks...
+ssr/assets/index-BlrmjmfE.js   58.41 kB
+ssr/assets/index-BAG9P1vG.js  156.43 kB
+ssr/ssr-entry.js              441.71 kB
+✓ built in 1.32s
+Running SSR verification...
+SSR verification passed: deterministic rendering, request isolation, and no server-side service execution.

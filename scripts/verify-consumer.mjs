@@ -24,20 +24,12 @@ for(const name of names){
  run('tar',['-xzf',tar,'-C',out],root);
 }
 const pkg=name=>join(unpacked,name,'package');
-// The starter declares the checker; install the workspace checker's archive so an unpublished
-// checker version resolves locally. The shipped pin must name the version packed with it.
-const checkerDir=join(root,'packages','architecture');
-const checkerVersion=JSON.parse(readFileSync(join(checkerDir,'package.json'),'utf8')).version;
-run('npm',['pack','--ignore-scripts','--pack-destination',packs,'--loglevel','error'],checkerDir);
-const checker=`file:${join(packs,`composable-svelte-architecture-${checkerVersion}.tgz`)}`;
-assert.equal(JSON.parse(readFileSync(join(pkg('core'),'consumer','package.json'),'utf8')).devDependencies['@composable-svelte/architecture'],checkerVersion,'starter checker pin differs from the packed checker');
 // Prove the shipped starter works with core alone before satellite packages
 // could accidentally satisfy an undeclared dependency.
 const starter=join(scratch,'starter');
 cpSync(join(pkg('core'),'consumer'),starter,{recursive:true});
 const starterManifest=JSON.parse(readFileSync(join(starter,'package.json'),'utf8'));
 starterManifest.dependencies['@composable-svelte/core']=deps['@composable-svelte/core'];
-starterManifest.devDependencies['@composable-svelte/architecture']=checker;
 writeFileSync(join(starter,'package.json'),JSON.stringify(starterManifest,null,2));
 run('npm',['install','--ignore-scripts','--no-audit','--no-fund'],starter);
 run('npx',['playwright','install','chromium'],starter);
@@ -49,7 +41,6 @@ console.log('Standalone core starter passed without satellite packages');
 cpSync(join(pkg('core'),'consumer'),app,{recursive:true});
 const manifest=JSON.parse(readFileSync(join(app,'package.json'),'utf8'));
 manifest.dependencies={...manifest.dependencies,...deps};
-manifest.devDependencies['@composable-svelte/architecture']=checker;
 manifest.devDependencies.tailwindcss3='npm:tailwindcss@3.4.17';
 manifest.devDependencies.autoprefixer='10.4.21';
 writeFileSync(join(app,'package.json'),JSON.stringify(manifest,null,2));

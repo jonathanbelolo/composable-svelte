@@ -1,0 +1,32 @@
+[
+  {
+    "name": "@composable-svelte/core",
+    "baseline": "/private/tmp/companion-runtime-release/archives-r6/composable-svelte-core-0.13.1.tgz",
+    "baselineSHA256": "729ca89f1850e56bde5db23c9f8560090eed07a0dc4126374dd5e33fd11a8e0d",
+    "archive": "/private/tmp/companion-runtime-release/archives-r8-production/composable-svelte-core-0.13.1.tgz",
+    "sha256": "9e76c7a0b939cdc5b7d5a05202761a14b4186f4408837f1668fdf2b3869b0c51",
+    "changedFiles": [
+      "CHANGELOG.md",
+      "README.md",
+      "consumer/AGENTS.md",
+      "consumer/README.md",
+      "consumer/package.json",
+      "docs/application-contract.md",
+      "docs/consumer.md",
+      "docs/prerelease.md"
+    ],
+    "allOtherEntriesIdentical": true
+  },
+  {
+    "name": "@composable-svelte/architecture",
+    "baseline": "/private/tmp/composable-final-checker/opus-final-review/final-archive/composable-svelte-architecture-0.13.1.tgz",
+    "baselineSHA256": "6095ae2fa24d7fe895db616d9cdc82b6380950cd2945ab9dc22f5fb85b3ff304",
+    "archive": "/private/tmp/companion-runtime-release/archives-r8-production/composable-svelte-architecture-0.13.1.tgz",
+    "sha256": "a11fc234b1638d45e709eec22c1a27cd96ded433cdae2aa4dc8545ef8d0949f3",
+    "changedFiles": [
+      "CHANGELOG.md",
+      "README.md"
+    ],
+    "allOtherEntriesIdentical": true
+  }
+]

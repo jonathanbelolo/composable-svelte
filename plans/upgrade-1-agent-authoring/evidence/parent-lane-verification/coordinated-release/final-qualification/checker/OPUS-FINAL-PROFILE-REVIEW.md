@@ -9,39 +9,41 @@ controlled application of this checker remain coordinator duties.
 
 ## Verdict
 
-**The corrected candidate is `cd12784e…`.** It passed all scoped installed gates, and both focused independent
-re-reviews of my corrections are CLEAR. **It is not accepted final.** Release acceptance is **blocked pending a parent
-scope decision on B1/B2 (§3a)**. These are two further pre-existing fail-open template-binding channels of the same
-impact class the parent judged release-blocking. They are not defaults, and I did not implement them, per the parent's
-"report concrete scope instead of broadening" instruction.
+- **Candidate:** `6095ae2f…` is the corrected checker candidate for the scoped profiles. It integrates the parent-authorized
+  B1 (computed binding keys refused) and B2 (`{#each}`, `{@const}` and `{:then}` values bound like script bindings).
+- **Review:** all corrections were focused-reviewed CLEAR by fresh independent reviewers.
+- **Gates:** every scoped installed gate passed on its actual bytes, with the frozen R6 runtime. That covers the 9
+  profiles, the starter, the Auth-only derivative, and the App-A/App-B app gates.
+- **Scope:** starter, 7 individual companion profiles and chat-code-media, plus the separately reviewed external App-B
+  Auth+Charts policy.
 
-Scope: starter, 7 individual companion profiles and chat-code-media, plus the separately reviewed external App-B
-Auth+Charts policy.
+**These are narrow phase gates, not a full release claim.** The parent owns final assembly and publication, aggregating
+these gates with the runtime matrix and the physical microphone check. `fullQualificationClaimed` stays false.
 
-- **Artifact history (all superseded ones kept and labeled):**
-  - `b62cf88f…` (finalizer) was **not cleared**. §2 lists its four fail-open analyzer defects, corrected in source.
-  - `f3c91ee6…` (corrections 1–4) is **superseded**. It is kept in
-    `opus-final-review/final-archive-f3c91ee6-SUPERSEDED/` and its evidence in `evidence-f3c91ee6-SUPERSEDED/` and
-    `app-gate/f3c91ee6-SUPERSEDED/`.
-  - `cd12784e…` adds correction 5, the parent-directed refusal of template binding-pattern defaults (§2a).
-- **Re-reviews:**
-  - `opus-final-review/FOCUSED-CORRECTION-REREVIEW.md` (corrections 1–4): CLEAR, including its addendum.
-  - `opus-final-review/FOCUSED-BINDING-DEFAULT-REREVIEW.md` (correction 5): the correction is CLEAR, including its
-    addendum. It is the source of the B1/B2 release-scope report.
-- **No full release qualification is claimed.** Every result is a scoped phase gate, and `fullQualificationClaimed`
-  stays false.
+- **Artifact history (superseded ones kept and labeled):**
+  - `b62cf88f…` (finalizer): **not cleared**. §2 lists its four fail-open defects.
+  - `f3c91ee6…` (corrections 1–4): superseded, in `opus-final-review/final-archive-f3c91ee6-SUPERSEDED/`.
+  - `cd12784e…` (correction 5, template binding defaults; its source equals `REVIEWED-SOURCE-HANDOFF`): superseded, in
+    `opus-final-review/final-archive-cd12784e-SUPERSEDED/`, with evidence in `evidence-cd12784e-SUPERSEDED/`. The
+    content-addressed copy is kept at `final-archive/by-sha/cd12784e…/`.
+  - **`6095ae2f…`: B1 + B2, current.**
+- **Re-reviews, all CLEAR:**
+  - `opus-final-review/FOCUSED-CORRECTION-REREVIEW.md` (corrections 1–4);
+  - `FOCUSED-BINDING-DEFAULT-REREVIEW.md` (correction 5);
+  - `FOCUSED-B1-REREVIEW.md` (B1);
+  - `FOCUSED-B2-REREVIEW.md` (B2 plus B1 confirmation, with a follow-up addendum).
 
 ### Current candidate artifact
 
 | | Value |
 |---|---|
-| Path | `opus-final-review/final-archive/composable-svelte-architecture-0.13.1.tgz`, plus the content-addressed copy `final-archive/by-sha/cd12784e…/` used by App-A |
-| sha256 | `cd12784eb9288aa510b2f980eb3d0ef57efce8c3d8d8318ab72cee32ce67e51a` |
-| SRI | `sha512-LAm/0jRDaTNRUs+DIaRjp6J1RdUF/BPU/3qN+87tT5DifvxlAeWmtRj2Am91YsvAbkW1qs6IzwSRtcN/aeNpvw==` (npm pack and openssl agree) |
-| Size / files | 99,447 bytes / 40 files |
-| Inspection | `archive-matches-source`. All 9 archived policies equal their embedded pins, and no tests are packed (`final-archive/inspect.json` `db5862c5…`). |
-| Source at pack | `opus-final-review/SOURCE-AT-PACK-v2.sha256`, re-verified unchanged after all gates |
-| Suite | `npm test` **554/554** (`evidence-v2/suite.log`) |
+| Path | `opus-final-review/final-archive/composable-svelte-architecture-0.13.1.tgz`, plus the content-addressed copy `final-archive/by-sha/6095ae2f…/` |
+| sha256 | `6095ae2fa24d7fe895db616d9cdc82b6380950cd2945ab9dc22f5fb85b3ff304` |
+| SRI | `sha512-kHetoCXaLxIDL/I5JPjOn4MyzGmEQbHKDBQo6HLVpI51g9NwU9/eMC6WTzYnrX22MKwJclp/KMHrsNxCAKQfFA==` (npm pack and openssl agree) |
+| Size / files | 100,301 bytes / 40 files |
+| Inspection | `archive-matches-source`. All 9 archived policies equal their embedded pins, and no tests are packed (`final-archive/inspect.json` `0cc27e8f…`). |
+| Source at pack | `opus-final-review/SOURCE-AT-PACK-v3.sha256`, re-verified unchanged after all gates |
+| Suite | `npm test` **560/560** (`evidence-v3/suite.log`) |
 
 ### Policies (unchanged by this review; hashes verified from bytes)
 
@@ -75,38 +77,33 @@ combinations and generic selectors.
 ## 1. Review scope and baseline
 
 - **Baseline:** `/private/tmp/composable-final-qualification/repo/packages/architecture` (0.13.0).
-- **Authoritative scoped delta:** `opus-final-review/OPUS-FINAL-SCOPED-CHECKER-DELTA.json` (`342b36ff…`, schema v2),
-  28 files. Each file records its baseline, finalizer and final hashes and a "changed by this review" flag.
-  - The `f3c91ee6` version of the delta is kept in the superseded directory.
-  - Top-level `FINAL-SCOPED-CHECKER-DELTA.json` is a coordinator preview, as the coordinator clarified.
-  - `package-lock.json` is the local parser-dependency install record; it is not packed.
-- **Files changed by this review** (relative to the finalizer's state):
+- **Authoritative delta:** `opus-final-review/OPUS-FINAL-SCOPED-CHECKER-DELTA.json` (`5447c924…`, schema v3), 29 files.
+  For each file it records the baseline, finalizer, `REVIEWED-SOURCE-HANDOFF` and final hashes, plus flags.
+- **Incremental reviewed delta relative to the immutable `REVIEWED-SOURCE-HANDOFF`** (whose source equals `cd12784e…`):
+  6 files, in `opus-final-review/INCREMENTAL-B1-B2-vs-REVIEWED-SOURCE-HANDOFF.diff` (`b69c92b2…`).
 
-| File | Finalizer | Final |
-|---|---|---|
-| `src/semantic-context.mjs` | `711832a6…` (= baseline) | `8cdcdef380ad18e17c48517f0869168c7a0e4e761fdb8acf7740a45cd2fe03aa` |
-| `src/semantic-flow.mjs` | `1b564143…` | `b58997fb0af0e7fe8a5cfb96497a1c9031ed3294f283f3bb1121e9cfa7d11e7b` |
-| `src/symbols.mjs` | `2a844729…` (= baseline) | `401ec803cea0ab934ef8a85a9e6d1e6bb6b5511c23a1e75419cb8516b33e320d` |
-| `src/instantiation-expression.test.mjs` | `5f861d16…` | `7d77ba7aa4547eaf46af0ed7f1f92eb430fd251becf792c9b46c8f1faf5bba2f` |
-| `src/getter-promise-compat.test.mjs` | `b02a6153…` | `3b32033abc615df5f15430f04637d4e0541136a52aafbf8bfbc6465da45acbe8` |
-| `src/template-binding-default.test.mjs` | absent | `9a91ba491889bae6891fcfad6e0e217d1c18030bb27cfe5b7a4e562cb3ef9776` |
-| `README.md` | `dbd094ee…` | `f986d23a61fa435906662d595abb8781ef7fbc069d2e61e30533b8c63788e33f` |
-| `CHANGELOG.md` | `6b92480e…` | `be7d8954cf50d414cec2d31facf439a05b815cd3b2c6f8e70f452e3cd5298ec6` |
+  | File | REVIEWED-SOURCE-HANDOFF | Final |
+  |---|---|---|
+  | `src/semantic-context.mjs` | `8cdcdef3…` | `f231bc6974bd35dd3fe9661711486fd63988ca1257e5b7bb7e41f98ad051a432` (B1 guard) |
+  | `src/semantic-flow.mjs` | `b58997fb…` | `64118c57457afaf195f615745c69b2ffb1cf50561a46ced3598309ce3434cb57` (B2 seeding) |
+  | `src/template-binding-default.test.mjs` | `9a91ba49…` | `c3515bb7c88ef07c32bd1280303a4c706af155dacae9b8325512562393388319` (B1 test) |
+  | `src/template-binding-values.test.mjs` | absent | `e6908b5192b43ce57e96410d638e0f7e734867308301cc72fb3f93b6a8a6a465` (B2 tests) |
+  | `README.md` | `f986d23a…` | `5903232d68f865c693a92b79c9fa12bb1ac6b866e3e3b56716dab69109ec746e` |
+  | `CHANGELOG.md` | `be7d8954…` | `a59ef81466128ee413833bc79747b1617394a8239a93131f1277e109abbc5534` |
 
-- **Unchanged from the finalizer's delta and reviewed:**
-  - `package.json`: version only, `3c016fc9…`;
-  - `check.mjs`: `CHECKER_VERSION` only, `c966b7a5…`;
-  - `bundled-policy.mjs`: `d64e226c…`;
-  - `expression-values.mjs`: `45fd04ee…`;
-  - the 9 policies;
-  - the test version bumps;
-  - the new bundled-policy and check tests;
-  - `test/installed-bin-smoke.mjs` (`b8ec1556…`).
-- **Diffs of my corrections:**
-  - `CORRECTIONS-src.diff` (`018badf0…`);
-  - `CORRECTIONS-symbols.diff` (`17c8345d…`);
-  - `CORRECTIONS-tests.diff` (`84258ef1…`);
-  - `CORRECTIONS-binding-default.diff` (`7e616280…`; relative to `f3c91ee6`).
+- **Changed by this review relative to the finalizer:**
+  - `semantic-context.mjs`, `semantic-flow.mjs` and `symbols.mjs`;
+  - the tests `instantiation-expression`, `getter-promise-compat`, `template-binding-default` and
+    `template-binding-values`;
+  - README and CHANGELOG.
+  
+  The finalizer's other reviewed changes are unchanged: `package.json`, `check.mjs`, `bundled-policy.mjs`,
+  `expression-values.mjs`, the 9 policies, the test bumps, and `installed-bin-smoke.mjs`.
+- **Correction diffs:**
+  - `CORRECTIONS-src.diff`, `CORRECTIONS-symbols.diff` and `CORRECTIONS-tests.diff` (corrections 1–4);
+  - `CORRECTIONS-binding-default.diff` (correction 5);
+  - `CORRECTIONS-B1-vs-cd12784e.diff` (B1 alone);
+  - `INCREMENTAL-B1-B2-vs-REVIEWED-SOURCE-HANDOFF.diff` (B1 + B2).
 
 ## 2. Critical compatibility review: findings and corrections
 
@@ -202,6 +199,37 @@ reproduced by probes in `opus-final-review/probes/`. `PKG=base` selects the unch
 - **Docs:** README (supported syntax) and CHANGELOG (Changed) state the refusal and that no-default patterns are
   unaffected.
 
+## 2b. B1 and B2 (parent-authorized)
+
+- **B1: computed keys in template binding patterns are refused** (`template-binding-computed-key`, in
+  `semantic-context.mjs`).
+  - **Scope:** a computed key used as a binding-element property name in any template binding unit (snippet params,
+    `{#each}`, `{@const}`, `{:then}`/`{:catch}`, and `let:`). Type-level computed names are unaffected.
+  - **Proof:** mutant M6 is killed; focused review CLEAR.
+- **B2: template binding values are propagated** (`seedTemplateBinding` in `semantic-flow.mjs`, about 25 lines). It
+  reuses `bindPattern`, `readMember(…,'*')`, `awaitValue` and `seedBinding` inside the existing fixpoint:
+  - `{#each xs as p}` binds like `for (const p of xs)`;
+  - `{@const p = v}` binds like `const p = v`;
+  - `{:then p}` binds like `const p = await promise`.
+
+  **Not changed:** no new rules, zones, evaluator or parser, and no catch machinery. **`{:catch}` values stay unmodeled**,
+  per the documented catch limitation.
+  - **Correlation:** markers are matched to parser units by exact start/end. A missing or inexact correlation is refused
+    as `template-binding-correlation`, never skipped.
+  - **Proof obligations met** (`src/template-binding-values.test.mjs` and `FOCUSED-B2-REREVIEW.md`):
+    - **Parity:** authority, store (`view-subscribe`) and history reach the same findings as their script forms through
+      each, const and then.
+    - **Convergence:** nested each 60 deep, const chains of 60 and mixed then/each/const chains all converge, as does
+      backward flow at script parity.
+    - **Fail-closed correlation:** covered by tests for the missing unit and the widened unit.
+    - **Ordinary data bindings stay supported and clean:** the reviewer checked 43 forms, byte-identical to the baseline.
+    - **Mutation:** mutants M7 (each), M8 (const), M9 (then), M10 (silent-skip correlation) and M11 (containment instead
+      of exact correlation) are all killed. M1–M11 results are in `mutants/RESULTS-v5.txt` (`9639dd77…`).
+    - **Real inputs:** all 10 positive inputs still pass, and the originals stay rejected at the same sites.
+  - **By-design consequence (documented in the CHANGELOG):** these bindings can now report the same unsupported
+    constructs as their script forms. For example, `{#each}` over a value exported by an opaque package is refused, as
+    `for…of` over it already was. No real input is affected.
+
 ## 3. Limitations: named, not new approvals
 
 **Pre-existing base limitations.** These are documented or asserted by the finalizer's documentation controls, are
@@ -218,7 +246,7 @@ unchanged, and are escalated to the coordinator:
 - **Async results passed to opaque code:** `sink(asyncFn())` where `asyncFn` returns authority gives no finding in 0.13.0
   either, because the rules' deep traversal does not follow `async-result`. Executor resolution is restricted to plain
   data, so executors add no channel.
-- **Snippet and `{#each}` destructuring defaults (earlier listed here):** now **refused** by correction 5 (§2a).
+- **Template binding patterns:** defaults (correction 5) and computed keys (B1) are refused. Values of `{#each}`, `{@const}` and `{:then}` are modeled (B2). `{:catch}` values are not.
 - **Implicit calls are not traced:** `toString` or `valueOf` run during coercion are not in the executor throw extent. A
   value thrown there reaches only a `catch` binding, at parity with the base throw→catch limitation. The README now says
   this, instead of the earlier "anything thrown while the executor runs".
@@ -233,86 +261,56 @@ unchanged, and are escalated to the coordinator:
   remain inactive with their reasons unchanged.
 - **Physical microphone behavior** is not proven by the media profiles; it needs a real-device check.
 
-## 3a. Release-scope report: B1 and B2 (open, pre-existing, not implemented)
+## 3a. Release-scope report B1/B2: resolved
 
-Both were reproduced by the binding-default re-reviewer (`rereview-binding-default/r2`, `r5`, `r8`, `r9`). The base
-0.13.0 behaves identically. Both are complete with no findings while a real authority write or subscription happens.
-That is the same impact class the parent judged release-blocking.
+B1 and B2, reported in the `cd12784e` review, were authorized by the parent and implemented (§2b). The **remaining
+modeled-scope limits** are:
 
-- **B1: computed property keys inside binding patterns are never evaluated.**
-  - **Examples:** `{#each [{}] as {[(window.location.href = '/x')]: f}}`, and the same shape in `{@const}`, `{:then}` or
-    `{:catch}`, or with `history.pushState(…)` or `store.subscribe(…)`. The Svelte 5.57.0 compiler output contains these
-    calls.
-  - **Scope:** a `ComputedPropertyName` inside a `binding` unit. Rendered snippet params are already covered.
-  - **Candidate bounded closure:** a refusal guard of the same shape, for example a `template-binding-computed-key`
-    construct. It needs no new machinery. **Not applied without authorization.**
-- **B2: `{#each}` item and `{@const}` values are not propagated at all.**
-  - **Examples:** `{#each [{f: window.location}] as {f}}` with `f.href = …`, `{@const f = window.location}`,
-    `{#each [store] as st}{st.subscribe(…)}` and `{#each [history] as h}` with `h.pushState(…)` all pass. The script
-    `for…of` equivalent is detected.
-  - **Why it matters here:** the refused `{#each … {f = window.location}}` default has an identical no-default twin that
-    still passes.
-  - **Options:** closing B2 requires either modeling each-item and `{@const}` values (new analysis machinery) or refusing
-    ordinary each and `{@const}` bindings, which contradicts "ordinary no-default each remain supported". **This is a
-    parent scope decision.**
-- **Effect on real inputs:**
-  - **B1:** no current real input contains a computed key in a binding pattern.
-  - **B2 is present in both author apps:**
-    - App-A `{#each}` at `src/Workspace.svelte:90,178,277`, over state data;
-    - App-B `{@const state = app.store.state}` and the session `{@const}` bindings at `src/App.svelte:47–51`.
+- `{:catch}` values and script `catch` bindings;
+- implicit coercion calls;
+- the other §3 items.
 
-    Their template-bound values are not analyzed, so the apps' clean results do not cover those uses; the independent app
-    source reviews do.
+## 4. Final installed gates on `6095ae2f…`
 
-## 4. Final installed gates on `cd12784e…`
-
-The gates were run by `opus-final-review/final-gates-v2.sh` (log `final-gates-v2.log`, exits `evidence-v2/exits.txt`).
-Stages A–E ran uninterrupted and were supervised to completion in this turn. The orchestration tooling is unchanged from
-the finalizer (`evidence-v2/tooling.sha256`).
+The gates were run by `opus-final-review/final-gates-v3.sh` (log `final-gates-v3.log`, exits `evidence-v3/exits.txt`).
+Stages A–E were supervised to completion in this turn. The orchestration tooling is unchanged (`evidence-v3/tooling.sha256`).
 
 - **Common to every gate:**
   - external `--policy` + `--policy-sha256`;
   - `--expected-core-version 0.13.1`;
-  - the installed `isQualificationPass` with the expected pin, core 0.13.1 and checker 0.13.1;
+  - the installed `isQualificationPass` with pin, core 0.13.1 and checker 0.13.1;
   - never qualification through a bundled selector.
-- **Runtime:** the R6 aggregate `archives-r6/MANIFEST.json` (`2813a209…`): Core `729ca89f…`, Auth `dbb2611b…`, Chat
-  `fe21f00f…`, and 5 unchanged archives. It is installed from local tarballs and byte-verified. Transport is local
-  candidate tarballs with registry-shaped specs; no registry retrieval is claimed.
+- **Runtime:** frozen R6 (`archives-r6/MANIFEST.json` `2813a209…`; every archive re-hashed intact), installed from local
+  tarballs and byte-verified. Transport is local candidate tarballs; no registry retrieval is claimed.
 
-1. **Profiles.** `evidence-v2/profiles/profile-qualification-receipt.json` = `bb19d108…`: **172/172**,
+1. **Profiles.** `evidence-v3/profiles/profile-qualification-receipt.json` = `b9f9274e…`: **172/172**,
    `ALL_EXPECTATIONS_MET`.
-   - The installed checker `cd12784e…` verified 40/40 files; the parser dependencies are 5.9.3 and 5.57.0.
-   - The 8 input identities, including the default-root consumer host files and the production-consumer deltas, are
-     byte-identical to the `f3c91ee6` run and to the finalizer's P9 run. All 172 (profile, input, label, exit, pass) rows
+   - The installed checker `6095ae2f…` verified 40/40 files; the parser dependencies are 5.9.3 and 5.57.0.
+   - The 8 input identities are byte-identical to the earlier runs, and all 172 (profile, input, label, exit, pass) rows
      are identical.
-   - **Positives:**
-     - default-root consumers of the unchanged shipped chat, code, media and chat-code-media recipes;
-     - maps, graphics and charts production consumers with only the `onApp` hook removed.
-   - **Original inputs stay rejected:** the ORIGINAL instrumented fixtures and the original auth consumer.
-   - **Negatives, all rejected:** wrong pin, core 0.13.0, companion pin +1, companion absent, core 0.13.2, Svelte 5.57.0,
-     missing root, starter approvals only, and the envelope checks.
-   - **Bundled selectors:** `bundled:<p>` analysis is exit 0; bundled qualification is refused with exit 22.
-2. **Checker-independent evidence reused, not rerun.** The inputs, source and runtime bytes are identical, and the
-   checker is not part of the app runtime.
+   - **Positives:** default-root consumers of the unchanged shipped chat, code, media and chat-code-media recipes, and
+     the maps, graphics and charts production consumers.
+   - **Originals stay rejected:** the ORIGINAL instrumented fixtures and the auth consumer.
+   - **Negatives:** all rejected.
+   - **Bundled selectors:** analysis exits 0; qualification is refused with exit 22.
+2. **Checker-independent evidence reused, not rerun.** The inputs and runtime bytes are identical, and the checker is not
+   part of the app runtime.
    - P9 consumer verification `3a3e39da…`.
-   - P9 production-consumer equivalence `8bf3d313…` (non-vacuity established in P5).
-   - Runtime matrix `matrix-r6/{minimum,newer}` (`f48048f0…` / `6e878bc8…`, 8/8 each).
-   - Declaration proof `r6-declaration-check/RECEIPT.json` (`3636d06d…`).
-3. **Real shipped starter** (`evidence-v2/starter/`).
-   - The R6 core consumer, with the shipped pins core 0.13.1 and Svelte 5.57.0.
-   - Installed core 1258/1258 and checker 40/40, with no symlinks; `package.json` was restored to the shipped bytes.
+   - P9 production-consumer equivalence `8bf3d313…` (non-vacuity in P5).
+   - `matrix-r6/{minimum,newer}` (`f48048f0…` / `6e878bc8…`).
+   - `r6-declaration-check/RECEIPT.json` (`3636d06d…`).
+3. **Real shipped starter** (`evidence-v3/starter/`).
+   - Core 1258/1258 and checker 40/40 installed, with no symlinks; the shipped `package.json` was restored.
    - `check` 0/0, `test` 2/2, `test:ssr`, `check:architecture` and **`test:browser` 2 + 1**: all exit 0.
-   - **Controls: 12/12.**
-   - **Installed-bin smoke:** passed (`683d8046…`): checker 0.13.1, pin `f2821ebf…`, bundled qualification exit 22.
-4. **Auth-only derivative** (`evidence-v2/auth-derivative/auth-derivative-controls.json` = `e9b06344…`): **12/12**.
-   - The exact Auth bytes and `candidate-auth` pass; every negative rejects.
-   - **The ORIGINAL Auth+Charts App-B rejects under Auth-only** (`ChartView.svelte:2`, `model.ts:21`).
+   - **Controls: 12/12** (`da6ab463…`).
+   - **Installed-bin smoke:** passed (`0a41ecda…`), bundled qualification exit 22.
+4. **Auth-only derivative** (`evidence-v3/auth-derivative/auth-derivative-controls.json` = `d0251b77…`): **12/12**.
+   - The ORIGINAL Auth+Charts App-B rejects under Auth-only.
    - The original App-B passes the external Auth+Charts policy.
-   - `bundled:auth` on the derivative: exit 0. `bundled:starter`: exit 21. Bundled qualification: exit 22.
-5. **Author-app compatibility copies** (`evidence-v2/author-apps/…` = `fee26d44…`): all expectations met.
+   - `bundled:auth`: exit 0. `bundled:starter`: exit 21. Bundled qualification: exit 22.
+5. **Author-app compatibility copies** (`evidence-v3/author-apps/…` = `d557577a…`): all expectations met.
 
-The superseded `f3c91ee6` gates, including the interrupted-then-resumed run, are kept in
-`evidence-f3c91ee6-SUPERSEDED/`.
+**Superseded gate evidence:** `evidence-cd12784e-SUPERSEDED/` and `evidence-f3c91ee6-SUPERSEDED/`.
 
 ## 5. Qualification inputs and the derivative: focused review
 
@@ -342,20 +340,18 @@ The superseded `f3c91ee6` gates, including the interrupted-then-resumed run, are
   - **Assessment:** this focused review finds the derivative faithful. It is not a no-op, and there is no source
     exclusion.
 
-## 6. Final app gate on `cd12784e…`
+## 6. Final app gate on `6095ae2f…`
 
 The app gate is recorded in `/private/tmp/composable-final-authoring/FINAL-APP-QUALIFICATION.md`. Its receipt is
-`opus-final-review/app-gate/FINAL-APP-GATE-RECEIPT-cd12784e.json` = `110bb67c…`, with **34/34** checker expectations met
-(App-A 18, App-B 16). The superseded `f3c91ee6` receipt is kept in `app-gate/f3c91ee6-SUPERSEDED/`.
+`opus-final-review/app-gate/FINAL-APP-GATE-RECEIPT-6095ae2f.json` = `a12dcdb9…`, with **34/34** expectations met (App-A 18,
+App-B 16). Superseded receipts are kept.
 
-- **App-A:** passes with the exact `chat-code-media` bytes on the installed `cd12784e` checker. The run includes:
-  - the refresh to R6 Core / R5 Chat;
-  - the checker devDependency now pointing at the content-addressed `cd12784e` copy;
-  - the affected functional proof re-run on these bytes: check 0/0, unit 14/14, SSR, build, browser 1/1.
-  
-  Relative to the original pre-gate snapshot, only `package.json` and `package-lock.json` changed (authorized).
-- **App-B:** passes only through the external Auth+Charts policy `bc68bb6b…`, on an isolated registry-shaped clone. The
-  original is entirely unchanged, including all 25 snapshot files and the installed runtime bytes.
+- **App-A:** passes with the exact `chat-code-media` bytes on installed `6095ae2f`. Its functional proof was re-run: check
+  0/0, unit 14/14, SSR, build, browser 1/1. Only its authorized manifest and lock changed.
+- **App-B:** passes only through the external Auth+Charts policy `bc68bb6b…`, on an isolated clone. The original is
+  entirely unchanged.
+- **B2 now covers both apps' template bindings:** App-A's `{#each}` and App-B's `{@const}` store/session bindings are
+  analyzed, and the apps still pass.
 
 ## 7. Corrections to handoff prose
 
@@ -363,31 +359,33 @@ The app gate is recorded in `/private/tmp/composable-final-authoring/FINAL-APP-Q
   - its "final candidate `b62cf88f…`" is superseded;
   - its §6 "analyzer bounds" missed defects 1–4;
   - its README summary ("anything thrown while the executor runs must be plain data") overclaimed.
-  A banner was added. The current candidate is `cd12784e…`, which is not accepted final (see the Verdict).
+  A banner was added. The current candidate is `6095ae2f…` (see the Verdict).
 - **`GETTER-PROMISE-IMPLEMENTATION.md`:** "closes P30" holds only for explicit `throw` statements in the synchronous
   extent. A banner was added.
 - **`FINAL-SCOPED-CHECKER-DELTA.json` (top level):** a coordinator preview, as the coordinator clarified. It is not the
   finalizer's `48932a2b…`, whose hash survives in `profile-phase/FINAL-EVIDENCE-SHA256SUMS`. The authoritative delta is
   `opus-final-review/OPUS-FINAL-SCOPED-CHECKER-DELTA.json`.
-- **This document's earlier `f3c91ee6` verdict** is superseded by the Verdict above.
+- **This document's earlier `f3c91ee6` and `cd12784e` verdicts** are superseded by the Verdict above. The `cd12784e` version is kept in `final-archive-cd12784e-SUPERSEDED/`.
 
 ## 8. Commands and evidence
 
 | Item | Location |
 |---|---|
-| Probes | `opus-final-review/probes/p1`–`p7` (run with `node`, or with `PKG=base` for 0.13.0) |
-| Re-reviews | `FOCUSED-CORRECTION-REREVIEW.md` + `rereview/`; `FOCUSED-BINDING-DEFAULT-REREVIEW.md` (`5a8032f1…`) + `rereview-binding-default/` |
-| Mutants | `mutants/run.sh`, `RESULTS-v2.txt` |
-| Gates | `final-gates-v2.sh`, `final-gates-v2.log`, `evidence-v2/` |
-| App gate | `app-gate/app-gate.mjs` (checker via `CHECKER_TGZ`/`CHECKER_SHA`), `app-gate/*cd12784e*` |
+| Probes | `opus-final-review/probes/p1`–`p9`, `rereview*/` (run with `node`, `PKG=base` for 0.13.0, or `PKG=proto` for the B2 scratch prototype) |
+| Re-reviews | `FOCUSED-CORRECTION-REREVIEW.md`, `FOCUSED-BINDING-DEFAULT-REREVIEW.md`, `FOCUSED-B1-REREVIEW.md` (`424db4d3…`), `FOCUSED-B2-REREVIEW.md` (`699d5a4e…`) |
+| B2 scope | `/private/tmp/composable-final-checker/B2-BOUNDED-SCOPE.md`, `opus-final-review/b2-prototype/` |
+| Mutants | `mutants/run.sh`, `RESULTS-v5.txt` |
+| Gates | `final-gates-v3.sh`, `final-gates-v3.log`, `evidence-v3/` |
+| App gate | `app-gate/app-gate.mjs` (checker via `CHECKER_TGZ`/`CHECKER_SHA`), `app-gate/*6095ae2f*` |
 | Checksums | `opus-final-review/OPUS-FINAL-EVIDENCE-SHA256SUMS` |
 | Curation pointers | `opus-final-review/CURATED-EVIDENCE-POINTERS.json` |
 
-## 9. Outstanding (coordinator and parent)
+## 9. Outstanding (parent and coordinator)
 
-- **Parent decision on B1 and B2 (§3a).** Until then, `cd12784e…` is the corrected candidate but not an accepted final
-  artifact. If B1's bounded refusal is authorized, it needs one more pack, affected gates and a focused re-review.
-- **Afterwards:** the controlled checker application and the parent git/npm release.
+- Final assembly and publication by the parent, using `6095ae2f…`: the controlled checker application, git/npm, and the
+  portable curated bundle, which the coordinator rebuilds from these outputs.
 - Decisions on the escalated base gaps (§3).
 - The physical microphone check.
 - The aggregate release gate.
+
+No full release qualification is claimed here.

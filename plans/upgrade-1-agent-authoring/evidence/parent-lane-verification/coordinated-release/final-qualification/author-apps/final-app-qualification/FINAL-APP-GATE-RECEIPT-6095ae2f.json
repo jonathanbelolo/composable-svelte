@@ -1,0 +1,3033 @@
+{
+  "schema": "opus-final-review/final-app-gate/v1",
+  "startedAt": "2026-09-26T16:21:09.504Z",
+  "scratch": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt",
+  "transport": "local candidate tarballs (file: specs) installed and byte-verified; registry-shaped version specs are materialized only in labeled clones for checker provenance; no registry retrieval claimed",
+  "checker": {
+    "path": "/private/tmp/composable-final-checker/opus-final-review/final-archive/by-sha/6095ae2fa24d7fe895db616d9cdc82b6380950cd2945ab9dc22f5fb85b3ff304/composable-svelte-architecture-0.13.1.tgz",
+    "sha256": "6095ae2fa24d7fe895db616d9cdc82b6380950cd2945ab9dc22f5fb85b3ff304",
+    "integrity": "sha512-kHetoCXaLxIDL/I5JPjOn4MyzGmEQbHKDBQo6HLVpI51g9NwU9/eMC6WTzYnrX22MKwJclp/KMHrsNxCAKQfFA=="
+  },
+  "runtimeManifest": {
+    "path": "/private/tmp/companion-runtime-release/archives-r6/MANIFEST.json",
+    "sha256": "2813a2094329e87d368d73d5244ecdb48d34f5e1015ad05e8b3ac144fe6f3951"
+  },
+  "policies": {
+    "chatCodeMedia": {
+      "path": "/private/tmp/composable-final-checker/opus-final-review/app-gate/policies-6095ae2f/exact-bundled-chat-code-media.json",
+      "sha256": "f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327"
+    },
+    "externalAppBAuthCharts": {
+      "path": "/private/tmp/composable-final-checker/opus-final-review/app-gate/policies-6095ae2f/external-app-b-auth-charts.json",
+      "sha256": "bc68bb6b47a8c524fa0897f33e9d77f6b88e17b3fc1d995a62ba703f7364a1de"
+    },
+    "bundledAuthBytes": {
+      "path": "/private/tmp/composable-final-checker/opus-final-review/app-gate/policies-6095ae2f/exact-bundled-auth.json",
+      "sha256": "ab100ba510f5cdc4931bca33e0dc398d21f1382010b51ed44242d30dc6846662"
+    },
+    "bundledStarterBytes": {
+      "path": "/private/tmp/composable-final-checker/opus-final-review/app-gate/policies-6095ae2f/exact-bundled-starter.json",
+      "sha256": "f2821ebf0fa5cd34b346361089edd56bb4ec01a40c59eb969c60f90c7e77d190"
+    }
+  },
+  "apps": {
+    "app-a": {
+      "path": "/private/tmp/composable-final-authoring/app-a",
+      "before": {
+        "packageJson": "0186001dd9c1e32dd748ccf0ce51e334b5de6cbf14385973d107bd6776024392",
+        "packageLock": "1ce717cf6a3de77b7f5a00ef22c41dbe1b64c4ebf6a61a238c8c9de64c2dd6ac",
+        "files": 85
+      },
+      "refresh": {
+        "@composable-svelte/core": {
+          "from": "file:/private/tmp/companion-runtime-release/archives-r6/composable-svelte-core-0.13.1.tgz",
+          "to": "file:/private/tmp/companion-runtime-release/archives-r6/composable-svelte-core-0.13.1.tgz"
+        },
+        "@composable-svelte/chat": {
+          "from": "file:/private/tmp/companion-runtime-release/archives-r5-chat/composable-svelte-chat-0.5.0.tgz",
+          "to": "file:/private/tmp/companion-runtime-release/archives-r5-chat/composable-svelte-chat-0.5.0.tgz"
+        },
+        "@composable-svelte/code": {
+          "from": "file:/private/tmp/companion-runtime-release/archives-r4/composable-svelte-code-0.5.0.tgz",
+          "to": "file:/private/tmp/companion-runtime-release/archives-r4/composable-svelte-code-0.5.0.tgz"
+        },
+        "@composable-svelte/media": {
+          "from": "file:/private/tmp/companion-runtime-release/archives-r4/composable-svelte-media-0.5.0.tgz",
+          "to": "file:/private/tmp/companion-runtime-release/archives-r4/composable-svelte-media-0.5.0.tgz"
+        },
+        "@composable-svelte/architecture": {
+          "from": "file:/private/tmp/composable-final-checker/opus-final-review/final-archive/by-sha/cd12784eb9288aa510b2f980eb3d0ef57efce8c3d8d8318ab72cee32ce67e51a/composable-svelte-architecture-0.13.1.tgz",
+          "to": "file:/private/tmp/composable-final-checker/opus-final-review/final-archive/by-sha/6095ae2fa24d7fe895db616d9cdc82b6380950cd2945ab9dc22f5fb85b3ff304/composable-svelte-architecture-0.13.1.tgz"
+        }
+      },
+      "install": {
+        "exit": 0
+      },
+      "installed": [
+        {
+          "name": "@composable-svelte/core",
+          "version": "0.13.1",
+          "archiveSha256": "729ca89f1850e56bde5db23c9f8560090eed07a0dc4126374dd5e33fd11a8e0d",
+          "archivePath": "/private/tmp/companion-runtime-release/archives-r6/composable-svelte-core-0.13.1.tgz",
+          "files": 1258,
+          "mismatched": 0,
+          "extra": 0,
+          "symlink": false,
+          "ok": true
+        },
+        {
+          "name": "@composable-svelte/chat",
+          "version": "0.5.0",
+          "archiveSha256": "fe21f00f75385205073744bc45cba715e441914d38119d46fb7cf0bfdfe76aeb",
+          "archivePath": "/private/tmp/companion-runtime-release/archives-r5-chat/composable-svelte-chat-0.5.0.tgz",
+          "files": 157,
+          "mismatched": 0,
+          "extra": 0,
+          "symlink": false,
+          "ok": true
+        },
+        {
+          "name": "@composable-svelte/code",
+          "version": "0.5.0",
+          "archiveSha256": "f85b945232c460edc45c0051dc69c4580f4a502b39a2988af38c62a2e3a37026",
+          "archivePath": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-code-0.5.0.tgz",
+          "files": 69,
+          "mismatched": 0,
+          "extra": 0,
+          "symlink": false,
+          "ok": true
+        },
+        {
+          "name": "@composable-svelte/media",
+          "version": "0.5.0",
+          "archiveSha256": "c0bfa6528fb6cd3dc68f2769237d3053514f76f79bc5197316b230eb07b78298",
+          "archivePath": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-media-0.5.0.tgz",
+          "files": 101,
+          "mismatched": 0,
+          "extra": 0,
+          "symlink": false,
+          "ok": true
+        },
+        {
+          "name": "@composable-svelte/architecture",
+          "version": "0.13.1",
+          "archiveSha256": "6095ae2fa24d7fe895db616d9cdc82b6380950cd2945ab9dc22f5fb85b3ff304",
+          "archivePath": "/private/tmp/composable-final-checker/opus-final-review/final-archive/by-sha/6095ae2fa24d7fe895db616d9cdc82b6380950cd2945ab9dc22f5fb85b3ff304/composable-svelte-architecture-0.13.1.tgz",
+          "files": 40,
+          "mismatched": 0,
+          "extra": 0,
+          "symlink": false,
+          "ok": true
+        }
+      ],
+      "toolchain": {
+        "svelte": "5.55.3",
+        "typescript": "5.9.3",
+        "vite": "7.3.6",
+        "vitest": "4.0.7",
+        "svelte-check": "4.3.3",
+        "@playwright/test": "1.56.1"
+      },
+      "checkerParserDeps": {
+        "typescript": "5.9.3",
+        "svelte": "5.57.0"
+      },
+      "sourceUnchanged": true,
+      "after": {
+        "packageJson": "f374901c455096bdea8313a2cd644d01157dc511ade46bc53544da17dd369f4b",
+        "packageLock": "7e81277c019ce9109757bf53b023379e9ae3b05fd2ba3bc6b90773fd96bd688a"
+      },
+      "functional": [
+        {
+          "script": "check",
+          "exit": 0
+        },
+        {
+          "script": "test",
+          "exit": 0
+        },
+        {
+          "script": "test:ssr",
+          "exit": 0
+        },
+        {
+          "script": "build",
+          "exit": 0
+        },
+        {
+          "script": "test:browser",
+          "exit": 0
+        }
+      ],
+      "registryShapedClone": {
+        "dir": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped",
+        "rewritten": {
+          "@composable-svelte/core": {
+            "from": "file:/private/tmp/companion-runtime-release/archives-r6/composable-svelte-core-0.13.1.tgz",
+            "to": "0.13.1"
+          },
+          "@composable-svelte/chat": {
+            "from": "file:/private/tmp/companion-runtime-release/archives-r5-chat/composable-svelte-chat-0.5.0.tgz",
+            "to": "0.5.0"
+          },
+          "@composable-svelte/code": {
+            "from": "file:/private/tmp/companion-runtime-release/archives-r4/composable-svelte-code-0.5.0.tgz",
+            "to": "0.5.0"
+          },
+          "@composable-svelte/media": {
+            "from": "file:/private/tmp/companion-runtime-release/archives-r4/composable-svelte-media-0.5.0.tgz",
+            "to": "0.5.0"
+          },
+          "@composable-svelte/architecture": {
+            "from": "file:/private/tmp/composable-final-checker/opus-final-review/final-archive/by-sha/6095ae2fa24d7fe895db616d9cdc82b6380950cd2945ab9dc22f5fb85b3ff304/composable-svelte-architecture-0.13.1.tgz",
+            "to": "0.13.1"
+          }
+        },
+        "filesEqualExceptPackageJson": 84,
+        "installed": [
+          {
+            "name": "@composable-svelte/core",
+            "version": "0.13.1",
+            "archiveSha256": "729ca89f1850e56bde5db23c9f8560090eed07a0dc4126374dd5e33fd11a8e0d",
+            "archivePath": "/private/tmp/companion-runtime-release/archives-r6/composable-svelte-core-0.13.1.tgz",
+            "files": 1258,
+            "mismatched": 0,
+            "extra": 0,
+            "symlink": false,
+            "ok": true
+          },
+          {
+            "name": "@composable-svelte/chat",
+            "version": "0.5.0",
+            "archiveSha256": "fe21f00f75385205073744bc45cba715e441914d38119d46fb7cf0bfdfe76aeb",
+            "archivePath": "/private/tmp/companion-runtime-release/archives-r5-chat/composable-svelte-chat-0.5.0.tgz",
+            "files": 157,
+            "mismatched": 0,
+            "extra": 0,
+            "symlink": false,
+            "ok": true
+          },
+          {
+            "name": "@composable-svelte/code",
+            "version": "0.5.0",
+            "archiveSha256": "f85b945232c460edc45c0051dc69c4580f4a502b39a2988af38c62a2e3a37026",
+            "archivePath": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-code-0.5.0.tgz",
+            "files": 69,
+            "mismatched": 0,
+            "extra": 0,
+            "symlink": false,
+            "ok": true
+          },
+          {
+            "name": "@composable-svelte/media",
+            "version": "0.5.0",
+            "archiveSha256": "c0bfa6528fb6cd3dc68f2769237d3053514f76f79bc5197316b230eb07b78298",
+            "archivePath": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-media-0.5.0.tgz",
+            "files": 101,
+            "mismatched": 0,
+            "extra": 0,
+            "symlink": false,
+            "ok": true
+          },
+          {
+            "name": "@composable-svelte/architecture",
+            "version": "0.13.1",
+            "archiveSha256": "6095ae2fa24d7fe895db616d9cdc82b6380950cd2945ab9dc22f5fb85b3ff304",
+            "archivePath": "/private/tmp/composable-final-checker/opus-final-review/final-archive/by-sha/6095ae2fa24d7fe895db616d9cdc82b6380950cd2945ab9dc22f5fb85b3ff304/composable-svelte-architecture-0.13.1.tgz",
+            "files": 40,
+            "mismatched": 0,
+            "extra": 0,
+            "symlink": false,
+            "ok": true
+          }
+        ]
+      },
+      "finalSourceUnchanged": true,
+      "finalManifest": {
+        "packageJson": "f374901c455096bdea8313a2cd644d01157dc511ade46bc53544da17dd369f4b",
+        "packageLock": "7e81277c019ce9109757bf53b023379e9ae3b05fd2ba3bc6b90773fd96bd688a",
+        "unchangedSinceRefresh": true
+      },
+      "finalInstalled": [
+        {
+          "name": "@composable-svelte/core",
+          "version": "0.13.1",
+          "archiveSha256": "729ca89f1850e56bde5db23c9f8560090eed07a0dc4126374dd5e33fd11a8e0d",
+          "archivePath": "/private/tmp/companion-runtime-release/archives-r6/composable-svelte-core-0.13.1.tgz",
+          "files": 1258,
+          "mismatched": 0,
+          "extra": 0,
+          "symlink": false,
+          "ok": true
+        },
+        {
+          "name": "@composable-svelte/chat",
+          "version": "0.5.0",
+          "archiveSha256": "fe21f00f75385205073744bc45cba715e441914d38119d46fb7cf0bfdfe76aeb",
+          "archivePath": "/private/tmp/companion-runtime-release/archives-r5-chat/composable-svelte-chat-0.5.0.tgz",
+          "files": 157,
+          "mismatched": 0,
+          "extra": 0,
+          "symlink": false,
+          "ok": true
+        },
+        {
+          "name": "@composable-svelte/code",
+          "version": "0.5.0",
+          "archiveSha256": "f85b945232c460edc45c0051dc69c4580f4a502b39a2988af38c62a2e3a37026",
+          "archivePath": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-code-0.5.0.tgz",
+          "files": 69,
+          "mismatched": 0,
+          "extra": 0,
+          "symlink": false,
+          "ok": true
+        },
+        {
+          "name": "@composable-svelte/media",
+          "version": "0.5.0",
+          "archiveSha256": "c0bfa6528fb6cd3dc68f2769237d3053514f76f79bc5197316b230eb07b78298",
+          "archivePath": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-media-0.5.0.tgz",
+          "files": 101,
+          "mismatched": 0,
+          "extra": 0,
+          "symlink": false,
+          "ok": true
+        },
+        {
+          "name": "@composable-svelte/architecture",
+          "version": "0.13.1",
+          "archiveSha256": "6095ae2fa24d7fe895db616d9cdc82b6380950cd2945ab9dc22f5fb85b3ff304",
+          "archivePath": "/private/tmp/composable-final-checker/opus-final-review/final-archive/by-sha/6095ae2fa24d7fe895db616d9cdc82b6380950cd2945ab9dc22f5fb85b3ff304/composable-svelte-architecture-0.13.1.tgz",
+          "files": 40,
+          "mismatched": 0,
+          "extra": 0,
+          "symlink": false,
+          "ok": true
+        }
+      ]
+    },
+    "app-b": {
+      "path": "/private/tmp/composable-final-authoring/app-b",
+      "before": {
+        "files": 235,
+        "snapshot": [
+          {
+            "path": "HANDOFF.md",
+            "ok": true
+          },
+          {
+            "path": "ITERATION-LOG.md",
+            "ok": true
+          },
+          {
+            "path": "OPUS-APP-REVIEW.md",
+            "ok": true
+          },
+          {
+            "path": "PUBLIC-REFERENCE-GAPS.md",
+            "ok": true
+          },
+          {
+            "path": "index.html",
+            "ok": true
+          },
+          {
+            "path": "package-lock.json",
+            "ok": true
+          },
+          {
+            "path": "package.json",
+            "ok": true
+          },
+          {
+            "path": "playwright.config.ts",
+            "ok": true
+          },
+          {
+            "path": "scripts/build.mjs",
+            "ok": true
+          },
+          {
+            "path": "scripts/ssr.mjs",
+            "ok": true
+          },
+          {
+            "path": "src/App.svelte",
+            "ok": true
+          },
+          {
+            "path": "src/lib/components/AuthFeatureView.svelte",
+            "ok": true
+          },
+          {
+            "path": "src/lib/components/ChangePasswordView.svelte",
+            "ok": true
+          },
+          {
+            "path": "src/lib/components/ChartView.svelte",
+            "ok": true
+          },
+          {
+            "path": "src/lib/components/LoginView.svelte",
+            "ok": true
+          },
+          {
+            "path": "src/lib/components/MfaView.svelte",
+            "ok": true
+          },
+          {
+            "path": "src/lib/controlled-backend.ts",
+            "ok": true
+          },
+          {
+            "path": "src/lib/model.ts",
+            "ok": true
+          },
+          {
+            "path": "src/lib/views.ts",
+            "ok": true
+          },
+          {
+            "path": "src/main.ts",
+            "ok": true
+          },
+          {
+            "path": "tests/browser/dashboard.pw.ts",
+            "ok": true
+          },
+          {
+            "path": "tests/dashboard.test.ts",
+            "ok": true
+          },
+          {
+            "path": "tsconfig.json",
+            "ok": true
+          },
+          {
+            "path": "vite.config.mjs",
+            "ok": true
+          },
+          {
+            "path": "vite.config.ts",
+            "ok": true
+          }
+        ]
+      },
+      "originalInstalled": [
+        {
+          "name": "@composable-svelte/core",
+          "version": "0.13.1",
+          "archiveSha256": "729ca89f1850e56bde5db23c9f8560090eed07a0dc4126374dd5e33fd11a8e0d",
+          "archivePath": "/private/tmp/companion-runtime-release/archives-r6/composable-svelte-core-0.13.1.tgz",
+          "files": 1258,
+          "mismatched": 0,
+          "extra": 0,
+          "symlink": false,
+          "ok": true
+        },
+        {
+          "name": "@composable-svelte/auth",
+          "version": "0.3.0",
+          "archiveSha256": "dbb2611bb01616e4e9ef86a54016724cf6271e0ec337b759b5cbcb21dae27112",
+          "archivePath": "/private/tmp/companion-runtime-release/archives-r6/composable-svelte-auth-0.3.0.tgz",
+          "files": 404,
+          "mismatched": 0,
+          "extra": 0,
+          "symlink": false,
+          "ok": true
+        },
+        {
+          "name": "@composable-svelte/charts",
+          "version": "0.3.0",
+          "archiveSha256": "c36b7a06e5a293259cdbebd599a1698cd448c000eac343c66411c1282a73c21d",
+          "archivePath": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-charts-0.3.0.tgz",
+          "files": 53,
+          "mismatched": 0,
+          "extra": 0,
+          "symlink": false,
+          "ok": true
+        }
+      ],
+      "checkerHost": {
+        "dir": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/checker-host",
+        "installed": {
+          "name": "@composable-svelte/architecture",
+          "version": "0.13.1",
+          "archiveSha256": "6095ae2fa24d7fe895db616d9cdc82b6380950cd2945ab9dc22f5fb85b3ff304",
+          "archivePath": "/private/tmp/composable-final-checker/opus-final-review/final-archive/by-sha/6095ae2fa24d7fe895db616d9cdc82b6380950cd2945ab9dc22f5fb85b3ff304/composable-svelte-architecture-0.13.1.tgz",
+          "files": 40,
+          "mismatched": 0,
+          "extra": 0,
+          "symlink": false,
+          "ok": true
+        },
+        "parser": {
+          "typescript": "5.9.3",
+          "svelte": "5.57.0"
+        }
+      },
+      "registryShapedClone": {
+        "dir": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-b-registry-shaped",
+        "rewritten": {
+          "@composable-svelte/core": {
+            "from": "file:/private/tmp/companion-runtime-release/archives-r6/composable-svelte-core-0.13.1.tgz",
+            "to": "0.13.1"
+          },
+          "@composable-svelte/auth": {
+            "from": "file:/private/tmp/companion-runtime-release/archives-r6/composable-svelte-auth-0.3.0.tgz",
+            "to": "0.3.0"
+          },
+          "@composable-svelte/charts": {
+            "from": "file:/private/tmp/composable-final-authoring/artifacts-b/composable-svelte-charts-0.3.0.tgz",
+            "to": "0.3.0"
+          }
+        },
+        "filesEqualExceptPackageJson": 234,
+        "installed": [
+          {
+            "name": "@composable-svelte/core",
+            "version": "0.13.1",
+            "archiveSha256": "729ca89f1850e56bde5db23c9f8560090eed07a0dc4126374dd5e33fd11a8e0d",
+            "archivePath": "/private/tmp/companion-runtime-release/archives-r6/composable-svelte-core-0.13.1.tgz",
+            "files": 1258,
+            "mismatched": 0,
+            "extra": 0,
+            "symlink": false,
+            "ok": true
+          },
+          {
+            "name": "@composable-svelte/auth",
+            "version": "0.3.0",
+            "archiveSha256": "dbb2611bb01616e4e9ef86a54016724cf6271e0ec337b759b5cbcb21dae27112",
+            "archivePath": "/private/tmp/companion-runtime-release/archives-r6/composable-svelte-auth-0.3.0.tgz",
+            "files": 404,
+            "mismatched": 0,
+            "extra": 0,
+            "symlink": false,
+            "ok": true
+          },
+          {
+            "name": "@composable-svelte/charts",
+            "version": "0.3.0",
+            "archiveSha256": "c36b7a06e5a293259cdbebd599a1698cd448c000eac343c66411c1282a73c21d",
+            "archivePath": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-charts-0.3.0.tgz",
+            "files": 53,
+            "mismatched": 0,
+            "extra": 0,
+            "symlink": false,
+            "ok": true
+          }
+        ]
+      },
+      "after": {
+        "unchanged": true,
+        "snapshot": [
+          {
+            "path": "HANDOFF.md",
+            "ok": true
+          },
+          {
+            "path": "ITERATION-LOG.md",
+            "ok": true
+          },
+          {
+            "path": "OPUS-APP-REVIEW.md",
+            "ok": true
+          },
+          {
+            "path": "PUBLIC-REFERENCE-GAPS.md",
+            "ok": true
+          },
+          {
+            "path": "index.html",
+            "ok": true
+          },
+          {
+            "path": "package-lock.json",
+            "ok": true
+          },
+          {
+            "path": "package.json",
+            "ok": true
+          },
+          {
+            "path": "playwright.config.ts",
+            "ok": true
+          },
+          {
+            "path": "scripts/build.mjs",
+            "ok": true
+          },
+          {
+            "path": "scripts/ssr.mjs",
+            "ok": true
+          },
+          {
+            "path": "src/App.svelte",
+            "ok": true
+          },
+          {
+            "path": "src/lib/components/AuthFeatureView.svelte",
+            "ok": true
+          },
+          {
+            "path": "src/lib/components/ChangePasswordView.svelte",
+            "ok": true
+          },
+          {
+            "path": "src/lib/components/ChartView.svelte",
+            "ok": true
+          },
+          {
+            "path": "src/lib/components/LoginView.svelte",
+            "ok": true
+          },
+          {
+            "path": "src/lib/components/MfaView.svelte",
+            "ok": true
+          },
+          {
+            "path": "src/lib/controlled-backend.ts",
+            "ok": true
+          },
+          {
+            "path": "src/lib/model.ts",
+            "ok": true
+          },
+          {
+            "path": "src/lib/views.ts",
+            "ok": true
+          },
+          {
+            "path": "src/main.ts",
+            "ok": true
+          },
+          {
+            "path": "tests/browser/dashboard.pw.ts",
+            "ok": true
+          },
+          {
+            "path": "tests/dashboard.test.ts",
+            "ok": true
+          },
+          {
+            "path": "tsconfig.json",
+            "ok": true
+          },
+          {
+            "path": "vite.config.mjs",
+            "ok": true
+          },
+          {
+            "path": "vite.config.ts",
+            "ok": true
+          }
+        ],
+        "installed": [
+          {
+            "name": "@composable-svelte/core",
+            "version": "0.13.1",
+            "archiveSha256": "729ca89f1850e56bde5db23c9f8560090eed07a0dc4126374dd5e33fd11a8e0d",
+            "archivePath": "/private/tmp/companion-runtime-release/archives-r6/composable-svelte-core-0.13.1.tgz",
+            "files": 1258,
+            "mismatched": 0,
+            "extra": 0,
+            "symlink": false,
+            "ok": true
+          },
+          {
+            "name": "@composable-svelte/auth",
+            "version": "0.3.0",
+            "archiveSha256": "dbb2611bb01616e4e9ef86a54016724cf6271e0ec337b759b5cbcb21dae27112",
+            "archivePath": "/private/tmp/companion-runtime-release/archives-r6/composable-svelte-auth-0.3.0.tgz",
+            "files": 404,
+            "mismatched": 0,
+            "extra": 0,
+            "symlink": false,
+            "ok": true
+          },
+          {
+            "name": "@composable-svelte/charts",
+            "version": "0.3.0",
+            "archiveSha256": "c36b7a06e5a293259cdbebd599a1698cd448c000eac343c66411c1282a73c21d",
+            "archivePath": "/private/tmp/companion-runtime-release/archives-r4/composable-svelte-charts-0.3.0.tgz",
+            "files": 53,
+            "mismatched": 0,
+            "extra": 0,
+            "symlink": false,
+            "ok": true
+          }
+        ]
+      },
+      "functionalEvidenceReused": {
+        "sequentialBrowser": "/private/tmp/composable-final-authoring/app-b/review-receipts/sequential-browser-coordinator/result.json",
+        "sha256": "f5f0fd5170921a3b7c34e87ad88bcd237bde123b1e3b4ee01306809ad692beaf",
+        "reason": "App-B source and installed runtime bytes are unchanged (verified above); the checker is not part of the app runtime."
+      }
+    }
+  },
+  "finishedAt": "2026-09-26T16:21:53.816Z",
+  "failures": 0,
+  "verdict": "ALL_EXPECTATIONS_MET",
+  "results": [
+    {
+      "app": "app-a",
+      "label": "POSITIVE exact registered chat-code-media bytes supplied externally",
+      "ok": true,
+      "expected": {
+        "exit": 0,
+        "pass": true
+      },
+      "exit": 0,
+      "isQualificationPass": true,
+      "envelope": {
+        "policySha256": "f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327",
+        "expectedCoreVersion": "0.13.1",
+        "expectedCheckerVersion": "0.13.1"
+      },
+      "policy": {
+        "id": "bundled-chat-code-media",
+        "source": "external",
+        "sha256": "f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327",
+        "bundledProfile": null
+      },
+      "checker": "0.13.1",
+      "core": {
+        "installed": "0.13.1",
+        "expected": "0.13.1",
+        "supported": {
+          "min": "0.13.1",
+          "maxExclusive": "0.14.0-0"
+        },
+        "paired": true
+      },
+      "qualification": "passed",
+      "outcome": "analysis-complete",
+      "enforced": 5,
+      "inactive": [
+        "presentation/no-fabricated-view",
+        "adapters/least-authority"
+      ],
+      "manualReviewRequired": true,
+      "limitations": 15,
+      "violations": 0,
+      "moduleCount": 9,
+      "analysisErrors": []
+    },
+    {
+      "app": "app-a",
+      "label": "DEVFEEDBACK bundled:chat-code-media analysis-only",
+      "ok": true,
+      "expected": {
+        "exit": 0,
+        "pass": false
+      },
+      "exit": 0,
+      "isQualificationPass": false,
+      "envelope": {
+        "policySha256": "f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327",
+        "expectedCoreVersion": "0.13.1",
+        "expectedCheckerVersion": "0.13.1"
+      },
+      "policy": {
+        "id": "bundled-chat-code-media",
+        "source": "bundled",
+        "sha256": "f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327",
+        "bundledProfile": "chat-code-media"
+      },
+      "checker": "0.13.1",
+      "core": {
+        "installed": "0.13.1",
+        "expected": "0.13.1",
+        "supported": {
+          "min": "0.13.1",
+          "maxExclusive": "0.14.0-0"
+        },
+        "paired": true
+      },
+      "qualification": "not-evaluated",
+      "outcome": "analysis-complete",
+      "enforced": 5,
+      "inactive": [
+        "presentation/no-fabricated-view",
+        "adapters/least-authority"
+      ],
+      "manualReviewRequired": true,
+      "limitations": 15,
+      "violations": 0,
+      "moduleCount": 9,
+      "analysisErrors": []
+    },
+    {
+      "app": "app-a",
+      "label": "NEG bundled:chat-code-media qualification refused",
+      "ok": true,
+      "expected": {
+        "exit": 22,
+        "pass": false
+      },
+      "exit": 22,
+      "isQualificationPass": false,
+      "stderrTail": "Architecture checker usage error: qualification requires an externally controlled policy and pin; bundled policy is developer feedback only"
+    },
+    {
+      "app": "app-a",
+      "label": "NEG wrong --policy-sha256",
+      "ok": true,
+      "expected": {
+        "exit": 21,
+        "pass": false
+      },
+      "exit": 21,
+      "isQualificationPass": false,
+      "envelope": {
+        "policySha256": "f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327",
+        "expectedCoreVersion": "0.13.1",
+        "expectedCheckerVersion": "0.13.1"
+      },
+      "policy": {
+        "id": null,
+        "source": "external",
+        "sha256": "f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327",
+        "bundledProfile": null
+      },
+      "checker": "0.13.1",
+      "core": null,
+      "qualification": "refused",
+      "outcome": "analysis-error",
+      "enforced": 0,
+      "inactive": [],
+      "manualReviewRequired": true,
+      "limitations": 15,
+      "violations": 0,
+      "analysisErrors": [
+        {
+          "code": "policy-pin-mismatch",
+          "construct": null,
+          "path": null,
+          "line": null,
+          "message": "policy bytes do not match the supplied sha256 pin"
+        }
+      ]
+    },
+    {
+      "app": "app-a",
+      "label": "NEG wrong expected core 0.13.0",
+      "ok": true,
+      "expected": {
+        "exit": 21,
+        "pass": false
+      },
+      "exit": 21,
+      "isQualificationPass": false,
+      "envelope": {
+        "policySha256": "f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327",
+        "expectedCoreVersion": "0.13.1",
+        "expectedCheckerVersion": "0.13.1"
+      },
+      "policy": {
+        "id": "bundled-chat-code-media",
+        "source": "external",
+        "sha256": "f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327",
+        "bundledProfile": null
+      },
+      "checker": "0.13.1",
+      "core": {
+        "installed": "0.13.1",
+        "expected": "0.13.0",
+        "supported": {
+          "min": "0.13.1",
+          "maxExclusive": "0.14.0-0"
+        },
+        "paired": false
+      },
+      "qualification": "refused",
+      "outcome": "analysis-error",
+      "enforced": 0,
+      "inactive": [
+        "presentation/no-fabricated-view",
+        "adapters/least-authority"
+      ],
+      "manualReviewRequired": true,
+      "limitations": 15,
+      "violations": 0,
+      "moduleCount": 9,
+      "analysisErrors": [
+        {
+          "code": "core-version-mismatch",
+          "construct": null,
+          "path": null,
+          "line": null,
+          "message": "installed core 0.13.1 is not the expected 0.13.0"
+        }
+      ]
+    },
+    {
+      "app": "app-a",
+      "label": "NEG envelope expects checker 0.13.0",
+      "ok": true,
+      "expected": {
+        "exit": 0,
+        "pass": false
+      },
+      "exit": 0,
+      "isQualificationPass": false,
+      "envelope": {
+        "policySha256": "f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327",
+        "expectedCoreVersion": "0.13.1",
+        "expectedCheckerVersion": "0.13.0"
+      },
+      "policy": {
+        "id": "bundled-chat-code-media",
+        "source": "external",
+        "sha256": "f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327",
+        "bundledProfile": null
+      },
+      "checker": "0.13.1",
+      "core": {
+        "installed": "0.13.1",
+        "expected": "0.13.1",
+        "supported": {
+          "min": "0.13.1",
+          "maxExclusive": "0.14.0-0"
+        },
+        "paired": true
+      },
+      "qualification": "passed",
+      "outcome": "analysis-complete",
+      "enforced": 5,
+      "inactive": [
+        "presentation/no-fabricated-view",
+        "adapters/least-authority"
+      ],
+      "manualReviewRequired": true,
+      "limitations": 15,
+      "violations": 0,
+      "moduleCount": 9,
+      "analysisErrors": []
+    },
+    {
+      "app": "app-a",
+      "label": "NEG envelope expects another policy pin",
+      "ok": true,
+      "expected": {
+        "exit": 0,
+        "pass": false
+      },
+      "exit": 0,
+      "isQualificationPass": false,
+      "envelope": {
+        "policySha256": "bc68bb6b47a8c524fa0897f33e9d77f6b88e17b3fc1d995a62ba703f7364a1de",
+        "expectedCoreVersion": "0.13.1",
+        "expectedCheckerVersion": "0.13.1"
+      },
+      "policy": {
+        "id": "bundled-chat-code-media",
+        "source": "external",
+        "sha256": "f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327",
+        "bundledProfile": null
+      },
+      "checker": "0.13.1",
+      "core": {
+        "installed": "0.13.1",
+        "expected": "0.13.1",
+        "supported": {
+          "min": "0.13.1",
+          "maxExclusive": "0.14.0-0"
+        },
+        "paired": true
+      },
+      "qualification": "passed",
+      "outcome": "analysis-complete",
+      "enforced": 5,
+      "inactive": [
+        "presentation/no-fabricated-view",
+        "adapters/least-authority"
+      ],
+      "manualReviewRequired": true,
+      "limitations": 15,
+      "violations": 0,
+      "moduleCount": 9,
+      "analysisErrors": []
+    },
+    {
+      "app": "app-a",
+      "label": "NEG policy app-a-chat-only",
+      "ok": true,
+      "expected": {
+        "exit": 21,
+        "pass": false
+      },
+      "exit": 21,
+      "isQualificationPass": false,
+      "envelope": {
+        "policySha256": "26b4e8d942940403232d6a358f32f4e8a51e525845db34e19572db5fac0047ab",
+        "expectedCoreVersion": "0.13.1",
+        "expectedCheckerVersion": "0.13.1"
+      },
+      "policy": {
+        "id": "neg-app-a-chat-only",
+        "source": "external",
+        "sha256": "26b4e8d942940403232d6a358f32f4e8a51e525845db34e19572db5fac0047ab",
+        "bundledProfile": null
+      },
+      "checker": "0.13.1",
+      "core": {
+        "installed": "0.13.1",
+        "expected": "0.13.1",
+        "supported": {
+          "min": "0.13.1",
+          "maxExclusive": "0.14.0-0"
+        },
+        "paired": true
+      },
+      "qualification": "refused",
+      "outcome": "analysis-error",
+      "enforced": 0,
+      "inactive": [
+        "presentation/no-fabricated-view",
+        "adapters/least-authority"
+      ],
+      "manualReviewRequired": true,
+      "limitations": 15,
+      "violations": 0,
+      "moduleCount": 9,
+      "analysisErrors": [
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/EditorView.svelte",
+          "line": 3,
+          "message": "package lacks external opaque-package approval: @composable-svelte/code"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/VoiceView.svelte",
+          "line": 3,
+          "message": "package lacks external opaque-package approval: @composable-svelte/media"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/Workspace.svelte",
+          "line": 3,
+          "message": "package lacks external opaque-package approval: @composable-svelte/media"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/model.ts",
+          "line": 18,
+          "message": "package lacks external opaque-package approval: @composable-svelte/code"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/model.ts",
+          "line": 24,
+          "message": "package lacks external opaque-package approval: @composable-svelte/media"
+        }
+      ]
+    },
+    {
+      "app": "app-a",
+      "label": "NEG policy app-a-chat-0.5.1",
+      "ok": true,
+      "expected": {
+        "exit": 21,
+        "pass": false
+      },
+      "exit": 21,
+      "isQualificationPass": false,
+      "envelope": {
+        "policySha256": "902fcddcebcca4e125801a6d9869203cdbefddb31bfdf74570007c61f365f456",
+        "expectedCoreVersion": "0.13.1",
+        "expectedCheckerVersion": "0.13.1"
+      },
+      "policy": {
+        "id": "neg-app-a-chat-0.5.1",
+        "source": "external",
+        "sha256": "902fcddcebcca4e125801a6d9869203cdbefddb31bfdf74570007c61f365f456",
+        "bundledProfile": null
+      },
+      "checker": "0.13.1",
+      "core": {
+        "installed": "0.13.1",
+        "expected": "0.13.1",
+        "supported": {
+          "min": "0.13.1",
+          "maxExclusive": "0.14.0-0"
+        },
+        "paired": true
+      },
+      "qualification": "refused",
+      "outcome": "analysis-error",
+      "enforced": 0,
+      "inactive": [
+        "presentation/no-fabricated-view",
+        "adapters/least-authority"
+      ],
+      "manualReviewRequired": true,
+      "limitations": 15,
+      "violations": 0,
+      "moduleCount": 9,
+      "analysisErrors": [
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/ChatView.svelte",
+          "line": 3,
+          "message": "installed package name or version does not match external approval: @composable-svelte/chat (@composable-svelte/chat@0.5.0 !== @composable-svelte/chat@0.5.1)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/model.ts",
+          "line": 12,
+          "message": "installed package name or version does not match external approval: @composable-svelte/chat (@composable-svelte/chat@0.5.0 !== @composable-svelte/chat@0.5.1)"
+        }
+      ]
+    },
+    {
+      "app": "app-a",
+      "label": "NEG policy app-a-code-0.5.1",
+      "ok": true,
+      "expected": {
+        "exit": 21,
+        "pass": false
+      },
+      "exit": 21,
+      "isQualificationPass": false,
+      "envelope": {
+        "policySha256": "698d810017da5094f1338c0490ab8f329f96f78c66832ea2765c3f29221124d6",
+        "expectedCoreVersion": "0.13.1",
+        "expectedCheckerVersion": "0.13.1"
+      },
+      "policy": {
+        "id": "neg-app-a-code-0.5.1",
+        "source": "external",
+        "sha256": "698d810017da5094f1338c0490ab8f329f96f78c66832ea2765c3f29221124d6",
+        "bundledProfile": null
+      },
+      "checker": "0.13.1",
+      "core": {
+        "installed": "0.13.1",
+        "expected": "0.13.1",
+        "supported": {
+          "min": "0.13.1",
+          "maxExclusive": "0.14.0-0"
+        },
+        "paired": true
+      },
+      "qualification": "refused",
+      "outcome": "analysis-error",
+      "enforced": 0,
+      "inactive": [
+        "presentation/no-fabricated-view",
+        "adapters/least-authority"
+      ],
+      "manualReviewRequired": true,
+      "limitations": 15,
+      "violations": 0,
+      "moduleCount": 9,
+      "analysisErrors": [
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/EditorView.svelte",
+          "line": 3,
+          "message": "installed package name or version does not match external approval: @composable-svelte/code (@composable-svelte/code@0.5.0 !== @composable-svelte/code@0.5.1)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/model.ts",
+          "line": 18,
+          "message": "installed package name or version does not match external approval: @composable-svelte/code (@composable-svelte/code@0.5.0 !== @composable-svelte/code@0.5.1)"
+        }
+      ]
+    },
+    {
+      "app": "app-a",
+      "label": "NEG policy app-a-media-0.5.1",
+      "ok": true,
+      "expected": {
+        "exit": 21,
+        "pass": false
+      },
+      "exit": 21,
+      "isQualificationPass": false,
+      "envelope": {
+        "policySha256": "c0686eb7b0380727d262b5ccebf97d1b9470c293e876e6e212558ccf22e81077",
+        "expectedCoreVersion": "0.13.1",
+        "expectedCheckerVersion": "0.13.1"
+      },
+      "policy": {
+        "id": "neg-app-a-media-0.5.1",
+        "source": "external",
+        "sha256": "c0686eb7b0380727d262b5ccebf97d1b9470c293e876e6e212558ccf22e81077",
+        "bundledProfile": null
+      },
+      "checker": "0.13.1",
+      "core": {
+        "installed": "0.13.1",
+        "expected": "0.13.1",
+        "supported": {
+          "min": "0.13.1",
+          "maxExclusive": "0.14.0-0"
+        },
+        "paired": true
+      },
+      "qualification": "refused",
+      "outcome": "analysis-error",
+      "enforced": 0,
+      "inactive": [
+        "presentation/no-fabricated-view",
+        "adapters/least-authority"
+      ],
+      "manualReviewRequired": true,
+      "limitations": 15,
+      "violations": 0,
+      "moduleCount": 9,
+      "analysisErrors": [
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/VoiceView.svelte",
+          "line": 3,
+          "message": "installed package name or version does not match external approval: @composable-svelte/media (@composable-svelte/media@0.5.0 !== @composable-svelte/media@0.5.1)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/Workspace.svelte",
+          "line": 3,
+          "message": "installed package name or version does not match external approval: @composable-svelte/media (@composable-svelte/media@0.5.0 !== @composable-svelte/media@0.5.1)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/model.ts",
+          "line": 24,
+          "message": "installed package name or version does not match external approval: @composable-svelte/media (@composable-svelte/media@0.5.0 !== @composable-svelte/media@0.5.1)"
+        }
+      ]
+    },
+    {
+      "app": "app-a",
+      "label": "NEG policy app-a-core-0.13.2",
+      "ok": true,
+      "expected": {
+        "exit": 21,
+        "pass": false
+      },
+      "exit": 21,
+      "isQualificationPass": false,
+      "envelope": {
+        "policySha256": "9b1806558161c99809a076372321219467d34a6d6c2aca09e45d53af4b50f358",
+        "expectedCoreVersion": "0.13.1",
+        "expectedCheckerVersion": "0.13.1"
+      },
+      "policy": {
+        "id": "neg-app-a-core-0.13.2",
+        "source": "external",
+        "sha256": "9b1806558161c99809a076372321219467d34a6d6c2aca09e45d53af4b50f358",
+        "bundledProfile": null
+      },
+      "checker": "0.13.1",
+      "core": {
+        "installed": "0.13.1",
+        "expected": "0.13.1",
+        "supported": {
+          "min": "0.13.1",
+          "maxExclusive": "0.14.0-0"
+        },
+        "paired": true
+      },
+      "qualification": "refused",
+      "outcome": "analysis-error",
+      "enforced": 0,
+      "inactive": [
+        "presentation/no-fabricated-view",
+        "adapters/least-authority"
+      ],
+      "manualReviewRequired": true,
+      "limitations": 15,
+      "violations": 0,
+      "moduleCount": 9,
+      "analysisErrors": [
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/App.svelte",
+          "line": 2,
+          "message": "installed package name or version does not match external approval: @composable-svelte/core (@composable-svelte/core@0.13.1 !== @composable-svelte/core@0.13.2)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/Workspace.svelte",
+          "line": 2,
+          "message": "installed package name or version does not match external approval: @composable-svelte/core (@composable-svelte/core@0.13.1 !== @composable-svelte/core@0.13.2)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/model.ts",
+          "line": 1,
+          "message": "installed package name or version does not match external approval: @composable-svelte/core (@composable-svelte/core@0.13.1 !== @composable-svelte/core@0.13.2)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/model.ts",
+          "line": 6,
+          "message": "installed package name or version does not match external approval: @composable-svelte/core (@composable-svelte/core@0.13.1 !== @composable-svelte/core@0.13.2)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/views.ts",
+          "line": 1,
+          "message": "installed package name or version does not match external approval: @composable-svelte/core (@composable-svelte/core@0.13.1 !== @composable-svelte/core@0.13.2)"
+        }
+      ]
+    },
+    {
+      "app": "app-a",
+      "label": "NEG policy app-a-svelte-5.57.0",
+      "ok": true,
+      "expected": {
+        "exit": 21,
+        "pass": false
+      },
+      "exit": 21,
+      "isQualificationPass": false,
+      "envelope": {
+        "policySha256": "c0a6b432340e1f669cf59719ea07d137a66871810efa6c40c02eefc3f631549a",
+        "expectedCoreVersion": "0.13.1",
+        "expectedCheckerVersion": "0.13.1"
+      },
+      "policy": {
+        "id": "neg-app-a-svelte-5.57.0",
+        "source": "external",
+        "sha256": "c0a6b432340e1f669cf59719ea07d137a66871810efa6c40c02eefc3f631549a",
+        "bundledProfile": null
+      },
+      "checker": "0.13.1",
+      "core": {
+        "installed": "0.13.1",
+        "expected": "0.13.1",
+        "supported": {
+          "min": "0.13.1",
+          "maxExclusive": "0.14.0-0"
+        },
+        "paired": true
+      },
+      "qualification": "refused",
+      "outcome": "analysis-error",
+      "enforced": 0,
+      "inactive": [
+        "presentation/no-fabricated-view",
+        "adapters/least-authority"
+      ],
+      "manualReviewRequired": true,
+      "limitations": 15,
+      "violations": 0,
+      "moduleCount": 9,
+      "analysisErrors": [
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/main.ts",
+          "line": 1,
+          "message": "installed package name or version does not match external approval: svelte (svelte@5.55.3 !== svelte@5.57.0)"
+        }
+      ]
+    },
+    {
+      "app": "app-a",
+      "label": "NEG policy app-a-missing-root",
+      "ok": true,
+      "expected": {
+        "exit": 21,
+        "pass": false
+      },
+      "exit": 21,
+      "isQualificationPass": false,
+      "envelope": {
+        "policySha256": "98aa724a6cbeb851e4c846a3b49d3efb59e3b094bafbaf65f31321888f017203",
+        "expectedCoreVersion": "0.13.1",
+        "expectedCheckerVersion": "0.13.1"
+      },
+      "policy": {
+        "id": "neg-app-a-missing-root",
+        "source": "external",
+        "sha256": "98aa724a6cbeb851e4c846a3b49d3efb59e3b094bafbaf65f31321888f017203",
+        "bundledProfile": null
+      },
+      "checker": "0.13.1",
+      "core": {
+        "installed": "0.13.1",
+        "expected": "0.13.1",
+        "supported": {
+          "min": "0.13.1",
+          "maxExclusive": "0.14.0-0"
+        },
+        "paired": true
+      },
+      "qualification": "refused",
+      "outcome": "analysis-error",
+      "enforced": 0,
+      "inactive": [
+        "presentation/no-fabricated-view",
+        "adapters/least-authority"
+      ],
+      "manualReviewRequired": true,
+      "limitations": 15,
+      "violations": 0,
+      "moduleCount": 0,
+      "analysisErrors": [
+        {
+          "code": "missing-root",
+          "construct": null,
+          "path": "src/missing-root.ts",
+          "line": null,
+          "message": "root is not an existing regular file"
+        }
+      ]
+    },
+    {
+      "app": "app-a",
+      "label": "NEG starter approvals only (exact bundled starter bytes)",
+      "ok": true,
+      "expected": {
+        "exit": 21,
+        "pass": false
+      },
+      "exit": 21,
+      "isQualificationPass": false,
+      "envelope": {
+        "policySha256": "f2821ebf0fa5cd34b346361089edd56bb4ec01a40c59eb969c60f90c7e77d190",
+        "expectedCoreVersion": "0.13.1",
+        "expectedCheckerVersion": "0.13.1"
+      },
+      "policy": {
+        "id": "bundled-starter",
+        "source": "external",
+        "sha256": "f2821ebf0fa5cd34b346361089edd56bb4ec01a40c59eb969c60f90c7e77d190",
+        "bundledProfile": null
+      },
+      "checker": "0.13.1",
+      "core": {
+        "installed": "0.13.1",
+        "expected": "0.13.1",
+        "supported": {
+          "min": "0.13.1",
+          "maxExclusive": "0.14.0-0"
+        },
+        "paired": true
+      },
+      "qualification": "refused",
+      "outcome": "analysis-error",
+      "enforced": 0,
+      "inactive": [
+        "presentation/no-fabricated-view",
+        "adapters/least-authority"
+      ],
+      "manualReviewRequired": true,
+      "limitations": 15,
+      "violations": 0,
+      "moduleCount": 9,
+      "analysisErrors": [
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/ChatView.svelte",
+          "line": 3,
+          "message": "package lacks external opaque-package approval: @composable-svelte/chat"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/EditorView.svelte",
+          "line": 3,
+          "message": "package lacks external opaque-package approval: @composable-svelte/code"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/VoiceView.svelte",
+          "line": 3,
+          "message": "package lacks external opaque-package approval: @composable-svelte/media"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/Workspace.svelte",
+          "line": 3,
+          "message": "package lacks external opaque-package approval: @composable-svelte/media"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/main.ts",
+          "line": 1,
+          "message": "installed package name or version does not match external approval: svelte (svelte@5.55.3 !== svelte@5.57.0)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/model.ts",
+          "line": 12,
+          "message": "package lacks external opaque-package approval: @composable-svelte/chat"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/model.ts",
+          "line": 18,
+          "message": "package lacks external opaque-package approval: @composable-svelte/code"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/model.ts",
+          "line": 24,
+          "message": "package lacks external opaque-package approval: @composable-svelte/media"
+        }
+      ]
+    },
+    {
+      "app": "app-a",
+      "label": "NEG labeled copy: unapproved package import",
+      "ok": true,
+      "expected": {
+        "exit": 21,
+        "pass": false
+      },
+      "exit": 21,
+      "isQualificationPass": false,
+      "envelope": {
+        "policySha256": "f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327",
+        "expectedCoreVersion": "0.13.1",
+        "expectedCheckerVersion": "0.13.1"
+      },
+      "policy": {
+        "id": "bundled-chat-code-media",
+        "source": "external",
+        "sha256": "f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327",
+        "bundledProfile": null
+      },
+      "checker": "0.13.1",
+      "core": {
+        "installed": "0.13.1",
+        "expected": "0.13.1",
+        "supported": {
+          "min": "0.13.1",
+          "maxExclusive": "0.14.0-0"
+        },
+        "paired": true
+      },
+      "qualification": "refused",
+      "outcome": "analysis-error",
+      "enforced": 0,
+      "inactive": [
+        "presentation/no-fabricated-view",
+        "adapters/least-authority"
+      ],
+      "manualReviewRequired": true,
+      "limitations": 15,
+      "violations": 0,
+      "moduleCount": 9,
+      "analysisErrors": [
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/main.ts",
+          "line": 1,
+          "message": "package lacks external opaque-package approval: vite"
+        }
+      ]
+    },
+    {
+      "app": "app-a",
+      "label": "NEG labeled copy: installed core 0.13.2",
+      "ok": true,
+      "expected": {
+        "exit": 21,
+        "pass": false
+      },
+      "exit": 21,
+      "isQualificationPass": false,
+      "envelope": {
+        "policySha256": "f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327",
+        "expectedCoreVersion": "0.13.1",
+        "expectedCheckerVersion": "0.13.1"
+      },
+      "policy": {
+        "id": "bundled-chat-code-media",
+        "source": "external",
+        "sha256": "f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327",
+        "bundledProfile": null
+      },
+      "checker": "0.13.1",
+      "core": {
+        "installed": "0.13.2",
+        "expected": "0.13.2",
+        "supported": {
+          "min": "0.13.1",
+          "maxExclusive": "0.14.0-0"
+        },
+        "paired": true
+      },
+      "qualification": "refused",
+      "outcome": "analysis-error",
+      "enforced": 0,
+      "inactive": [
+        "presentation/no-fabricated-view",
+        "adapters/least-authority"
+      ],
+      "manualReviewRequired": true,
+      "limitations": 15,
+      "violations": 0,
+      "moduleCount": 9,
+      "analysisErrors": [
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/App.svelte",
+          "line": 2,
+          "message": "installed package name or version does not match external approval: @composable-svelte/core (@composable-svelte/core@0.13.2 !== @composable-svelte/core@0.13.1)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/Workspace.svelte",
+          "line": 2,
+          "message": "installed package name or version does not match external approval: @composable-svelte/core (@composable-svelte/core@0.13.2 !== @composable-svelte/core@0.13.1)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/model.ts",
+          "line": 1,
+          "message": "installed package name or version does not match external approval: @composable-svelte/core (@composable-svelte/core@0.13.2 !== @composable-svelte/core@0.13.1)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/model.ts",
+          "line": 6,
+          "message": "installed package name or version does not match external approval: @composable-svelte/core (@composable-svelte/core@0.13.2 !== @composable-svelte/core@0.13.1)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/views.ts",
+          "line": 1,
+          "message": "installed package name or version does not match external approval: @composable-svelte/core (@composable-svelte/core@0.13.2 !== @composable-svelte/core@0.13.1)"
+        }
+      ]
+    },
+    {
+      "app": "app-a",
+      "label": "INFO original in-place app (file: specs, local transport) is not registry-shaped",
+      "ok": true,
+      "expected": {
+        "exit": 21,
+        "pass": false
+      },
+      "exit": 21,
+      "isQualificationPass": false,
+      "envelope": {
+        "policySha256": "f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327",
+        "expectedCoreVersion": "0.13.1",
+        "expectedCheckerVersion": "0.13.1"
+      },
+      "policy": {
+        "id": "bundled-chat-code-media",
+        "source": "external",
+        "sha256": "f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327",
+        "bundledProfile": null
+      },
+      "checker": "0.13.1",
+      "core": {
+        "installed": "0.13.1",
+        "expected": "0.13.1",
+        "supported": {
+          "min": "0.13.1",
+          "maxExclusive": "0.14.0-0"
+        },
+        "paired": true
+      },
+      "qualification": "refused",
+      "outcome": "analysis-error",
+      "enforced": 0,
+      "inactive": [
+        "presentation/no-fabricated-view",
+        "adapters/least-authority"
+      ],
+      "manualReviewRequired": true,
+      "limitations": 15,
+      "violations": 0,
+      "moduleCount": 9,
+      "analysisErrors": [
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/App.svelte",
+          "line": 2,
+          "message": "package dependency specification is not registry-shaped: @composable-svelte/core (file:/private/tmp/companion-runtime-release/archives-r6/composable-svelte-core-0.13.1.tgz)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/ChatView.svelte",
+          "line": 3,
+          "message": "package dependency specification is not registry-shaped: @composable-svelte/chat (file:/private/tmp/companion-runtime-release/archives-r5-chat/composable-svelte-chat-0.5.0.tgz)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/EditorView.svelte",
+          "line": 3,
+          "message": "package dependency specification is not registry-shaped: @composable-svelte/code (file:/private/tmp/companion-runtime-release/archives-r4/composable-svelte-code-0.5.0.tgz)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/VoiceView.svelte",
+          "line": 3,
+          "message": "package dependency specification is not registry-shaped: @composable-svelte/media (file:/private/tmp/companion-runtime-release/archives-r4/composable-svelte-media-0.5.0.tgz)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/Workspace.svelte",
+          "line": 2,
+          "message": "package dependency specification is not registry-shaped: @composable-svelte/core (file:/private/tmp/companion-runtime-release/archives-r6/composable-svelte-core-0.13.1.tgz)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/Workspace.svelte",
+          "line": 3,
+          "message": "package dependency specification is not registry-shaped: @composable-svelte/media (file:/private/tmp/companion-runtime-release/archives-r4/composable-svelte-media-0.5.0.tgz)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/model.ts",
+          "line": 1,
+          "message": "package dependency specification is not registry-shaped: @composable-svelte/core (file:/private/tmp/companion-runtime-release/archives-r6/composable-svelte-core-0.13.1.tgz)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/model.ts",
+          "line": 6,
+          "message": "package dependency specification is not registry-shaped: @composable-svelte/core (file:/private/tmp/companion-runtime-release/archives-r6/composable-svelte-core-0.13.1.tgz)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/model.ts",
+          "line": 12,
+          "message": "package dependency specification is not registry-shaped: @composable-svelte/chat (file:/private/tmp/companion-runtime-release/archives-r5-chat/composable-svelte-chat-0.5.0.tgz)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/model.ts",
+          "line": 18,
+          "message": "package dependency specification is not registry-shaped: @composable-svelte/code (file:/private/tmp/companion-runtime-release/archives-r4/composable-svelte-code-0.5.0.tgz)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/model.ts",
+          "line": 24,
+          "message": "package dependency specification is not registry-shaped: @composable-svelte/media (file:/private/tmp/companion-runtime-release/archives-r4/composable-svelte-media-0.5.0.tgz)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/views.ts",
+          "line": 1,
+          "message": "package dependency specification is not registry-shaped: @composable-svelte/core (file:/private/tmp/companion-runtime-release/archives-r6/composable-svelte-core-0.13.1.tgz)"
+        }
+      ]
+    },
+    {
+      "app": "app-b",
+      "label": "POSITIVE external Auth+Charts policy (never bundled)",
+      "ok": true,
+      "expected": {
+        "exit": 0,
+        "pass": true
+      },
+      "exit": 0,
+      "isQualificationPass": true,
+      "envelope": {
+        "policySha256": "bc68bb6b47a8c524fa0897f33e9d77f6b88e17b3fc1d995a62ba703f7364a1de",
+        "expectedCoreVersion": "0.13.1",
+        "expectedCheckerVersion": "0.13.1"
+      },
+      "policy": {
+        "id": "external-app-b-auth-charts",
+        "source": "external",
+        "sha256": "bc68bb6b47a8c524fa0897f33e9d77f6b88e17b3fc1d995a62ba703f7364a1de",
+        "bundledProfile": null
+      },
+      "checker": "0.13.1",
+      "core": {
+        "installed": "0.13.1",
+        "expected": "0.13.1",
+        "supported": {
+          "min": "0.13.1",
+          "maxExclusive": "0.14.0-0"
+        },
+        "paired": true
+      },
+      "qualification": "passed",
+      "outcome": "analysis-complete",
+      "enforced": 5,
+      "inactive": [
+        "presentation/no-fabricated-view",
+        "adapters/least-authority"
+      ],
+      "manualReviewRequired": true,
+      "limitations": 15,
+      "violations": 0,
+      "moduleCount": 10,
+      "analysisErrors": []
+    },
+    {
+      "app": "app-b",
+      "label": "NEG wrong --policy-sha256",
+      "ok": true,
+      "expected": {
+        "exit": 21,
+        "pass": false
+      },
+      "exit": 21,
+      "isQualificationPass": false,
+      "envelope": {
+        "policySha256": "bc68bb6b47a8c524fa0897f33e9d77f6b88e17b3fc1d995a62ba703f7364a1de",
+        "expectedCoreVersion": "0.13.1",
+        "expectedCheckerVersion": "0.13.1"
+      },
+      "policy": {
+        "id": null,
+        "source": "external",
+        "sha256": "bc68bb6b47a8c524fa0897f33e9d77f6b88e17b3fc1d995a62ba703f7364a1de",
+        "bundledProfile": null
+      },
+      "checker": "0.13.1",
+      "core": null,
+      "qualification": "refused",
+      "outcome": "analysis-error",
+      "enforced": 0,
+      "inactive": [],
+      "manualReviewRequired": true,
+      "limitations": 15,
+      "violations": 0,
+      "analysisErrors": [
+        {
+          "code": "policy-pin-mismatch",
+          "construct": null,
+          "path": null,
+          "line": null,
+          "message": "policy bytes do not match the supplied sha256 pin"
+        }
+      ]
+    },
+    {
+      "app": "app-b",
+      "label": "NEG wrong expected core 0.13.0",
+      "ok": true,
+      "expected": {
+        "exit": 21,
+        "pass": false
+      },
+      "exit": 21,
+      "isQualificationPass": false,
+      "envelope": {
+        "policySha256": "bc68bb6b47a8c524fa0897f33e9d77f6b88e17b3fc1d995a62ba703f7364a1de",
+        "expectedCoreVersion": "0.13.1",
+        "expectedCheckerVersion": "0.13.1"
+      },
+      "policy": {
+        "id": "external-app-b-auth-charts",
+        "source": "external",
+        "sha256": "bc68bb6b47a8c524fa0897f33e9d77f6b88e17b3fc1d995a62ba703f7364a1de",
+        "bundledProfile": null
+      },
+      "checker": "0.13.1",
+      "core": {
+        "installed": "0.13.1",
+        "expected": "0.13.0",
+        "supported": {
+          "min": "0.13.1",
+          "maxExclusive": "0.14.0-0"
+        },
+        "paired": false
+      },
+      "qualification": "refused",
+      "outcome": "analysis-error",
+      "enforced": 0,
+      "inactive": [
+        "presentation/no-fabricated-view",
+        "adapters/least-authority"
+      ],
+      "manualReviewRequired": true,
+      "limitations": 15,
+      "violations": 0,
+      "moduleCount": 10,
+      "analysisErrors": [
+        {
+          "code": "core-version-mismatch",
+          "construct": null,
+          "path": null,
+          "line": null,
+          "message": "installed core 0.13.1 is not the expected 0.13.0"
+        }
+      ]
+    },
+    {
+      "app": "app-b",
+      "label": "NEG envelope expects checker 0.13.0",
+      "ok": true,
+      "expected": {
+        "exit": 0,
+        "pass": false
+      },
+      "exit": 0,
+      "isQualificationPass": false,
+      "envelope": {
+        "policySha256": "bc68bb6b47a8c524fa0897f33e9d77f6b88e17b3fc1d995a62ba703f7364a1de",
+        "expectedCoreVersion": "0.13.1",
+        "expectedCheckerVersion": "0.13.0"
+      },
+      "policy": {
+        "id": "external-app-b-auth-charts",
+        "source": "external",
+        "sha256": "bc68bb6b47a8c524fa0897f33e9d77f6b88e17b3fc1d995a62ba703f7364a1de",
+        "bundledProfile": null
+      },
+      "checker": "0.13.1",
+      "core": {
+        "installed": "0.13.1",
+        "expected": "0.13.1",
+        "supported": {
+          "min": "0.13.1",
+          "maxExclusive": "0.14.0-0"
+        },
+        "paired": true
+      },
+      "qualification": "passed",
+      "outcome": "analysis-complete",
+      "enforced": 5,
+      "inactive": [
+        "presentation/no-fabricated-view",
+        "adapters/least-authority"
+      ],
+      "manualReviewRequired": true,
+      "limitations": 15,
+      "violations": 0,
+      "moduleCount": 10,
+      "analysisErrors": []
+    },
+    {
+      "app": "app-b",
+      "label": "NEG envelope expects another policy pin",
+      "ok": true,
+      "expected": {
+        "exit": 0,
+        "pass": false
+      },
+      "exit": 0,
+      "isQualificationPass": false,
+      "envelope": {
+        "policySha256": "f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327",
+        "expectedCoreVersion": "0.13.1",
+        "expectedCheckerVersion": "0.13.1"
+      },
+      "policy": {
+        "id": "external-app-b-auth-charts",
+        "source": "external",
+        "sha256": "bc68bb6b47a8c524fa0897f33e9d77f6b88e17b3fc1d995a62ba703f7364a1de",
+        "bundledProfile": null
+      },
+      "checker": "0.13.1",
+      "core": {
+        "installed": "0.13.1",
+        "expected": "0.13.1",
+        "supported": {
+          "min": "0.13.1",
+          "maxExclusive": "0.14.0-0"
+        },
+        "paired": true
+      },
+      "qualification": "passed",
+      "outcome": "analysis-complete",
+      "enforced": 5,
+      "inactive": [
+        "presentation/no-fabricated-view",
+        "adapters/least-authority"
+      ],
+      "manualReviewRequired": true,
+      "limitations": 15,
+      "violations": 0,
+      "moduleCount": 10,
+      "analysisErrors": []
+    },
+    {
+      "app": "app-b",
+      "label": "NEG exact bundled Auth-only bytes (Charts unapproved)",
+      "ok": true,
+      "expected": {
+        "exit": 21,
+        "pass": false,
+        "codes": [
+          "unresolved-package-import"
+        ]
+      },
+      "exit": 21,
+      "isQualificationPass": false,
+      "envelope": {
+        "policySha256": "ab100ba510f5cdc4931bca33e0dc398d21f1382010b51ed44242d30dc6846662",
+        "expectedCoreVersion": "0.13.1",
+        "expectedCheckerVersion": "0.13.1"
+      },
+      "policy": {
+        "id": "bundled-auth",
+        "source": "external",
+        "sha256": "ab100ba510f5cdc4931bca33e0dc398d21f1382010b51ed44242d30dc6846662",
+        "bundledProfile": null
+      },
+      "checker": "0.13.1",
+      "core": {
+        "installed": "0.13.1",
+        "expected": "0.13.1",
+        "supported": {
+          "min": "0.13.1",
+          "maxExclusive": "0.14.0-0"
+        },
+        "paired": true
+      },
+      "qualification": "refused",
+      "outcome": "analysis-error",
+      "enforced": 0,
+      "inactive": [
+        "presentation/no-fabricated-view",
+        "adapters/least-authority"
+      ],
+      "manualReviewRequired": true,
+      "limitations": 15,
+      "violations": 0,
+      "moduleCount": 10,
+      "analysisErrors": [
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/components/ChartView.svelte",
+          "line": 2,
+          "message": "package lacks external opaque-package approval: @composable-svelte/charts"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/model.ts",
+          "line": 21,
+          "message": "package lacks external opaque-package approval: @composable-svelte/charts"
+        }
+      ]
+    },
+    {
+      "app": "app-b",
+      "label": "NEG policy app-b-charts-0.3.1",
+      "ok": true,
+      "expected": {
+        "exit": 21,
+        "pass": false
+      },
+      "exit": 21,
+      "isQualificationPass": false,
+      "envelope": {
+        "policySha256": "b8cc7602524d2664191b08f4450910dfb907c433efcf6d9065497f8ac13dab4f",
+        "expectedCoreVersion": "0.13.1",
+        "expectedCheckerVersion": "0.13.1"
+      },
+      "policy": {
+        "id": "neg-app-b-charts-0.3.1",
+        "source": "external",
+        "sha256": "b8cc7602524d2664191b08f4450910dfb907c433efcf6d9065497f8ac13dab4f",
+        "bundledProfile": null
+      },
+      "checker": "0.13.1",
+      "core": {
+        "installed": "0.13.1",
+        "expected": "0.13.1",
+        "supported": {
+          "min": "0.13.1",
+          "maxExclusive": "0.14.0-0"
+        },
+        "paired": true
+      },
+      "qualification": "refused",
+      "outcome": "analysis-error",
+      "enforced": 0,
+      "inactive": [
+        "presentation/no-fabricated-view",
+        "adapters/least-authority"
+      ],
+      "manualReviewRequired": true,
+      "limitations": 15,
+      "violations": 0,
+      "moduleCount": 10,
+      "analysisErrors": [
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/components/ChartView.svelte",
+          "line": 2,
+          "message": "installed package name or version does not match external approval: @composable-svelte/charts (@composable-svelte/charts@0.3.0 !== @composable-svelte/charts@0.3.1)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/model.ts",
+          "line": 21,
+          "message": "installed package name or version does not match external approval: @composable-svelte/charts (@composable-svelte/charts@0.3.0 !== @composable-svelte/charts@0.3.1)"
+        }
+      ]
+    },
+    {
+      "app": "app-b",
+      "label": "NEG policy app-b-auth-0.3.1",
+      "ok": true,
+      "expected": {
+        "exit": 21,
+        "pass": false
+      },
+      "exit": 21,
+      "isQualificationPass": false,
+      "envelope": {
+        "policySha256": "298200d2f5ed185f0049391eea190e8f4f9cc0b3fa27d77183c53505de71ec98",
+        "expectedCoreVersion": "0.13.1",
+        "expectedCheckerVersion": "0.13.1"
+      },
+      "policy": {
+        "id": "neg-app-b-auth-0.3.1",
+        "source": "external",
+        "sha256": "298200d2f5ed185f0049391eea190e8f4f9cc0b3fa27d77183c53505de71ec98",
+        "bundledProfile": null
+      },
+      "checker": "0.13.1",
+      "core": {
+        "installed": "0.13.1",
+        "expected": "0.13.1",
+        "supported": {
+          "min": "0.13.1",
+          "maxExclusive": "0.14.0-0"
+        },
+        "paired": true
+      },
+      "qualification": "refused",
+      "outcome": "analysis-error",
+      "enforced": 0,
+      "inactive": [
+        "presentation/no-fabricated-view",
+        "adapters/least-authority"
+      ],
+      "manualReviewRequired": true,
+      "limitations": 15,
+      "violations": 0,
+      "moduleCount": 10,
+      "analysisErrors": [
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/components/ChangePasswordView.svelte",
+          "line": 2,
+          "message": "installed package name or version does not match external approval: @composable-svelte/auth (@composable-svelte/auth@0.3.0 !== @composable-svelte/auth@0.3.1)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/components/LoginView.svelte",
+          "line": 2,
+          "message": "installed package name or version does not match external approval: @composable-svelte/auth (@composable-svelte/auth@0.3.0 !== @composable-svelte/auth@0.3.1)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/components/MfaView.svelte",
+          "line": 2,
+          "message": "installed package name or version does not match external approval: @composable-svelte/auth (@composable-svelte/auth@0.3.0 !== @composable-svelte/auth@0.3.1)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/controlled-backend.ts",
+          "line": 1,
+          "message": "installed package name or version does not match external approval: @composable-svelte/auth (@composable-svelte/auth@0.3.0 !== @composable-svelte/auth@0.3.1)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/model.ts",
+          "line": 15,
+          "message": "installed package name or version does not match external approval: @composable-svelte/auth (@composable-svelte/auth@0.3.0 !== @composable-svelte/auth@0.3.1)"
+        }
+      ]
+    },
+    {
+      "app": "app-b",
+      "label": "NEG policy app-b-core-0.13.2",
+      "ok": true,
+      "expected": {
+        "exit": 21,
+        "pass": false
+      },
+      "exit": 21,
+      "isQualificationPass": false,
+      "envelope": {
+        "policySha256": "6534c84ab104e02cc6a74f7d01aeb3a654a4c7856e7582a4574c3678404c31bb",
+        "expectedCoreVersion": "0.13.1",
+        "expectedCheckerVersion": "0.13.1"
+      },
+      "policy": {
+        "id": "neg-app-b-core-0.13.2",
+        "source": "external",
+        "sha256": "6534c84ab104e02cc6a74f7d01aeb3a654a4c7856e7582a4574c3678404c31bb",
+        "bundledProfile": null
+      },
+      "checker": "0.13.1",
+      "core": {
+        "installed": "0.13.1",
+        "expected": "0.13.1",
+        "supported": {
+          "min": "0.13.1",
+          "maxExclusive": "0.14.0-0"
+        },
+        "paired": true
+      },
+      "qualification": "refused",
+      "outcome": "analysis-error",
+      "enforced": 0,
+      "inactive": [
+        "presentation/no-fabricated-view",
+        "adapters/least-authority"
+      ],
+      "manualReviewRequired": true,
+      "limitations": 15,
+      "violations": 0,
+      "moduleCount": 10,
+      "analysisErrors": [
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/App.svelte",
+          "line": 7,
+          "message": "installed package name or version does not match external approval: @composable-svelte/core (@composable-svelte/core@0.13.1 !== @composable-svelte/core@0.13.2)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/components/AuthFeatureView.svelte",
+          "line": 2,
+          "message": "installed package name or version does not match external approval: @composable-svelte/core (@composable-svelte/core@0.13.1 !== @composable-svelte/core@0.13.2)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/model.ts",
+          "line": 1,
+          "message": "installed package name or version does not match external approval: @composable-svelte/core (@composable-svelte/core@0.13.1 !== @composable-svelte/core@0.13.2)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/model.ts",
+          "line": 7,
+          "message": "installed package name or version does not match external approval: @composable-svelte/core (@composable-svelte/core@0.13.1 !== @composable-svelte/core@0.13.2)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/views.ts",
+          "line": 1,
+          "message": "installed package name or version does not match external approval: @composable-svelte/core (@composable-svelte/core@0.13.1 !== @composable-svelte/core@0.13.2)"
+        }
+      ]
+    },
+    {
+      "app": "app-b",
+      "label": "NEG policy app-b-svelte-5.57.0",
+      "ok": true,
+      "expected": {
+        "exit": 21,
+        "pass": false
+      },
+      "exit": 21,
+      "isQualificationPass": false,
+      "envelope": {
+        "policySha256": "96b88d3e5c904d71e3fcad817d36c9754664b1a7eddda4d1ddfd84f1d6bc7fbd",
+        "expectedCoreVersion": "0.13.1",
+        "expectedCheckerVersion": "0.13.1"
+      },
+      "policy": {
+        "id": "neg-app-b-svelte-5.57.0",
+        "source": "external",
+        "sha256": "96b88d3e5c904d71e3fcad817d36c9754664b1a7eddda4d1ddfd84f1d6bc7fbd",
+        "bundledProfile": null
+      },
+      "checker": "0.13.1",
+      "core": {
+        "installed": "0.13.1",
+        "expected": "0.13.1",
+        "supported": {
+          "min": "0.13.1",
+          "maxExclusive": "0.14.0-0"
+        },
+        "paired": true
+      },
+      "qualification": "refused",
+      "outcome": "analysis-error",
+      "enforced": 0,
+      "inactive": [
+        "presentation/no-fabricated-view",
+        "adapters/least-authority"
+      ],
+      "manualReviewRequired": true,
+      "limitations": 15,
+      "violations": 0,
+      "moduleCount": 10,
+      "analysisErrors": [
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/main.ts",
+          "line": 1,
+          "message": "installed package name or version does not match external approval: svelte (svelte@5.55.3 !== svelte@5.57.0)"
+        }
+      ]
+    },
+    {
+      "app": "app-b",
+      "label": "NEG policy app-b-missing-root",
+      "ok": true,
+      "expected": {
+        "exit": 21,
+        "pass": false
+      },
+      "exit": 21,
+      "isQualificationPass": false,
+      "envelope": {
+        "policySha256": "7c98e397d4c74db6a6fb31f71dd819f3ed51169c3fe4ffefb786d36f4d4c624c",
+        "expectedCoreVersion": "0.13.1",
+        "expectedCheckerVersion": "0.13.1"
+      },
+      "policy": {
+        "id": "neg-app-b-missing-root",
+        "source": "external",
+        "sha256": "7c98e397d4c74db6a6fb31f71dd819f3ed51169c3fe4ffefb786d36f4d4c624c",
+        "bundledProfile": null
+      },
+      "checker": "0.13.1",
+      "core": {
+        "installed": "0.13.1",
+        "expected": "0.13.1",
+        "supported": {
+          "min": "0.13.1",
+          "maxExclusive": "0.14.0-0"
+        },
+        "paired": true
+      },
+      "qualification": "refused",
+      "outcome": "analysis-error",
+      "enforced": 0,
+      "inactive": [
+        "presentation/no-fabricated-view",
+        "adapters/least-authority"
+      ],
+      "manualReviewRequired": true,
+      "limitations": 15,
+      "violations": 0,
+      "moduleCount": 0,
+      "analysisErrors": [
+        {
+          "code": "missing-root",
+          "construct": null,
+          "path": "src/missing-root.ts",
+          "line": null,
+          "message": "root is not an existing regular file"
+        }
+      ]
+    },
+    {
+      "app": "app-b",
+      "label": "DEVFEEDBACK bundled:auth analysis-only rejects (Charts unapproved; no Auth+Charts profile)",
+      "ok": true,
+      "expected": {
+        "exit": 21,
+        "pass": false,
+        "codes": [
+          "unresolved-package-import"
+        ]
+      },
+      "exit": 21,
+      "isQualificationPass": false,
+      "policy": {
+        "id": "bundled-auth",
+        "source": "bundled",
+        "sha256": "ab100ba510f5cdc4931bca33e0dc398d21f1382010b51ed44242d30dc6846662",
+        "bundledProfile": "auth"
+      },
+      "checker": "0.13.1",
+      "core": {
+        "installed": "0.13.1",
+        "expected": "0.13.1",
+        "supported": {
+          "min": "0.13.1",
+          "maxExclusive": "0.14.0-0"
+        },
+        "paired": true
+      },
+      "qualification": "not-evaluated",
+      "outcome": "analysis-error",
+      "enforced": 0,
+      "inactive": [
+        "presentation/no-fabricated-view",
+        "adapters/least-authority"
+      ],
+      "manualReviewRequired": true,
+      "limitations": 15,
+      "violations": 0,
+      "moduleCount": 10,
+      "analysisErrors": [
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/components/ChartView.svelte",
+          "line": 2,
+          "message": "package lacks external opaque-package approval: @composable-svelte/charts"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/model.ts",
+          "line": 21,
+          "message": "package lacks external opaque-package approval: @composable-svelte/charts"
+        }
+      ]
+    },
+    {
+      "app": "app-b",
+      "label": "DEVFEEDBACK bundled:charts analysis-only rejects (Auth unapproved)",
+      "ok": true,
+      "expected": {
+        "exit": 21,
+        "pass": false,
+        "codes": [
+          "unresolved-package-import"
+        ]
+      },
+      "exit": 21,
+      "isQualificationPass": false,
+      "policy": {
+        "id": "bundled-charts",
+        "source": "bundled",
+        "sha256": "853f929a63217a9667ec64e928dbd8767c15ad49ff82e75e802e4209e4398645",
+        "bundledProfile": "charts"
+      },
+      "checker": "0.13.1",
+      "core": {
+        "installed": "0.13.1",
+        "expected": "0.13.1",
+        "supported": {
+          "min": "0.13.1",
+          "maxExclusive": "0.14.0-0"
+        },
+        "paired": true
+      },
+      "qualification": "not-evaluated",
+      "outcome": "analysis-error",
+      "enforced": 0,
+      "inactive": [
+        "presentation/no-fabricated-view",
+        "adapters/least-authority"
+      ],
+      "manualReviewRequired": true,
+      "limitations": 15,
+      "violations": 0,
+      "moduleCount": 10,
+      "analysisErrors": [
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/components/ChangePasswordView.svelte",
+          "line": 2,
+          "message": "package lacks external opaque-package approval: @composable-svelte/auth"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/components/LoginView.svelte",
+          "line": 2,
+          "message": "package lacks external opaque-package approval: @composable-svelte/auth"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/components/MfaView.svelte",
+          "line": 2,
+          "message": "package lacks external opaque-package approval: @composable-svelte/auth"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/controlled-backend.ts",
+          "line": 1,
+          "message": "package lacks external opaque-package approval: @composable-svelte/auth"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/model.ts",
+          "line": 15,
+          "message": "package lacks external opaque-package approval: @composable-svelte/auth"
+        }
+      ]
+    },
+    {
+      "app": "app-b",
+      "label": "NEG bundled:auth qualification refused",
+      "ok": true,
+      "expected": {
+        "exit": 22,
+        "pass": false
+      },
+      "exit": 22,
+      "isQualificationPass": false,
+      "stderrTail": "Architecture checker usage error: qualification requires an externally controlled policy and pin; bundled policy is developer feedback only"
+    },
+    {
+      "app": "app-b",
+      "label": "NEG labeled copy: unapproved package import",
+      "ok": true,
+      "expected": {
+        "exit": 21,
+        "pass": false
+      },
+      "exit": 21,
+      "isQualificationPass": false,
+      "envelope": {
+        "policySha256": "bc68bb6b47a8c524fa0897f33e9d77f6b88e17b3fc1d995a62ba703f7364a1de",
+        "expectedCoreVersion": "0.13.1",
+        "expectedCheckerVersion": "0.13.1"
+      },
+      "policy": {
+        "id": "external-app-b-auth-charts",
+        "source": "external",
+        "sha256": "bc68bb6b47a8c524fa0897f33e9d77f6b88e17b3fc1d995a62ba703f7364a1de",
+        "bundledProfile": null
+      },
+      "checker": "0.13.1",
+      "core": {
+        "installed": "0.13.1",
+        "expected": "0.13.1",
+        "supported": {
+          "min": "0.13.1",
+          "maxExclusive": "0.14.0-0"
+        },
+        "paired": true
+      },
+      "qualification": "refused",
+      "outcome": "analysis-error",
+      "enforced": 0,
+      "inactive": [
+        "presentation/no-fabricated-view",
+        "adapters/least-authority"
+      ],
+      "manualReviewRequired": true,
+      "limitations": 15,
+      "violations": 0,
+      "moduleCount": 10,
+      "analysisErrors": [
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/main.ts",
+          "line": 1,
+          "message": "package lacks external opaque-package approval: vite"
+        }
+      ]
+    },
+    {
+      "app": "app-b",
+      "label": "INFO original in-place app (file: specs, read-only run) is not registry-shaped",
+      "ok": true,
+      "expected": {
+        "exit": 21,
+        "pass": false
+      },
+      "exit": 21,
+      "isQualificationPass": false,
+      "envelope": {
+        "policySha256": "bc68bb6b47a8c524fa0897f33e9d77f6b88e17b3fc1d995a62ba703f7364a1de",
+        "expectedCoreVersion": "0.13.1",
+        "expectedCheckerVersion": "0.13.1"
+      },
+      "policy": {
+        "id": "external-app-b-auth-charts",
+        "source": "external",
+        "sha256": "bc68bb6b47a8c524fa0897f33e9d77f6b88e17b3fc1d995a62ba703f7364a1de",
+        "bundledProfile": null
+      },
+      "checker": "0.13.1",
+      "core": {
+        "installed": "0.13.1",
+        "expected": "0.13.1",
+        "supported": {
+          "min": "0.13.1",
+          "maxExclusive": "0.14.0-0"
+        },
+        "paired": true
+      },
+      "qualification": "refused",
+      "outcome": "analysis-error",
+      "enforced": 0,
+      "inactive": [
+        "presentation/no-fabricated-view",
+        "adapters/least-authority"
+      ],
+      "manualReviewRequired": true,
+      "limitations": 15,
+      "violations": 0,
+      "moduleCount": 10,
+      "analysisErrors": [
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/App.svelte",
+          "line": 7,
+          "message": "package dependency specification is not registry-shaped: @composable-svelte/core (file:/private/tmp/companion-runtime-release/archives-r6/composable-svelte-core-0.13.1.tgz)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/components/AuthFeatureView.svelte",
+          "line": 2,
+          "message": "package dependency specification is not registry-shaped: @composable-svelte/core (file:/private/tmp/companion-runtime-release/archives-r6/composable-svelte-core-0.13.1.tgz)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/components/ChangePasswordView.svelte",
+          "line": 2,
+          "message": "package dependency specification is not registry-shaped: @composable-svelte/auth (file:/private/tmp/companion-runtime-release/archives-r6/composable-svelte-auth-0.3.0.tgz)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/components/ChartView.svelte",
+          "line": 2,
+          "message": "package dependency specification is not registry-shaped: @composable-svelte/charts (file:/private/tmp/composable-final-authoring/artifacts-b/composable-svelte-charts-0.3.0.tgz)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/components/LoginView.svelte",
+          "line": 2,
+          "message": "package dependency specification is not registry-shaped: @composable-svelte/auth (file:/private/tmp/companion-runtime-release/archives-r6/composable-svelte-auth-0.3.0.tgz)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/components/MfaView.svelte",
+          "line": 2,
+          "message": "package dependency specification is not registry-shaped: @composable-svelte/auth (file:/private/tmp/companion-runtime-release/archives-r6/composable-svelte-auth-0.3.0.tgz)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/controlled-backend.ts",
+          "line": 1,
+          "message": "package dependency specification is not registry-shaped: @composable-svelte/auth (file:/private/tmp/companion-runtime-release/archives-r6/composable-svelte-auth-0.3.0.tgz)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/model.ts",
+          "line": 1,
+          "message": "package dependency specification is not registry-shaped: @composable-svelte/core (file:/private/tmp/companion-runtime-release/archives-r6/composable-svelte-core-0.13.1.tgz)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/model.ts",
+          "line": 7,
+          "message": "package dependency specification is not registry-shaped: @composable-svelte/core (file:/private/tmp/companion-runtime-release/archives-r6/composable-svelte-core-0.13.1.tgz)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/model.ts",
+          "line": 15,
+          "message": "package dependency specification is not registry-shaped: @composable-svelte/auth (file:/private/tmp/companion-runtime-release/archives-r6/composable-svelte-auth-0.3.0.tgz)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/model.ts",
+          "line": 21,
+          "message": "package dependency specification is not registry-shaped: @composable-svelte/charts (file:/private/tmp/composable-final-authoring/artifacts-b/composable-svelte-charts-0.3.0.tgz)"
+        },
+        {
+          "code": "unresolved-package-import",
+          "construct": null,
+          "path": "src/lib/views.ts",
+          "line": 1,
+          "message": "package dependency specification is not registry-shaped: @composable-svelte/core (file:/private/tmp/companion-runtime-release/archives-r6/composable-svelte-core-0.13.1.tgz)"
+        }
+      ]
+    }
+  ],
+  "commandLog": [
+    {
+      "cmd": "tar xzf /private/tmp/companion-runtime-release/archives-r6/composable-svelte-core-0.13.1.tgz -C /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/unpacked/core",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt",
+      "exit": 0,
+      "ms": 138
+    },
+    {
+      "cmd": "tar xzf /private/tmp/companion-runtime-release/archives-r6/composable-svelte-auth-0.3.0.tgz -C /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/unpacked/auth",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt",
+      "exit": 0,
+      "ms": 46
+    },
+    {
+      "cmd": "tar xzf /private/tmp/companion-runtime-release/archives-r4/composable-svelte-maps-0.3.0.tgz -C /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/unpacked/maps",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt",
+      "exit": 0,
+      "ms": 11
+    },
+    {
+      "cmd": "tar xzf /private/tmp/companion-runtime-release/archives-r4/composable-svelte-graphics-0.3.0.tgz -C /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/unpacked/graphics",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt",
+      "exit": 0,
+      "ms": 18
+    },
+    {
+      "cmd": "tar xzf /private/tmp/companion-runtime-release/archives-r4/composable-svelte-charts-0.3.0.tgz -C /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/unpacked/charts",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt",
+      "exit": 0,
+      "ms": 10
+    },
+    {
+      "cmd": "tar xzf /private/tmp/companion-runtime-release/archives-r4/composable-svelte-code-0.5.0.tgz -C /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/unpacked/code",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt",
+      "exit": 0,
+      "ms": 12
+    },
+    {
+      "cmd": "tar xzf /private/tmp/companion-runtime-release/archives-r4/composable-svelte-media-0.5.0.tgz -C /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/unpacked/media",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt",
+      "exit": 0,
+      "ms": 14
+    },
+    {
+      "cmd": "tar xzf /private/tmp/companion-runtime-release/archives-r5-chat/composable-svelte-chat-0.5.0.tgz -C /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/unpacked/chat",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt",
+      "exit": 0,
+      "ms": 21
+    },
+    {
+      "cmd": "tar xzf /private/tmp/composable-final-checker/opus-final-review/final-archive/by-sha/6095ae2fa24d7fe895db616d9cdc82b6380950cd2945ab9dc22f5fb85b3ff304/composable-svelte-architecture-0.13.1.tgz -C /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/unpacked/architecture",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt",
+      "exit": 0,
+      "ms": 9
+    },
+    {
+      "cmd": "npm install --ignore-scripts --no-audit --no-fund",
+      "cwd": "/private/tmp/composable-final-authoring/app-a",
+      "exit": 0,
+      "ms": 318
+    },
+    {
+      "cmd": "npm run check",
+      "cwd": "/private/tmp/composable-final-authoring/app-a",
+      "exit": 0,
+      "ms": 1937
+    },
+    {
+      "cmd": "npm run test",
+      "cwd": "/private/tmp/composable-final-authoring/app-a",
+      "exit": 0,
+      "ms": 4892
+    },
+    {
+      "cmd": "npm run test:ssr",
+      "cwd": "/private/tmp/composable-final-authoring/app-a",
+      "exit": 0,
+      "ms": 2205
+    },
+    {
+      "cmd": "npm run build",
+      "cwd": "/private/tmp/composable-final-authoring/app-a",
+      "exit": 0,
+      "ms": 3126
+    },
+    {
+      "cmd": "npm run test:browser",
+      "cwd": "/private/tmp/composable-final-authoring/app-a",
+      "exit": 0,
+      "ms": 6135
+    },
+    {
+      "cmd": "cp -Rc /private/tmp/composable-final-authoring/app-a /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt",
+      "exit": 0,
+      "ms": 1667
+    },
+    {
+      "cmd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped/node_modules/.bin/composable-svelte-architecture --mode qualification --policy /private/tmp/composable-final-checker/opus-final-review/app-gate/policies-6095ae2f/exact-bundled-chat-code-media.json --policy-sha256 f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327 --expected-core-version 0.13.1 --project /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped --today 2026-09-26",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped",
+      "exit": 0,
+      "ms": 511
+    },
+    {
+      "cmd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped/node_modules/.bin/composable-svelte-architecture --mode analysis-only --policy bundled:chat-code-media --expected-core-version 0.13.1 --project /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped --today 2026-09-26",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped",
+      "exit": 0,
+      "ms": 522
+    },
+    {
+      "cmd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped/node_modules/.bin/composable-svelte-architecture --mode qualification --policy bundled:chat-code-media --expected-core-version 0.13.1 --project /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped --today 2026-09-26",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped",
+      "exit": 22,
+      "ms": 375
+    },
+    {
+      "cmd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped/node_modules/.bin/composable-svelte-architecture --mode qualification --policy /private/tmp/composable-final-checker/opus-final-review/app-gate/policies-6095ae2f/exact-bundled-chat-code-media.json --policy-sha256 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb --expected-core-version 0.13.1 --project /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped --today 2026-09-26",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped",
+      "exit": 21,
+      "ms": 359
+    },
+    {
+      "cmd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped/node_modules/.bin/composable-svelte-architecture --mode qualification --policy /private/tmp/composable-final-checker/opus-final-review/app-gate/policies-6095ae2f/exact-bundled-chat-code-media.json --policy-sha256 f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327 --expected-core-version 0.13.0 --project /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped --today 2026-09-26",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped",
+      "exit": 21,
+      "ms": 418
+    },
+    {
+      "cmd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped/node_modules/.bin/composable-svelte-architecture --mode qualification --policy /private/tmp/composable-final-checker/opus-final-review/app-gate/policies-6095ae2f/exact-bundled-chat-code-media.json --policy-sha256 f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327 --expected-core-version 0.13.1 --project /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped --today 2026-09-26",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped",
+      "exit": 0,
+      "ms": 498
+    },
+    {
+      "cmd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped/node_modules/.bin/composable-svelte-architecture --mode qualification --policy /private/tmp/composable-final-checker/opus-final-review/app-gate/policies-6095ae2f/exact-bundled-chat-code-media.json --policy-sha256 f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327 --expected-core-version 0.13.1 --project /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped --today 2026-09-26",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped",
+      "exit": 0,
+      "ms": 507
+    },
+    {
+      "cmd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped/node_modules/.bin/composable-svelte-architecture --mode qualification --policy /private/tmp/composable-final-checker/opus-final-review/app-gate/policies-6095ae2f/neg-app-a-chat-only.json --policy-sha256 26b4e8d942940403232d6a358f32f4e8a51e525845db34e19572db5fac0047ab --expected-core-version 0.13.1 --project /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped --today 2026-09-26",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped",
+      "exit": 21,
+      "ms": 411
+    },
+    {
+      "cmd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped/node_modules/.bin/composable-svelte-architecture --mode qualification --policy /private/tmp/composable-final-checker/opus-final-review/app-gate/policies-6095ae2f/neg-app-a-chat-0.5.1.json --policy-sha256 902fcddcebcca4e125801a6d9869203cdbefddb31bfdf74570007c61f365f456 --expected-core-version 0.13.1 --project /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped --today 2026-09-26",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped",
+      "exit": 21,
+      "ms": 431
+    },
+    {
+      "cmd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped/node_modules/.bin/composable-svelte-architecture --mode qualification --policy /private/tmp/composable-final-checker/opus-final-review/app-gate/policies-6095ae2f/neg-app-a-code-0.5.1.json --policy-sha256 698d810017da5094f1338c0490ab8f329f96f78c66832ea2765c3f29221124d6 --expected-core-version 0.13.1 --project /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped --today 2026-09-26",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped",
+      "exit": 21,
+      "ms": 410
+    },
+    {
+      "cmd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped/node_modules/.bin/composable-svelte-architecture --mode qualification --policy /private/tmp/composable-final-checker/opus-final-review/app-gate/policies-6095ae2f/neg-app-a-media-0.5.1.json --policy-sha256 c0686eb7b0380727d262b5ccebf97d1b9470c293e876e6e212558ccf22e81077 --expected-core-version 0.13.1 --project /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped --today 2026-09-26",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped",
+      "exit": 21,
+      "ms": 390
+    },
+    {
+      "cmd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped/node_modules/.bin/composable-svelte-architecture --mode qualification --policy /private/tmp/composable-final-checker/opus-final-review/app-gate/policies-6095ae2f/neg-app-a-core-0.13.2.json --policy-sha256 9b1806558161c99809a076372321219467d34a6d6c2aca09e45d53af4b50f358 --expected-core-version 0.13.1 --project /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped --today 2026-09-26",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped",
+      "exit": 21,
+      "ms": 427
+    },
+    {
+      "cmd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped/node_modules/.bin/composable-svelte-architecture --mode qualification --policy /private/tmp/composable-final-checker/opus-final-review/app-gate/policies-6095ae2f/neg-app-a-svelte-5.57.0.json --policy-sha256 c0a6b432340e1f669cf59719ea07d137a66871810efa6c40c02eefc3f631549a --expected-core-version 0.13.1 --project /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped --today 2026-09-26",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped",
+      "exit": 21,
+      "ms": 409
+    },
+    {
+      "cmd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped/node_modules/.bin/composable-svelte-architecture --mode qualification --policy /private/tmp/composable-final-checker/opus-final-review/app-gate/policies-6095ae2f/neg-app-a-missing-root.json --policy-sha256 98aa724a6cbeb851e4c846a3b49d3efb59e3b094bafbaf65f31321888f017203 --expected-core-version 0.13.1 --project /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped --today 2026-09-26",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped",
+      "exit": 21,
+      "ms": 360
+    },
+    {
+      "cmd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped/node_modules/.bin/composable-svelte-architecture --mode qualification --policy /private/tmp/composable-final-checker/opus-final-review/app-gate/policies-6095ae2f/exact-bundled-starter.json --policy-sha256 f2821ebf0fa5cd34b346361089edd56bb4ec01a40c59eb969c60f90c7e77d190 --expected-core-version 0.13.1 --project /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped --today 2026-09-26",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped",
+      "exit": 21,
+      "ms": 432
+    },
+    {
+      "cmd": "cp -Rc /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-NEG-unapproved-import",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt",
+      "exit": 0,
+      "ms": 1806
+    },
+    {
+      "cmd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped/node_modules/.bin/composable-svelte-architecture --mode qualification --policy /private/tmp/composable-final-checker/opus-final-review/app-gate/policies-6095ae2f/exact-bundled-chat-code-media.json --policy-sha256 f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327 --expected-core-version 0.13.1 --project /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-NEG-unapproved-import --today 2026-09-26",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-NEG-unapproved-import",
+      "exit": 21,
+      "ms": 427
+    },
+    {
+      "cmd": "cp -Rc /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-NEG-installed-core-0.13.2",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt",
+      "exit": 0,
+      "ms": 1748
+    },
+    {
+      "cmd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped/node_modules/.bin/composable-svelte-architecture --mode qualification --policy /private/tmp/composable-final-checker/opus-final-review/app-gate/policies-6095ae2f/exact-bundled-chat-code-media.json --policy-sha256 f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327 --expected-core-version 0.13.2 --project /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-NEG-installed-core-0.13.2 --today 2026-09-26",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-NEG-installed-core-0.13.2",
+      "exit": 21,
+      "ms": 424
+    },
+    {
+      "cmd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-a-registry-shaped/node_modules/.bin/composable-svelte-architecture --mode qualification --policy /private/tmp/composable-final-checker/opus-final-review/app-gate/policies-6095ae2f/exact-bundled-chat-code-media.json --policy-sha256 f1127dc259280482a726bb380f376f1874894b3dd2caa2136a82c71214e63327 --expected-core-version 0.13.1 --project /private/tmp/composable-final-authoring/app-a --today 2026-09-26",
+      "cwd": "/private/tmp/composable-final-authoring/app-a",
+      "exit": 21,
+      "ms": 418
+    },
+    {
+      "cmd": "npm install --ignore-scripts --no-audit --no-fund --no-package-lock",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/checker-host",
+      "exit": 0,
+      "ms": 509
+    },
+    {
+      "cmd": "cp -Rc /private/tmp/composable-final-authoring/app-b /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-b-registry-shaped",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt",
+      "exit": 0,
+      "ms": 1322
+    },
+    {
+      "cmd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/checker-host/node_modules/.bin/composable-svelte-architecture --mode qualification --policy /private/tmp/composable-final-checker/opus-final-review/app-gate/policies-6095ae2f/external-app-b-auth-charts.json --policy-sha256 bc68bb6b47a8c524fa0897f33e9d77f6b88e17b3fc1d995a62ba703f7364a1de --expected-core-version 0.13.1 --project /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-b-registry-shaped --today 2026-09-26",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-b-registry-shaped",
+      "exit": 0,
+      "ms": 530
+    },
+    {
+      "cmd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/checker-host/node_modules/.bin/composable-svelte-architecture --mode qualification --policy /private/tmp/composable-final-checker/opus-final-review/app-gate/policies-6095ae2f/external-app-b-auth-charts.json --policy-sha256 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb --expected-core-version 0.13.1 --project /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-b-registry-shaped --today 2026-09-26",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-b-registry-shaped",
+      "exit": 21,
+      "ms": 346
+    },
+    {
+      "cmd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/checker-host/node_modules/.bin/composable-svelte-architecture --mode qualification --policy /private/tmp/composable-final-checker/opus-final-review/app-gate/policies-6095ae2f/external-app-b-auth-charts.json --policy-sha256 bc68bb6b47a8c524fa0897f33e9d77f6b88e17b3fc1d995a62ba703f7364a1de --expected-core-version 0.13.0 --project /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-b-registry-shaped --today 2026-09-26",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-b-registry-shaped",
+      "exit": 21,
+      "ms": 411
+    },
+    {
+      "cmd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/checker-host/node_modules/.bin/composable-svelte-architecture --mode qualification --policy /private/tmp/composable-final-checker/opus-final-review/app-gate/policies-6095ae2f/external-app-b-auth-charts.json --policy-sha256 bc68bb6b47a8c524fa0897f33e9d77f6b88e17b3fc1d995a62ba703f7364a1de --expected-core-version 0.13.1 --project /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-b-registry-shaped --today 2026-09-26",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-b-registry-shaped",
+      "exit": 0,
+      "ms": 547
+    },
+    {
+      "cmd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/checker-host/node_modules/.bin/composable-svelte-architecture --mode qualification --policy /private/tmp/composable-final-checker/opus-final-review/app-gate/policies-6095ae2f/external-app-b-auth-charts.json --policy-sha256 bc68bb6b47a8c524fa0897f33e9d77f6b88e17b3fc1d995a62ba703f7364a1de --expected-core-version 0.13.1 --project /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-b-registry-shaped --today 2026-09-26",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-b-registry-shaped",
+      "exit": 0,
+      "ms": 540
+    },
+    {
+      "cmd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/checker-host/node_modules/.bin/composable-svelte-architecture --mode qualification --policy /private/tmp/composable-final-checker/opus-final-review/app-gate/policies-6095ae2f/exact-bundled-auth.json --policy-sha256 ab100ba510f5cdc4931bca33e0dc398d21f1382010b51ed44242d30dc6846662 --expected-core-version 0.13.1 --project /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-b-registry-shaped --today 2026-09-26",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-b-registry-shaped",
+      "exit": 21,
+      "ms": 422
+    },
+    {
+      "cmd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/checker-host/node_modules/.bin/composable-svelte-architecture --mode qualification --policy /private/tmp/composable-final-checker/opus-final-review/app-gate/policies-6095ae2f/neg-app-b-charts-0.3.1.json --policy-sha256 b8cc7602524d2664191b08f4450910dfb907c433efcf6d9065497f8ac13dab4f --expected-core-version 0.13.1 --project /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-b-registry-shaped --today 2026-09-26",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-b-registry-shaped",
+      "exit": 21,
+      "ms": 427
+    },
+    {
+      "cmd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/checker-host/node_modules/.bin/composable-svelte-architecture --mode qualification --policy /private/tmp/composable-final-checker/opus-final-review/app-gate/policies-6095ae2f/neg-app-b-auth-0.3.1.json --policy-sha256 298200d2f5ed185f0049391eea190e8f4f9cc0b3fa27d77183c53505de71ec98 --expected-core-version 0.13.1 --project /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-b-registry-shaped --today 2026-09-26",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-b-registry-shaped",
+      "exit": 21,
+      "ms": 406
+    },
+    {
+      "cmd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/checker-host/node_modules/.bin/composable-svelte-architecture --mode qualification --policy /private/tmp/composable-final-checker/opus-final-review/app-gate/policies-6095ae2f/neg-app-b-core-0.13.2.json --policy-sha256 6534c84ab104e02cc6a74f7d01aeb3a654a4c7856e7582a4574c3678404c31bb --expected-core-version 0.13.1 --project /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-b-registry-shaped --today 2026-09-26",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-b-registry-shaped",
+      "exit": 21,
+      "ms": 428
+    },
+    {
+      "cmd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/checker-host/node_modules/.bin/composable-svelte-architecture --mode qualification --policy /private/tmp/composable-final-checker/opus-final-review/app-gate/policies-6095ae2f/neg-app-b-svelte-5.57.0.json --policy-sha256 96b88d3e5c904d71e3fcad817d36c9754664b1a7eddda4d1ddfd84f1d6bc7fbd --expected-core-version 0.13.1 --project /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-b-registry-shaped --today 2026-09-26",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-b-registry-shaped",
+      "exit": 21,
+      "ms": 410
+    },
+    {
+      "cmd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/checker-host/node_modules/.bin/composable-svelte-architecture --mode qualification --policy /private/tmp/composable-final-checker/opus-final-review/app-gate/policies-6095ae2f/neg-app-b-missing-root.json --policy-sha256 7c98e397d4c74db6a6fb31f71dd819f3ed51169c3fe4ffefb786d36f4d4c624c --expected-core-version 0.13.1 --project /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-b-registry-shaped --today 2026-09-26",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-b-registry-shaped",
+      "exit": 21,
+      "ms": 361
+    },
+    {
+      "cmd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/checker-host/node_modules/.bin/composable-svelte-architecture --mode analysis-only --policy bundled:auth --expected-core-version 0.13.1 --project /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-b-registry-shaped --today 2026-09-26",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-b-registry-shaped",
+      "exit": 21,
+      "ms": 411
+    },
+    {
+      "cmd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/checker-host/node_modules/.bin/composable-svelte-architecture --mode analysis-only --policy bundled:charts --expected-core-version 0.13.1 --project /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-b-registry-shaped --today 2026-09-26",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-b-registry-shaped",
+      "exit": 21,
+      "ms": 414
+    },
+    {
+      "cmd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/checker-host/node_modules/.bin/composable-svelte-architecture --mode qualification --policy bundled:auth --expected-core-version 0.13.1 --project /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-b-registry-shaped --today 2026-09-26",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-b-registry-shaped",
+      "exit": 22,
+      "ms": 347
+    },
+    {
+      "cmd": "cp -Rc /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-b-registry-shaped /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-b-NEG-unapproved-import",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt",
+      "exit": 0,
+      "ms": 1285
+    },
+    {
+      "cmd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/checker-host/node_modules/.bin/composable-svelte-architecture --mode qualification --policy /private/tmp/composable-final-checker/opus-final-review/app-gate/policies-6095ae2f/external-app-b-auth-charts.json --policy-sha256 bc68bb6b47a8c524fa0897f33e9d77f6b88e17b3fc1d995a62ba703f7364a1de --expected-core-version 0.13.1 --project /private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-b-NEG-unapproved-import --today 2026-09-26",
+      "cwd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/app-b-NEG-unapproved-import",
+      "exit": 21,
+      "ms": 430
+    },
+    {
+      "cmd": "/private/var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/opus-app-gate-OF7MJt/checker-host/node_modules/.bin/composable-svelte-architecture --mode qualification --policy /private/tmp/composable-final-checker/opus-final-review/app-gate/policies-6095ae2f/external-app-b-auth-charts.json --policy-sha256 bc68bb6b47a8c524fa0897f33e9d77f6b88e17b3fc1d995a62ba703f7364a1de --expected-core-version 0.13.1 --project /private/tmp/composable-final-authoring/app-b --today 2026-09-26",
+      "cwd": "/private/tmp/composable-final-authoring/app-b",
+      "exit": 21,
+      "ms": 427
+    }
+  ]
+}

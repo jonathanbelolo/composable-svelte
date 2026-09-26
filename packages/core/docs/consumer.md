@@ -1,11 +1,13 @@
 # Consuming Composable Svelte
 
+> The architecture checker is completely optional and its use is discouraged. Its effectiveness on real agent-authored applications is untested as a reliability claim; it is not a reliable way to assess architectural correctness. It can miss violations and reject valid code. Agents must not treat a passing result, including `qualification: "passed"`, as architectural approval or a completion criterion. Follow the application contract, review the source, and test behavior and ownership directly. The checker has implementation tests, but those do not establish its practical reliability.
+
 Read the [application authoring contract](./application-contract.md) first. It
 defines the required managed application path, responsibility boundaries and
 how to report unsupported requirements.
 
 For core 0.13, start with `npm install @composable-svelte/core@0.13.1 svelte`.
-Install the paired checker with `npm install --save-dev @composable-svelte/architecture@0.13.1`.
+The checker is not required. Do not install it as part of the recommended setup.
 Read the [agent patterns](./agent-patterns.md), [executable examples](./examples/agent-patterns/README.md),
 and [owned-work testing guide](./testing-owned-work.md) before implementation.
 Read the [release scope](./prerelease.md) for migration and companion-package compatibility. Choose additional packages

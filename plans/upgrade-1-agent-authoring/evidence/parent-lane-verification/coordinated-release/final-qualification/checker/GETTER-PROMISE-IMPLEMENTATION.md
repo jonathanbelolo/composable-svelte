@@ -3,7 +3,7 @@
 > **Opus final review correction (2026-09-26):** "closes P30" holds only for explicit `throw` statements reachable in the
 > executor's synchronous extent. Exceptions from implicitly invoked code (for example `toString` during coercion) are not
 > traced; they reach only `catch` bindings, at parity with the base limitation. See `OPUS-FINAL-PROFILE-REVIEW.md` §2–§3 for the
-> four corrected fail-open defects. The current corrected candidate is `cd12784e…` (not accepted final; see §3a there).
+> four corrected fail-open defects. The current corrected candidate is `6095ae2f…`.
 
 
 > **Superseded:** the current final state is `FINAL-PROFILE-HANDOFF.md` (final candidate `b62cf88f…`, 9 selectors).

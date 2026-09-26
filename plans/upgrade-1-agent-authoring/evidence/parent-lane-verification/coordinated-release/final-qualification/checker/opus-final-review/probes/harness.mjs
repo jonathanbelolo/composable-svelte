@@ -1,7 +1,7 @@
 import {mkdtempSync, mkdirSync, writeFileSync, rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {dirname, join} from 'node:path';
-const which = process.env.PKG === 'base' ? '../baseline-pkg/src' : '../../packages/architecture/src';
+const which = process.env.PKG === 'base' ? '../baseline-pkg/src' : (process.env.PKG === 'proto' ? '../b2-prototype/src' : '../../packages/architecture/src');
 const {buildGraph} = await import(`${which}/graph.mjs`);
 const {analyzeSemantics} = await import(`${which}/semantics.mjs`);
 const PACKAGES = {

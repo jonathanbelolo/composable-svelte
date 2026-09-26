@@ -16,8 +16,10 @@
   "/private/tmp/composable-final-checker/opus-final-review/probes": "checker/opus-final-review/probes",
   "/private/tmp/composable-final-checker/opus-final-review/rereview": "checker/opus-final-review/rereview",
   "/private/tmp/composable-final-checker/opus-final-review/app-gate": "checker/opus-final-review/app-gate",
-  "/private/tmp/composable-final-checker/opus-final-review/evidence-v2": "checker/opus-final-review/evidence-v2",
   "/private/tmp/composable-final-checker/opus-final-review/rereview-binding-default": "checker/opus-final-review/rereview-binding-default",
+  "/private/tmp/composable-final-checker/opus-final-review/rereview-b1": "checker/opus-final-review/rereview-b1",
+  "/private/tmp/composable-final-checker/opus-final-review/rereview-b2": "checker/opus-final-review/rereview-b2",
+  "/private/tmp/composable-final-checker/opus-final-review/evidence-v3": "checker/opus-final-review/evidence-v3",
   "/private/tmp/composable-final-checker/opus-final-review/final-archive": "checker/opus-final-review/final-archive",
   "/private/tmp/composable-final-checker/packages/architecture/policies": "checker/policies"
 }

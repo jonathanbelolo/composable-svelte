@@ -1,0 +1,36 @@
+--- /var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/tmp.66r5PRcdJ9/package/src/semantic-context.mjs	1985-10-26 09:15:00
++++ packages/architecture/src/semantic-context.mjs	2026-09-26 18:00:12
+@@ -61,6 +61,11 @@
+         errors.push({code: 'unsupported-construct', construct: 'template-binding-default', path: module.path, span: unit.nodeSpan(node),
+           message: 'Defaults in snippet parameters and in {#each}, {@const} and {#await} destructuring are not analyzed; pass the value explicitly or apply the default in script.'});
+       }
++      // A computed key in such a pattern is a runtime expression that is likewise never evaluated.
++      if (unit.kind === 'binding' && ts.isComputedPropertyName(node) && node.parent && ts.isBindingElement(node.parent) && node.parent.propertyName === node) {
++        errors.push({code: 'unsupported-construct', construct: 'template-binding-computed-key', path: module.path, span: unit.nodeSpan(node),
++          message: 'Computed keys in snippet parameters and in {#each}, {@const} and {#await} destructuring are not analyzed; use a literal key or destructure in script.'});
++      }
+       const record = {node, unit, module, function: fn, class: cls, snippet:snippetFor(unit), runtime, id: id(module, unit, node)};
+       info.set(node, record);
+       nodes.push(record);
+--- /var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/tmp.66r5PRcdJ9/package/README.md	1985-10-26 09:15:00
++++ packages/architecture/README.md	2026-09-26 18:01:09
+@@ -120,6 +120,9 @@
+   `{@const}` destructuring and `{:then}`/`{:catch}` destructuring. They are reported as `template-binding-default`.
+   Pass the value explicitly or apply the default in script. The same patterns without
+   defaults are supported.
++- Computed keys in the same template binding patterns (`{#each rows as {[key]: value}}`)
++  are unsupported and reported as `template-binding-computed-key`. Use a literal key or
++  destructure in script.
+ 
+ Independent source review and functional tests remain required. The result always
+ includes `manualReviewRequired: true` and the bounded qualification scope. Preserve
+--- /var/folders/cs/gxnq5drx17bc0k8y0n7132tw0000gn/T/tmp.66r5PRcdJ9/package/CHANGELOG.md	1985-10-26 09:15:00
++++ packages/architecture/CHANGELOG.md	2026-09-26 18:01:09
+@@ -16,6 +16,7 @@
+ 
+ - The starter policy approves exactly core 0.13.1; its supported range is a pairing bound, not an approval.
+ - Default values in snippet parameters and in `{#each}`, `{@const}`, `{:then}` and `{:catch}` destructuring are now reported as unsupported (`template-binding-default`). Earlier releases skipped them without analysis. Patterns without defaults are unaffected.
++- Computed keys in the same template binding patterns are now reported as unsupported (`template-binding-computed-key`). Earlier releases skipped the key expression without analysis.
+ 
+ ## [0.13.0] - 2026-09-24
+ 

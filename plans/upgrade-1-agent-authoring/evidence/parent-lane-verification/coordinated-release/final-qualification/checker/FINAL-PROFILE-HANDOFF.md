@@ -4,8 +4,10 @@
 > not cleared**. The independent review found four fail-open analyzer defects that this handoff's §6 "analyzer bounds" missed:
 > instantiation expressions were marked non-runtime, settle checks were keyed per node, settle functions could reach templates,
 > and `arguments<T>` escaped its refusal. They were corrected in source and repacked as `f3c91ee6…`, which is itself now superseded by **`cd12784eb9288aa510b2f980eb3d0ef57efce8c3d8d8318ab72cee32ce67e51a`** (adding the
-> parent-directed refusal of template binding-pattern defaults). Focused re-reviews of both are CLEAR. `cd12784e…` is the corrected candidate,
-> **not accepted final**: parent scope decision pending on B1/B2 (`OPUS-FINAL-PROFILE-REVIEW.md` §3a). The README summary "anything thrown while the executor runs must be plain data" overclaimed:
+> parent-directed refusal of template binding-pattern defaults). Focused re-reviews of both are CLEAR. `cd12784e…` was in turn superseded by
+> **`6095ae2fa24d7fe895db616d9cdc82b6380950cd2945ab9dc22f5fb85b3ff304`**. It adds the parent-authorized B1 (computed binding keys
+> refused) and B2 (`{#each}`/`{@const}`/`{:then}` values modeled); focused review is CLEAR and all scoped gates pass. These are narrow phase gates; see
+> `OPUS-FINAL-PROFILE-REVIEW.md`. The README summary "anything thrown while the executor runs must be plain data" overclaimed:
 > only explicit `throw` statements in the executor's synchronous extent are checked. Policy hashes are unchanged.
 
 

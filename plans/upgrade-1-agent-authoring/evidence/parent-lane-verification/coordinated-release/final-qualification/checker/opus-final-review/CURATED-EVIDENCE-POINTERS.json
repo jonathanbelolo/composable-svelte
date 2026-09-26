@@ -1,36 +1,53 @@
 {
-  "schema": "opus-final-review/curated-evidence-pointers/v1",
+  "schema": "opus-final-review/curated-evidence-pointers/v2",
   "candidate": {
-    "sha256": "cd12784eb9288aa510b2f980eb3d0ef57efce8c3d8d8318ab72cee32ce67e51a",
-    "acceptedFinal": false,
-    "blockedOn": "parent scope decision B1/B2 (OPUS-FINAL-PROFILE-REVIEW.md section 3a)",
+    "sha256": "6095ae2fa24d7fe895db616d9cdc82b6380950cd2945ab9dc22f5fb85b3ff304",
+    "sri": "sha512-kHetoCXaLxIDL/I5JPjOn4MyzGmEQbHKDBQo6HLVpI51g9NwU9/eMC6WTzYnrX22MKwJclp/KMHrsNxCAKQfFA==",
     "archive": "opus-final-review/final-archive/composable-svelte-architecture-0.13.1.tgz",
-    "contentAddressed": "opus-final-review/final-archive/by-sha/cd12784eb9288aa510b2f980eb3d0ef57efce8c3d8d8318ab72cee32ce67e51a/composable-svelte-architecture-0.13.1.tgz"
+    "contentAddressed": "opus-final-review/final-archive/by-sha/6095ae2fa24d7fe895db616d9cdc82b6380950cd2945ab9dc22f5fb85b3ff304/composable-svelte-architecture-0.13.1.tgz",
+    "status": "corrected candidate; scoped phase gates passed; not a full release qualification"
   },
   "current": [
     "OPUS-FINAL-PROFILE-REVIEW.md",
+    "B2-BOUNDED-SCOPE.md",
     "opus-final-review/OPUS-FINAL-SCOPED-CHECKER-DELTA.json",
-    "opus-final-review/SOURCE-AT-PACK-v2.sha256",
+    "opus-final-review/INCREMENTAL-B1-B2-vs-REVIEWED-SOURCE-HANDOFF.diff",
+    "opus-final-review/SOURCE-AT-PACK-v3.sha256",
     "opus-final-review/final-archive",
-    "opus-final-review/evidence-v2",
-    "opus-final-review/app-gate/FINAL-APP-GATE-RECEIPT-cd12784e.json",
+    "opus-final-review/evidence-v3",
+    "opus-final-review/final-gates-v3.sh",
+    "opus-final-review/final-gates-v3.log",
+    "opus-final-review/app-gate/FINAL-APP-GATE-RECEIPT-6095ae2f.json",
     "opus-final-review/app-gate/app-gate.mjs",
-    "opus-final-review/final-gates-v2.sh",
-    "opus-final-review/final-gates-v2.log",
     "opus-final-review/FOCUSED-CORRECTION-REREVIEW.md",
     "opus-final-review/FOCUSED-BINDING-DEFAULT-REREVIEW.md",
+    "opus-final-review/FOCUSED-B1-REREVIEW.md",
+    "opus-final-review/FOCUSED-B2-REREVIEW.md",
     "opus-final-review/rereview",
     "opus-final-review/rereview-binding-default",
+    "opus-final-review/rereview-b1",
+    "opus-final-review/rereview-b2",
     "opus-final-review/probes",
-    "opus-final-review/mutants",
+    "opus-final-review/mutants/run.sh",
+    "opus-final-review/mutants/RESULTS-v5.txt",
+    "opus-final-review/b2-prototype/B2-PROTOTYPE.diff",
     "opus-final-review/CORRECTIONS-src.diff",
     "opus-final-review/CORRECTIONS-symbols.diff",
     "opus-final-review/CORRECTIONS-tests.diff",
     "opus-final-review/CORRECTIONS-binding-default.diff",
+    "opus-final-review/CORRECTIONS-B1-vs-cd12784e.diff",
     "/private/tmp/composable-final-authoring/FINAL-APP-QUALIFICATION.md",
     "/private/tmp/composable-final-authoring/final-app-qualification"
   ],
   "superseded": {
+    "cd12784eb9288aa510b2f980eb3d0ef57efce8c3d8d8318ab72cee32ce67e51a": [
+      "opus-final-review/final-archive-cd12784e-SUPERSEDED",
+      "opus-final-review/evidence-cd12784e-SUPERSEDED",
+      "opus-final-review/app-gate/FINAL-APP-GATE-RECEIPT-cd12784e.json",
+      "opus-final-review/final-gates-v2.sh",
+      "opus-final-review/final-archive/by-sha/cd12784eb9288aa510b2f980eb3d0ef57efce8c3d8d8318ab72cee32ce67e51a",
+      "/private/tmp/composable-final-authoring/final-app-qualification/cd12784e-SUPERSEDED"
+    ],
     "f3c91ee6ae078312cc1f289034d3245266ff74f5ba116c12641001611933808f": [
       "opus-final-review/final-archive-f3c91ee6-SUPERSEDED",
       "opus-final-review/evidence-f3c91ee6-SUPERSEDED",
@@ -44,5 +61,8 @@
       "profile-phase/P9-final"
     ]
   },
-  "note": "curate-release-evidence.py currently lists opus-final-review/evidence and opus-final-review/final-archive; evidence now lives in evidence-v2 (current) and evidence-f3c91ee6-SUPERSEDED. The coordinator owns that script; it was not edited."
+  "immutable": {
+    "REVIEWED-SOURCE-HANDOFF": "untouched; equals cd12784e source"
+  },
+  "note": "curate-release-evidence.py (coordinator-owned, not edited) should take evidence from evidence-v3 and final-archive; superseded directories are historical."
 }

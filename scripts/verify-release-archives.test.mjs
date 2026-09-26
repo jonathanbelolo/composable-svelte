@@ -763,6 +763,8 @@ test('runVerification: mode all with skipBrowser produces PARTIAL receipt and do
   assert.equal(receipt.status, 'PARTIAL');
   assert.equal(receipt.fullQualificationClaimed, false);
   assert.ok(receipt.incompleteReasons.some(r => r.includes('Browser tests were skipped')));
+  assert.equal(receipt.architectureQualification, null);
+  assert.ok(!receipt.incompleteReasons.some(r => /checker|policy/i.test(r)));
 });
 
 // ---------------------------------------------------------------------------

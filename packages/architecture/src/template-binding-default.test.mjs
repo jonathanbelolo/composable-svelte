@@ -77,3 +77,33 @@ test('ordinary template binding patterns without defaults stay supported and kee
   assert.equal(script.complete, true, JSON.stringify(script.errors));
   assert.ok(script.findings.includes('location-write'), JSON.stringify(script));
 });
+
+test('computed keys in template binding patterns are refused; literal keys and computed names in types are not', (t) => {
+  const store = `import {createStore, Effect} from '@composable-svelte/core';\nconst store = createStore({initialState: {}, reducer: (s: any) => [s, Effect.none()]});`;
+  const refused = [
+    app(``, `{#each [{}] as {[(window.location.href = '/x')]: f}}<p>{f}</p>{/each}`),
+    app(``, `{#each [{}] as {[String(history.pushState(null, '', '/x'))]: f}}<p>{f}</p>{/each}`),
+    app(store, `{#each [{}] as {[String(store.subscribe(() => {}))]: f}}<p>{f}</p>{/each}`),
+    app(resolver, `{#each [{}] as {[String(fire({ok: 1}))]: f}}<p>{f}</p>{/each}`),
+    app(`const obj: any = {};`, `{#if true}{@const {[(window.location.href = '/x')]: f} = obj}<p>{f}</p>{/if}`),
+    app(`const q = Promise.resolve({});`, `{#await q then {[(window.location.href = '/x')]: f}}<p>{f}</p>{/await}`),
+    app(`const q = Promise.resolve({});`, `{#await q}{:catch {[(window.location.href = '/x')]: f}}<p>{f}</p>{/await}`),
+    app(``, `{#snippet s({[(window.location.href = '/x')]: f}: any)}<p>{f}</p>{/snippet}\n{@render s({})}`)
+  ];
+  for (const files of refused) {
+    const result = analyze(t, files);
+    assert.equal(result.complete, false, files['App.svelte']);
+    assert.ok(result.errors.includes('template-binding-computed-key'), `${files['App.svelte']}\n${JSON.stringify(result)}`);
+  }
+  // The same effects written as template expressions are still reported, and literal keys and type-level computed names stay clean.
+  const direct = analyze(t, app(``, `<p>{String(history.pushState(null, '', '/x'))}</p>`));
+  assert.ok(direct.findings.includes('history-write'), JSON.stringify(direct));
+  for (const files of [
+    app(`const rows = [{a: 1}];`, `{#each rows as {'a': v, a: w}}<p>{v}{w}</p>{/each}`),
+    app(``, `{#snippet s(x: {[Symbol.iterator]: () => any; ['a']: number})}<p>{x.a}</p>{/snippet}\n{@render s({a: 1} as any)}`)
+  ]) {
+    const result = analyze(t, files);
+    assert.equal(result.complete, true, JSON.stringify(result.errors));
+    assert.deepEqual(result.errors, []);
+  }
+});

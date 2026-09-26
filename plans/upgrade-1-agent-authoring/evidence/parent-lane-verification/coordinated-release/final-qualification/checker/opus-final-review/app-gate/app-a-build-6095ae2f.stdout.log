@@ -1,0 +1,37 @@
+
+> build
+> vite build
+
+vite v7.3.6 building client environment for production...
+transforming...
+✓ 1176 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                             0.43 kB │ gzip:   0.30 kB
+dist/assets/index-Dff8Xjyn.css             11.96 kB │ gzip:   2.31 kB
+dist/assets/index-D2H8w3V_.css             22.80 kB │ gzip:   3.92 kB
+dist/assets/index-BDUebQtH.css             68.96 kB │ gzip:  10.60 kB
+dist/assets/chat_false-DnSfa4Af.js          0.12 kB │ gzip:   0.13 kB
+dist/assets/prism-json-xwnKirkR.js          0.45 kB │ gzip:   0.27 kB
+dist/assets/prism-typescript-CnO3FKZW.js    1.80 kB │ gzip:   0.88 kB
+dist/assets/prism-yaml-Chm5ZdEN.js          1.94 kB │ gzip:   0.86 kB
+dist/assets/index-DgfP423f.js               2.01 kB │ gzip:   1.25 kB
+dist/assets/prism-python-BHZWkbL-.js        2.61 kB │ gzip:   1.38 kB
+dist/assets/prism-rust-d1tC7BMp.js          2.99 kB │ gzip:   1.46 kB
+dist/assets/prism-sql-AgAyy5H_.js           3.26 kB │ gzip:   1.81 kB
+dist/assets/prism-javascript-2LMHe_9g.js    4.72 kB │ gzip:   1.65 kB
+dist/assets/prism-markdown-4MKFcK2x.js      5.24 kB │ gzip:   2.00 kB
+dist/assets/prism-bash-DTkDXsAh.js          6.15 kB │ gzip:   2.96 kB
+dist/assets/index-DTYUdgRW.js              13.97 kB │ gzip:   6.00 kB
+dist/assets/prism-5vbldh3J.js              19.46 kB │ gzip:   7.35 kB
+dist/assets/index-BUsbKf8o.js              26.52 kB │ gzip:   8.82 kB
+dist/assets/index-B91ShH-7.js              28.24 kB │ gzip:  12.52 kB
+dist/assets/index-BgAWZSkG.js              28.73 kB │ gzip:  11.41 kB
+dist/assets/index-BEAB7y3_.js              43.69 kB │ gzip:  12.58 kB
+dist/assets/index-DxeXAwQV.js              44.34 kB │ gzip:  15.36 kB
+dist/assets/index-CLSHLVor.js              45.10 kB │ gzip:  18.65 kB
+dist/assets/index-MTjLzRTu.js              83.70 kB │ gzip:  29.55 kB
+dist/assets/index-DCWzGdFK.js              84.54 kB │ gzip:  32.61 kB
+dist/assets/index-Bp-aXRVm.js             189.39 kB │ gzip:  61.60 kB
+dist/assets/index-CEE6fWJl.js             869.26 kB │ gzip: 277.72 kB
+✓ built in 2.74s

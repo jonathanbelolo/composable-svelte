@@ -1,0 +1,34 @@
+S1 for-of obj rest                 {"complete":true,"errors":[],"findings":["location-write@3"]}
+T1 each obj rest                   {"complete":true,"errors":[],"findings":["location-write@4"]}
+S2 for-of arr rest                 {"complete":true,"errors":[],"findings":["location-write@3"]}
+T2 each arr rest                   {"complete":true,"errors":[],"findings":["location-write@4"]}
+T3 each idx+key                    {"complete":true,"errors":[],"findings":["location-write@4"]}
+S4 for-of state                    {"complete":true,"errors":[],"findings":["authority-escape@2"]}
+T4 each state                      {"complete":true,"errors":[],"findings":["authority-escape@2"]}
+S5 for-of Map                      {"complete":true,"errors":[],"findings":["authority-escape@2"]}
+T5 each Map                        {"complete":true,"errors":[],"findings":["authority-escape@2"]}
+S5b for-of Set                     {"complete":true,"errors":[],"findings":["authority-escape@2"]}
+T5b each Set                       {"complete":true,"errors":[],"findings":["authority-escape@2"]}
+S5c for-of values()                {"complete":true,"errors":[],"findings":["authority-escape@3"]}
+T5c each values()                  {"complete":true,"errors":[],"findings":["authority-escape@4"]}
+S6 await destr rest                {"complete":true,"errors":[],"findings":["history-write@3"]}
+T6 then destr rest                 {"complete":true,"errors":[],"findings":["history-write@4"]}
+T6b then arr                       {"complete":true,"errors":[],"findings":["history-write@4"]}
+T6c then non-promise               {"complete":true,"errors":[],"findings":["history-write@4"]}
+T6d then pending form              {"complete":true,"errors":[],"findings":["history-write@4"]}
+T6e then Promise.resolve           {"complete":true,"errors":[],"findings":["authority-escape@4","history-write@4"]}
+T7 nested outer ref                {"complete":true,"errors":[],"findings":["location-write@4"]}
+T7b nested inner over outer        {"complete":true,"errors":[],"findings":["location-write@4"]}
+T8 const chain + destr             {"complete":true,"errors":[],"findings":["location-write@4"]}
+T8b const rest                     {"complete":true,"errors":[],"findings":["location-write@4"]}
+T8c const in each over item        {"complete":true,"errors":[],"findings":["location-write@4"]}
+T8d const in then                  {"complete":true,"errors":[],"findings":["location-write@4"]}
+T8e each over then value           {"complete":true,"errors":[],"findings":["location-write@4"]}
+T9 then store subscribe            {"complete":true,"errors":[],"findings":["view-subscribe@6"]}
+T9b each destr store               {"complete":true,"errors":[],"findings":["view-subscribe@6"]}
+S10 fn item called                 {"complete":true,"errors":[],"findings":["location-write@2"]}
+T10 fn item as handler             {"complete":true,"errors":[],"findings":["location-write@2"]}
+T10b const fn handler              {"complete":true,"errors":[],"findings":["history-write@2"]}
+T11 snippet param each             {"complete":true,"errors":[],"findings":["location-write@4"]}
+T12 each item to ext fn            {"complete":true,"errors":[],"findings":["authority-escape@5"]}
+S12 for-of item to ext fn          {"complete":true,"errors":[],"findings":["authority-escape@4"]}

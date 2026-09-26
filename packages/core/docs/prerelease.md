@@ -21,9 +21,7 @@ The raw dismiss factories and `DestinationRouter` are retired. Use managed prese
 
 The coordinated companion package releases (`auth`, `maps`, `graphics`, and `charts` at `0.3.0`; `code`, `media`, and `chat` at `0.5.0`) declare `@composable-svelte/core ^0.13.1`. They declare Svelte `^5.20.0`, except `code`, which requires Svelte `^5.30.0`. An application combining packages needs a Svelte version inside every declared range, so any application that includes `code` (directly or as chat's optional peer) needs Svelte 5.30 or newer. Do not bypass peer checks with `--force` or `--legacy-peer-deps`.
 
-The development-only `@composable-svelte/architecture@0.13.1` package is
-paired development tooling: its bundled starter policy targets core 0.13.x,
-the bundled starter pins it, and it must remain a dev dependency.
+The architecture checker is completely optional, its use is discouraged, and it is not installed by the starter. Its practical reliability is unestablished; passing it does not establish architectural correctness.
 
 ## Limits
 

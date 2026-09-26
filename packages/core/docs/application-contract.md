@@ -1,5 +1,7 @@
 # Application authoring contract
 
+> The architecture checker is completely optional and its use is discouraged. Its effectiveness on real agent-authored applications is untested as a reliability claim; it is not a reliable way to assess architectural correctness. It can miss violations and reject valid code. Agents must not treat a passing result, including `qualification: "passed"`, as architectural approval or a completion criterion. Follow the application contract, review the source, and test behavior and ownership directly. The checker has implementation tests, but those do not establish its practical reliability.
+
 **Read this first when building or changing an application, including with an AI agent.** Applications describe content, presentation and business rules. Composable Svelte supplies the machinery that executes and coordinates them.
 
 This is the normative application-authoring policy for the core 0.13 API. It takes precedence over lower-level tutorials when choosing application architecture; it does not add capabilities to the installed version. Read the matching [release scope](./prerelease.md). Use installed package documentation and public exports; a library checkout or private agent skill is unnecessary.
@@ -85,14 +87,7 @@ A low-level integration is acceptable only through an explicitly documented publ
 
 Before coding, identify the installed version, read this contract and the relevant linked guides, and map requirements to supported capabilities. Use public export paths and their declarations. For this core release, respect the companion-package compatibility limits; do not force incompatible peer dependencies.
 
-The optional development-only `@composable-svelte/architecture` CLI checks five
-bounded families: manual routing authority, subscription-driven presentation
-orchestration, impure reducer decisions, unowned infrastructure, and competing
-motion playback. Its bundled-policy command is author feedback, not release
-qualification. Manual source review remains mandatory, including genuine
-presentation authority and least-authority boundaries. Read the installed
-`node_modules/@composable-svelte/architecture/README.md` for the analysis command,
-limits, and externally controlled qualification guidance.
+The checker is not an architectural acceptance authority and is not required for release. Manual source review remains necessary, including genuine presentation authority and least-authority boundaries.
 
 When blocked by a capability gap, describe the required behavior, the documented APIs considered, the missing ownership or lifecycle guarantee, and the smallest proposed framework extension or explicitly agreed temporary deviation. Continue independent supported work. Do not silently implement the substitute or broaden an exception.
 
